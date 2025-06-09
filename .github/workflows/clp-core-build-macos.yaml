@@ -13,7 +13,7 @@ on:
       - "components/core/tools/scripts/deps-download/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
       - "taskfile.yaml"
-      - "taskfiles/deps.yaml"
+      - "taskfiles/**"
       - "tools/scripts/deps-download/**"
   push:
     paths:
@@ -27,7 +27,7 @@ on:
       - "components/core/tools/scripts/deps-download/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
       - "taskfile.yaml"
-      - "taskfiles/deps.yaml"
+      - "taskfiles/**"
       - "tools/scripts/deps-download/**"
   schedule:
     # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
@@ -74,7 +74,7 @@ jobs:
       - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
 
-      - run: "task deps:core"
+      - run: "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core"
         shell: "bash"
 
       - name: "Build CLP-core and run unit tests"
@@ -108,7 +108,9 @@ jobs:
       # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
       # - run: >-
       #     task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
-      - run: "task lint:check-cpp-full"
+      - run: >-
+          CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
+          task lint:check-cpp-full
         shell: "bash"
 
       # Cache the source file checksums and the generated files (logs) for the

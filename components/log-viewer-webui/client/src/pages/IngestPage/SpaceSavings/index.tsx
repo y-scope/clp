@@ -1,12 +1,28 @@
+import {
+    useCallback,
+    useEffect,
+    useState,
+} from "react";
+
 import {theme} from "antd";
 
 import StatCard from "../../../components/StatCard";
+import useIngestStatsStore from "../ingestStatsStore";
+import {querySql} from "../sqlConfig";
+import {
+    getSpaceSavingsSql,
+    SpaceSavingsResp,
+} from "./sql";
 
 
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with values from database once api implemented.
-const DUMMY_COMPRESSED_SIZE = 1004023;
-const DUMMY_UNCOMPRESSED_SIZE = 110300010;
+/**
+ * Default state for space savings.
+ */
+const SPACE_SAVINGS_DEFAULT = Object.freeze({
+    compressedSize: 0,
+    uncompressedSize: 0,
+});
+
 
 /**
  * Renders space savings card.
@@ -14,9 +30,40 @@ const DUMMY_UNCOMPRESSED_SIZE = 110300010;
  * @return
  */
 const SpaceSavings = () => {
+    const {refreshInterval} = useIngestStatsStore();
+    const [compressedSize, setCompressedSize] =
+        useState<number>(SPACE_SAVINGS_DEFAULT.compressedSize);
+    const [uncompressedSize, setUncompressedSize] =
+        useState<number>(SPACE_SAVINGS_DEFAULT.uncompressedSize);
     const {token} = theme.useToken();
-    const compressedSize = DUMMY_COMPRESSED_SIZE as number;
-    const uncompressedSize = DUMMY_UNCOMPRESSED_SIZE as number;
+
+    const fetchSpaceSavingsStats = useCallback(() => {
+        querySql<SpaceSavingsResp>(getSpaceSavingsSql())
+            .then((resp) => {
+                const [spaceSavings] = resp.data;
+                if ("undefined" === typeof spaceSavings) {
+                    throw new Error("Space savings response is undefined");
+                }
+                setCompressedSize(spaceSavings.total_compressed_size);
+                setUncompressedSize(spaceSavings.total_uncompressed_size);
+            })
+            .catch((e: unknown) => {
+                console.error("Failed to fetch space savings stats", e);
+            });
+    }, []);
+
+    useEffect(() => {
+        fetchSpaceSavingsStats();
+        const intervalId = setInterval(fetchSpaceSavingsStats, refreshInterval);
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, [
+        refreshInterval,
+        fetchSpaceSavingsStats,
+    ]);
+
 
     const spaceSavingsPercent = (0 !== uncompressedSize) ?
         100 * (1 - (compressedSize / uncompressedSize)) :

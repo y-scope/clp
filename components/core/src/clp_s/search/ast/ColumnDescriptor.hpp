@@ -2,9 +2,11 @@
 #define CLP_S_SEARCH_COLUMNDESCRIPTOR_HPP
 
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include "../../ErrorCode.hpp"
@@ -192,7 +194,7 @@ public:
      * Set types this column can match
      * @param flags that can be matched by this column
      */
-    void set_matching_types(LiteralTypeBitmask flags) { m_flags = flags; }
+    void set_matching_types(literal_type_bitmask_t flags) { m_flags = flags; }
 
     /**
      * Set type this column can match
@@ -204,7 +206,7 @@ public:
      * Remove types from set of types this column can match
      * @param flags to be removed
      */
-    void remove_matching_types(LiteralTypeBitmask flags) { m_flags &= ~flags; }
+    void remove_matching_types(literal_type_bitmask_t flags) { m_flags &= ~flags; }
 
     /**
      * Remove type from set of types this column can match
@@ -243,7 +245,7 @@ public:
     /**
      * @return a bitmask indicating all of the matching types for this column.
      */
-    LiteralTypeBitmask get_matching_types() const { return m_flags; }
+    literal_type_bitmask_t get_matching_types() const { return m_flags; }
 
     /**
      * Whether the list of Descriptor's contains any wildcards
@@ -264,9 +266,9 @@ public:
     // ColumnDescriptor can implicitly match several different types at the same time.
     bool matches_type(LiteralType type) override { return m_flags & type; }
 
-    bool matches_any(LiteralTypeBitmask mask) override { return m_flags & mask; }
+    bool matches_any(literal_type_bitmask_t mask) override { return m_flags & mask; }
 
-    bool matches_exactly(LiteralTypeBitmask mask) override { return m_flags == mask; }
+    bool matches_exactly(literal_type_bitmask_t mask) override { return m_flags == mask; }
 
     /**
      * Equal to operator to allow comparison between two column descriptors.
@@ -280,14 +282,21 @@ public:
         m_namespace = descriptor_namespace;
     }
 
+    auto get_subtree_type() const -> std::optional<std::string> const& { return m_subtree_type; }
+
+    auto set_subtree_type(std::optional<std::string> subtree_type) {
+        m_subtree_type = std::move(subtree_type);
+    }
+
 private:
     DescriptorList m_descriptors;  // list of descriptors describing the column
     DescriptorList m_unresolved_tokens;  // unresolved tokens used for array search
     std::string m_namespace;
-    LiteralTypeBitmask m_flags;  // set of types this column can match
+    literal_type_bitmask_t m_flags;  // set of types this column can match
     int32_t m_id;  // unambiguous CLJ column id this column represents. May be unset.
     bool m_unresolved_descriptors;  // true if contains wildcards
     bool m_pure_wildcard;  // true if column is single wildcard
+    std::optional<std::string> m_subtree_type;  // optional subtree type to resolve against
 
     // Constructors
     explicit ColumnDescriptor(std::vector<std::string> const&, std::string_view);

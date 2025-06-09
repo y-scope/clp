@@ -11,8 +11,9 @@
 #include <utility>
 #include <vector>
 
-#include <json/single_include/nlohmann/json.hpp>
-#include <outcome/single-header/outcome.hpp>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../ir/EncodedTextAst.hpp"
 #include "../time_types.hpp"
@@ -165,7 +166,7 @@ private:
 [[nodiscard]] auto get_schema_subtree_bitmap(
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs,
         SchemaTree const& schema_tree
-) -> OUTCOME_V2_NAMESPACE::std_result<vector<bool>>;
+) -> ystdlib::error_handling::Result<vector<bool>>;
 
 /**
  * Inserts the given key-value pair into the JSON object (map).
@@ -202,7 +203,7 @@ private:
         SchemaTree const& schema_tree,
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs,
         vector<bool> const& schema_subtree_bitmap
-) -> OUTCOME_V2_NAMESPACE::std_result<nlohmann::json>;
+) -> ystdlib::error_handling::Result<nlohmann::json>;
 
 /**
  * @param node A non-root schema tree node.
@@ -333,7 +334,7 @@ auto is_leaf_node(
 auto get_schema_subtree_bitmap(
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs,
         SchemaTree const& schema_tree
-) -> OUTCOME_V2_NAMESPACE::std_result<vector<bool>> {
+) -> ystdlib::error_handling::Result<vector<bool>> {
     vector<bool> schema_subtree_bitmap(schema_tree.get_size(), false);
     for (auto const& [node_id, val] : node_id_value_pairs) {
         if (node_id >= schema_subtree_bitmap.size()) {
@@ -430,14 +431,16 @@ auto serialize_node_id_value_pairs_to_json(
         SchemaTree const& schema_tree,
         KeyValuePairLogEvent::NodeIdValuePairs const& node_id_value_pairs,
         vector<bool> const& schema_subtree_bitmap
-) -> OUTCOME_V2_NAMESPACE::std_result<nlohmann::json> {
+) -> ystdlib::error_handling::Result<nlohmann::json> {
     if (node_id_value_pairs.empty()) {
         return nlohmann::json::object();
     }
 
     bool json_exception_captured{false};
-    auto json_exception_handler = [&]([[maybe_unused]] nlohmann::json::exception const& ex
-                                  ) -> void { json_exception_captured = true; };
+    auto json_exception_handler
+            = [&]([[maybe_unused]] nlohmann::json::exception const& ex) -> void {
+        json_exception_captured = true;
+    };
     using DfsIterator = JsonSerializationIterator<decltype(json_exception_handler)>;
 
     // NOTE: We use a `std::stack` (which uses `std::deque` as the underlying container) instead of
@@ -528,7 +531,7 @@ auto KeyValuePairLogEvent::create(
         NodeIdValuePairs auto_gen_node_id_value_pairs,
         NodeIdValuePairs user_gen_node_id_value_pairs,
         UtcOffset utc_offset
-) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent> {
+) -> ystdlib::error_handling::Result<KeyValuePairLogEvent> {
     if (nullptr == auto_gen_keys_schema_tree || nullptr == user_gen_keys_schema_tree) {
         return std::errc::invalid_argument;
     }
@@ -561,19 +564,20 @@ auto KeyValuePairLogEvent::create(
 }
 
 auto KeyValuePairLogEvent::get_auto_gen_keys_schema_subtree_bitmap() const
-        -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>> {
+        -> ystdlib::error_handling::Result<std::vector<bool>> {
     return get_schema_subtree_bitmap(m_auto_gen_node_id_value_pairs, *m_auto_gen_keys_schema_tree);
 }
 
 auto KeyValuePairLogEvent::get_user_gen_keys_schema_subtree_bitmap() const
-        -> outcome_v2::std_result<std::vector<bool>> {
+        -> ystdlib::error_handling::Result<std::vector<bool>> {
     return get_schema_subtree_bitmap(m_user_gen_node_id_value_pairs, *m_user_gen_keys_schema_tree);
 }
 
 auto KeyValuePairLogEvent::serialize_to_json() const
-        -> OUTCOME_V2_NAMESPACE::std_result<std::pair<nlohmann::json, nlohmann::json>> {
-    auto const auto_gen_keys_schema_subtree_bitmap_result{get_auto_gen_keys_schema_subtree_bitmap(
-    )};
+        -> ystdlib::error_handling::Result<std::pair<nlohmann::json, nlohmann::json>> {
+    auto const auto_gen_keys_schema_subtree_bitmap_result{
+            get_auto_gen_keys_schema_subtree_bitmap()
+    };
     if (auto_gen_keys_schema_subtree_bitmap_result.has_error()) {
         return auto_gen_keys_schema_subtree_bitmap_result.error();
     }
@@ -586,8 +590,9 @@ auto KeyValuePairLogEvent::serialize_to_json() const
         return serialized_auto_gen_kv_pairs_result.error();
     }
 
-    auto const user_gen_keys_schema_subtree_bitmap_result{get_user_gen_keys_schema_subtree_bitmap(
-    )};
+    auto const user_gen_keys_schema_subtree_bitmap_result{
+            get_user_gen_keys_schema_subtree_bitmap()
+    };
     if (user_gen_keys_schema_subtree_bitmap_result.has_error()) {
         return user_gen_keys_schema_subtree_bitmap_result.error();
     }

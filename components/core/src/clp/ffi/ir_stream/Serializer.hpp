@@ -7,9 +7,9 @@
 #include <string>
 #include <vector>
 
-#include <json/single_include/nlohmann/json.hpp>
 #include <msgpack.hpp>
-#include <outcome/single-header/outcome.hpp>
+#include <nlohmann/json.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../time_types.hpp"
 #include "../SchemaTree.hpp"
@@ -49,7 +49,7 @@ public:
      */
     [[nodiscard]] static auto create(
             std::optional<nlohmann::json> optional_user_defined_metadata = std::nullopt
-    ) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>>;
+    ) -> ystdlib::error_handling::Result<Serializer<encoded_variable_t>>;
 
     // Disable copy constructor/assignment operator
     Serializer(Serializer const&) = delete;

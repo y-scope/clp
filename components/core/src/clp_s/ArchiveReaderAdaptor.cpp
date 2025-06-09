@@ -6,16 +6,18 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <msgpack.hpp>
+#include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
 #include "../clp/BoundedReader.hpp"
 #include "../clp/FileReader.hpp"
 #include "archive_constants.hpp"
 #include "InputConfig.hpp"
-#include "ReaderUtils.hpp"
+#include "RangeIndexWriter.hpp"
 #include "SingleFileArchiveDefs.hpp"
 
 namespace clp_s {
@@ -97,6 +99,65 @@ ErrorCode ArchiveReaderAdaptor::try_read_archive_info(ZstdDecompressor& decompre
     return ErrorCodeSuccess;
 }
 
+auto ArchiveReaderAdaptor::try_read_range_index(ZstdDecompressor& decompressor, size_t size)
+        -> ErrorCode {
+    std::vector<char> buffer(size);
+    if (auto const rc = decompressor.try_read_exact_length(buffer.data(), buffer.size());
+        ErrorCodeSuccess != rc)
+    {
+        return rc;
+    }
+
+    auto range_index_json = nlohmann::json::from_msgpack(buffer.begin(), buffer.end(), true, false);
+    if (false == range_index_json.is_array()) {
+        return ErrorCodeCorrupt;
+    }
+
+    for (auto& range_index_entry : range_index_json) {
+        if (false == range_index_entry.contains(RangeIndexWriter::cStartIndexName)
+            || false == range_index_entry.at(RangeIndexWriter::cStartIndexName).is_number_integer())
+        {
+            return ErrorCodeCorrupt;
+        }
+        if (false == range_index_entry.contains(RangeIndexWriter::cEndIndexName)
+            || false == range_index_entry.at(RangeIndexWriter::cEndIndexName).is_number_integer())
+        {
+            return ErrorCodeCorrupt;
+        }
+        if (false == range_index_entry.contains(RangeIndexWriter::cMetadataFieldsName)
+            || false == range_index_entry.at(RangeIndexWriter::cMetadataFieldsName).is_object())
+        {
+            return ErrorCodeCorrupt;
+        }
+        size_t start_index{};
+        size_t end_index{};
+        try {
+            start_index = range_index_entry.at(RangeIndexWriter::cStartIndexName)
+                                  .template get<size_t>();
+            end_index
+                    = range_index_entry.at(RangeIndexWriter::cEndIndexName).template get<size_t>();
+        } catch (std::exception const&) {
+            return ErrorCodeCorrupt;
+        }
+        if (start_index > end_index) {
+            return ErrorCodeCorrupt;
+        }
+        m_range_index.emplace_back(
+                start_index,
+                end_index,
+                std::move(range_index_entry.at(RangeIndexWriter::cMetadataFieldsName))
+        );
+    }
+    return ErrorCodeSuccess;
+}
+
+auto
+ArchiveReaderAdaptor::try_read_unknown_metadata_packet(ZstdDecompressor& decompressor, size_t size)
+        -> ErrorCode {
+    std::vector<char> buffer(size);
+    return decompressor.try_read_exact_length(buffer.data(), buffer.size());
+}
+
 ErrorCode ArchiveReaderAdaptor::load_archive_metadata() {
     constexpr size_t cDecompressorFileReadBufferCapacity = 64 * 1024;
     m_reader = try_create_reader_at_header();
@@ -174,7 +235,11 @@ ErrorCode ArchiveReaderAdaptor::try_read_archive_metadata(ZstdDecompressor& deco
             case ArchiveMetadataPacketType::ArchiveInfo:
                 rc = try_read_archive_info(decompressor, packet_size);
                 break;
+            case ArchiveMetadataPacketType::RangeIndex:
+                rc = try_read_range_index(decompressor, packet_size);
+                break;
             default:
+                rc = try_read_unknown_metadata_packet(decompressor, packet_size);
                 break;
         }
         if (ErrorCodeSuccess != rc) {
@@ -195,7 +260,7 @@ std::shared_ptr<clp::ReaderInterface> ArchiveReaderAdaptor::try_create_reader_at
             return nullptr;
         }
     } else {
-        return ReaderUtils::try_create_reader(m_archive_path, m_network_auth);
+        return try_create_reader(m_archive_path, m_network_auth);
     }
 }
 

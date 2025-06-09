@@ -2,7 +2,7 @@
 
 #include <string>
 
-#include <json/single_include/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 
 namespace reducer {
 DeserializedRecordGroup::DeserializedRecordGroup(std::vector<uint8_t>& serialized_data)

@@ -131,8 +131,9 @@ bool compress(
         num_files_to_compress = files_to_compress.size() + grouped_files_to_compress.size();
     }
     if (command_line_args.sort_input_files()) {
-        sort(files_to_compress.begin(), files_to_compress.end(), file_gt_last_write_time_comparator
-        );
+        sort(files_to_compress.begin(),
+             files_to_compress.end(),
+             file_gt_last_write_time_comparator);
     }
     for (auto it = files_to_compress.cbegin(); it != files_to_compress.cend(); ++it) {
         if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dictionaries) {

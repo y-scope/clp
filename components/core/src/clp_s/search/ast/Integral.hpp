@@ -11,7 +11,7 @@ namespace clp_s::search::ast {
 using Integral64 = std::variant<int64_t, double>;
 
 // FIXME: figure out why String types are part of this bitmask
-constexpr LiteralTypeBitmask cIntegralLiteralTypes = cIntegralTypes | VarStringT;
+constexpr literal_type_bitmask_t cIntegralLiteralTypes = cIntegralTypes | VarStringT;
 
 /**
  * Class for Integral values (float/int) in the search AST
@@ -56,9 +56,11 @@ public:
     // Methods inherited from Literal
     bool matches_type(LiteralType type) override { return type & cIntegralLiteralTypes; }
 
-    bool matches_any(LiteralTypeBitmask mask) override { return mask & cIntegralLiteralTypes; }
+    bool matches_any(literal_type_bitmask_t mask) override { return mask & cIntegralLiteralTypes; }
 
-    bool matches_exactly(LiteralTypeBitmask mask) override { return mask == cIntegralLiteralTypes; }
+    bool matches_exactly(literal_type_bitmask_t mask) override {
+        return mask == cIntegralLiteralTypes;
+    }
 
     bool as_epoch_date() override { return true; }
 

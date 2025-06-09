@@ -1,5 +1,6 @@
 import Details from "./Details";
 import styles from "./index.module.css";
+import Jobs from "./Jobs";
 import SpaceSavings from "./SpaceSavings";
 
 
@@ -13,6 +14,7 @@ const IngestPage = () => {
         <div className={styles["ingestPageGrid"]}>
             <SpaceSavings/>
             <Details/>
+            <Jobs className={styles["jobs"] || ""}/>
         </div>
     );
 };

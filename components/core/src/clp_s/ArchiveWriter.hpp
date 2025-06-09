@@ -1,6 +1,8 @@
 #ifndef CLP_S_ARCHIVEWRITER_HPP
 #define CLP_S_ARCHIVEWRITER_HPP
 
+#include <optional>
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -9,6 +11,7 @@
 
 #include "archive_constants.hpp"
 #include "DictionaryWriter.hpp"
+#include "RangeIndexWriter.hpp"
 #include "Schema.hpp"
 #include "SchemaMap.hpp"
 #include "SchemaTree.hpp"
@@ -165,6 +168,39 @@ public:
      */
     size_t get_data_size();
 
+    /**
+     * Adds a metadata key value pair to the current range in the range index, opening a range if no
+     * range currently exists.
+     * @param key
+     * @param value
+     * @return ErrorCodeSuccess on success or the relevant error code on failure.
+     */
+    template <typename T>
+    [[nodiscard]] auto add_field_to_current_range(std::string const& key, T const& value)
+            -> ErrorCode {
+        if (false == m_range_open) {
+            if (auto const rc = m_range_index_writer.open_range(m_next_log_event_id);
+                ErrorCodeSuccess != rc)
+            {
+                return rc;
+            }
+            m_range_open = true;
+        }
+        return m_range_index_writer.add_value_to_range(key, value);
+    }
+
+    /**
+     * Closes the currently open range in the range index.
+     * @return ErrorCodeSuccess on success or the relevant error code on failure.
+     */
+    [[nodiscard]] auto close_current_range() -> ErrorCode {
+        auto const rc = m_range_index_writer.close_range(m_next_log_event_id);
+        if (ErrorCodeSuccess == rc) {
+            m_range_open = false;
+        }
+        return rc;
+    }
+
 private:
     /**
      * Initializes the schema writer
@@ -250,6 +286,9 @@ private:
     FileWriter m_table_metadata_file_writer;
     ZstdCompressor m_tables_compressor;
     ZstdCompressor m_table_metadata_compressor;
+
+    RangeIndexWriter m_range_index_writer;
+    bool m_range_open{false};
 };
 }  // namespace clp_s
 

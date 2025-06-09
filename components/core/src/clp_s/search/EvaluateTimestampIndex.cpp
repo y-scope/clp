@@ -12,11 +12,11 @@ using clp_s::search::ast::Expression;
 using clp_s::search::ast::FilterExpr;
 using clp_s::search::ast::Integral;
 using clp_s::search::ast::Integral64;
-using clp_s::search::ast::LiteralTypeBitmask;
+using clp_s::search::ast::literal_type_bitmask_t;
 using clp_s::search::ast::OrExpr;
 
 namespace clp_s::search {
-constexpr LiteralTypeBitmask cDateTypes = search::ast::cIntegralTypes | search::ast::EpochDateT;
+constexpr literal_type_bitmask_t cDateTypes = search::ast::cIntegralTypes | search::ast::EpochDateT;
 
 EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& expr) {
     if (std::dynamic_pointer_cast<OrExpr>(expr)) {

@@ -12,9 +12,9 @@
 #include <utility>
 #include <vector>
 
-#include <Catch2/single_include/catch2/catch.hpp>
-#include <json/single_include/nlohmann/json.hpp>
+#include <catch2/catch.hpp>
 #include <msgpack.hpp>
+#include <nlohmann/json.hpp>
 
 #include "../src/clp/BufferReader.hpp"
 #include "../src/clp/ErrorCode.hpp"
@@ -24,6 +24,7 @@
 #include "../src/clp/ffi/ir_stream/encoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/IrUnitType.hpp"
 #include "../src/clp/ffi/ir_stream/protocol_constants.hpp"
+#include "../src/clp/ffi/ir_stream/search/test/utils.hpp"
 #include "../src/clp/ffi/ir_stream/Serializer.hpp"
 #include "../src/clp/ffi/ir_stream/utils.hpp"
 #include "../src/clp/ffi/KeyValuePairLogEvent.hpp"
@@ -49,6 +50,7 @@ using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::encoded_tag_t;
 using clp::ffi::ir_stream::get_encoding_type;
 using clp::ffi::ir_stream::IRErrorCode;
+using clp::ffi::ir_stream::search::test::unpack_and_serialize_msgpack_bytes;
 using clp::ffi::ir_stream::serialize_utc_offset_change;
 using clp::ffi::ir_stream::Serializer;
 using clp::ffi::ir_stream::validate_protocol_version;
@@ -94,11 +96,11 @@ private:
 };
 
 /**
- * Class that implements `clp::ffi::ir_stream::IrUnitHandlerInterface` for testing purposes.
+ * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for testing purposes.
  */
 class IrUnitHandler {
 public:
-    // Implements `clp::ffi::ir_stream::IrUnitHandlerInterface` interface
+    // Implements `clp::ffi::ir_stream::IrUnitHandlerReq`
     [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent&& log_event) -> IRErrorCode {
         m_deserialized_log_events.emplace_back(std::move(log_event));
         return IRErrorCode::IRErrorCode_Success;
@@ -209,21 +211,6 @@ auto flush_and_clear_serializer_buffer(
         Serializer<encoded_variable_t>& serializer,
         std::vector<int8_t>& byte_buf
 ) -> void;
-
-/**
- * Unpacks and serializes the given msgpack bytes using kv serializer.
- * @tparam encoded_variable_t
- * @param auto_gen_msgpack_bytes
- * @param user_gen_msgpack_bytes
- * @param serializer
- * @return Whether serialization succeeded.
- */
-template <typename encoded_variable_t>
-[[nodiscard]] auto unpack_and_serialize_msgpack_bytes(
-        vector<uint8_t> const& auto_gen_msgpack_bytes,
-        vector<uint8_t> const& user_gen_msgpack_bytes,
-        Serializer<encoded_variable_t>& serializer
-) -> bool;
 
 /**
  * @return A msgpack object handle that holds an empty msgpack map.
@@ -361,36 +348,6 @@ auto flush_and_clear_serializer_buffer(
     auto const view{serializer.get_ir_buf_view()};
     byte_buf.insert(byte_buf.cend(), view.begin(), view.end());
     serializer.clear_ir_buf();
-}
-
-template <typename encoded_variable_t>
-auto unpack_and_serialize_msgpack_bytes(
-        vector<uint8_t> const& auto_gen_msgpack_bytes,
-        vector<uint8_t> const& user_gen_msgpack_bytes,
-        Serializer<encoded_variable_t>& serializer
-) -> bool {
-    auto const auto_gen_msgpack_byte_handle{msgpack::unpack(
-            clp::size_checked_pointer_cast<char const>(auto_gen_msgpack_bytes.data()),
-            auto_gen_msgpack_bytes.size()
-    )};
-    auto const auto_gen_msgpack_obj{auto_gen_msgpack_byte_handle.get()};
-    if (msgpack::type::MAP != auto_gen_msgpack_obj.type) {
-        return false;
-    }
-
-    auto const user_gen_msgpack_byte_handle{msgpack::unpack(
-            clp::size_checked_pointer_cast<char const>(user_gen_msgpack_bytes.data()),
-            user_gen_msgpack_bytes.size()
-    )};
-    auto const user_gen_msgpack_obj{user_gen_msgpack_byte_handle.get()};
-    if (msgpack::type::MAP != user_gen_msgpack_obj.type) {
-        return false;
-    }
-
-    return serializer.serialize_msgpack_map(
-            auto_gen_msgpack_obj.via.map,
-            user_gen_msgpack_obj.via.map
-    );
 }
 
 auto create_msgpack_empty_map_obj_handle() -> msgpack::object_handle {
@@ -708,8 +665,8 @@ TEMPLATE_TEST_CASE(
     // Check if encoding type is properly read
     BufferReader ir_buffer{size_checked_pointer_cast<char const>(ir_buf.data()), ir_buf.size()};
     bool is_four_bytes_encoding;
-    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding) == IRErrorCode::IRErrorCode_Success
-    );
+    REQUIRE(get_encoding_type(ir_buffer, is_four_bytes_encoding)
+            == IRErrorCode::IRErrorCode_Success);
     REQUIRE(match_encoding_type<TestType>(is_four_bytes_encoding));
     REQUIRE(MagicNumberLength == ir_buffer.get_pos());
 
@@ -831,7 +788,8 @@ TEMPLATE_TEST_CASE(
             ir_buf.size()
     };
     REQUIRE(IRErrorCode::IRErrorCode_Success == deserialize_tag(incomplete_preamble_buffer, tag));
-    REQUIRE(IRErrorCode::IRErrorCode_Incomplete_IR
+    REQUIRE(
+            IRErrorCode::IRErrorCode_Incomplete_IR
             == deserialize_log_event<TestType>(incomplete_preamble_buffer, tag, message, timestamp)
     );
 }
@@ -1143,7 +1101,7 @@ TEMPLATE_TEST_CASE(
     }
     auto result = log_event_deserializer.deserialize_log_event();
     REQUIRE(result.has_error());
-    REQUIRE(std::errc::no_message_available == result.error());
+    REQUIRE(std::errc::no_message == result.error());
 }
 
 TEMPLATE_TEST_CASE(

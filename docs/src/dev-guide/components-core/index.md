@@ -9,7 +9,8 @@ CLP core is the low-level component that performs compression, decompression, an
 * A recent compiler that fully supports C++20 features such as
   * std::span
   * std::source_location
-* [Task](https://taskfile.dev/) >= 3.38.0
+* [Task] >= 3.38.0 and < 3.43.0
+  * We constrain the version due to unresolved [issues][clp-issue-872].
 
 To build, we require some source dependencies, packages from package managers, and libraries built
 from source.
@@ -24,27 +25,32 @@ tools/scripts/deps-download/init.sh
 
 ### Source Dependencies
 
-We use both git submodules and third-party source packages. To download all, run this `task`
-command:
+To get all dependencies required by CLP core, run the `deps:core` task:
 
 ```shell
 task deps:core
 ```
 
-This will download:
-* [abseil-cpp](https://github.com/abseil/abseil-cpp) (20230802.1)
-* [ANTLR](https://www.antlr.org) (v4.13.1)
-* [Catch2](https://github.com/catchorg/Catch2.git) (v2.13.7)
-* [date](https://github.com/HowardHinnant/date.git) (v3.0.1)
-* [json](https://github.com/nlohmann/json.git) (v3.11.3)
-* [log-surgeon](https://github.com/y-scope/log-surgeon) (f801a3f)
-* [outcome](https://github.com/ned14/outcome) (v2.2.9)
-* [simdjson](https://github.com/simdjson/simdjson) (v3.6.3)
-* [SQLite3](https://www.sqlite.org/download.html) (v3.36.0)
-* [uftcpp](https://github.com/nemtrif/utfcpp.git) (v4.0.6)
-* [yaml-cpp](https://github.com/jbeder/yaml-cpp.git) (v0.7.0)
-* [yscope-log-viewer](https://github.com/y-scope/yscope-log-viewer.git) (969ff35)
-* [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp.git) (2ac1757)
+The task will download, build, and install (within the build directory) the following libraries:
+
+| Library                                                               | Version/commit |
+|-----------------------------------------------------------------------|----------------|
+| [abseil-cpp](https://github.com/abseil/abseil-cpp)                    | 20230802.1     |
+| [ANTLR](https://www.antlr.org)                                        | v4.13.1        |
+| [Catch2](https://github.com/catchorg/Catch2.git)                      | v2.13.7        |
+| [date](https://github.com/HowardHinnant/date.git)                     | v3.0.1         |
+| [fmt](https://github.com/fmtlib/fmt)                                  | v8.0.1         |
+| [json](https://github.com/nlohmann/json.git)                          | v3.11.3        |
+| [log-surgeon](https://github.com/y-scope/log-surgeon)                 | f801a3f        |
+| [mongo-cxx-driver](https://github.com/mongodb/mongo-cxx-driver)       | r3.10.2        |
+| [outcome](https://github.com/ned14/outcome)                           | v2.2.9         |
+| [simdjson](https://github.com/simdjson/simdjson)                      | v3.6.3         |
+| [spdlog](https://github.com/gabime/spdlog)                            | v1.9.2         |
+| [SQLite3](https://www.sqlite.org/download.html)                       | v3.36.0        |
+| [uftcpp](https://github.com/nemtrif/utfcpp.git)                       | v4.0.6         |
+| [yaml-cpp](https://github.com/jbeder/yaml-cpp.git)                    | v0.7.0         |
+| [yscope-log-viewer](https://github.com/y-scope/yscope-log-viewer.git) | 969ff35        |
+| [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp.git)             | 2ac1757        |
 
 ### Environment
 
@@ -107,4 +113,6 @@ ubuntu-jammy-deps-install
 regex-utils
 :::
 
+[clp-issue-872]: https://github.com/y-scope/clp/issues/872
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[Task]: https://taskfile.dev/

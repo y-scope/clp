@@ -4,7 +4,8 @@
 #include <filesystem>
 #include <sstream>
 
-#include <json/single_include/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
 #include "../clp/streaming_archive/Constants.hpp"
 #include "archive_constants.hpp"
@@ -58,6 +59,11 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
 }
 
 void ArchiveWriter::close() {
+    if (m_range_open) {
+        if (auto const rc = close_current_range(); ErrorCodeSuccess != rc) {
+            throw OperationFailed(rc, __FILENAME__, __LINE__);
+        }
+    }
     auto var_dict_compressed_size = m_var_dict->close();
     auto log_dict_compressed_size = m_log_dict->close();
     auto array_dict_compressed_size = m_array_dict->close();
@@ -145,8 +151,12 @@ void ArchiveWriter::write_archive_metadata(
 
     ZstdCompressor compressor;
     compressor.open(archive_writer, m_compression_level);
-    uint8_t const num_packets{3U};
-    compressor.write_numeric_value(num_packets);
+    uint8_t num_optional_packets{0ULL};
+    if (false == m_range_index_writer.empty()) {
+        ++num_optional_packets;
+    }
+    uint8_t const num_constant_packets{3U};
+    compressor.write_numeric_value<uint8_t>(num_constant_packets + num_optional_packets);
 
     // Write archive info
     ArchiveInfoPacket archive_info{.num_segments = 1};
@@ -172,6 +182,11 @@ void ArchiveWriter::write_archive_metadata(
     std::string encoded_timestamp_dict = timestamp_dict_stream.str();
     compressor.write_numeric_value(static_cast<uint32_t>(encoded_timestamp_dict.size()));
     compressor.write(encoded_timestamp_dict.data(), encoded_timestamp_dict.size());
+
+    // Write range index
+    if (auto rc = m_range_index_writer.write(compressor); ErrorCodeSuccess != rc) {
+        throw OperationFailed(rc, __FILENAME__, __LINE__);
+    }
 
     compressor.close();
 }

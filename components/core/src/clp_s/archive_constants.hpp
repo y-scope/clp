@@ -34,6 +34,15 @@ constexpr std::string_view cDefaultNamespace{""};
 constexpr std::string_view cRangeIndexNamespace{"$"};
 constexpr std::string_view cReservedNamespace1{"!"};
 constexpr std::string_view cReservedNamespace2{"#"};
+constexpr std::string_view cObjectSubtreeType{"object"};
+constexpr std::string_view cMetadataSubtreeType{"metadata"};
+
+// Metadata constants
+namespace range_index {
+constexpr std::string_view cFilename{"_filename"};
+constexpr std::string_view cFileSplitNumber{"_file_split_number"};
+constexpr std::string_view cArchiveCreatorId{"_archive_creator_id"};
+}  // namespace range_index
 
 namespace results_cache::decompression {
 constexpr char cPath[]{"path"};

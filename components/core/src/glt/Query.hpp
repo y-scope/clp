@@ -45,8 +45,8 @@ public:
 
     VariableDictionaryEntry const* get_var_dict_entry() const { return m_var_dict_entry; }
 
-    std::unordered_set<VariableDictionaryEntry const*> const& get_possible_var_dict_entries(
-    ) const {
+    std::unordered_set<VariableDictionaryEntry const*> const&
+    get_possible_var_dict_entries() const {
         return m_possible_var_dict_entries;
     }
 

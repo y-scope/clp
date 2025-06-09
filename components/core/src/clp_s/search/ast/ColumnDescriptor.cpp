@@ -59,7 +59,8 @@ std::shared_ptr<ColumnDescriptor> ColumnDescriptor::create_from_descriptors(
         DescriptorList const& descriptors,
         std::string_view descriptor_namespace
 ) {
-    return std::shared_ptr<ColumnDescriptor>(new ColumnDescriptor(descriptors, descriptor_namespace)
+    return std::shared_ptr<ColumnDescriptor>(
+            new ColumnDescriptor(descriptors, descriptor_namespace)
     );
 }
 
@@ -82,6 +83,10 @@ void ColumnDescriptor::print() const {
     }
     os << ">(";
 
+    if (m_subtree_type.has_value()) {
+        os << "subtree_type=\"" << m_subtree_type.value() << "\", ";
+    }
+    os << "namespace=\"" << m_namespace << "\", tokens=[";
     for (auto it = m_descriptors.begin(); it != m_descriptors.end();) {
         os << "\"" << (*it).get_token() << "\"";
 
@@ -90,7 +95,7 @@ void ColumnDescriptor::print() const {
             os << ", ";
         }
     }
-    os << ")";
+    os << "])";
 }
 
 void ColumnDescriptor::add_unresolved_tokens(DescriptorList::iterator it) {

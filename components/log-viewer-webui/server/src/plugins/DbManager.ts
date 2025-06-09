@@ -1,8 +1,3 @@
-import fastifyMongoDb from "@fastify/mongodb";
-import {
-    fastifyMysql,
-    MySQLPromisePool,
-} from "@fastify/mysql";
 import {encode as msgpackEncode} from "@msgpack/msgpack";
 import {
     FastifyInstance,
@@ -17,14 +12,16 @@ import {
 import {Nullable} from "../typings/common.js";
 import {
     DbManagerOptions,
+    StreamFileMongoDocument,
+    StreamFilesCollection,
+} from "../typings/DbManager.js";
+import {
     QUERY_JOB_STATUS,
     QUERY_JOB_STATUS_WAITING_STATES,
     QUERY_JOB_TYPE,
     QUERY_JOBS_TABLE_COLUMN_NAMES,
     QueryJob,
-    StreamFileMongoDocument,
-    StreamFilesCollection,
-} from "../typings/DbManager.js";
+} from "../typings/query.js";
 import {sleep} from "../utils/time.js";
 
 
@@ -68,8 +65,15 @@ class DbManager {
     }
 
     static async create (app: FastifyInstance, dbConfig: DbManagerOptions) {
-        const mysqlConnectionPool = await DbManager.#initMySql(app, dbConfig.mysqlConfig);
-        const {streamFilesCollection} = await DbManager.#initMongo(app, dbConfig.mongoConfig);
+        const mysqlConnectionPool = app.mysql.pool;
+        if ("undefined" === typeof app.mongo.db) {
+            throw new Error("MongoDB database not found");
+        }
+        const streamFilesCollection =
+            app.mongo.db.collection<StreamFileMongoDocument>(
+                dbConfig.mongoConfig.streamFilesCollectionName
+            );
+
         return new DbManager({
             app: app,
             mysqlConnectionPool: mysqlConnectionPool,
@@ -79,60 +83,14 @@ class DbManager {
     }
 
     /**
-     * Initializes the MySQL plugin.
+     * Submits a query to MySQL.
      *
-     * @param app
-     * @param config
-     * @return The MySQL connection pool created during initialization.
+     * @param queryString
+     * @return The result from MySQL.
      */
-    static async #initMySql (app: FastifyInstance, config: DbManagerOptions["mysqlConfig"]) {
-        try {
-            await app.register(fastifyMysql, {
-                promise: true,
-                connectionString: `mysql://${config.user}:${config.password}@${config.host}:` +
-                    `${config.port}/${config.database}`,
-            });
-        } catch (e: unknown) {
-            throw new Error(
-                `Failed to init MySql: ${e instanceof Error ?
-                    e.message :
-                    JSON.stringify(e)}`,
-                {cause: e}
-            );
-        }
-
-        return app.mysql.pool;
-    }
-
-    /**
-     * Initializes the MongoDB plugin.
-     *
-     * @param app
-     * @param config
-     * @return The MongoDB Collection objects created during initialization.
-     */
-    static async #initMongo (app: FastifyInstance, config: DbManagerOptions["mongoConfig"])
-        : Promise<{
-            streamFilesCollection: StreamFilesCollection;
-        }> {
-        try {
-            await app.register(fastifyMongoDb, {
-                forceClose: true,
-                url: `mongodb://${config.host}:${config.port}/${config.database}`,
-            });
-        } catch (e: unknown) {
-            throw new Error(
-                `Failed to init MongoDB: ${e instanceof Error ?
-                    e.message :
-                    JSON.stringify(e)}`,
-                {cause: e}
-            );
-        }
-        if ("undefined" === typeof app.mongo.db) {
-            throw new Error("Failed to initialize MongoDB plugin.");
-        }
-
-        return {streamFilesCollection: app.mongo.db.collection(config.streamFilesCollectionName)};
+    async queryMySql (queryString: string) {
+        const [result] = await this.#mysqlConnectionPool.query(queryString);
+        return result;
     }
 
 
@@ -271,11 +229,6 @@ const dbManagerPluginCallback: FastifyPluginAsync<DbManagerOptions> = async (app
 
 declare module "fastify" {
     interface FastifyInstance {
-
-        // The typing of `@fastify/mysql` needs to be manually specified.
-        // See https://github.com/fastify/fastify-mysql#typescript
-        mysql: MySQLPromisePool;
-
         dbManager: DbManager;
     }
 }

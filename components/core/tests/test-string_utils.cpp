@@ -2,7 +2,7 @@
 
 #include <boost/foreach.hpp>
 #include <boost/range/combine.hpp>
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch.hpp>
 #include <string_utils/string_utils.hpp>
 
 using clp::string_utils::clean_up_wildcard_search_string;
@@ -209,7 +209,8 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
             REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == false);
         }
 
-        GIVEN("MISSING matching literals in the beginning with both \"*\" and \"?\" in the middle"
+        GIVEN(
+                "MISSING matching literals in the beginning with both \"*\" and \"?\" in the middle"
         ) {
             tameString = "abcd", wildString = "b*?d";
             REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == false);

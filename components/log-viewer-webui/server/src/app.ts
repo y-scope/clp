@@ -1,21 +1,18 @@
-import process from "node:process";
-
 import {
-    fastify,
     FastifyInstance,
-    FastifyServerOptions,
+    FastifyPluginAsync,
 } from "fastify";
 
 import settings from "../settings.json" with {type: "json"};
 import DbManager from "./plugins/DbManager.js";
+import MongoSocketIoServer from "./plugins/MongoSocketIoServer/index.js";
 import S3Manager from "./plugins/S3Manager.js";
 import exampleRoutes from "./routes/example.js";
 import queryRoutes from "./routes/query.js";
 import staticRoutes from "./routes/static.js";
 
 
-interface AppProps {
-    fastifyOptions: FastifyServerOptions;
+interface AppPluginOptions {
     sqlDbUser: string;
     sqlDbPass: string;
 }
@@ -23,21 +20,20 @@ interface AppProps {
 /**
  * Creates the Fastify app with the given options.
  *
- * @param props
- * @param props.fastifyOptions
- * @param props.sqlDbUser
- * @param props.sqlDbPass
- * @return The created Fastify instance.
+ * TODO: Once old webui code is refactored to new modlular fastify style, this plugin should be
+ * removed.
+ *
+ * @param fastify
+ * @param opts
+ * @return
  */
-const app = async ({
-    fastifyOptions,
-    sqlDbUser,
-    sqlDbPass,
-}: AppProps): Promise<FastifyInstance> => {
-    const server = fastify(fastifyOptions);
-
+const FastifyV1App: FastifyPluginAsync<AppPluginOptions> = async (
+    fastify: FastifyInstance,
+    opts: AppPluginOptions
+) => {
+    const {sqlDbUser, sqlDbPass} = opts;
     if ("test" !== process.env.NODE_ENV) {
-        await server.register(DbManager, {
+        await fastify.register(DbManager, {
             mysqlConfig: {
                 database: settings.SqlDbName,
                 host: settings.SqlDbHost,
@@ -53,20 +49,24 @@ const app = async ({
                 port: settings.MongoDbPort,
             },
         });
-        await server.register(
+        await fastify.register(
             S3Manager,
             {
                 region: settings.StreamFilesS3Region,
                 profile: settings.StreamFilesS3Profile,
             }
         );
+        await fastify.register(MongoSocketIoServer, {
+            host: settings.MongoDbHost,
+            port: settings.MongoDbPort,
+            database: settings.MongoDbName,
+        });
     }
 
-    await server.register(staticRoutes);
-    await server.register(exampleRoutes);
-    await server.register(queryRoutes);
-
-    return server;
+    // Register the routes
+    await fastify.register(staticRoutes);
+    await fastify.register(exampleRoutes);
+    await fastify.register(queryRoutes);
 };
 
-export default app;
+export default FastifyV1App;

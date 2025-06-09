@@ -144,7 +144,7 @@ private:
 
     std::vector<ast::ColumnDescriptor*> m_wildcard_columns;
     std::map<ast::ColumnDescriptor*, std::set<int32_t>> m_wildcard_to_searched_basic_columns;
-    ast::LiteralTypeBitmask m_wildcard_type_mask{0};
+    ast::literal_type_bitmask_t m_wildcard_type_mask{0};
     std::unordered_set<int32_t> m_metadata_columns;
 
     std::stack<
