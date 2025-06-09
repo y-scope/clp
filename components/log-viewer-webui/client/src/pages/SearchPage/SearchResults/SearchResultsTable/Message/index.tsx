@@ -1,5 +1,5 @@
 import SyntaxHighlighter from "react-syntax-highlighter";
-import {qtcreatorLight} from "react-syntax-highlighter/dist/esm/styles/hljs";
+import {tomorrow} from "react-syntax-highlighter/dist/esm/styles/hljs";
 
 import {Typography} from "antd";
 
@@ -42,7 +42,7 @@ const Message = ({
             <Text>
                 <SyntaxHighlighter
                     customStyle={highlighterCustomStyles}
-                    style={qtcreatorLight}
+                    style={tomorrow}
                     wrapLongLines={true}
                     language={
                         CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE ?
