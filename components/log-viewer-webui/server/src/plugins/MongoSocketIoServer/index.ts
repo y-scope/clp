@@ -254,7 +254,8 @@ class MongoSocketIoServer {
         this.#addQueryIdToSubscribedList(queryId, socket.id);
         this.#fastify.log.info(
             `Socket:${socket.id} subscribed to query:${JSON.stringify(query)} ` +
-            `with options:${JSON.stringify(options)} on collection:${collectionName} with ID:${queryId}`
+            `with options:${JSON.stringify(options)} ` +
+            `on collection:${collectionName} with ID:${queryId}`
         );
     }
 

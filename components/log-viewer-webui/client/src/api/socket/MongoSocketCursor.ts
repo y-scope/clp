@@ -54,6 +54,7 @@ class MongoSocketCursor {
     async subscribe (onDataUpdate: (data: object[]) => void): Promise<void> {
         console.debug(
             `Subscribing to query: ${JSON.stringify(this.#query)} ` +
+            `with options:${JSON.stringify(this.#options)} ` +
             `on collection:${this.#collectionName}`
         );
 
@@ -87,7 +88,9 @@ class MongoSocketCursor {
         this.#queryId = response.data.queryId;
         console.debug(
             `Successfully subscribed to query: ${JSON.stringify(this.#query)} ` +
-            `on collection:${this.#collectionName} with MongoSocketIoQueryID:${this.#queryId}`
+            `with options:${JSON.stringify(this.#options)} ` +
+            `on collection:${this.#collectionName} ` +
+            `MongoSocketIoQueryID:${this.#queryId}`
         );
     }
 
