@@ -24,9 +24,6 @@ const SearchResultsTable = () => {
     const [tableHeight, setTableHeight] = useState<number>(0);
     const containerRef = useRef<HTMLDivElement>(null);
 
-    let length = searchResults ? searchResults.length : 0;
-    console.log(length);
-
     // Antd table requires a fixed height for virtual scrolling. The effect sets a fixed height
     // based on the window height, container top, and fixed padding.
     useEffect(() => {
