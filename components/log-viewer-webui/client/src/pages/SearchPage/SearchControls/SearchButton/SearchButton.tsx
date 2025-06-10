@@ -11,7 +11,7 @@ import SubmitButton from "./SubmitButton";
  */
 const SearchButton = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
-    
+
     return (
         (searchUiState === SEARCH_UI_STATE.QUERYING) ?
             <CancelButton/> :

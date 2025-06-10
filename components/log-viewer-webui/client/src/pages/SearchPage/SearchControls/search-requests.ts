@@ -5,7 +5,7 @@ import {
     QueryJobSchema,
     submitQuery,
 } from "../../../api/search";
-import useSearchStore, { SEARCH_STATE_DEFAULT } from "../SearchState/index";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState";
 import {SEARCH_UI_STATE} from "../SearchState/typings";
 
 
