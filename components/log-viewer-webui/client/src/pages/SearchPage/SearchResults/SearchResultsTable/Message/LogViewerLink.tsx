@@ -2,6 +2,7 @@ import {Link} from "react-router";
 
 import {LinkOutlined} from "@ant-design/icons";
 import {
+    theme,
     Tooltip,
     Typography,
 } from "antd";
@@ -29,25 +30,31 @@ const LogViewerLink = ({
     fileText,
     logEventIdx,
     streamId,
-}: LogViewerLinkProps) => (
-    <Tooltip title={"Open file"}>
-        <Typography.Link>
-            <Link
-                className={styles["linkIcon"] || ""}
-                target={"_blank"}
-                to={{
-                    pathname: "/streamFile",
-                    search:
-                        `?type=${encodeURIComponent(STREAM_TYPE)}` +
-                        `&streamId=${encodeURIComponent(streamId)}` +
-                        `&logEventIdx=${encodeURIComponent(logEventIdx)}`,
-                }}
-            >
-                <LinkOutlined/>
-                {fileText}
-            </Link>
-        </Typography.Link>
-    </Tooltip>
-);
+}: LogViewerLinkProps) => {
+    const {token} = theme.useToken();
+
+    return (
+        <Tooltip title={"Open file"}>
+            <Typography.Text>
+                <Link
+                    className={styles["linkIcon"] || ""}
+                    style={{color: token.colorLink}}
+                    target={"_blank"}
+                    to={{
+                        pathname: "/streamFile",
+                        search:
+                            `?type=${encodeURIComponent(STREAM_TYPE)}` +
+                            `&streamId=${encodeURIComponent(streamId)}` +
+                            `&logEventIdx=${encodeURIComponent(logEventIdx)}`,
+                    }}
+                >
+                    <LinkOutlined/>
+                    {fileText}
+                </Link>
+            </Typography.Text>
+        </Tooltip>
+    );
+};
+
 
 export default LogViewerLink;
