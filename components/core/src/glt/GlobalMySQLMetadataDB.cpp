@@ -12,7 +12,7 @@ using std::vector;
 
 namespace glt {
 namespace {
-// Type
+// Types
 enum class ArchivesTableFieldIndexes : uint16_t {
     Id = 0,
     BeginTimestamp,
