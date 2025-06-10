@@ -89,13 +89,17 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
 
     submitQuery(payload)
         .then((result) => {
-            let {searchJobId, aggregationJobId}  = result.data;
+            const {searchJobId, aggregationJobId} = result.data;
             store.updateSearchJobId(searchJobId);
             store.updateAggregationJobId(aggregationJobId);
             store.updateSearchUiState(SEARCH_UI_STATE.QUERYING);
-            console.debug("Search job created - ",
-                "Search job ID:", searchJobId,
-                "Aggregation job ID:", aggregationJobId);
+            console.debug(
+                "Search job created - ",
+                "Search job ID:",
+                searchJobId,
+                "Aggregation job ID:",
+                aggregationJobId
+            );
         })
         .catch((err: unknown) => {
             console.error("Failed to submit query:", err);
