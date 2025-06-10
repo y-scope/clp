@@ -30,7 +30,9 @@ const InputWithCaseSensitive = ({
             {...inputProps}
             suffix={
                 <CaseSensitiveToggle
-                    disabled={inputProps.disabled}
+                    {...(inputProps.disabled ?
+                        {disabled: inputProps.disabled} :
+                        {})}
                     isCaseSensitive={isCaseSensitive}
                     onCaseSensitiveChange={onCaseSensitiveChange}/>
             }/>

@@ -8,7 +8,7 @@ import {
 
 
 interface CaseSensitiveToggleProps {
-    disabled?: boolean | undefined;
+    disabled?: boolean;
     isCaseSensitive: boolean;
     onCaseSensitiveChange: (newValue: boolean) => void;
 
@@ -29,30 +29,29 @@ const CaseSensitiveToggle = ({
     isCaseSensitive,
     onCaseSensitiveChange,
 }: CaseSensitiveToggleProps) => {
-    const isDisabled = disabled ?? false;
-
     const handleButtonClick = useCallback(() => {
-        if (false === isDisabled) {
-            onCaseSensitiveChange(!isCaseSensitive);
-        }
+        onCaseSensitiveChange(!isCaseSensitive);
     }, [
-        isDisabled,
         isCaseSensitive,
         onCaseSensitiveChange,
     ]);
 
     return (
         <Tooltip
-            title={(isDisabled) ?
-                "" :
-                "Match case"}
+            title={"Match case"}
         >
             <Button
+                {...(disabled ?
+                    {disabled: disabled} :
+                    {})}
                 color={"default"}
-                disabled={isDisabled}
                 size={"small"}
                 icon={
-                    <Typography.Text disabled={isDisabled}>
+                    <Typography.Text
+                        {...(disabled ?
+                            {disabled: disabled} :
+                            {})}
+                    >
                         Aa
                     </Typography.Text>
                 }
@@ -64,5 +63,6 @@ const CaseSensitiveToggle = ({
     );
 };
 
-export default CaseSensitiveToggle;
+
 export type {CaseSensitiveToggleProps};
+export default CaseSensitiveToggle;
