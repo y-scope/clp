@@ -4,8 +4,7 @@ import {
     useState,
 } from "react";
 
-import {Table} from "antd";
-
+import VirtualTable from "../../../../components/VirtualTable";
 import useSearchStore from "../../SearchState/index";
 import {
     SearchResult,
@@ -57,16 +56,16 @@ const SearchResultsTable = () => {
     }, []);
 
     return (
-        <div ref={containerRef}>
-            <Table<SearchResult>
+        <div
+            ref={containerRef}
+            style={{outline: "none"}}
+        >
+            <VirtualTable<SearchResult>
                 columns={searchResultsTableColumns}
+                dataSource={searchResults || []}
                 pagination={false}
                 rowKey={(record) => record._id.toString()}
-                scroll={{y: tableHeight}}
-                virtual={true}
-                dataSource={searchResults ?
-                    searchResults :
-                    []}/>
+                scroll={{y: tableHeight}}/>
         </div>
     );
 };
