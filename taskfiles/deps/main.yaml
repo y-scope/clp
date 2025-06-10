@@ -86,8 +86,9 @@ tasks:
             - "-DCMAKE_CXX_STANDARD=20"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           LIB_NAME: "absl"
-          TARBALL_SHA256: "987ce98f02eefbaf930d6e38ab16aa05737234d7afbab2d5c4ea7adbe50c28ed"
-          TARBALL_URL: "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz"
+          TARBALL_SHA256: "7262daa7c1711406248c10f41026d685e88223bc92817d16fb93c19adb57f669"
+          TARBALL_URL: "https://github.com/abseil/abseil-cpp/releases/download/20250512.0/\
+                        abseil-cpp-20250512.0.tar.gz"
 
   antlr-jar:
     internal: true
@@ -277,8 +278,8 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           LIB_NAME: "simdjson"
-          TARBALL_SHA256: "afd8201cfb1abe927737d876441bb1f21730a9ee6078a1b8c6174e6463981fa3"
-          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.6.3.tar.gz"
+          TARBALL_SHA256: "07a1bb3587aac18fd6a10a83fe4ab09f1100ab39f0cb73baea1317826b9f9e0d"
+          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.13.0.tar.gz"
 
   spdlog:
     internal: true

@@ -14,17 +14,17 @@ import {highlighterCustomStyles} from "./utils";
 const {Text} = Typography;
 
 interface MessageProps {
-    filePath: string;
+    fileText: string;
     message: string;
     logEventIdx: number;
     streamId: string;
 }
 
 /**
- * Renders a message with syntax highlighting and a file path link.
+ * Renders a message with syntax highlighting and a link to original file.
  *
  * @param props
- * @param props.filePath
+ * @param props.fileText
  * @param props.logEventIdx
  * @param props.message
  * @param props.streamId
@@ -32,7 +32,7 @@ interface MessageProps {
  */
 const Message = ({
     message,
-    filePath,
+    fileText,
     streamId,
     logEventIdx,
 }: MessageProps) => {
@@ -54,7 +54,7 @@ const Message = ({
                 </SyntaxHighlighter>
             </Text>
             <LogViewerLink
-                filePath={filePath}
+                fileText={fileText}
                 logEventIdx={logEventIdx}
                 streamId={streamId}/>
         </>
