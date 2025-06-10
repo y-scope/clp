@@ -13,7 +13,7 @@
 
 #include <msgpack.hpp>
 #include <nlohmann/json.hpp>
-#include <outcome/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../ir/types.hpp"
 #include "../../time_types.hpp"
@@ -524,7 +524,7 @@ template <
 template <typename encoded_variable_t>
 auto Serializer<encoded_variable_t>::create(
         std::optional<nlohmann::json> optional_user_defined_metadata
-) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<encoded_variable_t>> {
+) -> ystdlib::error_handling::Result<Serializer<encoded_variable_t>> {
     static_assert(
             std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
             || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
@@ -796,10 +796,10 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
 // file
 template auto Serializer<eight_byte_encoded_variable_t>::create(
         std::optional<nlohmann::json> optional_user_defined_metadata
-) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<eight_byte_encoded_variable_t>>;
+) -> ystdlib::error_handling::Result<Serializer<eight_byte_encoded_variable_t>>;
 template auto Serializer<four_byte_encoded_variable_t>::create(
         std::optional<nlohmann::json> optional_user_defined_metadata
-) -> OUTCOME_V2_NAMESPACE::std_result<Serializer<four_byte_encoded_variable_t>>;
+) -> ystdlib::error_handling::Result<Serializer<four_byte_encoded_variable_t>>;
 
 template auto Serializer<eight_byte_encoded_variable_t>::change_utc_offset(UtcOffset utc_offset)
         -> void;
