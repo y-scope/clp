@@ -1,8 +1,8 @@
 import {SearchResultsMetadataDocument} from "@common/index.js";
 
-import settings from "../../../../settings.json" with { type: "json" };
 import MongoSocketCollection from "../../../api/socket/MongoSocketCollection";
 import {useCursor} from "../../../api/socket/useCursor";
+import {settings} from "../../../settings";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "./index";
 
 
@@ -51,5 +51,6 @@ const useResultsMetadata = () => {
 
     return resultsMetadata;
 };
+
 
 export {useResultsMetadata};

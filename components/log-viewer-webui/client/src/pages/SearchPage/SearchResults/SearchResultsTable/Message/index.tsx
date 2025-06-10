@@ -1,11 +1,14 @@
 import SyntaxHighlighter from "react-syntax-highlighter";
+import {tomorrow} from "react-syntax-highlighter/dist/esm/styles/hljs";
 
 import {Typography} from "antd";
 
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../.././../../../config";
 import LogViewerLink from "./LogViewerLink";
 import {highlighterCustomStyles} from "./utils";
-
-import "highlight.js/styles/intellij-light.css";
 
 
 const {Text} = Typography;
@@ -39,9 +42,13 @@ const Message = ({
             <Text>
                 <SyntaxHighlighter
                     customStyle={highlighterCustomStyles}
-                    language={"armasm"}
-                    useInlineStyles={false}
+                    style={tomorrow}
                     wrapLongLines={true}
+                    language={
+                        CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE ?
+                            "json" :
+                            "armasm"
+                    }
                 >
                     {message}
                 </SyntaxHighlighter>

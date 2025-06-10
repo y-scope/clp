@@ -11,7 +11,7 @@ import {
     CLP_STORAGE_ENGINES,
     SETTINGS_STORAGE_ENGINE,
 } from "../../../config";
-import useSearchStore from "../SearchState/index";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState/";
 import {SEARCH_UI_STATE} from "../SearchState/typings";
 import {unquoteString} from "./utils";
 
@@ -54,7 +54,7 @@ const handleClearResults = () => {
 const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
     const store = useSearchStore.getState();
 
-    // Buttons to submit a query should be disabled while an existing query is in progress.
+    // User should NOT be able to submit a new query while an existing query is in progress.
     if (
         store.searchUiState !== SEARCH_UI_STATE.DEFAULT &&
         store.searchUiState !== SEARCH_UI_STATE.DONE
@@ -63,9 +63,6 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
 
         return;
     }
-
-    handleClearResults();
-
 
     if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
         try {
@@ -84,6 +81,10 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
         }
     }
 
+    handleClearResults();
+
+    store.updateNumSearchResultsTable(SEARCH_STATE_DEFAULT.numSearchResultsTable);
+    store.updateNumSearchResultsTimeline(SEARCH_STATE_DEFAULT.numSearchResultsTimeline);
     store.updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 
     submitQuery(payload)
