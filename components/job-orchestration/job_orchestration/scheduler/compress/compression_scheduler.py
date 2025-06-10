@@ -24,8 +24,8 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
+    add_dataset,
     create_metadata_db_tables,
-    insert_new_datasets_table_entry,
 )
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
@@ -161,7 +161,34 @@ def _fetch_existing_datasets(
     table_prefix = clp_metadata_db_connection_config["table_prefix"]
     db_cursor.execute(f"SELECT name FROM `{table_prefix}{DATASETS_TABLE_SUFFIX}`")
     rows = db_cursor.fetchall()
-    return {str(row["name"]) for row in rows}
+    return {row["name"] for row in rows}
+
+
+def _register_dataset(
+    db_conn,
+    db_cursor,
+    table_prefix: str,
+    dataset_name: str,
+    clp_storage_type: StorageType,
+    archive_storage_directory: Path,
+    existing_datasets: Set[str],
+) -> None:
+    try:
+        add_dataset(
+            db_cursor,
+            table_prefix,
+            dataset_name,
+            clp_archive_output.storage.type,
+            archive_storage_directory,
+        )
+        create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
+        db_conn.commit()
+    except Exception as e:
+        # The current dataset is already registered in the metadata database.
+        logger.warn(f"Failed to register dataset `{dataset_name}`: {e}")
+        db_conn.rollback()
+        pass
+    existing_datasets.add(dataset_name)
 
 
 def search_and_schedule_new_tasks(
@@ -170,16 +197,16 @@ def search_and_schedule_new_tasks(
     clp_metadata_db_connection_config: Dict[str, Any],
     clp_storage_engine: StorageEngine,
     clp_archive_output: ArchiveOutput,
-    datasets_cache: Set[str],
+    existing_datasets: Set[str],
 ):
     """
-    For all jobs with PENDING status, split the job into tasks and schedule them.
+    For all jobs with PENDING status, splits the job into tasks and schedules them.
     :param db_conn:
     :param db_cursor:
     :param clp_metadata_db_connection_config:
     :param clp_storage_engine:
     :param clp_archive_output:
-    :param datasets_cache:
+    :param existing_datasets:
     """
     global scheduled_jobs
 
@@ -198,32 +225,22 @@ def search_and_schedule_new_tasks(
         table_prefix = clp_metadata_db_connection_config["table_prefix"]
         if StorageEngine.CLP_S == clp_storage_engine:
             dataset_name = input_config.dataset
-            if dataset_name not in datasets_cache:
+            if dataset_name not in existing_datasets:
                 archive_storage_directory: Path
                 if StorageType.S3 == clp_archive_output.storage.type:
                     s3_config = clp_archive_output.storage.s3_config
                     archive_storage_directory = Path(s3_config.key_prefix) / dataset_name
                 else:
                     archive_storage_directory = clp_archive_output.get_directory() / dataset_name
-
-                try:
-                    insert_new_datasets_table_entry(
-                        db_cursor,
-                        table_prefix,
-                        dataset_name,
-                        clp_archive_output.storage.type,
-                        archive_storage_directory,
-                    )
-                    create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
-                    db_conn.commit()
-                except Exception as e:
-                    # The current dataset is already registered in the metadata database.
-                    logger.warn(f"Failed to register dataset `{dataset_name}`: {e}")
-                    db_conn.rollback()
-                    pass
-
-                datasets_cache.add(dataset_name)
-
+                _register_dataset(
+                    db_conn,
+                    db_cursor,
+                    table_prefix,
+                    dataset_name,
+                    clp_archive_output.storage.type,
+                    archive_storage_directory,
+                    existing_datasets,
+                )
             table_prefix = f"{table_prefix}{dataset_name}_"
 
         paths_to_compress_buffer = PathsToCompressBuffer(
@@ -450,9 +467,15 @@ def main(argv):
             sql_adapter.database_config.get_clp_connection_params_and_type(True)
         )
         clp_storage_engine = clp_config.package.storage_engine
-        datasets_cache: Set[str] = set()
+        existing_datasets: Set[str] = set()
         if StorageEngine.CLP_S == clp_storage_engine:
-            datasets_cache = _fetch_existing_datasets(db_cursor, clp_metadata_db_connection_config)
+            try:
+                existing_datasets = _fetch_existing_datasets(
+                    db_cursor, clp_metadata_db_connection_config
+                )
+            except Exception as ex:
+                logger.error(ex)
+                return -1
 
         # Start Job Processing Loop
         while True:
@@ -463,7 +486,7 @@ def main(argv):
                     clp_metadata_db_connection_config,
                     clp_storage_engine,
                     clp_config.archive_output,
-                    datasets_cache,
+                    existing_datasets,
                 )
                 poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)

@@ -117,7 +117,7 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
     )
 
 
-def insert_new_datasets_table_entry(
+def add_dataset(
     db_cursor,
     table_prefix: str,
     dataset_name: str,
@@ -125,13 +125,13 @@ def insert_new_datasets_table_entry(
     dataset_archive_storage_directory: Path,
 ) -> None:
     """
-    Inserts an entry that represents a new dataset into the datasets information table.
+    Inserts a new dataset into the `datasets` table.
 
     :param db_cursor: The database cursor to execute the table row insertion.
     :param table_prefix: A string to prepend to the table name.
-    :param dataset_name: Name of the dataset to register.
+    :param dataset_name:
     :param archive_storage_type:
-    :param dataset_archive_storage_directory: Path to the storage directory for this dataset's archives.
+    :param dataset_archive_storage_directory:
     """
     query = f"""INSERT INTO `{table_prefix}{DATASETS_TABLE_SUFFIX}`
                 (name, archive_storage_type, archive_storage_directory)
