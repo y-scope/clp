@@ -623,7 +623,6 @@ set(SOURCE_FILES_unitTest
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
-        tests/catch2_test_utils.cpp
         tests/clp_s_test_utils.cpp
         tests/clp_s_test_utils.hpp
         tests/LogSuppressor.hpp
@@ -699,9 +698,6 @@ target_link_libraries(unitTest
         ystdlib::error_handling
         ${LIBLZMA_LIBRARIES}
         ZStd::ZStd
-        )
-target_compile_definitions(unitTest
-        PRIVATE CATCH_CONFIG_CPP17_STRING_VIEW
         )
 target_compile_features(unitTest
         PRIVATE cxx_std_20
