@@ -1,5 +1,6 @@
 type Settings = {
     MongoDbSearchResultsMetadataCollectionName: string;
+    ClpStorageEngine: string;
 };
 
 /**
