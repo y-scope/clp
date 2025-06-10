@@ -119,7 +119,7 @@ const handleQueryCancel = (payload: QueryJobSchema) => {
     cancelQuery(
         payload
     ).then(() => {
-        console.log("Query cancelled successfully");
+        console.debug("Query cancelled successfully");
     })
         .catch((err: unknown) => {
             console.error("Failed to cancel query:", err);

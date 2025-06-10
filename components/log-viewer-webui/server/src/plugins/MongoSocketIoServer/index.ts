@@ -201,7 +201,7 @@ class MongoSocketIoServer {
         let watcherCollection = this.#collections.get(collectionName);
         if ("undefined" === typeof watcherCollection) {
             watcherCollection = new MongoWatcherCollection(collectionName, this.#mongoDb);
-            this.#fastify.log.info(`Initialize Mongo watcher collection:${collectionName}.`);
+            this.#fastify.log.debug(`Initialize Mongo watcher collection:${collectionName}.`);
             this.#collections.set(collectionName, watcherCollection);
         }
 
@@ -226,7 +226,7 @@ class MongoSocketIoServer {
     ): Promise<void> {
         const {collectionName, query, options} = requestArgs;
 
-        this.#fastify.log.info(
+        this.#fastify.log.debug(
             `Socket:${socket.id} requested query:${JSON.stringify(query)} ` +
             `with options:${JSON.stringify(options)} to collection:${collectionName}`
         );
@@ -254,7 +254,7 @@ class MongoSocketIoServer {
         this.#addQueryIdToSubscribedList(queryId, socket.id);
         this.#fastify.log.info(
             `Socket:${socket.id} subscribed to query:${JSON.stringify(query)} ` +
-            `on collection:${collectionName} with ID:${queryId}`
+            `with options:${JSON.stringify(options)} on collection:${collectionName} with ID:${queryId}`
         );
     }
 
@@ -310,7 +310,7 @@ class MongoSocketIoServer {
         this.#fastify.log.info(`Socket ${socket.id} unsubscribed from query:${queryId}`);
 
         if (isLastSubscriber) {
-            this.#fastify.log.info(`Query:${queryId} deleted from query map.`);
+            this.#fastify.log.debug(`Query:${queryId} deleted from query map.`);
             this.#queryIdToQueryHashMap.delete(queryId);
         }
 
@@ -320,7 +320,7 @@ class MongoSocketIoServer {
         );
 
         if (false === collection.isReferenced()) {
-            this.#fastify.log.info(`Collection:${queryParams.collectionName}` +
+            this.#fastify.log.debug(`Collection:${queryParams.collectionName}` +
             " deallocated from server.");
             this.#collections.delete(queryParams.collectionName);
         }
@@ -338,7 +338,7 @@ class MongoSocketIoServer {
         requestArgs: {queryId: number}
     ): Promise<void> {
         const {queryId} = requestArgs;
-        this.#fastify.log.info(
+        this.#fastify.log.debug(
             `Socket:${socket.id} requested unsubscription to query:${queryId}`
         );
 
