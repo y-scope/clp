@@ -38,9 +38,9 @@ set(
         ../ArchiveReaderAdaptor.hpp
         ../ColumnReader.cpp
         ../ColumnReader.hpp
+        ../DictionaryReader.hpp
         ../DictionaryEntry.cpp
         ../DictionaryEntry.hpp
-        ../DictionaryReader.hpp
         ../FileReader.cpp
         ../FileReader.hpp
         ../FileWriter.cpp
@@ -73,13 +73,11 @@ set(
         ../ZstdDecompressor.hpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
-        constants.hpp
         indexer.cpp
         IndexManager.cpp
         IndexManager.hpp
         MySQLIndexStorage.cpp
         MySQLIndexStorage.hpp
-        types.hpp
 )
 
 add_executable(indexer ${INDEXER_SOURCES})

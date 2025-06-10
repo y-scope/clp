@@ -1,5 +1,7 @@
 #include "MySQLIndexStorage.hpp"
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
 #include <memory>
@@ -16,8 +18,20 @@
 #include "../ErrorCode.hpp"
 #include "../SchemaTree.hpp"
 #include "../TraceableException.hpp"
-#include "constants.hpp"
-#include "types.hpp"
+
+namespace {
+// Types
+enum class ColumnMetadataTableFieldIndexes : uint8_t {
+    Name = 0,
+    Type,
+    Length,
+};
+
+// Constants
+constexpr std::string_view cColumnMetadataTableSuffix = "column_metadata";
+constexpr std::array<std::string_view, static_cast<size_t>(ColumnMetadataTableFieldIndexes::Length)>
+        cColumnMetadataTableFieldNames = {"name", "type"};
+}  // namespace
 
 namespace clp_s::indexer {
 MySQLIndexStorage::MySQLIndexStorage(
