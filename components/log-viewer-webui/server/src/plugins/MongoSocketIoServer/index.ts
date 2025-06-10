@@ -252,7 +252,10 @@ class MongoSocketIoServer {
         callback({data: {queryId, initialDocuments}});
 
         this.#addQueryIdToSubscribedList(queryId, socket.id);
-        this.#fastify.log.info(`Socket:${socket.id} subscribed to queryID:${queryId}.`);
+        this.#fastify.log.info(
+            `Socket:${socket.id} subscribed to query:${JSON.stringify(query)} ` +
+            `on collection:${collectionName} with ID:${queryId}`
+        );
     }
 
     /**
@@ -288,7 +291,7 @@ class MongoSocketIoServer {
     #unsubscribe (socket: MongoCustomSocket, queryId: number) {
         const queryHash: string | undefined = this.#queryIdToQueryHashMap.get(queryId);
         if ("undefined" === typeof queryHash) {
-            this.#fastify.log.error(`QueryId ${queryId} not found in query map`);
+            this.#fastify.log.error(`query:${queryId} not found in query map`);
 
             return;
         }
@@ -302,11 +305,12 @@ class MongoSocketIoServer {
             return;
         }
 
+
         const isLastSubscriber = collection.unsubscribe(queryId, socket.id);
-        this.#fastify.log.info(`Socket ${socket.id} unsubscribed from query ${queryId}`);
+        this.#fastify.log.info(`Socket ${socket.id} unsubscribed from query:${queryId}`);
 
         if (isLastSubscriber) {
-            this.#fastify.log.info(`QueryID:${queryId} deleted from query map.`);
+            this.#fastify.log.info(`Query:${queryId} deleted from query map.`);
             this.#queryIdToQueryHashMap.delete(queryId);
         }
 
@@ -335,7 +339,7 @@ class MongoSocketIoServer {
     ): Promise<void> {
         const {queryId} = requestArgs;
         this.#fastify.log.info(
-            `Socket:${socket.id} requested unsubscription to QueryId:${queryId}`
+            `Socket:${socket.id} requested unsubscription to query:${queryId}`
         );
 
         const subscribedQueryIds = this.#subscribedQueryIdsMap.get(socket.id);

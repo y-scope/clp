@@ -1,4 +1,4 @@
-import MongoCollectionSocket from "../../../../api/socket/MongoCollectionSocket";
+import MongoSocketCollection from "../../../../api/socket/MongoSocketCollection";
 import {useCursor} from "../../../../api/socket/useCursor";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
 import {SearchResult} from "./typings";
@@ -20,7 +20,11 @@ const useSearchResults = () => {
                 return null;
             }
 
-            const collection = new MongoCollectionSocket(searchJobId.toString());
+            console.log(
+                `Subscribing to updates to search results with job ID: ${searchJobId}`
+            );
+
+            const collection = new MongoSocketCollection(searchJobId.toString());
             return collection.find({}, {});
         },
         [searchJobId]
