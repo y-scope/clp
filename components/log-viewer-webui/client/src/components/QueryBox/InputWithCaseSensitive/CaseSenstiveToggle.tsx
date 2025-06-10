@@ -11,7 +11,6 @@ interface CaseSensitiveToggleProps {
     disabled: boolean;
     isCaseSensitive: boolean;
     onCaseSensitiveChange: (newValue: boolean) => void;
-
 }
 
 /**
