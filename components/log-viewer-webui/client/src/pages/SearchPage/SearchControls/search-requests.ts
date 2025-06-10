@@ -1,3 +1,5 @@
+import {message} from "antd";
+
 import {
     cancelQuery,
     clearQueryResults,
@@ -5,8 +7,13 @@ import {
     QueryJobSchema,
     submitQuery,
 } from "../../../api/search";
-import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState";
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../../../config";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState/";
 import {SEARCH_UI_STATE} from "../SearchState/typings";
+import {unquoteString} from "./utils";
 
 
 /**
@@ -55,6 +62,23 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
         console.error("Cannot submit query while existing query is in progress.");
 
         return;
+    }
+
+    if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
+        try {
+            payload.queryString = unquoteString(payload.queryString, '"', "\\");
+            if ("" === payload.queryString) {
+                message.error("Query string cannot be empty.");
+
+                return;
+            }
+        } catch (e: unknown) {
+            message.error(`Error processing query string: ${e instanceof Error ?
+                e.message :
+                String(e)}`);
+
+            return;
+        }
     }
 
     handleClearResults();
