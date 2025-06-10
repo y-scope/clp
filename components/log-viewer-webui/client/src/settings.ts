@@ -1,3 +1,6 @@
+import axios from "axios";
+
+
 type Settings = {
     MongoDbSearchResultsMetadataCollectionName: string;
     ClpStorageEngine: string;
@@ -14,8 +17,8 @@ type Settings = {
  */
 const loadSettings = async (): Promise<Settings> => {
     try {
-        const response = await fetch("settings.json");
-        return (await response.json()) as Settings;
+        const response = await axios.get<Settings>("settings.json");
+        return response.data;
     } catch (e: unknown) {
         throw new Error("Failed to fetch settings.", {cause: e});
     }
