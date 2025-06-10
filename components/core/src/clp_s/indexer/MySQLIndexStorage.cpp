@@ -6,6 +6,7 @@
 #include <iterator>
 #include <memory>
 #include <string>
+#include <system_error>
 #include <vector>
 
 #include <fmt/core.h>
@@ -15,9 +16,7 @@
 #include "../../clp/database_utils.hpp"
 #include "../../clp/MySQLPreparedStatement.hpp"
 #include "../../clp/type_utils.hpp"
-#include "../ErrorCode.hpp"
 #include "../SchemaTree.hpp"
-#include "../TraceableException.hpp"
 
 namespace {
 // Types
@@ -101,7 +100,11 @@ void MySQLIndexStorage::add_field(std::string const& field_name, NodeType field_
     );
 
     if (false == m_insert_field_statement->execute()) {
-        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+        // TODO: determine if we need more SQL error granularity
+        throw OperationFailed(
+                std::make_error_code(std::errc::io_error),
+                "SQL insertion statement failed."
+        );
     }
 }
 }  // namespace clp_s::indexer

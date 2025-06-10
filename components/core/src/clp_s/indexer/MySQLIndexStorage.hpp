@@ -5,11 +5,11 @@
 #include <string>
 #include <string_view>
 
+#include <ystdlib/error_handling/TraceableException.hpp>
+
 #include "../../clp/MySQLDB.hpp"
 #include "../../clp/MySQLPreparedStatement.hpp"
-#include "../ErrorCode.hpp"
 #include "../SchemaTree.hpp"
-#include "../TraceableException.hpp"
 
 namespace clp_s::indexer {
 /**
@@ -17,13 +17,7 @@ namespace clp_s::indexer {
  */
 class MySQLIndexStorage {
 public:
-    // Types
-    class OperationFailed : public TraceableException {
-    public:
-        // Constructors
-        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
-    };
+    YSTDLIB_ERROR_HANDLING_DEFINE_TRACEABLE_EXCEPTION(OperationFailed);
 
     // Constructor
     MySQLIndexStorage(
