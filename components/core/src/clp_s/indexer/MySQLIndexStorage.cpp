@@ -60,9 +60,7 @@ MySQLIndexStorage::MySQLIndexStorage(
                             cColumnMetadataTableFieldNames.end()
                     }
             ),
-            clp::get_placeholders_sql(
-                    clp::enum_to_underlying_type(ColumnMetadataTableFieldIndexes::Length)
-            )
+            clp::get_placeholders_sql(cColumnMetadataTableFieldNames.size())
     );
     SPDLOG_DEBUG("{:.{}}", statement_buffer.data(), statement_buffer.size());
     m_insert_field_statement = std::make_unique<clp::MySQLPreparedStatement>(
