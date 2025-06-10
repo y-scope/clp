@@ -8,7 +8,7 @@ import {
 
 
 interface CaseSensitiveToggleProps {
-    disabled?: boolean;
+    disabled: boolean;
     isCaseSensitive: boolean;
     onCaseSensitiveChange: (newValue: boolean) => void;
 
@@ -41,17 +41,11 @@ const CaseSensitiveToggle = ({
             title={"Match case"}
         >
             <Button
-                {...(disabled ?
-                    {disabled: disabled} :
-                    {})}
                 color={"default"}
+                disabled={disabled}
                 size={"small"}
                 icon={
-                    <Typography.Text
-                        {...(disabled ?
-                            {disabled: disabled} :
-                            {})}
-                    >
+                    <Typography.Text disabled={disabled}>
                         Aa
                     </Typography.Text>
                 }
