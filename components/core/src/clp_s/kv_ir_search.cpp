@@ -10,9 +10,9 @@
 
 #include <fmt/core.h>
 #include <nlohmann/json_fwd.hpp>
-#include <outcome/outcome.hpp>
 #include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/ErrorCode.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../clp/ErrorCode.hpp"
 #include "../clp/ffi/ir_stream/Deserializer.hpp"
@@ -60,7 +60,7 @@ public:
      */
     [[nodiscard]] static auto
     create(CommandLineArguments const& command_line_arguments, int reducer_socket_fd)
-            -> outcome_v2::std_result<IrUnitHandler>;
+            -> ystdlib::error_handling::Result<IrUnitHandler>;
 
     // Delete copy constructor and assignment operator
     IrUnitHandler(IrUnitHandler const&) = delete;
@@ -120,12 +120,12 @@ private:
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<search::ast::Expression> query,
         int reducer_socket_fd
-) -> outcome_v2::std_result<void>;
+) -> ystdlib::error_handling::Result<void>;
 
 auto IrUnitHandler::create(
         CommandLineArguments const& command_line_arguments,
         [[maybe_unused]] int reducer_socket_fd
-) -> outcome_v2::std_result<IrUnitHandler> {
+) -> ystdlib::error_handling::Result<IrUnitHandler> {
     switch (command_line_arguments.get_output_handler_type()) {
         case CommandLineArguments::OutputHandlerType::Stdout:
             break;
@@ -191,20 +191,19 @@ auto deserialize_and_search_kv_ir_stream(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<search::ast::Expression> query,
         int reducer_socket_fd
-) -> outcome_v2::std_result<void> {
+) -> ystdlib::error_handling::Result<void> {
     auto trivial_new_projected_schema_tree_node_callback
-            = [](
-                      [[maybe_unused]] bool is_auto_generated,
-                      [[maybe_unused]] SchemaTree::Node::id_t node_id,
-                      [[maybe_unused]] std::string_view projected_key_path
-              ) -> outcome_v2::std_result<void> { return outcome_v2::success(); };
+            = []([[maybe_unused]] bool is_auto_generated,
+                 [[maybe_unused]] SchemaTree::Node::id_t node_id,
+                 [[maybe_unused]] std::string_view projected_key_path)
+            -> ystdlib::error_handling::Result<void> { return ystdlib::error_handling::success(); };
     using QueryHandlerType = clp::ffi::ir_stream::search::QueryHandler<
             decltype(trivial_new_projected_schema_tree_node_callback)>;
 
-    auto ir_unit_handler{
-            OUTCOME_TRYX(IrUnitHandler::create(command_line_arguments, reducer_socket_fd))
-    };
-    auto query_handler{OUTCOME_TRYX(
+    auto ir_unit_handler{YSTDLIB_ERROR_HANDLING_TRYX(
+            IrUnitHandler::create(command_line_arguments, reducer_socket_fd)
+    )};
+    auto query_handler{YSTDLIB_ERROR_HANDLING_TRYX(
             QueryHandlerType::create(
                     trivial_new_projected_schema_tree_node_callback,
                     std::move(query),
@@ -223,10 +222,10 @@ auto deserialize_and_search_kv_ir_stream(
 
     auto& deserializer{deserializer_result.value()};
     while (IrUnitType::EndOfStream
-           != OUTCOME_TRYX(deserializer.deserialize_next_ir_unit(stream_reader)))
+           != YSTDLIB_ERROR_HANDLING_TRYX(deserializer.deserialize_next_ir_unit(stream_reader)))
     {}
 
-    return outcome_v2::success();
+    return ystdlib::error_handling::success();
 }
 }  // namespace
 
@@ -235,7 +234,7 @@ auto search_kv_ir_stream(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<search::ast::Expression> query,
         int reducer_socket_fd
-) -> outcome_v2::std_result<void> {
+) -> ystdlib::error_handling::Result<void> {
     if (false == command_line_arguments.get_projection_columns().empty()) {
         SPDLOG_ERROR("kv-ir search: Projection support is not implemented.");
         return KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented};
@@ -268,7 +267,7 @@ auto search_kv_ir_stream(
         clp::streaming_compression::zstd::Decompressor decompressor;
         constexpr size_t cReaderBufferSize{64L * 1024L};  // 64 KB
         decompressor.open(*raw_reader, cReaderBufferSize);
-        OUTCOME_TRYV(deserialize_and_search_kv_ir_stream(
+        YSTDLIB_ERROR_HANDLING_TRYV(deserialize_and_search_kv_ir_stream(
                 decompressor,
                 command_line_arguments,
                 std::move(query),
@@ -293,7 +292,7 @@ auto search_kv_ir_stream(
         return KvIrSearchError{KvIrSearchErrorEnum::ClpLegacyError};
     }
 
-    return outcome_v2::success();
+    return ystdlib::error_handling::success();
 }
 }  // namespace clp_s
 
