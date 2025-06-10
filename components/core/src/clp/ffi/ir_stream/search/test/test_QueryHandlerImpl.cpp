@@ -7,7 +7,8 @@
 #include <utility>
 #include <vector>
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <fmt/core.h>
 #include <fmt/format.h>
 #include <ystdlib/error_handling/Result.hpp>

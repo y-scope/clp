@@ -3,7 +3,8 @@
 #include <string>
 #include <string_view>
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <fmt/format.h>
 #include <msgpack.hpp>
 #include <nlohmann/json.hpp>
