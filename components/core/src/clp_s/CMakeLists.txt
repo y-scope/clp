@@ -87,11 +87,6 @@ add_library(
 )
 add_library(clp_s::clp_dependencies ALIAS clp_s_clp_dependencies)
 target_compile_features(clp_s_clp_dependencies PRIVATE cxx_std_20)
-target_include_directories(
-        clp_s_clp_dependencies
-        PUBLIC
-        "${CLP_OUTCOME_INCLUDE_DIRECTORY}"
-)
 target_link_libraries(
         clp_s_clp_dependencies
         PUBLIC
@@ -376,10 +371,6 @@ add_executable(
         ${CLP_S_EXE_SOURCES}
 )
 target_compile_features(clp-s PRIVATE cxx_std_20)
-target_include_directories(clp-s
-        PRIVATE
-        "${CLP_OUTCOME_INCLUDE_DIRECTORY}"
-)
 target_link_libraries(
         clp-s
         PRIVATE
