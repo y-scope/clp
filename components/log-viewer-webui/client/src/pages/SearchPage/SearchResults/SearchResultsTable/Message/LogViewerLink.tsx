@@ -6,7 +6,7 @@ import {
     Typography,
 } from "antd";
 
-import {STREAM_TYPE} from "../utils";
+import {STREAM_TYPE} from "../../../../../config";
 import styles from "./index.module.css";
 
 
