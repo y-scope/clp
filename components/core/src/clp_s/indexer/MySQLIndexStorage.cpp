@@ -17,6 +17,7 @@
 #include "../SchemaTree.hpp"
 #include "../TraceableException.hpp"
 #include "constants.hpp"
+#include "types.hpp"
 
 namespace clp_s::indexer {
 MySQLIndexStorage::MySQLIndexStorage(
