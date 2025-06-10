@@ -11,22 +11,22 @@ import styles from "./index.module.css";
 
 
 interface LogViewerLinkProps {
-    filePath: string;
+    fileText: string;
     logEventIdx: number;
     streamId: string;
 }
 
 /**
- * Render a link to the log viewer with open file.
+ * Render a link to the log viewer.
  *
  * @param props
- * @param props.filePath
+ * @param props.fileText
  * @param props.logEventIdx
  * @param props.streamId
  * @return
  */
 const LogViewerLink = ({
-    filePath,
+    fileText,
     logEventIdx,
     streamId,
 }: LogViewerLinkProps) => (
@@ -44,7 +44,7 @@ const LogViewerLink = ({
                 }}
             >
                 <LinkOutlined/>
-                {filePath}
+                {fileText}
             </Link>
         </Typography.Link>
     </Tooltip>
