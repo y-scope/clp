@@ -34,7 +34,7 @@ const TimeRangeInput = () => {
     const handleSelectChange = (newTimeRangeOption: TIME_RANGE_OPTION) => {
         updateTimeRangeOption(newTimeRangeOption);
         if (newTimeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
-            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[newTimeRangeOption];
+            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[newTimeRangeOption]();
             updateTimeRange(dayJsRange);
         }
     };
