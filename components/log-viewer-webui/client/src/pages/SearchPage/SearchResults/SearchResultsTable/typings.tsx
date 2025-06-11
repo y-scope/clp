@@ -30,10 +30,16 @@ interface SearchResult {
 const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]> = [
     {
         dataIndex: "timestamp",
-        defaultSortOrder: "ascend",
+        defaultSortOrder: "descend",
         key: "timestamp",
         render: (timestamp: number) => dayjs(timestamp).format(DATETIME_FORMAT_TEMPLATE),
-        sorter: (a, b) => a.timestamp - b.timestamp,
+        sorter: (a, b) => {
+            const timestampDiff = a.timestamp - b.timestamp;
+            if (timestampDiff !== 0) {
+                return timestampDiff;
+            }
+            return a._id.localeCompare(b._id);
+        },
 
         // Specifying a third sort direction removes ability for user to cancel sorting.
         sortDirections: [
@@ -68,8 +74,15 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
  */
 const TABLE_BOTTOM_PADDING = 75;
 
+/**
+ * The maximum number of results to retrieve for a search.
+ */
+const SEARCH_MAX_NUM_RESULTS = 1000;
+
 
 export type {SearchResult};
 export {
-    searchResultsTableColumns, TABLE_BOTTOM_PADDING,
+    searchResultsTableColumns,
+    TABLE_BOTTOM_PADDING,
+    SEARCH_MAX_NUM_RESULTS
 };
