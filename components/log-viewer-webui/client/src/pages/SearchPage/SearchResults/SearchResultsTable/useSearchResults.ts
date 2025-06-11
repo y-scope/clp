@@ -31,7 +31,7 @@ const useSearchResults = () => {
                         "desc",
                     ],
                     [
-                        "id",
+                        "_id",
                         "desc",
                     ],
                 ],
