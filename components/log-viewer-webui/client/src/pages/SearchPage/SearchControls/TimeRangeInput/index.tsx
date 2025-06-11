@@ -54,7 +54,7 @@ const TimeRangeInput = () => {
             className={styles["timeRangeInputContainer"]}
         >
             <Select
-                listHeight={300}
+                listHeight={400}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
                 size={"large"}
