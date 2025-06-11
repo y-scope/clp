@@ -1,6 +1,6 @@
 import {SearchResultsMetadataDocument} from "@common/index.js";
 
-import MongoCollectionSocket from "../../../api/socket/MongoCollectionSocket";
+import MongoSocketCollection from "../../../api/socket/MongoSocketCollection";
 import {useCursor} from "../../../api/socket/useCursor";
 import {settings} from "../../../settings";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "./index";
@@ -22,8 +22,12 @@ const useResultsMetadata = () => {
                 return null;
             }
 
-            const collection = new MongoCollectionSocket(
+            const collection = new MongoSocketCollection(
                 settings.MongoDbSearchResultsMetadataCollectionName
+            );
+
+            console.log(
+                `Subscribing to updates for results metadata for search job ID: ${searchJobId}`
             );
 
             return collection.find({_id: searchJobId.toString()}, {limit: 1});
