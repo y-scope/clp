@@ -30,8 +30,6 @@ const SearchResultsTable = () => {
             searchResults.length :
             0;
 
-        console.log(num);
-
         updateNumSearchResultsTable(num);
     }, [
         searchResults,

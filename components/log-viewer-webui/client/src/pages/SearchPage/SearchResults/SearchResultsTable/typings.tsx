@@ -35,9 +35,10 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
         render: (timestamp: number) => dayjs(timestamp).format(DATETIME_FORMAT_TEMPLATE),
         sorter: (a, b) => {
             const timestampDiff = a.timestamp - b.timestamp;
-            if (timestampDiff !== 0) {
+            if (0 !== timestampDiff) {
                 return timestampDiff;
             }
+
             return a._id.localeCompare(b._id);
         },
 
@@ -82,7 +83,7 @@ const SEARCH_MAX_NUM_RESULTS = 1000;
 
 export type {SearchResult};
 export {
+    SEARCH_MAX_NUM_RESULTS,
     searchResultsTableColumns,
     TABLE_BOTTOM_PADDING,
-    SEARCH_MAX_NUM_RESULTS
 };
