@@ -27,9 +27,6 @@ const useSearchResults = () => {
                 `Subscribing to updates to search results with job ID: ${searchJobId}`
             );
 
-            const collection = new MongoSocketCollection(searchJobId.toString());
-            return collection.find({}, {});
-          
             // Retrieve 1k most recent results.
             const options = {
                 sort: [
@@ -45,7 +42,7 @@ const useSearchResults = () => {
                 limit: SEARCH_MAX_NUM_RESULTS,
             };
 
-            const collection = new MongoCollectionSocket(searchJobId.toString());
+            const collection = new MongoSocketCollection(searchJobId.toString());
             return collection.find({}, options);
         },
         [searchJobId]
