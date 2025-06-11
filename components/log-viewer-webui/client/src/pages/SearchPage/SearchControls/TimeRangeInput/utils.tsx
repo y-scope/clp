@@ -1,5 +1,4 @@
 import dayjs from "dayjs";
-
 import DayjsUtc from "dayjs/plugin/utc";
 dayjs.extend(DayjsUtc);
 
@@ -30,8 +29,10 @@ const TIME_RANGE_OPTION_DAYJS_MAP: Record<TIME_RANGE_OPTION, [dayjs.Dayjs, dayjs
         dayjs.utc()],
     [TIME_RANGE_OPTION.TODAY]: [dayjs.utc().startOf("day"),
         dayjs.utc().endOf("day")],
-    [TIME_RANGE_OPTION.YESTERDAY]: [dayjs.utc().subtract(1, "d").startOf("day"),
-        dayjs.utc().subtract(1, "d").endOf("day")],
+    [TIME_RANGE_OPTION.YESTERDAY]: [dayjs.utc().subtract(1, "d")
+        .startOf("day"),
+    dayjs.utc().subtract(1, "d")
+        .endOf("day")],
     [TIME_RANGE_OPTION.LAST_7_DAYS]: [dayjs.utc().subtract(7, "d"),
         dayjs.utc()],
     [TIME_RANGE_OPTION.LAST_30_DAYS]: [dayjs.utc().subtract(30, "d"),

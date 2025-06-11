@@ -46,9 +46,9 @@ const TimeRangeInput = () => {
             return;
         }
 
-        console.debug('Selected date range:', {
-            start: dates?.[0]?.format('YYYY-MM-DD HH:mm:ss Z'),
-            end: dates?.[1]?.format('YYYY-MM-DD HH:mm:ss Z')
+        console.debug("Selected date range:", {
+            start: dates[0].format("YYYY-MM-DD HH:mm:ss Z"),
+            end: dates[1].format("YYYY-MM-DD HH:mm:ss Z"),
         });
 
         updateTimeRange(dates);
