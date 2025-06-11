@@ -96,8 +96,7 @@ For example, to query for log events that were compressed from a file whose name
 $_filename: "test.jsonl"
 ```
 
-To query for a key named `$key` within the default namespace, the `$` character can be escaped as
-follows:
+To query for a key named `$key` in an event, the `$` character can be escaped as follows:
 
 ```
 \$key: value
