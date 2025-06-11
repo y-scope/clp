@@ -292,7 +292,7 @@ class MongoSocketIoServer {
     #unsubscribe (socket: MongoCustomSocket, queryId: number) {
         const queryHash: string | undefined = this.#queryIdToQueryHashMap.get(queryId);
         if ("undefined" === typeof queryHash) {
-            this.#fastify.log.error(`query:${queryId} not found in query map`);
+            this.#fastify.log.error(`Query:${queryId} not found in query map`);
 
             return;
         }
