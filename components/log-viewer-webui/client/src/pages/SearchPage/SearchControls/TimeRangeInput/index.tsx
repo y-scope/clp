@@ -14,7 +14,6 @@ import {
     TIME_RANGE_OPTION_NAMES,
 } from "./utils";
 
-
 /**
  * Renders controls for selecting a time range for queries. By default, the component is
  * a select dropdown with a list of preset time ranges. If the user selects "Custom",
@@ -45,6 +44,12 @@ const TimeRangeInput = () => {
         if (!isValidDateRange(dates)) {
             return;
         }
+
+        console.debug('Selected date range:', {
+            start: dates?.[0]?.format('YYYY-MM-DD HH:mm:ss Z'),
+            end: dates?.[1]?.format('YYYY-MM-DD HH:mm:ss Z')
+        });
+
         updateTimeRange(dates);
     };
 
