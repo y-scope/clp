@@ -6,8 +6,8 @@
 #include <string>
 #include <string_view>
 
-#include <outcome/outcome.hpp>
 #include <string_utils/string_utils.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../../../clp_s/search/ast/FilterExpr.hpp"
 #include "../../../../clp_s/search/ast/FilterOperation.hpp"
@@ -128,7 +128,7 @@ requires std::same_as<OperandType, value_int_t> || std::same_as<OperandType, val
         std::shared_ptr<Literal> const& operand,
         Value const& value,
         bool case_sensitive_match
-) -> outcome_v2::std_result<bool>;
+) -> ystdlib::error_handling::Result<bool>;
 
 template <typename OperandType>
 requires std::same_as<OperandType, value_int_t> || std::same_as<OperandType, value_float_t>
@@ -253,7 +253,7 @@ auto evaluate_clp_string_filter_op(
         std::shared_ptr<Literal> const& operand,
         Value const& value,
         bool case_sensitive_match
-) -> outcome_v2::std_result<bool> {
+) -> ystdlib::error_handling::Result<bool> {
     std::string filter_operand;
     if (false == operand->as_clp_string(filter_operand, op)) {
         return false;
@@ -339,7 +339,7 @@ auto evaluate_filter_against_literal_type_value_pair(
         LiteralType literal_type,
         std::optional<Value> const& value,
         bool case_sensitive_match
-) -> outcome_v2::std_result<bool> {
+) -> ystdlib::error_handling::Result<bool> {
     auto const op{filter->get_operation()};
     if (FilterOperation::EXISTS == op) {
         return true;

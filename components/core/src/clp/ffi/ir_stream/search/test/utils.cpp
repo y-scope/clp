@@ -12,7 +12,7 @@
 
 #include <fmt/core.h>
 #include <fmt/format.h>
-#include <outcome/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../../../../clp_s/search/ast/Literal.hpp"
 #include "../../../SchemaTree.hpp"
@@ -68,8 +68,8 @@ auto trivial_new_projected_schema_tree_node_callback(
         [[maybe_unused]] bool is_auto_generated,
         [[maybe_unused]] SchemaTree::Node::id_t node_id,
         [[maybe_unused]] std::string_view projected_key_path
-) -> outcome_v2::std_result<void> {
-    return outcome_v2::success();
+) -> ystdlib::error_handling::Result<void> {
+    return ystdlib::error_handling::success();
 }
 
 auto get_schema_tree_column_queries(std::shared_ptr<SchemaTree> const& schema_tree)

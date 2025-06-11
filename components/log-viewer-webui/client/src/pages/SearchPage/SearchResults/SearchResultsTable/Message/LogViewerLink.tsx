@@ -2,52 +2,59 @@ import {Link} from "react-router";
 
 import {LinkOutlined} from "@ant-design/icons";
 import {
+    theme,
     Tooltip,
     Typography,
 } from "antd";
 
-import {STREAM_TYPE} from "../utils";
+import {STREAM_TYPE} from "../../../../../config";
 import styles from "./index.module.css";
 
 
 interface LogViewerLinkProps {
-    filePath: string;
+    fileText: string;
     logEventIdx: number;
     streamId: string;
 }
 
 /**
- * Render a link to the log viewer with open file.
+ * Render a link to the log viewer.
  *
  * @param props
- * @param props.filePath
+ * @param props.fileText
  * @param props.logEventIdx
  * @param props.streamId
  * @return
  */
 const LogViewerLink = ({
-    filePath,
+    fileText,
     logEventIdx,
     streamId,
-}: LogViewerLinkProps) => (
-    <Tooltip title={"Open file"}>
-        <Typography.Link>
-            <Link
-                className={styles["linkIcon"] || ""}
-                target={"_blank"}
-                to={{
-                    pathname: "/streamFile",
-                    search:
-                        `?type=${encodeURIComponent(STREAM_TYPE)}` +
-                        `&streamId=${encodeURIComponent(streamId)}` +
-                        `&logEventIdx=${encodeURIComponent(logEventIdx)}`,
-                }}
-            >
-                <LinkOutlined/>
-                {filePath}
-            </Link>
-        </Typography.Link>
-    </Tooltip>
-);
+}: LogViewerLinkProps) => {
+    const {token} = theme.useToken();
+
+    return (
+        <Tooltip title={"Open file"}>
+            <Typography.Text>
+                <Link
+                    className={styles["linkIcon"] || ""}
+                    style={{color: token.colorLink}}
+                    target={"_blank"}
+                    to={{
+                        pathname: "/streamFile",
+                        search:
+                            `?type=${encodeURIComponent(STREAM_TYPE)}` +
+                            `&streamId=${encodeURIComponent(streamId)}` +
+                            `&logEventIdx=${encodeURIComponent(logEventIdx)}`,
+                    }}
+                >
+                    <LinkOutlined/>
+                    {fileText}
+                </Link>
+            </Typography.Text>
+        </Tooltip>
+    );
+};
+
 
 export default LogViewerLink;
