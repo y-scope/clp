@@ -4,7 +4,7 @@ import {
 } from "@common/index.js";
 import {Socket} from "socket.io-client";
 
-import {MongoCursorSocket} from "./MongoCursorSocket.js";
+import {MongoSocketCursor} from "./MongoSocketCursor.js";
 import {getSharedSocket} from "./SocketSingleton.js";
 
 
@@ -12,7 +12,7 @@ import {getSharedSocket} from "./SocketSingleton.js";
  * Socket connection to a MongoDB collection residing on a server. Class provides methods to
  * query the collection.
  */
-class MongoCollectionSocket {
+class MongoSocketCollection {
     #collectionName: string;
 
     #socket: Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -25,7 +25,6 @@ class MongoCollectionSocket {
     constructor (collectionName: string) {
         this.#socket = getSharedSocket();
         this.#collectionName = collectionName;
-        console.log(`MongoDB collection:${collectionName} initialized.`);
     }
 
     /**
@@ -33,11 +32,11 @@ class MongoCollectionSocket {
      *
      * @param query
      * @param options
-     * @return a `MongoCursorSocket`.
+     * @return a `MongoSocketCursor`.
      */
 
     find (query: object, options: object) {
-        return new MongoCursorSocket(
+        return new MongoSocketCursor(
             this.#socket,
             this.#collectionName,
             query,
@@ -47,4 +46,4 @@ class MongoCollectionSocket {
 }
 
 
-export default MongoCollectionSocket;
+export default MongoSocketCollection;
