@@ -6,7 +6,7 @@
 #include <string>
 #include <utility>
 
-#include <outcome/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../ReaderInterface.hpp"
 #include "../../time_types.hpp"
@@ -43,7 +43,7 @@ namespace clp::ffi::ir_stream {
         ReaderInterface& reader,
         encoded_tag_t tag,
         std::string& key_name
-) -> OUTCOME_V2_NAMESPACE::std_result<std::pair<bool, SchemaTree::NodeLocator>>;
+) -> ystdlib::error_handling::Result<std::pair<bool, SchemaTree::NodeLocator>>;
 
 /**
  * Deserializes a UTC offset change IR unit.
@@ -53,7 +53,7 @@ namespace clp::ffi::ir_stream {
  * - Forwards `clp::ffi::ir_stream::deserialize_utc_offset_change`'s return values.
  */
 [[nodiscard]] auto deserialize_ir_unit_utc_offset_change(ReaderInterface& reader)
-        -> OUTCOME_V2_NAMESPACE::std_result<UtcOffset>;
+        -> ystdlib::error_handling::Result<UtcOffset>;
 
 /**
  * Deserializes a key-value pair log event IR unit.
@@ -79,7 +79,7 @@ namespace clp::ffi::ir_stream {
         std::shared_ptr<SchemaTree> auto_gen_keys_schema_tree,
         std::shared_ptr<SchemaTree> user_gen_keys_schema_tree,
         UtcOffset utc_offset
-) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent>;
+) -> ystdlib::error_handling::Result<KeyValuePairLogEvent>;
 }  // namespace clp::ffi::ir_stream
 
 #endif  // CLP_FFI_IR_STREAM_IR_UNIT_DESERIALIZATION_METHODS_HPP
