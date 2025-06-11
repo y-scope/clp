@@ -53,8 +53,8 @@ const Details = () => {
             if ("undefined" === typeof details) {
                 throw new Error("Details response is undefined");
             }
-            setBeginDate(dayjs(details.begin_timestamp));
-            setEndDate(dayjs(details.end_timestamp));
+            setBeginDate(dayjs.utc(details.begin_timestamp));
+            setEndDate(dayjs.utc(details.end_timestamp));
             setNumFiles(details.num_files);
             setNumMessages(details.num_messages);
         })

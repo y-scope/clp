@@ -21,7 +21,7 @@ interface TimeRangeProps {
 const TimeRange = ({beginDate, endDate}: TimeRangeProps) => {
     let stat;
     if (beginDate.isValid() && endDate.isValid()) {
-        stat = `${beginDate.utc().format(DATE_FORMAT)} - ${endDate.utc().format(DATE_FORMAT)}`;
+        stat = `${beginDate.format(DATE_FORMAT)} - ${endDate.format(DATE_FORMAT)}`;
     } else {
         stat = "No timestamp data";
     }
