@@ -82,9 +82,9 @@ follows:
 
 ### Querying file-level metadata kv-pairs
 
-clp-json stores some metadata about each file that's compressed into an archive (e.g., the file's
-name). To filter for log events that correspond to some kv-pair in this metadata, you can prefix
-the key with `$`:
+clp-json stores some metadata about each file that is compressed into an archive (e.g., the file's
+name). To filter for log events that correspond to some kv-pair in this metadata, you can prefix the
+key with `$`:
 
 ```
 $key: value
