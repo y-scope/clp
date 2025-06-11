@@ -80,18 +80,27 @@ follows:
 \@key: value
 ```
 
-### Querying kv-pairs in the archive range index
+### Querying file-level metadata kv-pairs
 
-The archive range index maps metadata about each file ingested into an archive to a logical range
-of the archive. Filters that reference fields in this metadata transparently get converted to
-filters that match corresponding logical ranges of an archive.
+clp-json stores some metadata about each file that's compressed into an archive (e.g., the file's
+name). To filter for log events that correspond to some kv-pair in this metadata, you can prefix
+the key with `$`:
 
-To search for records corresponding to a kv-pair within the archive range index you can prefix the
-key with `$`. For example, the following query searches for records from a file that was passed to
-compression as `test.jsonl`:
+```
+$key: value
+```
+
+For example, to query for log events that were compressed from a file whose name was `test.jsonl`:
 
 ```
 $_filename: "test.jsonl"
+```
+
+To query for a key named `$key` within the default namespace, the `$` character can be escaped as
+follows:
+
+```
+\$key: value
 ```
 
 ### Wildcards in values
