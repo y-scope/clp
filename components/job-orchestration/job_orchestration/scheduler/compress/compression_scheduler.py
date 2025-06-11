@@ -173,21 +173,15 @@ def _register_dataset(
     archive_storage_directory: Path,
     existing_datasets: Set[str],
 ) -> None:
-    try:
-        add_dataset(
-            db_cursor,
-            table_prefix,
-            dataset_name,
-            clp_archive_output.storage.type,
-            archive_storage_directory,
-        )
-        create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
-        db_conn.commit()
-    except Exception as e:
-        # The current dataset is already registered in the metadata database.
-        logger.warn(f"Failed to register dataset `{dataset_name}`: {e}")
-        db_conn.rollback()
-        pass
+    add_dataset(
+        db_cursor,
+        table_prefix,
+        dataset_name,
+        clp_archive_output.storage.type,
+        archive_storage_directory,
+    )
+    create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
+    db_conn.commit()
     existing_datasets.add(dataset_name)
 
 
@@ -469,13 +463,9 @@ def main(argv):
         clp_storage_engine = clp_config.package.storage_engine
         existing_datasets: Set[str] = set()
         if StorageEngine.CLP_S == clp_storage_engine:
-            try:
-                existing_datasets = _fetch_existing_datasets(
-                    db_cursor, clp_metadata_db_connection_config
-                )
-            except Exception as ex:
-                logger.error(ex)
-                return -1
+            existing_datasets = _fetch_existing_datasets(
+                db_cursor, clp_metadata_db_connection_config
+            )
 
         # Start Job Processing Loop
         while True:
