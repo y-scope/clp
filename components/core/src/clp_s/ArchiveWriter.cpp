@@ -7,7 +7,6 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
-#include "../clp/streaming_archive/Constants.hpp"
 #include "archive_constants.hpp"
 #include "Defs.hpp"
 #include "SchemaTree.hpp"
@@ -58,7 +57,7 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_array_dict->open(array_dict_path, m_compression_level, UINT64_MAX);
 }
 
-void ArchiveWriter::close() {
+void ArchiveWriter::close(bool is_split) {
     if (m_range_open) {
         if (auto const rc = close_current_range(); ErrorCodeSuccess != rc) {
             throw OperationFailed(rc, __FILENAME__, __LINE__);
@@ -108,7 +107,16 @@ void ArchiveWriter::close() {
     }
 
     if (m_print_archive_stats) {
-        print_archive_stats();
+        ArchiveStats archive_stats{
+                m_id,
+                m_timestamp_dict.get_begin_timestamp(),
+                m_timestamp_dict.get_end_timestamp(),
+                m_uncompressed_size,
+                m_compressed_size,
+                m_archive_metadata,
+                is_split
+        };
+        std::cout << archive_stats.as_string() << std::endl;
     }
 
     m_id_to_schema_writer.clear();
@@ -184,7 +192,9 @@ void ArchiveWriter::write_archive_metadata(
     compressor.write(encoded_timestamp_dict.data(), encoded_timestamp_dict.size());
 
     // Write range index
-    if (auto rc = m_range_index_writer.write(compressor); ErrorCodeSuccess != rc) {
+    if (auto rc = m_range_index_writer.write(compressor, m_archive_metadata);
+        ErrorCodeSuccess != rc)
+    {
         throw OperationFailed(rc, __FILENAME__, __LINE__);
     }
 
@@ -440,16 +450,5 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     m_tables_file_writer.close();
 
     return {table_metadata_compressed_size, table_compressed_size};
-}
-
-auto ArchiveWriter::print_archive_stats() const -> void {
-    namespace Archive = clp::streaming_archive::cMetadataDB::Archive;
-    nlohmann::json json_msg
-            = {{Archive::Id, m_id},
-               {Archive::BeginTimestamp, m_timestamp_dict.get_begin_timestamp()},
-               {Archive::EndTimestamp, m_timestamp_dict.get_end_timestamp()},
-               {Archive::UncompressedSize, m_uncompressed_size},
-               {Archive::Size, m_compressed_size}};
-    std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
 }
 }  // namespace clp_s

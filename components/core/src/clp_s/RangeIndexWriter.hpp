@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <nlohmann/json.hpp>
+#include <ystdlib/error_handling/ErrorCode.hpp>
 
 #include "ErrorCode.hpp"
 #include "ZstdCompressor.hpp"
@@ -74,10 +75,14 @@ public:
 
     /**
      * Writes ranges to a `ZstdCompressor` then clears internal state.
+     *
+     * TODO: refactor this method to return the metadata as a `ystdlib::error_handling::Result`.
+     *
      * @param writer
+     * @param The metadata written to the `ZstdCompressor` returned by reference.
      * @return ErrorCodeSuccess on success or the relevant error code on failure.
      */
-    [[nodiscard]] auto write(ZstdCompressor& writer) -> ErrorCode;
+    [[nodiscard]] auto write(ZstdCompressor& writer, nlohmann::json& metadata) -> ErrorCode;
 
     /**
      * @return true if there are no ranges, false otherwise.
