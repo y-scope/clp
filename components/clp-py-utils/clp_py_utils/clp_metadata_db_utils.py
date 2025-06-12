@@ -100,10 +100,14 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
     :param db_cursor: The database cursor to execute the table creation.
     :param table_prefix: A string to prepend to the table name.
     """
+
+    # For a description of the table, see
+    # `../../../docs/src/dev-guide/design-metadata-db.md`
     db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{table_prefix}{DATASETS_TABLE_SUFFIX}` (
             `name` VARCHAR(255) NOT NULL,
+            `archive_storage_type` VARCHAR(64) NOT NULL,
             `archive_storage_directory` VARCHAR(4096) NOT NULL,
             PRIMARY KEY (`name`)
         )

@@ -3,14 +3,6 @@
 // TODO: Move listeners to a separate file to reduce lines
 // Reference: https://github.com/socketio/socket.io/blob/main/examples/basic-crud-application/server/lib/todo-management/todo.handlers.ts
 
-import type {
-    ClientToServerEvents,
-    InterServerEvents,
-    QueryId,
-    Response,
-    ServerToClientEvents,
-    SocketData,
-} from "@common/index.js";
 import {
     FastifyInstance,
     FastifyPluginAsync,
@@ -19,6 +11,14 @@ import fastifyPlugin from "fastify-plugin";
 import {Db} from "mongodb";
 import {Server} from "socket.io";
 
+import type {
+    ClientToServerEvents,
+    InterServerEvents,
+    QueryId,
+    Response,
+    ServerToClientEvents,
+    SocketData,
+} from "../../../../common/index.js";
 import MongoWatcherCollection from "./MongoWatcherCollection.js";
 import {
     ConnectionId,
@@ -55,6 +55,9 @@ class MongoSocketIoServer {
     // Mapping of connection IDs to the query IDs they are subscribed to. A connection can
     // subscribe to the same queryID multiple times, so the list can contain duplicates.
     #subscribedQueryIdsMap: Map<ConnectionId, QueryId[]> = new Map();
+
+    // Counter for generating unique query IDs.
+    #queryIdCounter: QueryId = 0;
 
     readonly #mongoDb: Db;
 
@@ -176,15 +179,11 @@ class MongoSocketIoServer {
                 return queryId;
             }
         }
+        const queryId = this.#queryIdCounter;
+        this.#queryIdToQueryHashMap.set(queryId, queryHash);
 
-        let queryId = 0;
-        if (0 === this.#queryIdToQueryHashMap.size) {
-            this.#queryIdToQueryHashMap.set(queryId, queryHash);
-        } else {
-            const maxKey = Math.max(...Array.from(this.#queryIdToQueryHashMap.keys()));
-            queryId = maxKey + 1;
-            this.#queryIdToQueryHashMap.set(queryId, queryHash);
-        }
+        // JS is single threaded and ++ is atomic, so we can safely increment the global counter.
+        this.#queryIdCounter++;
 
         return queryId;
     }
@@ -202,7 +201,7 @@ class MongoSocketIoServer {
         let watcherCollection = this.#collections.get(collectionName);
         if ("undefined" === typeof watcherCollection) {
             watcherCollection = new MongoWatcherCollection(collectionName, this.#mongoDb);
-            this.#fastify.log.info(`Created MongoDb collection:${collectionName}.`);
+            this.#fastify.log.debug(`Initialize Mongo watcher collection:${collectionName}.`);
             this.#collections.set(collectionName, watcherCollection);
         }
 
@@ -227,7 +226,7 @@ class MongoSocketIoServer {
     ): Promise<void> {
         const {collectionName, query, options} = requestArgs;
 
-        this.#fastify.log.info(
+        this.#fastify.log.debug(
             `Socket:${socket.id} requested query:${JSON.stringify(query)} ` +
             `with options:${JSON.stringify(options)} to collection:${collectionName}`
         );
@@ -253,7 +252,11 @@ class MongoSocketIoServer {
         callback({data: {queryId, initialDocuments}});
 
         this.#addQueryIdToSubscribedList(queryId, socket.id);
-        this.#fastify.log.info(`Socket:${socket.id} subscribed to queryID:${queryId}.`);
+        this.#fastify.log.info(
+            `Socket:${socket.id} subscribed to query:${JSON.stringify(query)} ` +
+            `with options:${JSON.stringify(options)} ` +
+            `on collection:${collectionName} with ID:${queryId}`
+        );
     }
 
     /**
@@ -289,7 +292,7 @@ class MongoSocketIoServer {
     #unsubscribe (socket: MongoCustomSocket, queryId: number) {
         const queryHash: string | undefined = this.#queryIdToQueryHashMap.get(queryId);
         if ("undefined" === typeof queryHash) {
-            this.#fastify.log.error(`QueryId ${queryId} not found in query map`);
+            this.#fastify.log.error(`Query:${queryId} not found in query map`);
 
             return;
         }
@@ -304,10 +307,10 @@ class MongoSocketIoServer {
         }
 
         const isLastSubscriber = collection.unsubscribe(queryId, socket.id);
-        this.#fastify.log.info(`Socket ${socket.id} unsubscribed from query ${queryId}`);
+        this.#fastify.log.info(`Socket:${socket.id} unsubscribed from query:${queryId}`);
 
         if (isLastSubscriber) {
-            this.#fastify.log.info(`QueryID:${queryId} deleted from query map.`);
+            this.#fastify.log.debug(`Query:${queryId} deleted from query map.`);
             this.#queryIdToQueryHashMap.delete(queryId);
         }
 
@@ -317,7 +320,7 @@ class MongoSocketIoServer {
         );
 
         if (false === collection.isReferenced()) {
-            this.#fastify.log.info(`Collection:${queryParams.collectionName}` +
+            this.#fastify.log.debug(`Collection:${queryParams.collectionName}` +
             " deallocated from server.");
             this.#collections.delete(queryParams.collectionName);
         }
@@ -335,8 +338,8 @@ class MongoSocketIoServer {
         requestArgs: {queryId: number}
     ): Promise<void> {
         const {queryId} = requestArgs;
-        this.#fastify.log.info(
-            `Socket:${socket.id} requested unsubscription to QueryId:${queryId}`
+        this.#fastify.log.debug(
+            `Socket:${socket.id} requested unsubscription to query:${queryId}`
         );
 
         const subscribedQueryIds = this.#subscribedQueryIdsMap.get(socket.id);

@@ -172,11 +172,11 @@ TEST_CASE("clp-s-range-index", "[clp-s][range-index]") {
     };
 
     auto input_file{get_test_input_local_path()};
-    auto input_file_type{clp_s::CommandLineArguments::FileType::Json};
+    auto input_file_type{clp_s::FileType::Json};
     if (from_ir) {
         generate_ir();
         input_file = get_ir_test_input_relative_path();
-        input_file_type = clp_s::CommandLineArguments::FileType::KeyValueIr;
+        input_file_type = clp_s::FileType::KeyValueIr;
     }
     REQUIRE_NOTHROW(compress_archive(
             input_file,

@@ -1,43 +1,53 @@
 import {
-    Input,
-    InputProps,
     Progress,
+    theme,
 } from "antd";
+import {Nullable} from "src/typings/common";
 
-import {Nullable} from "../../typings/common";
 import styles from "./index.module.css";
+import InputWithCaseSensitive, {InputWithCaseSensitiveProps} from "./InputWithCaseSensitive";
 
-export interface QueryBoxProps extends InputProps {
-    /** The progress of the progress bar from `0` to `100`. Hides the bar if null. */
+
+interface QueryBoxProps extends InputWithCaseSensitiveProps {
+    /**
+     * The progress of the progress bar from `0` to `100`. Hides the bar if `null`.
+     */
     progress: Nullable<number>;
 }
 
 /**
- * Renders an Input with a progress bar.
+ * Renders an Input with a case sensitivity toggle and progress bar.
  *
  * @param props
  * @param props.progress
- * @param props.rest
+ * @param props.inputProps
  * @return
  */
-const QueryBox = ({progress, ...rest}: QueryBoxProps) => {
+const QueryBox = ({
+    progress,
+    ...inputProps
+}: QueryBoxProps) => {
+    const {token} = theme.useToken();
     return (
         <div className={styles["queryBox"]}>
-            <div className={styles["queryBoxPosition"]}>
-                <Input {...rest}/>
-                <div className={styles["queryBoxWrapper"]}>
+            <InputWithCaseSensitive {...inputProps}/>
+            <div
+                className={styles["progressBarMask"]}
+                style={{borderRadius: token.borderRadiusLG}}
+            >
+                {null !== progress && (
                     <Progress
-                        className={styles["queryBoxProgress"] || ""}
-                        percent={progress ?? 0}
+                        className={styles["progressBar"] || ""}
+                        percent={progress}
                         showInfo={false}
                         size={"small"}
-                        strokeLinecap={"butt"}
-                        style={{display: null === progress ?
-                            "none" :
-                            "block"}}/>
-                </div>
+                        status={"active"}
+                        strokeLinecap={"butt"}/>
+                )}
             </div>
         </div>
     );
 };
+
+export type {QueryBoxProps};
 export default QueryBox;

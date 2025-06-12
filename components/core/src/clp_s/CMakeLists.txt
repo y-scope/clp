@@ -1,10 +1,8 @@
 add_subdirectory(indexer)
-add_subdirectory(search/ast)
-add_subdirectory(search/kql)
-add_subdirectory(search/sql)
+add_subdirectory(search)
 
 set(
-        CLP_SOURCES
+        CLP_S_CLP_SOURCES
         ../clp/aws/AwsAuthenticationSigner.cpp
         ../clp/aws/AwsAuthenticationSigner.hpp
         ../clp/BoundedReader.cpp
@@ -82,108 +80,31 @@ set(
         ../clp/WriterInterface.hpp
 )
 
-set(
-        CLP_S_SOURCES
-        archive_constants.hpp
-        ArchiveReader.cpp
-        ArchiveReader.hpp
-        ArchiveReaderAdaptor.cpp
-        ArchiveReaderAdaptor.hpp
-        ArchiveWriter.cpp
-        ArchiveWriter.hpp
-        BufferViewReader.hpp
-        ColumnReader.cpp
-        ColumnReader.hpp
-        ColumnWriter.cpp
-        ColumnWriter.hpp
-        CommandLineArguments.cpp
-        CommandLineArguments.hpp
-        Compressor.hpp
-        Decompressor.hpp
-        Defs.hpp
-        DictionaryEntry.cpp
-        DictionaryEntry.hpp
-        DictionaryReader.hpp
-        DictionaryWriter.cpp
-        DictionaryWriter.hpp
-        ErrorCode.hpp
-        FileReader.cpp
-        FileReader.hpp
-        FileWriter.cpp
-        FileWriter.hpp
-        InputConfig.cpp
-        InputConfig.hpp
-        JsonConstructor.cpp
-        JsonConstructor.hpp
-        JsonFileIterator.cpp
-        JsonFileIterator.hpp
-        JsonParser.cpp
-        JsonParser.hpp
-        JsonSerializer.hpp
-        kv_ir_search.cpp
-        kv_ir_search.hpp
-        PackedStreamReader.cpp
-        PackedStreamReader.hpp
-        ParsedMessage.hpp
-        RangeIndexWriter.cpp
-        RangeIndexWriter.hpp
-        ReaderUtils.cpp
-        ReaderUtils.hpp
-        Schema.cpp
-        Schema.hpp
-        SchemaMap.cpp
-        SchemaMap.hpp
-        SchemaReader.cpp
-        SchemaReader.hpp
-        SchemaTree.cpp
-        SchemaTree.hpp
-        SchemaWriter.cpp
-        SchemaWriter.hpp
-        TimestampDictionaryReader.cpp
-        TimestampDictionaryReader.hpp
-        TimestampDictionaryWriter.cpp
-        TimestampDictionaryWriter.hpp
-        TimestampEntry.cpp
-        TimestampEntry.hpp
-        TraceableException.hpp
-        Utils.cpp
-        Utils.hpp
-        VariableDecoder.cpp
-        VariableDecoder.hpp
-        VariableEncoder.cpp
-        VariableEncoder.hpp
-        ZstdCompressor.cpp
-        ZstdCompressor.hpp
-        ZstdDecompressor.cpp
-        ZstdDecompressor.hpp
+# This library is intended as a temporary stand-in until clp has been packaged into libraries.
+add_library(
+        clp_s_clp_dependencies
+        ${CLP_S_CLP_SOURCES}
+)
+add_library(clp_s::clp_dependencies ALIAS clp_s_clp_dependencies)
+target_compile_features(clp_s_clp_dependencies PRIVATE cxx_std_20)
+target_link_libraries(
+        clp_s_clp_dependencies
+        PUBLIC
+        clp::string_utils
+        ystdlib::containers
+        PRIVATE
+        Boost::regex
+        ${CURL_LIBRARIES}
+        fmt::fmt
+        spdlog::spdlog
+        nlohmann_json::nlohmann_json
+        OpenSSL::Crypto
+        ystdlib::error_handling
+        ZStd::ZStd
 )
 
 set(
-        CLP_S_SEARCH_SOURCES
-        search/AddTimestampConditions.cpp
-        search/AddTimestampConditions.hpp
-        search/clp_search/EncodedVariableInterpreter.cpp
-        search/clp_search/EncodedVariableInterpreter.hpp
-        search/clp_search/Grep.cpp
-        search/clp_search/Grep.hpp
-        search/clp_search/Query.cpp
-        search/clp_search/Query.hpp
-        search/EvaluateTimestampIndex.cpp
-        search/EvaluateTimestampIndex.hpp
-        search/Output.cpp
-        search/Output.hpp
-        search/OutputHandler.cpp
-        search/OutputHandler.hpp
-        search/Projection.cpp
-        search/Projection.hpp
-        search/QueryRunner.cpp
-        search/QueryRunner.hpp
-        search/SchemaMatch.cpp
-        search/SchemaMatch.hpp
-)
-
-set(
-        REDUCER_SOURCES
+        CLP_S_REDUCER_SOURCES
         ../reducer/BufferedSocketWriter.cpp
         ../reducer/BufferedSocketWriter.hpp
         ../reducer/ConstRecordIterator.hpp
@@ -205,6 +126,209 @@ set(
         ../reducer/types.hpp
 )
 
+# This library is intended as a temporary stand-in until the reducer has been packaged into
+# libraries.
+add_library(
+        clp_s_reducer_dependencies
+        ${CLP_S_REDUCER_SOURCES}
+)
+add_library(clp_s::reducer_dependencies ALIAS clp_s_reducer_dependencies)
+target_compile_features(clp_s_reducer_dependencies PRIVATE cxx_std_20)
+target_link_libraries(
+        clp_s_reducer_dependencies
+        PUBLIC
+        nlohmann_json::nlohmann_json
+        PRIVATE
+        clp_s::clp_dependencies
+)
+
+set(
+        CLP_S_IO_SOURCES
+        Compressor.hpp
+        Decompressor.hpp
+        ErrorCode.hpp
+        FileReader.cpp
+        FileReader.hpp
+        FileWriter.cpp
+        FileWriter.hpp
+        InputConfig.cpp
+        InputConfig.hpp
+        TraceableException.hpp
+        Utils.cpp
+        Utils.hpp
+        ZstdCompressor.cpp
+        ZstdCompressor.hpp
+        ZstdDecompressor.cpp
+        ZstdDecompressor.hpp
+)
+
+add_library(
+        clp_s_io
+        ${CLP_S_IO_SOURCES}
+)
+add_library(clp_s::io ALIAS clp_s_io)
+target_compile_features(clp_s_io PRIVATE cxx_std_20)
+target_include_directories(clp_s_io PUBLIC ../)
+target_link_libraries(
+        clp_s_io
+        PRIVATE
+        Boost::iostreams Boost::url
+        clp_s::clp_dependencies
+        fmt::fmt
+        spdlog::spdlog
+        ZStd::ZStd
+)
+
+set(
+        CLP_S_ARCHIVE_WRITER_SOURCES
+        archive_constants.hpp
+        ArchiveWriter.cpp
+        ArchiveWriter.hpp
+        ColumnWriter.cpp
+        ColumnWriter.hpp
+        Defs.hpp
+        DictionaryEntry.cpp
+        DictionaryEntry.hpp
+        DictionaryWriter.cpp
+        DictionaryWriter.hpp
+        ErrorCode.hpp
+        JsonFileIterator.cpp
+        JsonFileIterator.hpp
+        JsonParser.cpp
+        JsonParser.hpp
+        ParsedMessage.hpp
+        RangeIndexWriter.cpp
+        RangeIndexWriter.hpp
+        ReaderUtils.cpp
+        ReaderUtils.hpp
+        Schema.cpp
+        Schema.hpp
+        SchemaMap.cpp
+        SchemaMap.hpp
+        SchemaTree.cpp
+        SchemaTree.hpp
+        SchemaWriter.cpp
+        SchemaWriter.hpp
+        TimestampDictionaryWriter.cpp
+        TimestampDictionaryWriter.hpp
+        TimestampEntry.cpp
+        TimestampEntry.hpp
+        TraceableException.hpp
+        Utils.cpp
+        Utils.hpp
+        VariableEncoder.cpp
+        VariableEncoder.hpp
+)
+
+add_library(
+        clp_s_archive_writer
+        ${CLP_S_ARCHIVE_WRITER_SOURCES}
+)
+add_library(clp_s::archive_writer ALIAS clp_s_archive_writer)
+target_compile_features(clp_s_archive_writer PRIVATE cxx_std_20)
+target_include_directories(clp_s_archive_writer PUBLIC ../)
+target_link_libraries(
+        clp_s_archive_writer
+        PUBLIC
+        absl::flat_hash_map
+        clp_s::io
+        simdjson::simdjson
+        PRIVATE
+        Boost::url
+        clp_s::clp_dependencies
+        clp_s::timestamp_pattern
+        ${CURL_LIBRARIES}
+        fmt::fmt
+        msgpack-cxx
+        nlohmann_json::nlohmann_json
+        spdlog::spdlog
+)
+
+set(
+        CLP_S_ARCHIVE_READER_SOURCES
+        archive_constants.hpp
+        ArchiveReader.cpp
+        ArchiveReader.hpp
+        ArchiveReaderAdaptor.cpp
+        ArchiveReaderAdaptor.hpp
+        BufferViewReader.hpp
+        ColumnReader.cpp
+        ColumnReader.hpp
+        Defs.hpp
+        DictionaryEntry.cpp
+        DictionaryEntry.hpp
+        DictionaryReader.hpp
+        ErrorCode.hpp
+        JsonSerializer.hpp
+        PackedStreamReader.cpp
+        PackedStreamReader.hpp
+        ReaderUtils.cpp
+        ReaderUtils.hpp
+        Schema.cpp
+        Schema.hpp
+        SchemaReader.cpp
+        SchemaReader.hpp
+        SchemaTree.cpp
+        SchemaTree.hpp
+        TimestampDictionaryReader.cpp
+        TimestampDictionaryReader.hpp
+        TimestampEntry.cpp
+        TimestampEntry.hpp
+        TraceableException.hpp
+        Utils.cpp
+        Utils.hpp
+        VariableDecoder.cpp
+        VariableDecoder.hpp
+)
+
+add_library(
+        clp_s_archive_reader
+        ${CLP_S_ARCHIVE_READER_SOURCES}
+)
+add_library(clp_s::archive_reader ALIAS clp_s_archive_reader)
+target_compile_features(clp_s_archive_reader PRIVATE cxx_std_20)
+target_include_directories(clp_s_archive_reader PUBLIC ../)
+target_link_libraries(
+        clp_s_archive_reader
+        PUBLIC
+        absl::flat_hash_map
+        clp_s::io
+        nlohmann_json::nlohmann_json
+        PRIVATE
+        Boost::url
+        clp_s::clp_dependencies
+        clp_s::timestamp_pattern
+        ${CURL_LIBRARIES}
+        fmt::fmt
+        msgpack-cxx
+        spdlog::spdlog
+)
+
+set(
+        CLP_S_JSON_CONSTRUCTOR_SOURCES
+        ErrorCode.hpp
+        JsonConstructor.cpp
+        JsonConstructor.hpp
+        TraceableException.hpp
+)
+
+add_library(
+        clp_s_json_constructor
+        ${CLP_S_JSON_CONSTRUCTOR_SOURCES}
+)
+add_library(clp_s::json_constructor ALIAS clp_s_json_constructor)
+target_compile_features(clp_s_json_constructor PRIVATE cxx_std_20)
+target_include_directories(clp_s_json_constructor PUBLIC ../)
+target_link_libraries(
+        clp_s_json_constructor
+        PUBLIC
+        clp_s::archive_reader
+        PRIVATE
+        fmt::fmt
+        ${MONGOCXX_TARGET}
+        spdlog::spdlog
+)
+
 set(
         CLP_S_TIMESTAMP_PATTERN_SOURCES
         Defs.hpp
@@ -215,53 +339,55 @@ set(
 )
 
 add_library(
-        clp_s_TimestampPattern
+        clp_s_timestamp_pattern
         ${CLP_S_TIMESTAMP_PATTERN_SOURCES}
 )
-add_library(clp_s::TimestampPattern ALIAS clp_s_TimestampPattern)
-target_compile_features(clp_s_TimestampPattern PRIVATE cxx_std_20)
+add_library(clp_s::timestamp_pattern ALIAS clp_s_timestamp_pattern)
+target_compile_features(clp_s_timestamp_pattern PRIVATE cxx_std_20)
+target_include_directories(clp_s_timestamp_pattern PUBLIC ../)
 target_link_libraries(
-        clp_s_TimestampPattern
+        clp_s_timestamp_pattern
         PRIVATE
         clp::string_utils
         date::date
         spdlog::spdlog
 )
 
+set(
+        CLP_S_EXE_SOURCES
+        CommandLineArguments.cpp
+        CommandLineArguments.hpp
+        ErrorCode.hpp
+        kv_ir_search.cpp
+        kv_ir_search.hpp
+        OutputHandlerImpl.cpp
+        OutputHandlerImpl.hpp
+        TraceableException.hpp
+)
+
 add_executable(
         clp-s
         clp-s.cpp
-        ${CLP_SOURCES}
-        ${CLP_S_SOURCES}
-        ${CLP_S_SEARCH_SOURCES}
-        ${REDUCER_SOURCES}
+        ${CLP_S_EXE_SOURCES}
 )
 target_compile_features(clp-s PRIVATE cxx_std_20)
 target_link_libraries(
         clp-s
         PRIVATE
-        absl::flat_hash_map
-        Boost::iostreams Boost::program_options Boost::regex Boost::url
-        ${CURL_LIBRARIES}
-        clp::string_utils
+        Boost::program_options
+        clp_s::archive_reader
+        clp_s::archive_writer
+        clp_s::clp_dependencies
+        clp_s::io
+        clp_s::json_constructor
+        clp_s::reducer_dependencies
+        clp_s::search
         clp_s::search::ast
-        clp_s::TimestampPattern
-        kql
-        MariaDBClient::MariaDBClient
+        clp_s::search::kql
         ${MONGOCXX_TARGET}
         msgpack-cxx
-        nlohmann_json::nlohmann_json
-        OpenSSL::Crypto
-        simdjson::simdjson
         spdlog::spdlog
-        yaml-cpp
-        ystdlib::containers
         ystdlib::error_handling
-        ZStd::ZStd
-)
-target_include_directories(clp-s
-        PRIVATE
-        "${CLP_OUTCOME_INCLUDE_DIRECTORY}"
 )
 set_target_properties(
         clp-s

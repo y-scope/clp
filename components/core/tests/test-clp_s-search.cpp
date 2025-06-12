@@ -15,8 +15,8 @@
 
 #include "../src/clp_s/archive_constants.hpp"
 #include "../src/clp_s/ArchiveReader.hpp"
-#include "../src/clp_s/CommandLineArguments.hpp"
 #include "../src/clp_s/InputConfig.hpp"
+#include "../src/clp_s/OutputHandlerImpl.hpp"
 #include "../src/clp_s/search/ast/ColumnDescriptor.hpp"
 #include "../src/clp_s/search/ast/ConvertToExists.hpp"
 #include "../src/clp_s/search/ast/EmptyExpr.hpp"
@@ -26,10 +26,10 @@
 #include "../src/clp_s/search/ast/NarrowTypes.hpp"
 #include "../src/clp_s/search/ast/OrExpr.hpp"
 #include "../src/clp_s/search/ast/OrOfAndForm.hpp"
+#include "../src/clp_s/search/EvaluateRangeIndexFilters.hpp"
 #include "../src/clp_s/search/EvaluateTimestampIndex.hpp"
 #include "../src/clp_s/search/kql/kql.hpp"
 #include "../src/clp_s/search/Output.hpp"
-#include "../src/clp_s/search/OutputHandler.hpp"
 #include "../src/clp_s/search/Projection.hpp"
 #include "../src/clp_s/search/SchemaMatch.hpp"
 #include "../src/clp_s/Utils.hpp"
@@ -53,7 +53,7 @@ void search(
         std::vector<int64_t> const& expected_results
 );
 void validate_results(
-        std::vector<clp_s::search::VectorOutputHandler::QueryResult> const& results,
+        std::vector<clp_s::VectorOutputHandler::QueryResult> const& results,
         std::vector<int64_t> const& expected_results
 );
 
@@ -102,7 +102,7 @@ auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search
 }
 
 void validate_results(
-        std::vector<clp_s::search::VectorOutputHandler::QueryResult> const& results,
+        std::vector<clp_s::VectorOutputHandler::QueryResult> const& results,
         std::vector<int64_t> const& expected_results
 ) {
     std::set<int64_t> results_set;
@@ -149,7 +149,7 @@ void search(
     expr = convert_pass.run(expr);
     REQUIRE(nullptr != expr);
 
-    std::vector<clp_s::search::VectorOutputHandler::QueryResult> results;
+    std::vector<clp_s::VectorOutputHandler::QueryResult> results;
     for (auto const& entry : std::filesystem::directory_iterator(cTestSearchArchiveDirectory)) {
         auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
         auto archive_path = clp_s::Path{
@@ -159,6 +159,14 @@ void search(
         archive_reader->open(archive_path, clp_s::NetworkAuthOption{});
 
         auto archive_expr = expr->copy();
+
+        clp_s::search::EvaluateRangeIndexFilters metadata_filter_pass{
+                archive_reader->get_range_index(),
+                false == ignore_case
+        };
+        archive_expr = metadata_filter_pass.run(archive_expr);
+        REQUIRE(nullptr != archive_expr);
+        REQUIRE(nullptr == std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(archive_expr));
 
         auto timestamp_dict = archive_reader->get_timestamp_dictionary();
         clp_s::search::EvaluateTimestampIndex timestamp_index_pass(timestamp_dict);
@@ -171,7 +179,7 @@ void search(
         archive_expr = match_pass->run(archive_expr);
         REQUIRE(nullptr != archive_expr);
 
-        auto output_handler = std::make_unique<clp_s::search::VectorOutputHandler>(results);
+        auto output_handler = std::make_unique<clp_s::VectorOutputHandler>(results);
         clp_s::search::Output output_pass(
                 match_pass,
                 archive_expr,
@@ -201,7 +209,18 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 5, 6}},
             {R"aa(arr.b > 1000)aa", {7, 8}},
             {R"aa(var_string: *)aa", {9}},
-            {R"aa(clp_string: *)aa", {9}}
+            {R"aa(clp_string: *)aa", {9}},
+            {fmt::format(
+                     R"aa($_filename: "{}" AND $_file_split_number: 0 AND )aa"
+                     R"aa($_archive_creator_id: * AND idx: 0)aa",
+                     get_test_input_local_path()
+             ),
+             {0}},
+            {R"aa(idx: 0 AND NOT $_filename: "clp string")aa", {0}},
+            {R"aa(idx: 0 AND NOT $*._filename.*: "clp string")aa", {0}},
+            {R"aa(($_filename: file OR $_file_split_number: 1 OR $_archive_creator_id > 0) AND )aa"
+             R"aa(idx: 0 OR idx: 1)aa",
+             {1}}
     };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
@@ -213,10 +232,11 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             std::string{cTestSearchArchiveDirectory},
             single_file_archive,
             structurize_arrays,
-            clp_s::CommandLineArguments::FileType::Json
+            clp_s::FileType::Json
     ));
 
     for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
         REQUIRE_NOTHROW(search(query, false, expected_results));
     }
 

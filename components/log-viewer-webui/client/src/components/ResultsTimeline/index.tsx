@@ -13,17 +13,13 @@ import {
     TooltipItem,
 } from "chart.js";
 import zoomPlugin from "chartjs-plugin-zoom";
-import dayjs from "dayjs";
+import dayjs, {Dayjs} from "dayjs";
 
-import {Nullable} from "../../typings/common";
+import {DATETIME_FORMAT_TEMPLATE} from "../../typings/datetime";
 import {
     convertUtcDatetimeToSameLocalDate,
     convertZoomTimestampToUtcDatetime,
 } from "./datetime";
-import {
-    DATETIME_FORMAT_TEMPLATE,
-    TimeRange,
-} from "./datetime/typings";
 import styles from "./index.module.css";
 import {
     TimelineBucket,
@@ -47,8 +43,8 @@ ChartJs.register(
 
 interface ResultsTimelineProps {
     isInputDisabled: boolean;
-    onTimelineZoom: (newTimeRange: TimeRange) => void;
-    timelineBuckets: Nullable<TimelineBucket[]>;
+    onTimelineZoom: (newTimeRange: [Dayjs, Dayjs]) => void;
+    timelineBuckets: TimelineBucket[];
     timelineConfig: TimelineConfig;
 }
 
@@ -79,10 +75,6 @@ const ResultsTimeline = ({
                 "crosshair"
         );
     }, [isInputDisabled]);
-
-    if (null === timelineBuckets) {
-        return <div/>;
-    }
 
     const data = {
         datasets: [
@@ -181,10 +173,10 @@ const ResultsTimeline = ({
                             return;
                         }
                         const {min, max} = xAxis;
-                        const newTimeRange = {
-                            begin: convertZoomTimestampToUtcDatetime(min),
-                            end: convertZoomTimestampToUtcDatetime(max),
-                        };
+                        const newTimeRange: [Dayjs, Dayjs] = [
+                            convertZoomTimestampToUtcDatetime(min),
+                            convertZoomTimestampToUtcDatetime(max),
+                        ];
 
                         onTimelineZoom(newTimeRange);
                     },

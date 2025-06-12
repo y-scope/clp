@@ -1,9 +1,17 @@
-import QueryBox from "../../../components/QueryBox";
-import useSearchStore from "../SearchState";
 import styles from "./index.module.css";
-import SearchButton from "./SearchButton";
+import QueryInput from "./QueryInput";
+import SearchButton from "./SearchButton/SearchButton";
 import TimeRangeInput from "./TimeRangeInput";
 
+
+/**
+ * Prevents the default behavior to avoid page reload when submitting query.
+ *
+ * @param ev
+ */
+const handleSubmit = (ev: React.FormEvent<HTMLFormElement>) => {
+    ev.preventDefault();
+};
 
 /**
  * Renders controls for submitting queries.
@@ -11,22 +19,14 @@ import TimeRangeInput from "./TimeRangeInput";
  * @return
  */
 const SearchControls = () => {
-    const queryString = useSearchStore((state) => state.queryString);
-    const updateQueryString = useSearchStore((state) => state.updateQueryString);
-
     return (
-        <div className={styles["searchControlsContainer"]}>
-            <QueryBox
-                placeholder={"Enter your query"}
-                progress={null}
-                size={"large"}
-                value={queryString}
-                onChange={(e) => {
-                    updateQueryString(e.target.value);
-                }}/>
-            <TimeRangeInput/>
-            <SearchButton/>
-        </div>
+        <form onSubmit={handleSubmit}>
+            <div className={styles["searchControlsContainer"]}>
+                <QueryInput/>
+                <TimeRangeInput/>
+                <SearchButton/>
+            </div>
+        </form>
     );
 };
 

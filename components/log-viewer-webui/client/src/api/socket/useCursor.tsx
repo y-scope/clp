@@ -4,34 +4,44 @@ import {
     useState,
 } from "react";
 
-import {MongoCursorSocket} from "./MongoCursorSocket.js";
+import {Nullable} from "../../typings/common";
+import {MongoSocketCursor} from "./MongoSocketCursor.js";
 
 
 /**
- * Custom hook which returns a real-time reactive array of documents from a `MongoCursorSocket`.
+ * Custom hook which returns a real-time reactive array of documents from a `MongoSocketCursor`.
  *
- * @param query Function which returns a `MongoCursorSocket` instance.
+ * @template T The document type returned by the cursor.
+ * @param query Function which returns a `MongoSocketCursor` instance or null.
  * @param dependencies Array of dependencies for the query.
- * @return Reactive array.
+ * @return
+ * - If `query` returns a `MongoSocketCursor` instance, then hook returns null while
+ * the subscription is pending, and a reactive array of documents when the subscription is ready.
+ * - If `query` returns null, then the hook also returns null.
  */
-const useCursor = (
-    query: () => MongoCursorSocket,
+const useCursor = <T = object>(
+    query: () => Nullable<MongoSocketCursor>,
     dependencies: DependencyList = []
-): object[] => {
-    const [data, setData] = useState<object[]>([]);
-
+): Nullable<T[]> => {
+    const [data, setData] = useState<Nullable<T[]>>(null);
 
     useEffect(() => {
         const cursor = query();
 
+        if (null === cursor) {
+            setData(null);
+
+            return () => {
+            };
+        }
+
         // Flag to ignore updates after unmounting.
         let ignore = false;
-        console.log("Subscribing to cursor");
 
         // Handler to set data updates from the server.
         const onDataUpdate = (dataUpdate: object[]) => {
             if (false === ignore) {
-                setData(dataUpdate);
+                setData(dataUpdate as T[]);
             }
         };
 
@@ -52,7 +62,6 @@ const useCursor = (
                 .then(() => {
                     // Unsubscribe will not run if the subscription failed since the promise was
                     // rejected.
-                    console.log("Unsubscribing from cursor");
                     cursor.unsubscribe();
                 })
                 .catch((error: unknown) => {

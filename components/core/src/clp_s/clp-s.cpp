@@ -22,6 +22,7 @@
 #include "JsonConstructor.hpp"
 #include "JsonParser.hpp"
 #include "kv_ir_search.hpp"
+#include "OutputHandlerImpl.hpp"
 #include "search/AddTimestampConditions.hpp"
 #include "search/ast/ConvertToExists.hpp"
 #include "search/ast/EmptyExpr.hpp"
@@ -29,6 +30,7 @@
 #include "search/ast/NarrowTypes.hpp"
 #include "search/ast/OrOfAndForm.hpp"
 #include "search/ast/SearchUtils.hpp"
+#include "search/EvaluateRangeIndexFilters.hpp"
 #include "search/EvaluateTimestampIndex.hpp"
 #include "search/kql/kql.hpp"
 #include "search/Output.hpp"
@@ -107,7 +109,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.record_log_order = command_line_arguments.get_record_log_order();
 
     clp_s::JsonParser parser(option);
-    if (CommandLineArguments::FileType::KeyValueIr == option.input_file_type) {
+    if (clp_s::FileType::KeyValueIr == option.input_file_type) {
         if (false == parser.parse_from_ir()) {
             SPDLOG_ERROR("Encountered error while parsing input");
             return false;
@@ -171,6 +173,15 @@ bool search_archive(
         return false;
     }
 
+    EvaluateRangeIndexFilters metadata_filter_pass{
+            archive_reader->get_range_index(),
+            false == command_line_arguments.get_ignore_case()
+    };
+    if (expr = metadata_filter_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
+        SPDLOG_INFO("No matching metadata ranges for query '{}'", query);
+        return true;
+    }
+
     // skip decompressing the archive if we won't match based on
     // the timestamp index
     EvaluateTimestampIndex timestamp_index(timestamp_dict);
@@ -227,16 +238,16 @@ bool search_archive(
     try {
         switch (command_line_arguments.get_output_handler_type()) {
             case CommandLineArguments::OutputHandlerType::Network:
-                output_handler = std::make_unique<NetworkOutputHandler>(
+                output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
                         command_line_arguments.get_network_dest_host(),
                         command_line_arguments.get_network_dest_port()
                 );
                 break;
             case CommandLineArguments::OutputHandlerType::Reducer:
                 if (command_line_arguments.do_count_results_aggregation()) {
-                    output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+                    output_handler = std::make_unique<clp_s::CountOutputHandler>(reducer_socket_fd);
                 } else if (command_line_arguments.do_count_by_time_aggregation()) {
-                    output_handler = std::make_unique<CountByTimeOutputHandler>(
+                    output_handler = std::make_unique<clp_s::CountByTimeOutputHandler>(
                             reducer_socket_fd,
                             command_line_arguments.get_count_by_time_bucket_size()
                     );
@@ -246,7 +257,7 @@ bool search_archive(
                 }
                 break;
             case CommandLineArguments::OutputHandlerType::ResultsCache:
-                output_handler = std::make_unique<ResultsCacheOutputHandler>(
+                output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
                         command_line_arguments.get_mongodb_uri(),
                         command_line_arguments.get_mongodb_collection(),
                         command_line_arguments.get_batch_size(),
@@ -254,7 +265,7 @@ bool search_archive(
                 );
                 break;
             case CommandLineArguments::OutputHandlerType::Stdout:
-                output_handler = std::make_unique<StandardOutputHandler>();
+                output_handler = std::make_unique<clp_s::StandardOutputHandler>();
                 break;
             default:
                 SPDLOG_ERROR("Unhandled OutputHandlerType.");

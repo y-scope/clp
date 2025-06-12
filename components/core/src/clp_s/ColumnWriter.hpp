@@ -4,16 +4,12 @@
 #include <utility>
 #include <variant>
 
-#include <simdjson.h>
-
 #include "DictionaryWriter.hpp"
 #include "FileWriter.hpp"
 #include "ParsedMessage.hpp"
 #include "TimestampDictionaryWriter.hpp"
 #include "VariableEncoder.hpp"
 #include "ZstdCompressor.hpp"
-
-using namespace simdjson;
 
 namespace clp_s {
 class BaseColumnWriter {

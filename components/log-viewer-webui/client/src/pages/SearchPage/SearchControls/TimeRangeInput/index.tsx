@@ -4,7 +4,8 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 
-import useSearchStore from "../../SearchState";
+import useSearchStore from "../../SearchState/index";
+import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import styles from "./index.module.css";
 import {
     isValidDateRange,
@@ -27,12 +28,13 @@ const TimeRangeInput = () => {
         updateTimeRange,
         timeRangeOption,
         updateTimeRangeOption,
+        searchUiState,
     } = useSearchStore();
 
     const handleSelectChange = (newTimeRangeOption: TIME_RANGE_OPTION) => {
         updateTimeRangeOption(newTimeRangeOption);
         if (newTimeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
-            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[newTimeRangeOption];
+            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[newTimeRangeOption]();
             updateTimeRange(dayJsRange);
         }
     };
@@ -43,6 +45,7 @@ const TimeRangeInput = () => {
         if (!isValidDateRange(dates)) {
             return;
         }
+
         updateTimeRange(dates);
     };
 
@@ -51,7 +54,7 @@ const TimeRangeInput = () => {
             className={styles["timeRangeInputContainer"]}
         >
             <Select
-                listHeight={300}
+                listHeight={400}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
                 size={"large"}
@@ -60,6 +63,8 @@ const TimeRangeInput = () => {
                 className={timeRangeOption === TIME_RANGE_OPTION.CUSTOM ?
                     (styles["customSelected"] || "") :
                     ""}
+                disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
+                            searchUiState === SEARCH_UI_STATE.QUERYING}
                 onChange={handleSelectChange}/>
             {timeRangeOption === TIME_RANGE_OPTION.CUSTOM && (
                 <DatePicker.RangePicker
@@ -68,6 +73,8 @@ const TimeRangeInput = () => {
                     showTime={true}
                     size={"large"}
                     value={timeRange}
+                    disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
+                                searchUiState === SEARCH_UI_STATE.QUERYING}
                     onChange={(dates) => {
                         handleRangePickerChange(dates);
                     }}/>

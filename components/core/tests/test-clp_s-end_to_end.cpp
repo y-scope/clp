@@ -107,7 +107,7 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
             std::string{cTestEndToEndArchiveDirectory},
             single_file_archive,
             structurize_arrays,
-            clp_s::CommandLineArguments::FileType::Json
+            clp_s::FileType::Json
     ));
 
     auto extracted_json_path = extract();
