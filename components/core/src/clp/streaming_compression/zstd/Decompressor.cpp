@@ -243,6 +243,7 @@ auto Decompressor::reset_stream() -> void {
 
     ZSTD_initDStream(m_decompression_stream);
     m_decompressed_stream_pos = 0;
+    m_frame_has_more_data = false;
 
     m_compressed_stream_block.pos = 0;
 }
