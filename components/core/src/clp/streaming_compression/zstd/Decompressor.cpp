@@ -40,7 +40,7 @@ auto Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
         if (m_compressed_stream_block.pos == m_compressed_stream_block.size
             && false == m_frame_has_more_data)
         {
-            auto const error_code{refill_compressed_buffer()};
+            auto const error_code{refill_compressed_stream_block()};
             if (ErrorCode_Success != error_code) {
                 m_decompressed_stream_pos += decompressed_stream_block.pos;
 
@@ -199,7 +199,7 @@ auto Decompressor::get_decompressed_stream_region(
     return error_code;
 }
 
-auto Decompressor::refill_compressed_buffer() -> ErrorCode {
+auto Decompressor::refill_compressed_stream_block() -> ErrorCode {
     switch (m_input_type) {
         case InputType::CompressedDataBuf:
             // Fall through
