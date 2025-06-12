@@ -23,9 +23,9 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
     searchJobId: null,
     searchResultsMetadata: null,
     searchUiState: SEARCH_UI_STATE.DEFAULT,
-    timeRange: TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE],
+    timeRange: TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE](),
     timeRangeOption: DEFAULT_TIME_RANGE,
-    timelineConfig: computeTimelineConfig(TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE]),
+    timelineConfig: computeTimelineConfig(TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE]()),
 });
 
 interface SearchState {
