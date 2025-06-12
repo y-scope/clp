@@ -177,7 +177,7 @@ def _register_dataset(
         db_cursor,
         table_prefix,
         dataset_name,
-        clp_archive_output.storage.type,
+        clp_storage_type,
         archive_storage_directory,
     )
     create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
