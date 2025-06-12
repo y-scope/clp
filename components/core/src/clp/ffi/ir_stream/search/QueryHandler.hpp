@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include <outcome/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../../../clp_s/search/ast/Expression.hpp"
 #include "../../../../clp_s/search/ast/Literal.hpp"
@@ -43,10 +43,10 @@ public:
             std::vector<std::pair<std::string, clp_s::search::ast::literal_type_bitmask_t>> const&
                     projections,
             bool case_sensitive_match
-    ) -> outcome_v2::std_result<QueryHandler> {
+    ) -> ystdlib::error_handling::Result<QueryHandler> {
         return QueryHandler{
                 new_projected_schema_tree_node_callback,
-                OUTCOME_TRYX(
+                YSTDLIB_ERROR_HANDLING_TRYX(
                         QueryHandlerImpl::create(
                                 std::move(query),
                                 projections,
@@ -80,7 +80,7 @@ public:
             bool is_auto_generated,
             SchemaTree::NodeLocator const& node_locator,
             SchemaTree::Node::id_t node_id
-    ) -> outcome_v2::std_result<void> {
+    ) -> ystdlib::error_handling::Result<void> {
         return m_query_handler_impl.update_partially_resolved_columns(
                 is_auto_generated,
                 node_locator,
@@ -97,7 +97,7 @@ public:
      * - Forwards `QueryHandlerImpl::evaluate_kv_pair_log_event`'s return values.
      */
     [[nodiscard]] auto evaluate_kv_pair_log_event(KeyValuePairLogEvent const& log_event)
-            -> outcome_v2::std_result<AstEvaluationResult> {
+            -> ystdlib::error_handling::Result<AstEvaluationResult> {
         return m_query_handler_impl.evaluate_kv_pair_log_event(log_event);
     }
 

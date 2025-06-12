@@ -1,5 +1,6 @@
 import styles from "./index.module.css";
 import SearchControls from "./SearchControls";
+import SearchQueryStatus from "./SearchQueryStatus";
 import SearchResultsTable from "./SearchResults/SearchResultsTable";
 import SearchResultsTimeline from "./SearchResults/SearchResultsTimeline";
 import {useUiUpdateOnDoneSignal} from "./SearchState/useUpdateStateWithMetadata";
@@ -15,7 +16,10 @@ const SearchPage = () => {
 
     return (
         <div className={styles["searchPageContainer"]}>
-            <SearchControls/>
+            <div>
+                <SearchControls/>
+                <SearchQueryStatus/>
+            </div>
             <SearchResultsTimeline/>
             <SearchResultsTable/>
         </div>

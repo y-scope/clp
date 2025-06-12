@@ -14,7 +14,7 @@
 
 #include <catch2/catch.hpp>
 #include <msgpack.hpp>
-#include <outcome/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../../../../../clp_s/search/ast/Literal.hpp"
 #include "../../../../ir/EncodedTextAst.hpp"
@@ -81,7 +81,7 @@ private:
         bool is_auto_generated,
         SchemaTree::Node::id_t node_id,
         std::string_view projected_key_path
-) -> outcome_v2::std_result<void>;
+) -> ystdlib::error_handling::Result<void>;
 
 /**
  * Gets all possible column queries to every single node in the schema-tree with a bitmask
