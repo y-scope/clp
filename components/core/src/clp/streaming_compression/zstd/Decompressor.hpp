@@ -121,10 +121,11 @@ private:
 
     // Methods
     /**
-     * Refills the compressed buffer with data from the underlying reader.
+     * Refills m_compressed_stream_block with data from the underlying input medium.
      *
      * @return ErrorCode_Success on success
      * @return ErrorCode_EndOfFile if no more data is available
+     * @return Forwards `ReaderInterface::try_read`'s return values.
      */
     [[nodiscard]] auto refill_compressed_stream_block() -> ErrorCode;
 
