@@ -153,7 +153,9 @@ def handle_extract_stream_cmd(
     elif EXTRACT_JSON_CMD == command:
         job_type = QueryJobType.EXTRACT_JSON
         job_config = ExtractJsonJobConfig(
-            archive_id=parsed_args.archive_id, target_chunk_size=parsed_args.target_chunk_size
+            dataset=CLP_DEFAULT_DATASET_NAME,
+            archive_id=parsed_args.archive_id,
+            target_chunk_size=parsed_args.target_chunk_size,
         )
     else:
         logger.error(f"Unsupported stream extraction command: {command}")

@@ -67,6 +67,7 @@ class ExtractIrJobConfig(QueryJobConfig):
 
 
 class ExtractJsonJobConfig(QueryJobConfig):
+    dataset: str = CLP_DEFAULT_DATASET_NAME
     archive_id: str
     target_chunk_size: typing.Optional[int] = None
 
