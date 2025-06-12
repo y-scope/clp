@@ -12,7 +12,7 @@ import {Nullable} from "../../typings/common";
 /**
  * A cursor-like object receiving MongoDB documents over a socket connection.
  */
-class MongoCursorSocket {
+class MongoSocketCursor {
     #socket: Socket<ServerToClientEvents, ClientToServerEvents>;
 
     #collectionName: string;
@@ -52,7 +52,11 @@ class MongoCursorSocket {
      * @throws {Error} if subscription fails.
      */
     async subscribe (onDataUpdate: (data: object[]) => void): Promise<void> {
-        console.log("Attempting to subscribe to query:", JSON.stringify(this.#query));
+        console.debug(
+            `Subscribing to query: ${JSON.stringify(this.#query)} ` +
+            `with options:${JSON.stringify(this.#options)} ` +
+            `on collection:${this.#collectionName}`
+        );
 
         this.#updateListener = (respArgs: {queryId: number; data: object[]}) => {
             // Server sends updates for multiple queryIDs using the same event name.
@@ -82,7 +86,12 @@ class MongoCursorSocket {
         onDataUpdate(response.data.initialDocuments);
 
         this.#queryId = response.data.queryId;
-        console.log(`Subscribed to queryID:${this.#queryId}.`);
+        console.debug(
+            `Successfully subscribed to query: ${JSON.stringify(this.#query)} ` +
+            `with options:${JSON.stringify(this.#options)} ` +
+            `on collection:${this.#collectionName} ` +
+            `MongoSocketIoQueryID:${this.#queryId}`
+        );
     }
 
     /**
@@ -105,10 +114,10 @@ class MongoCursorSocket {
             this.#updateListener = null;
         }
 
-        console.log(`Unsubscribed to queryID:${this.#queryId}.`);
+        console.debug(`Unsubscribed from MongoSocketIoQueryID:${this.#queryId}.`);
 
         this.#queryId = null;
     }
 }
 
-export {MongoCursorSocket};
+export {MongoSocketCursor};
