@@ -43,7 +43,10 @@ auto Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
             auto const error_code{refill_compressed_buffer()};
             if (ErrorCode_Success != error_code) {
                 num_bytes_read = decompressed_stream_block.pos;
-                return decompressed_stream_block.pos > 0 ? ErrorCode_Success : error_code;
+                if (ErrorCode_EndOfFile == error_code && decompressed_stream_block.pos > 0) {
+                    return ErrorCode_Success;
+                }
+                return error_code;
             }
         }
 
