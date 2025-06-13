@@ -635,7 +635,6 @@ def handle_pending_query_jobs(
             job_id = str(job["job_id"])
             job_type = job["type"]
             job_config = msgpack.unpackb(job["job_config"])
-            search_config = SearchJobConfig.parse_obj(job_config)
 
             table_prefix = clp_metadata_db_conn_params["table_prefix"]
             if StorageEngine.CLP_S == clp_storage_engine:
@@ -647,6 +646,7 @@ def handle_pending_query_jobs(
                 if job_id in active_jobs:
                     continue
 
+                search_config = SearchJobConfig.parse_obj(job_config)
                 archives_for_search = get_archives_for_search(db_conn, table_prefix, search_config)
                 if len(archives_for_search) == 0:
                     if set_job_or_task_status(
