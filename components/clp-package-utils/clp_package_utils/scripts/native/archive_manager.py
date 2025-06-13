@@ -10,8 +10,10 @@ from pathlib import Path
 from clp_py_utils.clp_config import (
     ARCHIVE_TAGS_TABLE_SUFFIX,
     ARCHIVES_TABLE_SUFFIX,
+    CLP_DEFAULT_DATASET_NAME,
     Database,
     FILES_TABLE_SUFFIX,
+    StorageEngine,
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
 
@@ -94,6 +96,11 @@ def main(argv: typing.List[str]) -> int:
         "-c",
         default=str(default_config_file_path),
         help="CLP configuration file.",
+    )
+    args_parser.add_argument(
+        "--dataset",
+        default=CLP_DEFAULT_DATASET_NAME,
+        help="The name of the log category.",
     )
 
     # Top-level commands
@@ -182,6 +189,7 @@ def main(argv: typing.List[str]) -> int:
         logger.exception("Failed to load config.")
         return -1
 
+    storage_engine: StorageEngine = clp_config.package.storage_engine
     database_config: Database = clp_config.database
     archives_dir: Path = clp_config.archive_output.get_directory()
     if not archives_dir.exists():
@@ -192,6 +200,8 @@ def main(argv: typing.List[str]) -> int:
         return _find_archives(
             archives_dir,
             database_config,
+            storage_engine,
+            parsed_args.dataset,
             parsed_args.begin_ts,
             parsed_args.end_ts,
         )
@@ -202,6 +212,8 @@ def main(argv: typing.List[str]) -> int:
             return _delete_archives(
                 archives_dir,
                 database_config,
+                storage_engine,
+                parsed_args.dataset,
                 delete_handler,
                 parsed_args.dry_run,
             )
@@ -212,6 +224,8 @@ def main(argv: typing.List[str]) -> int:
             return _delete_archives(
                 archives_dir,
                 database_config,
+                storage_engine,
+                parsed_args.dataset,
                 delete_handler,
                 parsed_args.dry_run,
             )
@@ -226,6 +240,8 @@ def main(argv: typing.List[str]) -> int:
 def _find_archives(
     archives_dir: Path,
     database_config: Database,
+    storage_engine: StorageEngine,
+    dataset: str,
     begin_ts: int,
     end_ts: int = typing.Optional[int],
 ) -> int:
@@ -234,6 +250,8 @@ def _find_archives(
     `begin_ts <= archive.begin_timestamp` and `archive.end_timestamp <= end_ts`.
     :param archives_dir:
     :param database_config:
+    :param storage_engine:
+    :param dataset:
     :param begin_ts:
     :param end_ts:
     :return: 0 on success, 1 on failure.
@@ -246,6 +264,9 @@ def _find_archives(
             database_config.get_clp_connection_params_and_type(True)
         )
         table_prefix: str = clp_db_connection_params["table_prefix"]
+        if StorageEngine.CLP_S == storage_engine:
+            table_prefix = f"{table_prefix}{dataset}_"
+
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
@@ -286,6 +307,8 @@ def _find_archives(
 def _delete_archives(
     archives_dir: Path,
     database_config: Database,
+    storage_engine: StorageEngine,
+    dataset: str,
     delete_handler: DeleteHandler,
     dry_run: bool = False,
 ) -> int:
@@ -294,6 +317,8 @@ def _delete_archives(
 
     :param archives_dir:
     :param database_config:
+    :param storage_engine:
+    :param dataset:
     :param delete_handler: Object to handle differences between by-filter and by-ids delete types.
     :param dry_run: If True, no changes will be made to the database or disk.
     :return: 0 on success, -1 otherwise.
@@ -307,6 +332,9 @@ def _delete_archives(
             database_config.get_clp_connection_params_and_type(True)
         )
         table_prefix = clp_db_connection_params["table_prefix"]
+        if StorageEngine.CLP_S == storage_engine:
+            table_prefix = f"{table_prefix}{dataset}_"
+
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:

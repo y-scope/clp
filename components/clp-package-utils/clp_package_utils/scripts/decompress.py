@@ -5,7 +5,12 @@ import subprocess
 import sys
 from typing import Optional
 
-from clp_py_utils.clp_config import CLPConfig, StorageEngine, StorageType
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
+    CLPConfig,
+    StorageEngine,
+    StorageType,
+)
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -207,6 +212,8 @@ def handle_extract_stream_cmd(
             extract_cmd.append(str(parsed_args.target_uncompressed_size))
     elif EXTRACT_JSON_CMD == job_command:
         extract_cmd.append(str(parsed_args.archive_id))
+        extract_cmd.append("--dataset")
+        extract_cmd.append(str(parsed_args.dataset))
         if parsed_args.target_chunk_size:
             extract_cmd.append("--target-chunk-size")
             extract_cmd.append(str(parsed_args.target_chunk_size))
@@ -267,6 +274,12 @@ def main(argv):
     # JSON extraction command parser
     json_extraction_parser = command_args_parser.add_parser(EXTRACT_JSON_CMD)
     json_extraction_parser.add_argument("archive_id", type=str, help="Archive ID")
+    json_extraction_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=CLP_DEFAULT_DATASET_NAME,
+        help="The name of the log category.",
+    )
     json_extraction_parser.add_argument(
         "--target-chunk-size",
         type=int,
