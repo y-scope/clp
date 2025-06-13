@@ -50,6 +50,7 @@ from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType, 
 from job_orchestration.scheduler.job_config import (
     ExtractIrJobConfig,
     ExtractJsonJobConfig,
+    QueryJobConfig,
     SearchJobConfig,
 )
 from job_orchestration.scheduler.query.reducer_handler import (
