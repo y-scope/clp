@@ -638,7 +638,7 @@ def handle_pending_query_jobs(
 
             table_prefix = clp_metadata_db_conn_params["table_prefix"]
             if StorageEngine.CLP_S == clp_storage_engine:
-                dataset = search_config.dataset
+                dataset = QueryJobConfig.parse_obj(job_config).dataset
                 table_prefix = f"{table_prefix}{dataset}_"
 
             if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
