@@ -6,7 +6,10 @@ import sys
 import uuid
 from typing import List
 
-from clp_py_utils.clp_config import StorageEngine
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
+    StorageEngine,
+)
 from job_orchestration.scheduler.job_config import InputType
 
 from clp_package_utils.general import (
@@ -74,6 +77,8 @@ def _generate_compress_cmd(
         "--config", str(config_path),
     ]
     # fmt: on
+    compress_cmd.append("--dataset")
+    compress_cmd.append(str(parsed_args.dataset))
     if parsed_args.timestamp_key is not None:
         compress_cmd.append("--timestamp-key")
         compress_cmd.append(parsed_args.timestamp_key)
@@ -82,7 +87,6 @@ def _generate_compress_cmd(
         compress_cmd.append(parsed_args.tags)
     if parsed_args.no_progress_reporting is True:
         compress_cmd.append("--no-progress-reporting")
-
     compress_cmd.append("--logs-list")
     compress_cmd.append(str(logs_list_path))
 
@@ -130,6 +134,11 @@ def main(argv):
         "-c",
         default=str(default_config_file_path),
         help="CLP package configuration file.",
+    )
+    args_parser.add_argument(
+        "--dataset",
+        default=CLP_DEFAULT_DATASET_NAME,
+        help="The name of the log category.",
     )
     args_parser.add_argument(
         "--timestamp-key",
