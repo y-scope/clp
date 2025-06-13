@@ -79,7 +79,7 @@ public:
      * TODO: refactor this method to return the metadata as a `ystdlib::error_handling::Result`.
      *
      * @param writer
-     * @param The metadata written to the `ZstdCompressor` returned by reference.
+     * @param metadata The metadata written to the `ZstdCompressor` returned by reference.
      * @return ErrorCodeSuccess on success or the relevant error code on failure.
      */
     [[nodiscard]] auto write(ZstdCompressor& writer, nlohmann::json& metadata) -> ErrorCode;
