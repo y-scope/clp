@@ -48,7 +48,7 @@ struct ArchiveStats {
               end_timestamp{end_timestamp},
               uncompressed_size{uncompressed_size},
               compressed_size{compressed_size},
-              metadata{std::move(metadata)},
+              metadata(std::move(metadata)),  // Avoid {} to avoid wrapping metadata in JSON array.
               is_split{is_split} {}
 
     [[nodiscard]] auto as_string() -> std::string {
@@ -127,6 +127,7 @@ public:
     /**
      * Closes the archive writer.
      * @param is_split Whether the last file ingested into the archive is split.
+     * @return Statistics for the newly-written archive.
      */
     [[nodiscard]] auto close(bool is_split = false) -> ArchiveStats;
 
@@ -266,16 +267,20 @@ private:
     /**
      * Writes the archive to a single file
      * @param files
+     * @return The archive range index as a JSON object.
      */
-    void write_single_file_archive(std::vector<ArchiveFileInfo> const& files);
+    [[nodiscard]] auto write_single_file_archive(std::vector<ArchiveFileInfo> const& files)
+            -> nlohmann::json;
 
     /**
      * Writes the metadata section of an archive.
      * @param archive_writer
      * @param files
+     * @return The archive range index as a JSON object.
      */
-    void
-    write_archive_metadata(FileWriter& archive_writer, std::vector<ArchiveFileInfo> const& files);
+    [[nodiscard]] auto
+    write_archive_metadata(FileWriter& archive_writer, std::vector<ArchiveFileInfo> const& files)
+            -> nlohmann::json;
 
     /**
      * Writes the file section of the single file archive
@@ -329,7 +334,6 @@ private:
     ZstdCompressor m_table_metadata_compressor;
 
     RangeIndexWriter m_range_index_writer;
-    nlohmann::json m_archive_metadata;
     bool m_range_open{false};
 };
 }  // namespace clp_s
