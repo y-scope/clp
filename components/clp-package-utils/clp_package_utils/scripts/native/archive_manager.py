@@ -97,6 +97,11 @@ def main(argv: typing.List[str]) -> int:
         default=str(default_config_file_path),
         help="CLP configuration file.",
     )
+    args_parser.add_argument(
+        "--dataset",
+        default=CLP_DEFAULT_DATASET_NAME,
+        help="The name of the log category.",
+    )
 
     # Top-level commands
     subparsers: argparse._SubParsersAction[argparse.ArgumentParser] = args_parser.add_subparsers(
@@ -196,7 +201,7 @@ def main(argv: typing.List[str]) -> int:
             archives_dir,
             database_config,
             storage_engine,
-            CLP_DEFAULT_DATASET_NAME,
+            parsed_args.dataset,
             parsed_args.begin_ts,
             parsed_args.end_ts,
         )
@@ -208,7 +213,7 @@ def main(argv: typing.List[str]) -> int:
                 archives_dir,
                 database_config,
                 storage_engine,
-                CLP_DEFAULT_DATASET_NAME,
+                parsed_args.dataset,
                 delete_handler,
                 parsed_args.dry_run,
             )
@@ -220,7 +225,7 @@ def main(argv: typing.List[str]) -> int:
                 archives_dir,
                 database_config,
                 storage_engine,
-                CLP_DEFAULT_DATASET_NAME,
+                parsed_args.dataset,
                 delete_handler,
                 parsed_args.dry_run,
             )

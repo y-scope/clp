@@ -5,7 +5,10 @@ import sys
 import typing
 from pathlib import Path
 
-from clp_py_utils.clp_config import StorageType
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
+    StorageType,
+)
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -60,6 +63,11 @@ def main(argv: typing.List[str]) -> int:
         "-c",
         default=str(default_config_file_path),
         help="CLP package configuration file.",
+    )
+    args_parser.add_argument(
+        "--dataset",
+        default=CLP_DEFAULT_DATASET_NAME,
+        help="The name of the log category.",
     )
 
     # Top-level commands
@@ -196,6 +204,7 @@ def main(argv: typing.List[str]) -> int:
         "python3",
         "-m", "clp_package_utils.scripts.native.archive_manager",
         "--config", str(generated_config_path_on_container),
+        "--dataset", str(parsed_args.dataset),
         str(subcommand),
     ]
     # fmt : on
