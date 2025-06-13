@@ -65,7 +65,8 @@ auto Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
             );
             return ErrorCode_Failure;
         }
-        m_zstd_frame_has_more_data = decompressed_stream_block.pos == decompressed_stream_block.size;
+        m_zstd_frame_has_more_data
+                = decompressed_stream_block.pos == decompressed_stream_block.size;
     }
 
     // Update decompression stream position
