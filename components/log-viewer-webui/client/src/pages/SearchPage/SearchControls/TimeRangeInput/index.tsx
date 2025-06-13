@@ -34,7 +34,7 @@ const TimeRangeInput = () => {
     const handleSelectChange = (newTimeRangeOption: TIME_RANGE_OPTION) => {
         updateTimeRangeOption(newTimeRangeOption);
         if (newTimeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
-            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[newTimeRangeOption];
+            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[newTimeRangeOption]();
             updateTimeRange(dayJsRange);
         }
     };
@@ -45,6 +45,7 @@ const TimeRangeInput = () => {
         if (!isValidDateRange(dates)) {
             return;
         }
+
         updateTimeRange(dates);
     };
 
@@ -53,7 +54,7 @@ const TimeRangeInput = () => {
             className={styles["timeRangeInputContainer"]}
         >
             <Select
-                listHeight={300}
+                listHeight={400}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
                 size={"large"}

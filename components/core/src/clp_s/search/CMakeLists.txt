@@ -15,6 +15,8 @@ set(
         clp_search/Grep.hpp
         clp_search/Query.cpp
         clp_search/Query.hpp
+        EvaluateRangeIndexFilters.cpp
+        EvaluateRangeIndexFilters.hpp
         EvaluateTimestampIndex.cpp
         EvaluateTimestampIndex.hpp
         Output.cpp
@@ -44,6 +46,7 @@ if(NOT CLP_NO_BUILD_CLP_S_SEARCH)
                 clp_s::search::ast
                 simdjson::simdjson
                 PRIVATE
+                clp_s::clp_dependencies
                 spdlog::spdlog
         )
 endif()

@@ -378,6 +378,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/clp_search/Grep.hpp
     src/clp_s/search/clp_search/Query.cpp
     src/clp_s/search/clp_search/Query.hpp
+    src/clp_s/search/EvaluateRangeIndexFilters.cpp
+    src/clp_s/search/EvaluateRangeIndexFilters.hpp
     src/clp_s/search/EvaluateTimestampIndex.cpp
     src/clp_s/search/EvaluateTimestampIndex.hpp
     src/clp_s/search/Output.cpp
