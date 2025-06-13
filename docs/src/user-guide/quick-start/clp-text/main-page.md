@@ -1,4 +1,4 @@
-# clp-text Quick-start
+# clp-text quick-start
 
 This page will walk you through how to start up CLP, and then use it to compress and search unstructured text logs.
 

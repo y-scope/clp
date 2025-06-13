@@ -1,6 +1,6 @@
-# clp-json Quick-start
+# clp-json quick-start
 
-This page will walk you through how to start up CLP, and then use it to compress and search JSON logs.
+This page will walk you through how to start up CLP and use it to compress and search JSON logs.
 
 :::{caution}
 If you're using the `clp-json` release, you can only compress JSON logs.

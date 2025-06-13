@@ -13,7 +13,7 @@ View system requirements and choose a flavour of CLP.
 :::
 ::::
 
-If you already have CLP set up on your computer, click your flavour of CLP below to learn how to use it.
+If you already have CLP set up, click your flavour of CLP below to learn how to use it.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
@@ -27,8 +27,8 @@ Learn about compressing and searching JSON logs.
 
 :::{grid-item-card}
 :link: clp-text/main-page
-CLP for unstructured logs
+CLP for unstructured text logs
 ^^^^^^^^^^^^
-Learn about compressing and searching unstructured logs.
+Learn about compressing and searching unstructured text logs.
 :::
 ::::

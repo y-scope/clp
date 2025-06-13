@@ -1,6 +1,6 @@
 # Setup
 
-This page will guide you through CLP's system requirements, and help you choose which flavour of CLP will be best for you.
+This page will guide you through CLP's system requirements and help you choose which flavour of CLP will be best for you.
 
 ---
 
@@ -40,7 +40,7 @@ If you're planning to deploy CLP on multiple nodes/systems, there are a few othe
 
 ## Choosing a flavour
 
-CLP has two flavours. Each flavour deals with a different type of log.
+There are two flavours of CLP:
 
 * **[clp-json](#clp-json)** for compressing and searching **JSON** logs.
 * **[clp-text](#clp-text)** for compressing and searching **unstructured text** logs.
