@@ -37,6 +37,7 @@ from clp_py_utils.clp_config import (
     FILES_TABLE_SUFFIX,
     QUERY_JOBS_TABLE_NAME,
     QUERY_TASKS_TABLE_NAME,
+    StorageEngine,
     TAGS_TABLE_SUFFIX,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
@@ -49,6 +50,7 @@ from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType, 
 from job_orchestration.scheduler.job_config import (
     ExtractIrJobConfig,
     ExtractJsonJobConfig,
+    QueryJobConfig,
     SearchJobConfig,
 )
 from job_orchestration.scheduler.query.reducer_handler import (
@@ -614,6 +616,7 @@ def dispatch_job_and_update_db(
 def handle_pending_query_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
+    clp_storage_engine: StorageEngine,
     results_cache_uri: str,
     stream_collection_name: str,
     num_archives_to_search_per_sub_job: int,
@@ -628,13 +631,16 @@ def handle_pending_query_jobs(
         and job.get_type() == QueryJobType.SEARCH_OR_AGGREGATION
     ]
 
-    table_prefix = clp_metadata_db_conn_params["table_prefix"]
-
     with contextlib.closing(db_conn_pool.connect()) as db_conn:
         for job in fetch_new_query_jobs(db_conn):
             job_id = str(job["job_id"])
             job_type = job["type"]
             job_config = msgpack.unpackb(job["job_config"])
+
+            table_prefix = clp_metadata_db_conn_params["table_prefix"]
+            if StorageEngine.CLP_S == clp_storage_engine:
+                dataset = QueryJobConfig.parse_obj(job_config).dataset
+                table_prefix = f"{table_prefix}{dataset}_"
 
             if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
                 # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
@@ -1049,6 +1055,7 @@ async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_del
 async def handle_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
+    clp_storage_engine: StorageEngine,
     results_cache_uri: str,
     stream_collection_name: str,
     jobs_poll_delay: float,
@@ -1063,6 +1070,7 @@ async def handle_jobs(
         reducer_acquisition_tasks = handle_pending_query_jobs(
             db_conn_pool,
             clp_metadata_db_conn_params,
+            clp_storage_engine,
             results_cache_uri,
             stream_collection_name,
             num_archives_to_search_per_sub_job,
@@ -1147,6 +1155,7 @@ async def main(argv: List[str]) -> int:
                 clp_metadata_db_conn_params=clp_config.database.get_clp_connection_params_and_type(
                     True
                 ),
+                clp_storage_engine=clp_config.package.storage_engine,
                 results_cache_uri=clp_config.results_cache.get_uri(),
                 stream_collection_name=clp_config.results_cache.stream_collection_name,
                 jobs_poll_delay=clp_config.query_scheduler.jobs_poll_delay,

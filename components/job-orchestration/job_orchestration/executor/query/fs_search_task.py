@@ -54,14 +54,15 @@ def _make_core_clp_s_command_and_env_vars(
     archive_id: str,
     search_config: SearchJobConfig,
 ) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
-    archives_dir = worker_config.archive_output.get_directory()
     command = [
         str(clp_home / "bin" / "clp-s"),
         "s",
     ]
 
+    dataset = search_config.dataset
     if StorageType.S3 == worker_config.archive_output.storage.type:
         s3_config = worker_config.archive_output.storage.s3_config
+        s3_config.key_prefix = f"{s3_config.key_prefix}{dataset}/"
         try:
             s3_url = generate_s3_virtual_hosted_style_url(
                 s3_config.region_code, s3_config.bucket, f"{s3_config.key_prefix}{archive_id}"
@@ -79,6 +80,7 @@ def _make_core_clp_s_command_and_env_vars(
         env_vars = dict(os.environ)
         env_vars.update(get_credential_env_vars(s3_config.aws_authentication))
     else:
+        archives_dir = worker_config.archive_output.get_directory() / dataset
         # fmt: off
         command.extend((
             str(archives_dir),
