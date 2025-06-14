@@ -1,4 +1,7 @@
-import type {ThemeConfig} from "antd";
+import type {ThemeConfig} from "antd/es/config-provider/context";
+
+import useThemeStore from "./themeStore";
+import {THEME_MODE} from "./typings";
 
 
 /**
@@ -15,4 +18,8 @@ const THEME_CONFIG: ThemeConfig = Object.freeze({
 });
 
 
+export {
+    THEME_MODE,
+    useThemeStore,
+};
 export default THEME_CONFIG;
