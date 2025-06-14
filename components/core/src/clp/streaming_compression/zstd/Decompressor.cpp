@@ -37,7 +37,7 @@ auto Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
     ZSTD_outBuffer decompressed_stream_block{buf, num_bytes_to_read, 0};
     while (decompressed_stream_block.pos < num_bytes_to_read) {
         if (m_compressed_stream_block.pos == m_compressed_stream_block.size
-            && false == m_zstd_frame_has_more_data)
+            && false == m_zstd_frame_might_have_more_data)
         {
             auto const error_code{refill_compressed_stream_block()};
             if (ErrorCode_Success != error_code) {
@@ -64,7 +64,7 @@ auto Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
             );
             return ErrorCode_Failure;
         }
-        m_zstd_frame_has_more_data
+        m_zstd_frame_might_have_more_data
                 = decompressed_stream_block.pos == decompressed_stream_block.size;
     }
 
@@ -243,7 +243,7 @@ auto Decompressor::reset_stream() -> void {
 
     ZSTD_initDStream(m_decompression_stream);
     m_decompressed_stream_pos = 0;
-    m_zstd_frame_has_more_data = false;
+    m_zstd_frame_might_have_more_data = false;
 
     m_compressed_stream_block.pos = 0;
 }
