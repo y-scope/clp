@@ -43,8 +43,9 @@ auto RangeIndexWriter::close_range(size_t end_index) -> ErrorCode {
     return ErrorCodeSuccess;
 }
 
-auto RangeIndexWriter::write(ZstdCompressor& writer) -> ErrorCode {
+auto RangeIndexWriter::write(ZstdCompressor& writer, nlohmann::json& metadata) -> ErrorCode {
     if (m_ranges.empty()) {
+        metadata = nlohmann::json::array();
         return ErrorCodeSuccess;
     }
 
@@ -66,6 +67,7 @@ auto RangeIndexWriter::write(ZstdCompressor& writer) -> ErrorCode {
 
         ranges_array.emplace_back(std::move(obj));
     }
+    metadata = ranges_array;
 
     std::vector<char> serialized_range_index;
     nlohmann::json::to_msgpack(ranges_array, serialized_range_index);

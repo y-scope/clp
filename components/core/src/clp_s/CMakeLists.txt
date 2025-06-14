@@ -232,6 +232,7 @@ target_link_libraries(
         PUBLIC
         absl::flat_hash_map
         clp_s::io
+        nlohmann_json::nlohmann_json
         simdjson::simdjson
         PRIVATE
         Boost::url
@@ -240,7 +241,6 @@ target_link_libraries(
         ${CURL_LIBRARIES}
         fmt::fmt
         msgpack-cxx
-        nlohmann_json::nlohmann_json
         spdlog::spdlog
 )
 

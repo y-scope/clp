@@ -227,13 +227,15 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
 
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
 
-    REQUIRE_NOTHROW(compress_archive(
-            get_test_input_local_path(),
-            std::string{cTestSearchArchiveDirectory},
-            single_file_archive,
-            structurize_arrays,
-            clp_s::FileType::Json
-    ));
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(),
+                    std::string{cTestSearchArchiveDirectory},
+                    single_file_archive,
+                    structurize_arrays,
+                    clp_s::FileType::Json
+            )
+    );
 
     for (auto const& [query, expected_results] : queries_and_results) {
         CAPTURE(query);
