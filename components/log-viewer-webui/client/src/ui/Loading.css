@@ -1,0 +1,24 @@
+.loading-sheet {
+    height: 100%;
+
+    display: flex;
+    flex-direction: column;
+
+    align-items: center;
+    justify-content: center;
+}
+
+.loading-progress-container {
+    width: 100%;
+}
+
+.loading-stepper-container {
+    display: flex;
+    flex-grow: 1;
+
+    align-items: center;
+}
+
+.loading-stepper {
+    --Stepper-verticalGap: 2rem !important;
+}
