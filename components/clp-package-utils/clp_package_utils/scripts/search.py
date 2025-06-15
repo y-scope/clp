@@ -7,7 +7,11 @@ import sys
 import uuid
 
 import yaml
-from clp_py_utils.clp_config import StorageEngine, StorageType
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
+    StorageEngine,
+    StorageType,
+)
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -34,6 +38,11 @@ def main(argv):
         "-c",
         default=str(default_config_file_path),
         help="CLP package configuration file.",
+    )
+    args_parser.add_argument(
+        "--dataset",
+        default=CLP_DEFAULT_DATASET_NAME,
+        help="The name of the log category.",
     )
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
@@ -104,6 +113,7 @@ def main(argv):
         "python3",
         "-m", "clp_package_utils.scripts.native.search",
         "--config", str(generated_config_path_on_container),
+        "--dataset", str(parsed_args.dataset),
         parsed_args.wildcard_query,
     ]
     # fmt: on
