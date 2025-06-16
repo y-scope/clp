@@ -855,22 +855,10 @@ def start_webui(
     container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
     node_path = str(container_webui_dir / "server" / "node_modules")
     client_settings_json_path = (
-        get_clp_home()
-        / "var"
-        / "www"
-        / "webui"
-        / "client"
-        / "settings.json"
+        get_clp_home() / "var" / "www" / "webui" / "client" / "settings.json"
     )
     server_settings_json_path = (
-        get_clp_home()
-        / "var"
-        / "www"
-        / "webui"
-        / "server"
-        / "dist"
-        / "server"
-        / "settings.json"
+        get_clp_home() / "var" / "www" / "webui" / "server" / "dist" / "server" / "settings.json"
     )
 
     validate_webui_config(clp_config, client_settings_json_path, server_settings_json_path)
@@ -880,8 +868,9 @@ def start_webui(
         "ClpStorageEngine": clp_config.package.storage_engine,
         "MongoDbSearchResultsMetadataCollectionName": clp_config.webui.results_metadata_collection_name,
     }
-    client_settings_json = read_and_update_settings_json(client_settings_json_path,
-                                                    client_settings_json_updates)
+    client_settings_json = read_and_update_settings_json(
+        client_settings_json_path, client_settings_json_updates
+    )
     with open(client_settings_json_path, "w") as client_settings_json_file:
         client_settings_json_file.write(json.dumps(client_settings_json))
 
@@ -921,8 +910,9 @@ def start_webui(
         server_settings_json_updates["StreamFilesS3PathPrefix"] = None
         server_settings_json_updates["StreamFilesS3Profile"] = None
 
-    server_settings_json = read_and_update_settings_json(server_settings_json_path,
-                                                         server_settings_json_updates)
+    server_settings_json = read_and_update_settings_json(
+        server_settings_json_path, server_settings_json_updates
+    )
     with open(server_settings_json_path, "w") as settings_json_file:
         settings_json_file.write(json.dumps(server_settings_json))
 

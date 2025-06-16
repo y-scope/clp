@@ -38,7 +38,8 @@ vars:
 
   # Checksum files
   G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-client-node-modules.md5"
-  G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-log-viewer-node-modules.md5"
+  G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE:
+    "{{.G_BUILD_DIR}}/webui-log-viewer-node-modules.md5"
   G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-package-node-modules.md5"
   G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-server-node-modules.md5"
 
