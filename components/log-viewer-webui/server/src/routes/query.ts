@@ -10,6 +10,8 @@ import {
 } from "../typings/query.js";
 
 
+const DEFAULT_DATASET_PREFIX = "default/";
+
 /**
  * Creates query routes.
  *
@@ -80,12 +82,20 @@ const routes: FastifyPluginAsync = async (app) => {
             }
         }
 
+        let dataset_prefix = "";
+        if (extractJobType === QUERY_JOB_TYPE.EXTRACT_JSON) {
+            // eslint-disable-next-line no-warning-comments
+            // TODO: Replace with user configurable dataset prefix when front-end dataset support is
+            // added.
+            dataset_prefix = DEFAULT_DATASET_PREFIX;
+        }
+
         if (fastify.hasDecorator("s3Manager") && "undefined" !== typeof fastify.s3Manager) {
             streamMetadata.path = await fastify.s3Manager.getPreSignedUrl(
-                `s3://${settings.StreamFilesS3PathPrefix}${streamMetadata.path}`
+                `s3://${settings.StreamFilesS3PathPrefix}${dataset_prefix}${streamMetadata.path}`
             );
         } else {
-            streamMetadata.path = `/streams/${streamMetadata.path}`;
+            streamMetadata.path = `/streams/${dataset_prefix}${streamMetadata.path}`;
         }
 
         return streamMetadata;
