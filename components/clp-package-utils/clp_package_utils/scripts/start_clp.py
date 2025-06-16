@@ -896,9 +896,9 @@ def start_webui(
         "MongoDbSearchResultsMetadataCollectionName": clp_config.webui.results_metadata_collection_name,
         "MongoDbStreamFilesCollectionName": clp_config.results_cache.stream_collection_name,
         "ClientDir": str(container_webui_dir / "client"),
+        "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
         "StreamFilesDir": str(container_clp_config.stream_output.get_directory()),
         "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
-        "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
     }
 
     container_cmd_extra_opts = []
