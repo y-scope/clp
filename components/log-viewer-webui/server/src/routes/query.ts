@@ -1,6 +1,9 @@
 import {TypeBoxTypeProvider} from "@fastify/type-provider-typebox";
 import {Type} from "@sinclair/typebox";
-import {FastifyPluginAsync} from "fastify";
+import {
+    FastifyInstance,
+    FastifyPluginAsync,
+} from "fastify";
 import {StatusCodes} from "http-status-codes";
 
 import settings from "../../settings.json" with {type: "json"};
@@ -11,6 +14,36 @@ import {
 
 
 const DEFAULT_DATASET_PREFIX = "default/";
+
+/**
+ * Generates path to stream file.
+ *
+ * @param extractJobType
+ * @param fileName
+ * @param fastify
+ * @return
+ */
+const buildStreamPath = async (
+    extractJobType: QUERY_JOB_TYPE,
+    fileName: string,
+    fastify: FastifyInstance,
+): Promise<string> => {
+    let datasetPrefix = "";
+    if (extractJobType === QUERY_JOB_TYPE.EXTRACT_JSON) {
+        // eslint-disable-next-line no-warning-comments
+        // TODO: Replace with user configurable dataset prefix when front-end dataset support is
+        // added.
+        datasetPrefix = DEFAULT_DATASET_PREFIX;
+    }
+
+    if (fastify.hasDecorator("s3Manager") && "undefined" !== typeof fastify.s3Manager) {
+        return await fastify.s3Manager.getPreSignedUrl(
+            `s3://${settings.StreamFilesS3PathPrefix}${datasetPrefix}${fileName}`
+        );
+    }
+
+    return `/streams/${datasetPrefix}${fileName}`;
+};
 
 /**
  * Creates query routes.
@@ -82,21 +115,11 @@ const routes: FastifyPluginAsync = async (app) => {
             }
         }
 
-        let dataset_prefix = "";
-        if (extractJobType === QUERY_JOB_TYPE.EXTRACT_JSON) {
-            // eslint-disable-next-line no-warning-comments
-            // TODO: Replace with user configurable dataset prefix when front-end dataset support is
-            // added.
-            dataset_prefix = DEFAULT_DATASET_PREFIX;
-        }
-
-        if (fastify.hasDecorator("s3Manager") && "undefined" !== typeof fastify.s3Manager) {
-            streamMetadata.path = await fastify.s3Manager.getPreSignedUrl(
-                `s3://${settings.StreamFilesS3PathPrefix}${dataset_prefix}${streamMetadata.path}`
-            );
-        } else {
-            streamMetadata.path = `/streams/${dataset_prefix}${streamMetadata.path}`;
-        }
+        streamMetadata.path = await buildStreamPath(
+            extractJobType,
+            streamMetadata.path,
+            fastify,
+        );
 
         return streamMetadata;
     });
