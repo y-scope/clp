@@ -34,73 +34,43 @@ auto Decompressor::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
 
     num_bytes_read = 0;
 
-    ZSTD_outBuffer decompressed_stream_block = {buf, num_bytes_to_read, 0};
+    ZSTD_outBuffer decompressed_stream_block{buf, num_bytes_to_read, 0};
     while (decompressed_stream_block.pos < num_bytes_to_read) {
-        // Check if there's data that can be decompressed
-        if (m_compressed_stream_block.pos == m_compressed_stream_block.size) {
-            switch (m_input_type) {
-                case InputType::CompressedDataBuf:
-                    // Fall through
-                case InputType::MemoryMappedCompressedFile:
-                    num_bytes_read = decompressed_stream_block.pos;
-                    if (0 == decompressed_stream_block.pos) {
-                        return ErrorCode_EndOfFile;
-                    } else {
-                        return ErrorCode_Success;
-                    }
-                    break;
-                case InputType::ReaderInterface: {
-                    if (false == m_read_buffer.has_value()) {
-                        throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
-                    }
-                    auto& read_buffer{m_read_buffer.value()};
-                    auto error_code = m_reader->try_read(
-                            read_buffer.data(),
-                            read_buffer.size(),
-                            m_read_buffer_length
-                    );
-                    if (ErrorCode_Success != error_code) {
-                        if (ErrorCode_EndOfFile == error_code) {
-                            num_bytes_read = decompressed_stream_block.pos;
-                            if (0 == decompressed_stream_block.pos) {
-                                return ErrorCode_EndOfFile;
-                            } else {
-                                return ErrorCode_Success;
-                            }
-                        } else {
-                            return error_code;
-                        }
-                    }
+        if (m_compressed_stream_block.pos == m_compressed_stream_block.size
+            && false == m_zstd_frame_might_have_more_data)
+        {
+            auto const error_code{refill_compressed_stream_block()};
+            if (ErrorCode_Success != error_code) {
+                m_decompressed_stream_pos += decompressed_stream_block.pos;
+                num_bytes_read = decompressed_stream_block.pos;
 
-                    m_compressed_stream_block.pos = 0;
-                    m_compressed_stream_block.size = m_read_buffer_length;
-                    break;
+                if (ErrorCode_EndOfFile == error_code && decompressed_stream_block.pos > 0) {
+                    return ErrorCode_Success;
                 }
-                default:
-                    throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+                return error_code;
             }
         }
 
         // Decompress
-        size_t error = ZSTD_decompressStream(
+        auto const ret{ZSTD_decompressStream(
                 m_decompression_stream,
                 &decompressed_stream_block,
                 &m_compressed_stream_block
-        );
-        if (ZSTD_isError(error)) {
+        )};
+        if (ZSTD_isError(ret)) {
             SPDLOG_ERROR(
-                    "streaming_compression::zstd::Decompressor: ZSTD_decompressStream() error: "
-                    "{}",
-                    ZSTD_getErrorName(error)
+                    "streaming_compression::zstd::Decompressor: ZSTD_decompressStream() error: {}",
+                    ZSTD_getErrorName(ret)
             );
             return ErrorCode_Failure;
         }
+        m_zstd_frame_might_have_more_data
+                = decompressed_stream_block.pos == decompressed_stream_block.size;
     }
 
-    // Update decompression stream position
     m_decompressed_stream_pos += decompressed_stream_block.pos;
-
     num_bytes_read = decompressed_stream_block.pos;
+
     return ErrorCode_Success;
 }
 
@@ -228,6 +198,37 @@ auto Decompressor::get_decompressed_stream_region(
     return error_code;
 }
 
+auto Decompressor::refill_compressed_stream_block() -> ErrorCode {
+    switch (m_input_type) {
+        case InputType::CompressedDataBuf:
+            // Fall through
+        case InputType::MemoryMappedCompressedFile:
+            return ErrorCode_EndOfFile;
+        case InputType::ReaderInterface: {
+            if (false == m_read_buffer.has_value()) {
+                throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
+            }
+
+            auto& read_buffer{m_read_buffer.value()};
+            auto const error_code = m_reader->try_read(
+                    read_buffer.data(),
+                    read_buffer.size(),
+                    m_read_buffer_length
+            );
+
+            if (ErrorCode_Success != error_code) {
+                return error_code;
+            }
+
+            m_compressed_stream_block.pos = 0;
+            m_compressed_stream_block.size = m_read_buffer_length;
+            return ErrorCode_Success;
+        }
+        default:
+            throw OperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+    }
+}
+
 auto Decompressor::reset_stream() -> void {
     if (InputType::ReaderInterface == m_input_type) {
         if (auto const rc = m_reader->try_seek_from_begin(m_reader_initial_pos);
@@ -241,6 +242,7 @@ auto Decompressor::reset_stream() -> void {
 
     ZSTD_initDStream(m_decompression_stream);
     m_decompressed_stream_pos = 0;
+    m_zstd_frame_might_have_more_data = false;
 
     m_compressed_stream_block.pos = 0;
 }

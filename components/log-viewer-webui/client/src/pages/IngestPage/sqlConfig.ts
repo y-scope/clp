@@ -1,8 +1,6 @@
 import axios from "axios";
 
 
-// eslint-disable-next-line no-warning-comments
-// TODO: replace with a settings file shared between client and server
 enum SQL_CONFIG {
     SqlDbClpArchivesTableName = "clp_archives",
     SqlDbClpFilesTableName = "clp_files",
