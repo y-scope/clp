@@ -7,6 +7,10 @@ import {
 import dayjs, {Dayjs} from "dayjs";
 import {Nullable} from "src/typings/common";
 
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../../../config";
 import useIngestStatsStore from "../ingestStatsStore";
 import {querySql} from "../sqlConfig";
 import Files from "./Files";
@@ -53,8 +57,8 @@ const Details = () => {
             if ("undefined" === typeof details) {
                 throw new Error("Details response is undefined");
             }
-            setBeginDate(dayjs(details.begin_timestamp));
-            setEndDate(dayjs(details.end_timestamp));
+            setBeginDate(dayjs.utc(details.begin_timestamp));
+            setEndDate(dayjs.utc(details.end_timestamp));
             setNumFiles(details.num_files);
             setNumMessages(details.num_messages);
         })
@@ -76,16 +80,25 @@ const Details = () => {
         fetchDetailsStats,
     ]);
 
+    if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
+        return (
+            <div className={styles["detailsGrid"]}>
+                <div className={styles["timeRange"]}>
+                    <TimeRange
+                        beginDate={beginDate}
+                        endDate={endDate}/>
+                </div>
+                <Messages numMessages={numMessages}/>
+                <Files numFiles={numFiles}/>
+            </div>
+        );
+    }
 
     return (
-        <div className={styles["detailsGrid"]}>
-            <div className={styles["timeRange"]}>
-                <TimeRange
-                    beginDate={beginDate}
-                    endDate={endDate}/>
-            </div>
-            <Messages numMessages={numMessages}/>
-            <Files numFiles={numFiles}/>
+        <div>
+            <TimeRange
+                beginDate={beginDate}
+                endDate={endDate}/>
         </div>
     );
 };

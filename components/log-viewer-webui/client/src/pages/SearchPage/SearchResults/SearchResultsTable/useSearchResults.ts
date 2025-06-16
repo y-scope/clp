@@ -1,7 +1,10 @@
-import MongoCollectionSocket from "../../../../api/socket/MongoCollectionSocket";
+import MongoSocketCollection from "../../../../api/socket/MongoSocketCollection";
 import {useCursor} from "../../../../api/socket/useCursor";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
-import {SearchResult} from "./typings";
+import {
+    SEARCH_MAX_NUM_RESULTS,
+    SearchResult,
+} from "./typings";
 
 
 /**
@@ -20,8 +23,27 @@ const useSearchResults = () => {
                 return null;
             }
 
-            const collection = new MongoCollectionSocket(searchJobId.toString());
-            return collection.find({}, {});
+            console.log(
+                `Subscribing to updates to search results with job ID: ${searchJobId}`
+            );
+
+            // Retrieve 1k most recent results.
+            const options = {
+                sort: [
+                    [
+                        "timestamp",
+                        "desc",
+                    ],
+                    [
+                        "_id",
+                        "desc",
+                    ],
+                ],
+                limit: SEARCH_MAX_NUM_RESULTS,
+            };
+
+            const collection = new MongoSocketCollection(searchJobId.toString());
+            return collection.find({}, options);
         },
         [searchJobId]
     );
