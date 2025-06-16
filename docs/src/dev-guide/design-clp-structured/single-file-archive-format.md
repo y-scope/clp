@@ -1,30 +1,30 @@
 # Single-file archive format
 
-The clp-s single-file archive format is designed to offer high compression and fast search on
-dynamically structured log data such as JSON logs. This format is optimized for streaming reads in
-order to enable high performance for archives stored on object storage systems such as S3.
+The `clp-s` single-file archive format is designed to offer high compression and fast search on
+dynamically-structured log data such as JSON logs. This format is optimized for streaming reads in
+order to enable high performance for archives stored on object storage systems such as [S3][amazon-s3].
 
 This documentation records the details of the single-file archive v0.3.1 format and what it enables
-with only minimal discussion of design rationale --- for more information about the design decisions
-behind clp-s, please refer to [our paper on clp-s][μSlope], or our [blog][s3-blog] on optimizing
-clp-s for object storage.
+with minimal discussion of design rationale. For more information about the design decisions
+behind `clp-s`, please refer to [our paper on `clp-s`][μSlope], or our [blog][s3-blog] on optimizing
+`clp-s` for object storage.
 
 ## Format overview
 
-The single-file archive format is divided into the "header", "metadata", and "files" section as
+The single-file archive format is divided into the `header`, `metadata`, and `files` sections, as
 shown in [Figure 1](#figure-1). All archives begin with a 64-byte header that contains important
-metadata information such as the archive format version and information needed to read the
-"metadata" section. The metadata section is made up of several independent "metadata packets" that
+metadata, such as the archive format version and information needed to read the
+`metadata` section. The `metadata` section is made up of several independent "metadata packets" that
 contain archive-level metadata such as the range of timestamp values present in an archive and
-information needed to read the "files" section. The files section contains the data structures used
-to represent log data and makes up most of the size of an archive; the files section is named as
+information needed to read the `files` section. The `files` section contains the data structures used
+to represent log data and makes up most of the size of an archive; the `files` section is named as
 such because its various components exist as individual files in the multi-file archive format.
 
 :::{note}
-This format is little-endian and all fields in the remainder of this document should be treated as
+The single-file archive format is little-endian. Therefore, all fields in the remainder of this document should be treated as
 little-endian unless specified otherwise. Furthermore, any "struct-like" descriptions of binary
-formats should be interpreted as _not_ having padding for alignment, e.g. an int32_t followed by
-an int64_t should be interpreted as a 12-byte structure without padding.
+formats should be interpreted as _not_ having padding for alignment, e.g. an `int32_t` followed by
+an `int64_t` should be interpreted as a 12-byte structure without padding.
 :::
 
 (figure-1)=
@@ -62,12 +62,12 @@ block-beta
 ## Header section
 
 The archive header is a 64-byte unit at the start of a single-file archive containing some of the
-most important metadata information about an archive as shown in [Figure 2](#figure-2). The header
+most important metadata information about an archive, as shown in [Figure 2](#figure-2). The header
 begins with a 4-byte magic number which identifies the file as an archive. The magic number is
 followed by a 4-byte version number made up of a 2-byte patch version and 1-byte minor and major 
 version numbers respectively. For version 0.X.Y archives every minor version change is breaking and
-readers designed for a given minor version are only sometimes backwards compatible to reduce
-maintenance while the archive format stabilizes.
+to reduce maintenance while the archive format stabilizes,
+not all readers designed for a given minor version are backwards-compatible.
 
 (figure-2)=
 ::::{card}
@@ -117,7 +117,7 @@ The metadata section size field indicates the _compressed_ size of the metadata 
 This field can be used in combination with the uncompressed size field and known header size to
 determine the size and offset both the "metadata" and "files" sections.
 
-The compression type for an archive indicates the general purpose compressor used to compress each
+The compression type for an archive indicates the general-purpose compressor used to compress each
 section of the archive and is currently one of:
 * `0x0000` - ZStandard
 
@@ -163,12 +163,12 @@ Archives currently support the following metadata packet types, some of which ar
 ### ArchiveInfo packet
 
 The ArchiveInfo packet is a msgpack map that currently only records the number of segments in an
-archive as shown in [Figure 4](#figure-4). Each archive currently consists of only a single segment
+archive, as shown in [Figure 4](#figure-4). Each archive currently consists of only a single segment
 (i.e. there is only one tables segment file), but we still record the number of segments in order
 to offer backwards compatibility if we do start splitting tables into multiple segments.
 
 This metadata packet was originally intended to mimic the "ArchiveMetadata" structure in CLP, but
-most of what "ArchiveMetata" records is now present in either the header or the RangeIndex metadata
+most of what "ArchiveMetadata" records is now present in either the header or the RangeIndex metadata
 packet.
 
 (figure-4)=
@@ -185,11 +185,11 @@ packet.
 ### ArchiveFileInfo packet
 
 The ArchiveFileInfo packet is a msgpack map that records the name and offset relative to the start
-of the files section of each entry in the files section, as shown in [Figure 5](#figure-5). Entries
-are ordered by their offset into the files section. This means that the order of entries in the
-ArchiveFileInfo packet corresponds to the order in which the components of the files section should
+of the `files` section of each entry in that section, as shown in [Figure 5](#figure-5). Entries
+are ordered by their offset into the `files` section. This means that the order of entries in the
+ArchiveFileInfo packet corresponds to the order in which the components of the `files` section should
 be read to avoid backwards seeks. The offsets stored in this section can be combined with
-information from the header to determine the size and absolute offset of every entry in the files
+information from the header to determine the size and absolute offset of every entry in the `files`
 section.
 
 (figure-5)=
@@ -206,9 +206,9 @@ section.
 }
 ```
 +++
-**Figure 5**: Layout of the ArchiveFileInfo msgpack payload. The files array contains entries for
-each file in the files section ordered by their offset. Each file is described by its name "n" and
-offset into the files section "o".
+**Figure 5**: Layout of the ArchiveFileInfo msgpack payload. The `"files"` array contains entries for
+each file in the `files` section, ordered by their offset. Each file is described by its name `"n"` and
+offset into the `files` section `"o"`.
 ::::
 
 The ArchiveFileInfo packet has entries with the following names in order:
@@ -228,7 +228,7 @@ enabled.
 
 The TimestampDictionary packet is a binary format that records:
 1. The key name, corresponding MPT nodes, and range of values for zero or more timestamp columns
-2. The format and Id of zero or more timestamp patterns used to encode timestamps in the archive
+2. The format and ID of zero or more timestamp patterns used to encode timestamps in the archive
 
 The details of the binary format can be seen in [Figure 6](#figure-6).
 
@@ -270,8 +270,8 @@ instance of "TimestampDictionary".
 ::::
 
 The key name in each TimestampRange follows the same
-[escaping rules](../../user-guide/reference-json-search-syntax.md) we use for key names in kql
-search. Note that we allow each key to map to multiple MPT nodes and have its range recorded as
+[escaping rules](../../user-guide/reference-json-search-syntax.md) we use for key names in KQL
+search. Note that we allow each key to map to multiple MPT nodes, and that each key's range can be recorded as
 either integer epoch time or double epoch time to handle timestamp columns with polymorphic types.
 
 The pattern in each TimestampPattern entry is a format string that follows the specification from
@@ -281,17 +281,17 @@ and pattern id.
 
 ### RangeIndex packet
 
-The archive range index allows users associate arbitrary properties with each file (or any other
-unit of data) ingested into clp-s. Collectively these units of data are referred to as "ingestion
+The archive range index allows users to associate arbitrary properties with each file (or any other
+unit of data) ingested into `clp-s`. Collectively, these units of data are referred to as "ingestion
 units". Since each archive can potentially aggregate data from multiple files the archive range
 index associates these ingestion unit properties with a logical range of records in an archive.
 Note that ingestion units can be split across multiple archives in order to maintain a configured
-archive size and that in these cases the properties get associated with each chunk of the ingestion
+archive size, and that in these cases the properties become associated with each chunk of the ingestion
 unit in each archive.
 
 By default we automatically store the following properties about each ingestion unit:
-* `"_filename"` - the original filename of the ingestion unit as it was passed to clp-s compression
-* `"_file_split_number"` - incremented each time this ingestion-unit is split across antoher archive
+* `"_filename"` - the original filename of the ingestion unit as it was passed to `clp-s` during compression
+* `"_file_split_number"` - incremented each time this ingestion-unit is split across another archive
 * `"_archive_creator_id"` - UUID associated with a particular _invocation_ of compression
 
 Currently clp-s will store these default properties as well as any properties present in the
@@ -319,13 +319,13 @@ The RangeIndex packet is encoded as a msgpack array with the format shown in [Fi
 ```
 +++
 **Figure 7**: Layout of the RangeIndex msgpack payload. Each entry in the array records a start
-index "s" and end index "e" indicating that the properties correspond to the logical range of
-records [s, e). No entries in the range index have overlapping logical ranges and all entries are
-ordered by logical range. The "f" object contains the properties associated with an ingestion unit.
+index `"s"` and end index `"e"` indicating that the properties correspond to the logical range of
+records `[s, e)`. No entries in the range index have overlapping logical ranges, and all entries are
+ordered by logical range. The `"f"` object contains the properties associated with an ingestion unit.
 ::::
 
-Note that properties created and used by clp-s are always prefixed with the "_" character. To avoid
-naming collisions with properties created by clp-s users should avoid creating properties with this
+Note that properties created and used by `clp-s` are always prefixed with the `_` character. To avoid
+naming collisions with properties created by `clp-s`, users should avoid creating properties with this
 prefix.
 
 ## Files section
@@ -350,3 +350,4 @@ prefix.
 
 [s3-blog]: https://blog.yscope.com/optimizing-clp-for-s3-object-storage-b4c502e930ee
 [μSlope]: https://www.usenix.org/conference/osdi24/presentation/wang-rui
+[amazon-s3]: https://aws.amazon.com/s3/

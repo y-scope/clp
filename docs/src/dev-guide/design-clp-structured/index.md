@@ -1,8 +1,8 @@
 # clp-s
 
-The compressed-log-processor-structured (abbreviated as clp-s and also known as [μSlope][μSlope])
-archive format is a storage format for large chunks of dynamically structured (e.g., JSON) logs.
-Compared to the [KV-IR](../design-kv-ir-streams/index.md) streaming compression format clp-s
+The compressed-log-processor-structured (abbreviated `clp-s`, also known as [μSlope][μSlope])
+archive format is a storage format for large chunks of dynamically-structured (e.g., JSON) logs.
+Compared to the [KV-IR](../design-kv-ir-streams/index.md) streaming compression format, `clp-s`
 achieves higher compression ratios and significantly faster search speeds at the cost of needing to
 aggregate log data before compressing the data into archives and requiring memory proportional to
 archive size for both compression and search. This makes clp-s unsuitable for real-time or severely
@@ -15,7 +15,7 @@ resource-constrained usage but ideal for long-term archival and search.
 :link: background
 Background
 ^^^
-Any necessary information to understand clp-s' format.
+All necessary information needed to understand `clp-s`' format.
 :::
 
 :::{grid-item-card}
