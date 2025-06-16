@@ -568,4 +568,7 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
 
     for prefix in RESTRICTED_PREFIXES:
         if path.is_relative_to(prefix):
-            raise ValueError(f"Invalid path: `{path}` is under the restricted prefix '{prefix}'.")
+            raise ValueError(
+                f"Invalid path: `{path}` cannot be under '{prefix}' which may overlap with a path"
+                f" in the container."
+            )
