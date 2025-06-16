@@ -41,6 +41,7 @@ EXTRACT_JSON_CMD = "j"
 CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
 CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
 CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yml"
+DEFAULT_AWS_CONFIG_DIRECTORY = pathlib.Path("/") / ".aws"
 
 DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
 
@@ -267,7 +268,7 @@ def generate_container_config(
 
     # Only create the mount if the directory exists
     if clp_config.aws_config_directory is not None:
-        container_clp_config.aws_config_directory = pathlib.Path("/") / ".aws"
+        container_clp_config.aws_config_directory = DEFAULT_AWS_CONFIG_DIRECTORY
         docker_mounts.aws_config_dir = DockerMount(
             DockerMountType.BIND,
             clp_config.aws_config_directory,
@@ -561,6 +562,7 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
         pathlib.Path("/var"),
         CONTAINER_CLP_HOME,
         CONTAINER_INPUT_LOGS_ROOT_DIR,
+        DEFAULT_AWS_CONFIG_DIRECTORY
     ]
 
     if not path.is_absolute():
