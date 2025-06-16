@@ -562,7 +562,7 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
         pathlib.Path("/var"),
         CONTAINER_CLP_HOME,
         CONTAINER_INPUT_LOGS_ROOT_DIR,
-        CONTAINER_AWS_CONFIG_DIRECTORY
+        CONTAINER_AWS_CONFIG_DIRECTORY,
     ]
 
     if not path.is_absolute():
