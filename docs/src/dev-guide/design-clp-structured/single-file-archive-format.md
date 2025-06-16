@@ -2,12 +2,13 @@
 
 The `clp-s` single-file archive format is designed to offer high compression and fast search on
 dynamically-structured log data such as JSON logs. This format is optimized for streaming reads in
-order to enable high performance for archives stored on object storage systems such as [S3][amazon-s3].
+order to enable high performance for archives stored on object storage systems such as
+[S3][amazon-s3].
 
-This documentation records the details of the single-file archive v0.3.1 format and what it enables
-with minimal discussion of design rationale. For more information about the design decisions
-behind `clp-s`, please refer to [our paper on `clp-s`][μSlope], or our [blog][s3-blog] on optimizing
-`clp-s` for object storage.
+This documentation records the details of the single-file archive (v0.3.1) format and what it
+enables, with minimal discussion of design rationale. For more information about the design 
+decisions behind `clp-s`, please refer to [our paper on `clp-s`][μSlope], or our [blog][s3-blog] on
+optimizing `clp-s` for object storage.
 
 ## Format overview
 
@@ -16,15 +17,16 @@ shown in [Figure 1](#figure-1). All archives begin with a 64-byte header that co
 metadata, such as the archive format version and information needed to read the
 `metadata` section. The `metadata` section is made up of several independent "metadata packets" that
 contain archive-level metadata such as the range of timestamp values present in an archive and
-information needed to read the `files` section. The `files` section contains the data structures used
-to represent log data and makes up most of the size of an archive; the `files` section is named as
-such because its various components exist as individual files in the multi-file archive format.
+information needed to read the `files` section. The `files` section contains the data structures 
+used to represent log data and makes up most of the size of an archive; the `files` section is named
+as such because its various components exist as individual files in the multi-file archive format.
 
 :::{note}
-The single-file archive format is little-endian. Therefore, all fields in the remainder of this document should be treated as
-little-endian unless specified otherwise. Furthermore, any "struct-like" descriptions of binary
-formats should be interpreted as _not_ having padding for alignment, e.g. an `int32_t` followed by
-an `int64_t` should be interpreted as a 12-byte structure without padding.
+The single-file archive format is little-endian. Therefore, all fields in the remainder of this
+document should be treated as little-endian unless specified otherwise. Furthermore, any
+"struct-like" descriptions of binary formats should be interpreted as _not_ having padding for
+alignment, e.g. an `int32_t` followed by an `int64_t` should be interpreted as a 12-byte structure
+without padding.
 :::
 
 (figure-1)=
@@ -64,10 +66,10 @@ block-beta
 The archive header is a 64-byte unit at the start of a single-file archive that contains some of the
 most important metadata information about an archive, as shown in [Figure 2](#figure-2). The header
 begins with a 4-byte magic number which identifies the file as an archive. The magic number is
-followed by a 4-byte version number, comprised of a 2-byte patch version number, followed by 1-byte minor and major 
-version numbers respectively. For version 0.X.Y archives every minor version change is breaking and
-to reduce maintenance while the archive format stabilizes,
-not all readers designed for a given minor version are backwards-compatible.
+followed by a 4-byte version number, comprised of a 2-byte patch version number, followed by 1-byte
+minor and major  version numbers respectively. For version 0.X.Y archives, every minor version
+change is breaking. To reduce maintenance while the archive format stabilizes, not all readers
+designed for a given minor version are backwards-compatible.
 
 (figure-2)=
 ::::{card}
