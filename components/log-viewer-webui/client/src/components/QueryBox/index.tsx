@@ -1,62 +1,14 @@
-import {useCallback} from "react";
-
 import {
-    Button,
-    Input,
-    InputProps,
     Progress,
     theme,
-    Tooltip,
-    Typography,
 } from "antd";
 import {Nullable} from "src/typings/common";
 
 import styles from "./index.module.css";
+import InputWithCaseSensitive, {InputWithCaseSensitiveProps} from "./InputWithCaseSensitive";
 
 
-interface CaseSensitiveToggleProps {
-    isCaseSensitive: boolean;
-    onCaseSensitiveChange: (newValue: boolean) => void;
-}
-
-/**
- * A toggle button component that switches between case-sensitive and case-insensitive modes.
- *
- * This component displays a button labeled "Aa". When clicked, it toggles the `isCaseSensitive`
- * state and invokes the `onCaseSensitiveChange` callback with the new value.
- *
- * @param props
- * @param props.isCaseSensitive
- * @param props.onCaseSensitiveChange
- * @return
- */
-const CaseSensitiveToggle = ({
-    isCaseSensitive,
-    onCaseSensitiveChange,
-}: CaseSensitiveToggleProps) => {
-    const handleButtonClick = useCallback(() => {
-        onCaseSensitiveChange(!isCaseSensitive);
-    }, [
-        isCaseSensitive,
-        onCaseSensitiveChange,
-    ]);
-
-    return (
-        <Tooltip title={"Match case"}>
-            <Button
-                color={"default"}
-                icon={<Typography.Text disabled={!isCaseSensitive}>Aa</Typography.Text>}
-                size={"small"}
-                variant={isCaseSensitive ?
-                    "filled" :
-                    "text"}
-                onClick={handleButtonClick}/>
-        </Tooltip>
-    );
-};
-
-
-interface QueryBoxProps extends InputProps, CaseSensitiveToggleProps {
+interface QueryBoxProps extends InputWithCaseSensitiveProps {
     /**
      * The progress of the progress bar from `0` to `100`. Hides the bar if `null`.
      */
@@ -64,29 +16,21 @@ interface QueryBoxProps extends InputProps, CaseSensitiveToggleProps {
 }
 
 /**
- * Renders an Input with a progress bar.
+ * Renders an Input with a case sensitivity toggle and progress bar.
  *
  * @param props
  * @param props.progress
  * @param props.inputProps
- * @param props.onCaseSensitiveChange
- * @param props.isCaseSensitive
  * @return
  */
 const QueryBox = ({
     progress,
-    isCaseSensitive,
-    onCaseSensitiveChange,
     ...inputProps
 }: QueryBoxProps) => {
     const {token} = theme.useToken();
     return (
         <div className={styles["queryBox"]}>
-            <Input
-                {...inputProps}
-                suffix={<CaseSensitiveToggle
-                    isCaseSensitive={isCaseSensitive}
-                    onCaseSensitiveChange={onCaseSensitiveChange}/>}/>
+            <InputWithCaseSensitive {...inputProps}/>
             <div
                 className={styles["progressBarMask"]}
                 style={{borderRadius: token.borderRadiusLG}}

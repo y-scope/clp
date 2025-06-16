@@ -1,4 +1,4 @@
-import MongoCollectionSocket from "../../../../api/socket/MongoCollectionSocket";
+import MongoSocketCollection from "../../../../api/socket/MongoSocketCollection";
 import {useCursor} from "../../../../api/socket/useCursor";
 import {TimelineBucket} from "../../../../components/ResultsTimeline/typings";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
@@ -20,7 +20,11 @@ const useAggregationResults = () => {
                 return null;
             }
 
-            const collection = new MongoCollectionSocket(aggregationJobId.toString());
+            console.log(
+                `Subscribing to updates to aggregation results with job ID: ${aggregationJobId}`
+            );
+
+            const collection = new MongoSocketCollection(aggregationJobId.toString());
             return collection.find({}, {});
         },
         [aggregationJobId]
