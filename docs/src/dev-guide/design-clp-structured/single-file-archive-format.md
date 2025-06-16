@@ -53,7 +53,8 @@ block-beta
     columns 1
     files
     block:files_detail
-        mpt["/schema_tree"] sm["/schema_ids"] tm["/table_metadata"] vd["/var.dict"] ld["/log.dict"] ad["/array.dict"] t["/0"]
+        mpt["/schema_tree"] sm["/schema_ids"] tm["/table_metadata"] vd["/var.dict"] ld["/log.dict"]
+        ad["/array.dict"] t["/0"]
     end
   end
 :::
@@ -107,17 +108,17 @@ packet-beta
 **Figure 2**: Layout of the 64-byte archive header.
 ::::
 
-The value in `compressed archive size` indicates the total size of the archive, including the size of the header. The
-`original uncompressed size` field indicates the total size of the data that was compressed into the
-archive. The interpretation of `original uncompressed size` changes somewhat based on what data was
-ingested into the archive. For example, when ingesting `ndjson`, the field records the number of bytes
-of raw JSON data ingested into the archive --- however, when ingesting KV-IR streams, the field records the
-number of decompressed bytes of KV-IR ingested into the archive (since KV-IR streams are typically
-compressed by a general purposed compressor before being stored).
+The value in `compressed archive size` indicates the total size of the archive, including the size
+of the header. The `original uncompressed size` field indicates the total size of the data that was
+compressed into the archive. The interpretation of `original uncompressed size` changes somewhat
+based on what data was ingested into the archive. For example, when ingesting `ndjson`, the field
+records the number of bytes of raw JSON data ingested into the archive --- however, when ingesting
+KV-IR streams, the field records the number of decompressed bytes of KV-IR ingested into the archive
+(since KV-IR streams are typically compressed by a general purposed compressor before being stored).
 
 The `metadata section size` field indicates the _compressed_ size of the metadata section in bytes.
-This field can be used in combination with the `original uncompressed size` field and known header size to
-determine the size and offset of both the `metadata` and `files` sections.
+This field can be used in combination with the `original uncompressed size` field and known header
+size to determine the size and offset of both the `metadata` and `files` sections.
 
 The compression type for an archive indicates the general-purpose compressor used to compress each
 section of the archive and is currently one of:
@@ -147,8 +148,8 @@ MetadataPacketStream {
 }
 ```
 +++
-**Figure 3**: `Metadata` section packet stream binary format. The `metadata` section is equivalent to a
-single instance of `MetadataPacketStream`.
+**Figure 3**: The `metadata` section packet stream binary format. The `metadata` section is
+equivalent to a single instance of `MetadataPacketStream`.
 ::::
 
 Each metadata packet has a type, size, and arbitrary binary payload. Different packet types make
@@ -171,8 +172,8 @@ archive, as shown in [Figure 4](#figure-4). Each archive currently consists of o
 to offer backwards compatibility if we do start splitting tables into multiple segments.
 
 This metadata packet was originally intended to mimic the "ArchiveMetadata" structure in CLP, but
-most of what "ArchiveMetadata" records is now present in either the header or the RangeIndex metadata
-packet.
+most of what "ArchiveMetadata" records is now present in either the header or the RangeIndex
+metadata packet.
 
 (figure-4)=
 ::::{card}
@@ -190,8 +191,8 @@ packet.
 The ArchiveFileInfo packet is a msgpack map that records the name and offset relative to the start
 of the `files` section of each entry in that section, as shown in [Figure 5](#figure-5). Entries
 are ordered by their offset into the `files` section. This means that the order of entries in the
-ArchiveFileInfo packet corresponds to the order in which the components of the `files` section should
-be read to avoid backwards seeks. The offsets stored in this section can be combined with
+ArchiveFileInfo packet corresponds to the order in which the components of the `files` section
+should be read to avoid backwards seeks. The offsets stored in this section can be combined with
 information from the header to determine the size and absolute offset of every entry in the `files`
 section.
 
@@ -209,9 +210,9 @@ section.
 }
 ```
 +++
-**Figure 5**: Layout of the ArchiveFileInfo msgpack payload. The `"files"` array contains entries for
-each file in the `files` section, ordered by their offset. Each file is described by its name `"n"` and
-offset into the `files` section `"o"`.
+**Figure 5**: Layout of the ArchiveFileInfo msgpack payload. The `"files"` array contains entries
+for each file in the `files` section, ordered by their offset. Each file is described by its name
+`"n"` and offset into the `files` section `"o"`.
 ::::
 
 The ArchiveFileInfo packet has entries with the following names in order:
@@ -273,13 +274,14 @@ instance of "TimestampDictionary".
 
 The key name in each TimestampRange follows the same
 [escaping rules](../../user-guide/reference-json-search-syntax.md) we use for key names in KQL
-search. Note that we allow each key to map to multiple MPT nodes, and that each key's range can be recorded as
-either integer epoch time or double epoch time to handle timestamp columns with polymorphic types.
+search. Note that we allow each key to map to multiple MPT nodes, and that each key's range can be
+recorded as either integer epoch time or double epoch time to handle timestamp columns with
+polymorphic types.
 
 The `pattern` in each TimestampPattern entry is a format string that follows the specification from
-the `clp_s::TimestampPattern` class. The associated `pattern_id` can be used to uniquely identify each
-format string. This allows string timestamps in the archive to be encoded as a tuple of epoch time
-and pattern id.
+the `clp_s::TimestampPattern` class. The associated `pattern_id` can be used to uniquely identify
+each format string. This allows string timestamps in the archive to be encoded as a tuple of epoch
+time and pattern id.
 
 ### RangeIndex packet
 
@@ -288,11 +290,12 @@ unit of data) ingested into `clp-s`. Collectively, these units of data are refer
 units". Since each archive can potentially aggregate data from multiple files, the archive range
 index associates these ingestion unit properties with a logical range of records in an archive.
 Note that ingestion units can be split across multiple archives in order to maintain a configured
-archive size, and that in these cases the properties become associated with each chunk of the ingestion
-unit in each archive.
+archive size, and that in these cases the properties become associated with each chunk of the
+ingestion unit in each archive.
 
 By default we automatically store the following properties about each ingestion unit:
-* `"_filename"` - the original filename of the ingestion unit as it was passed to `clp-s` during compression
+* `"_filename"` - the original filename of the ingestion unit as it was passed to `clp-s` during
+compression
 * `"_file_split_number"` - incremented each time this ingestion-unit is split across another archive
 * `"_archive_creator_id"` - UUID associated with a particular _invocation_ of compression
 
@@ -323,12 +326,13 @@ The RangeIndex packet is encoded as a msgpack array with the format shown in [Fi
 **Figure 7**: Layout of the RangeIndex msgpack payload. Each entry in the array records a start
 index `"s"` and end index `"e"` indicating that the properties correspond to the logical range of
 records `[s, e)`. No entries in the range index have overlapping logical ranges, and all entries are
-ordered by logical range. The `"f"` object contains the properties associated with an ingestion unit.
+ordered by logical range. The `"f"` object contains the properties associated with an ingestion 
+unit.
 ::::
 
-Note that properties created and used by `clp-s` are always prefixed with the `_` character. To avoid
-naming collisions with properties created by `clp-s`, users should avoid creating properties with this
-prefix.
+Note that properties created and used by `clp-s` are always prefixed with the `_` character. To 
+avoid naming collisions with properties created by `clp-s`, users should avoid creating properties
+with this prefix.
 
 ## Files section
 
