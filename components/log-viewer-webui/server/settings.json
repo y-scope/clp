@@ -7,8 +7,8 @@
     "MongoDbHost": "localhost",
     "MongoDbPort": 27017,
     "MongoDbName": "clp-query-results",
-    "MongoDbStreamFilesCollectionName": "stream-files",
     "MongoDbSearchResultsMetadataCollectionName": "results-metadata",
+    "MongoDbStreamFilesCollectionName": "stream-files",
 
     "ClientDir": "../client/dist",
     "LogViewerDir": "../yscope-log-viewer/dist",

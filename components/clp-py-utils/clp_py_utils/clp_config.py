@@ -571,6 +571,7 @@ class StreamOutput(BaseModel):
 class WebUi(BaseModel):
     host: str = "localhost"
     port: int = 4000
+    results_metadata_collection_name: str = "results-metadata"
 
     @validator("host")
     def validate_host(cls, field):
@@ -580,6 +581,12 @@ class WebUi(BaseModel):
     @validator("port")
     def validate_port(cls, field):
         _validate_port(cls, field)
+        return field
+
+    @validator("results_metadata_collection_name")
+    def validate_results_metadata_collection_name(cls, field):
+        if "" == field:
+            raise ValueError(f"{WEBUI_COMPONENT_NAME}.results_metadata_collection_name cannot be empty.")
         return field
 
 

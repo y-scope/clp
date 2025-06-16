@@ -61,6 +61,7 @@
 #webui:
 #  host: "localhost"
 #  port: 4000
+#  result_metadata_collection_name: "results-metadata"
 #
 ## Where archives should be output to
 #archive_output:

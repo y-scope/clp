@@ -509,10 +509,11 @@ def validate_worker_config(clp_config: CLPConfig):
     clp_config.validate_stream_output_config()
 
 
-def validate_webui_config(clp_config: CLPConfig, settings_json_path: pathlib.Path):
-    if not settings_json_path.exists():
-        raise ValueError(
-            f"{WEBUI_COMPONENT_NAME} {settings_json_path} is not a valid path to settings.json"
-        )
+def validate_webui_config(clp_config: CLPConfig,
+                          client_settings_json_path: pathlib.Path,
+                          server_settings_json_path: pathlib.Path):
+    for path in [client_settings_json_path, server_settings_json_path]:
+        if not path.exists():
+            raise ValueError(f"{WEBUI_COMPONENT_NAME} {path} is not a valid path to settings.json")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)

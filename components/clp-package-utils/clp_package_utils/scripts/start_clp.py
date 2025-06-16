@@ -854,7 +854,15 @@ def start_webui(
 
     container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "log-viewer-webui"
     node_path = str(container_webui_dir / "server" / "node_modules")
-    settings_json_path = (
+    client_settings_json_path = (
+        get_clp_home()
+        / "var"
+        / "www"
+        / "log-viewer-webui"
+        / "client"
+        / "settings.json"
+    )
+    server_settings_json_path = (
         get_clp_home()
         / "var"
         / "www"
@@ -865,10 +873,19 @@ def start_webui(
         / "settings.json"
     )
 
-    validate_webui_config(clp_config, settings_json_path)
+    validate_webui_config(clp_config, client_settings_json_path, server_settings_json_path)
 
-    # Read, update, and write back settings.json
-    settings_json_updates = {
+    # Read, update, and write back client's and server's settings.json
+    client_settings_json_updates = {
+        "ClpStorageEngine": clp_config.package.storage_engine,
+        "MongoDbSearchResultsMetadataCollectionName": clp_config.webui.results_metadata_collection_name,
+    }
+    client_settings_json = read_and_update_settings_json(client_settings_json_path,
+                                                    client_settings_json_updates)
+    with open(client_settings_json_path, "w") as client_settings_json_file:
+        client_settings_json_file.write(json.dumps(client_settings_json))
+
+    server_settings_json_updates = {
         "SqlDbHost": clp_config.database.host,
         "SqlDbPort": clp_config.database.port,
         "SqlDbName": clp_config.database.name,
@@ -876,6 +893,7 @@ def start_webui(
         "MongoDbHost": clp_config.results_cache.host,
         "MongoDbPort": clp_config.results_cache.port,
         "MongoDbName": clp_config.results_cache.db_name,
+        "MongoDbSearchResultsMetadataCollectionName": clp_config.webui.results_metadata_collection_name,
         "MongoDbStreamFilesCollectionName": clp_config.results_cache.stream_collection_name,
         "ClientDir": str(container_webui_dir / "client"),
         "StreamFilesDir": str(container_clp_config.stream_output.get_directory()),
@@ -889,23 +907,24 @@ def start_webui(
     if StorageType.S3 == stream_storage.type:
         s3_config = stream_storage.s3_config
 
-        settings_json_updates["StreamFilesS3Region"] = s3_config.region_code
-        settings_json_updates["StreamFilesS3PathPrefix"] = (
+        server_settings_json_updates["StreamFilesS3Region"] = s3_config.region_code
+        server_settings_json_updates["StreamFilesS3PathPrefix"] = (
             f"{s3_config.bucket}/{s3_config.key_prefix}"
         )
         auth = s3_config.aws_authentication
         if AwsAuthType.profile == auth.type:
-            settings_json_updates["StreamFilesS3Profile"] = auth.profile
+            server_settings_json_updates["StreamFilesS3Profile"] = auth.profile
         else:
-            settings_json_updates["StreamFilesS3Profile"] = None
+            server_settings_json_updates["StreamFilesS3Profile"] = None
     elif StorageType.FS == stream_storage.type:
-        settings_json_updates["StreamFilesS3Region"] = None
-        settings_json_updates["StreamFilesS3PathPrefix"] = None
-        settings_json_updates["StreamFilesS3Profile"] = None
+        server_settings_json_updates["StreamFilesS3Region"] = None
+        server_settings_json_updates["StreamFilesS3PathPrefix"] = None
+        server_settings_json_updates["StreamFilesS3Profile"] = None
 
-    settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
-    with open(settings_json_path, "w") as settings_json_file:
-        settings_json_file.write(json.dumps(settings_json))
+    server_settings_json = read_and_update_settings_json(server_settings_json_path,
+                                                         server_settings_json_updates)
+    with open(server_settings_json_path, "w") as settings_json_file:
+        settings_json_file.write(json.dumps(server_settings_json))
 
     # fmt: off
     container_cmd = [
