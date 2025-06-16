@@ -5,22 +5,22 @@ import {
 } from "react";
 
 import {Nullable} from "../../typings/common";
-import {MongoCursorSocket} from "./MongoCursorSocket.js";
+import {MongoSocketCursor} from "./MongoSocketCursor.js";
 
 
 /**
- * Custom hook which returns a real-time reactive array of documents from a `MongoCursorSocket`.
+ * Custom hook which returns a real-time reactive array of documents from a `MongoSocketCursor`.
  *
  * @template T The document type returned by the cursor.
- * @param query Function which returns a `MongoCursorSocket` instance or null.
+ * @param query Function which returns a `MongoSocketCursor` instance or null.
  * @param dependencies Array of dependencies for the query.
  * @return
- * - If `query` returns a `MongoCursorSocket` instance, then hook returns null while
+ * - If `query` returns a `MongoSocketCursor` instance, then hook returns null while
  * the subscription is pending, and a reactive array of documents when the subscription is ready.
  * - If `query` returns null, then the hook also returns null.
  */
 const useCursor = <T = object>(
-    query: () => Nullable<MongoCursorSocket>,
+    query: () => Nullable<MongoSocketCursor>,
     dependencies: DependencyList = []
 ): Nullable<T[]> => {
     const [data, setData] = useState<Nullable<T[]>>(null);
@@ -37,7 +37,6 @@ const useCursor = <T = object>(
 
         // Flag to ignore updates after unmounting.
         let ignore = false;
-        console.log("Subscribing to cursor");
 
         // Handler to set data updates from the server.
         const onDataUpdate = (dataUpdate: object[]) => {
@@ -63,7 +62,6 @@ const useCursor = <T = object>(
                 .then(() => {
                     // Unsubscribe will not run if the subscription failed since the promise was
                     // rejected.
-                    console.log("Unsubscribing from cursor");
                     cursor.unsubscribe();
                 })
                 .catch((error: unknown) => {

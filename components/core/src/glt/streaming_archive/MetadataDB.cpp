@@ -9,6 +9,13 @@
 #include "../type_utils.hpp"
 #include "Constants.hpp"
 
+using std::make_unique;
+using std::string;
+using std::to_string;
+using std::vector;
+
+namespace glt::streaming_archive {
+namespace {
 // Types
 enum class FilesTableFieldIndexes : uint16_t {
     Id = 0,  // NOTE: This needs to be the first item in the list
@@ -27,13 +34,8 @@ enum class FilesTableFieldIndexes : uint16_t {
     SegmentOffsetPosition,
     Length,
 };
+}  // namespace
 
-using std::make_unique;
-using std::string;
-using std::to_string;
-using std::vector;
-
-namespace glt::streaming_archive {
 static void
 create_tables(vector<std::pair<string, string>> const& file_field_names_and_types, SQLiteDB& db) {
     fmt::memory_buffer statement_buffer;

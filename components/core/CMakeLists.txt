@@ -211,17 +211,12 @@ else()
 endif()
 
 # Find and setup mongocxx
+find_package(mongocxx REQUIRED)
+message(STATUS "Found mongocxx ${mongocxx_VERSION}")
 if(CLP_USE_STATIC_LIBS)
     set(MONGOCXX_TARGET mongo::mongocxx_static)
 else()
     set(MONGOCXX_TARGET mongo::mongocxx_shared)
-endif()
-
-find_package(mongocxx REQUIRED)
-if(mongocxx_FOUND)
-    message(STATUS "Found mongocxx ${mongocxx_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for mongocxx")
 endif()
 
 # Find and setup msgpack
@@ -338,6 +333,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/clp_search/Grep.hpp
     src/clp_s/search/clp_search/Query.cpp
     src/clp_s/search/clp_search/Query.hpp
+    src/clp_s/search/EvaluateRangeIndexFilters.cpp
+    src/clp_s/search/EvaluateRangeIndexFilters.hpp
     src/clp_s/search/EvaluateTimestampIndex.cpp
     src/clp_s/search/EvaluateTimestampIndex.hpp
     src/clp_s/search/Output.cpp
@@ -673,7 +670,6 @@ add_executable(unitTest
         )
 target_include_directories(unitTest
         PRIVATE
-        ${CLP_OUTCOME_INCLUDE_DIRECTORY}
         ${CLP_SQLITE3_INCLUDE_DIRECTORY}
         )
 target_link_libraries(unitTest
