@@ -123,13 +123,14 @@ The compression type for an archive indicates the general-purpose compressor use
 section of the archive and is currently one of:
 * `0x0000` - ZStandard
 
-All "reserved padding" is reserved for use in future versions of the single-file archive format.
+All `reserved padding` fields are reserved for use in future versions of the single-file archive
+format.
 
 ## Metadata section
 
-The metadata section is made up of a compressed sequence of metadata packets with the binary format
-shown in [Figure 3](#figure-3). Metadata packets generally contain information that relates to the
-entire archive or large sections of the archive.
+The `metadata`` section is made up of a compressed sequence of metadata packets encoded with the
+binary format shown in [Figure 3](#figure-3). Metadata packets generally contain information that
+relates to the entire archive or large sections of the archive.
 
 (figure-3)=
 ::::{card}
@@ -295,9 +296,9 @@ By default we automatically store the following properties about each ingestion 
 * `"_file_split_number"` - incremented each time this ingestion-unit is split across another archive
 * `"_archive_creator_id"` - UUID associated with a particular _invocation_ of compression
 
-Currently clp-s will store these default properties as well as any properties present in the
-metadata section of a KV-IR stream. There will likely be future support for associating arbitrary
-additional properties with an ingestion unit at compression time.
+Currently `clp-s` will associate these default properties as well as any properties present in the
+metadata section of a KV-IR stream with each ingestion unit. There will likely be future support
+for associating arbitrary additional properties with an ingestion unit at compression time.
 
 The RangeIndex packet is encoded as a msgpack array with the format shown in [Figure 7](#figure-7).
 
