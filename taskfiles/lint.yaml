@@ -57,13 +57,8 @@ tasks:
   check-js:
     sources: &js_source_files
       - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
-      - "{{.G_WEBUI_SRC_DIR}}/client/package.json"
-      - "{{.G_WEBUI_SRC_DIR}}/client/src/**/*.css"
-      - "{{.G_WEBUI_SRC_DIR}}/client/src/**/*.jsx"
-      - "{{.G_WEBUI_SRC_DIR}}/client/src/webpack.config.js"
-      - "{{.G_WEBUI_SRC_DIR}}/server/package.json"
-      - "{{.G_WEBUI_SRC_DIR}}/server/settings.json"
-      - "{{.G_WEBUI_SRC_DIR}}/server/src/**/*.js"
+      - "{{.G_WEBUI_SRC_DIR}}/**/*"
+      - exclude: "{{.G_WEBUI_SRC_DIR}}/**/dist/*"
       - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     cmds:

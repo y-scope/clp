@@ -36,6 +36,12 @@ vars:
   G_CORE_MAX_PARALLELISM_PER_BUILD_TASK: >-
     {{default "" (env "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK")}}
 
+  # Checksum files
+  G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-client-node-modules.md5"
+  G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-log-viewer-node-modules.md5"
+  G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-package-node-modules.md5"
+  G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-server-node-modules.md5"
+
 tasks:
   default:
     deps: ["package"]
@@ -256,27 +262,13 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
     sources:
-      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
+      - "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
-      - "client/index.html"
-      - "client/tsconfig/**/*"
-      - "client/tsconfig.json"
-      - "client/package.json"
-      - "client/package-lock.json"
-      - "client/src/**/*.css"
-      - "client/src/**/*.ts"
-      - "client/src/**/*.tsx"
-      - "server/package.json"
-      - "server/package-lock.json"
-      - "server/settings.json"
-      - "server/src/**/*.ts"
-      - "server/tsconfig.json"
-      - "yscope-log-viewer/package.json"
-      - "yscope-log-viewer/public/**/*"
-      - "yscope-log-viewer/src/**/*"
-      - "yscope-log-viewer/tsconfig.json"
-      - "yscope-log-viewer/webpack.common.js"
-      - "yscope-log-viewer/webpack.prod.js"
+      - "**/*"
+      - exclude: "**/dist/*"
     dir: "components/webui"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -364,13 +356,6 @@ tasks:
   webui-node-modules:
     internal: true
     vars:
-      # Checksum files
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      CLIENT_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-client-node-modules.md5"
-      LOG_VIEWER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-log-viewer-node-modules.md5"
-      PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-package-node-modules.md5"
-      SERVER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-server-node-modules.md5"
-
       # Directories
       SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
       CLIENT_OUTPUT_DIR: "{{.SRC_DIR}}/client/node_modules"
@@ -391,62 +376,52 @@ tasks:
       - "yscope-log-viewer/package-lock.json"
     dir: "{{.SRC_DIR}}"
     generates:
-      - "{{.CHECKSUM_FILE}}"
-      - "{{.CLIENT_CHECKSUM_FILE}}"
-      - "{{.LOG_VIEWER_CHECKSUM_FILE}}"
-      - "{{.PACKAGE_CHECKSUM_FILE}}"
-      - "{{.SERVER_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
     deps:
       - "deps:log-viewer"
       - "nodejs-22"
       - task: "utils:checksum:validate"
         vars:
-          CHECKSUM_FILE: "{{.CLIENT_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.CLIENT_OUTPUT_DIR}}"]
       - task: "utils:checksum:validate"
         vars:
-          CHECKSUM_FILE: "{{.SERVER_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.SERVER_OUTPUT_DIR}}"]
+          CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.LOG_VIEWER_OUTPUT_DIR}}"]
       - task: "utils:checksum:validate"
         vars:
-          CHECKSUM_FILE: "{{.PACKAGE_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
       - task: "utils:checksum:validate"
         vars:
-          CHECKSUM_FILE: "{{.LOG_VIEWER_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.LOG_VIEWER_OUTPUT_DIR}}"]
+          CHECKSUM_FILE: "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.SERVER_OUTPUT_DIR}}"]
     cmds:
-      - "rm -f {{.CHECKSUM_FILE}}"
       - task: "clean-webui"
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
       - |-
         cd yscope-log-viewer
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm install
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
       # These commands must be last
       - task: "utils:checksum:compute"
         vars:
-          CHECKSUM_FILE: "{{.CLIENT_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.CLIENT_OUTPUT_DIR}}"]
       - task: "utils:checksum:compute"
         vars:
-          CHECKSUM_FILE: "{{.LOG_VIEWER_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.LOG_VIEWER_OUTPUT_DIR}}"]
       - task: "utils:checksum:compute"
         vars:
-          CHECKSUM_FILE: "{{.PACKAGE_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
       - task: "utils:checksum:compute"
         vars:
-          CHECKSUM_FILE: "{{.SERVER_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.SERVER_OUTPUT_DIR}}"]
-      # This command must be last
-      - >-
-        cat
-        "{{.CLIENT_CHECKSUM_FILE}}"
-        "{{.LOG_VIEWER_CHECKSUM_FILE}}"
-        "{{.PACKAGE_CHECKSUM_FILE}}"
-        "{{.SERVER_CHECKSUM_FILE}}"
-        > "{{.CHECKSUM_FILE}}"
 
   nodejs:
     internal: true
