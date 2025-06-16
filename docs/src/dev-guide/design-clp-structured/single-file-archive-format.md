@@ -74,62 +74,46 @@ designed for a given minor version are backwards-compatible.
 
 (figure-2)=
 ::::{card}
-:::{mermaid}
-%%{
-  init: {
-    "theme": "base",
-    "themeVariables": {
-      "primaryColor": "#0066cc",
-      "primaryTextColor": "#fff",
-      "primaryBorderColor": "transparent",
-      "lineColor": "#007fff",
-      "secondaryColor": "#007fff",
-      "tertiaryColor": "#fff"
-    },
-    "packet": {
-        "bitsPerRow": 8,
-        "bitWidth": 128
-    }
-  }
-}%%
-packet-beta
-  0-3: "Magic Number (0xFD, 0x2F, 0xC5, 0x30)"
-  4-5: "Patch Version"
-  6: "Minor Version"
-  7: "Major Version"
-  8-15: "Original Uncompressed Size"
-  16-23: "Compressed Archive Size"
-  24-55: "Reserved Padding"
-  56-59: "Metadata Section Size"
-  60-61: "Compression Type"
-  62-63: "Reserved Padding"
-:::
+```
+Header {
+  magic_number: uint8_t[4] = {0xFD, 0x2F, 0xC5, 0x30}
+  patch_version: uint16_t
+  minor_version: uint8_t
+  major_version: uint8_t
+  original_uncompressed_size: uint64_t
+  compressed_archive_size: uint64_t
+  reserved_padding1: uint64_t[4]
+  metadata_section_size: uint32_t
+  compression_type: uint16_t
+  reserved_padding2: uint16_t
+}
+```
 +++
 **Figure 2**: Layout of the 64-byte archive header.
 ::::
 
-The value in `compressed archive size` indicates the total size of the archive, including the size
-of the header. The `original uncompressed size` field indicates the total size of the data that was
-compressed into the archive. The interpretation of `original uncompressed size` changes somewhat
+The value in `compressed_archive_size` indicates the total size of the archive, including the size
+of the header. The `original_uncompressed_size` field indicates the total size of the data that was
+compressed into the archive. The interpretation of `original_uncompressed_size` changes somewhat
 based on what data was ingested into the archive. For example, when ingesting `ndjson`, the field
 records the number of bytes of raw JSON data ingested into the archive --- however, when ingesting
 KV-IR streams, the field records the number of decompressed bytes of KV-IR ingested into the archive
 (since KV-IR streams are typically compressed by a general purposed compressor before being stored).
 
-The `metadata section size` field indicates the _compressed_ size of the metadata section in bytes.
-This field can be used in combination with the `original uncompressed size` field and known header
+The `metadata_section_size` field indicates the _compressed_ size of the metadata section in bytes.
+This field can be used in combination with the `original_uncompressed_size` field and known header
 size to determine the size and offset of both the `metadata` and `files` sections.
 
 The compression type for an archive indicates the general-purpose compressor used to compress each
 section of the archive and is currently one of:
 * `0x0000` - ZStandard
 
-All `reserved padding` fields are reserved for use in future versions of the single-file archive
+All `reserved_padding` fields are reserved for use in future versions of the single-file archive
 format.
 
 ## Metadata section
 
-The `metadata`` section is made up of a compressed sequence of metadata packets encoded with the
+The `metadata` section is made up of a compressed sequence of metadata packets encoded with the
 binary format shown in [Figure 3](#figure-3). Metadata packets generally contain information that
 relates to the entire archive or large sections of the archive.
 
