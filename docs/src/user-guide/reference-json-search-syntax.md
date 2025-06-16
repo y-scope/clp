@@ -80,6 +80,28 @@ follows:
 \@key: value
 ```
 
+### Querying file-level metadata kv-pairs
+
+clp-json stores some metadata about each file that is compressed into an archive (e.g., the file's
+name). To filter for log events that correspond to some kv-pair in this metadata, you can prefix the
+key with `$`:
+
+```
+$key: value
+```
+
+For example, to query for log events that were compressed from a file whose name was `test.jsonl`:
+
+```
+$_filename: "test.jsonl"
+```
+
+To query for a key named `$key` in an event, the `$` character can be escaped as follows:
+
+```
+\$key: value
+```
+
 ### Wildcards in values
 
 To search for a kv-pair with *any* value, you can specify the value as a single `*`.
