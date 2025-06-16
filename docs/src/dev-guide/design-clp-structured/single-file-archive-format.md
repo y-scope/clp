@@ -105,17 +105,17 @@ packet-beta
 **Figure 2**: Layout of the 64-byte archive header.
 ::::
 
-The compressed archive size is the total size of an archive (including the size of the header). The
-original uncompressed size field indicates the total size of the data that was compressed into an
-archive. The interpretation of "original uncompressed size" changes somewhat based on what data was
-ingested into an archive. For example, when ingesting ndjson the field records the number of bytes
-of raw JSON data ingested into an archive and when ingesting KV-IR streams the field records the
-number of decompressed bytes of KV-IR ingested into an archive (since KV-IR streams are typically
+The value in `compressed archive size` indicates the total size of the archive, including the size of the header. The
+`original uncompressed size` field indicates the total size of the data that was compressed into the
+archive. The interpretation of `original uncompressed size` changes somewhat based on what data was
+ingested into the archive. For example, when ingesting `ndjson`, the field records the number of bytes
+of raw JSON data ingested into the archive --- however, when ingesting KV-IR streams, the field records the
+number of decompressed bytes of KV-IR ingested into the archive (since KV-IR streams are typically
 compressed by a general purposed compressor before being stored).
 
-The metadata section size field indicates the _compressed_ size of the metadata section in bytes.
-This field can be used in combination with the uncompressed size field and known header size to
-determine the size and offset both the "metadata" and "files" sections.
+The `metadata section size` field indicates the _compressed_ size of the metadata section in bytes.
+This field can be used in combination with the `original uncompressed size` field and known header size to
+determine the size and offset of both the `metadata` and `files` sections.
 
 The compression type for an archive indicates the general-purpose compressor used to compress each
 section of the archive and is currently one of:
@@ -126,8 +126,8 @@ All "reserved padding" is reserved for use in future versions of the single-file
 ## Metadata section
 
 The metadata section is made up of a compressed sequence of metadata packets with the binary format
-shown in [Figure 3](#figure-3). Metadata packets generally contain information that relates to an
-entire archive or large sections of an archive.
+shown in [Figure 3](#figure-3). Metadata packets generally contain information that relates to the
+entire archive or large sections of the archive.
 
 (figure-3)=
 ::::{card}
