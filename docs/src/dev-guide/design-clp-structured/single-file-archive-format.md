@@ -61,10 +61,10 @@ block-beta
 
 ## Header section
 
-The archive header is a 64-byte unit at the start of a single-file archive containing some of the
+The archive header is a 64-byte unit at the start of a single-file archive that contains some of the
 most important metadata information about an archive, as shown in [Figure 2](#figure-2). The header
 begins with a 4-byte magic number which identifies the file as an archive. The magic number is
-followed by a 4-byte version number made up of a 2-byte patch version and 1-byte minor and major 
+followed by a 4-byte version number, comprised of a 2-byte patch version number, followed by 1-byte minor and major 
 version numbers respectively. For version 0.X.Y archives every minor version change is breaking and
 to reduce maintenance while the archive format stabilizes,
 not all readers designed for a given minor version are backwards-compatible.
@@ -144,8 +144,8 @@ MetadataPacketStream {
 }
 ```
 +++
-**Figure 3**: Metadata section packet stream binary format. The metadata section is equivalent to a
-single instance of "MetadataPacketStream".
+**Figure 3**: `Metadata` section packet stream binary format. The `metadata` section is equivalent to a
+single instance of `MetadataPacketStream`.
 ::::
 
 Each metadata packet has a type, size, and arbitrary binary payload. Different packet types make
@@ -221,8 +221,7 @@ The ArchiveFileInfo packet has entries with the following names in order:
 * `"/0"` - the first tables segment
 
 The Array Log-type Dictionary is nominally optional for archives that use structured arrays, but in
-practice we currently just store an empty dictionary in this section when structured arrays are
-enabled.
+practice, when structured arrays are enabled, we just store an empty dictionary in this section.
 
 ### TimestampDictionary packet
 
@@ -274,8 +273,8 @@ The key name in each TimestampRange follows the same
 search. Note that we allow each key to map to multiple MPT nodes, and that each key's range can be recorded as
 either integer epoch time or double epoch time to handle timestamp columns with polymorphic types.
 
-The pattern in each TimestampPattern entry is a format string that follows the specification from
-the `clp_s::TimestampPattern` class. The associated pattern_id can be used to uniquely identify each
+The `pattern` in each TimestampPattern entry is a format string that follows the specification from
+the `clp_s::TimestampPattern` class. The associated `pattern_id` can be used to uniquely identify each
 format string. This allows string timestamps in the archive to be encoded as a tuple of epoch time
 and pattern id.
 
@@ -283,7 +282,7 @@ and pattern id.
 
 The archive range index allows users to associate arbitrary properties with each file (or any other
 unit of data) ingested into `clp-s`. Collectively, these units of data are referred to as "ingestion
-units". Since each archive can potentially aggregate data from multiple files the archive range
+units". Since each archive can potentially aggregate data from multiple files, the archive range
 index associates these ingestion unit properties with a logical range of records in an archive.
 Note that ingestion units can be split across multiple archives in order to maintain a configured
 archive size, and that in these cases the properties become associated with each chunk of the ingestion
