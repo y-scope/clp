@@ -852,13 +852,13 @@ def start_webui(
     if container_exists(container_name):
         return
 
-    container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "log-viewer-webui"
+    container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
     node_path = str(container_webui_dir / "server" / "node_modules")
     client_settings_json_path = (
         get_clp_home()
         / "var"
         / "www"
-        / "log-viewer-webui"
+        / "webui"
         / "client"
         / "settings.json"
     )
@@ -866,7 +866,7 @@ def start_webui(
         get_clp_home()
         / "var"
         / "www"
-        / "log-viewer-webui"
+        / "webui"
         / "server"
         / "dist"
         / "server"

@@ -56,14 +56,14 @@ tasks:
 
   check-js:
     sources: &js_source_files
-      - "{{.G_BUILD_DIR}}/log-viewer-webui-node-modules.md5"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/package.json"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/**/*.css"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/**/*.jsx"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/webpack.config.js"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/package.json"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/settings.json"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/src/**/*.js"
+      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
+      - "{{.G_WEBUI_SRC_DIR}}/client/package.json"
+      - "{{.G_WEBUI_SRC_DIR}}/client/src/**/*.css"
+      - "{{.G_WEBUI_SRC_DIR}}/client/src/**/*.jsx"
+      - "{{.G_WEBUI_SRC_DIR}}/client/src/webpack.config.js"
+      - "{{.G_WEBUI_SRC_DIR}}/server/package.json"
+      - "{{.G_WEBUI_SRC_DIR}}/server/settings.json"
+      - "{{.G_WEBUI_SRC_DIR}}/server/src/**/*.js"
       - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     cmds:
@@ -762,10 +762,10 @@ tasks:
     internal: true
     requires:
       vars: ["LINT_CMD"]
-    deps: [":log-viewer-webui-node-modules"]
+    deps: [":webui-node-modules"]
     cmds:
       - |-
-        cd "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}"
+        cd "{{.G_WEBUI_SRC_DIR}}"
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run "lint:{{.LINT_CMD}}"
 
   py:
