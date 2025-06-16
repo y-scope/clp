@@ -9,16 +9,6 @@ import settings from "../../settings.json" with {type: "json"};
 
 
 /**
- * Routes for serving static files in the React SPA client.
- * This should be kept in sync with the client-side routes defined in `client/src/router.tsx`.
- */
-const CLIENT_ROUTES = Object.freeze([
-    "/ingest",
-    "/search",
-    "/streamFile",
-]);
-
-/**
  * Creates static files serving routes.
  *
  * @param fastify
@@ -63,11 +53,9 @@ const routes: FastifyPluginAsync = async (fastify) => {
             wildcard: false,
         });
 
-        // Serve the index.html file for all routes in the React SPA client.
-        CLIENT_ROUTES.forEach((route) => {
-            fastify.get(route, (_, reply) => {
-                reply.sendFile("index.html");
-            });
+        // Serve index.html for all unmatched routes in the React Single Page Application (SPA).
+        fastify.get("/*", (_, reply) => {
+            reply.sendFile("index.html");
         });
     }
 };
