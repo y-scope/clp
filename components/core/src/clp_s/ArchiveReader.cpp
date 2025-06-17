@@ -188,6 +188,9 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         case NodeType::Integer:
             column_reader = new Int64ColumnReader(column_id);
             break;
+        case NodeType::DeltaInteger:
+            column_reader = new DeltaColumnReader(column_id);
+            break;
         case NodeType::Float:
             column_reader = new FloatColumnReader(column_id);
             break;
@@ -237,6 +240,9 @@ void ArchiveReader::append_unordered_reader_columns(
         switch (node.get_type()) {
             case NodeType::Integer:
                 column_reader = new Int64ColumnReader(column_id);
+                break;
+            case NodeType::DeltaInteger:
+                column_reader = new DeltaColumnReader(column_id);
                 break;
             case NodeType::Float:
                 column_reader = new FloatColumnReader(column_id);

@@ -91,6 +91,33 @@ private:
     UnalignedMemSpan<int64_t> m_values;
 };
 
+class DeltaColumnReader : public BaseColumnReader {
+public:
+    // Constructor
+    explicit DeltaColumnReader(int32_t id) : BaseColumnReader(id) {}
+
+    // Destructor
+    ~DeltaColumnReader() override = default;
+
+    // Methods inherited from BaseColumnReader
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
+
+    NodeType get_type() override { return NodeType::DeltaInteger; }
+
+    std::variant<int64_t, double, std::string, uint8_t> extract_value(
+            uint64_t cur_message
+    ) override;
+
+    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+
+private:
+    int64_t get_value_at_idx(size_t idx);
+
+    UnalignedMemSpan<int64_t> m_values;
+    int64_t m_cur_value{};
+    size_t m_cur_idx{};
+};
+
 class FloatColumnReader : public BaseColumnReader {
 public:
     // Constructor
