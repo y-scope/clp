@@ -330,10 +330,8 @@ void ArchiveReader::initialize_schema_reader(
         }
         BaseColumnReader* column_reader = append_reader_column(reader, column_id);
 
-        if (column_id == m_log_event_idx_column_id
-            && nullptr != dynamic_cast<Int64ColumnReader*>(column_reader))
-        {
-            reader.mark_column_as_log_event_idx(static_cast<Int64ColumnReader*>(column_reader));
+        if (column_id == m_log_event_idx_column_id) {
+            reader.mark_column_as_log_event_idx(column_reader);
         }
 
         if (should_extract_timestamp && column_reader && timestamp_column_ids.count(column_id) > 0)
