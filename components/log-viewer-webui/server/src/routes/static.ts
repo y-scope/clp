@@ -16,7 +16,7 @@ import settings from "../../settings.json" with {type: "json"};
 const routes: FastifyPluginAsync = async (fastify) => {
     const filename = fileURLToPath(import.meta.url);
     const dirname = path.dirname(filename);
-    const rootDirname = path.resolve(dirname, "../..");
+    const rootDirname = path.resolve(dirname, "../../../..");
 
     let streamFilesDir = settings.StreamFilesDir;
     if (false === path.isAbsolute(streamFilesDir)) {
@@ -25,6 +25,7 @@ const routes: FastifyPluginAsync = async (fastify) => {
     await fastify.register(fastifyStatic, {
         prefix: "/streams",
         root: streamFilesDir,
+        decorateReply: false,
     });
 
     let logViewerDir = settings.LogViewerDir;
@@ -48,12 +49,13 @@ const routes: FastifyPluginAsync = async (fastify) => {
         await fastify.register(fastifyStatic, {
             prefix: "/",
             root: clientDir,
-            decorateReply: false,
+            decorateReply: true,
             wildcard: false,
         });
 
-        fastify.get("/streamFile", (_, reply) => {
-            reply.sendFile("index.html", clientDir);
+        // Serve index.html for all unmatched routes in the React Single Page Application (SPA).
+        fastify.get("/*", (_, reply) => {
+            reply.sendFile("index.html");
         });
     }
 };
