@@ -143,9 +143,9 @@ void check_archive_metadata_from_stats(
         bool from_ir
 ) {
     for (auto const& stats : archive_stats) {
-        REQUIRE(stats.metadata.is_array());
-        REQUIRE(1ULL == stats.metadata.size());
-        auto entry = stats.metadata.begin();
+        REQUIRE(stats.range_index.is_array());
+        REQUIRE(1ULL == stats.range_index.size());
+        auto entry = stats.range_index.begin();
         REQUIRE(entry->is_object());
         REQUIRE(entry->contains(clp_s::RangeIndexWriter::cStartIndexName));
         REQUIRE(entry->contains(clp_s::RangeIndexWriter::cEndIndexName));

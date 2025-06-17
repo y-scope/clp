@@ -40,7 +40,7 @@ struct ArchiveStats {
             epochtime_t end_timestamp,
             size_t uncompressed_size,
             size_t compressed_size,
-            nlohmann::json metadata,
+            nlohmann::json range_index,
             bool is_split
     )
             : id{id},
@@ -48,13 +48,13 @@ struct ArchiveStats {
               end_timestamp{end_timestamp},
               uncompressed_size{uncompressed_size},
               compressed_size{compressed_size},
-              metadata(std::move(metadata)),  // Avoid {} to avoid wrapping metadata in JSON array.
+              range_index(std::move(range_index)),  // Avoid {} to prevent wrapping in JSON array.
               is_split{is_split} {}
 
     [[nodiscard]] auto as_string() -> std::string {
         namespace Archive = clp::streaming_archive::cMetadataDB::Archive;
         namespace File = clp::streaming_archive::cMetadataDB::File;
-        constexpr std::string_view cMetadata{"metadata"};
+        constexpr std::string_view cRangeIndex{"range_index"};
 
         nlohmann::json json_msg
                 = {{Archive::Id, id},
@@ -63,7 +63,7 @@ struct ArchiveStats {
                    {Archive::UncompressedSize, uncompressed_size},
                    {Archive::Size, compressed_size},
                    {File::IsSplit, is_split},
-                   {cMetadata, metadata}};
+                   {cRangeIndex, range_index}};
         return json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore);
     }
 
@@ -72,7 +72,7 @@ struct ArchiveStats {
     epochtime_t end_timestamp{};
     size_t uncompressed_size{};
     size_t compressed_size{};
-    nlohmann::json metadata;
+    nlohmann::json range_index;
     bool is_split{};
 };
 
