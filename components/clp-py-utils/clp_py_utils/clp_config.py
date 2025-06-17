@@ -27,6 +27,7 @@ COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
 LOG_VIEWER_WEBUI_COMPONENT_NAME = "log_viewer_webui"
+DAEMON_COMPONENT_NAME = "daemon"
 
 # Target names
 ALL_TARGET_NAME = ""
@@ -292,6 +293,7 @@ class ResultsCache(BaseModel):
     port: int = 27017
     db_name: str = "clp-query-results"
     stream_collection_name: str = "stream-files"
+    retention_period: Optional[int] = 10
 
     @validator("host")
     def validate_host(cls, field):
@@ -311,6 +313,12 @@ class ResultsCache(BaseModel):
             raise ValueError(
                 f"{RESULTS_CACHE_COMPONENT_NAME}.stream_collection_name cannot be empty."
             )
+        return field
+
+    @validator("retention_period")
+    def validate_retention_period(cls, field):
+        if field is not None and field <= 0:
+            raise ValueError("retention_period must be be greater than 0")
         return field
 
     def get_uri(self):
@@ -504,6 +512,8 @@ class ArchiveOutput(BaseModel):
     target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB
     target_segment_size: int = 256 * 1024 * 1024  # 256 MB
     compression_level: int = 3
+    # Retention period in minutes
+    retention_period: Optional[int] = 10
 
     @validator("target_archive_size")
     def validate_target_archive_size(cls, field):
@@ -535,6 +545,12 @@ class ArchiveOutput(BaseModel):
             raise ValueError("compression_level must be a value from 1 to 19")
         return field
 
+    @validator("retention_period")
+    def validate_retention_period(cls, field):
+        if field is not None and field <= 0:
+            raise ValueError("retention_period must be be greater than 0")
+        return field
+
     def set_directory(self, directory: pathlib.Path):
         _set_directory_for_storage_config(self.storage, directory)
 
@@ -550,11 +566,19 @@ class ArchiveOutput(BaseModel):
 class StreamOutput(BaseModel):
     storage: Union[StreamFsStorage, StreamS3Storage] = StreamFsStorage()
     target_uncompressed_size: int = 128 * 1024 * 1024
+    # Retention period in minutes
+    retention_period: Optional[int] = 10
 
     @validator("target_uncompressed_size")
     def validate_target_uncompressed_size(cls, field):
         if field <= 0:
             raise ValueError("target_uncompressed_size must be greater than 0")
+        return field
+
+    @validator("retention_period")
+    def validate_retention_period(cls, field):
+        if field is not None and field <= 0:
+            raise ValueError("retention_period must be be greater than 0")
         return field
 
     def set_directory(self, directory: pathlib.Path):
@@ -605,6 +629,23 @@ class LogViewerWebUi(BaseModel):
         return field
 
 
+class JobFrequency(BaseModel):
+    archive_retention: int = 5
+
+    class Config:
+        extra = "forbid"
+
+
+class Daemon(BaseModel):
+    logging_level: str = "INFO"
+    job_frequency: JobFrequency = JobFrequency()
+
+    @validator("logging_level")
+    def validate_logging_level(cls, field):
+        _validate_logging_level(cls, field)
+        return field
+
+
 class CLPConfig(BaseModel):
     execution_container: Optional[str] = None
 
@@ -622,6 +663,7 @@ class CLPConfig(BaseModel):
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     log_viewer_webui: LogViewerWebUi = LogViewerWebUi()
+    daemon: Daemon = Daemon()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()

@@ -14,6 +14,7 @@ import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLPConfig,
+    DAEMON_COMPONENT_NAME,
     DB_COMPONENT_NAME,
     LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
@@ -504,8 +505,11 @@ def validate_results_cache_config(
     )
 
 
-def validate_worker_config(clp_config: CLPConfig):
+def validate_logs_input_config(clp_config: CLPConfig):
     clp_config.validate_logs_input_config()
+
+
+def validate_output_config(clp_config: CLPConfig):
     clp_config.validate_archive_output_config()
     clp_config.validate_stream_output_config()
 
@@ -537,3 +541,10 @@ def validate_log_viewer_webui_config(clp_config: CLPConfig, settings_json_path: 
         clp_config.log_viewer_webui.host,
         clp_config.log_viewer_webui.port,
     )
+
+
+def validate_daemon_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{DAEMON_COMPONENT_NAME} logs directory is invalid: {ex}")
