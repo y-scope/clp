@@ -51,7 +51,7 @@ struct ArchiveStats {
               range_index(std::move(range_index)),  // Avoid {} to prevent wrapping in JSON array.
               is_split{is_split} {}
 
-    [[nodiscard]] auto as_string() -> std::string {
+    [[nodiscard]] auto as_string() const -> std::string {
         namespace Archive = clp::streaming_archive::cMetadataDB::Archive;
         namespace File = clp::streaming_archive::cMetadataDB::File;
         constexpr std::string_view cRangeIndex{"range_index"};
@@ -67,13 +67,13 @@ struct ArchiveStats {
         return json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore);
     }
 
-    std::string id;
-    epochtime_t begin_timestamp{};
-    epochtime_t end_timestamp{};
-    size_t uncompressed_size{};
-    size_t compressed_size{};
-    nlohmann::json range_index;
-    bool is_split{};
+    std::string const id;
+    epochtime_t const begin_timestamp{};
+    epochtime_t const end_timestamp{};
+    size_t const uncompressed_size{};
+    size_t const compressed_size{};
+    nlohmann::json const range_index;
+    bool const is_split{};
 };
 
 class ArchiveWriter {
