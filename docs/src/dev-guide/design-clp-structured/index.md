@@ -15,7 +15,7 @@ resource-constrained usage, but ideal for long-term archival and search.
 :link: background
 Background
 ^^^
-All necessary information needed to understand `clp-s`' format.
+All information needed to understand `clp-s`' format.
 :::
 
 :::{grid-item-card}

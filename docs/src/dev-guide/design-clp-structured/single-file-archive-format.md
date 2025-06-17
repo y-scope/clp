@@ -6,7 +6,7 @@ order to enable high performance for archives stored on object storage systems s
 [S3][amazon-s3].
 
 This documentation records the details of the single-file archive (v0.3.1) format and what it
-enables, with minimal discussion of design rationale. For more information about the design 
+enables, with minimal discussion of design rationale. For more information about the design
 decisions behind `clp-s`, please refer to [our paper on `clp-s`][μSlope], or our [blog][s3-blog] on
 optimizing `clp-s` for object storage.
 
@@ -68,7 +68,7 @@ The archive header is a 64-byte unit at the start of a single-file archive that 
 most important metadata information about an archive, as shown in [Figure 2](#figure-2). The header
 begins with a 4-byte magic number which identifies the file as an archive. The magic number is
 followed by a 4-byte version number, comprised of a 2-byte patch version number, followed by 1-byte
-minor and major  version numbers respectively. For version 0.X.Y archives, every minor version
+minor and major version numbers respectively. For version 0.X.Y archives, every minor version
 change is breaking. To reduce maintenance while the archive format stabilizes, not all readers
 designed for a given minor version are backwards-compatible.
 
@@ -105,7 +105,7 @@ This field can be used in combination with the `original_uncompressed_size` fiel
 size to determine the size and offset of both the `metadata` and `files` sections.
 
 The compression type for an archive indicates the general-purpose compressor used to compress each
-section of the archive and is currently one of:
+section of the archive, and is currently one of:
 * `0x0000` - ZStandard
 
 All `reserved_padding` fields are reserved for use in future versions of the single-file archive
@@ -138,9 +138,9 @@ equivalent to a single instance of `MetadataPacketStream`.
 
 Each metadata packet has a type, size, and arbitrary binary payload. Different packet types make
 different choices for encoding content in this binary payload. Since the size of each packet is
-well-defined reader implementations can attempt to read archives containing packet types they are
-unfamiliar with by simply skipping the corresponding content. Generally this metadata section design
-is intended to allow for some degree of forwards-compatibility and extensibility.
+well-defined, reader implementations can attempt to read archives containing packet types they are
+unfamiliar with by simply skipping the corresponding content. Generally, this metadata section
+design is intended to allow for some degree of forwards-compatibility and extensibility.
 
 Archives currently support the following metadata packet types, some of which are optional:
 * `0x00` - ArchiveInfo
@@ -152,8 +152,8 @@ Archives currently support the following metadata packet types, some of which ar
 
 The ArchiveInfo packet is a msgpack map that currently only records the number of segments in an
 archive, as shown in [Figure 4](#figure-4). Each archive currently consists of only a single segment
-(i.e. there is only one tables segment file), but we still record the number of segments in order
-to offer backwards compatibility if we do start splitting tables into multiple segments.
+(i.e. there is only one tables segment file), but we still record the number of segments to offer
+backwards compatibility if we do start splitting tables into multiple segments.
 
 This metadata packet was originally intended to mimic the "ArchiveMetadata" structure in CLP, but
 most of what "ArchiveMetadata" records is now present in either the header or the RangeIndex
@@ -277,7 +277,7 @@ Note that ingestion units can be split across multiple archives in order to main
 archive size, and that in these cases the properties become associated with each chunk of the
 ingestion unit in each archive.
 
-By default we automatically store the following properties about each ingestion unit:
+By default, we automatically store the following properties about each ingestion unit:
 * `"_filename"` - the original filename of the ingestion unit as it was passed to `clp-s` during
 compression
 * `"_file_split_number"` - incremented each time this ingestion-unit is split across another archive
@@ -310,11 +310,11 @@ The RangeIndex packet is encoded as a msgpack array with the format shown in [Fi
 **Figure 7**: Layout of the RangeIndex msgpack payload. Each entry in the array records a start
 index `"s"` and end index `"e"` indicating that the properties correspond to the logical range of
 records `[s, e)`. No entries in the range index have overlapping logical ranges, and all entries are
-ordered by logical range. The `"f"` object contains the properties associated with an ingestion 
+ordered by logical range. The `"f"` object contains the properties associated with an ingestion
 unit.
 ::::
 
-Note that properties created and used by `clp-s` are always prefixed with the `_` character. To 
+Note that properties created and used by `clp-s` are always prefixed with the `_` character. To
 avoid naming collisions with properties created by `clp-s`, users should avoid creating properties
 with this prefix.
 
