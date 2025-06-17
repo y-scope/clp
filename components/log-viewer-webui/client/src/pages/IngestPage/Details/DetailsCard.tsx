@@ -22,7 +22,7 @@ const DetailsCard = ({title, stat}: DetailsCardProps) => {
         <StatCard
             stat={stat}
             statColor={token.colorTextSecondary}
-            statSize={"1.3rem"}
+            statSize={"1.4rem"}
             title={title}/>
     );
 };

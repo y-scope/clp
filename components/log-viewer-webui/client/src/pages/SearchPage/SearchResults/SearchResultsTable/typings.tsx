@@ -2,7 +2,12 @@ import {TableProps} from "antd";
 import dayjs from "dayjs";
 
 import {DATETIME_FORMAT_TEMPLATE} from "../../../../typings/datetime";
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from ".././../../../config";
 import Message from "./Message";
+import {getStreamId} from "./utils";
 
 
 /**
@@ -10,12 +15,13 @@ import Message from "./Message";
  */
 interface SearchResult {
     _id: string;
-    timestamp: number;
-    message: string;
+    archive_id: string;
     filePath: string;
-    orig_file_path: string;
-    orig_file_id: string;
     log_event_ix: number;
+    message: string;
+    orig_file_id: string;
+    orig_file_path: string;
+    timestamp: number;
 }
 
 /**
@@ -24,9 +30,24 @@ interface SearchResult {
 const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]> = [
     {
         dataIndex: "timestamp",
+        defaultSortOrder: "descend",
         key: "timestamp",
-        render: (timestamp: number) => dayjs(timestamp).format(DATETIME_FORMAT_TEMPLATE),
-        sorter: true,
+        render: (timestamp: number) => dayjs.utc(timestamp).format(DATETIME_FORMAT_TEMPLATE),
+        sorter: (a, b) => {
+            const timestampDiff = a.timestamp - b.timestamp;
+            if (0 !== timestampDiff) {
+                return timestampDiff;
+            }
+
+            return a._id.localeCompare(b._id);
+        },
+
+        // Specifying a third sort direction removes ability for user to cancel sorting.
+        sortDirections: [
+            "ascend",
+            "descend",
+            "ascend",
+        ],
         title: "Timestamp",
         width: 15,
     },
@@ -35,8 +56,14 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
         key: "message",
         render: (_, record) => (
             <Message
-                filePath={record.orig_file_path}
-                message={record.message}/>
+                logEventIdx={record.log_event_ix}
+                message={record.message}
+                streamId={getStreamId(record)}
+                fileText={
+                    CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE ?
+                        record.orig_file_path :
+                        " Original file"
+                }/>
         ),
         title: "Message",
         width: 85,
@@ -48,8 +75,15 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
  */
 const TABLE_BOTTOM_PADDING = 75;
 
+/**
+ * The maximum number of results to retrieve for a search.
+ */
+const SEARCH_MAX_NUM_RESULTS = 1000;
+
 
 export type {SearchResult};
 export {
-    searchResultsTableColumns, TABLE_BOTTOM_PADDING,
+    SEARCH_MAX_NUM_RESULTS,
+    searchResultsTableColumns,
+    TABLE_BOTTOM_PADDING,
 };
