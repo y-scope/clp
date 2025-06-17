@@ -586,7 +586,9 @@ class WebUi(BaseModel):
     @validator("results_metadata_collection_name")
     def validate_results_metadata_collection_name(cls, field):
         if "" == field:
-            raise ValueError(f"{WEBUI_COMPONENT_NAME}.results_metadata_collection_name cannot be empty.")
+            raise ValueError(
+                f"{WEBUI_COMPONENT_NAME}.results_metadata_collection_name cannot be empty."
+            )
         return field
 
 
