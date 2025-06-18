@@ -26,6 +26,7 @@ from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logg
 from clp_py_utils.clp_metadata_db_utils import (
     add_dataset,
     create_metadata_db_tables,
+    fetch_existing_datasets,
 )
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
@@ -153,15 +154,6 @@ def _process_s3_input(
 
     for object_metadata in object_metadata_list:
         paths_to_compress_buffer.add_file(object_metadata)
-
-
-def _fetch_existing_datasets(
-    db_cursor, clp_metadata_db_connection_config: Dict[str, Any]
-) -> Set[str]:
-    table_prefix = clp_metadata_db_connection_config["table_prefix"]
-    db_cursor.execute(f"SELECT name FROM `{table_prefix}{DATASETS_TABLE_SUFFIX}`")
-    rows = db_cursor.fetchall()
-    return {row["name"] for row in rows}
 
 
 def _register_dataset(
@@ -463,8 +455,8 @@ def main(argv):
         clp_storage_engine = clp_config.package.storage_engine
         existing_datasets: Set[str] = set()
         if StorageEngine.CLP_S == clp_storage_engine:
-            existing_datasets = _fetch_existing_datasets(
-                db_cursor, clp_metadata_db_connection_config
+            existing_datasets = fetch_existing_datasets(
+                db_cursor, clp_metadata_db_connection_config["table_prefix"]
             )
 
         # Start Job Processing Loop

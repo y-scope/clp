@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Set
 
 from clp_py_utils.clp_config import (
     ARCHIVE_TAGS_TABLE_SUFFIX,
@@ -140,6 +141,21 @@ def add_dataset(
     db_cursor.execute(
         query, (dataset_name, archive_storage_type, str(dataset_archive_storage_directory))
     )
+
+
+def fetch_existing_datasets(
+    db_cursor,
+    table_prefix: str,
+) -> Set[str]:
+    """
+    Get a list of currently available log categories from the `datasets` table.
+
+    :param db_cursor:
+    :param table_prefix:
+    """
+    db_cursor.execute(f"SELECT name FROM `{table_prefix}{DATASETS_TABLE_SUFFIX}`")
+    rows = db_cursor.fetchall()
+    return {row["name"] for row in rows}
 
 
 def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None = None) -> None:
