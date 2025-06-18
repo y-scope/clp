@@ -64,7 +64,7 @@ struct ArchiveStats {
                    {Archive::Size, compressed_size},
                    {File::IsSplit, is_split},
                    {cRangeIndex, range_index}};
-        return json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore);
+        return json_msg.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore);
     }
 
     std::string const id;
