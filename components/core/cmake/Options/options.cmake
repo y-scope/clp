@@ -91,7 +91,7 @@ option(
 
 function(validate_clp_binaries_dependencies)
     if (NOT CLP_BUILD_CLP_REGEX_UTILS)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_REGEX_UTILS=ON")
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_REGEX_UTILS=ON")
     endif()
 
     if (NOT CLP_BUILD_CLP_STRING_UTILS)
@@ -148,23 +148,23 @@ endfunction()
 
 function(validate_clp_tests_dependencies)
     if (NOT CLP_BUILD_CLP_REGEX_UTILS)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_REGEX_UTILS=ON")
+        message(FATAL_ERROR "CLP_BUILD_TESTS requires CLP_BUILD_REGEX_UTILS=ON")
     endif()
 
     if (NOT CLP_BUILD_CLP_STRING_UTILS)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_STRING_UTILS=ON")
+        message(FATAL_ERROR "CLP_BUILD_TESTS requires CLP_BUILD_CLP_STRING_UTILS=ON")
     endif()
 
     if (NOT CLP_BUILD_CLP_S_SEARCH_AST)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_SEARCH_AST=ON")
+        message(FATAL_ERROR "CLP_BUILD_TESTS requires CLP_BUILD_CLP_S_SEARCH_AST=ON")
     endif()
 
     if (NOT CLP_BUILD_CLP_S_SEARCH_KQL)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_SEARCH_KQL=ON")
+        message(FATAL_ERROR "CLP_BUILD_TESTS requires CLP_BUILD_CLP_S_SEARCH_KQL=ON")
     endif()
 
     if (NOT CLP_BUILD_CLP_S_SEARCH_SQL)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_SEARCH_SQL=ON")
+        message(FATAL_ERROR "CLP_BUILD_TESTS requires CLP_BUILD_CLP_S_SEARCH_SQL=ON")
     endif()
 endfunction()
 
@@ -245,7 +245,7 @@ function(set_clp_s_archivewriter_dependencies)
     set_property(DIRECTORY PROPERTY CLP_NEED_FMT TRUE)
     set_property(DIRECTORY PROPERTY CLP_NEED_MSGPACKCXX TRUE)
     set_property(DIRECTORY PROPERTY CLP_NEED_NLOHMANN_JSON TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SIMDJSON)
+    set_property(DIRECTORY PROPERTY CLP_NEED_SIMDJSON TRUE)
     set_property(DIRECTORY PROPERTY CLP_NEED_SPDLOG TRUE)
 endfunction()
 
@@ -320,10 +320,6 @@ function(set_clp_s_search_dependencies)
     set_property(DIRECTORY PROPERTY CLP_NEED_ABSL TRUE)
     set_property(DIRECTORY PROPERTY CLP_NEED_SIMDJSON TRUE)
     set_property(DIRECTORY PROPERTY CLP_NEED_SPDLOG TRUE)
-endfunction()
-
-function(set_clp_s_reducer_dependencies_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_NLOHMANN_JSON TRUE)
 endfunction()
 
 function(validate_clp_s_search_ast_dependencies)
