@@ -3,13 +3,15 @@
 import argparse
 import logging
 import os
+import pathlib
+import shutil
 import sys
 import time
 import typing
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import List, Set, Callable
 
 import pymongo
 import pymongo.database
@@ -20,6 +22,11 @@ from clp_py_utils.clp_config import (
     DAEMON_COMPONENT_NAME,
     JobFrequency,
     ResultsCache,
+    FsStorage,
+    S3Storage,
+    StorageEngine,
+    StorageType,
+    StreamOutput
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
@@ -31,10 +38,19 @@ from pymongo.collection import Collection
 logger = get_logger(DAEMON_COMPONENT_NAME)
 
 MIN_TO_SECOND = 60
-
+MONGODB_ID_KEY = "_id"
 
 def get_target_time(retention_minutes: int):
     return int(time.time() - retention_minutes * MIN_TO_SECOND)
+
+
+def try_removing_fs_path(fs_storage_config: FsStorage, relative_path: str) -> bool:
+    file_path = fs_storage_config.directory / relative_path
+    if not file_path.is_dir():
+        return False
+
+    shutil.rmtree(file_path)
+    return True
 
 
 # # Let's first not consider recovery from interrupt
@@ -96,10 +112,10 @@ def archive_retention_entry(clp_config: CLPConfig, job_frequency: int) -> None:
 
 
 def find_collection_stub(collection: pymongo.collection.Collection) -> typing.Optional[int]:
-    latest_doc = collection.find().sort("_id", -1).limit(1)
+    latest_doc = collection.find().sort(MONGODB_ID_KEY, -1).limit(1)
     if latest_doc:
         latest_doc = list(latest_doc)
-        object_id = latest_doc[0]["_id"]
+        object_id = latest_doc[0][MONGODB_ID_KEY]
         if isinstance(object_id, ObjectId):
             return int(object_id.generation_time.timestamp())
         else:
@@ -110,7 +126,7 @@ def try_removing_results_metadata(
     database: pymongo.database.Database, collection_name: str
 ) -> None:
     results_metadata_collection = database.get_collection("results-metadata")
-    results_metadata_collection.delete_one({"_id": str(collection_name)})
+    results_metadata_collection.delete_one({MONGODB_ID_KEY: str(collection_name)})
 
 
 def handle_search_results_retention(clp_config: CLPConfig):
@@ -147,33 +163,81 @@ def search_results_retention_entry(clp_config: CLPConfig, job_frequency_secs: in
         time.sleep(job_frequency_secs)
 
 
-def handle_stream_retention(clp_config: CLPConfig) -> None:
-    stream_output_config = clp_config.stream_output
+# May require some redesign
+class RecoveryFile:
+    def __init__(self, path: pathlib.Path):
+        self.file_path = path
+    def load(self) -> Set[str]:
+        res = set()
+        with open(self.file_path, "r") as f:
+            for line in f.readlines():
+                res.add(line)
+        return res
+
+    def append(self, lines: Set[str]) -> None:
+        with open(self.file_path, "a") as f:
+            for line in lines:
+                f.write(line + "\n")
+
+
+def handle_removal(stream_output_config: StreamOutput, stream_path: str) -> bool:
+    stream_storage_config = stream_output_config.storage
+    stream_storage_type = stream_storage_config.type
+
+    if StorageType.S3 == stream_storage_type:
+        stream_s3_config = stream_storage_config.s3_config
+        return s3_try_removing_object(stream_storage_config.s3_config, stream_path)
+    elif StorageType.FS == stream_storage_type:
+        return try_removing_fs_path(stream_storage_config, stream_path)
+    else:
+        raise ValueError(
+            f"Stream storage type {stream_storage_type} is not supported"
+        )
+
+
+def handle_stream_retention(stream_output_config: StreamOutput, results_cache_config: ResultsCache) -> None:
     expiry_time = get_target_time(stream_output_config.retention_period)
     expiry_oid = ObjectId.from_datetime(datetime.utcfromtimestamp(expiry_time))
-    result_cache_config: ResultsCache = clp_config.results_cache
 
     logger.info(f"Handler targeting all streams < {expiry_time}")
     logger.info(f"Translated to objectID = {expiry_oid}")
 
-    results_cache_uri = result_cache_config.get_uri()
+    results_cache_uri = results_cache_config.get_uri()
     with pymongo.MongoClient(results_cache_uri) as results_cache_client:
         results_cache_db = results_cache_client.get_default_database()
         stream_collection = results_cache_db.get_collection(
-            result_cache_config.stream_collection_name
+            results_cache_config.stream_collection_name
         )
         # Find documents where _id (and thus creation time) is earlier
-        results = stream_collection.find({"_id": {"$lt": expiry_oid}})
+        retention_filter = {MONGODB_ID_KEY: {"$lt": expiry_oid}}
+        results = stream_collection.find(retention_filter)
         for stream in results:
             stream_path = stream["path"]
             logger.info(f"Plan to remove {stream_path}")
+            res = handle_removal(stream_output_config, stream_path)
+            if not res:
+                logger.error(f"failed to remove {stream_path}")
 
+        stream_collection.delete_many(retention_filter)
     return
 
 
 def stream_retention_entry(clp_config: CLPConfig, job_frequency_secs: int) -> None:
+    stream_output_config = clp_config.stream_output
+    storage_type = stream_output_config.storage.type
+
+    if StorageType.S3 == storage_type:
+        storage_engine = clp_config.package.storage_engine
+        if StorageEngine.CLP_S != storage_engine:
+            # TODO: update error message
+            raise ValueError(f"Stream storage type {storage_type} is not supported when using storage engine {storage_engine}")
+    elif StorageType.FS != storage_type:
+        raise ValueError(
+            f"Stream storage type {storage_type} is not supported"
+        )
+
     while True:
-        handle_stream_retention(clp_config)
+        handle_stream_retention(stream_output_config, clp_config.results_cache)
         time.sleep(job_frequency_secs)
 
 
