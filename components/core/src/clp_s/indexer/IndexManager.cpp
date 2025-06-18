@@ -1,10 +1,12 @@
 #include "IndexManager.hpp"
 
 #include <filesystem>
+#include <memory>
 #include <stack>
 #include <string>
 
 #include "../archive_constants.hpp"
+#include "../TimestampDictionaryReader.hpp"
 
 namespace clp_s::indexer {
 IndexManager::IndexManager(
@@ -35,7 +37,10 @@ IndexManager::IndexManager(
 void IndexManager::update_metadata(Path const& archive_path) {
     ArchiveReader archive_reader;
     archive_reader.open(archive_path, NetworkAuthOption{});
-    traverse_schema_tree_and_update_metadata(archive_reader.get_schema_tree());
+    traverse_schema_tree_and_update_metadata(
+            archive_reader.get_schema_tree(),
+            archive_reader.get_timestamp_dictionary()
+    );
 }
 
 std::string IndexManager::escape_key_name(std::string_view const key_name) {
@@ -86,9 +91,14 @@ std::string IndexManager::escape_key_name(std::string_view const key_name) {
 }
 
 void IndexManager::traverse_schema_tree_and_update_metadata(
-        std::shared_ptr<SchemaTree> const& schema_tree
+        std::shared_ptr<SchemaTree> const& schema_tree,
+        std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict
 ) {
     if (nullptr == schema_tree) {
+        return;
+    }
+
+    if (nullptr == timestamp_dict) {
         return;
     }
 
@@ -121,7 +131,12 @@ void IndexManager::traverse_schema_tree_and_update_metadata(
         path_buffer += escape_key_name(node.get_key_name());
         if (children_ids.empty() && NodeType::Object != node_type && NodeType::Unknown != node_type)
         {
-            m_field_update_callback(path_buffer, node_type);
+            // Always index authoritative timestamp as `NodeType::DateString`
+            auto const indexed_node_type
+                    = timestamp_dict->get_authoritative_timestamp_column_ids().contains(node_id)
+                              ? NodeType::DateString
+                              : node_type;
+            m_field_update_callback(path_buffer, indexed_node_type);
         }
 
         for (auto child_id : children_ids) {

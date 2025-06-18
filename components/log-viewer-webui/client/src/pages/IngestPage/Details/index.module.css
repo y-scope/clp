@@ -5,6 +5,10 @@
 }
 
 .timeRange {
+    display: flex;
     grid-column: span 2;
 }
 
+.timeRange :global(.ant-card) {
+    flex: 1;
+}

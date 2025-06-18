@@ -65,6 +65,7 @@ export const autoConfig = {
             ".env",
             ".env.local",
         ],
+        override: true,
     },
 
     // Source for the configuration data
