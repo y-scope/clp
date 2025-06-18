@@ -97,13 +97,7 @@ def try_removing_fs_file(fs_storage_config: FsStorage, relative_path: str) -> bo
 #             WHERE archive_id in ({ids_list_string})
 #             """
 #         )
-#         for archive_id in archive_ids:
-#             logger.info(f"Deleted archive {archive_id} from the database.")
 #
-#         if dry_run:
-#             logger.info("Dry-run finished.")
-#             db_conn.rollback()
-#             return 0
 #
 #         db_conn.commit()
 
@@ -114,26 +108,27 @@ def archive_retention_entry(clp_config: CLPConfig, job_frequency: int) -> None:
         time.sleep(job_frequency_secs)
 
 
-def find_collection_stub(collection: pymongo.collection.Collection) -> typing.Optional[int]:
-    latest_doc = collection.find().sort(MONGODB_ID_KEY, -1).limit(1)
+# For empty collection, we return 0
+def find_collection_stub(collection: pymongo.collection.Collection) -> int:
+    latest_doc = collection.find_one(sort=[(MONGODB_ID_KEY, pymongo.DESCENDING)])
     if latest_doc:
-        latest_doc = list(latest_doc)
-        object_id = latest_doc[0][MONGODB_ID_KEY]
+        object_id = latest_doc[MONGODB_ID_KEY]
         if isinstance(object_id, ObjectId):
             return int(object_id.generation_time.timestamp())
         else:
-            return None
+            raise ValueError(f"{object_id} is not in the form of ObjectID")
+
+    return 0
 
 
 def try_removing_results_metadata(
     database: pymongo.database.Database, collection_name: str
 ) -> None:
     results_metadata_collection = database.get_collection("results-metadata")
-    results_metadata_collection.delete_one({MONGODB_ID_KEY: str(collection_name)})
+    results_metadata_collection.delete_one({MONGODB_ID_KEY: collection_name})
 
 
-def handle_search_results_retention(clp_config: CLPConfig):
-    result_cache_config: ResultsCache = clp_config.results_cache
+def handle_search_results_retention(result_cache_config: ResultsCache):
     expiry_ts = get_target_time(result_cache_config.retention_period)
     logger.info(f"Handler targeting all search results < {expiry_ts}")
 
@@ -147,10 +142,6 @@ def handle_search_results_retention(clp_config: CLPConfig):
 
             collection = results_cache_db.get_collection(collection_name)
             collection_stub = find_collection_stub(collection)
-            if collection_stub is None:
-                # TODO: how do we handle this?
-                logger.warning("Unexpected empty collection")
-                continue
 
             logger.info(f"Collection stub: {collection_name}, {collection_stub}")
             if collection_stub < expiry_ts:
@@ -162,7 +153,7 @@ def handle_search_results_retention(clp_config: CLPConfig):
 
 def search_results_retention_entry(clp_config: CLPConfig, job_frequency_secs: int) -> None:
     while True:
-        handle_search_results_retention(clp_config)
+        handle_search_results_retention(clp_config.results_cache)
         time.sleep(job_frequency_secs)
 
 
@@ -279,7 +270,7 @@ def main(argv: List[str]) -> int:
     results_cache_retention_period = clp_config.results_cache.retention_period
     logger.info(f"Results cache retention period: {results_cache_retention_period}")
 
-    stream_retention_entry(clp_config, 30)
+    search_results_retention_entry(clp_config, 30)
 
     logger.info("reducer terminated")
 
