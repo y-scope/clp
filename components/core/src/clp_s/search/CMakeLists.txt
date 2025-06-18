@@ -30,7 +30,7 @@ set(
         SchemaMatch.hpp
 )
 
-if(NOT CLP_NO_BUILD_CLP_S_SEARCH)
+if(CLP_BUILD_CLP_S_SEARCH)
         add_library(
                 clp_s_search
                 ${CLP_S_SEARCH_SOURCES}

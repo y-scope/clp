@@ -49,7 +49,7 @@ set(
     ../../TraceableException.hpp
 )
 
-if(NOT CLP_NO_BUILD_CLP_S_SEARCH_AST)
+if(CLP_BUILD_CLP_S_SEARCH_AST)
     add_library(
         clp_s_search_ast
         ${CLP_S_AST_SOURCES}

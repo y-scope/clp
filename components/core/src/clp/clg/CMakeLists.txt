@@ -123,7 +123,7 @@ set(
         CommandLineArguments.hpp
 )
 
-if(NOT CLP_NO_BUILD_BINARIES)
+if(CLP_BUILD_BINARIES)
         add_executable(clg ${CLG_SOURCES})
         target_compile_features(clg PRIVATE cxx_std_20)
         target_include_directories(clg

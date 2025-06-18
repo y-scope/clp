@@ -11,7 +11,7 @@ set(ANTLR_GENERATED_SOURCES
 		${ANTLR_GENERATED_SOURCE_DIR}/SqlVisitor.h
 )
 
-if(NOT CLP_NO_BUILD_CLP_S_SEARCH_SQL)
+if(CLP_BUILD_CLP_S_SEARCH_SQL)
         add_library(
                 clp_s_search_sql
                 ${ANTLR_GENERATED_SOURCES}

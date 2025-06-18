@@ -12,6 +12,8 @@ validate_compiler_versions()
 # Include options for CLP build
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Options/options.cmake")
 
+validate_and_setup_all_clp_dependency_flags()
+
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
     message(STATUS "No build type specified. Setting to '${default_build_type}'.")
@@ -116,7 +118,7 @@ if(PROJECT_IS_TOP_LEVEL)
     endif()
 endif()
 
-if(NOT CLP_NO_NEED_ABSL)
+if(CLP_NEED_ABSL)
     find_package(absl REQUIRED)
     if (absl_FOUND)
         message(STATUS "Found absl ${absl_VERSION}")
@@ -124,7 +126,7 @@ if(NOT CLP_NO_NEED_ABSL)
 endif()
 
 # Find and setup ANTLR Library
-if(NOT CLP_NO_NEED_ANTLR)
+if(CLP_NEED_ANTLR)
     find_package(antlr4-runtime REQUIRED)
     if (antlr4-runtime_FOUND)
         message(STATUS "Found antlr4-runtime ${antlr4-runtime_VERSION}")
@@ -132,7 +134,7 @@ if(NOT CLP_NO_NEED_ANTLR)
 endif()
 
 # Find and setup Boost Library
-if(NOT CLP_NO_NEED_BOOST)
+if(CLP_NEED_BOOST)
     if(CLP_USE_STATIC_LIBS)
         set(Boost_USE_STATIC_LIBS ON)
     endif()
@@ -144,49 +146,49 @@ if(NOT CLP_NO_NEED_BOOST)
     endif()
 endif()
 
-if(NOT CLP_NO_BUILD_TESTS)
+if(CLP_NEED_CATCH2)
     find_package(Catch2 REQUIRED)
     if (Catch2_FOUND)
         message(STATUS "Found Catch2 ${Catch2_VERSION}")
     endif()
 endif()
 
-if(NOT CLP_NO_NEED_DATE)
+if(CLP_NEED_DATE)
     find_package(date REQUIRED)
     if (date_FOUND)
         message(STATUS "Found date ${date_VERSION}")
     endif()
 endif()
 
-if(NOT CLP_NO_NEED_FMT)
+if(CLP_NEED_FMT)
     find_package(fmt REQUIRED)
     if(fmt_FOUND)
         message(STATUS "Found fmt ${fmt_VERSION}")
     endif()
 endif()
 
-if(NOT CLP_NO_NEED_LOG_SURGEON)
+if(CLP_NEED_LOG_SURGEON)
     find_package(log_surgeon REQUIRED)
     if(log_surgeon_FOUND)
         message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
     endif()
 endif()
 
-if(NOT CLP_NO_NEED_NLOHMANN_JSON)
+if(CLP_NEED_NLOHMANN_JSON)
     find_package(nlohmann_json REQUIRED)
     if(nlohmann_json_FOUND)
         message(STATUS "Found nlohmann_json ${nlohmann_json_VERSION}")
     endif()
 endif()
 
-if(NOT CLP_NO_NEED_SIMDJSON)
+if(CLP_NEED_SIMDJSON)
     find_package(simdjson REQUIRED)
     if(simdjson_FOUND)
         message(STATUS "Found simdjson ${simdjson_VERSION}")
     endif()
 endif()
 
-if(NOT CLP_NO_NEED_SPDLOG)
+if(CLP_NEED_SPDLOG)
     find_package(spdlog REQUIRED)
     if(spdlog_FOUND)
         message(STATUS "Found spdlog ${spdlog_VERSION}")
@@ -194,7 +196,7 @@ if(NOT CLP_NO_NEED_SPDLOG)
 endif()
 
 # Find and setup libarchive
-if(NOT CLP_NO_NEED_LIBARCHIVE)
+if(CLP_NEED_LIBARCHIVE)
     if(CLP_USE_STATIC_LIBS)
         set(LibArchive_USE_STATIC_LIBS ON)
     endif()
@@ -208,7 +210,7 @@ endif()
 
 # Find and setup libcurl
 # By default, CURL does not provide static libraries
-if(NOT CLP_NO_NEED_CURL)
+if(CLP_NEED_CURL)
     find_package(CURL 7.68.0 REQUIRED)
     if(CURL_FOUND)
         message(STATUS "Found CURL ${CURL_VERSION_STRING}")
@@ -218,7 +220,7 @@ if(NOT CLP_NO_NEED_CURL)
 endif()
 
 # Find OpenSSL
-if(NOT CLP_NO_NEED_OPENSSL)
+if(CLP_NEED_OPENSSL)
     find_package(OpenSSL REQUIRED)
     if(OPENSSL_FOUND)
         message(STATUS "Found OpenSSL (${OPENSSL_VERSION})")
@@ -228,7 +230,7 @@ if(NOT CLP_NO_NEED_OPENSSL)
 endif()
 
 # Find and setup MariaDBClient library
-if(NOT CLP_NO_NEED_MARIADB)
+if(CLP_NEED_MARIADB)
     if(CLP_USE_STATIC_LIBS)
         # NOTE: We can't statically link to MariaDBClient since it's GPL
         message(AUTHOR_WARNING "MariaDBClient cannot be statically linked due to its license.")
@@ -242,7 +244,7 @@ if(NOT CLP_NO_NEED_MARIADB)
 endif()
 
 # Find and setup mongocxx
-if(NOT CLP_NO_NEED_MONGOCXX)
+if(CLP_NEED_MONGOCXX)
     find_package(mongocxx REQUIRED)
     message(STATUS "Found mongocxx ${mongocxx_VERSION}")
     if(CLP_USE_STATIC_LIBS)
@@ -253,7 +255,7 @@ if(NOT CLP_NO_NEED_MONGOCXX)
 endif()
 
 # Find and setup msgpack
-if(NOT CLP_NO_NEED_MSGPACKCXX)
+if(CLP_NEED_MSGPACKCXX)
     find_package(msgpack-cxx 7.0.0 REQUIRED)
     if(msgpack-cxx_FOUND)
         message(STATUS "Found msgpack-cxx ${msgpack-cxx_VERSION}")
@@ -264,7 +266,7 @@ endif()
 
 find_package(Threads REQUIRED)
 
-if(NOT CLP_NO_NEED_YAMLCPP)
+if(CLP_NEED_YAMLCPP)
     find_package(yaml-cpp REQUIRED)
     if(yaml-cpp_FOUND)
         message(STATUS "Found yaml-cpp ${yaml-cpp_VERSION}")
@@ -272,13 +274,13 @@ if(NOT CLP_NO_NEED_YAMLCPP)
 endif()
 
 # Add ystdlib
-if(NOT CLP_NO_NEED_YSTDLIB)
+if(CLP_NEED_YSTDLIB)
     set(YSTDLIB_CPP_BUILD_TESTING OFF)
     add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
 endif()
 
 # Find and setup ZStd Library
-if(NOT CLP_NO_NEED_ZSTD)
+if(CLP_NEED_ZSTD)
     if(CLP_USE_STATIC_LIBS)
         set(ZStd_USE_STATIC_LIBS ON)
     endif()
@@ -292,7 +294,7 @@ endif()
 
 # Find and setup LZMA Library
 # TODO: Add a script in ./cmake/Modules to properly import LZMA in find_package()'s module mode
-if(NOT CLP_NO_NEED_LZMA)
+if(CLP_NEED_LZMA)
     if(CLP_USE_STATIC_LIBS)
         set(LIBLZMA_USE_STATIC_LIBS ON)
     endif()
@@ -308,7 +310,7 @@ if(NOT CLP_NO_NEED_LZMA)
 endif()
 
 # sqlite dependencies
-if(NOT CLP_NO_NEED_SQLITE)
+if(CLP_NEED_SQLITE)
     set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
     include(cmake/Modules/FindLibraryDependencies.cmake)
     FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
@@ -709,7 +711,7 @@ set(SOURCE_FILES_unitTest
         tests/test-Utils.cpp
         )
 
-if(NOT CLP_NO_BUILD_TESTS)
+if(CLP_BUILD_TESTS)
     add_executable(unitTest
             ${SOURCE_FILES_unitTest}
             ${SOURCE_FILES_clp_s_unitTest}

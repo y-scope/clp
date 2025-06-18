@@ -5,7 +5,7 @@ set(
         "regex_translation_utils.hpp"
         "RegexToWildcardTranslatorConfig.hpp"
 )
-if(NOT CLP_NO_BUILD_CLP_REGEX_UTILS)
+if(CLP_BUILD_CLP_REGEX_UTILS)
         add_library(
                 regex_utils
                 ErrorCode.cpp

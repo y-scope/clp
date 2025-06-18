@@ -81,7 +81,7 @@ set(
 )
 
 # This library is intended as a temporary stand-in until clp has been packaged into libraries.
-if(NOT CLP_NO_BUILD_CLP_S_CLP_DEPENDENCIES)
+if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         add_library(
                 clp_s_clp_dependencies
                 ${CLP_S_CLP_SOURCES}
@@ -130,7 +130,7 @@ set(
 
 # This library is intended as a temporary stand-in until the reducer has been packaged into
 # libraries.
-if(NOT CLP_NO_BUILD_CLP_S_REDUCER_DEPENDENCIES)
+if(CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES)
         add_library(
                 clp_s_reducer_dependencies
                 ${CLP_S_REDUCER_SOURCES}
@@ -166,7 +166,7 @@ set(
         ZstdDecompressor.hpp
 )
 
-if(NOT CLP_NO_BUILD_CLP_S_IO)
+if(CLP_BUILD_CLP_S_IO)
         add_library(
                 clp_s_io
                 ${CLP_S_IO_SOURCES}
@@ -226,7 +226,7 @@ set(
         VariableEncoder.hpp
 )
 
-if(NOT CLP_NO_BUILD_CLP_S_ARCHIVEWRITER)
+if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
         add_library(
                 clp_s_archive_writer
                 ${CLP_S_ARCHIVE_WRITER_SOURCES}
@@ -289,7 +289,7 @@ set(
         VariableDecoder.hpp
 )
 
-if(NOT CLP_NO_BUILD_CLP_S_ARCHIVEREADER)
+if(CLP_BUILD_CLP_S_ARCHIVEREADER)
         add_library(
                 clp_s_archive_reader
                 ${CLP_S_ARCHIVE_READER_SOURCES}
@@ -322,7 +322,7 @@ set(
         TraceableException.hpp
 )
 
-if(NOT CLP_NO_BUILD_CLP_S_JSONCONSTRUCTOR)
+if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
         add_library(
                 clp_s_json_constructor
                 ${CLP_S_JSON_CONSTRUCTOR_SOURCES}
@@ -350,7 +350,7 @@ set(
         TraceableException.hpp
 )
 
-if(NOT CLP_NO_BUILD_CLP_S_TIMESTAMPPATTERN)
+if(CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
         add_library(
                 clp_s_timestamp_pattern
                 ${CLP_S_TIMESTAMP_PATTERN_SOURCES}
@@ -379,7 +379,7 @@ set(
         TraceableException.hpp
 )
 
-if(NOT CLP_NO_BUILD_BINARIES)
+if(CLP_BUILD_BINARIES)
         add_executable(
                 clp-s
                 clp-s.cpp

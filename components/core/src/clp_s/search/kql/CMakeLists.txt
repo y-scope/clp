@@ -11,7 +11,7 @@ set(ANTLR_GENERATED_SOURCES
 		${ANTLR_GENERATED_SOURCE_DIR}/KqlVisitor.h
 )
 
-if(NOT CLP_NO_BUILD_CLP_S_SEARCH_KQL)
+if(CLP_BUILD_CLP_S_SEARCH_KQL)
         add_library(
                 clp_s_search_kql
                 ${ANTLR_GENERATED_SOURCES}

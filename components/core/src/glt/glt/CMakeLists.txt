@@ -171,7 +171,7 @@ set(
         utils.hpp
 )
 
-if(NOT CLP_NO_BUILD_BINARIES)
+if(CLP_BUILD_BINARIES)
         add_executable(glt ${GLT_SOURCES})
         target_compile_features(glt PRIVATE cxx_std_20)
         target_include_directories(glt

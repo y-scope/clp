@@ -1,211 +1,448 @@
 # Build Target Options
 option(
-    CLP_NO_BUILD_BINARIES
-    "Do not build any binaries."
-    OFF
+    CLP_BUILD_BINARIES
+    "Build all binaries."
+    ON
 )
 
 option(
-    CLP_NO_BUILD_TESTS
-    "Do not build any tests."
-    OFF
+    CLP_BUILD_TESTS
+    "Build all tests."
+    ON
 )
 
 option(
-    CLP_NO_BUILD_CLP_REGEX_UTILS
-    "Do not build clp::regex_utils."
-    OFF
+    CLP_BUILD_CLP_REGEX_UTILS
+    "Build clp::regex_utils."
+    ON
 )
 
 option(
-    CLP_NO_BUILD_CLP_STRING_UTILS
-    "Do not build clp::string_utils."
-    OFF
+    CLP_BUILD_CLP_STRING_UTILS
+    "Build clp::string_utils."
+    ON
 )
 
 option(
-    CLP_NO_BUILD_CLP_S_ARCHIVEREADER
-    "Do not build clp_s::archive_reader."
-    OFF
+    CLP_BUILD_CLP_S_ARCHIVEREADER
+    "Build clp_s::archive_reader."
+    ON
 )
 
 option(
-    CLP_NO_BUILD_CLP_S_ARCHIVEWRITER
-    "Do not build clp_s::archive_writer."
-    OFF
+    CLP_BUILD_CLP_S_ARCHIVEWRITER
+    "Build clp_s::archive_writer."
+    ON
 )
 
 option(
-    CLP_NO_BUILD_CLP_S_CLP_DEPENDENCIES
-    "Do not build clp_s::clp_dependencies."
-    OFF
+    CLP_BUILD_CLP_S_CLP_DEPENDENCIES
+    "BUILD clp_s::clp_dependencies."
+    ON
 )
 
 option(
-    CLP_NO_BUILD_CLP_S_IO
-    "Do not build clp_s::io."
-    OFF
+    CLP_BUILD_CLP_S_IO
+    "Build clp_s::io."
+    ON
 )
 
 option(
-    CLP_NO_BUILD_CLP_S_JSONCONSTRUCTOR
-    "Do not build clp_s::json_constructor."
-    OFF
+    CLP_BUILD_CLP_S_JSONCONSTRUCTOR
+    "Build clp_s::json_constructor."
+    ON
 )
 
 option(
-    CLP_NO_BUILD_CLP_S_REDUCER_DEPENDENCIES
-    "Do not build clp_s::reducer_dependencies."
-    OFF
+    CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES
+    "Build clp_s::reducer_dependencies."
+    ON
 )
 
 option(
-    CLP_NO_BUILD_CLP_S_SEARCH
-    "Do not build clp_s::search."
-    OFF
+    CLP_BUILD_CLP_S_SEARCH
+    "Build clp_s::search."
+    ON
 )
 
 option(
-    CLP_NO_BUILD_CLP_S_SEARCH_AST
-    "Do not build clp_s::search::ast."
-    OFF
+    CLP_BUILD_CLP_S_SEARCH_AST
+    "Build clp_s::search::ast."
+    ON
 )
 
 option(
-    CLP_NO_BUILD_CLP_S_SEARCH_KQL
-    "Do not build clp_s::search::kql."
-    OFF
+    CLP_BUILD_CLP_S_SEARCH_KQL
+    "Build clp_s::search::kql."
+    ON
 )
 
 option(
-    CLP_NO_BUILD_CLP_S_SEARCH_SQL
-    "Do not build clp_s::search::sql."
-    OFF
+    CLP_BUILD_CLP_S_SEARCH_SQL
+    "Build clp_s::search::sql."
+    ON
 )
 
 option(
-    CLP_NO_BUILD_CLP_S_TIMESTAMPPATTERN
-    "Do not build clp_s::timestamp_pattern."
-    OFF
+    CLP_BUILD_CLP_S_TIMESTAMPPATTERN
+    "Build clp_s::timestamp_pattern."
+    ON
 )
 
-# Dependency Options
-option(
-    CLP_NO_NEED_ABSL
-    "Do not include abseil in the build."
-    OFF
-)
+function(validate_clp_binaries_dependencies)
+    if (NOT CLP_BUILD_CLP_REGEX_UTILS)
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_REGEX_UTILS=ON")
+    endif()
 
-option(
-    CLP_NO_NEED_ANTLR
-    "Do not include ANTLR in the build."
-    OFF
-)
+    if (NOT CLP_BUILD_CLP_STRING_UTILS)
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_STRING_UTILS=ON")
+    endif()
 
-option(
-    CLP_NO_NEED_BOOST
-    "Do not include boost in the build."
-    OFF
-)
+    if (NOT CLP_BUILD_CLP_S_ARCHIVEREADER)
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_ARCHIVEREADER=ON")
+    endif()
 
-option(
-    CLP_NO_NEED_CURL
-    "Do not include CURL in the build."
-    OFF
-)
+    if (NOT CLP_BUILD_CLP_S_ARCHIVEWRITER)
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_ARCHIVEWRITER=ON")
+    endif()
 
-option(
-    CLP_NO_NEED_DATE
-    "Do not include date in the build."
-    OFF
-)
+    if (NOT CLP_BUILD_CLP_S_IO)
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_IO=ON")
+    endif()
 
-option(
-    CLP_NO_NEED_FMT
-    "Do not include fmt in the build."
-    OFF
-)
+    if (NOT CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_JSONCONSTRUCTOR=ON")
+    endif()
 
-option(
-    CLP_NO_NEED_LIBARCHIVE
-    "Do not include libarchive in the build."
-    OFF
-)
+    if (NOT CLP_BUILD_CLP_S_SEARCH)
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_SEARCH=ON")
+    endif()
 
-option(
-    CLP_NO_NEED_LOG_SURGEON
-    "Do not include log-surgeon in the build."
-    OFF
-)
+    if (NOT CLP_BUILD_CLP_S_SEARCH_AST)
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_SEARCH_AST=ON")
+    endif()
 
-option(
-    CLP_NO_NEED_LZMA
-    "Do not include lzma in the build."
-    OFF
-)
+    if (NOT CLP_BUILD_CLP_S_SEARCH_KQL)
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_SEARCH_KQL=ON")
+    endif()
+endfunction()
 
-option(
-    CLP_NO_NEED_MARIADB
-    "Do not include mariadb in the build."
-    OFF
-)
+function(set_clp_binaries_dependencies)
+    set(CLP_NEED_BOOST TRUE)
+    set(CLP_NEED_DATE TRUE)
+    set(CLP_NEED_FMT TRUE)
+    set(CLP_NEED_LOG_SURGEON TRUE)
+    set(CLP_NEED_LIBARCHIVE TRUE)
+    set(CLP_NEED_MARIADB TRUE)
+    set(CLP_NEED_MONGOCXX TRUE)
+    set(CLP_NEED_MSGPACKCXX TRUE)
+    set(CLP_NEED_NLOHMANN_JSON TRUE)
+    set(CLP_NEED_OPENSSL TRUE)
+    set(CLP_NEED_SIMDJSON TRUE)
+    set(CLP_NEED_SPDLOG TRUE)
+    set(CLP_NEED_SQLITE TRUE)
+    set(CLP_NEED_YAMLCPP TRUE)
+    set(CLP_NEED_YSTDLIB TRUE)
+    set(CLP_NEED_ZSTD TRUE)
+endfunction()
 
-option(
-    CLP_NO_NEED_MONGOCXX
-    "Do not include mongo-cxx in the build."
-    OFF
-)
+function(validate_clp_tests_dependencies)
+    if (NOT CLP_BUILD_CLP_REGEX_UTILS)
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_REGEX_UTILS=ON")
+    endif()
 
-option(
-    CLP_NO_NEED_MSGPACKCXX
-    "Do not include msgpack-cxx in the build."
-    OFF
-)
+    if (NOT CLP_BUILD_CLP_STRING_UTILS)
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_STRING_UTILS=ON")
+    endif()
 
-option(
-    CLP_NO_NEED_NLOHMANN_JSON
-    "Do not include nlohmann_json in the build."
-    OFF
-)
+    if (NOT CLP_BUILD_CLP_S_SEARCH_AST)
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_SEARCH_AST=ON")
+    endif()
 
-option(
-    CLP_NO_NEED_OPENSSL
-    "Do not include openssl in the build."
-    OFF
-)
+    if (NOT CLP_BUILD_CLP_S_SEARCH_KQL)
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_SEARCH_KQL=ON")
+    endif()
 
-option(
-    CLP_NO_NEED_SIMDJSON
-    "Do not include simdjson in the build."
-    OFF
-)
+    if (NOT CLP_BUILD_CLP_S_SEARCH_SQL)
+        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_SEARCH_SQL=ON")
+    endif()
+endfunction()
 
-option(
-    CLP_NO_NEED_SPDLOG
-    "Do not include spdlog in the build."
-    OFF
-)
+function(set_clp_tests_dependencies)
+    set(CLP_NEED_ABSL TRUE)
+    set(CLP_NEED_BOOST TRUE)
+    set(CLP_NEED_CATCH2 TRUE)
+    set(CLP_NEED_DATE TRUE)
+    set(CLP_NEED_FMT TRUE)
+    set(CLP_NEED_LOG_SURGEON TRUE)
+    set(CLP_NEED_LIBARCHIVE TRUE)
+    set(CLP_NEED_LZMA TRUE)
+    set(CLP_NEED_MARIADB TRUE)
+    set(CLP_NEED_MONGOCXX TRUE)
+    set(CLP_NEED_MSGPACKCXX TRUE)
+    set(CLP_NEED_NLOHMANN_JSON TRUE)
+    set(CLP_NEED_OPENSSL TRUE)
+    set(CLP_NEED_SIMDJSON TRUE)
+    set(CLP_NEED_SPDLOG TRUE)
+    set(CLP_NEED_SQLITE TRUE)
+    set(CLP_NEED_YAMLCPP TRUE)
+    set(CLP_NEED_YSTDLIB TRUE)
+    set(CLP_NEED_ZSTD TRUE)
+endfunction()
 
-option(
-    CLP_NO_NEED_SQLITE
-    "Do not include sqlite in the build."
-    OFF
-)
+function(validate_clp_regex_utils_dependencies)
+    if (NOT CLP_BUILD_CLP_STRING_UTILS)
+        message(FATAL_ERROR "CLP_BUILD_CLP_REGEX_UTILS requires CLP_BUILD_CLP_STRING_UTILS=ON")
+    endif()
+endfunction()
 
-option(
-    CLP_NO_NEED_YAMLCPP
-    "Do not include yaml-cpp in the build."
-    OFF
-)
+function(set_clp_regex_utils_dependencies)
+    set(CLP_NEED_YSTDLIB TRUE)
+endfunction()
 
-option(
-    CLP_NO_NEED_YSTDLIB
-    "Do not include ystdlib in the build."
-    OFF
-)
+function(validate_clp_s_archivereader_dependencies)
+    if (NOT CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_ARCHIVEREADER requires CLP_BUILD_CLP_S_CLP_DEPENDENCIES=ON")
+    endif()
 
-option(
-    CLP_NO_NEED_ZSTD
-    "Do not include zstd in the build."
-    OFF
-)
+    if (NOT CLP_BUILD_CLP_S_IO)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_ARCHIVEREADER requires CLP_BUILD_CLP_S_IO=ON")
+    endif()
+
+    if (NOT CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_ARCHIVEREADER requires CLP_BUILD_CLP_S_TIMESTAMPPATTERN=ON")
+    endif()
+endfunction()
+
+function(set_clp_s_archivereader_dependencies)
+    set(CLP_NEED_ABSL TRUE)
+    set(CLP_NEED_BOOST TRUE)
+    set(CLP_NEED_CURL TRUE)
+    set(CLP_NEED_FMT TRUE)
+    set(CLP_NEED_MSGPACKCXX TRUE)
+    set(CLP_NEED_NLOHMANN_JSON TRUE)
+    set(CLP_NEED_SPDLOG TRUE)
+endfunction()
+
+function(validate_clp_s_archivewriter_dependencies)
+    if (NOT CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_ARCHIVEWRITER requires CLP_BUILD_CLP_S_CLP_DEPENDENCIES=ON")
+    endif()
+
+    if (NOT CLP_BUILD_CLP_S_IO)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_ARCHIVEWRITER requires CLP_BUILD_CLP_S_IO=ON")
+    endif()
+
+    if (NOT CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_ARCHIVEWRITER requires CLP_BUILD_CLP_S_TIMESTAMPPATTERN=ON")
+    endif()
+endfunction()
+
+function(set_clp_s_archivewriter_dependencies)
+    set(CLP_NEED_ABSL TRUE)
+    set(CLP_NEED_BOOST TRUE)
+    set(CLP_NEED_CURL TRUE)
+    set(CLP_NEED_FMT TRUE)
+    set(CLP_NEED_MSGPACKCXX TRUE)
+    set(CLP_NEED_NLOHMANN_JSON TRUE)
+    set(CLP_NEED_SIMDJSON)
+    set(CLP_NEED_SPDLOG TRUE)
+endfunction()
+
+function(validate_clp_s_clp_dependencies_dependencies)
+    if (NOT CLP_BUILD_CLP_STRING_UTILS)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_CLP_DEPENDENCIES requires CLP_BUILD_CLP_STRING_UTILS=ON")
+    endif()
+endfunction()
+
+function(set_clp_s_clp_dependencies_dependencies)
+    set(CLP_NEED_BOOST TRUE)
+    set(CLP_NEED_CURL TRUE)
+    set(CLP_NEED_FMT TRUE)
+    set(CLP_NEED_NLOHMANN_JSON TRUE)
+    set(CLP_NEED_OPENSSL TRUE)
+    set(CLP_NEED_SPDLOG TRUE)
+    set(CLP_NEED_YSTDLIB TRUE)
+    set(CLP_NEED_ZSTD TRUE)
+endfunction()
+
+function(validate_clp_s_io_dependencies)
+    if (NOT CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_IO requires CLP_BUILD_CLP_S_CLP_DEPENDENCIES=ON")
+    endif()
+endfunction()
+
+function(set_clp_s_io_dependencies)
+    set(CLP_NEED_BOOST TRUE)
+    set(CLP_NEED_FMT TRUE)
+    set(CLP_NEED_MSGPACKCXX TRUE)
+    set(CLP_NEED_SPDLOG TRUE)
+    set(CLP_NEED_ZSTD TRUE)
+endfunction()
+
+function(validate_clp_s_json_constructor_dependencies)
+    if (NOT CLP_BUILD_CLP_S_ARCHIVEREADER)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_JSONCONSTRUCTOR requires CLP_BUILD_CLP_S_ARCHIVEREADER=ON")
+    endif()
+endfunction()
+
+function(set_clp_s_json_constructor_dependencies)
+    set(CLP_NEED_FMT TRUE)
+    set(CLP_NEED_MONGOCXX TRUE)
+    set(CLP_NEED_SPDLOG TRUE)
+endfunction()
+
+function(validate_clp_s_reducer_dependencies_dependencies)
+    if (NOT CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES requires CLP_BUILD_CLP_S_CLP_DEPENDENCIES=ON")
+    endif()
+endfunction()
+
+function(set_clp_s_reducer_dependencies_dependencies)
+    set(CLP_NEED_NLOHMANN_JSON TRUE)
+endfunction()
+
+function(validate_clp_s_search_dependencies)
+    if (NOT CLP_BUILD_CLP_S_ARCHIVEREADER)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_SEARCH requires CLP_BUILD_CLP_S_ARCHIVEREADER=ON")
+    endif()
+
+    if (NOT CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_SEARCH requires CLP_BUILD_CLP_S_CLP_DEPENDENCIES=ON")
+    endif()
+
+    if (NOT CLP_BUILD_CLP_S_SEARCH_AST)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_SEARCH requires CLP_BUILD_CLP_S_SEARCH_AST=ON")
+    endif()
+endfunction()
+
+function(set_clp_s_search_dependencies)
+    set(CLP_NEED_ABSL TRUE)
+    set(CLP_NEED_SIMDJSON TRUE)
+    set(CLP_NEED_SPDLOG TRUE)
+endfunction()
+
+function(set_clp_s_reducer_dependencies_dependencies)
+    set(CLP_NEED_NLOHMANN_JSON TRUE)
+endfunction()
+
+function(validate_clp_s_search_ast_dependencies)
+    if (NOT CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_SEARCH_AST requires CLP_BUILD_CLP_S_TIMESTAMPPATTERN=ON")
+    endif()
+endfunction()
+
+function(set_clp_s_search_ast_dependencies)
+    set(CLP_NEED_SIMDJSON TRUE)
+endfunction()
+
+function(validate_clp_s_search_kql_dependencies)
+    if (NOT CLP_BUILD_CLP_STRING_UTILS)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_SEARCH_KQL requires CLP_BUILD_CLP_STRING_UTILS=ON")
+    endif()
+
+    if (NOT CLP_BUILD_CLP_S_SEARCH_AST)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_SEARCH_KQL requires CLP_BUILD_CLP_S_SEARCH_AST=ON")
+    endif()
+endfunction()
+
+function(set_clp_s_search_kql_dependencies)
+    set(CLP_NEED_ANTLR TRUE)
+    set(CLP_NEED_SPDLOG TRUE)
+endfunction()
+
+function(validate_clp_s_search_sql_dependencies)
+    if (NOT CLP_BUILD_CLP_S_SEARCH_AST)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_SEARCH_SQL requires CLP_BUILD_CLP_S_SEARCH_AST=ON")
+    endif()
+endfunction()
+
+function(set_clp_s_search_sql_dependencies)
+    set(CLP_NEED_ANTLR TRUE)
+    set(CLP_NEED_SPDLOG TRUE)
+endfunction()
+
+function(validate_clp_s_timestamppattern_dependencies)
+    if (NOT CLP_BUILD_CLP_STRING_UTILS)
+        message(FATAL_ERROR "CLP_BUILD_CLP_S_TIMESTAMPPATTERN requires CLP_BUILD_CLP_STRING_UTILS=ON")
+    endif()
+endfunction()
+
+function(set_clp_s_timestamppattern_dependencies)
+    set(CLP_NEED_DATE TRUE)
+    set(CLP_NEED_SPDLOG TRUE)
+endfunction()
+
+function(validate_and_setup_all_clp_dependency_flags)
+    if (CLP_BUILD_BINARIES)
+        validate_clp_binaries_dependencies()
+        set_clp_binaries_dependencies()
+    endif()
+
+    if (CLP_BUILD_TESTS)
+        validate_clp_tests_dependencies()
+        set_clp_tests_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_REGEX_UTILS)
+        validate_clp_regex_utils_dependencies()
+        set_clp_regex_utils_dependencies()
+    endif()
+
+    # clp::string_utils has no dependencies
+
+    if (CLP_BUILD_CLP_S_ARCHIVEREADER)
+        validate_clp_s_archivereader_dependencies()
+        set_clp_s_archivereader_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_ARCHIVEWRITER)
+        validate_clp_s_archivewriter_dependencies()
+        set_clp_s_archivewriter_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
+        validate_clp_s_clp_dependencies_dependencies()
+        set_clp_s_clp_dependencies_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_IO)
+        validate_clp_s_io_dependencies()
+        set_clp_s_io_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
+        validate_clp_s_json_constructor_dependencies()
+        set_clp_s_json_constructor_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES)
+        validate_clp_s_reducer_dependencies_dependencies()
+        set_clp_s_reducer_dependencies_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_SEARCH)
+        validate_clp_s_search_dependencies()
+        set_clp_s_search_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_SEARCH_AST)
+        validate_clp_s_search_ast_dependencies()
+        set_clp_s_search_ast_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_SEARCH_KQL)
+        validate_clp_s_search_ast_dependencies()
+        set_clp_s_search_ast_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_SEARCH_SQL)
+        validate_clp_s_search_sql_dependencies()
+        set_clp_s_search_sql_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
+        validate_clp_s_timestamppattern_dependencies()
+        set_clp_s_timestamppattern_dependencies()
+    endif()
+endfunction()

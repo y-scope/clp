@@ -2,7 +2,7 @@ set(
         STRING_UTILS_HEADER_LIST
         "string_utils.hpp"
 )
-if(NOT CLP_NO_BUILD_CLP_STRING_UTILS)
+if(CLP_BUILD_CLP_STRING_UTILS)
         add_library(
                 string_utils
                 string_utils.cpp
