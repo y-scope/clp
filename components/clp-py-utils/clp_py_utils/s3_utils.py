@@ -199,6 +199,19 @@ def _create_s3_client(s3_config: S3Config, boto3_config: Optional[Config] = None
     return s3_client
 
 
+def _key_exists(s3_client: boto3.client, bucket: str, key: str) -> bool:
+    objects = s3_client.list_objects_v2(Bucket=bucket, Prefix=key)
+    contents = objects.get("Contents", None)
+    if contents is None:
+        return False
+
+    for obj in contents:
+        if key == obj["Key"]:
+            return True
+
+    return False
+
+
 def parse_s3_url(s3_url: str) -> Tuple[str, str, str]:
     """
     Parses the region_code, bucket, and key_prefix from the given S3 URL.
@@ -308,3 +321,25 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_file_name: str) -> None:
         s3_client.put_object(
             Bucket=s3_config.bucket, Body=file_data, Key=s3_config.key_prefix + dest_file_name
         )
+
+
+def s3_try_removing_object(s3_config: S3Config, object_key: str) -> bool:
+    """
+    Tries Removing an object from the S3 bucket using AWS's Delete Object operation.
+    The function returns false if the object doesn't exist
+    :param s3_config: S3 configuration specifying the upload destination and credentials.
+    :param object_key: The key of the archive to remove.
+    :raises: Propagates `boto3.client`'s exceptions.
+    :raises: Propagates `boto3.client.delete_object`'s exceptions.
+    """
+    boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
+    s3_client = _create_s3_client(s3_config, boto3_config)
+
+    if not _key_exists(s3_client, s3_config.bucket, object_key):
+        return False
+
+    s3_client.delete_object(
+        Bucket=s3_config.bucket,
+        Key=object_key,
+    )
+    return True
