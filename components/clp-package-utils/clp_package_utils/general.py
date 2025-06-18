@@ -38,9 +38,9 @@ EXTRACT_IR_CMD = "i"
 EXTRACT_JSON_CMD = "j"
 
 # Paths
+CONTAINER_AWS_CONFIG_DIRECTORY = pathlib.Path("/") / ".aws"
 CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
 CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
-CONTAINER_AWS_CONFIG_DIRECTORY = pathlib.Path("/") / ".aws"
 CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yml"
 
 DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
@@ -544,9 +544,9 @@ def validate_log_viewer_webui_config(clp_config: CLPConfig, settings_json_path: 
 
 def validate_path_for_container_mount(path: pathlib.Path) -> None:
     RESTRICTED_PREFIXES: List[pathlib.Path] = [
+        CONTAINER_AWS_CONFIG_DIRECTORY,
         CONTAINER_CLP_HOME,
         CONTAINER_INPUT_LOGS_ROOT_DIR,
-        CONTAINER_AWS_CONFIG_DIRECTORY,
         pathlib.Path("/bin"),
         pathlib.Path("/boot"),
         pathlib.Path("/dev"),
