@@ -1,6 +1,26 @@
-# Setup
+# Overview
 
 This page will guide you through CLP's system requirements and help you choose which flavour of CLP will be best for you.
+
+If you already have CLP set up, click your flavour of CLP below to learn how to use it.
+
+::::{grid} 1 1 2 2
+:gutter: 2
+
+:::{grid-item-card}
+:link: clp-json
+CLP for JSON logs
+^^^
+Learn about compressing and searching JSON logs.
+:::
+
+:::{grid-item-card}
+:link: clp-text
+CLP for unstructured text logs
+^^^^^^^^^^^^
+Learn about compressing and searching unstructured text logs.
+:::
+::::
 
 ---
 
@@ -33,7 +53,7 @@ python3 --version
 If Python isn't on your system, or if the version isn't high enough, install or upgrade it.
 
 :::{note}
-If you're planning to deploy CLP on multiple nodes/systems, there are a few other system requirements; check out the [multi-node deployment](../../guides/guides-multi-node/multi-node) page for more details.
+If you're planning to deploy CLP on multiple nodes/systems, there are a few other system requirements; check out the [multi-node deployment](../guides-multi-node) page for more details.
 :::
 
 ---
@@ -80,7 +100,7 @@ If your logs are JSON logs, download and extract the JSON flavour tarball from t
 :gutter: 2
 
 :::{grid-item-card}
-:link: ../clp-json/main-page
+:link: clp-json
 CLP for JSON logs
 ^^^
 Learn how to start up clp-json, and begin compressing and searching JSON logs.
@@ -118,7 +138,7 @@ If your logs are unstructured text logs, download and extract the unstructured t
 :gutter: 2
 
 :::{grid-item-card}
-:link: ../clp-text/main-page
+:link: clp-text
 CLP for unstructured logs
 ^^^
 Learn how to start up clp-text, and begin compressing and searching unstructured text logs.

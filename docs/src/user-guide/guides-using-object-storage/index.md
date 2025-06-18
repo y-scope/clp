@@ -136,4 +136,4 @@ clp-usage
 [aws-iam-roles]: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-role.html
 [aws-key-prefixes]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-prefixes.html
 [aws-sts-credentials]: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html
-[release-choices]: ../../quick-start/clp-json/main-page
+[release-choices]: ../quick-start/clp-json

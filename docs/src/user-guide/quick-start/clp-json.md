@@ -50,12 +50,12 @@ Compressed logs will be stored in the `/var/bin/archives` directory.
 
 :::{tip}
 To compress logs from object storage, see
-[Using object storage](../../guides/guides-using-object-storage/index).
+[Using object storage](../guides-using-object-storage/index).
 :::
 
 ### Sample logs
 
-For some sample logs, check out the open-source [datasets](../../resources-datasets).
+For some sample logs, check out the open-source [datasets](../resources-datasets).
 
 ### Examining compression statistics
 
@@ -82,7 +82,7 @@ where `key` is the name of the JSON key you'd like to search within, and `value`
 key1: value1 AND key2: value2 OR key3: value3 ...
 ```
 
-There are a number of other JSON-specific syntax rules that you can use to make your searches more powerful and effective. You can read about these syntax rules [here](../../reference-json-search-syntax).
+There are a number of other JSON-specific syntax rules that you can use to make your searches more powerful and effective. You can read about these syntax rules [here](../reference-json-search-syntax).
 
 ### Searching from the command line
 
@@ -109,7 +109,7 @@ searches are case-**sensitive** on the command line.
 
 If you'd like to search your query from the web UI, CLP includes a web interface available at [http://localhost:4000](http://localhost:4000) by default (if you changed `webui.host` or `webui.port` in `etc/clp-config.yml`, use the new values).
 
-:::{image} clp-search-ui.png
+:::{image} ../../clp-search-ui.png
 :::
 
 The image above shows the search page after running a query. The numbered circles correspond to the following features:
@@ -145,4 +145,4 @@ sbin/stop-clp.sh
 
 ## More information
 
-You've reached the end of the clp-json quick-start guide. For more information on clp-json, visit the [CLP for JSON logs](../../core-clp-s) page.
+You've reached the end of the clp-json quick-start guide. For more information on clp-json, visit the [CLP for JSON logs](../core-clp-s) page.

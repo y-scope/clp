@@ -13,7 +13,7 @@ Using CLP to ingest logs from object storage and store archives on object storag
 :::
 
 :::{grid-item-card}
-:link: guides-multi-node/multi-node
+:link: guides-multi-node
 Multi-node deployment
 ^^^
 Learn how to deploy CLP across multiple nodes.

@@ -9,14 +9,14 @@ The sections are as follows:
 :gutter: 2
 
 :::{grid-item-card}
-:link: quick-start/index
+:link: quick-start/overview
 Quick-start
 ^^^
 A quick-start guide for choosing a flavour of CLP, setting it up, compressing your logs, and searching them.
 :::
 
 :::{grid-item-card}
-:link: guides/guides-overview
+:link: guides-overview
 Guides
 ^^^
 Guides for using CLP in various use cases.
@@ -48,10 +48,9 @@ Reference docs like format specifications, etc.
 :hidden:
 :caption: Quick-start
 
-quick-start/index
-quick-start/setup/main-page
-quick-start/clp-json/main-page
-quick-start/clp-text/main-page
+quick-start/overview
+quick-start/clp-json
+quick-start/clp-text
 
 :::
 
@@ -60,9 +59,9 @@ quick-start/clp-text/main-page
 :caption: Guides
 :glob:
 
-guides/guides-overview
-guides/guides-using-object-storage/index
-guides/guides-multi-node/multi-node
+guides-overview
+guides-using-object-storage/index
+guides-multi-node
 
 :::
 
