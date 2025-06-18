@@ -13,6 +13,7 @@ validate_compiler_versions()
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Options/options.cmake")
 
 validate_and_setup_all_clp_dependency_flags()
+convert_clp_dependency_properties_to_variables()
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
