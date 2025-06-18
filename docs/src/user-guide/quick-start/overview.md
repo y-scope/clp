@@ -129,8 +129,8 @@ Caused by: java.net.UnknownHostException: i-e5d112ea
     ... 17 more
 ```
 
-The log file above contains two log events, both beginning with a timestamp. The first is a single line, while the second contains multiple lines.
-line while the second contains multiple lines.
+The log file above contains two log events, both beginning with a timestamp. The first is a single
+line, while the second contains multiple lines.
 
 If your logs are unstructured text logs, download and extract the unstructured text flavour tarball from the [Releases][clp-releases] page on GitHub, and proceed to the clp-text portal below.
 
