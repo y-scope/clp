@@ -44,12 +44,15 @@ def get_target_time(retention_minutes: int):
     return int(time.time() - retention_minutes * MIN_TO_SECOND)
 
 
-def try_removing_fs_path(fs_storage_config: FsStorage, relative_path: str) -> bool:
+def try_removing_fs_file(fs_storage_config: FsStorage, relative_path: str) -> bool:
     file_path = fs_storage_config.directory / relative_path
-    if not file_path.is_dir():
+    if not file_path.exists():
         return False
 
-    shutil.rmtree(file_path)
+    if file_path.is_dir():
+        raise ValueError(f"Path {file_path} resolves to a directory")
+
+    os.remove(file_path)
     return True
 
 
