@@ -39,6 +39,9 @@ logger = get_logger(DAEMON_COMPONENT_NAME)
 
 MIN_TO_SECOND = 60
 MONGODB_ID_KEY = "_id"
+# TODO: consider to make this a shared constant between webui and package scripts
+RESULTS_METADATA_COLLECTION = "results-metadata"
+
 
 def get_target_time(retention_minutes: int):
     return int(time.time() - retention_minutes * MIN_TO_SECOND)
@@ -124,7 +127,7 @@ def find_collection_stub(collection: pymongo.collection.Collection) -> int:
 def try_removing_results_metadata(
     database: pymongo.database.Database, collection_name: str
 ) -> None:
-    results_metadata_collection = database.get_collection("results-metadata")
+    results_metadata_collection = database.get_collection(RESULTS_METADATA_COLLECTION)
     results_metadata_collection.delete_one({MONGODB_ID_KEY: collection_name})
 
 
