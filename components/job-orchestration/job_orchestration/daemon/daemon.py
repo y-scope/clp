@@ -191,7 +191,7 @@ def handle_removal(stream_output_config: StreamOutput, stream_path: str) -> bool
         stream_s3_config = stream_storage_config.s3_config
         return s3_try_removing_object(stream_storage_config.s3_config, stream_path)
     elif StorageType.FS == stream_storage_type:
-        return try_removing_fs_path(stream_storage_config, stream_path)
+        return try_removing_fs_file(stream_storage_config, stream_path)
     else:
         raise ValueError(
             f"Stream storage type {stream_storage_type} is not supported"
