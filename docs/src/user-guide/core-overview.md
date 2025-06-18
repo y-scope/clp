@@ -11,7 +11,7 @@ explain how to use each flavour.
 
 :::{grid-item-card}
 :link: core-unstructured/index
-CLP for unstructured logs
+CLP for unstructured text logs
 ^^^
 A flavour of CLP for unstructured (e.g., free-text) logs.
 :::

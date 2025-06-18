@@ -34,7 +34,7 @@ The image above shows the search page after running a query. The numbered circle
 
 1. The search box is where you can enter your query.
 2. The timeline shows the number of results across the time range of your query.
-   * You can click and drag to zoom into a time range or use the time range filter in (4).
+   * You can click and drag to zoom into a time range, or use the time range filter in (4).
 3. The table displays the search results for your query.
 4. Clicking the <i class="fa fa-bars"></i> icon reveals additional filters for your query.
    * The time range filter allows you to specify the period of time that matching log events must be

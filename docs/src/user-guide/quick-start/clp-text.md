@@ -63,4 +63,4 @@ There are a number of other syntax rules specific to unstructured text queries t
 
 ## More information
 
-You've reached the end of the clp-text quick-start guide. For more information on clp-text, visit the [CLP for unstructured logs](../core-unstructured/index) page.
+You've reached the end of the clp-text quick-start guide. For more information on clp-text, visit the [CLP for unstructured text logs](../core-unstructured/index) page.

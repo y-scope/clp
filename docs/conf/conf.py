@@ -19,6 +19,9 @@ extensions = [
     "sphinxcontrib.mermaid",
 ]
 
+# TODO: These suppressions are global, and while they solve the issue of suppressing 
+# the warnings re. using the {include} directive on the files in _shared (see PR#968),
+# they may suppress legitimate warnings in the future. Find a better way to do this.
 suppress_warnings = [
     "myst.header",
     "image.not_readable",
