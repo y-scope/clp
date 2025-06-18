@@ -19,6 +19,12 @@ extensions = [
     "sphinxcontrib.mermaid",
 ]
 
+suppress_warnings = [
+    "myst.header",
+    "image.not_readable",
+    "myst.xref_missing",
+]
+
 # -- MyST extensions -----------------------------------------------------------
 # https://myst-parser.readthedocs.io/en/stable/syntax/optional.html
 myst_enable_extensions = [

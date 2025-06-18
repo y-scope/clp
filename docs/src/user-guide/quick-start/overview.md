@@ -139,7 +139,7 @@ If your logs are unstructured text logs, download and extract the unstructured t
 
 :::{grid-item-card}
 :link: clp-text
-CLP for unstructured logs
+CLP for unstructured text logs
 ^^^
 Learn how to start up clp-text, and begin compressing and searching unstructured text logs.
 :::
