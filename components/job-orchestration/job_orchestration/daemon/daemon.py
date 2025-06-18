@@ -11,7 +11,7 @@ import typing
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
-from typing import List, Set, Callable
+from typing import List, Set
 
 import pymongo
 import pymongo.database
@@ -20,13 +20,13 @@ from clp_py_utils.clp_config import (
     ARCHIVES_TABLE_SUFFIX,
     CLPConfig,
     DAEMON_COMPONENT_NAME,
+    FsStorage,
     JobFrequency,
     ResultsCache,
-    FsStorage,
     S3Storage,
     StorageEngine,
     StorageType,
-    StreamOutput
+    StreamOutput,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
@@ -164,6 +164,7 @@ def search_results_retention_entry(clp_config: CLPConfig, job_frequency_secs: in
 class RecoveryFile:
     def __init__(self, path: pathlib.Path):
         self.file_path = path
+
     def load(self) -> Set[str]:
         res = set()
         with open(self.file_path, "r") as f:
@@ -187,12 +188,12 @@ def handle_removal(stream_output_config: StreamOutput, stream_path: str) -> bool
     elif StorageType.FS == stream_storage_type:
         return try_removing_fs_file(stream_storage_config, stream_path)
     else:
-        raise ValueError(
-            f"Stream storage type {stream_storage_type} is not supported"
-        )
+        raise ValueError(f"Stream storage type {stream_storage_type} is not supported")
 
 
-def handle_stream_retention(stream_output_config: StreamOutput, results_cache_config: ResultsCache) -> None:
+def handle_stream_retention(
+    stream_output_config: StreamOutput, results_cache_config: ResultsCache
+) -> None:
     expiry_time = get_target_time(stream_output_config.retention_period)
     expiry_oid = ObjectId.from_datetime(datetime.utcfromtimestamp(expiry_time))
 
@@ -227,11 +228,11 @@ def stream_retention_entry(clp_config: CLPConfig, job_frequency_secs: int) -> No
         storage_engine = clp_config.package.storage_engine
         if StorageEngine.CLP_S != storage_engine:
             # TODO: update error message
-            raise ValueError(f"Stream storage type {storage_type} is not supported when using storage engine {storage_engine}")
+            raise ValueError(
+                f"Stream storage type {storage_type} is not supported when using storage engine {storage_engine}"
+            )
     elif StorageType.FS != storage_type:
-        raise ValueError(
-            f"Stream storage type {storage_type} is not supported"
-        )
+        raise ValueError(f"Stream storage type {storage_type} is not supported")
 
     while True:
         handle_stream_retention(stream_output_config, clp_config.results_cache)
