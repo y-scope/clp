@@ -432,8 +432,8 @@ function(validate_and_setup_all_clp_dependency_flags)
     endif()
 
     if (CLP_BUILD_CLP_S_SEARCH_KQL)
-        validate_clp_s_search_ast_dependencies()
-        set_clp_s_search_ast_dependencies()
+        validate_clp_s_search_kql_dependencies()
+        set_clp_s_search_kql_dependencies()
     endif()
 
     if (CLP_BUILD_CLP_S_SEARCH_SQL)
