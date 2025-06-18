@@ -11,8 +11,18 @@ import {
  */
 const getSpaceSavingsSql = () => `
 SELECT
-    SUM(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.UNCOMPRESSED_SIZE}) AS total_uncompressed_size,
-    SUM(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.SIZE})              AS total_compressed_size
+    CAST(
+        COALESCE(
+            SUM(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.UNCOMPRESSED_SIZE}),
+            0
+        ) AS UNSIGNED
+    ) AS total_uncompressed_size,
+    CAST(
+        COALESCE(
+            SUM(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.SIZE}),
+            0
+        ) AS UNSIGNED
+    ) AS total_compressed_size
 FROM ${SQL_CONFIG.SqlDbClpArchivesTableName}
 `;
 
