@@ -39,6 +39,7 @@ logger = get_logger(DAEMON_COMPONENT_NAME)
 
 MIN_TO_SECOND = 60
 MONGODB_ID_KEY = "_id"
+MONGODB_STREAM_PATH_KEY = "path"
 # TODO: consider to make this a shared constant between webui and package scripts
 RESULTS_METADATA_COLLECTION = "results-metadata"
 
@@ -149,7 +150,6 @@ def handle_search_results_retention(result_cache_config: ResultsCache):
             logger.info(f"Collection stub: {collection_name}, {collection_stub}")
             if collection_stub < expiry_ts:
                 logger.info(f"Removing collection: {collection_name}")
-                # TODO
                 try_removing_results_metadata(results_cache_db, collection_name)
                 collection.drop()
 
@@ -167,21 +167,29 @@ class TargetsHandle:
         self._targets: Set[str] = set()
         self._new_targets: List[str] = list()
 
-        if self._recovery_file_path.exists():
-            with open(self._recovery_file_path, "r") as f:
-                for line in f.readlines():
-                    self._targets.add(line)
+        if not self._recovery_file_path.exists():
+            return
+
+        with open(self._recovery_file_path, "r") as f:
+            for line in f:
+                self._targets.add(line.strip())
+
     def add_target(self, target: str) -> None:
         if target not in self._targets:
             self._targets.add(target)
             self._new_targets.append(target)
+
     def get_targets(self) -> Set[str]:
         return self._targets
+
     def flush_new_targets(self) -> None:
+        if len(self._new_targets) == 0:
+            return
+
         with open(self._recovery_file_path, "a") as f:
             for target in self._new_targets:
                 f.write(f"{target}\n")
-    def __del__(self):
+    def clean(self):
         if self._recovery_file_path.exists():
             os.unlink(self._recovery_file_path)
 
@@ -220,17 +228,38 @@ def handle_stream_retention(
         # Find documents where _id (and thus creation time) is earlier
         retention_filter = {MONGODB_ID_KEY: {"$lt": expiry_oid}}
         results = stream_collection.find(retention_filter)
+        object_ids_to_delete: List[ObjectId] = list()
+
         for stream in results:
-            stream_path = stream["path"]
-            logger.info(f"Plan to remove {stream_path}")
+            stream_path = stream.get(MONGODB_STREAM_PATH_KEY)
             targets_handle.add_target(stream_path)
+            object_ids_to_delete.append(stream.get(MONGODB_ID_KEY))
 
         targets_handle.flush_new_targets()
-        stream_collection.delete_many(retention_filter)
 
+        # TODO: here we don't use retention_filter again to avoid race condition between
+        # targets to delete and timestamp of file.
+        # This could create another race condition that
+        # 1. daemon mark the entry as stale
+        # 2. somehow webui access the entry and updates its last access time.
+        # 3. daemon removes the file while log viewer tries to load it, race condition. boom
+        # There are some strategy we can take to prevent this.
+        # 1. Simply sleep for around ~10 seconds before deleting the files so most probably log viewer
+        # would have already loaded it. (but how about files with other line numbers?)
+        # 2. Let log viewer ignore streams outside of TTL and request creating new entries.
+        if 0 != len(object_ids_to_delete):
+            stream_collection.delete_many({MONGODB_ID_KEY: {'$in': object_ids_to_delete}})
+
+
+    # TODO: I feel it's ok to always run this even if there's no results from pymongo
+    # First, if we reached this line, it means either 1. no new targets has been added, or
+    # some new target has been added, and we have already removed them from mongodb. either case,
+    # the targets in the file must have been removed from the mongodb and not needed.
     for target in targets_handle.get_targets():
+        logger.info(f"removing {target}")
         _ = handle_removal(stream_output_config, target)
 
+    targets_handle.clean()
     return
 
 
