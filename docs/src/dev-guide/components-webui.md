@@ -44,7 +44,7 @@ server. It also serves the [log-viewer].
     ```
 
     If you want to customize what host and port the server binds to, you can copy `.env` to
-    `.env.local` and modify the values there. The `.env.local` file will override settings in 
+    `.env.local` and modify the values there. The `.env.local` file will override settings in
     `.env`.
 
 ## Linting
