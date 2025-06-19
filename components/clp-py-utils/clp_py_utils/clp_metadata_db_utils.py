@@ -161,7 +161,6 @@ def fetch_existing_datasets(
     db_cursor.execute(f"SELECT name FROM `{table_prefix}{DATASETS_TABLE_SUFFIX}`")
     rows = db_cursor.fetchall()
     return {row["name"] for row in rows}
->>>>>>> main
 
 
 def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None = None) -> None:
