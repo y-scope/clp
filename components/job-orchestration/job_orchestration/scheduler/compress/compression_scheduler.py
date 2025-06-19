@@ -17,7 +17,6 @@ from clp_py_utils.clp_config import (
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
-    DATASETS_TABLE_SUFFIX,
     StorageEngine,
     StorageType,
     TAGS_TABLE_SUFFIX,
@@ -25,7 +24,7 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
     add_dataset,
-    create_metadata_db_tables,
+    fetch_existing_datasets,
 )
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
@@ -155,36 +154,6 @@ def _process_s3_input(
         paths_to_compress_buffer.add_file(object_metadata)
 
 
-def _fetch_existing_datasets(
-    db_cursor, clp_metadata_db_connection_config: Dict[str, Any]
-) -> Set[str]:
-    table_prefix = clp_metadata_db_connection_config["table_prefix"]
-    db_cursor.execute(f"SELECT name FROM `{table_prefix}{DATASETS_TABLE_SUFFIX}`")
-    rows = db_cursor.fetchall()
-    return {row["name"] for row in rows}
-
-
-def _register_dataset(
-    db_conn,
-    db_cursor,
-    table_prefix: str,
-    dataset_name: str,
-    clp_storage_type: StorageType,
-    archive_storage_directory: Path,
-    existing_datasets: Set[str],
-) -> None:
-    add_dataset(
-        db_cursor,
-        table_prefix,
-        dataset_name,
-        clp_storage_type,
-        archive_storage_directory,
-    )
-    create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
-    db_conn.commit()
-    existing_datasets.add(dataset_name)
-
-
 def search_and_schedule_new_tasks(
     db_conn,
     db_cursor,
@@ -226,15 +195,15 @@ def search_and_schedule_new_tasks(
                     archive_storage_directory = Path(s3_config.key_prefix) / dataset_name
                 else:
                     archive_storage_directory = clp_archive_output.get_directory() / dataset_name
-                _register_dataset(
+                add_dataset(
                     db_conn,
                     db_cursor,
                     table_prefix,
                     dataset_name,
                     clp_archive_output.storage.type,
                     archive_storage_directory,
-                    existing_datasets,
                 )
+                existing_datasets.add(dataset_name)
             table_prefix = f"{table_prefix}{dataset_name}_"
 
         paths_to_compress_buffer = PathsToCompressBuffer(
@@ -463,8 +432,8 @@ def main(argv):
         clp_storage_engine = clp_config.package.storage_engine
         existing_datasets: Set[str] = set()
         if StorageEngine.CLP_S == clp_storage_engine:
-            existing_datasets = _fetch_existing_datasets(
-                db_cursor, clp_metadata_db_connection_config
+            existing_datasets = fetch_existing_datasets(
+                db_cursor, clp_metadata_db_connection_config["table_prefix"]
             )
 
         # Start Job Processing Loop
