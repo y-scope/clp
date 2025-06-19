@@ -106,7 +106,6 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.print_archive_stats = command_line_arguments.print_archive_stats();
     option.single_file_archive = command_line_arguments.get_single_file_archive();
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
-    option.record_log_order = command_line_arguments.get_record_log_order();
 
     clp_s::JsonParser parser(option);
     if (clp_s::FileType::KeyValueIr == option.input_file_type) {

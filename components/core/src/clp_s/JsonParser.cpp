@@ -90,7 +90,6 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_max_document_size(option.max_document_size),
           m_timestamp_key(option.timestamp_key),
           m_structurize_arrays(option.structurize_arrays),
-          m_record_log_order(option.record_log_order),
           m_input_paths(option.input_paths),
           m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
@@ -511,10 +510,8 @@ bool JsonParser::parse() {
         size_t file_split_number{0ULL};
         int32_t log_event_idx_node_id{};
         auto initialize_fields_for_archive = [&]() -> bool {
-            if (m_record_log_order) {
-                log_event_idx_node_id
-                        = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
-            }
+            log_event_idx_node_id
+                    = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
             if (auto const rc = m_archive_writer->add_field_to_current_range(
                         std::string{constants::range_index::cFilename},
                         path.path
@@ -583,13 +580,11 @@ bool JsonParser::parse() {
             }
 
             // Add log_event_idx field to metadata for record
-            if (m_record_log_order) {
-                m_current_parsed_message.add_value(
-                        log_event_idx_node_id,
-                        m_archive_writer->get_next_log_event_id()
-                );
-                m_current_schema.insert_ordered(log_event_idx_node_id);
-            }
+            m_current_parsed_message.add_value(
+                    log_event_idx_node_id,
+                    m_archive_writer->get_next_log_event_id()
+            );
+            m_current_schema.insert_ordered(log_event_idx_node_id);
 
             // Some errors from simdjson are latent until trying to access invalid JSON fields.
             // Instead of checking for an error every time we access a JSON field in parse_line we
@@ -980,10 +975,8 @@ auto JsonParser::parse_from_ir() -> bool {
         size_t file_split_number{0ULL};
         int32_t log_event_idx_node_id{};
         auto initialize_fields_for_archive = [&]() -> bool {
-            if (m_record_log_order) {
-                log_event_idx_node_id
-                        = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
-            }
+            log_event_idx_node_id
+                    = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
             if (auto const rc = m_archive_writer->add_field_to_current_range(
                         std::string{constants::range_index::cFilename},
                         path.path
@@ -1084,13 +1077,11 @@ auto JsonParser::parse_from_ir() -> bool {
                 m_current_schema.clear();
 
                 // Add log_event_idx field to metadata for record
-                if (m_record_log_order) {
-                    m_current_parsed_message.add_value(
-                            log_event_idx_node_id,
-                            m_archive_writer->get_next_log_event_id()
-                    );
-                    m_current_schema.insert_ordered(log_event_idx_node_id);
-                }
+                m_current_parsed_message.add_value(
+                        log_event_idx_node_id,
+                        m_archive_writer->get_next_log_event_id()
+                );
+                m_current_schema.insert_ordered(log_event_idx_node_id);
 
                 try {
                     parse_kv_log_event(*kv_log_event);

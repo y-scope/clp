@@ -256,10 +256,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::bool_switch(&m_structurize_arrays),
                     "Structurize arrays instead of compressing them as clp strings."
             )(
-                    "disable-log-order",
-                    po::bool_switch(&m_disable_log_order),
-                    "Do not record log order at ingestion time."
-            )(
                     "file-type",
                     po::value<std::string>(&file_type)->value_name("FILE_TYPE")->default_value(file_type),
                     "The type of file being compressed (json or kv-ir)"
