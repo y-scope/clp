@@ -25,7 +25,7 @@ server. It also serves the [log-viewer].
     ```
 
     If you add a package manually to `package.json` or `package.json` changes for some other reason, 
-    you should rerun this command.
+    you should rerun the commands above.
 
 ## Running
 
