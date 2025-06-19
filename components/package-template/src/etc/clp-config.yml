@@ -10,9 +10,9 @@
 ## File containing credentials for services
 #credentials_file_path: "etc/credentials.yml"
 #
-#package:
-#  storage_engine: "clp"
-#
+package:
+  storage_engine: "clp-s"
+
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
 #  host: "localhost"
@@ -46,13 +46,13 @@
 #  logging_level: "INFO"
 #  upsert_interval: 100  # milliseconds
 #
-#results_cache:
-#  host: "localhost"
-#  port: 27017
-#  db_name: "clp-query-results"
-#  stream_collection_name: "stream-files"
-#  # TODO
-#  retention_period: 10
+results_cache:
+  host: "localhost"
+  port: 27017
+  db_name: "clp-query-results"
+  stream_collection_name: "stream-files"
+  # TODO
+  retention_period: 1
 #
 #compression_worker:
 #  logging_level: "INFO"
@@ -95,18 +95,26 @@
 #  # How much archives should be compressed: 1 (fast/low compression) to 19 (slow/high compression)
 #  compression_level: 3
 #
-## Where CLP stream files (e.g., IR streams) should be output
-#stream_output:
+# Where CLP stream files (e.g., IR streams) should be output
+stream_output:
 #  storage:
-#    type: "fs"
-#    directory: "var/data/streams"
+#    type: "s3"
+#    staging_directory: "var/data/streams"
+#    s3_config:
+#      region_code: "us-west-1"
+#      bucket: "private-clp-test-bucket"
+#      key_prefix: "extraction_output/"
 #
-#  # TODO
-#  retention_period: 5
-#
-#  # How large each stream file should be before being split into a new stream file
-#  target_uncompressed_size: 134217728  # 128 MB
-#
+#      aws_authentication:
+#        type: "profile"
+#        profile: "default"
+
+  # TODO
+  retention_period: 1
+
+  # How large each stream file should be before being split into a new stream file
+  target_uncompressed_size: 134217728  # 128 MB
+
 ## TODO
 #daemon:
 #  logging_level: "INFO"
@@ -121,4 +129,4 @@
 #logs_directory: "var/log"
 #
 ## Location of the AWS tools' config files (e.g., `~/.aws`)
-#aws_config_directory: null
+# aws_config_directory: "/home/haiqixu/.aws"
