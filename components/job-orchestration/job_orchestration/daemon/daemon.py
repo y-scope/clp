@@ -11,7 +11,7 @@ import typing
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
-from typing import List, Set
+from typing import List, Set, Optional
 
 import pymongo
 import pymongo.database
@@ -161,29 +161,35 @@ def search_results_retention_entry(clp_config: CLPConfig, job_frequency_secs: in
 
 
 # May require some redesign
-class RecoveryFile:
-    def __init__(self, path: pathlib.Path):
-        self.file_path = path
+class TargetsHandle:
+    def __init__(self, recovery_file_path: pathlib.Path):
+        self._recovery_file_path: Optional[pathlib.Path] = recovery_file_path
+        self._targets: Set[str] = set()
+        self._new_targets: List[str] = list()
 
-    def load(self) -> Set[str]:
-        res = set()
-        with open(self.file_path, "r") as f:
-            for line in f.readlines():
-                res.add(line)
-        return res
-
-    def append(self, lines: Set[str]) -> None:
-        with open(self.file_path, "a") as f:
-            for line in lines:
-                f.write(line + "\n")
-
+        if self._recovery_file_path.exists():
+            with open(self._recovery_file_path, "r") as f:
+                for line in f.readlines():
+                    self._targets.add(line)
+    def add_target(self, target: str) -> None:
+        if target not in self._targets:
+            self._targets.add(target)
+            self._new_targets.append(target)
+    def get_targets(self) -> Set[str]:
+        return self._targets
+    def flush_new_targets(self) -> None:
+        with open(self._recovery_file_path, "a") as f:
+            for target in self._new_targets:
+                f.write(f"{target}\n")
+    def __del__(self):
+        if self._recovery_file_path.exists():
+            os.unlink(self._recovery_file_path)
 
 def handle_removal(stream_output_config: StreamOutput, stream_path: str) -> bool:
     stream_storage_config = stream_output_config.storage
     stream_storage_type = stream_storage_config.type
 
     if StorageType.S3 == stream_storage_type:
-        stream_s3_config = stream_storage_config.s3_config
         return s3_try_removing_object(stream_storage_config.s3_config, stream_path)
     elif StorageType.FS == stream_storage_type:
         return try_removing_fs_file(stream_storage_config, stream_path)
@@ -192,7 +198,8 @@ def handle_removal(stream_output_config: StreamOutput, stream_path: str) -> bool
 
 
 def handle_stream_retention(
-    stream_output_config: StreamOutput, results_cache_config: ResultsCache
+    stream_output_config: StreamOutput,
+    results_cache_config: ResultsCache
 ) -> None:
     expiry_time = get_target_time(stream_output_config.retention_period)
     expiry_oid = ObjectId.from_datetime(datetime.utcfromtimestamp(expiry_time))
