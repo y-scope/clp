@@ -12,24 +12,28 @@ import {
     QUERY_JOB_TYPE,
 } from "../typings/query.js";
 
+
+const DEFAULT_DATASET_PREFIX = "default/";
+
 /**
  * Generates path to stream file.
  *
- * @param dataset
  * @param extractJobType
  * @param fileName
  * @param fastify
  * @return
  */
 const buildStreamPath = async (
-    dataset: string,
     extractJobType: QUERY_JOB_TYPE,
     fileName: string,
     fastify: FastifyInstance,
 ): Promise<string> => {
     let datasetPrefix = "";
     if (extractJobType === QUERY_JOB_TYPE.EXTRACT_JSON) {
-        datasetPrefix = dataset;
+        // eslint-disable-next-line no-warning-comments
+        // TODO: Replace with user configurable dataset prefix when front-end dataset support is
+        // added.
+        datasetPrefix = DEFAULT_DATASET_PREFIX;
     }
 
     if (fastify.hasDecorator("s3Manager") && "undefined" !== typeof fastify.s3Manager) {
@@ -40,7 +44,6 @@ const buildStreamPath = async (
 
     return `/streams/${datasetPrefix}${fileName}`;
 };
-
 
 /**
  * Creates query routes.
@@ -115,7 +118,6 @@ const routes: FastifyPluginAsync = async (app) => {
         }
 
         streamMetadata.path = await buildStreamPath(
-            dataset,
             extractJobType,
             streamMetadata.path,
             fastify,

@@ -152,9 +152,9 @@ async def do_search_without_aggregation(
     db_monitor_task = asyncio.ensure_future(
         run_function_in_process(
             create_and_monitor_job_in_db,
-            dataset,
             db_config,
             results_cache,
+            dataset,
             wildcard_query,
             tags,
             begin_timestamp,
