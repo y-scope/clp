@@ -78,7 +78,7 @@ public:
 
 private:
     std::vector<int64_t> m_values;
-    int64_t m_cur;
+    int64_t m_cur{};
 };
 
 class FloatColumnWriter : public BaseColumnWriter {
