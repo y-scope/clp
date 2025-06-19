@@ -11,6 +11,7 @@ import {
 import {isAxiosError} from "axios";
 
 import {submitExtractStreamJob} from "../api/query";
+import useSearchStore from "../pages/SearchPage/SearchState";
 import {Nullable} from "../typings/common";
 import {
     EXTRACT_JOB_TYPE,
@@ -31,6 +32,7 @@ let isFirstRun = true;
  * @return
  */
 const QueryStatus = () => {
+    const cachedDataset = useSearchStore((state) => state.cachedDataset);
     const [queryState, setQueryState] = useState<QUERY_LOADING_STATE>(
         QUERY_LOADING_STATE.SUBMITTING
     );
@@ -64,17 +66,15 @@ const QueryStatus = () => {
             return;
         }
 
-        submitExtractStreamJob(
-
-            // `parseResult.type` must be valid key since parsed using with typebox type
-            // `ExtractJobSearchParams`.
-            EXTRACT_JOB_TYPE[parseResult.type as keyof typeof EXTRACT_JOB_TYPE],
-            parseResult.streamId,
-            parseResult.logEventIdx,
-            () => {
+        submitExtractStreamJob({
+            dataset: cachedDataset,
+            extractJobType: EXTRACT_JOB_TYPE[parseResult.type as keyof typeof EXTRACT_JOB_TYPE],
+            logEventIdx: parseResult.logEventIdx,
+            onUploadProgress: () => {
                 setQueryState(QUERY_LOADING_STATE.WAITING);
-            }
-        )
+            },
+            streamId: parseResult.streamId,
+        })
             .then(({data}) => {
                 setQueryState(QUERY_LOADING_STATE.LOADING);
 
@@ -93,7 +93,7 @@ const QueryStatus = () => {
                 console.error(msg, e);
                 setErrorMsg(msg);
             });
-    }, []);
+    }, [cachedDataset]);
 
     return (
         <Loading
