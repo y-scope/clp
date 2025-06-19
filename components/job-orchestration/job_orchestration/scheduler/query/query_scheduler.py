@@ -621,7 +621,7 @@ def _validate_dataset(
     existing_datasets: Set[str],
 ) -> bool:
     if dataset in existing_datasets:
-        return true
+        return True
     existing_datasets = fetch_existing_datasets(db_cursor, table_prefix)
     return dataset in existing_datasets
 
@@ -657,7 +657,7 @@ def handle_pending_query_jobs(
             if StorageEngine.CLP_S == clp_storage_engine:
                 dataset = QueryJobConfig.parse_obj(job_config).dataset
                 if not _validate_dataset(db_cursor, table_prefix, dataset, existing_datasets):
-                    logger.error(f"Failed to find dataset `{dataset}`.")
+                    logger.error(f"Dataset `{dataset}` doesn't exist.")
                     if not set_job_or_task_status(
                         db_conn,
                         QUERY_JOBS_TABLE_NAME,

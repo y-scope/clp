@@ -148,7 +148,7 @@ def fetch_existing_datasets(
     table_prefix: str,
 ) -> Set[str]:
     """
-    Get a list of currently available log categories from the `datasets` table.
+    Gets the names of all existing datasets.
 
     :param db_cursor:
     :param table_prefix:

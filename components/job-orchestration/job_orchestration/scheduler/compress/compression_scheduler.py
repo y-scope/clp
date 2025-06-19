@@ -17,7 +17,6 @@ from clp_py_utils.clp_config import (
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
-    DATASETS_TABLE_SUFFIX,
     StorageEngine,
     StorageType,
     TAGS_TABLE_SUFFIX,

@@ -295,6 +295,7 @@ def run_clp(
         archive_output_dir = archive_output_dir / input_dataset
         if StorageType.S3 == storage_type:
             s3_config.key_prefix = f"{s3_config.key_prefix}{input_dataset}/"
+
         compression_cmd, compression_env = _make_clp_s_command_and_env(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
