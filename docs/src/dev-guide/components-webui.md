@@ -19,7 +19,7 @@ server. It also serves the [log-viewer].
 2. Install the app's dependencies:
 
     ```shell
-    cd components/log-viewer-webui
+    cd components/webui
     (cd client && npm i)
     (cd server && npm i)
     ```
