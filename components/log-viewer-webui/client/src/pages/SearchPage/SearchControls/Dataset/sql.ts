@@ -24,7 +24,7 @@ const GET_DATASETS_SQL = `
 `;
 
 interface DatasetItem {
-    name: string;
+    [CLP_DATASETS_TABLE_COLUMN_NAMES.NAME]: string;
 }
 
 /**
@@ -37,7 +37,4 @@ const fetchDatasetNames = async (): Promise<string[]> => {
     return resp.data.map(dataset => dataset.name);
 };
 
-export type {
-    DatasetItem,
-};
-export {fetchDatasetNames, GET_DATASETS_SQL};
+export {fetchDatasetNames};

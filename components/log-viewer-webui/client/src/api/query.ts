@@ -21,11 +21,11 @@ import {
  * @return The API response.
  */
 const submitExtractStreamJob = async (
+    dataset: string,
     extractJobType: QUERY_JOB_TYPE,
     streamId: string,
     logEventIdx: number,
     onUploadProgress: (progressEvent: AxiosProgressEvent) => void,
-    dataset?: string,
 ): Promise<AxiosResponse<ExtractStreamResp>> => {
     return await axios.post(
         "/query/extract-stream",

@@ -11,7 +11,6 @@ import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import {handleQuerySubmit} from "../../search-requests";
 import styles from "./index.module.css";
-import {QueryJobCreationSchema} from "../../../../../api/search";
 import {
     CLP_STORAGE_ENGINES,
     SETTINGS_STORAGE_ENGINE,
@@ -59,6 +58,8 @@ const SubmitButton = () => {
     }, [queryString, updateTimelineConfig, timeRange, selectDataset, updateCachedDataset]);
 
     const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
+    // Submit button must be disabled if there are no datasets since clp-s requires dataset option
+    // for queries.
     const isSomeDataset = (selectDataset !== null) &&
                           (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE);
 

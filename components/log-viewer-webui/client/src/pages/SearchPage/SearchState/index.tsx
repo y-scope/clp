@@ -16,7 +16,6 @@ import {SEARCH_UI_STATE} from "./typings";
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
-    selectDataset: null,
     cachedDataset: "",
     numSearchResultsTable: 0,
     numSearchResultsTimeline: 0,
@@ -24,6 +23,7 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
     queryString: "",
     searchJobId: null,
     searchUiState: SEARCH_UI_STATE.DEFAULT,
+    selectDataset: null,
     timeRange: TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE](),
     timeRangeOption: DEFAULT_TIME_RANGE,
     timelineConfig: computeTimelineConfig(TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE]()),
