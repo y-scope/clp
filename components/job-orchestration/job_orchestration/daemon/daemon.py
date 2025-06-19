@@ -11,7 +11,7 @@ import typing
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
-from typing import List, Set, Optional
+from typing import List, Optional, Set
 
 import pymongo
 import pymongo.database
@@ -29,6 +29,7 @@ from clp_py_utils.clp_config import (
     StreamOutput,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
+from clp_py_utils.constants import MIN_TO_SECOND
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import s3_try_removing_object
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -37,7 +38,6 @@ from pymongo.collection import Collection
 
 logger = get_logger(DAEMON_COMPONENT_NAME)
 
-MIN_TO_SECOND = 60
 MONGODB_ID_KEY = "_id"
 MONGODB_STREAM_PATH_KEY = "path"
 # TODO: consider to make this a shared constant between webui and package scripts
@@ -60,10 +60,10 @@ def try_removing_fs_file(fs_storage_config: FsStorage, relative_path: str) -> bo
     return True
 
 
-# # Let's first not consider recovery from interrupt
+# # Let's first consider the case for only CLP.
 # def handle_archive_retention(clp_config: CLPConfig) -> None:
-#     archive_retention_period = clp_config.archive_output.retention_period
-#     expiry_epoch = time.time() - archive_retention_period
+#     archive_output_config = clp_config.archive_output
+#     expiry_epoch = get_target_time(archive_output_config.retention_period)
 #
 #     logger.info("Creating SQL adapter")
 #     sql_adapter = SQL_Adapter(clp_config.database)
@@ -189,9 +189,11 @@ class TargetsHandle:
         with open(self._recovery_file_path, "a") as f:
             for target in self._new_targets:
                 f.write(f"{target}\n")
+
     def clean(self):
         if self._recovery_file_path.exists():
             os.unlink(self._recovery_file_path)
+
 
 def handle_removal(stream_output_config: StreamOutput, stream_path: str) -> bool:
     stream_storage_config = stream_output_config.storage
@@ -208,7 +210,7 @@ def handle_removal(stream_output_config: StreamOutput, stream_path: str) -> bool
 def handle_stream_retention(
     logs_directory: pathlib.Path,
     stream_output_config: StreamOutput,
-    results_cache_config: ResultsCache
+    results_cache_config: ResultsCache,
 ) -> None:
     expiry_time = get_target_time(stream_output_config.retention_period)
     expiry_oid = ObjectId.from_datetime(datetime.utcfromtimestamp(expiry_time))
@@ -248,8 +250,7 @@ def handle_stream_retention(
         # would have already loaded it. (but how about files with other line numbers?)
         # 2. Let log viewer ignore streams outside of TTL and request creating new entries.
         if 0 != len(object_ids_to_delete):
-            stream_collection.delete_many({MONGODB_ID_KEY: {'$in': object_ids_to_delete}})
-
+            stream_collection.delete_many({MONGODB_ID_KEY: {"$in": object_ids_to_delete}})
 
     # TODO: I feel it's ok to always run this even if there's no results from pymongo
     # First, if we reached this line, it means either 1. no new targets has been added, or
@@ -278,7 +279,9 @@ def stream_retention_entry(clp_config: CLPConfig, job_frequency_secs: int) -> No
         raise ValueError(f"Stream storage type {storage_type} is not supported")
 
     while True:
-        handle_stream_retention(clp_config.logs_directory, stream_output_config, clp_config.results_cache)
+        handle_stream_retention(
+            clp_config.logs_directory, stream_output_config, clp_config.results_cache
+        )
         time.sleep(job_frequency_secs)
 
 

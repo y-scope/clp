@@ -40,6 +40,7 @@ from clp_py_utils.clp_config import (
     TAGS_TABLE_SUFFIX,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
+from clp_py_utils.constants import MIN_TO_SECOND, SECOND_TO_MILLISECOND
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -243,7 +244,8 @@ def fetch_new_query_jobs(db_conn) -> list:
             f"""
             SELECT {QUERY_JOBS_TABLE_NAME}.id as job_id,
             {QUERY_JOBS_TABLE_NAME}.job_config,
-            {QUERY_JOBS_TABLE_NAME}.type
+            {QUERY_JOBS_TABLE_NAME}.type,
+            {QUERY_JOBS_TABLE_NAME}.creation_time
             FROM {QUERY_JOBS_TABLE_NAME}
             WHERE {QUERY_JOBS_TABLE_NAME}.status={QueryJobStatus.PENDING}
             """
@@ -385,6 +387,7 @@ def get_archives_for_search(
     db_conn,
     table_prefix: str,
     search_config: SearchJobConfig,
+    retention_target_msc: Optional[int],
 ):
     query = f"""SELECT id as archive_id, end_timestamp
             FROM {table_prefix}{ARCHIVES_TABLE_SUFFIX}
@@ -394,6 +397,8 @@ def get_archives_for_search(
         filter_clauses.append(f"begin_timestamp <= {search_config.end_timestamp}")
     if search_config.begin_timestamp is not None:
         filter_clauses.append(f"end_timestamp >= {search_config.begin_timestamp}")
+    if retention_target_msc is not None:
+        filter_clauses.append(f"(end_timestamp >= {retention_target_msc} OR end_timestamp = 0)")
     if search_config.tags is not None:
         filter_clauses.append(
             f"id IN (SELECT archive_id FROM {table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX} WHERE "
@@ -617,6 +622,7 @@ def handle_pending_query_jobs(
     results_cache_uri: str,
     stream_collection_name: str,
     num_archives_to_search_per_sub_job: int,
+    archive_retention_period: Optional[int],
 ) -> List[asyncio.Task]:
     global active_jobs
 
@@ -635,14 +641,22 @@ def handle_pending_query_jobs(
             job_id = str(job["job_id"])
             job_type = job["type"]
             job_config = msgpack.unpackb(job["job_config"])
-
+            job_creation_time = job["creation_time"].timestamp()
             if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
                 # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
                 if job_id in active_jobs:
                     continue
 
                 search_config = SearchJobConfig.parse_obj(job_config)
-                archives_for_search = get_archives_for_search(db_conn, table_prefix, search_config)
+                retention_target_msecs: Optional[int]
+                if archive_retention_period is not None:
+                    retention_target_msecs = SECOND_TO_MILLISECOND * (
+                        job_creation_time - archive_retention_period * MIN_TO_SECOND
+                    )
+
+                archives_for_search = get_archives_for_search(
+                    db_conn, table_prefix, search_config, retention_target_msecs
+                )
                 if len(archives_for_search) == 0:
                     if set_job_or_task_status(
                         db_conn,
@@ -1053,6 +1067,7 @@ async def handle_jobs(
     stream_collection_name: str,
     jobs_poll_delay: float,
     num_archives_to_search_per_sub_job: int,
+    archive_retention_period: Optional[int],
 ) -> None:
     handle_updating_task = asyncio.create_task(
         handle_job_updates(db_conn_pool, results_cache_uri, jobs_poll_delay)
@@ -1066,6 +1081,7 @@ async def handle_jobs(
             results_cache_uri,
             stream_collection_name,
             num_archives_to_search_per_sub_job,
+            archive_retention_period,
         )
         if 0 == len(reducer_acquisition_tasks):
             tasks.append(asyncio.create_task(asyncio.sleep(jobs_poll_delay)))
@@ -1151,6 +1167,7 @@ async def main(argv: List[str]) -> int:
                 stream_collection_name=clp_config.results_cache.stream_collection_name,
                 jobs_poll_delay=clp_config.query_scheduler.jobs_poll_delay,
                 num_archives_to_search_per_sub_job=batch_size,
+                archive_retention_period=clp_config.archive_output.retention_period,
             )
         )
         reducer_handler = asyncio.create_task(reducer_handler.serve_forever())
