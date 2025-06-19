@@ -62,7 +62,7 @@ task lint:fix-js
 ```
 
 [eslint]: https://eslint.org/
-[nvm]: https://github.com/nvm-sh/nvm
 [Fastify]: https://www.fastify.io/
 [log-viewer]: https://github.com/y-scope/yscope-log-viewer
+[nvm]: https://github.com/nvm-sh/nvm
 [React]: https://reactjs.org/
