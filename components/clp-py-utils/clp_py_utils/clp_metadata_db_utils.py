@@ -127,8 +127,8 @@ def add_dataset(
     dataset_archive_storage_directory: Path,
 ) -> None:
     """
-    Inserts a new dataset into the `datasets` table and creates its standard set
-    of tables for CLP's metadata.
+    Inserts a new dataset into the `datasets` table and creates the corresponding standard set of
+    tables for CLP's metadata.
 
     :param db_conn:
     :param db_cursor: The database cursor to execute the table row insertion.
