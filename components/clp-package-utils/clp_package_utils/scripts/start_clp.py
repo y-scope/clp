@@ -16,6 +16,7 @@ from clp_py_utils.clp_config import (
     ALL_TARGET_NAME,
     ARCHIVES_TABLE_SUFFIX,
     AwsAuthType,
+    CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -32,6 +33,7 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
 )
@@ -867,6 +869,8 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     # Read and update settings.json
     clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
+    if StorageEngine.CLP_S == clp_config.package.storage_engine:
+        table_prefix = f"{table_prefix}{CLP_DEFAULT_DATASET_NAME}_"
     meteor_settings_updates = {
         "private": {
             "SqlDbHost": clp_config.database.host,
