@@ -11,6 +11,7 @@ import {
 import {isAxiosError} from "axios";
 
 import {submitExtractStreamJob} from "../api/query";
+import useSearchStore from "../pages/SearchPage/SearchState";
 import {Nullable} from "../typings/common";
 import {
     EXTRACT_JOB_TYPE,
@@ -18,11 +19,7 @@ import {
     QUERY_LOADING_STATE,
 } from "../typings/query";
 import Loading from "./Loading";
-import useSearchStore from "../pages/SearchPage/SearchState";
-import {
-    CLP_STORAGE_ENGINES,
-    SETTINGS_STORAGE_ENGINE,
-} from "../config";
+
 
 /**
  * Flag to prevent duplicate execution of `useEffect`.
@@ -69,18 +66,15 @@ const QueryStatus = () => {
             return;
         }
 
-        submitExtractStreamJob(
-            cachedDataset,
-            // `parseResult.type` must be valid key since parsed using with typebox type
-            // `ExtractJobSearchParams`.
-            EXTRACT_JOB_TYPE[parseResult.type as keyof typeof EXTRACT_JOB_TYPE],
-            parseResult.streamId,
-            parseResult.logEventIdx,
-            () => {
+        submitExtractStreamJob({
+            dataset: cachedDataset,
+            extractJobType: EXTRACT_JOB_TYPE[parseResult.type as keyof typeof EXTRACT_JOB_TYPE],
+            logEventIdx: parseResult.logEventIdx,
+            onUploadProgress: () => {
                 setQueryState(QUERY_LOADING_STATE.WAITING);
             },
-
-        )
+            streamId: parseResult.streamId,
+        })
             .then(({data}) => {
                 setQueryState(QUERY_LOADING_STATE.LOADING);
 
@@ -99,7 +93,7 @@ const QueryStatus = () => {
                 console.error(msg, e);
                 setErrorMsg(msg);
             });
-    }, []);
+    }, [cachedDataset]);
 
     return (
         <Loading

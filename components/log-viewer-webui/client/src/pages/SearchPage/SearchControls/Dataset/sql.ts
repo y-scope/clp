@@ -1,5 +1,6 @@
 import {querySql} from "../../../../api/sql";
 
+
 /**
  * Table name for dataset queries.
  */
@@ -34,7 +35,7 @@ interface DatasetItem {
  */
 const fetchDatasetNames = async (): Promise<string[]> => {
     const resp = await querySql<DatasetItem[]>(GET_DATASETS_SQL);
-    return resp.data.map(dataset => dataset.name);
+    return resp.data.map((dataset) => dataset.name);
 };
 
 export {fetchDatasetNames};

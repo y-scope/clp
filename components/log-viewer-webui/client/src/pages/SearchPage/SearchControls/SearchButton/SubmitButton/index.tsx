@@ -6,15 +6,15 @@ import {
     Tooltip,
 } from "antd";
 
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../../../../../config";
 import {computeTimelineConfig} from "../../../SearchResults/SearchResultsTimeline/utils";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import {handleQuerySubmit} from "../../search-requests";
 import styles from "./index.module.css";
-import {
-    CLP_STORAGE_ENGINES,
-    SETTINGS_STORAGE_ENGINE,
-} from "../../../../../config";
 
 
 /**
@@ -43,6 +43,7 @@ const SubmitButton = () => {
                 updateCachedDataset(selectDataset);
             } else {
                 console.error("Cannot submit a clp-s query without a dataset selection.");
+
                 return;
             }
         }
@@ -55,12 +56,17 @@ const SubmitButton = () => {
             timestampBegin: timeRange[0].valueOf(),
             timestampEnd: timeRange[1].valueOf(),
         });
-    }, [queryString, updateTimelineConfig, timeRange, selectDataset, updateCachedDataset]);
+    }, [queryString,
+        updateTimelineConfig,
+        timeRange,
+        selectDataset,
+        updateCachedDataset]);
 
     const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
+
     // Submit button must be disabled if there are no datasets since clp-s requires dataset option
     // for queries.
-    const isSomeDataset = (selectDataset !== null) &&
+    const isSomeDataset = (null !== selectDataset) &&
                           (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE);
 
     let tooltipTitle = "";
@@ -74,11 +80,11 @@ const SubmitButton = () => {
         <Tooltip title={tooltipTitle}>
             <Button
                 className={styles["gradientButton"] || ""}
-                disabled={isQueryStringEmpty || false === isSomeDataset ||
-                          searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
                 icon={<SearchOutlined/>}
                 size={"large"}
                 type={"primary"}
+                disabled={isQueryStringEmpty || false === isSomeDataset ||
+                          searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
                 onClick={handleSubmitButtonClick}
             >
                 Search

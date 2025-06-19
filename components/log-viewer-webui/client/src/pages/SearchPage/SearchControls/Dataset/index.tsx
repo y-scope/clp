@@ -1,12 +1,23 @@
-import {Select, message} from "antd";
-import {useQuery} from "@tanstack/react-query";
 import {useEffect} from "react";
-import useSearchStore from "../../SearchState/index";
+
+import {useQuery} from "@tanstack/react-query";
+import {
+    message,
+    Select,
+} from "antd";
+
 import useIngestStatsStore from "../../../IngestPage/ingestStatsStore";
+import useSearchStore from "../../SearchState/index";
 import DatasetLabel from "./DatasetLabel";
 import styles from "./index.module.css";
 import {fetchDatasetNames} from "./sql";
 
+
+/**
+ * Renders a dataset selector component that allows users to select from available datasets.
+ *
+ * @return
+ */
 const Dataset = () => {
     const {refreshInterval} = useIngestStatsStore();
 
@@ -16,7 +27,7 @@ const Dataset = () => {
     const [messageApi, contextHolder] = message.useMessage();
 
     const {data, isPending, isSuccess, error} = useQuery({
-        queryKey: ['datasets'],
+        queryKey: ["datasets"],
         queryFn: fetchDatasetNames,
         staleTime: refreshInterval,
         initialData: [],
@@ -30,49 +41,53 @@ const Dataset = () => {
                 updateDataset(data[0]);
             }
         }
-    }, [isSuccess, data, dataset, updateDataset]);
+    }, [isSuccess,
+        data,
+        dataset,
+        updateDataset]);
 
     // Display error message if the query fails since user querying is disabled if no datasets.
     useEffect(() => {
         if (error) {
             messageApi.error({
-                key: 'fetchError',
-                content: 'Error fetching datasets.',
+                key: "fetchError",
+                content: "Error fetching datasets.",
             });
         }
-    }, [error]);
+    }, [error,
+        messageApi]);
 
     // Display warning message if response empty since user querying is disabled if no
     // datasets.
     useEffect(() => {
-        if (isSuccess && data.length === 0) {
+        if (isSuccess && 0 === data.length) {
             messageApi.warning({
-                key: 'noData',
-                content: 'There is no data ingested yet. Please ingest data to search.',
+                key: "noData",
+                content: "There is no data ingested yet. Please ingest data to search.",
                 duration: 0,
             });
         }
-    }, [data, isSuccess]);
+    }, [data,
+        isSuccess,
+        messageApi]);
 
     const handleDatasetChange = (value: string) => {
         updateDataset(value);
     };
 
     return (
-        <div className={styles['datasetContainer']}>
+        <div className={styles["datasetContainer"]}>
             {contextHolder}
-            <DatasetLabel />
+            <DatasetLabel/>
             <Select
-                className={styles['select'] || ""}
-                placeholder=""
-                size={"large"}
-                onChange={handleDatasetChange}
+                className={styles["select"] || ""}
                 loading={isPending}
-                value={dataset}
-                showSearch
                 options={data.map((option) => ({label: option, value: option}))}
-            >
-            </Select>
+                placeholder={""}
+                showSearch={true}
+                size={"large"}
+                value={dataset}
+                onChange={handleDatasetChange}/>
         </div>
     );
 };

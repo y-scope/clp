@@ -5,17 +5,16 @@ import {Dayjs} from "dayjs";
 import {TimelineConfig} from "src/components/ResultsTimeline/typings";
 
 import ResultsTimeline from "../../../../components/ResultsTimeline/index";
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../../../../config";
 import {handleQuerySubmit} from "../../SearchControls/search-requests";
 import {TIME_RANGE_OPTION} from "../../SearchControls/TimeRangeInput/utils";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import {useAggregationResults} from "./useAggregationResults";
 import {computeTimelineConfig} from "./utils";
-import {
-    CLP_STORAGE_ENGINES,
-    SETTINGS_STORAGE_ENGINE,
-} from "../../../../config";
-import {QueryJobCreationSchema} from "../../../../api/search";
 
 
 /**
@@ -30,7 +29,9 @@ const SearchResultsTimeline = () => {
     const timelineConfig = useSearchStore((state) => state.timelineConfig);
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
-    const updateNumSearchResultsTimeline = useSearchStore((state) => state.updateNumSearchResultsTimeline);
+    const updateNumSearchResultsTimeline = useSearchStore(
+        (state) => state.updateNumSearchResultsTimeline
+    );
     const selectDataset = useSearchStore((state) => state.selectDataset);
     const updateCachedDataset = useSearchStore((state) => state.updateCachedDataset);
 
@@ -66,6 +67,7 @@ const SearchResultsTimeline = () => {
                 updateCachedDataset(selectDataset);
             } else {
                 console.error("Cannot submit a clp-s query without a dataset selection.");
+
                 return;
             }
         }
