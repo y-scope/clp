@@ -60,6 +60,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         },
         async (request, reply) => {
             const {
+                dataset,
                 timestampBegin,
                 timestampEnd,
                 ignoreCase,
@@ -68,6 +69,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             } = request.body;
 
             const args = {
+                dataset: dataset,
                 begin_timestamp: timestampBegin,
                 end_timestamp: timestampEnd,
                 ignore_case: ignoreCase,

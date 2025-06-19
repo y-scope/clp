@@ -9,6 +9,7 @@ import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import {useAggregationResults} from "./useAggregationResults";
 import {computeTimelineConfig} from "./utils";
+import Dataset from "../../SearchControls/Dataset";
 
 
 /**
@@ -17,14 +18,14 @@ import {computeTimelineConfig} from "./utils";
  * @return
  */
 const SearchResultsTimeline = () => {
-    const {
-        queryString,
-        updateTimeRange,
-        updateTimeRangeOption,
-        timelineConfig,
-        searchUiState,
-        updateTimelineConfig,
-    } = useSearchStore();
+    const queryString = useSearchStore((state) => state.queryString);
+    const updateTimeRange = useSearchStore((state) => state.updateTimeRange);
+    const updateTimeRangeOption = useSearchStore((state) => state.updateTimeRangeOption);
+    const timelineConfig = useSearchStore((state) => state.timelineConfig);
+    const searchUiState = useSearchStore((state) => state.searchUiState);
+    const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
+    const selectDataset = useSearchStore((state) => state.selectDataset);
+    const updateCachedDataset = useSearchStore((state) => state.updateCachedDataset);
 
     const aggregationResults = useAggregationResults();
 
@@ -42,7 +43,18 @@ const SearchResultsTimeline = () => {
             return;
         }
 
+        let storageEngine = "clp-s";
+        if (storageEngine === "clp-s") {
+            if (null !== selectDataset) {
+                updateCachedDataset(selectDataset);
+            } else {
+                console.error("Cannot submit a clp-s query without a dataset selection.");
+                return;
+            }
+        }
+
         handleQuerySubmit({
+            dataset: selectDataset,
             ignoreCase: false,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),

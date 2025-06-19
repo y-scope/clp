@@ -1,6 +1,9 @@
 import {TypeBoxTypeProvider} from "@fastify/type-provider-typebox";
 import {Type} from "@sinclair/typebox";
-import {FastifyPluginAsync} from "fastify";
+import {
+    FastifyInstance,
+    FastifyPluginAsync,
+} from "fastify";
 import {StatusCodes} from "http-status-codes";
 
 import settings from "../../settings.json" with {type: "json"};
@@ -8,6 +11,35 @@ import {
     EXTRACT_JOB_TYPES,
     QUERY_JOB_TYPE,
 } from "../typings/query.js";
+
+/**
+ * Generates path to stream file.
+ *
+ * @param dataset
+ * @param extractJobType
+ * @param fileName
+ * @param fastify
+ * @return
+ */
+const buildStreamPath = async (
+    dataset: string,
+    extractJobType: QUERY_JOB_TYPE,
+    fileName: string,
+    fastify: FastifyInstance,
+): Promise<string> => {
+    let datasetPrefix = "";
+    if (extractJobType === QUERY_JOB_TYPE.EXTRACT_JSON) {
+        datasetPrefix = dataset;
+    }
+
+    if (fastify.hasDecorator("s3Manager") && "undefined" !== typeof fastify.s3Manager) {
+        return await fastify.s3Manager.getPreSignedUrl(
+            `s3://${settings.StreamFilesS3PathPrefix}${datasetPrefix}${fileName}`
+        );
+    }
+
+    return `/streams/${datasetPrefix}${fileName}`;
+};
 
 
 /**
@@ -38,13 +70,14 @@ const routes: FastifyPluginAsync = async (app) => {
     fastify.post("/query/extract-stream", {
         schema: {
             body: Type.Object({
+                dataset: Type.String(),
                 extractJobType: Type.Enum(QUERY_JOB_TYPE),
                 logEventIdx: Type.Integer(),
                 streamId: Type.String({minLength: 1}),
             }),
         },
     }, async (req, resp) => {
-        const {extractJobType, logEventIdx, streamId} = req.body;
+        const {dataset, extractJobType, logEventIdx, streamId} = req.body;
         if (false === EXTRACT_JOB_TYPES.has(extractJobType)) {
             resp.code(StatusCodes.BAD_REQUEST);
             throw new Error(`Invalid extractJobType="${extractJobType}".`);
@@ -57,6 +90,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
         if (null === streamMetadata) {
             const extractResult = await fastify.dbManager.submitAndWaitForExtractStreamJob({
+                dataset: dataset,
                 jobType: extractJobType,
                 logEventIdx: logEventIdx,
                 streamId: streamId,
@@ -80,13 +114,12 @@ const routes: FastifyPluginAsync = async (app) => {
             }
         }
 
-        if (fastify.hasDecorator("s3Manager") && "undefined" !== typeof fastify.s3Manager) {
-            streamMetadata.path = await fastify.s3Manager.getPreSignedUrl(
-                `s3://${settings.StreamFilesS3PathPrefix}${streamMetadata.path}`
-            );
-        } else {
-            streamMetadata.path = `/streams/${streamMetadata.path}`;
-        }
+        streamMetadata.path = await buildStreamPath(
+            dataset,
+            extractJobType,
+            streamMetadata.path,
+            fastify,
+        );
 
         return streamMetadata;
     });

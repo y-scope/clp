@@ -16,10 +16,11 @@ import {SEARCH_UI_STATE} from "./typings";
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
+    selectDataset: null,
+    cachedDataset: "",
     queryIsCaseSensitive: false,
     queryString: "",
     searchJobId: null,
-    searchResultsMetadata: null,
     searchUiState: SEARCH_UI_STATE.DEFAULT,
     timeRange: TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE],
     timeRangeOption: DEFAULT_TIME_RANGE,
@@ -31,6 +32,18 @@ interface SearchState {
      * Unique ID from the database for the aggregation job.
      */
     aggregationJobId: string | null;
+
+    /**
+     * Clp-s dataset filter shown in UI selector.
+     */
+    selectDataset: string | null;
+
+    /**
+     * Clp-s dataset filter submitted as part of query. There is a seperate state for the submitted
+     * dataset so modifications to the selector do not change path for displayed log viewer links
+     * (path contains dataset).
+     */
+    cachedDataset: string;
 
     /**
      * Whether the query is case sensitive.
@@ -70,6 +83,8 @@ interface SearchState {
     timelineConfig: TimelineConfig;
 
     updateAggregationJobId: (id: string | null) => void;
+    updateSelectDataset: (dataset: string) => void;
+    updateCachedDataset: (dataset: string) => void;
     updateQueryIsCaseSensitive: (newValue: boolean) => void;
     updateQueryString: (query: string) => void;
     updateSearchJobId: (id: string | null) => void;
@@ -83,6 +98,12 @@ const useSearchStore = create<SearchState>((set) => ({
     ...SEARCH_STATE_DEFAULT,
     updateAggregationJobId: (id) => {
         set({aggregationJobId: id});
+    },
+    updateSelectDataset: (dataset) => {
+        set({selectDataset: dataset});
+    },
+    updateCachedDataset: (dataset) => {
+        set({cachedDataset: dataset});
     },
     updateQueryIsCaseSensitive: (newValue: boolean) => {
         set({queryIsCaseSensitive: newValue});
