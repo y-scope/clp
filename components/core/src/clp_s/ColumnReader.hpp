@@ -111,6 +111,12 @@ public:
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
 private:
+    /**
+     * Gets the value stored at a given index by summing up the stored deltas between the requested
+     * index and the last requested index.
+     * @param idx
+     * @return The value stored at the requested index.
+     */
     int64_t get_value_at_idx(size_t idx);
 
     UnalignedMemSpan<int64_t> m_values;
