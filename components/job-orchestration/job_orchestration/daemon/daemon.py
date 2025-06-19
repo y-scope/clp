@@ -198,6 +198,7 @@ def handle_removal(stream_output_config: StreamOutput, stream_path: str) -> bool
 
 
 def handle_stream_retention(
+    logs_directory: pathlib.Path,
     stream_output_config: StreamOutput,
     results_cache_config: ResultsCache
 ) -> None:
@@ -206,6 +207,9 @@ def handle_stream_retention(
 
     logger.info(f"Handler targeting all streams < {expiry_time}")
     logger.info(f"Translated to objectID = {expiry_oid}")
+
+    recovery_file = logs_directory / "stream_retention.tmp"
+    targets_handle = TargetsHandle(recovery_file)
 
     results_cache_uri = results_cache_config.get_uri()
     with pymongo.MongoClient(results_cache_uri) as results_cache_client:
@@ -219,11 +223,14 @@ def handle_stream_retention(
         for stream in results:
             stream_path = stream["path"]
             logger.info(f"Plan to remove {stream_path}")
-            res = handle_removal(stream_output_config, stream_path)
-            if not res:
-                logger.error(f"failed to remove {stream_path}")
+            targets_handle.add_target(stream_path)
 
+        targets_handle.flush_new_targets()
         stream_collection.delete_many(retention_filter)
+
+    for target in targets_handle.get_targets():
+        _ = handle_removal(stream_output_config, target)
+
     return
 
 
@@ -242,7 +249,7 @@ def stream_retention_entry(clp_config: CLPConfig, job_frequency_secs: int) -> No
         raise ValueError(f"Stream storage type {storage_type} is not supported")
 
     while True:
-        handle_stream_retention(stream_output_config, clp_config.results_cache)
+        handle_stream_retention(clp_config.logs_directory, stream_output_config, clp_config.results_cache)
         time.sleep(job_frequency_secs)
 
 
@@ -281,7 +288,7 @@ def main(argv: List[str]) -> int:
     results_cache_retention_period = clp_config.results_cache.retention_period
     logger.info(f"Results cache retention period: {results_cache_retention_period}")
 
-    search_results_retention_entry(clp_config, 30)
+    stream_retention_entry(clp_config, 30)
 
     logger.info("reducer terminated")
 
