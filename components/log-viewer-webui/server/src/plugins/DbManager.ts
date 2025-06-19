@@ -112,7 +112,7 @@ class DbManager {
         streamId,
         targetUncompressedSize,
     }: {
-        dataset?: string;
+        dataset: string;
         jobType: QUERY_JOB_TYPE;
         logEventIdx: number;
         streamId: string;

@@ -61,17 +61,8 @@ const SearchResultsTimeline = () => {
             return;
         }
 
-        let payload: QueryJobCreationSchema = {
-            ignoreCase: false,
-            queryString: queryString,
-            timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
-            timestampBegin: newTimeRange[0].valueOf(),
-            timestampEnd: newTimeRange[1].valueOf(),
-        }
-
         if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
             if (null !== selectDataset) {
-                payload.dataset = selectDataset;
                 updateCachedDataset(selectDataset);
             } else {
                 console.error("Cannot submit a clp-s query without a dataset selection.");
@@ -79,7 +70,14 @@ const SearchResultsTimeline = () => {
             }
         }
 
-        handleQuerySubmit(payload);
+        handleQuerySubmit({
+            dataset: selectDataset ?? "",
+            ignoreCase: false,
+            queryString: queryString,
+            timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
+            timestampBegin: newTimeRange[0].valueOf(),
+            timestampEnd: newTimeRange[1].valueOf(),
+        });
     };
 
     return (

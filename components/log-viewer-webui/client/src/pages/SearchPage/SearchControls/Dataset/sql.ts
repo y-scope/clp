@@ -1,4 +1,4 @@
-import {querySql} from "../../../IngestPage/sqlConfig";
+import {querySql} from "../../../../api/sql";
 
 /**
  * Table name for dataset queries.
@@ -14,19 +14,18 @@ enum CLP_DATASETS_TABLE_COLUMN_NAMES {
 }
 
 /**
- * SQL query to get all datasets.
+ * SQL query to get all datasets names.
  */
 const GET_DATASETS_SQL = `
-SELECT
-    ${CLP_DATASETS_TABLE_COLUMN_NAMES.NAME} AS name
-FROM ${SqlDbClpDatasetsTableName}
-ORDER BY ${CLP_DATASETS_TABLE_COLUMN_NAMES.NAME};
+    SELECT
+        ${CLP_DATASETS_TABLE_COLUMN_NAMES.NAME} AS name
+    FROM ${SqlDbClpDatasetsTableName}
+    ORDER BY ${CLP_DATASETS_TABLE_COLUMN_NAMES.NAME};
 `;
 
 interface DatasetItem {
     name: string;
 }
-
 
 /**
  * Fetches all datasets names from the `clp_datasets` table.

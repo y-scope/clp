@@ -11,8 +11,8 @@ import {
     CLP_STORAGE_ENGINES,
     SETTINGS_STORAGE_ENGINE,
 } from "../../../config";
+import {querySql} from "../../../api/sql";
 import useIngestStatsStore from "../ingestStatsStore";
-import {querySql} from "../sqlConfig";
 import Files from "./Files";
 import styles from "./index.module.css";
 import Messages from "./Messages";

@@ -24,8 +24,6 @@ import {
     SETTINGS_STORAGE_ENGINE,
 } from "../config";
 
-CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE
-
 /**
  * Flag to prevent duplicate execution of `useEffect`.
  */
@@ -72,6 +70,7 @@ const QueryStatus = () => {
         }
 
         submitExtractStreamJob(
+            cachedDataset,
             // `parseResult.type` must be valid key since parsed using with typebox type
             // `ExtractJobSearchParams`.
             EXTRACT_JOB_TYPE[parseResult.type as keyof typeof EXTRACT_JOB_TYPE],
@@ -80,7 +79,7 @@ const QueryStatus = () => {
             () => {
                 setQueryState(QUERY_LOADING_STATE.WAITING);
             },
-            CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE ? cachedDataset : undefined,
+
         )
             .then(({data}) => {
                 setQueryState(QUERY_LOADING_STATE.LOADING);

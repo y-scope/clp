@@ -1,9 +1,6 @@
 import {TypeBoxTypeProvider} from "@fastify/type-provider-typebox";
 import {Type} from "@sinclair/typebox";
-import {
-    FastifyInstance,
-    FastifyPluginAsync,
-} from "fastify";
+import {FastifyPluginAsync} from "fastify";
 import {StatusCodes} from "http-status-codes";
 
 import settings from "../../settings.json" with {type: "json"};
@@ -41,7 +38,7 @@ const routes: FastifyPluginAsync = async (app) => {
     fastify.post("/query/extract-stream", {
         schema: {
             body: Type.Object({
-                dataset: Type.Optional(Type.String()),
+                dataset: Type.String(),
                 extractJobType: Type.Enum(QUERY_JOB_TYPE),
                 logEventIdx: Type.Integer(),
                 streamId: Type.String({minLength: 1}),
@@ -61,7 +58,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
         if (null === streamMetadata) {
             const extractResult = await fastify.dbManager.submitAndWaitForExtractStreamJob({
-                ...(typeof dataset !== "undefined" && { dataset }),
+                dataset,
                 jobType: extractJobType,
                 logEventIdx: logEventIdx,
                 streamId: streamId,

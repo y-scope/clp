@@ -39,17 +39,8 @@ const SubmitButton = () => {
         const newTimelineConfig = computeTimelineConfig(timeRange);
         updateTimelineConfig(newTimelineConfig);
 
-        let payload: QueryJobCreationSchema = {
-            ignoreCase: false,
-            queryString: queryString,
-            timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
-            timestampBegin: timeRange[0].valueOf(),
-            timestampEnd: timeRange[1].valueOf(),
-        }
-
         if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
             if (null !== selectDataset) {
-                payload.dataset = selectDataset;
                 updateCachedDataset(selectDataset);
             } else {
                 console.error("Cannot submit a clp-s query without a dataset selection.");
@@ -57,7 +48,14 @@ const SubmitButton = () => {
             }
         }
 
-        handleQuerySubmit(payload);
+        handleQuerySubmit({
+            dataset: selectDataset ?? "",
+            ignoreCase: false,
+            queryString: queryString,
+            timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
+            timestampBegin: timeRange[0].valueOf(),
+            timestampEnd: timeRange[1].valueOf(),
+        });
     }, [queryString, updateTimelineConfig, timeRange, selectDataset, updateCachedDataset]);
 
     const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
@@ -66,7 +64,7 @@ const SubmitButton = () => {
 
     let tooltipTitle = "";
     if (false === isSomeDataset) {
-        tooltipTitle = "Data must be ingested prior to enable search";
+        tooltipTitle = "Some data must be ingested to enable search";
     } else if (isQueryStringEmpty) {
         tooltipTitle = "Enter query to search";
     }

@@ -69,12 +69,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             } = request.body;
 
             const args = {
+                dataset,
                 begin_timestamp: timestampBegin,
                 end_timestamp: timestampEnd,
                 ignore_case: ignoreCase,
                 max_num_results: SEARCH_MAX_NUM_RESULTS,
                 query_string: queryString,
-                ...(typeof dataset !== "undefined" && { dataset }),
             };
 
             request.log.info(args, "/api/search/query args");

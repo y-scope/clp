@@ -13,15 +13,14 @@ import {
  * Submits a job to extract the stream that contains a given log event. The stream is extracted
  * either as a CLP IR or a JSON Lines file.
  *
+ * @param dataset
  * @param extractJobType
  * @param streamId
  * @param logEventIdx
  * @param onUploadProgress Callback to handle upload progress events.
- * @param [dataset]
  * @return The API response.
  */
 const submitExtractStreamJob = async (
-
     extractJobType: QUERY_JOB_TYPE,
     streamId: string,
     logEventIdx: number,
@@ -31,7 +30,7 @@ const submitExtractStreamJob = async (
     return await axios.post(
         "/query/extract-stream",
         {
-            ...(typeof dataset !== "undefined" && { dataset }),
+            dataset,
             extractJobType,
             streamId,
             logEventIdx,

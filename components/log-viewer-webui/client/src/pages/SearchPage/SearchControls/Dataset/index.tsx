@@ -1,15 +1,13 @@
-import {Select, theme, Typography, message} from "antd";
+import {Select, message} from "antd";
 import {useQuery} from "@tanstack/react-query";
 import {useEffect} from "react";
 import useSearchStore from "../../SearchState/index";
 import useIngestStatsStore from "../../../IngestPage/ingestStatsStore";
+import DatasetLabel from "./DatasetLabel";
 import styles from "./index.module.css";
 import {fetchDatasetNames} from "./sql";
 
-const {Text} = Typography;
-
 const Dataset = () => {
-    const {token} = theme.useToken();
     const {refreshInterval} = useIngestStatsStore();
 
     const dataset = useSearchStore((state) => state.selectDataset);
@@ -34,7 +32,7 @@ const Dataset = () => {
         }
     }, [isSuccess, data, dataset, updateDataset]);
 
-    // Display error message if the query fails since querying is disabled if no datasets.
+    // Display error message if the query fails since user querying is disabled if no datasets.
     useEffect(() => {
         if (error) {
             messageApi.error({
@@ -44,7 +42,8 @@ const Dataset = () => {
         }
     }, [error]);
 
-    // Display warning message if there are no datasets since querying is disabled if no datasets.
+    // Display warning message if response empty since user querying is disabled if no
+    // datasets.
     useEffect(() => {
         if (isSuccess && data.length === 0) {
             messageApi.warning({
@@ -62,31 +61,16 @@ const Dataset = () => {
     return (
         <div className={styles['datasetContainer']}>
             {contextHolder}
-            <Text
-                className={styles['labelBox'] || ""}
-                style={{
-                    backgroundColor: token.colorFillAlter,
-                    borderColor: token.colorBorder,
-                    borderTopLeftRadius: `${token.borderRadius}px`,
-                    borderBottomLeftRadius: `${token.borderRadius}px`,
-                    fontSize: token.fontSizeLG
-                }}
-            >
-                Dataset
-            </Text>
+            <DatasetLabel />
             <Select
                 className={styles['select'] || ""}
-                placeholder="Load..."
+                placeholder=""
                 size={"large"}
                 onChange={handleDatasetChange}
                 loading={isPending}
                 value={dataset}
                 showSearch
                 options={data.map((option) => ({label: option, value: option}))}
-                optionFilterProp="label"
-                filterSort={(optionA, optionB) =>
-                    (optionA?.label ?? '').toLowerCase().localeCompare((optionB?.label ?? '').toLowerCase())
-                }
             >
             </Select>
         </div>
