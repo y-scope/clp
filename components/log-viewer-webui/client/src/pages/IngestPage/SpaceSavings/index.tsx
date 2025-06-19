@@ -9,10 +9,13 @@ import {theme} from "antd";
 import StatCard from "../../../components/StatCard";
 import useIngestStatsStore from "../ingestStatsStore";
 import {querySql} from "../sqlConfig";
+import CompressedSize from "./CompressedSize";
+import styles from "./index.module.css";
 import {
     getSpaceSavingsSql,
     SpaceSavingsResp,
 } from "./sql";
+import UncompressedSize from "./UncompressedSize";
 
 
 /**
@@ -72,13 +75,19 @@ const SpaceSavings = () => {
     const spaceSavingsPercentText = `${spaceSavingsPercent.toFixed(2)}%`;
 
     return (
-        <StatCard
-            backgroundColor={token.colorPrimary}
-            stat={spaceSavingsPercentText}
-            statColor={token.colorWhite}
-            statSize={"6rem"}
-            title={"Space Savings"}
-            titleColor={token.colorWhite}/>
+        <div className={styles["spaceSavingsGrid"]}>
+            <div className={styles["spaceSavingsCard"]}>
+                <StatCard
+                    backgroundColor={token.colorPrimary}
+                    stat={spaceSavingsPercentText}
+                    statColor={token.colorWhite}
+                    statSize={"5.5rem"}
+                    title={"Space Savings"}
+                    titleColor={token.colorWhite}/>
+            </div>
+            <UncompressedSize uncompressedSize={uncompressedSize}/>
+            <CompressedSize compressedSize={compressedSize}/>
+        </div>
     );
 };
 

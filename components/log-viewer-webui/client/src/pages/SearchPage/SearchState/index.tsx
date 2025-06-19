@@ -18,13 +18,15 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
     selectDataset: null,
     cachedDataset: "",
+    numSearchResultsTable: 0,
+    numSearchResultsTimeline: 0,
     queryIsCaseSensitive: false,
     queryString: "",
     searchJobId: null,
     searchUiState: SEARCH_UI_STATE.DEFAULT,
-    timeRange: TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE],
+    timeRange: TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE](),
     timeRangeOption: DEFAULT_TIME_RANGE,
-    timelineConfig: computeTimelineConfig(TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE]),
+    timelineConfig: computeTimelineConfig(TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE]()),
 });
 
 interface SearchState {
@@ -44,6 +46,16 @@ interface SearchState {
      * (path contains dataset).
      */
     cachedDataset: string;
+
+    /**
+     * The number of search table results.
+     */
+    numSearchResultsTable: number;
+
+    /**
+     * The number of timeline results.
+     */
+    numSearchResultsTimeline: number;
 
     /**
      * Whether the query is case sensitive.
@@ -85,6 +97,8 @@ interface SearchState {
     updateAggregationJobId: (id: string | null) => void;
     updateSelectDataset: (dataset: string) => void;
     updateCachedDataset: (dataset: string) => void;
+    updateNumSearchResultsTable: (num: number) => void;
+    updateNumSearchResultsTimeline: (num: number) => void;
     updateQueryIsCaseSensitive: (newValue: boolean) => void;
     updateQueryString: (query: string) => void;
     updateSearchJobId: (id: string | null) => void;
@@ -104,6 +118,12 @@ const useSearchStore = create<SearchState>((set) => ({
     },
     updateCachedDataset: (dataset) => {
         set({cachedDataset: dataset});
+    },
+    updateNumSearchResultsTable: (num) => {
+        set({numSearchResultsTable: num});
+    },
+    updateNumSearchResultsTimeline: (num) => {
+        set({numSearchResultsTimeline: num});
     },
     updateQueryIsCaseSensitive: (newValue: boolean) => {
         set({queryIsCaseSensitive: newValue});

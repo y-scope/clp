@@ -1,3 +1,5 @@
+import {useEffect} from "react";
+
 import {Card} from "antd";
 import {Dayjs} from "dayjs";
 import {TimelineConfig} from "src/components/ResultsTimeline/typings";
@@ -24,11 +26,23 @@ const SearchResultsTimeline = () => {
     const timelineConfig = useSearchStore((state) => state.timelineConfig);
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
+    const updateNumSearchResultsTimeline = useSearchStore((state) => state.updateNumSearchResultsTimeline);
     const selectDataset = useSearchStore((state) => state.selectDataset);
     const updateCachedDataset = useSearchStore((state) => state.updateCachedDataset);
 
     const aggregationResults = useAggregationResults();
 
+    useEffect(() => {
+        const numSearchResultsTimeline = aggregationResults?.reduce(
+            (acc, curr) => acc + curr.count,
+            0
+        ) ?? 0;
+
+        updateNumSearchResultsTimeline(numSearchResultsTimeline);
+    }, [
+        aggregationResults,
+        updateNumSearchResultsTimeline,
+    ]);
 
     const handleTimelineZoom = (newTimeRange: [Dayjs, Dayjs]) => {
         const newTimelineConfig: TimelineConfig = computeTimelineConfig(newTimeRange);

@@ -6,6 +6,15 @@ import Dataset from "./Dataset";
 
 
 /**
+ * Prevents the default behavior to avoid page reload when submitting query.
+ *
+ * @param ev
+ */
+const handleSubmit = (ev: React.FormEvent<HTMLFormElement>) => {
+    ev.preventDefault();
+};
+
+/**
  * Renders controls for submitting queries.
  *
  * @return
@@ -16,12 +25,14 @@ const SearchControls = () => {
     const isClpSEngine = storageEngine === "clp-s";
 
     return (
-        <div className={styles["searchControlsContainer"]}>
-            {isClpSEngine && <Dataset/>}
-            <QueryInput/>
-            <TimeRangeInput/>
-            <SearchButton/>
-        </div>
+        <form onSubmit={handleSubmit}>
+            <div className={styles["searchControlsContainer"]}>
+                {isClpSEngine && <Dataset/>}
+                <QueryInput/>
+                <TimeRangeInput/>
+                <SearchButton/>
+            </div>
+        </form>
     );
 };
 

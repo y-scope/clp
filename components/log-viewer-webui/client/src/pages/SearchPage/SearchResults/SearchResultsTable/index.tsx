@@ -4,8 +4,8 @@ import {
     useState,
 } from "react";
 
-import {Table} from "antd";
-
+import VirtualTable from "../../../../components/VirtualTable";
+import useSearchStore from "../../SearchState/index";
 import {
     SearchResult,
     searchResultsTableColumns,
@@ -20,9 +20,21 @@ import {useSearchResults} from "./useSearchResults";
  * @return
  */
 const SearchResultsTable = () => {
+    const {updateNumSearchResultsTable} = useSearchStore();
     const searchResults = useSearchResults();
     const [tableHeight, setTableHeight] = useState<number>(0);
     const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const num = searchResults ?
+            searchResults.length :
+            0;
+
+        updateNumSearchResultsTable(num);
+    }, [
+        searchResults,
+        updateNumSearchResultsTable,
+    ]);
 
     // Antd table requires a fixed height for virtual scrolling. The effect sets a fixed height
     // based on the window height, container top, and fixed padding.
@@ -44,16 +56,16 @@ const SearchResultsTable = () => {
     }, []);
 
     return (
-        <div ref={containerRef}>
-            <Table<SearchResult>
+        <div
+            ref={containerRef}
+            style={{outline: "none"}}
+        >
+            <VirtualTable<SearchResult>
                 columns={searchResultsTableColumns}
+                dataSource={searchResults || []}
                 pagination={false}
                 rowKey={(record) => record._id.toString()}
-                scroll={{y: tableHeight}}
-                virtual={true}
-                dataSource={searchResults ?
-                    searchResults :
-                    []}/>
+                scroll={{y: tableHeight}}/>
         </div>
     );
 };
