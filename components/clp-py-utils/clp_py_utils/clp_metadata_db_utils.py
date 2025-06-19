@@ -96,6 +96,30 @@ def _create_column_metadata_table(db_cursor, table_prefix: str) -> None:
     )
 
 
+def _create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None = None) -> None:
+    """
+    Creates the standard set of tables for CLP's metadata.
+
+    :param db_cursor: The database cursor to execute the table creations.
+    :param table_prefix: A string to prepend to all table names.
+    :param dataset: If set, all tables will be named in a dataset-specific manner.
+    """
+    if dataset is not None:
+        table_prefix = f"{table_prefix}{dataset}_"
+        _create_column_metadata_table(db_cursor, table_prefix)
+
+    archives_table_name = f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}"
+    tags_table_name = f"{table_prefix}{TAGS_TABLE_SUFFIX}"
+    archive_tags_table_name = f"{table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX}"
+
+    _create_archives_table(db_cursor, archives_table_name)
+    _create_tags_table(db_cursor, tags_table_name)
+    _create_archive_tags_table(
+        db_cursor, archive_tags_table_name, archives_table_name, tags_table_name
+    )
+    _create_files_table(db_cursor, table_prefix)
+
+
 def create_datasets_table(db_cursor, table_prefix: str) -> None:
     """
     Creates the datasets information table.
@@ -119,6 +143,7 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
 
 
 def add_dataset(
+    db_conn,
     db_cursor,
     table_prefix: str,
     dataset_name: str,
@@ -126,8 +151,10 @@ def add_dataset(
     dataset_archive_storage_directory: Path,
 ) -> None:
     """
-    Inserts a new dataset into the `datasets` table.
+    Inserts a new dataset into the `datasets` table and creates its standard set
+    of tables for CLP's metadata.
 
+    :param db_conn:
     :param db_cursor: The database cursor to execute the table row insertion.
     :param table_prefix: A string to prepend to the table name.
     :param dataset_name:
@@ -141,6 +168,8 @@ def add_dataset(
     db_cursor.execute(
         query, (dataset_name, archive_storage_type, str(dataset_archive_storage_directory))
     )
+    _create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
+    db_conn.commit()
 
 
 def fetch_existing_datasets(
@@ -156,27 +185,3 @@ def fetch_existing_datasets(
     db_cursor.execute(f"SELECT name FROM `{table_prefix}{DATASETS_TABLE_SUFFIX}`")
     rows = db_cursor.fetchall()
     return {row["name"] for row in rows}
-
-
-def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None = None) -> None:
-    """
-    Creates the standard set of tables for CLP's metadata.
-
-    :param db_cursor: The database cursor to execute the table creations.
-    :param table_prefix: A string to prepend to all table names.
-    :param dataset: If set, all tables will be named in a dataset-specific manner.
-    """
-    if dataset is not None:
-        table_prefix = f"{table_prefix}{dataset}_"
-        _create_column_metadata_table(db_cursor, table_prefix)
-
-    archives_table_name = f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}"
-    tags_table_name = f"{table_prefix}{TAGS_TABLE_SUFFIX}"
-    archive_tags_table_name = f"{table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX}"
-
-    _create_archives_table(db_cursor, archives_table_name)
-    _create_tags_table(db_cursor, tags_table_name)
-    _create_archive_tags_table(
-        db_cursor, archive_tags_table_name, archives_table_name, tags_table_name
-    )
-    _create_files_table(db_cursor, table_prefix)
