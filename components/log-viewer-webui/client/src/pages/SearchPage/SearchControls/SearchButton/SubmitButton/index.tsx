@@ -11,6 +11,11 @@ import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import {handleQuerySubmit} from "../../search-requests";
 import styles from "./index.module.css";
+import {QueryJobCreationSchema} from "../../../../../api/search";
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../../../../../config";
 
 
 /**
@@ -26,8 +31,6 @@ const SubmitButton = () => {
     const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
     const updateCachedDataset = useSearchStore((state) => state.updateCachedDataset);
 
-    let storageEngine = "clp-s";
-
     /**
      * Submits search query.
      */
@@ -36,8 +39,17 @@ const SubmitButton = () => {
         const newTimelineConfig = computeTimelineConfig(timeRange);
         updateTimelineConfig(newTimelineConfig);
 
-        if (storageEngine === "clp-s") {
+        let payload: QueryJobCreationSchema = {
+            ignoreCase: false,
+            queryString: queryString,
+            timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
+            timestampBegin: timeRange[0].valueOf(),
+            timestampEnd: timeRange[1].valueOf(),
+        }
+
+        if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
             if (null !== selectDataset) {
+                payload.dataset = selectDataset;
                 updateCachedDataset(selectDataset);
             } else {
                 console.error("Cannot submit a clp-s query without a dataset selection.");
@@ -45,18 +57,12 @@ const SubmitButton = () => {
             }
         }
 
-        handleQuerySubmit({
-            dataset: selectDataset,
-            ignoreCase: false,
-            queryString: queryString,
-            timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
-            timestampBegin: timeRange[0].valueOf(),
-            timestampEnd: timeRange[1].valueOf(),
-        });
+        handleQuerySubmit(payload);
     }, [queryString, updateTimelineConfig, timeRange, selectDataset, updateCachedDataset]);
 
     const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
-    const isSomeDataset = selectDataset !== null && (storageEngine === "clp-s");
+    const isSomeDataset = (selectDataset !== null) &&
+                          (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE);
 
     let tooltipTitle = "";
     if (false === isSomeDataset) {

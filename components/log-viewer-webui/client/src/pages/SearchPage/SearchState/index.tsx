@@ -36,14 +36,9 @@ interface SearchState {
     aggregationJobId: string | null;
 
     /**
-     * Clp-s dataset filter shown in UI selector.
-     */
-    selectDataset: string | null;
-
-    /**
      * Clp-s dataset filter submitted as part of query. There is a seperate state for the submitted
-     * dataset so modifications to the selector do not change path for displayed log viewer links
-     * (path contains dataset).
+     * dataset so modifications to the selector do not change dataset used in extract stream job for
+     * log viewer links.
      */
     cachedDataset: string;
 
@@ -78,6 +73,11 @@ interface SearchState {
     searchUiState: SEARCH_UI_STATE;
 
     /**
+     * Clp-s dataset filter shown in UI selector.
+     */
+    selectDataset: string | null;
+
+    /**
      * Time range for search query.
      */
     timeRange: [dayjs.Dayjs, dayjs.Dayjs];
@@ -95,7 +95,6 @@ interface SearchState {
     timelineConfig: TimelineConfig;
 
     updateAggregationJobId: (id: string | null) => void;
-    updateSelectDataset: (dataset: string) => void;
     updateCachedDataset: (dataset: string) => void;
     updateNumSearchResultsTable: (num: number) => void;
     updateNumSearchResultsTimeline: (num: number) => void;
@@ -103,6 +102,7 @@ interface SearchState {
     updateQueryString: (query: string) => void;
     updateSearchJobId: (id: string | null) => void;
     updateSearchUiState: (state: SEARCH_UI_STATE) => void;
+    updateSelectDataset: (dataset: string) => void;
     updateTimeRange: (range: [dayjs.Dayjs, dayjs.Dayjs]) => void;
     updateTimeRangeOption: (option: TIME_RANGE_OPTION) => void;
     updateTimelineConfig: (config: TimelineConfig) => void;
@@ -112,9 +112,6 @@ const useSearchStore = create<SearchState>((set) => ({
     ...SEARCH_STATE_DEFAULT,
     updateAggregationJobId: (id) => {
         set({aggregationJobId: id});
-    },
-    updateSelectDataset: (dataset) => {
-        set({selectDataset: dataset});
     },
     updateCachedDataset: (dataset) => {
         set({cachedDataset: dataset});
@@ -136,6 +133,9 @@ const useSearchStore = create<SearchState>((set) => ({
     },
     updateSearchUiState: (state) => {
         set({searchUiState: state});
+    },
+    updateSelectDataset: (dataset) => {
+        set({selectDataset: dataset});
     },
     updateTimeRange: (range) => {
         set({timeRange: range});

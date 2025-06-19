@@ -18,7 +18,13 @@ import {
     QUERY_LOADING_STATE,
 } from "../typings/query";
 import Loading from "./Loading";
+import useSearchStore from "../pages/SearchPage/SearchState";
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../config";
 
+CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE
 
 /**
  * Flag to prevent duplicate execution of `useEffect`.
@@ -31,6 +37,7 @@ let isFirstRun = true;
  * @return
  */
 const QueryStatus = () => {
+    const cachedDataset = useSearchStore((state) => state.cachedDataset);
     const [queryState, setQueryState] = useState<QUERY_LOADING_STATE>(
         QUERY_LOADING_STATE.SUBMITTING
     );
@@ -65,7 +72,6 @@ const QueryStatus = () => {
         }
 
         submitExtractStreamJob(
-
             // `parseResult.type` must be valid key since parsed using with typebox type
             // `ExtractJobSearchParams`.
             EXTRACT_JOB_TYPE[parseResult.type as keyof typeof EXTRACT_JOB_TYPE],
@@ -73,7 +79,8 @@ const QueryStatus = () => {
             parseResult.logEventIdx,
             () => {
                 setQueryState(QUERY_LOADING_STATE.WAITING);
-            }
+            },
+            CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE ? cachedDataset : undefined,
         )
             .then(({data}) => {
                 setQueryState(QUERY_LOADING_STATE.LOADING);

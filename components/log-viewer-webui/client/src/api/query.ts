@@ -17,17 +17,21 @@ import {
  * @param streamId
  * @param logEventIdx
  * @param onUploadProgress Callback to handle upload progress events.
+ * @param [dataset]
  * @return The API response.
  */
 const submitExtractStreamJob = async (
+
     extractJobType: QUERY_JOB_TYPE,
     streamId: string,
     logEventIdx: number,
     onUploadProgress: (progressEvent: AxiosProgressEvent) => void,
+    dataset?: string,
 ): Promise<AxiosResponse<ExtractStreamResp>> => {
     return await axios.post(
         "/query/extract-stream",
         {
+            ...(typeof dataset !== "undefined" && { dataset }),
             extractJobType,
             streamId,
             logEventIdx,

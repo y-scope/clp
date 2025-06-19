@@ -4,17 +4,9 @@ import {useEffect} from "react";
 import useSearchStore from "../../SearchState/index";
 import useIngestStatsStore from "../../../IngestPage/ingestStatsStore";
 import styles from "./index.module.css";
-import {fetchDatasetsRaw} from "./datasetSql";
+import {fetchDatasetNames} from "./sql";
 
-const {Option} = Select;
 const {Text} = Typography;
-
-// Plan is the two states.
-// UI states starts as null, then there is a hook that updates it. Maybe is Success. Use same trick with null. Like if not null
-// In UI, should disabled submit button when no data. Should also disable timeline zoom. Tooltip should change to say no datasets. State must also be clp-s
-// If there is an error, should display a message. Error fetching data
-// If there is no error, but no data should display something as well.  maybe can do warning. Maybe put message. saying please ingest data.
-// Note this whole component should not render
 
 const Dataset = () => {
     const {token} = theme.useToken();
@@ -27,12 +19,13 @@ const Dataset = () => {
 
     const {data, isPending, isSuccess, error} = useQuery({
         queryKey: ['datasets'],
-        queryFn: fetchDatasetsRaw,
+        queryFn: fetchDatasetNames,
         staleTime: refreshInterval,
         initialData: [],
     });
 
-    // Set first dataset as default when data loads and no dataset is selected
+    // Update the selected dataset to the first dataset in the the reponse. The dataset is only
+    // updated if the dataset is not already set (i.e. on initial response).
     useEffect(() => {
         if (isSuccess) {
             if ("undefined" !== typeof data[0] && null === dataset) {
@@ -41,7 +34,7 @@ const Dataset = () => {
         }
     }, [isSuccess, data, dataset, updateDataset]);
 
-    // Handle error messages - they auto-disappear so no cleanup needed
+    // Display error message if the query fails since querying is disabled if no datasets.
     useEffect(() => {
         if (error) {
             messageApi.error({
@@ -51,12 +44,12 @@ const Dataset = () => {
         }
     }, [error]);
 
-        // Handle error messages - they auto-disappear so no cleanup needed
+    // Display warning message if there are no datasets since querying is disabled if no datasets.
     useEffect(() => {
         if (isSuccess && data.length === 0) {
             messageApi.warning({
                 key: 'noData',
-                content: 'There is no data ingested yet. Please ingest data to begin search',
+                content: 'There is no data ingested yet. Please ingest data to search.',
                 duration: 0,
             });
         }
@@ -65,8 +58,6 @@ const Dataset = () => {
     const handleDatasetChange = (value: string) => {
         updateDataset(value);
     };
-
-    let testdata = ["hello, world", "test dataset", "another dataset"];
 
     return (
         <div className={styles['datasetContainer']}>
@@ -91,7 +82,7 @@ const Dataset = () => {
                 loading={isPending}
                 value={dataset}
                 showSearch
-                options={testdata.map((option) => ({label: option, value: option}))}
+                options={data.map((option) => ({label: option, value: option}))}
                 optionFilterProp="label"
                 filterSort={(optionA, optionB) =>
                     (optionA?.label ?? '').toLowerCase().localeCompare((optionB?.label ?? '').toLowerCase())

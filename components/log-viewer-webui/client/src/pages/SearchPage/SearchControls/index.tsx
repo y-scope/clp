@@ -3,6 +3,10 @@ import QueryInput from "./QueryInput";
 import SearchButton from "./SearchButton";
 import TimeRangeInput from "./TimeRangeInput";
 import Dataset from "./Dataset";
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../../../config";
 
 
 /**
@@ -20,14 +24,10 @@ const handleSubmit = (ev: React.FormEvent<HTMLFormElement>) => {
  * @return
  */
 const SearchControls = () => {
-    // TODO: Replace with actual settings/config check for storage engine
-    const storageEngine = "clp-s"; // This should come from settings/config
-    const isClpSEngine = storageEngine === "clp-s";
-
     return (
         <form onSubmit={handleSubmit}>
             <div className={styles["searchControlsContainer"]}>
-                {isClpSEngine && <Dataset/>}
+                {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && <Dataset/>}
                 <QueryInput/>
                 <TimeRangeInput/>
                 <SearchButton/>

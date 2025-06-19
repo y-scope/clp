@@ -11,7 +11,11 @@ import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import {useAggregationResults} from "./useAggregationResults";
 import {computeTimelineConfig} from "./utils";
-import Dataset from "../../SearchControls/Dataset";
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../../../../config";
+import {QueryJobCreationSchema} from "../../../../api/search";
 
 
 /**
@@ -57,9 +61,17 @@ const SearchResultsTimeline = () => {
             return;
         }
 
-        let storageEngine = "clp-s";
-        if (storageEngine === "clp-s") {
+        let payload: QueryJobCreationSchema = {
+            ignoreCase: false,
+            queryString: queryString,
+            timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
+            timestampBegin: newTimeRange[0].valueOf(),
+            timestampEnd: newTimeRange[1].valueOf(),
+        }
+
+        if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
             if (null !== selectDataset) {
+                payload.dataset = selectDataset;
                 updateCachedDataset(selectDataset);
             } else {
                 console.error("Cannot submit a clp-s query without a dataset selection.");
@@ -67,14 +79,7 @@ const SearchResultsTimeline = () => {
             }
         }
 
-        handleQuerySubmit({
-            dataset: selectDataset,
-            ignoreCase: false,
-            queryString: queryString,
-            timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
-            timestampBegin: newTimeRange[0].valueOf(),
-            timestampEnd: newTimeRange[1].valueOf(),
-        });
+        handleQuerySubmit(payload);
     };
 
     return (

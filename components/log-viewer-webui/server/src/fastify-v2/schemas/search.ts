@@ -1,7 +1,6 @@
 import {Type} from "@sinclair/typebox";
 
 import {
-    Nullable,
     IdSchema,
     StringSchema,
 } from "./common.js";
@@ -11,7 +10,7 @@ import {
  * Schema for request to create a new query job.
  */
 const QueryJobCreationSchema = Type.Object({
-    dataset: Nullable(Type.String()),
+    dataset: Type.Optional(Type.String()),
     ignoreCase: Type.Boolean(),
     queryString: StringSchema,
     timeRangeBucketSizeMillis: Type.Integer(),
