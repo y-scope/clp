@@ -11,6 +11,7 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
     // type-per-token support.
     switch (type) {
         case NodeType::Integer:
+        case NodeType::DeltaInteger:
             return clp_s::search::ast::LiteralType::IntegerT;
         case NodeType::Float:
             return clp_s::search::ast::LiteralType::FloatT;

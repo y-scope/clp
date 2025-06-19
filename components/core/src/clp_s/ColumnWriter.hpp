@@ -63,6 +63,24 @@ private:
     std::vector<int64_t> m_values;
 };
 
+class DeltaEncodedInt64ColumnWriter : public BaseColumnWriter {
+public:
+    // Constructor
+    explicit DeltaEncodedInt64ColumnWriter(int32_t id) : BaseColumnWriter(id) {}
+
+    // Destructor
+    ~DeltaEncodedInt64ColumnWriter() override = default;
+
+    // Methods inherited from BaseColumnWriter
+    size_t add_value(ParsedMessage::variable_t& value) override;
+
+    void store(ZstdCompressor& compressor) override;
+
+private:
+    std::vector<int64_t> m_values;
+    int64_t m_cur{};
+};
+
 class FloatColumnWriter : public BaseColumnWriter {
 public:
     // Constructor

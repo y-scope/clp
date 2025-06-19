@@ -16,6 +16,36 @@ std::variant<int64_t, double, std::string, uint8_t> Int64ColumnReader::extract_v
     return m_values[cur_message];
 }
 
+void DeltaEncodedInt64ColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_values = reader.read_unaligned_span<int64_t>(num_messages);
+    if (num_messages > 0) {
+        m_cur_idx = 0;
+        m_cur_value = m_values[0];
+    }
+}
+
+int64_t DeltaEncodedInt64ColumnReader::get_value_at_idx(size_t idx) {
+    if (m_cur_idx == idx) {
+        return m_cur_value;
+    }
+    if (idx > m_cur_idx) {
+        for (; m_cur_idx < idx; ++m_cur_idx) {
+            m_cur_value += m_values[m_cur_idx + 1];
+        }
+        return m_cur_value;
+    }
+    for (; m_cur_idx > idx; --m_cur_idx) {
+        m_cur_value -= m_values[m_cur_idx];
+    }
+    return m_cur_value;
+}
+
+std::variant<int64_t, double, std::string, uint8_t> DeltaEncodedInt64ColumnReader::extract_value(
+        uint64_t cur_message
+) {
+    return get_value_at_idx(cur_message);
+}
+
 void FloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
     m_values = reader.read_unaligned_span<double>(num_messages);
 }
@@ -23,6 +53,13 @@ void FloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
 void
 Int64ColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) {
     buffer.append(std::to_string(m_values[cur_message]));
+}
+
+void DeltaEncodedInt64ColumnReader::extract_string_value_into_buffer(
+        uint64_t cur_message,
+        std::string& buffer
+) {
+    buffer.append(std::to_string(get_value_at_idx(cur_message)));
 }
 
 std::variant<int64_t, double, std::string, uint8_t> FloatColumnReader::extract_value(
