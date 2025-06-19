@@ -96,7 +96,7 @@ def _create_column_metadata_table(db_cursor, table_prefix: str) -> None:
     )
 
 
-def _create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None = None) -> None:
+def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None = None) -> None:
     """
     Creates the standard set of tables for CLP's metadata.
 
@@ -168,7 +168,7 @@ def add_dataset(
     db_cursor.execute(
         query, (dataset_name, archive_storage_type, str(dataset_archive_storage_directory))
     )
-    _create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
+    create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
     db_conn.commit()
 
 
