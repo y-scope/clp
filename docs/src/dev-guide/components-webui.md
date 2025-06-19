@@ -49,8 +49,6 @@ server. It also serves the [log-viewer].
 
 ## Linting
 
-You can lint this component either as part of the entire project.
-
 To check for linting errors:
 
 ```shell
