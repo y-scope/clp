@@ -12,7 +12,6 @@ from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
     ARCHIVE_TAGS_TABLE_SUFFIX,
     ARCHIVES_TABLE_SUFFIX,
-    CLP_DEFAULT_DATASET_NAME,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
@@ -295,6 +294,7 @@ def run_clp(
         archive_output_dir = archive_output_dir / input_dataset
         if StorageType.S3 == storage_type:
             s3_config.key_prefix = f"{s3_config.key_prefix}{input_dataset}/"
+
         compression_cmd, compression_env = _make_clp_s_command_and_env(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,

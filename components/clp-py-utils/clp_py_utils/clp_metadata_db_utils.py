@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Set
 
 from clp_py_utils.clp_config import (
     ARCHIVE_TAGS_TABLE_SUFFIX,
@@ -118,6 +119,7 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
 
 
 def add_dataset(
+    db_conn,
     db_cursor,
     table_prefix: str,
     dataset_name: str,
@@ -125,8 +127,10 @@ def add_dataset(
     dataset_archive_storage_directory: Path,
 ) -> None:
     """
-    Inserts a new dataset into the `datasets` table.
+    Inserts a new dataset into the `datasets` table and creates the corresponding standard set of
+    tables for CLP's metadata.
 
+    :param db_conn:
     :param db_cursor: The database cursor to execute the table row insertion.
     :param table_prefix: A string to prepend to the table name.
     :param dataset_name:
@@ -140,6 +144,24 @@ def add_dataset(
     db_cursor.execute(
         query, (dataset_name, archive_storage_type, str(dataset_archive_storage_directory))
     )
+    create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
+    db_conn.commit()
+
+
+def fetch_existing_datasets(
+    db_cursor,
+    table_prefix: str,
+) -> Set[str]:
+    """
+    Gets the names of all existing datasets.
+
+    :param db_cursor:
+    :param table_prefix:
+    """
+    db_cursor.execute(f"SELECT name FROM `{table_prefix}{DATASETS_TABLE_SUFFIX}`")
+    rows = db_cursor.fetchall()
+    return {row["name"] for row in rows}
+>>>>>>> main
 
 
 def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None = None) -> None:

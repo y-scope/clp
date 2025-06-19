@@ -84,6 +84,7 @@ def _make_clp_s_command_and_env_vars(
     print_stream_stats: bool,
 ) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
     storage_type = worker_config.archive_output.storage.type
+    stream_output_dir = worker_config.stream_output.get_directory()
     stream_collection_name = worker_config.stream_collection_name
 
     logger.info("Starting JSON extraction")
@@ -94,7 +95,6 @@ def _make_clp_s_command_and_env_vars(
     ]
 
     dataset = extract_json_config.dataset
-    stream_output_dir = worker_config.stream_output.get_directory() / dataset
     if StorageType.S3 == storage_type:
         s3_config = worker_config.archive_output.storage.s3_config
         s3_config.key_prefix = f"{s3_config.key_prefix}{dataset}/"
