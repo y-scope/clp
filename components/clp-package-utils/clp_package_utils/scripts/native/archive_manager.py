@@ -287,7 +287,7 @@ def _find_archives(
             logger.info(f"Found {len(archive_ids)} archives within the specified time range.")
             for archive_id in archive_ids:
                 logger.info(archive_id)
-                archive_path: Path = archives_dir / archive_id
+                archive_path: Path = archives_dir / dataset / archive_id
                 if not archive_path.is_dir():
                     logger.warning(f"Archive {archive_id} in database not found on disk.")
 
@@ -388,7 +388,7 @@ def _delete_archives(
     logger.info(f"Finished deleting archives from the database.")
 
     for archive_id in archive_ids:
-        archive_path: Path = archives_dir / archive_id
+        archive_path: Path = archives_dir / dataset / archive_id
         if not archive_path.is_dir():
             logger.warning(f"Archive {archive_id} is not a directory. Skipping deletion.")
             continue
