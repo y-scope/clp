@@ -314,7 +314,7 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
                 writer->append_column(new DateStringColumnWriter(id));
                 break;
             case NodeType::DeltaInteger:
-                writer->append_column(new DeltaColumnWriter(id));
+                writer->append_column(new DeltaEncodedInt64ColumnWriter(id));
                 break;
             case NodeType::Metadata:
             case NodeType::NullValue:

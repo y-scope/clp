@@ -63,13 +63,13 @@ private:
     std::vector<int64_t> m_values;
 };
 
-class DeltaColumnWriter : public BaseColumnWriter {
+class DeltaEncodedInt64ColumnWriter : public BaseColumnWriter {
 public:
     // Constructor
-    explicit DeltaColumnWriter(int32_t id) : BaseColumnWriter(id) {}
+    explicit DeltaEncodedInt64ColumnWriter(int32_t id) : BaseColumnWriter(id) {}
 
     // Destructor
-    ~DeltaColumnWriter() override = default;
+    ~DeltaEncodedInt64ColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
     size_t add_value(ParsedMessage::variable_t& value) override;

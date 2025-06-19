@@ -91,13 +91,13 @@ private:
     UnalignedMemSpan<int64_t> m_values;
 };
 
-class DeltaColumnReader : public BaseColumnReader {
+class DeltaEncodedInt64ColumnReader : public BaseColumnReader {
 public:
     // Constructor
-    explicit DeltaColumnReader(int32_t id) : BaseColumnReader(id) {}
+    explicit DeltaEncodedInt64ColumnReader(int32_t id) : BaseColumnReader(id) {}
 
     // Destructor
-    ~DeltaColumnReader() override = default;
+    ~DeltaEncodedInt64ColumnReader() override = default;
 
     // Methods inherited from BaseColumnReader
     void load(BufferViewReader& reader, uint64_t num_messages) override;

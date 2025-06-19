@@ -189,7 +189,7 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
             column_reader = new Int64ColumnReader(column_id);
             break;
         case NodeType::DeltaInteger:
-            column_reader = new DeltaColumnReader(column_id);
+            column_reader = new DeltaEncodedInt64ColumnReader(column_id);
             break;
         case NodeType::Float:
             column_reader = new FloatColumnReader(column_id);
@@ -242,7 +242,7 @@ void ArchiveReader::append_unordered_reader_columns(
                 column_reader = new Int64ColumnReader(column_id);
                 break;
             case NodeType::DeltaInteger:
-                column_reader = new DeltaColumnReader(column_id);
+                column_reader = new DeltaEncodedInt64ColumnReader(column_id);
                 break;
             case NodeType::Float:
                 column_reader = new FloatColumnReader(column_id);

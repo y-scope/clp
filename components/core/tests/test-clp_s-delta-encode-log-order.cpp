@@ -100,8 +100,8 @@ TEST_CASE("clp-s-delta-encode-log-order", "[clp-s][delta-encode-log-order]") {
     }
     REQUIRE(nullptr != log_event_idx_reader);
     REQUIRE(clp_s::NodeType::DeltaInteger == log_event_idx_reader->get_type());
-    REQUIRE(nullptr != dynamic_cast<clp_s::DeltaColumnReader*>(log_event_idx_reader));
-    // Test forwards and backwards seeks on `DeltaColumnReader`.
+    REQUIRE(nullptr != dynamic_cast<clp_s::DeltaEncodedInt64ColumnReader*>(log_event_idx_reader));
+    // Test forwards and backwards seeks on `DeltaEncodedInt64ColumnReader`.
     size_t i{start_index};
     for (size_t num_iterations{0ULL}; num_iterations < cNumEntries; ++num_iterations) {
         int64_t val{};

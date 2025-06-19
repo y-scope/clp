@@ -31,7 +31,7 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
         };
     } else if (m_timestamp_column->get_type() == NodeType::DeltaInteger) {
         m_get_timestamp = [this]() {
-            return std::get<int64_t>(static_cast<DeltaColumnReader*>(m_timestamp_column)
+            return std::get<int64_t>(static_cast<DeltaEncodedInt64ColumnReader*>(m_timestamp_column)
                                              ->extract_value(m_cur_message));
         };
     } else if (m_timestamp_column->get_type() == NodeType::Float) {
