@@ -7,11 +7,12 @@
 
 namespace clp_s::search::kql {
 /**
- * Generate a search AST from a Kibana expression in an input stream
- * @param in input stream containing a Kibana expression followed by EOF
- * @return a search AST on success, nullptr otherwise
+ * Generates a search AST from a Kibana Query Language (KQL) expression.
+ * @param in An input stream containing a KQL expression followed by EOF.
+ * @return A search AST on success or nullptr on failure.
  */
-std::shared_ptr<clp_s::search::ast::Expression> parse_kql_expression(std::istream& in);
+[[nodiscard]] auto parse_kql_expression(std::istream& in)
+        -> std::shared_ptr<clp_s::search::ast::Expression>;
 }  // namespace clp_s::search::kql
 
 #endif  // CLP_S_SEARCH_KQL_KQL_HPP
