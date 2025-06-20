@@ -78,12 +78,12 @@ def try_removing_archive(fs_storage_config: FsStorage, relative_archive_path: st
 
 
 # May require some redesign
-class TargetsHandle:
+class TargetsBuffer:
     def __init__(self, recovery_file_path: pathlib.Path):
         logger.info(recovery_file_path)
         self._recovery_file_path: pathlib.Path = recovery_file_path
         self._targets: Set[str] = set()
-        self._new_targets: List[str] = list()
+        self._targets_to_persist: List[str] = list()
 
         if not self._recovery_file_path.exists():
             logger.info("Return")
@@ -101,19 +101,19 @@ class TargetsHandle:
     def add_target(self, target: str) -> None:
         if target not in self._targets:
             self._targets.add(target)
-            self._new_targets.append(target)
+            self._targets_to_persist.append(target)
 
     def get_targets(self) -> Set[str]:
         return self._targets
 
-    def flush_new_targets(self) -> None:
-        if len(self._new_targets) == 0:
+    def persists_new_targets(self) -> None:
+        if len(self._targets_to_persist) == 0:
             return
 
         with open(self._recovery_file_path, "a") as f:
-            for target in self._new_targets:
+            for target in self._targets_to_persist:
                 f.write(f"{target}\n")
-            self._new_targets.clear()
+        self._targets_to_persist.clear()
 
     def clear(self):
         self._targets.clear()
@@ -129,7 +129,7 @@ def archive_retention_helper(
     db_cursor,
     table_prefix: str,
     archive_expiry_epoch: int,
-    targets_handle: TargetsHandle,
+    targets_buffer: TargetsBuffer,
     archive_output_config: ArchiveOutput,
     dataset: Optional[str],
 ):
@@ -180,17 +180,17 @@ def archive_retention_helper(
         for target in archive_ids:
             if dataset is not None:
                 target = f"{dataset}/{target}"
-            targets_handle.add_target(target)
+            targets_buffer.add_target(target)
 
-        targets_handle.flush_new_targets()
+        targets_buffer.persists_new_targets()
 
         db_conn.commit()
 
-    for target in targets_handle.get_targets():
+    for target in targets_buffer.get_targets():
         logger.info(f"removing {target}")
         _ = remove_archive(archive_output_config, target)
 
-    targets_handle.clean()
+    targets_buffer.clean()
 
 
 # Let's first consider the case for only CLP.
@@ -210,7 +210,7 @@ def handle_archive_retention(clp_config: CLPConfig) -> None:
 
     recovery_file = clp_config.logs_directory / "archive_retention.tmp"
     logger.info("Creating target handle")
-    targets_handle = TargetsHandle(recovery_file)
+    targets_buffer = TargetsBuffer(recovery_file)
 
     logger.info("mysql cursor starts")
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
@@ -224,7 +224,7 @@ def handle_archive_retention(clp_config: CLPConfig) -> None:
                     db_cursor,
                     table_prefix,
                     archive_expiry_epoch,
-                    targets_handle,
+                    targets_buffer,
                     archive_output_config,
                     dataset,
                 )
@@ -234,7 +234,7 @@ def handle_archive_retention(clp_config: CLPConfig) -> None:
                 db_cursor,
                 table_prefix,
                 archive_expiry_epoch,
-                targets_handle,
+                targets_buffer,
                 archive_output_config,
                 None,
             )
@@ -334,7 +334,7 @@ def handle_stream_retention(
     logger.info(f"Translated to objectID = {expiry_oid}")
 
     recovery_file = logs_directory / "stream_retention.tmp"
-    targets_handle = TargetsHandle(recovery_file)
+    targets_buffer = TargetsBuffer(recovery_file)
 
     results_cache_uri = results_cache_config.get_uri()
     with pymongo.MongoClient(results_cache_uri) as results_cache_client:
@@ -349,10 +349,10 @@ def handle_stream_retention(
 
         for stream in results:
             stream_path = stream.get(MONGODB_STREAM_PATH_KEY)
-            targets_handle.add_target(stream_path)
+            targets_buffer.add_target(stream_path)
             object_ids_to_delete.append(stream.get(MONGODB_ID_KEY))
 
-        targets_handle.flush_new_targets()
+        targets_buffer.persists_new_targets()
 
         # TODO: here we don't use retention_filter again to avoid race condition between
         # targets to delete and timestamp of file.
@@ -371,11 +371,11 @@ def handle_stream_retention(
     # First, if we reached this line, it means either 1. no new targets has been added, or
     # some new target has been added, and we have already removed them from mongodb. either case,
     # the targets in the file must have been removed from the mongodb and not needed.
-    for target in targets_handle.get_targets():
+    for target in targets_buffer.get_targets():
         logger.info(f"removing {target}")
         _ = remove_stream(stream_output_config, target)
 
-    targets_handle.clean()
+    targets_buffer.clean()
     return
 
 
