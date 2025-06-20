@@ -75,7 +75,7 @@ def update_tags(db_cursor, table_prefix, dataset, archive_id, tag_ids):
     archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
     db_cursor.executemany(
         f"""
-        INSERT INTO {tags_table_name} (archive_id, tag_id)
+        INSERT INTO {archive_tags_table_name} (archive_id, tag_id)
         VALUES (%s, %s)
         """,
         [(archive_id, tag_id) for tag_id in tag_ids],
