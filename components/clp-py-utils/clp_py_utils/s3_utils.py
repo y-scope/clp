@@ -328,6 +328,7 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_path: str) -> None:
         )
 
 
+# TODO: now we need more permission
 def s3_try_removing_object(s3_config: S3Config, relative_object_key: str) -> bool:
     """
     Tries Removing an object from the S3 bucket using AWS's Delete Object operation.
