@@ -194,9 +194,9 @@ def search_and_schedule_new_tasks(
                 # TODO: Handle archive storage directory and s3 config properly
                 if StorageType.S3 == clp_archive_output.storage.type:
                     s3_config = clp_archive_output.storage.s3_config
-                    archive_storage_directory = Path(s3_config.key_prefix) / dataset_name
+                    archive_storage_directory = Path(s3_config.key_prefix)
                 else:
-                    archive_storage_directory = clp_archive_output.get_directory() / dataset_name
+                    archive_storage_directory = clp_archive_output.get_directory()
                 add_dataset(
                     db_conn,
                     db_cursor,
