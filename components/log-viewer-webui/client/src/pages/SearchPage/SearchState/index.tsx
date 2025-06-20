@@ -36,7 +36,7 @@ interface SearchState {
     aggregationJobId: string | null;
 
     /**
-     * Clp-s dataset filter submitted as part of query. There is a seperate state for the submitted
+     * Clp-s dataset filter submitted as part of query. There is a separate state for the submitted
      * dataset so modifications to the selector do not change dataset used in extract stream job for
      * log viewer links.
      */

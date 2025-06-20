@@ -21,7 +21,7 @@ interface submitExtractStreamJobProps {
  * Submits a job to extract the stream that contains a given log event. The stream is extracted
  * either as a CLP IR or a JSON Lines file.
  *
- * @param props The extraction job properties.
+ * @param props
  * @param props.dataset
  * @param props.extractJobType
  * @param props.streamId
