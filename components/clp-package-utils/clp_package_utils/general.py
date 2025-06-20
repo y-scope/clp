@@ -37,6 +37,7 @@ EXTRACT_IR_CMD = "i"
 EXTRACT_JSON_CMD = "j"
 
 # Paths
+CONTAINER_AWS_CONFIG_DIRECTORY = pathlib.Path("/") / ".aws"
 CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
 CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
 CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yml"
@@ -226,7 +227,6 @@ def generate_container_config(
             DockerMountType.BIND, input_logs_dir, container_clp_config.logs_input.directory, True
         )
 
-    container_clp_config.data_directory = CONTAINER_CLP_HOME / "var" / "data"
     if not is_path_already_mounted(
         clp_home, CONTAINER_CLP_HOME, clp_config.data_directory, container_clp_config.data_directory
     ):
@@ -234,7 +234,6 @@ def generate_container_config(
             DockerMountType.BIND, clp_config.data_directory, container_clp_config.data_directory
         )
 
-    container_clp_config.logs_directory = CONTAINER_CLP_HOME / "var" / "log"
     if not is_path_already_mounted(
         clp_home, CONTAINER_CLP_HOME, clp_config.logs_directory, container_clp_config.logs_directory
     ):
@@ -242,7 +241,6 @@ def generate_container_config(
             DockerMountType.BIND, clp_config.logs_directory, container_clp_config.logs_directory
         )
 
-    container_clp_config.archive_output.set_directory(pathlib.Path("/") / "mnt" / "archive-output")
     if not is_path_already_mounted(
         clp_home,
         CONTAINER_CLP_HOME,
@@ -255,7 +253,6 @@ def generate_container_config(
             container_clp_config.archive_output.get_directory(),
         )
 
-    container_clp_config.stream_output.set_directory(pathlib.Path("/") / "mnt" / "stream-output")
     if not is_path_already_mounted(
         clp_home,
         CONTAINER_CLP_HOME,
@@ -270,7 +267,7 @@ def generate_container_config(
 
     # Only create the mount if the directory exists
     if clp_config.aws_config_directory is not None:
-        container_clp_config.aws_config_directory = pathlib.Path("/") / ".aws"
+        container_clp_config.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
         docker_mounts.aws_config_dir = DockerMount(
             DockerMountType.BIND,
             clp_config.aws_config_directory,
@@ -367,6 +364,9 @@ def load_config_file(
 
     clp_config.make_config_paths_absolute(clp_home)
     clp_config.load_execution_container_name()
+
+    validate_path_for_container_mount(clp_config.data_directory)
+    validate_path_for_container_mount(clp_config.logs_directory)
 
     # Make data and logs directories node-specific
     hostname = socket.gethostname()
@@ -508,6 +508,9 @@ def validate_worker_config(clp_config: CLPConfig):
     clp_config.validate_archive_output_config()
     clp_config.validate_stream_output_config()
 
+    validate_path_for_container_mount(clp_config.archive_output.get_directory())
+    validate_path_for_container_mount(clp_config.stream_output.get_directory())
+
 
 def validate_webui_config(
     clp_config: CLPConfig,
@@ -519,3 +522,37 @@ def validate_webui_config(
             raise ValueError(f"{WEBUI_COMPONENT_NAME} {path} is not a valid path to settings.json")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
+
+
+def validate_path_for_container_mount(path: pathlib.Path) -> None:
+    RESTRICTED_PREFIXES: List[pathlib.Path] = [
+        CONTAINER_AWS_CONFIG_DIRECTORY,
+        CONTAINER_CLP_HOME,
+        CONTAINER_INPUT_LOGS_ROOT_DIR,
+        pathlib.Path("/bin"),
+        pathlib.Path("/boot"),
+        pathlib.Path("/dev"),
+        pathlib.Path("/etc"),
+        pathlib.Path("/lib"),
+        pathlib.Path("/lib32"),
+        pathlib.Path("/lib64"),
+        pathlib.Path("/libx32"),
+        pathlib.Path("/proc"),
+        pathlib.Path("/root"),
+        pathlib.Path("/run"),
+        pathlib.Path("/sbin"),
+        pathlib.Path("/srv"),
+        pathlib.Path("/sys"),
+        pathlib.Path("/usr"),
+        pathlib.Path("/var"),
+    ]
+
+    if not path.is_absolute():
+        raise ValueError(f"Path: `{path}` must be absolute:")
+
+    for prefix in RESTRICTED_PREFIXES:
+        if path.is_relative_to(prefix):
+            raise ValueError(
+                f"Invalid path: `{path}` cannot be under '{prefix}' which may overlap with a path"
+                f" in the container."
+            )
