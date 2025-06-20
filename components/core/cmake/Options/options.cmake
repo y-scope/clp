@@ -290,7 +290,7 @@ function(validate_clp_s_search_ast_dependencies)
     list(APPEND DEPENDENCY_LIST
         CLP_BUILD_CLP_S_TIMESTAMPPATTERN
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_SEARCH")
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_SEARCH_AST")
 endfunction()
 
 function(set_clp_s_search_ast_dependencies)
