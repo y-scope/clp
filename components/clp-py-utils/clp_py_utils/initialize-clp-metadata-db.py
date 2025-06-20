@@ -13,6 +13,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
 )
 from clp_py_utils.clp_metadata_db_utils import (
+    add_dataset,
     create_datasets_table,
     create_metadata_db_tables,
 )
