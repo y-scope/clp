@@ -20,9 +20,8 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
-    get_archives_table_name,
     get_archive_tags_table_name,
-    get_tags_table_name,
+    get_archives_table_name,
 )
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import (
