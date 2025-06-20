@@ -195,7 +195,8 @@ def fetch_existing_datasets(
     :param db_cursor:
     :param table_prefix:
     """
-    db_cursor.execute(f"SELECT name FROM `{table_prefix}{DATASETS_TABLE_SUFFIX}`")
+    datasets_table_name = get_datasets_table_name(table_prefix)
+    db_cursor.execute(f"SELECT name FROM `{datasets_table_name}`")
     rows = db_cursor.fetchall()
     return {row["name"] for row in rows}
 
