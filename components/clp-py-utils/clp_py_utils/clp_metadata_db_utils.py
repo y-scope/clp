@@ -14,6 +14,30 @@ from clp_py_utils.clp_config import (
 )
 
 
+def _generic_get_table_name(prefix: str, suffix: str, dataset: str | None):
+    table_name = f"{prefix}"
+    if dataset is not None:
+        table_name += f"{dataset}_"
+    table_name += f"{suffix}"
+    return table_name
+
+
+def get_archives_table_name(table_prefix: str, dataset: str | None):
+    return _generic_get_table_name(table_prefix, ARCHIVES_TABLE_SUFFIX, dataset)
+
+
+def get_tags_table_name(table_prefix: str, dataset: str | None):
+    return _generic_get_table_name(table_prefix, TAGS_TABLE_SUFFIX, dataset)
+
+
+def get_archive_tags_table_name(table_prefix: str, dataset: str | None):
+    return _generic_get_table_name(table_prefix, ARCHIVE_TAGS_TABLE_SUFFIX, dataset)
+
+
+def get_files_table_name(table_prefix: str, dataset: str | None):
+    return _generic_get_table_name(table_prefix, FILES_TABLE_SUFFIX, dataset)
+
+
 def _create_archives_table(db_cursor, archives_table_name: str) -> None:
     db_cursor.execute(
         f"""
@@ -63,10 +87,11 @@ def _create_archive_tags_table(
     )
 
 
-def _create_files_table(db_cursor, table_prefix: str) -> None:
+def _create_files_table(db_cursor, table_prefix: str, dataset: str | None) -> None:
+    files_table_name = get_files_table_name(table_prefix, dataset)
     db_cursor.execute(
         f"""
-        CREATE TABLE IF NOT EXISTS `{table_prefix}{FILES_TABLE_SUFFIX}` (
+        CREATE TABLE IF NOT EXISTS `{files_table_name}` (
             `id` VARCHAR(64) NOT NULL,
             `orig_file_id` VARCHAR(64) NOT NULL,
             `path` VARCHAR(12288) NOT NULL,
@@ -84,10 +109,11 @@ def _create_files_table(db_cursor, table_prefix: str) -> None:
     )
 
 
-def _create_column_metadata_table(db_cursor, table_prefix: str) -> None:
+def _create_column_metadata_table(db_cursor, table_prefix: str, dataset: str) -> None:
+    column_metadata_table_name = f"{table_prefix}{dataset}_{COLUMN_METADATA_TABLE_SUFFIX}"
     db_cursor.execute(
         f"""
-        CREATE TABLE IF NOT EXISTS `{table_prefix}{COLUMN_METADATA_TABLE_SUFFIX}` (
+        CREATE TABLE IF NOT EXISTS `{column_metadata_table_name}` (
             `name` VARCHAR(512) NOT NULL,
             `type` TINYINT NOT NULL,
             PRIMARY KEY (`name`, `type`)
@@ -172,16 +198,15 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
     :param dataset: If set, all tables will be named in a dataset-specific manner.
     """
     if dataset is not None:
-        table_prefix = f"{table_prefix}{dataset}_"
-        _create_column_metadata_table(db_cursor, table_prefix)
+        _create_column_metadata_table(db_cursor, table_prefix, dataset)
 
-    archives_table_name = f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}"
-    tags_table_name = f"{table_prefix}{TAGS_TABLE_SUFFIX}"
-    archive_tags_table_name = f"{table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX}"
+    archives_table_name = get_archives_table_name(table_prefix, dataset)
+    tags_table_name = get_tags_table_name(table_prefix, dataset)
+    archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
 
     _create_archives_table(db_cursor, archives_table_name)
     _create_tags_table(db_cursor, tags_table_name)
     _create_archive_tags_table(
         db_cursor, archive_tags_table_name, archives_table_name, tags_table_name
     )
-    _create_files_table(db_cursor, table_prefix)
+    _create_files_table(db_cursor, table_prefix, dataset)

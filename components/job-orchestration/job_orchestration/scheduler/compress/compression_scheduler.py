@@ -6,7 +6,7 @@ import sys
 import time
 from contextlib import closing
 from pathlib import Path
-from typing import Any, Dict, Set
+from typing import Any, Dict, Optional, Set
 
 import brotli
 import celery
@@ -19,12 +19,12 @@ from clp_py_utils.clp_config import (
     COMPRESSION_TASKS_TABLE_NAME,
     StorageEngine,
     StorageType,
-    TAGS_TABLE_SUFFIX,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
     add_dataset,
     fetch_existing_datasets,
+    get_tags_table_name,
 )
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
@@ -186,10 +186,12 @@ def search_and_schedule_new_tasks(
         input_config = clp_io_config.input
 
         table_prefix = clp_metadata_db_connection_config["table_prefix"]
+        dataset_name: Optional[str] = None
         if StorageEngine.CLP_S == clp_storage_engine:
             dataset_name = input_config.dataset
             if dataset_name not in existing_datasets:
                 archive_storage_directory: Path
+                # TODO: Handle archive storage directory and s3 config properly
                 if StorageType.S3 == clp_archive_output.storage.type:
                     s3_config = clp_archive_output.storage.s3_config
                     archive_storage_directory = Path(s3_config.key_prefix) / dataset_name
@@ -204,7 +206,6 @@ def search_and_schedule_new_tasks(
                     archive_storage_directory,
                 )
                 existing_datasets.add(dataset_name)
-            table_prefix = f"{table_prefix}{dataset_name}_"
 
         paths_to_compress_buffer = PathsToCompressBuffer(
             maintain_file_ordering=False,
@@ -277,13 +278,14 @@ def search_and_schedule_new_tasks(
 
         tag_ids = None
         if clp_io_config.output.tags:
+            tags_table_name = get_tags_table_name(table_prefix, dataset_name)
             db_cursor.executemany(
-                f"INSERT IGNORE INTO {table_prefix}{TAGS_TABLE_SUFFIX} (tag_name) VALUES (%s)",
+                f"INSERT IGNORE INTO {tags_table_name} (tag_name) VALUES (%s)",
                 [(tag,) for tag in clp_io_config.output.tags],
             )
             db_conn.commit()
             db_cursor.execute(
-                f"SELECT tag_id FROM {table_prefix}{TAGS_TABLE_SUFFIX} WHERE tag_name IN (%s)"
+                f"SELECT tag_id FROM {tags_table_name} WHERE tag_name IN (%s)"
                 % ", ".join(["%s"] * len(clp_io_config.output.tags)),
                 clp_io_config.output.tags,
             )

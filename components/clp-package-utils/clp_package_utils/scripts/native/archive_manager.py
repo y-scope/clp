@@ -8,12 +8,14 @@ from contextlib import closing
 from pathlib import Path
 
 from clp_py_utils.clp_config import (
-    ARCHIVE_TAGS_TABLE_SUFFIX,
-    ARCHIVES_TABLE_SUFFIX,
     CLP_DEFAULT_DATASET_NAME,
     Database,
-    FILES_TABLE_SUFFIX,
     StorageEngine,
+)
+from clp_py_utils.clp_metadata_db_utils import (
+    get_archive_tags_table_name,
+    get_archives_table_name,
+    get_files_table_name,
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
 
@@ -191,12 +193,16 @@ def main(argv: typing.List[str]) -> int:
         logger.error("`archive_output.directory` doesn't exist.")
         return -1
 
+    dataset: typing.Optional[str] = None
+    if StorageEngine.CLP_S == storage_engine:
+        dataset = CLP_DEFAULT_DATASET_NAME
+
     if FIND_COMMAND == parsed_args.subcommand:
         return _find_archives(
             archives_dir,
             database_config,
             storage_engine,
-            CLP_DEFAULT_DATASET_NAME,
+            dataset,
             parsed_args.begin_ts,
             parsed_args.end_ts,
         )
@@ -208,7 +214,7 @@ def main(argv: typing.List[str]) -> int:
                 archives_dir,
                 database_config,
                 storage_engine,
-                CLP_DEFAULT_DATASET_NAME,
+                dataset,
                 delete_handler,
                 parsed_args.dry_run,
             )
@@ -220,7 +226,7 @@ def main(argv: typing.List[str]) -> int:
                 archives_dir,
                 database_config,
                 storage_engine,
-                CLP_DEFAULT_DATASET_NAME,
+                dataset,
                 delete_handler,
                 parsed_args.dry_run,
             )
@@ -236,7 +242,7 @@ def _find_archives(
     archives_dir: Path,
     database_config: Database,
     storage_engine: StorageEngine,
-    dataset: str,
+    dataset: typing.Optional[str],
     begin_ts: int,
     end_ts: int = typing.Optional[int],
 ) -> int:
@@ -259,16 +265,15 @@ def _find_archives(
             database_config.get_clp_connection_params_and_type(True)
         )
         table_prefix: str = clp_db_connection_params["table_prefix"]
-        if StorageEngine.CLP_S == storage_engine:
-            table_prefix = f"{table_prefix}{dataset}_"
 
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
             query_params: typing.List[int] = [begin_ts]
+            archives_table_name = get_archives_table_name(table_prefix, dataset)
             query: str = (
                 f"""
-                SELECT id FROM `{table_prefix}{ARCHIVES_TABLE_SUFFIX}`
+                SELECT id FROM `{archives_table_name}`
                 WHERE begin_timestamp >= %s
                 """
             )
@@ -287,7 +292,10 @@ def _find_archives(
             logger.info(f"Found {len(archive_ids)} archives within the specified time range.")
             for archive_id in archive_ids:
                 logger.info(archive_id)
-                archive_path: Path = archives_dir / dataset / archive_id
+                if dataset is not None:
+                    archive_path: Path = archives_dir / dataset / archive_id
+                else:
+                    archive_path: Path = archives_dir / archive_id
                 if not archive_path.is_dir():
                     logger.warning(f"Archive {archive_id} in database not found on disk.")
 
@@ -327,8 +335,6 @@ def _delete_archives(
             database_config.get_clp_connection_params_and_type(True)
         )
         table_prefix = clp_db_connection_params["table_prefix"]
-        if StorageEngine.CLP_S == storage_engine:
-            table_prefix = f"{table_prefix}{dataset}_"
 
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
@@ -338,10 +344,11 @@ def _delete_archives(
 
             query_criteria: str = delete_handler.get_criteria()
             query_params: typing.List[str] = delete_handler.get_params()
+            archives_table_name = get_archives_table_name(table_prefix, dataset)
 
             db_cursor.execute(
                 f"""
-                DELETE FROM `{table_prefix}{ARCHIVES_TABLE_SUFFIX}`
+                DELETE FROM `{archives_table_name}`
                 WHERE {query_criteria}
                 RETURNING id
                 """,
@@ -357,17 +364,19 @@ def _delete_archives(
             delete_handler.validate_results(archive_ids)
 
             ids_list_string: str = ", ".join(["'%s'"] * len(archive_ids))
+            files_table_name = get_files_table_name(table_prefix, dataset)
+            archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
 
             db_cursor.execute(
                 f"""
-                DELETE FROM `{table_prefix}{FILES_TABLE_SUFFIX}`
+                DELETE FROM `{files_table_name}`
                 WHERE archive_id in ({ids_list_string})
                 """
             )
 
             db_cursor.execute(
                 f"""
-                DELETE FROM `{table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX}`
+                DELETE FROM `{archive_tags_table_name}`
                 WHERE archive_id in ({ids_list_string})
                 """
             )
@@ -388,7 +397,10 @@ def _delete_archives(
     logger.info(f"Finished deleting archives from the database.")
 
     for archive_id in archive_ids:
-        archive_path: Path = archives_dir / dataset / archive_id
+        if dataset is not None:
+            archive_path: Path = archives_dir / dataset / archive_id
+        else:
+            archive_path: Path = archives_dir / archive_id
         if not archive_path.is_dir():
             logger.warning(f"Archive {archive_id} is not a directory. Skipping deletion.")
             continue
