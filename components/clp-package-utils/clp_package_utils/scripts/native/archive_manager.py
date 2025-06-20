@@ -285,7 +285,9 @@ def _find_archives(
                 return 0
 
             logger.info(f"Found {len(archive_ids)} archives within the specified time range.")
-            archive_output_dir: Path = archives_dir / dataset if dataset is not None else archives_dir
+            archive_output_dir: Path = (
+                archives_dir / dataset if dataset is not None else archives_dir
+            )
             for archive_id in archive_ids:
                 logger.info(archive_id)
                 archive_path = archive_output_dir / archive_id

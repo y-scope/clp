@@ -689,7 +689,9 @@ def handle_pending_query_jobs(
                     continue
 
                 search_config = SearchJobConfig.parse_obj(job_config)
-                archives_for_search = get_archives_for_search(db_conn, table_prefix, dataset, search_config)
+                archives_for_search = get_archives_for_search(
+                    db_conn, table_prefix, dataset, search_config
+                )
                 if len(archives_for_search) == 0:
                     if set_job_or_task_status(
                         db_conn,
