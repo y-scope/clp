@@ -15,6 +15,7 @@ type QueryJobSchema = {
 // Currently, server schema types require typebox dependency so they cannot be moved to the
 // `@common` directory with current implementation.
 type QueryJobCreationSchema = {
+    dataset: string;
     ignoreCase: boolean;
     queryString: string;
     timeRangeBucketSizeMillis: number;

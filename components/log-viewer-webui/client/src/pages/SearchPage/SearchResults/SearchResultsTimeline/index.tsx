@@ -5,6 +5,10 @@ import {Dayjs} from "dayjs";
 import {TimelineConfig} from "src/components/ResultsTimeline/typings";
 
 import ResultsTimeline from "../../../../components/ResultsTimeline/index";
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../../../../config";
 import {handleQuerySubmit} from "../../SearchControls/search-requests";
 import {TIME_RANGE_OPTION} from "../../SearchControls/TimeRangeInput/utils";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
@@ -19,15 +23,17 @@ import {computeTimelineConfig} from "./utils";
  * @return
  */
 const SearchResultsTimeline = () => {
-    const {
-        queryString,
-        updateTimeRange,
-        updateTimeRangeOption,
-        timelineConfig,
-        searchUiState,
-        updateTimelineConfig,
-        updateNumSearchResultsTimeline,
-    } = useSearchStore();
+    const queryString = useSearchStore((state) => state.queryString);
+    const updateTimeRange = useSearchStore((state) => state.updateTimeRange);
+    const updateTimeRangeOption = useSearchStore((state) => state.updateTimeRangeOption);
+    const timelineConfig = useSearchStore((state) => state.timelineConfig);
+    const searchUiState = useSearchStore((state) => state.searchUiState);
+    const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
+    const updateNumSearchResultsTimeline = useSearchStore(
+        (state) => state.updateNumSearchResultsTimeline
+    );
+    const selectDataset = useSearchStore((state) => state.selectDataset);
+    const updateCachedDataset = useSearchStore((state) => state.updateCachedDataset);
 
     const aggregationResults = useAggregationResults();
 
@@ -56,7 +62,18 @@ const SearchResultsTimeline = () => {
             return;
         }
 
+        if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
+            if (null !== selectDataset) {
+                updateCachedDataset(selectDataset);
+            } else {
+                console.error("Cannot submit a clp-s query without a dataset selection.");
+
+                return;
+            }
+        }
+
         handleQuerySubmit({
+            dataset: selectDataset ?? "",
             ignoreCase: false,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),

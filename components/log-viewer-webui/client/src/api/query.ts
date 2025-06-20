@@ -9,25 +9,37 @@ import {
 } from "../typings/query";
 
 
+interface submitExtractStreamJobProps {
+    dataset: string;
+    extractJobType: QUERY_JOB_TYPE;
+    streamId: string;
+    logEventIdx: number;
+    onUploadProgress: (progressEvent: AxiosProgressEvent) => void;
+}
+
 /**
  * Submits a job to extract the stream that contains a given log event. The stream is extracted
  * either as a CLP IR or a JSON Lines file.
  *
- * @param extractJobType
- * @param streamId
- * @param logEventIdx
- * @param onUploadProgress Callback to handle upload progress events.
+ * @param props
+ * @param props.dataset
+ * @param props.extractJobType
+ * @param props.streamId
+ * @param props.logEventIdx
+ * @param props.onUploadProgress
  * @return The API response.
  */
-const submitExtractStreamJob = async (
-    extractJobType: QUERY_JOB_TYPE,
-    streamId: string,
-    logEventIdx: number,
-    onUploadProgress: (progressEvent: AxiosProgressEvent) => void,
-): Promise<AxiosResponse<ExtractStreamResp>> => {
+const submitExtractStreamJob = async ({
+    dataset,
+    extractJobType,
+    streamId,
+    logEventIdx,
+    onUploadProgress,
+}: submitExtractStreamJobProps): Promise<AxiosResponse<ExtractStreamResp>> => {
     return await axios.post(
         "/query/extract-stream",
         {
+            dataset,
             extractJobType,
             streamId,
             logEventIdx,
