@@ -102,7 +102,7 @@ interface SearchState {
     updateQueryString: (query: string) => void;
     updateSearchJobId: (id: string | null) => void;
     updateSearchUiState: (state: SEARCH_UI_STATE) => void;
-    updateSelectDataset: (dataset: string) => void;
+    updateSelectDataset: (dataset: string | null) => void;
     updateTimeRange: (range: [dayjs.Dayjs, dayjs.Dayjs]) => void;
     updateTimeRangeOption: (option: TIME_RANGE_OPTION) => void;
     updateTimelineConfig: (config: TimelineConfig) => void;

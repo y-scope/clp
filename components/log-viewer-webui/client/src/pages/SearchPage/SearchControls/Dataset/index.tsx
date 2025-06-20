@@ -30,7 +30,6 @@ const Dataset = () => {
         queryKey: ["datasets"],
         queryFn: fetchDatasetNames,
         staleTime: refreshInterval,
-        initialData: [],
     });
 
     // Update the selected dataset to the first dataset in the the reponse. The dataset is only
@@ -64,8 +63,10 @@ const Dataset = () => {
             messageApi.warning({
                 key: "noData",
                 content: "There is no data ingested yet. Please ingest data to search.",
-                duration: 0,
             });
+            // If all datasets were deleted, the dataset state must be reset to null to disable
+            // submit button since dataset option required to query clp-s.
+            updateDataset(null);
         }
     }, [data,
         isSuccess,
@@ -75,6 +76,7 @@ const Dataset = () => {
         updateDataset(value);
     };
 
+    let datasetNames: string[] = data ? data : []
     return (
         <div className={styles["datasetContainer"]}>
             {contextHolder}
@@ -82,8 +84,8 @@ const Dataset = () => {
             <Select
                 className={styles["select"] || ""}
                 loading={isPending}
-                options={data.map((option) => ({label: option, value: option}))}
-                placeholder={""}
+                options={datasetNames.map((option) => ({label: option, value: option}))}
+                placeholder={"None"}
                 showSearch={true}
                 size={"large"}
                 value={dataset}
