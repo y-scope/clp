@@ -21,6 +21,7 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
     get_archives_table_name,
+    get_archive_tags_table_name,
     get_tags_table_name,
 )
 from clp_py_utils.core import read_yaml_config_file
@@ -71,7 +72,7 @@ def increment_compression_job_metadata(db_cursor, job_id, kv):
 
 
 def update_tags(db_cursor, table_prefix, dataset, archive_id, tag_ids):
-    tags_table_name = get_tags_table_name(table_prefix, dataset)
+    archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
     db_cursor.executemany(
         f"""
         INSERT INTO {tags_table_name} (archive_id, tag_id)
