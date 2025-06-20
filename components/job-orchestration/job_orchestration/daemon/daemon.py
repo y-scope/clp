@@ -17,7 +17,6 @@ import pymongo
 import pymongo.database
 from bson import ObjectId
 from clp_py_utils.clp_config import (
-    ARCHIVES_TABLE_SUFFIX,
     CLPConfig,
     DAEMON_COMPONENT_NAME,
     FsStorage,
@@ -27,14 +26,20 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
     StreamOutput,
+    ArchiveOutput,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
-from clp_py_utils.constants import MIN_TO_SECOND
+from clp_py_utils.clp_metadata_db_utils import (
+    fetch_existing_datasets,
+    get_archives_table_name,
+    get_files_table_name,
+    get_archive_tags_table_name,
+)
+from clp_py_utils.constants import MIN_TO_SECOND, SECOND_TO_MILLISECOND
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import s3_try_removing_object
 from clp_py_utils.sql_adapter import SQL_Adapter
 from pydantic import ValidationError
-from pymongo.collection import Collection
 
 logger = get_logger(DAEMON_COMPONENT_NAME)
 
@@ -60,55 +65,112 @@ def try_removing_fs_file(fs_storage_config: FsStorage, relative_path: str) -> bo
     return True
 
 
-# # Let's first consider the case for only CLP.
-# def handle_archive_retention(clp_config: CLPConfig) -> None:
-#     archive_output_config = clp_config.archive_output
-#     expiry_epoch = get_target_time(archive_output_config.retention_period)
-#
-#     logger.info("Creating SQL adapter")
-#     sql_adapter = SQL_Adapter(clp_config.database)
-#     clp_connection_param = clp_config.database.get_clp_connection_params_and_type()
-#     table_prefix = clp_connection_param["table_prefix"]
-#
-#     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-#         db_conn.cursor(dictionary=True)
-#     ) as db_cursor:
-#
-#         # Remove all archives
-#         db_cursor.execute(
-#             f"""
-#             DELETE FROM `{table_prefix}{ARCHIVES_TABLE_SUFFIX}`
-#             WHERE end_timestamp <= %s
-#             RETURNING id
-#             """,
-#             [expiry_epoch],
-#         )
-#         results = db_cursor.fetchall()
-#
-#         archive_ids: typing.List[str] = [result["id"] for result in results]
-#         ids_list_string: str = ", ".join(["'%s'"] * len(archive_ids))
-#
-#         db_cursor.execute(
-#             f"""
-#             DELETE FROM `{table_prefix}{FILES_TABLE_SUFFIX}`
-#             WHERE archive_id in ({ids_list_string})
-#             """
-#         )
-#
-#         db_cursor.execute(
-#             f"""
-#             DELETE FROM `{table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX}`
-#             WHERE archive_id in ({ids_list_string})
-#             """
-#         )
-#
-#
-#         db_conn.commit()
+def try_removing_archive(fs_storage_config: FsStorage, relative_archive_path: str) -> bool:
+    archive_path = fs_storage_config.directory / relative_archive_path
+    if not archive_path.exists():
+        return False
+
+    if not archive_path.is_dir():
+        raise ValueError(f"Path {archive_path} doesn't resolve to a directory")
+
+    shutil.rmtree(archive_path)
+    return True
 
 
-def archive_retention_entry(clp_config: CLPConfig, job_frequency: int) -> None:
-    job_frequency_secs: int = job_frequency * MIN_TO_SECOND
+# Let's first consider the case for only CLP.
+def handle_archive_retention(clp_config: CLPConfig) -> None:
+    archive_output_config = clp_config.archive_output
+    storage_engine = clp_config.package.storage_engine
+    archive_expiry_epoch = SECOND_TO_MILLISECOND * get_target_time(archive_output_config.retention_period)
+
+    logger.info(f"Handler targeting all archives with end_ts < {archive_expiry_epoch}")
+
+    logger.info("Creating SQL adapter")
+    sql_adapter = SQL_Adapter(clp_config.database)
+    clp_connection_param = clp_config.database.get_clp_connection_params_and_type()
+    table_prefix = clp_connection_param["table_prefix"]
+
+    recovery_file = clp_config.logs_directory / "archive_retention.tmp"
+    logger.info("Creating target handle")
+    targets_handle = TargetsHandle(recovery_file)
+
+    logger.info("mysql cursor starts")
+    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
+        db_conn.cursor(dictionary=True)
+    ) as db_cursor:
+
+        # datasets: Optional[Set[str]] = None
+        # if StorageEngine.CLP_S == storage_engine:
+        #     datasets = fetch_existing_datasets(db_cursor, table_prefix)
+
+        dataset: Optional[str] = None
+        # Remove all archives
+        archives_table = get_archives_table_name(table_prefix, dataset)
+        db_cursor.execute(
+            f"""
+            SELECT id FROM `{archives_table}`
+            WHERE end_timestamp <= %s
+            """,
+            [archive_expiry_epoch],
+        )
+
+        results = db_cursor.fetchall()
+        if len(results) != 0:
+            archive_ids: List[str] = [result["id"] for result in results]
+            ids_list_string: str = ", ".join(["%s"] * len(archive_ids))
+
+            logger.info(f"Deleting {archive_ids}")
+
+            files_table = get_files_table_name(table_prefix, dataset)
+            db_cursor.execute(
+                f"""
+                DELETE FROM `{files_table}`
+                WHERE archive_id in ({ids_list_string})
+                """,
+                archive_ids
+            )
+
+            archive_tags_table = get_archive_tags_table_name(table_prefix, dataset)
+            db_cursor.execute(
+                f"""
+                DELETE FROM `{archive_tags_table}`
+                WHERE archive_id in ({ids_list_string})
+                """,
+                archive_ids
+            )
+
+            db_cursor.execute(
+                f"""
+                DELETE FROM `{archives_table}`
+                WHERE id in ({ids_list_string})
+                """,
+                archive_ids
+            )
+
+            # TODO: Here it's a bit awkward, can we do better?
+            for target in archive_ids:
+                if dataset is not None:
+                    target = f"{dataset}/{target}"
+                targets_handle.add_target(target)
+
+            targets_handle.flush_new_targets()
+
+            db_conn.commit()
+
+    for target in targets_handle.get_targets():
+        logger.info(f"removing {target}")
+        _ = remove_archive(archive_output_config, target)
+
+    targets_handle.clean()
+
+
+def archive_retention_entry(clp_config: CLPConfig, job_frequency_secs: int) -> None:
+    archive_retention_period = clp_config.archive_output.retention_period
+    if archive_retention_period is None:
+        logger.info("No archive retention period is specified, give up")
+        return
     while True:
+        handle_archive_retention(clp_config)
         time.sleep(job_frequency_secs)
 
 
@@ -163,13 +225,20 @@ def search_results_retention_entry(clp_config: CLPConfig, job_frequency_secs: in
 # May require some redesign
 class TargetsHandle:
     def __init__(self, recovery_file_path: pathlib.Path):
-        self._recovery_file_path: Optional[pathlib.Path] = recovery_file_path
+        logger.info(recovery_file_path)
+        self._recovery_file_path: pathlib.Path = recovery_file_path
         self._targets: Set[str] = set()
         self._new_targets: List[str] = list()
 
         if not self._recovery_file_path.exists():
+            logger.info("Return")
             return
 
+        if not self._recovery_file_path.is_file():
+            logger.error("Error")
+            raise ValueError(f"Path {self._recovery_file_path} does not resolve to a file")
+
+        logger.info("opening file")
         with open(self._recovery_file_path, "r") as f:
             for line in f:
                 self._targets.add(line.strip())
@@ -189,22 +258,41 @@ class TargetsHandle:
         with open(self._recovery_file_path, "a") as f:
             for target in self._new_targets:
                 f.write(f"{target}\n")
+            self._new_targets.clear()
+
+    def clear(self):
+        self._targets.clear()
 
     def clean(self):
+        self.clear()
         if self._recovery_file_path.exists():
             os.unlink(self._recovery_file_path)
 
 
-def handle_removal(stream_output_config: StreamOutput, stream_path: str) -> bool:
-    stream_storage_config = stream_output_config.storage
-    stream_storage_type = stream_storage_config.type
 
-    if StorageType.S3 == stream_storage_type:
-        return s3_try_removing_object(stream_storage_config.s3_config, stream_path)
-    elif StorageType.FS == stream_storage_type:
-        return try_removing_fs_file(stream_storage_config, stream_path)
+
+def remove_stream(output_config: StreamOutput, stream_path: str) -> bool:
+    storage_config = output_config.storage
+    storage_type = storage_config.type
+
+    if StorageType.S3 == storage_type:
+        return s3_try_removing_object(storage_config.s3_config, stream_path)
+    elif StorageType.FS == storage_type:
+        return try_removing_fs_file(storage_config, stream_path)
     else:
-        raise ValueError(f"Stream storage type {stream_storage_type} is not supported")
+        raise ValueError(f"Stream storage type {storage_type} is not supported")
+
+
+def remove_archive(output_config: ArchiveOutput, stream_path: str) -> bool:
+    storage_config = output_config.storage
+    storage_type = storage_config.type
+
+    if StorageType.S3 == storage_type:
+        return s3_try_removing_object(storage_config.s3_config, stream_path)
+    elif StorageType.FS == storage_type:
+        return try_removing_archive(storage_config, stream_path)
+    else:
+        raise ValueError(f"Stream storage type {storage_type} is not supported")
 
 
 def handle_stream_retention(
@@ -258,7 +346,7 @@ def handle_stream_retention(
     # the targets in the file must have been removed from the mongodb and not needed.
     for target in targets_handle.get_targets():
         logger.info(f"removing {target}")
-        _ = handle_removal(stream_output_config, target)
+        _ = remove_stream(stream_output_config, target)
 
     targets_handle.clean()
     return
@@ -320,7 +408,7 @@ def main(argv: List[str]) -> int:
     results_cache_retention_period = clp_config.results_cache.retention_period
     logger.info(f"Results cache retention period: {results_cache_retention_period}")
 
-    stream_retention_entry(clp_config, 30)
+    archive_retention_entry(clp_config, 30)
 
     logger.info("reducer terminated")
 
