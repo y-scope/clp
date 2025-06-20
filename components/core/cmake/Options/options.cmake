@@ -89,42 +89,27 @@ option(
     ON
 )
 
+function(validate_dependencies_for_target DEPENDENCIES TARGET)
+    foreach(DEPENDENCY IN LISTS DEPENDENCIES)
+        if (NOT "${${DEPENDENCY}}")
+            message(FATAL_ERROR "${TARGET} requires ${DEPENDENCY}=ON")
+        endif()
+    endforeach()
+endfunction()
+
 function(validate_clp_binaries_dependencies)
-    if (NOT CLP_BUILD_CLP_REGEX_UTILS)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_REGEX_UTILS=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_STRING_UTILS)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_STRING_UTILS=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_ARCHIVEREADER)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_ARCHIVEREADER=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_ARCHIVEWRITER)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_ARCHIVEWRITER=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_IO)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_IO=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_JSONCONSTRUCTOR=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_SEARCH)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_SEARCH=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_SEARCH_AST)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_SEARCH_AST=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_SEARCH_KQL)
-        message(FATAL_ERROR "CLP_BUILD_BINARIES requires CLP_BUILD_CLP_S_SEARCH_KQL=ON")
-    endif()
+    list(APPEND DEPENDENCY_LIST
+        CLP_BUILD_CLP_REGEX_UTILS
+        CLP_BUILD_CLP_STRING_UTILS
+        CLP_BUILD_CLP_S_ARCHIVEREADER
+        CLP_BUILD_CLP_S_ARCHIVEWRITER
+        CLP_BUILD_CLP_S_IO
+        CLP_BUILD_CLP_S_JSONCONSTRUCTOR
+        CLP_BUILD_CLP_S_SEARCH
+        CLP_BUILD_CLP_S_SEARCH_AST
+        CLP_BUILD_CLP_S_SEARCH_KQL
+    )
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_BINARIES")
 endfunction()
 
 function(set_clp_binaries_dependencies)
@@ -147,25 +132,14 @@ function(set_clp_binaries_dependencies)
 endfunction()
 
 function(validate_clp_tests_dependencies)
-    if (NOT CLP_BUILD_CLP_REGEX_UTILS)
-        message(FATAL_ERROR "CLP_BUILD_TESTS requires CLP_BUILD_REGEX_UTILS=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_STRING_UTILS)
-        message(FATAL_ERROR "CLP_BUILD_TESTS requires CLP_BUILD_CLP_STRING_UTILS=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_SEARCH_AST)
-        message(FATAL_ERROR "CLP_BUILD_TESTS requires CLP_BUILD_CLP_S_SEARCH_AST=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_SEARCH_KQL)
-        message(FATAL_ERROR "CLP_BUILD_TESTS requires CLP_BUILD_CLP_S_SEARCH_KQL=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_SEARCH_SQL)
-        message(FATAL_ERROR "CLP_BUILD_TESTS requires CLP_BUILD_CLP_S_SEARCH_SQL=ON")
-    endif()
+    list(APPEND DEPENDENCY_LIST
+        CLP_BUILD_CLP_REGEX_UTILS
+        CLP_BUILD_CLP_STRING_UTILS
+        CLP_BUILD_CLP_S_SEARCH_AST
+        CLP_BUILD_CLP_S_SEARCH_KQL
+        CLP_BUILD_CLP_S_SEARCH_SQL
+    )
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_TESTS")
 endfunction()
 
 function(set_clp_tests_dependencies)
@@ -191,9 +165,10 @@ function(set_clp_tests_dependencies)
 endfunction()
 
 function(validate_clp_regex_utils_dependencies)
-    if (NOT CLP_BUILD_CLP_STRING_UTILS)
-        message(FATAL_ERROR "CLP_BUILD_CLP_REGEX_UTILS requires CLP_BUILD_CLP_STRING_UTILS=ON")
-    endif()
+    list(APPEND DEPENDENCY_LIST
+        CLP_BUILD_CLP_STRING_UTILS
+    )
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_REGEX_UTILS")
 endfunction()
 
 function(set_clp_regex_utils_dependencies)
@@ -201,17 +176,12 @@ function(set_clp_regex_utils_dependencies)
 endfunction()
 
 function(validate_clp_s_archivereader_dependencies)
-    if (NOT CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_ARCHIVEREADER requires CLP_BUILD_CLP_S_CLP_DEPENDENCIES=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_IO)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_ARCHIVEREADER requires CLP_BUILD_CLP_S_IO=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_ARCHIVEREADER requires CLP_BUILD_CLP_S_TIMESTAMPPATTERN=ON")
-    endif()
+    list(APPEND DEPENDENCY_LIST
+        CLP_BUILD_CLP_S_CLP_DEPENDENCIES
+        CLP_BUILD_CLP_S_IO
+        CLP_BUILD_CLP_S_TIMESTAMPPATTERN
+    )
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_ARCHIVEREADER")
 endfunction()
 
 function(set_clp_s_archivereader_dependencies)
@@ -225,17 +195,12 @@ function(set_clp_s_archivereader_dependencies)
 endfunction()
 
 function(validate_clp_s_archivewriter_dependencies)
-    if (NOT CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_ARCHIVEWRITER requires CLP_BUILD_CLP_S_CLP_DEPENDENCIES=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_IO)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_ARCHIVEWRITER requires CLP_BUILD_CLP_S_IO=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_ARCHIVEWRITER requires CLP_BUILD_CLP_S_TIMESTAMPPATTERN=ON")
-    endif()
+    list(APPEND DEPENDENCY_LIST
+        CLP_BUILD_CLP_S_CLP_DEPENDENCIES
+        CLP_BUILD_CLP_S_IO
+        CLP_BUILD_CLP_S_TIMESTAMPPATTERN
+    )
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_ARCHIVEWRITER")
 endfunction()
 
 function(set_clp_s_archivewriter_dependencies)
@@ -250,9 +215,10 @@ function(set_clp_s_archivewriter_dependencies)
 endfunction()
 
 function(validate_clp_s_clp_dependencies_dependencies)
-    if (NOT CLP_BUILD_CLP_STRING_UTILS)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_CLP_DEPENDENCIES requires CLP_BUILD_CLP_STRING_UTILS=ON")
-    endif()
+    list(APPEND DEPENDENCY_LIST
+        CLP_BUILD_CLP_STRING_UTILS
+    )
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_CLP_DEPENDENCIES")
 endfunction()
 
 function(set_clp_s_clp_dependencies_dependencies)
@@ -267,9 +233,10 @@ function(set_clp_s_clp_dependencies_dependencies)
 endfunction()
 
 function(validate_clp_s_io_dependencies)
-    if (NOT CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_IO requires CLP_BUILD_CLP_S_CLP_DEPENDENCIES=ON")
-    endif()
+    list(APPEND DEPENDENCY_LIST
+        CLP_BUILD_CLP_S_CLP_DEPENDENCIES
+    )
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_IO")
 endfunction()
 
 function(set_clp_s_io_dependencies)
@@ -281,9 +248,10 @@ function(set_clp_s_io_dependencies)
 endfunction()
 
 function(validate_clp_s_json_constructor_dependencies)
-    if (NOT CLP_BUILD_CLP_S_ARCHIVEREADER)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_JSONCONSTRUCTOR requires CLP_BUILD_CLP_S_ARCHIVEREADER=ON")
-    endif()
+    list(APPEND DEPENDENCY_LIST
+        CLP_BUILD_CLP_S_ARCHIVEREADER
+    )
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_JSONCONSTRUCTOR")
 endfunction()
 
 function(set_clp_s_json_constructor_dependencies)
@@ -293,9 +261,10 @@ function(set_clp_s_json_constructor_dependencies)
 endfunction()
 
 function(validate_clp_s_reducer_dependencies_dependencies)
-    if (NOT CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES requires CLP_BUILD_CLP_S_CLP_DEPENDENCIES=ON")
-    endif()
+    list(APPEND DEPENDENCY_LIST
+        CLP_BUILD_CLP_S_CLP_DEPENDENCIES
+    )
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES")
 endfunction()
 
 function(set_clp_s_reducer_dependencies_dependencies)
@@ -303,17 +272,12 @@ function(set_clp_s_reducer_dependencies_dependencies)
 endfunction()
 
 function(validate_clp_s_search_dependencies)
-    if (NOT CLP_BUILD_CLP_S_ARCHIVEREADER)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_SEARCH requires CLP_BUILD_CLP_S_ARCHIVEREADER=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_SEARCH requires CLP_BUILD_CLP_S_CLP_DEPENDENCIES=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_SEARCH_AST)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_SEARCH requires CLP_BUILD_CLP_S_SEARCH_AST=ON")
-    endif()
+    list(APPEND DEPENDENCY_LIST
+        CLP_BUILD_CLP_S_ARCHIVEREADER
+        CLP_BUILD_CLP_S_CLP_DEPENDENCIES
+        CLP_BUILD_CLP_S_SEARCH_AST
+    )
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_SEARCH")
 endfunction()
 
 function(set_clp_s_search_dependencies)
@@ -323,9 +287,10 @@ function(set_clp_s_search_dependencies)
 endfunction()
 
 function(validate_clp_s_search_ast_dependencies)
-    if (NOT CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_SEARCH_AST requires CLP_BUILD_CLP_S_TIMESTAMPPATTERN=ON")
-    endif()
+    list(APPEND DEPENDENCY_LIST
+        CLP_BUILD_CLP_S_TIMESTAMPPATTERN
+    )
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_SEARCH")
 endfunction()
 
 function(set_clp_s_search_ast_dependencies)
@@ -333,13 +298,11 @@ function(set_clp_s_search_ast_dependencies)
 endfunction()
 
 function(validate_clp_s_search_kql_dependencies)
-    if (NOT CLP_BUILD_CLP_STRING_UTILS)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_SEARCH_KQL requires CLP_BUILD_CLP_STRING_UTILS=ON")
-    endif()
-
-    if (NOT CLP_BUILD_CLP_S_SEARCH_AST)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_SEARCH_KQL requires CLP_BUILD_CLP_S_SEARCH_AST=ON")
-    endif()
+    list(APPEND DEPENDENCY_LIST
+        CLP_BUILD_CLP_STRING_UTILS
+        CLP_BUILD_CLP_S_SEARCH_AST
+    )
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_SEARCH_KQL")
 endfunction()
 
 function(set_clp_s_search_kql_dependencies)
@@ -348,9 +311,10 @@ function(set_clp_s_search_kql_dependencies)
 endfunction()
 
 function(validate_clp_s_search_sql_dependencies)
-    if (NOT CLP_BUILD_CLP_S_SEARCH_AST)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_SEARCH_SQL requires CLP_BUILD_CLP_S_SEARCH_AST=ON")
-    endif()
+    list(APPEND DEPENDENCY_LIST
+        CLP_BUILD_CLP_S_SEARCH_AST
+    )
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_SEARCH_SQL")
 endfunction()
 
 function(set_clp_s_search_sql_dependencies)
@@ -359,9 +323,10 @@ function(set_clp_s_search_sql_dependencies)
 endfunction()
 
 function(validate_clp_s_timestamppattern_dependencies)
-    if (NOT CLP_BUILD_CLP_STRING_UTILS)
-        message(FATAL_ERROR "CLP_BUILD_CLP_S_TIMESTAMPPATTERN requires CLP_BUILD_CLP_STRING_UTILS=ON")
-    endif()
+    list(APPEND DEPENDENCY_LIST
+        CLP_BUILD_CLP_STRING_UTILS
+    )
+    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_TIMESTAMPPATTERN")
 endfunction()
 
 function(set_clp_s_timestamppattern_dependencies)
@@ -444,46 +409,32 @@ function(validate_and_setup_all_clp_dependency_flags)
 endfunction()
 
 function (convert_clp_dependency_properties_to_variables)
-    get_property(CLP_NEED_ABSL DIRECTORY PROPERTY CLP_NEED_ABSL)
-    set(CLP_NEED_ABSL "${CLP_NEED_ABSL}" PARENT_SCOPE)
-    get_property(CLP_NEED_ANTLR DIRECTORY PROPERTY CLP_NEED_ANTLR)
-    set(CLP_NEED_ANTLR "${CLP_NEED_ANTLR}" PARENT_SCOPE)
-    get_property(CLP_NEED_BOOST DIRECTORY PROPERTY CLP_NEED_BOOST)
-    set(CLP_NEED_BOOST "${CLP_NEED_BOOST}" PARENT_SCOPE)
-    get_property(CLP_NEED_CATCH2 DIRECTORY PROPERTY CLP_NEED_CATCH2)
-    set(CLP_NEED_CATCH2 "${CLP_NEED_CATCH2}" PARENT_SCOPE)
-    get_property(CLP_NEED_CURL DIRECTORY PROPERTY CLP_NEED_CURL)
-    set(CLP_NEED_CURL "${CLP_NEED_CURL}" PARENT_SCOPE)
-    get_property(CLP_NEED_DATE DIRECTORY PROPERTY CLP_NEED_DATE)
-    set(CLP_NEED_DATE "${CLP_NEED_DATE}" PARENT_SCOPE)
-    get_property(CLP_NEED_FMT DIRECTORY PROPERTY CLP_NEED_FMT)
-    set(CLP_NEED_FMT "${CLP_NEED_FMT}" PARENT_SCOPE)
-    get_property(CLP_NEED_LOG_SURGEON DIRECTORY PROPERTY CLP_NEED_LOG_SURGEON)
-    set(CLP_NEED_LOG_SURGEON "${CLP_NEED_LOG_SURGEON}" PARENT_SCOPE)
-    get_property(CLP_NEED_LIBARCHIVE DIRECTORY PROPERTY CLP_NEED_LIBARCHIVE)
-    set(CLP_NEED_LIBARCHIVE "${CLP_NEED_LIBARCHIVE}" PARENT_SCOPE)
-    get_property(CLP_NEED_LZMA DIRECTORY PROPERTY CLP_NEED_LZMA)
-    set(CLP_NEED_LZMA "${CLP_NEED_LZMA}" PARENT_SCOPE)
-    get_property(CLP_NEED_MARIADB DIRECTORY PROPERTY CLP_NEED_MARIADB)
-    set(CLP_NEED_MARIADB "${CLP_NEED_MARIADB}" PARENT_SCOPE)
-    get_property(CLP_NEED_MONGOCXX DIRECTORY PROPERTY CLP_NEED_MONGOCXX)
-    set(CLP_NEED_MONGOCXX "${CLP_NEED_MONGOCXX}" PARENT_SCOPE)
-    get_property(CLP_NEED_MSGPACKCXX DIRECTORY PROPERTY CLP_NEED_MSGPACKCXX)
-    set(CLP_NEED_MSGPACKCXX "${CLP_NEED_MSGPACKCXX}" PARENT_SCOPE)
-    get_property(CLP_NEED_NLOHMANN_JSON DIRECTORY PROPERTY CLP_NEED_NLOHMANN_JSON)
-    set(CLP_NEED_NLOHMANN_JSON "${CLP_NEED_NLOHMANN_JSON}" PARENT_SCOPE)
-    get_property(CLP_NEED_OPENSSL DIRECTORY PROPERTY CLP_NEED_OPENSSL)
-    set(CLP_NEED_OPENSSL "${CLP_NEED_OPENSSL}" PARENT_SCOPE)
-    get_property(CLP_NEED_SIMDJSON DIRECTORY PROPERTY CLP_NEED_SIMDJSON)
-    set(CLP_NEED_SIMDJSON "${CLP_NEED_SIMDJSON}" PARENT_SCOPE)
-    get_property(CLP_NEED_SPDLOG DIRECTORY PROPERTY CLP_NEED_SPDLOG)
-    set(CLP_NEED_SPDLOG "${CLP_NEED_SPDLOG}" PARENT_SCOPE)
-    get_property(CLP_NEED_SQLITE DIRECTORY PROPERTY CLP_NEED_SQLITE)
-    set(CLP_NEED_SQLITE "${CLP_NEED_SQLITE}" PARENT_SCOPE)
-    get_property(CLP_NEED_YAMLCPP DIRECTORY PROPERTY CLP_NEED_YAMLCPP)
-    set(CLP_NEED_YAMLCPP "${CLP_NEED_YAMLCPP}" PARENT_SCOPE)
-    get_property(CLP_NEED_YSTDLIB DIRECTORY PROPERTY CLP_NEED_YSTDLIB)
-    set(CLP_NEED_YSTDLIB "${CLP_NEED_YSTDLIB}" PARENT_SCOPE)
-    get_property(CLP_NEED_ZSTD DIRECTORY PROPERTY CLP_NEED_ZSTD)
-    set(CLP_NEED_ZSTD "${CLP_NEED_ZSTD}" PARENT_SCOPE)
+    list(APPEND CLP_NEED_FLAGS
+        CLP_NEED_ABSL 
+        CLP_NEED_ANTLR
+        CLP_NEED_BOOST
+        CLP_NEED_CATCH2
+        CLP_NEED_CURL 
+        CLP_NEED_DATE 
+        CLP_NEED_FMT
+        CLP_NEED_LOG_SURGEON
+        CLP_NEED_LIBARCHIVE
+        CLP_NEED_LZMA 
+        CLP_NEED_MARIADB
+        CLP_NEED_MONGOCXX
+        CLP_NEED_MSGPACKCXX
+        CLP_NEED_NLOHMANN_JSON
+        CLP_NEED_OPENSSL
+        CLP_NEED_SIMDJSON
+        CLP_NEED_SPDLOG
+        CLP_NEED_SQLITE
+        CLP_NEED_YAMLCPP
+        CLP_NEED_YSTDLIB
+        CLP_NEED_ZSTD 
+    )
+
+    foreach(FLAG IN LISTS CLP_NEED_FLAGS)
+        get_property(VALUE DIRECTORY PROPERTY "${FLAG}")
+        set("${FLAG}" "${VALUE}" PARENT_SCOPE)
+    endforeach()
 endfunction()
