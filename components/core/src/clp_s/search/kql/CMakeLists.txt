@@ -11,25 +11,27 @@ set(ANTLR_GENERATED_SOURCES
 		${ANTLR_GENERATED_SOURCE_DIR}/KqlVisitor.h
 )
 
-add_library(
-        clp_s_search_kql
-		${ANTLR_GENERATED_SOURCES}
-        ../antlr_common/ErrorListener.hpp
-        kql.cpp
-        kql.hpp
-)
-add_library(clp_s::search::kql ALIAS clp_s_search_kql)
-target_compile_features(clp_s_search_kql PRIVATE cxx_std_20)
-target_include_directories(clp_s_search_kql
-	PRIVATE
-	${ANTLR_GENERATED_SOURCE_DIR}
-)
+if(CLP_BUILD_CLP_S_SEARCH_KQL)
+        add_library(
+                clp_s_search_kql
+                ${ANTLR_GENERATED_SOURCES}
+                ../antlr_common/ErrorListener.hpp
+                kql.cpp
+                kql.hpp
+        )
+        add_library(clp_s::search::kql ALIAS clp_s_search_kql)
+        target_compile_features(clp_s_search_kql PRIVATE cxx_std_20)
+        target_include_directories(clp_s_search_kql
+                PRIVATE
+                ${ANTLR_GENERATED_SOURCE_DIR}
+        )
 
-target_link_libraries(
-	clp_s_search_kql
-	PRIVATE
-	antlr4_static
-	clp::string_utils
-	clp_s::search::ast
-	spdlog::spdlog
-)
+        target_link_libraries(
+                clp_s_search_kql
+                PRIVATE
+                antlr4_static
+                clp::string_utils
+                clp_s::search::ast
+                spdlog::spdlog
+        )
+endif()
