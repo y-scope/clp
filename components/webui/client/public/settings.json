@@ -1,0 +1,4 @@
+{
+    "ClpStorageEngine": "clp",
+    "MongoDbSearchResultsMetadataCollectionName": "results-metadata"
+}
