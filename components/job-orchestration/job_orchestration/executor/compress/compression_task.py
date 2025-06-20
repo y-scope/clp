@@ -143,6 +143,18 @@ def _generate_s3_logs_list(
             file.write("\n")
 
 
+def _upload_archive_to_s3(
+    s3_config: S3Config,
+    archive_src_path: pathlib.Path,
+    archive_id: str,
+    dataset: Optional[str],
+):
+    dest_path = archive_id
+    if dataset is not None:
+        dest_path = f"{dataset}/{dest_path}"
+    s3_put(s3_config, archive_src_path, dest_path)
+
+
 def _make_clp_command_and_env(
     clp_home: pathlib.Path,
     archive_output_dir: pathlib.Path,
@@ -292,10 +304,7 @@ def run_clp(
         )
     elif StorageEngine.CLP_S == clp_storage_engine:
         input_dataset = clp_config.input.dataset
-        # TODO: do something for archive_output_dir and s3_config
         archive_output_dir = archive_output_dir / input_dataset
-        if StorageType.S3 == storage_type:
-            s3_config.key_prefix = f"{s3_config.key_prefix}{input_dataset}/"
 
         compression_cmd, compression_env = _make_clp_s_command_and_env(
             clp_home=clp_home,
@@ -359,7 +368,7 @@ def run_clp(
                 if s3_error is None:
                     logger.info(f"Uploading archive {archive_id} to S3...")
                     try:
-                        s3_put(s3_config, archive_path, archive_id)
+                        _upload_archive_to_s3(s3_config, archive_path, archive_id, input_dataset)
                         logger.info(f"Finished uploading archive {archive_id} to S3.")
                     except Exception as err:
                         logger.exception(f"Failed to upload archive {archive_id}")

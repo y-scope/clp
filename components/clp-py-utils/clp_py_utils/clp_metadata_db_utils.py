@@ -14,28 +14,36 @@ from clp_py_utils.clp_config import (
 )
 
 
-def _generic_get_table_name(prefix: str, suffix: str, dataset: str | None):
-    table_name = f"{prefix}"
+def _generic_get_table_name(prefix: str, suffix: str, dataset: str | None) -> str:
+    table_name = prefix
     if dataset is not None:
         table_name += f"{dataset}_"
-    table_name += f"{suffix}"
+    table_name += suffix
     return table_name
 
 
-def get_archives_table_name(table_prefix: str, dataset: str | None):
+def get_archives_table_name(table_prefix: str, dataset: str | None) -> str:
     return _generic_get_table_name(table_prefix, ARCHIVES_TABLE_SUFFIX, dataset)
 
 
-def get_tags_table_name(table_prefix: str, dataset: str | None):
+def get_tags_table_name(table_prefix: str, dataset: str | None) -> str:
     return _generic_get_table_name(table_prefix, TAGS_TABLE_SUFFIX, dataset)
 
 
-def get_archive_tags_table_name(table_prefix: str, dataset: str | None):
+def get_archive_tags_table_name(table_prefix: str, dataset: str | None) -> str:
     return _generic_get_table_name(table_prefix, ARCHIVE_TAGS_TABLE_SUFFIX, dataset)
 
 
-def get_files_table_name(table_prefix: str, dataset: str | None):
+def get_files_table_name(table_prefix: str, dataset: str | None) -> str:
     return _generic_get_table_name(table_prefix, FILES_TABLE_SUFFIX, dataset)
+
+
+def get_column_metadata_table_name(table_prefix: str, dataset: str | None) -> str:
+    return _generic_get_table_name(table_prefix, COLUMN_METADATA_TABLE_SUFFIX, dataset)
+
+
+def get_datasets_table_name(table_prefix: str) -> str:
+    return _generic_get_table_name(table_prefix, DATASETS_TABLE_SUFFIX, None)
 
 
 def _create_archives_table(db_cursor, archives_table_name: str) -> None:
@@ -110,7 +118,7 @@ def _create_files_table(db_cursor, table_prefix: str, dataset: str | None) -> No
 
 
 def _create_column_metadata_table(db_cursor, table_prefix: str, dataset: str) -> None:
-    column_metadata_table_name = f"{table_prefix}{dataset}_{COLUMN_METADATA_TABLE_SUFFIX}"
+    column_metadata_table_name = get_column_metadata_table_name(table_prefix, dataset)
     db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{column_metadata_table_name}` (
@@ -132,9 +140,10 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
 
     # For a description of the table, see
     # `../../../docs/src/dev-guide/design-metadata-db.md`
+    datasets_table_name = get_datasets_table_name(table_prefix)
     db_cursor.execute(
         f"""
-        CREATE TABLE IF NOT EXISTS `{table_prefix}{DATASETS_TABLE_SUFFIX}` (
+        CREATE TABLE IF NOT EXISTS `{datasets_table_name}` (
             `name` VARCHAR(255) NOT NULL,
             `archive_storage_type` VARCHAR(64) NOT NULL,
             `archive_storage_directory` VARCHAR(4096) NOT NULL,
@@ -163,7 +172,8 @@ def add_dataset(
     :param archive_storage_type:
     :param dataset_archive_storage_directory:
     """
-    query = f"""INSERT INTO `{table_prefix}{DATASETS_TABLE_SUFFIX}`
+    datasets_table_name = get_datasets_table_name(table_prefix)
+    query = f"""INSERT INTO `{datasets_table_name}`
                 (name, archive_storage_type, archive_storage_directory)
                 VALUES (%s, %s, %s)
                 """
