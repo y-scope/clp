@@ -11,7 +11,6 @@ import {
 import {isAxiosError} from "axios";
 
 import {submitExtractStreamJob} from "../api/query";
-import useSearchStore from "../pages/SearchPage/SearchState";
 import {Nullable} from "../typings/common";
 import {
     EXTRACT_JOB_TYPE,
@@ -32,10 +31,10 @@ let isFirstRun = true;
  * @return
  */
 const QueryStatus = () => {
-    const cachedDataset = useSearchStore((state) => state.cachedDataset);
     const [queryState, setQueryState] = useState<QUERY_LOADING_STATE>(
         QUERY_LOADING_STATE.SUBMITTING
     );
+
     const [errorMsg, setErrorMsg] = useState<Nullable<string>>(null);
 
     useEffect(() => {
@@ -67,7 +66,7 @@ const QueryStatus = () => {
         }
 
         submitExtractStreamJob({
-            dataset: cachedDataset,
+            dataset: parseResult.dataset,
             extractJobType: EXTRACT_JOB_TYPE[parseResult.type as keyof typeof EXTRACT_JOB_TYPE],
             logEventIdx: parseResult.logEventIdx,
             onUploadProgress: () => {
@@ -93,7 +92,7 @@ const QueryStatus = () => {
                 console.error(msg, e);
                 setErrorMsg(msg);
             });
-    }, [cachedDataset]);
+    }, []);
 
     return (
         <Loading
