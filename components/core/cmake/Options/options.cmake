@@ -89,7 +89,7 @@ option(
     ON
 )
 
-function(validate_dependencies_for_target DEPENDENCIES TARGET)
+function(validate_clp_dependencies_for_target DEPENDENCIES TARGET)
     foreach(DEPENDENCY IN LISTS DEPENDENCIES)
         if (NOT "${${DEPENDENCY}}")
             message(FATAL_ERROR "${TARGET} requires ${DEPENDENCY}=ON")
@@ -109,7 +109,7 @@ function(validate_clp_binaries_dependencies)
         CLP_BUILD_CLP_S_SEARCH_AST
         CLP_BUILD_CLP_S_SEARCH_KQL
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_BINARIES")
+    validate_clp_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_BINARIES")
 endfunction()
 
 function(set_clp_binaries_dependencies)
@@ -139,7 +139,7 @@ function(validate_clp_tests_dependencies)
         CLP_BUILD_CLP_S_SEARCH_KQL
         CLP_BUILD_CLP_S_SEARCH_SQL
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_TESTS")
+    validate_clp_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_TESTS")
 endfunction()
 
 function(set_clp_tests_dependencies)
@@ -168,7 +168,7 @@ function(validate_clp_regex_utils_dependencies)
     list(APPEND DEPENDENCY_LIST
         CLP_BUILD_CLP_STRING_UTILS
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_REGEX_UTILS")
+    validate_clp_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_REGEX_UTILS")
 endfunction()
 
 function(set_clp_regex_utils_dependencies)
@@ -181,7 +181,7 @@ function(validate_clp_s_archivereader_dependencies)
         CLP_BUILD_CLP_S_IO
         CLP_BUILD_CLP_S_TIMESTAMPPATTERN
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_ARCHIVEREADER")
+    validate_clp_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_ARCHIVEREADER")
 endfunction()
 
 function(set_clp_s_archivereader_dependencies)
@@ -200,7 +200,7 @@ function(validate_clp_s_archivewriter_dependencies)
         CLP_BUILD_CLP_S_IO
         CLP_BUILD_CLP_S_TIMESTAMPPATTERN
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_ARCHIVEWRITER")
+    validate_clp_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_ARCHIVEWRITER")
 endfunction()
 
 function(set_clp_s_archivewriter_dependencies)
@@ -218,7 +218,7 @@ function(validate_clp_s_clp_dependencies_dependencies)
     list(APPEND DEPENDENCY_LIST
         CLP_BUILD_CLP_STRING_UTILS
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_CLP_DEPENDENCIES")
+    validate_clp_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_CLP_DEPENDENCIES")
 endfunction()
 
 function(set_clp_s_clp_dependencies_dependencies)
@@ -236,7 +236,7 @@ function(validate_clp_s_io_dependencies)
     list(APPEND DEPENDENCY_LIST
         CLP_BUILD_CLP_S_CLP_DEPENDENCIES
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_IO")
+    validate_clp_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_IO")
 endfunction()
 
 function(set_clp_s_io_dependencies)
@@ -251,7 +251,7 @@ function(validate_clp_s_json_constructor_dependencies)
     list(APPEND DEPENDENCY_LIST
         CLP_BUILD_CLP_S_ARCHIVEREADER
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_JSONCONSTRUCTOR")
+    validate_clp_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_JSONCONSTRUCTOR")
 endfunction()
 
 function(set_clp_s_json_constructor_dependencies)
@@ -264,7 +264,7 @@ function(validate_clp_s_reducer_dependencies_dependencies)
     list(APPEND DEPENDENCY_LIST
         CLP_BUILD_CLP_S_CLP_DEPENDENCIES
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES")
+    validate_clp_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES")
 endfunction()
 
 function(set_clp_s_reducer_dependencies_dependencies)
@@ -277,7 +277,7 @@ function(validate_clp_s_search_dependencies)
         CLP_BUILD_CLP_S_CLP_DEPENDENCIES
         CLP_BUILD_CLP_S_SEARCH_AST
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_SEARCH")
+    validate_clp_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_SEARCH")
 endfunction()
 
 function(set_clp_s_search_dependencies)
@@ -290,7 +290,7 @@ function(validate_clp_s_search_ast_dependencies)
     list(APPEND DEPENDENCY_LIST
         CLP_BUILD_CLP_S_TIMESTAMPPATTERN
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_SEARCH_AST")
+    validate_clp_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_SEARCH_AST")
 endfunction()
 
 function(set_clp_s_search_ast_dependencies)
@@ -302,7 +302,7 @@ function(validate_clp_s_search_kql_dependencies)
         CLP_BUILD_CLP_STRING_UTILS
         CLP_BUILD_CLP_S_SEARCH_AST
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_SEARCH_KQL")
+    validate_clp_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_SEARCH_KQL")
 endfunction()
 
 function(set_clp_s_search_kql_dependencies)
@@ -314,7 +314,7 @@ function(validate_clp_s_search_sql_dependencies)
     list(APPEND DEPENDENCY_LIST
         CLP_BUILD_CLP_S_SEARCH_AST
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_SEARCH_SQL")
+    validate_clp_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_SEARCH_SQL")
 endfunction()
 
 function(set_clp_s_search_sql_dependencies)
@@ -326,7 +326,7 @@ function(validate_clp_s_timestamppattern_dependencies)
     list(APPEND DEPENDENCY_LIST
         CLP_BUILD_CLP_STRING_UTILS
     )
-    validate_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_TIMESTAMPPATTERN")
+    validate_clp_dependencies_for_target("${DEPENDENCY_LIST}" "CLP_BUILD_CLP_S_TIMESTAMPPATTERN")
 endfunction()
 
 function(set_clp_s_timestamppattern_dependencies)
