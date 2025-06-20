@@ -10,8 +10,6 @@ import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
-    ARCHIVE_TAGS_TABLE_SUFFIX,
-    ARCHIVES_TABLE_SUFFIX,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
@@ -21,6 +19,10 @@ from clp_py_utils.clp_config import (
     WorkerConfig,
 )
 from clp_py_utils.clp_logging import set_logging_level
+from clp_py_utils.clp_metadata_db_utils import (
+    get_archives_table_name,
+    get_tags_table_name,
+)
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import (
     generate_s3_virtual_hosted_style_url,
@@ -68,19 +70,20 @@ def increment_compression_job_metadata(db_cursor, job_id, kv):
     db_cursor.execute(query)
 
 
-def update_tags(db_cursor, table_prefix, archive_id, tag_ids):
+def update_tags(db_cursor, table_prefix, dataset, archive_id, tag_ids):
+    tags_table_name = get_tags_table_name(table_prefix, dataset)
     db_cursor.executemany(
         f"""
-        INSERT INTO {table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX} (archive_id, tag_id)
+        INSERT INTO {tags_table_name} (archive_id, tag_id)
         VALUES (%s, %s)
         """,
         [(archive_id, tag_id) for tag_id in tag_ids],
     )
 
 
-def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archive_stats):
+def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, dataset, tag_ids, archive_stats):
     if tag_ids is not None:
-        update_tags(db_cursor, table_prefix, archive_stats["id"], tag_ids)
+        update_tags(db_cursor, table_prefix, dataset, archive_stats["id"], tag_ids)
     increment_compression_job_metadata(
         db_cursor,
         job_id,
@@ -91,7 +94,7 @@ def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archi
     )
 
 
-def update_archive_metadata(db_cursor, table_prefix, archive_stats):
+def update_archive_metadata(db_cursor, table_prefix, dataset, archive_stats):
     archive_stats_defaults = {
         "begin_timestamp": 0,
         "end_timestamp": 0,
@@ -102,9 +105,8 @@ def update_archive_metadata(db_cursor, table_prefix, archive_stats):
         archive_stats.setdefault(k, v)
     keys = ", ".join(archive_stats.keys())
     value_placeholders = ", ".join(["%s"] * len(archive_stats))
-    query = (
-        f"INSERT INTO {table_prefix}{ARCHIVES_TABLE_SUFFIX} ({keys}) VALUES ({value_placeholders})"
-    )
+    archives_table_name = get_archives_table_name(table_prefix, dataset)
+    query = f"INSERT INTO {archives_table_name} ({keys}) VALUES ({value_placeholders})"
     db_cursor.execute(query, list(archive_stats.values()))
 
 
@@ -280,7 +282,7 @@ def run_clp(
         enable_s3_write = True
 
     table_prefix = clp_metadata_db_connection_config["table_prefix"]
-    input_dataset: str
+    input_dataset: Optional[str] = None
     if StorageEngine.CLP == clp_storage_engine:
         compression_cmd, compression_env = _make_clp_command_and_env(
             clp_home=clp_home,
@@ -290,7 +292,7 @@ def run_clp(
         )
     elif StorageEngine.CLP_S == clp_storage_engine:
         input_dataset = clp_config.input.dataset
-        table_prefix = f"{table_prefix}{input_dataset}_"
+        # TODO: do something for archive_output_dir and s3_config
         archive_output_dir = archive_output_dir / input_dataset
         if StorageType.S3 == storage_type:
             s3_config.key_prefix = f"{s3_config.key_prefix}{input_dataset}/"
@@ -375,11 +377,14 @@ def run_clp(
                     db_conn.cursor(dictionary=True)
                 ) as db_cursor:
                     if StorageEngine.CLP_S == clp_storage_engine:
-                        update_archive_metadata(db_cursor, table_prefix, last_archive_stats)
+                        update_archive_metadata(
+                            db_cursor, table_prefix, input_dataset, last_archive_stats
+                        )
                     update_job_metadata_and_tags(
                         db_cursor,
                         job_id,
                         table_prefix,
+                        input_dataset,
                         tag_ids,
                         last_archive_stats,
                     )

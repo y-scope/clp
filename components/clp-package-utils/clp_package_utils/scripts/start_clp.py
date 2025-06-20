@@ -14,7 +14,6 @@ from typing import Any, Dict, List, Optional
 import yaml
 from clp_py_utils.clp_config import (
     ALL_TARGET_NAME,
-    ARCHIVES_TABLE_SUFFIX,
     AwsAuthType,
     CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
@@ -23,7 +22,6 @@ from clp_py_utils.clp_config import (
     COMPRESSION_WORKER_COMPONENT_NAME,
     CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
-    FILES_TABLE_SUFFIX,
     LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
@@ -36,6 +34,7 @@ from clp_py_utils.clp_config import (
     StorageType,
     WEBUI_COMPONENT_NAME,
 )
+from clp_py_utils.clp_metadata_db_utils import get_archives_table_name, get_files_table_name
 from clp_py_utils.s3_utils import generate_container_auth_options
 from job_orchestration.scheduler.constants import QueueName
 from pydantic import BaseModel
@@ -866,15 +865,16 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     # Read and update settings.json
     clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
+    dataset: Optional[str] = None
     if StorageEngine.CLP_S == clp_config.package.storage_engine:
-        table_prefix = f"{table_prefix}{CLP_DEFAULT_DATASET_NAME}_"
+        dataset = CLP_DEFAULT_DATASET_NAME
     meteor_settings_updates = {
         "private": {
             "SqlDbHost": clp_config.database.host,
             "SqlDbPort": clp_config.database.port,
             "SqlDbName": clp_config.database.name,
-            "SqlDbClpArchivesTableName": f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}",
-            "SqlDbClpFilesTableName": f"{table_prefix}{FILES_TABLE_SUFFIX}",
+            "SqlDbClpArchivesTableName": get_archives_table_name(table_prefix, dataset),
+            "SqlDbClpFilesTableName": get_files_table_name(table_prefix, dataset),
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
             "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
         },
