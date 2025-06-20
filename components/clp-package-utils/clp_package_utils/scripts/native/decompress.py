@@ -13,7 +13,6 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     Database,
-    FILES_TABLE_SUFFIX,
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
