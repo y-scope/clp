@@ -10,8 +10,8 @@ import "@ant-design/v5-patch-for-react-19";
  *
  * @return
  */
-const AntApp = () => {
+const App = () => {
     return <RouterProvider router={router}/>;
 };
 
-export default AntApp;
+export default App;
