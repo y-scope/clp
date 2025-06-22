@@ -97,6 +97,12 @@ function(validate_clp_dependencies_for_target DEPENDENCIES TARGET)
     endforeach()
 endfunction()
 
+function(set_clp_need_flags)
+    foreach(NEEDS_FLAG IN LISTS ARGV)
+        set_property(DIRECTORY PROPERTY "${NEEDS_FLAG}" TRUE)
+    endforeach()
+endfunction()
+
 function(validate_clp_binaries_dependencies)
     list(APPEND DEPENDENCY_LIST
         CLP_BUILD_CLP_REGEX_UTILS
@@ -113,22 +119,24 @@ function(validate_clp_binaries_dependencies)
 endfunction()
 
 function(set_clp_binaries_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_BOOST TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_DATE TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_FMT TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_LOG_SURGEON TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_LIBARCHIVE TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_MARIADB TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_MONGOCXX TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_MSGPACKCXX TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_NLOHMANN_JSON TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_OPENSSL TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SIMDJSON TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SPDLOG TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SQLITE TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_YAMLCPP TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_YSTDLIB TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_ZSTD TRUE)
+    set_clp_need_flags(
+        CLP_NEED_BOOST
+        CLP_NEED_DATE
+        CLP_NEED_FMT
+        CLP_NEED_LOG_SURGEON
+        CLP_NEED_LIBARCHIVE
+        CLP_NEED_MARIADB
+        CLP_NEED_MONGOCXX
+        CLP_NEED_MSGPACKCXX
+        CLP_NEED_NLOHMANN_JSON
+        CLP_NEED_OPENSSL
+        CLP_NEED_SIMDJSON
+        CLP_NEED_SPDLOG
+        CLP_NEED_SQLITE
+        CLP_NEED_YAMLCPP
+        CLP_NEED_YSTDLIB
+        CLP_NEED_ZSTD
+    )
 endfunction()
 
 function(validate_clp_tests_dependencies)
@@ -143,25 +151,27 @@ function(validate_clp_tests_dependencies)
 endfunction()
 
 function(set_clp_tests_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_ABSL TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_BOOST TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_CATCH2 TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_DATE TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_FMT TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_LOG_SURGEON TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_LIBARCHIVE TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_LZMA TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_MARIADB TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_MONGOCXX TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_MSGPACKCXX TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_NLOHMANN_JSON TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_OPENSSL TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SIMDJSON TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SPDLOG TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SQLITE TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_YAMLCPP TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_YSTDLIB TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_ZSTD TRUE)
+    set_clp_need_flags(
+        CLP_NEED_ABSL
+        CLP_NEED_BOOST
+        CLP_NEED_CATCH2
+        CLP_NEED_DATE
+        CLP_NEED_FMT
+        CLP_NEED_LOG_SURGEON
+        CLP_NEED_LIBARCHIVE
+        CLP_NEED_LZMA
+        CLP_NEED_MARIADB
+        CLP_NEED_MONGOCXX
+        CLP_NEED_MSGPACKCXX
+        CLP_NEED_NLOHMANN_JSON
+        CLP_NEED_OPENSSL
+        CLP_NEED_SIMDJSON
+        CLP_NEED_SPDLOG
+        CLP_NEED_SQLITE
+        CLP_NEED_YAMLCPP
+        CLP_NEED_YSTDLIB
+        CLP_NEED_ZSTD
+    )
 endfunction()
 
 function(validate_clp_regex_utils_dependencies)
@@ -185,13 +195,15 @@ function(validate_clp_s_archivereader_dependencies)
 endfunction()
 
 function(set_clp_s_archivereader_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_ABSL TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_BOOST TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_CURL TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_FMT TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_MSGPACKCXX TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_NLOHMANN_JSON TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SPDLOG TRUE)
+    set_clp_need_flags(
+        CLP_NEED_ABSL
+        CLP_NEED_BOOST
+        CLP_NEED_CURL
+        CLP_NEED_FMT
+        CLP_NEED_MSGPACKCXX
+        CLP_NEED_NLOHMANN_JSON
+        CLP_NEED_SPDLOG
+    )
 endfunction()
 
 function(validate_clp_s_archivewriter_dependencies)
@@ -204,14 +216,16 @@ function(validate_clp_s_archivewriter_dependencies)
 endfunction()
 
 function(set_clp_s_archivewriter_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_ABSL TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_BOOST TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_CURL TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_FMT TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_MSGPACKCXX TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_NLOHMANN_JSON TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SIMDJSON TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SPDLOG TRUE)
+    set_clp_need_flags(
+        CLP_NEED_ABSL
+        CLP_NEED_BOOST
+        CLP_NEED_CURL
+        CLP_NEED_FMT
+        CLP_NEED_MSGPACKCXX
+        CLP_NEED_NLOHMANN_JSON
+        CLP_NEED_SIMDJSON
+        CLP_NEED_SPDLOG
+    )
 endfunction()
 
 function(validate_clp_s_clp_dependencies_dependencies)
@@ -222,14 +236,16 @@ function(validate_clp_s_clp_dependencies_dependencies)
 endfunction()
 
 function(set_clp_s_clp_dependencies_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_BOOST TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_CURL TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_FMT TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_NLOHMANN_JSON TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_OPENSSL TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SPDLOG TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_YSTDLIB TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_ZSTD TRUE)
+    set_clp_need_flags(
+        CLP_NEED_BOOST
+        CLP_NEED_CURL
+        CLP_NEED_FMT
+        CLP_NEED_NLOHMANN_JSON
+        CLP_NEED_OPENSSL
+        CLP_NEED_SPDLOG
+        CLP_NEED_YSTDLIB
+        CLP_NEED_ZSTD
+    )
 endfunction()
 
 function(validate_clp_s_io_dependencies)
@@ -240,11 +256,13 @@ function(validate_clp_s_io_dependencies)
 endfunction()
 
 function(set_clp_s_io_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_BOOST TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_FMT TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_MSGPACKCXX TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SPDLOG TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_ZSTD TRUE)
+    set_clp_need_flags(
+        CLP_NEED_BOOST
+        CLP_NEED_FMT
+        CLP_NEED_MSGPACKCXX
+        CLP_NEED_SPDLOG
+        CLP_NEED_ZSTD
+    )
 endfunction()
 
 function(validate_clp_s_json_constructor_dependencies)
@@ -255,9 +273,11 @@ function(validate_clp_s_json_constructor_dependencies)
 endfunction()
 
 function(set_clp_s_json_constructor_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_FMT TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_MONGOCXX TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SPDLOG TRUE)
+    set_clp_need_flags(
+        CLP_NEED_FMT
+        CLP_NEED_MONGOCXX
+        CLP_NEED_SPDLOG
+    )
 endfunction()
 
 function(validate_clp_s_reducer_dependencies_dependencies)
@@ -268,7 +288,9 @@ function(validate_clp_s_reducer_dependencies_dependencies)
 endfunction()
 
 function(set_clp_s_reducer_dependencies_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_NLOHMANN_JSON TRUE)
+    set_clp_need_flags(
+        CLP_NEED_NLOHMANN_JSON
+    )
 endfunction()
 
 function(validate_clp_s_search_dependencies)
@@ -281,9 +303,11 @@ function(validate_clp_s_search_dependencies)
 endfunction()
 
 function(set_clp_s_search_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_ABSL TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SIMDJSON TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SPDLOG TRUE)
+    set_clp_need_flags(
+        CLP_NEED_ABSL
+        CLP_NEED_SIMDJSON
+        CLP_NEED_SPDLOG
+    )
 endfunction()
 
 function(validate_clp_s_search_ast_dependencies)
@@ -294,7 +318,9 @@ function(validate_clp_s_search_ast_dependencies)
 endfunction()
 
 function(set_clp_s_search_ast_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SIMDJSON TRUE)
+    set_clp_need_flags(
+        CLP_NEED_SIMDJSON
+    )
 endfunction()
 
 function(validate_clp_s_search_kql_dependencies)
@@ -306,8 +332,10 @@ function(validate_clp_s_search_kql_dependencies)
 endfunction()
 
 function(set_clp_s_search_kql_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_ANTLR TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SPDLOG TRUE)
+    set_clp_need_flags(
+        CLP_NEED_ANTLR
+        CLP_NEED_SPDLOG
+    )
 endfunction()
 
 function(validate_clp_s_search_sql_dependencies)
@@ -318,8 +346,10 @@ function(validate_clp_s_search_sql_dependencies)
 endfunction()
 
 function(set_clp_s_search_sql_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_ANTLR TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SPDLOG TRUE)
+    set_clp_need_flags(
+        CLP_NEED_ANTLR
+        CLP_NEED_SPDLOG
+    )
 endfunction()
 
 function(validate_clp_s_timestamppattern_dependencies)
@@ -330,8 +360,10 @@ function(validate_clp_s_timestamppattern_dependencies)
 endfunction()
 
 function(set_clp_s_timestamppattern_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_DATE TRUE)
-    set_property(DIRECTORY PROPERTY CLP_NEED_SPDLOG TRUE)
+    set_clp_need_flags(
+        CLP_NEED_DATE
+        CLP_NEED_SPDLOG
+    )
 endfunction()
 
 function(validate_and_setup_all_clp_dependency_flags)
