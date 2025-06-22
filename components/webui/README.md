@@ -1,9 +1,7 @@
-# Log Viewer WebUI
+# WebUI
 
-A webapp that allows us to serve the [log-viewer] and integrate it with CLP's [webui].
+The web interface for the CLP package.
 
 See the [docs] for more details.
 
-[docs]: https://docs.yscope.com/clp/main/dev-guide/components-log-viewer-webui
-[log-viewer]: https://github.com/y-scope/yscope-log-viewer
-[webui]: ../webui
+[docs]: https://docs.yscope.com/clp/main/dev-guide/components-webui
