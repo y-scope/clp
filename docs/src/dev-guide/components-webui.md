@@ -61,7 +61,6 @@ To also fix linting errors (if applicable):
 task lint:fix-js
 ```
 
-[eslint]: https://eslint.org/
 [Fastify]: https://www.fastify.io/
 [log-viewer]: https://github.com/y-scope/yscope-log-viewer
 [nvm]: https://github.com/nvm-sh/nvm
