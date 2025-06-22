@@ -259,7 +259,7 @@ function(set_clp_s_io_dependencies)
 endfunction()
 
 function(validate_clp_s_json_constructor_dependencies)
-    validate_clp_dependencies_for_target("CLP_BUILD_CLP_S_IO"
+    validate_clp_dependencies_for_target("CLP_BUILD_CLP_S_JSONCONSTRUCTOR"
         CLP_BUILD_CLP_S_ARCHIVEREADER
     )
 endfunction()
