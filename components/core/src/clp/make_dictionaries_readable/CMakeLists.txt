@@ -39,7 +39,7 @@ set(
         make-dictionaries-readable.cpp
 )
 
-if(CLP_BUILD_BINARIES)
+if(CLP_BUILD_EXECUTABLES)
         add_executable(make-dictionaries-readable ${MAKE_DICTIONARIES_READABLE_SOURCES})
         target_compile_features(make-dictionaries-readable PRIVATE cxx_std_20)
         target_link_libraries(make-dictionaries-readable

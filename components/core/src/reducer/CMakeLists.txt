@@ -38,7 +38,7 @@ set(
         types.hpp
 )
 
-if(CLP_BUILD_BINARIES)
+if(CLP_BUILD_EXECUTABLES)
         add_executable(reducer-server ${REDUCER_SOURCES})
         target_compile_features(reducer-server PRIVATE cxx_std_20)
         target_link_libraries(reducer-server

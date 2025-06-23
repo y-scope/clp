@@ -165,7 +165,7 @@ set(
         utils.hpp
 )
 
-if(CLP_BUILD_BINARIES)
+if(CLP_BUILD_EXECUTABLES)
         add_executable(clp ${CLP_SOURCES})
         target_compile_features(clp PRIVATE cxx_std_20)
         target_include_directories(clp

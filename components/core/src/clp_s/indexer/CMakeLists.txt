@@ -80,7 +80,7 @@ set(
         MySQLIndexStorage.hpp
 )
 
-if(CLP_BUILD_BINARIES)
+if(CLP_BUILD_EXECUTABLES)
         add_executable(indexer ${INDEXER_SOURCES})
         target_compile_features(indexer PRIVATE cxx_std_20)
         target_link_libraries(indexer

@@ -712,7 +712,7 @@ set(SOURCE_FILES_unitTest
         tests/test-Utils.cpp
         )
 
-if(CLP_BUILD_TESTS)
+if(CLP_BUILD_TESTING)
     add_executable(unitTest
             ${SOURCE_FILES_unitTest}
             ${SOURCE_FILES_clp_s_unitTest}

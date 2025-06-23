@@ -151,7 +151,7 @@ set(
         ../../reducer/types.hpp
 )
 
-if(CLP_BUILD_BINARIES)
+if(CLP_BUILD_EXECUTABLES)
         add_executable(clo ${CLO_SOURCES} ${REDUCER_SOURCES})
         target_compile_features(clo PRIVATE cxx_std_20)
         target_include_directories(clo

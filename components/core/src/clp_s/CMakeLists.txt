@@ -379,7 +379,7 @@ set(
         TraceableException.hpp
 )
 
-if(CLP_BUILD_BINARIES)
+if(CLP_BUILD_EXECUTABLES)
         add_executable(
                 clp-s
                 clp-s.cpp

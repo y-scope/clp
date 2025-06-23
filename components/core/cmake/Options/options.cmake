@@ -1,12 +1,12 @@
 # Build Target Options
 option(
-    CLP_BUILD_BINARIES
-    "Build all binaries."
+    CLP_BUILD_EXECUTABLES
+    "Build all executables."
     ON
 )
 
 option(
-    CLP_BUILD_TESTS
+    CLP_BUILD_TESTING
     "Build all tests."
     ON
 )
@@ -115,13 +115,14 @@ function(set_clp_need_flags)
 endfunction()
 
 function(validate_clp_binaries_dependencies)
-    validate_clp_dependencies_for_target("CLP_BUILD_BINARIES"
-        CLP_BUILD_CLP_REGEX_UTILS
+    validate_clp_dependencies_for_target("CLP_BUILD_EXECUTABLES"
         CLP_BUILD_CLP_STRING_UTILS
         CLP_BUILD_CLP_S_ARCHIVEREADER
         CLP_BUILD_CLP_S_ARCHIVEWRITER
+        CLP_BUILD_CLP_S_CLP_DEPENDENCIES
         CLP_BUILD_CLP_S_IO
         CLP_BUILD_CLP_S_JSONCONSTRUCTOR
+        CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES
         CLP_BUILD_CLP_S_SEARCH
         CLP_BUILD_CLP_S_SEARCH_AST
         CLP_BUILD_CLP_S_SEARCH_KQL
@@ -130,11 +131,13 @@ endfunction()
 
 function(set_clp_binaries_dependencies)
     set_clp_need_flags(
+        CLP_NEED_ABSL
         CLP_NEED_BOOST
+        CLP_NEED_CURL
         CLP_NEED_DATE
         CLP_NEED_FMT
-        CLP_NEED_LOG_SURGEON
         CLP_NEED_LIBARCHIVE
+        CLP_NEED_LOG_SURGEON
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
         CLP_NEED_MSGPACKCXX
@@ -150,12 +153,13 @@ function(set_clp_binaries_dependencies)
 endfunction()
 
 function(validate_clp_tests_dependencies)
-    validate_clp_dependencies_for_target("CLP_BUILD_TESTS"
+    validate_clp_dependencies_for_target("CLP_BUILD_TESTING"
         CLP_BUILD_CLP_REGEX_UTILS
         CLP_BUILD_CLP_STRING_UTILS
         CLP_BUILD_CLP_S_SEARCH_AST
         CLP_BUILD_CLP_S_SEARCH_KQL
         CLP_BUILD_CLP_S_SEARCH_SQL
+        CLP_BUILD_CLP_S_TIMESTAMPPATTERN
     )
 endfunction()
 
@@ -367,12 +371,12 @@ endfunction()
 # the target's dependencies are also `ON`; Sets the required `CLP_NEED_` flags for any target that
 # will be built.
 function(validate_and_setup_all_clp_dependency_flags)
-    if (CLP_BUILD_BINARIES)
+    if (CLP_BUILD_EXECUTABLES)
         validate_clp_binaries_dependencies()
         set_clp_binaries_dependencies()
     endif()
 
-    if (CLP_BUILD_TESTS)
+    if (CLP_BUILD_TESTING)
         validate_clp_tests_dependencies()
         set_clp_tests_dependencies()
     endif()
