@@ -188,7 +188,7 @@ def archive_retention_helper(
 
     for target in targets_buffer.get_targets():
         logger.info(f"removing {target}")
-        _ = remove_archive(archive_output_config, target)
+        remove_archive(archive_output_config, target)
 
     targets_buffer.clean()
 
@@ -298,26 +298,26 @@ def search_results_retention_entry(clp_config: CLPConfig, job_frequency_secs: in
         time.sleep(job_frequency_secs)
 
 
-def remove_stream(output_config: StreamOutput, stream_path: str) -> bool:
+def remove_stream(output_config: StreamOutput, stream_path: str) -> None:
     storage_config = output_config.storage
     storage_type = storage_config.type
 
     if StorageType.S3 == storage_type:
-        return s3_try_removing_object(storage_config.s3_config, stream_path)
+        s3_try_removing_object(storage_config.s3_config, stream_path)
     elif StorageType.FS == storage_type:
-        return try_removing_fs_file(storage_config, stream_path)
+        try_removing_fs_file(storage_config, stream_path)
     else:
         raise ValueError(f"Stream storage type {storage_type} is not supported")
 
 
-def remove_archive(output_config: ArchiveOutput, stream_path: str) -> bool:
+def remove_archive(output_config: ArchiveOutput, archive_path: str) -> None:
     storage_config = output_config.storage
     storage_type = storage_config.type
 
     if StorageType.S3 == storage_type:
-        return s3_try_removing_object(storage_config.s3_config, stream_path)
+        s3_try_removing_object(storage_config.s3_config, archive_path)
     elif StorageType.FS == storage_type:
-        return try_removing_archive(storage_config, stream_path)
+        try_removing_archive(storage_config, archive_path)
     else:
         raise ValueError(f"Stream storage type {storage_type} is not supported")
 
@@ -373,7 +373,7 @@ def handle_stream_retention(
     # the targets in the file must have been removed from the mongodb and not needed.
     for target in targets_buffer.get_targets():
         logger.info(f"removing {target}")
-        _ = remove_stream(stream_output_config, target)
+        remove_stream(stream_output_config, target)
 
     targets_buffer.clean()
     return
@@ -426,7 +426,6 @@ def main(argv: List[str]) -> int:
         logger.error(ex)
         return 1
 
-    clp_home = Path(os.getenv("CLP_HOME"))
     # fmt: off
     archive_retention_period = clp_config.archive_output.retention_period
     logger.info(f"Archive retention period: {archive_retention_period}")

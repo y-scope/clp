@@ -328,8 +328,8 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_path: str) -> None:
         )
 
 
-# TODO: now we need more permission
-def s3_try_removing_object(s3_config: S3Config, relative_object_key: str) -> bool:
+# TODO: Considering utilizing delete_objects that deletes multiple objects with single API call
+def s3_try_removing_object(s3_config: S3Config, relative_object_key: str) -> None:
     """
     Tries Removing an object from the S3 bucket using AWS's Delete Object operation.
     The function returns false if the object doesn't exist
@@ -342,9 +342,6 @@ def s3_try_removing_object(s3_config: S3Config, relative_object_key: str) -> boo
     s3_client = _create_s3_client(s3_config, boto3_config)
 
     full_object_key = s3_config.key_prefix + relative_object_key
-    if not _key_exists(s3_client, s3_config.bucket, full_object_key):
-        return False
-
     s3_client.delete_object(
         Bucket=s3_config.bucket,
         Key=full_object_key,
