@@ -82,7 +82,7 @@ The log file above contains two log events represented by two JSON objects print
 other. Whitespace is ignored, so the log events could also appear with no newlines and indentation.
 
 If you're using JSON logs, download and extract the `clp-json` release from the
-[Releases][clp-releases] page, then process to the [clp-json](./clp-json.md) quick-start
+[Releases][clp-releases] page, then proceed to the [clp-json](./clp-json.md) quick-start
 guide.
 
 ### clp-text
@@ -111,7 +111,7 @@ The log file above contains two log events, both beginning with a timestamp. The
 line, while the second contains multiple lines.
 
 If you're using unstructured text logs, download and extract the `clp-text` release from the
-[Releases][clp-releases] page, then process to the [clp-text](./clp-text.md) quick-start
+[Releases][clp-releases] page, then proceed to the [clp-text](./clp-text.md) quick-start
 guide.
 
 ---
