@@ -79,8 +79,9 @@ public:
 
     /**
      * Writes the metadata and archive data to disk.
+     * @return Statistics for every archive that was written without encountering an error.
      */
-    void store();
+    [[nodiscard]] auto store() -> std::vector<ArchiveStats>;
 
 private:
     /**
@@ -228,6 +229,8 @@ private:
             m_ir_node_to_archive_node_id_mapping;
     absl::flat_hash_map<std::pair<uint32_t, NodeType>, std::pair<int32_t, bool>>
             m_autogen_ir_node_to_archive_node_id_mapping;
+
+    std::vector<ArchiveStats> m_archive_stats;
 };
 }  // namespace clp_s
 
