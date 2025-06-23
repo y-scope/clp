@@ -55,7 +55,6 @@ public:
 
     // Methods
     /**
-     * Dumps the contents of `ArchiveStats` as a JSON object in a string.
      * @return The contents of `ArchiveStats` as a JSON object in a string.
      */
     [[nodiscard]] auto as_string() const -> std::string {
