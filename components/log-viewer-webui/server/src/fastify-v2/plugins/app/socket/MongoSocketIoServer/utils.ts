@@ -3,9 +3,7 @@ import {
     Filter,
 } from "mongodb";
 
-import {
-    QueryParameters,
-} from "./typings.js";
+import {QueryParameters} from "./typings.js";
 
 
 /**

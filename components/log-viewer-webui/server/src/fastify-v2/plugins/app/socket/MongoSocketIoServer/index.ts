@@ -4,6 +4,7 @@
 // Reference: https://github.com/socketio/socket.io/blob/main/examples/basic-crud-application/server/lib/todo-management/todo.handlers.ts
 
 import {
+    FastifyBaseLogger,
     FastifyInstance,
 } from "fastify";
 import fastifyPlugin from "fastify-plugin";
@@ -29,7 +30,6 @@ import {
     getQueryHash,
     removeItemFromArray,
 } from "./utils.js";
-import {FastifyBaseLogger} from "fastify";
 
 
 /**
@@ -79,6 +79,7 @@ class MongoSocketIoServer {
      * Creates a new MongoSocketIoServer.
      *
      * @param fastify
+     * @throws {Error} When MongoDB database not found
      * @return
      */
     static create (
@@ -205,7 +206,11 @@ class MongoSocketIoServer {
         : MongoWatcherCollection {
         let watcherCollection = this.#collections.get(collectionName);
         if ("undefined" === typeof watcherCollection) {
-            watcherCollection = new MongoWatcherCollection(collectionName, this.#logger, this.#mongoDb);
+            watcherCollection = new MongoWatcherCollection(
+                collectionName,
+                 this.#logger,
+                this.#mongoDb
+            );
             this.#logger.debug(`Initialize Mongo watcher collection:${collectionName}.`);
             this.#collections.set(collectionName, watcherCollection);
         }

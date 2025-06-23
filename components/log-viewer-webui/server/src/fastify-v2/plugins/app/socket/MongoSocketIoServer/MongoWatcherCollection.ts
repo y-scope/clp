@@ -1,8 +1,8 @@
+import {FastifyBaseLogger} from "fastify";
 import type {
     Collection,
     Db,
 } from "mongodb";
-import {FastifyBaseLogger} from "fastify";
 
 import {QueryId} from "../../../../../../../common/index.js";
 import {
