@@ -60,21 +60,18 @@ class MongoSocketIoServer {
     readonly #mongoDb: Db;
 
     /**
-     * Private constructor for MongoSocketIoServer. This is not intended to be invoked publicly.
-     * Instead, use MongoSocketIoServer.create() to create a new instance of the class.
-     *
      * @param io
-     * @param mongoDb
      * @param logger
+     * @param mongoDb
      */
-    constructor (
+    private constructor (
         io: Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
-        mongoDb: Db,
-        logger: FastifyBaseLogger
+        logger: FastifyBaseLogger,
+        mongoDb: Db
     ) {
+        this.#io = io;
         this.#logger = logger;
         this.#mongoDb = mongoDb;
-        this.#io = io;
         this.#registerEventListeners();
     }
 
@@ -100,7 +97,7 @@ class MongoSocketIoServer {
             SocketData
         >(fastify.server);
 
-        return new MongoSocketIoServer(io, mongoDb, fastify.log);
+        return new MongoSocketIoServer(io, fastify.log, mongoDb);
     }
 
     /**

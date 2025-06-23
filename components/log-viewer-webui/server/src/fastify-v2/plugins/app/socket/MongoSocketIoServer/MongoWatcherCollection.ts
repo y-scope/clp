@@ -30,10 +30,10 @@ class MongoWatcherCollection {
 
     /**
      * @param collectionName
-     * @param mongoDb
      * @param logger
+     * @param mongoDb
      */
-    constructor (collectionName: string, mongoDb: Db, logger: FastifyBaseLogger) {
+    constructor (collectionName: string, logger: FastifyBaseLogger, mongoDb: Db) {
         this.#collection = mongoDb.collection(collectionName);
         this.#logger = logger;
     }
