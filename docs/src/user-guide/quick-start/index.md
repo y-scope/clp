@@ -3,7 +3,7 @@
 This guide describes:
 
 - [CLP's system requirements](#system-requirements);
-- [how to choose a CLP flavor](#choosing-a-flavour); and
+- [how to choose a CLP flavor](#choosing-a-flavor); and
 - [how to use CLP](#using-clp).
 
 ---
@@ -42,21 +42,21 @@ CLP requires Python 3.8 or higher. If Python isn't installed, or if the version 
 
 ---
 
-## Choosing a flavour
+## Choosing a flavor
 
-There are two flavours of CLP:
+There are two flavors of CLP:
 
 * **[clp-json](#clp-json)** for compressing and searching **JSON** logs.
 * **[clp-text](#clp-text)** for compressing and searching **unstructured text** logs.
 
 :::{note}
-Both flavours contain the same binaries but are configured with different values for the
+Both flavors contain the same binaries but are configured with different values for the
 `package.storage_engine` key in the package's config file (`etc/clp-config.yml`).
 :::
 
 ### clp-json
 
-The JSON flavour of CLP is appropriate for JSON logs, where each log event is an independent JSON
+The JSON flavor of CLP is appropriate for JSON logs, where each log event is an independent JSON
 object. For example:
 
 ```json lines
@@ -82,7 +82,7 @@ If you're using JSON logs, download and extract the `clp-json` release from the 
 
 ### clp-text
 
-The unstructured text flavour of CLP is appropriate for unstructured text logs, where each log event contains a
+The unstructured text flavor of CLP is appropriate for unstructured text logs, where each log event contains a
 timestamp and may span one or more lines.
 
 :::{note}
@@ -111,7 +111,7 @@ If you're using unstructured text logs, download and extract the `clp-text` rele
 
 ## Using CLP
 
-Once you have CLP set up, proceed to the quick start guide for your chosen flavour by clicking the link below.
+Once you have CLP set up, proceed to the quick start guide for your chosen flavor by clicking the link below.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
