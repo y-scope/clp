@@ -5,12 +5,13 @@ import {
 import {StatusCodes} from "http-status-codes";
 
 import {SqlSchema} from "../../../schemas/archive-metadata.js";
+
+
 /**
- * Search API routes.
+ * Archive metadata API routes.
  *
  * @param fastify
  */
-// eslint-disable-next-line max-lines-per-function
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     const mysqlConnectionPool = fastify.mysql.pool;
 
@@ -28,7 +29,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         async (req, reply) => {
             const {queryString} = req.body;
             reply.code(StatusCodes.OK);
-            return await mysqlConnectionPool.query(queryString);
+            const [result] = await mysqlConnectionPool.query(queryString);
+            return result;
         },
     );
 };
