@@ -175,7 +175,6 @@ function(set_clp_tests_dependencies)
         CLP_NEED_LZMA
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
-        CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
         CLP_NEED_OPENSSL
         CLP_NEED_SIMDJSON
