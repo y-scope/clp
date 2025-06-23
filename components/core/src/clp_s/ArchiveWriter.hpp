@@ -80,7 +80,7 @@ public:
 
     auto get_end_timestamp() const -> epochtime_t { return m_end_timestamp; }
 
-    auto get_uncompreseed_size() const -> size_t { return m_uncompressed_size; }
+    auto get_uncompressed_size() const -> size_t { return m_uncompressed_size; }
 
     auto get_compressed_size() const -> size_t { return m_compressed_size; }
 
