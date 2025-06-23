@@ -102,7 +102,7 @@ To narrow your search to a specific time range:
 
 * Add `--begin-time <epoch-timestamp-millis>` to filter for log events after a certain time.
   * `<epoch-timestamp-millis>` is the timestamp as milliseconds since the UNIX epoch.
-* Add `--end-time <epoch-timestamp-millis>` to filter for log events after a certain time.
+* Add `--end-time <epoch-timestamp-millis>` to filter for log events before a certain time.
 
 To perform case-insensitive searches, add the `--ignore-case` flag.
 
