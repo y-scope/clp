@@ -79,8 +79,8 @@ class MongoSocketIoServer {
      * Creates a new MongoSocketIoServer.
      *
      * @param fastify
-     * @throws {Error} When MongoDB database not found
      * @return
+     * @throws {Error} When MongoDB database not found
      */
     static create (
         fastify: FastifyInstance
@@ -208,7 +208,7 @@ class MongoSocketIoServer {
         if ("undefined" === typeof watcherCollection) {
             watcherCollection = new MongoWatcherCollection(
                 collectionName,
-                 this.#logger,
+                this.#logger,
                 this.#mongoDb
             );
             this.#logger.debug(`Initialize Mongo watcher collection:${collectionName}.`);
