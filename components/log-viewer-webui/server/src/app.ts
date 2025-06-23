@@ -5,7 +5,7 @@ import {
 
 import settings from "../settings.json" with {type: "json"};
 import DbManager from "./plugins/DbManager.js";
-import MongoSocketIoServer from "./plugins/MongoSocketIoServer/index.js";
+import MongoSocketIoServer from "./fastify-v2/plugins/app/socket/MongoSocketIoServer/index.js";
 import S3Manager from "./plugins/S3Manager.js";
 import exampleRoutes from "./routes/example.js";
 import queryRoutes from "./routes/query.js";
@@ -56,11 +56,6 @@ const FastifyV1App: FastifyPluginAsync<AppPluginOptions> = async (
                 profile: settings.StreamFilesS3Profile,
             }
         );
-        await fastify.register(MongoSocketIoServer, {
-            host: settings.MongoDbHost,
-            port: settings.MongoDbPort,
-            database: settings.MongoDbName,
-        });
     }
 
     // Register the routes
