@@ -1,9 +1,12 @@
 # clp-text quick-start
 
-This page will walk you through how to start up CLP, and then use it to compress and search unstructured text logs.
+This page will walk you through how to start up CLP, and then use it to compress and search
+unstructured text logs.
 
 :::{caution}
-If you're using the `clp-text` release, you should only compress unstructured text logs. `clp-text` is able to compress and search JSON logs as if it was unstructured text, but `clp-text` cannot query individual fields. This limitation will be addressed in a future version of CLP.
+If you're using the `clp-text` release, you should only compress unstructured text logs. `clp-text`
+is able to compress and search JSON logs as if it was unstructured text, but `clp-text` cannot
+query individual fields. This limitation will be addressed in a future version of CLP.
 :::
 
 ---
@@ -52,21 +55,28 @@ You can search through your logs using queries from the UI or from the command l
 
 ### Queries
 
-Regardless of what method you use to search, you'll need a query to find the logs you're looking for. All unstructured text log queries are written as plain text. 
+Regardless of what method you use to search, you'll need a query to find the logs you're looking
+for. All unstructured text log queries are written as plain text.
 
-You can use a couple of special characters to make these queries more versatile. `*` can be used as a placeholder for an unknown number of characters, and `?` can be used for a single character. For example, the query
+You can use a couple of special characters to make these queries more versatile. `*` can be used as
+a placeholder for an unknown number of characters, and `?` can be used for a single character.
+For example, the query
 
 ```bash
 a*b?c
 ```
 
-would return all logs that contain the character `"a"` followed by any number (including zero) of other characters, followed by `"b"`, followed by one other character, followed by `"c"`.
+would return all logs that contain the character `"a"` followed by any number (including zero) of
+other characters, followed by `"b"`, followed by one other character, followed by `"c"`.
 
-There are a number of other syntax rules specific to unstructured text queries that you can use to make your searches more powerful and effective. You can read about these syntax rules [here](../reference-text-search-syntax).
+There are a number of other syntax rules specific to unstructured text queries that you can use to
+make your searches more powerful and effective. You can read about these rules on the
+[text syntax reference page](../reference-text-search-syntax).
 
 ### Searching from the command line
 
-If you'd like to search your query from the command line, run the following command from inside the package:
+If you'd like to search your query from the command line, run the following command from inside the
+package:
 
 ```bash
 sbin/search.sh '<query>'
@@ -75,7 +85,7 @@ sbin/search.sh '<query>'
 To narrow your search to a specific time range:
 
 * Add `--begin-time <epoch-timestamp-millis>` to filter for log events after a certain time.
-    * `<epoch-timestamp-millis>` is the timestamp as milliseconds since the UNIX epoch.
+  * `<epoch-timestamp-millis>` is the timestamp as milliseconds since the UNIX epoch.
 * Add `--end-time <epoch-timestamp-millis>` to filter for log events after a certain time.
 
 To perform case-insensitive searches, add the `--ignore-case` flag.
@@ -87,12 +97,15 @@ searches are case-**sensitive** on the command line.
 
 ### Searching from the UI
 
-If you'd like to search your query from the web UI, CLP includes a web interface available at [http://localhost:4000](http://localhost:4000) by default (if you changed `webui.host` or `webui.port` in `etc/clp-config.yml`, use the new values).
+If you'd like to search your query from the web UI, CLP includes a web interface available at
+[http://localhost:4000](http://localhost:4000) by default (if you changed `webui.host` or
+`webui.port` in `etc/clp-config.yml`, use the new values).
 
 :::{image} ../../clp-search-ui.png
 :::
 
-The image above shows the search page after running a query. The numbered circles correspond to the following features:
+The image above shows the search page after running a query. The numbered circles correspond to the
+following features:
 
 1. The search box is where you can enter your query.
 2. The timeline shows the number of results across the time range of your query.
@@ -125,4 +138,5 @@ sbin/stop-clp.sh
 
 ## More information
 
-You've reached the end of the clp-text quick-start guide. For more information on clp-text, visit the [CLP for unstructured text logs](../core-unstructured/index) page.
+You've reached the end of the clp-text quick-start guide. For more information on clp-text,
+visit the [CLP for unstructured text logs](../core-unstructured/index) page.

@@ -2,9 +2,9 @@
 
 This guide describes:
 
-- [CLP's system requirements](#system-requirements);
-- [how to choose a CLP flavor](#choosing-a-flavor); and
-- [how to use CLP](#using-clp).
+* [CLP's system requirements](#system-requirements);
+* [how to choose a CLP flavor](#choosing-a-flavor); and
+* [how to use CLP](#using-clp).
 
 ---
 
@@ -27,8 +27,10 @@ If Docker isn't installed, follow these [instructions][Docker] to install it.
 
 NOTE:
 
-* If you're not running as root, ensure Docker can be run [without superuser privileges][docker-non-root].
-* If you're using Docker Desktop, ensure version 4.34 or higher is installed, and [host networking is enabled][docker-desktop-host-networking].
+* If you're not running as root, ensure Docker can be run
+  [without superuser privileges][docker-non-root].
+* If you're using Docker Desktop, ensure version 4.34 or higher is installed, and
+  [host networking is enabled][docker-desktop-host-networking].
 
 ### Python
 
@@ -38,7 +40,8 @@ To check whether Python is installed on your system, run:
 python3 --version
 ```
 
-CLP requires Python 3.8 or higher. If Python isn't installed, or if the version isn't high enough, install or upgrade it by following the instructions for your OS.
+CLP requires Python 3.8 or higher. If Python isn't installed, or if the version isn't high enough,
+install or upgrade it by following the instructions for your OS.
 
 ---
 
@@ -78,12 +81,14 @@ object. For example:
 The log file above contains two log events represented by two JSON objects printed one after the
 other. Whitespace is ignored, so the log events could also appear with no newlines and indentation.
 
-If you're using JSON logs, download and extract the `clp-json` release from the [Releases][clp-releases] page, then process to the [clp-json](./clp-json.md) quick-start guide.
+If you're using JSON logs, download and extract the `clp-json` release from the
+[Releases][clp-releases] page, then process to the [clp-json](./clp-json.md) quick-start
+guide.
 
 ### clp-text
 
-The unstructured text flavor of CLP is appropriate for unstructured text logs, where each log event contains a
-timestamp and may span one or more lines.
+The unstructured text flavor of CLP is appropriate for unstructured text logs, where each log event
+contains a timestamp and may span one or more lines.
 
 :::{note}
 If your logs do not contain timestamps or CLP can't automatically parse the timestamps in your logs,
@@ -105,13 +110,16 @@ Caused by: java.net.UnknownHostException: i-e5d112ea
 The log file above contains two log events, both beginning with a timestamp. The first is a single
 line, while the second contains multiple lines.
 
-If you're using unstructured text logs, download and extract the `clp-text` release from the [Releases][clp-releases] page, then process to the [clp-text](./clp-text.md) quick-start guide.
+If you're using unstructured text logs, download and extract the `clp-text` release from the
+[Releases][clp-releases] page, then process to the [clp-text](./clp-text.md) quick-start
+guide.
 
 ---
 
 ## Using CLP
 
-Once you have CLP set up, proceed to the quick start guide for your chosen flavor by clicking the link below.
+Once you have CLP set up, proceed to the quick start guide for your chosen flavor by clicking the
+link below.
 
 ::::{grid} 1 1 2 2
 :gutter: 2

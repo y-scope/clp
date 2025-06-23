@@ -32,19 +32,19 @@ sbin/compress.sh fs --timestamp-key '<timestamp-key>' <path1> [<path2> ...]
 ```
 
 * `<timestamp-key>` is the field path of the kv-pair that contains the timestamp in each log event.
-    * E.g., if your log events look like
-      `{"timestamp": {"iso8601": "2024-01-01 00:01:02.345", ...}}`, you should enter
-      `timestamp.iso8601` as the timestamp key.
+  * E.g., if your log events look like
+    `{"timestamp": {"iso8601": "2024-01-01 00:01:02.345", ...}}`, you should enter
+    `timestamp.iso8601` as the timestamp key.
 
   :::{caution}
-  Log events without the specified timestamp key will _not_ have an assigned timestamp. Currently,
+  Log events without the specified timestamp key will *not* have an assigned timestamp. Currently,
   these events can only be searched from the command line (when you don't specify a timestamp
   filter).
   :::
 
 * `<path...>` are paths to JSON log files or directories containing such files.
-    * Each JSON log file should contain each log event as a separate JSON object,
-      i.e., _not_ as an array.
+  * Each JSON log file should contain each log event as a separate JSON object,
+    i.e., *not* as an array.
 
 Compressed logs will be stored in the `/var/bin/archives` directory.
 
@@ -59,8 +59,8 @@ For some sample logs, check out the open-source [datasets](../resources-datasets
 
 ### Examining compression statistics
 
-The compression script used above will output the compression ratio of each dataset you compress, or
-you can use the UI to view overall statistics.
+The compression script used above will output the compression ratio of each dataset you compress,
+or you can use the UI to view overall statistics.
 
 ---
 
@@ -70,23 +70,29 @@ You can search through your logs using queries from the UI or from the command l
 
 ### Queries
 
-Regardless of what method you use to search, you'll need a query to find the logs you're looking for. Queries for JSON logs take the general form of
+Regardless of what method you use to search, you'll need a query to find the logs you're looking
+for. Queries for JSON logs take the general form of
 
 ```bash
 key: value
 ```
 
-where `key` is the name of the JSON key you'd like to search within, and `value` is a sequence of characters you're looking for within that key. Multiple key-value pairs can be chained together with `AND`, `OR`, or `NOT`, like so:
+where `key` is the name of the JSON key you'd like to search within, and `value` is a sequence of
+characters you're looking for within that key. Multiple key-value pairs can be chained together
+with `AND`, `OR`, or `NOT`, like so:
 
 ```bash
 key1: value1 AND key2: value2 OR key3: value3 ...
 ```
 
-There are a number of other JSON-specific syntax rules that you can use to make your searches more powerful and effective. You can read about these syntax rules [here](../reference-json-search-syntax).
+There are a number of other JSON-specific syntax rules that you can use to make your searches more
+powerful and effective. You can read about these rules on the
+[JSON syntax reference page](../reference-json-search-syntax).
 
 ### Searching from the command line
 
-If you'd like to search your query from the command line, run the following command from inside the package:
+If you'd like to search your query from the command line, run the following command from inside the
+package:
 
 ```bash
 sbin/search.sh '<query>'
@@ -95,7 +101,7 @@ sbin/search.sh '<query>'
 To narrow your search to a specific time range:
 
 * Add `--begin-time <epoch-timestamp-millis>` to filter for log events after a certain time.
-    * `<epoch-timestamp-millis>` is the timestamp as milliseconds since the UNIX epoch.
+  * `<epoch-timestamp-millis>` is the timestamp as milliseconds since the UNIX epoch.
 * Add `--end-time <epoch-timestamp-millis>` to filter for log events after a certain time.
 
 To perform case-insensitive searches, add the `--ignore-case` flag.
@@ -107,12 +113,15 @@ searches are case-**sensitive** on the command line.
 
 ### Searching from the UI
 
-If you'd like to search your query from the web UI, CLP includes a web interface available at [http://localhost:4000](http://localhost:4000) by default (if you changed `webui.host` or `webui.port` in `etc/clp-config.yml`, use the new values).
+If you'd like to search your query from the web UI, CLP includes a web interface available at
+[http://localhost:4000](http://localhost:4000) by default (if you changed `webui.host` or
+`webui.port` in `etc/clp-config.yml`, use the new values).
 
 :::{image} ../../clp-search-ui.png
 :::
 
-The image above shows the search page after running a query. The numbered circles correspond to the following features:
+The image above shows the search page after running a query. The numbered circles correspond to
+the following features:
 
 1. The search box is where you can enter your query.
 2. The timeline shows the number of results across the time range of your query.
@@ -145,4 +154,5 @@ sbin/stop-clp.sh
 
 ## More information
 
-You've reached the end of the clp-json quick-start guide. For more information on clp-json, visit the [CLP for JSON logs](../core-clp-s) page.
+You've reached the end of the clp-json quick-start guide. For more information on clp-json,
+visit the [CLP for JSON logs](../core-clp-s) page.

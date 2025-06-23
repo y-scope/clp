@@ -11,7 +11,7 @@ to use object storage for any combination of the three use cases (e.g., compress
 cache the stream files on S3, but store archives on the local filesystem).
 
 :::{note}
-Currently, only the [clp-json][release-choices] flavour supports object storage. Support for
+Currently, only the [clp-json][release-choices] flavor supports object storage. Support for
 `clp-text` will be added in a future release.
 :::
 
