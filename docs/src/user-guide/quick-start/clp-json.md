@@ -3,7 +3,7 @@
 This page will walk you through how to start up CLP and use it to compress and search JSON logs.
 
 :::{caution}
-If you're using the `clp-json` release, you can only compress JSON logs.
+If you're using the `clp-json` flavor, you can only compress JSON logs.
 :::
 
 ---
