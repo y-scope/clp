@@ -94,8 +94,10 @@ def _make_clp_s_command_and_env_vars(
         "x",
     ]
 
+    dataset = extract_json_config.dataset
     if StorageType.S3 == storage_type:
         s3_config = worker_config.archive_output.storage.s3_config
+        s3_config.key_prefix = f"{s3_config.key_prefix}{dataset}/"
         try:
             s3_url = generate_s3_virtual_hosted_style_url(
                 s3_config.region_code, s3_config.bucket, f"{s3_config.key_prefix}{archive_id}"
@@ -114,9 +116,10 @@ def _make_clp_s_command_and_env_vars(
         env_vars = dict(os.environ)
         env_vars.update(get_credential_env_vars(s3_config.aws_authentication))
     else:
+        archives_dir = worker_config.archive_output.get_directory() / dataset
         # fmt: off
         command.extend((
-            str(worker_config.archive_output.get_directory()),
+            str(archives_dir),
             str(stream_output_dir),
             "--archive-id",
             archive_id,
