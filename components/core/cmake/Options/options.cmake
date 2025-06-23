@@ -89,6 +89,10 @@ option(
     ON
 )
 
+# Validates that the `CLP_BUILD_` options required by `TARGET_CLP_BUILD_OPTION` are `ON`.
+#
+# @param {string} TARGET_CLP_BUILD_OPTION
+# @param {string[]} ARGN The required `CLP_BUILD_` options
 function(validate_clp_dependencies_for_target TARGET)
     foreach(DEPENDENCY IN LISTS ARGN)
         if (NOT "${${DEPENDENCY}}")
@@ -97,9 +101,12 @@ function(validate_clp_dependencies_for_target TARGET)
     endforeach()
 endfunction()
 
+# Sets the given `CLP_NEED_` flags as directory properties
+#
+# @param {string[]} ARGV The `CLP_NEED_` flags to set.
 function(set_clp_need_flags)
     foreach(NEEDS_FLAG IN LISTS ARGV)
-        set_property(DIRECTORY PROPERTY "${NEEDS_FLAG}" TRUE)
+        set_property(DIRECTORY PROPERTY "${NEEDS_FLAG}" ON)
     endforeach()
 endfunction()
 
@@ -352,6 +359,9 @@ function(set_clp_s_timestamppattern_dependencies)
     )
 endfunction()
 
+# Validates that for each target whose `CLP_BUILD_` option is `ON`, the `CLP_BUILD_` options for
+# the target's dependencies are also `ON`; Sets the required `CLP_NEED_` flags for any target that
+# will be built.
 function(validate_and_setup_all_clp_dependency_flags)
     if (CLP_BUILD_BINARIES)
         validate_clp_binaries_dependencies()
