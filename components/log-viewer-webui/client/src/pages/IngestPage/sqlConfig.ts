@@ -52,7 +52,7 @@ enum COMPRESSION_JOBS_TABLE_COLUMN_NAMES {
  * @return
  */
 const querySql = async <T>(queryString: string) => {
-    return axios.post<T>("/query/sql", {queryString});
+    return axios.post<T>("/api/archive-metadata/sql", {queryString});
 };
 
 export {

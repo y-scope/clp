@@ -83,18 +83,6 @@ class DbManager {
     }
 
     /**
-     * Submits a query to MySQL.
-     *
-     * @param queryString
-     * @return The result from MySQL.
-     */
-    async queryMySql (queryString: string) {
-        const [result] = await this.#mysqlConnectionPool.query(queryString);
-        return result;
-    }
-
-
-    /**
      * Submits a stream extraction job to the scheduler and waits for it to finish.
      *
      * @param props
