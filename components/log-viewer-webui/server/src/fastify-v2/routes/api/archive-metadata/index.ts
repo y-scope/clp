@@ -28,8 +28,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         },
         async (req, reply) => {
             const {queryString} = req.body;
-            reply.code(StatusCodes.OK);
             const [result] = await mysqlConnectionPool.query(queryString);
+            reply.code(StatusCodes.OK);
+
             return result;
         },
     );

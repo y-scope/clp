@@ -16,7 +16,6 @@ import {
  * @param app
  * @return
  */
-// eslint-disable-next-line max-lines-per-function
 const routes: FastifyPluginAsync = async (app) => {
     const fastify = app.withTypeProvider<TypeBoxTypeProvider>();
 
