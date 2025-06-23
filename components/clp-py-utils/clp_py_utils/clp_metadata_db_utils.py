@@ -137,9 +137,7 @@ def add_dataset(
                 (name, archive_storage_directory)
                 VALUES (%s, %s)
                 """
-    db_cursor.execute(
-        query, (dataset_name, str(dataset_archive_storage_directory))
-    )
+    db_cursor.execute(query, (dataset_name, str(dataset_archive_storage_directory)))
     create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
     db_conn.commit()
 
