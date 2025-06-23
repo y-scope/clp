@@ -446,16 +446,16 @@ endfunction()
 
 function (convert_clp_dependency_properties_to_variables)
     list(APPEND CLP_NEED_FLAGS
-        CLP_NEED_ABSL 
+        CLP_NEED_ABSL
         CLP_NEED_ANTLR
         CLP_NEED_BOOST
         CLP_NEED_CATCH2
-        CLP_NEED_CURL 
-        CLP_NEED_DATE 
+        CLP_NEED_CURL
+        CLP_NEED_DATE
         CLP_NEED_FMT
         CLP_NEED_LOG_SURGEON
         CLP_NEED_LIBARCHIVE
-        CLP_NEED_LZMA 
+        CLP_NEED_LZMA
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
         CLP_NEED_MSGPACKCXX
@@ -466,7 +466,7 @@ function (convert_clp_dependency_properties_to_variables)
         CLP_NEED_SQLITE
         CLP_NEED_YAMLCPP
         CLP_NEED_YSTDLIB
-        CLP_NEED_ZSTD 
+        CLP_NEED_ZSTD
     )
 
     foreach(FLAG IN LISTS CLP_NEED_FLAGS)
