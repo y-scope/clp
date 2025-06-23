@@ -360,18 +360,21 @@ def _delete_archives(
             files_table_name = get_files_table_name(table_prefix, dataset)
             archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
 
+            # TODO: fix this
             db_cursor.execute(
                 f"""
                 DELETE FROM `{files_table_name}`
                 WHERE archive_id in ({ids_list_string})
-                """
+                """,
+                archive_ids,
             )
 
             db_cursor.execute(
                 f"""
                 DELETE FROM `{archive_tags_table_name}`
                 WHERE archive_id in ({ids_list_string})
-                """
+                """,
+                archive_ids,
             )
             for archive_id in archive_ids:
                 logger.info(f"Deleted archive {archive_id} from the database.")
