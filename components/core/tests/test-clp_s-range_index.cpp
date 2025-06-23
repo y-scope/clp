@@ -143,9 +143,10 @@ void check_archive_metadata_from_stats(
         bool from_ir
 ) {
     for (auto const& stats : archive_stats) {
-        REQUIRE(stats.range_index.is_array());
-        REQUIRE(1ULL == stats.range_index.size());
-        auto entry = stats.range_index.begin();
+        auto const& range_index{stats.get_range_index()};
+        REQUIRE(range_index.is_array());
+        REQUIRE(1ULL == range_index.size());
+        auto entry = range_index.begin();
         REQUIRE(entry->is_object());
         REQUIRE(entry->contains(clp_s::RangeIndexWriter::cStartIndexName));
         REQUIRE(entry->contains(clp_s::RangeIndexWriter::cEndIndexName));
@@ -156,12 +157,12 @@ void check_archive_metadata_from_stats(
         REQUIRE(start_index.is_number_integer());
         REQUIRE(end_index.is_number_integer());
         REQUIRE(metadata_fields.is_object());
-        std::vector<clp_s::RangeIndexEntry> range_index{clp_s::RangeIndexEntry{
+        std::vector<clp_s::RangeIndexEntry> range_index_entries{clp_s::RangeIndexEntry{
                 start_index.template get<size_t>(),
                 end_index.template get<size_t>(),
                 std::move(metadata_fields)
         }};
-        check_archive_range_index(range_index, from_ir);
+        check_archive_range_index(range_index_entries, from_ir);
     }
 }
 

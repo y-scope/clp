@@ -9,7 +9,6 @@
 #include <vector>
 
 #include <nlohmann/json.hpp>
-#include <ystdlib/error_handling/ErrorCode.hpp>
 
 #include "ErrorCode.hpp"
 #include "ZstdCompressor.hpp"

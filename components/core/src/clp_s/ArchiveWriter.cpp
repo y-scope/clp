@@ -117,7 +117,8 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
             is_split
     };
     if (m_print_archive_stats) {
-        std::cout << archive_stats.as_string() << std::endl;
+        std::cout << archive_stats.as_string() << '\n';
+        std::cout << std::flush;
     }
 
     m_id_to_schema_writer.clear();
