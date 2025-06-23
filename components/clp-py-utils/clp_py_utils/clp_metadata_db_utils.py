@@ -9,7 +9,6 @@ from clp_py_utils.clp_config import (
     COLUMN_METADATA_TABLE_SUFFIX,
     DATASETS_TABLE_SUFFIX,
     FILES_TABLE_SUFFIX,
-    StorageType,
     TAGS_TABLE_SUFFIX,
 )
 
