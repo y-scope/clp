@@ -16,6 +16,6 @@ Using CLP to ingest logs from object storage and store archives on object storag
 :link: guides-multi-node
 Multi-node deployment
 ^^^
-Learn how to deploy CLP across multiple nodes.
+How to deploy CLP across multiple nodes.
 :::
 ::::

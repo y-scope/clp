@@ -1,60 +1,44 @@
 # Overview
 
-This page will guide you through CLP's system requirements and help you choose which flavour of CLP will be best for you.
+This guide describes:
 
-If you already have CLP set up, click your flavour of CLP below to learn how to use it.
-
-::::{grid} 1 1 2 2
-:gutter: 2
-
-:::{grid-item-card}
-:link: clp-json
-CLP for JSON logs
-^^^
-Learn about compressing and searching JSON logs.
-:::
-
-:::{grid-item-card}
-:link: clp-text
-CLP for unstructured text logs
-^^^^^^^^^^^^
-Learn about compressing and searching unstructured text logs.
-:::
-::::
+- [CLP's system requirements](#system-requirements);
+- [how to choose a CLP flavor](#choosing-a-flavour); and
+- [how to use CLP](#using-clp).
 
 ---
 
 ## System Requirements
 
-To run properly on your system, CLP requires a few other programs. Before you set up CLP, ensure that you have the following installed.
+To run a CLP release, you'll need:
+
+* [Docker](#docker)
+* [Python](#python)
 
 ### Docker
 
-CLP uses Docker to deploy its different components. You can check whether Docker is already installed on your system by running the command
+To check whether Docker is installed on your system, run:
 
 ```bash
 docker version
 ```
 
-If Docker is not on your system, follow the instructions [here][Docker] to install it.
+If Docker isn't installed, follow these [instructions][Docker] to install it.
 
-If you're not running as root, ensure Docker can be run [without superuser privileges][docker-non-root].
+NOTE:
 
-If you're using Docker Desktop, ensure version 4.34 or higher is installed, and [host networking is enabled][docker-desktop-host-networking].
+* If you're not running as root, ensure Docker can be run [without superuser privileges][docker-non-root].
+* If you're using Docker Desktop, ensure version 4.34 or higher is installed, and [host networking is enabled][docker-desktop-host-networking].
 
 ### Python
 
-CLP uses Python to interpret the scripts that coordinate how it runs. Specifically, CLP needs Python version 3.8 or higher. Many Linux distributions come with Python pre-installed; to confirm that it's on your system, run the command
+To check whether Python is installed on your system, run:
 
 ```bash
 python3 --version
 ```
 
-If Python isn't on your system, or if the version isn't high enough, install or upgrade it.
-
-:::{note}
-If you're planning to deploy CLP on multiple nodes/systems, there are a few other system requirements; check out the [multi-node deployment](../guides-multi-node) page for more details.
-:::
+CLP requires Python 3.8 or higher. If Python isn't installed, or if the version isn't high enough, install or upgrade it by following the instructions for your OS.
 
 ---
 
@@ -94,18 +78,7 @@ object. For example:
 The log file above contains two log events represented by two JSON objects printed one after the
 other. Whitespace is ignored, so the log events could also appear with no newlines and indentation.
 
-If your logs are JSON logs, download and extract the JSON flavour tarball from the [Releases][clp-releases] page on GitHub, and proceed to the clp-json portal below.
-
-::::{grid} 1 1 1 1
-:gutter: 2
-
-:::{grid-item-card}
-:link: clp-json
-CLP for JSON logs
-^^^
-Learn how to start up clp-json, and begin compressing and searching JSON logs.
-:::
-::::
+If you're using JSON logs, download and extract the `clp-json` release from the [Releases][clp-releases] page, then process to the [clp-json](./clp-json.md) quick-start guide.
 
 ### clp-text
 
@@ -132,16 +105,29 @@ Caused by: java.net.UnknownHostException: i-e5d112ea
 The log file above contains two log events, both beginning with a timestamp. The first is a single
 line, while the second contains multiple lines.
 
-If your logs are unstructured text logs, download and extract the unstructured text flavour tarball from the [Releases][clp-releases] page on GitHub, and proceed to the clp-text portal below.
+If you're using unstructured text logs, download and extract the `clp-text` release from the [Releases][clp-releases] page, then process to the [clp-text](./clp-text.md) quick-start guide.
 
-::::{grid} 1 1 1 1
+---
+
+## Using CLP
+
+Once you have CLP set up, proceed to the quick start guide for your chosen flavour by clicking the link below.
+
+::::{grid} 1 1 2 2
 :gutter: 2
+
+:::{grid-item-card}
+:link: clp-json
+CLP for JSON logs
+^^^
+Learn about compressing and searching JSON logs.
+:::
 
 :::{grid-item-card}
 :link: clp-text
 CLP for unstructured text logs
 ^^^
-Learn how to start up clp-text, and begin compressing and searching unstructured text logs.
+Learn about compressing and searching unstructured text logs.
 :::
 ::::
 

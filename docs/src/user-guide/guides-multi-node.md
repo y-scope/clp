@@ -110,7 +110,7 @@ Where `<component>` is the name of the component in the groups above.
 
 ## Using CLP
 
-Check out the [quick-start guide](./quick-start/overview) for your chosen flavour of CLP to learn how to compress and search your logs.
+Check out the [quick-start guide](./quick-start/index) for your chosen flavour of CLP to learn how to compress and search your logs.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
