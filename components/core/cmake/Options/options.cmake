@@ -94,6 +94,10 @@ option(
 # @param {string} TARGET_CLP_BUILD_OPTION
 # @param {string[]} ARGN The required `CLP_BUILD_` options
 function(validate_clp_dependencies_for_target TARGET)
+    if (NOT DEFINED TARGET_CLP_BUILD_OPTION OR TARGET_CLP_BUILD_OPTION STREQUAL "")
+        message(FATAL_ERROR "TARGET_CLP_BUILD_OPTION can't be unset or empty.")
+    endif()
+
     foreach(DEPENDENCY IN LISTS ARGN)
         if (NOT "${${DEPENDENCY}}")
             message(FATAL_ERROR "${TARGET} requires ${DEPENDENCY}=ON")
