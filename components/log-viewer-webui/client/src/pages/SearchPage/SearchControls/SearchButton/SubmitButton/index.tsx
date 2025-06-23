@@ -66,11 +66,11 @@ const SubmitButton = () => {
 
     // Submit button must be disabled if there are no datasets since clp-s requires dataset option
     // for queries.
-    const isSomeDataset = (null !== selectDataset) &&
+    const isNoDatasetsAndClpS = (null === selectDataset) &&
                           (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE);
 
     let tooltipTitle = "";
-    if (false === isSomeDataset) {
+    if (true === isNoDatasetsAndClpS) {
         tooltipTitle = "Some data must be ingested to enable search";
     } else if (isQueryStringEmpty) {
         tooltipTitle = "Enter query to search";
@@ -83,7 +83,7 @@ const SubmitButton = () => {
                 icon={<SearchOutlined/>}
                 size={"large"}
                 type={"primary"}
-                disabled={isQueryStringEmpty || false === isSomeDataset ||
+                disabled={isQueryStringEmpty || true === isNoDatasetsAndClpS ||
                           searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
                 onClick={handleSubmitButtonClick}
             >
