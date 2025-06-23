@@ -205,7 +205,7 @@ class MongoSocketIoServer {
         : MongoWatcherCollection {
         let watcherCollection = this.#collections.get(collectionName);
         if ("undefined" === typeof watcherCollection) {
-            watcherCollection = new MongoWatcherCollection(collectionName, this.#mongoDb, this.#logger);
+            watcherCollection = new MongoWatcherCollection(collectionName, this.#logger, this.#mongoDb);
             this.#logger.debug(`Initialize Mongo watcher collection:${collectionName}.`);
             this.#collections.set(collectionName, watcherCollection);
         }
