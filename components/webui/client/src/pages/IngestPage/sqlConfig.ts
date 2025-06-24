@@ -1,12 +1,6 @@
 import axios from "axios";
 
 
-enum SQL_CONFIG {
-    SqlDbClpArchivesTableName = "clp_archives",
-    SqlDbClpFilesTableName = "clp_files",
-    SqlDbCompressionJobsTableName = "compression_jobs",
-}
-
 /**
  * Column names for the `clp_archives` table.
  */
@@ -60,5 +54,4 @@ export {
     CLP_FILES_TABLE_COLUMN_NAMES,
     COMPRESSION_JOBS_TABLE_COLUMN_NAMES,
     querySql,
-    SQL_CONFIG,
 };

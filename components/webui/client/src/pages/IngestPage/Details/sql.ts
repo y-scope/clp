@@ -1,9 +1,9 @@
 import {Nullable} from "src/typings/common";
 
+import {settings} from "../../../settings";
 import {
     CLP_ARCHIVES_TABLE_COLUMN_NAMES,
     CLP_FILES_TABLE_COLUMN_NAMES,
-    SQL_CONFIG,
 } from "../sqlConfig";
 
 
@@ -23,7 +23,7 @@ FROM
     SELECT
         MIN(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.BEGIN_TIMESTAMP})   AS begin_timestamp,
         MAX(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.END_TIMESTAMP})     AS end_timestamp
-    FROM ${SQL_CONFIG.SqlDbClpArchivesTableName}
+    FROM ${settings.SqlDbClpArchivesTableName}
 ) a,
 (
     SELECT
@@ -34,7 +34,7 @@ FROM
                 0
             ) AS INTEGER
         ) AS num_messages
-    FROM ${SQL_CONFIG.SqlDbClpFilesTableName}
+    FROM ${settings.SqlDbClpFilesTableName}
 ) b;
 `;
 

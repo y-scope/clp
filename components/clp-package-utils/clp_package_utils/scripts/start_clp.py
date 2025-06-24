@@ -866,9 +866,15 @@ def start_webui(
     validate_webui_config(clp_config, client_settings_json_path, server_settings_json_path)
 
     # Read, update, and write back client's and server's settings.json
+    clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+    table_prefix = clp_db_connection_params["table_prefix"]
+    if StorageEngine.CLP_S == clp_config.package.storage_engine:
+        table_prefix = f"{table_prefix}{CLP_DEFAULT_DATASET_NAME}_"
     client_settings_json_updates = {
         "ClpStorageEngine": clp_config.package.storage_engine,
         "MongoDbSearchResultsMetadataCollectionName": clp_config.webui.results_metadata_collection_name,
+        "SqlDbClpArchivesTableName": f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}",
+        "SqlDbClpFilesTableName": f"{table_prefix}{FILES_TABLE_SUFFIX}",
     }
     client_settings_json = read_and_update_settings_json(
         client_settings_json_path, client_settings_json_updates

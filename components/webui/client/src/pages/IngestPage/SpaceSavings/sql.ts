@@ -1,7 +1,5 @@
-import {
-    CLP_ARCHIVES_TABLE_COLUMN_NAMES,
-    SQL_CONFIG,
-} from "../sqlConfig";
+import {settings} from "../../../settings";
+import {CLP_ARCHIVES_TABLE_COLUMN_NAMES} from "../sqlConfig";
 
 
 /**
@@ -23,7 +21,7 @@ SELECT
             0
         ) AS UNSIGNED
     ) AS total_compressed_size
-FROM ${SQL_CONFIG.SqlDbClpArchivesTableName}
+FROM ${settings.SqlDbClpArchivesTableName}
 `;
 
 interface SpaceSavingsItem {
