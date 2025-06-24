@@ -18,7 +18,7 @@ from bson import ObjectId
 from clp_py_utils.clp_config import (
     ArchiveOutput,
     CLPConfig,
-    DAEMON_COMPONENT_NAME,
+    RETENTION_DAEMON_COMPONENT_NAME,
     FsStorage,
     JobFrequency,
     ResultsCache,
@@ -38,7 +38,7 @@ from clp_py_utils.s3_utils import s3_delete_objects
 from clp_py_utils.sql_adapter import SQL_Adapter
 from pydantic import ValidationError
 
-logger = get_logger(DAEMON_COMPONENT_NAME)
+logger = get_logger(RETENTION_DAEMON_COMPONENT_NAME)
 
 MONGODB_ID_KEY = "_id"
 MONGODB_STREAM_PATH_KEY = "path"
@@ -336,13 +336,13 @@ def stream_retention_entry(clp_config: CLPConfig, job_frequency_secs: int) -> No
 
 
 def main(argv: List[str]) -> int:
-    args_parser = argparse.ArgumentParser(description=f"Spin up the {DAEMON_COMPONENT_NAME}.")
+    args_parser = argparse.ArgumentParser(description=f"Spin up the {RETENTION_DAEMON_COMPONENT_NAME}.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
 
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Setup logging to file
-    log_file = Path(os.getenv("CLP_LOGS_DIR")) / f"{DAEMON_COMPONENT_NAME}.log"
+    log_file = Path(os.getenv("CLP_LOGS_DIR")) / f"{RETENTION_DAEMON_COMPONENT_NAME}.log"
     logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
     logging_file_handler.setFormatter(get_logging_formatter())
     logger.addHandler(logging_file_handler)

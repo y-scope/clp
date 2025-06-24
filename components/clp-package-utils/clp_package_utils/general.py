@@ -14,7 +14,7 @@ import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLPConfig,
-    DAEMON_COMPONENT_NAME,
+    RETENTION_DAEMON_COMPONENT_NAME,
     DB_COMPONENT_NAME,
     LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
@@ -580,8 +580,8 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
             )
 
 
-def validate_daemon_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
+def validate_retention_daemon_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
     try:
         validate_path_could_be_dir(logs_dir)
     except ValueError as ex:
-        raise ValueError(f"{DAEMON_COMPONENT_NAME} logs directory is invalid: {ex}")
+        raise ValueError(f"{RETENTION_DAEMON_COMPONENT_NAME} logs directory is invalid: {ex}")

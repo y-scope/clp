@@ -27,7 +27,7 @@ COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
 LOG_VIEWER_WEBUI_COMPONENT_NAME = "log_viewer_webui"
-DAEMON_COMPONENT_NAME = "daemon"
+RETENTION_DAEMON_COMPONENT_NAME = "retention_daemon"
 
 # Target names
 ALL_TARGET_NAME = ""
@@ -636,7 +636,7 @@ class JobFrequency(BaseModel):
         extra = "forbid"
 
 
-class Daemon(BaseModel):
+class RetentionDaemon(BaseModel):
     logging_level: str = "INFO"
     job_frequency: JobFrequency = JobFrequency()
 
@@ -663,7 +663,7 @@ class CLPConfig(BaseModel):
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     log_viewer_webui: LogViewerWebUi = LogViewerWebUi()
-    daemon: Daemon = Daemon()
+    retention_daemon: RetentionDaemon = RetentionDaemon()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
