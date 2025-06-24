@@ -1,7 +1,7 @@
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union, Set
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import boto3
 from botocore.config import Config
@@ -30,6 +30,7 @@ AWS_ENDPOINT = "amazonaws.com"
 AWS_ENV_VAR_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID"
 AWS_ENV_VAR_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY"
 AWS_ENV_VAR_SESSION_TOKEN = "AWS_SESSION_TOKEN"
+
 
 def _get_session_credentials(aws_profile: Optional[str] = None) -> Optional[S3Credentials]:
     """
@@ -327,25 +328,6 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_path: str) -> None:
         )
 
 
-def s3_delete_object(s3_config: S3Config, relative_object_key: str) -> None:
-    """
-    Tries Removing an object from the S3 bucket using AWS's Delete Object operation.
-    The function returns false if the object doesn't exist
-    :param s3_config: S3 configuration specifying the upload destination and credentials.
-    :param relative_object_key: The key of the file to move, relative to the s3_config's prefix.
-    :raises: Propagates `boto3.client`'s exceptions.
-    :raises: Propagates `boto3.client.delete_object`'s exceptions.
-    """
-    boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
-    s3_client = _create_s3_client(s3_config, boto3_config)
-
-    full_object_key = s3_config.key_prefix + relative_object_key
-    s3_client.delete_object(
-        Bucket=s3_config.bucket,
-        Key=full_object_key,
-    )
-
-
 def s3_delete_objects(s3_config: S3Config, relative_object_keys: Set[str]) -> None:
     """
     Tries Removing an object from the S3 bucket using AWS's Delete Object operation.
@@ -357,6 +339,7 @@ def s3_delete_objects(s3_config: S3Config, relative_object_keys: Set[str]) -> No
     """
 
     MAX_OBJECTS_PER_REQUEST = 1000
+
     def chunked_iterate(key_prefix: str, relative_obj_keys: Set[str], chunk_size: int):
         chunk: List[str] = list()
         for relative_obj_key in relative_obj_keys:
@@ -369,12 +352,14 @@ def s3_delete_objects(s3_config: S3Config, relative_object_keys: Set[str]) -> No
             yield chunk
 
     def gen_deletion_config(objects_to_delete: List[str]):
-        return {'Objects': [{'Key': obj_to_delete} for obj_to_delete in objects_to_delete]}
+        return {"Objects": [{"Key": obj_to_delete} for obj_to_delete in objects_to_delete]}
 
     boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
     s3_client = _create_s3_client(s3_config, boto3_config)
 
-    for chunked_keys in chunked_iterate(s3_config.key_prefix, relative_object_keys, MAX_OBJECTS_PER_REQUEST):
+    for chunked_keys in chunked_iterate(
+        s3_config.key_prefix, relative_object_keys, MAX_OBJECTS_PER_REQUEST
+    ):
         s3_client.delete_objects(
             Bucket=s3_config.bucket,
             Delete=gen_deletion_config(chunked_keys),

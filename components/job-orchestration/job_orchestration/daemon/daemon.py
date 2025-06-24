@@ -22,7 +22,6 @@ from clp_py_utils.clp_config import (
     FsStorage,
     JobFrequency,
     ResultsCache,
-    S3Storage,
     StorageEngine,
     StorageType,
     StreamOutput,
@@ -75,7 +74,7 @@ class TargetsBuffer:
             return
 
         if not self._recovery_file_path.is_file():
-            raise ValueError(f"Path {self._recovery_file_path} does not resolve to a file")
+            raise ValueError(f"{self._recovery_file_path} does not resolve to a file")
 
         with open(self._recovery_file_path, "r") as f:
             for line in f:
@@ -157,14 +156,12 @@ def archive_retention_helper(
             archive_ids,
         )
 
-        # TODO: Here it's a bit awkward, can we do better?
         for target in archive_ids:
             if dataset is not None:
                 target = f"{dataset}/{target}"
             targets_buffer.add_target(target)
 
         targets_buffer.persists_new_targets()
-
         db_conn.commit()
 
     remove_targets(archive_output_config, targets_buffer.get_targets())
@@ -216,6 +213,8 @@ def handle_archive_retention(clp_config: CLPConfig) -> None:
                 archive_output_config,
                 None,
             )
+        else:
+            raise ValueError(f"Unsupported Storage engine: {storage_engine}")
 
 
 def archive_retention_entry(clp_config: CLPConfig, job_frequency_secs: int) -> None:
@@ -241,9 +240,7 @@ def find_collection_stub(collection: pymongo.collection.Collection) -> int:
     return 0
 
 
-def try_removing_results_metadata(
-    database: pymongo.database.Database, collection_name: str
-) -> None:
+def remove_result_metadata(database: pymongo.database.Database, collection_name: str) -> None:
     results_metadata_collection = database.get_collection(RESULTS_METADATA_COLLECTION)
     results_metadata_collection.delete_one({MONGODB_ID_KEY: collection_name})
 
@@ -265,8 +262,8 @@ def handle_search_results_retention(result_cache_config: ResultsCache):
 
             logger.info(f"Collection stub: {collection_name}, {collection_stub}")
             if collection_stub < expiry_ts:
-                logger.info(f"Removing collection: {collection_name}")
-                try_removing_results_metadata(results_cache_db, collection_name)
+                logger.debug(f"Removing collection: {collection_name}")
+                remove_result_metadata(results_cache_db, collection_name)
                 collection.drop()
 
 
@@ -287,7 +284,7 @@ def remove_targets(output_config: Union[ArchiveOutput, StreamOutput], targets: S
         for target in targets:
             remove_fs_target(storage_config, target)
     else:
-        raise ValueError(f"Storage type {storage_type} is not supported")
+        raise ValueError(f"Unsupported Storage type: {storage_type}")
 
 
 def handle_stream_retention(
@@ -352,12 +349,11 @@ def stream_retention_entry(clp_config: CLPConfig, job_frequency_secs: int) -> No
     if StorageType.S3 == storage_type:
         storage_engine = clp_config.package.storage_engine
         if StorageEngine.CLP_S != storage_engine:
-            # TODO: update error message
             raise ValueError(
-                f"Stream storage type {storage_type} is not supported when using storage engine {storage_engine}"
+                f"{storage_type} is not supported when using storage engine {storage_engine}"
             )
     elif StorageType.FS != storage_type:
-        raise ValueError(f"Stream storage type {storage_type} is not supported")
+        raise ValueError(f"Unsupported Storage type: {storage_type}")
 
     while True:
         handle_stream_retention(
