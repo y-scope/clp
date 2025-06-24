@@ -7,11 +7,10 @@ import pathlib
 import shutil
 import sys
 import time
-import typing
 from contextlib import closing
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Union
 
 import pymongo
 import pymongo.database
@@ -37,7 +36,7 @@ from clp_py_utils.clp_metadata_db_utils import (
 )
 from clp_py_utils.constants import MIN_TO_SECOND, SECOND_TO_MILLISECOND
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.s3_utils import s3_try_removing_object
+from clp_py_utils.s3_utils import s3_delete_objects
 from clp_py_utils.sql_adapter import SQL_Adapter
 from pydantic import ValidationError
 
@@ -53,28 +52,15 @@ def get_target_time(retention_minutes: int):
     return int(time.time() - retention_minutes * MIN_TO_SECOND)
 
 
-def try_removing_fs_file(fs_storage_config: FsStorage, relative_path: str) -> bool:
-    file_path = fs_storage_config.directory / relative_path
-    if not file_path.exists():
-        return False
+def remove_fs_target(fs_storage_config: FsStorage, relative_path: str) -> None:
+    path_to_remove = fs_storage_config.directory / relative_path
+    if not path_to_remove.exists():
+        return
 
-    if file_path.is_dir():
-        raise ValueError(f"Path {file_path} resolves to a directory")
-
-    os.remove(file_path)
-    return True
-
-
-def try_removing_archive(fs_storage_config: FsStorage, relative_archive_path: str) -> bool:
-    archive_path = fs_storage_config.directory / relative_archive_path
-    if not archive_path.exists():
-        return False
-
-    if not archive_path.is_dir():
-        raise ValueError(f"Path {archive_path} doesn't resolve to a directory")
-
-    shutil.rmtree(archive_path)
-    return True
+    if path_to_remove.is_dir():
+        shutil.rmtree(path_to_remove)
+    else:
+        os.remove(path_to_remove)
 
 
 # May require some redesign
@@ -86,14 +72,11 @@ class TargetsBuffer:
         self._targets_to_persist: List[str] = list()
 
         if not self._recovery_file_path.exists():
-            logger.info("Return")
             return
 
         if not self._recovery_file_path.is_file():
-            logger.error("Error")
             raise ValueError(f"Path {self._recovery_file_path} does not resolve to a file")
 
-        logger.info("opening file")
         with open(self._recovery_file_path, "r") as f:
             for line in f:
                 self._targets.add(line.strip())
@@ -113,13 +96,11 @@ class TargetsBuffer:
         with open(self._recovery_file_path, "a") as f:
             for target in self._targets_to_persist:
                 f.write(f"{target}\n")
+
         self._targets_to_persist.clear()
 
-    def clear(self):
+    def flush(self):
         self._targets.clear()
-
-    def clean(self):
-        self.clear()
         if self._recovery_file_path.exists():
             os.unlink(self._recovery_file_path)
 
@@ -186,11 +167,8 @@ def archive_retention_helper(
 
         db_conn.commit()
 
-    for target in targets_buffer.get_targets():
-        logger.info(f"removing {target}")
-        remove_archive(archive_output_config, target)
-
-    targets_buffer.clean()
+    remove_targets(archive_output_config, targets_buffer.get_targets())
+    targets_buffer.flush()
 
 
 # Let's first consider the case for only CLP.
@@ -258,7 +236,7 @@ def find_collection_stub(collection: pymongo.collection.Collection) -> int:
         if isinstance(object_id, ObjectId):
             return int(object_id.generation_time.timestamp())
         else:
-            raise ValueError(f"{object_id} is not in the form of ObjectID")
+            raise ValueError(f"{object_id} is not a ObjectID")
 
     return 0
 
@@ -298,28 +276,18 @@ def search_results_retention_entry(clp_config: CLPConfig, job_frequency_secs: in
         time.sleep(job_frequency_secs)
 
 
-def remove_stream(output_config: StreamOutput, stream_path: str) -> None:
+def remove_targets(output_config: Union[ArchiveOutput, StreamOutput], targets: Set[str]) -> None:
+    logger.debug(f"Removing: {targets}")
     storage_config = output_config.storage
     storage_type = storage_config.type
 
     if StorageType.S3 == storage_type:
-        s3_try_removing_object(storage_config.s3_config, stream_path)
+        s3_delete_objects(storage_config.s3_config, targets)
     elif StorageType.FS == storage_type:
-        try_removing_fs_file(storage_config, stream_path)
+        for target in targets:
+            remove_fs_target(storage_config, target)
     else:
-        raise ValueError(f"Stream storage type {storage_type} is not supported")
-
-
-def remove_archive(output_config: ArchiveOutput, archive_path: str) -> None:
-    storage_config = output_config.storage
-    storage_type = storage_config.type
-
-    if StorageType.S3 == storage_type:
-        s3_try_removing_object(storage_config.s3_config, archive_path)
-    elif StorageType.FS == storage_type:
-        try_removing_archive(storage_config, archive_path)
-    else:
-        raise ValueError(f"Stream storage type {storage_type} is not supported")
+        raise ValueError(f"Storage type {storage_type} is not supported")
 
 
 def handle_stream_retention(
@@ -371,11 +339,9 @@ def handle_stream_retention(
     # First, if we reached this line, it means either 1. no new targets has been added, or
     # some new target has been added, and we have already removed them from mongodb. either case,
     # the targets in the file must have been removed from the mongodb and not needed.
-    for target in targets_buffer.get_targets():
-        logger.info(f"removing {target}")
-        remove_stream(stream_output_config, target)
+    remove_targets(stream_output_config, targets_buffer.get_targets())
+    targets_buffer.flush()
 
-    targets_buffer.clean()
     return
 
 
