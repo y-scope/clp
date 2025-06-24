@@ -14,7 +14,6 @@ from clp_py_utils.clp_config import (
     CLPConfig,
     Database,
     FILES_TABLE_SUFFIX,
-    StorageEngine,
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
@@ -41,13 +40,9 @@ from clp_package_utils.scripts.native.utils import (
 logger = logging.getLogger(__file__)
 
 
-def get_orig_file_id(
-    db_config: Database, storage_engine: StorageEngine, dataset: str, path: str
-) -> Optional[str]:
+def get_orig_file_id(db_config: Database, path: str) -> Optional[str]:
     """
     :param db_config:
-    :param storage_engine:
-    :param dataset:
     :param path: Path of the original file.
     :return: The ID of an original file which has the given path, or None if no such file exists.
     NOTE: Multiple original files may have the same path in which case this method returns the ID of
@@ -56,9 +51,6 @@ def get_orig_file_id(
     sql_adapter = SQL_Adapter(db_config)
     clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
-    if StorageEngine.CLP_S == storage_engine:
-        table_prefix = f"{table_prefix}{dataset}_"
-
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
@@ -136,12 +128,7 @@ def handle_extract_stream_cmd(
             orig_file_id = parsed_args.orig_file_id
         else:
             orig_file_path = parsed_args.orig_file_path
-            orig_file_id = get_orig_file_id(
-                clp_config.database,
-                clp_config.package.storage_engine,
-                CLP_DEFAULT_DATASET_NAME,
-                orig_file_path,
-            )
+            orig_file_id = get_orig_file_id(clp_config.database, orig_file_path)
             if orig_file_id is None:
                 logger.error(f"Cannot find orig_file_id corresponding to '{orig_file_path}'.")
                 return -1
