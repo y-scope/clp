@@ -21,7 +21,6 @@ from clp_py_utils.clp_config import (
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     CONTROLLER_TARGET_NAME,
-    RETENTION_DAEMON_COMPONENT_NAME,
     DB_COMPONENT_NAME,
     LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUERY_JOBS_TABLE_NAME,
@@ -31,6 +30,7 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    RETENTION_DAEMON_COMPONENT_NAME,
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
@@ -56,7 +56,6 @@ from clp_package_utils.general import (
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
-    validate_retention_daemon_config,
     validate_db_config,
     validate_log_viewer_webui_config,
     validate_logs_input_config,
@@ -65,6 +64,7 @@ from clp_package_utils.general import (
     validate_redis_config,
     validate_reducer_config,
     validate_results_cache_config,
+    validate_retention_daemon_config,
     validate_webui_config,
 )
 
@@ -1251,14 +1251,14 @@ def main(argv):
 
         # Validate and load necessary credentials
         if target in (
-                ALL_TARGET_NAME,
-                CONTROLLER_TARGET_NAME,
-                DB_COMPONENT_NAME,
-                RETENTION_DAEMON_COMPONENT_NAME,
-                COMPRESSION_SCHEDULER_COMPONENT_NAME,
-                QUERY_SCHEDULER_COMPONENT_NAME,
-                WEBUI_COMPONENT_NAME,
-                LOG_VIEWER_WEBUI_COMPONENT_NAME,
+            ALL_TARGET_NAME,
+            CONTROLLER_TARGET_NAME,
+            DB_COMPONENT_NAME,
+            RETENTION_DAEMON_COMPONENT_NAME,
+            COMPRESSION_SCHEDULER_COMPONENT_NAME,
+            QUERY_SCHEDULER_COMPONENT_NAME,
+            WEBUI_COMPONENT_NAME,
+            LOG_VIEWER_WEBUI_COMPONENT_NAME,
         ):
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if target in (
@@ -1288,10 +1288,10 @@ def main(argv):
         ):
             validate_logs_input_config(clp_config)
         if target in (
-                ALL_TARGET_NAME,
-                COMPRESSION_WORKER_COMPONENT_NAME,
-                QUERY_WORKER_COMPONENT_NAME,
-                RETENTION_DAEMON_COMPONENT_NAME,
+            ALL_TARGET_NAME,
+            COMPRESSION_WORKER_COMPONENT_NAME,
+            QUERY_WORKER_COMPONENT_NAME,
+            RETENTION_DAEMON_COMPONENT_NAME,
         ):
             validate_output_config(clp_config)
 
