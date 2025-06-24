@@ -1,3 +1,4 @@
+import logging
 import pathlib
 import time
 from typing import List
@@ -21,7 +22,8 @@ from job_orchestration.retention.utils import (
     TargetsBuffer,
 )
 
-logger = get_logger("STREAMS_RETENTION_HANDLER")
+HANDLER_NAME = "streams_retention_handler"
+logger = get_logger(HANDLER_NAME)
 
 
 def handle_stream_retention(
@@ -79,8 +81,14 @@ def handle_stream_retention(
 
 
 def stream_retention_entry(
-    clp_config: CLPConfig, job_frequency_secs: int, log_directory: pathlib.Path
+    clp_config: CLPConfig, job_frequency_secs: int, log_directory: pathlib, logging_level: str
 ) -> None:
+    log_file = log_directory / f"{HANDLER_NAME}.log"
+    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
+    logging_file_handler.setFormatter(get_logging_formatter())
+    logger.addHandler(logging_file_handler)
+    set_logging_level(logger, logging_level)
+
     stream_output_config = clp_config.stream_output
     storage_type = stream_output_config.storage.type
 

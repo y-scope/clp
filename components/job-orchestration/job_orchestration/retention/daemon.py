@@ -29,13 +29,14 @@ def main(argv: List[str]) -> int:
 
     # Setup logging to file
     logs_directory = Path(os.getenv("CLP_LOGS_DIR"))
+    logging_level = os.getenv("CLP_LOGGING_LEVEL")
     log_file = logs_directory / f"{RETENTION_DAEMON_COMPONENT_NAME}.log"
     logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
     logging_file_handler.setFormatter(get_logging_formatter())
     logger.addHandler(logging_file_handler)
 
     # Update logging level based on config
-    set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
+    set_logging_level(logger, logging_level)
 
     # Load configuration
     config_path = Path(parsed_args.config)
@@ -56,7 +57,7 @@ def main(argv: List[str]) -> int:
     results_cache_retention_period = clp_config.results_cache.retention_period
     logger.info(f"Results cache retention period: {results_cache_retention_period}")
 
-    archive_retention_entry(clp_config, 30, logger)
+    archive_retention_entry(clp_config, 30, logs_directory, logging_level)
 
     logger.info("reducer terminated")
 

@@ -44,8 +44,8 @@ def remove_targets(output_config: Union[ArchiveOutput, StreamOutput], targets: S
         raise ValueError(f"Unsupported Storage type: {storage_type}")
 
 
-def get_oid_with_expiry_time(expiry_epoch: int):
-    expiry_oid = ObjectId.from_datetime(datetime.utcfromtimestamp(expiry_epoch))
+def get_oid_with_expiry_time(expiry_epoch: int) -> ObjectId:
+    return ObjectId.from_datetime(datetime.utcfromtimestamp(expiry_epoch))
 
 
 class TargetsBuffer:

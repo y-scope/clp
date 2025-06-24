@@ -1,3 +1,5 @@
+import logging
+import pathlib
 import time
 from typing import List
 
@@ -12,7 +14,8 @@ from job_orchestration.retention.utils import (
     RESULTS_METADATA_COLLECTION,
 )
 
-logger = get_logger("SEARCH_RESULTS_RETENTION_HANDLER")
+HANDLER_NAME = "search_results_retention_handler"
+logger = get_logger(HANDLER_NAME)
 
 
 def find_collection_stub(collection: pymongo.collection.Collection) -> int:
@@ -54,7 +57,15 @@ def handle_search_results_retention(result_cache_config: ResultsCache):
                 collection.drop()
 
 
-def search_results_retention_entry(clp_config: CLPConfig, job_frequency_secs: int) -> None:
+def search_results_retention_entry(
+    clp_config: CLPConfig, job_frequency_secs: int, log_directory: pathlib, logging_level: str
+) -> None:
+    log_file = log_directory / f"{HANDLER_NAME}.log"
+    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
+    logging_file_handler.setFormatter(get_logging_formatter())
+    logger.addHandler(logging_file_handler)
+    set_logging_level(logger, logging_level)
+
     while True:
         handle_search_results_retention(clp_config.results_cache)
         time.sleep(job_frequency_secs)
