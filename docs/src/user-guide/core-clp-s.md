@@ -79,7 +79,7 @@ Usage:
 ./clp-s x [<options>] <archives-path> <output-dir>
 ```
 
-* `archives-path` is a directory containing archives, a path to an archive, or a URL pointing to a 
+* `archives-path` is a directory containing archives, a path to an archive, or a URL pointing to a
   single-file archive.
 * `output-dir` is the directory that decompressed logs should be written to.
 * `options` allow you to specify things like a specific archive (from within the directory
@@ -102,7 +102,7 @@ Usage:
 ./clp-s s [<options>] <archives-path> <kql-query>
 ```
 
-* `archives-path` is a directory containing archives, a path to an archive, or a URL pointing to a 
+* `archives-path` is a directory containing archives, a path to an archive, or a URL pointing to a
   single-file archive.
 * `kql-query` is a [KQL](reference-json-search-syntax) query.
 * `options` allow you to specify things like a specific archive (from within the directory
