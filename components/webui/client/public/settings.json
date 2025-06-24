@@ -1,7 +1,7 @@
 {
     "ClpStorageEngine": "clp",
     "MongoDbSearchResultsMetadataCollectionName": "results-metadata",
-    "SqlDbCompressionJobsTableName": "compression_jobs",
     "SqlDbClpArchivesTableName": "clp_archives",
-    "SqlDbClpFilesTableName": "clp_files"
+    "SqlDbClpFilesTableName": "clp_files",
+    "SqlDbCompressionJobsTableName": "compression_jobs"
 }

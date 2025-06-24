@@ -2,11 +2,11 @@ import axios from "axios";
 
 
 type Settings = {
-    MongoDbSearchResultsMetadataCollectionName: string;
     ClpStorageEngine: string;
-    SqlDbCompressionJobsTableName: string;
+    MongoDbSearchResultsMetadataCollectionName: string;
     SqlDbClpArchivesTableName: string;
     SqlDbClpFilesTableName: string;
+    SqlDbCompressionJobsTableName: string;
 };
 
 /**
