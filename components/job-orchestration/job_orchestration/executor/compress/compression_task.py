@@ -346,7 +346,7 @@ def run_clp(
         if not line:
             last_line_decoded = True
         else:
-            stats = json.loads(line.decode("ascii"))
+            stats = json.loads(line.decode("utf-8"))
 
         if last_archive_stats is not None and (
             None is stats or stats["id"] != last_archive_stats["id"]
