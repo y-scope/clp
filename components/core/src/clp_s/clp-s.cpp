@@ -120,7 +120,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
             return false;
         }
     }
-    parser.store();
+    std::ignore = parser.store();
     return true;
 }
 
