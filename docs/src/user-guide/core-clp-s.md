@@ -29,7 +29,7 @@ Usage:
     if the input path is a URL. When S3 authentication is enabled we issue a GET request following
     the presigned URL v4 specification. This request draws on the environment variables
     `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and, optionally, `AWS_SESSION_TOKEN` if it exists.
-    For more information on usage with S3 see our
+    For more information on usage with S3, see our
     [dedicated guide](#guides-using-object-storage/index).
 
 For a complete list of options, run `./clp-s c --help`.
