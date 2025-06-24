@@ -28,7 +28,7 @@ Usage:
   * `--auth <s3|none>` specifies the authentication method that should be used for network requests
     if the input path is a URL. When S3 authentication is enabled we issue a GET request following
     the presigned URL v4 specification. This request draws on the environment variables
-    `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and optionally `AWS_SESSION_TOKEN` if it exists.
+    `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and, optionally, `AWS_SESSION_TOKEN` if it exists.
     For more information on usage with S3 see our
     [dedicated guide](#guides-using-object-storage/index).
 
@@ -76,14 +76,14 @@ AWS_ACCESS_KEY_ID='...' AWS_SECRET_ACCESS_KEY='...' \
 Usage:
 
 ```shell
-./clp-s x [<options>] <archives-dir> <output-dir>
+./clp-s x [<options>] <archives-path> <output-dir>
 ```
 
-* `archives-dir` is a directory containing archives, a path to an archive, or a URL pointing to a 
+* `archives-path` is a directory containing archives, a path to an archive, or a URL pointing to a 
   single-file archive.
 * `output-dir` is the directory that decompressed logs should be written to.
 * `options` allow you to specify things like a specific archive (from within the directory
-  `archives-dir`, if it is a directory) to decompress (`--archive-id <archive-id>`).
+  `archives-path`, if it is a directory) to decompress (`--archive-id <archive-id>`).
   * For a complete list, run `./clp-s x --help`
 
 ### Examples
@@ -106,7 +106,7 @@ Usage:
   single-file archive.
 * `kql-query` is a [KQL](reference-json-search-syntax) query.
 * `options` allow you to specify things like a specific archive (from within the directory
-  `archives-dir`, if it is a directory) to search (`--archive-id <archive-id>`).
+  `archives-path`, if it is a directory) to search (`--archive-id <archive-id>`).
   * For a complete list, run `./clp-s s --help`
 
 ### Examples
