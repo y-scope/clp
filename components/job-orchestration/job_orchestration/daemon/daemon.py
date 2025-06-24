@@ -28,10 +28,9 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
+    delete_archives_from_metadata_db,
     fetch_existing_datasets,
-    get_archive_tags_table_name,
     get_archives_table_name,
-    get_files_table_name,
 )
 from clp_py_utils.constants import MIN_TO_SECOND, SECOND_TO_MILLISECOND
 from clp_py_utils.core import read_yaml_config_file
@@ -119,42 +118,16 @@ def archive_retention_helper(
         f"""
         SELECT id FROM `{archives_table}`
         WHERE end_timestamp <= %s
+        AND end_timestamp != 0
         """,
         [archive_expiry_epoch],
     )
 
     results = db_cursor.fetchall()
-    if len(results) != 0:
-        archive_ids: List[str] = [result["id"] for result in results]
-        ids_list_string: str = ", ".join(["%s"] * len(archive_ids))
-
+    archive_ids: List[str] = [result["id"] for result in results]
+    if len(archive_ids) != 0:
         logger.info(f"Deleting {archive_ids}")
-
-        files_table = get_files_table_name(table_prefix, dataset)
-        db_cursor.execute(
-            f"""
-            DELETE FROM `{files_table}`
-            WHERE archive_id in ({ids_list_string})
-            """,
-            archive_ids,
-        )
-
-        archive_tags_table = get_archive_tags_table_name(table_prefix, dataset)
-        db_cursor.execute(
-            f"""
-            DELETE FROM `{archive_tags_table}`
-            WHERE archive_id in ({ids_list_string})
-            """,
-            archive_ids,
-        )
-
-        db_cursor.execute(
-            f"""
-            DELETE FROM `{archives_table}`
-            WHERE id in ({ids_list_string})
-            """,
-            archive_ids,
-        )
+        delete_archives_from_metadata_db(db_cursor, archive_ids, table_prefix, dataset)
 
         for target in archive_ids:
             if dataset is not None:

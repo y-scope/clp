@@ -8,14 +8,15 @@ from contextlib import closing
 from pathlib import Path
 
 from clp_py_utils.clp_config import (
+    ArchiveOutput,
     CLP_DEFAULT_DATASET_NAME,
     Database,
     StorageEngine,
+    StorageType,
 )
 from clp_py_utils.clp_metadata_db_utils import (
-    get_archive_tags_table_name,
+    delete_archives_from_metadata_db,
     get_archives_table_name,
-    get_files_table_name,
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
 
@@ -199,7 +200,7 @@ def main(argv: typing.List[str]) -> int:
 
     if FIND_COMMAND == parsed_args.subcommand:
         return _find_archives(
-            archives_dir,
+            clp_config.archive_output,
             database_config,
             dataset,
             parsed_args.begin_ts,
@@ -236,7 +237,7 @@ def main(argv: typing.List[str]) -> int:
 
 
 def _find_archives(
-    archives_dir: Path,
+    archives_output_config: ArchiveOutput,
     database_config: Database,
     dataset: typing.Optional[str],
     begin_ts: int,
@@ -285,14 +286,17 @@ def _find_archives(
                 return 0
 
             logger.info(f"Found {len(archive_ids)} archives within the specified time range.")
-            archive_output_dir: Path = (
-                archives_dir / dataset if dataset is not None else archives_dir
-            )
-            for archive_id in archive_ids:
-                logger.info(archive_id)
-                archive_path = archive_output_dir / archive_id
-                if not archive_path.is_dir():
-                    logger.warning(f"Archive {archive_id} in database not found on disk.")
+
+            if StorageType.FS == archives_output_config.storage.type:
+                archives_dir = archives_output_config.get_directory()
+                archive_output_dir: Path = (
+                    archives_dir / dataset if dataset is not None else archives_dir
+                )
+                for archive_id in archive_ids:
+                    logger.info(archive_id)
+                    archive_path = archive_output_dir / archive_id
+                    if not archive_path.is_dir():
+                        logger.warning(f"Archive {archive_id} in database not found on disk.")
 
     except Exception:
         logger.exception("Failed to find archives from the database.")
@@ -341,9 +345,8 @@ def _delete_archives(
 
             db_cursor.execute(
                 f"""
-                DELETE FROM `{archives_table_name}`
+                SELECT id FROM `{archives_table_name}`
                 WHERE {query_criteria}
-                RETURNING id
                 """,
                 query_params,
             )
@@ -356,26 +359,8 @@ def _delete_archives(
             archive_ids: typing.List[str] = [result["id"] for result in results]
             delete_handler.validate_results(archive_ids)
 
-            ids_list_string: str = ", ".join(["'%s'"] * len(archive_ids))
-            files_table_name = get_files_table_name(table_prefix, dataset)
-            archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
+            delete_archives_from_metadata_db(db_cursor, archive_ids, table_prefix, dataset)
 
-            # TODO: fix this
-            db_cursor.execute(
-                f"""
-                DELETE FROM `{files_table_name}`
-                WHERE archive_id in ({ids_list_string})
-                """,
-                archive_ids,
-            )
-
-            db_cursor.execute(
-                f"""
-                DELETE FROM `{archive_tags_table_name}`
-                WHERE archive_id in ({ids_list_string})
-                """,
-                archive_ids,
-            )
             for archive_id in archive_ids:
                 logger.info(f"Deleted archive {archive_id} from the database.")
 

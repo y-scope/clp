@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Set
+from typing import List, Set
 
 from clp_py_utils.clp_config import (
     ARCHIVE_TAGS_TABLE_SUFFIX,
@@ -222,3 +222,36 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
         db_cursor, archive_tags_table_name, archives_table_name, tags_table_name
     )
     _create_files_table(db_cursor, table_prefix, dataset)
+
+
+def delete_archives_from_metadata_db(
+    db_cursor, archive_ids: List[str], table_prefix: str, dataset: str | None
+):
+    ids_list_string: str = ", ".join(["%s"] * len(archive_ids))
+
+    files_table = get_files_table_name(table_prefix, dataset)
+    db_cursor.execute(
+        f"""
+        DELETE FROM `{files_table}`
+        WHERE archive_id in ({ids_list_string})
+        """,
+        archive_ids,
+    )
+
+    archive_tags_table = get_archive_tags_table_name(table_prefix, dataset)
+    db_cursor.execute(
+        f"""
+        DELETE FROM `{archive_tags_table}`
+        WHERE archive_id in ({ids_list_string})
+        """,
+        archive_ids,
+    )
+
+    archives_table = get_archives_table_name(table_prefix, dataset)
+    db_cursor.execute(
+        f"""
+        DELETE FROM `{archives_table}`
+        WHERE id in ({ids_list_string})
+        """,
+        archive_ids,
+    )
