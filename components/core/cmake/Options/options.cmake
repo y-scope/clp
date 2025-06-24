@@ -170,8 +170,8 @@ function(set_clp_tests_dependencies)
         CLP_NEED_CATCH2
         CLP_NEED_DATE
         CLP_NEED_FMT
-        CLP_NEED_LOG_SURGEON
         CLP_NEED_LIBARCHIVE
+        CLP_NEED_LOG_SURGEON
         CLP_NEED_LZMA
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
@@ -266,7 +266,6 @@ function(set_clp_s_io_dependencies)
     set_clp_need_flags(
         CLP_NEED_BOOST
         CLP_NEED_FMT
-        CLP_NEED_MSGPACKCXX
         CLP_NEED_SPDLOG
         CLP_NEED_ZSTD
     )
