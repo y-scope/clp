@@ -50,7 +50,6 @@ tasks:
   clean:
     cmds:
       - "rm -rf '{{.G_BUILD_DIR}}'"
-      - task: "clean-webui"
       - task: "clean-python-component"
         vars:
           COMPONENT: "clp-package-utils"
@@ -60,6 +59,7 @@ tasks:
       - task: "clean-python-component"
         vars:
           COMPONENT: "job-orchestration"
+      - task: "clean-webui"
 
   clean-core:
     cmds:
@@ -95,8 +95,8 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
     sources:
-      - "{{.G_BUILD_DIR}}/webui.md5"
       - "{{.G_BUILD_DIR}}/package-venv.md5"
+      - "{{.G_BUILD_DIR}}/webui.md5"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
@@ -117,11 +117,11 @@ tasks:
       - "init"
       - "job-orchestration"
       - "package-venv"
-      - "webui"
       - task: "utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+      - "webui"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
@@ -274,11 +274,11 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "init"
-      - "webui-node-modules"
       - task: "utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+      - "webui-node-modules"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
