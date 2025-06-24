@@ -75,9 +75,10 @@ public:
     /**
      * Writes ranges to a `ZstdCompressor` then clears internal state.
      * @param writer
+     * @param metadata The metadata written to the `ZstdCompressor` returned by reference.
      * @return ErrorCodeSuccess on success or the relevant error code on failure.
      */
-    [[nodiscard]] auto write(ZstdCompressor& writer) -> ErrorCode;
+    [[nodiscard]] auto write(ZstdCompressor& writer, nlohmann::json& metadata) -> ErrorCode;
 
     /**
      * @return true if there are no ranges, false otherwise.

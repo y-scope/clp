@@ -239,6 +239,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 PUBLIC
                 absl::flat_hash_map
                 clp_s::io
+                nlohmann_json::nlohmann_json
                 simdjson::simdjson
                 PRIVATE
                 Boost::url
@@ -247,7 +248,6 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 ${CURL_LIBRARIES}
                 fmt::fmt
                 msgpack-cxx
-                nlohmann_json::nlohmann_json
                 spdlog::spdlog
         )
 endif()
