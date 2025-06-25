@@ -20,7 +20,7 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    RETENTION_DAEMON_COMPONENT_NAME,
+    RETENTION_CLEANER_COMPONENT_NAME,
     StorageType,
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
@@ -580,8 +580,8 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
             )
 
 
-def validate_retention_daemon_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
+def validate_retention_cleaner_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
     try:
         validate_path_could_be_dir(logs_dir)
     except ValueError as ex:
-        raise ValueError(f"{RETENTION_DAEMON_COMPONENT_NAME} logs directory is invalid: {ex}")
+        raise ValueError(f"{RETENTION_CLEANER_COMPONENT_NAME} logs directory is invalid: {ex}")

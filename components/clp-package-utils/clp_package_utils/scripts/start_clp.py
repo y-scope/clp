@@ -30,7 +30,7 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    RETENTION_DAEMON_COMPONENT_NAME,
+    RETENTION_CLEANER_COMPONENT_NAME,
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
@@ -64,7 +64,7 @@ from clp_package_utils.general import (
     validate_redis_config,
     validate_reducer_config,
     validate_results_cache_config,
-    validate_retention_daemon_config,
+    validate_retention_cleaner_config,
     validate_webui_config,
 )
 
@@ -1114,13 +1114,13 @@ def start_reducer(
     logger.info(f"Started {component_name}.")
 
 
-def start_retention_daemon(
+def start_retention_cleaner(
     instance_id: str,
     clp_config: CLPConfig,
     container_clp_config: CLPConfig,
     mounts: CLPDockerMounts,
 ):
-    component_name = RETENTION_DAEMON_COMPONENT_NAME
+    component_name = RETENTION_CLEANER_COMPONENT_NAME
     logger.info(f"Starting {component_name}...")
 
     container_name = f"clp-{component_name}-{instance_id}"
@@ -1133,7 +1133,7 @@ def start_retention_daemon(
         yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
 
     logs_dir = clp_config.logs_directory / component_name
-    validate_retention_daemon_config(clp_config, logs_dir)
+    validate_retention_cleaner_config(clp_config, logs_dir)
 
     logs_dir.mkdir(parents=True, exist_ok=True)
     container_logs_dir = container_clp_config.logs_directory / component_name
@@ -1158,7 +1158,7 @@ def start_retention_daemon(
         f"CLP_HOME={CONTAINER_CLP_HOME}",
         f"CLP_CONFIG_PATH={container_clp_config.logs_directory / container_config_filename}",
         f"CLP_LOGS_DIR={container_logs_dir}",
-        f"CLP_LOGGING_LEVEL={clp_config.retention_daemon.logging_level}",
+        f"CLP_LOGGING_LEVEL={clp_config.retention_cleaner.logging_level}",
     ]
     necessary_mounts = [
         mounts.clp_home,
@@ -1181,12 +1181,12 @@ def start_retention_daemon(
     container_start_cmd.append(clp_config.execution_container)
 
     # fmt: off
-    retention_daemon_cmd = [
+    retention_cleaner_cmd = [
         "python3", "-u",
-        "-m", "job_orchestration.retention.daemon",
+        "-m", "job_orchestration.retention.retention_cleaner",
         "--config", str(container_clp_config.logs_directory / container_config_filename),
     ]
-    cmd = container_start_cmd + retention_daemon_cmd
+    cmd = container_start_cmd + retention_cleaner_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Started {component_name}.")
@@ -1229,7 +1229,7 @@ def main(argv):
     add_num_workers_argument(reducer_server_parser)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
     component_args_parser.add_parser(LOG_VIEWER_WEBUI_COMPONENT_NAME)
-    component_args_parser.add_parser(RETENTION_DAEMON_COMPONENT_NAME)
+    component_args_parser.add_parser(RETENTION_CLEANER_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -1254,7 +1254,7 @@ def main(argv):
             ALL_TARGET_NAME,
             CONTROLLER_TARGET_NAME,
             DB_COMPONENT_NAME,
-            RETENTION_DAEMON_COMPONENT_NAME,
+            RETENTION_CLEANER_COMPONENT_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
             QUERY_SCHEDULER_COMPONENT_NAME,
             WEBUI_COMPONENT_NAME,
@@ -1291,7 +1291,7 @@ def main(argv):
             ALL_TARGET_NAME,
             COMPRESSION_WORKER_COMPONENT_NAME,
             QUERY_WORKER_COMPONENT_NAME,
-            RETENTION_DAEMON_COMPONENT_NAME,
+            RETENTION_CLEANER_COMPONENT_NAME,
         ):
             validate_output_config(clp_config)
 
@@ -1364,8 +1364,8 @@ def main(argv):
             start_webui(instance_id, clp_config, mounts)
         if target in (ALL_TARGET_NAME, LOG_VIEWER_WEBUI_COMPONENT_NAME):
             start_log_viewer_webui(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, RETENTION_DAEMON_COMPONENT_NAME):
-            start_retention_daemon(instance_id, clp_config, container_clp_config, mounts)
+        if target in (ALL_TARGET_NAME, RETENTION_CLEANER_COMPONENT_NAME):
+            start_retention_cleaner(instance_id, clp_config, container_clp_config, mounts)
 
     except Exception as ex:
         if type(ex) == ValueError:

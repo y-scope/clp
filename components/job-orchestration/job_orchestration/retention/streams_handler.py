@@ -85,7 +85,7 @@ async def stream_retention(
     storage_engine = clp_config.package.storage_engine
     validate_storage_type(stream_output_config, storage_engine)
 
-    job_frequency_minutes = clp_config.retention_daemon.job_frequency.streams
+    job_frequency_minutes = clp_config.retention_cleaner.job_frequency.streams
     while True:
         _handle_stream_retention(
             clp_config.logs_directory, stream_output_config, clp_config.results_cache

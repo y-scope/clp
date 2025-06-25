@@ -17,7 +17,7 @@ from clp_py_utils.clp_config import (
     LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
-    RETENTION_DAEMON_COMPONENT_NAME,
+    RETENTION_CLEANER_COMPONENT_NAME,
     S3Config,
     S3Credentials,
     S3Storage,
@@ -119,7 +119,7 @@ def generate_container_auth_options(
     elif component_type in (LOG_VIEWER_WEBUI_COMPONENT_NAME,):
         output_storages_by_component_type = [clp_config.stream_output.storage]
     elif component_type in (
-        RETENTION_DAEMON_COMPONENT_NAME,
+        RETENTION_CLEANER_COMPONENT_NAME,
         QUERY_SCHEDULER_COMPONENT_NAME,
         QUERY_WORKER_COMPONENT_NAME,
     ):

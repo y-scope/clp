@@ -120,7 +120,7 @@ async def archive_retention(
     storage_engine = clp_config.package.storage_engine
     validate_storage_type(archive_output_config, storage_engine)
 
-    job_frequency_minutes = clp_config.retention_daemon.job_frequency.archives
+    job_frequency_minutes = clp_config.retention_cleaner.job_frequency.archives
     while True:
         _handle_archive_retention(
             archive_output_config, storage_engine, clp_config.database, clp_config.logs_directory
