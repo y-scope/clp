@@ -25,7 +25,7 @@ Usage:
   * `--target-encoded-size <size>` specifies the threshold (in bytes) at which archives are split,
     where `size` is the total size of the dictionaries and encoded messages in an archive.
     * This option acts as a soft limit on memory usage for compression, decompression, and search.
-    * This option significantly affects compression ratio.
+    * This option significantly affects compression the ratio.
   * `--structurize-arrays` specifies that arrays should be fully parsed and array entries should be
     encoded into dedicated columns.
   * `--auth <s3|none>` specifies the authentication method that should be used for network requests
