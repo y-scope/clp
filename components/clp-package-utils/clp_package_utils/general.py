@@ -568,9 +568,6 @@ def is_retention_cleaner_required(clp_config: CLPConfig) -> bool:
     if clp_config.archive_output.retention_period is not None:
         return True
 
-    if clp_config.stream_output.retention_period is not None:
-        return True
-
     if clp_config.results_cache.retention_period is not None:
         return True
 

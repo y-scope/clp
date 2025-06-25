@@ -106,9 +106,6 @@
 #    # error will be raised if so.
 #    directory: "var/data/streams"
 #
-#  # Retention period for streams, in minutes. Set to null to disable retention.
-#  retention_period: null
-#
 #  # How large each stream file should be before being split into a new stream file
 #  target_uncompressed_size: 134217728  # 128 MB
 #
@@ -119,7 +116,6 @@
 #  # Frequency (in minutes) at which each retention job runs
 #  job_frequency:
 #    archives: 60
-#    streams: 60
 #    search_results: 30
 #
 ## Location where other data (besides archives) are stored. It will be created if

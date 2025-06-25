@@ -12,14 +12,12 @@ from clp_py_utils.clp_config import (
     FsStorage,
     StorageEngine,
     StorageType,
-    StreamOutput,
 )
 from clp_py_utils.clp_logging import get_logging_formatter, set_logging_level
 from clp_py_utils.s3_utils import s3_delete_objects
 from job_orchestration.retention.constants import MIN_TO_SECONDS
 
 MONGODB_ID_KEY = "_id"
-MONGODB_STREAM_PATH_KEY = "path"
 # TODO: Remove this constant and use the one defined in package once PR939 is merged.
 RESULTS_METADATA_COLLECTION = "results-metadata"
 
@@ -35,7 +33,7 @@ def configure_logger(
 
 
 def validate_storage_type(
-    output_config: Union[StreamOutput, ArchiveOutput], storage_engine: str
+    output_config: ArchiveOutput, storage_engine: str
 ) -> None:
     storage_type = output_config.storage.type
     if StorageType.S3 == storage_type:
@@ -80,7 +78,7 @@ def remove_fs_target(fs_storage_config: FsStorage, target: str) -> None:
         os.remove(path_to_remove)
 
 
-def remove_targets(output_config: Union[ArchiveOutput, StreamOutput], targets: Set[str]) -> None:
+def remove_targets(output_config: ArchiveOutput, targets: Set[str]) -> None:
     storage_config = output_config.storage
     storage_type = storage_config.type
 

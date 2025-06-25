@@ -565,18 +565,11 @@ class ArchiveOutput(BaseModel):
 class StreamOutput(BaseModel):
     storage: Union[StreamFsStorage, StreamS3Storage] = StreamFsStorage()
     target_uncompressed_size: int = 128 * 1024 * 1024
-    retention_period: Optional[int] = None
 
     @validator("target_uncompressed_size")
     def validate_target_uncompressed_size(cls, field):
         if field <= 0:
             raise ValueError("target_uncompressed_size must be greater than 0")
-        return field
-
-    @validator("retention_period")
-    def validate_retention_period(cls, field):
-        if field is not None and field <= 0:
-            raise ValueError("retention_period must be be greater than 0")
         return field
 
     def set_directory(self, directory: pathlib.Path):
@@ -629,7 +622,6 @@ class LogViewerWebUi(BaseModel):
 
 class JobFrequency(BaseModel):
     archives: int = 60
-    streams: int = 60
     search_results: int = 30
 
     class Config:
@@ -841,9 +833,6 @@ class CLPConfig(BaseModel):
         else:
             d["aws_config_directory"] = None
         return d
-
-    # TODO: Considering defining a centralized method under clp config to return a well-formated
-    # retention configuration structure
 
 
 class WorkerConfig(BaseModel):

@@ -16,11 +16,9 @@ from clp_py_utils.core import read_yaml_config_file
 from job_orchestration.retention.archives_handler import archive_retention
 from job_orchestration.retention.constants import (
     ARCHIVES_RETENTION_HANDLER_NAME,
-    SEARCH_RESULTS_RETENTION_HANDLER_NAME,
-    STREAMS_RETENTION_HANDLER_NAME,
+    SEARCH_RESULTS_RETENTION_HANDLER_NAME
 )
 from job_orchestration.retention.search_results_handler import search_results_retention
-from job_orchestration.retention.streams_handler import stream_retention
 from job_orchestration.retention.utils import configure_logger
 from pydantic import ValidationError
 
@@ -58,10 +56,6 @@ async def main(argv: List[str]) -> int:
         SEARCH_RESULTS_RETENTION_HANDLER_NAME: (
             clp_config.results_cache.retention_period,
             search_results_retention,
-        ),
-        STREAMS_RETENTION_HANDLER_NAME: (
-            clp_config.stream_output.retention_period,
-            stream_retention,
         ),
     }
     tasks_handler: List[asyncio.Task[None]] = list()
