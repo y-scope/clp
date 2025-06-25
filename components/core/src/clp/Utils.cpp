@@ -166,11 +166,13 @@ void load_lexer_from_file(
 
     lexer.add_rule(
             lexer.m_symbol_id["newLine"],
-            std::move(std::make_unique<log_surgeon::finite_automata::RegexASTLiteral<
-                              log_surgeon::finite_automata::ByteNfaState>>(
-                    log_surgeon::finite_automata::RegexASTLiteral<
-                            log_surgeon::finite_automata::ByteNfaState>('\n')
-            ))
+            std::move(
+                    std::make_unique<log_surgeon::finite_automata::RegexASTLiteral<
+                            log_surgeon::finite_automata::ByteNfaState>>(
+                            log_surgeon::finite_automata::RegexASTLiteral<
+                                    log_surgeon::finite_automata::ByteNfaState>('\n')
+                    )
+            )
     );
 
     for (auto const& delimiters_ast : schema_ast->m_delimiters) {
@@ -241,7 +243,7 @@ void load_lexer_from_file(
     }
     if (reverse) {
         // TODO: This isn't used anymore for the new search, supporting it here is a waste of time
-        //lexer.generate_reverse();
+        // lexer.generate_reverse();
     } else {
         lexer.generate();
     }
