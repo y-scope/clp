@@ -52,11 +52,13 @@ from clp_package_utils.general import (
     get_clp_home,
     is_container_exited,
     is_container_running,
+    is_retention_cleaner_required,
     load_config_file,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
     validate_db_config,
+    validate_log_directory,
     validate_log_viewer_webui_config,
     validate_logs_input_config,
     validate_output_config,
@@ -65,8 +67,6 @@ from clp_package_utils.general import (
     validate_reducer_config,
     validate_results_cache_config,
     validate_webui_config,
-    validate_log_directory,
-    is_retention_cleaner_required,
 )
 
 logger = logging.getLogger(__file__)
@@ -1125,7 +1125,7 @@ def start_retention_cleaner(
 
     retention_cleaner_required = is_retention_cleaner_required(clp_config)
     if not retention_cleaner_required:
-        logger.info(f"No retention period is configured, skip creating {component_name}...")
+        logger.info(f"No retention period is configured, skipping {component_name}...")
         return
 
     logger.info(f"Starting {component_name}...")
