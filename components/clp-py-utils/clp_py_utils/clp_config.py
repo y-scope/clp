@@ -842,6 +842,8 @@ class CLPConfig(BaseModel):
             d["aws_config_directory"] = None
         return d
 
+    # TODO: Considering defining a centralized method under clp config to return a well-formated
+    # retention configuration structure
 
 class WorkerConfig(BaseModel):
     package: Package = Package()

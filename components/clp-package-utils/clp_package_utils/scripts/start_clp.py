@@ -64,8 +64,9 @@ from clp_package_utils.general import (
     validate_redis_config,
     validate_reducer_config,
     validate_results_cache_config,
-    validate_retention_cleaner_config,
     validate_webui_config,
+    validate_log_directory,
+    is_retention_cleaner_required,
 )
 
 logger = logging.getLogger(__file__)
@@ -1121,6 +1122,12 @@ def start_retention_cleaner(
     mounts: CLPDockerMounts,
 ):
     component_name = RETENTION_CLEANER_COMPONENT_NAME
+
+    retention_cleaner_required = is_retention_cleaner_required(clp_config)
+    if not retention_cleaner_required:
+        logger.info(f"No retention period is configured, skip creating {component_name}...")
+        return
+
     logger.info(f"Starting {component_name}...")
 
     container_name = f"clp-{component_name}-{instance_id}"
@@ -1133,8 +1140,7 @@ def start_retention_cleaner(
         yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
 
     logs_dir = clp_config.logs_directory / component_name
-    validate_retention_cleaner_config(clp_config, logs_dir)
-
+    validate_log_directory(logs_dir, component_name)
     logs_dir.mkdir(parents=True, exist_ok=True)
     container_logs_dir = container_clp_config.logs_directory / component_name
 
