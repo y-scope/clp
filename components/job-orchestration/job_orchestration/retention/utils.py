@@ -20,40 +20,8 @@ from job_orchestration.retention.constants import MIN_TO_SECONDS
 
 MONGODB_ID_KEY = "_id"
 MONGODB_STREAM_PATH_KEY = "path"
-# TODO: consider to make this a shared constant between webui and package scripts
+# TODO: Remove this constant and use the one defined in package once PR939 is merged.
 RESULTS_METADATA_COLLECTION = "results-metadata"
-
-
-def get_expiry_epoch_secs(retention_minutes: int) -> int:
-    return int(time.time() - retention_minutes * MIN_TO_SECONDS)
-
-
-def remove_fs_target(fs_storage_config: FsStorage, relative_path: str) -> None:
-    path_to_remove = fs_storage_config.directory / relative_path
-    if not path_to_remove.exists():
-        return
-
-    if path_to_remove.is_dir():
-        shutil.rmtree(path_to_remove)
-    else:
-        os.remove(path_to_remove)
-
-
-def remove_targets(output_config: Union[ArchiveOutput, StreamOutput], targets: Set[str]) -> None:
-    storage_config = output_config.storage
-    storage_type = storage_config.type
-
-    if StorageType.S3 == storage_type:
-        s3_delete_objects(storage_config.s3_config, targets)
-    elif StorageType.FS == storage_type:
-        for target in targets:
-            remove_fs_target(storage_config, target)
-    else:
-        raise ValueError(f"Unsupported Storage type: {storage_type}")
-
-
-def get_oid_with_expiry_time(expiry_epoch: int) -> ObjectId:
-    return ObjectId.from_datetime(datetime.utcfromtimestamp(expiry_epoch))
 
 
 def configure_logger(
@@ -76,6 +44,38 @@ def validate_storage_type(
                 f"{storage_type} is not supported when using storage engine {storage_engine}"
             )
     elif StorageType.FS != storage_type:
+        raise ValueError(f"Unsupported Storage type: {storage_type}")
+
+
+def get_expiry_epoch_secs(retention_minutes: int) -> int:
+    return int(time.time() - retention_minutes * MIN_TO_SECONDS)
+
+
+def remove_fs_target(fs_storage_config: FsStorage, relative_path: str) -> None:
+    path_to_remove = fs_storage_config.directory / relative_path
+    if not path_to_remove.exists():
+        return
+
+    if path_to_remove.is_dir():
+        shutil.rmtree(path_to_remove)
+    else:
+        os.remove(path_to_remove)
+
+
+def get_oid_with_expiry_time(expiry_epoch_secs: int) -> ObjectId:
+    return ObjectId.from_datetime(datetime.utcfromtimestamp(expiry_epoch_secs))
+
+
+def remove_targets(output_config: Union[ArchiveOutput, StreamOutput], targets: Set[str]) -> None:
+    storage_config = output_config.storage
+    storage_type = storage_config.type
+
+    if StorageType.S3 == storage_type:
+        s3_delete_objects(storage_config.s3_config, targets)
+    elif StorageType.FS == storage_type:
+        for target in targets:
+            remove_fs_target(storage_config, target)
+    else:
         raise ValueError(f"Unsupported Storage type: {storage_type}")
 
 

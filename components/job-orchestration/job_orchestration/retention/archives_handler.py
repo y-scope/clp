@@ -50,7 +50,7 @@ def _remove_expired_archives(
     results = db_cursor.fetchall()
     archive_ids = [result["id"] for result in results]
     if len(archive_ids) != 0:
-        logger.info(f"Deleting {archive_ids}")
+        logger.debug(f"Deleting {archive_ids}")
         delete_archives_from_metadata_db(db_cursor, archive_ids, table_prefix, dataset)
 
         for target in archive_ids:
@@ -74,12 +74,11 @@ def _handle_archive_retention(
     archive_expiry_epoch = SECOND_TO_MILLISECOND * get_expiry_epoch_secs(
         archive_output_config.retention_period
     )
-    logger.info(f"Handler targeting all archives with end_ts < {archive_expiry_epoch}")
 
     clp_connection_param = database_config.get_clp_connection_params_and_type()
     table_prefix = clp_connection_param["table_prefix"]
 
-    recovery_file = clp_logs_directory / f"{HANDLER_NAME}.tmp"
+    recovery_file = clp_logs_directory / f"{ARCHIVES_RETENTION_HANDLER_NAME}.tmp"
     targets_buffer = TargetsBuffer(recovery_file)
 
     sql_adapter = SQL_Adapter(database_config)

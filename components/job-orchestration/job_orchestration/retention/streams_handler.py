@@ -30,13 +30,10 @@ def _handle_stream_retention(
     stream_output_config: StreamOutput,
     results_cache_config: ResultsCache,
 ) -> None:
-    expiry_epoch = get_expiry_epoch_secs(stream_output_config.retention_period)
-    expiry_oid = get_oid_with_expiry_time(expiry_epoch)
+    expiry_epoch_secs = get_expiry_epoch_secs(stream_output_config.retention_period)
+    expiry_oid = get_oid_with_expiry_time(expiry_epoch_secs)
 
-    logger.info(f"Handler targeting all streams < {expiry_epoch}")
-    logger.info(f"Translated to objectID = {expiry_oid}")
-
-    recovery_file = logs_directory / f"{HANDLER_NAME}.tmp"
+    recovery_file = logs_directory / f"{STREAMS_RETENTION_HANDLER_NAME}.tmp"
     targets_buffer = TargetsBuffer(recovery_file)
 
     with pymongo.MongoClient(results_cache_config.get_uri()) as results_cache_client:
@@ -50,6 +47,7 @@ def _handle_stream_retention(
         object_ids_to_delete: List[ObjectId] = list()
 
         for stream in results:
+            logger.debug(f"Deleting {stream.get(MONGODB_STREAM_PATH_KEY)}")
             targets_buffer.add_target(stream.get(MONGODB_STREAM_PATH_KEY))
             object_ids_to_delete.append(stream.get(MONGODB_ID_KEY))
 
