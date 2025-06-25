@@ -119,7 +119,7 @@ bool FileCompressor::compress_file(
     std::string file_name = std::filesystem::canonical(file_to_compress.get_path()).string();
 
     PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
-    Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
+    Profiler::start_fragmented_measurement<Profiler::FragmentedMeasurementIndex::ParseLogFile>();
 
     m_file_reader.open(file_to_compress.get_path());
 
@@ -186,8 +186,7 @@ bool FileCompressor::compress_file(
 
     m_file_reader.close();
 
-    Profiler::stop_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
-    LOG_CONTINUOUS_MEASUREMENT(Profiler::ContinuousMeasurementIndex::ParseLogFile)
+    Profiler::stop_fragmented_measurement<Profiler::FragmentedMeasurementIndex::ParseLogFile>();
     PROFILER_SPDLOG_INFO("Done parsing {}", file_name)
 
     return succeeded;
