@@ -9,7 +9,6 @@ from clp_py_utils.clp_config import (
     COLUMN_METADATA_TABLE_SUFFIX,
     DATASETS_TABLE_SUFFIX,
     FILES_TABLE_SUFFIX,
-    StorageType,
     TAGS_TABLE_SUFFIX,
 )
 
@@ -145,7 +144,6 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
         f"""
         CREATE TABLE IF NOT EXISTS `{datasets_table_name}` (
             `name` VARCHAR(255) NOT NULL,
-            `archive_storage_type` VARCHAR(64) NOT NULL,
             `archive_storage_directory` VARCHAR(4096) NOT NULL,
             PRIMARY KEY (`name`)
         )
@@ -158,7 +156,6 @@ def add_dataset(
     db_cursor,
     table_prefix: str,
     dataset_name: str,
-    archive_storage_type: StorageType,
     dataset_archive_storage_directory: Path,
 ) -> None:
     """
@@ -169,17 +166,16 @@ def add_dataset(
     :param db_cursor: The database cursor to execute the table row insertion.
     :param table_prefix: A string to prepend to the table name.
     :param dataset_name:
-    :param archive_storage_type:
     :param dataset_archive_storage_directory:
     """
     datasets_table_name = get_datasets_table_name(table_prefix)
     query = f"""INSERT INTO `{datasets_table_name}`
-                (name, archive_storage_type, archive_storage_directory)
-                VALUES (%s, %s, %s)
+                (name, archive_storage_directory)
+                VALUES (%s, %s)
                 """
     db_cursor.execute(
         query,
-        (dataset_name, archive_storage_type, str(dataset_archive_storage_directory / dataset_name)),
+        (dataset_name, str(dataset_archive_storage_directory / dataset_name)),
     )
     create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
     db_conn.commit()
