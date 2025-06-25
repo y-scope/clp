@@ -10,7 +10,7 @@ from clp_py_utils.clp_config import (
     StreamOutput,
 )
 from clp_py_utils.clp_logging import get_logger
-from clp_py_utils.constants import MIN_TO_SECONDS
+from job_orchestration.retention.constants import MIN_TO_SECONDS, STREAMS_RETENTION_HANDLER_NAME
 from job_orchestration.retention.utils import (
     configure_logger,
     get_expiry_epoch_secs,
@@ -22,8 +22,7 @@ from job_orchestration.retention.utils import (
     validate_storage_type,
 )
 
-HANDLER_NAME = "streams_retention_handler"
-logger = get_logger(HANDLER_NAME)
+logger = get_logger(STREAMS_RETENTION_HANDLER_NAME)
 
 
 def _handle_stream_retention(
@@ -82,20 +81,13 @@ def _handle_stream_retention(
 async def stream_retention(
     clp_config: CLPConfig, log_directory: pathlib, logging_level: str
 ) -> None:
-    configure_logger(logger, logging_level, log_directory, HANDLER_NAME)
+    configure_logger(logger, logging_level, log_directory, STREAMS_RETENTION_HANDLER_NAME)
 
-    job_frequency_minutes = clp_config.retention_daemon.job_frequency.streams
-    streams_retention_period = clp_config.stream_output.retention_period
-    if streams_retention_period is None:
-        logger.info("Stream retention period is not specified, terminate")
-        return
-    if job_frequency_minutes is None:
-        logger.info("Job frequency is not specified, terminate")
-
-    stream_output_config: StreamOutput = clp_config.stream_output
-    storage_engine: str = clp_config.package.storage_engine
+    stream_output_config = clp_config.stream_output
+    storage_engine = clp_config.package.storage_engine
     validate_storage_type(stream_output_config, storage_engine)
 
+    job_frequency_minutes = clp_config.retention_daemon.job_frequency.streams
     while True:
         _handle_stream_retention(
             clp_config.logs_directory, stream_output_config, clp_config.results_cache

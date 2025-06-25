@@ -6,7 +6,7 @@ import logging
 import os
 import sys
 from pathlib import Path
-from typing import List
+from typing import Callable, Dict, List, Optional, Tuple
 
 from clp_py_utils.clp_config import (
     CLPConfig,
@@ -15,6 +15,11 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
 from job_orchestration.retention.archives_handler import archive_retention
+from job_orchestration.retention.constants import (
+    ARCHIVES_RETENTION_HANDLER_NAME,
+    SEARCH_RESULTS_RETENTION_HANDLER_NAME,
+    STREAMS_RETENTION_HANDLER_NAME,
+)
 from job_orchestration.retention.search_results_handler import search_results_retention
 from job_orchestration.retention.streams_handler import stream_retention
 from pydantic import ValidationError
@@ -53,29 +58,36 @@ async def main(argv: List[str]) -> int:
         logger.error(ex)
         return 1
 
-    retention_tasks = []
+    retention_tasks: Dict[str, Tuple[Optional[int], Callable]] = {
+        ARCHIVES_RETENTION_HANDLER_NAME: (
+            clp_config.archive_output.retention_period,
+            archive_retention,
+        ),
+        SEARCH_RESULTS_RETENTION_HANDLER_NAME: (
+            clp_config.results_cache.retention_period,
+            search_results_retention,
+        ),
+        STREAMS_RETENTION_HANDLER_NAME: (
+            clp_config.stream_output.retention_period,
+            stream_retention,
+        ),
+    }
+    tasks_handler: List[asyncio.Task[None]] = list()
 
-    archive_retention_handle = asyncio.create_task(
-        archive_retention(clp_config, logs_directory, logging_level), name="archive_retention"
-    )
-    retention_tasks.append(archive_retention_handle)
+    for task_name, (retention_period, task_method) in retention_tasks.items():
+        if retention_period is not None:
+            logger.info(f"Creating {task_name} task with retention = {retention_period} minutes")
+            archive_retention_handle = asyncio.create_task(
+                task_method(clp_config, logs_directory, logging_level), name=task_name
+            )
+            tasks_handler.append(archive_retention_handle)
+        else:
+            logger.info(f"Skip creating {task_name} task.")
 
-    streams_retention_handle = asyncio.create_task(
-        stream_retention(clp_config, logs_directory, logging_level), name="stream_retention"
-    )
-    retention_tasks.append(streams_retention_handle)
-
-    search_results_retention_handle = asyncio.create_task(
-        search_results_retention(clp_config, logs_directory, logging_level),
-        name="search_results_retention",
-    )
-    retention_tasks.append(search_results_retention_handle)
-
-    while retention_tasks:
-        done, pending = await asyncio.wait(retention_tasks, return_when=asyncio.FIRST_COMPLETED)
-
+    while tasks_handler:
+        done, pending = await asyncio.wait(tasks_handler, return_when=asyncio.FIRST_COMPLETED)
         for task in done:
-            retention_tasks.remove(task)
+            tasks_handler.remove(task)
             task_name = task.get_name()
             try:
                 _ = task.result()

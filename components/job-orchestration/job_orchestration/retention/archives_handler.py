@@ -1,7 +1,7 @@
 import asyncio
 import pathlib
 from contextlib import closing
-from typing import List, Optional
+from typing import Optional
 
 from clp_py_utils.clp_config import ArchiveOutput, CLPConfig, Database, StorageEngine
 from clp_py_utils.clp_logging import get_logger
@@ -10,8 +10,12 @@ from clp_py_utils.clp_metadata_db_utils import (
     fetch_existing_datasets,
     get_archives_table_name,
 )
-from clp_py_utils.constants import MIN_TO_SECONDS, SECOND_TO_MILLISECOND
 from clp_py_utils.sql_adapter import SQL_Adapter
+from job_orchestration.retention.constants import (
+    ARCHIVES_RETENTION_HANDLER_NAME,
+    MIN_TO_SECONDS,
+    SECOND_TO_MILLISECOND,
+)
 from job_orchestration.retention.utils import (
     configure_logger,
     get_expiry_epoch_secs,
@@ -20,8 +24,7 @@ from job_orchestration.retention.utils import (
     validate_storage_type,
 )
 
-HANDLER_NAME = "archive_retention_handler"
-logger = get_logger(HANDLER_NAME)
+logger = get_logger(ARCHIVES_RETENTION_HANDLER_NAME)
 
 
 def _remove_expired_archives(
@@ -45,7 +48,7 @@ def _remove_expired_archives(
     )
 
     results = db_cursor.fetchall()
-    archive_ids: List[str] = [result["id"] for result in results]
+    archive_ids = [result["id"] for result in results]
     if len(archive_ids) != 0:
         logger.info(f"Deleting {archive_ids}")
         delete_archives_from_metadata_db(db_cursor, archive_ids, table_prefix, dataset)
@@ -112,21 +115,13 @@ def _handle_archive_retention(
 async def archive_retention(
     clp_config: CLPConfig, log_directory: pathlib, logging_level: str
 ) -> None:
-    configure_logger(logger, logging_level, log_directory, HANDLER_NAME)
+    configure_logger(logger, logging_level, log_directory, ARCHIVES_RETENTION_HANDLER_NAME)
 
-    job_frequency_minutes = clp_config.retention_daemon.job_frequency.archives
-    archive_retention_period = clp_config.archive_output.retention_period
-    if archive_retention_period is None:
-        logger.info("Archive retention period is not specified, terminate.")
-        return
-    if job_frequency_minutes is None:
-        logger.info("Job frequency is not specified, terminate.")
-        return
-
-    archive_output_config: ArchiveOutput = clp_config.archive_output
-    storage_engine: str = clp_config.package.storage_engine
+    archive_output_config = clp_config.archive_output
+    storage_engine = clp_config.package.storage_engine
     validate_storage_type(archive_output_config, storage_engine)
 
+    job_frequency_minutes = clp_config.retention_daemon.job_frequency.archives
     while True:
         _handle_archive_retention(
             archive_output_config, storage_engine, clp_config.database, clp_config.logs_directory

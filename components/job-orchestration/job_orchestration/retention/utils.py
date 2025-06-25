@@ -15,8 +15,8 @@ from clp_py_utils.clp_config import (
     StreamOutput,
 )
 from clp_py_utils.clp_logging import get_logging_formatter, set_logging_level
-from clp_py_utils.constants import MIN_TO_SECONDS
 from clp_py_utils.s3_utils import s3_delete_objects
+from job_orchestration.retention.constants import MIN_TO_SECONDS
 
 MONGODB_ID_KEY = "_id"
 MONGODB_STREAM_PATH_KEY = "path"

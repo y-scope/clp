@@ -637,6 +637,13 @@ class JobFrequency(BaseModel):
     class Config:
         extra = "forbid"
 
+    @root_validator
+    def validate_job_frequencies(cls, values):
+        for field, value in values.items():
+            if value <= 0:
+                raise ValueError(f"Job frequency of {field} must be greater than 0")
+        return values
+
 
 class RetentionDaemon(BaseModel):
     logging_level: str = "INFO"
