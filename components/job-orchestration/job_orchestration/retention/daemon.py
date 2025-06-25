@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
+import asyncio
 import logging
 import os
 import sys
@@ -13,13 +14,16 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
-from job_orchestration.retention.archives_handler import archive_retention_entry
+from job_orchestration.retention.archives_handler import archive_retention
+from job_orchestration.retention.search_results_handler import search_results_retention
+from job_orchestration.retention.streams_handler import stream_retention
 from pydantic import ValidationError
 
 logger = get_logger(RETENTION_DAEMON_COMPONENT_NAME)
 
 
-def main(argv: List[str]) -> int:
+async def main(argv: List[str]) -> int:
+
     args_parser = argparse.ArgumentParser(
         description=f"Spin up the {RETENTION_DAEMON_COMPONENT_NAME}."
     )
@@ -49,20 +53,39 @@ def main(argv: List[str]) -> int:
         logger.error(ex)
         return 1
 
-    # fmt: off
-    archive_retention_period = clp_config.archive_output.retention_period
-    logger.info(f"Archive retention period: {archive_retention_period}")
-    stream_retention_period = clp_config.stream_output.retention_period
-    logger.info(f"Stream retention period: {stream_retention_period}")
-    results_cache_retention_period = clp_config.results_cache.retention_period
-    logger.info(f"Results cache retention period: {results_cache_retention_period}")
+    retention_tasks = []
 
-    archive_retention_entry(clp_config, logs_directory, logging_level)
+    archive_retention_handle = asyncio.create_task(
+        archive_retention(clp_config, logs_directory, logging_level), name="archive_retention"
+    )
+    retention_tasks.append(archive_retention_handle)
 
-    logger.info("reducer terminated")
+    streams_retention_handle = asyncio.create_task(
+        stream_retention(clp_config, logs_directory, logging_level), name="stream_retention"
+    )
+    retention_tasks.append(streams_retention_handle)
 
+    search_results_retention_handle = asyncio.create_task(
+        search_results_retention(clp_config, logs_directory, logging_level),
+        name="search_results_retention",
+    )
+    retention_tasks.append(search_results_retention_handle)
+
+    while retention_tasks:
+        done, pending = await asyncio.wait(retention_tasks, return_when=asyncio.FIRST_COMPLETED)
+
+        for task in done:
+            retention_tasks.remove(task)
+            task_name = task.get_name()
+            try:
+                _ = task.result()
+                logger.info(f"Task {task_name} terminated without error.")
+            except Exception as e:
+                logger.error(f"Task {task_name} failed with error: {e}", exc_info=True)
+
+    logger.info(f"No retention tasks are running, daemon terminates.")
     return 0
 
 
 if "__main__" == __name__:
-    sys.exit(main(sys.argv))
+    sys.exit(asyncio.run(main(sys.argv)))

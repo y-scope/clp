@@ -1,6 +1,5 @@
-import logging
+import asyncio
 import pathlib
-import time
 from typing import List
 
 import pymongo
@@ -10,7 +9,8 @@ from clp_py_utils.clp_config import (
     ResultsCache,
     StreamOutput,
 )
-from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
+from clp_py_utils.clp_logging import get_logger
+from clp_py_utils.constants import MIN_TO_SECONDS
 from job_orchestration.retention.utils import (
     configure_logger,
     get_expiry_epoch_secs,
@@ -26,7 +26,7 @@ HANDLER_NAME = "streams_retention_handler"
 logger = get_logger(HANDLER_NAME)
 
 
-def handle_stream_retention(
+def _handle_stream_retention(
     logs_directory: pathlib.Path,
     stream_output_config: StreamOutput,
     results_cache_config: ResultsCache,
@@ -79,17 +79,17 @@ def handle_stream_retention(
     return
 
 
-def stream_retention_entry(
+async def stream_retention(
     clp_config: CLPConfig, log_directory: pathlib, logging_level: str
 ) -> None:
     configure_logger(logger, logging_level, log_directory, HANDLER_NAME)
 
-    job_frequency_secs = clp_config.retention_daemon.job_frequency.streams
+    job_frequency_minutes = clp_config.retention_daemon.job_frequency.streams
     streams_retention_period = clp_config.stream_output.retention_period
     if streams_retention_period is None:
         logger.info("Stream retention period is not specified, terminate")
         return
-    if job_frequency_secs is None:
+    if job_frequency_minutes is None:
         logger.info("Job frequency is not specified, terminate")
 
     stream_output_config: StreamOutput = clp_config.stream_output
@@ -97,7 +97,7 @@ def stream_retention_entry(
     validate_storage_type(stream_output_config, storage_engine)
 
     while True:
-        handle_stream_retention(
+        _handle_stream_retention(
             clp_config.logs_directory, stream_output_config, clp_config.results_cache
         )
-        time.sleep(job_frequency_secs)
+        await asyncio.sleep(job_frequency_minutes * MIN_TO_SECONDS)

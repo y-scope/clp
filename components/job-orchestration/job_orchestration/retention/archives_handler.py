@@ -1,11 +1,10 @@
-import logging
+import asyncio
 import pathlib
-import time
 from contextlib import closing
 from typing import List, Optional
 
 from clp_py_utils.clp_config import ArchiveOutput, CLPConfig, Database, StorageEngine
-from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
+from clp_py_utils.clp_logging import get_logger
 from clp_py_utils.clp_metadata_db_utils import (
     delete_archives_from_metadata_db,
     fetch_existing_datasets,
@@ -25,7 +24,7 @@ HANDLER_NAME = "archive_retention_handler"
 logger = get_logger(HANDLER_NAME)
 
 
-def archive_retention_helper(
+def _remove_expired_archives(
     db_conn,
     db_cursor,
     table_prefix: str,
@@ -63,7 +62,7 @@ def archive_retention_helper(
     targets_buffer.flush()
 
 
-def handle_archive_retention(
+def _handle_archive_retention(
     archive_output_config: ArchiveOutput,
     storage_engine: str,
     database_config: Database,
@@ -72,23 +71,22 @@ def handle_archive_retention(
     archive_expiry_epoch = SECOND_TO_MILLISECOND * get_expiry_epoch_secs(
         archive_output_config.retention_period
     )
-
     logger.info(f"Handler targeting all archives with end_ts < {archive_expiry_epoch}")
-    sql_adapter = SQL_Adapter(database_config)
+
     clp_connection_param = database_config.get_clp_connection_params_and_type()
     table_prefix = clp_connection_param["table_prefix"]
 
     recovery_file = clp_logs_directory / f"{HANDLER_NAME}.tmp"
     targets_buffer = TargetsBuffer(recovery_file)
 
-    logger.info("mysql cursor starts")
+    sql_adapter = SQL_Adapter(database_config)
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
         if StorageEngine.CLP_S == storage_engine:
             datasets = fetch_existing_datasets(db_cursor, table_prefix)
             for dataset in datasets:
-                archive_retention_helper(
+                _remove_expired_archives(
                     db_conn,
                     db_cursor,
                     table_prefix,
@@ -98,7 +96,7 @@ def handle_archive_retention(
                     dataset,
                 )
         elif StorageEngine.CLP == storage_engine:
-            archive_retention_helper(
+            _remove_expired_archives(
                 db_conn,
                 db_cursor,
                 table_prefix,
@@ -111,7 +109,7 @@ def handle_archive_retention(
             raise ValueError(f"Unsupported Storage engine: {storage_engine}")
 
 
-def archive_retention_entry(
+async def archive_retention(
     clp_config: CLPConfig, log_directory: pathlib, logging_level: str
 ) -> None:
     configure_logger(logger, logging_level, log_directory, HANDLER_NAME)
@@ -119,10 +117,10 @@ def archive_retention_entry(
     job_frequency_minutes = clp_config.retention_daemon.job_frequency.archives
     archive_retention_period = clp_config.archive_output.retention_period
     if archive_retention_period is None:
-        logger.info("Archive retention period is not specified, terminate")
+        logger.info("Archive retention period is not specified, terminate.")
         return
     if job_frequency_minutes is None:
-        logger.info("Job frequency is not specified, terminate")
+        logger.info("Job frequency is not specified, terminate.")
         return
 
     archive_output_config: ArchiveOutput = clp_config.archive_output
@@ -130,7 +128,7 @@ def archive_retention_entry(
     validate_storage_type(archive_output_config, storage_engine)
 
     while True:
-        handle_archive_retention(
+        _handle_archive_retention(
             archive_output_config, storage_engine, clp_config.database, clp_config.logs_directory
         )
-        time.sleep(job_frequency_minutes * MIN_TO_SECONDS)
+        await asyncio.sleep(job_frequency_minutes * MIN_TO_SECONDS)
