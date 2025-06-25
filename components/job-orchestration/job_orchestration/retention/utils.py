@@ -48,11 +48,29 @@ def validate_storage_type(
 
 
 def get_expiry_epoch_secs(retention_minutes: int) -> int:
+    """
+    returns the expiry epoch, calculated as `expiry_epoch = cur_time - retention_secs`.
+    :param: retention_minutes: Retention period in minutes.
+
+    :return: The epoch of the expiry time.
+    """
     return int(time.time() - retention_minutes * MIN_TO_SECONDS)
 
 
-def remove_fs_target(fs_storage_config: FsStorage, relative_path: str) -> None:
-    path_to_remove = fs_storage_config.directory / relative_path
+def get_oid_with_expiry_time(expiry_epoch_secs: int) -> ObjectId:
+    return ObjectId.from_datetime(datetime.utcfromtimestamp(expiry_epoch_secs))
+
+
+def remove_fs_target(fs_storage_config: FsStorage, target: str) -> None:
+    """
+    Removes a file or directory from the filesystem storage. The full path to the target is
+    constructed as `fs_storage_config.directory`+ target`.
+    Note: The function does nothing if the target does not exist.
+
+    :param fs_storage_config:
+    :param target: Relative path of the file or directory to remove.
+    """
+    path_to_remove = fs_storage_config.directory / target
     if not path_to_remove.exists():
         return
 
@@ -60,10 +78,6 @@ def remove_fs_target(fs_storage_config: FsStorage, relative_path: str) -> None:
         shutil.rmtree(path_to_remove)
     else:
         os.remove(path_to_remove)
-
-
-def get_oid_with_expiry_time(expiry_epoch_secs: int) -> ObjectId:
-    return ObjectId.from_datetime(datetime.utcfromtimestamp(expiry_epoch_secs))
 
 
 def remove_targets(output_config: Union[ArchiveOutput, StreamOutput], targets: Set[str]) -> None:
@@ -80,6 +94,16 @@ def remove_targets(output_config: Union[ArchiveOutput, StreamOutput], targets: S
 
 
 class TargetsBuffer:
+    """
+    A class representing an in-memory buffer for targets with fault-tolerance support.
+    This class support recovering from a previous failure by reading previously persisted targets
+    from a recovery file. The user is expected to explicitly call `persists_new_targets` to persist
+    any new targets on to the disk for fault-tolerance purposes.
+
+    :param recovery_file_path: Path to the file used for recovering and persisting targets.
+    :raises ValueError: If the recovery path exists but is not a file.
+    """
+
     def __init__(self, recovery_file_path: pathlib.Path):
         self._recovery_file_path: pathlib.Path = recovery_file_path
         self._targets: Set[str] = set()
@@ -104,6 +128,9 @@ class TargetsBuffer:
         return self._targets
 
     def persists_new_targets(self) -> None:
+        """
+        Writes any new targets added since initialization to the recovery file.
+        """
         if len(self._targets_to_persist) == 0:
             return
 
@@ -114,6 +141,11 @@ class TargetsBuffer:
         self._targets_to_persist.clear()
 
     def flush(self):
+        """
+        Clear the in-memory buffer of targets and remove the recovery file.
+        This is intended to be called after the caller finishing processing all targets (i.e. when
+        recovery is no longer needed for the targets.)
+        """
         self._targets.clear()
         if self._recovery_file_path.exists():
             os.unlink(self._recovery_file_path)

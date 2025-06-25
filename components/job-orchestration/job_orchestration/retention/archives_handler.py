@@ -36,7 +36,6 @@ def _remove_expired_archives(
     archive_output_config: ArchiveOutput,
     dataset: Optional[str],
 ):
-    # Remove all archives
     archives_table = get_archives_table_name(table_prefix, dataset)
     db_cursor.execute(
         f"""
