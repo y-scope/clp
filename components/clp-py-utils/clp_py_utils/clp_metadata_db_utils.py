@@ -163,6 +163,28 @@ def fetch_existing_datasets(
     return {row["name"] for row in rows}
 
 
+def validate_dataset(
+    db_cursor,
+    table_prefix: str,
+    dataset: str,
+    existing_datasets: Set[str] | None = None,
+) -> bool:
+    """
+    Checks if a dataset currently exists in the metadata or in the local dataset cache.
+
+    :param db_cursor:
+    :param table_prefix:
+    :param dataset: The dataset to validate.
+    :param existing_datasets: Returns a refreshed cache of dataset names fetched from the metadata
+                              if the current cache doesn not contain the provided dataset and a
+                              lookup is required.
+    """
+    if existing_datasets is not None and dataset in existing_datasets:
+        return True
+    existing_datasets = fetch_existing_datasets(db_cursor, table_prefix)
+    return dataset in existing_datasets
+
+
 def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None = None) -> None:
     """
     Creates the standard set of tables for CLP's metadata.
