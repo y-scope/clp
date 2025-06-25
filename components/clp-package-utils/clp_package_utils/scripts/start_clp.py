@@ -875,7 +875,7 @@ def start_webui(
         "MongoDbSearchResultsMetadataCollectionName": clp_config.webui.results_metadata_collection_name,
         "SqlDbClpArchivesTableName": f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}",
         "SqlDbClpFilesTableName": f"{table_prefix}{FILES_TABLE_SUFFIX}",
-        "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME
+        "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
     }
     client_settings_json = read_and_update_settings_json(
         client_settings_json_path, client_settings_json_updates
