@@ -32,9 +32,7 @@ def configure_logger(
     set_logging_level(logger, logging_level)
 
 
-def validate_storage_type(
-    output_config: ArchiveOutput, storage_engine: str
-) -> None:
+def validate_storage_type(output_config: ArchiveOutput, storage_engine: str) -> None:
     storage_type = output_config.storage.type
     if StorageType.S3 == storage_type:
         if StorageEngine.CLP_S != storage_engine:

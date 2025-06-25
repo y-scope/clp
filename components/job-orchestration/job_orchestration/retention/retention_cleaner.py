@@ -16,7 +16,7 @@ from clp_py_utils.core import read_yaml_config_file
 from job_orchestration.retention.archives_handler import archive_retention
 from job_orchestration.retention.constants import (
     ARCHIVES_RETENTION_HANDLER_NAME,
-    SEARCH_RESULTS_RETENTION_HANDLER_NAME
+    SEARCH_RESULTS_RETENTION_HANDLER_NAME,
 )
 from job_orchestration.retention.search_results_handler import search_results_retention
 from job_orchestration.retention.utils import configure_logger
