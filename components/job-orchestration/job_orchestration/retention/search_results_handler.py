@@ -9,7 +9,8 @@ from bson import ObjectId
 from clp_py_utils.clp_config import CLPConfig, ResultsCache
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from job_orchestration.retention.utils import (
-    get_target_time,
+    configure_logger,
+    get_expiry_epoch_secs,
     MONGODB_ID_KEY,
     RESULTS_METADATA_COLLECTION,
 )
@@ -36,11 +37,10 @@ def remove_result_metadata(database: pymongo.database.Database, collection_name:
 
 
 def handle_search_results_retention(result_cache_config: ResultsCache):
-    expiry_ts = get_target_time(result_cache_config.retention_period)
-    logger.info(f"Handler targeting all search results < {expiry_ts}")
+    expiry_epoch = get_expiry_epoch_secs(result_cache_config.retention_period)
+    logger.info(f"Handler targeting all search results < {expiry_epoch}")
 
-    results_cache_uri = result_cache_config.get_uri()
-    with pymongo.MongoClient(results_cache_uri) as results_cache_client:
+    with pymongo.MongoClient(result_cache_config.get_uri()) as results_cache_client:
         results_cache_db = results_cache_client.get_default_database()
         collection_names: List[str] = results_cache_db.list_collection_names()
         for collection_name in collection_names:
@@ -51,20 +51,24 @@ def handle_search_results_retention(result_cache_config: ResultsCache):
             collection_stub = find_collection_stub(collection)
 
             logger.info(f"Collection stub: {collection_name}, {collection_stub}")
-            if collection_stub < expiry_ts:
+            if collection_stub < expiry_epoch:
                 logger.debug(f"Removing collection: {collection_name}")
                 remove_result_metadata(results_cache_db, collection_name)
                 collection.drop()
 
 
 def search_results_retention_entry(
-    clp_config: CLPConfig, job_frequency_secs: int, log_directory: pathlib, logging_level: str
+    clp_config: CLPConfig, log_directory: pathlib, logging_level: str
 ) -> None:
-    log_file = log_directory / f"{HANDLER_NAME}.log"
-    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
-    logging_file_handler.setFormatter(get_logging_formatter())
-    logger.addHandler(logging_file_handler)
-    set_logging_level(logger, logging_level)
+    configure_logger(logger, logging_level, log_directory, HANDLER_NAME)
+
+    job_frequency_secs = clp_config.retention_daemon.job_frequency.search_results
+    search_results_retention_period = clp_config.results_cache.retention_period
+    if search_results_retention_period is None:
+        logger.info("Search results retention period is not specified, terminate")
+        return
+    if job_frequency_secs is None:
+        logger.info("Job frequency is not specified, terminate")
 
     while True:
         handle_search_results_retention(clp_config.results_cache)

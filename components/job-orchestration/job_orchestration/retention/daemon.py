@@ -57,7 +57,7 @@ def main(argv: List[str]) -> int:
     results_cache_retention_period = clp_config.results_cache.retention_period
     logger.info(f"Results cache retention period: {results_cache_retention_period}")
 
-    archive_retention_entry(clp_config, 30, logs_directory, logging_level)
+    archive_retention_entry(clp_config, logs_directory, logging_level)
 
     logger.info("reducer terminated")
 

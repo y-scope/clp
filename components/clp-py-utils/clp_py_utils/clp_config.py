@@ -630,7 +630,9 @@ class LogViewerWebUi(BaseModel):
 
 
 class JobFrequency(BaseModel):
-    archive_retention: int = 5
+    archives: int = 1
+    streams: int = 1
+    search_results: int = 1
 
     class Config:
         extra = "forbid"

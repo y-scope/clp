@@ -8,18 +8,18 @@ from bson import ObjectId
 from clp_py_utils.clp_config import (
     CLPConfig,
     ResultsCache,
-    StorageEngine,
-    StorageType,
     StreamOutput,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from job_orchestration.retention.utils import (
+    configure_logger,
+    get_expiry_epoch_secs,
     get_oid_with_expiry_time,
-    get_target_time,
     MONGODB_ID_KEY,
     MONGODB_STREAM_PATH_KEY,
     remove_targets,
     TargetsBuffer,
+    validate_storage_type,
 )
 
 HANDLER_NAME = "streams_retention_handler"
@@ -31,17 +31,16 @@ def handle_stream_retention(
     stream_output_config: StreamOutput,
     results_cache_config: ResultsCache,
 ) -> None:
-    expiry_time = get_target_time(stream_output_config.retention_period)
-    expiry_oid = get_oid_with_expiry_time(expiry_time)
+    expiry_epoch = get_expiry_epoch_secs(stream_output_config.retention_period)
+    expiry_oid = get_oid_with_expiry_time(expiry_epoch)
 
-    logger.info(f"Handler targeting all streams < {expiry_time}")
+    logger.info(f"Handler targeting all streams < {expiry_epoch}")
     logger.info(f"Translated to objectID = {expiry_oid}")
 
-    recovery_file = logs_directory / "stream_retention.tmp"
+    recovery_file = logs_directory / f"{HANDLER_NAME}.tmp"
     targets_buffer = TargetsBuffer(recovery_file)
 
-    results_cache_uri = results_cache_config.get_uri()
-    with pymongo.MongoClient(results_cache_uri) as results_cache_client:
+    with pymongo.MongoClient(results_cache_config.get_uri()) as results_cache_client:
         results_cache_db = results_cache_client.get_default_database()
         stream_collection = results_cache_db.get_collection(
             results_cache_config.stream_collection_name
@@ -81,25 +80,21 @@ def handle_stream_retention(
 
 
 def stream_retention_entry(
-    clp_config: CLPConfig, job_frequency_secs: int, log_directory: pathlib, logging_level: str
+    clp_config: CLPConfig, log_directory: pathlib, logging_level: str
 ) -> None:
-    log_file = log_directory / f"{HANDLER_NAME}.log"
-    logging_file_handler = logging.FileHandler(filename=log_file, encoding="utf-8")
-    logging_file_handler.setFormatter(get_logging_formatter())
-    logger.addHandler(logging_file_handler)
-    set_logging_level(logger, logging_level)
+    configure_logger(logger, logging_level, log_directory, HANDLER_NAME)
 
-    stream_output_config = clp_config.stream_output
-    storage_type = stream_output_config.storage.type
+    job_frequency_secs = clp_config.retention_daemon.job_frequency.streams
+    streams_retention_period = clp_config.stream_output.retention_period
+    if streams_retention_period is None:
+        logger.info("Stream retention period is not specified, terminate")
+        return
+    if job_frequency_secs is None:
+        logger.info("Job frequency is not specified, terminate")
 
-    if StorageType.S3 == storage_type:
-        storage_engine = clp_config.package.storage_engine
-        if StorageEngine.CLP_S != storage_engine:
-            raise ValueError(
-                f"{storage_type} is not supported when using storage engine {storage_engine}"
-            )
-    elif StorageType.FS != storage_type:
-        raise ValueError(f"Unsupported Storage type: {storage_type}")
+    stream_output_config: StreamOutput = clp_config.stream_output
+    storage_engine: str = clp_config.package.storage_engine
+    validate_storage_type(stream_output_config, storage_engine)
 
     while True:
         handle_stream_retention(

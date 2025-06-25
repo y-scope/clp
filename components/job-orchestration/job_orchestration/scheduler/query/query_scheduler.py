@@ -44,7 +44,7 @@ from clp_py_utils.clp_metadata_db_utils import (
     get_files_table_name,
     get_tags_table_name,
 )
-from clp_py_utils.constants import MIN_TO_SECOND, SECOND_TO_MILLISECOND
+from clp_py_utils.constants import MIN_TO_SECONDS, SECOND_TO_MILLISECOND
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -699,7 +699,7 @@ def handle_pending_query_jobs(
                 retention_target_msecs: Optional[int] = None
                 if archive_retention_period is not None:
                     retention_target_msecs = SECOND_TO_MILLISECOND * (
-                        job_creation_time - archive_retention_period * MIN_TO_SECOND
+                        job_creation_time - archive_retention_period * MIN_TO_SECONDS
                     )
 
                 archives_for_search = get_archives_for_search(
