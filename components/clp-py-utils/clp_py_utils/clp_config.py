@@ -293,7 +293,7 @@ class ResultsCache(BaseModel):
     port: int = 27017
     db_name: str = "clp-query-results"
     stream_collection_name: str = "stream-files"
-    retention_period: Optional[int] = 10
+    retention_period: Optional[int] = None
 
     @validator("host")
     def validate_host(cls, field):
@@ -512,8 +512,7 @@ class ArchiveOutput(BaseModel):
     target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB
     target_segment_size: int = 256 * 1024 * 1024  # 256 MB
     compression_level: int = 3
-    # Retention period in minutes
-    retention_period: Optional[int] = 10
+    retention_period: Optional[int] = None
 
     @validator("target_archive_size")
     def validate_target_archive_size(cls, field):
@@ -566,8 +565,7 @@ class ArchiveOutput(BaseModel):
 class StreamOutput(BaseModel):
     storage: Union[StreamFsStorage, StreamS3Storage] = StreamFsStorage()
     target_uncompressed_size: int = 128 * 1024 * 1024
-    # Retention period in minutes
-    retention_period: Optional[int] = 10
+    retention_period: Optional[int] = None
 
     @validator("target_uncompressed_size")
     def validate_target_uncompressed_size(cls, field):
@@ -630,9 +628,9 @@ class LogViewerWebUi(BaseModel):
 
 
 class JobFrequency(BaseModel):
-    archives: int = 1
-    streams: int = 1
-    search_results: int = 1
+    archives: int = 60
+    streams: int = 60
+    search_results: int = 30
 
     class Config:
         extra = "forbid"

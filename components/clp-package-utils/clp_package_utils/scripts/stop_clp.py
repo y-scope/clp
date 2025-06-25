@@ -137,7 +137,9 @@ def main(argv):
         force = parsed_args.force
         if target in (ALL_TARGET_NAME, RETENTION_DAEMON_COMPONENT_NAME):
             container_name = f"clp-{RETENTION_DAEMON_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, already_exited_containers, force)
+            # Always force stop retention daemon because it may terminate early if no retention
+            # period is specified
+            stop_running_container(container_name, already_exited_containers, True)
         if target in (ALL_TARGET_NAME, LOG_VIEWER_WEBUI_COMPONENT_NAME):
             container_name = f"clp-{LOG_VIEWER_WEBUI_COMPONENT_NAME}-{instance_id}"
             stop_running_container(container_name, already_exited_containers, force)

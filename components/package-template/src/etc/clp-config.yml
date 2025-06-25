@@ -10,9 +10,9 @@
 ## File containing credentials for services
 #credentials_file_path: "etc/credentials.yml"
 #
-package:
-  storage_engine: "clp-s"
-
+#package:
+#  storage_engine: "clp"
+#
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
 #  host: "localhost"
@@ -46,13 +46,14 @@ package:
 #  logging_level: "INFO"
 #  upsert_interval: 100  # milliseconds
 #
-results_cache:
-  host: "localhost"
-  port: 27017
-  db_name: "clp-query-results"
-  stream_collection_name: "stream-files"
-  # TODO
-  retention_period: 1
+#results_cache:
+#  host: "localhost"
+#  port: 27017
+#  db_name: "clp-query-results"
+#  stream_collection_name: "stream-files"
+#
+#  # Retention period for search results, in minutes. Set to null to disable retention.
+#  retention_period: null
 #
 #compression_worker:
 #  logging_level: "INFO"
@@ -70,15 +71,15 @@ results_cache:
 #  port: 3000
 #
 ## Where archives should be output to
-archive_output:
-  storage:
-    type: "fs"
-    # NOTE: This directory must not overlap with any path used in CLP's execution container. An
-    # error will be raised if so.
-    directory: "var/data/archives"
-
-  # TODO
-  retention_period: null
+#archive_output:
+#  storage:
+#    type: "fs"
+#    # NOTE: This directory must not overlap with any path used in CLP's execution container. An
+#    # error will be raised if so.
+#    directory: "var/data/archives"
+#
+#  # Retention period for archives, in minutes. Set to null to disable retention.
+#  retention_period: null
 #
 #  # How much data CLP should try to compress into each archive
 #  target_archive_size: 268435456  # 256 MB
@@ -97,31 +98,29 @@ archive_output:
 #  # How much archives should be compressed: 1 (fast/low compression) to 19 (slow/high compression)
 #  compression_level: 3
 #
-# Where CLP stream files (e.g., IR streams) should be output
-stream_output:
+## Where CLP stream files (e.g., IR streams) should be output
+#stream_output:
 #  storage:
-#    type: "s3"
-#    staging_directory: "var/data/streams"
-#    s3_config:
-#      region_code: "us-west-1"
-#      bucket: "private-clp-test-bucket"
-#      key_prefix: "extraction_output/"
+#    type: "fs"
+#    # NOTE: This directory must not overlap with any path used in CLP's execution container. An
+#    # error will be raised if so.
+#    directory: "var/data/streams"
 #
-#      aws_authentication:
-#        type: "profile"
-#        profile: "default"
-
-  # TODO
-  retention_period: 1
-
-  # How large each stream file should be before being split into a new stream file
-  target_uncompressed_size: 134217728  # 128 MB
-
-## TODO
-#daemon:
+#  # Retention period for streams, in minutes. Set to null to disable retention.
+#  retention_period: null
+#
+#  # How large each stream file should be before being split into a new stream file
+#  target_uncompressed_size: 134217728  # 128 MB
+#
+## Configuration for retention jobs
+#retention_daemon:
 #  logging_level: "INFO"
+#
+#  # Frequency (in minutes) at which each retention job runs
 #  job_frequency:
-#    archive_retention: 5
+#    archives: 60
+#    streams: 60
+#    search_results: 30
 #
 ## Location where other data (besides archives) are stored. It will be created if
 ## it doesn't exist.
@@ -135,4 +134,4 @@ stream_output:
 #logs_directory: "var/log"
 #
 ## Location of the AWS tools' config files (e.g., `~/.aws`)
-# aws_config_directory: "/home/haiqixu/.aws"
+#aws_config_directory: null
