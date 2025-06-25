@@ -132,8 +132,8 @@ void ArrayBackedPosIntSet<PosIntType>::insert(PosIntType value) {
 }
 
 template <typename PosIntType>
-void ArrayBackedPosIntSet<PosIntType>::insert_all(ArrayBackedPosIntSet<PosIntType> const& input_set
-) {
+void
+ArrayBackedPosIntSet<PosIntType>::insert_all(ArrayBackedPosIntSet<PosIntType> const& input_set) {
     // Increase capacity if necessary
     size_t input_set_largest_value = input_set.m_largest_value;
     if (input_set_largest_value >= m_data.size()) {

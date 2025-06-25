@@ -1,7 +1,9 @@
 #ifndef CLP_S_ARCHIVEDEFS_HPP
 #define CLP_S_ARCHIVEDEFS_HPP
 
+#include <cstdint>
 #include <string>
+#include <vector>
 
 #include "msgpack.hpp"
 
@@ -9,7 +11,7 @@ namespace clp_s {
 // define the version
 constexpr uint8_t cArchiveMajorVersion = 0;
 constexpr uint8_t cArchiveMinorVersion = 3;
-constexpr uint16_t cArchivePatchVersion = 0;
+constexpr uint16_t cArchivePatchVersion = 1;
 
 // define the magic number
 constexpr uint8_t cStructuredSFAMagicNumber[] = {0xFD, 0x2F, 0xC5, 0x30};
@@ -33,6 +35,7 @@ enum struct ArchiveMetadataPacketType : uint8_t {
     ArchiveInfo = 0,
     ArchiveFileInfo = 1,
     TimestampDictionary = 2,
+    RangeIndex = 3
 };
 
 struct ArchiveInfoPacket {

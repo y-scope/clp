@@ -2,10 +2,12 @@
 #define CLP_S_INDEXER_INDEXMANAGER_HPP
 
 #include <functional>
+#include <memory>
 #include <optional>
 
 #include "../../clp/GlobalMetadataDBConfig.hpp"
 #include "../ArchiveReader.hpp"
+#include "../TimestampDictionaryReader.hpp"
 #include "MySQLIndexStorage.hpp"
 
 namespace clp_s::indexer {
@@ -48,10 +50,10 @@ public:
     // Methods
     /**
      * Updates the metadata for a given archive
-     * @param table_name
+     * @param dataset_name
      * @param archive_path
      */
-    void update_metadata(std::string const& table_name, Path const& archive_path);
+    void update_metadata(std::string const& dataset_name, Path const& archive_path);
 
 private:
     /**
@@ -64,8 +66,12 @@ private:
     /**
      * Traverses the schema tree and updates the metadata
      * @param schema_tree
+     * @param timestamp_dict
      */
-    void traverse_schema_tree_and_update_metadata(std::shared_ptr<SchemaTree> const& schema_tree);
+    void traverse_schema_tree_and_update_metadata(
+            std::shared_ptr<SchemaTree> const& schema_tree,
+            std::shared_ptr<TimestampDictionaryReader> const& timestamp_dict
+    );
 
     OutputType m_output_type{OutputType::Database};
     std::shared_ptr<MySQLIndexStorage> m_mysql_index_storage;

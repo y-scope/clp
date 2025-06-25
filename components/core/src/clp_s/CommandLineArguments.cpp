@@ -99,10 +99,12 @@ void validate_archive_paths(
         if (false == std::filesystem::exists(archive_fs_path, ec) || ec) {
             throw std::invalid_argument("Requested archive does not exist");
         }
-        archive_paths.emplace_back(clp_s::Path{
-                .source = clp_s::InputSource::Filesystem,
-                .path = archive_fs_path.string()
-        });
+        archive_paths.emplace_back(
+                clp_s::Path{
+                        .source = clp_s::InputSource::Filesystem,
+                        .path = archive_fs_path.string()
+                }
+        );
     } else if (false == get_input_archives_for_raw_path(archive_path, archive_paths)) {
         throw std::invalid_argument("Invalid archive path");
     }
@@ -203,7 +205,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
 
             po::options_description compression_options("Compression options");
-            std::string metadata_db_config_file_path;
             std::string input_path_list_file_path;
             constexpr std::string_view cJsonFileType{"json"};
             constexpr std::string_view cKeyValueIrFileType{"kv-ir"};
@@ -214,7 +215,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "compression-level",
                     po::value<int>(&m_compression_level)->value_name("LEVEL")->
                         default_value(m_compression_level),
-                    "1 (fast/low compression) to 9 (slow/high compression)."
+                    "1 (fast/low compression) to 19 (slow/high compression)."
             )(
                     "target-encoded-size",
                     po::value<size_t>(&m_target_encoded_size)->value_name("TARGET_ENCODED_SIZE")->
@@ -236,11 +237,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::value<std::string>(&m_timestamp_key)->value_name("TIMESTAMP_COLUMN_KEY")->
                         default_value(m_timestamp_key),
                     "Path (e.g. x.y) for the field containing the log event's timestamp."
-            )(
-                    "db-config-file",
-                    po::value<std::string>(&metadata_db_config_file_path)->value_name("FILE")->
-                    default_value(metadata_db_config_file_path),
-                    "Global metadata DB YAML config"
             )(
                     "files-from,f",
                     po::value<std::string>(&input_path_list_file_path)
@@ -351,29 +347,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             validate_network_auth(auth, m_network_auth);
-
-            // Parse and validate global metadata DB config
-            if (false == metadata_db_config_file_path.empty()) {
-                clp::GlobalMetadataDBConfig metadata_db_config;
-                try {
-                    metadata_db_config.parse_config_file(metadata_db_config_file_path);
-                } catch (std::exception& e) {
-                    SPDLOG_ERROR("Failed to validate metadata database config - {}.", e.what());
-                    return ParsingResult::Failure;
-                }
-
-                if (clp::GlobalMetadataDBConfig::MetadataDBType::MySQL
-                    != metadata_db_config.get_metadata_db_type())
-                {
-                    SPDLOG_ERROR(
-                            "Invalid metadata database type for {}; only supported type is MySQL.",
-                            m_program_name
-                    );
-                    return ParsingResult::Failure;
-                }
-
-                m_metadata_db_config = std::move(metadata_db_config);
-            }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
             std::string archive_path;
@@ -496,8 +469,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 }
 
                 if (false == m_mongodb_uri.empty()) {
-                    throw std::invalid_argument("Recording decompression metadata only supported"
-                                                " for ordered decompression");
+                    throw std::invalid_argument(
+                            "Recording decompression metadata only supported for ordered"
+                            " decompression"
+                    );
                 }
             }
 
@@ -593,7 +568,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
             search_options.add(aggregation_options);
 
-            po::options_description network_output_handler_options("Network Output Handler Options"
+            po::options_description network_output_handler_options(
+                    "Network Output Handler Options"
             );
             // clang-format off
             network_output_handler_options.add_options()(
@@ -607,7 +583,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
 
-            po::options_description reducer_output_handler_options("Reducer Output Handler Options"
+            po::options_description reducer_output_handler_options(
+                    "Reducer Output Handler Options"
             );
             // clang-format off
             reducer_output_handler_options.add_options()(
@@ -753,7 +730,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             if (parsed_command_line_options.count("count-by-time") > 0) {
                 m_do_count_by_time_aggregation = true;
                 if (m_count_by_time_bucket_size <= 0) {
-                    throw std::invalid_argument("Value for count-by-time must be greater than zero."
+                    throw std::invalid_argument(
+                            "Value for count-by-time must be greater than zero."
                     );
                 }
             }
@@ -814,8 +792,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             } else if ((false == aggregation_was_specified
                         && OutputHandlerType::Reducer == m_output_handler_type))
             {
-                throw std::invalid_argument("The reducer output handler currently only supports "
-                                            "count and count-by-time aggregations.");
+                throw std::invalid_argument(
+                        "The reducer output handler currently only supports count and"
+                        " count-by-time aggregations."
+                );
             }
 
             if (m_do_count_by_time_aggregation && m_do_count_results_aggregation) {

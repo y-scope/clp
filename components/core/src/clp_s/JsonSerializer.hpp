@@ -9,7 +9,6 @@
 #include "Utils.hpp"
 
 namespace clp_s {
-
 class JsonSerializer {
 public:
     enum Op : uint8_t {
@@ -155,7 +154,6 @@ private:
     size_t m_op_list_index{0};
     size_t m_special_keys_index{0};
 };
-
 }  // namespace clp_s
 
 #endif  // CLP_S_JSONSERIALIZER_HPP

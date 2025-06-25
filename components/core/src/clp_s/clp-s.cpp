@@ -5,29 +5,34 @@
 #include <memory>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <utility>
 
-#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/instance.hpp>
+#include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 
 #include "../clp/CurlGlobalInstance.hpp"
-#include "../clp/GlobalMySQLMetadataDB.hpp"
+#include "../clp/ir/constants.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
 #include "../reducer/network_utils.hpp"
 #include "CommandLineArguments.hpp"
 #include "Defs.hpp"
 #include "JsonConstructor.hpp"
 #include "JsonParser.hpp"
+#include "kv_ir_search.hpp"
+#include "OutputHandlerImpl.hpp"
 #include "search/AddTimestampConditions.hpp"
-#include "search/ConvertToExists.hpp"
-#include "search/EmptyExpr.hpp"
+#include "search/ast/ConvertToExists.hpp"
+#include "search/ast/EmptyExpr.hpp"
+#include "search/ast/Expression.hpp"
+#include "search/ast/NarrowTypes.hpp"
+#include "search/ast/OrOfAndForm.hpp"
+#include "search/ast/SearchUtils.hpp"
+#include "search/EvaluateRangeIndexFilters.hpp"
 #include "search/EvaluateTimestampIndex.hpp"
-#include "search/Expression.hpp"
 #include "search/kql/kql.hpp"
-#include "search/NarrowTypes.hpp"
-#include "search/OrOfAndForm.hpp"
 #include "search/Output.hpp"
 #include "search/OutputHandler.hpp"
 #include "search/Projection.hpp"
@@ -40,6 +45,8 @@ using clp_s::cArchiveFormatDevelopmentVersionFlag;
 using clp_s::cEpochTimeMax;
 using clp_s::cEpochTimeMin;
 using clp_s::CommandLineArguments;
+using clp_s::KvIrSearchError;
+using clp_s::KvIrSearchErrorEnum;
 using clp_s::StringUtils;
 
 namespace {
@@ -67,7 +74,7 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
-        std::shared_ptr<Expression> expr,
+        std::shared_ptr<ast::Expression> expr,
         int reducer_socket_fd
 );
 
@@ -101,21 +108,8 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
     option.record_log_order = command_line_arguments.get_record_log_order();
 
-    auto const& db_config_container = command_line_arguments.get_metadata_db_config();
-    if (db_config_container.has_value()) {
-        auto const& db_config = db_config_container.value();
-        option.metadata_db = std::make_shared<clp::GlobalMySQLMetadataDB>(
-                db_config.get_metadata_db_host(),
-                db_config.get_metadata_db_port(),
-                db_config.get_metadata_db_username(),
-                db_config.get_metadata_db_password(),
-                db_config.get_metadata_db_name(),
-                db_config.get_metadata_table_prefix()
-        );
-    }
-
     clp_s::JsonParser parser(option);
-    if (CommandLineArguments::FileType::KeyValueIr == option.input_file_type) {
+    if (clp_s::FileType::KeyValueIr == option.input_file_type) {
         if (false == parser.parse_from_ir()) {
             SPDLOG_ERROR("Encountered error while parsing input");
             return false;
@@ -126,7 +120,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
             return false;
         }
     }
-    parser.store();
+    std::ignore = parser.store();
     return true;
 }
 
@@ -138,7 +132,7 @@ void decompress_archive(clp_s::JsonConstructorOption const& json_constructor_opt
 bool search_archive(
         CommandLineArguments const& command_line_arguments,
         std::shared_ptr<clp_s::ArchiveReader> const& archive_reader,
-        std::shared_ptr<Expression> expr,
+        std::shared_ptr<ast::Expression> expr,
         int reducer_socket_fd
 ) {
     auto const& query = command_line_arguments.get_query();
@@ -149,7 +143,8 @@ bool search_archive(
             command_line_arguments.get_search_begin_ts(),
             command_line_arguments.get_search_end_ts()
     );
-    if (expr = add_timestamp_conditions.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    if (expr = add_timestamp_conditions.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr))
+    {
         SPDLOG_ERROR(
                 "Query '{}' specified timestamp filters tge {} tle {}, but no authoritative "
                 "timestamp column was found for this archive",
@@ -160,22 +155,31 @@ bool search_archive(
         return false;
     }
 
-    OrOfAndForm standardize_pass;
-    if (expr = standardize_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    ast::OrOfAndForm standardize_pass;
+    if (expr = standardize_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_ERROR("Query '{}' is logically false", query);
         return false;
     }
 
-    NarrowTypes narrow_pass;
-    if (expr = narrow_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    ast::NarrowTypes narrow_pass;
+    if (expr = narrow_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_ERROR("Query '{}' is logically false", query);
         return false;
     }
 
-    ConvertToExists convert_pass;
-    if (expr = convert_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    ast::ConvertToExists convert_pass;
+    if (expr = convert_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_ERROR("Query '{}' is logically false", query);
         return false;
+    }
+
+    EvaluateRangeIndexFilters metadata_filter_pass{
+            archive_reader->get_range_index(),
+            false == command_line_arguments.get_ignore_case()
+    };
+    if (expr = metadata_filter_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
+        SPDLOG_INFO("No matching metadata ranges for query '{}'", query);
+        return true;
     }
 
     // skip decompressing the archive if we won't match based on
@@ -187,8 +191,11 @@ bool search_archive(
     }
 
     // Narrow against schemas
-    SchemaMatch match_pass(archive_reader->get_schema_tree(), archive_reader->get_schema_map());
-    if (expr = match_pass.run(expr); std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+    auto match_pass = std::make_shared<SchemaMatch>(
+            archive_reader->get_schema_tree(),
+            archive_reader->get_schema_map()
+    );
+    if (expr = match_pass->run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_INFO("No matching schemas for query '{}'", query);
         return true;
     }
@@ -204,7 +211,7 @@ bool search_archive(
             std::vector<std::string> descriptor_tokens;
             std::string descriptor_namespace;
             if (false
-                == StringUtils::tokenize_column_descriptor(
+                == clp_s::search::ast::tokenize_column_descriptor(
                         column,
                         descriptor_tokens,
                         descriptor_namespace
@@ -213,10 +220,12 @@ bool search_archive(
                 SPDLOG_ERROR("Can not tokenize invalid column: \"{}\"", column);
                 return false;
             }
-            projection->add_column(ColumnDescriptor::create_from_escaped_tokens(
-                    descriptor_tokens,
-                    descriptor_namespace
-            ));
+            projection->add_column(
+                    ast::ColumnDescriptor::create_from_escaped_tokens(
+                            descriptor_tokens,
+                            descriptor_namespace
+                    )
+            );
         }
     } catch (std::exception const& e) {
         SPDLOG_ERROR("{}", e.what());
@@ -229,16 +238,16 @@ bool search_archive(
     try {
         switch (command_line_arguments.get_output_handler_type()) {
             case CommandLineArguments::OutputHandlerType::Network:
-                output_handler = std::make_unique<NetworkOutputHandler>(
+                output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
                         command_line_arguments.get_network_dest_host(),
                         command_line_arguments.get_network_dest_port()
                 );
                 break;
             case CommandLineArguments::OutputHandlerType::Reducer:
                 if (command_line_arguments.do_count_results_aggregation()) {
-                    output_handler = std::make_unique<CountOutputHandler>(reducer_socket_fd);
+                    output_handler = std::make_unique<clp_s::CountOutputHandler>(reducer_socket_fd);
                 } else if (command_line_arguments.do_count_by_time_aggregation()) {
-                    output_handler = std::make_unique<CountByTimeOutputHandler>(
+                    output_handler = std::make_unique<clp_s::CountByTimeOutputHandler>(
                             reducer_socket_fd,
                             command_line_arguments.get_count_by_time_bucket_size()
                     );
@@ -248,7 +257,7 @@ bool search_archive(
                 }
                 break;
             case CommandLineArguments::OutputHandlerType::ResultsCache:
-                output_handler = std::make_unique<ResultsCacheOutputHandler>(
+                output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
                         command_line_arguments.get_mongodb_uri(),
                         command_line_arguments.get_mongodb_collection(),
                         command_line_arguments.get_batch_size(),
@@ -256,7 +265,7 @@ bool search_archive(
                 );
                 break;
             case CommandLineArguments::OutputHandlerType::Stdout:
-                output_handler = std::make_unique<StandardOutputHandler>();
+                output_handler = std::make_unique<clp_s::StandardOutputHandler>();
                 break;
             default:
                 SPDLOG_ERROR("Unhandled OutputHandlerType.");
@@ -272,7 +281,6 @@ bool search_archive(
             match_pass,
             expr,
             archive_reader,
-            timestamp_dict,
             std::move(output_handler),
             command_line_arguments.get_ignore_case()
     );
@@ -345,7 +353,7 @@ int main(int argc, char const* argv[]) {
             return 1;
         }
 
-        if (std::dynamic_pointer_cast<EmptyExpr>(expr)) {
+        if (std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
             SPDLOG_ERROR("Query '{}' is logically false", query);
             return 1;
         }
@@ -366,9 +374,57 @@ int main(int argc, char const* argv[]) {
         }
 
         auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
-        for (auto const& archive_path : command_line_arguments.get_input_paths()) {
+        for (auto const& input_path : command_line_arguments.get_input_paths()) {
+            if (std::string::npos != input_path.path.find(clp::ir::cIrFileExtension)) {
+                auto const result{clp_s::search_kv_ir_stream(
+                        input_path,
+                        command_line_arguments,
+                        expr->copy(),
+                        reducer_socket_fd
+                )};
+                if (false == result.has_error()) {
+                    continue;
+                }
+
+                auto const error{result.error()};
+                if (std::errc::result_out_of_range == error) {
+                    // To support real-time search, we will allow incomplete IR streams.
+                    // TODO: Use dedicated error code for this case once issue #904 is resolved.
+                    SPDLOG_WARN("IR stream `{}` is truncated", input_path.path);
+                    continue;
+                }
+
+                if (KvIrSearchError{KvIrSearchErrorEnum::ProjectionSupportNotImplemented} == error
+                    || KvIrSearchError{KvIrSearchErrorEnum::UnsupportedOutputHandlerType} == error
+                    || KvIrSearchError{KvIrSearchErrorEnum::CountSupportNotImplemented} == error)
+                {
+                    // These errors are treated as non-fatal because they result from unsupported
+                    // features. However, this approach may cause archives with this extension to be
+                    // skipped if the search uses advanced features that are not yet implemented. To
+                    // mitigate this, we log a warning and proceed to search the input as an
+                    // archive.
+                    SPDLOG_WARN(
+                            "Attempted to search an IR stream using unsupported features. Falling"
+                            " back to searching the input as an archive."
+                    );
+                } else if (KvIrSearchError{KvIrSearchErrorEnum::DeserializerCreationFailure}
+                           != error)
+                {
+                    // If the error is `DeserializerCreationFailure`, we may continue to treat the
+                    // input as an archive and retry. Otherwise, it should be considered as a
+                    // non-recoverable failure and return directly.
+                    SPDLOG_ERROR(
+                            "Failed to search '{}' as an IR stream, error_category={}, error={}",
+                            input_path.path,
+                            error.category().name(),
+                            error.message()
+                    );
+                    return 1;
+                }
+            }
+
             try {
-                archive_reader->open(archive_path, command_line_arguments.get_network_auth());
+                archive_reader->open(input_path, command_line_arguments.get_network_auth());
             } catch (std::exception const& e) {
                 SPDLOG_ERROR("Failed to open archive - {}", e.what());
                 return 1;

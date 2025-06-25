@@ -7,13 +7,8 @@
 #include <utility>
 
 #include "ArchiveReader.hpp"
-#include "ColumnReader.hpp"
-#include "DictionaryReader.hpp"
 #include "ErrorCode.hpp"
-#include "FileWriter.hpp"
 #include "InputConfig.hpp"
-#include "SchemaReader.hpp"
-#include "SchemaTree.hpp"
 #include "TraceableException.hpp"
 
 namespace clp_s {

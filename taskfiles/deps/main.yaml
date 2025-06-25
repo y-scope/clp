@@ -1,0 +1,393 @@
+version: "3"
+
+includes:
+  utils: "./utils.yaml"
+  yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
+vars:
+  # Directories
+  G_DEPS_DIR: "{{.G_BUILD_DIR}}/deps"
+  G_DEPS_CORE_DIR: "{{.G_DEPS_DIR}}/core"
+  G_DEPS_CORE_CHECKSUMS_DIR: "{{.G_DEPS_CORE_DIR}}/checksums"
+
+  # Checksum file paths
+  G_DEPS_CORE_CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/all.md5"
+  G_DEPS_LOG_VIEWER_CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer.md5"
+
+  # NOTE: This must be kept in-sync with its usage in components/core/CMakeLists.txt
+  G_DEPS_CORE_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_DIR}}/cmake-settings"
+
+  # Library names
+  G_FMT_LIB_NAME: "fmt"
+
+  # Antlr
+  G_ANTLR_VERSION: "4.13.2"
+  G_ANTLR_JAR_FILE: "{{.G_DEPS_CORE_DIR}}/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
+
+tasks:
+  default:
+    deps:
+      - "core"
+      - "log-viewer"
+
+  core:
+    deps:
+      - "utils:clean-outdated-core-checksum-files"
+      - "utils:init"
+    cmds:
+      - "rm -rf '{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}'"
+      - "mkdir -p '{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}'"
+      - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
+          DEP_TASK: "core-all-parallel"
+      - task: "utils:combine-core-checksum-files"
+
+  log-viewer:
+    deps:
+      - "utils:init"
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
+          FILE_SHA256: "de0600b505545f1bceb7ff5725941035f7c1dc875d08249d9b6d679e3ba77f26"
+          OUTPUT_DIR: "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/yscope-log-viewer"
+          TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
+          URL: "https://github.com/y-scope/yscope-log-viewer/archive/969ff35.tar.gz"
+
+  core-all-parallel:
+    internal: true
+    run: "once"
+    deps:
+      - task: "absl"
+      - task: "antlr-jar"
+      - task: "antlr-runtime"
+      - task: "catch2"
+      - task: "date"
+      - task: "fmt"
+      - task: "log-surgeon"
+      - task: "mongocxx"
+      - task: "nlohmann_json"
+      - task: "simdjson"
+      - task: "spdlog"
+      - task: "sqlite3"
+      - task: "utfcpp"
+      - task: "yaml-cpp"
+      - task: "ystdlib"
+
+  absl:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_CXX_STANDARD=20"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          LIB_NAME: "absl"
+          TARBALL_SHA256: "7262daa7c1711406248c10f41026d685e88223bc92817d16fb93c19adb57f669"
+          TARBALL_URL: "https://github.com/abseil/abseil-cpp/releases/download/20250512.0/\
+                        abseil-cpp-20250512.0.tar.gz"
+
+  antlr-jar:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/antlr-jar.md5"
+      OUTPUT_FILE: "{{.G_ANTLR_JAR_FILE}}"
+    run: "once"
+    deps:
+      - task: "yscope-dev-utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS:
+            - "{{.OUTPUT_FILE}}"
+      - task: "utils:init"
+    cmds:
+      - task: "yscope-dev-utils:remote:curl"
+        vars:
+          FILE_SHA256: "eae2dfa119a64327444672aff63e9ec35a20180dc5b8090b7a6ab85125df4d76"
+          OUTPUT_FILE: "{{.OUTPUT_FILE}}"
+          URL: "https://www.antlr.org/download/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
+
+      # This command must be last
+      - task: "yscope-dev-utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS:
+            - "{{.OUTPUT_FILE}}"
+
+  antlr-runtime:
+    internal: true
+    run: "once"
+    vars:
+      LIB_NAME: "antlr4-runtime"
+
+      # Paths
+      BUILD_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-build"
+      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+      INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install"
+      SOURCE_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+    deps:
+      - task: "utils:init"
+      - task: "yscope-dev-utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
+
+    # NOTE: We can't use `yscope-dev-utils:cmake:install-remote-tar` (and by extension
+    # `utils:install-remote-cmake-lib`) since it doesn't yet support the `INCLUDE_PATTERNS` and
+    # `NUM_COMPONENTS_TO_STRIP` parameters.
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          FILE_SHA256: "9f18272a9b32b622835a3365f850dd1063d60f5045fb1e12ce475ae6e18a35bb"
+          INCLUDE_PATTERNS: ["*/runtime/Cpp"]
+          NUM_COMPONENTS_TO_STRIP: 3
+          OUTPUT_DIR: "{{.SOURCE_DIR}}"
+          URL: "https://github.com/antlr/antlr4/archive/refs/tags/{{.G_ANTLR_VERSION}}.tar.gz"
+      - task: "yscope-dev-utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          EXTRA_ARGS:
+            - "-DANTLR4_INSTALL=ON"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+
+            # Set CMP0135 so that extracted files use the current timestamp as their modification
+            # timestamp, which ensures the library gets rebuilt if the extracted files change.
+            - "-DCMAKE_POLICY_DEFAULT_CMP0135=NEW"
+          SOURCE_DIR: "{{.SOURCE_DIR}}"
+      - task: "yscope-dev-utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
+      - task: "yscope-dev-utils:cmake:install"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+          NAME: "{{.LIB_NAME}}"
+
+      # This command must be last
+      - task: "yscope-dev-utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
+
+  catch2:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_TESTING=OFF"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          LIB_NAME: "Catch2"
+          TARBALL_SHA256: "3cdb4138a072e4c0290034fe22d9f0a80d3bcfb8d7a8a5c49ad75d3a5da24fae"
+          TARBALL_URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v2.13.7.tar.gz"
+
+  date:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          LIB_NAME: "date"
+          TARBALL_SHA256: "7a390f200f0ccd207e8cff6757e04817c1a0aec3e327b006b7eb451c57ee3538"
+          TARBALL_URL: "https://github.com/HowardHinnant/date/archive/refs/tags/v3.0.1.tar.gz"
+
+  fmt:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DFMT_DOC=OFF"
+            - "-DFMT_TEST=OFF"
+          LIB_NAME: "{{.G_FMT_LIB_NAME}}"
+          TARBALL_SHA256: "b06ca3130158c625848f3fb7418f235155a4d389b2abc3a6245fb01cb0eb1e01"
+          TARBALL_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/8.0.1.tar.gz"
+
+  log-surgeon:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          LIB_NAME: "log_surgeon"
+          TARBALL_SHA256: "169b56714b620c3f8f07bf7975aba8573b9bd25e423e5c4f0cc9b52450a2403d"
+          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/f801a3f.tar.gz"
+
+  mongocxx:
+    internal: true
+    vars:
+      VERSION: "r3.10.2"
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_SHARED_AND_STATIC_LIBS=ON"
+            - "-DBUILD_SHARED_LIBS_WITH_STATIC_MONGOC=ON"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DENABLE_TESTS=OFF"
+            - "-DENABLE_UNINSTALL=OFF"
+          LIB_NAME: "mongocxx"
+          TARBALL_SHA256: "52b99b2866019b5ea25d15c5a39e2a88c70fe1259c40f1091deff8bfae0194be"
+          TARBALL_URL: "https://github.com/mongodb/mongo-cxx-driver/releases/download/{{.VERSION}}\
+          /mongo-cxx-driver-{{.VERSION}}.tar.gz"
+
+  nlohmann_json:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DJSON_BuildTests=OFF"
+          LIB_NAME: "nlohmann_json"
+          TARBALL_SHA256: "0d8ef5af7f9794e3263480193c491549b2ba6cc74bb018906202ada498a79406"
+
+          # NOTE: We use the GitHub-generated source tarball for this version rather than the
+          # release tarball, since the latter is served from githubusercontent.com which is blocked
+          # by some developers' firewalls. The contents of the former are a superset of the latter.
+          TARBALL_URL: "https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz"
+
+  simdjson:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          LIB_NAME: "simdjson"
+          TARBALL_SHA256: "07a1bb3587aac18fd6a10a83fe4ab09f1100ab39f0cb73baea1317826b9f9e0d"
+          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.13.0.tar.gz"
+
+  spdlog:
+    internal: true
+    run: "once"
+    deps:
+      - "fmt"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+
+            # Set CMP0074 since our minimum required CMake version is less than 3.27, and we
+            # depend on fmt's settings file, which uses `fmt_ROOT`.
+            - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
+
+            - "-DSPDLOG_BUILD_EXAMPLE=OFF"
+            - "-DSPDLOG_BUILD_EXAMPLE_HO=OFF"
+            - "-DSPDLOG_FMT_EXTERNAL=ON"
+          LIB_NAME: "spdlog"
+          TARBALL_SHA256: "6fff9215f5cb81760be4cc16d033526d1080427d236e86d70bb02994f85e3d38"
+
+          # NOTE: Since spdlog depends on fmt, we need to choose a version of spdlog that's
+          # compatible with the version of fmt we use.
+          TARBALL_URL: "https://github.com/gabime/spdlog/archive/refs/tags/v1.9.2.tar.gz"
+
+  sqlite3:
+    internal: true
+    vars:
+      LIB_NAME: "sqlite3"
+
+      # Paths
+      EXTRACTION_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+      INSTALL_INCLUDE_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install/include"
+      INSTALL_SYMLINK: "{{.INSTALL_INCLUDE_DIR}}/{{.LIB_NAME}}"
+      ZIP_FILENAME_STEM: "sqlite-amalgamation-3360000"
+      SRC_DIR: "{{.EXTRACTION_DIR}}/{{.ZIP_FILENAME_STEM}}"
+    run: "once"
+    deps:
+      - task: "utils:init"
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-zip"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          FILE_SHA256: "999826fe4c871f18919fdb8ed7ec9dd8217180854dd1fe21eea96aed36186729"
+          OUTPUT_DIR: "{{.EXTRACTION_DIR}}"
+          URL: "https://www.sqlite.org/2021/{{.ZIP_FILENAME_STEM}}.zip"
+      - "mkdir -p '{{.INSTALL_INCLUDE_DIR}}'"
+      - "rm -f '{{.INSTALL_SYMLINK}}'"
+      - "ln -s '{{.SRC_DIR}}' '{{.INSTALL_SYMLINK}}'"
+      - |-
+        echo "set(CLP_SQLITE3_SOURCE_DIRECTORY \"{{.SRC_DIR}}\")" \
+        > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        echo "set(CLP_SQLITE3_INCLUDE_DIRECTORY \"{{.INSTALL_INCLUDE_DIR}}\")" \
+        >> "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+
+  utfcpp:
+    internal: true
+    vars:
+      LIB_NAME: "utfcpp"
+      UTFCPP_OUTPUT_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+    run: "once"
+    deps:
+      - task: "utils:init"
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          FILE_SHA256: "6920a6a5d6a04b9a89b2a89af7132f8acefd46e0c2a7b190350539e9213816c0"
+          OUTPUT_DIR: "{{.UTFCPP_OUTPUT_DIR}}"
+          URL: "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.0.6.tar.gz"
+      - >-
+        echo "set(
+        CLP_UTFCPP_INCLUDE_DIRECTORY \"{{.UTFCPP_OUTPUT_DIR}}\"
+        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+
+  yaml-cpp:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_TESTING=OFF"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          LIB_NAME: "yaml-cpp"
+          TARBALL_SHA256: "43e6a9fcb146ad871515f0d0873947e5d497a1c9c60c58cb102a97b47208b7c3"
+          TARBALL_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.tar.gz"
+
+  ystdlib:
+    internal: true
+    vars:
+      LIB_NAME: "ystdlib"
+      YSTDLIB_OUTPUT_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+    run: "once"
+    deps:
+      - task: "utils:init"
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          FILE_SHA256: "36fa0e9d96b7307ca92482343d6ba1091c5576370676e6d423cce32c20e34a3d"
+          OUTPUT_DIR: "{{.YSTDLIB_OUTPUT_DIR}}"
+          URL: "https://github.com/y-scope/ystdlib-cpp/archive/d80cf86.tar.gz"
+      - >-
+        echo "set(
+        CLP_YSTDLIB_SOURCE_DIRECTORY \"{{.YSTDLIB_OUTPUT_DIR}}\"
+        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"

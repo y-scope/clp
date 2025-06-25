@@ -9,7 +9,12 @@ from contextlib import closing
 from typing import Optional
 
 import yaml
-from clp_py_utils.clp_config import CLP_METADATA_TABLE_PREFIX, CLPConfig, Database
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
+    CLPConfig,
+    Database,
+    FILES_TABLE_SUFFIX,
+)
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
 from job_orchestration.scheduler.job_config import (
@@ -44,11 +49,13 @@ def get_orig_file_id(db_config: Database, path: str) -> Optional[str]:
     only one of them.
     """
     sql_adapter = SQL_Adapter(db_config)
+    clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
+    table_prefix = clp_db_connection_params["table_prefix"]
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
         db_cursor.execute(
-            f"SELECT orig_file_id FROM `{CLP_METADATA_TABLE_PREFIX}files` WHERE path = (%s)",
+            f"SELECT orig_file_id FROM `{table_prefix}{FILES_TABLE_SUFFIX}` WHERE path = (%s)",
             (path,),
         )
         results = db_cursor.fetchall()
@@ -133,7 +140,9 @@ def handle_extract_stream_cmd(
     elif EXTRACT_JSON_CMD == command:
         job_type = QueryJobType.EXTRACT_JSON
         job_config = ExtractJsonJobConfig(
-            archive_id=parsed_args.archive_id, target_chunk_size=parsed_args.target_chunk_size
+            dataset=CLP_DEFAULT_DATASET_NAME,
+            archive_id=parsed_args.archive_id,
+            target_chunk_size=parsed_args.target_chunk_size,
         )
     else:
         logger.error(f"Unsupported stream extraction command: {command}")

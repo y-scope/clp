@@ -1,13 +1,15 @@
 #ifndef CLP_S_SEARCH_ADDTIMESTAMPCONDITIONS_HPP
 #define CLP_S_SEARCH_ADDTIMESTAMPCONDITIONS_HPP
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <utility>
 #include <vector>
 
 #include "../Defs.hpp"
-#include "Transformation.hpp"
+#include "ast/Expression.hpp"
+#include "ast/Transformation.hpp"
 
 namespace clp_s::search {
 /**
@@ -19,7 +21,7 @@ namespace clp_s::search {
  * If either begin_ts or end_ts is specified and the timestamp_column option is empty then this
  * transformation pass will yield EmptyExpr.
  */
-class AddTimestampConditions : public Transformation {
+class AddTimestampConditions : public ast::Transformation {
 public:
     // Constructors
     AddTimestampConditions(
@@ -36,7 +38,7 @@ public:
      * @param expr the AST to transform
      * @return the transformed AST
      */
-    std::shared_ptr<Expression> run(std::shared_ptr<Expression>& expr) override;
+    std::shared_ptr<ast::Expression> run(std::shared_ptr<ast::Expression>& expr) override;
 
 private:
     std::optional<std::pair<std::vector<std::string>, std::string>> m_timestamp_column;

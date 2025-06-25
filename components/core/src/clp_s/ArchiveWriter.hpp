@@ -1,15 +1,19 @@
 #ifndef CLP_S_ARCHIVEWRITER_HPP
 #define CLP_S_ARCHIVEWRITER_HPP
 
+#include <optional>
+#include <string>
 #include <string_view>
 #include <utility>
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <nlohmann/json.hpp>
 
-#include "../clp/GlobalMySQLMetadataDB.hpp"
+#include "../clp/streaming_archive/Constants.hpp"
 #include "archive_constants.hpp"
 #include "DictionaryWriter.hpp"
+#include "RangeIndexWriter.hpp"
 #include "Schema.hpp"
 #include "SchemaMap.hpp"
 #include "SchemaTree.hpp"
@@ -27,6 +31,70 @@ struct ArchiveWriterOption {
     size_t min_table_size;
     std::vector<std::string> authoritative_timestamp;
     std::string authoritative_timestamp_namespace;
+};
+
+class ArchiveStats {
+public:
+    // Constructors
+    explicit ArchiveStats(
+            std::string id,
+            epochtime_t begin_timestamp,
+            epochtime_t end_timestamp,
+            size_t uncompressed_size,
+            size_t compressed_size,
+            nlohmann::json range_index,
+            bool is_split
+    )
+            : m_id{id},
+              m_begin_timestamp{begin_timestamp},
+              m_end_timestamp{end_timestamp},
+              m_uncompressed_size{uncompressed_size},
+              m_compressed_size{compressed_size},
+              m_range_index(std::move(range_index)),  // Avoid {} to prevent wrapping in JSON array.
+              m_is_split{is_split} {}
+
+    // Methods
+    /**
+     * @return The contents of `ArchiveStats` as a JSON object in a string.
+     */
+    [[nodiscard]] auto as_string() const -> std::string {
+        namespace Archive = clp::streaming_archive::cMetadataDB::Archive;
+        namespace File = clp::streaming_archive::cMetadataDB::File;
+        constexpr std::string_view cRangeIndex{"range_index"};
+
+        nlohmann::json json_msg
+                = {{Archive::Id, m_id},
+                   {Archive::BeginTimestamp, m_begin_timestamp},
+                   {Archive::EndTimestamp, m_end_timestamp},
+                   {Archive::UncompressedSize, m_uncompressed_size},
+                   {Archive::Size, m_compressed_size},
+                   {File::IsSplit, m_is_split},
+                   {cRangeIndex, m_range_index}};
+        return json_msg.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore);
+    }
+
+    auto get_id() const -> std::string const& { return m_id; }
+
+    auto get_begin_timestamp() const -> epochtime_t { return m_begin_timestamp; }
+
+    auto get_end_timestamp() const -> epochtime_t { return m_end_timestamp; }
+
+    auto get_uncompressed_size() const -> size_t { return m_uncompressed_size; }
+
+    auto get_compressed_size() const -> size_t { return m_compressed_size; }
+
+    auto get_range_index() const -> nlohmann::json const& { return m_range_index; }
+
+    auto get_is_split() const -> bool { return m_is_split; }
+
+private:
+    std::string m_id;
+    epochtime_t m_begin_timestamp{};
+    epochtime_t m_end_timestamp{};
+    size_t m_uncompressed_size{};
+    size_t m_compressed_size{};
+    nlohmann::json m_range_index;
+    bool m_is_split{};
 };
 
 class ArchiveWriter {
@@ -66,8 +134,7 @@ public:
     };
 
     // Constructor
-    explicit ArchiveWriter(std::shared_ptr<clp::GlobalMySQLMetadataDB> metadata_db)
-            : m_metadata_db(std::move(metadata_db)) {}
+    ArchiveWriter() = default;
 
     // Destructor
     ~ArchiveWriter() = default;
@@ -79,9 +146,11 @@ public:
     void open(ArchiveWriterOption const& option);
 
     /**
-     * Closes the archive writer
+     * Closes the archive writer.
+     * @param is_split Whether the last file ingested into the archive is split.
+     * @return Statistics for the newly-written archive.
      */
-    void close();
+    [[nodiscard]] auto close(bool is_split = false) -> ArchiveStats;
 
     /**
      * Appends a message to the archive writer
@@ -167,6 +236,39 @@ public:
      */
     size_t get_data_size();
 
+    /**
+     * Adds a metadata key value pair to the current range in the range index, opening a range if no
+     * range currently exists.
+     * @param key
+     * @param value
+     * @return ErrorCodeSuccess on success or the relevant error code on failure.
+     */
+    template <typename T>
+    [[nodiscard]] auto add_field_to_current_range(std::string const& key, T const& value)
+            -> ErrorCode {
+        if (false == m_range_open) {
+            if (auto const rc = m_range_index_writer.open_range(m_next_log_event_id);
+                ErrorCodeSuccess != rc)
+            {
+                return rc;
+            }
+            m_range_open = true;
+        }
+        return m_range_index_writer.add_value_to_range(key, value);
+    }
+
+    /**
+     * Closes the currently open range in the range index.
+     * @return ErrorCodeSuccess on success or the relevant error code on failure.
+     */
+    [[nodiscard]] auto close_current_range() -> ErrorCode {
+        auto const rc = m_range_index_writer.close_range(m_next_log_event_id);
+        if (ErrorCodeSuccess == rc) {
+            m_range_open = false;
+        }
+        return rc;
+    }
+
 private:
     /**
      * Initializes the schema writer
@@ -186,16 +288,20 @@ private:
     /**
      * Writes the archive to a single file
      * @param files
+     * @return The archive range index as a JSON object.
      */
-    void write_single_file_archive(std::vector<ArchiveFileInfo> const& files);
+    [[nodiscard]] auto write_single_file_archive(std::vector<ArchiveFileInfo> const& files)
+            -> nlohmann::json;
 
     /**
      * Writes the metadata section of an archive.
      * @param archive_writer
      * @param files
+     * @return The archive range index as a JSON object.
      */
-    void
-    write_archive_metadata(FileWriter& archive_writer, std::vector<ArchiveFileInfo> const& files);
+    [[nodiscard]] auto
+    write_archive_metadata(FileWriter& archive_writer, std::vector<ArchiveFileInfo> const& files)
+            -> nlohmann::json;
 
     /**
      * Writes the file section of the single file archive
@@ -210,16 +316,6 @@ private:
      * @param metadata_section_size
      */
     void write_archive_header(FileWriter& archive_writer, size_t metadata_section_size);
-
-    /**
-     * Updates the metadata db with the archive's metadata (id, size, timestamp ranges, etc.)
-     */
-    void update_metadata_db();
-
-    /**
-     * Prints the archive's statistics (id, uncompressed size, compressed size, etc.)
-     */
-    void print_archive_stats();
 
     static constexpr size_t cReadBlockSize = 4 * 1024;
 
@@ -238,7 +334,6 @@ private:
     std::shared_ptr<LogTypeDictionaryWriter> m_log_dict;
     std::shared_ptr<LogTypeDictionaryWriter> m_array_dict;  // log type dictionary for arrays
     TimestampDictionaryWriter m_timestamp_dict;
-    std::shared_ptr<clp::GlobalMySQLMetadataDB> m_metadata_db;
     int m_compression_level{};
     bool m_print_archive_stats{};
     bool m_single_file_archive{};
@@ -258,6 +353,9 @@ private:
     FileWriter m_table_metadata_file_writer;
     ZstdCompressor m_tables_compressor;
     ZstdCompressor m_table_metadata_compressor;
+
+    RangeIndexWriter m_range_index_writer;
+    bool m_range_open{false};
 };
 }  // namespace clp_s
 

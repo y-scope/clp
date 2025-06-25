@@ -93,7 +93,6 @@ private:
     size_t m_begin_offset{};
     size_t m_prev_stream_id{0ULL};
 };
-
 }  // namespace clp_s
 
 #endif  // CLP_S_PACKEDSTREAMREADER_HPP

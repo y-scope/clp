@@ -10,7 +10,7 @@ from typing import List
 
 import brotli
 import msgpack
-from clp_py_utils.clp_config import COMPRESSION_JOBS_TABLE_NAME, S3Credentials
+from clp_py_utils.clp_config import CLPConfig, COMPRESSION_JOBS_TABLE_NAME
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.s3_utils import parse_s3_url
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -36,12 +36,17 @@ from clp_package_utils.general import (
 logger = logging.getLogger(__file__)
 
 
-def print_compression_job_status(job_row, current_time):
+def print_compression_job_status(job_row):
     job_uncompressed_size = job_row["uncompressed_size"]
     job_compressed_size = job_row["compressed_size"]
-    job_start_time = job_row["start_time"]
     compression_ratio = float(job_uncompressed_size) / job_compressed_size
-    compression_speed = job_uncompressed_size / (current_time - job_start_time).total_seconds()
+    if CompressionJobStatus.SUCCEEDED == job_row["status"]:
+        compression_speed = job_uncompressed_size / job_row["duration"]
+    else:
+        compression_speed = (
+            job_uncompressed_size
+            / (datetime.datetime.now() - job_row["start_time"]).total_seconds()
+        )
     logger.info(
         f"Compressed {pretty_size(job_uncompressed_size)} into "
         f"{pretty_size(job_compressed_size)} ({compression_ratio:.2f}x). "
@@ -56,7 +61,7 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
         )
     else:
         polling_query = (
-            f"SELECT start_time, status, status_msg, uncompressed_size, compressed_size "
+            f"SELECT start_time, status, status_msg, uncompressed_size, compressed_size, duration "
             f"FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id={job_id}"
         )
 
@@ -73,13 +78,12 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
 
         job_row = results[0]
         job_status = job_row["status"]
-        current_time = datetime.datetime.now()
 
         if CompressionJobStatus.SUCCEEDED == job_status:
             # All tasks in the job is done
             if not no_progress_reporting:
                 logger.info("Compression finished.")
-                print_compression_job_status(job_row, current_time)
+                print_compression_job_status(job_row)
             break  # Done
         if CompressionJobStatus.FAILED == job_status:
             # One or more tasks in the job has failed
@@ -90,7 +94,7 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
             if not no_progress_reporting:
                 job_uncompressed_size = job_row["uncompressed_size"]
                 if job_last_uncompressed_size < job_uncompressed_size:
-                    print_compression_job_status(job_row, current_time)
+                    print_compression_job_status(job_row)
                     job_last_uncompressed_size = job_uncompressed_size
         elif CompressionJobStatus.PENDING == job_status:
             pass  # Simply wait another iteration
@@ -128,30 +132,32 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
 
 
 def _generate_clp_io_config(
-    logs_to_compress: List[str], parsed_args: argparse.Namespace
+    clp_config: CLPConfig, logs_to_compress: List[str], parsed_args: argparse.Namespace
 ) -> typing.Union[S3InputConfig, FsInputConfig]:
-    input_type = parsed_args.input_type
+    input_type = clp_config.logs_input.type
 
     if InputType.FS == input_type:
+        if len(logs_to_compress) == 0:
+            raise ValueError(f"No input paths given.")
         return FsInputConfig(
             paths_to_compress=logs_to_compress,
             timestamp_key=parsed_args.timestamp_key,
             path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
         )
     elif InputType.S3 == input_type:
-        if len(logs_to_compress) != 1:
-            ValueError(f"Too many URLs: {len(logs_to_compress)} > 1")
+        if len(logs_to_compress) == 0:
+            raise ValueError(f"No URLs given.")
+        elif len(logs_to_compress) != 1:
+            raise ValueError(f"Too many URLs: {len(logs_to_compress)} > 1")
 
         s3_url = logs_to_compress[0]
         region_code, bucket_name, key_prefix = parse_s3_url(s3_url)
+        aws_authentication = clp_config.logs_input.aws_authentication
         return S3InputConfig(
             region_code=region_code,
             bucket=bucket_name,
             key_prefix=key_prefix,
-            credentials=S3Credentials(
-                access_key_id=parsed_args.aws_access_key_id,
-                secret_access_key=parsed_args.aws_secret_access_key,
-            ),
+            aws_authentication=aws_authentication,
             timestamp_key=parsed_args.timestamp_key,
         )
     else:
@@ -159,9 +165,6 @@ def _generate_clp_io_config(
 
 
 def _get_logs_to_compress(logs_list_path: pathlib.Path) -> List[str]:
-    # Define the path processing function based on the input type
-    process_path_func: typing.Callable[[str], str]
-
     # Read logs from the input file
     logs_to_compress = []
     with open(logs_list_path, "r") as f:
@@ -175,7 +178,18 @@ def _get_logs_to_compress(logs_list_path: pathlib.Path) -> List[str]:
     return logs_to_compress
 
 
-def _add_common_arguments(args_parser: argparse.ArgumentParser) -> None:
+def main(argv):
+    clp_home = get_clp_home()
+    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+    args_parser = argparse.ArgumentParser(description="Compresses logs")
+
+    # Package-level config option
+    args_parser.add_argument(
+        "--config",
+        "-c",
+        default=str(default_config_file_path),
+        help="CLP package configuration file.",
+    )
     args_parser.add_argument(
         "-f",
         "--logs-list",
@@ -193,41 +207,13 @@ def _add_common_arguments(args_parser: argparse.ArgumentParser) -> None:
     args_parser.add_argument(
         "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
     )
-
-
-def main(argv):
-    clp_home = get_clp_home()
-    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
-    args_parser = argparse.ArgumentParser(description="Compresses logs")
-
-    # Package-level config option
-    args_parser.add_argument(
-        "--config",
-        "-c",
-        default=str(default_config_file_path),
-        help="CLP package configuration file.",
-    )
-    input_type_args_parser = args_parser.add_subparsers(dest="input_type")
-
-    fs_compressor_parser = input_type_args_parser.add_parser(InputType.FS)
-    _add_common_arguments(fs_compressor_parser)
-
-    s3_compressor_parser = input_type_args_parser.add_parser(InputType.S3)
-    _add_common_arguments(s3_compressor_parser)
-    s3_compressor_parser.add_argument(
-        "--aws-access-key-id", type=str, default=None, help="AWS access key ID."
-    )
-    s3_compressor_parser.add_argument(
-        "--aws-secret-access-key", type=str, default=None, help="AWS secret access key."
-    )
-
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
-        clp_config.validate_input_logs_dir()
+        clp_config.validate_logs_input_config()
         clp_config.validate_logs_dir()
     except:
         logger.exception("Failed to load config.")
@@ -238,7 +224,7 @@ def main(argv):
 
     logs_to_compress = _get_logs_to_compress(pathlib.Path(parsed_args.logs_list).resolve())
 
-    clp_input_config = _generate_clp_io_config(logs_to_compress, parsed_args)
+    clp_input_config = _generate_clp_io_config(clp_config, logs_to_compress, parsed_args)
     clp_output_config = OutputConfig.parse_obj(clp_config.archive_output)
     if parsed_args.tags:
         tag_list = [tag.strip().lower() for tag in parsed_args.tags.split(",") if tag]

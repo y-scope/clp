@@ -30,8 +30,8 @@ public:
 
 protected:
     // Variables
-    DictionaryIdType m_id;
     std::string m_value;
+    DictionaryIdType m_id;
 };
 
 /**

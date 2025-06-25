@@ -4,12 +4,11 @@
 #include <string>
 #include <string_view>
 
-#include <outcome/single-header/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "regex_utils/RegexToWildcardTranslatorConfig.hpp"
 
 namespace clp::regex_utils {
-
 /**
  * Translate a given regex string to wildcard with the default configuration that has all the
  * options set to false.
@@ -18,7 +17,7 @@ namespace clp::regex_utils {
  * @return The translated wildcard string.
  */
 [[nodiscard]] auto regex_to_wildcard(std::string_view regex_str)
-        -> OUTCOME_V2_NAMESPACE::std_result<std::string>;
+        -> ystdlib::error_handling::Result<std::string>;
 
 /**
  * Translate a given regex string to wildcard with a custom configuration.
@@ -28,8 +27,7 @@ namespace clp::regex_utils {
  */
 [[nodiscard]] auto
 regex_to_wildcard(std::string_view regex_str, RegexToWildcardTranslatorConfig const& config)
-        -> OUTCOME_V2_NAMESPACE::std_result<std::string>;
-
+        -> ystdlib::error_handling::Result<std::string>;
 }  // namespace clp::regex_utils
 
 #endif  // CLP_REGEX_UTILS_REGEX_UTILS_HPP

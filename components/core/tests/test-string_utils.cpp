@@ -2,7 +2,7 @@
 
 #include <boost/foreach.hpp>
 #include <boost/range/combine.hpp>
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch.hpp>
 #include <string_utils/string_utils.hpp>
 
 using clp::string_utils::clean_up_wildcard_search_string;
@@ -209,7 +209,8 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
             REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == false);
         }
 
-        GIVEN("MISSING matching literals in the beginning with both \"*\" and \"?\" in the middle"
+        GIVEN(
+                "MISSING matching literals in the beginning with both \"*\" and \"?\" in the middle"
         ) {
             tameString = "abcd", wildString = "b*?d";
             REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == false);
@@ -470,9 +471,10 @@ SCENARIO("Test wild card performance", "[wildcard performance]") {
     vector<string> tameVec, wildVec;
 
     // Typical apache log
-    tameVec.push_back("64.242.88.10 - - [07/Mar/2004:16:06:51 -0800] \"GET "
-                      "/twiki/bin/rdiff/TWiki/NewUserTemplate?rev1=1"
-                      ".3&rev2=1.2 HTTP/1.1\" 200 4523");
+    tameVec.push_back(
+            "64.242.88.10 - - [07/Mar/2004:16:06:51 -0800]"
+            " \"GET /twiki/bin/rdiff/TWiki/NewUserTemplate?rev1=1.3&rev2=1.2 HTTP/1.1\" 200 4523"
+    );
     wildVec.push_back("*64.242.88.10*Mar/2004*GET*200*");
 
     /***********************************************************************************************

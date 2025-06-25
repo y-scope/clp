@@ -10,6 +10,8 @@ import yaml
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
+    ARCHIVE_TAGS_TABLE_SUFFIX,
+    ARCHIVES_TABLE_SUFFIX,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
@@ -20,7 +22,11 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url, s3_put
+from clp_py_utils.s3_utils import (
+    generate_s3_virtual_hosted_style_url,
+    get_credential_env_vars,
+    s3_put,
+)
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.constants import CompressionTaskStatus
@@ -64,7 +70,10 @@ def increment_compression_job_metadata(db_cursor, job_id, kv):
 
 def update_tags(db_cursor, table_prefix, archive_id, tag_ids):
     db_cursor.executemany(
-        f"INSERT INTO {table_prefix}archive_tags (archive_id, tag_id) VALUES (%s, %s)",
+        f"""
+        INSERT INTO {table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX} (archive_id, tag_id)
+        VALUES (%s, %s)
+        """,
         [(archive_id, tag_id) for tag_id in tag_ids],
     )
 
@@ -80,6 +89,23 @@ def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archi
             compressed_size=archive_stats["size"],
         ),
     )
+
+
+def update_archive_metadata(db_cursor, table_prefix, archive_stats):
+    archive_stats_defaults = {
+        "begin_timestamp": 0,
+        "end_timestamp": 0,
+        "creator_id": "",
+        "creation_ix": 0,
+    }
+    for k, v in archive_stats_defaults.items():
+        archive_stats.setdefault(k, v)
+    keys = ", ".join(archive_stats.keys())
+    value_placeholders = ", ".join(["%s"] * len(archive_stats))
+    query = (
+        f"INSERT INTO {table_prefix}{ARCHIVES_TABLE_SUFFIX} ({keys}) VALUES ({value_placeholders})"
+    )
+    db_cursor.execute(query, list(archive_stats.values()))
 
 
 def _generate_fs_logs_list(
@@ -115,7 +141,7 @@ def _generate_s3_logs_list(
             file.write("\n")
 
 
-def make_clp_command_and_env(
+def _make_clp_command_and_env(
     clp_home: pathlib.Path,
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
@@ -140,6 +166,7 @@ def make_clp_command_and_env(
         "--target-dictionaries-size", str(clp_config.output.target_dictionaries_size),
         "--target-segment-size", str(clp_config.output.target_segment_size),
         "--target-encoded-file-size", str(clp_config.output.target_encoded_file_size),
+        "--compression-level", str(clp_config.output.compression_level),
         "--db-config-file", str(db_config_file_path),
     ]
     # fmt: on
@@ -156,11 +183,10 @@ def make_clp_command_and_env(
     return compression_cmd, None
 
 
-def make_clp_s_command_and_env(
+def _make_clp_s_command_and_env(
     clp_home: pathlib.Path,
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
-    db_config_file_path: pathlib.Path,
     use_single_file_archive: bool,
 ) -> Tuple[List[str], Optional[Dict[str, str]]]:
     """
@@ -168,7 +194,6 @@ def make_clp_s_command_and_env(
     :param clp_home:
     :param archive_output_dir:
     :param clp_config:
-    :param db_config_file_path:
     :param use_single_file_archive:
     :return: Tuple of (compression_command, compression_env_vars)
     """
@@ -180,16 +205,13 @@ def make_clp_s_command_and_env(
         "--print-archive-stats",
         "--target-encoded-size",
         str(clp_config.output.target_segment_size + clp_config.output.target_dictionaries_size),
-        "--db-config-file", str(db_config_file_path),
+        "--compression-level", str(clp_config.output.compression_level),
     ]
     # fmt: on
 
     if InputType.S3 == clp_config.input.type:
-        compression_env_vars = {
-            **os.environ,
-            "AWS_ACCESS_KEY_ID": clp_config.input.credentials.access_key_id,
-            "AWS_SECRET_ACCESS_KEY": clp_config.input.credentials.secret_access_key,
-        }
+        compression_env_vars = dict(os.environ)
+        compression_env_vars.update(get_credential_env_vars(clp_config.input.aws_authentication))
         compression_cmd.append("--auth")
         compression_cmd.append("s3")
     else:
@@ -257,19 +279,26 @@ def run_clp(
         s3_config = worker_config.archive_output.storage.s3_config
         enable_s3_write = True
 
+    table_prefix = clp_metadata_db_connection_config["table_prefix"]
+    input_dataset: str
     if StorageEngine.CLP == clp_storage_engine:
-        compression_cmd, compression_env = make_clp_command_and_env(
+        compression_cmd, compression_env = _make_clp_command_and_env(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
             db_config_file_path=db_config_file_path,
         )
     elif StorageEngine.CLP_S == clp_storage_engine:
-        compression_cmd, compression_env = make_clp_s_command_and_env(
+        input_dataset = clp_config.input.dataset
+        table_prefix = f"{table_prefix}{input_dataset}_"
+        archive_output_dir = archive_output_dir / input_dataset
+        if StorageType.S3 == storage_type:
+            s3_config.key_prefix = f"{s3_config.key_prefix}{input_dataset}/"
+
+        compression_cmd, compression_env = _make_clp_s_command_and_env(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
-            db_config_file_path=db_config_file_path,
             use_single_file_archive=enable_s3_write,
         )
     else:
@@ -317,7 +346,7 @@ def run_clp(
         if not line:
             last_line_decoded = True
         else:
-            stats = json.loads(line.decode("ascii"))
+            stats = json.loads(line.decode("utf-8"))
 
         if last_archive_stats is not None and (
             None is stats or stats["id"] != last_archive_stats["id"]
@@ -345,24 +374,23 @@ def run_clp(
                 with closing(sql_adapter.create_connection(True)) as db_conn, closing(
                     db_conn.cursor(dictionary=True)
                 ) as db_cursor:
+                    if StorageEngine.CLP_S == clp_storage_engine:
+                        update_archive_metadata(db_cursor, table_prefix, last_archive_stats)
                     update_job_metadata_and_tags(
                         db_cursor,
                         job_id,
-                        clp_metadata_db_connection_config["table_prefix"],
+                        table_prefix,
                         tag_ids,
                         last_archive_stats,
                     )
                     db_conn.commit()
 
                 if StorageEngine.CLP_S == clp_storage_engine:
-                    # TODO: Since CLP doesn't currently support datasets but users of the index
-                    # require a dataset name, we hardcode a name for now.
-                    dataset_name = "default"
                     indexer_cmd = [
                         str(clp_home / "bin" / "indexer"),
                         "--db-config-file",
                         str(db_config_file_path),
-                        dataset_name,
+                        input_dataset,
                         archive_path,
                     ]
                     try:

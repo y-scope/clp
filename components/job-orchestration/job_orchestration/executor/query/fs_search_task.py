@@ -5,9 +5,14 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
-from clp_py_utils.clp_config import Database, StorageEngine, StorageType, WorkerConfig
+from clp_py_utils.clp_config import (
+    Database,
+    StorageEngine,
+    StorageType,
+    WorkerConfig,
+)
 from clp_py_utils.clp_logging import set_logging_level
-from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url
+from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url, get_credential_env_vars
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
@@ -49,14 +54,15 @@ def _make_core_clp_s_command_and_env_vars(
     archive_id: str,
     search_config: SearchJobConfig,
 ) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
-    archives_dir = worker_config.archive_output.get_directory()
     command = [
         str(clp_home / "bin" / "clp-s"),
         "s",
     ]
 
+    dataset = search_config.dataset
     if StorageType.S3 == worker_config.archive_output.storage.type:
         s3_config = worker_config.archive_output.storage.s3_config
+        s3_config.key_prefix = f"{s3_config.key_prefix}{dataset}/"
         try:
             s3_url = generate_s3_virtual_hosted_style_url(
                 s3_config.region_code, s3_config.bucket, f"{s3_config.key_prefix}{archive_id}"
@@ -71,13 +77,10 @@ def _make_core_clp_s_command_and_env_vars(
             "s3"
         ))
         # fmt: on
-        aws_access_key_id, aws_secret_access_key = s3_config.get_credentials()
-        env_vars = {
-            **os.environ,
-            "AWS_ACCESS_KEY_ID": aws_access_key_id,
-            "AWS_SECRET_ACCESS_KEY": aws_secret_access_key,
-        }
+        env_vars = dict(os.environ)
+        env_vars.update(get_credential_env_vars(s3_config.aws_authentication))
     else:
+        archives_dir = worker_config.archive_output.get_directory() / dataset
         # fmt: off
         command.extend((
             str(archives_dir),

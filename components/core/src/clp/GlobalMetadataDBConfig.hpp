@@ -1,6 +1,7 @@
 #ifndef CLP_GLOBALMETADATADBCONFIG_HPP
 #define CLP_GLOBALMETADATADBCONFIG_HPP
 
+#include <cstdint>
 #include <string>
 
 namespace clp {
@@ -16,34 +17,43 @@ public:
     };
 
     // Constructors
-    GlobalMetadataDBConfig()
-            : m_metadata_db_type(MetadataDBType::SQLite),
-              m_metadata_db_host("localhost"),
-              m_metadata_db_port(3306) {}
+    GlobalMetadataDBConfig() = default;
 
     // Methods
     void parse_config_file(std::string const& config_file_path);
 
-    MetadataDBType get_metadata_db_type() const { return m_metadata_db_type; }
+    [[nodiscard]] auto get_metadata_db_type() const -> MetadataDBType { return m_metadata_db_type; }
 
-    std::string const& get_metadata_db_host() const { return m_metadata_db_host; }
+    [[nodiscard]] auto get_metadata_db_host() const -> std::string const& {
+        return m_metadata_db_host;
+    }
 
-    int get_metadata_db_port() const { return m_metadata_db_port; }
+    [[nodiscard]] auto get_metadata_db_port() const -> int { return m_metadata_db_port; }
 
-    std::string const& get_metadata_db_name() const { return m_metadata_db_name; }
+    [[nodiscard]] auto get_metadata_db_name() const -> std::string const& {
+        return m_metadata_db_name;
+    }
 
-    std::string const& get_metadata_db_username() const { return m_metadata_db_username; }
+    [[nodiscard]] auto get_metadata_db_username() const -> std::string const& {
+        return m_metadata_db_username;
+    }
 
-    std::string const& get_metadata_db_password() const { return m_metadata_db_password; }
+    [[nodiscard]] auto get_metadata_db_password() const -> std::string const& {
+        return m_metadata_db_password;
+    }
 
-    std::string const& get_metadata_table_prefix() const { return m_metadata_table_prefix; }
+    [[nodiscard]] auto get_metadata_table_prefix() const -> std::string const& {
+        return m_metadata_table_prefix;
+    }
 
 private:
     // Variables
-    MetadataDBType m_metadata_db_type;
+    static constexpr int cDefaultMetadataDbPort{3306};
 
-    std::string m_metadata_db_host;
-    int m_metadata_db_port;
+    MetadataDBType m_metadata_db_type{MetadataDBType::SQLite};
+
+    std::string m_metadata_db_host{"localhost"};
+    int m_metadata_db_port{cDefaultMetadataDbPort};
     std::string m_metadata_db_name;
 
     std::string m_metadata_db_username;

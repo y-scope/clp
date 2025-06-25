@@ -21,13 +21,13 @@ shown below.
       "primaryColor": "#0066cc",
       "primaryTextColor": "#fff",
       "primaryBorderColor": "transparent",
-      "lineColor": "#9580ff",
-      "secondaryColor": "#9580ff",
+      "lineColor": "#007fff",
+      "secondaryColor": "#007fff",
       "tertiaryColor": "#fff"
     }
   }
 }%%
-flowchart LR
+flowchart TD
     filter-relevant-changes --> centos-stream-9-deps-image
     filter-relevant-changes --> ubuntu-jammy-deps-image
     filter-relevant-changes --> centos-stream-9-binaries

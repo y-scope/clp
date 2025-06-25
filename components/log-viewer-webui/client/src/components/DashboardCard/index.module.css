@@ -1,0 +1,13 @@
+.card :global(.ant-card-head) {
+    border: 0px;
+}
+
+.cardContent {
+    display: flex;
+    flex-direction: column;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 600;
+}

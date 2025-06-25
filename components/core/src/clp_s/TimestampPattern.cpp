@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-#include <date/include/date/date.h>
+#include <date/date.h>
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
 
@@ -110,16 +110,16 @@ append_padded_value_notz(int value, char padding_character, size_t max_length, s
     string value_str = to_string(value);
     if ("0" != value_str) {
         str.append(max_length - value_str.length(), padding_character);
-        size_t last_zero = string::npos;
-        for (size_t last = value_str.size() - 1; last >= 0; --last) {
-            if (value_str[last] == '0') {
-                last_zero = last;
+        size_t last_zero = value_str.size();
+        for (auto it = value_str.crbegin(); it != value_str.crend(); ++it) {
+            if ('0' == *it) {
+                --last_zero;
             } else {
                 break;
             }
         }
 
-        if (last_zero != string::npos) {
+        if (last_zero < value_str.size()) {
             value_str.erase(last_zero, string::npos);
         }
     }
@@ -208,6 +208,10 @@ static bool convert_string_to_number_notz(
  * only done once when the program starts.
  */
 void TimestampPattern::init() {
+    // Terminate if already initialized.
+    if (nullptr != m_known_ts_patterns) {
+        return;
+    }
     // First create vector of observed patterns so that it's easy to maintain
     vector<TimestampPattern> patterns;
     // E.g. 1706980946603
@@ -1097,8 +1101,8 @@ void TimestampPattern::insert_formatted_timestamp(epochtime_t timestamp, string&
 }
 
 bool operator==(TimestampPattern const& lhs, TimestampPattern const& rhs) {
-    return (lhs.m_num_spaces_before_ts == rhs.m_num_spaces_before_ts && lhs.m_format == rhs.m_format
-    );
+    return (lhs.m_num_spaces_before_ts == rhs.m_num_spaces_before_ts
+            && lhs.m_format == rhs.m_format);
 }
 
 bool operator!=(TimestampPattern const& lhs, TimestampPattern const& rhs) {

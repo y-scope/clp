@@ -9,6 +9,12 @@ currently consists of a [React] client and a [Fastify] server.
 
 ## Setup
 
+Download the log-viewer's source code:
+
+```bash
+task deps:log-viewer
+```
+
 Install the app's dependencies:
 
 ```shell
@@ -28,16 +34,22 @@ npm run start
 To run the server during development:
 
 ```shell
-npm run start
+npm run dev
 ```
 
 To run the server in production:
 
 ```shell
-npm run prod
+npm run start
 ```
 
-In both cases, if you want to customize what host and port the server binds to, you can use the
+To run the server as a standalone Node.js process:
+
+```shell
+npm run standalone
+```
+
+If you want to customize what host and port the server binds to, you can use the
 environment variables in `components/log-viewer-webui/server/.env`.
 
 ## Testing

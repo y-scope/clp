@@ -1,0 +1,17 @@
+.mainLayout {
+  min-height: 100vh;
+}
+
+.siderLogoContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 64px;
+}
+
+.siderLogo {
+  max-width: 100%;
+  max-height: 100%;
+  padding-inline: 15%;
+  padding-block: 16px;
+}

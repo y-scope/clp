@@ -7,7 +7,7 @@
 #include <utility>
 
 #include <boost/filesystem.hpp>
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch.hpp>
 #include <log_surgeon/LogParser.hpp>
 
 #include "../src/clp/clp/run.hpp"

@@ -25,18 +25,23 @@ import pathlib
 import sys
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 import celery
 import msgpack
 import pymongo
 from clp_py_utils.clp_config import (
-    CLP_METADATA_TABLE_PREFIX,
+    ARCHIVE_TAGS_TABLE_SUFFIX,
+    ARCHIVES_TABLE_SUFFIX,
     CLPConfig,
+    FILES_TABLE_SUFFIX,
     QUERY_JOBS_TABLE_NAME,
     QUERY_TASKS_TABLE_NAME,
+    StorageEngine,
+    TAGS_TABLE_SUFFIX,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
+from clp_py_utils.clp_metadata_db_utils import fetch_existing_datasets
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -46,6 +51,7 @@ from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType, 
 from job_orchestration.scheduler.job_config import (
     ExtractIrJobConfig,
     ExtractJsonJobConfig,
+    QueryJobConfig,
     SearchJobConfig,
 )
 from job_orchestration.scheduler.query.reducer_handler import (
@@ -104,11 +110,17 @@ class StreamExtractionHandle(ABC):
 
 
 class IrExtractionHandle(StreamExtractionHandle):
-    def __init__(self, job_id: str, job_config: Dict[str, Any], db_conn):
+    def __init__(
+        self,
+        job_id: str,
+        job_config: Dict[str, Any],
+        db_conn,
+        table_prefix: str,
+    ):
         super().__init__(job_id)
         self.__job_config = ExtractIrJobConfig.parse_obj(job_config)
         self._archive_id, self.__file_split_id = get_archive_and_file_split_ids_for_ir_extraction(
-            db_conn, self.__job_config
+            db_conn, table_prefix, self.__job_config
         )
         if self._archive_id is None:
             raise ValueError("Job parameters don't resolve to an existing archive")
@@ -145,11 +157,17 @@ class IrExtractionHandle(StreamExtractionHandle):
 
 
 class JsonExtractionHandle(StreamExtractionHandle):
-    def __init__(self, job_id: str, job_config: Dict[str, Any], db_conn):
+    def __init__(
+        self,
+        job_id: str,
+        job_config: Dict[str, Any],
+        db_conn,
+        table_prefix: str,
+    ):
         super().__init__(job_id)
         self.__job_config = ExtractJsonJobConfig.parse_obj(job_config)
         self._archive_id = self.__job_config.archive_id
-        if not archive_exists(db_conn, self._archive_id):
+        if not archive_exists(db_conn, table_prefix, self._archive_id):
             raise ValueError(f"Archive {self._archive_id} doesn't exist")
 
     def get_stream_id(self) -> str:
@@ -368,10 +386,11 @@ def insert_query_tasks_into_db(db_conn, job_id, archive_ids: List[str]) -> List[
 @exception_default_value(default=[])
 def get_archives_for_search(
     db_conn,
+    table_prefix: str,
     search_config: SearchJobConfig,
 ):
-    query = f"""SELECT id as archive_id, end_timestamp 
-            FROM {CLP_METADATA_TABLE_PREFIX}archives
+    query = f"""SELECT id as archive_id, end_timestamp
+            FROM {table_prefix}{ARCHIVES_TABLE_SUFFIX}
             """
     filter_clauses = []
     if search_config.end_timestamp is not None:
@@ -380,8 +399,8 @@ def get_archives_for_search(
         filter_clauses.append(f"end_timestamp >= {search_config.begin_timestamp}")
     if search_config.tags is not None:
         filter_clauses.append(
-            f"id IN (SELECT archive_id FROM {CLP_METADATA_TABLE_PREFIX}archive_tags WHERE "
-            f"tag_id IN (SELECT tag_id FROM {CLP_METADATA_TABLE_PREFIX}tags WHERE tag_name IN "
+            f"id IN (SELECT archive_id FROM {table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX} WHERE "
+            f"tag_id IN (SELECT tag_id FROM {table_prefix}{TAGS_TABLE_SUFFIX} WHERE tag_name IN "
             f"(%s)))" % ", ".join(["%s" for _ in search_config.tags])
         )
     if len(filter_clauses) > 0:
@@ -399,12 +418,13 @@ def get_archives_for_search(
 
 def get_archive_and_file_split_ids_for_ir_extraction(
     db_conn,
+    table_prefix: str,
     extract_ir_config: ExtractIrJobConfig,
 ) -> Tuple[Optional[str], Optional[str]]:
     orig_file_id = extract_ir_config.orig_file_id
     msg_ix = extract_ir_config.msg_ix
 
-    results = get_archive_and_file_split_ids(db_conn, orig_file_id, msg_ix)
+    results = get_archive_and_file_split_ids(db_conn, table_prefix, orig_file_id, msg_ix)
     if len(results) == 0:
         logger.error(f"No matching file splits for orig_file_id={orig_file_id}, msg_ix={msg_ix}")
         return None, None
@@ -420,6 +440,7 @@ def get_archive_and_file_split_ids_for_ir_extraction(
 @exception_default_value(default=[])
 def get_archive_and_file_split_ids(
     db_conn,
+    table_prefix: str,
     orig_file_id: str,
     msg_ix: int,
 ):
@@ -429,16 +450,17 @@ def get_archive_and_file_split_ids(
     1. The file split's original file id = `orig_file_id`
     2. The file split includes the message with index = `msg_ix`
     :param db_conn:
+    :param table_prefix:
     :param orig_file_id: Original file id of the split
     :param msg_ix: Index of the message that the file split must include
     :return: A list of (archive id, file split id) on success. An empty list if
     an exception occurs while interacting with the database.
     """
 
-    query = f"""SELECT archive_id, id as file_split_id 
-            FROM {CLP_METADATA_TABLE_PREFIX}files WHERE
-            orig_file_id = '{orig_file_id}' AND 
-            begin_message_ix <= {msg_ix} AND 
+    query = f"""SELECT archive_id, id as file_split_id
+            FROM {table_prefix}{FILES_TABLE_SUFFIX} WHERE
+            orig_file_id = '{orig_file_id}' AND
+            begin_message_ix <= {msg_ix} AND
             (begin_message_ix + num_messages) > {msg_ix}
             """
 
@@ -451,12 +473,10 @@ def get_archive_and_file_split_ids(
 @exception_default_value(default=False)
 def archive_exists(
     db_conn,
+    table_prefix: str,
     archive_id: str,
 ) -> bool:
-    query = f"""SELECT 1 
-                FROM {CLP_METADATA_TABLE_PREFIX}archives WHERE
-                id = %s
-                """
+    query = f"SELECT 1 FROM {table_prefix}{ARCHIVES_TABLE_SUFFIX} WHERE id = %s"
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
         cursor.execute(query, (archive_id,))
         if cursor.fetchone():
@@ -594,12 +614,26 @@ def dispatch_job_and_update_db(
     )
 
 
+def _validate_dataset(
+    db_cursor,
+    table_prefix: str,
+    dataset: str,
+    existing_datasets: Set[str],
+) -> bool:
+    if dataset in existing_datasets:
+        return True
+    existing_datasets = fetch_existing_datasets(db_cursor, table_prefix)
+    return dataset in existing_datasets
+
+
 def handle_pending_query_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
+    clp_storage_engine: StorageEngine,
     results_cache_uri: str,
     stream_collection_name: str,
     num_archives_to_search_per_sub_job: int,
+    existing_datasets: Set[str],
 ) -> List[asyncio.Task]:
     global active_jobs
 
@@ -611,11 +645,31 @@ def handle_pending_query_jobs(
         and job.get_type() == QueryJobType.SEARCH_OR_AGGREGATION
     ]
 
-    with contextlib.closing(db_conn_pool.connect()) as db_conn:
+    with contextlib.closing(db_conn_pool.connect()) as db_conn, contextlib.closing(
+        db_conn.cursor(dictionary=True)
+    ) as db_cursor:
         for job in fetch_new_query_jobs(db_conn):
             job_id = str(job["job_id"])
             job_type = job["type"]
             job_config = msgpack.unpackb(job["job_config"])
+
+            table_prefix = clp_metadata_db_conn_params["table_prefix"]
+            if StorageEngine.CLP_S == clp_storage_engine:
+                dataset = QueryJobConfig.parse_obj(job_config).dataset
+                if not _validate_dataset(db_cursor, table_prefix, dataset, existing_datasets):
+                    logger.error(f"Dataset `{dataset}` doesn't exist.")
+                    if not set_job_or_task_status(
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.FAILED,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        duration=0,
+                    ):
+                        logger.error(f"Failed to set job {job_id} as failed.")
+                    continue
+                table_prefix = f"{table_prefix}{dataset}_"
 
             if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
                 # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
@@ -623,7 +677,7 @@ def handle_pending_query_jobs(
                     continue
 
                 search_config = SearchJobConfig.parse_obj(job_config)
-                archives_for_search = get_archives_for_search(db_conn, search_config)
+                archives_for_search = get_archives_for_search(db_conn, table_prefix, search_config)
                 if len(archives_for_search) == 0:
                     if set_job_or_task_status(
                         db_conn,
@@ -662,9 +716,9 @@ def handle_pending_query_jobs(
                 job_handle: StreamExtractionHandle
                 try:
                     if QueryJobType.EXTRACT_IR == job_type:
-                        job_handle = IrExtractionHandle(job_id, job_config, db_conn)
+                        job_handle = IrExtractionHandle(job_id, job_config, db_conn, table_prefix)
                     else:
-                        job_handle = JsonExtractionHandle(job_id, job_config, db_conn)
+                        job_handle = JsonExtractionHandle(job_id, job_config, db_conn, table_prefix)
                 except ValueError:
                     logger.exception("Failed to initialize extraction job handle")
                     if not set_job_or_task_status(
@@ -1030,6 +1084,7 @@ async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_del
 async def handle_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
+    clp_storage_engine: StorageEngine,
     results_cache_uri: str,
     stream_collection_name: str,
     jobs_poll_delay: float,
@@ -1040,13 +1095,16 @@ async def handle_jobs(
     )
 
     tasks = [handle_updating_task]
+    existing_datasets: Set[str] = set()
     while True:
         reducer_acquisition_tasks = handle_pending_query_jobs(
             db_conn_pool,
             clp_metadata_db_conn_params,
+            clp_storage_engine,
             results_cache_uri,
             stream_collection_name,
             num_archives_to_search_per_sub_job,
+            existing_datasets,
         )
         if 0 == len(reducer_acquisition_tasks):
             tasks.append(asyncio.create_task(asyncio.sleep(jobs_poll_delay)))
@@ -1128,6 +1186,7 @@ async def main(argv: List[str]) -> int:
                 clp_metadata_db_conn_params=clp_config.database.get_clp_connection_params_and_type(
                     True
                 ),
+                clp_storage_engine=clp_config.package.storage_engine,
                 results_cache_uri=clp_config.results_cache.get_uri(),
                 stream_collection_name=clp_config.results_cache.stream_collection_name,
                 jobs_poll_delay=clp_config.query_scheduler.jobs_poll_delay,

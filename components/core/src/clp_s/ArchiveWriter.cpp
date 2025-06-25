@@ -4,7 +4,8 @@
 #include <filesystem>
 #include <sstream>
 
-#include <json/single_include/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
+#include <spdlog/spdlog.h>
 
 #include "archive_constants.hpp"
 #include "Defs.hpp"
@@ -56,7 +57,12 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_array_dict->open(array_dict_path, m_compression_level, UINT64_MAX);
 }
 
-void ArchiveWriter::close() {
+auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
+    if (m_range_open) {
+        if (auto const rc = close_current_range(); ErrorCodeSuccess != rc) {
+            throw OperationFailed(rc, __FILENAME__, __LINE__);
+        }
+    }
     auto var_dict_compressed_size = m_var_dict->close();
     auto log_dict_compressed_size = m_log_dict->close();
     auto array_dict_compressed_size = m_array_dict->close();
@@ -80,15 +86,16 @@ void ArchiveWriter::close() {
         offset += original_size;
     }
 
+    nlohmann::json archive_range_index;
     if (m_single_file_archive) {
-        write_single_file_archive(files);
+        archive_range_index = write_single_file_archive(files);
     } else {
         FileWriter header_and_metadata_writer;
         header_and_metadata_writer.open(
                 m_archive_path + constants::cArchiveHeaderFile,
                 FileWriter::OpenMode::CreateForWriting
         );
-        write_archive_metadata(header_and_metadata_writer, files);
+        archive_range_index = write_archive_metadata(header_and_metadata_writer, files);
         size_t metadata_size = header_and_metadata_writer.get_pos() - sizeof(ArchiveHeader);
 
         m_compressed_size
@@ -100,12 +107,18 @@ void ArchiveWriter::close() {
         header_and_metadata_writer.close();
     }
 
-    if (m_metadata_db) {
-        update_metadata_db();
-    }
-
+    ArchiveStats archive_stats{
+            m_id,
+            m_timestamp_dict.get_begin_timestamp(),
+            m_timestamp_dict.get_end_timestamp(),
+            m_uncompressed_size,
+            m_compressed_size,
+            archive_range_index,
+            is_split
+    };
     if (m_print_archive_stats) {
-        print_archive_stats();
+        std::cout << archive_stats.as_string() << '\n';
+        std::cout << std::flush;
     }
 
     m_id_to_schema_writer.clear();
@@ -120,14 +133,17 @@ void ArchiveWriter::close() {
     m_authoritative_timestamp_namespace.clear();
     m_matched_timestamp_prefix_length = 0ULL;
     m_matched_timestamp_prefix_node_id = constants::cRootNodeId;
+    return archive_stats;
 }
 
-void ArchiveWriter::write_single_file_archive(std::vector<ArchiveFileInfo> const& files) {
+auto ArchiveWriter::write_single_file_archive(std::vector<ArchiveFileInfo> const& files)
+        -> nlohmann::json {
     std::string single_file_archive_path = (std::filesystem::path(m_archives_dir) / m_id).string();
     FileWriter archive_writer;
     archive_writer.open(single_file_archive_path, FileWriter::OpenMode::CreateForWriting);
 
-    write_archive_metadata(archive_writer, files);
+    // Avoid brace initialization to avoid wrapping nlohmann::json return value in a JSON array
+    auto archive_range_index(write_archive_metadata(archive_writer, files));
     size_t metadata_section_size = archive_writer.get_pos() - sizeof(ArchiveHeader);
     write_archive_files(archive_writer, files);
     m_compressed_size = archive_writer.get_pos();
@@ -138,18 +154,23 @@ void ArchiveWriter::write_single_file_archive(std::vector<ArchiveFileInfo> const
     if (false == std::filesystem::remove(m_archive_path, ec)) {
         throw OperationFailed(ErrorCodeFileExists, __FILENAME__, __LINE__);
     }
+    return archive_range_index;
 }
 
-void ArchiveWriter::write_archive_metadata(
+auto ArchiveWriter::write_archive_metadata(
         FileWriter& archive_writer,
         std::vector<ArchiveFileInfo> const& files
-) {
+) -> nlohmann::json {
     archive_writer.seek_from_begin(sizeof(ArchiveHeader));
 
     ZstdCompressor compressor;
     compressor.open(archive_writer, m_compression_level);
-    uint8_t const num_packets{3U};
-    compressor.write_numeric_value(num_packets);
+    uint8_t num_optional_packets{0ULL};
+    if (false == m_range_index_writer.empty()) {
+        ++num_optional_packets;
+    }
+    uint8_t const num_constant_packets{3U};
+    compressor.write_numeric_value<uint8_t>(num_constant_packets + num_optional_packets);
 
     // Write archive info
     ArchiveInfoPacket archive_info{.num_segments = 1};
@@ -176,7 +197,16 @@ void ArchiveWriter::write_archive_metadata(
     compressor.write_numeric_value(static_cast<uint32_t>(encoded_timestamp_dict.size()));
     compressor.write(encoded_timestamp_dict.data(), encoded_timestamp_dict.size());
 
+    // Write range index
+    nlohmann::json archive_range_index;
+    if (auto rc = m_range_index_writer.write(compressor, archive_range_index);
+        ErrorCodeSuccess != rc)
+    {
+        throw OperationFailed(rc, __FILENAME__, __LINE__);
+    }
+
     compressor.close();
+    return archive_range_index;
 }
 
 void ArchiveWriter::write_archive_files(
@@ -241,14 +271,15 @@ ArchiveWriter::append_message(int32_t schema_id, Schema const& schema, ParsedMes
 
 int32_t ArchiveWriter::add_node(int parent_node_id, NodeType type, std::string_view key) {
     auto const node_id{m_schema_tree.add_node(parent_node_id, type, key)};
-    if (NodeType::Object == type && m_matched_timestamp_prefix_node_id == parent_node_id
-        && m_authoritative_timestamp.size() > (m_matched_timestamp_prefix_length + 1))
-    {
-        if (constants::cRootNodeId == parent_node_id) {
+    if (NodeType::Object == type && m_matched_timestamp_prefix_node_id == parent_node_id) {
+        if (false == m_authoritative_timestamp.empty() && constants::cRootNodeId == parent_node_id)
+        {
             if (m_authoritative_timestamp_namespace == key) {
                 m_matched_timestamp_prefix_node_id = node_id;
             }
-        } else if (m_authoritative_timestamp.at(m_matched_timestamp_prefix_length) == key) {
+        } else if (m_authoritative_timestamp.size() > (m_matched_timestamp_prefix_length + 1)
+                   && m_authoritative_timestamp.at(m_matched_timestamp_prefix_length) == key)
+        {
             m_matched_timestamp_prefix_length += 1;
             m_matched_timestamp_prefix_node_id = node_id;
         }
@@ -427,31 +458,5 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     m_tables_file_writer.close();
 
     return {table_metadata_compressed_size, table_compressed_size};
-}
-
-void ArchiveWriter::update_metadata_db() {
-    m_metadata_db->open();
-    clp::streaming_archive::ArchiveMetadata metadata(
-            cArchiveFormatDevelopmentVersionFlag,
-            "",
-            0ULL
-    );
-    metadata.increment_static_compressed_size(m_compressed_size);
-    metadata.increment_static_uncompressed_size(m_uncompressed_size);
-    metadata.expand_time_range(
-            m_timestamp_dict.get_begin_timestamp(),
-            m_timestamp_dict.get_end_timestamp()
-    );
-
-    m_metadata_db->add_archive(m_id, metadata);
-    m_metadata_db->close();
-}
-
-void ArchiveWriter::print_archive_stats() {
-    nlohmann::json json_msg;
-    json_msg["id"] = m_id;
-    json_msg["uncompressed_size"] = m_uncompressed_size;
-    json_msg["size"] = m_compressed_size;
-    std::cout << json_msg.dump(-1, ' ', true, nlohmann::json::error_handler_t::ignore) << std::endl;
 }
 }  // namespace clp_s

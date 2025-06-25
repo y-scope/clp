@@ -9,6 +9,7 @@
 #include <vector>
 
 #include <absl/container/flat_hash_map.h>
+#include <boost/uuid/uuid_io.hpp>
 #include <curl/curl.h>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
@@ -16,6 +17,7 @@
 #include "../clp/ffi/ir_stream/decoding_methods.hpp"
 #include "../clp/ffi/ir_stream/Deserializer.hpp"
 #include "../clp/ffi/ir_stream/IrUnitType.hpp"
+#include "../clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../clp/ffi/KeyValuePairLogEvent.hpp"
 #include "../clp/ffi/SchemaTree.hpp"
 #include "../clp/ffi/Value.hpp"
@@ -26,9 +28,11 @@
 #include "../clp/time_types.hpp"
 #include "archive_constants.hpp"
 #include "ErrorCode.hpp"
+#include "InputConfig.hpp"
 #include "JsonFileIterator.hpp"
 #include "JsonParser.hpp"
-#include "search/ColumnDescriptor.hpp"
+#include "search/ast/ColumnDescriptor.hpp"
+#include "search/ast/SearchUtils.hpp"
 
 using clp::ffi::ir_stream::Deserializer;
 using clp::ffi::ir_stream::IRErrorCode;
@@ -37,7 +41,7 @@ using clp::UtcOffset;
 
 namespace clp_s {
 /**
- * Class that implements `clp::ffi::ir_stream::IrUnitHandlerInterface` for Key-Value IR compression.
+ * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for Key-Value IR compression.
  */
 class IrUnitHandler {
 public:
@@ -91,7 +95,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
         if (false
-            == clp_s::StringUtils::tokenize_column_descriptor(
+            == clp_s::search::ast::tokenize_column_descriptor(
                     m_timestamp_key,
                     m_timestamp_column,
                     m_timestamp_namespace
@@ -103,7 +107,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
 
         // Unescape individual tokens to match unescaped JSON and confirm there are no wildcards in
         // the timestamp column.
-        auto column = clp_s::search::ColumnDescriptor::create_from_escaped_tokens(
+        auto column = clp_s::search::ast::ColumnDescriptor::create_from_escaped_tokens(
                 m_timestamp_column,
                 m_timestamp_namespace
         );
@@ -126,7 +130,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_options.authoritative_timestamp = m_timestamp_column;
     m_archive_options.authoritative_timestamp_namespace = m_timestamp_namespace;
 
-    m_archive_writer = std::make_unique<ArchiveWriter>(option.metadata_db);
+    m_archive_writer = std::make_unique<ArchiveWriter>();
     m_archive_writer->open(m_archive_options);
 }
 
@@ -475,16 +479,15 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 hit_end = true;
             }
         } while (false == object_it_stack.empty() && hit_end);
-    }
-
-    while (false == object_stack.empty());
+    } while (false == object_stack.empty());
 }
 
 bool JsonParser::parse() {
+    auto archive_creator_id = boost::uuids::to_string(m_generator());
     for (auto const& path : m_input_paths) {
-        auto reader{ReaderUtils::try_create_reader(path, m_network_auth)};
+        auto reader{try_create_reader(path, m_network_auth)};
         if (nullptr == reader) {
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         }
 
@@ -495,7 +498,7 @@ bool JsonParser::parse() {
                     simdjson::error_message(json_file_iterator.get_error()),
                     path.path
             );
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         }
 
@@ -505,14 +508,59 @@ bool JsonParser::parse() {
         size_t bytes_consumed_up_to_prev_archive = 0;
         size_t bytes_consumed_up_to_prev_record = 0;
 
+        size_t file_split_number{0ULL};
         int32_t log_event_idx_node_id{};
-        auto add_log_event_idx_node = [&]() {
+        auto initialize_fields_for_archive = [&]() -> bool {
             if (m_record_log_order) {
                 log_event_idx_node_id
                         = add_metadata_field(constants::cLogEventIdxName, NodeType::Integer);
             }
+            if (auto const rc = m_archive_writer->add_field_to_current_range(
+                        std::string{constants::range_index::cFilename},
+                        path.path
+                );
+                ErrorCodeSuccess != rc)
+            {
+                SPDLOG_ERROR(
+                        "Failed to add metadata field \"{}\" ({})",
+                        constants::range_index::cFilename,
+                        static_cast<int64_t>(rc)
+                );
+                return false;
+            }
+            if (auto const rc = m_archive_writer->add_field_to_current_range(
+                        std::string{constants::range_index::cFileSplitNumber},
+                        file_split_number
+                );
+                ErrorCodeSuccess != rc)
+            {
+                SPDLOG_ERROR(
+                        "Failed to add metadata field \"{}\" ({})",
+                        constants::range_index::cFileSplitNumber,
+                        static_cast<int64_t>(rc)
+                );
+                return false;
+            }
+            if (auto const rc = m_archive_writer->add_field_to_current_range(
+                        std::string{constants::range_index::cArchiveCreatorId},
+                        archive_creator_id
+                );
+                ErrorCodeSuccess != rc)
+            {
+                SPDLOG_ERROR(
+                        "Failed to add metadata field \"{}\" ({})",
+                        constants::range_index::cArchiveCreatorId,
+                        static_cast<int64_t>(rc)
+                );
+                return false;
+            }
+            return true;
         };
-        add_log_event_idx_node();
+        if (false == initialize_fields_for_archive()) {
+            std::ignore = m_archive_writer->close();
+            return false;
+        }
+        auto update_fields_after_archive_split = [&]() { ++file_split_number; };
 
         while (json_file_iterator.get_json(json_it)) {
             m_current_schema.clear();
@@ -530,7 +578,7 @@ bool JsonParser::parse() {
                         path.path,
                         bytes_consumed_up_to_prev_record
                 );
-                m_archive_writer->close();
+                std::ignore = m_archive_writer->close();
                 return false;
             }
 
@@ -555,7 +603,7 @@ bool JsonParser::parse() {
                         path.path,
                         bytes_consumed_up_to_prev_record
                 );
-                m_archive_writer->close();
+                std::ignore = m_archive_writer->close();
                 return false;
             }
             m_num_messages++;
@@ -572,7 +620,11 @@ bool JsonParser::parse() {
                 );
                 bytes_consumed_up_to_prev_archive = bytes_consumed_up_to_prev_record;
                 split_archive();
-                add_log_event_idx_node();
+                update_fields_after_archive_split();
+                if (false == initialize_fields_for_archive()) {
+                    std::ignore = m_archive_writer->close();
+                    return false;
+                }
             }
 
             m_current_parsed_message.clear();
@@ -589,7 +641,7 @@ bool JsonParser::parse() {
                     path.path,
                     bytes_consumed_up_to_prev_record
             );
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         } else if (json_file_iterator.truncated_bytes() > 0) {
             // currently don't treat truncated bytes at the end of the file as an error
@@ -601,7 +653,13 @@ bool JsonParser::parse() {
         }
 
         if (check_and_log_curl_error(path, reader)) {
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
+            return false;
+        }
+
+        if (auto const rc = m_archive_writer->close_current_range(); ErrorCodeSuccess != rc) {
+            SPDLOG_ERROR("Failed to close metadata range: {}", static_cast<int64_t>(rc));
+            std::ignore = m_archive_writer->close();
             return false;
         }
     }
@@ -888,10 +946,11 @@ void JsonParser::parse_kv_log_event(KeyValuePairLogEvent const& kv) {
 
 auto JsonParser::parse_from_ir() -> bool {
     constexpr size_t cDecompressorReadBufferCapacity{64 * 1024};  // 64 KB
+    auto archive_creator_id = boost::uuids::to_string(m_generator());
     for (auto const& path : m_input_paths) {
-        auto reader{ReaderUtils::try_create_reader(path, m_network_auth)};
+        auto reader{try_create_reader(path, m_network_auth)};
         if (nullptr == reader) {
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         }
 
@@ -900,7 +959,8 @@ auto JsonParser::parse_from_ir() -> bool {
         size_t last_pos{};
         decompressor.open(*reader, cDecompressorReadBufferCapacity);
 
-        auto deserializer_result{Deserializer<IrUnitHandler>::create(decompressor, IrUnitHandler{})
+        auto deserializer_result{
+                Deserializer<IrUnitHandler>::create(decompressor, IrUnitHandler{})
         };
         if (deserializer_result.has_error()) {
             auto err = deserializer_result.error();
@@ -911,34 +971,109 @@ auto JsonParser::parse_from_ir() -> bool {
             );
             decompressor.close();
             check_and_log_curl_error(path, reader);
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         }
         auto& deserializer = deserializer_result.value();
         auto& ir_unit_handler{deserializer.get_ir_unit_handler()};
 
+        size_t file_split_number{0ULL};
         int32_t log_event_idx_node_id{};
-        auto add_log_event_idx_node = [&]() {
+        auto initialize_fields_for_archive = [&]() -> bool {
             if (m_record_log_order) {
                 log_event_idx_node_id
                         = add_metadata_field(constants::cLogEventIdxName, NodeType::Integer);
             }
+            if (auto const rc = m_archive_writer->add_field_to_current_range(
+                        std::string{constants::range_index::cFilename},
+                        path.path
+                );
+                ErrorCodeSuccess != rc)
+            {
+                SPDLOG_ERROR(
+                        "Failed to add metadata field \"{}\" ({})",
+                        constants::range_index::cFilename,
+                        static_cast<int64_t>(rc)
+                );
+                return false;
+            }
+            if (auto const rc = m_archive_writer->add_field_to_current_range(
+                        std::string{constants::range_index::cFileSplitNumber},
+                        file_split_number
+                );
+                ErrorCodeSuccess != rc)
+            {
+                SPDLOG_ERROR(
+                        "Failed to add metadata field \"{}\" ({})",
+                        constants::range_index::cFileSplitNumber,
+                        static_cast<int64_t>(rc)
+                );
+                return false;
+            }
+            if (auto const rc = m_archive_writer->add_field_to_current_range(
+                        std::string{constants::range_index::cArchiveCreatorId},
+                        archive_creator_id
+                );
+                ErrorCodeSuccess != rc)
+            {
+                SPDLOG_ERROR(
+                        "Failed to add metadata field \"{}\" ({})",
+                        constants::range_index::cArchiveCreatorId,
+                        static_cast<int64_t>(rc)
+                );
+                return false;
+            }
+            auto const& metadata = deserializer.get_metadata();
+            if (metadata.contains(clp::ffi::ir_stream::cProtocol::Metadata::UserDefinedMetadataKey))
+            {
+                for (auto const& [metadata_key, metadata_value] :
+                     metadata.at(clp::ffi::ir_stream::cProtocol::Metadata::UserDefinedMetadataKey)
+                             .items())
+                {
+                    if (auto const rc = m_archive_writer->add_field_to_current_range(
+                                metadata_key,
+                                metadata_value
+                        );
+                        ErrorCodeSuccess != rc)
+                    {
+                        SPDLOG_ERROR(
+                                "Failed to add metadata field \"{}\" ({})",
+                                metadata_key,
+                                static_cast<int64_t>(rc)
+                        );
+                        return false;
+                    }
+                }
+            }
+            return true;
         };
-        add_log_event_idx_node();
+        if (false == initialize_fields_for_archive()) {
+            decompressor.close();
+            std::ignore = m_archive_writer->close();
+            return false;
+        }
+        auto update_fields_after_archive_split = [&]() { ++file_split_number; };
+
         while (true) {
             auto const kv_log_event_result{deserializer.deserialize_next_ir_unit(decompressor)};
 
             if (kv_log_event_result.has_error()) {
                 auto err = kv_log_event_result.error();
-                SPDLOG_ERROR(
-                        "Encountered error while deserializing kv-ir log event: ({}) - {}",
+                SPDLOG_WARN(
+                        "Encountered error while deserializing kv-ir log event from stream \"{}\": "
+                        "({}) - {}",
+                        path.path,
                         err.value(),
                         err.message()
                 );
-                m_archive_writer->close();
-                decompressor.close();
-                check_and_log_curl_error(path, reader);
-                return false;
+                if (check_and_log_curl_error(path, reader)) {
+                    std::ignore = m_archive_writer->close();
+                    decompressor.close();
+                    return false;
+                } else {
+                    // Treat deserialization error as end of a truncated stream
+                    break;
+                }
             }
             if (kv_log_event_result.value() == clp::ffi::ir_stream::IrUnitType::EndOfStream) {
                 break;
@@ -961,7 +1096,7 @@ auto JsonParser::parse_from_ir() -> bool {
                     parse_kv_log_event(*kv_log_event);
                 } catch (std::exception const& e) {
                     SPDLOG_ERROR("Encountered error while parsing a kv log event - {}", e.what());
-                    m_archive_writer->close();
+                    std::ignore = m_archive_writer->close();
                     decompressor.close();
                     return false;
                 }
@@ -973,7 +1108,12 @@ auto JsonParser::parse_from_ir() -> bool {
                     m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
                     last_pos = curr_pos;
                     split_archive();
-                    add_log_event_idx_node();
+                    update_fields_after_archive_split();
+                    if (false == initialize_fields_for_archive()) {
+                        std::ignore = m_archive_writer->close();
+                        decompressor.close();
+                        return false;
+                    }
                 }
 
                 ir_unit_handler.clear();
@@ -988,7 +1128,7 @@ auto JsonParser::parse_from_ir() -> bool {
                         "Encountered unkown IR unit type ({}) during deserialization.",
                         static_cast<uint8_t>(kv_log_event_result.value())
                 );
-                m_archive_writer->close();
+                std::ignore = m_archive_writer->close();
                 decompressor.close();
                 return false;
             }
@@ -998,16 +1138,22 @@ auto JsonParser::parse_from_ir() -> bool {
         curr_pos = decompressor.get_pos();
         m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
         decompressor.close();
+        if (auto const rc = m_archive_writer->close_current_range(); ErrorCodeSuccess != rc) {
+            SPDLOG_ERROR("Failed to close metadata range: {}", static_cast<int64_t>(rc));
+            std::ignore = m_archive_writer->close();
+            return false;
+        }
     }
     return true;
 }
 
-void JsonParser::store() {
-    m_archive_writer->close();
+auto JsonParser::store() -> std::vector<ArchiveStats> {
+    m_archive_stats.emplace_back(m_archive_writer->close());
+    return std::move(m_archive_stats);
 }
 
 void JsonParser::split_archive() {
-    m_archive_writer->close();
+    m_archive_stats.emplace_back(m_archive_writer->close(true));
     m_archive_options.id = m_generator();
     m_archive_writer->open(m_archive_options);
 }

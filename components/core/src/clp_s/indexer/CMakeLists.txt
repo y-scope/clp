@@ -55,6 +55,8 @@ set(
         ../SchemaReader.hpp
         ../SchemaTree.cpp
         ../SchemaTree.hpp
+        ../search/ast/SearchUtils.cpp
+        ../search/ast/SearchUtils.hpp
         ../TimestampDictionaryReader.cpp
         ../TimestampDictionaryReader.hpp
         ../TimestampEntry.cpp
@@ -78,25 +80,29 @@ set(
         MySQLIndexStorage.hpp
 )
 
-add_executable(indexer ${INDEXER_SOURCES})
-target_compile_features(indexer PRIVATE cxx_std_20)
-target_include_directories(indexer PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
-target_link_libraries(indexer
-        PRIVATE
-        absl::flat_hash_map
-        Boost::iostreams Boost::program_options Boost::url
-        ${CURL_LIBRARIES}
-        clp::string_utils
-        MariaDBClient::MariaDBClient
-        OpenSSL::Crypto
-        simdjson
-        spdlog::spdlog
-        yaml-cpp::yaml-cpp
-        ZStd::ZStd
-)
-# Put the built executable at the root of the build directory
-set_target_properties(
-        indexer
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
-)
+if(CLP_BUILD_EXECUTABLES)
+        add_executable(indexer ${INDEXER_SOURCES})
+        target_compile_features(indexer PRIVATE cxx_std_20)
+        target_link_libraries(indexer
+                PRIVATE
+                absl::flat_hash_map
+                Boost::iostreams Boost::program_options Boost::url
+                ${CURL_LIBRARIES}
+                clp::string_utils
+                date::date
+                MariaDBClient::MariaDBClient
+                nlohmann_json::nlohmann_json
+                OpenSSL::Crypto
+                simdjson::simdjson
+                spdlog::spdlog
+                yaml-cpp
+                ystdlib::containers
+                ZStd::ZStd
+        )
+        # Put the built executable at the root of the build directory
+        set_target_properties(
+                indexer
+                PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+        )
+endif()

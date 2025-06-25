@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 from enum import auto
 
-from clp_py_utils.clp_config import S3Credentials
+from clp_py_utils.clp_config import CLP_DEFAULT_DATASET_NAME, S3Config
 from pydantic import BaseModel, validator
 from strenum import LowercaseStrEnum
 
@@ -22,20 +22,16 @@ class PathsToCompress(BaseModel):
 
 class FsInputConfig(BaseModel):
     type: typing.Literal[InputType.FS.value] = InputType.FS.value
+    dataset: str = CLP_DEFAULT_DATASET_NAME
     paths_to_compress: typing.List[str]
     path_prefix_to_remove: str = None
     timestamp_key: typing.Optional[str] = None
 
 
-class S3InputConfig(BaseModel):
+class S3InputConfig(S3Config):
     type: typing.Literal[InputType.S3.value] = InputType.S3.value
+    dataset: str = CLP_DEFAULT_DATASET_NAME
     timestamp_key: typing.Optional[str] = None
-
-    region_code: str
-    bucket: str
-    key_prefix: str
-
-    credentials: S3Credentials
 
 
 class OutputConfig(BaseModel):
@@ -44,6 +40,7 @@ class OutputConfig(BaseModel):
     target_dictionaries_size: int
     target_segment_size: int
     target_encoded_file_size: int
+    compression_level: int
 
 
 class ClpIoConfig(BaseModel):
@@ -59,7 +56,8 @@ class AggregationConfig(BaseModel):
     count_by_time_bucket_size: typing.Optional[int] = None  # Milliseconds
 
 
-class QueryJobConfig(BaseModel): ...
+class QueryJobConfig(BaseModel):
+    dataset: str = CLP_DEFAULT_DATASET_NAME
 
 
 class ExtractIrJobConfig(QueryJobConfig):

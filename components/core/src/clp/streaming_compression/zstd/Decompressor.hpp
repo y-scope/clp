@@ -5,9 +5,9 @@
 #include <optional>
 #include <string>
 
+#include <ystdlib/containers/Array.hpp>
 #include <zstd.h>
 
-#include "../../Array.hpp"
 #include "../../ReaderInterface.hpp"
 #include "../../ReadOnlyMemoryMappedFile.hpp"
 #include "../../TraceableException.hpp"
@@ -121,6 +121,15 @@ private:
 
     // Methods
     /**
+     * Refills m_compressed_stream_block with data from the underlying input medium.
+     *
+     * @return ErrorCode_Success on success
+     * @return ErrorCode_EndOfFile if no more data is available
+     * @return Forwards `ReaderInterface::try_read`'s return values.
+     */
+    [[nodiscard]] auto refill_compressed_stream_block() -> ErrorCode;
+
+    /**
      * Reset streaming decompression state so it will start decompressing from the beginning of
      * the stream afterwards
      */
@@ -136,14 +145,15 @@ private:
     ReaderInterface* m_reader{nullptr};
     size_t m_reader_initial_pos{0ULL};
 
-    std::optional<Array<char>> m_read_buffer;
+    std::optional<ystdlib::containers::Array<char>> m_read_buffer;
     size_t m_read_buffer_length{0ULL};
 
     ZSTD_inBuffer m_compressed_stream_block{};
 
     size_t m_decompressed_stream_pos{0ULL};
+    bool m_zstd_frame_might_have_more_data{false};
 
-    Array<char> m_unused_decompressed_stream_block_buffer;
+    ystdlib::containers::Array<char> m_unused_decompressed_stream_block_buffer;
 };
 }  // namespace clp::streaming_compression::zstd
 #endif  // CLP_STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP
