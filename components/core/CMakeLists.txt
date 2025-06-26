@@ -235,8 +235,10 @@ if(yaml-cpp_FOUND)
 endif()
 
 # Add ystdlib
-set(YSTDLIB_CPP_BUILD_TESTING OFF)
-add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
+find_package(ystdlib REQUIRED)
+if (ystdlib_FOUND)
+    message(STATUS "Found ystdlib ${ystdlib_VERSION}")
+endif()
 
 # Find and setup ZStd Library
 if(CLP_USE_STATIC_LIBS)
