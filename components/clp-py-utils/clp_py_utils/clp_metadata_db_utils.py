@@ -164,21 +164,46 @@ def fetch_existing_datasets(
 
 
 def validate_dataset(
+    database_config: Database,
+    dataset: str | None,
+) -> bool:
+    """
+    Checks if the provided dataset currently exists in the metadata database.
+
+    Primarily used by scripts that want to validate the dataset during argument parsing stage.
+    :param database_config:
+    :param dataset:
+    """
+    if not dataset:
+        return False
+    sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
+    clp_db_connection_params: dict[str, any] = database_config.get_clp_connection_params_and_type(
+        True
+    )
+    table_prefix: str = clp_db_connection_params["table_prefix"]
+    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
+        db_conn.cursor(dictionary=True)
+    ) as db_cursor:
+        return validate_and_cache_dataset(db_cursor, table_prefix, dataset)
+
+
+def validate_and_cache_dataset(
     db_cursor,
     table_prefix: str,
-    dataset: str,
+    dataset: str | None,
     existing_datasets: Set[str] | None = None,
 ) -> bool:
     """
-    Checks if a dataset currently exists in the metadata or in the local dataset cache.
+    Checks if the provided dataset currently exists in the metadata database and cache it locally.
 
+    If the dataset already exists in the local cache, database query is skipped.
     :param db_cursor:
     :param table_prefix:
     :param dataset: The dataset to validate.
-    :param existing_datasets: Returns a refreshed cache of dataset names fetched from the metadata
-                              if the current cache doesn not contain the provided dataset and a
-                              lookup is required.
+    :param existing_datasets: Returns a refreshed cache of dataset names if a lookup is required.
     """
+    if not dataset:
+        return False
     if existing_datasets is not None and dataset in existing_datasets:
         return True
     existing_datasets = fetch_existing_datasets(db_cursor, table_prefix)
