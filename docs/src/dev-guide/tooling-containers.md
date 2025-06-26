@@ -3,8 +3,8 @@
 We publish (to [GitHub packages][gh-packages]) several Docker container images useful for building
 and running CLP:
 
-* Various manylinux_2_28 based images 
-  ([x86_64](core-deps-manylinux_2_28_x86_64), [aarch64](core-deps-manylinux_2_28_aarch64))
+* Various manylinux_2_28 based images
+  ([x86_64][core-deps-manylinux_2_28_x86_64], [aarch64][core-deps-manylinux_2_28_aarch64])
   containing the dependencies necessary to build CLP core in manylinux_2_28 environments
   
   ```text

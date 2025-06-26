@@ -4,7 +4,7 @@ CLP core is the low-level component that performs compression, decompression, an
 
 ## Requirements
 
-* We have built and tested CLP on the OSes listed [below](#native-environment).
+* We have built and tested CLP on the OSes listed [below](#native-build-environment).
   * If you have trouble building for another OS, file an issue, and we may be able to help.
 * A recent compiler that fully supports C++20 features such as
   * std::span
@@ -37,7 +37,7 @@ A handful of packages and libraries are required to build CLP. There are two opt
 
 See the relevant README for your OS:
 
-* [manylinux_2_28](manylinux_2_28)
+* [manylinux_2_28](manylinux_2_28-deps-install)
 * [CentOS Stream 9](centos-stream-9-deps-install)
 * [macOS](macos-deps-install)
 * [Ubuntu 22.04](ubuntu-jammy-deps-install)
@@ -119,7 +119,7 @@ the relevant paths on your machine.
 
 :::{toctree}
 :hidden:
-
+manylinux_2_28-deps-install
 centos-stream-9-deps-install
 macos-deps-install
 ubuntu-jammy-deps-install
