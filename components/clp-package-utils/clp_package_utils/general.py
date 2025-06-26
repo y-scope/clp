@@ -21,7 +21,6 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    SQL_Adapter,
     StorageType,
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
@@ -33,6 +32,7 @@ from clp_py_utils.core import (
     read_yaml_config_file,
     validate_path_could_be_dir,
 )
+from clp_py_utils.sql_adapter import SQL_Adapter
 from strenum import KebabCaseStrEnum
 
 # CONSTANTS
