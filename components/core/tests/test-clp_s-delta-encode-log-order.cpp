@@ -23,8 +23,8 @@ constexpr size_t cNumEntries{3};
 
 namespace {
 /**
- * This class is a simple implementation of the abstract clp_s::FilterClass that allows us to grab
- * the underlying `std::vector<BaseColumnReader*>` from a `SchemaReader`.
+ * A simple implementation of `clp_s::FilterClass` that allows us to grab the underlying
+ * `std::vector<BaseColumnReader*>` from a `SchemaReader`.
  */
 class SimpleFilterClass : public clp_s::FilterClass {
 public:
@@ -101,6 +101,7 @@ TEST_CASE("clp-s-delta-encode-log-order", "[clp-s][delta-encode-log-order]") {
     REQUIRE(nullptr != log_event_idx_reader);
     REQUIRE(clp_s::NodeType::DeltaInteger == log_event_idx_reader->get_type());
     REQUIRE(nullptr != dynamic_cast<clp_s::DeltaEncodedInt64ColumnReader*>(log_event_idx_reader));
+
     // Test forwards and backwards seeks on `DeltaEncodedInt64ColumnReader`.
     size_t i{start_index};
     for (size_t num_iterations{0ULL}; num_iterations < cNumEntries; ++num_iterations) {
