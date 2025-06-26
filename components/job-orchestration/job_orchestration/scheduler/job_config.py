@@ -56,7 +56,8 @@ class AggregationConfig(BaseModel):
     count_by_time_bucket_size: typing.Optional[int] = None  # Milliseconds
 
 
-class QueryJobConfig(BaseModel): ...
+class QueryJobConfig(BaseModel):
+    dataset: str = CLP_DEFAULT_DATASET_NAME
 
 
 class ExtractIrJobConfig(QueryJobConfig):
@@ -72,7 +73,6 @@ class ExtractJsonJobConfig(QueryJobConfig):
 
 
 class SearchJobConfig(QueryJobConfig):
-    dataset: str = CLP_DEFAULT_DATASET_NAME
     query_string: str
     max_num_results: int
     tags: typing.Optional[typing.List[str]] = None

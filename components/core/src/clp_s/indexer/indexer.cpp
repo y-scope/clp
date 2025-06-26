@@ -31,7 +31,10 @@ int main(int argc, char const* argv[]) {
     }
 
     try {
-        clp_s::indexer::IndexManager index_manager(command_line_arguments.get_db_config());
+        clp_s::indexer::IndexManager index_manager(
+                command_line_arguments.get_db_config(),
+                command_line_arguments.should_create_table()
+        );
         index_manager.update_metadata(
                 command_line_arguments.get_dataset_name(),
                 command_line_arguments.get_archive_path()
