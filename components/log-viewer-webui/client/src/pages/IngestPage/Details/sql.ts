@@ -60,10 +60,17 @@ interface DetailsItem {
     num_messages: Nullable<number>;
 }
 
+const DETAILS_DEFAULT: DetailsItem = {
+    begin_timestamp: null,
+    end_timestamp: null,
+    num_files: 0,
+    num_messages: 0,
+};
+
 type DetailsResp = DetailsItem[];
 
 export type {
     DetailsItem,
     DetailsResp,
 };
-export {buildMultiDatasetDetailsSql};
+export {buildMultiDatasetDetailsSql, DETAILS_DEFAULT};

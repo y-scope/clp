@@ -5,7 +5,6 @@ import {theme} from "antd";
 import StatCard from "../../../components/StatCard";
 import {querySql} from "../../../api/sql";
 import {fetchDatasetNames} from "../../SearchPage/SearchControls/Dataset/sql";
-import useIngestStatsStore from "../ingestStatsStore";
 import CompressedSize from "./CompressedSize";
 import styles from "./index.module.css";
 import {
@@ -39,7 +38,7 @@ const SpaceSavings = () => {
         staleTime: refreshInterval,
     });
 
-    const {data: spaceSavings, isPending} = useQuery({
+    const {data, isPending} = useQuery({
         queryKey: ["space-savings", datasetNames],
         queryFn: async () => {
             if (false === isSuccessDatasetNames) {
@@ -60,8 +59,10 @@ const SpaceSavings = () => {
         enabled: isSuccessDatasetNames,
     });
 
-    const compressedSize = spaceSavings?.total_compressed_size ?? 0;
-    const uncompressedSize = spaceSavings?.total_uncompressed_size ?? 0;
+    const spaceSavings = data ?? SPACE_SAVINGS_DEFAULT;
+
+    const compressedSize = spaceSavings.total_compressed_size;
+    const uncompressedSize = spaceSavings.total_uncompressed_size;
 
     const spaceSavingsPercent = (0 !== uncompressedSize) ?
         100 * (1 - (compressedSize / uncompressedSize)) :

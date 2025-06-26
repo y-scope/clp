@@ -12,8 +12,8 @@ interface DashboardCardProps {
     title: string;
     titleColor?: string;
     backgroundColor?: string;
-    isLoading?: boolean;
     children?: React.ReactNode;
+    isLoading?: boolean;
 }
 
 /**

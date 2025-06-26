@@ -4,7 +4,6 @@ import dayjs from "dayjs";
 import {DashboardCard} from "../../../components/DashboardCard";
 import VirtualTable from "../../../components/VirtualTable";
 import {querySql} from "../../../api/sql";
-import useIngestStatsStore from "../ingestStatsStore";
 import styles from "./index.module.css";
 import {
     getQueryJobsSql,
