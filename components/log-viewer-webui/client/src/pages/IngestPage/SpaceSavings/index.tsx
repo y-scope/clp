@@ -9,18 +9,10 @@ import CompressedSize from "./CompressedSize";
 import styles from "./index.module.css";
 import {
     buildMultiDatasetSpaceSavingsSql,
+    SPACE_SAVINGS_DEFAULT,
     SpaceSavingsItem,
 } from "./sql";
 import UncompressedSize from "./UncompressedSize";
-
-
-/**
- * Default state for space savings.
- */
-const SPACE_SAVINGS_DEFAULT: SpaceSavingsItem = {
-    total_compressed_size: 0,
-    total_uncompressed_size: 0,
-};
 
 
 /**
@@ -29,16 +21,14 @@ const SPACE_SAVINGS_DEFAULT: SpaceSavingsItem = {
  * @return
  */
 const SpaceSavings = () => {
-    const {refreshInterval} = useIngestStatsStore();
     const {token} = theme.useToken();
 
     const {data: datasetNames, isSuccess: isSuccessDatasetNames} = useQuery({
         queryKey: ["datasets"],
         queryFn: fetchDatasetNames,
-        staleTime: refreshInterval,
     });
 
-    const {data, isPending} = useQuery({
+    const {data: spaceSavings = SPACE_SAVINGS_DEFAULT, isPending} = useQuery({
         queryKey: ["space-savings", datasetNames],
         queryFn: async () => {
             if (false === isSuccessDatasetNames) {
@@ -58,8 +48,6 @@ const SpaceSavings = () => {
         },
         enabled: isSuccessDatasetNames,
     });
-
-    const spaceSavings = data ?? SPACE_SAVINGS_DEFAULT;
 
     const compressedSize = spaceSavings.total_compressed_size;
     const uncompressedSize = spaceSavings.total_uncompressed_size;

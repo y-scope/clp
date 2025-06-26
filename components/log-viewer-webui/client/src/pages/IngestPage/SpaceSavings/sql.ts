@@ -42,10 +42,21 @@ interface SpaceSavingsItem {
     total_compressed_size: number;
 }
 
+/**
+ * Default state for space savings.
+ */
+const SPACE_SAVINGS_DEFAULT: SpaceSavingsItem = {
+    total_compressed_size: 0,
+    total_uncompressed_size: 0,
+};
+
 type SpaceSavingsResp = SpaceSavingsItem[];
 
 export type {
     SpaceSavingsItem,
     SpaceSavingsResp,
 };
-export {buildMultiDatasetSpaceSavingsSql};
+export {
+    buildMultiDatasetSpaceSavingsSql,
+    SPACE_SAVINGS_DEFAULT,
+};

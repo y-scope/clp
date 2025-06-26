@@ -30,16 +30,14 @@ interface JobsProps {
  * @return
  */
 const Jobs = ({className}: JobsProps) => {
-    const {refreshInterval} = useIngestStatsStore();
 
-    const {data: jobs = [], isLoading} = useQuery({
+    const {data: jobs = [], isPending} = useQuery({
         queryKey: ["jobs"],
         queryFn: async () => {
             const beginTimestamp = dayjs().subtract(DAYS_TO_SHOW, "days").unix();
             const resp = await querySql<QueryJobsResp>(getQueryJobsSql(beginTimestamp));
             return resp.data.map((item): JobData => convertQueryJobsItemToJobData(item));
         },
-        staleTime: refreshInterval,
     });
 
     return (
@@ -49,7 +47,7 @@ const Jobs = ({className}: JobsProps) => {
                     className={styles["jobs"] || ""}
                     columns={jobColumns}
                     dataSource={jobs}
-                    loading={isLoading}
+                    loading={isPending}
                     pagination={false}
                     scroll={{y: 400}}/>
             </DashboardCard>

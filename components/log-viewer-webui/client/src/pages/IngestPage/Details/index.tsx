@@ -30,7 +30,7 @@ const Details = () => {
         queryFn: fetchDatasetNames,
     });
 
-    const {data, isPending} = useQuery({
+    const {data: details = DETAILS_DEFAULT, isPending} = useQuery({
         queryKey: ["aggregate-stats",
             datasetNames],
         queryFn: async () => {
@@ -51,8 +51,6 @@ const Details = () => {
         },
         enabled: isSuccessDatasetNames,
     });
-
-    const details = data ?? DETAILS_DEFAULT;
 
     if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
         return (
