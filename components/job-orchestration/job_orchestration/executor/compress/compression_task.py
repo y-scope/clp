@@ -92,33 +92,33 @@ def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archi
 
 
 def update_archive_metadata(db_cursor, table_prefix, archive_stats):
-    default_creation_stats = {
+    stats_to_update = {
         # Use defaults for values clp-s doesn't output
         "creation_ix": 0,
         "creator_id": "",
     }
 
     # Validate clp-s doesn't output the set kv-pairs
-    for key, default_value in default_creation_stats.items():
+    for key in stats_to_update:
         if key in archive_stats:
             raise ValueError(f"Unexpected key '{key}' in archive stats")
-        archive_stats[key] = default_value
 
-    stats_to_update = [
+    required_stat_names = [
         "begin_timestamp",
         "end_timestamp",
         "id",
         "size",
         "uncompressed_size",
     ]
-    stats_to_update.extend(default_creation_stats.keys())
+    for stat_name in required_stat_names:
+        stats_to_update[stat_name] = archive_stats[stat_name]
 
-    keys = ", ".join(stats_to_update)
+    keys = ", ".join(stats_to_update.keys())
     value_placeholders = ", ".join(["%s"] * len(stats_to_update))
     query = (
         f"INSERT INTO {table_prefix}{ARCHIVES_TABLE_SUFFIX} ({keys}) VALUES ({value_placeholders})"
     )
-    db_cursor.execute(query, [archive_stats[key] for key in stats_to_update])
+    db_cursor.execute(query, list(stats_to_update.values()))
 
 
 def _generate_fs_logs_list(
