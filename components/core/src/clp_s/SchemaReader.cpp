@@ -29,6 +29,11 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
             return std::get<int64_t>(static_cast<Int64ColumnReader*>(m_timestamp_column)
                                              ->extract_value(m_cur_message));
         };
+    } else if (m_timestamp_column->get_type() == NodeType::DeltaInteger) {
+        m_get_timestamp = [this]() {
+            return std::get<int64_t>(static_cast<DeltaEncodedInt64ColumnReader*>(m_timestamp_column)
+                                             ->extract_value(m_cur_message));
+        };
     } else if (m_timestamp_column->get_type() == NodeType::Float) {
         m_get_timestamp = [this]() {
             return static_cast<epochtime_t>(
@@ -428,6 +433,7 @@ size_t SchemaReader::generate_structured_array_template(
                     m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                     break;
                 }
+                case NodeType::DeltaInteger:
                 case NodeType::Integer: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddIntValue);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
@@ -512,6 +518,7 @@ size_t SchemaReader::generate_structured_object_template(
                     m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                     break;
                 }
+                case NodeType::DeltaInteger:
                 case NodeType::Integer: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
@@ -620,6 +627,7 @@ void SchemaReader::generate_json_template(int32_t id) {
                 m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                 break;
             }
+            case NodeType::DeltaInteger:
             case NodeType::Integer: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
