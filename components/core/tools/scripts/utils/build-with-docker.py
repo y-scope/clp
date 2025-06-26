@@ -29,12 +29,12 @@ PROJECT_ROOT_DEPTH = 6
 PLATFORM_CONFIGS = {
     "linux/amd64": {
         "build_script": "clp-env-base-manylinux_2_28_x86_64/build.sh",
-        "docker_image": "clp-core-dependencies-manylinux_2_28_x86_64"
+        "docker_image": "clp-core-dependencies-manylinux_2_28_x86_64",
     },
     "linux/arm64": {
         "build_script": "clp-env-base-manylinux_2_28_aarch64/build.sh",
-        "docker_image": "clp-core-dependencies-manylinux_2_28_aarch64"
-    }
+        "docker_image": "clp-core-dependencies-manylinux_2_28_aarch64",
+    },
 }
 
 
@@ -63,9 +63,7 @@ def _find_project_root() -> Path:
 
 
 def _build_clp_manylinux_2_28_binaries(
-        output_path: Path,
-        target_platform: str,
-        use_shared_libs: bool = False
+    output_path: Path, target_platform: str, use_shared_libs: bool = False
 ) -> None:
     """
     Builds the CLP-core binaries for the specified target platform
@@ -80,14 +78,21 @@ def _build_clp_manylinux_2_28_binaries(
     build_script = Path("/clp/components/core/tools/scripts/utils/build.py")
 
     cmd = [
-        "docker", "run",
-        "--user", f"{os.getuid()}:{os.getgid()}",
-        "--platform", target_platform,
-        "-v", f"{project_root}:/clp",
-        "-v", f"{output_path}:/output",
+        "docker",
+        "run",
+        "--user",
+        f"{os.getuid()}:{os.getgid()}",
+        "--platform",
+        target_platform,
+        "-v",
+        f"{project_root}:/clp",
+        "-v",
+        f"{output_path}:/output",
         f"{config['docker_image']}:dev",
-        "python3", str(build_script),
-        "--build-dir", "/output"
+        "python3",
+        str(build_script),
+        "--build-dir",
+        "/output",
     ]
     if use_shared_libs:
         cmd.append("--use-shared-libs")
@@ -101,24 +106,20 @@ def _build_clp_manylinux_2_28_binaries(
 
 
 def main(argv: List[str]) -> int:
-    args_parser = argparse.ArgumentParser(
-        description="Builds the CLP-core's binaries"
-    )
+    args_parser = argparse.ArgumentParser(description="Builds the CLP-core's binaries")
     args_parser.add_argument(
-        "--output-dir",
-        required=True,
-        help="Directory to put the compiled CLP-core binaries in."
+        "--output-dir", required=True, help="Directory to put the compiled CLP-core binaries in."
     )
     args_parser.add_argument(
         "--use-shared-libs",
         action="store_true",
-        help="Build targets by linking against shared libraries."
+        help="Build targets by linking against shared libraries.",
     )
     args_parser.add_argument(
         "--target-platform",
         default="linux/amd64",
         choices=["linux/amd64", "linux/arm64"],
-        help="Target platform of the compiled binary: linux/amd64 or linux/arm64"
+        help="Target platform of the compiled binary: linux/amd64 or linux/arm64",
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
@@ -130,9 +131,7 @@ def main(argv: List[str]) -> int:
 
     _build_clp_env_base_image(parsed_args.target_platform)
     _build_clp_manylinux_2_28_binaries(
-        output_dir,
-        parsed_args.target_platform,
-        parsed_args.use_shared_libs
+        output_dir, parsed_args.target_platform, parsed_args.use_shared_libs
     )
 
     logger.info("Build process completed successfully.")

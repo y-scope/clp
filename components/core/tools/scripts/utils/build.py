@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter(
@@ -25,6 +24,7 @@ logger = logging.getLogger(__name__)
 # Number of parent directories to reach project root from this script
 PROJECT_ROOT_DEPTH = 6
 
+
 def _run_subprocess(cmd: List[str], cwd: Optional[Path] = None) -> None:
     logger.info(f"Running: {' '.join(cmd)} in {cwd if cwd else Path.cwd()}")
     try:
@@ -37,8 +37,10 @@ def _run_subprocess(cmd: List[str], cwd: Optional[Path] = None) -> None:
 def _config_cmake_project(src_dir: Path, build_dir: Path, use_shared_libs: bool):
     cmd = [
         "cmake",
-        "-S", str(src_dir),
-        "-B", str(build_dir),
+        "-S",
+        str(src_dir),
+        "-B",
+        str(build_dir),
     ]
     if use_shared_libs:
         cmd.append("-DCLP_USE_STATIC_LIBS=OFF")
@@ -82,7 +84,7 @@ def main(argv: List[str]) -> int:
         "--num-jobs",
         type=int,
         default=os.cpu_count(),
-        help="Max number of jobs to run when building."
+        help="Max number of jobs to run when building.",
     )
 
     parsed_args = args_parser.parse_args(argv[1:])

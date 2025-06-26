@@ -45,7 +45,10 @@ def main(argv: List[str]) -> int:
         help="Build targets by linking against shared libraries.",
     )
     args_parser.add_argument(
-        "--num-jobs", type=int, default=os.cpu_count(), help="Max number of jobs to run when building."
+        "--num-jobs",
+        type=int,
+        default=os.cpu_count(),
+        help="Max number of jobs to run when building.",
     )
     args_parser.add_argument("--test-spec", help="Catch2 test specification.")
 
@@ -54,9 +57,12 @@ def main(argv: List[str]) -> int:
     test_spec: Optional[str] = parsed_args.test_spec
 
     build_cmd = [
-        "python3", "build.py",
-        "--build-dir", str(build_dir),
-        "--num-jobs", str(parsed_args.num_jobs)
+        "python3",
+        "build.py",
+        "--build-dir",
+        str(build_dir),
+        "--num-jobs",
+        str(parsed_args.num_jobs),
     ]
     if parsed_args.use_shared_libs:
         build_cmd.append("--use-shared-libs")
