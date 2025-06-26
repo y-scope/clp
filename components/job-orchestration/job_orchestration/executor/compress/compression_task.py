@@ -93,9 +93,12 @@ def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archi
 
 def update_archive_metadata(db_cursor, table_prefix, archive_stats):
     default_creation_stats = {
+        # Use defaults for values clp-s doesn't output
         "creation_ix": 0,
         "creator_id": "",
     }
+
+    # Validate clp-s doesn't output the set kv-pairs
     for key, default_value in default_creation_stats.items():
         if key in archive_stats:
             raise ValueError(f"Unexpected key '{key}' in archive stats")
