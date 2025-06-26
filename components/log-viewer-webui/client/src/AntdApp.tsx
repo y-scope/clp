@@ -1,19 +1,14 @@
 import {RouterProvider} from "react-router";
 
-import {
-    QueryClient,
-    QueryClientProvider,
-} from "@tanstack/react-query";
+import {QueryClientProvider} from "@tanstack/react-query";
 import {ReactQueryDevtools} from "@tanstack/react-query-devtools";
 import {ConfigProvider} from "antd";
 
+import queryClient from "./config/queryClient";
 import router from "./router";
 import THEME_CONFIG from "./theme";
 
 import "@ant-design/v5-patch-for-react-19";
-
-
-const queryClient = new QueryClient();
 
 /**
  * Renders Web UI app.
