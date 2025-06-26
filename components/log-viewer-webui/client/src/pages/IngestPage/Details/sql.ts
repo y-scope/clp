@@ -3,40 +3,55 @@ import {Nullable} from "src/typings/common";
 import {
     CLP_ARCHIVES_TABLE_COLUMN_NAMES,
     CLP_FILES_TABLE_COLUMN_NAMES,
-    SQL_CONFIG,
 } from "../sqlConfig";
 
 
 /**
  * Builds the query string to query stats.
  *
+ * @param datasetNames
  * @return
  */
-const getDetailsSql = () => `
-SELECT
-    a.begin_timestamp         AS begin_timestamp,
-    a.end_timestamp           AS end_timestamp,
-    b.num_files               AS num_files,
-    b.num_messages            AS num_messages
-FROM
-(
+const buildMultiDatasetDetailsSql = (datasetNames: string[]): string => {
+    const archiveQueries = datasetNames.map((name) => `
     SELECT
-        MIN(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.BEGIN_TIMESTAMP})   AS begin_timestamp,
-        MAX(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.END_TIMESTAMP})     AS end_timestamp
-    FROM ${SQL_CONFIG.SqlDbClpArchivesTableName}
-) a,
-(
+      MIN(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.BEGIN_TIMESTAMP}) AS begin_timestamp,
+      MAX(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.END_TIMESTAMP}) AS end_timestamp
+    FROM clp_${name}_archives
+  `);
+
+    const fileQueries = datasetNames.map((name) => `
     SELECT
-        COUNT(DISTINCT ${CLP_FILES_TABLE_COLUMN_NAMES.ORIG_FILE_ID})   AS num_files,
-        CAST(
-            COALESCE(
-                SUM(${CLP_FILES_TABLE_COLUMN_NAMES.NUM_MESSAGES}),
-                0
-            ) AS INTEGER
-        ) AS num_messages
-    FROM ${SQL_CONFIG.SqlDbClpFilesTableName}
-) b;
-`;
+      COUNT(DISTINCT ${CLP_FILES_TABLE_COLUMN_NAMES.ORIG_FILE_ID}) AS num_files,
+      CAST(COALESCE(SUM(${CLP_FILES_TABLE_COLUMN_NAMES.NUM_MESSAGES}), 0) AS INTEGER) AS num_messages
+    FROM clp_${name}_files
+  `);
+
+    return `
+    SELECT
+      a.begin_timestamp,
+      a.end_timestamp,
+      b.num_files,
+      b.num_messages
+    FROM
+    (
+      SELECT
+        MIN(begin_timestamp) AS begin_timestamp,
+        MAX(end_timestamp)   AS end_timestamp
+      FROM (
+        ${archiveQueries.join("\nUNION ALL\n")}
+      ) AS archives_combined
+    ) a,
+    (
+      SELECT
+        SUM(num_files)    AS num_files,
+        SUM(num_messages) AS num_messages
+      FROM (
+        ${fileQueries.join("\nUNION ALL\n")}
+      ) AS files_combined
+    ) b;
+  `;
+};
 
 interface DetailsItem {
     begin_timestamp: Nullable<number>;
@@ -51,4 +66,4 @@ export type {
     DetailsItem,
     DetailsResp,
 };
-export {getDetailsSql};
+export {buildMultiDatasetDetailsSql};

@@ -1,15 +1,10 @@
-import {
-    useCallback,
-    useEffect,
-    useState,
-} from "react";
-
+import {useQuery} from "@tanstack/react-query";
 import dayjs from "dayjs";
 
 import {DashboardCard} from "../../../components/DashboardCard";
 import VirtualTable from "../../../components/VirtualTable";
+import {querySql} from "../../../api/sql";
 import useIngestStatsStore from "../ingestStatsStore";
-import {querySql} from "../sqlConfig";
 import styles from "./index.module.css";
 import {
     getQueryJobsSql,
@@ -24,13 +19,6 @@ import {convertQueryJobsItemToJobData} from "./utils";
 
 const DAYS_TO_SHOW: number = 30;
 
-/**
- * Default state for jobs.
- */
-const JOBS_DEFAULT = Object.freeze({
-    jobs: [],
-});
-
 interface JobsProps {
     className: string;
 }
@@ -44,43 +32,16 @@ interface JobsProps {
  */
 const Jobs = ({className}: JobsProps) => {
     const {refreshInterval} = useIngestStatsStore();
-    const [jobs, setJobs] = useState<JobData[]>(JOBS_DEFAULT.jobs);
 
-    /**
-     * Fetches jobs stats from the server.
-     *
-     * @throws {Error} If the response is undefined.
-     */
-    const fetchJobsStats = useCallback(() => {
-        const beginTimestamp = dayjs().subtract(DAYS_TO_SHOW, "days")
-            .unix();
-
-        querySql<QueryJobsResp>(getQueryJobsSql(beginTimestamp))
-            .then((resp) => {
-                const newJobs = resp.data.map(
-                    (item): JobData => convertQueryJobsItemToJobData(item)
-                );
-
-                setJobs(newJobs);
-            })
-            .catch((e: unknown) => {
-                console.error("Failed to fetch jobs stats", e);
-            });
-    }, []);
-
-
-    useEffect(() => {
-        fetchJobsStats();
-        const intervalId = setInterval(fetchJobsStats, refreshInterval);
-
-        return () => {
-            clearInterval(intervalId);
-        };
-    }, [
-        refreshInterval,
-        fetchJobsStats,
-    ]);
-
+    const {data: jobs = [], isLoading} = useQuery({
+        queryKey: ["jobs"],
+        queryFn: async () => {
+            const beginTimestamp = dayjs().subtract(DAYS_TO_SHOW, "days").unix();
+            const resp = await querySql<QueryJobsResp>(getQueryJobsSql(beginTimestamp));
+            return resp.data.map((item): JobData => convertQueryJobsItemToJobData(item));
+        },
+        staleTime: refreshInterval,
+    });
 
     return (
         <div className={className}>
@@ -89,6 +50,7 @@ const Jobs = ({className}: JobsProps) => {
                     className={styles["jobs"] || ""}
                     columns={jobColumns}
                     dataSource={jobs}
+                    loading={isLoading}
                     pagination={false}
                     scroll={{y: 400}}/>
             </DashboardCard>
