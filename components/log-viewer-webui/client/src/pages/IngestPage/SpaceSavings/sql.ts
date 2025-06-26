@@ -50,11 +50,9 @@ const SPACE_SAVINGS_DEFAULT: SpaceSavingsItem = {
     total_uncompressed_size: 0,
 };
 
-type SpaceSavingsResp = SpaceSavingsItem[];
 
 export type {
     SpaceSavingsItem,
-    SpaceSavingsResp,
 };
 export {
     buildMultiDatasetSpaceSavingsSql,

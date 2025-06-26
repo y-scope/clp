@@ -41,7 +41,7 @@ const SpaceSavings = () => {
             const resp = await querySql<SpaceSavingsItem[]>(sql);
             const [spaceSavingsResult] = resp.data;
             if ("undefined" === typeof spaceSavingsResult) {
-                throw new Error("Space savings response is undefined");
+                throw new Error("Space savings result does not contain data.");
             }
 
             return spaceSavingsResult;
