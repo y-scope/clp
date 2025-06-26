@@ -25,14 +25,15 @@ Usage:
   * `--target-encoded-size <size>` specifies the threshold (in bytes) at which archives are split,
     where `size` is the total size of the dictionaries and encoded messages in an archive.
     * This option acts as a soft limit on memory usage for compression, decompression, and search.
-    * This option significantly affects compression the ratio.
+    * This option significantly affects compression ratio.
   * `--structurize-arrays` specifies that arrays should be fully parsed and array entries should be
     encoded into dedicated columns.
   * `--auth <s3|none>` specifies the authentication method that should be used for network requests
     if the input path is a URL.
     * When S3 authentication is enabled, we issue a GET request following the [AWS Signature Version
-      4 specification][1]. This request uses the environment variables `AWS_ACCESS_KEY_ID`,
-      `AWS_SECRET_ACCESS_KEY`, and, optionally, `AWS_SESSION_TOKEN` if it exists.
+      4 specification][aws-signature-v4]. This request uses the environment variables
+      `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and, optionally, `AWS_SESSION_TOKEN` if it
+      exists.
     * For more information on usage with S3, see our
       [dedicated guide](guides-using-object-storage/index).
 
@@ -57,7 +58,7 @@ Specifying the timestamp-key will create a range-index for the timestamp column 
 compression ratio and search performance.
 :::
 
-**Compress a KV-IR file stored on S3 to a single-file archive:**
+**Compress a KV-IR file stored on S3 into a single-file archive:**
 
 ```shell
 AWS_ACCESS_KEY_ID='...' AWS_SECRET_ACCESS_KEY='...' \
@@ -156,4 +157,4 @@ compressed data:**
 * In addition, there are a few limitations, related to querying arrays, described in the search
   syntax [reference](reference-json-search-syntax).
 
-[1]: https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
+[aws-signature-v4]: https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html
