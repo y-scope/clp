@@ -14,16 +14,19 @@ import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLPConfig,
+    Database,
     DB_COMPONENT_NAME,
     LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SQL_Adapter,
     StorageType,
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
 )
+from clp_py_utils.clp_metadata_db_utils import validate_and_cache_dataset
 from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
@@ -574,3 +577,23 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
                 f"Invalid path: `{path}` cannot be under '{prefix}' which may overlap with a path"
                 f" in the container."
             )
+
+
+def validate_dataset(clp_config: CLPConfig, dataset: typing.Optional[str]) -> None:
+    """
+    Checks if the provided dataset currently exists in the metadata database.
+    :param clp_config:
+    :param dataset:
+    """
+    if not dataset:
+        raise ValueError(f"`{dataset}` is not a valid dataset name.")
+    db_config: Database = clp_config.database
+    sql_adapter: SQL_Adapter = SQL_Adapter(db_config)
+    clp_db_connection_params: dict[str, any] = db_config.get_clp_connection_params_and_type(True)
+    table_prefix: str = clp_db_connection_params["table_prefix"]
+    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
+        db_conn.cursor(dictionary=True)
+    ) as db_cursor:
+        dataset_valid, _ = validate_and_cache_dataset(db_cursor, table_prefix, dataset)
+        if not dataset_valid:
+            raise ValueError(f"Dataset `{dataset}` does not exist.")
