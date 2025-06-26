@@ -3,6 +3,9 @@
 # Exit on any error
 set -e
 
+# Exit on failures hidden inside pipes (e.g., curl | tar)
+set -o pipefail
+
 # Error on undefined variable
 set -u
 
@@ -33,7 +36,8 @@ esac
 
 # Install `task`
 # NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
-task_pkg_path="$(mktemp -t --suffix ".rpm" task-pkg.XXXXXXXXXX)"
+tmp_rpm=$(mktemp -t --suffix ".rpm" task-pkg.XXXXXXXXXX) || exit 1
+task_pkg_path="$tmp_rpm"
 curl \
     --fail \
     --location \
@@ -41,7 +45,7 @@ curl \
     --show-error \
     "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.rpm"
 dnf install --assumeyes "$task_pkg_path"
-rm "$task_pkg_path"
+rm -rf "$task_pkg_path"
 
 # The bundled CMake 4.x version is too new; downgrading to CMake 3.27 is
 # necessary to resolve build issues with third-party libraries. Even after
@@ -59,6 +63,6 @@ export PLATFORM=$(uname -m)
 export CMAKE_VERSION=3.27.9
 export CMAKE_RELEASE_URL=https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-linux-${PLATFORM}.tar.gz
 echo "Downgrading CMAKE to 3.27.9"
-curl -L ${CMAKE_RELEASE_URL} | tar -xzf -
-mv cmake-${CMAKE_VERSION}-linux-${PLATFORM} /opt/cmake-${CMAKE_VERSION}
-ln -sf /opt/cmake-${CMAKE_VERSION}/bin/cmake /usr/local/bin/cmake
+curl -L "${CMAKE_RELEASE_URL}" | tar -xzf -
+mv "cmake-${CMAKE_VERSION}-linux-${PLATFORM}" "/opt/cmake-${CMAKE_VERSION}"
+ln -sf "/opt/cmake-${CMAKE_VERSION}/bin/cmake" /usr/local/bin/cmake

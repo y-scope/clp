@@ -17,7 +17,7 @@ from source.
 
 ### Build Environment
 
-A handful of packages and libraries are required to build CLP. There are two options to use them:
+A handful of packages and libraries are required to build CLP. There are three options to use them:
 
 * Install them on your machine and build CLP natively
 * Build CLP within a prebuilt docker container that contains the libraries;
@@ -49,6 +49,7 @@ Want to build natively on an OS not listed here? You can file a [feature request
 You can use these commands to start a container in which you can manually build and run CLP:
 
 * Start a build container
+
   ```shell
   # Make sure to change /path/to/clp/ and /path/to/my/logs below
   docker run --rm -it \
@@ -102,6 +103,7 @@ The task will download, build, and install (within the build directory) the foll
 ### Build
 
 * Configure the cmake project:
+
   ```shell
   cd components/core
   mkdir build
@@ -110,12 +112,12 @@ The task will download, build, and install (within the build directory) the foll
   ```
 
 * Build:
+
   ```shell
   make -j
   ```
 
-> Make sure to change `/path/to/clp/` and `/path/to/my/logs` to
-the relevant paths on your machine.
+> Make sure to change `/path/to/clp/` and `/path/to/my/logs` to the relevant paths on your machine.
 
 :::{toctree}
 :hidden:

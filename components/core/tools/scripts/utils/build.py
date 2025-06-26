@@ -1,3 +1,9 @@
+"""
+Centralized build utility for CLP-core binaries.
+
+This script automates the process of cleaning, installing dependencies, configuring CMake,
+and building the CLP-core binaries in the local environment.
+"""
 import argparse
 import logging
 import os

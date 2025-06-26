@@ -6,7 +6,7 @@ and running CLP:
 * Various manylinux_2_28 based images
   ([x86_64][core-deps-manylinux_2_28_x86_64], [aarch64][core-deps-manylinux_2_28_aarch64])
   containing the dependencies necessary to build CLP core in manylinux_2_28 environments
-  
+
   ```text
   ghcr.io/y-scope/clp/clp-core-dependencies-manylinux_2_28_x86_64:main
   ghcr.io/y-scope/clp/clp-core-dependencies-manylinux_2_28_aarch64:main
