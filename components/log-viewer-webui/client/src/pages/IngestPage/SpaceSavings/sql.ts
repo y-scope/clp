@@ -1,6 +1,4 @@
-import {
-    CLP_ARCHIVES_TABLE_COLUMN_NAMES,
-} from "../sqlConfig";
+import {CLP_ARCHIVES_TABLE_COLUMN_NAMES} from "../sqlConfig";
 
 
 /**
@@ -51,9 +49,7 @@ const SPACE_SAVINGS_DEFAULT: SpaceSavingsItem = {
 };
 
 
-export type {
-    SpaceSavingsItem,
-};
+export type {SpaceSavingsItem};
 export {
     buildMultiDatasetSpaceSavingsSql,
     SPACE_SAVINGS_DEFAULT,

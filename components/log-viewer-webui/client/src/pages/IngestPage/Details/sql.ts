@@ -23,7 +23,9 @@ const buildMultiDatasetDetailsSql = (datasetNames: string[]): string => {
     const fileQueries = datasetNames.map((name) => `
     SELECT
       COUNT(DISTINCT ${CLP_FILES_TABLE_COLUMN_NAMES.ORIG_FILE_ID}) AS num_files,
-      CAST(COALESCE(SUM(${CLP_FILES_TABLE_COLUMN_NAMES.NUM_MESSAGES}), 0) AS INTEGER) AS num_messages
+      CAST(
+        COALESCE(SUM(${CLP_FILES_TABLE_COLUMN_NAMES.NUM_MESSAGES}), 0) AS INTEGER
+      ) AS num_messages
     FROM clp_${name}_files
   `);
 
@@ -67,10 +69,7 @@ const DETAILS_DEFAULT: DetailsItem = {
     num_messages: 0,
 };
 
-type DetailsResp = DetailsItem[];
-
-export type {
-    DetailsItem,
-    DetailsResp,
+export type {DetailsItem};
+export {
+    buildMultiDatasetDetailsSql, DETAILS_DEFAULT,
 };
-export {buildMultiDatasetDetailsSql, DETAILS_DEFAULT};

@@ -24,7 +24,6 @@ import TimeRange from "./TimeRange";
  * @return
  */
 const Details = () => {
-
     const {data: datasetNames, isSuccess: isSuccessDatasetNames} = useQuery({
         queryKey: ["datasets"],
         queryFn: fetchDatasetNames,

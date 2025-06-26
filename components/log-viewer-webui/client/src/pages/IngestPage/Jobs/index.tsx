@@ -1,9 +1,9 @@
 import {useQuery} from "@tanstack/react-query";
 import dayjs from "dayjs";
 
+import {querySql} from "../../../api/sql";
 import {DashboardCard} from "../../../components/DashboardCard";
 import VirtualTable from "../../../components/VirtualTable";
-import {querySql} from "../../../api/sql";
 import styles from "./index.module.css";
 import {
     getQueryJobsSql,
@@ -30,11 +30,11 @@ interface JobsProps {
  * @return
  */
 const Jobs = ({className}: JobsProps) => {
-
     const {data: jobs = [], isPending} = useQuery({
         queryKey: ["jobs"],
         queryFn: async () => {
-            const beginTimestamp = dayjs().subtract(DAYS_TO_SHOW, "days").unix();
+            const beginTimestamp = dayjs().subtract(DAYS_TO_SHOW, "days")
+                .unix();
             const resp = await querySql<QueryJobsResp>(getQueryJobsSql(beginTimestamp));
             return resp.data.map((item): JobData => convertQueryJobsItemToJobData(item));
         },

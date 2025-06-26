@@ -1,9 +1,8 @@
 import {useQuery} from "@tanstack/react-query";
-
 import {theme} from "antd";
 
-import StatCard from "../../../components/StatCard";
 import {querySql} from "../../../api/sql";
+import StatCard from "../../../components/StatCard";
 import {fetchDatasetNames} from "../../SearchPage/SearchControls/Dataset/sql";
 import CompressedSize from "./CompressedSize";
 import styles from "./index.module.css";
@@ -29,7 +28,8 @@ const SpaceSavings = () => {
     });
 
     const {data: spaceSavings = SPACE_SAVINGS_DEFAULT, isPending} = useQuery({
-        queryKey: ["space-savings", datasetNames],
+        queryKey: ["space-savings",
+            datasetNames],
         queryFn: async () => {
             if (false === isSuccessDatasetNames) {
                 throw new Error("Dataset names are not available");
@@ -71,8 +71,8 @@ const SpaceSavings = () => {
                     titleColor={token.colorWhite}/>
             </div>
             <UncompressedSize
-                uncompressedSize={uncompressedSize}
-                isLoading={isPending}/>
+                isLoading={isPending}
+                uncompressedSize={uncompressedSize}/>
             <CompressedSize
                 compressedSize={compressedSize}
                 isLoading={isPending}/>
