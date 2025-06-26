@@ -63,6 +63,7 @@ auto get_test_input_local_path() -> std::string {
 TEST_CASE("clp-s-delta-encode-log-order", "[clp-s][delta-encode-log-order]") {
     auto start_index = GENERATE(0ULL, 1ULL, 2ULL);
     TestOutputCleaner const test_cleanup{{std::string{cTestDeltaEncodeOrderArchiveDirectory}}};
+
     REQUIRE_NOTHROW(compress_archive(
             get_test_input_local_path(),
             std::string{cTestDeltaEncodeOrderArchiveDirectory},
@@ -77,6 +78,7 @@ TEST_CASE("clp-s-delta-encode-log-order", "[clp-s][delta-encode-log-order]") {
             archive_paths
     ));
     REQUIRE(1 == archive_paths.size());
+
     clp_s::ArchiveReader archive_reader;
     REQUIRE_NOTHROW(archive_reader.open(archive_paths.back(), clp_s::NetworkAuthOption{}));
     REQUIRE_NOTHROW(archive_reader.read_dictionaries_and_metadata());
@@ -84,11 +86,13 @@ TEST_CASE("clp-s-delta-encode-log-order", "[clp-s][delta-encode-log-order]") {
     auto mpt = archive_reader.get_schema_tree();
     auto log_event_idx_node_id = mpt->get_metadata_field_id(clp_s::constants::cLogEventIdxName);
     REQUIRE(-1 != log_event_idx_node_id);
+
     std::vector<std::shared_ptr<clp_s::SchemaReader>> schema_readers;
     REQUIRE_NOTHROW(schema_readers = archive_reader.read_all_tables());
     REQUIRE(1 == schema_readers.size());
     auto schema_reader = schema_readers.back();
     REQUIRE(cNumEntries == schema_reader->get_num_messages());
+
     SimpleFilterClass simple_filter_class;
     schema_reader->initialize_filter(&simple_filter_class);
     clp_s::BaseColumnReader* log_event_idx_reader{nullptr};
