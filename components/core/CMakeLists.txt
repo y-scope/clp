@@ -275,7 +275,6 @@ if(CLP_NEED_YAMLCPP)
 endif()
 
 # Add ystdlib
-set(ystdlib_BUILD_TESTING OFF)
 find_package(ystdlib REQUIRED)
 if (ystdlib_FOUND)
     message(STATUS "Found ystdlib ${ystdlib_VERSION}")
