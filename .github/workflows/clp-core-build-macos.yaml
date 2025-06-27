@@ -77,8 +77,8 @@ jobs:
           echo "$LLVM_PREFIX/bin" >> "$GITHUB_PATH"
           {
             echo "LLVM_PREFIX=$LLVM_PREFIX"
-            echo "CC=clang"
-            echo "CXX=clang++"
+            echo "CC=$LLVM_PREFIX/bin/clang"
+            echo "CXX=$LLVM_PREFIX/bin/clang++"
             echo "LDFLAGS=-L$LLVM_PREFIX/lib"
             echo "CPPFLAGS=-I$LLVM_PREFIX/include"
           } >> "$GITHUB_ENV"
