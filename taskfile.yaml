@@ -387,6 +387,9 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.CLIENT_OUTPUT_DIR}}"]
+          EXCLUDE_PATTERNS:
+            - ".tmp"
+            - ".vite-temp"
       - task: "utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
@@ -410,6 +413,9 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.CLIENT_OUTPUT_DIR}}"]
+          EXCLUDE_PATTERNS:
+            - ".tmp"
+            - ".vite-temp"
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
