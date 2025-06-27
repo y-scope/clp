@@ -4,6 +4,22 @@ import {
     SQL_CONFIG,
 } from "../sqlConfig";
 
+/**
+ * Result from sql space savings query.
+ */
+interface SpaceSavingsItem {
+    total_uncompressed_size: number;
+    total_compressed_size: number;
+}
+
+/**
+ * Default values for space savings when no data is available.
+ */
+const SPACE_SAVINGS_DEFAULT: SpaceSavingsItem = {
+    total_compressed_size: 0,
+    total_uncompressed_size: 0,
+};
+
 
 /**
  * Builds the query string for space savings stats when using CLP storage engine (i.e. no datasets).
@@ -61,20 +77,6 @@ const buildMultiDatasetSpaceSavingsSql = (datasetNames: string[]): string => {
     ) AS archives_combined
     `;
 };
-
-interface SpaceSavingsItem {
-    total_uncompressed_size: number;
-    total_compressed_size: number;
-}
-
-/**
- * Default state for space savings.
- */
-const SPACE_SAVINGS_DEFAULT: SpaceSavingsItem = {
-    total_compressed_size: 0,
-    total_uncompressed_size: 0,
-};
-
 
 /**
  * Executes space savings SQL query and extracts space savings result.

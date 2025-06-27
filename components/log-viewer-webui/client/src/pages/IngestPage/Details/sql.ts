@@ -8,6 +8,9 @@ import {
 } from "../sqlConfig";
 
 
+/**
+ * Result from sql details query.
+ */
 interface DetailsItem {
     begin_timestamp: Nullable<number>;
     end_timestamp: Nullable<number>;
@@ -15,6 +18,9 @@ interface DetailsItem {
     num_messages: Nullable<number>;
 }
 
+/**
+ * Default values for details when no data is available.
+ */
 const DETAILS_DEFAULT: DetailsItem = {
     begin_timestamp: null,
     end_timestamp: null,

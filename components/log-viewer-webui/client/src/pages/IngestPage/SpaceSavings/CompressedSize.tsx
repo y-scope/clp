@@ -4,7 +4,7 @@ import {formatSizeInBytes} from "../Jobs/units";
 
 interface CompressedSizeProps {
     compressedSize: number;
-    isLoading?: boolean;
+    isLoading: boolean;
 }
 
 /**
@@ -15,7 +15,7 @@ interface CompressedSizeProps {
  * @param props.isLoading
  * @return
  */
-const CompressedSize = ({compressedSize, isLoading = false}: CompressedSizeProps) => {
+const CompressedSize = ({compressedSize, isLoading}: CompressedSizeProps) => {
     return (
         <DetailsCard
             isLoading={isLoading}
