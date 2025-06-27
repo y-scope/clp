@@ -4,7 +4,7 @@ CLP core is the low-level component that performs compression, decompression, an
 
 ## Requirements
 
-* We have built and tested CLP on the OSes listed [below](#native-build-environment).
+* We have built and tested CLP on the OSes listed [below](#native-environment).
   * If you have trouble building for another OS, file an issue, and we may be able to help.
 * A recent compiler that fully supports C++20 features such as
   * std::span
@@ -15,57 +15,9 @@ CLP core is the low-level component that performs compression, decompression, an
 To build, we require some source dependencies, packages from package managers, and libraries built
 from source.
 
-### Build Environment
-
-A handful of packages and libraries are required to build CLP. There are three options to use them:
-
-* Install them on your machine and build CLP natively
-* Build CLP within a prebuilt docker container that contains the libraries;
-  However, this won't work if you need additional libraries that aren't already in the container.
-* If you just want to quickly build a CLP binary compatible with most platforms, you can run the following script:
-  ```shell
-  # Build CLP binary using manylinux_2_28 for x86_64 or aarch64 platforms
-  /path/to/clp/components/core/tools/scripts/utils/build-with-docker.py \
-  --output <output_directory> \
-  [--platform linux/amd64|linux/arm64]
-  ```
-  * `--output <output_directory>`: Directory to place the built CLP binary.
-  * `--platform linux/amd64|linux/arm64` (optional): Target platform. Defaults to linux/amd64 if not specified.
-
-
-#### Native Build Environment
-
-See the relevant README for your OS:
-
-* [manylinux_2_28](manylinux_2_28-deps-install)
-* [CentOS Stream 9](centos-stream-9-deps-install)
-* [macOS](macos-deps-install)
-* [Ubuntu 22.04](ubuntu-jammy-deps-install)
-
-Want to build natively on an OS not listed here? You can file a [feature request][feature-req].
-
-#### Docker Build Environments
-
-You can use these commands to start a container in which you can manually build and run CLP:
-
-* Start a build container
-
-  ```shell
-  # Make sure to change /path/to/clp/ and /path/to/my/logs below
-  docker run --rm -it \
-    --name 'clp-build-env' \
-    -u$(id -u):$(id -g) \
-    -v$(readlink -f /path/to/clp):/mnt/clp \
-    -v$(readlink -f /path/to/my/logs):/mnt/logs \
-    ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-jammy:main \
-    /bin/bash -l
-  
-  cd /mnt/clp
-  ```
-
 ### Set up
 
-After the build environment is initialized, we begin by initializing the project:
+To initialize the project, run:
 
 ```shell
 tools/scripts/deps-download/init.sh
@@ -99,29 +51,61 @@ The task will download, build, and install (within the build directory) the foll
 | [yscope-log-viewer](https://github.com/y-scope/yscope-log-viewer.git) | 969ff35        |
 | [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp.git)             | d80cf86        |
 
+### Environment
 
-### Build
+A handful of packages and libraries are required to build CLP. There are two options to use them:
+
+* Install them on your machine and build CLP natively
+* Build CLP within a prebuilt docker container that contains the libraries;
+  However, this won't work if you need additional libraries that aren't already in the container.
+
+#### Native Environment
+
+See the relevant README for your OS:
+
+* [CentOS Stream 9](centos-stream-9-deps-install)
+* [macOS](macos-deps-install)
+* [Ubuntu 22.04](ubuntu-jammy-deps-install)
+
+Want to build natively on an OS not listed here? You can file a [feature request][feature-req].
+
+#### Docker Environment
+
+You can use these commands to start a container in which you can build and run CLP:
+
+```shell
+# Make sure to change /path/to/clp/components/core and /path/to/my/logs below
+docker run --rm -it \
+  --name 'clp-build-env' \
+  -u$(id -u):$(id -g) \
+  -v$(readlink -f /path/to/clp/components/core):/mnt/clp \
+  -v$(readlink -f /path/to/my/logs):/mnt/logs \
+  ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-jammy:main \
+  /bin/bash -l
+
+cd /mnt/clp
+```
+
+Make sure to change `/path/to/clp/components/core` and `/path/to/my/logs` to
+the relevant paths on your machine.
+
+## Build
 
 * Configure the cmake project:
-
   ```shell
-  cd components/core
   mkdir build
   cd build
   cmake ../
   ```
 
 * Build:
-
   ```shell
   make -j
   ```
 
-> Make sure to change `/path/to/clp/` and `/path/to/my/logs` to the relevant paths on your machine.
-
 :::{toctree}
 :hidden:
-manylinux_2_28-deps-install
+
 centos-stream-9-deps-install
 macos-deps-install
 ubuntu-jammy-deps-install
