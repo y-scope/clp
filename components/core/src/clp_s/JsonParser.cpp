@@ -513,7 +513,7 @@ bool JsonParser::parse() {
         auto initialize_fields_for_archive = [&]() -> bool {
             if (m_record_log_order) {
                 log_event_idx_node_id
-                        = add_metadata_field(constants::cLogEventIdxName, NodeType::Integer);
+                        = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
             }
             if (auto const rc = m_archive_writer->add_field_to_current_range(
                         std::string{constants::range_index::cFilename},
@@ -982,7 +982,7 @@ auto JsonParser::parse_from_ir() -> bool {
         auto initialize_fields_for_archive = [&]() -> bool {
             if (m_record_log_order) {
                 log_event_idx_node_id
-                        = add_metadata_field(constants::cLogEventIdxName, NodeType::Integer);
+                        = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
             }
             if (auto const rc = m_archive_writer->add_field_to_current_range(
                         std::string{constants::range_index::cFilename},

@@ -206,7 +206,7 @@ public:
     /**
      * Marks a column as the log_event_idx column.
      */
-    void mark_column_as_log_event_idx(Int64ColumnReader* column_reader) {
+    void mark_column_as_log_event_idx(BaseColumnReader* column_reader) {
         m_log_event_idx_column = column_reader;
     }
 
@@ -321,7 +321,7 @@ private:
 
     BaseColumnReader* m_timestamp_column;
     std::function<epochtime_t()> m_get_timestamp;
-    Int64ColumnReader* m_log_event_idx_column{nullptr};
+    BaseColumnReader* m_log_event_idx_column{nullptr};
 
     std::shared_ptr<SchemaTree> m_global_schema_tree;
     SchemaTree m_local_schema_tree;
