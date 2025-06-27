@@ -83,10 +83,10 @@ tasks:
 
   clean-webui:
     cmds:
-      - "rm -rf 'components/webui/client/node_modules'"
-      - "rm -rf 'components/webui/node_modules'"
-      - "rm -rf 'components/webui/server/node_modules'"
-      - "rm -rf 'components/webui/yscope-log-viewer/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/client/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules'"
 
   package:
     env:
@@ -271,7 +271,7 @@ tasks:
       - "**/*"
       - exclude: "**/dist/**/*"
       - exclude: "**/node_modules/**/*"
-    dir: "components/webui"
+    dir: "{{.G_WEBUI_SRC_DIR}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "init"
