@@ -4,6 +4,7 @@ import {
     SQL_CONFIG,
 } from "../sqlConfig";
 
+
 /**
  * Result from sql space savings query.
  */
