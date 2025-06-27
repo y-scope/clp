@@ -348,13 +348,12 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
-  # NOTE: The webui has four different node_modules directories:
+  # NOTE: The webui has four different node_modules directories, and we generate a checksum file for
+  # each one. The directories are:
   # * client
   # * server
   # * log-viewer submodule
   # * the top-level one we call "package"
-  # This means we have to create four different checksums. To allow tasks which depend on this task
-  # to only have to check one checksum file, we concatenate the four checksum files into one.
   webui-node-modules:
     internal: true
     vars:
