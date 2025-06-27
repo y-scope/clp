@@ -177,8 +177,6 @@ tasks:
             - >-
               --line-filter "[{{.G_CLANG_TIDY_LINE_FILTER_IGNORE_MSGPACK_1098}}]"
             - "-p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
-            - "-Drsize_t=size_t"
-            - "-Derrno_t=int"
           OUTPUT_DIR: "{{.G_LINT_CLANG_TIDY_DIR}}"
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
@@ -766,8 +764,6 @@ tasks:
             - >-
               --line-filter "[{{.G_CLANG_TIDY_LINE_FILTER_IGNORE_MSGPACK_1098}}]"
             - "-p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
-            - "-Drsize_t=size_t"
-            - "-Derrno_t=int"
           INCLUDE_PATTERNS:
             - "{{.G_CORE_COMPONENT_DIR}}/src/*"
             - "{{.G_CORE_COMPONENT_DIR}}/tests/*"
