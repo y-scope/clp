@@ -270,6 +270,7 @@ tasks:
       - "{{.TASKFILE}}"
       - "**/*"
       - exclude: "**/dist/*"
+      - exclude: "**/node_modules/*"
     dir: "components/webui"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
