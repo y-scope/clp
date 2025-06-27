@@ -269,8 +269,8 @@ tasks:
       - "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
       - "**/*"
-      - exclude: "**/dist/*"
-      - exclude: "**/node_modules/*"
+      - exclude: "**/dist/**/*"
+      - exclude: "**/node_modules/**/*"
     dir: "components/webui"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
