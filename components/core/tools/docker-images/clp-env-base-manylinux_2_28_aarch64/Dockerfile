@@ -1,4 +1,4 @@
-FROM quay.io/pypa/manylinux_2_28_aarch64
+FROM quay.io/pypa/manylinux_2_28_aarch64:2025.06.25-1
 
 # Binaries built on manylinux_2_28 (AlmaLinux 8 based) is expected to be
 # compatible with other distros using glibc 2.28 or later, including:
@@ -10,7 +10,7 @@ FROM quay.io/pypa/manylinux_2_28_aarch64
 WORKDIR /root
 
 RUN mkdir -p ./tools/scripts/lib_install
-ADD ./tools/scripts/lib_install ./tools/scripts/lib_install
+COPY ./tools/scripts/lib_install ./tools/scripts/lib_install
 
 RUN ./tools/scripts/lib_install/manylinux_2_28/install-all.sh
 

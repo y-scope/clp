@@ -3,6 +3,9 @@
 # Exit on any error
 set -e
 
+# Exit on failures hidden inside pipes (e.g., curl | tar)
+set -o pipefail
+
 # Error on undefined variable
 set -u
 
