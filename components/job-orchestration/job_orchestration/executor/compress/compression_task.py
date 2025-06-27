@@ -119,9 +119,7 @@ def update_archive_metadata(db_cursor, table_prefix, dataset, archive_stats):
     keys = ", ".join(stats_to_update.keys())
     value_placeholders = ", ".join(["%s"] * len(stats_to_update))
     archives_table_name = get_archives_table_name(table_prefix, dataset)
-    query = (
-        f"INSERT INTO {archives_table_name} ({keys}) VALUES ({value_placeholders})"
-    )
+    query = f"INSERT INTO {archives_table_name} ({keys}) VALUES ({value_placeholders})"
     db_cursor.execute(query, list(stats_to_update.values()))
 
 
