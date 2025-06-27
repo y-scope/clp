@@ -1,5 +1,30 @@
-import {CLP_ARCHIVES_TABLE_COLUMN_NAMES} from "../sqlConfig";
+import {
+    CLP_ARCHIVES_TABLE_COLUMN_NAMES,
+    SQL_CONFIG,
+} from "../sqlConfig";
 
+
+/**
+ * Builds the query string to query space savings stats for CLP storage engine.
+ *
+ * @return
+ */
+const getSpaceSavingsSql = () => `
+SELECT
+    CAST(
+        COALESCE(
+            SUM(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.UNCOMPRESSED_SIZE}),
+            0
+        ) AS UNSIGNED
+    ) AS total_uncompressed_size,
+    CAST(
+        COALESCE(
+            SUM(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.SIZE}),
+            0
+        ) AS UNSIGNED
+    ) AS total_compressed_size
+FROM ${SQL_CONFIG.SqlDbClpArchivesTableName}
+`;
 
 /**
  * Builds the query string to query space savings stats for multiple datasets.
@@ -52,5 +77,6 @@ const SPACE_SAVINGS_DEFAULT: SpaceSavingsItem = {
 export type {SpaceSavingsItem};
 export {
     buildMultiDatasetSpaceSavingsSql,
+    getSpaceSavingsSql,
     SPACE_SAVINGS_DEFAULT,
 };

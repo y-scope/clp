@@ -3,8 +3,38 @@ import {Nullable} from "src/typings/common";
 import {
     CLP_ARCHIVES_TABLE_COLUMN_NAMES,
     CLP_FILES_TABLE_COLUMN_NAMES,
+    SQL_CONFIG,
 } from "../sqlConfig";
 
+
+/**
+ *
+ */
+const getDetailsSql = () => `
+SELECT
+    a.begin_timestamp         AS begin_timestamp,
+    a.end_timestamp           AS end_timestamp,
+    b.num_files               AS num_files,
+    b.num_messages            AS num_messages
+FROM
+(
+    SELECT
+        MIN(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.BEGIN_TIMESTAMP})   AS begin_timestamp,
+        MAX(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.END_TIMESTAMP})     AS end_timestamp
+    FROM ${SQL_CONFIG.SqlDbClpArchivesTableName}
+) a,
+(
+    SELECT
+        COUNT(DISTINCT ${CLP_FILES_TABLE_COLUMN_NAMES.ORIG_FILE_ID})   AS num_files,
+        CAST(
+            COALESCE(
+                SUM(${CLP_FILES_TABLE_COLUMN_NAMES.NUM_MESSAGES}),
+                0
+            ) AS INTEGER
+        ) AS num_messages
+    FROM ${SQL_CONFIG.SqlDbClpFilesTableName}
+) b;
+`;
 
 /**
  * Builds the query string to query stats.
@@ -71,5 +101,7 @@ const DETAILS_DEFAULT: DetailsItem = {
 
 export type {DetailsItem};
 export {
-    buildMultiDatasetDetailsSql, DETAILS_DEFAULT,
+    buildMultiDatasetDetailsSql,
+    DETAILS_DEFAULT,
+    getDetailsSql,
 };

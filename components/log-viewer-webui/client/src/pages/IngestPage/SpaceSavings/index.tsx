@@ -3,11 +3,16 @@ import {theme} from "antd";
 
 import {querySql} from "../../../api/sql";
 import StatCard from "../../../components/StatCard";
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../../../config";
 import {fetchDatasetNames} from "../../SearchPage/SearchControls/Dataset/sql";
 import CompressedSize from "./CompressedSize";
 import styles from "./index.module.css";
 import {
     buildMultiDatasetSpaceSavingsSql,
+    getSpaceSavingsSql,
     SPACE_SAVINGS_DEFAULT,
     SpaceSavingsItem,
 } from "./sql";
@@ -25,19 +30,28 @@ const SpaceSavings = () => {
     const {data: datasetNames, isSuccess: isSuccessDatasetNames} = useQuery({
         queryKey: ["datasets"],
         queryFn: fetchDatasetNames,
+        enabled: CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE,
     });
 
     const {data: spaceSavings = SPACE_SAVINGS_DEFAULT, isPending} = useQuery({
         queryKey: ["space-savings",
             datasetNames],
         queryFn: async () => {
-            if (false === isSuccessDatasetNames) {
-                throw new Error("Dataset names are not available");
+            let sql: string;
+
+            if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
+                sql = getSpaceSavingsSql();
+            } else {
+                // CLP-S storage engine
+                if (false === isSuccessDatasetNames) {
+                    throw new Error("Dataset names are not available");
+                }
+                if (0 === datasetNames.length) {
+                    return SPACE_SAVINGS_DEFAULT;
+                }
+                sql = buildMultiDatasetSpaceSavingsSql(datasetNames);
             }
-            if (0 === datasetNames.length) {
-                return SPACE_SAVINGS_DEFAULT;
-            }
-            const sql = buildMultiDatasetSpaceSavingsSql(datasetNames);
+
             const resp = await querySql<SpaceSavingsItem[]>(sql);
             const [spaceSavingsResult] = resp.data;
             if ("undefined" === typeof spaceSavingsResult) {
@@ -46,7 +60,7 @@ const SpaceSavings = () => {
 
             return spaceSavingsResult;
         },
-        enabled: isSuccessDatasetNames,
+        enabled: CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE || isSuccessDatasetNames,
     });
 
     const compressedSize = spaceSavings.total_compressed_size;
