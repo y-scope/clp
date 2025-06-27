@@ -1,5 +1,6 @@
 import {Nullable} from "src/typings/common";
 
+import {querySql} from "../../../api/sql";
 import {
     CLP_ARCHIVES_TABLE_COLUMN_NAMES,
     CLP_FILES_TABLE_COLUMN_NAMES,
@@ -7,8 +8,24 @@ import {
 } from "../sqlConfig";
 
 
+interface DetailsItem {
+    begin_timestamp: Nullable<number>;
+    end_timestamp: Nullable<number>;
+    num_files: Nullable<number>;
+    num_messages: Nullable<number>;
+}
+
+const DETAILS_DEFAULT: DetailsItem = {
+    begin_timestamp: null,
+    end_timestamp: null,
+    num_files: 0,
+    num_messages: 0,
+};
+
 /**
+ * Builds the query string for details stats when using CLP storage engine (i.e. no datasets).
  *
+ * @return
  */
 const getDetailsSql = () => `
 SELECT
@@ -37,7 +54,8 @@ FROM
 `;
 
 /**
- * Builds the query string to query stats.
+ * Builds the query string for details stats when using CLP-S storage engine
+ * (i.e. multiple datasets).
  *
  * @param datasetNames
  * @return
@@ -85,23 +103,55 @@ const buildMultiDatasetDetailsSql = (datasetNames: string[]): string => {
   `;
 };
 
-interface DetailsItem {
-    begin_timestamp: Nullable<number>;
-    end_timestamp: Nullable<number>;
-    num_files: Nullable<number>;
-    num_messages: Nullable<number>;
-}
+/**
+ * Executes details SQL query and extracts details result.
+ *
+ * @param sql
+ * @return
+ * @throws {Error} if query result does not contain data
+ */
+const executeDetailsQuery = async (sql: string): Promise<DetailsItem> => {
+    const resp = await querySql<DetailsItem[]>(sql);
+    const [detailsResult] = resp.data;
+    if ("undefined" === typeof detailsResult) {
+        throw new Error("Details result does not contain data.");
+    }
 
-const DETAILS_DEFAULT: DetailsItem = {
-    begin_timestamp: null,
-    end_timestamp: null,
-    num_files: 0,
-    num_messages: 0,
+    return detailsResult;
+};
+
+/**
+ * Fetches details statistics when using CLP storage engine.
+ *
+ * @return
+ */
+const fetchClpDetails = async (): Promise<DetailsItem> => {
+    const sql = getDetailsSql();
+    return executeDetailsQuery(sql);
+};
+
+/**
+ * Fetches details statistics when using CLP-S storage engine.
+ *
+ * @param datasetNames
+ * @return
+ */
+const fetchClpsDetails = async (
+    datasetNames: string[]
+): Promise<DetailsItem> => {
+    if (0 === datasetNames.length) {
+        return DETAILS_DEFAULT;
+    }
+    const sql = buildMultiDatasetDetailsSql(datasetNames);
+    return executeDetailsQuery(sql);
 };
 
 export type {DetailsItem};
 export {
     buildMultiDatasetDetailsSql,
     DETAILS_DEFAULT,
+    executeDetailsQuery,
+    fetchClpDetails,
+    fetchClpsDetails,
     getDetailsSql,
 };

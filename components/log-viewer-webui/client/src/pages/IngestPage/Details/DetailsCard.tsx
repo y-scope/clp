@@ -6,7 +6,7 @@ import StatCard from "../../../components/StatCard";
 interface DetailsCardProps {
     title: string;
     stat: string;
-    isLoading?: boolean;
+    isLoading: boolean;
 }
 
 /**
@@ -18,7 +18,7 @@ interface DetailsCardProps {
  * @param props.isLoading
  * @return
  */
-const DetailsCard = ({title, stat, isLoading = false}: DetailsCardProps) => {
+const DetailsCard = ({title, stat, isLoading}: DetailsCardProps) => {
     const {token} = theme.useToken();
     return (
         <StatCard

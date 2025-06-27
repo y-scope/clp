@@ -1,7 +1,6 @@
 import {useQuery} from "@tanstack/react-query";
 import dayjs from "dayjs";
 
-import {querySql} from "../../../api/sql";
 import {
     CLP_STORAGE_ENGINES,
     SETTINGS_STORAGE_ENGINE,
@@ -11,10 +10,9 @@ import Files from "./Files";
 import styles from "./index.module.css";
 import Messages from "./Messages";
 import {
-    buildMultiDatasetDetailsSql,
     DETAILS_DEFAULT,
-    DetailsItem,
-    getDetailsSql,
+    fetchClpDetails,
+    fetchClpsDetails,
 } from "./sql";
 import TimeRange from "./TimeRange";
 
@@ -25,37 +23,23 @@ import TimeRange from "./TimeRange";
  * @return
  */
 const Details = () => {
-    const {data: datasetNames, isSuccess: isSuccessDatasetNames} = useQuery({
+    const {data: datasetNames = [], isSuccess: isSuccessDatasetNames} = useQuery({
         queryKey: ["datasets"],
         queryFn: fetchDatasetNames,
         enabled: CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE,
     });
 
     const {data: details = DETAILS_DEFAULT, isPending} = useQuery({
-        queryKey: ["aggregate-stats",
-            datasetNames],
+        queryKey: [
+            "details",
+            datasetNames,
+        ],
         queryFn: async () => {
-            let sql: string;
-
             if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
-                sql = getDetailsSql();
-            } else {
-                if (false === isSuccessDatasetNames) {
-                    throw new Error("Dataset names are not available.");
-                }
-                if (0 === datasetNames.length) {
-                    return DETAILS_DEFAULT;
-                }
-                sql = buildMultiDatasetDetailsSql(datasetNames);
+                return fetchClpDetails();
             }
 
-            const resp = await querySql<DetailsItem[]>(sql);
-            const [detailsResult] = resp.data;
-            if ("undefined" === typeof detailsResult) {
-                throw new Error("Details result does not contain data.");
-            }
-
-            return detailsResult;
+            return fetchClpsDetails(datasetNames);
         },
         enabled: CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE || isSuccessDatasetNames,
     });
