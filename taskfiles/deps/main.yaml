@@ -74,8 +74,6 @@ tasks:
       - task: "utfcpp"
       - task: "yaml-cpp"
       - task: "ystdlib"
-    cmds:
-      - echo "PATH:$PATH"
 
   absl:
     internal: true
