@@ -79,10 +79,10 @@ jobs:
             echo "LLVM_PREFIX=$LLVM_PREFIX"
             echo "CC=$LLVM_PREFIX/bin/clang"
             echo "CXX=$LLVM_PREFIX/bin/clang++"
+            echo "AR=$LLVM_PREFIX/bin/llvm-ar"
+            echo "RANLIB=$LLVM_PREFIX/bin/llvm-ranlib"
             echo "LDFLAGS=-L$LLVM_PREFIX/lib"
-            echo "CFLAGS=-I$LLVM_PREFIX/include"
             echo "CPPFLAGS=-I$LLVM_PREFIX/include"
-            echo "LIBRARY_PATH=$LLVM_PREFIX/lib"
             echo "DYLD_LIBRARY_PATH=$LLVM_PREFIX/lib"
           } >> "$GITHUB_ENV"
 
