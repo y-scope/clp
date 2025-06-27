@@ -80,8 +80,10 @@ jobs:
             echo "CC=$LLVM_PREFIX/bin/clang"
             echo "CXX=$LLVM_PREFIX/bin/clang++"
             echo "LDFLAGS=-L$LLVM_PREFIX/lib"
+            echo "CFLAGS=-I$LLVM_PREFIX/include"
             echo "CPPFLAGS=-I$LLVM_PREFIX/include"
-            echo "LD_LIBRARY_PATH=$LLVM_PREFIX/lib"
+            echo "LIBRARY_PATH=$LLVM_PREFIX/lib"
+            echo "DYLD_LIBRARY_PATH=$LLVM_PREFIX/lib"
           } >> "$GITHUB_ENV"
 
       - run: "./tools/scripts/deps-download/init.sh"
