@@ -11,6 +11,7 @@ import {
     SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
 } from "../../../../../../common/index.js";
+import {JobManager} from "../../../plugins/app/JobManager/index.js";
 
 
 /**
@@ -30,7 +31,7 @@ type UpdateSearchSignalWhenJobsFinishProps = {
     aggregationJobId: number;
     logger: FastifyBaseLogger;
     mongoDb: Db;
-    queryJobsDbManager: FastifyInstance["QueryJobsDbManager"];
+    jobManager: JobManager;
     searchJobId: number;
     searchResultsMetadataCollection: Collection<SearchResultsMetadataDocument>;
 
