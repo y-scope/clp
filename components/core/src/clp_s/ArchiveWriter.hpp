@@ -8,7 +8,9 @@
 
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
+#include <nlohmann/json.hpp>
 
+#include "../clp/streaming_archive/Constants.hpp"
 #include "archive_constants.hpp"
 #include "DictionaryWriter.hpp"
 #include "RangeIndexWriter.hpp"
@@ -29,6 +31,70 @@ struct ArchiveWriterOption {
     size_t min_table_size;
     std::vector<std::string> authoritative_timestamp;
     std::string authoritative_timestamp_namespace;
+};
+
+class ArchiveStats {
+public:
+    // Constructors
+    explicit ArchiveStats(
+            std::string id,
+            epochtime_t begin_timestamp,
+            epochtime_t end_timestamp,
+            size_t uncompressed_size,
+            size_t compressed_size,
+            nlohmann::json range_index,
+            bool is_split
+    )
+            : m_id{id},
+              m_begin_timestamp{begin_timestamp},
+              m_end_timestamp{end_timestamp},
+              m_uncompressed_size{uncompressed_size},
+              m_compressed_size{compressed_size},
+              m_range_index(std::move(range_index)),  // Avoid {} to prevent wrapping in JSON array.
+              m_is_split{is_split} {}
+
+    // Methods
+    /**
+     * @return The contents of `ArchiveStats` as a JSON object in a string.
+     */
+    [[nodiscard]] auto as_string() const -> std::string {
+        namespace Archive = clp::streaming_archive::cMetadataDB::Archive;
+        namespace File = clp::streaming_archive::cMetadataDB::File;
+        constexpr std::string_view cRangeIndex{"range_index"};
+
+        nlohmann::json json_msg
+                = {{Archive::Id, m_id},
+                   {Archive::BeginTimestamp, m_begin_timestamp},
+                   {Archive::EndTimestamp, m_end_timestamp},
+                   {Archive::UncompressedSize, m_uncompressed_size},
+                   {Archive::Size, m_compressed_size},
+                   {File::IsSplit, m_is_split},
+                   {cRangeIndex, m_range_index}};
+        return json_msg.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore);
+    }
+
+    auto get_id() const -> std::string const& { return m_id; }
+
+    auto get_begin_timestamp() const -> epochtime_t { return m_begin_timestamp; }
+
+    auto get_end_timestamp() const -> epochtime_t { return m_end_timestamp; }
+
+    auto get_uncompressed_size() const -> size_t { return m_uncompressed_size; }
+
+    auto get_compressed_size() const -> size_t { return m_compressed_size; }
+
+    auto get_range_index() const -> nlohmann::json const& { return m_range_index; }
+
+    auto get_is_split() const -> bool { return m_is_split; }
+
+private:
+    std::string m_id;
+    epochtime_t m_begin_timestamp{};
+    epochtime_t m_end_timestamp{};
+    size_t m_uncompressed_size{};
+    size_t m_compressed_size{};
+    nlohmann::json m_range_index;
+    bool m_is_split{};
 };
 
 class ArchiveWriter {
@@ -80,9 +146,11 @@ public:
     void open(ArchiveWriterOption const& option);
 
     /**
-     * Closes the archive writer
+     * Closes the archive writer.
+     * @param is_split Whether the last file ingested into the archive is split.
+     * @return Statistics for the newly-written archive.
      */
-    void close();
+    [[nodiscard]] auto close(bool is_split = false) -> ArchiveStats;
 
     /**
      * Appends a message to the archive writer
@@ -220,16 +288,20 @@ private:
     /**
      * Writes the archive to a single file
      * @param files
+     * @return The archive range index as a JSON object.
      */
-    void write_single_file_archive(std::vector<ArchiveFileInfo> const& files);
+    [[nodiscard]] auto write_single_file_archive(std::vector<ArchiveFileInfo> const& files)
+            -> nlohmann::json;
 
     /**
      * Writes the metadata section of an archive.
      * @param archive_writer
      * @param files
+     * @return The archive range index as a JSON object.
      */
-    void
-    write_archive_metadata(FileWriter& archive_writer, std::vector<ArchiveFileInfo> const& files);
+    [[nodiscard]] auto
+    write_archive_metadata(FileWriter& archive_writer, std::vector<ArchiveFileInfo> const& files)
+            -> nlohmann::json;
 
     /**
      * Writes the file section of the single file archive
@@ -244,11 +316,6 @@ private:
      * @param metadata_section_size
      */
     void write_archive_header(FileWriter& archive_writer, size_t metadata_section_size);
-
-    /**
-     * Prints the archive's statistics (id, uncompressed size, compressed size, etc.)
-     */
-    auto print_archive_stats() const -> void;
 
     static constexpr size_t cReadBlockSize = 4 * 1024;
 
