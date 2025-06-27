@@ -358,7 +358,6 @@ tasks:
   webui-node-modules:
     internal: true
     vars:
-      # Directories
       SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
       CLIENT_OUTPUT_DIR: "{{.SRC_DIR}}/client/node_modules"
       LOG_VIEWER_OUTPUT_DIR: "{{.SRC_DIR}}/yscope-log-viewer/node_modules"
