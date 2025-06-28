@@ -97,10 +97,11 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 Boost::regex
                 ${CURL_LIBRARIES}
                 fmt::fmt
-                spdlog::spdlog
+		msgpack-cxx
                 nlohmann_json::nlohmann_json
                 OpenSSL::Crypto
-                ystdlib::error_handling
+                spdlog::spdlog
+		ystdlib::error_handling
                 ZStd::ZStd
         )
 endif()
