@@ -61,11 +61,7 @@
 #webui:
 #  host: "localhost"
 #  port: 4000
-#  logging_level: "INFO"
-#
-#log_viewer_webui:
-#  host: "localhost"
-#  port: 3000
+#  results_metadata_collection_name: "results-metadata"
 #
 ## Where archives should be output to
 #archive_output:

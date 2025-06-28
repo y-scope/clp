@@ -51,7 +51,7 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
           FILE_SHA256: "de0600b505545f1bceb7ff5725941035f7c1dc875d08249d9b6d679e3ba77f26"
-          OUTPUT_DIR: "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/yscope-log-viewer"
+          OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer"
           TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
           URL: "https://github.com/y-scope/yscope-log-viewer/archive/969ff35.tar.gz"
 
