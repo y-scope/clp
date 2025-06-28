@@ -764,7 +764,7 @@ tasks:
             - >-
               --line-filter "[{{.G_CLANG_TIDY_LINE_FILTER_IGNORE_MSGPACK_1098}}]"
             - "-p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
-            - "--extra-arg=-Drsize=size_t"
+            - "--extra-arg=-Drsize_t=size_t"
           INCLUDE_PATTERNS:
             - "{{.G_CORE_COMPONENT_DIR}}/src/*"
             - "{{.G_CORE_COMPONENT_DIR}}/tests/*"
