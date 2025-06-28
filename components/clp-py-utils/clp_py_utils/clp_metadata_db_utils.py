@@ -160,7 +160,7 @@ def fetch_existing_datasets(
 def validate_and_cache_dataset(
     db_cursor,
     table_prefix: str,
-    dataset: str | None,
+    dataset: str,
     existing_datasets: Set[str] | None = None,
 ) -> Tuple[bool, Set[str]]:
     """
@@ -173,8 +173,6 @@ def validate_and_cache_dataset(
     :param existing_datasets:
     :return: Whether the dataset exists, and a refreshed cache of datasets if a lookup is required.
     """
-    if not dataset:
-        return False, existing_datasets
     if existing_datasets is not None and dataset in existing_datasets:
         return True, existing_datasets
     existing_datasets = fetch_existing_datasets(db_cursor, table_prefix)
