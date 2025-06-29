@@ -6,6 +6,35 @@ can be built and used locally, but some are available to download from
 
 To build an image locally, run the `build.sh` script in the image's directory.
 
+## clp-core-dependencies-&lt;arch&gt;-manylinux-2.28
+
+Images containing the dependencies necessary to build CLP core in a manylinux 2.28 environment
+(aarch64 or x86).
+
+Binaries built on manylinux 2.28 (based on AlmaLinux 8) are expected to be compatible with other
+distros using glibc 2.28+, including:
+
+* CentOS/RHEL 8+
+* Debian 10+
+* Fedora 29+
+* Ubuntu 18.10+
+
+### clp-core-dependencies-aarch64-manylinux-2.28
+
+* Path:
+
+  ```text
+  components/core/tools/docker-images/clp-env-base-manylinux-2.28-aarch64
+  ```
+
+### clp-core-dependencies-x86-manylinux-2.28
+
+* Path:
+
+  ```text
+  components/core/tools/docker-images/clp-env-base-manylinux-2.28-x86_64
+  ```
+
 ## clp-core-dependencies-x86-centos-stream-9
 
 An image containing the dependencies necessary to build CLP core in a CentOS Stream 9 x86
