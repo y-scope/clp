@@ -18,7 +18,6 @@ from clp_py_utils.clp_config import (
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     StorageEngine,
-    StorageType,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
@@ -190,18 +189,12 @@ def search_and_schedule_new_tasks(
         if StorageEngine.CLP_S == clp_storage_engine:
             dataset_name = input_config.dataset
             if dataset_name not in existing_datasets:
-                archive_storage_directory: Path
-                if StorageType.S3 == clp_archive_output.storage.type:
-                    s3_config = clp_archive_output.storage.s3_config
-                    archive_storage_directory = Path(s3_config.key_prefix)
-                else:
-                    archive_storage_directory = clp_archive_output.get_directory()
                 add_dataset(
                     db_conn,
                     db_cursor,
                     table_prefix,
                     dataset_name,
-                    archive_storage_directory,
+                    clp_archive_output,
                 )
                 existing_datasets.add(dataset_name)
 

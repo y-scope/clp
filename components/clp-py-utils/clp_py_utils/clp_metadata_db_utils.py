@@ -5,10 +5,12 @@ from typing import Set
 
 from clp_py_utils.clp_config import (
     ARCHIVE_TAGS_TABLE_SUFFIX,
+    ArchiveOutput,
     ARCHIVES_TABLE_SUFFIX,
     COLUMN_METADATA_TABLE_SUFFIX,
     DATASETS_TABLE_SUFFIX,
     FILES_TABLE_SUFFIX,
+    StorageType,
     TAGS_TABLE_SUFFIX,
 )
 
@@ -156,7 +158,7 @@ def add_dataset(
     db_cursor,
     table_prefix: str,
     dataset_name: str,
-    dataset_archive_storage_directory: Path,
+    archive_output: ArchiveOutput,
 ) -> None:
     """
     Inserts a new dataset into the `datasets` table and creates the corresponding standard set of
@@ -166,8 +168,15 @@ def add_dataset(
     :param db_cursor: The database cursor to execute the table row insertion.
     :param table_prefix: A string to prepend to the table name.
     :param dataset_name:
-    :param dataset_archive_storage_directory:
+    :param archive_output:
     """
+    archive_storage_directory: Path
+    if StorageType.S3 == archive_output.storage.type:
+        s3_config = archive_output.storage.s3_config
+        archive_storage_directory = Path(s3_config.key_prefix)
+    else:
+        archive_storage_directory = archive_output.get_directory()
+
     datasets_table_name = get_datasets_table_name(table_prefix)
     query = f"""INSERT INTO `{datasets_table_name}`
                 (name, archive_storage_directory)
@@ -175,7 +184,7 @@ def add_dataset(
                 """
     db_cursor.execute(
         query,
-        (dataset_name, str(dataset_archive_storage_directory / dataset_name)),
+        (dataset_name, str(archive_storage_directory / dataset_name)),
     )
     create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
     db_conn.commit()

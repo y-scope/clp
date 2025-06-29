@@ -5,8 +5,6 @@ import sys
 from contextlib import closing
 from pathlib import Path
 
-from sql_adapter import SQL_Adapter
-
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_DATASET_NAME,
     Database,
@@ -17,6 +15,7 @@ from clp_py_utils.clp_metadata_db_utils import (
     create_metadata_db_tables,
 )
 from clp_py_utils.core import read_yaml_config_file
+from clp_py_utils.sql_adapter import SQL_Adapter
 
 # Setup logging
 # Create logger
@@ -56,10 +55,6 @@ def main(argv):
         ) as metadata_db_cursor:
             if StorageEngine.CLP_S == storage_engine:
                 create_datasets_table(metadata_db_cursor, table_prefix)
-                # Note: the webui still expect tables with default dataset
-                create_metadata_db_tables(
-                    metadata_db_cursor, table_prefix, CLP_DEFAULT_DATASET_NAME
-                )
             else:
                 create_metadata_db_tables(metadata_db_cursor, table_prefix)
             metadata_db.commit()
