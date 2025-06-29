@@ -642,8 +642,8 @@ def handle_pending_query_jobs(
             job_config = msgpack.unpackb(job["job_config"])
 
             table_prefix = clp_metadata_db_conn_params["table_prefix"]
-            if StorageEngine.CLP_S == clp_storage_engine:
-                dataset = QueryJobConfig.parse_obj(job_config).dataset
+            dataset = QueryJobConfig.parse_obj(job_config).dataset
+            if StorageEngine.CLP_S == clp_storage_engine and dataset is not None:
                 dataset_exists, existing_datasets = validate_and_cache_dataset(
                     db_cursor, table_prefix, dataset, existing_datasets
                 )
