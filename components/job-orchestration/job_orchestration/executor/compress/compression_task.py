@@ -12,7 +12,6 @@ from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
     ARCHIVE_TAGS_TABLE_SUFFIX,
     ARCHIVES_TABLE_SUFFIX,
-    CLP_DEFAULT_DATASET_NAME,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
@@ -93,20 +92,33 @@ def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, tag_ids, archi
 
 
 def update_archive_metadata(db_cursor, table_prefix, archive_stats):
-    archive_stats_defaults = {
-        "begin_timestamp": 0,
-        "end_timestamp": 0,
-        "creator_id": "",
+    stats_to_update = {
+        # Use defaults for values clp-s doesn't output
         "creation_ix": 0,
+        "creator_id": "",
     }
-    for k, v in archive_stats_defaults.items():
-        archive_stats.setdefault(k, v)
-    keys = ", ".join(archive_stats.keys())
-    value_placeholders = ", ".join(["%s"] * len(archive_stats))
+
+    # Validate clp-s doesn't output the set kv-pairs
+    for key in stats_to_update:
+        if key in archive_stats:
+            raise ValueError(f"Unexpected key '{key}' in archive stats")
+
+    required_stat_names = [
+        "begin_timestamp",
+        "end_timestamp",
+        "id",
+        "size",
+        "uncompressed_size",
+    ]
+    for stat_name in required_stat_names:
+        stats_to_update[stat_name] = archive_stats[stat_name]
+
+    keys = ", ".join(stats_to_update.keys())
+    value_placeholders = ", ".join(["%s"] * len(stats_to_update))
     query = (
         f"INSERT INTO {table_prefix}{ARCHIVES_TABLE_SUFFIX} ({keys}) VALUES ({value_placeholders})"
     )
-    db_cursor.execute(query, list(archive_stats.values()))
+    db_cursor.execute(query, list(stats_to_update.values()))
 
 
 def _generate_fs_logs_list(
@@ -280,6 +292,8 @@ def run_clp(
         s3_config = worker_config.archive_output.storage.s3_config
         enable_s3_write = True
 
+    table_prefix = clp_metadata_db_connection_config["table_prefix"]
+    input_dataset: str
     if StorageEngine.CLP == clp_storage_engine:
         compression_cmd, compression_env = _make_clp_command_and_env(
             clp_home=clp_home,
@@ -288,6 +302,12 @@ def run_clp(
             db_config_file_path=db_config_file_path,
         )
     elif StorageEngine.CLP_S == clp_storage_engine:
+        input_dataset = clp_config.input.dataset
+        table_prefix = f"{table_prefix}{input_dataset}_"
+        archive_output_dir = archive_output_dir / input_dataset
+        if StorageType.S3 == storage_type:
+            s3_config.key_prefix = f"{s3_config.key_prefix}{input_dataset}/"
+
         compression_cmd, compression_env = _make_clp_s_command_and_env(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
@@ -339,7 +359,7 @@ def run_clp(
         if not line:
             last_line_decoded = True
         else:
-            stats = json.loads(line.decode("ascii"))
+            stats = json.loads(line.decode("utf-8"))
 
         if last_archive_stats is not None and (
             None is stats or stats["id"] != last_archive_stats["id"]
@@ -367,7 +387,6 @@ def run_clp(
                 with closing(sql_adapter.create_connection(True)) as db_conn, closing(
                     db_conn.cursor(dictionary=True)
                 ) as db_cursor:
-                    table_prefix = clp_metadata_db_connection_config["table_prefix"]
                     if StorageEngine.CLP_S == clp_storage_engine:
                         update_archive_metadata(db_cursor, table_prefix, last_archive_stats)
                     update_job_metadata_and_tags(
@@ -384,7 +403,7 @@ def run_clp(
                         str(clp_home / "bin" / "indexer"),
                         "--db-config-file",
                         str(db_config_file_path),
-                        CLP_DEFAULT_DATASET_NAME,
+                        input_dataset,
                         archive_path,
                     ]
                     try:

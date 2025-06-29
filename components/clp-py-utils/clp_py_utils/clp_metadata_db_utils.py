@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+from pathlib import Path
+from typing import Set
+
 from clp_py_utils.clp_config import (
     ARCHIVE_TAGS_TABLE_SUFFIX,
     ARCHIVES_TABLE_SUFFIX,
-    CLP_DEFAULT_DATASET_NAME,
     COLUMN_METADATA_TABLE_SUFFIX,
     DATASETS_TABLE_SUFFIX,
     FILES_TABLE_SUFFIX,
@@ -95,7 +97,7 @@ def _create_column_metadata_table(db_cursor, table_prefix: str) -> None:
 
 def create_datasets_table(db_cursor, table_prefix: str) -> None:
     """
-    Creates the dataset information table.
+    Creates the datasets information table.
 
     :param db_cursor: The database cursor to execute the table creation.
     :param table_prefix: A string to prepend to the table name.
@@ -107,12 +109,52 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
         f"""
         CREATE TABLE IF NOT EXISTS `{table_prefix}{DATASETS_TABLE_SUFFIX}` (
             `name` VARCHAR(255) NOT NULL,
-            `archive_storage_type` VARCHAR(64) NOT NULL,
             `archive_storage_directory` VARCHAR(4096) NOT NULL,
             PRIMARY KEY (`name`)
         )
         """
     )
+
+
+def add_dataset(
+    db_conn,
+    db_cursor,
+    table_prefix: str,
+    dataset_name: str,
+    dataset_archive_storage_directory: Path,
+) -> None:
+    """
+    Inserts a new dataset into the `datasets` table and creates the corresponding standard set of
+    tables for CLP's metadata.
+
+    :param db_conn:
+    :param db_cursor: The database cursor to execute the table row insertion.
+    :param table_prefix: A string to prepend to the table name.
+    :param dataset_name:
+    :param dataset_archive_storage_directory:
+    """
+    query = f"""INSERT INTO `{table_prefix}{DATASETS_TABLE_SUFFIX}`
+                (name, archive_storage_directory)
+                VALUES (%s, %s)
+                """
+    db_cursor.execute(query, (dataset_name, str(dataset_archive_storage_directory)))
+    create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
+    db_conn.commit()
+
+
+def fetch_existing_datasets(
+    db_cursor,
+    table_prefix: str,
+) -> Set[str]:
+    """
+    Gets the names of all existing datasets.
+
+    :param db_cursor:
+    :param table_prefix:
+    """
+    db_cursor.execute(f"SELECT name FROM `{table_prefix}{DATASETS_TABLE_SUFFIX}`")
+    rows = db_cursor.fetchall()
+    return {row["name"] for row in rows}
 
 
 def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None = None) -> None:
@@ -125,6 +167,7 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
     """
     if dataset is not None:
         table_prefix = f"{table_prefix}{dataset}_"
+        _create_column_metadata_table(db_cursor, table_prefix)
 
     archives_table_name = f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}"
     tags_table_name = f"{table_prefix}{TAGS_TABLE_SUFFIX}"
@@ -136,7 +179,3 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
         db_cursor, archive_tags_table_name, archives_table_name, tags_table_name
     )
     _create_files_table(db_cursor, table_prefix)
-
-    # TODO: Create this table only for the `CLP_S` storage-engine after the dataset feature is
-    # fully implemented.
-    _create_column_metadata_table(db_cursor, f"{table_prefix}{CLP_DEFAULT_DATASET_NAME}_")

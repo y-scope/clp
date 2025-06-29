@@ -26,6 +26,7 @@
 #include "../src/clp_s/search/ast/NarrowTypes.hpp"
 #include "../src/clp_s/search/ast/OrExpr.hpp"
 #include "../src/clp_s/search/ast/OrOfAndForm.hpp"
+#include "../src/clp_s/search/EvaluateRangeIndexFilters.hpp"
 #include "../src/clp_s/search/EvaluateTimestampIndex.hpp"
 #include "../src/clp_s/search/kql/kql.hpp"
 #include "../src/clp_s/search/Output.hpp"
@@ -159,6 +160,14 @@ void search(
 
         auto archive_expr = expr->copy();
 
+        clp_s::search::EvaluateRangeIndexFilters metadata_filter_pass{
+                archive_reader->get_range_index(),
+                false == ignore_case
+        };
+        archive_expr = metadata_filter_pass.run(archive_expr);
+        REQUIRE(nullptr != archive_expr);
+        REQUIRE(nullptr == std::dynamic_pointer_cast<clp_s::search::ast::EmptyExpr>(archive_expr));
+
         auto timestamp_dict = archive_reader->get_timestamp_dictionary();
         clp_s::search::EvaluateTimestampIndex timestamp_index_pass(timestamp_dict);
         REQUIRE(clp_s::EvaluatedValue::False != timestamp_index_pass.run(archive_expr));
@@ -200,22 +209,36 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 5, 6}},
             {R"aa(arr.b > 1000)aa", {7, 8}},
             {R"aa(var_string: *)aa", {9}},
-            {R"aa(clp_string: *)aa", {9}}
+            {R"aa(clp_string: *)aa", {9}},
+            {fmt::format(
+                     R"aa($_filename: "{}" AND $_file_split_number: 0 AND )aa"
+                     R"aa($_archive_creator_id: * AND idx: 0)aa",
+                     get_test_input_local_path()
+             ),
+             {0}},
+            {R"aa(idx: 0 AND NOT $_filename: "clp string")aa", {0}},
+            {R"aa(idx: 0 AND NOT $*._filename.*: "clp string")aa", {0}},
+            {R"aa(($_filename: file OR $_file_split_number: 1 OR $_archive_creator_id > 0) AND )aa"
+             R"aa(idx: 0 OR idx: 1)aa",
+             {1}}
     };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
 
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
 
-    REQUIRE_NOTHROW(compress_archive(
-            get_test_input_local_path(),
-            std::string{cTestSearchArchiveDirectory},
-            single_file_archive,
-            structurize_arrays,
-            clp_s::FileType::Json
-    ));
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(),
+                    std::string{cTestSearchArchiveDirectory},
+                    single_file_archive,
+                    structurize_arrays,
+                    clp_s::FileType::Json
+            )
+    );
 
     for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
         REQUIRE_NOTHROW(search(query, false, expected_results));
     }
 
