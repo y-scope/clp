@@ -17,7 +17,5 @@ RUN ./tools/scripts/lib_install/manylinux_2_28/install-all.sh
 # Remove cached files
 RUN dnf clean all && rm -rf /var/cache/dnf /tmp/* /var/tmp/*
 
-# DO NOT FLATTEN THE IMAGE!!!
-# The consequence of flattening the image is that we lose shell startup scripts
-# and environment modification from /etc/profile.d, /etc/bashrc, etc.
-# These are important for manylinux, otherwise, default system compilers are used, etc.
+# NOTE: Don't flatten the image or else we'll lose any environment modifications from the base
+# image.
