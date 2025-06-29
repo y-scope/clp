@@ -41,7 +41,7 @@ from clp_py_utils.clp_config import (
     TAGS_TABLE_SUFFIX,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
-from clp_py_utils.clp_metadata_db_utils import fetch_existing_datasets
+from clp_py_utils.clp_metadata_db_utils import validate_and_cache_dataset
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -614,18 +614,6 @@ def dispatch_job_and_update_db(
     )
 
 
-def _validate_dataset(
-    db_cursor,
-    table_prefix: str,
-    dataset: str,
-    existing_datasets: Set[str],
-) -> bool:
-    if dataset in existing_datasets:
-        return True
-    existing_datasets = fetch_existing_datasets(db_cursor, table_prefix)
-    return dataset in existing_datasets
-
-
 def handle_pending_query_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
@@ -654,9 +642,12 @@ def handle_pending_query_jobs(
             job_config = msgpack.unpackb(job["job_config"])
 
             table_prefix = clp_metadata_db_conn_params["table_prefix"]
-            if StorageEngine.CLP_S == clp_storage_engine:
-                dataset = QueryJobConfig.parse_obj(job_config).dataset
-                if not _validate_dataset(db_cursor, table_prefix, dataset, existing_datasets):
+            dataset = QueryJobConfig.parse_obj(job_config).dataset
+            if StorageEngine.CLP_S == clp_storage_engine and dataset is not None:
+                dataset_exists, existing_datasets = validate_and_cache_dataset(
+                    db_cursor, table_prefix, dataset, existing_datasets
+                )
+                if not dataset_exists:
                     logger.error(f"Dataset `{dataset}` doesn't exist.")
                     if not set_job_or_task_status(
                         db_conn,
