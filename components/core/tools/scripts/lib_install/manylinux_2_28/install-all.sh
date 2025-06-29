@@ -1,13 +1,7 @@
 #!/usr/bin/env bash
 
-# Exit on any error
-set -e
-
-# Exit on failures hidden inside pipes (e.g., curl | tar)
+set -eu
 set -o pipefail
-
-# Error on undefined variable
-set -u
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
