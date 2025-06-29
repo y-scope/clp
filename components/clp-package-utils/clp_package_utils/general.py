@@ -7,6 +7,7 @@ import socket
 import subprocess
 import typing
 import uuid
+from contextlib import closing
 from enum import auto
 from typing import List, Optional, Tuple
 
