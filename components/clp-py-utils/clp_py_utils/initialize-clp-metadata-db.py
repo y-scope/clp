@@ -6,7 +6,6 @@ from contextlib import closing
 from pathlib import Path
 
 from clp_py_utils.clp_config import (
-    CLP_DEFAULT_DATASET_NAME,
     Database,
     StorageEngine,
 )
