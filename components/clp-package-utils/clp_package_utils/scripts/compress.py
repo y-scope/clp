@@ -4,13 +4,14 @@ import pathlib
 import subprocess
 import sys
 import uuid
-from typing import List
+from typing import List, Optional
 
 from clp_py_utils.clp_config import StorageEngine
 from job_orchestration.scheduler.job_config import InputType
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    CLP_DEFAULT_DATASET_NAME,
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     dump_container_config,
     generate_container_config,
@@ -20,7 +21,6 @@ from clp_package_utils.general import (
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
-    validate_dataset,
 )
 
 logger = logging.getLogger(__file__)
@@ -173,13 +173,17 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    dataset = validate_dataset(clp_config, parsed_args.dataset)
-
     input_type = clp_config.logs_input.type
+    storage_engine: StorageEngine = clp_config.package.storage_engine
+
+    dataset: Optional[str] = parsed_args.dataset
+    if StorageEngine.CLP_S == storage_engine and dataset is None:
+        dataset = CLP_DEFAULT_DATASET_NAME
+
     if InputType.FS == input_type:
         _validate_fs_input_args(parsed_args, args_parser)
     elif InputType.S3 == input_type:
-        _validate_s3_input_args(parsed_args, args_parser, clp_config.package.storage_engine)
+        _validate_s3_input_args(parsed_args, args_parser, storage_engine)
     else:
         raise ValueError(f"Unsupported input type: {input_type}.")
 
