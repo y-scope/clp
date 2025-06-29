@@ -1,12 +1,11 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-set -euo pipefail
+set -eu
+set -o pipefail
 
-# Get the directory this script is in
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-component_root=${script_dir}/../../../
+component_root="${script_dir}/../../../"
 
-# Build aarch64 image, will automatically use QEMU emulate if not on native platform
 build_cmd=(
     docker buildx build
     --platform linux/arm64
@@ -16,7 +15,6 @@ build_cmd=(
     --load
 )
 
-# If in a git repo, add labels for revision and source
 if command -v git >/dev/null && git -C "$script_dir" rev-parse --is-inside-work-tree >/dev/null ;
 then
     build_cmd+=(
@@ -26,6 +24,4 @@ then
 fi
 
 echo "Running: ${build_cmd[*]}"
-
-# Execute the docker buildx command
 "${build_cmd[@]}"
