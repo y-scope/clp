@@ -1,4 +1,4 @@
-FROM quay.io/pypa/manylinux_2_28_aarch64:2025.06.25-1
+FROM quay.io/pypa/manylinux_2_28_aarch64
 
 WORKDIR /root
 
