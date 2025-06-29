@@ -5,7 +5,7 @@ WORKDIR /root
 RUN mkdir -p ./tools/scripts/lib_install
 COPY ./tools/scripts/lib_install ./tools/scripts/lib_install
 
-RUN ./tools/scripts/lib_install/manylinux_2_28/install-all.sh
+RUN ./tools/scripts/lib_install/manylinux-2.28/install-all.sh
 
 # Remove cached files
 RUN dnf clean all && rm -rf /var/cache/dnf /tmp/* /var/tmp/*
