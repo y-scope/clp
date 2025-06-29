@@ -63,7 +63,7 @@ fi
 cd ${extracted_dir}
 mkdir -p cmake-build-release
 cd cmake-build-release
-# NOTE: Disable expat and openssl  so the static libarchive doesn't look for it at link time
+# NOTE: Disable Expat and OpenSSL so the static libarchive doesn't look for them at link time.
 cmake -DENABLE_EXPAT=OFF -DENABLE_OPENSSL=OFF ../
 make -j${num_cpus}
 
