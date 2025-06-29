@@ -1,9 +1,3 @@
-enum SQL_CONFIG {
-    SqlDbClpArchivesTableName = "clp_archives",
-    SqlDbClpFilesTableName = "clp_files",
-    SqlDbCompressionJobsTableName = "compression_jobs",
-}
-
 /**
  * Column names for the `clp_archives` table.
  */
@@ -46,5 +40,4 @@ export {
     CLP_ARCHIVES_TABLE_COLUMN_NAMES,
     CLP_FILES_TABLE_COLUMN_NAMES,
     COMPRESSION_JOBS_TABLE_COLUMN_NAMES,
-    SQL_CONFIG,
 };
