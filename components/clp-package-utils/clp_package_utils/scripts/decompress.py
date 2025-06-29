@@ -27,6 +27,7 @@ from clp_package_utils.general import (
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
+    validate_dataset,
     validate_path_could_be_dir,
 )
 

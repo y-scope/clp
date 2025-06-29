@@ -205,6 +205,7 @@ def main(argv: typing.List[str]) -> int:
         "python3",
         "-m", "clp_package_utils.scripts.native.archive_manager",
         "--config", str(generated_config_path_on_container),
+        "--dataset", str(dataset),
         str(subcommand),
     ]
     # fmt : on
