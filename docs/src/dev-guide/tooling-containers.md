@@ -1,34 +1,81 @@
 # Containers
 
-We publish (to [GitHub packages][gh-packages]) several Docker container images useful for building
-and running CLP:
+We maintain several Docker container images that are useful for building and running CLP. All images
+can be built and used locally, but some are available to download from
+[GitHub Packages][gh-packages].
 
-* An [image][core-deps-centos-stream-9] containing the dependencies necessary to build CLP core in a
-  Centos Stream 9 x86 environment.
+To build an image locally, run the `build.sh` script in the image's directory.
 
-  ```text
-  ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos-stream-9:main
+## clp-core-dependencies-x86-centos-stream-9
+
+An image containing the dependencies necessary to build CLP core in a CentOS Stream 9 x86
+environment.
+
+* [GitHub Packages page][core-deps-centos-stream-9]
+* Pull command:
+
+  ```bash
+  docker pull ghcr.io/y-scope/clp/clp-core-dependencies-x86-centos-stream-9:main
   ```
 
-* An [image][core-deps-ubuntu-jammy] containing the dependencies necessary to build CLP core in an
-  Ubuntu Jammy x86 environment.
+* Path:
 
   ```text
-  ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-jammy:main
+  components/core/tools/docker-images/clp-env-base-centos-stream-9
   ```
 
-* An [image][core-ubuntu-jammy] containing the CLP core binaries (`clg`, `clp`, `clp-s`, `glt`,
-  etc.) built in an Ubuntu Jammy x86 environment.
+## clp-core-dependencies-x86-ubuntu-jammy
 
-  ```text
-  ghcr.io/y-scope/clp/clp-core-x86-ubuntu-jammy:main
+An image containing the dependencies necessary to build CLP core in an Ubuntu Jammy x86
+environment.
+
+* [GitHub Packages page][core-deps-ubuntu-jammy]
+* Pull command:
+
+  ```bash
+  docker pull ghcr.io/y-scope/clp/clp-core-dependencies-x86-ubuntu-jammy:main
   ```
 
-* An [image][exe-ubuntu-jammy] containing the dependencies necessary to run the CLP package in an
-  Ubuntu Jammy x86 environment.
+* Path:
 
   ```text
-  ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-jammy:main
+  components/core/tools/docker-images/clp-env-base-ubuntu-jammy
+  ```
+
+## clp-core-x86-ubuntu-jammy
+
+An image containing the CLP core binaries (`clg`, `clp`, `clp-s`, `glt`, etc.) built in an Ubuntu
+Jammy x86 environment.
+
+* [GitHub Packages page][core-ubuntu-jammy]
+* Pull command:
+
+  ```bash
+  docker pull ghcr.io/y-scope/clp/clp-core-x86-ubuntu-jammy:main
+  ```
+
+* Path:
+
+  ```text
+  components/core/tools/docker-images/clp-core-ubuntu-jammy
+  ```
+
+## clp-execution-x86-ubuntu-jammy
+
+An image containing the dependencies necessary to run the CLP package in an Ubuntu Jammy x86
+environment.
+
+* [GitHub Packages page][exe-ubuntu-jammy]
+* Pull command:
+
+  ```bash
+  docker pull ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-jammy:main
+  ```
+
+* Path:
+
+  ```text
+  tools/docker-images/clp-execution-base-ubuntu-jammy
   ```
 
 [core-deps-centos-stream-9]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos-stream-9
