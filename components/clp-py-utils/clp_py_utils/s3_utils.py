@@ -14,13 +14,13 @@ from clp_py_utils.clp_config import (
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     FsStorage,
-    LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
     S3Config,
     S3Credentials,
     S3Storage,
     StorageType,
+    WEBUI_COMPONENT_NAME,
 )
 from clp_py_utils.compression import FileMetadata
 
@@ -115,7 +115,7 @@ def generate_container_auth_options(
     ):
         output_storages_by_component_type = [clp_config.archive_output.storage]
         input_storage_needed = True
-    elif component_type in (LOG_VIEWER_WEBUI_COMPONENT_NAME,):
+    elif component_type in (WEBUI_COMPONENT_NAME,):
         output_storages_by_component_type = [clp_config.stream_output.storage]
     elif component_type in (
         QUERY_SCHEDULER_COMPONENT_NAME,
