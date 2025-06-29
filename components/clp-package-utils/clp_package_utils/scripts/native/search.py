@@ -32,6 +32,7 @@ logger = logging.getLogger(__file__)
 def create_and_monitor_job_in_db(
     db_config: Database,
     results_cache: ResultsCache,
+    dataset: str | None,
     wildcard_query: str,
     tags: str | None,
     begin_timestamp: int | None,
@@ -43,6 +44,7 @@ def create_and_monitor_job_in_db(
     count_by_time_bucket_size: int | None,
 ):
     search_config = SearchJobConfig(
+        dataset=dataset,
         query_string=wildcard_query,
         begin_timestamp=begin_timestamp,
         end_timestamp=end_timestamp,
@@ -113,6 +115,7 @@ def get_worker_connection_handler(raw_output: bool):
 async def do_search_without_aggregation(
     db_config: Database,
     results_cache: ResultsCache,
+    dataset: str | None,
     wildcard_query: str,
     tags: str | None,
     begin_timestamp: int | None,
@@ -147,6 +150,7 @@ async def do_search_without_aggregation(
             create_and_monitor_job_in_db,
             db_config,
             results_cache,
+            dataset,
             wildcard_query,
             tags,
             begin_timestamp,
@@ -184,6 +188,7 @@ async def do_search_without_aggregation(
 async def do_search(
     db_config: Database,
     results_cache: ResultsCache,
+    dataset: str | None,
     wildcard_query: str,
     tags: str | None,
     begin_timestamp: int | None,
@@ -198,6 +203,7 @@ async def do_search(
         await do_search_without_aggregation(
             db_config,
             results_cache,
+            dataset,
             wildcard_query,
             tags,
             begin_timestamp,
@@ -211,6 +217,7 @@ async def do_search(
             create_and_monitor_job_in_db,
             db_config,
             results_cache,
+            dataset,
             wildcard_query,
             tags,
             begin_timestamp,
@@ -229,6 +236,12 @@ def main(argv):
 
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
+    args_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
+    )
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
         "-t", "--tags", help="Comma-separated list of tags of archives to search."
@@ -286,6 +299,7 @@ def main(argv):
             do_search(
                 clp_config.database,
                 clp_config.results_cache,
+                parsed_args.dataset,
                 parsed_args.wildcard_query,
                 parsed_args.tags,
                 parsed_args.begin_time,

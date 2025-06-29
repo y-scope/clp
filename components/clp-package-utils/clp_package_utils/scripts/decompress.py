@@ -5,7 +5,12 @@ import subprocess
 import sys
 from typing import Optional
 
-from clp_py_utils.clp_config import CLPConfig, StorageEngine, StorageType
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
+    CLPConfig,
+    StorageEngine,
+    StorageType,
+)
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -167,11 +172,17 @@ def handle_extract_stream_cmd(
 
     storage_type = clp_config.archive_output.storage.type
     storage_engine = clp_config.package.storage_engine
+    job_command = parsed_args.command
+
     if StorageType.S3 == storage_type and StorageEngine.CLP == storage_engine:
         logger.error(
             f"Stream extraction is not supported for archive storage type `{storage_type}` with"
             f" storage engine `{storage_engine}`."
         )
+        return -1
+
+    if EXTRACT_JSON_CMD == job_command and StorageEngine.CLP_S != storage_engine:
+        logger.error(f"Json extraction is only supported with storage engine `{storage_engine}`.")
         return -1
 
     container_name = generate_container_name(str(JobType.IR_EXTRACTION))
@@ -185,7 +196,6 @@ def handle_extract_stream_cmd(
     )
 
     # fmt: off
-    job_command = parsed_args.command
     extract_cmd = [
         "python3",
         "-m", "clp_package_utils.scripts.native.decompress",
@@ -207,6 +217,9 @@ def handle_extract_stream_cmd(
             extract_cmd.append(str(parsed_args.target_uncompressed_size))
     elif EXTRACT_JSON_CMD == job_command:
         extract_cmd.append(str(parsed_args.archive_id))
+        dataset = validate_dataset(clp_config, parsed_args.dataset)
+        extract_cmd.append("--dataset")
+        extract_cmd.append(dataset)
         if parsed_args.target_chunk_size:
             extract_cmd.append("--target-chunk-size")
             extract_cmd.append(str(parsed_args.target_chunk_size))
@@ -267,6 +280,12 @@ def main(argv):
     # JSON extraction command parser
     json_extraction_parser = command_args_parser.add_parser(EXTRACT_JSON_CMD)
     json_extraction_parser.add_argument("archive_id", type=str, help="Archive ID")
+    json_extraction_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=CLP_DEFAULT_DATASET_NAME,
+        help="The dataset that the archives belong to.",
+    )
     json_extraction_parser.add_argument(
         "--target-chunk-size",
         type=int,

@@ -19,6 +19,7 @@ from clp_package_utils.general import (
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
+    validate_dataset,
 )
 
 logger = logging.getLogger(__file__)
@@ -34,6 +35,12 @@ def main(argv):
         "-c",
         default=str(default_config_file_path),
         help="CLP package configuration file.",
+    )
+    args_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
     )
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
@@ -78,6 +85,8 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
+    dataset = validate_dataset(clp_config, parsed_args.dataset)
+
     storage_type = clp_config.archive_output.storage.type
     storage_engine = clp_config.package.storage_engine
     if StorageType.S3 == storage_type and StorageEngine.CLP == storage_engine:
@@ -107,6 +116,9 @@ def main(argv):
         parsed_args.wildcard_query,
     ]
     # fmt: on
+    if dataset is not None:
+        search_cmd.append("--dataset")
+        search_cmd.append(dataset)
     if parsed_args.tags:
         search_cmd.append("--tags")
         search_cmd.append(parsed_args.tags)

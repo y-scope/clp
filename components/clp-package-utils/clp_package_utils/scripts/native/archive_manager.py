@@ -10,7 +10,6 @@ from pathlib import Path
 from clp_py_utils.clp_config import (
     ARCHIVE_TAGS_TABLE_SUFFIX,
     ARCHIVES_TABLE_SUFFIX,
-    CLP_DEFAULT_DATASET_NAME,
     Database,
     FILES_TABLE_SUFFIX,
     StorageEngine,
@@ -96,6 +95,12 @@ def main(argv: typing.List[str]) -> int:
         "-c",
         default=str(default_config_file_path),
         help="CLP configuration file.",
+    )
+    args_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
     )
 
     # Top-level commands
@@ -196,7 +201,7 @@ def main(argv: typing.List[str]) -> int:
             archives_dir,
             database_config,
             storage_engine,
-            CLP_DEFAULT_DATASET_NAME,
+            parsed_args.dataset,
             parsed_args.begin_ts,
             parsed_args.end_ts,
         )
@@ -208,7 +213,7 @@ def main(argv: typing.List[str]) -> int:
                 archives_dir,
                 database_config,
                 storage_engine,
-                CLP_DEFAULT_DATASET_NAME,
+                parsed_args.dataset,
                 delete_handler,
                 parsed_args.dry_run,
             )
@@ -220,7 +225,7 @@ def main(argv: typing.List[str]) -> int:
                 archives_dir,
                 database_config,
                 storage_engine,
-                CLP_DEFAULT_DATASET_NAME,
+                parsed_args.dataset,
                 delete_handler,
                 parsed_args.dry_run,
             )
@@ -236,7 +241,7 @@ def _find_archives(
     archives_dir: Path,
     database_config: Database,
     storage_engine: StorageEngine,
-    dataset: str,
+    dataset: typing.Optional[str],
     begin_ts: int,
     end_ts: int = typing.Optional[int],
 ) -> int:
@@ -285,9 +290,12 @@ def _find_archives(
                 return 0
 
             logger.info(f"Found {len(archive_ids)} archives within the specified time range.")
+            archive_output_dir: Path = (
+                archives_dir / dataset if dataset is not None else archives_dir
+            )
             for archive_id in archive_ids:
                 logger.info(archive_id)
-                archive_path: Path = archives_dir / dataset / archive_id
+                archive_path = archive_output_dir / archive_id
                 if not archive_path.is_dir():
                     logger.warning(f"Archive {archive_id} in database not found on disk.")
 
@@ -303,7 +311,7 @@ def _delete_archives(
     archives_dir: Path,
     database_config: Database,
     storage_engine: StorageEngine,
-    dataset: str,
+    dataset: typing.Optional[str],
     delete_handler: DeleteHandler,
     dry_run: bool = False,
 ) -> int:
@@ -387,8 +395,9 @@ def _delete_archives(
 
     logger.info(f"Finished deleting archives from the database.")
 
+    archive_output_dir: Path = archives_dir / dataset if dataset is not None else archives_dir
     for archive_id in archive_ids:
-        archive_path: Path = archives_dir / dataset / archive_id
+        archive_path = archive_output_dir / archive_id
         if not archive_path.is_dir():
             logger.warning(f"Archive {archive_id} is not a directory. Skipping deletion.")
             continue

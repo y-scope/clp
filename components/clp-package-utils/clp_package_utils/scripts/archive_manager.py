@@ -18,6 +18,7 @@ from clp_package_utils.general import (
     get_clp_home,
     load_config_file,
     validate_and_load_db_credentials_file,
+    validate_dataset,
 )
 
 # Command/Argument Constants
@@ -60,6 +61,12 @@ def main(argv: typing.List[str]) -> int:
         "-c",
         default=str(default_config_file_path),
         help="CLP package configuration file.",
+    )
+    args_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
     )
 
     # Top-level commands
@@ -157,6 +164,8 @@ def main(argv: typing.List[str]) -> int:
     except:
         logger.exception("Failed to load config.")
         return -1
+
+    dataset = validate_dataset(clp_config, parsed_args.dataset)
 
     storage_type: StorageType = clp_config.archive_output.storage.type
     if StorageType.FS != storage_type:

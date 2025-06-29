@@ -20,6 +20,7 @@ from clp_package_utils.general import (
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
+    validate_dataset,
 )
 
 logger = logging.getLogger(__file__)
@@ -63,6 +64,7 @@ def _generate_logs_list(
 
 def _generate_compress_cmd(
     parsed_args: argparse.Namespace,
+    dataset: Optional[str],
     config_path: pathlib.Path,
     logs_list_path: pathlib.Path,
 ) -> List[str]:
@@ -74,6 +76,9 @@ def _generate_compress_cmd(
         "--config", str(config_path),
     ]
     # fmt: on
+    if dataset is not None:
+        compress_cmd.append("--dataset")
+        compress_cmd.append(dataset)
     if parsed_args.timestamp_key is not None:
         compress_cmd.append("--timestamp-key")
         compress_cmd.append(parsed_args.timestamp_key)
@@ -132,6 +137,12 @@ def main(argv):
         help="CLP package configuration file.",
     )
     args_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
+    )
+    args_parser.add_argument(
         "--timestamp-key",
         help="The path (e.g. x.y) for the field containing the log event's timestamp.",
     )
@@ -161,6 +172,8 @@ def main(argv):
     except:
         logger.exception("Failed to load config.")
         return -1
+
+    dataset = validate_dataset(clp_config, parsed_args.dataset)
 
     input_type = clp_config.logs_input.type
     if InputType.FS == input_type:
@@ -198,7 +211,7 @@ def main(argv):
         container_name, necessary_mounts, clp_config.execution_container
     )
     compress_cmd = _generate_compress_cmd(
-        parsed_args, generated_config_path_on_container, logs_list_path_on_container
+        parsed_args, dataset, generated_config_path_on_container, logs_list_path_on_container
     )
     cmd = container_start_cmd + compress_cmd
     subprocess.run(cmd, check=True)
