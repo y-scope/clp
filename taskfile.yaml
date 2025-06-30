@@ -14,15 +14,11 @@ vars:
   G_COMPONENTS_DIR: "{{.ROOT_DIR}}/components"
   G_CORE_COMPONENT_DIR: "{{.G_COMPONENTS_DIR}}/core"
   G_CORE_COMPONENT_SUBMODULES_DIR: "{{.G_CORE_COMPONENT_DIR}}/submodules"
-  G_LOG_VIEWER_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/log-viewer-webui"
+  G_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/webui"
 
   # Build paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
-  G_LOG_VIEWER_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/log-viewer-webui"
-  G_METEOR_BUILD_DIR: "{{.G_BUILD_DIR}}/meteor"
-  G_NODEJS_14_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-14"
-  G_NODEJS_14_BIN_DIR: "{{.G_NODEJS_14_BUILD_DIR}}/bin"
   G_NODEJS_22_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
   G_NODEJS_22_BIN_DIR: "{{.G_NODEJS_22_BUILD_DIR}}/bin"
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
@@ -40,6 +36,13 @@ vars:
   G_CORE_MAX_PARALLELISM_PER_BUILD_TASK: >-
     {{default "" (env "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK")}}
 
+  # Checksum files
+  G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-client-node-modules.md5"
+  G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE:
+    "{{.G_BUILD_DIR}}/webui-log-viewer-node-modules.md5"
+  G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-package-node-modules.md5"
+  G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-server-node-modules.md5"
+
 tasks:
   default:
     deps: ["package"]
@@ -47,7 +50,6 @@ tasks:
   clean:
     cmds:
       - "rm -rf '{{.G_BUILD_DIR}}'"
-      - task: "clean-log-viewer-webui"
       - task: "clean-python-component"
         vars:
           COMPONENT: "clp-package-utils"
@@ -65,18 +67,6 @@ tasks:
         vars:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
 
-  clean-log-viewer-webui:
-    cmds:
-      - "rm -rf 'components/log-viewer-webui/client/node_modules'"
-      - "rm -rf 'components/log-viewer-webui/node_modules'"
-      - "rm -rf 'components/log-viewer-webui/server/node_modules'"
-      - "rm -rf 'components/log-viewer-webui/yscope-log-viewer/node_modules'"
-
-  clean-webui:
-    cmds:
-      - "rm -rf 'components/webui/.meteor/local'"
-      - "rm -rf 'components/webui/node_modules'"
-
   clp-json-pkg-tar:
     cmds:
       - task: "package-tar"
@@ -91,6 +81,13 @@ tasks:
           FLAVOUR: "text"
           STORAGE_ENGINE: "clp"
 
+  clean-webui:
+    cmds:
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/client/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules'"
+
   package:
     env:
       NODE_ENV: "production"
@@ -98,10 +95,8 @@ tasks:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
     sources:
-      - "{{.G_BUILD_DIR}}/log-viewer-webui.md5"
       - "{{.G_BUILD_DIR}}/package-venv.md5"
       - "{{.G_BUILD_DIR}}/webui.md5"
-      - "{{.G_BUILD_DIR}}/webui-nodejs.md5"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
@@ -121,8 +116,6 @@ tasks:
       - "clp-py-utils"
       - "init"
       - "job-orchestration"
-      - "log-viewer-webui"
-      - "nodejs-14"
       - "package-venv"
       - task: "utils:checksum:validate"
         vars:
@@ -153,28 +146,15 @@ tasks:
         "{{.OUTPUT_DIR}}/bin/"
       - >-
         rsync -a
-        "{{.G_NODEJS_14_BIN_DIR}}/node"
-        "{{.OUTPUT_DIR}}/bin/node-14"
-      - >-
-        rsync -a
         "{{.G_NODEJS_22_BIN_DIR}}/node"
         "{{.OUTPUT_DIR}}/bin/node-22"
       - "mkdir -p '{{.OUTPUT_DIR}}/var/www/'"
       - >-
         rsync -a
         "{{.G_WEBUI_BUILD_DIR}}/"
-        "{{.OUTPUT_DIR}}/var/www/webui/"
-      # Avoid using `npm clean-install` because Meteor does not generate a `package-lock.json` file,
-      # which `clean-install` depends on.
+        "{{.OUTPUT_DIR}}/var/www/webui"
       - |-
-        cd "{{.OUTPUT_DIR}}/var/www/webui/programs/server"
-        PATH="{{.G_NODEJS_14_BIN_DIR}}":$PATH npm install
-      - >-
-        rsync -a
-        "{{.G_LOG_VIEWER_WEBUI_BUILD_DIR}}/"
-        "{{.OUTPUT_DIR}}/var/www/log-viewer-webui"
-      - |-
-        cd "{{.OUTPUT_DIR}}/var/www/log-viewer-webui/server"
+        cd "{{.OUTPUT_DIR}}/var/www/webui/server"
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
       # This command must be last
       - task: "utils:checksum:compute"
@@ -278,41 +258,28 @@ tasks:
       vars:
         COMPONENT: "{{.TASK}}"
 
-  log-viewer-webui:
+  webui:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.G_LOG_VIEWER_WEBUI_BUILD_DIR}}"
+      OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
     sources:
-      - "{{.G_BUILD_DIR}}/log-viewer-webui-node-modules.md5"
+      - "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.TASKFILE}}"
-      - "client/index.html"
-      - "client/tsconfig/**/*"
-      - "client/tsconfig.json"
-      - "client/package.json"
-      - "client/package-lock.json"
-      - "client/src/**/*.css"
-      - "client/src/**/*.ts"
-      - "client/src/**/*.tsx"
-      - "server/package.json"
-      - "server/package-lock.json"
-      - "server/settings.json"
-      - "server/src/**/*.ts"
-      - "server/tsconfig.json"
-      - "yscope-log-viewer/package.json"
-      - "yscope-log-viewer/public/**/*"
-      - "yscope-log-viewer/src/**/*"
-      - "yscope-log-viewer/tsconfig.json"
-      - "yscope-log-viewer/webpack.common.js"
-      - "yscope-log-viewer/webpack.prod.js"
-    dir: "components/log-viewer-webui"
+      - "**/*"
+      - exclude: "**/dist/**/*"
+      - exclude: "**/node_modules/**/*"
+    dir: "{{.G_WEBUI_SRC_DIR}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "init"
-      - "log-viewer-webui-node-modules"
       - task: "utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+      - "webui-node-modules"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
@@ -335,50 +302,6 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
-  webui:
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
-    sources:
-      - "{{.G_BUILD_DIR}}/meteor.md5"
-      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
-      - "{{.TASKFILE}}"
-      - "*"
-      - ".meteor/*"
-      - "client/**/*"
-      - "imports/**/*"
-      - "server/**/*"
-      - "tests/**/*"
-    dir: "components/webui"
-    platforms: ["386", "amd64"]
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "init"
-      - "meteor"
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-      - "webui-node-modules"
-    cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "mkdir -p '{{.OUTPUT_DIR}}'"
-      - "PATH='{{.G_METEOR_BUILD_DIR}}':$PATH meteor build --directory '{{.OUTPUT_DIR}}'"
-      - >-
-        rsync -a
-        "{{.OUTPUT_DIR}}/bundle/"
-        launcher.js
-        settings.json
-        "{{.OUTPUT_DIR}}/"
-      - "rm -rf '{{.OUTPUT_DIR}}/bundle/'"
-      # Remove temp files generated by `meteor build` before checksum
-      - "find node_modules -type f -name '.meteor-portable-2.json' -exec rm {} +"
-      # This command must be last
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-
   nodejs-22:
     internal: true
     vars:
@@ -390,18 +313,6 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           NODEJS_VERSION: "v22.4.0"
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-
-  nodejs-14:
-    internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIR: "{{.G_NODEJS_14_BUILD_DIR}}"
-    cmds:
-      - task: "nodejs"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          NODEJS_VERSION: "v14.21.3"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
 
   download-and-extract-tar:
@@ -437,25 +348,16 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
-  # NOTE: The log-viewer-webui has four different node_modules directories:
+  # NOTE: The webui has four different node_modules directories, and we generate a checksum file for
+  # each one. The directories are:
   # * client
   # * server
   # * log-viewer submodule
   # * the top-level one we call "package"
-  # This means we have to create four different checksums. To allow tasks which depend on this task
-  # to only have to check one checksum file, we concatenate the four checksum files into one.
-  log-viewer-webui-node-modules:
+  webui-node-modules:
     internal: true
     vars:
-      # Checksum files
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      CLIENT_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-client-node-modules.md5"
-      LOG_VIEWER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-log-viewer-node-modules.md5"
-      PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-package-node-modules.md5"
-      SERVER_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/log-viewer-webui-server-node-modules.md5"
-
-      # Directories
-      SRC_DIR: "{{.TASKFILE_DIR}}/components/log-viewer-webui"
+      SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
       CLIENT_OUTPUT_DIR: "{{.SRC_DIR}}/client/node_modules"
       LOG_VIEWER_OUTPUT_DIR: "{{.SRC_DIR}}/yscope-log-viewer/node_modules"
       PACKAGE_OUTPUT_DIR: "{{.SRC_DIR}}/node_modules"
@@ -474,82 +376,56 @@ tasks:
       - "yscope-log-viewer/package-lock.json"
     dir: "{{.SRC_DIR}}"
     generates:
-      - "{{.CHECKSUM_FILE}}"
-      - "{{.CLIENT_CHECKSUM_FILE}}"
-      - "{{.LOG_VIEWER_CHECKSUM_FILE}}"
-      - "{{.PACKAGE_CHECKSUM_FILE}}"
-      - "{{.SERVER_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
     deps:
       - "deps:log-viewer"
       - "nodejs-22"
       - task: "utils:checksum:validate"
         vars:
-          CHECKSUM_FILE: "{{.CLIENT_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.CLIENT_OUTPUT_DIR}}"]
+          EXCLUDE_PATTERNS: &webui_node_modules_checksum_exclude_patterns
+            - ".tmp"
+            - ".vite-temp"
       - task: "utils:checksum:validate"
         vars:
-          CHECKSUM_FILE: "{{.SERVER_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.SERVER_OUTPUT_DIR}}"]
+          CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.LOG_VIEWER_OUTPUT_DIR}}"]
       - task: "utils:checksum:validate"
         vars:
-          CHECKSUM_FILE: "{{.PACKAGE_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
       - task: "utils:checksum:validate"
         vars:
-          CHECKSUM_FILE: "{{.LOG_VIEWER_CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.LOG_VIEWER_OUTPUT_DIR}}"]
+          CHECKSUM_FILE: "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.SERVER_OUTPUT_DIR}}"]
     cmds:
-      - "rm -f {{.CHECKSUM_FILE}}"
-      - task: "clean-log-viewer-webui"
+      - task: "clean-webui"
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
       - |-
         cd yscope-log-viewer
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm install
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
       # These commands must be last
       - task: "utils:checksum:compute"
         vars:
-          CHECKSUM_FILE: "{{.CLIENT_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.CLIENT_OUTPUT_DIR}}"]
+          EXCLUDE_PATTERNS: *webui_node_modules_checksum_exclude_patterns
       - task: "utils:checksum:compute"
         vars:
-          CHECKSUM_FILE: "{{.LOG_VIEWER_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.LOG_VIEWER_OUTPUT_DIR}}"]
       - task: "utils:checksum:compute"
         vars:
-          CHECKSUM_FILE: "{{.PACKAGE_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.PACKAGE_OUTPUT_DIR}}"]
       - task: "utils:checksum:compute"
         vars:
-          CHECKSUM_FILE: "{{.SERVER_CHECKSUM_FILE}}"
+          CHECKSUM_FILE: "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.SERVER_OUTPUT_DIR}}"]
-      # This command must be last
-      - >-
-        cat
-        "{{.CLIENT_CHECKSUM_FILE}}"
-        "{{.LOG_VIEWER_CHECKSUM_FILE}}"
-        "{{.PACKAGE_CHECKSUM_FILE}}"
-        "{{.SERVER_CHECKSUM_FILE}}"
-        > "{{.CHECKSUM_FILE}}"
-
-  meteor:
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      METEOR_ARCH: "{{ if eq ARCH \"arm64\" }}arm64{{ else }}x86_64{{ end }}"
-      METEOR_PLATFORM: "{{ if eq OS \"darwin\" }}osx{{ else }}linux{{ end }}"
-      METEOR_RELEASE: "2.16"
-    run: "once"
-    preconditions:
-      - sh: >-
-          (test "$(uname -m)" != "aarch64") || (test "$(uname -s)" != "Linux")
-        msg: "Meteor 2.x does not support aarch64 on Linux"
-    cmds:
-      - task: "download-and-extract-tar"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          EXTRACTED_DIR_NAME: ".meteor"
-          OUTPUT_DIR: "{{.G_METEOR_BUILD_DIR}}"
-          TAR_NAME: "meteor-bootstrap-os.{{.METEOR_PLATFORM}}.{{.METEOR_ARCH}}.tar.gz"
-          URL_PREFIX: "https://static.meteor.com/packages-bootstrap/{{.METEOR_RELEASE}}"
 
   nodejs:
     internal: true
@@ -672,35 +548,6 @@ tasks:
       - |-
         . "{{.VENV_DIR}}/bin/activate"
         poetry build --format wheel
-
-  webui-node-modules:
-    internal: true
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/webui"
-      OUTPUT_DIR: "{{.WEBUI_SRC_DIR}}/node_modules"
-    sources:
-      - "{{.G_BUILD_DIR}}/meteor.md5"
-      - "{{.TASKFILE}}"
-      - ".meteor/packages"
-      - "package.json"
-    dir: "{{.WEBUI_SRC_DIR}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "init"
-      - "meteor"
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-    cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "PATH='{{.G_METEOR_BUILD_DIR}}':$PATH meteor npm install --production"
-      # This command must be last
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   component-venv:
     internal: true
