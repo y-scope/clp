@@ -35,6 +35,33 @@ distros using glibc 2.28+, including:
   components/core/tools/docker-images/clp-env-base-manylinux_2_28-x86_64
   ```
 
+## clp-core-dependencies-&lt;arch&gt;-musllinux_1_2
+
+Images containing the dependencies necessary to build CLP core in a [musllinux_1_2][musllinux_1_2]
+environment (aarch64 or x86).
+
+Binaries built on musllinux_1_2 (based on Alpine Linux 3.22) are expected to be compatible with other
+distros using musl 1.2, including:
+
+* Alpine Linux 3.13+
+
+### clp-core-dependencies-aarch64-musllinux_1_2
+
+* Path:
+
+  ```text
+  components/core/tools/docker-images/clp-env-base-musllinux_1_2-aarch64
+  ```
+
+### clp-core-dependencies-x86-musllinux_1_2
+
+* Path:
+
+  ```text
+  components/core/tools/docker-images/clp-env-base-musllinux_1_2-x86_64
+  ```
+
+
 ## clp-core-dependencies-x86-centos-stream-9
 
 An image containing the dependencies necessary to build CLP core in a CentOS Stream 9 x86
@@ -113,3 +140,4 @@ environment.
 [exe-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-execution-x86-ubuntu-jammy
 [gh-packages]: https://github.com/orgs/y-scope/packages?repo_name=clp
 [manylinux_2_28]: https://github.com/pypa/manylinux?tab=readme-ov-file#manylinux_2_28-almalinux-8-based
+[musllinux_1_2]: https://github.com/pypa/manylinux?tab=readme-ov-file#musllinux_1_2-alpine-linux-322-based-313-compatible
