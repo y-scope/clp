@@ -99,10 +99,9 @@ def _create_archive_tags_table(
 
 
 def _create_files_table(db_cursor, table_prefix: str, dataset: str | None) -> None:
-    files_table_name = get_files_table_name(table_prefix, dataset)
     db_cursor.execute(
         f"""
-        CREATE TABLE IF NOT EXISTS `{files_table_name}` (
+        CREATE TABLE IF NOT EXISTS `{get_files_table_name(table_prefix, dataset)}` (
             `id` VARCHAR(64) NOT NULL,
             `orig_file_id` VARCHAR(64) NOT NULL,
             `path` VARCHAR(12288) NOT NULL,
@@ -121,10 +120,9 @@ def _create_files_table(db_cursor, table_prefix: str, dataset: str | None) -> No
 
 
 def _create_column_metadata_table(db_cursor, table_prefix: str, dataset: str) -> None:
-    column_metadata_table_name = get_column_metadata_table_name(table_prefix, dataset)
     db_cursor.execute(
         f"""
-        CREATE TABLE IF NOT EXISTS `{column_metadata_table_name}` (
+        CREATE TABLE IF NOT EXISTS `{get_column_metadata_table_name(table_prefix, dataset)}` (
             `name` VARCHAR(512) NOT NULL,
             `type` TINYINT NOT NULL,
             PRIMARY KEY (`name`, `type`)
@@ -143,10 +141,9 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
 
     # For a description of the table, see
     # `../../../docs/src/dev-guide/design-metadata-db.md`
-    datasets_table_name = get_datasets_table_name(table_prefix)
     db_cursor.execute(
         f"""
-        CREATE TABLE IF NOT EXISTS `{datasets_table_name}` (
+        CREATE TABLE IF NOT EXISTS `{get_datasets_table_name(table_prefix)}` (
             `name` VARCHAR(255) NOT NULL,
             `archive_storage_directory` VARCHAR(4096) NOT NULL,
             PRIMARY KEY (`name`)
@@ -179,8 +176,7 @@ def add_dataset(
     else:
         archive_storage_directory = archive_output.get_directory()
 
-    datasets_table_name = get_datasets_table_name(table_prefix)
-    query = f"""INSERT INTO `{datasets_table_name}`
+    query = f"""INSERT INTO `{get_datasets_table_name(table_prefix)}`
                 (name, archive_storage_directory)
                 VALUES (%s, %s)
                 """
@@ -202,8 +198,7 @@ def fetch_existing_datasets(
     :param db_cursor:
     :param table_prefix:
     """
-    datasets_table_name = get_datasets_table_name(table_prefix)
-    db_cursor.execute(f"SELECT name FROM `{datasets_table_name}`")
+    db_cursor.execute(f"SELECT name FROM `{get_datasets_table_name(table_prefix)}`")
     rows = db_cursor.fetchall()
     return {row["name"] for row in rows}
 
