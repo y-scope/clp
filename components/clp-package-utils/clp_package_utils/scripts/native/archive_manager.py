@@ -265,10 +265,9 @@ def _find_archives(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
             query_params: typing.List[int] = [begin_ts]
-            archives_table_name = get_archives_table_name(table_prefix, dataset)
             query: str = (
                 f"""
-                SELECT id FROM `{archives_table_name}`
+                SELECT id FROM `{get_archives_table_name(table_prefix, dataset)}`
                 WHERE begin_timestamp >= %s
                 """
             )
@@ -285,9 +284,7 @@ def _find_archives(
                 return 0
 
             logger.info(f"Found {len(archive_ids)} archives within the specified time range.")
-            archive_output_dir: Path = (
-                archives_dir / dataset if dataset is not None else archives_dir
-            )
+            archive_output_dir = archives_dir / dataset if dataset is not None else archives_dir
             for archive_id in archive_ids:
                 logger.info(archive_id)
                 archive_path = archive_output_dir / archive_id
@@ -337,11 +334,10 @@ def _delete_archives(
 
             query_criteria: str = delete_handler.get_criteria()
             query_params: typing.List[str] = delete_handler.get_params()
-            archives_table_name = get_archives_table_name(table_prefix, dataset)
 
             db_cursor.execute(
                 f"""
-                DELETE FROM `{archives_table_name}`
+                DELETE FROM `{get_archives_table_name(table_prefix, dataset)}`
                 WHERE {query_criteria}
                 RETURNING id
                 """,
@@ -357,19 +353,17 @@ def _delete_archives(
             delete_handler.validate_results(archive_ids)
 
             ids_list_string: str = ", ".join(["'%s'"] * len(archive_ids))
-            files_table_name = get_files_table_name(table_prefix, dataset)
-            archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
 
             db_cursor.execute(
                 f"""
-                DELETE FROM `{files_table_name}`
+                DELETE FROM `{get_files_table_name(table_prefix, dataset)}`
                 WHERE archive_id in ({ids_list_string})
                 """
             )
 
             db_cursor.execute(
                 f"""
-                DELETE FROM `{archive_tags_table_name}`
+                DELETE FROM `{get_archive_tags_table_name(table_prefix, dataset)}`
                 WHERE archive_id in ({ids_list_string})
                 """
             )
