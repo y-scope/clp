@@ -42,4 +42,4 @@ rm "$task_pkg_path"
 
 # Downgrade to CMake v3 to work around https://github.com/y-scope/clp/issues/795
 pipx uninstall cmake
-pipx install cmake~=3.0
+pipx install cmake~=3.31
