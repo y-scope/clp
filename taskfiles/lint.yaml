@@ -6,7 +6,6 @@ vars:
     {\"name\":\"cpp11_zone.hpp\",\"lines\":[[197,197]]}
   G_LINT_CLANG_TIDY_DIR: "{{.G_BUILD_DIR}}/lint-clang-tidy"
   G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
-  G_WEBUI_SRC_DIR: "{{.ROOT_DIR}}/components/webui"
 
 tasks:
   check:
@@ -57,26 +56,9 @@ tasks:
 
   check-js:
     sources: &js_source_files
-      - "{{.G_BUILD_DIR}}/lint#linter-node-modules.md5"
-      - "{{.G_BUILD_DIR}}/log-viewer-webui-node-modules.md5"
       - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/package.json"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/**/*.css"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/**/*.jsx"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/client/src/webpack.config.js"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/package.json"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/settings.json"
-      - "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/server/src/**/*.js"
-      - "{{.G_WEBUI_SRC_DIR}}/client/**/*.js"
-      - "{{.G_WEBUI_SRC_DIR}}/client/**/*.jsx"
-      - "{{.G_WEBUI_SRC_DIR}}/imports/**/*.js"
-      - "{{.G_WEBUI_SRC_DIR}}/imports/**/*.jsx"
-      - "{{.G_WEBUI_SRC_DIR}}/launcher.js"
-      - "{{.G_WEBUI_SRC_DIR}}/package.json"
-      - "{{.G_WEBUI_SRC_DIR}}/server/**/*.js"
-      - "{{.G_WEBUI_SRC_DIR}}/server/**/*.jsx"
-      - "{{.G_WEBUI_SRC_DIR}}/tests/**/*.js"
-      - "{{.G_WEBUI_SRC_DIR}}/tests/**/*.jsx"
+      - "{{.G_WEBUI_SRC_DIR}}/**/*"
+      - exclude: "{{.G_WEBUI_SRC_DIR}}/**/dist/*"
       - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
     cmds:
@@ -775,14 +757,11 @@ tasks:
     internal: true
     requires:
       vars: ["LINT_CMD"]
-    deps: [":log-viewer-webui-node-modules", "linter-node-modules"]
+    deps: [":webui-node-modules"]
     cmds:
-      - for:
-          - "components/log-viewer-webui"
-          - "components/webui"
-        cmd: |-
-          cd "{{.ITEM}}"
-          PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run "lint:{{.LINT_CMD}}"
+      - |-
+        cd "{{.G_WEBUI_SRC_DIR}}"
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run "lint:{{.LINT_CMD}}"
 
   py:
     internal: true
@@ -802,38 +781,6 @@ tasks:
           cd "{{.ITEM}}"
           black --color --line-length 100 {{.BLACK_FLAGS}} .
           ruff check {{.RUFF_FLAGS}} .
-
-  linter-node-modules:
-    internal: true
-    vars:
-      WEBUI_LINTER_DIR: "{{.ROOT_DIR}}/components/webui/linter"
-      OUTPUT_DIR: "{{.WEBUI_LINTER_DIR}}/node_modules"
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
-    sources:
-      - "{{.G_BUILD_DIR}}/nodejs-22.md5"
-      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
-      - "{{.ROOT_DIR}}/taskfile.yaml"
-      - "{{.TASKFILE}}"
-      - "package.json"
-      - "package-lock.json"
-    dir: "{{.WEBUI_LINTER_DIR}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - ":init"
-      - ":webui-node-modules"
-      - task: ":utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-      - ":nodejs-22"
-    cmds:
-      - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm clean-install"
-      # This command must be last
-      - task: ":utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   venv:
     internal: true
