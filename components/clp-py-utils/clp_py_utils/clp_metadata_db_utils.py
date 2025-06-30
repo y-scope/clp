@@ -17,44 +17,6 @@ FILES_TABLE_SUFFIX = "files"
 TAGS_TABLE_SUFFIX = "tags"
 
 
-def _get_table_name(prefix: str, suffix: str, dataset: str | None) -> str:
-    """
-    :param prefix:
-    :param suffix:
-    :param dataset:
-    :return: The table name in the form of "<prefix>[<dataset>_]<suffix>".
-    """
-    table_name = prefix
-    if dataset is not None:
-        table_name += f"{dataset}_"
-    table_name += suffix
-    return table_name
-
-
-def get_archive_tags_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _get_table_name(table_prefix, ARCHIVE_TAGS_TABLE_SUFFIX, dataset)
-
-
-def get_archives_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _get_table_name(table_prefix, ARCHIVES_TABLE_SUFFIX, dataset)
-
-
-def get_column_metadata_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _get_table_name(table_prefix, COLUMN_METADATA_TABLE_SUFFIX, dataset)
-
-
-def get_datasets_table_name(table_prefix: str) -> str:
-    return _get_table_name(table_prefix, DATASETS_TABLE_SUFFIX, None)
-
-
-def get_files_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _get_table_name(table_prefix, FILES_TABLE_SUFFIX, dataset)
-
-
-def get_tags_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _get_table_name(table_prefix, TAGS_TABLE_SUFFIX, dataset)
-
-
 def _create_archives_table(db_cursor, archives_table_name: str) -> None:
     db_cursor.execute(
         f"""
@@ -135,6 +97,20 @@ def _create_column_metadata_table(db_cursor, table_prefix: str, dataset: str) ->
         )
         """
     )
+
+
+def _get_table_name(prefix: str, suffix: str, dataset: str | None) -> str:
+    """
+    :param prefix:
+    :param suffix:
+    :param dataset:
+    :return: The table name in the form of "<prefix>[<dataset>_]<suffix>".
+    """
+    table_name = prefix
+    if dataset is not None:
+        table_name += f"{dataset}_"
+    table_name += suffix
+    return table_name
 
 
 def create_datasets_table(db_cursor, table_prefix: str) -> None:
@@ -230,3 +206,27 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
         db_cursor, archive_tags_table_name, archives_table_name, tags_table_name
     )
     _create_files_table(db_cursor, table_prefix, dataset)
+
+
+def get_archive_tags_table_name(table_prefix: str, dataset: str | None) -> str:
+    return _get_table_name(table_prefix, ARCHIVE_TAGS_TABLE_SUFFIX, dataset)
+
+
+def get_archives_table_name(table_prefix: str, dataset: str | None) -> str:
+    return _get_table_name(table_prefix, ARCHIVES_TABLE_SUFFIX, dataset)
+
+
+def get_column_metadata_table_name(table_prefix: str, dataset: str | None) -> str:
+    return _get_table_name(table_prefix, COLUMN_METADATA_TABLE_SUFFIX, dataset)
+
+
+def get_datasets_table_name(table_prefix: str) -> str:
+    return _get_table_name(table_prefix, DATASETS_TABLE_SUFFIX, None)
+
+
+def get_files_table_name(table_prefix: str, dataset: str | None) -> str:
+    return _get_table_name(table_prefix, FILES_TABLE_SUFFIX, dataset)
+
+
+def get_tags_table_name(table_prefix: str, dataset: str | None) -> str:
+    return _get_table_name(table_prefix, TAGS_TABLE_SUFFIX, dataset)
