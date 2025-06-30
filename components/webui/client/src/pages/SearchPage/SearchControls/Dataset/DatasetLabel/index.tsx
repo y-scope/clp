@@ -20,7 +20,7 @@ const DatasetLabel = () => {
         <Text
             className={styles["datasetLabel"] || ""}
             style={{
-                backgroundColor: token.colorFillAlter,
+                backgroundColor: token.colorFillTertiary,
                 borderBottomLeftRadius: `${token.borderRadius}px`,
                 borderColor: token.colorBorder,
                 borderTopLeftRadius: `${token.borderRadius}px`,

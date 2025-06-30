@@ -9,7 +9,7 @@ import {
 } from "../typings/query";
 
 
-interface submitExtractStreamJobProps {
+interface SubmitExtractStreamJobProps {
     dataset: string;
     extractJobType: QUERY_JOB_TYPE;
     streamId: string;
@@ -35,7 +35,7 @@ const submitExtractStreamJob = async ({
     streamId,
     logEventIdx,
     onUploadProgress,
-}: submitExtractStreamJobProps): Promise<AxiosResponse<ExtractStreamResp>> => {
+}: SubmitExtractStreamJobProps): Promise<AxiosResponse<ExtractStreamResp>> => {
     return await axios.post(
         "/query/extract-stream",
         {
