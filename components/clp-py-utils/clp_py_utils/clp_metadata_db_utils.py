@@ -31,20 +31,12 @@ def _get_table_name(prefix: str, suffix: str, dataset: str | None) -> str:
     return table_name
 
 
-def get_archives_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _get_table_name(table_prefix, ARCHIVES_TABLE_SUFFIX, dataset)
-
-
-def get_tags_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _get_table_name(table_prefix, TAGS_TABLE_SUFFIX, dataset)
-
-
 def get_archive_tags_table_name(table_prefix: str, dataset: str | None) -> str:
     return _get_table_name(table_prefix, ARCHIVE_TAGS_TABLE_SUFFIX, dataset)
 
 
-def get_files_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _get_table_name(table_prefix, FILES_TABLE_SUFFIX, dataset)
+def get_archives_table_name(table_prefix: str, dataset: str | None) -> str:
+    return _get_table_name(table_prefix, ARCHIVES_TABLE_SUFFIX, dataset)
 
 
 def get_column_metadata_table_name(table_prefix: str, dataset: str | None) -> str:
@@ -53,6 +45,14 @@ def get_column_metadata_table_name(table_prefix: str, dataset: str | None) -> st
 
 def get_datasets_table_name(table_prefix: str) -> str:
     return _get_table_name(table_prefix, DATASETS_TABLE_SUFFIX, None)
+
+
+def get_files_table_name(table_prefix: str, dataset: str | None) -> str:
+    return _get_table_name(table_prefix, FILES_TABLE_SUFFIX, dataset)
+
+
+def get_tags_table_name(table_prefix: str, dataset: str | None) -> str:
+    return _get_table_name(table_prefix, TAGS_TABLE_SUFFIX, dataset)
 
 
 def _create_archives_table(db_cursor, archives_table_name: str) -> None:
