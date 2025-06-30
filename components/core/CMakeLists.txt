@@ -75,8 +75,8 @@ if (CLP_USE_STATIC_LIBS)
         # NOTE:
         # 1. We don't support static linking on any CentOS-based distro except manylinux 2.28 (which
         #    shows up as "AlmaLinux").
-        # 2. A released called "AlmaLinux" doesn't guarantee we're running on a manylinux distro,
-        #    but we can improve this check when someone reports an issue.
+        # 2. A release called "AlmaLinux" doesn't guarantee we're running on a manylinux distro, but
+        #    we can improve this check when someone reports an issue.
         file(READ "/etc/centos-release" CENTOS_RELEASE_CONTENT)
         if(NOT "${CENTOS_RELEASE_CONTENT}" MATCHES "AlmaLinux")
             set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
