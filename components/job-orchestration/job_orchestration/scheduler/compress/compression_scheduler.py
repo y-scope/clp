@@ -6,7 +6,7 @@ import sys
 import time
 from contextlib import closing
 from pathlib import Path
-from typing import Any, Dict, Optional, Set
+from typing import Any, Dict, Set
 
 import brotli
 import celery
@@ -157,7 +157,6 @@ def search_and_schedule_new_tasks(
     db_conn,
     db_cursor,
     clp_metadata_db_connection_config: Dict[str, Any],
-    clp_storage_engine: StorageEngine,
     clp_archive_output: ArchiveOutput,
     existing_datasets: Set[str],
 ):
@@ -166,7 +165,6 @@ def search_and_schedule_new_tasks(
     :param db_conn:
     :param db_cursor:
     :param clp_metadata_db_connection_config:
-    :param clp_storage_engine:
     :param clp_archive_output:
     :param existing_datasets:
     """
@@ -185,18 +183,20 @@ def search_and_schedule_new_tasks(
         input_config = clp_io_config.input
 
         table_prefix = clp_metadata_db_connection_config["table_prefix"]
-        dataset_name: Optional[str] = None
-        if StorageEngine.CLP_S == clp_storage_engine:
-            dataset_name = input_config.dataset
-            if dataset_name not in existing_datasets:
+        dataset = input_config.dataset
+        if dataset is not None and dataset not in existing_datasets:
+            try:
                 add_dataset(
                     db_conn,
                     db_cursor,
                     table_prefix,
-                    dataset_name,
+                    dataset,
                     clp_archive_output,
                 )
-                existing_datasets.add(dataset_name)
+            except:
+                # Dataset may have been added in other places
+                pass
+            existing_datasets.add(dataset)
 
         paths_to_compress_buffer = PathsToCompressBuffer(
             maintain_file_ordering=False,
@@ -422,9 +422,8 @@ def main(argv):
         clp_metadata_db_connection_config = (
             sql_adapter.database_config.get_clp_connection_params_and_type(True)
         )
-        clp_storage_engine = clp_config.package.storage_engine
         existing_datasets: Set[str] = set()
-        if StorageEngine.CLP_S == clp_storage_engine:
+        if StorageEngine.CLP_S == clp_config.package.storage_engine:
             existing_datasets = fetch_existing_datasets(
                 db_cursor, clp_metadata_db_connection_config["table_prefix"]
             )
@@ -436,7 +435,6 @@ def main(argv):
                     db_conn,
                     db_cursor,
                     clp_metadata_db_connection_config,
-                    clp_storage_engine,
                     clp_config.archive_output,
                     existing_datasets,
                 )
