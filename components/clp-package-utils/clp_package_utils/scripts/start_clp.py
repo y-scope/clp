@@ -1098,6 +1098,12 @@ def main(argv):
         config_file_path = pathlib.Path(parsed_args.config)
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
 
+        # Early exit if targeting query components when using Presto
+        if QueryEngine.PRESTO == clp_config.package.query_engine:
+            if target in (QUERY_SCHEDULER_COMPONENT_NAME, QUERY_WORKER_COMPONENT_NAME, REDUCER_COMPONENT_NAME):
+                logger.info(f"Cannot start {target} when using Presto as query engine")
+                return 0
+
         # Validate and load necessary credentials
         if target in (
             ALL_TARGET_NAME,
@@ -1193,8 +1199,6 @@ def main(argv):
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUERY_SCHEDULER_COMPONENT_NAME):
             if QueryEngine.PRESTO != clp_config.package.query_engine:
                 start_query_scheduler(instance_id, clp_config, container_clp_config, mounts)
-            else:
-                logger.info(f"Skipping {QUERY_SCHEDULER_COMPONENT_NAME} since using Presto as query engine")
         if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
             start_compression_worker(
                 instance_id, clp_config, container_clp_config, num_workers, mounts
@@ -1202,13 +1206,9 @@ def main(argv):
         if target in (ALL_TARGET_NAME, QUERY_WORKER_COMPONENT_NAME):
             if QueryEngine.PRESTO != clp_config.package.query_engine:
                 start_query_worker(instance_id, clp_config, container_clp_config, num_workers, mounts)
-            else:
-                logger.info(f"Skipping {QUERY_WORKER_COMPONENT_NAME} since using Presto as query engine")
         if target in (ALL_TARGET_NAME, REDUCER_COMPONENT_NAME):
             if QueryEngine.PRESTO != clp_config.package.query_engine:
                 start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
-            else:
-                logger.info(f"Skipping {REDUCER_COMPONENT_NAME} since using Presto as query engine")
         if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
             start_webui(instance_id, clp_config, container_clp_config, mounts)
 
