@@ -71,6 +71,18 @@ jobs:
       - name: "Install dependencies"
         run: "./components/core/tools/scripts/lib_install/macos/install-all.sh"
 
+      - name: "Set environment to use Homebrew's llvm"
+        run: |
+          LLVM_PREFIX=$(brew --prefix llvm@16)
+          echo "$LLVM_PREFIX/bin" >> "$GITHUB_PATH"
+          {
+            echo "LLVM_PREFIX=$LLVM_PREFIX"
+            echo "CC=$LLVM_PREFIX/bin/clang"
+            echo "CXX=$LLVM_PREFIX/bin/clang++"
+            echo "AR=$LLVM_PREFIX/bin/llvm-ar"
+            echo "RANLIB=$LLVM_PREFIX/bin/llvm-ranlib"
+          } >> "$GITHUB_ENV"
+
       - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
 
