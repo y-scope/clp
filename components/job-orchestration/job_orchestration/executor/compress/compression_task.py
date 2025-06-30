@@ -74,13 +74,12 @@ def update_tags(
     db_cursor,
     table_prefix: str,
     dataset: Optional[str],
-    archive_id: int,
-    tag_ids: dict[int, int],
+    archive_id: str,
+    tag_ids: List[int],
 ) -> None:
-    archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
     db_cursor.executemany(
         f"""
-        INSERT INTO {archive_tags_table_name} (archive_id, tag_id)
+        INSERT INTO {get_archive_tags_table_name(table_prefix, dataset)} (archive_id, tag_id)
         VALUES (%s, %s)
         """,
         [(archive_id, tag_id) for tag_id in tag_ids],
@@ -92,8 +91,8 @@ def update_job_metadata_and_tags(
     job_id: int,
     table_prefix: str,
     dataset: Optional[str],
-    tag_ids: dict[int, int],
-    archive_stats: dict[str, any],
+    tag_ids: List[int],
+    archive_stats: dict[str, Any],
 ) -> None:
     if tag_ids is not None:
         update_tags(db_cursor, table_prefix, dataset, archive_stats["id"], tag_ids)
@@ -111,7 +110,7 @@ def update_archive_metadata(
     db_cursor,
     table_prefix: str,
     dataset: Optional[str],
-    archive_stats: dict[str, any],
+    archive_stats: dict[str, Any],
 ) -> None:
     stats_to_update = {
         # Use defaults for values clp-s doesn't output
@@ -323,7 +322,7 @@ def run_clp(
         enable_s3_write = True
 
     table_prefix = clp_metadata_db_connection_config["table_prefix"]
-    dataset: Optional[str] = clp_config.input.dataset
+    dataset = clp_config.input.dataset
     if StorageEngine.CLP == clp_storage_engine:
         compression_cmd, compression_env = _make_clp_command_and_env(
             clp_home=clp_home,
