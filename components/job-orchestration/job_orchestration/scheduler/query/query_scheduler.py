@@ -390,10 +390,9 @@ def get_archives_for_search(
     table_prefix: str,
     search_config: SearchJobConfig,
 ):
-    dataset: str = search_config.dataset
-    archives_table_name = get_archives_table_name(table_prefix, dataset)
+    dataset = search_config.dataset
     query = f"""SELECT id as archive_id, end_timestamp
-            FROM {archives_table_name}
+            FROM {get_archives_table_name(table_prefix, dataset)}
             """
     filter_clauses = []
     if search_config.end_timestamp is not None:
@@ -461,9 +460,8 @@ def get_archive_and_file_split_ids(
     :return: A list of (archive id, file split id) on success. An empty list if
     an exception occurs while interacting with the database.
     """
-    files_table_name = get_files_table_name(table_prefix, None)
     query = f"""SELECT archive_id, id as file_split_id
-            FROM {files_table_name} WHERE
+            FROM {get_files_table_name(table_prefix, None)} WHERE
             orig_file_id = '{orig_file_id}' AND
             begin_message_ix <= {msg_ix} AND
             (begin_message_ix + num_messages) > {msg_ix}
