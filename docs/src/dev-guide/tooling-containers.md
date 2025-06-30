@@ -8,8 +8,8 @@ To build an image locally, run the `build.sh` script in the image's directory.
 
 ## clp-core-dependencies-&lt;arch&gt;-manylinux-2.28
 
-Images containing the dependencies necessary to build CLP core in a manylinux 2.28 environment
-(aarch64 or x86).
+Images containing the dependencies necessary to build CLP core in a [manylinux 2.28][manylinux-2.28]
+environment (aarch64 or x86).
 
 Binaries built on manylinux 2.28 (based on AlmaLinux 8) are expected to be compatible with other
 distros using glibc 2.28+, including:
@@ -112,3 +112,4 @@ environment.
 [core-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-jammy
 [exe-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-execution-x86-ubuntu-jammy
 [gh-packages]: https://github.com/orgs/y-scope/packages?repo_name=clp
+[manylinux-2.28]: https://github.com/pypa/manylinux?tab=readme-ov-file#manylinux_2_28-almalinux-8-based
