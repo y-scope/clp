@@ -5,6 +5,8 @@ import sys
 from contextlib import closing
 from pathlib import Path
 
+from sql_adapter import SQL_Adapter
+
 from clp_py_utils.clp_config import (
     Database,
     StorageEngine,
@@ -14,7 +16,6 @@ from clp_py_utils.clp_metadata_db_utils import (
     create_metadata_db_tables,
 )
 from clp_py_utils.core import read_yaml_config_file
-from clp_py_utils.sql_adapter import SQL_Adapter
 
 # Setup logging
 # Create logger
