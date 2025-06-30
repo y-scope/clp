@@ -56,6 +56,11 @@ class StorageEngine(KebabCaseStrEnum):
     CLP_S = auto()
 
 
+class QueryEngine(LowercaseStrEnum):
+    NATIVE = auto()
+    PRESTO = auto()
+
+
 class StorageType(LowercaseStrEnum):
     FS = auto()
     S3 = auto()
@@ -69,10 +74,12 @@ class AwsAuthType(LowercaseStrEnum):
 
 
 VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
+VALID_QUERY_ENGINES = [query_engine.value for query_engine in QueryEngine]
 
 
 class Package(BaseModel):
     storage_engine: str = "clp"
+    query_engine: str = "native"
 
     @validator("storage_engine")
     def validate_storage_engine(cls, field):
@@ -80,6 +87,15 @@ class Package(BaseModel):
             raise ValueError(
                 f"package.storage_engine must be one of the following"
                 f" {'|'.join(VALID_STORAGE_ENGINES)}"
+            )
+        return field
+
+    @validator("query_engine")
+    def validate_query_engine(cls, field):
+        if field not in VALID_QUERY_ENGINES:
+            raise ValueError(
+                f"package.query_engine must be one of the following"
+                f" {'|'.join(VALID_QUERY_ENGINES)}"
             )
         return field
 

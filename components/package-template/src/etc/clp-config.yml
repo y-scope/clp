@@ -12,6 +12,7 @@
 #
 #package:
 #  storage_engine: "clp"
+#  query_engine: "native"
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
