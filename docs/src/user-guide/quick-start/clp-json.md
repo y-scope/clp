@@ -47,7 +47,7 @@ sbin/compress.sh --timestamp-key '<timestamp-key>' <path1> [<path2> ...]
     [JSON object](./index.md#clp-json), i.e., *not* as an array.
 
 Compressed logs will be stored in the directory specified by the `archive_output.storage.directory`
-config option in `etc/clp-config.yaml` (`archive_output.storage.directory` defaults to
+config option in `etc/clp-config.yml` (`archive_output.storage.directory` defaults to
 `var/data/archives`).
 
 :::{tip}

@@ -37,7 +37,7 @@ sbin/compress.sh <path1> [<path2> ...]
 `<path...>` are paths to unstructured text log files or directories containing such files.
 
 Compressed logs will be stored in the directory specified by the `archive_output.storage.directory`
-config option in `etc/clp-config.yaml` (`archive_output.storage.directory` defaults to
+config option in `etc/clp-config.yml` (`archive_output.storage.directory` defaults to
 `var/data/archives`).
 
 ### Sample logs
