@@ -185,17 +185,13 @@ def search_and_schedule_new_tasks(
         table_prefix = clp_metadata_db_connection_config["table_prefix"]
         dataset = input_config.dataset
         if dataset is not None and dataset not in existing_datasets:
-            try:
-                add_dataset(
-                    db_conn,
-                    db_cursor,
-                    table_prefix,
-                    dataset,
-                    clp_archive_output,
-                )
-            except:
-                # Dataset may have been added in other places
-                pass
+            add_dataset(
+                db_conn,
+                db_cursor,
+                table_prefix,
+                dataset,
+                clp_archive_output,
+            )
             existing_datasets.add(dataset)
 
         paths_to_compress_buffer = PathsToCompressBuffer(
@@ -269,7 +265,7 @@ def search_and_schedule_new_tasks(
 
         tag_ids = None
         if clp_io_config.output.tags:
-            tags_table_name = get_tags_table_name(table_prefix, dataset_name)
+            tags_table_name = get_tags_table_name(table_prefix, dataset)
             db_cursor.executemany(
                 f"INSERT IGNORE INTO {tags_table_name} (tag_name) VALUES (%s)",
                 [(tag,) for tag in clp_io_config.output.tags],
