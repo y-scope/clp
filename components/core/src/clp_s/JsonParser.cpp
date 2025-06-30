@@ -487,7 +487,7 @@ bool JsonParser::parse() {
     for (auto const& path : m_input_paths) {
         auto reader{try_create_reader(path, m_network_auth)};
         if (nullptr == reader) {
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         }
 
@@ -498,7 +498,7 @@ bool JsonParser::parse() {
                     simdjson::error_message(json_file_iterator.get_error()),
                     path.path
             );
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         }
 
@@ -513,7 +513,7 @@ bool JsonParser::parse() {
         auto initialize_fields_for_archive = [&]() -> bool {
             if (m_record_log_order) {
                 log_event_idx_node_id
-                        = add_metadata_field(constants::cLogEventIdxName, NodeType::Integer);
+                        = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
             }
             if (auto const rc = m_archive_writer->add_field_to_current_range(
                         std::string{constants::range_index::cFilename},
@@ -557,7 +557,7 @@ bool JsonParser::parse() {
             return true;
         };
         if (false == initialize_fields_for_archive()) {
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         }
         auto update_fields_after_archive_split = [&]() { ++file_split_number; };
@@ -578,7 +578,7 @@ bool JsonParser::parse() {
                         path.path,
                         bytes_consumed_up_to_prev_record
                 );
-                m_archive_writer->close();
+                std::ignore = m_archive_writer->close();
                 return false;
             }
 
@@ -603,7 +603,7 @@ bool JsonParser::parse() {
                         path.path,
                         bytes_consumed_up_to_prev_record
                 );
-                m_archive_writer->close();
+                std::ignore = m_archive_writer->close();
                 return false;
             }
             m_num_messages++;
@@ -622,7 +622,7 @@ bool JsonParser::parse() {
                 split_archive();
                 update_fields_after_archive_split();
                 if (false == initialize_fields_for_archive()) {
-                    m_archive_writer->close();
+                    std::ignore = m_archive_writer->close();
                     return false;
                 }
             }
@@ -641,7 +641,7 @@ bool JsonParser::parse() {
                     path.path,
                     bytes_consumed_up_to_prev_record
             );
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         } else if (json_file_iterator.truncated_bytes() > 0) {
             // currently don't treat truncated bytes at the end of the file as an error
@@ -653,13 +653,13 @@ bool JsonParser::parse() {
         }
 
         if (check_and_log_curl_error(path, reader)) {
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         }
 
         if (auto const rc = m_archive_writer->close_current_range(); ErrorCodeSuccess != rc) {
             SPDLOG_ERROR("Failed to close metadata range: {}", static_cast<int64_t>(rc));
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         }
     }
@@ -950,7 +950,7 @@ auto JsonParser::parse_from_ir() -> bool {
     for (auto const& path : m_input_paths) {
         auto reader{try_create_reader(path, m_network_auth)};
         if (nullptr == reader) {
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         }
 
@@ -971,7 +971,7 @@ auto JsonParser::parse_from_ir() -> bool {
             );
             decompressor.close();
             check_and_log_curl_error(path, reader);
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         }
         auto& deserializer = deserializer_result.value();
@@ -982,7 +982,7 @@ auto JsonParser::parse_from_ir() -> bool {
         auto initialize_fields_for_archive = [&]() -> bool {
             if (m_record_log_order) {
                 log_event_idx_node_id
-                        = add_metadata_field(constants::cLogEventIdxName, NodeType::Integer);
+                        = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
             }
             if (auto const rc = m_archive_writer->add_field_to_current_range(
                         std::string{constants::range_index::cFilename},
@@ -1049,7 +1049,7 @@ auto JsonParser::parse_from_ir() -> bool {
         };
         if (false == initialize_fields_for_archive()) {
             decompressor.close();
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         }
         auto update_fields_after_archive_split = [&]() { ++file_split_number; };
@@ -1067,7 +1067,7 @@ auto JsonParser::parse_from_ir() -> bool {
                         err.message()
                 );
                 if (check_and_log_curl_error(path, reader)) {
-                    m_archive_writer->close();
+                    std::ignore = m_archive_writer->close();
                     decompressor.close();
                     return false;
                 } else {
@@ -1096,7 +1096,7 @@ auto JsonParser::parse_from_ir() -> bool {
                     parse_kv_log_event(*kv_log_event);
                 } catch (std::exception const& e) {
                     SPDLOG_ERROR("Encountered error while parsing a kv log event - {}", e.what());
-                    m_archive_writer->close();
+                    std::ignore = m_archive_writer->close();
                     decompressor.close();
                     return false;
                 }
@@ -1110,7 +1110,7 @@ auto JsonParser::parse_from_ir() -> bool {
                     split_archive();
                     update_fields_after_archive_split();
                     if (false == initialize_fields_for_archive()) {
-                        m_archive_writer->close();
+                        std::ignore = m_archive_writer->close();
                         decompressor.close();
                         return false;
                     }
@@ -1128,7 +1128,7 @@ auto JsonParser::parse_from_ir() -> bool {
                         "Encountered unkown IR unit type ({}) during deserialization.",
                         static_cast<uint8_t>(kv_log_event_result.value())
                 );
-                m_archive_writer->close();
+                std::ignore = m_archive_writer->close();
                 decompressor.close();
                 return false;
             }
@@ -1140,19 +1140,20 @@ auto JsonParser::parse_from_ir() -> bool {
         decompressor.close();
         if (auto const rc = m_archive_writer->close_current_range(); ErrorCodeSuccess != rc) {
             SPDLOG_ERROR("Failed to close metadata range: {}", static_cast<int64_t>(rc));
-            m_archive_writer->close();
+            std::ignore = m_archive_writer->close();
             return false;
         }
     }
     return true;
 }
 
-void JsonParser::store() {
-    m_archive_writer->close();
+auto JsonParser::store() -> std::vector<ArchiveStats> {
+    m_archive_stats.emplace_back(m_archive_writer->close());
+    return std::move(m_archive_stats);
 }
 
 void JsonParser::split_archive() {
-    m_archive_writer->close();
+    m_archive_stats.emplace_back(m_archive_writer->close(true));
     m_archive_options.id = m_generator();
     m_archive_writer->open(m_archive_options);
 }

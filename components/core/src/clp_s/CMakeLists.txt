@@ -81,27 +81,29 @@ set(
 )
 
 # This library is intended as a temporary stand-in until clp has been packaged into libraries.
-add_library(
-        clp_s_clp_dependencies
-        ${CLP_S_CLP_SOURCES}
-)
-add_library(clp_s::clp_dependencies ALIAS clp_s_clp_dependencies)
-target_compile_features(clp_s_clp_dependencies PRIVATE cxx_std_20)
-target_link_libraries(
-        clp_s_clp_dependencies
-        PUBLIC
-        clp::string_utils
-        ystdlib::containers
-        PRIVATE
-        Boost::regex
-        ${CURL_LIBRARIES}
-        fmt::fmt
-        spdlog::spdlog
-        nlohmann_json::nlohmann_json
-        OpenSSL::Crypto
-        ystdlib::error_handling
-        ZStd::ZStd
-)
+if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
+        add_library(
+                clp_s_clp_dependencies
+                ${CLP_S_CLP_SOURCES}
+        )
+        add_library(clp_s::clp_dependencies ALIAS clp_s_clp_dependencies)
+        target_compile_features(clp_s_clp_dependencies PRIVATE cxx_std_20)
+        target_link_libraries(
+                clp_s_clp_dependencies
+                PUBLIC
+                clp::string_utils
+                ystdlib::containers
+                PRIVATE
+                Boost::regex
+                ${CURL_LIBRARIES}
+                fmt::fmt
+                spdlog::spdlog
+                nlohmann_json::nlohmann_json
+                OpenSSL::Crypto
+                ystdlib::error_handling
+                ZStd::ZStd
+        )
+endif()
 
 set(
         CLP_S_REDUCER_SOURCES
@@ -128,19 +130,21 @@ set(
 
 # This library is intended as a temporary stand-in until the reducer has been packaged into
 # libraries.
-add_library(
-        clp_s_reducer_dependencies
-        ${CLP_S_REDUCER_SOURCES}
-)
-add_library(clp_s::reducer_dependencies ALIAS clp_s_reducer_dependencies)
-target_compile_features(clp_s_reducer_dependencies PRIVATE cxx_std_20)
-target_link_libraries(
-        clp_s_reducer_dependencies
-        PUBLIC
-        nlohmann_json::nlohmann_json
-        PRIVATE
-        clp_s::clp_dependencies
-)
+if(CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES)
+        add_library(
+                clp_s_reducer_dependencies
+                ${CLP_S_REDUCER_SOURCES}
+        )
+        add_library(clp_s::reducer_dependencies ALIAS clp_s_reducer_dependencies)
+        target_compile_features(clp_s_reducer_dependencies PRIVATE cxx_std_20)
+        target_link_libraries(
+                clp_s_reducer_dependencies
+                PUBLIC
+                nlohmann_json::nlohmann_json
+                PRIVATE
+                clp_s::clp_dependencies
+        )
+endif()
 
 set(
         CLP_S_IO_SOURCES
@@ -162,22 +166,24 @@ set(
         ZstdDecompressor.hpp
 )
 
-add_library(
-        clp_s_io
-        ${CLP_S_IO_SOURCES}
-)
-add_library(clp_s::io ALIAS clp_s_io)
-target_compile_features(clp_s_io PRIVATE cxx_std_20)
-target_include_directories(clp_s_io PUBLIC ../)
-target_link_libraries(
-        clp_s_io
-        PRIVATE
-        Boost::iostreams Boost::url
-        clp_s::clp_dependencies
-        fmt::fmt
-        spdlog::spdlog
-        ZStd::ZStd
-)
+if(CLP_BUILD_CLP_S_IO)
+        add_library(
+                clp_s_io
+                ${CLP_S_IO_SOURCES}
+        )
+        add_library(clp_s::io ALIAS clp_s_io)
+        target_compile_features(clp_s_io PRIVATE cxx_std_20)
+        target_include_directories(clp_s_io PUBLIC ../)
+        target_link_libraries(
+                clp_s_io
+                PRIVATE
+                Boost::iostreams Boost::url
+                clp_s::clp_dependencies
+                fmt::fmt
+                spdlog::spdlog
+                ZStd::ZStd
+        )
+endif()
 
 set(
         CLP_S_ARCHIVE_WRITER_SOURCES
@@ -220,29 +226,31 @@ set(
         VariableEncoder.hpp
 )
 
-add_library(
-        clp_s_archive_writer
-        ${CLP_S_ARCHIVE_WRITER_SOURCES}
-)
-add_library(clp_s::archive_writer ALIAS clp_s_archive_writer)
-target_compile_features(clp_s_archive_writer PRIVATE cxx_std_20)
-target_include_directories(clp_s_archive_writer PUBLIC ../)
-target_link_libraries(
-        clp_s_archive_writer
-        PUBLIC
-        absl::flat_hash_map
-        clp_s::io
-        simdjson::simdjson
-        PRIVATE
-        Boost::url
-        clp_s::clp_dependencies
-        clp_s::timestamp_pattern
-        ${CURL_LIBRARIES}
-        fmt::fmt
-        msgpack-cxx
-        nlohmann_json::nlohmann_json
-        spdlog::spdlog
-)
+if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
+        add_library(
+                clp_s_archive_writer
+                ${CLP_S_ARCHIVE_WRITER_SOURCES}
+        )
+        add_library(clp_s::archive_writer ALIAS clp_s_archive_writer)
+        target_compile_features(clp_s_archive_writer PRIVATE cxx_std_20)
+        target_include_directories(clp_s_archive_writer PUBLIC ../)
+        target_link_libraries(
+                clp_s_archive_writer
+                PUBLIC
+                absl::flat_hash_map
+                clp_s::io
+                nlohmann_json::nlohmann_json
+                simdjson::simdjson
+                PRIVATE
+                Boost::url
+                clp_s::clp_dependencies
+                clp_s::timestamp_pattern
+                ${CURL_LIBRARIES}
+                fmt::fmt
+                msgpack-cxx
+                spdlog::spdlog
+        )
+endif()
 
 set(
         CLP_S_ARCHIVE_READER_SOURCES
@@ -281,28 +289,30 @@ set(
         VariableDecoder.hpp
 )
 
-add_library(
-        clp_s_archive_reader
-        ${CLP_S_ARCHIVE_READER_SOURCES}
-)
-add_library(clp_s::archive_reader ALIAS clp_s_archive_reader)
-target_compile_features(clp_s_archive_reader PRIVATE cxx_std_20)
-target_include_directories(clp_s_archive_reader PUBLIC ../)
-target_link_libraries(
-        clp_s_archive_reader
-        PUBLIC
-        absl::flat_hash_map
-        clp_s::io
-        nlohmann_json::nlohmann_json
-        PRIVATE
-        Boost::url
-        clp_s::clp_dependencies
-        clp_s::timestamp_pattern
-        ${CURL_LIBRARIES}
-        fmt::fmt
-        msgpack-cxx
-        spdlog::spdlog
-)
+if(CLP_BUILD_CLP_S_ARCHIVEREADER)
+        add_library(
+                clp_s_archive_reader
+                ${CLP_S_ARCHIVE_READER_SOURCES}
+        )
+        add_library(clp_s::archive_reader ALIAS clp_s_archive_reader)
+        target_compile_features(clp_s_archive_reader PRIVATE cxx_std_20)
+        target_include_directories(clp_s_archive_reader PUBLIC ../)
+        target_link_libraries(
+                clp_s_archive_reader
+                PUBLIC
+                absl::flat_hash_map
+                clp_s::io
+                nlohmann_json::nlohmann_json
+                PRIVATE
+                Boost::url
+                clp_s::clp_dependencies
+                clp_s::timestamp_pattern
+                ${CURL_LIBRARIES}
+                fmt::fmt
+                msgpack-cxx
+                spdlog::spdlog
+        )
+endif()
 
 set(
         CLP_S_JSON_CONSTRUCTOR_SOURCES
@@ -312,22 +322,24 @@ set(
         TraceableException.hpp
 )
 
-add_library(
-        clp_s_json_constructor
-        ${CLP_S_JSON_CONSTRUCTOR_SOURCES}
-)
-add_library(clp_s::json_constructor ALIAS clp_s_json_constructor)
-target_compile_features(clp_s_json_constructor PRIVATE cxx_std_20)
-target_include_directories(clp_s_json_constructor PUBLIC ../)
-target_link_libraries(
-        clp_s_json_constructor
-        PUBLIC
-        clp_s::archive_reader
-        PRIVATE
-        fmt::fmt
-        ${MONGOCXX_TARGET}
-        spdlog::spdlog
-)
+if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
+        add_library(
+                clp_s_json_constructor
+                ${CLP_S_JSON_CONSTRUCTOR_SOURCES}
+        )
+        add_library(clp_s::json_constructor ALIAS clp_s_json_constructor)
+        target_compile_features(clp_s_json_constructor PRIVATE cxx_std_20)
+        target_include_directories(clp_s_json_constructor PUBLIC ../)
+        target_link_libraries(
+                clp_s_json_constructor
+                PUBLIC
+                clp_s::archive_reader
+                PRIVATE
+                fmt::fmt
+                ${MONGOCXX_TARGET}
+                spdlog::spdlog
+        )
+endif()
 
 set(
         CLP_S_TIMESTAMP_PATTERN_SOURCES
@@ -338,20 +350,22 @@ set(
         TraceableException.hpp
 )
 
-add_library(
-        clp_s_timestamp_pattern
-        ${CLP_S_TIMESTAMP_PATTERN_SOURCES}
-)
-add_library(clp_s::timestamp_pattern ALIAS clp_s_timestamp_pattern)
-target_compile_features(clp_s_timestamp_pattern PRIVATE cxx_std_20)
-target_include_directories(clp_s_timestamp_pattern PUBLIC ../)
-target_link_libraries(
-        clp_s_timestamp_pattern
-        PRIVATE
-        clp::string_utils
-        date::date
-        spdlog::spdlog
-)
+if(CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
+        add_library(
+                clp_s_timestamp_pattern
+                ${CLP_S_TIMESTAMP_PATTERN_SOURCES}
+        )
+        add_library(clp_s::timestamp_pattern ALIAS clp_s_timestamp_pattern)
+        target_compile_features(clp_s_timestamp_pattern PRIVATE cxx_std_20)
+        target_include_directories(clp_s_timestamp_pattern PUBLIC ../)
+        target_link_libraries(
+                clp_s_timestamp_pattern
+                PRIVATE
+                clp::string_utils
+                date::date
+                spdlog::spdlog
+        )
+endif()
 
 set(
         CLP_S_EXE_SOURCES
@@ -365,32 +379,34 @@ set(
         TraceableException.hpp
 )
 
-add_executable(
-        clp-s
-        clp-s.cpp
-        ${CLP_S_EXE_SOURCES}
-)
-target_compile_features(clp-s PRIVATE cxx_std_20)
-target_link_libraries(
-        clp-s
-        PRIVATE
-        Boost::program_options
-        clp_s::archive_reader
-        clp_s::archive_writer
-        clp_s::clp_dependencies
-        clp_s::io
-        clp_s::json_constructor
-        clp_s::reducer_dependencies
-        clp_s::search
-        clp_s::search::ast
-        clp_s::search::kql
-        ${MONGOCXX_TARGET}
-        msgpack-cxx
-        spdlog::spdlog
-        ystdlib::error_handling
-)
-set_target_properties(
-        clp-s
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
-)
+if(CLP_BUILD_EXECUTABLES)
+        add_executable(
+                clp-s
+                clp-s.cpp
+                ${CLP_S_EXE_SOURCES}
+        )
+        target_compile_features(clp-s PRIVATE cxx_std_20)
+        target_link_libraries(
+                clp-s
+                PRIVATE
+                Boost::program_options
+                clp_s::archive_reader
+                clp_s::archive_writer
+                clp_s::clp_dependencies
+                clp_s::io
+                clp_s::json_constructor
+                clp_s::reducer_dependencies
+                clp_s::search
+                clp_s::search::ast
+                clp_s::search::kql
+                ${MONGOCXX_TARGET}
+                msgpack-cxx
+                spdlog::spdlog
+                ystdlib::error_handling
+        )
+        set_target_properties(
+                clp-s
+                PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+        )
+endif()
