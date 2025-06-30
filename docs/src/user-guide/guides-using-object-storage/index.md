@@ -11,7 +11,7 @@ to use object storage for any combination of the three use cases (e.g., compress
 cache the stream files on S3, but store archives on the local filesystem).
 
 :::{note}
-Currently, only the [clp-json][release-choices] flavor supports object storage. Support for
+Currently, only the [clp-json][release-choices] release supports object storage. Support for
 `clp-text` will be added in a future release.
 :::
 
@@ -23,7 +23,7 @@ will be added in a future release.
 ## Prerequisites
 
 1. This guide assumes you're able to configure, start, stop, and use a CLP cluster as described in
-   the [clp-json quick-start guide][release-choices].
+   the [clp-json quick-start guide](../quick-start/clp-json.md).
 2. An S3 bucket and [key prefix][aws-key-prefixes] containing the logs you wish to compress.
 3. An S3 bucket and key prefix where you wish to store compressed archives.
 4. An S3 bucket and key prefix where you wish to cache stream files.
@@ -136,4 +136,4 @@ clp-usage
 [aws-iam-roles]: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-role.html
 [aws-key-prefixes]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/using-prefixes.html
 [aws-sts-credentials]: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_temp.html
-[release-choices]: ../quick-start/clp-json
+[release-choices]: ../quick-start/index.md#choosing-a-flavor

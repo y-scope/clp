@@ -1,10 +1,10 @@
 # Overview
 
-This guide describes:
+This guide describes the following:
 
-* [CLP's system requirements](#system-requirements);
-* [how to choose a CLP flavor](#choosing-a-flavor); and
-* [how to use CLP](#using-clp).
+* [CLP's system requirements](#system-requirements)
+* [How to choose a CLP flavor](#choosing-a-flavor)
+* [How to use CLP](#using-clp).
 
 ---
 
@@ -82,16 +82,15 @@ The log file above contains two log events represented by two JSON objects print
 other. Whitespace is ignored, so the log events could also appear with no newlines and indentation.
 
 If you're using JSON logs, download and extract the `clp-json` release from the
-[Releases][clp-releases] page, then proceed to the [clp-json](./clp-json.md) quick-start
-guide.
+[Releases][clp-releases] page, then proceed to the [clp-json](./clp-json.md) quick-start guide.
 
 ### clp-text
 
-The unstructured text flavor of CLP is appropriate for unstructured text logs, where each log event
-contains a timestamp and may span one or more lines.
+The text flavor of CLP is appropriate for unstructured text logs, where each log event contains a
+timestamp and may span one or more lines.
 
 :::{note}
-If your logs do not contain timestamps or CLP can't automatically parse the timestamps in your logs,
+If your logs don't contain timestamps or CLP can't automatically parse the timestamps in your logs,
 it will treat each line as an independent log event.
 :::
 
@@ -111,15 +110,14 @@ The log file above contains two log events, both beginning with a timestamp. The
 line, while the second contains multiple lines.
 
 If you're using unstructured text logs, download and extract the `clp-text` release from the
-[Releases][clp-releases] page, then proceed to the [clp-text](./clp-text.md) quick-start
-guide.
+[Releases][clp-releases] page, then proceed to the [clp-text](./clp-text.md) quick-start guide.
 
 ---
 
 ## Using CLP
 
-Once you have CLP set up, proceed to the quick start guide for your chosen flavor by clicking the
-link below.
+Once you have CLP set up, proceed to the quick-start guide for your chosen flavor by clicking the
+corresponding link below.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
@@ -128,18 +126,18 @@ link below.
 :link: clp-json
 CLP for JSON logs
 ^^^
-Learn about compressing and searching JSON logs.
+How to compress and search JSON logs.
 :::
 
 :::{grid-item-card}
 :link: clp-text
 CLP for unstructured text logs
 ^^^
-Learn about compressing and searching unstructured text logs.
+How to compress and search unstructured text logs.
 :::
 ::::
 
-[Docker]: https://docs.docker.com/engine/install/
-[docker-non-root]: https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user
-[docker-desktop-host-networking]: https://docs.docker.com/engine/network/drivers/host/#docker-desktop
 [clp-releases]: https://github.com/y-scope/clp/releases
+[Docker]: https://docs.docker.com/engine/install/
+[docker-desktop-host-networking]: https://docs.docker.com/engine/network/drivers/host/#docker-desktop
+[docker-non-root]: https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user

@@ -12,7 +12,8 @@ The sections are as follows:
 :link: quick-start/index
 Quick start
 ^^^
-A quick-start guide for choosing a flavour of CLP, setting it up, compressing your logs, and searching them.
+A quick-start guide for choosing a flavor of CLP, setting it up, compressing your logs, and
+searching them.
 :::
 
 :::{grid-item-card}

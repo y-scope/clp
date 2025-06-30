@@ -1,16 +1,16 @@
 # clp-json quick-start
 
-This page will walk you through how to start up CLP and use it to compress and search JSON logs.
+This page will walk you through how to start CLP and use it to compress and search JSON logs.
 
 :::{caution}
-If you're using the `clp-json` flavor, you can only compress JSON logs.
+If you're using a `clp-json` release, you can only compress and search JSON logs.
 :::
 
 ---
 
 ## Starting CLP
 
-To start CLP, run
+To start CLP, run:
 
 ```bash
 sbin/start-clp.sh
@@ -25,10 +25,10 @@ If CLP fails to start (e.g., due to a port conflict), try adjusting the settings
 
 ## Compressing JSON logs
 
-To compress JSON logs, from inside the package directory, run:
+To compress some JSON logs, run:
 
 ```bash
-sbin/compress.sh fs --timestamp-key '<timestamp-key>' <path1> [<path2> ...]
+sbin/compress.sh --timestamp-key '<timestamp-key>' <path1> [<path2> ...]
 ```
 
 * `<timestamp-key>` is the field path of the kv-pair that contains the timestamp in each log event.
@@ -43,10 +43,12 @@ sbin/compress.sh fs --timestamp-key '<timestamp-key>' <path1> [<path2> ...]
   :::
 
 * `<path...>` are paths to JSON log files or directories containing such files.
-  * Each JSON log file should contain each log event as a separate JSON object,
-    i.e., *not* as an array.
+  * Each JSON log file should contain each log event as a separate
+    [JSON object](./index.md#clp-json), i.e., *not* as an array.
 
-Compressed logs will be stored in the `/var/bin/archives` directory.
+Compressed logs will be stored in the directory specified by the `archive_output.storage.directory`
+config option in `etc/clp-config.yaml` (`archive_output.storage.directory` defaults to
+`var/data/archives`).
 
 :::{tip}
 To compress logs from object storage, see
@@ -117,7 +119,7 @@ If you'd like to search your query from the web UI, CLP includes a web interface
 [http://localhost:4000](http://localhost:4000) by default (if you changed `webui.host` or
 `webui.port` in `etc/clp-config.yml`, use the new values).
 
-:::{image} ../../clp-search-ui.png
+:::{image} clp-search-ui.png
 :::
 
 The image above shows the search page after running a query. The numbered circles correspond to
@@ -144,7 +146,7 @@ return more results, use the [command line](#searching-from-the-command-line).
 
 ## Stopping CLP
 
-If you need to stop CLP, run the command
+If you need to stop CLP, run:
 
 ```bash
 sbin/stop-clp.sh

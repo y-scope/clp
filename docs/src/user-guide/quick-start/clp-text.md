@@ -13,7 +13,7 @@ query individual fields. This limitation will be addressed in a future version o
 
 ## Starting CLP
 
-To start CLP, run
+To start CLP, run:
 
 ```bash
 sbin/start-clp.sh
@@ -36,7 +36,9 @@ sbin/compress.sh <path1> [<path2> ...]
 
 `<path...>` are paths to unstructured text log files or directories containing such files.
 
-Compressed logs will be stored in the `/var/bin/archives` directory.
+Compressed logs will be stored in the directory specified by the `archive_output.storage.directory`
+config option in `etc/clp-config.yaml` (`archive_output.storage.directory` defaults to
+`var/data/archives`).
 
 ### Sample logs
 
@@ -101,7 +103,7 @@ If you'd like to search your query from the web UI, CLP includes a web interface
 [http://localhost:4000](http://localhost:4000) by default (if you changed `webui.host` or
 `webui.port` in `etc/clp-config.yml`, use the new values).
 
-:::{image} ../../clp-search-ui.png
+:::{image} clp-search-ui.png
 :::
 
 The image above shows the search page after running a query. The numbered circles correspond to the
@@ -128,7 +130,7 @@ return more results, use the [command line](#searching-from-the-command-line).
 
 ## Stopping CLP
 
-If you need to stop CLP, run the command
+If you need to stop CLP, run:
 
 ```bash
 sbin/stop-clp.sh
