@@ -11,7 +11,7 @@ lib_install_scripts_dir="${script_dir}/.."
 
 # NOTE:
 # 1. libarchive may statically link with LZMA, LZ4, and Zstandard, so we install them beforehand.
-# 2. The versions of libarchive, LZMA, LZ4, and Zstandard available in the manylinux 2.28 package
+# 2. The versions of libarchive, LZMA, LZ4, and Zstandard available in manylinux_2_28's package
 #    repositories are either dated or don't include static libraries, so we install more recent
 #    versions from source.
 "${lib_install_scripts_dir}/liblzma.sh" 5.8.1

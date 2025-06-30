@@ -6,12 +6,12 @@ can be built and used locally, but some are available to download from
 
 To build an image locally, run the `build.sh` script in the image's directory.
 
-## clp-core-dependencies-&lt;arch&gt;-manylinux-2.28
+## clp-core-dependencies-&lt;arch&gt;-manylinux_2_28
 
-Images containing the dependencies necessary to build CLP core in a [manylinux 2.28][manylinux-2.28]
+Images containing the dependencies necessary to build CLP core in a [manylinux_2_28][manylinux_2_28]
 environment (aarch64 or x86).
 
-Binaries built on manylinux 2.28 (based on AlmaLinux 8) are expected to be compatible with other
+Binaries built on manylinux_2_28 (based on AlmaLinux 8) are expected to be compatible with other
 distros using glibc 2.28+, including:
 
 * CentOS/RHEL 8+
@@ -19,20 +19,20 @@ distros using glibc 2.28+, including:
 * Fedora 29+
 * Ubuntu 18.10+
 
-### clp-core-dependencies-aarch64-manylinux-2.28
+### clp-core-dependencies-aarch64-manylinux_2_28
 
 * Path:
 
   ```text
-  components/core/tools/docker-images/clp-env-base-manylinux-2.28-aarch64
+  components/core/tools/docker-images/clp-env-base-manylinux_2_28-aarch64
   ```
 
-### clp-core-dependencies-x86-manylinux-2.28
+### clp-core-dependencies-x86-manylinux_2_28
 
 * Path:
 
   ```text
-  components/core/tools/docker-images/clp-env-base-manylinux-2.28-x86_64
+  components/core/tools/docker-images/clp-env-base-manylinux_2_28-x86_64
   ```
 
 ## clp-core-dependencies-x86-centos-stream-9
@@ -112,4 +112,4 @@ environment.
 [core-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-jammy
 [exe-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-execution-x86-ubuntu-jammy
 [gh-packages]: https://github.com/orgs/y-scope/packages?repo_name=clp
-[manylinux-2.28]: https://github.com/pypa/manylinux?tab=readme-ov-file#manylinux_2_28-almalinux-8-based
+[manylinux_2_28]: https://github.com/pypa/manylinux?tab=readme-ov-file#manylinux_2_28-almalinux-8-based

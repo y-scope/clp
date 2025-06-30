@@ -8,8 +8,8 @@ component_root="${script_dir}/../../../"
 
 build_cmd=(
     docker buildx build
-    --platform linux/arm64
-    --tag clp-core-dependencies-aarch64-manylinux-2.28:dev
+    --platform linux/amd64
+    --tag clp-core-dependencies-x86-manylinux_2_28:dev
     "$component_root"
     --file "${script_dir}/Dockerfile"
     --load
