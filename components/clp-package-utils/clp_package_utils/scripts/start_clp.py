@@ -9,7 +9,6 @@ import subprocess
 import sys
 import time
 import uuid
-from contextlib import closing
 from typing import Any, Dict, List, Optional
 
 import yaml
@@ -35,12 +34,10 @@ from clp_py_utils.clp_config import (
     WEBUI_COMPONENT_NAME,
 )
 from clp_py_utils.clp_metadata_db_utils import (
-    add_dataset,
     get_archives_table_name,
     get_files_table_name,
 )
 from clp_py_utils.s3_utils import generate_container_auth_options
-from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import QueueName
 from pydantic import BaseModel
 
@@ -870,19 +867,12 @@ def start_webui(
 
     validate_webui_config(clp_config, client_settings_json_path, server_settings_json_path)
 
-    # Read, update, and write back client's and server's settings.json and database backend
+    # Read, update, and write back client's and server's settings.json
     clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
     dataset: Optional[str] = None
-
     if StorageEngine.CLP_S == clp_config.package.storage_engine:
         dataset = CLP_DEFAULT_DATASET_NAME
-        sql_adapter: SQL_Adapter = SQL_Adapter(clp_config.database)
-        with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-            db_conn.cursor(dictionary=True)
-        ) as db_cursor:
-            add_dataset(db_conn, db_cursor, table_prefix, dataset, clp_config.archive_output)
-
     client_settings_json_updates = {
         "ClpStorageEngine": clp_config.package.storage_engine,
         "MongoDbSearchResultsMetadataCollectionName": clp_config.webui.results_metadata_collection_name,
