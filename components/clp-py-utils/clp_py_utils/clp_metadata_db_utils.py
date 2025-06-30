@@ -4,15 +4,17 @@ from pathlib import Path
 from typing import Set
 
 from clp_py_utils.clp_config import (
-    ARCHIVE_TAGS_TABLE_SUFFIX,
     ArchiveOutput,
-    ARCHIVES_TABLE_SUFFIX,
-    COLUMN_METADATA_TABLE_SUFFIX,
-    DATASETS_TABLE_SUFFIX,
-    FILES_TABLE_SUFFIX,
     StorageType,
-    TAGS_TABLE_SUFFIX,
 )
+
+# Constants
+ARCHIVE_TAGS_TABLE_SUFFIX = "archive_tags"
+ARCHIVES_TABLE_SUFFIX = "archives"
+COLUMN_METADATA_TABLE_SUFFIX = "column_metadata"
+DATASETS_TABLE_SUFFIX = "datasets"
+FILES_TABLE_SUFFIX = "files"
+TAGS_TABLE_SUFFIX = "tags"
 
 
 def _generic_get_table_name(prefix: str, suffix: str, dataset: str | None) -> str:
