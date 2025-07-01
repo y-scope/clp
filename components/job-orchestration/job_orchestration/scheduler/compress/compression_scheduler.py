@@ -14,7 +14,6 @@ import msgpack
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
     ArchiveOutput,
-    CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
@@ -160,7 +159,6 @@ def search_and_schedule_new_tasks(
     clp_metadata_db_connection_config: Dict[str, Any],
     clp_archive_output: ArchiveOutput,
     existing_datasets: Set[str],
-    using_clp_s: bool,
 ):
     """
     For all jobs with PENDING status, splits the job into tasks and schedules them.
@@ -169,7 +167,6 @@ def search_and_schedule_new_tasks(
     :param clp_metadata_db_connection_config:
     :param clp_archive_output:
     :param existing_datasets:
-    :param using_clp_s:
     """
     global scheduled_jobs
 
@@ -187,10 +184,6 @@ def search_and_schedule_new_tasks(
 
         table_prefix = clp_metadata_db_connection_config["table_prefix"]
         dataset = input_config.dataset
-
-        # TODO: remove this hack fix when we can properly assign dataset from CLI and WebUI
-        if dataset is None and using_clp_s:
-            dataset = CLP_DEFAULT_DATASET_NAME
 
         if dataset is not None and dataset not in existing_datasets:
             add_dataset(
@@ -442,7 +435,6 @@ def main(argv):
                     clp_metadata_db_connection_config,
                     clp_config.archive_output,
                     existing_datasets,
-                    StorageEngine.CLP_S == clp_config.package.storage_engine,
                 )
                 poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
