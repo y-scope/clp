@@ -9,7 +9,7 @@ component_root="${script_dir}/../../../"
 build_cmd=(
     docker buildx build
     --platform linux/arm64
-    --tag clp-core-dependencies-arm64-musllinux_1_2:dev
+    --tag clp-core-dependencies-aarch64-musllinux_1_2:dev
     "$component_root"
     --file "${script_dir}/Dockerfile"
     --load
