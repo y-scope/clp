@@ -92,7 +92,7 @@ def update_job_metadata_and_tags(
     table_prefix: str,
     dataset: Optional[str],
     tag_ids: List[int],
-    archive_stats: dict[str, Any],
+    archive_stats: Dict[str, Any],
 ) -> None:
     if tag_ids is not None:
         update_tags(db_cursor, table_prefix, dataset, archive_stats["id"], tag_ids)
@@ -110,7 +110,7 @@ def update_archive_metadata(
     db_cursor,
     table_prefix: str,
     dataset: Optional[str],
-    archive_stats: dict[str, Any],
+    archive_stats: Dict[str, Any],
 ) -> None:
     stats_to_update = {
         # Use defaults for values clp-s doesn't output
