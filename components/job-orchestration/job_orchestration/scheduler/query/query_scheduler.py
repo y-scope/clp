@@ -31,9 +31,11 @@ import celery
 import msgpack
 import pymongo
 from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     QUERY_JOBS_TABLE_NAME,
     QUERY_TASKS_TABLE_NAME,
+    StorageEngine,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
@@ -627,7 +629,9 @@ def _validate_dataset(
 ) -> bool:
     if dataset in existing_datasets:
         return True
-    existing_datasets = fetch_existing_datasets(db_cursor, table_prefix)
+    # Note: Assume we never delete a dataset.
+    new_datasets = fetch_existing_datasets(db_cursor, table_prefix)
+    existing_datasets.update(new_datasets)
     return dataset in existing_datasets
 
 
@@ -638,6 +642,7 @@ def handle_pending_query_jobs(
     stream_collection_name: str,
     num_archives_to_search_per_sub_job: int,
     existing_datasets: Set[str],
+    using_clp_s: bool,
 ) -> List[asyncio.Task]:
     global active_jobs
 
@@ -659,6 +664,11 @@ def handle_pending_query_jobs(
 
             table_prefix = clp_metadata_db_conn_params["table_prefix"]
             dataset = QueryJobConfig.parse_obj(job_config).dataset
+
+            # TODO: remove this hack fix when we can properly assign dataset from CLI and WebUI
+            if dataset is None and using_clp_s:
+                dataset = CLP_DEFAULT_DATASET_NAME
+
             if dataset is not None and not _validate_dataset(
                 db_cursor, table_prefix, dataset, existing_datasets
             ):
@@ -681,6 +691,10 @@ def handle_pending_query_jobs(
                     continue
 
                 search_config = SearchJobConfig.parse_obj(job_config)
+
+                # TODO: remove this hack fix when we can properly assign dataset from CLI and WebUI
+                search_config.dataset = dataset
+
                 archives_for_search = get_archives_for_search(db_conn, table_prefix, search_config)
                 if len(archives_for_search) == 0:
                     if set_job_or_task_status(
@@ -1092,6 +1106,7 @@ async def handle_jobs(
     stream_collection_name: str,
     jobs_poll_delay: float,
     num_archives_to_search_per_sub_job: int,
+    using_clp_s: bool,
 ) -> None:
     handle_updating_task = asyncio.create_task(
         handle_job_updates(db_conn_pool, results_cache_uri, jobs_poll_delay)
@@ -1107,6 +1122,7 @@ async def handle_jobs(
             stream_collection_name,
             num_archives_to_search_per_sub_job,
             existing_datasets,
+            using_clp_s,
         )
         if 0 == len(reducer_acquisition_tasks):
             tasks.append(asyncio.create_task(asyncio.sleep(jobs_poll_delay)))
@@ -1192,6 +1208,7 @@ async def main(argv: List[str]) -> int:
                 stream_collection_name=clp_config.results_cache.stream_collection_name,
                 jobs_poll_delay=clp_config.query_scheduler.jobs_poll_delay,
                 num_archives_to_search_per_sub_job=batch_size,
+                using_clp_s=(StorageEngine.CLP_S == clp_config.package.storage_engine),
             )
         )
         reducer_handler = asyncio.create_task(reducer_handler.serve_forever())
