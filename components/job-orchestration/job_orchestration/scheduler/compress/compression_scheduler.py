@@ -14,7 +14,6 @@ import msgpack
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
     ArchiveOutput,
-    CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
@@ -186,9 +185,14 @@ def search_and_schedule_new_tasks(
         table_prefix = clp_metadata_db_connection_config["table_prefix"]
         dataset = input_config.dataset
         if dataset is not None and dataset not in existing_datasets:
-            _add_and_cache_dataset(
-                db_conn, db_cursor, table_prefix, dataset, clp_archive_output, existing_datasets
+            add_dataset(
+                db_conn,
+                db_cursor,
+                table_prefix,
+                dataset,
+                clp_archive_output,
             )
+            existing_datasets.add(dataset)
 
         paths_to_compress_buffer = PathsToCompressBuffer(
             maintain_file_ordering=False,
@@ -416,22 +420,9 @@ def main(argv):
         )
         existing_datasets: Set[str] = set()
         if StorageEngine.CLP_S == clp_config.package.storage_engine:
-            table_prefix = clp_metadata_db_connection_config["table_prefix"]
-            existing_datasets = fetch_existing_datasets(db_cursor, table_prefix)
-
-            # Create the default dataset if it doesn't yet exist since the webui expects it.
-            #
-            # TODO: This should be removed once the webui supports aggregating stats from multiple
-            # datasets.
-            if CLP_DEFAULT_DATASET_NAME not in existing_datasets:
-                _add_and_cache_dataset(
-                    db_conn,
-                    db_cursor,
-                    table_prefix,
-                    CLP_DEFAULT_DATASET_NAME,
-                    clp_config.archive_output,
-                    existing_datasets,
-                )
+            existing_datasets = fetch_existing_datasets(
+                db_cursor, clp_metadata_db_connection_config["table_prefix"]
+            )
 
         # Start Job Processing Loop
         while True:
@@ -451,28 +442,6 @@ def main(argv):
             except Exception:
                 logger.exception(f"Error in scheduling.")
                 return -1
-
-
-def _add_and_cache_dataset(
-    db_conn,
-    db_cursor,
-    table_prefix: str,
-    dataset_name: str,
-    archive_output: ArchiveOutput,
-    existing_datasets: Set[str],
-) -> None:
-    """
-    Adds a new dataset to the metadata database and caches its name.
-
-    :param db_conn:
-    :param db_cursor:
-    :param table_prefix:
-    :param dataset_name:
-    :param archive_output:
-    :param existing_datasets:
-    """
-    add_dataset(db_conn, db_cursor, table_prefix, dataset_name, archive_output)
-    existing_datasets.add(dataset_name)
 
 
 if "__main__" == __name__:
