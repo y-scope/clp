@@ -12,18 +12,18 @@ import {
     StreamFilesCollection,
 } from "../../../typings/DbManager.js";
 import {QUERY_JOB_TYPE} from "../../../typings/query.js";
-import {JobManager} from "./JobManager/index.js";
+import {QueryJobDbManager} from "./QueryJobDbManager/index.js";
 
 /**
  * Class to manage stream files for the log viewer.
  */
 class StreamFileManager {
-    readonly #jobManager: JobManager;
+    readonly #jobManager: QueryJobDbManager;
     readonly #logger: FastifyBaseLogger;
     readonly #streamFilesCollection: StreamFilesCollection;
 
     constructor ({jobManager, logger, streamFilesCollection}: {
-        jobManager: JobManager;
+        jobManager: QueryJobDbManager;
         logger: FastifyBaseLogger;
         streamFilesCollection: StreamFilesCollection;
     }) {
@@ -110,18 +110,19 @@ class StreamFileManager {
     }
 }
 
-const streamFileManagerPluginCallback: FastifyPluginAsync<DbManagerOptions> = async (app, options) => {
-    const streamFileManager = await StreamFileManager.create(app, options);
-    app.decorate("streamFileManager", streamFileManager);
-};
-
 declare module "fastify" {
     interface FastifyInstance {
         streamFileManager: StreamFileManager;
     }
 }
 
-export {QUERY_JOB_TYPE};
-export default fastifyPlugin(streamFileManagerPluginCallback, {
-    dependencies: ["jobManager"],
-});
+export default fastifyPlugin(
+    async (app, options: DbManagerOptions) => {
+        const streamFileManager = await StreamFileManager.create(app, options);
+        app.decorate("streamFileManager", streamFileManager);
+    },
+    {
+        name: "StreamFileManager",
+        dependencies: ["QueryJobDbManager"],
+    }
+);

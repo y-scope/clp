@@ -21,9 +21,9 @@ import {
 const JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS = 500;
 
 /**
- * Class for managing query jobs in the database.
+ * Class for managing jobs in the CLP package query scheduler database.
  */
-class JobManager {
+class QueryJobDbManager {
     readonly #sqlPool: MySQLPromisePool;
     readonly #tableName: string;
 
@@ -33,20 +33,20 @@ class JobManager {
     }
 
     /**
-     * Creates a new JobManager.
+     * Creates a new QueryDbJobManager.
      *
      * @param fastify
      * @return
      */
-    static create(fastify: FastifyInstance): JobManager {
-        return new JobManager(fastify.mysql, settings.SqlDbQueryJobsTableName);
+    static create(fastify: FastifyInstance): QueryJobDbManager {
+        return new QueryJobDbManager(fastify.mysql, settings.SqlDbQueryJobsTableName);
     }
 
     /**
      * Submits a job to the database.
      *
-     * @param jobConfig The job configuration object.
-     * @param jobType The type of job to submit.
+     * @param jobConfig
+     * @param jobType
      * @return The job's ID.
      * @throws {Error} on error.
      */
@@ -143,16 +143,15 @@ class JobManager {
 
 declare module "fastify" {
     interface FastifyInstance {
-        jobManager: JobManager;
+        jobManager: QueryJobDbManager;
     }
 }
 
-export {JobManager, QUERY_JOB_TYPE};
 export default fp(
     (fastify) => {
-        fastify.decorate("jobManager", JobManager.create(fastify));
+        fastify.decorate("QueryJobDbManager", QueryJobDbManager.create(fastify));
     },
     {
-        name: "jobManager",
+        name: "QueryJobDbManager",
     }
 );
