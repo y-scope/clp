@@ -632,7 +632,8 @@ def _validate_dataset(
 ) -> bool:
     if dataset in existing_datasets:
         return True
-    # Note: Assume we never delete a dataset.
+
+    # NOTE: This assumes we never delete a dataset.
     new_datasets = fetch_existing_datasets(db_cursor, table_prefix)
     existing_datasets.update(new_datasets)
     return dataset in existing_datasets

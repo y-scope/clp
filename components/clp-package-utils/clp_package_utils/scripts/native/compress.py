@@ -139,13 +139,17 @@ def _generate_clp_io_config(
     clp_config: CLPConfig,
     logs_to_compress: List[str],
     parsed_args: argparse.Namespace,
-    dataset: Optional[str],
 ) -> Union[S3InputConfig, FsInputConfig]:
-    input_type = clp_config.logs_input.type
+    dataset = (
+        CLP_DEFAULT_DATASET_NAME
+        if StorageEngine.CLP_S == clp_config.package.storage_engine
+        else None
+    )
 
+    input_type = clp_config.logs_input.type
     if InputType.FS == input_type:
         if len(logs_to_compress) == 0:
-            raise ValueError(f"No input paths given.")
+            raise ValueError("No input paths given.")
         return FsInputConfig(
             dataset=dataset,
             paths_to_compress=logs_to_compress,
@@ -154,7 +158,7 @@ def _generate_clp_io_config(
         )
     elif InputType.S3 == input_type:
         if len(logs_to_compress) == 0:
-            raise ValueError(f"No URLs given.")
+            raise ValueError("No URLs given.")
         elif len(logs_to_compress) != 1:
             raise ValueError(f"Too many URLs: {len(logs_to_compress)} > 1")
 
@@ -233,12 +237,7 @@ def main(argv):
 
     logs_to_compress = _get_logs_to_compress(pathlib.Path(parsed_args.logs_list).resolve())
 
-    dataset = (
-        CLP_DEFAULT_DATASET_NAME
-        if StorageEngine.CLP_S == clp_config.package.storage_engine
-        else None
-    )
-    clp_input_config = _generate_clp_io_config(clp_config, logs_to_compress, parsed_args, dataset)
+    clp_input_config = _generate_clp_io_config(clp_config, logs_to_compress, parsed_args)
     clp_output_config = OutputConfig.parse_obj(clp_config.archive_output)
     if parsed_args.tags:
         tag_list = [tag.strip().lower() for tag in parsed_args.tags.split(",") if tag]

@@ -891,6 +891,7 @@ def start_webui(
         client_settings_json_file.write(json.dumps(client_settings_json))
 
     server_settings_json_updates = {
+        "ClpStorageEngine": clp_config.package.storage_engine,
         "SqlDbHost": clp_config.database.host,
         "SqlDbPort": clp_config.database.port,
         "SqlDbName": clp_config.database.name,
