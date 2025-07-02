@@ -246,7 +246,7 @@ def _find_archives(
     """
     Lists all archive IDs, if begin_ts and end_ts are provided, only lists archives where
     `begin_ts <= archive.begin_timestamp` and `archive.end_timestamp <= end_ts`.
-    :param archives_dir:
+    :param archives_output_config:
     :param database_config:
     :param dataset:
     :param begin_ts:
@@ -266,10 +266,9 @@ def _find_archives(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
             query_params: typing.List[int] = [begin_ts]
-            archives_table_name = get_archives_table_name(table_prefix, dataset)
             query: str = (
                 f"""
-                SELECT id FROM `{archives_table_name}`
+                SELECT id FROM `{get_archives_table_name(table_prefix, dataset)}`
                 WHERE begin_timestamp >= %s
                 """
             )
@@ -286,12 +285,9 @@ def _find_archives(
                 return 0
 
             logger.info(f"Found {len(archive_ids)} archives within the specified time range.")
-
             if StorageType.FS == archives_output_config.storage.type:
                 archives_dir = archives_output_config.get_directory()
-                archive_output_dir: Path = (
-                    archives_dir / dataset if dataset is not None else archives_dir
-                )
+                archive_output_dir = archives_dir / dataset if dataset is not None else archives_dir
                 for archive_id in archive_ids:
                     logger.info(archive_id)
                     archive_path = archive_output_dir / archive_id
@@ -341,11 +337,10 @@ def _delete_archives(
 
             query_criteria: str = delete_handler.get_criteria()
             query_params: typing.List[str] = delete_handler.get_params()
-            archives_table_name = get_archives_table_name(table_prefix, dataset)
 
             db_cursor.execute(
                 f"""
-                SELECT id FROM `{archives_table_name}`
+                DELETE FROM `{get_archives_table_name(table_prefix, dataset)}`
                 WHERE {query_criteria}
                 """,
                 query_params,
@@ -360,7 +355,6 @@ def _delete_archives(
             delete_handler.validate_results(archive_ids)
 
             delete_archives_from_metadata_db(db_cursor, archive_ids, table_prefix, dataset)
-
             for archive_id in archive_ids:
                 logger.info(f"Deleted archive {archive_id} from the database.")
 

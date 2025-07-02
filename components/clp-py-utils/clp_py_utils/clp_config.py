@@ -26,7 +26,6 @@ QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
-LOG_VIEWER_WEBUI_COMPONENT_NAME = "log_viewer_webui"
 RETENTION_CLEANER_COMPONENT_NAME = "retention_cleaner"
 
 # Target names
@@ -37,13 +36,6 @@ QUERY_JOBS_TABLE_NAME = "query_jobs"
 QUERY_TASKS_TABLE_NAME = "query_tasks"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
-
-ARCHIVE_TAGS_TABLE_SUFFIX = "archive_tags"
-ARCHIVES_TABLE_SUFFIX = "archives"
-COLUMN_METADATA_TABLE_SUFFIX = "column_metadata"
-DATASETS_TABLE_SUFFIX = "datasets"
-FILES_TABLE_SUFFIX = "files"
-TAGS_TABLE_SUFFIX = "tags"
 
 OS_RELEASE_FILE_PATH = pathlib.Path("etc") / "os-release"
 
@@ -587,7 +579,7 @@ class StreamOutput(BaseModel):
 class WebUi(BaseModel):
     host: str = "localhost"
     port: int = 4000
-    logging_level: str = "INFO"
+    results_metadata_collection_name: str = "results-metadata"
 
     @validator("host")
     def validate_host(cls, field):
@@ -599,24 +591,12 @@ class WebUi(BaseModel):
         _validate_port(cls, field)
         return field
 
-    @validator("logging_level")
-    def validate_logging_level(cls, field):
-        _validate_logging_level(cls, field)
-        return field
-
-
-class LogViewerWebUi(BaseModel):
-    host: str = "localhost"
-    port: int = 3000
-
-    @validator("host")
-    def validate_host(cls, field):
-        _validate_host(cls, field)
-        return field
-
-    @validator("port")
-    def validate_port(cls, field):
-        _validate_port(cls, field)
+    @validator("results_metadata_collection_name")
+    def validate_results_metadata_collection_name(cls, field):
+        if "" == field:
+            raise ValueError(
+                f"{WEBUI_COMPONENT_NAME}.results_metadata_collection_name cannot be empty."
+            )
         return field
 
 
@@ -661,7 +641,6 @@ class CLPConfig(BaseModel):
     compression_worker: CompressionWorker = CompressionWorker()
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
-    log_viewer_webui: LogViewerWebUi = LogViewerWebUi()
     retention_cleaner: RetentionCleaner = RetentionCleaner()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 

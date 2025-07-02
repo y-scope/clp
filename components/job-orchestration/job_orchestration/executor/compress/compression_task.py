@@ -70,18 +70,30 @@ def increment_compression_job_metadata(db_cursor, job_id, kv):
     db_cursor.execute(query)
 
 
-def update_tags(db_cursor, table_prefix, dataset, archive_id, tag_ids):
-    archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
+def update_tags(
+    db_cursor,
+    table_prefix: str,
+    dataset: Optional[str],
+    archive_id: str,
+    tag_ids: List[int],
+) -> None:
     db_cursor.executemany(
         f"""
-        INSERT INTO {archive_tags_table_name} (archive_id, tag_id)
+        INSERT INTO {get_archive_tags_table_name(table_prefix, dataset)} (archive_id, tag_id)
         VALUES (%s, %s)
         """,
         [(archive_id, tag_id) for tag_id in tag_ids],
     )
 
 
-def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, dataset, tag_ids, archive_stats):
+def update_job_metadata_and_tags(
+    db_cursor,
+    job_id: int,
+    table_prefix: str,
+    dataset: Optional[str],
+    tag_ids: List[int],
+    archive_stats: Dict[str, Any],
+) -> None:
     if tag_ids is not None:
         update_tags(db_cursor, table_prefix, dataset, archive_stats["id"], tag_ids)
     increment_compression_job_metadata(
@@ -94,7 +106,12 @@ def update_job_metadata_and_tags(db_cursor, job_id, table_prefix, dataset, tag_i
     )
 
 
-def update_archive_metadata(db_cursor, table_prefix, dataset, archive_stats):
+def update_archive_metadata(
+    db_cursor,
+    table_prefix: str,
+    dataset: Optional[str],
+    archive_stats: Dict[str, Any],
+) -> None:
     stats_to_update = {
         # Use defaults for values clp-s doesn't output
         "creation_ix": 0,
@@ -162,9 +179,7 @@ def _upload_archive_to_s3(
     archive_id: str,
     dataset: Optional[str],
 ):
-    dest_path = archive_id
-    if dataset is not None:
-        dest_path = f"{dataset}/{dest_path}"
+    dest_path = f"{dataset}/{archive_id}" if dataset is not None else archive_id
     s3_put(s3_config, archive_src_path, dest_path)
 
 
@@ -307,7 +322,7 @@ def run_clp(
         enable_s3_write = True
 
     table_prefix = clp_metadata_db_connection_config["table_prefix"]
-    input_dataset: Optional[str] = None
+    dataset = clp_config.input.dataset
     if StorageEngine.CLP == clp_storage_engine:
         compression_cmd, compression_env = _make_clp_command_and_env(
             clp_home=clp_home,
@@ -316,9 +331,7 @@ def run_clp(
             db_config_file_path=db_config_file_path,
         )
     elif StorageEngine.CLP_S == clp_storage_engine:
-        input_dataset = clp_config.input.dataset
-        archive_output_dir = archive_output_dir / input_dataset
-
+        archive_output_dir = archive_output_dir / dataset
         compression_cmd, compression_env = _make_clp_s_command_and_env(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
@@ -381,7 +394,7 @@ def run_clp(
                 if s3_error is None:
                     logger.info(f"Uploading archive {archive_id} to S3...")
                     try:
-                        _upload_archive_to_s3(s3_config, archive_path, archive_id, input_dataset)
+                        _upload_archive_to_s3(s3_config, archive_path, archive_id, dataset)
                         logger.info(f"Finished uploading archive {archive_id} to S3.")
                     except Exception as err:
                         logger.exception(f"Failed to upload archive {archive_id}")
@@ -400,13 +413,13 @@ def run_clp(
                 ) as db_cursor:
                     if StorageEngine.CLP_S == clp_storage_engine:
                         update_archive_metadata(
-                            db_cursor, table_prefix, input_dataset, last_archive_stats
+                            db_cursor, table_prefix, dataset, last_archive_stats
                         )
                     update_job_metadata_and_tags(
                         db_cursor,
                         job_id,
                         table_prefix,
-                        input_dataset,
+                        dataset,
                         tag_ids,
                         last_archive_stats,
                     )
@@ -417,7 +430,7 @@ def run_clp(
                         str(clp_home / "bin" / "indexer"),
                         "--db-config-file",
                         str(db_config_file_path),
-                        input_dataset,
+                        dataset,
                         archive_path,
                     ]
                     try:

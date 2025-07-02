@@ -4,45 +4,17 @@ from pathlib import Path
 from typing import List, Set
 
 from clp_py_utils.clp_config import (
-    ARCHIVE_TAGS_TABLE_SUFFIX,
-    ARCHIVES_TABLE_SUFFIX,
-    COLUMN_METADATA_TABLE_SUFFIX,
-    DATASETS_TABLE_SUFFIX,
-    FILES_TABLE_SUFFIX,
-    TAGS_TABLE_SUFFIX,
+    ArchiveOutput,
+    StorageType,
 )
 
-
-def _generic_get_table_name(prefix: str, suffix: str, dataset: str | None) -> str:
-    table_name = prefix
-    if dataset is not None:
-        table_name += f"{dataset}_"
-    table_name += suffix
-    return table_name
-
-
-def get_archives_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _generic_get_table_name(table_prefix, ARCHIVES_TABLE_SUFFIX, dataset)
-
-
-def get_tags_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _generic_get_table_name(table_prefix, TAGS_TABLE_SUFFIX, dataset)
-
-
-def get_archive_tags_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _generic_get_table_name(table_prefix, ARCHIVE_TAGS_TABLE_SUFFIX, dataset)
-
-
-def get_files_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _generic_get_table_name(table_prefix, FILES_TABLE_SUFFIX, dataset)
-
-
-def get_column_metadata_table_name(table_prefix: str, dataset: str | None) -> str:
-    return _generic_get_table_name(table_prefix, COLUMN_METADATA_TABLE_SUFFIX, dataset)
-
-
-def get_datasets_table_name(table_prefix: str) -> str:
-    return _generic_get_table_name(table_prefix, DATASETS_TABLE_SUFFIX, None)
+# Constants
+ARCHIVE_TAGS_TABLE_SUFFIX = "archive_tags"
+ARCHIVES_TABLE_SUFFIX = "archives"
+COLUMN_METADATA_TABLE_SUFFIX = "column_metadata"
+DATASETS_TABLE_SUFFIX = "datasets"
+FILES_TABLE_SUFFIX = "files"
+TAGS_TABLE_SUFFIX = "tags"
 
 
 def _create_archives_table(db_cursor, archives_table_name: str) -> None:
@@ -95,10 +67,9 @@ def _create_archive_tags_table(
 
 
 def _create_files_table(db_cursor, table_prefix: str, dataset: str | None) -> None:
-    files_table_name = get_files_table_name(table_prefix, dataset)
     db_cursor.execute(
         f"""
-        CREATE TABLE IF NOT EXISTS `{files_table_name}` (
+        CREATE TABLE IF NOT EXISTS `{get_files_table_name(table_prefix, dataset)}` (
             `id` VARCHAR(64) NOT NULL,
             `orig_file_id` VARCHAR(64) NOT NULL,
             `path` VARCHAR(12288) NOT NULL,
@@ -117,16 +88,29 @@ def _create_files_table(db_cursor, table_prefix: str, dataset: str | None) -> No
 
 
 def _create_column_metadata_table(db_cursor, table_prefix: str, dataset: str) -> None:
-    column_metadata_table_name = get_column_metadata_table_name(table_prefix, dataset)
     db_cursor.execute(
         f"""
-        CREATE TABLE IF NOT EXISTS `{column_metadata_table_name}` (
+        CREATE TABLE IF NOT EXISTS `{get_column_metadata_table_name(table_prefix, dataset)}` (
             `name` VARCHAR(512) NOT NULL,
             `type` TINYINT NOT NULL,
             PRIMARY KEY (`name`, `type`)
         )
         """
     )
+
+
+def _get_table_name(prefix: str, suffix: str, dataset: str | None) -> str:
+    """
+    :param prefix:
+    :param suffix:
+    :param dataset:
+    :return: The table name in the form of "<prefix>[<dataset>_]<suffix>".
+    """
+    table_name = prefix
+    if dataset is not None:
+        table_name += f"{dataset}_"
+    table_name += suffix
+    return table_name
 
 
 def create_datasets_table(db_cursor, table_prefix: str) -> None:
@@ -139,10 +123,9 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
 
     # For a description of the table, see
     # `../../../docs/src/dev-guide/design-metadata-db.md`
-    datasets_table_name = get_datasets_table_name(table_prefix)
     db_cursor.execute(
         f"""
-        CREATE TABLE IF NOT EXISTS `{datasets_table_name}` (
+        CREATE TABLE IF NOT EXISTS `{get_datasets_table_name(table_prefix)}` (
             `name` VARCHAR(255) NOT NULL,
             `archive_storage_directory` VARCHAR(4096) NOT NULL,
             PRIMARY KEY (`name`)
@@ -156,7 +139,7 @@ def add_dataset(
     db_cursor,
     table_prefix: str,
     dataset_name: str,
-    dataset_archive_storage_directory: Path,
+    archive_output: ArchiveOutput,
 ) -> None:
     """
     Inserts a new dataset into the `datasets` table and creates the corresponding standard set of
@@ -166,16 +149,22 @@ def add_dataset(
     :param db_cursor: The database cursor to execute the table row insertion.
     :param table_prefix: A string to prepend to the table name.
     :param dataset_name:
-    :param dataset_archive_storage_directory:
+    :param archive_output:
     """
-    datasets_table_name = get_datasets_table_name(table_prefix)
-    query = f"""INSERT INTO `{datasets_table_name}`
+    archive_storage_directory: Path
+    if StorageType.S3 == archive_output.storage.type:
+        s3_config = archive_output.storage.s3_config
+        archive_storage_directory = Path(s3_config.key_prefix)
+    else:
+        archive_storage_directory = archive_output.get_directory()
+
+    query = f"""INSERT INTO `{get_datasets_table_name(table_prefix)}`
                 (name, archive_storage_directory)
                 VALUES (%s, %s)
                 """
     db_cursor.execute(
         query,
-        (dataset_name, str(dataset_archive_storage_directory / dataset_name)),
+        (dataset_name, str(archive_storage_directory / dataset_name)),
     )
     create_metadata_db_tables(db_cursor, table_prefix, dataset_name)
     db_conn.commit()
@@ -191,8 +180,7 @@ def fetch_existing_datasets(
     :param db_cursor:
     :param table_prefix:
     """
-    datasets_table_name = get_datasets_table_name(table_prefix)
-    db_cursor.execute(f"SELECT name FROM `{datasets_table_name}`")
+    db_cursor.execute(f"SELECT name FROM `{get_datasets_table_name(table_prefix)}`")
     rows = db_cursor.fetchall()
     return {row["name"] for row in rows}
 
@@ -235,29 +223,50 @@ def delete_archives_from_metadata_db(
     """
     ids_list_string: str = ", ".join(["%s"] * len(archive_ids))
 
-    files_table = get_files_table_name(table_prefix, dataset)
     db_cursor.execute(
         f"""
-        DELETE FROM `{files_table}`
+        DELETE FROM `{get_files_table_name(table_prefix, dataset)}`
         WHERE archive_id in ({ids_list_string})
         """,
         archive_ids,
     )
 
-    archive_tags_table = get_archive_tags_table_name(table_prefix, dataset)
     db_cursor.execute(
         f"""
-        DELETE FROM `{archive_tags_table}`
+        DELETE FROM `{get_archive_tags_table_name(table_prefix, dataset)}`
         WHERE archive_id in ({ids_list_string})
         """,
         archive_ids,
     )
 
-    archives_table = get_archives_table_name(table_prefix, dataset)
     db_cursor.execute(
         f"""
-        DELETE FROM `{archives_table}`
+        DELETE FROM `{get_archives_table_name(table_prefix, dataset)}`
         WHERE id in ({ids_list_string})
         """,
         archive_ids,
     )
+
+
+def get_archive_tags_table_name(table_prefix: str, dataset: str | None) -> str:
+    return _get_table_name(table_prefix, ARCHIVE_TAGS_TABLE_SUFFIX, dataset)
+
+
+def get_archives_table_name(table_prefix: str, dataset: str | None) -> str:
+    return _get_table_name(table_prefix, ARCHIVES_TABLE_SUFFIX, dataset)
+
+
+def get_column_metadata_table_name(table_prefix: str, dataset: str | None) -> str:
+    return _get_table_name(table_prefix, COLUMN_METADATA_TABLE_SUFFIX, dataset)
+
+
+def get_datasets_table_name(table_prefix: str) -> str:
+    return _get_table_name(table_prefix, DATASETS_TABLE_SUFFIX, None)
+
+
+def get_files_table_name(table_prefix: str, dataset: str | None) -> str:
+    return _get_table_name(table_prefix, FILES_TABLE_SUFFIX, dataset)
+
+
+def get_tags_table_name(table_prefix: str, dataset: str | None) -> str:
+    return _get_table_name(table_prefix, TAGS_TABLE_SUFFIX, dataset)

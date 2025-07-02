@@ -15,7 +15,6 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLPConfig,
     DB_COMPONENT_NAME,
-    LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
@@ -505,29 +504,15 @@ def validate_output_config(clp_config: CLPConfig):
 
 
 def validate_webui_config(
-    clp_config: CLPConfig, logs_dir: pathlib.Path, settings_json_path: pathlib.Path
+    clp_config: CLPConfig,
+    client_settings_json_path: pathlib.Path,
+    server_settings_json_path: pathlib.Path,
 ):
-    if not settings_json_path.exists():
-        raise ValueError(
-            f"{WEBUI_COMPONENT_NAME} {settings_json_path} is not a valid path to Meteor settings.json"
-        )
-
-    validate_log_directory(logs_dir, WEBUI_COMPONENT_NAME)
+    for path in [client_settings_json_path, server_settings_json_path]:
+        if not path.exists():
+            raise ValueError(f"{WEBUI_COMPONENT_NAME} {path} is not a valid path to settings.json")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
-
-
-def validate_log_viewer_webui_config(clp_config: CLPConfig, settings_json_path: pathlib.Path):
-    if not settings_json_path.exists():
-        raise ValueError(
-            f"{WEBUI_COMPONENT_NAME} {settings_json_path} is not a valid path to settings.json"
-        )
-
-    validate_port(
-        f"{LOG_VIEWER_WEBUI_COMPONENT_NAME}.port",
-        clp_config.log_viewer_webui.host,
-        clp_config.log_viewer_webui.port,
-    )
 
 
 def validate_path_for_container_mount(path: pathlib.Path) -> None:
