@@ -23,7 +23,7 @@ To check whether Docker is installed on your system, run:
 docker version
 ```
 
-If Docker isn't installed, follow these [instructions][Docker] to install it.
+If Docker isn't installed, follow [these instructions][Docker] to install it.
 
 NOTE:
 
@@ -82,7 +82,7 @@ The log file above contains two log events represented by two JSON objects print
 other. Whitespace is ignored, so the log events could also appear with no newlines and indentation.
 
 If you're using JSON logs, download and extract the `clp-json` release from the
-[Releases][clp-releases] page, then proceed to the [clp-json](./clp-json.md) quick-start guide.
+[Releases][clp-releases] page, then proceed to the [clp-json quick-start](./clp-json.md) guide.
 
 ### clp-text
 
@@ -110,14 +110,14 @@ The log file above contains two log events, both beginning with a timestamp. The
 line, while the second contains multiple lines.
 
 If you're using unstructured text logs, download and extract the `clp-text` release from the
-[Releases][clp-releases] page, then proceed to the [clp-text](./clp-text.md) quick-start guide.
+[Releases][clp-releases] page, then proceed to the [clp-text quick-start](./clp-text.md) guide.
 
 ---
 
 ## Using CLP
 
-Once you have CLP set up, proceed to the quick-start guide for your chosen flavor by clicking the
-corresponding link below.
+Once you've installed CLP's requirements and downloaded a CLP release, proceed to the quick-start
+guide for your chosen flavor by clicking the corresponding link below.
 
 ::::{grid} 1 1 2 2
 :gutter: 2

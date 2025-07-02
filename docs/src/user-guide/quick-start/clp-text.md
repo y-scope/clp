@@ -36,72 +36,67 @@ sbin/compress.sh <path1> [<path2> ...]
 
 `<path...>` are paths to unstructured text log files or directories containing such files.
 
+The compression script will output the compression ratio of each dataset you compress, or you can
+use the UI to view overall statistics.
+
 Compressed logs will be stored in the directory specified by the `archive_output.storage.directory`
 config option in `etc/clp-config.yml` (`archive_output.storage.directory` defaults to
 `var/data/archives`).
 
 ### Sample logs
 
-For some sample logs, check out the open-source [datasets](../resources-datasets).
-
-### Examining compression statistics
-
-The compression script used above will output the compression ratio of each dataset you compress, or
-you can use the UI to view overall statistics.
+For some sample logs, check out the [open-source datasets](../resources-datasets).
 
 ---
 
 ## Searching unstructured text logs
 
-You can search through your logs using queries from the UI or from the command line.
+You can search your compressed logs from CLP's [UI](#searching-from-the-ui) or the
+[command line](#searching-from-the-command-line).
 
-### Queries
+All unstructured text log queries are written as plain text. You can use a couple of special
+characters to make these queries more versatile. `*` can be used as a placeholder for an unknown
+number of characters, and `?` can be used for a single character. For example, consider the logs in
+[Figure 1](#figure-1) and the query in [Figure 2](#figure-2).
 
-Regardless of what method you use to search, you'll need a query to find the logs you're looking
-for. All unstructured text log queries are written as plain text.
+(figure-1)=
+:::{card}
 
-You can use a couple of special characters to make these queries more versatile. `*` can be used as
-a placeholder for an unknown number of characters, and `?` can be used for a single character.
-For example, the query
-
-```bash
-a*b?c
+```text
+1   abc
+2   axbc
+3   abxc
+4   axxbxc
+5   a b c
 ```
 
-would return all logs that contain the character `"a"` followed by any number (including zero) of
-other characters, followed by `"b"`, followed by one other character, followed by `"c"`.
-
-There are a number of other syntax rules specific to unstructured text queries that you can use to
-make your searches more powerful and effective. You can read about these rules on the
-[text syntax reference page](../reference-text-search-syntax).
-
-### Searching from the command line
-
-If you'd like to search your query from the command line, run the following command from inside the
-package:
-
-```bash
-sbin/search.sh '<query>'
-```
-
-To narrow your search to a specific time range:
-
-* Add `--begin-time <epoch-timestamp-millis>` to filter for log events after a certain time.
-  * `<epoch-timestamp-millis>` is the timestamp as milliseconds since the UNIX epoch.
-* Add `--end-time <epoch-timestamp-millis>` to filter for log events before a certain time.
-
-To perform case-insensitive searches, add the `--ignore-case` flag.
-
-:::{caution}
-To match the convention of other tools, by default, searches are case-**insensitive** in the UI and
-searches are case-**sensitive** on the command line.
++++
+**Figure 1**: A set of unstructured text log events.
 :::
+
+(figure-2)=
+:::{card}
+
+```bash
+"a*b?c"
+```
+
++++
+**Figure 2**: An example query.
+:::
+
+The query in [Figure 2](#figure-2) will match with lines 3, 4, and 5 in [Figure 1](#figure-1), as they are the only lines which contain the character
+`"a"` followed by any number (including zero) of other characters, followed by `"b"`, followed
+by one other character, followed by `"c"`.
+
+A complete reference for `clp-text`'s query syntax is available on the
+[text syntax reference page](../reference-text-search-syntax).
 
 ### Searching from the UI
 
-If you'd like to search your query from the web UI, CLP includes a web interface available at
-[http://localhost:4000](http://localhost:4000) by default (if you changed `webui.host` or
-`webui.port` in `etc/clp-config.yml`, use the new values).
+To search your compressed logs from CLP's UI, open [http://localhost:4000](http://localhost:4000) in
+your browser (if you changed `webui.host` or `webui.port` in `etc/clp-config.yml`, use the new
+values).
 
 :::{image} clp-search-ui.png
 :::
@@ -125,6 +120,28 @@ following features:
 By default, the UI will only return 1,000 of the latest search results. To perform searches which
 return more results, use the [command line](#searching-from-the-command-line).
 :::
+
+### Searching from the command line
+
+To search your compressed logs from the command line, run:
+
+```bash
+sbin/search.sh '<query>'
+```
+
+To narrow your search to a specific time range:
+
+* Add `--begin-time <epoch-timestamp-millis>` to filter for log events after a certain time.
+  * `<epoch-timestamp-millis>` is the timestamp as milliseconds since the UNIX epoch.
+* Add `--end-time <epoch-timestamp-millis>` to filter for log events before a certain time.
+
+To perform case-insensitive searches, add the `--ignore-case` flag.
+
+:::{caution}
+To match the convention of other tools, by default, searches are case-**insensitive** in the UI and
+searches are case-**sensitive** on the command line.
+:::
+
 
 ---
 

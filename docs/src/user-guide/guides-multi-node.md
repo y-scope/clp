@@ -120,14 +120,14 @@ the flavor of CLP you're running:
 :link: quick-start/clp-json
 Using clp-json
 ^^^
-Compress and search JSON logs.
+How to compress and search JSON logs.
 :::
 
 :::{grid-item-card}
 :link: quick-start/clp-text
 Using clp-text
 ^^^
-Compress and search unstructured text logs.
+How to compress and search unstructured text logs.
 :::
 ::::
 
