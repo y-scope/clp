@@ -58,7 +58,7 @@ const SearchResultsTimeline = () => {
         }
 
         handleQuerySubmit({
-            ignoreCase: queryIsCaseSensitive,
+            ignoreCase: false === queryIsCaseSensitive,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
             timestampBegin: newTimeRange[0].valueOf(),

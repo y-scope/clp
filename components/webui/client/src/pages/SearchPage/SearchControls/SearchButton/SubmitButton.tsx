@@ -34,7 +34,7 @@ const SubmitButton = () => {
         updateTimelineConfig(newTimelineConfig);
 
         handleQuerySubmit({
-            ignoreCase: queryIsCaseSensitive,
+            ignoreCase: false === queryIsCaseSensitive,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
             timestampBegin: timeRange[0].valueOf(),
