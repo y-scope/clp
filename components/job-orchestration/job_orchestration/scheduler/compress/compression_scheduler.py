@@ -200,7 +200,6 @@ def search_and_schedule_new_tasks(
                     db_cursor,
                     table_prefix,
                     dataset_name,
-                    clp_archive_output.storage.type,
                     archive_storage_directory,
                 )
                 existing_datasets.add(dataset_name)
