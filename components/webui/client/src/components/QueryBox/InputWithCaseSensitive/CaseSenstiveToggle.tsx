@@ -3,7 +3,6 @@ import {useCallback} from "react";
 import {
     Button,
     Tooltip,
-    Typography,
 } from "antd";
 
 
@@ -40,18 +39,18 @@ const CaseSensitiveToggle = ({
             title={"Match case"}
         >
             <Button
-                color={"default"}
                 disabled={disabled}
                 size={"small"}
-                icon={
-                    <Typography.Text disabled={disabled}>
-                        Aa
-                    </Typography.Text>
-                }
+                color={isCaseSensitive ?
+                    "primary" :
+                    "default"}
                 variant={isCaseSensitive ?
-                    "outlined" :
-                    "text"}
-                onClick={handleButtonClick}/>
+                    "solid" :
+                    "outlined"}
+                onClick={handleButtonClick}
+            >
+                Aa
+            </Button>
         </Tooltip>
     );
 };
