@@ -47,7 +47,6 @@ if(CLP_BUILD_CLP_S_SEARCH)
                 simdjson::simdjson
                 PRIVATE
                 clp_s::clp_dependencies
-                msgpack-cxx
                 spdlog::spdlog
         )
 endif()
