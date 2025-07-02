@@ -45,10 +45,12 @@ def validate_storage_type(output_config: ArchiveOutput, storage_engine: str) -> 
 
 def get_expiry_epoch_secs(retention_minutes: int) -> int:
     """
-    returns the expiry epoch, calculated as `expiry_epoch = cur_time - retention_secs`.
+    Returns a cutoff `expiry_epoch` based on the current timestamp and `retention_minutes`. Any
+    target with a timestamp (`ts`) less than `expiry_epoch` are considered expired.
+    The `expiry_epoch` is calculated as `expiry_epoch = cur_time - retention_secs`.
     :param: retention_minutes: Retention period in minutes.
 
-    :return: The epoch of the expiry time.
+    :return: The UTC epoch of the expiry time.
     """
     return int(time.time() - retention_minutes * MIN_TO_SECONDS)
 
@@ -59,9 +61,9 @@ def get_oid_with_expiry_time(expiry_epoch_secs: int) -> ObjectId:
 
 def remove_fs_target(fs_storage_config: FsStorage, target: str) -> None:
     """
-    Removes a file or directory from the filesystem storage. The full path to the target is
-    constructed as `fs_storage_config.directory`+ target`.
-    Note: The function does nothing if the target does not exist.
+    Removes a target (either a directory or a file) from the filesystem storage. The full path
+    of the target is constructed as `fs_storage_config.directory / target`. The function performs
+    no action if the target does not exist.
 
     :param fs_storage_config:
     :param target: Relative path of the file or directory to remove.

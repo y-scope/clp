@@ -212,9 +212,10 @@ def delete_archives_from_metadata_db(
     db_cursor, archive_ids: List[str], table_prefix: str, dataset: str | None
 ):
     """
-    Deletes the given list of archives from the metadata database.
-    The order of deletion preserves foreign key constraints, ensuring no violations occur during
-    the deletion process.
+    Deletes the given list of archives from the metadata database. Also deletes associated entries
+    from `files` and `archive_tags` table that reference the target archives.
+    The order of deletion follows the foreign key constraints, ensuring no violations occur during
+    the process.
 
     :param db_cursor:
     :param archive_ids: The list of archive to delete.

@@ -60,6 +60,7 @@ async def main(argv: List[str]) -> int:
     }
     tasks_handler: List[asyncio.Task[None]] = list()
 
+    # Create retention tasks
     for task_name, (retention_period, task_method) in retention_tasks.items():
         if retention_period is not None:
             logger.info(f"Creating {task_name} task with retention = {retention_period} minutes")
@@ -68,8 +69,9 @@ async def main(argv: List[str]) -> int:
             )
             tasks_handler.append(archive_retention_handle)
         else:
-            logger.info(f"Skip creating {task_name} task.")
+            logger.info(f"No retention period configured, skip creating {task_name} task.")
 
+    # Poll and report any task that finishes unexpectedly
     while tasks_handler:
         done, pending = await asyncio.wait(tasks_handler, return_when=asyncio.FIRST_COMPLETED)
         for task in done:

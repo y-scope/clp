@@ -19,7 +19,6 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    RETENTION_CLEANER_COMPONENT_NAME,
     StorageType,
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
@@ -176,13 +175,6 @@ def validate_log_directory(logs_dir: pathlib.Path, component_name: str) -> None:
         validate_path_could_be_dir(logs_dir)
     except ValueError as ex:
         raise ValueError(f"{component_name} logs directory is invalid: {ex}")
-
-
-def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
-    try:
-        validate_path_could_be_dir(data_dir)
-    except ValueError as ex:
-        raise ValueError(f"{component_name} data directory is invalid: {ex}")
 
 
 def validate_port(port_name: str, hostname: str, port: int):
@@ -557,3 +549,10 @@ def is_retention_cleaner_required(clp_config: CLPConfig) -> bool:
         return True
 
     return False
+
+
+def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
+    try:
+        validate_path_could_be_dir(data_dir)
+    except ValueError as ex:
+        raise ValueError(f"{component_name} data directory is invalid: {ex}")

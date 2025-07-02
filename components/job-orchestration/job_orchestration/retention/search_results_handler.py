@@ -60,7 +60,7 @@ async def search_results_retention(
 ) -> None:
     configure_logger(logger, logging_level, log_directory, SEARCH_RESULTS_RETENTION_HANDLER_NAME)
 
-    job_frequency_minutes = clp_config.retention_cleaner.job_frequency.search_results
+    job_frequency_secs = clp_config.retention_cleaner.job_frequency.search_results * MIN_TO_SECONDS
     while True:
         _handle_search_results_retention(clp_config.results_cache)
-        await asyncio.sleep(job_frequency_minutes * MIN_TO_SECONDS)
+        await asyncio.sleep(job_frequency_secs)

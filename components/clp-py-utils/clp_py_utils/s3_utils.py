@@ -315,10 +315,10 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_path: str) -> None:
 def s3_delete_objects(s3_config: S3Config, object_keys: Set[str]) -> None:
     """
     Deletes a set of objects from the S3 bucket using AWS's DeleteObjects operation.
-    The objects to be deleted are identified by keys that are relative to the
-    `s3_config.key_prefix`.
+    The objects to be deleted are identified by keys relative to the `s3_config.key_prefix`.
     Note: `boto3.delete_objects` is limited to 1000 objects per call. This method divides the input
-    object keys into chunks of 1000 and calls `boto3.delete_objects` multiple times if necessary.
+    object keys into chunks of 1000 in size and calls `boto3.delete_objects` multiple times until
+    all objects are deleted.
 
     :param s3_config: S3 configuration specifying the upload destination and credentials.
     :param object_keys: The set of object keys to delete, relative to `s3_config.key_prefix`.
@@ -326,7 +326,7 @@ def s3_delete_objects(s3_config: S3Config, object_keys: Set[str]) -> None:
     :raises: Propagates `boto3.client.delete_object`'s exceptions.
     """
 
-    def chunked_iterate(key_prefix: str, relative_object_keys: Set[str], chunk_size: int):
+    def _iterate_by_chunk(key_prefix: str, relative_object_keys: Set[str], chunk_size: int):
         chunk: List[str] = list()
         for relative_obj_key in relative_object_keys:
             chunk.append(key_prefix + relative_obj_key)
@@ -337,15 +337,15 @@ def s3_delete_objects(s3_config: S3Config, object_keys: Set[str]) -> None:
         if chunk:
             yield chunk
 
-    def gen_deletion_config(objects_to_delete: List[str]):
+    def _gen_deletion_config(objects_to_delete: List[str]):
         return {"Objects": [{"Key": obj_to_delete} for obj_to_delete in objects_to_delete]}
 
     boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
     s3_client = _create_s3_client(s3_config, boto3_config)
 
     MAX_OBJECTS_PER_REQUEST = 1000
-    for chunked_keys in chunked_iterate(s3_config.key_prefix, object_keys, MAX_OBJECTS_PER_REQUEST):
+    for chunked_keys in _iterate_by_chunk(s3_config.key_prefix, object_keys, MAX_OBJECTS_PER_REQUEST):
         s3_client.delete_objects(
             Bucket=s3_config.bucket,
-            Delete=gen_deletion_config(chunked_keys),
+            Delete=_gen_deletion_config(chunked_keys),
         )

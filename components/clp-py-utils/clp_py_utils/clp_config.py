@@ -604,6 +604,7 @@ class JobFrequency(BaseModel):
     archives: int = 60
     search_results: int = 30
 
+    # Explicitly disallow any unexpected key
     class Config:
         extra = "forbid"
 

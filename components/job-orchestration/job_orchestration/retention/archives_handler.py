@@ -68,18 +68,16 @@ def _handle_archive_retention(
     archive_output_config: ArchiveOutput,
     storage_engine: str,
     database_config: Database,
-    clp_logs_directory: pathlib.Path,
+    recovery_file: pathlib.Path,
 ) -> None:
     archive_expiry_epoch = SECOND_TO_MILLISECOND * get_expiry_epoch_secs(
         archive_output_config.retention_period
     )
 
-    clp_connection_param = database_config.get_clp_connection_params_and_type()
-    table_prefix = clp_connection_param["table_prefix"]
-
-    recovery_file = clp_logs_directory / f"{ARCHIVES_RETENTION_HANDLER_NAME}.tmp"
     targets_buffer = TargetsBuffer(recovery_file)
 
+    clp_connection_param = database_config.get_clp_connection_params_and_type()
+    table_prefix = clp_connection_param["table_prefix"]
     sql_adapter = SQL_Adapter(database_config)
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
@@ -119,9 +117,12 @@ async def archive_retention(
     storage_engine = clp_config.package.storage_engine
     validate_storage_type(archive_output_config, storage_engine)
 
-    job_frequency_minutes = clp_config.retention_cleaner.job_frequency.archives
+    job_frequency_secs = clp_config.retention_cleaner.job_frequency.archives * MIN_TO_SECONDS
+    recovery_file = clp_config.logs_directory / f"{ARCHIVES_RETENTION_HANDLER_NAME}.tmp"
+
+    # Start retention loop
     while True:
         _handle_archive_retention(
-            archive_output_config, storage_engine, clp_config.database, clp_config.logs_directory
+            archive_output_config, storage_engine, clp_config.database, recovery_file
         )
-        await asyncio.sleep(job_frequency_minutes * MIN_TO_SECONDS)
+        await asyncio.sleep(job_frequency_secs)

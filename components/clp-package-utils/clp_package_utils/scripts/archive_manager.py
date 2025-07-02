@@ -159,7 +159,7 @@ def main(argv: typing.List[str]) -> int:
         return -1
 
     storage_type: StorageType = clp_config.archive_output.storage.type
-    if DEL_COMMAND == subcommand and StorageType.FS != storage_type:
+    if StorageType.FS != storage_type:
         logger.error(f"Archive deletion is not supported for storage type: {storage_type}.")
         return -1
 
