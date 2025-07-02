@@ -19,7 +19,11 @@ import styles from "./index.module.css";
  * @return
  */
 const SubmitButton = () => {
-    const {searchUiState, timeRange, queryString, updateTimelineConfig} = useSearchStore();
+    const searchUiState = useSearchStore((state) => state.searchUiState);
+    const timeRange = useSearchStore((state) => state.timeRange);
+    const queryString = useSearchStore((state) => state.queryString);
+    const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
+    const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
 
     /**
      * Submits search query.
@@ -30,7 +34,7 @@ const SubmitButton = () => {
         updateTimelineConfig(newTimelineConfig);
 
         handleQuerySubmit({
-            ignoreCase: false,
+            ignoreCase: queryIsCaseSensitive,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
             timestampBegin: timeRange[0].valueOf(),

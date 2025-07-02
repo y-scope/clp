@@ -19,15 +19,14 @@ import {computeTimelineConfig} from "./utils";
  * @return
  */
 const SearchResultsTimeline = () => {
-    const {
-        queryString,
-        updateTimeRange,
-        updateTimeRangeOption,
-        timelineConfig,
-        searchUiState,
-        updateTimelineConfig,
-        updateNumSearchResultsTimeline,
-    } = useSearchStore();
+    const queryString = useSearchStore((state) => state.queryString);
+    const updateTimeRange = useSearchStore((state) => state.updateTimeRange);
+    const updateTimeRangeOption = useSearchStore((state) => state.updateTimeRangeOption);
+    const timelineConfig = useSearchStore((state) => state.timelineConfig);
+    const searchUiState = useSearchStore((state) => state.searchUiState);
+    const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
+    const updateNumSearchResultsTimeline = useSearchStore((state) => state.updateNumSearchResultsTimeline);
+    const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
 
     const aggregationResults = useAggregationResults();
 
@@ -57,7 +56,7 @@ const SearchResultsTimeline = () => {
         }
 
         handleQuerySubmit({
-            ignoreCase: false,
+            ignoreCase: queryIsCaseSensitive,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
             timestampBegin: newTimeRange[0].valueOf(),
