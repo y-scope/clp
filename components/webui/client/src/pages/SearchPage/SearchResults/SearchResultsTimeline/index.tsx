@@ -25,7 +25,9 @@ const SearchResultsTimeline = () => {
     const timelineConfig = useSearchStore((state) => state.timelineConfig);
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
-    const updateNumSearchResultsTimeline = useSearchStore((state) => state.updateNumSearchResultsTimeline);
+    const updateNumSearchResultsTimeline = useSearchStore(
+        (state) => state.updateNumSearchResultsTimeline
+    );
     const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
 
     const aggregationResults = useAggregationResults();
