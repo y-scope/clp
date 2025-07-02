@@ -41,6 +41,7 @@ const SubmitButton = () => {
             timestampEnd: timeRange[1].valueOf(),
         });
     }, [queryString,
+        queryIsCaseSensitive,
         updateTimelineConfig,
         timeRange]);
 

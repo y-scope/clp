@@ -21,13 +21,11 @@ import {
  * @return
  */
 const QueryInput = () => {
-    const {
-        queryString,
-        queryIsCaseSensitive,
-        updateQueryString,
-        updateQueryIsCaseSensitive,
-        searchUiState,
-    } = useSearchStore();
+    const queryString = useSearchStore((state) => state.queryString);
+    const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
+    const updateQueryString = useSearchStore((state) => state.updateQueryString);
+    const updateQueryIsCaseSensitive = useSearchStore((state) => state.updateQueryIsCaseSensitive);
+    const searchUiState = useSearchStore((state) => state.searchUiState);
     const [pseudoProgress, setPseudoProgress] = useState<Nullable<number>>(null);
     const intervalIdRef = useRef<number>(0);
 
