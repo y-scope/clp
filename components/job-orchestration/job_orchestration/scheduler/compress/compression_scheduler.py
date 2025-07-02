@@ -193,7 +193,8 @@ def search_and_schedule_new_tasks(
                 dataset,
                 clp_archive_output,
             )
-            # Note: Assume we never delete a dataset.
+
+            # NOTE: This assumes we never delete a dataset
             existing_datasets.add(dataset)
 
         paths_to_compress_buffer = PathsToCompressBuffer(
