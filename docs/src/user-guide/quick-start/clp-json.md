@@ -61,7 +61,7 @@ To compress logs from object storage, see
 
 ### Sample logs
 
-For some sample logs, check out the open-source [datasets](../resources-datasets).
+For some sample logs, check out the [open-source datasets](../resources-datasets).
 
 ---
 
@@ -70,10 +70,22 @@ For some sample logs, check out the open-source [datasets](../resources-datasets
 You can search your compressed logs from CLP's [UI](#searching-from-the-ui) or the
 [command line](#searching-from-the-command-line).
 
-Queries must be in the form of a set of conditions (predicates) on key-value pairs (kv-pairs). For
-example, consider the logs in [Figure 1](#figure-1) and the query in [Figure 2](#figure-2).
+In clp-json, queries are written as a set of conditions (predicates) on key-value pairs (kv-pairs).
+For example, [Figure 1](#figure-1) shows a query that matches the first log event in
+[Figure 2](#figure-2).
 
 (figure-1)=
+:::{card}
+
+```sql
+ctx: "conn11" AND msg: "*write concern*"
+```
+
++++
+**Figure 1**: An example query.
+:::
+
+(figure-2)=
 :::{card}
 
 ```json lines
@@ -93,23 +105,12 @@ example, consider the logs in [Figure 1](#figure-1) and the query in [Figure 2](
 ```
 
 +++
-**Figure 1**: A set of JSON log events.
-:::
-
-(figure-2)=
-:::{card}
-
-```sql
-ctx: "conn11" AND msg: "*write concern*"
-```
-
-+++
-**Figure 2**: An example query.
+**Figure 2**: A set of JSON log events.
 :::
 
 The query in [Figure 2](#figure-2) will match log events that contain the kv-pair `"ctx": "conn11"`
 as well as a kv-pair with key `"msg"` and a value that matches the wildcard query
-`"*write concern*"`. This query will match the first log event in [Figure 1](#figure-1).
+`"*write concern*"`.
 
 A complete reference for clp-json's query syntax is available on the
 [JSON syntax reference page](../reference-json-search-syntax).
@@ -131,8 +132,8 @@ the following features:
    * You can click and drag to zoom into a time range, or use the time range filter in (4).
 3. The table displays the search results for your query.
 4. Clicking the <i class="fa fa-bars"></i> icon reveals additional filters for your query.
-   * The time range filter allows you to specify the period of time that matching log events must
-     be in.
+   * The time range filter allows you to specify the period of time that matching log events must be
+     in.
    * The case sensitivity filter allows you to specify whether CLP should respect the case of your
      query.
 5. Clicking the <i class="fa fa-cog"></i> icon reveals options for displaying results.
