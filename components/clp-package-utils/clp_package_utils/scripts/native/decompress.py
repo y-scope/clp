@@ -13,8 +13,8 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     Database,
-    FILES_TABLE_SUFFIX,
 )
+from clp_py_utils.clp_metadata_db_utils import get_files_table_name
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
 from job_orchestration.scheduler.job_config import (
@@ -54,8 +54,9 @@ def get_orig_file_id(db_config: Database, path: str) -> Optional[str]:
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
+        files_table_name = get_files_table_name(table_prefix, None)
         db_cursor.execute(
-            f"SELECT orig_file_id FROM `{table_prefix}{FILES_TABLE_SUFFIX}` WHERE path = (%s)",
+            f"SELECT orig_file_id FROM `{files_table_name}` WHERE path = (%s)",
             (path,),
         )
         results = db_cursor.fetchall()

@@ -248,6 +248,7 @@ function(set_clp_s_clp_dependencies_dependencies)
         CLP_NEED_BOOST
         CLP_NEED_CURL
         CLP_NEED_FMT
+        CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
         CLP_NEED_OPENSSL
         CLP_NEED_SPDLOG
