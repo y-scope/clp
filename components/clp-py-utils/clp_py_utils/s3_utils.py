@@ -344,7 +344,9 @@ def s3_delete_objects(s3_config: S3Config, object_keys: Set[str]) -> None:
     s3_client = _create_s3_client(s3_config, boto3_config)
 
     MAX_OBJECTS_PER_REQUEST = 1000
-    for chunked_keys in _iterate_by_chunk(s3_config.key_prefix, object_keys, MAX_OBJECTS_PER_REQUEST):
+    for chunked_keys in _iterate_by_chunk(
+        s3_config.key_prefix, object_keys, MAX_OBJECTS_PER_REQUEST
+    ):
         s3_client.delete_objects(
             Bucket=s3_config.bucket,
             Delete=_gen_deletion_config(chunked_keys),

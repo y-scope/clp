@@ -4,7 +4,7 @@ import pathlib
 import shutil
 import time
 from datetime import datetime
-from typing import List, Set, Union
+from typing import List, Set
 
 from bson import ObjectId
 from clp_py_utils.clp_config import (
@@ -16,10 +16,6 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import get_logging_formatter, set_logging_level
 from clp_py_utils.s3_utils import s3_delete_objects
 from job_orchestration.retention.constants import MIN_TO_SECONDS
-
-MONGODB_ID_KEY = "_id"
-# TODO: Remove this constant and use the one defined in package once PR939 is merged.
-RESULTS_METADATA_COLLECTION = "results-metadata"
 
 
 def configure_logger(
