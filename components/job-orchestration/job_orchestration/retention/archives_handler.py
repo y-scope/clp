@@ -96,14 +96,16 @@ def _get_archive_safe_expiry_epoch_msecs(
         ORDER BY creation_time ASC
         LIMIT 1
         """,
-        [archive_expiry_epoch, curr_epoch]
+        [archive_expiry_epoch, curr_epoch],
     )
 
     # Not working yet.
     row = db_cursor.fetchone()
     if row is not None:
         min_creation_time = row.get("creation_time")
-        results = int((min_creation_time.timestamp() - retention_period_secs) * SECOND_TO_MILLISECOND)
+        results = int(
+            (min_creation_time.timestamp() - retention_period_secs) * SECOND_TO_MILLISECOND
+        )
         logger.info(f"Query jobs running at {min_creation_time}")
         logger.info(f"Returning {results}")
         return results
