@@ -38,7 +38,7 @@ def _remove_expired_archives(
     db_conn,
     db_cursor,
     table_prefix: str,
-    archive_expiry_epoch_msecs: int,
+    archive_expiry_epoch_secs: int,
     targets_buffer: TargetsBuffer,
     archive_output_config: ArchiveOutput,
     dataset: Optional[str],
@@ -50,7 +50,7 @@ def _remove_expired_archives(
         WHERE end_timestamp <= %s
         AND end_timestamp != 0
         """,
-        [archive_expiry_epoch_msecs],
+        [archive_expiry_epoch_secs * SECOND_TO_MILLISECOND],
     )
 
     results = db_cursor.fetchall()
@@ -71,47 +71,51 @@ def _remove_expired_archives(
     targets_buffer.flush()
 
 
-def _get_archive_safe_expiry_epoch_msecs(
+def _get_archive_safe_expiry_epoch(
     db_cursor,
     retention_period_minutes: int,
 ) -> int:
     """
-    TODO: write docstrings
+    Calculates a safe expiration timestamp such that archives with `end_ts` less than this value are
+    guaranteed not to be searched by any running query jobs.
+
+    If no query jobs are running, the expiry time is set to `current_time - retention_period`.
+    If a query job is running and was created at `creation_time`, the query scheduler guarantees
+    that it will not search any archive whose end_ts < (creation_time - retention_period).
+    In this case, the expiry time can be safely adjusted to `creation_time - retention_period`.
+
+    Note: This function does not consider query jobs that started before
+    `current_time - retention_period`, as such long-running jobs are likely hanging.
+    Including them would prevent the expiry time from advancing.
 
     :param db_cursor: Database cursor object
     :param retention_period_minutes: Retention window in minutes
-    :return: Epoch timestamp (int) indicating the expiration cutoff
+    :return: Epoch timestamp indicating the safe expiration time (in seconds)
     """
     retention_period_secs = retention_period_minutes * MIN_TO_SECONDS
-    curr_epoch = time.time()
-    archive_expiry_epoch = curr_epoch - retention_period_secs
+    current_epoch_secs = time.time()
+    archive_expiry_epoch = current_epoch_secs - retention_period_secs
 
     db_cursor.execute(
         f"""
         SELECT id, creation_time
         FROM `{QUERY_JOBS_TABLE_NAME}`
-        WHERE {QUERY_JOBS_TABLE_NAME}.status = {QueryJobStatus.SUCCEEDED}
+        WHERE {QUERY_JOBS_TABLE_NAME}.status = {QueryJobStatus.RUNNING}
         AND {QUERY_JOBS_TABLE_NAME}.creation_time 
         BETWEEN FROM_UNIXTIME(%s) AND FROM_UNIXTIME(%s)
         ORDER BY creation_time ASC
         LIMIT 1
         """,
-        [archive_expiry_epoch, curr_epoch],
+        [archive_expiry_epoch, current_epoch_secs],
     )
 
-    # Not working yet.
     row = db_cursor.fetchone()
     if row is not None:
-        min_creation_time = row.get("creation_time")
-        results = int(
-            (min_creation_time.timestamp() - retention_period_secs) * SECOND_TO_MILLISECOND
-        )
-        logger.info(f"Query jobs running at {min_creation_time}")
-        logger.info(f"Returning {results}")
-        return results
+        job_creation_time = row.get("creation_time")
+        logger.debug(f"Discovered running query job created at {job_creation_time}")
+        return int(job_creation_time.timestamp()) - retention_period_secs
 
-    logger.info(f"No query jobs Satisfy condition, returning {archive_expiry_epoch}")
-    return int(archive_expiry_epoch * SECOND_TO_MILLISECOND)
+    return int(archive_expiry_epoch)
 
 
 def _handle_archive_retention(
@@ -128,7 +132,7 @@ def _handle_archive_retention(
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
-        archive_safe_expiry_epoch_msecs = _get_archive_safe_expiry_epoch_msecs(
+        archive_expiry_epoch = _get_archive_safe_expiry_epoch(
             db_cursor,
             archive_output_config.retention_period,
         )
@@ -139,7 +143,7 @@ def _handle_archive_retention(
                     db_conn,
                     db_cursor,
                     table_prefix,
-                    archive_safe_expiry_epoch_msecs,
+                    archive_expiry_epoch,
                     targets_buffer,
                     archive_output_config,
                     dataset,
@@ -149,7 +153,7 @@ def _handle_archive_retention(
                 db_conn,
                 db_cursor,
                 table_prefix,
-                archive_safe_expiry_epoch_msecs,
+                archive_expiry_epoch,
                 targets_buffer,
                 archive_output_config,
                 None,
