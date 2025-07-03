@@ -37,7 +37,6 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
-    fetch_existing_datasets,
     get_archive_tags_table_name,
     get_archives_table_name,
     get_files_table_name,
