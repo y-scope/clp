@@ -117,7 +117,7 @@ class DbManager {
         streamId,
         targetUncompressedSize,
     }: {
-        dataset: string;
+        dataset: string | null;
         jobType: QUERY_JOB_TYPE;
         logEventIdx: number;
         streamId: string;
@@ -134,7 +134,7 @@ class DbManager {
         } else if (QUERY_JOB_TYPE.EXTRACT_JSON === jobType) {
             jobConfig = {
                 dataset: CLP_STORAGE_ENGINE_CLP_S === settings.ClpStorageEngine ?
-                    CLP_DEFAULT_DATASET_NAME :
+                    (dataset ?? CLP_DEFAULT_DATASET_NAME) :
                     null,
                 archive_id: streamId,
                 target_chunk_size: targetUncompressedSize,
