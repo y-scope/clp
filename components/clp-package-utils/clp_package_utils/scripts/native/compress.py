@@ -4,13 +4,17 @@ import logging
 import pathlib
 import sys
 import time
-import typing
 from contextlib import closing
-from typing import List
+from typing import List, Optional, Union
 
 import brotli
 import msgpack
-from clp_py_utils.clp_config import CLPConfig, COMPRESSION_JOBS_TABLE_NAME
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
+    CLPConfig,
+    COMPRESSION_JOBS_TABLE_NAME,
+    StorageEngine,
+)
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.s3_utils import parse_s3_url
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -132,21 +136,29 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
 
 
 def _generate_clp_io_config(
-    clp_config: CLPConfig, logs_to_compress: List[str], parsed_args: argparse.Namespace
-) -> typing.Union[S3InputConfig, FsInputConfig]:
-    input_type = clp_config.logs_input.type
+    clp_config: CLPConfig,
+    logs_to_compress: List[str],
+    parsed_args: argparse.Namespace,
+) -> Union[S3InputConfig, FsInputConfig]:
+    dataset = (
+        CLP_DEFAULT_DATASET_NAME
+        if StorageEngine.CLP_S == clp_config.package.storage_engine
+        else None
+    )
 
+    input_type = clp_config.logs_input.type
     if InputType.FS == input_type:
         if len(logs_to_compress) == 0:
-            raise ValueError(f"No input paths given.")
+            raise ValueError("No input paths given.")
         return FsInputConfig(
+            dataset=dataset,
             paths_to_compress=logs_to_compress,
             timestamp_key=parsed_args.timestamp_key,
             path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
         )
     elif InputType.S3 == input_type:
         if len(logs_to_compress) == 0:
-            raise ValueError(f"No URLs given.")
+            raise ValueError("No URLs given.")
         elif len(logs_to_compress) != 1:
             raise ValueError(f"Too many URLs: {len(logs_to_compress)} > 1")
 
@@ -154,6 +166,7 @@ def _generate_clp_io_config(
         region_code, bucket_name, key_prefix = parse_s3_url(s3_url)
         aws_authentication = clp_config.logs_input.aws_authentication
         return S3InputConfig(
+            dataset=dataset,
             region_code=region_code,
             bucket=bucket_name,
             key_prefix=key_prefix,

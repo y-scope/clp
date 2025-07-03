@@ -20,6 +20,10 @@ vars:
   # Library names
   G_FMT_LIB_NAME: "fmt"
 
+  # Antlr
+  G_ANTLR_VERSION: "4.13.2"
+  G_ANTLR_JAR_FILE: "{{.G_DEPS_CORE_DIR}}/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
+
 tasks:
   default:
     deps:
@@ -46,23 +50,24 @@ tasks:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
-          FILE_SHA256: "de0600b505545f1bceb7ff5725941035f7c1dc875d08249d9b6d679e3ba77f26"
-          OUTPUT_DIR: "{{.G_LOG_VIEWER_WEBUI_SRC_DIR}}/yscope-log-viewer"
+          FILE_SHA256: "d2becd90fc4a4e5660013af15a4f718bfb7e0c7fb86bdf6b8a464f134fe2fdb2"
+          OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer"
           TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
-          URL: "https://github.com/y-scope/yscope-log-viewer/archive/969ff35.tar.gz"
+          URL: "https://github.com/y-scope/yscope-log-viewer/archive/07cf097.tar.gz"
 
   core-all-parallel:
     internal: true
     run: "once"
     deps:
       - task: "absl"
-      - task: "antlr"
+      - task: "antlr-jar"
+      - task: "antlr-runtime"
       - task: "catch2"
       - task: "date"
       - task: "fmt"
       - task: "log-surgeon"
+      - task: "mongocxx"
       - task: "nlohmann_json"
-      - task: "outcome"
       - task: "simdjson"
       - task: "spdlog"
       - task: "sqlite3"
@@ -81,17 +86,15 @@ tasks:
             - "-DCMAKE_CXX_STANDARD=20"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           LIB_NAME: "absl"
-          TARBALL_SHA256: "987ce98f02eefbaf930d6e38ab16aa05737234d7afbab2d5c4ea7adbe50c28ed"
-          TARBALL_URL: "https://github.com/abseil/abseil-cpp/archive/refs/tags/20230802.1.tar.gz"
+          TARBALL_SHA256: "7262daa7c1711406248c10f41026d685e88223bc92817d16fb93c19adb57f669"
+          TARBALL_URL: "https://github.com/abseil/abseil-cpp/releases/download/20250512.0/\
+                        abseil-cpp-20250512.0.tar.gz"
 
-  antlr:
+  antlr-jar:
     internal: true
     vars:
-      DEP_NAME: "antlr"
-
-      # Paths
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.DEP_NAME}}.md5"
-      OUTPUT_FILE: "{{.G_DEPS_CORE_DIR}}/antlr-4.13.1-complete.jar"
+      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/antlr-jar.md5"
+      OUTPUT_FILE: "{{.G_ANTLR_JAR_FILE}}"
     run: "once"
     deps:
       - task: "yscope-dev-utils:checksum:validate"
@@ -103,13 +106,9 @@ tasks:
     cmds:
       - task: "yscope-dev-utils:remote:curl"
         vars:
-          FILE_SHA256: "bc13a9c57a8dd7d5196888211e5ede657cb64a3ce968608697e4f668251a8487"
+          FILE_SHA256: "eae2dfa119a64327444672aff63e9ec35a20180dc5b8090b7a6ab85125df4d76"
           OUTPUT_FILE: "{{.OUTPUT_FILE}}"
-          URL: "https://www.antlr.org/download/antlr-4.13.1-complete.jar"
-      - >-
-        echo "set(
-        ANTLR_EXECUTABLE \"{{.OUTPUT_FILE}}\"
-        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.DEP_NAME}}.cmake"
+          URL: "https://www.antlr.org/download/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
 
       # This command must be last
       - task: "yscope-dev-utils:checksum:compute"
@@ -117,6 +116,64 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS:
             - "{{.OUTPUT_FILE}}"
+
+  antlr-runtime:
+    internal: true
+    run: "once"
+    vars:
+      LIB_NAME: "antlr4-runtime"
+
+      # Paths
+      BUILD_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-build"
+      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+      INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install"
+      SOURCE_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+    deps:
+      - task: "utils:init"
+      - task: "yscope-dev-utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
+
+    # NOTE: We can't use `yscope-dev-utils:cmake:install-remote-tar` (and by extension
+    # `utils:install-remote-cmake-lib`) since it doesn't yet support the `INCLUDE_PATTERNS` and
+    # `NUM_COMPONENTS_TO_STRIP` parameters.
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          FILE_SHA256: "9f18272a9b32b622835a3365f850dd1063d60f5045fb1e12ce475ae6e18a35bb"
+          INCLUDE_PATTERNS: ["*/runtime/Cpp"]
+          NUM_COMPONENTS_TO_STRIP: 3
+          OUTPUT_DIR: "{{.SOURCE_DIR}}"
+          URL: "https://github.com/antlr/antlr4/archive/refs/tags/{{.G_ANTLR_VERSION}}.tar.gz"
+      - task: "yscope-dev-utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          EXTRA_ARGS:
+            - "-DANTLR4_INSTALL=ON"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+
+            # Set CMP0135 so that extracted files use the current timestamp as their modification
+            # timestamp, which ensures the library gets rebuilt if the extracted files change.
+            - "-DCMAKE_POLICY_DEFAULT_CMP0135=NEW"
+          SOURCE_DIR: "{{.SOURCE_DIR}}"
+      - task: "yscope-dev-utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
+      - task: "yscope-dev-utils:cmake:install"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+          NAME: "{{.LIB_NAME}}"
+
+      # This command must be last
+      - task: "yscope-dev-utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
 
   catch2:
     internal: true
@@ -173,6 +230,26 @@ tasks:
           TARBALL_SHA256: "169b56714b620c3f8f07bf7975aba8573b9bd25e423e5c4f0cc9b52450a2403d"
           TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/f801a3f.tar.gz"
 
+  mongocxx:
+    internal: true
+    vars:
+      VERSION: "r3.10.2"
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_SHARED_AND_STATIC_LIBS=ON"
+            - "-DBUILD_SHARED_LIBS_WITH_STATIC_MONGOC=ON"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DENABLE_TESTS=OFF"
+            - "-DENABLE_UNINSTALL=OFF"
+          LIB_NAME: "mongocxx"
+          TARBALL_SHA256: "52b99b2866019b5ea25d15c5a39e2a88c70fe1259c40f1091deff8bfae0194be"
+          TARBALL_URL: "https://github.com/mongodb/mongo-cxx-driver/releases/download/{{.VERSION}}\
+          /mongo-cxx-driver-{{.VERSION}}.tar.gz"
+
   nlohmann_json:
     internal: true
     run: "once"
@@ -191,40 +268,6 @@ tasks:
           # by some developers' firewalls. The contents of the former are a superset of the latter.
           TARBALL_URL: "https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz"
 
-  outcome:
-    internal: true
-    vars:
-      LIB_NAME: "outcome"
-
-      # Paths
-      INSTALL_INCLUDE_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install/include"
-      INSTALL_SYMLINK: "{{.INSTALL_INCLUDE_DIR}}/{{.LIB_NAME}}"
-      SRC_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
-    run: "once"
-    deps:
-      - task: "utils:init"
-    cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-tar"
-        vars:
-          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "14e15bda4e7c26ee42b0329d7ff746235f67bda084305c9d61297e9a521deb18"
-          INCLUDE_PATTERNS:
-            - "*/single-header"
-          OUTPUT_DIR: "{{.SRC_DIR}}"
-
-          # NOTE: We use the GitHub-generated source tarball for this version rather than the
-          # release tarball, since the latter is served from githubusercontent.com which is blocked
-          # by some developers' firewalls. The source files we use are identical between the two
-          # tarballs.
-          URL: "https://github.com/ned14/outcome/archive/refs/tags/v2.2.12.tar.gz"
-      - "mkdir -p '{{.INSTALL_INCLUDE_DIR}}'"
-      - "rm -f '{{.INSTALL_SYMLINK}}'"
-      - "ln -s '{{.SRC_DIR}}/single-header' '{{.INSTALL_SYMLINK}}'"
-      - >-
-        echo "set(
-        CLP_OUTCOME_INCLUDE_DIRECTORY \"{{.INSTALL_INCLUDE_DIR}}\"
-        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
-
   simdjson:
     internal: true
     run: "once"
@@ -235,8 +278,8 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           LIB_NAME: "simdjson"
-          TARBALL_SHA256: "afd8201cfb1abe927737d876441bb1f21730a9ee6078a1b8c6174e6463981fa3"
-          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.6.3.tar.gz"
+          TARBALL_SHA256: "07a1bb3587aac18fd6a10a83fe4ab09f1100ab39f0cb73baea1317826b9f9e0d"
+          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.13.0.tar.gz"
 
   spdlog:
     internal: true
@@ -341,9 +384,9 @@ tasks:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "d47c703c0d1c5e755c1bfb984b68c85967683a09dadbe23772d9eb69f822d040"
+          FILE_SHA256: "36fa0e9d96b7307ca92482343d6ba1091c5576370676e6d423cce32c20e34a3d"
           OUTPUT_DIR: "{{.YSTDLIB_OUTPUT_DIR}}"
-          URL: "https://github.com/y-scope/ystdlib-cpp/archive/2ac1757.tar.gz"
+          URL: "https://github.com/y-scope/ystdlib-cpp/archive/d80cf86.tar.gz"
       - >-
         echo "set(
         CLP_YSTDLIB_SOURCE_DIRECTORY \"{{.YSTDLIB_OUTPUT_DIR}}\"

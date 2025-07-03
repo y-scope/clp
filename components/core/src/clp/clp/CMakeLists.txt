@@ -165,33 +165,35 @@ set(
         utils.hpp
 )
 
-add_executable(clp ${CLP_SOURCES})
-target_compile_features(clp PRIVATE cxx_std_20)
-target_include_directories(clp
-        PRIVATE
-        "${CLP_OUTCOME_INCLUDE_DIRECTORY}"
-        "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
-)
-target_link_libraries(clp
-        PRIVATE
-        Boost::filesystem Boost::program_options
-        date::date
-        fmt::fmt
-        log_surgeon::log_surgeon
-        spdlog::spdlog
-        ${sqlite_LIBRARY_DEPENDENCIES}
-        LibArchive::LibArchive
-        MariaDBClient::MariaDBClient
-        nlohmann_json::nlohmann_json
-        ${STD_FS_LIBS}
-        clp::string_utils
-        yaml-cpp
-        ystdlib::containers
-        ZStd::ZStd
-)
-# Put the built executable at the root of the build directory
-set_target_properties(
-        clp
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
-)
+if(CLP_BUILD_EXECUTABLES)
+        add_executable(clp ${CLP_SOURCES})
+        target_compile_features(clp PRIVATE cxx_std_20)
+        target_include_directories(clp
+                PRIVATE
+                "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
+        )
+        target_link_libraries(clp
+                PRIVATE
+                Boost::filesystem Boost::program_options
+                date::date
+                fmt::fmt
+                log_surgeon::log_surgeon
+                spdlog::spdlog
+                ${sqlite_LIBRARY_DEPENDENCIES}
+                LibArchive::LibArchive
+                MariaDBClient::MariaDBClient
+                nlohmann_json::nlohmann_json
+                ${STD_FS_LIBS}
+                clp::string_utils
+                yaml-cpp
+                ystdlib::containers
+                ystdlib::error_handling
+                ZStd::ZStd
+        )
+        # Put the built executable at the root of the build directory
+        set_target_properties(
+                clp
+                PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+        )
+endif()

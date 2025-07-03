@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16.3)
+cmake_minimum_required(VERSION 3.21)
 
 # Toolchain setup must come before the first project() call in the entire CMake buildsystem.
 # If CLP is not the top-level project, the following setup has no effect.
@@ -8,6 +8,12 @@ setup_toolchains()
 project(CLP LANGUAGES CXX C)
 
 validate_compiler_versions()
+
+# Include options for CLP build
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Options/options.cmake")
+
+validate_and_setup_all_clp_dependency_flags()
+convert_clp_dependency_properties_to_variables()
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
@@ -66,7 +72,15 @@ if (CLP_USE_STATIC_LIBS)
     if (APPLE)
         set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "macOS")
     elseif (EXISTS "/etc/centos-release")
-        set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
+        # NOTE:
+        # 1. We don't support static linking on any CentOS-based distro except manylinux_2_28 (which
+        #    shows up as "AlmaLinux").
+        # 2. A release called "AlmaLinux" doesn't guarantee we're running on a manylinux distro, but
+        #    we can improve this check when someone reports an issue.
+        file(READ "/etc/centos-release" CENTOS_RELEASE_CONTENT)
+        if(NOT "${CENTOS_RELEASE_CONTENT}" MATCHES "AlmaLinux")
+            set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
+        endif()
     endif()
 
     if (DEFINED CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM)
@@ -113,169 +127,203 @@ if(PROJECT_IS_TOP_LEVEL)
     endif()
 endif()
 
-find_package(absl REQUIRED)
-if (absl_FOUND)
-    message(STATUS "Found absl ${absl_VERSION}")
+if(CLP_NEED_ABSL)
+    find_package(absl REQUIRED)
+    if (absl_FOUND)
+        message(STATUS "Found absl ${absl_VERSION}")
+    endif()
 endif()
 
 # Find and setup ANTLR Library
-# We build and link to the static library
-find_package(ANTLR REQUIRED)
-if (ANTLR_FOUND)
-    message(STATUS "Found ANTLR ${ANTLR_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find libraries for ANTLR ${ANTLR4_TAG}")
+if(CLP_NEED_ANTLR)
+    find_package(antlr4-runtime REQUIRED)
+    if (antlr4-runtime_FOUND)
+        message(STATUS "Found antlr4-runtime ${antlr4-runtime_VERSION}")
+    endif()
 endif()
 
 # Find and setup Boost Library
-if(CLP_USE_STATIC_LIBS)
-    set(Boost_USE_STATIC_LIBS ON)
-endif()
-find_package(Boost 1.81 REQUIRED iostreams program_options filesystem system regex url)
-if(Boost_FOUND)
-    message(STATUS "Found Boost ${Boost_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
-endif()
-
-find_package(Catch2 REQUIRED)
-if (Catch2_FOUND)
-    message(STATUS "Found Catch2 ${Catch2_VERSION}")
+if(CLP_NEED_BOOST)
+    if(CLP_USE_STATIC_LIBS)
+        set(Boost_USE_STATIC_LIBS ON)
+    endif()
+    find_package(Boost 1.81 REQUIRED iostreams program_options filesystem system regex url)
+    if(Boost_FOUND)
+        message(STATUS "Found Boost ${Boost_VERSION}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
+    endif()
 endif()
 
-find_package(date REQUIRED)
-if (date_FOUND)
-    message(STATUS "Found date ${date_VERSION}")
+if(CLP_NEED_CATCH2)
+    find_package(Catch2 REQUIRED)
+    if (Catch2_FOUND)
+        message(STATUS "Found Catch2 ${Catch2_VERSION}")
+    endif()
 endif()
 
-find_package(fmt REQUIRED)
-if(fmt_FOUND)
-    message(STATUS "Found fmt ${fmt_VERSION}")
+if(CLP_NEED_DATE)
+    find_package(date REQUIRED)
+    if (date_FOUND)
+        message(STATUS "Found date ${date_VERSION}")
+    endif()
 endif()
 
-find_package(log_surgeon REQUIRED)
-if(log_surgeon_FOUND)
-    message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
+if(CLP_NEED_FMT)
+    find_package(fmt REQUIRED)
+    if(fmt_FOUND)
+        message(STATUS "Found fmt ${fmt_VERSION}")
+    endif()
 endif()
 
-find_package(nlohmann_json REQUIRED)
-if(nlohmann_json_FOUND)
-    message(STATUS "Found nlohmann_json ${nlohmann_json_VERSION}")
+if(CLP_NEED_LOG_SURGEON)
+    find_package(log_surgeon REQUIRED)
+    if(log_surgeon_FOUND)
+        message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
+    endif()
 endif()
 
-find_package(simdjson REQUIRED)
-if(simdjson_FOUND)
-    message(STATUS "Found simdjson ${simdjson_VERSION}")
+if(CLP_NEED_NLOHMANN_JSON)
+    find_package(nlohmann_json REQUIRED)
+    if(nlohmann_json_FOUND)
+        message(STATUS "Found nlohmann_json ${nlohmann_json_VERSION}")
+    endif()
 endif()
 
-find_package(spdlog REQUIRED)
-if(spdlog_FOUND)
-    message(STATUS "Found spdlog ${spdlog_VERSION}")
+if(CLP_NEED_SIMDJSON)
+    find_package(simdjson REQUIRED)
+    if(simdjson_FOUND)
+        message(STATUS "Found simdjson ${simdjson_VERSION}")
+    endif()
+endif()
+
+if(CLP_NEED_SPDLOG)
+    find_package(spdlog REQUIRED)
+    if(spdlog_FOUND)
+        message(STATUS "Found spdlog ${spdlog_VERSION}")
+    endif()
 endif()
 
 # Find and setup libarchive
-if(CLP_USE_STATIC_LIBS)
-    set(LibArchive_USE_STATIC_LIBS ON)
-endif()
-find_package(LibArchive REQUIRED)
-if(LibArchive_FOUND)
-    message(STATUS "Found LibArchive ${LibArchive_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
+if(CLP_NEED_LIBARCHIVE)
+    if(CLP_USE_STATIC_LIBS)
+        set(LibArchive_USE_STATIC_LIBS ON)
+    endif()
+    find_package(LibArchive REQUIRED)
+    if(LibArchive_FOUND)
+        message(STATUS "Found LibArchive ${LibArchive_VERSION}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
+    endif()
 endif()
 
 # Find and setup libcurl
 # By default, CURL does not provide static libraries
-find_package(CURL 7.68.0 REQUIRED)
-if(CURL_FOUND)
-    message(STATUS "Found CURL ${CURL_VERSION_STRING}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
+if(CLP_NEED_CURL)
+    find_package(CURL 7.61.1 REQUIRED)
+    if(CURL_FOUND)
+        message(STATUS "Found CURL ${CURL_VERSION_STRING}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
+    endif()
 endif()
 
 # Find OpenSSL
-find_package(OpenSSL REQUIRED)
-if (OPENSSL_FOUND)
-    message(STATUS "Found OpenSSL (${OPENSSL_VERSION})")
-else ()
-    message(FATAL_ERROR "OpenSSL not found")
-endif ()
+if(CLP_NEED_OPENSSL)
+    find_package(OpenSSL REQUIRED)
+    if(OPENSSL_FOUND)
+        message(STATUS "Found OpenSSL (${OPENSSL_VERSION})")
+    else()
+        message(FATAL_ERROR "OpenSSL not found")
+    endif()
+endif()
 
 # Find and setup MariaDBClient library
-if(CLP_USE_STATIC_LIBS)
-    # NOTE: We can't statically link to MariaDBClient since it's GPL
-    message(AUTHOR_WARNING "MariaDBClient cannot be statically linked due to its license.")
-endif()
-find_package(MariaDBClient 3.1.0 REQUIRED)
-if(MariaDBClient_FOUND)
-    message(STATUS "Found MariaDBClient ${MariaDBClient_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for MariaDBClient")
+if(CLP_NEED_MARIADB)
+    if(CLP_USE_STATIC_LIBS)
+        # NOTE: We can't statically link to MariaDBClient since it's GPL
+        message(AUTHOR_WARNING "MariaDBClient cannot be statically linked due to its license.")
+    endif()
+    find_package(MariaDBClient 3.1.0 REQUIRED)
+    if(MariaDBClient_FOUND)
+        message(STATUS "Found MariaDBClient ${MariaDBClient_VERSION}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for MariaDBClient")
+    endif()
 endif()
 
 # Find and setup mongocxx
-if(CLP_USE_STATIC_LIBS)
-    set(MONGOCXX_TARGET mongo::mongocxx_static)
-else()
-    set(MONGOCXX_TARGET mongo::mongocxx_shared)
-endif()
-
-find_package(mongocxx REQUIRED)
-if(mongocxx_FOUND)
+if(CLP_NEED_MONGOCXX)
+    find_package(mongocxx REQUIRED)
     message(STATUS "Found mongocxx ${mongocxx_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for mongocxx")
+    if(CLP_USE_STATIC_LIBS)
+        set(MONGOCXX_TARGET mongo::mongocxx_static)
+    else()
+        set(MONGOCXX_TARGET mongo::mongocxx_shared)
+    endif()
 endif()
 
 # Find and setup msgpack
-find_package(msgpack-cxx 7.0.0 REQUIRED)
-if(msgpack-cxx_FOUND)
-    message(STATUS "Found msgpack-cxx ${msgpack-cxx_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find msgpack-cxx")
+if(CLP_NEED_MSGPACKCXX)
+    find_package(msgpack-cxx 7.0.0 REQUIRED)
+    if(msgpack-cxx_FOUND)
+        message(STATUS "Found msgpack-cxx ${msgpack-cxx_VERSION}")
+    else()
+        message(FATAL_ERROR "Could not find msgpack-cxx")
+    endif()
 endif()
 
 find_package(Threads REQUIRED)
 
-find_package(yaml-cpp REQUIRED)
-if(yaml-cpp_FOUND)
-    message(STATUS "Found yaml-cpp ${yaml-cpp_VERSION}")
+if(CLP_NEED_YAMLCPP)
+    find_package(yaml-cpp REQUIRED)
+    if(yaml-cpp_FOUND)
+        message(STATUS "Found yaml-cpp ${yaml-cpp_VERSION}")
+    endif()
 endif()
 
 # Add ystdlib
-set(YSTDLIB_CPP_BUILD_TESTING OFF)
-add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
+if(CLP_NEED_YSTDLIB)
+    set(YSTDLIB_CPP_BUILD_TESTING OFF)
+    add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
+endif()
 
 # Find and setup ZStd Library
-if(CLP_USE_STATIC_LIBS)
-    set(ZStd_USE_STATIC_LIBS ON)
-endif()
-find_package(ZStd 1.4.4 REQUIRED)
-if(ZStd_FOUND)
-    message(STATUS "Found ZStd ${ZStd_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
+if(CLP_NEED_ZSTD)
+    if(CLP_USE_STATIC_LIBS)
+        set(ZStd_USE_STATIC_LIBS ON)
+    endif()
+    find_package(ZStd 1.4.4 REQUIRED)
+    if(ZStd_FOUND)
+        message(STATUS "Found ZStd ${ZStd_VERSION}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
+    endif()
 endif()
 
 # Find and setup LZMA Library
 # TODO: Add a script in ./cmake/Modules to properly import LZMA in find_package()'s module mode
-if(CLP_USE_STATIC_LIBS)
-    set(LIBLZMA_USE_STATIC_LIBS ON)
+if(CLP_NEED_LZMA)
+    if(CLP_USE_STATIC_LIBS)
+        set(LIBLZMA_USE_STATIC_LIBS ON)
+    endif()
+    find_package(LibLZMA REQUIRED)
+    if(LIBLZMA_FOUND)
+        message(STATUS "Found Lzma ${LIBLZMA_VERSION_STRING}")
+        message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
+        message(STATUS "Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
+    endif()
+    include_directories(${LIBLZMA_INCLUDE_DIRS})
 endif()
-find_package(LibLZMA REQUIRED)
-if(LIBLZMA_FOUND)
-    message(STATUS "Found Lzma ${LIBLZMA_VERSION_STRING}")
-    message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
-    message(STATUS "Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
-endif()
-include_directories(${LIBLZMA_INCLUDE_DIRS})
 
 # sqlite dependencies
-set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
-include(cmake/Modules/FindLibraryDependencies.cmake)
-FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
+if(CLP_NEED_SQLITE)
+    set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
+    include(cmake/Modules/FindLibraryDependencies.cmake)
+    FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
+endif()
 
 add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
@@ -341,6 +389,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/search/clp_search/Grep.hpp
     src/clp_s/search/clp_search/Query.cpp
     src/clp_s/search/clp_search/Query.hpp
+    src/clp_s/search/EvaluateRangeIndexFilters.cpp
+    src/clp_s/search/EvaluateRangeIndexFilters.hpp
     src/clp_s/search/EvaluateTimestampIndex.cpp
     src/clp_s/search/EvaluateTimestampIndex.hpp
     src/clp_s/search/Output.cpp
@@ -637,6 +687,7 @@ set(SOURCE_FILES_unitTest
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedFileReader.cpp
+        tests/test-clp_s-delta-encode-log-order.cpp
         tests/test-clp_s-end_to_end.cpp
         tests/test-clp_s-range_index.cpp
         tests/test-clp_s-search.cpp
@@ -669,46 +720,48 @@ set(SOURCE_FILES_unitTest
         tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
         )
-add_executable(unitTest
-        ${SOURCE_FILES_unitTest}
-        ${SOURCE_FILES_clp_s_unitTest}
-        ${SOURCE_FILES_reducer_unitTest}
-        )
-target_include_directories(unitTest
-        PRIVATE
-        ${CLP_OUTCOME_INCLUDE_DIRECTORY}
-        ${CLP_SQLITE3_INCLUDE_DIRECTORY}
-        )
-target_link_libraries(unitTest
-        PRIVATE
-        absl::flat_hash_map
-        Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
-        Catch2::Catch2
-        ${CURL_LIBRARIES}
-        clp_s::search::ast
-        clp_s::search::kql
-        clp_s::search::sql
-        clp_s::timestamp_pattern
-        date::date
-        fmt::fmt
-        log_surgeon::log_surgeon
-        LibArchive::LibArchive
-        MariaDBClient::MariaDBClient
-        ${MONGOCXX_TARGET}
-        nlohmann_json::nlohmann_json
-        simdjson::simdjson
-        spdlog::spdlog
-        OpenSSL::Crypto
-        ${sqlite_LIBRARY_DEPENDENCIES}
-        ${STD_FS_LIBS}
-        clp::regex_utils
-        clp::string_utils
-        yaml-cpp
-        ystdlib::containers
-        ystdlib::error_handling
-        ${LIBLZMA_LIBRARIES}
-        ZStd::ZStd
-        )
-target_compile_features(unitTest
-        PRIVATE cxx_std_20
-        )
+
+if(CLP_BUILD_TESTING)
+    add_executable(unitTest
+            ${SOURCE_FILES_unitTest}
+            ${SOURCE_FILES_clp_s_unitTest}
+            ${SOURCE_FILES_reducer_unitTest}
+            )
+    target_include_directories(unitTest
+            PRIVATE
+            ${CLP_SQLITE3_INCLUDE_DIRECTORY}
+            )
+    target_link_libraries(unitTest
+            PRIVATE
+            absl::flat_hash_map
+            Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
+            Catch2::Catch2
+            ${CURL_LIBRARIES}
+            clp_s::search::ast
+            clp_s::search::kql
+            clp_s::search::sql
+            clp_s::timestamp_pattern
+            date::date
+            fmt::fmt
+            log_surgeon::log_surgeon
+            LibArchive::LibArchive
+            MariaDBClient::MariaDBClient
+            ${MONGOCXX_TARGET}
+            nlohmann_json::nlohmann_json
+            simdjson::simdjson
+            spdlog::spdlog
+            OpenSSL::Crypto
+            ${sqlite_LIBRARY_DEPENDENCIES}
+            ${STD_FS_LIBS}
+            clp::regex_utils
+            clp::string_utils
+            yaml-cpp
+            ystdlib::containers
+            ystdlib::error_handling
+            ${LIBLZMA_LIBRARIES}
+            ZStd::ZStd
+            )
+    target_compile_features(unitTest
+            PRIVATE cxx_std_20
+            )
+endif()

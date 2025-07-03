@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <nlohmann/json_fwd.hpp>
-#include <outcome/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../time_types.hpp"
 #include "SchemaTree.hpp"
@@ -48,7 +48,7 @@ public:
             NodeIdValuePairs auto_gen_node_id_value_pairs,
             NodeIdValuePairs user_gen_node_id_value_pairs,
             UtcOffset utc_offset
-    ) -> OUTCOME_V2_NAMESPACE::std_result<KeyValuePairLogEvent>;
+    ) -> ystdlib::error_handling::Result<KeyValuePairLogEvent>;
 
     // Disable copy constructor and assignment operator
     KeyValuePairLogEvent(KeyValuePairLogEvent const&) = delete;
@@ -86,7 +86,7 @@ public:
      * - Forwards `get_schema_subtree_bitmap`'s return values.
      */
     [[nodiscard]] auto get_auto_gen_keys_schema_subtree_bitmap() const
-            -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>>;
+            -> ystdlib::error_handling::Result<std::vector<bool>>;
 
     /**
      * @return A result containing a bitmap where every bit corresponds to the ID of a node in the
@@ -96,7 +96,7 @@ public:
      * - Forwards `get_schema_subtree_bitmap`'s return values.
      */
     [[nodiscard]] auto get_user_gen_keys_schema_subtree_bitmap() const
-            -> OUTCOME_V2_NAMESPACE::std_result<std::vector<bool>>;
+            -> ystdlib::error_handling::Result<std::vector<bool>>;
 
     [[nodiscard]] auto get_utc_offset() const -> UtcOffset { return m_utc_offset; }
 
@@ -111,7 +111,7 @@ public:
      *   - Forwards `serialize_node_id_value_pairs_to_json`'s return values on failure.
      */
     [[nodiscard]] auto serialize_to_json() const
-            -> OUTCOME_V2_NAMESPACE::std_result<std::pair<nlohmann::json, nlohmann::json>>;
+            -> ystdlib::error_handling::Result<std::pair<nlohmann::json, nlohmann::json>>;
 
 private:
     // Constructor

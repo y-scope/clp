@@ -151,32 +151,34 @@ set(
         ../../reducer/types.hpp
 )
 
-add_executable(clo ${CLO_SOURCES} ${REDUCER_SOURCES})
-target_compile_features(clo PRIVATE cxx_std_20)
-target_include_directories(clo
-        PRIVATE
-        "${CLP_OUTCOME_INCLUDE_DIRECTORY}"
-        "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
-)
-target_link_libraries(clo
-        PRIVATE
-        Boost::filesystem Boost::program_options
-        date::date
-        fmt::fmt
-        log_surgeon::log_surgeon
-        ${MONGOCXX_TARGET}
-        msgpack-cxx
-        nlohmann_json::nlohmann_json
-        spdlog::spdlog
-        ${sqlite_LIBRARY_DEPENDENCIES}
-        ${STD_FS_LIBS}
-        clp::string_utils
-        ystdlib::containers
-        ZStd::ZStd
-)
-# Put the built executable at the root of the build directory
-set_target_properties(
-        clo
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
-)
+if(CLP_BUILD_EXECUTABLES)
+        add_executable(clo ${CLO_SOURCES} ${REDUCER_SOURCES})
+        target_compile_features(clo PRIVATE cxx_std_20)
+        target_include_directories(clo
+                PRIVATE
+                "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
+        )
+        target_link_libraries(clo
+                PRIVATE
+                Boost::filesystem Boost::program_options
+                date::date
+                fmt::fmt
+                log_surgeon::log_surgeon
+                ${MONGOCXX_TARGET}
+                msgpack-cxx
+                nlohmann_json::nlohmann_json
+                spdlog::spdlog
+                ${sqlite_LIBRARY_DEPENDENCIES}
+                ${STD_FS_LIBS}
+                clp::string_utils
+                ystdlib::containers
+                ystdlib::error_handling
+                ZStd::ZStd
+        )
+        # Put the built executable at the root of the build directory
+        set_target_properties(
+                clo
+                PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+        )
+endif()

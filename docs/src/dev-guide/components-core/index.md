@@ -35,21 +35,21 @@ The task will download, build, and install (within the build directory) the foll
 
 | Library                                                               | Version/commit |
 |-----------------------------------------------------------------------|----------------|
-| [abseil-cpp](https://github.com/abseil/abseil-cpp)                    | 20230802.1     |
-| [ANTLR](https://www.antlr.org)                                        | v4.13.1        |
+| [abseil-cpp](https://github.com/abseil/abseil-cpp)                    | 20250512.0     |
+| [ANTLR](https://www.antlr.org)                                        | v4.13.2        |
 | [Catch2](https://github.com/catchorg/Catch2.git)                      | v2.13.7        |
 | [date](https://github.com/HowardHinnant/date.git)                     | v3.0.1         |
 | [fmt](https://github.com/fmtlib/fmt)                                  | v8.0.1         |
 | [json](https://github.com/nlohmann/json.git)                          | v3.11.3        |
 | [log-surgeon](https://github.com/y-scope/log-surgeon)                 | f801a3f        |
-| [outcome](https://github.com/ned14/outcome)                           | v2.2.9         |
-| [simdjson](https://github.com/simdjson/simdjson)                      | v3.6.3         |
+| [mongo-cxx-driver](https://github.com/mongodb/mongo-cxx-driver)       | r3.10.2        |
+| [simdjson](https://github.com/simdjson/simdjson)                      | v3.13.0        |
 | [spdlog](https://github.com/gabime/spdlog)                            | v1.9.2         |
 | [SQLite3](https://www.sqlite.org/download.html)                       | v3.36.0        |
 | [uftcpp](https://github.com/nemtrif/utfcpp.git)                       | v4.0.6         |
 | [yaml-cpp](https://github.com/jbeder/yaml-cpp.git)                    | v0.7.0         |
 | [yscope-log-viewer](https://github.com/y-scope/yscope-log-viewer.git) | 969ff35        |
-| [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp.git)             | 2ac1757        |
+| [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp.git)             | d80cf86        |
 
 ### Environment
 

@@ -30,6 +30,7 @@
 #include "search/ast/NarrowTypes.hpp"
 #include "search/ast/OrOfAndForm.hpp"
 #include "search/ast/SearchUtils.hpp"
+#include "search/EvaluateRangeIndexFilters.hpp"
 #include "search/EvaluateTimestampIndex.hpp"
 #include "search/kql/kql.hpp"
 #include "search/Output.hpp"
@@ -119,7 +120,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
             return false;
         }
     }
-    parser.store();
+    std::ignore = parser.store();
     return true;
 }
 
@@ -170,6 +171,15 @@ bool search_archive(
     if (expr = convert_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
         SPDLOG_ERROR("Query '{}' is logically false", query);
         return false;
+    }
+
+    EvaluateRangeIndexFilters metadata_filter_pass{
+            archive_reader->get_range_index(),
+            false == command_line_arguments.get_ignore_case()
+    };
+    if (expr = metadata_filter_pass.run(expr); std::dynamic_pointer_cast<ast::EmptyExpr>(expr)) {
+        SPDLOG_INFO("No matching metadata ranges for query '{}'", query);
+        return true;
     }
 
     // skip decompressing the archive if we won't match based on
