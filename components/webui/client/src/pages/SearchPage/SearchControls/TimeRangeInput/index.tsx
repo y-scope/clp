@@ -69,8 +69,8 @@ const TimeRangeInput = () => {
             {timeRangeOption === TIME_RANGE_OPTION.CUSTOM && (
                 <DatePicker.RangePicker
 
-                    // `ShowNow` and `allowClear` options are disabled since they set the timezone
-                    //  of the range picker to the local timezone.
+                    // NOTE: We disable `showNow` and `allowClear` since they set the timezone of
+                    // the range picker to the local timezone.
                     allowClear={false}
                     className={styles["rangePicker"] || ""}
                     showNow={false}
