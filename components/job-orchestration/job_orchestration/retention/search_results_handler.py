@@ -21,19 +21,6 @@ MONGODB_ID_KEY = "_id"
 logger = get_logger(SEARCH_RESULTS_RETENTION_HANDLER_NAME)
 
 
-async def search_results_retention(
-    clp_config: CLPConfig, log_directory: pathlib, logging_level: str
-) -> None:
-    configure_logger(logger, logging_level, log_directory, SEARCH_RESULTS_RETENTION_HANDLER_NAME)
-
-    job_frequency_secs = clp_config.retention_cleaner.job_frequency.search_results * MIN_TO_SECONDS
-    while True:
-        _handle_search_results_retention(
-            clp_config.results_cache, clp_config.webui.results_metadata_collection_name
-        )
-        await asyncio.sleep(job_frequency_secs)
-
-
 def _get_latest_doc_timestamp(collection: pymongo.collection.Collection) -> int:
     latest_doc = collection.find_one(sort=[(MONGODB_ID_KEY, pymongo.DESCENDING)])
     if latest_doc:
@@ -71,3 +58,16 @@ def _handle_search_results_retention(
                 logger.debug(f"Removing search results for job: {job_id}")
                 _remove_result_metadata(results_cache_db, results_metadata_collection_name, job_id)
                 job_results_collection.drop()
+
+
+async def search_results_retention(
+    clp_config: CLPConfig, log_directory: pathlib, logging_level: str
+) -> None:
+    configure_logger(logger, logging_level, log_directory, SEARCH_RESULTS_RETENTION_HANDLER_NAME)
+
+    job_frequency_secs = clp_config.retention_cleaner.job_frequency.search_results * MIN_TO_SECONDS
+    while True:
+        _handle_search_results_retention(
+            clp_config.results_cache, clp_config.webui.results_metadata_collection_name
+        )
+        await asyncio.sleep(job_frequency_secs)

@@ -34,26 +34,6 @@ from job_orchestration.scheduler.constants import QueryJobStatus
 logger = get_logger(ARCHIVES_RETENTION_HANDLER_NAME)
 
 
-async def archive_retention(
-    clp_config: CLPConfig, log_directory: pathlib, logging_level: str
-) -> None:
-    configure_logger(logger, logging_level, log_directory, ARCHIVES_RETENTION_HANDLER_NAME)
-
-    archive_output_config = clp_config.archive_output
-    storage_engine = clp_config.package.storage_engine
-    validate_storage_type(archive_output_config, storage_engine)
-
-    job_frequency_secs = clp_config.retention_cleaner.job_frequency.archives * MIN_TO_SECONDS
-    recovery_file = clp_config.logs_directory / f"{ARCHIVES_RETENTION_HANDLER_NAME}.tmp"
-
-    # Start retention loop
-    while True:
-        _handle_archive_retention(
-            archive_output_config, storage_engine, clp_config.database, recovery_file
-        )
-        await asyncio.sleep(job_frequency_secs)
-
-
 def _remove_expired_archives(
     db_conn,
     db_cursor,
@@ -174,3 +154,23 @@ def _handle_archive_retention(
             )
         else:
             raise ValueError(f"Unsupported Storage engine: {storage_engine}")
+
+
+async def archive_retention(
+    clp_config: CLPConfig, log_directory: pathlib, logging_level: str
+) -> None:
+    configure_logger(logger, logging_level, log_directory, ARCHIVES_RETENTION_HANDLER_NAME)
+
+    archive_output_config = clp_config.archive_output
+    storage_engine = clp_config.package.storage_engine
+    validate_storage_type(archive_output_config, storage_engine)
+
+    job_frequency_secs = clp_config.retention_cleaner.job_frequency.archives * MIN_TO_SECONDS
+    recovery_file = clp_config.logs_directory / f"{ARCHIVES_RETENTION_HANDLER_NAME}.tmp"
+
+    # Start retention loop
+    while True:
+        _handle_archive_retention(
+            archive_output_config, storage_engine, clp_config.database, recovery_file
+        )
+        await asyncio.sleep(job_frequency_secs)
