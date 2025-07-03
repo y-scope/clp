@@ -17,7 +17,6 @@ from clp_py_utils.clp_config import (
     CLPConfig,
     Database,
     DB_COMPONENT_NAME,
-    fetch_existing_datasets,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
@@ -26,6 +25,7 @@ from clp_py_utils.clp_config import (
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
 )
+from clp_py_utils.clp_metadata_db_utils import fetch_existing_datasets
 from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
@@ -565,11 +565,10 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
 def validate_dataset(db_config: Database, dataset: str) -> None:
     """
     Checks if `dataset` currently exists in the metadata database.
-    :param clp_config:
+    :param db_config:
     :param dataset:
     :raise: ValueError
     """
-    db_config: Database = clp_config.database
     sql_adapter: SQL_Adapter = SQL_Adapter(db_config)
     clp_db_connection_params: dict[str, any] = db_config.get_clp_connection_params_and_type(True)
     table_prefix: str = clp_db_connection_params["table_prefix"]

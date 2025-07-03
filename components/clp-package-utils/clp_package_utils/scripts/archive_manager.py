@@ -173,9 +173,12 @@ def main(argv: typing.List[str]) -> int:
         logger.error(f"Archive deletion is not supported for storage type: {storage_type}.")
         return -1
 
+    storage_engine: StorageEngine = clp_config.package.storage_engine
     dataset = parsed_args.dataset
-    if StorageEngine.CLP_S == clp_config.package.storage_engine and dataset is None:
-        dataset = CLP_DEFAULT_DATASET_NAME
+    if StorageEngine.CLP_S == storage_engine:
+        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
+    elif dataset is None:
+        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
 
     # Validate input depending on subcommands
     if (DEL_COMMAND == subcommand and DEL_BY_FILTER_SUBCOMMAND == parsed_args.del_subcommand) or (

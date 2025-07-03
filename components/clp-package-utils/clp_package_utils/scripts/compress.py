@@ -177,8 +177,10 @@ def main(argv):
 
     storage_engine: StorageEngine = clp_config.package.storage_engine
     dataset = parsed_args.dataset
-    if StorageEngine.CLP_S == storage_engine and dataset is None:
-        dataset = CLP_DEFAULT_DATASET_NAME
+    if StorageEngine.CLP_S == storage_engine:
+        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
+    elif dataset is None:
+        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
 
     input_type = clp_config.logs_input.type
     if InputType.FS == input_type:

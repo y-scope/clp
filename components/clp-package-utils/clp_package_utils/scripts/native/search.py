@@ -299,7 +299,7 @@ def main(argv):
         return -1
 
     if parsed_args.dataset is not None:
-        validate_dataset(clp_config.dataset, parsed_args.dataset)
+        validate_dataset(clp_config.database, parsed_args.dataset)
 
     try:
         asyncio.run(
