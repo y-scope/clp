@@ -139,6 +139,11 @@ def handle_extract_stream_cmd(
             target_uncompressed_size=parsed_args.target_uncompressed_size,
         )
     elif EXTRACT_JSON_CMD == command:
+        dataset = parsed_args.dataset
+        if dataset is None:
+            logger.error("Dataset not specified for JSON extraction. Check the storage engine.")
+            return -1
+        validate_dataset(clp_config.database, dataset)
         job_type = QueryJobType.EXTRACT_JSON
         job_config = ExtractJsonJobConfig(
             dataset=parsed_args.dataset,
@@ -311,9 +316,6 @@ def main(argv):
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
-
-    if parsed_args.dataset is not None:
-        validate_dataset(clp_config.database, parsed_args.dataset)
 
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:
