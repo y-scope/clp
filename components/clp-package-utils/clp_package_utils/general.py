@@ -566,7 +566,8 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
 
 def validate_dataset(clp_config: CLPConfig, input_dataset: Optional[str]) -> Optional[str]:
     """
-    Checks if the provided dataset currently exists in the metadata database.
+    Checks if the provided dataset currently exists in the metadata database, or provides a default
+    value if the CLP_S storage engine is used.
     :param clp_config:
     :param input_dataset: Dataset from the CLI.
     :return: The validated dataset to use.
@@ -586,7 +587,6 @@ def validate_dataset(clp_config: CLPConfig, input_dataset: Optional[str]) -> Opt
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
-        dataset_exists, _ = validate_and_cache_dataset(db_cursor, table_prefix, dataset)
-        if not dataset_exists:
+        if not validate_and_cache_dataset(db_cursor, table_prefix, dataset):
             raise ValueError(f"Dataset `{dataset}` does not exist.")
     return dataset

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Set, Tuple
+from typing import Set
 
 from clp_py_utils.clp_config import (
     ArchiveOutput,
@@ -190,7 +190,7 @@ def validate_and_cache_dataset(
     table_prefix: str,
     dataset: str,
     existing_datasets: Set[str] | None = None,
-) -> Tuple[bool, Set[str]]:
+) -> bool:
     """
     Checks if the provided dataset currently exists in the metadata database and cache it locally.
     If the dataset already exists in the local cache, the database query is skipped and the cache is
@@ -198,13 +198,17 @@ def validate_and_cache_dataset(
     :param db_cursor:
     :param table_prefix:
     :param dataset:
-    :param existing_datasets:
-    :return: Whether the dataset exists, and a refreshed cache of datasets if a lookup is required.
+    :param existing_datasets: Returns a refreshed dataset cache if a database lookup is required.
+    :return: Whether the dataset exists.
     """
     if existing_datasets is not None and dataset in existing_datasets:
-        return True, existing_datasets
-    existing_datasets = fetch_existing_datasets(db_cursor, table_prefix)
-    return dataset in existing_datasets, existing_datasets
+        return True
+
+    # NOTE: This assumes we never delete a dataset.
+    new_datasets = fetch_existing_datasets(db_cursor, table_prefix)
+    if existing_datasets is not None:
+        existing_datasets.update(new_datasets)
+    return dataset in new_datasets
 
 
 def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None = None) -> None:
