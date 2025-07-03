@@ -188,8 +188,9 @@ def handle_extract_stream_cmd(
     dataset = parsed_args.dataset
     if StorageEngine.CLP_S == storage_engine:
         dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
-    elif dataset is None:
+    elif dataset is not None:
         logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+        return -1
 
     container_name = generate_container_name(str(JobType.IR_EXTRACTION))
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)

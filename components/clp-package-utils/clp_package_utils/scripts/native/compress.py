@@ -33,7 +33,6 @@ from clp_package_utils.general import (
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     get_clp_home,
     load_config_file,
-    validate_dataset,
 )
 
 logger = logging.getLogger(__file__)
@@ -231,9 +230,6 @@ def main(argv):
     except:
         logger.exception("Failed to load config.")
         return -1
-
-    if parsed_args.dataset is not None:
-        validate_dataset(clp_config.database, parsed_args.dataset)
 
     comp_jobs_dir = clp_config.logs_directory / "comp-jobs"
     comp_jobs_dir.mkdir(parents=True, exist_ok=True)
