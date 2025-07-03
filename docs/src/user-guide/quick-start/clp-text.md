@@ -91,7 +91,7 @@ Caused by: java.net.UnknownHostException: i-e5d112ea
 :::
 
 The query in [Figure 1](#figure-1) will match with the first log message, as the `?` will match the
-character "1", and the `*` match the text " from ALLOCATED to ".
+character "1", and the `*` will match the text " from ALLOCATED to ".
 
 A complete reference for clp-text's query syntax is available on the
 [syntax reference page](../reference-text-search-syntax).
