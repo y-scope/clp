@@ -108,7 +108,7 @@ ctx: "conn11" AND msg: "*write concern*"
 **Figure 2**: A set of JSON log events.
 :::
 
-The query in [Figure 2](#figure-2) will match log events that contain the kv-pair `"ctx": "conn11"`
+The query in [Figure 1](#figure-1) will match log events that contain the kv-pair `"ctx": "conn11"`
 as well as a kv-pair with key `"msg"` and a value that matches the wildcard query
 `"*write concern*"`.
 

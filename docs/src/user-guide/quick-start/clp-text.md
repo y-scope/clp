@@ -90,7 +90,7 @@ Caused by: java.net.UnknownHostException: i-e5d112ea
 **Figure 2**: A set of unstructured text log events.
 :::
 
-The query in [Figure 2](#figure-2) will match with the first log message, as the `?` will match the
+The query in [Figure 1](#figure-1) will match with the first log message, as the `?` will match the
 character "1", and the `*` match the text " from ALLOCATED to ".
 
 A complete reference for clp-text's query syntax is available on the
