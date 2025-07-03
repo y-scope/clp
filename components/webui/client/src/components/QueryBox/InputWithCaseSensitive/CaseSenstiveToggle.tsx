@@ -2,6 +2,7 @@ import {useCallback} from "react";
 
 import {
     Button,
+    ButtonProps,
     Tooltip,
 } from "antd";
 
@@ -11,6 +12,8 @@ interface CaseSensitiveToggleProps {
     isCaseSensitive: boolean;
     onCaseSensitiveChange: (newValue: boolean) => void;
 }
+
+type ButtonVariantType = ButtonProps["variant"];
 
 /**
  * A toggle button component that switches between case-sensitive and case-insensitive
@@ -34,6 +37,15 @@ const CaseSensitiveToggle = ({
         onCaseSensitiveChange,
     ]);
 
+    let buttonVariant: ButtonVariantType = "outlined";
+    if (isCaseSensitive) {
+        buttonVariant = "solid";
+    } else if (disabled) {
+        // The "solid" and "outlined" variants look the same when disabled,
+        // so we use "text" variant for a different appearance.
+        buttonVariant = "text";
+    }
+
     return (
         <Tooltip
             title={"Match case"}
@@ -41,12 +53,10 @@ const CaseSensitiveToggle = ({
             <Button
                 disabled={disabled}
                 size={"small"}
+                variant={buttonVariant}
                 color={isCaseSensitive ?
                     "primary" :
                     "default"}
-                variant={isCaseSensitive ?
-                    "solid" :
-                    "outlined"}
                 onClick={handleButtonClick}
             >
                 Aa
