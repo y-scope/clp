@@ -14,7 +14,6 @@ from typing import List, Optional, Tuple
 import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
-    CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     Database,
     DB_COMPONENT_NAME,
@@ -27,7 +26,6 @@ from clp_py_utils.clp_config import (
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
 )
-from clp_py_utils.clp_metadata_db_utils import validate_and_cache_dataset
 from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
@@ -564,9 +562,9 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
             )
 
 
-def validate_dataset(clp_config: CLPConfig, dataset: str) -> None:
+def validate_dataset(db_config: Database, dataset: str) -> None:
     """
-    Checks if the provided dataset currently exists in the metadata database.
+    Checks if `dataset` currently exists in the metadata database.
     :param clp_config:
     :param dataset:
     :raise: ValueError
