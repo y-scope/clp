@@ -57,7 +57,7 @@ const updateSearchResultsMeta = async ({
  * @param props
  * @param props.aggregationJobId
  * @param props.logger
- * @param props.jobManager
+ * @param props.queryJobDbManager
  * @param props.searchJobId
  * @param props.searchResultsMetadataCollection
  * @param props.mongoDb
@@ -66,7 +66,7 @@ const updateSearchSignalWhenJobsFinish = async ({
     aggregationJobId,
     logger,
     mongoDb,
-    jobManager,
+    queryJobDbManager,
     searchJobId,
     searchResultsMetadataCollection,
 
@@ -74,8 +74,8 @@ const updateSearchSignalWhenJobsFinish = async ({
     let errorMsg: string | null = null;
 
     try {
-        await jobManager.awaitJobCompletion(searchJobId);
-        await jobManager.awaitJobCompletion(aggregationJobId);
+        await queryJobDbManager.awaitJobCompletion(searchJobId);
+        await queryJobDbManager.awaitJobCompletion(aggregationJobId);
     } catch (e: unknown) {
         errorMsg = e instanceof Error ?
             e.message :

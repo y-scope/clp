@@ -7,6 +7,7 @@ import fp from "fastify-plugin";
 import {ResultSetHeader} from "mysql2";
 
 import settings from "../../../../../settings.json" with {type: "json"};
+import {JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS} from "./typings.js";
 import {
     QUERY_JOB_STATUS,
     QUERY_JOB_STATUS_WAITING_STATES,
@@ -14,11 +15,6 @@ import {
     QUERY_JOBS_TABLE_COLUMN_NAMES,
     QueryJob,
 } from "../../../../typings/query.js";
-
-/**
- * Interval in milliseconds for polling the completion status of a job.
- */
-const JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS = 500;
 
 /**
  * Class for managing jobs in the CLP package query scheduler database.
@@ -52,8 +48,13 @@ class QueryJobDbManager {
      */
     async submitJob(jobConfig: object, jobType: QUERY_JOB_TYPE): Promise<number> {
         const [result] = await this.#sqlPool.query<ResultSetHeader>(
-            `INSERT INTO ${this.#tableName} (${QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG}, ${QUERY_JOBS_TABLE_COLUMN_NAMES.TYPE})
-             VALUES (?, ?)`,
+            `
+            INSERT INTO ${settings.SqlDbQueryJobsTableName} (
+               ${QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG},
+               ${QUERY_JOBS_TABLE_COLUMN_NAMES.TYPE}
+            )
+            VALUES (?, ?)
+            `,
             [
                 Buffer.from(encode(jobConfig)),
                 jobType,
@@ -84,8 +85,8 @@ class QueryJobDbManager {
      * Waits for the job with the given ID to finish.
      *
      * @param jobId
-     * @throws {Error} If there's an error querying the job's status, the job is not found,
-     * the job was cancelled, or it exited with an unexpected status.
+     * @throws {Error} on MySQL error, if the job wasn't found in the database, if the job was
+     * cancelled, or if the job completed in an unexpected state.
      */
     async awaitJobCompletion(jobId: number): Promise<void> {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -129,8 +130,8 @@ class QueryJobDbManager {
     /**
      * Submits a job and waits for it to complete.
      *
-     * @param jobConfig The job configuration object.
-     * @param jobType The type of job to submit.
+     * @param jobConfig
+     * @param jobType
      * @return The job's ID.
      * @throws {Error} on error.
      */
@@ -143,7 +144,7 @@ class QueryJobDbManager {
 
 declare module "fastify" {
     interface FastifyInstance {
-        jobManager: QueryJobDbManager;
+        QueryJobDbManager: QueryJobDbManager;
     }
 }
 
