@@ -279,12 +279,14 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
     return file_metadata_list
 
 
-def s3_put(s3_config: S3Config, src_file: Path, dest_file_name: str) -> None:
+def s3_put(s3_config: S3Config, src_file: Path, dest_path: str) -> None:
     """
     Uploads a local file to an S3 bucket using AWS's PutObject operation.
+
     :param s3_config: S3 configuration specifying the upload destination and credentials.
     :param src_file: Local file to upload.
-    :param dest_file_name: The name for the uploaded file in the S3 bucket.
+    :param dest_path: The destination path for the uploaded file in the S3 bucket, relative to
+    `s3_config.key_prefix` (the file's S3 key will be `s3_config.key_prefix` + `dest_path`).
     :raises: ValueError if `src_file` doesn't exist, doesn't resolve to a file or is larger than the
     S3 PutObject limit.
     :raises: Propagates `boto3.client`'s exceptions.
@@ -304,5 +306,5 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_file_name: str) -> None:
 
     with open(src_file, "rb") as file_data:
         s3_client.put_object(
-            Bucket=s3_config.bucket, Body=file_data, Key=s3_config.key_prefix + dest_file_name
+            Bucket=s3_config.bucket, Body=file_data, Key=s3_config.key_prefix + dest_path
         )

@@ -31,17 +31,18 @@ import celery
 import msgpack
 import pymongo
 from clp_py_utils.clp_config import (
-    ARCHIVE_TAGS_TABLE_SUFFIX,
-    ARCHIVES_TABLE_SUFFIX,
     CLPConfig,
-    FILES_TABLE_SUFFIX,
     QUERY_JOBS_TABLE_NAME,
     QUERY_TASKS_TABLE_NAME,
-    StorageEngine,
-    TAGS_TABLE_SUFFIX,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
-from clp_py_utils.clp_metadata_db_utils import fetch_existing_datasets
+from clp_py_utils.clp_metadata_db_utils import (
+    fetch_existing_datasets,
+    get_archive_tags_table_name,
+    get_archives_table_name,
+    get_files_table_name,
+    get_tags_table_name,
+)
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -167,7 +168,7 @@ class JsonExtractionHandle(StreamExtractionHandle):
         super().__init__(job_id)
         self.__job_config = ExtractJsonJobConfig.parse_obj(job_config)
         self._archive_id = self.__job_config.archive_id
-        if not archive_exists(db_conn, table_prefix, self._archive_id):
+        if not archive_exists(db_conn, table_prefix, self.__job_config.dataset, self._archive_id):
             raise ValueError(f"Archive {self._archive_id} doesn't exist")
 
     def get_stream_id(self) -> str:
@@ -389,8 +390,9 @@ def get_archives_for_search(
     table_prefix: str,
     search_config: SearchJobConfig,
 ):
+    dataset = search_config.dataset
     query = f"""SELECT id as archive_id, end_timestamp
-            FROM {table_prefix}{ARCHIVES_TABLE_SUFFIX}
+            FROM {get_archives_table_name(table_prefix, dataset)}
             """
     filter_clauses = []
     if search_config.end_timestamp is not None:
@@ -398,9 +400,11 @@ def get_archives_for_search(
     if search_config.begin_timestamp is not None:
         filter_clauses.append(f"end_timestamp >= {search_config.begin_timestamp}")
     if search_config.tags is not None:
+        archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
+        tags_table_name = get_tags_table_name(table_prefix, dataset)
         filter_clauses.append(
-            f"id IN (SELECT archive_id FROM {table_prefix}{ARCHIVE_TAGS_TABLE_SUFFIX} WHERE "
-            f"tag_id IN (SELECT tag_id FROM {table_prefix}{TAGS_TABLE_SUFFIX} WHERE tag_name IN "
+            f"id IN (SELECT archive_id FROM {archive_tags_table_name} WHERE "
+            f"tag_id IN (SELECT tag_id FROM {tags_table_name} WHERE tag_name IN "
             f"(%s)))" % ", ".join(["%s" for _ in search_config.tags])
         )
     if len(filter_clauses) > 0:
@@ -456,9 +460,8 @@ def get_archive_and_file_split_ids(
     :return: A list of (archive id, file split id) on success. An empty list if
     an exception occurs while interacting with the database.
     """
-
     query = f"""SELECT archive_id, id as file_split_id
-            FROM {table_prefix}{FILES_TABLE_SUFFIX} WHERE
+            FROM {get_files_table_name(table_prefix, None)} WHERE
             orig_file_id = '{orig_file_id}' AND
             begin_message_ix <= {msg_ix} AND
             (begin_message_ix + num_messages) > {msg_ix}
@@ -474,9 +477,11 @@ def get_archive_and_file_split_ids(
 def archive_exists(
     db_conn,
     table_prefix: str,
+    dataset: Optional[str],
     archive_id: str,
 ) -> bool:
-    query = f"SELECT 1 FROM {table_prefix}{ARCHIVES_TABLE_SUFFIX} WHERE id = %s"
+    archives_table_name = get_archives_table_name(table_prefix, dataset)
+    query = f"SELECT 1 FROM {archives_table_name} WHERE id = %s"
     with contextlib.closing(db_conn.cursor(dictionary=True)) as cursor:
         cursor.execute(query, (archive_id,))
         if cursor.fetchone():
@@ -622,14 +627,16 @@ def _validate_dataset(
 ) -> bool:
     if dataset in existing_datasets:
         return True
-    existing_datasets = fetch_existing_datasets(db_cursor, table_prefix)
+
+    # NOTE: This assumes we never delete a dataset.
+    new_datasets = fetch_existing_datasets(db_cursor, table_prefix)
+    existing_datasets.update(new_datasets)
     return dataset in existing_datasets
 
 
 def handle_pending_query_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
-    clp_storage_engine: StorageEngine,
     results_cache_uri: str,
     stream_collection_name: str,
     num_archives_to_search_per_sub_job: int,
@@ -654,22 +661,22 @@ def handle_pending_query_jobs(
             job_config = msgpack.unpackb(job["job_config"])
 
             table_prefix = clp_metadata_db_conn_params["table_prefix"]
-            if StorageEngine.CLP_S == clp_storage_engine:
-                dataset = QueryJobConfig.parse_obj(job_config).dataset
-                if not _validate_dataset(db_cursor, table_prefix, dataset, existing_datasets):
-                    logger.error(f"Dataset `{dataset}` doesn't exist.")
-                    if not set_job_or_task_status(
-                        db_conn,
-                        QUERY_JOBS_TABLE_NAME,
-                        job_id,
-                        QueryJobStatus.FAILED,
-                        QueryJobStatus.PENDING,
-                        start_time=datetime.datetime.now(),
-                        duration=0,
-                    ):
-                        logger.error(f"Failed to set job {job_id} as failed.")
-                    continue
-                table_prefix = f"{table_prefix}{dataset}_"
+            dataset = QueryJobConfig.parse_obj(job_config).dataset
+            if dataset is not None and not _validate_dataset(
+                db_cursor, table_prefix, dataset, existing_datasets
+            ):
+                logger.error(f"Dataset `{dataset}` doesn't exist.")
+                if not set_job_or_task_status(
+                    db_conn,
+                    QUERY_JOBS_TABLE_NAME,
+                    job_id,
+                    QueryJobStatus.FAILED,
+                    QueryJobStatus.PENDING,
+                    start_time=datetime.datetime.now(),
+                    duration=0,
+                ):
+                    logger.error(f"Failed to set job {job_id} as failed.")
+                continue
 
             if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
                 # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
@@ -1084,7 +1091,6 @@ async def handle_job_updates(db_conn_pool, results_cache_uri: str, jobs_poll_del
 async def handle_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
-    clp_storage_engine: StorageEngine,
     results_cache_uri: str,
     stream_collection_name: str,
     jobs_poll_delay: float,
@@ -1100,7 +1106,6 @@ async def handle_jobs(
         reducer_acquisition_tasks = handle_pending_query_jobs(
             db_conn_pool,
             clp_metadata_db_conn_params,
-            clp_storage_engine,
             results_cache_uri,
             stream_collection_name,
             num_archives_to_search_per_sub_job,
@@ -1186,7 +1191,6 @@ async def main(argv: List[str]) -> int:
                 clp_metadata_db_conn_params=clp_config.database.get_clp_connection_params_and_type(
                     True
                 ),
-                clp_storage_engine=clp_config.package.storage_engine,
                 results_cache_uri=clp_config.results_cache.get_uri(),
                 stream_collection_name=clp_config.results_cache.stream_collection_name,
                 jobs_poll_delay=clp_config.query_scheduler.jobs_poll_delay,
