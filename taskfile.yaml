@@ -283,20 +283,17 @@ tasks:
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
-      - |-
-        cd client
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
-        --emptyOutDir --outDir '{{.OUTPUT_DIR}}/client'
+      - for: ["client", "yscope-log-viewer"]
+        cmd: |-
+          cd "{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}"
+          PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
+          --emptyOutDir --outDir '{{.OUTPUT_DIR}}/{{.ITEM}}'
       - |-
         cd server
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npx tsc --outDir '{{.OUTPUT_DIR}}/server/dist'
         rsync -a \
         package.json package-lock.json \
         "{{.OUTPUT_DIR}}/server/"
-      - |-
-        cd yscope-log-viewer
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
-        --output-path '{{.OUTPUT_DIR}}/yscope-log-viewer'
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"

@@ -9,7 +9,7 @@ import {
     ResultSetHeader,
 } from "mysql2/promise";
 
-import settings from "../../settings.json";
+import settings from "../../settings.json" with {type: "json"};
 import {
     CLP_DEFAULT_DATASET_NAME,
     CLP_STORAGE_ENGINE_CLP_S,
