@@ -9,9 +9,7 @@ import {
     type SearchResultsMetadataDocument,
 } from "../../../../../../common/index.js";
 import settings from "../../../../../settings.json" with {type: "json"};
-import {
-    CLP_STORAGE_ENGINE_CLP_S,
-} from "../../../../configConstants.js";
+import { CLP_STORAGE_ENGINE_CLP_S } from "../../../../configConstants.js";
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
     QueryJobCreationSchema,
