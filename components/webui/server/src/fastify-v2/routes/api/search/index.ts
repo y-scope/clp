@@ -74,9 +74,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
             const args = {
                 begin_timestamp: timestampBegin,
-                dataset: CLP_STORAGE_ENGINE_CLP_S === settings.ClpStorageEngine ?
-                    (dataset ?? CLP_DEFAULT_DATASET_NAME) :
-                    null,
+                dataset: CLP_STORAGE_ENGINE_CLP_S === settings.ClpStorageEngine ? dataset : null,
                 end_timestamp: timestampEnd,
                 ignore_case: ignoreCase,
                 max_num_results: SEARCH_MAX_NUM_RESULTS,
