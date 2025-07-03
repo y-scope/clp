@@ -29,6 +29,16 @@ const QueryInput = () => {
     const [pseudoProgress, setPseudoProgress] = useState<Nullable<number>>(null);
     const intervalIdRef = useRef<number>(0);
 
+    const handleCaseSensitiveChange = useCallback((newValue: boolean) => {
+        const {updateQueryIsCaseSensitive} = useSearchStore.getState();
+        updateQueryIsCaseSensitive(newValue);
+    }, []);
+
+    const handleChange = useCallback((ev: ChangeEvent<HTMLInputElement>) => {
+        const {updateQueryString} = useSearchStore.getState();
+        updateQueryString(ev.target.value);
+    }, []);
+
     useEffect(() => {
         if (searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING) {
             if (0 !== intervalIdRef.current) {
@@ -55,16 +65,6 @@ const QueryInput = () => {
     // Clear the interval if the component unmounts.
     useEffect(() => {
         clearInterval(intervalIdRef.current);
-    }, []);
-
-    const handleCaseSensitiveChange = useCallback((newValue: boolean) => {
-        const {updateQueryIsCaseSensitive} = useSearchStore.getState();
-        updateQueryIsCaseSensitive(newValue);
-    }, []);
-
-    const handleChange = useCallback((ev: ChangeEvent<HTMLInputElement>) => {
-        const {updateQueryString} = useSearchStore.getState();
-        updateQueryString(ev.target.value);
     }, []);
 
     return (

@@ -29,21 +29,6 @@ const SearchResultsTimeline = () => {
 
     const aggregationResults = useAggregationResults();
 
-    useEffect(() => {
-        const numSearchResultsTimeline = aggregationResults?.reduce(
-            (acc, curr) => acc + curr.count,
-            0
-        ) ?? 0;
-
-        const {
-            updateNumSearchResultsTimeline,
-        } = useSearchStore.getState();
-
-        updateNumSearchResultsTimeline(numSearchResultsTimeline);
-    }, [
-        aggregationResults,
-    ]);
-
     const handleTimelineZoom = useCallback((newTimeRange: [Dayjs, Dayjs]) => {
         const newTimelineConfig: TimelineConfig = computeTimelineConfig(newTimeRange);
         const {
@@ -70,6 +55,21 @@ const SearchResultsTimeline = () => {
     }, [
         queryIsCaseSensitive,
         queryString,
+    ]);
+
+    useEffect(() => {
+        const numSearchResultsTimeline = aggregationResults?.reduce(
+            (acc, curr) => acc + curr.count,
+            0
+        ) ?? 0;
+
+        const {
+            updateNumSearchResultsTimeline,
+        } = useSearchStore.getState();
+
+        updateNumSearchResultsTimeline(numSearchResultsTimeline);
+    }, [
+        aggregationResults,
     ]);
 
     return (
