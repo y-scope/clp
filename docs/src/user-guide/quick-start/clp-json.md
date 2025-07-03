@@ -113,7 +113,7 @@ as well as a kv-pair with key `"msg"` and a value that matches the wildcard quer
 `"*write concern*"`.
 
 A complete reference for clp-json's query syntax is available on the
-[JSON syntax reference page](../reference-json-search-syntax).
+[syntax reference page](../reference-json-search-syntax).
 
 ### Searching from the UI
 

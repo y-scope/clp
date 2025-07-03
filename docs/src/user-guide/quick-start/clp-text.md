@@ -90,12 +90,11 @@ Caused by: java.net.UnknownHostException: i-e5d112ea
 **Figure 2**: A set of unstructured text log events.
 :::
 
-The query in [Figure 2](#figure-2) will match with the first log message, as the `?` will stand in
-for any one character (in this case, `1`), and the `*` will stand in for the characters
-` from ALLOCATED to `.
+The query in [Figure 2](#figure-2) will match with the first log message, as the `?` will match the
+character "1", and the `*` match the text " from ALLOCATED to ".
 
 A complete reference for clp-text's query syntax is available on the
-[text syntax reference page](../reference-text-search-syntax).
+[syntax reference page](../reference-text-search-syntax).
 
 ### Searching from the UI
 
