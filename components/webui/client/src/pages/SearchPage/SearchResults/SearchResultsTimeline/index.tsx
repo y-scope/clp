@@ -1,4 +1,7 @@
-import {useEffect} from "react";
+import {
+    useCallback,
+    useEffect,
+} from "react";
 
 import {Card} from "antd";
 import {Dayjs} from "dayjs";
@@ -19,16 +22,10 @@ import {computeTimelineConfig} from "./utils";
  * @return
  */
 const SearchResultsTimeline = () => {
-    const queryString = useSearchStore((state) => state.queryString);
-    const updateTimeRange = useSearchStore((state) => state.updateTimeRange);
-    const updateTimeRangeOption = useSearchStore((state) => state.updateTimeRangeOption);
-    const timelineConfig = useSearchStore((state) => state.timelineConfig);
-    const searchUiState = useSearchStore((state) => state.searchUiState);
-    const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
-    const updateNumSearchResultsTimeline = useSearchStore(
-        (state) => state.updateNumSearchResultsTimeline
-    );
     const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
+    const queryString = useSearchStore((state) => state.queryString);
+    const searchUiState = useSearchStore((state) => state.searchUiState);
+    const timelineConfig = useSearchStore((state) => state.timelineConfig);
 
     const aggregationResults = useAggregationResults();
 
@@ -38,14 +35,20 @@ const SearchResultsTimeline = () => {
             0
         ) ?? 0;
 
+        const {
+            updateNumSearchResultsTimeline,
+        } = useSearchStore.getState();
+
         updateNumSearchResultsTimeline(numSearchResultsTimeline);
     }, [
         aggregationResults,
-        updateNumSearchResultsTimeline,
     ]);
 
-    const handleTimelineZoom = (newTimeRange: [Dayjs, Dayjs]) => {
+    const handleTimelineZoom = useCallback((newTimeRange: [Dayjs, Dayjs]) => {
         const newTimelineConfig: TimelineConfig = computeTimelineConfig(newTimeRange);
+        const {
+            updateTimeRange, updateTimeRangeOption, updateTimelineConfig,
+        } = useSearchStore.getState();
 
         // Update range picker selection to match zoomed range.
         updateTimeRange(newTimeRange);
@@ -64,7 +67,10 @@ const SearchResultsTimeline = () => {
             timestampBegin: newTimeRange[0].valueOf(),
             timestampEnd: newTimeRange[1].valueOf(),
         });
-    };
+    }, [
+        queryIsCaseSensitive,
+        queryString,
+    ]);
 
     return (
         <Card>

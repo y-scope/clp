@@ -20,10 +20,9 @@ import styles from "./index.module.css";
  */
 const SubmitButton = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
-    const timeRange = useSearchStore((state) => state.timeRange);
     const queryString = useSearchStore((state) => state.queryString);
-    const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
     const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
+    const timeRange = useSearchStore((state) => state.timeRange);
 
     /**
      * Submits search query.
@@ -31,6 +30,7 @@ const SubmitButton = () => {
     const handleSubmitButtonClick = useCallback(() => {
         // Update timeline to match range picker selection.
         const newTimelineConfig = computeTimelineConfig(timeRange);
+        const {updateTimelineConfig} = useSearchStore.getState();
         updateTimelineConfig(newTimelineConfig);
 
         handleQuerySubmit({
@@ -42,7 +42,6 @@ const SubmitButton = () => {
         });
     }, [queryString,
         queryIsCaseSensitive,
-        updateTimelineConfig,
         timeRange]);
 
     const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
