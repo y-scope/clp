@@ -10,9 +10,9 @@ build_cmd=(
     docker buildx build
     --platform linux/arm64
     --tag clp-core-dependencies-aarch64-musllinux_1_2:dev
-    "$component_root"
     --file "${script_dir}/Dockerfile"
     --load
+    "$component_root"
 )
 
 if command -v git >/dev/null && git -C "$script_dir" rev-parse --is-inside-work-tree >/dev/null ;

@@ -3,7 +3,7 @@
 set -eu
 set -o pipefail
 
-apk update &&  apk add \
+apk update && apk add --no-cache \
     openjdk11-jdk \
     jq \
     curl-dev \
