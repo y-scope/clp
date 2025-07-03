@@ -142,7 +142,6 @@ To match the convention of other tools, by default, searches are case-**insensit
 searches are case-**sensitive** on the command line.
 :::
 
-
 ---
 
 ## Stopping CLP
