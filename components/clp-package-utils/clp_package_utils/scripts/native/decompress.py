@@ -29,6 +29,7 @@ from clp_package_utils.general import (
     EXTRACT_JSON_CMD,
     get_clp_home,
     load_config_file,
+    validate_dataset,
 )
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
@@ -302,6 +303,7 @@ def main(argv):
     json_extraction_parser.add_argument(
         "--dataset",
         type=str,
+        default=None,
         help="The dataset that the archives belong to.",
     )
     json_extraction_parser.add_argument(
@@ -309,6 +311,9 @@ def main(argv):
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
+
+    if parsed_args.dataset is not None:
+        validate_dataset(clp_config.database, parsed_args.dataset)
 
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:

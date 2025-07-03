@@ -5,7 +5,11 @@ import sys
 import typing
 from pathlib import Path
 
-from clp_py_utils.clp_config import StorageType
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
+    StorageEngine,
+    StorageType,
+)
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -18,7 +22,6 @@ from clp_package_utils.general import (
     get_clp_home,
     load_config_file,
     validate_and_load_db_credentials_file,
-    validate_dataset,
 )
 
 # Command/Argument Constants
@@ -165,12 +168,14 @@ def main(argv: typing.List[str]) -> int:
         logger.exception("Failed to load config.")
         return -1
 
-    dataset = validate_dataset(clp_config, parsed_args.dataset)
-
     storage_type: StorageType = clp_config.archive_output.storage.type
     if StorageType.FS != storage_type:
         logger.error(f"Archive deletion is not supported for storage type: {storage_type}.")
         return -1
+
+    dataset = parsed_args.dataset
+    if StorageEngine.CLP_S == clp_config.package.storage_engine and dataset is None:
+        dataset = CLP_DEFAULT_DATASET_NAME
 
     # Validate input depending on subcommands
     if (DEL_COMMAND == subcommand and DEL_BY_FILTER_SUBCOMMAND == parsed_args.del_subcommand) or (
@@ -205,10 +210,12 @@ def main(argv: typing.List[str]) -> int:
         "python3",
         "-m", "clp_package_utils.scripts.native.archive_manager",
         "--config", str(generated_config_path_on_container),
-        "--dataset", str(dataset),
-        str(subcommand),
     ]
     # fmt : on
+    if dataset is not None:
+        archive_manager_cmd.append("--dataset")
+        archive_manager_cmd.append(dataset)
+    archive_manager_cmd.append(subcommand)
 
     # Add subcommand-specific arguments
     if DEL_COMMAND == subcommand:

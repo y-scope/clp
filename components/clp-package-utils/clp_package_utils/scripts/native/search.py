@@ -22,6 +22,7 @@ from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     get_clp_home,
     load_config_file,
+    validate_dataset,
 )
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
@@ -296,6 +297,9 @@ def main(argv):
     except:
         logger.exception("Failed to load config.")
         return -1
+
+    if parsed_args.dataset is not None:
+        validate_dataset(clp_config.dataset, parsed_args.dataset)
 
     try:
         asyncio.run(

@@ -27,7 +27,6 @@ from clp_package_utils.general import (
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
-    validate_dataset,
     validate_path_could_be_dir,
 )
 
@@ -186,6 +185,10 @@ def handle_extract_stream_cmd(
         logger.error(f"Json extraction is only supported with storage engine `{storage_engine}`.")
         return -1
 
+    dataset = parsed_args.dataset
+    if StorageEngine.CLP_S == storage_engine and dataset is None:
+        dataset = CLP_DEFAULT_DATASET_NAME
+
     container_name = generate_container_name(str(JobType.IR_EXTRACTION))
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
@@ -218,9 +221,9 @@ def handle_extract_stream_cmd(
             extract_cmd.append(str(parsed_args.target_uncompressed_size))
     elif EXTRACT_JSON_CMD == job_command:
         extract_cmd.append(str(parsed_args.archive_id))
-        dataset = validate_dataset(clp_config, parsed_args.dataset)
-        extract_cmd.append("--dataset")
-        extract_cmd.append(dataset)
+        if dataset is not None:
+            extract_cmd.append("--dataset")
+            extract_cmd.append(dataset)
         if parsed_args.target_chunk_size:
             extract_cmd.append("--target-chunk-size")
             extract_cmd.append(str(parsed_args.target_chunk_size))
@@ -284,7 +287,7 @@ def main(argv):
     json_extraction_parser.add_argument(
         "--dataset",
         type=str,
-        default=CLP_DEFAULT_DATASET_NAME,
+        default=None,
         help="The dataset that the archives belong to.",
     )
     json_extraction_parser.add_argument(

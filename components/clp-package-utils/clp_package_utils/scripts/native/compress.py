@@ -33,6 +33,7 @@ from clp_package_utils.general import (
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     get_clp_home,
     load_config_file,
+    validate_dataset,
 )
 
 logger = logging.getLogger(__file__)
@@ -139,6 +140,7 @@ def _generate_clp_io_config(
     parsed_args: argparse.Namespace,
 ) -> Union[S3InputConfig, FsInputConfig]:
     input_type = clp_config.logs_input.type
+
     if InputType.FS == input_type:
         if len(logs_to_compress) == 0:
             raise ValueError("No input paths given.")
@@ -229,6 +231,9 @@ def main(argv):
     except:
         logger.exception("Failed to load config.")
         return -1
+
+    if parsed_args.dataset is not None:
+        validate_dataset(clp_config.database, parsed_args.dataset)
 
     comp_jobs_dir = clp_config.logs_directory / "comp-jobs"
     comp_jobs_dir.mkdir(parents=True, exist_ok=True)

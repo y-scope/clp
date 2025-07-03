@@ -7,7 +7,11 @@ import sys
 import uuid
 
 import yaml
-from clp_py_utils.clp_config import StorageEngine, StorageType
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
+    StorageEngine,
+    StorageType,
+)
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -19,7 +23,6 @@ from clp_package_utils.general import (
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
-    validate_dataset,
 )
 
 logger = logging.getLogger(__file__)
@@ -85,8 +88,6 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    dataset = validate_dataset(clp_config, parsed_args.dataset)
-
     storage_type = clp_config.archive_output.storage.type
     storage_engine = clp_config.package.storage_engine
     if StorageType.S3 == storage_type and StorageEngine.CLP == storage_engine:
@@ -95,6 +96,10 @@ def main(argv):
             f" `{storage_engine}`."
         )
         return -1
+
+    dataset = parsed_args.dataset
+    if StorageEngine.CLP_S == storage_engine and dataset is None:
+        dataset = CLP_DEFAULT_DATASET_NAME
 
     container_name = generate_container_name(str(JobType.SEARCH))
 

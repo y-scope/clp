@@ -20,6 +20,7 @@ from clp_package_utils.general import (
     CLPConfig,
     get_clp_home,
     load_config_file,
+    validate_dataset,
 )
 
 # Command/Argument Constants
@@ -188,6 +189,10 @@ def main(argv: typing.List[str]) -> int:
         logger.exception("Failed to load config.")
         return -1
 
+    dataset = parsed_args.dataset
+    if dataset is not None:
+        validate_dataset(clp_config, dataset)
+
     database_config: Database = clp_config.database
     archives_dir: Path = clp_config.archive_output.get_directory()
     if not archives_dir.exists():
@@ -198,7 +203,7 @@ def main(argv: typing.List[str]) -> int:
         return _find_archives(
             archives_dir,
             database_config,
-            parsed_args.dataset,
+            dataset,
             parsed_args.begin_ts,
             parsed_args.end_ts,
         )
@@ -209,7 +214,7 @@ def main(argv: typing.List[str]) -> int:
             return _delete_archives(
                 archives_dir,
                 database_config,
-                parsed_args.dataset,
+                dataset,
                 delete_handler,
                 parsed_args.dry_run,
             )
@@ -220,7 +225,7 @@ def main(argv: typing.List[str]) -> int:
             return _delete_archives(
                 archives_dir,
                 database_config,
-                parsed_args.dataset,
+                dataset,
                 delete_handler,
                 parsed_args.dry_run,
             )
