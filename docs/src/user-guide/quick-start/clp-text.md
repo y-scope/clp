@@ -1,10 +1,10 @@
 # clp-text quick-start
 
-This page will walk you through how to start up CLP, and then use it to compress and search
-unstructured text logs.
+This page will walk you through how to start CLP and use it to compress and search unstructured
+text logs.
 
 :::{caution}
-If you're using the `clp-text` flavor, you should only compress unstructured text logs. `clp-text`
+If you're using a `clp-text` release, you should only compress unstructured text logs. `clp-text`
 is able to compress and search JSON logs as if it was unstructured text, but `clp-text` cannot
 query individual fields. This limitation will be addressed in a future version of CLP.
 :::
@@ -28,7 +28,7 @@ If CLP fails to start (e.g., due to a port conflict), try adjusting the settings
 
 ## Compressing unstructured text logs
 
-To compress unstructured text logs, run the following from inside the package directory:
+To compress some unstructured text logs, run:
 
 ```bash
 sbin/compress.sh <path1> [<path2> ...]
@@ -54,7 +54,7 @@ For some sample logs, check out the [open-source datasets](../resources-datasets
 You can search your compressed logs from CLP's [UI](#searching-from-the-ui) or the
 [command line](#searching-from-the-command-line).
 
-All unstructured text log queries are written as plain text. You can use a couple of special
+Unstructured text log queries are written as plain text. You can use a couple of special
 characters to make these queries more versatile. `*` can be used as a placeholder for an unknown
 number of characters, and `?` can be used for a single character. For example, consider the logs in
 [Figure 1](#figure-1) and the query in [Figure 2](#figure-2).
@@ -85,11 +85,11 @@ number of characters, and `?` can be used for a single character. For example, c
 **Figure 2**: An example query.
 :::
 
-The query in [Figure 2](#figure-2) will match with lines 3, 4, and 5 in [Figure 1](#figure-1), as they are the only lines which contain the character
-`"a"` followed by any number (including zero) of other characters, followed by `"b"`, followed
-by one other character, followed by `"c"`.
+The query in [Figure 2](#figure-2) will match with lines 3, 4, and 5 in [Figure 1](#figure-1), as
+they are the only lines which contain the character `"a"` followed by any number (including zero)
+of other characters, followed by `"b"`, followed by one other character, followed by `"c"`.
 
-A complete reference for `clp-text`'s query syntax is available on the
+A complete reference for clp-text's query syntax is available on the
 [text syntax reference page](../reference-text-search-syntax).
 
 ### Searching from the UI
@@ -101,8 +101,8 @@ values).
 :::{image} clp-search-ui.png
 :::
 
-The image above shows the search page after running a query. The numbered circles correspond to the
-following features:
+The image above shows the search page after running a query. The numbered circles correspond to
+the following features:
 
 1. The search box is where you can enter your query.
 2. The timeline shows the number of results across the time range of your query.
@@ -152,10 +152,3 @@ If you need to stop CLP, run:
 ```bash
 sbin/stop-clp.sh
 ```
-
----
-
-## More information
-
-You've reached the end of the clp-text quick-start guide. For more information on clp-text,
-visit the [CLP for unstructured text logs](../core-unstructured/index) page.
