@@ -37,11 +37,11 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
+    fetch_existing_datasets,
     get_archive_tags_table_name,
     get_archives_table_name,
     get_files_table_name,
     get_tags_table_name,
-    validate_and_cache_dataset,
 )
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
@@ -647,21 +647,22 @@ def handle_pending_query_jobs(
 
             table_prefix = clp_metadata_db_conn_params["table_prefix"]
             dataset = QueryJobConfig.parse_obj(job_config).dataset
-            if dataset is not None and not validate_and_cache_dataset(
-                db_cursor, table_prefix, dataset, existing_datasets
-            ):
-                logger.error(f"Dataset `{dataset}` doesn't exist.")
-                if not set_job_or_task_status(
-                    db_conn,
-                    QUERY_JOBS_TABLE_NAME,
-                    job_id,
-                    QueryJobStatus.FAILED,
-                    QueryJobStatus.PENDING,
-                    start_time=datetime.datetime.now(),
-                    duration=0,
-                ):
-                    logger.error(f"Failed to set job {job_id} as failed.")
-                continue
+            if dataset is not None and dataset not in existing_datasets:
+                # NOTE: This assumes we never delete a dataset.
+                existing_datasets.update(fetch_existing_datasets(db_cursor, table_prefix))
+                if dataset not in existing_datasets:
+                    logger.error(f"Dataset `{dataset}` doesn't exist.")
+                    if not set_job_or_task_status(
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.FAILED,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        duration=0,
+                    ):
+                        logger.error(f"Failed to set job {job_id} as failed.")
+                    continue
 
             if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
                 # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
