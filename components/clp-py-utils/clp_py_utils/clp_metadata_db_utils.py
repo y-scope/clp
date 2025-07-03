@@ -208,7 +208,7 @@ def validate_and_cache_dataset(
     new_datasets = fetch_existing_datasets(db_cursor, table_prefix)
     if existing_datasets is not None:
         existing_datasets.update(new_datasets)
-    return dataset in existing_datasets
+    return dataset in new_datasets
 
 
 def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None = None) -> None:
