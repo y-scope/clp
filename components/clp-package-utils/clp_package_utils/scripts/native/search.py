@@ -10,7 +10,10 @@ import sys
 
 import msgpack
 import pymongo
-from clp_py_utils.clp_config import Database, ResultsCache
+from clp_py_utils.clp_config import (
+    Database,
+    ResultsCache,
+)
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
 from job_orchestration.scheduler.job_config import AggregationConfig, SearchJobConfig
