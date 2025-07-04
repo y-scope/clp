@@ -578,4 +578,3 @@ def validate_dataset(db_config: Database, dataset: str) -> None:
     ) as db_cursor:
         if dataset not in fetch_existing_datasets(db_cursor, table_prefix):
             raise ValueError(f"Dataset `{dataset}` doesn't exist.")
-
