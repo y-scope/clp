@@ -165,9 +165,9 @@ tasks:
       - task: "yscope-dev-utils:cmake:install"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
+          CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
           INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
-          NAME: "{{.LIB_NAME}}"
 
       # This command must be last
       - task: "yscope-dev-utils:checksum:compute"
