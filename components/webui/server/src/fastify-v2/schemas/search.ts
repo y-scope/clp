@@ -10,7 +10,8 @@ import {
  * Schema for request to create a new query job.
  */
 const QueryJobCreationSchema = Type.Object({
-    dataset: Type.String(),
+    dataset: Type.Union([Type.String(),
+        Type.Null()]),
     ignoreCase: Type.Boolean(),
     queryString: StringSchema,
     timeRangeBucketSizeMillis: Type.Integer(),

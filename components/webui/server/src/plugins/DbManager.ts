@@ -9,11 +9,6 @@ import {
     ResultSetHeader,
 } from "mysql2/promise";
 
-import settings from "../../settings.json" with {type: "json"};
-import {
-    CLP_DEFAULT_DATASET_NAME,
-    CLP_STORAGE_ENGINE_CLP_S,
-} from "../configConstants.js";
 import {Nullable} from "../typings/common.js";
 import {
     DbManagerOptions,
@@ -117,7 +112,7 @@ class DbManager {
         streamId,
         targetUncompressedSize,
     }: {
-        dataset: string | null;
+        dataset: string;
         jobType: QUERY_JOB_TYPE;
         logEventIdx: number;
         streamId: string;
@@ -133,9 +128,7 @@ class DbManager {
             };
         } else if (QUERY_JOB_TYPE.EXTRACT_JSON === jobType) {
             jobConfig = {
-                dataset: CLP_STORAGE_ENGINE_CLP_S === settings.ClpStorageEngine ?
-                    (dataset ?? CLP_DEFAULT_DATASET_NAME) :
-                    null,
+                dataset: dataset,
                 archive_id: streamId,
                 target_chunk_size: targetUncompressedSize,
             };

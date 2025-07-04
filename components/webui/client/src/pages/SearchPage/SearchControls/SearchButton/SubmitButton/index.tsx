@@ -49,7 +49,7 @@ const SubmitButton = () => {
         }
 
         handleQuerySubmit({
-            dataset: selectDataset ?? "",
+            dataset: selectDataset,
             ignoreCase: false,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),

@@ -1,5 +1,7 @@
 import axios, {AxiosResponse} from "axios";
 
+import {Nullable} from "../typings/common";
+
 
 // eslint-disable-next-line no-warning-comments
 // TODO: Replace with shared type from the `@common` directory once refactoring is completed.
@@ -15,7 +17,7 @@ type QueryJobSchema = {
 // Currently, server schema types require typebox dependency so they cannot be moved to the
 // `@common` directory with current implementation.
 type QueryJobCreationSchema = {
-    dataset: string;
+    dataset: Nullable<string>;
     ignoreCase: boolean;
     queryString: string;
     timeRangeBucketSizeMillis: number;

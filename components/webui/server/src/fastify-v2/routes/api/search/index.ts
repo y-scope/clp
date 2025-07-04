@@ -9,7 +9,6 @@ import {
     type SearchResultsMetadataDocument,
 } from "../../../../../../common/index.js";
 import settings from "../../../../../settings.json" with {type: "json"};
-import { CLP_STORAGE_ENGINE_CLP_S } from "../../../../configConstants.js";
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
     QueryJobCreationSchema,
@@ -71,9 +70,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
             const args = {
                 begin_timestamp: timestampBegin,
-                dataset: CLP_STORAGE_ENGINE_CLP_S === settings.ClpStorageEngine ?
-                    dataset :
-                    null,
+                dataset: dataset,
                 end_timestamp: timestampEnd,
                 ignore_case: ignoreCase,
                 max_num_results: SEARCH_MAX_NUM_RESULTS,

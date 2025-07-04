@@ -40,7 +40,7 @@ const SearchResultsTimeline = () => {
             updateTimeRange,
             updateTimeRangeOption,
             updateTimelineConfig,
-            updateCachedDataset
+            updateCachedDataset,
         } = useSearchStore.getState();
 
         // Update range picker selection to match zoomed range.
@@ -64,7 +64,7 @@ const SearchResultsTimeline = () => {
         }
 
         handleQuerySubmit({
-            dataset: selectDataset ?? "",
+            dataset: selectDataset,
             ignoreCase: false === queryIsCaseSensitive,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
