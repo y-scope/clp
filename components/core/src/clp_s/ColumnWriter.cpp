@@ -11,6 +11,23 @@ void Int64ColumnWriter::store(ZstdCompressor& compressor) {
     compressor.write(reinterpret_cast<char const*>(m_values.data()), size);
 }
 
+size_t DeltaEncodedInt64ColumnWriter::add_value(ParsedMessage::variable_t& value) {
+    if (0 == m_values.size()) {
+        m_cur = std::get<int64_t>(value);
+        m_values.push_back(m_cur);
+    } else {
+        auto next = std::get<int64_t>(value);
+        m_values.push_back(next - m_cur);
+        m_cur = next;
+    }
+    return sizeof(int64_t);
+}
+
+void DeltaEncodedInt64ColumnWriter::store(ZstdCompressor& compressor) {
+    size_t size = m_values.size() * sizeof(int64_t);
+    compressor.write(reinterpret_cast<char const*>(m_values.data()), size);
+}
+
 size_t FloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
     m_values.push_back(std::get<double>(value));
     return sizeof(double);
