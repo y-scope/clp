@@ -58,7 +58,7 @@ async def main(argv: List[str]) -> int:
             search_results_retention,
         ),
     }
-    tasks_handler: List[asyncio.Task[None]] = list()
+    tasks_handler: List[asyncio.Task[None]] = []
 
     # Create retention tasks
     for task_name, (retention_period, task_method) in retention_tasks.items():

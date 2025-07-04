@@ -327,12 +327,12 @@ def s3_delete_objects(s3_config: S3Config, object_keys: Set[str]) -> None:
     """
 
     def _iterate_by_chunk(key_prefix: str, relative_object_keys: Set[str], chunk_size: int):
-        chunk: List[str] = list()
+        chunk: List[str] = []
         for relative_obj_key in relative_object_keys:
             chunk.append(key_prefix + relative_obj_key)
             if len(chunk) == chunk_size:
                 yield chunk
-                chunk = list()
+                chunk = []
 
         if chunk:
             yield chunk

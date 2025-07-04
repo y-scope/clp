@@ -1,5 +1,6 @@
 import asyncio
 import pathlib
+from typing import Final
 
 import pymongo
 import pymongo.database
@@ -16,7 +17,7 @@ from job_orchestration.retention.utils import (
 )
 
 # Constants
-MONGODB_ID_KEY = "_id"
+MONGODB_ID_KEY: Final[str] = "_id"
 
 logger = get_logger(SEARCH_RESULTS_RETENTION_HANDLER_NAME)
 

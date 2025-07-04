@@ -222,7 +222,7 @@ def delete_archives_from_metadata_db(
     :param table_prefix:
     :param dataset:
     """
-    ids_list_string: str = ", ".join(["%s"] * len(archive_ids))
+    ids_list_string = ", ".join(["%s"] * len(archive_ids))
 
     db_cursor.execute(
         f"""
