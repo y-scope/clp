@@ -1,23 +1,26 @@
 import {
-    FastifyInstance,
     FastifyBaseLogger,
+    FastifyInstance,
 } from "fastify";
 import fp from "fastify-plugin";
 
+import settings from "../../../../settings.json" with {type: "json"};
 import {Nullable} from "../../../typings/common.js";
 import {
     StreamFileMongoDocument,
     StreamFilesCollection,
 } from "../../../typings/DbManager.js";
 import {QUERY_JOB_TYPE} from "../../../typings/query.js";
-import settings from "../../../../settings.json" with {type: "json"};
+
 
 /**
  * Class to manage stream files for the log viewer.
  */
 class StreamFileManager {
     readonly #queryJobDbManager: FastifyInstance["QueryJobDbManager"];
+
     readonly #logger: FastifyBaseLogger;
+
     readonly #streamFilesCollection: StreamFilesCollection;
 
     constructor ({QueryJobDbManager, logger, streamFilesCollection}: {
@@ -86,6 +89,7 @@ class StreamFileManager {
             return await this.#queryJobDbManager.submitAndWaitForJob(jobConfig, jobType);
         } catch (e) {
             this.#logger.error(e);
+
             return null;
         }
     }

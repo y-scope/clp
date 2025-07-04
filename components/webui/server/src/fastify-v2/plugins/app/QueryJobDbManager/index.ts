@@ -7,7 +7,6 @@ import fp from "fastify-plugin";
 import {ResultSetHeader} from "mysql2";
 
 import settings from "../../../../../settings.json" with {type: "json"};
-import {JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS} from "./typings.js";
 import {
     QUERY_JOB_STATUS,
     QUERY_JOB_STATUS_WAITING_STATES,
@@ -15,15 +14,18 @@ import {
     QUERY_JOBS_TABLE_COLUMN_NAMES,
     QueryJob,
 } from "../../../../typings/query.js";
+import {JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS} from "./typings.js";
+
 
 /**
  * Class for managing jobs in the CLP package query scheduler database.
  */
 class QueryJobDbManager {
     readonly #sqlPool: MySQLPromisePool;
+
     readonly #tableName: string;
 
-    private constructor(sqlPool: MySQLPromisePool, tableName: string) {
+    private constructor (sqlPool: MySQLPromisePool, tableName: string) {
         this.#sqlPool = sqlPool;
         this.#tableName = tableName;
     }
@@ -34,7 +36,7 @@ class QueryJobDbManager {
      * @param fastify
      * @return
      */
-    static create(fastify: FastifyInstance): QueryJobDbManager {
+    static create (fastify: FastifyInstance): QueryJobDbManager {
         return new QueryJobDbManager(fastify.mysql, settings.SqlDbQueryJobsTableName);
     }
 
@@ -46,7 +48,7 @@ class QueryJobDbManager {
      * @return The job's ID.
      * @throws {Error} on error.
      */
-    async submitJob(jobConfig: object, jobType: QUERY_JOB_TYPE): Promise<number> {
+    async submitJob (jobConfig: object, jobType: QUERY_JOB_TYPE): Promise<number> {
         const [result] = await this.#sqlPool.query<ResultSetHeader>(
             `
             INSERT INTO ${settings.SqlDbQueryJobsTableName} (
@@ -70,7 +72,7 @@ class QueryJobDbManager {
      * @param jobId ID of the job to cancel.
      * @throws {Error} on error.
      */
-    async cancelJob(jobId: number): Promise<void> {
+    async cancelJob (jobId: number): Promise<void> {
         await this.#sqlPool.query(
             `UPDATE ${this.#tableName}
              SET ${QUERY_JOBS_TABLE_COLUMN_NAMES.STATUS} = ${QUERY_JOB_STATUS.CANCELLING}
@@ -88,7 +90,7 @@ class QueryJobDbManager {
      * @throws {Error} on MySQL error, if the job wasn't found in the database, if the job was
      * cancelled, or if the job completed in an unexpected state.
      */
-    async awaitJobCompletion(jobId: number): Promise<void> {
+    async awaitJobCompletion (jobId: number): Promise<void> {
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         while (true) {
             let queryJob: QueryJob | undefined;
@@ -135,9 +137,10 @@ class QueryJobDbManager {
      * @return The job's ID.
      * @throws {Error} on error.
      */
-    async submitAndWaitForJob(jobConfig: object, jobType: QUERY_JOB_TYPE): Promise<number> {
+    async submitAndWaitForJob (jobConfig: object, jobType: QUERY_JOB_TYPE): Promise<number> {
         const jobId = await this.submitJob(jobConfig, jobType);
         await this.awaitJobCompletion(jobId);
+
         return jobId;
     }
 }

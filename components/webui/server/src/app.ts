@@ -10,6 +10,7 @@ import exampleRoutes from "./routes/example.js";
 import queryRoutes from "./routes/query.js";
 import staticRoutes from "./routes/static.js";
 
+
 /**
  * Creates the Fastify app with the given options.
  *

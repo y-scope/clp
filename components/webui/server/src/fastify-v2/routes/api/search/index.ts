@@ -84,13 +84,14 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             try {
                 searchJobId = await QueryJobDbManager.submitJob(args, QUERY_JOB_TYPE.SEARCH_OR_AGGREGATION);
 
-                const searchAggregationConfig = {
+                const aggregationArgs = {
                     ...args,
                     aggregation_config: {
                         count_by_time_bucket_size: timeRangeBucketSizeMillis,
                     },
                 };
-                aggregationJobId = await QueryJobDbManager.submitJob(searchAggregationConfig, QUERY_JOB_TYPE.SEARCH_OR_AGGREGATION);
+
+                aggregationJobId = await QueryJobDbManager.submitJob(aggregationArgs, QUERY_JOB_TYPE.SEARCH_OR_AGGREGATION);
             } catch (err: unknown) {
                 const errMsg = "Unable to submit search/aggregation job to the SQL database";
                 request.log.error(err, errMsg);
@@ -113,7 +114,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     aggregationJobId: aggregationJobId,
                     logger: request.log,
                     mongoDb: mongoDb,
-                    jobManager: QueryJobDbManager,
+                    queryJobDbManager: QueryJobDbManager,
                     searchJobId: searchJobId,
                     searchResultsMetadataCollection: searchResultsMetadataCollection,
                 }).catch((err: unknown) => {

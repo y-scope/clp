@@ -1,15 +1,18 @@
 import {
     FastifyPluginAsyncTypebox,
-    Type,
 } from "@fastify/type-provider-typebox";
 import {StatusCodes} from "http-status-codes";
 
 import settings from "../../../../../settings.json" with {type: "json"};
 import {
     EXTRACT_JOB_TYPES,
-    QUERY_JOB_TYPE,
 } from "../../../../typings/query.js";
 import {ErrorSchema} from "../../../schemas/error.js";
+import {
+    StreamFileExtractionSchema,
+    StreamFileMetadataSchema,
+} from "../../../schemas/stream-files.js";
+
 
 /**
  * Stream Files API routes.
@@ -17,24 +20,16 @@ import {ErrorSchema} from "../../../schemas/error.js";
  * @param fastify
  */
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
+    const {StreamFileManager} = fastify;
+
     fastify.post(
         "/extract",
         {
             schema: {
-                body: Type.Object({
-                    extractJobType: Type.Enum(QUERY_JOB_TYPE),
-                    logEventIdx: Type.Integer(),
-                    streamId: Type.String({minLength: 1}),
-                }),
+                body: StreamFileExtractionSchema,
                 response: {
-                    [StatusCodes.OK]: Type.Object({
-                        path: Type.String(),
-                        stream_id: Type.String(),
-                        begin_msg_ix: Type.Integer(),
-                        end_msg_ix: Type.Integer(),
-                    }),
+                    [StatusCodes.OK]: StreamFileMetadataSchema,
                     [StatusCodes.BAD_REQUEST]: ErrorSchema,
-                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Stream Files"],
             },
@@ -46,13 +41,13 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 return reply.badRequest(`Invalid extractJobType="${extractJobType}".`);
             }
 
-            let streamMetadata = await fastify.StreamFileManager.getExtractedStreamFileMetadata(
+            let streamMetadata = await StreamFileManager.getExtractedStreamFileMetadata(
                 streamId,
                 logEventIdx
             );
 
             if (null === streamMetadata) {
-                const extractResult = await fastify.StreamFileManager.submitAndWaitForExtractStreamJob({
+                const extractResult = await StreamFileManager.submitAndWaitForExtractStreamJob({
                     jobType: extractJobType,
                     logEventIdx: logEventIdx,
                     streamId: streamId,
@@ -65,7 +60,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     );
                 }
 
-                streamMetadata = await fastify.StreamFileManager.getExtractedStreamFileMetadata(
+                streamMetadata = await StreamFileManager.getExtractedStreamFileMetadata(
                     streamId,
                     logEventIdx
                 );
