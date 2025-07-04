@@ -1,4 +1,7 @@
-import {useEffect} from "react";
+import {
+    useCallback,
+    useEffect,
+} from "react";
 
 import {Card} from "antd";
 import {Dayjs} from "dayjs";
@@ -19,32 +22,18 @@ import {computeTimelineConfig} from "./utils";
  * @return
  */
 const SearchResultsTimeline = () => {
-    const {
-        queryString,
-        updateTimeRange,
-        updateTimeRangeOption,
-        timelineConfig,
-        searchUiState,
-        updateTimelineConfig,
-        updateNumSearchResultsTimeline,
-    } = useSearchStore();
+    const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
+    const queryString = useSearchStore((state) => state.queryString);
+    const searchUiState = useSearchStore((state) => state.searchUiState);
+    const timelineConfig = useSearchStore((state) => state.timelineConfig);
 
     const aggregationResults = useAggregationResults();
 
-    useEffect(() => {
-        const numSearchResultsTimeline = aggregationResults?.reduce(
-            (acc, curr) => acc + curr.count,
-            0
-        ) ?? 0;
-
-        updateNumSearchResultsTimeline(numSearchResultsTimeline);
-    }, [
-        aggregationResults,
-        updateNumSearchResultsTimeline,
-    ]);
-
-    const handleTimelineZoom = (newTimeRange: [Dayjs, Dayjs]) => {
+    const handleTimelineZoom = useCallback((newTimeRange: [Dayjs, Dayjs]) => {
         const newTimelineConfig: TimelineConfig = computeTimelineConfig(newTimeRange);
+        const {
+            updateTimeRange, updateTimeRangeOption, updateTimelineConfig,
+        } = useSearchStore.getState();
 
         // Update range picker selection to match zoomed range.
         updateTimeRange(newTimeRange);
@@ -57,13 +46,31 @@ const SearchResultsTimeline = () => {
         }
 
         handleQuerySubmit({
-            ignoreCase: false,
+            ignoreCase: false === queryIsCaseSensitive,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
             timestampBegin: newTimeRange[0].valueOf(),
             timestampEnd: newTimeRange[1].valueOf(),
         });
-    };
+    }, [
+        queryIsCaseSensitive,
+        queryString,
+    ]);
+
+    useEffect(() => {
+        const numSearchResultsTimeline = aggregationResults?.reduce(
+            (acc, curr) => acc + curr.count,
+            0
+        ) ?? 0;
+
+        const {
+            updateNumSearchResultsTimeline,
+        } = useSearchStore.getState();
+
+        updateNumSearchResultsTimeline(numSearchResultsTimeline);
+    }, [
+        aggregationResults,
+    ]);
 
     return (
         <Card>
