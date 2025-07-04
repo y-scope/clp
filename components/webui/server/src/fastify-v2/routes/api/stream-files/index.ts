@@ -46,13 +46,13 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 return reply.badRequest(`Invalid extractJobType="${extractJobType}".`);
             }
 
-            let streamMetadata = await fastify.streamFileManager.getExtractedStreamFileMetadata(
+            let streamMetadata = await fastify.StreamFileManager.getExtractedStreamFileMetadata(
                 streamId,
                 logEventIdx
             );
 
             if (null === streamMetadata) {
-                const extractResult = await fastify.streamFileManager.submitAndWaitForExtractStreamJob({
+                const extractResult = await fastify.StreamFileManager.submitAndWaitForExtractStreamJob({
                     jobType: extractJobType,
                     logEventIdx: logEventIdx,
                     streamId: streamId,
@@ -65,7 +65,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     );
                 }
 
-                streamMetadata = await fastify.streamFileManager.getExtractedStreamFileMetadata(
+                streamMetadata = await fastify.StreamFileManager.getExtractedStreamFileMetadata(
                     streamId,
                     logEventIdx
                 );

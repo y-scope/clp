@@ -1,48 +1,46 @@
 import {
     FastifyInstance,
-    FastifyPluginAsync,
     FastifyBaseLogger,
 } from "fastify";
-import {fastifyPlugin} from "fastify-plugin";
+import fp from "fastify-plugin";
 
 import {Nullable} from "../../../typings/common.js";
 import {
-    DbManagerOptions,
     StreamFileMongoDocument,
     StreamFilesCollection,
 } from "../../../typings/DbManager.js";
 import {QUERY_JOB_TYPE} from "../../../typings/query.js";
-import {QueryJobDbManager} from "./QueryJobDbManager/index.js";
+import settings from "../../../../settings.json" with {type: "json"};
 
 /**
  * Class to manage stream files for the log viewer.
  */
 class StreamFileManager {
-    readonly #jobManager: QueryJobDbManager;
+    readonly #queryJobDbManager: FastifyInstance["QueryJobDbManager"];
     readonly #logger: FastifyBaseLogger;
     readonly #streamFilesCollection: StreamFilesCollection;
 
-    constructor ({jobManager, logger, streamFilesCollection}: {
-        jobManager: QueryJobDbManager;
+    constructor ({QueryJobDbManager, logger, streamFilesCollection}: {
+        QueryJobDbManager: FastifyInstance["QueryJobDbManager"];
         logger: FastifyBaseLogger;
         streamFilesCollection: StreamFilesCollection;
     }) {
-        this.#jobManager = jobManager;
+        this.#queryJobDbManager = QueryJobDbManager;
         this.#logger = logger;
         this.#streamFilesCollection = streamFilesCollection;
     }
 
-    static async create (app: FastifyInstance, dbConfig: DbManagerOptions) {
+    static async create (app: FastifyInstance) {
         if ("undefined" === typeof app.mongo.db) {
             throw new Error("MongoDB database not found");
         }
         const streamFilesCollection =
             app.mongo.db.collection<StreamFileMongoDocument>(
-                dbConfig.mongoConfig.streamFilesCollectionName
+                settings.MongoDbStreamFilesCollectionName
             );
 
         return new StreamFileManager({
-            jobManager: app.jobManager,
+            QueryJobDbManager: app.QueryJobDbManager,
             logger: app.log,
             streamFilesCollection: streamFilesCollection,
         });
@@ -85,7 +83,7 @@ class StreamFileManager {
         }
 
         try {
-            return await this.#jobManager.submitAndWaitForJob(jobConfig, jobType);
+            return await this.#queryJobDbManager.submitAndWaitForJob(jobConfig, jobType);
         } catch (e) {
             this.#logger.error(e);
             return null;
@@ -112,14 +110,14 @@ class StreamFileManager {
 
 declare module "fastify" {
     interface FastifyInstance {
-        streamFileManager: StreamFileManager;
+        StreamFileManager: StreamFileManager;
     }
 }
 
-export default fastifyPlugin(
-    async (app, options: DbManagerOptions) => {
-        const streamFileManager = await StreamFileManager.create(app, options);
-        app.decorate("streamFileManager", streamFileManager);
+export default fp(
+    async (fastify) => {
+        const streamFileManager = await StreamFileManager.create(fastify);
+        fastify.decorate("StreamFileManager", streamFileManager);
     },
     {
         name: "StreamFileManager",

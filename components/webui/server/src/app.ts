@@ -4,18 +4,11 @@ import {
 } from "fastify";
 
 import settings from "../settings.json" with {type: "json"};
-import DbManager from "./plugins/DbManager.js";
 import MongoSocketIoServer from "./plugins/MongoSocketIoServer/index.js";
 import S3Manager from "./plugins/S3Manager.js";
 import exampleRoutes from "./routes/example.js";
 import queryRoutes from "./routes/query.js";
 import staticRoutes from "./routes/static.js";
-
-
-interface AppPluginOptions {
-    sqlDbUser: string;
-    sqlDbPass: string;
-}
 
 /**
  * Creates the Fastify app with the given options.
@@ -27,28 +20,10 @@ interface AppPluginOptions {
  * @param opts
  * @return
  */
-const FastifyV1App: FastifyPluginAsync<AppPluginOptions> = async (
-    fastify: FastifyInstance,
-    opts: AppPluginOptions
+const FastifyV1App: FastifyPluginAsync = async (
+    fastify: FastifyInstance
 ) => {
-    const {sqlDbUser, sqlDbPass} = opts;
     if ("test" !== process.env.NODE_ENV) {
-        await fastify.register(DbManager, {
-            mysqlConfig: {
-                database: settings.SqlDbName,
-                host: settings.SqlDbHost,
-                password: sqlDbPass,
-                port: settings.SqlDbPort,
-                queryJobsTableName: settings.SqlDbQueryJobsTableName,
-                user: sqlDbUser,
-            },
-            mongoConfig: {
-                database: settings.MongoDbName,
-                host: settings.MongoDbHost,
-                streamFilesCollectionName: settings.MongoDbStreamFilesCollectionName,
-                port: settings.MongoDbPort,
-            },
-        });
         await fastify.register(
             S3Manager,
             {
