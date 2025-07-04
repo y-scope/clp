@@ -1,14 +1,9 @@
 import {
-    Db,
     Document,
     Filter,
-    MongoClient,
 } from "mongodb";
 
-import {
-    DbOptions,
-    QueryParameters,
-} from "./typings.js";
+import {QueryParameters} from "./typings.js";
 
 
 /**
@@ -60,27 +55,6 @@ const getQuery = (
 };
 
 /**
- * Initializes a MongoDB client.
- *
- * @param options
- * @return
- * @throws {Error} If there is a MongoDB connection error.
- */
-const initializeMongoClient = async (
-    options: DbOptions
-): Promise<Db> => {
-    const mongoUri = `mongodb://${options.host}:${options.port}`;
-    const mongoClient = new MongoClient(mongoUri);
-    try {
-        await mongoClient.connect();
-
-        return mongoClient.db(options.database);
-    } catch (e) {
-        throw new Error("MongoDB connection error", {cause: e as Error});
-    }
-};
-
-/**
  * Removes the first instance of item from an array, if it exists.
  *
  * @param array
@@ -100,6 +74,5 @@ export {
     convertQueryToChangeStreamFormat,
     getQuery,
     getQueryHash,
-    initializeMongoClient,
     removeItemFromArray,
 };

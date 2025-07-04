@@ -1,9 +1,10 @@
+import {FastifyBaseLogger} from "fastify";
 import type {
     Collection,
     Db,
 } from "mongodb";
 
-import {QueryId} from "../../../../common/index.js";
+import {QueryId} from "../../../../../../../common/index.js";
 import {
     CLIENT_UPDATE_TIMEOUT_MILLIS,
     MongoCustomSocket,
@@ -22,15 +23,19 @@ import {
 class MongoWatcherCollection {
     #collection: Collection;
 
+    #logger: FastifyBaseLogger;
+
     // Active watchers
     #queryIdtoWatcherMap: Map<QueryId, Watcher> = new Map();
 
     /**
      * @param collectionName
+     * @param logger
      * @param mongoDb
      */
-    constructor (collectionName: string, mongoDb: Db) {
+    constructor (collectionName: string, logger: FastifyBaseLogger, mongoDb: Db) {
         this.#collection = mongoDb.collection(collectionName);
+        this.#logger = logger;
     }
 
     /**
@@ -70,7 +75,7 @@ class MongoWatcherCollection {
         const watcher = this.#queryIdtoWatcherMap.get(queryId);
 
         if ("undefined" === typeof watcher) {
-            console.warn(`No watcher found for queryID:${queryId}`);
+            this.#logger.warn(`No watcher found for queryID:${queryId}`);
 
             return false;
         }
@@ -82,7 +87,7 @@ class MongoWatcherCollection {
         }
 
         watcher.changeStream.close().catch((err: unknown) => {
-            console.error(`Error closing watcher for queryID:${queryId}:`, err);
+            this.#logger.error(err, `Error closing watcher for queryID:${queryId}`);
         });
         this.#queryIdtoWatcherMap.delete(queryId);
 
@@ -146,7 +151,7 @@ class MongoWatcherCollection {
             const documents = await this.#collection.find(query, options).toArray();
             return documents;
         } catch (error) {
-            console.error("Error fetching data for query:", error);
+            this.#logger.error(error, "Error fetching data for query");
 
             return [];
         }
@@ -187,7 +192,7 @@ class MongoWatcherCollection {
                     };
 
                     fetchAndEmit().catch((error: unknown) => {
-                        console.error("Error in emitUpdatesWithTimeout:", error);
+                        this.#logger.error(error, "Error in emitUpdatesWithTimeout");
                     });
                     lastEmitTime = Date.now();
                 }, delay);
@@ -196,12 +201,12 @@ class MongoWatcherCollection {
 
         watcher.changeStream.on("change", (change) => {
             if ("invalidate" === change.operationType) {
-                console.log("Change stream received invalidate event for queryID", queryId);
+                this.#logger.info(`Change stream received invalidate event for queryID ${queryId}`);
 
                 return;
             }
             emitUpdateWithTimeout().catch((error: unknown) => {
-                console.error("Error in emitUpdatesWithTimeout:", error);
+                this.#logger.error(error, "Error in emitUpdatesWithTimeout");
             });
         });
     }

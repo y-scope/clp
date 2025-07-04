@@ -4,8 +4,8 @@
 // Reference: https://github.com/socketio/socket.io/blob/main/examples/basic-crud-application/server/lib/todo-management/todo.handlers.ts
 
 import {
+    FastifyBaseLogger,
     FastifyInstance,
-    FastifyPluginAsync,
 } from "fastify";
 import fastifyPlugin from "fastify-plugin";
 import {Db} from "mongodb";
@@ -18,18 +18,16 @@ import type {
     Response,
     ServerToClientEvents,
     SocketData,
-} from "../../../../common/index.js";
+} from "../../../../../../../common/index.js";
 import MongoWatcherCollection from "./MongoWatcherCollection.js";
 import {
     ConnectionId,
-    DbOptions,
     MongoCustomSocket,
     QueryParameters,
 } from "./typings.js";
 import {
     getQuery,
     getQueryHash,
-    initializeMongoClient,
     removeItemFromArray,
 } from "./utils.js";
 
@@ -42,7 +40,7 @@ import {
  * names per query, limiting the number of events listeners triggered in the client.
  */
 class MongoSocketIoServer {
-    #fastify: FastifyInstance;
+    #logger: FastifyBaseLogger;
 
     #io: Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>;
 
@@ -62,21 +60,18 @@ class MongoSocketIoServer {
     readonly #mongoDb: Db;
 
     /**
-     * Private constructor for MongoSocketIoServer. This is not intended to be invoked publicly.
-     * Instead, use MongoSocketIoServer.create() to create a new instance of the class.
-     *
-     * @param fastify
+     * @param io
+     * @param logger
      * @param mongoDb
      */
-    constructor (fastify: FastifyInstance, mongoDb: Db) {
-        this.#fastify = fastify;
+    private constructor (
+        io: Server<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
+        logger: FastifyBaseLogger,
+        mongoDb: Db
+    ) {
+        this.#io = io;
+        this.#logger = logger;
         this.#mongoDb = mongoDb;
-        this.#io = new Server<
-            ClientToServerEvents,
-            ServerToClientEvents,
-            InterServerEvents,
-            SocketData
-        >(fastify.server);
         this.#registerEventListeners();
     }
 
@@ -84,15 +79,26 @@ class MongoSocketIoServer {
      * Creates a new MongoSocketIoServer.
      *
      * @param fastify
-     * @param options
      * @return
+     * @throws {Error} When MongoDB database not found
      */
-    static async create (
-        fastify: FastifyInstance,
-        options: DbOptions
-    ): Promise<MongoSocketIoServer> {
-        const mongoDb = await initializeMongoClient(options);
-        return new MongoSocketIoServer(fastify, mongoDb);
+    static create (
+        fastify: FastifyInstance
+    ): MongoSocketIoServer {
+        const mongoDb = fastify.mongo.db;
+
+        if ("undefined" === typeof mongoDb) {
+            throw new Error("MongoDB database not found");
+        }
+
+        const io = new Server<
+            ClientToServerEvents,
+            ServerToClientEvents,
+            InterServerEvents,
+            SocketData
+        >(fastify.server);
+
+        return new MongoSocketIoServer(io, fastify.log, mongoDb);
     }
 
     /**
@@ -100,7 +106,7 @@ class MongoSocketIoServer {
      */
     #registerEventListeners () {
         this.#io.on("connection", (socket) => {
-            this.#fastify.log.info(`New socket connected with ID:${socket.id}`);
+            this.#logger.info(`New socket connected with ID:${socket.id}`);
             socket.on("disconnect", this.#disconnectListener.bind(this, socket));
             socket.on(
                 "collection::find::subscribe",
@@ -119,7 +125,7 @@ class MongoSocketIoServer {
      * @param socket
      */
     async #disconnectListener (socket: MongoCustomSocket) {
-        this.#fastify.log.info(`Socket:${socket.id} disconnected`);
+        this.#logger.info(`Socket:${socket.id} disconnected`);
         const subscribedQueryIds = this.#subscribedQueryIdsMap.get(socket.id);
 
         if ("undefined" === typeof subscribedQueryIds) {
@@ -131,7 +137,7 @@ class MongoSocketIoServer {
         }
 
         this.#subscribedQueryIdsMap.delete(socket.id);
-        this.#fastify.log.debug(
+        this.#logger.debug(
             "Subscribed queryIDs map" +
             ` ${JSON.stringify(Array.from(this.#subscribedQueryIdsMap.entries()))}`
         );
@@ -200,8 +206,12 @@ class MongoSocketIoServer {
         : MongoWatcherCollection {
         let watcherCollection = this.#collections.get(collectionName);
         if ("undefined" === typeof watcherCollection) {
-            watcherCollection = new MongoWatcherCollection(collectionName, this.#mongoDb);
-            this.#fastify.log.debug(`Initialize Mongo watcher collection:${collectionName}.`);
+            watcherCollection = new MongoWatcherCollection(
+                collectionName,
+                this.#logger,
+                this.#mongoDb
+            );
+            this.#logger.debug(`Initialize Mongo watcher collection:${collectionName}.`);
             this.#collections.set(collectionName, watcherCollection);
         }
 
@@ -226,14 +236,14 @@ class MongoSocketIoServer {
     ): Promise<void> {
         const {collectionName, query, options} = requestArgs;
 
-        this.#fastify.log.debug(
+        this.#logger.debug(
             `Socket:${socket.id} requested query:${JSON.stringify(query)} ` +
             `with options:${JSON.stringify(options)} to collection:${collectionName}`
         );
 
         const hasCollection = await this.#hasCollection(collectionName);
         if (false === hasCollection) {
-            this.#fastify.log.error(`Collection ${collectionName} does not exist in MongoDB`);
+            this.#logger.error(`Collection ${collectionName} does not exist in MongoDB`);
             callback({
                 error: `Collection ${collectionName} does not exist in MongoDB on server`,
             });
@@ -252,7 +262,7 @@ class MongoSocketIoServer {
         callback({data: {queryId, initialDocuments}});
 
         this.#addQueryIdToSubscribedList(queryId, socket.id);
-        this.#fastify.log.info(
+        this.#logger.info(
             `Socket:${socket.id} subscribed to query:${JSON.stringify(query)} ` +
             `with options:${JSON.stringify(options)} ` +
             `on collection:${collectionName} with ID:${queryId}`
@@ -292,7 +302,7 @@ class MongoSocketIoServer {
     #unsubscribe (socket: MongoCustomSocket, queryId: number) {
         const queryHash: string | undefined = this.#queryIdToQueryHashMap.get(queryId);
         if ("undefined" === typeof queryHash) {
-            this.#fastify.log.error(`Query:${queryId} not found in query map`);
+            this.#logger.error(`Query:${queryId} not found in query map`);
 
             return;
         }
@@ -301,26 +311,26 @@ class MongoSocketIoServer {
 
         const collection = this.#collections.get(queryParams.collectionName);
         if ("undefined" === typeof collection) {
-            this.#fastify.log.error(`${queryParams.collectionName} is missing from server`);
+            this.#logger.error(`${queryParams.collectionName} is missing from server`);
 
             return;
         }
 
         const isLastSubscriber = collection.unsubscribe(queryId, socket.id);
-        this.#fastify.log.info(`Socket:${socket.id} unsubscribed from query:${queryId}`);
+        this.#logger.info(`Socket:${socket.id} unsubscribed from query:${queryId}`);
 
         if (isLastSubscriber) {
-            this.#fastify.log.debug(`Query:${queryId} deleted from query map.`);
+            this.#logger.debug(`Query:${queryId} deleted from query map.`);
             this.#queryIdToQueryHashMap.delete(queryId);
         }
 
-        this.#fastify.log.debug(
+        this.#logger.debug(
             "Query ID to query hash map:" +
             ` ${JSON.stringify(Array.from(this.#queryIdToQueryHashMap.entries()))}`
         );
 
         if (false === collection.isReferenced()) {
-            this.#fastify.log.debug(`Collection:${queryParams.collectionName}` +
+            this.#logger.debug(`Collection:${queryParams.collectionName}` +
             " deallocated from server.");
             this.#collections.delete(queryParams.collectionName);
         }
@@ -338,7 +348,7 @@ class MongoSocketIoServer {
         requestArgs: {queryId: number}
     ): Promise<void> {
         const {queryId} = requestArgs;
-        this.#fastify.log.debug(
+        this.#logger.debug(
             `Socket:${socket.id} requested unsubscription to query:${queryId}`
         );
 
@@ -346,7 +356,7 @@ class MongoSocketIoServer {
         if ("undefined" === typeof subscribedQueryIds ||
             false === subscribedQueryIds.includes(queryId)
         ) {
-            this.#fastify.log.error(`Socket ${socket.id} is not subscribed to ${queryId}`);
+            this.#logger.error(`Socket ${socket.id} is not subscribed to ${queryId}`);
 
             return;
         }
@@ -356,27 +366,24 @@ class MongoSocketIoServer {
 
         removeItemFromArray(subscribedQueryIds, queryId);
 
-        this.#fastify.log.debug(
+        this.#logger.debug(
             `Subscribed queryIDs map ${
                 JSON.stringify(Array.from(this.#subscribedQueryIdsMap.entries()))}`
         );
     }
 }
 
-/**
- * A Fastify plugin callback for setting up the `MongoSocketIoServer`.
- *
- * @param app
- * @param options
- * @param options.database
- * @param options.host
- * @param options.port
- */
-const MongoServerPlugin: FastifyPluginAsync<DbOptions> = async (
-    app: FastifyInstance,
-    options: DbOptions
-) => {
-    await MongoSocketIoServer.create(app, options);
-};
+declare module "fastify" {
+    export interface FastifyInstance {
+        MongoSocketIoServer: MongoSocketIoServer;
+    }
+}
 
-export default fastifyPlugin(MongoServerPlugin);
+export default fastifyPlugin(
+    (fastify) => {
+        fastify.decorate("MongoSocketIoServer", MongoSocketIoServer.create(fastify));
+    },
+    {
+        name: "MongoSocketIoServer",
+    }
+);
