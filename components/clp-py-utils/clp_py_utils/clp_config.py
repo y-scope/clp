@@ -310,9 +310,8 @@ class ResultsCache(BaseModel):
     @validator("retention_period")
     def validate_retention_period(cls, field):
         if field is not None and field <= 0:
-            raise ValueError("retention_period must be be greater than 0")
+            raise ValueError("retention_period must be greater than 0")
         return field
-
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
@@ -539,9 +538,8 @@ class ArchiveOutput(BaseModel):
     @validator("retention_period")
     def validate_retention_period(cls, field):
         if field is not None and field <= 0:
-            raise ValueError("retention_period must be be greater than 0")
+            raise ValueError("retention_period must be greater than 0")
         return field
-
     def set_directory(self, directory: pathlib.Path):
         _set_directory_for_storage_config(self.storage, directory)
 
