@@ -5,6 +5,7 @@ import DetailsCard from "./DetailsCard";
 
 interface MessagesProps {
     numMessages: Nullable<number>;
+    isLoading: boolean;
 }
 
 /**
@@ -12,11 +13,13 @@ interface MessagesProps {
  *
  * @param props
  * @param props.numMessages
+ * @param props.isLoading
  * @return
  */
-const Messages = ({numMessages}: MessagesProps) => {
+const Messages = ({numMessages, isLoading}: MessagesProps) => {
     return (
         <DetailsCard
+            isLoading={isLoading}
             stat={(numMessages ?? 0).toString()}
             title={"Messages"}/>
     );

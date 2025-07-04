@@ -8,6 +8,7 @@ const DATE_FORMAT = "MMMM D, YYYY";
 interface TimeRangeProps {
     beginDate: Dayjs;
     endDate: Dayjs;
+    isLoading: boolean;
 }
 
 /**
@@ -16,9 +17,10 @@ interface TimeRangeProps {
  * @param props
  * @param props.beginDate
  * @param props.endDate
+ * @param props.isLoading
  * @return
  */
-const TimeRange = ({beginDate, endDate}: TimeRangeProps) => {
+const TimeRange = ({beginDate, endDate, isLoading}: TimeRangeProps) => {
     let stat;
     if (beginDate.isValid() && endDate.isValid()) {
         stat = `${beginDate.format(DATE_FORMAT)} - ${endDate.format(DATE_FORMAT)}`;
@@ -28,6 +30,7 @@ const TimeRange = ({beginDate, endDate}: TimeRangeProps) => {
 
     return (
         <DetailsCard
+            isLoading={isLoading}
             stat={stat}
             title={"Time Range"}/>
     );

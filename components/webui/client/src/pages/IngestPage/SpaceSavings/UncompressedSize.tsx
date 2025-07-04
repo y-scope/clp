@@ -4,6 +4,7 @@ import {formatSizeInBytes} from "../Jobs/units";
 
 interface UncompressedSizeProps {
     uncompressedSize: number;
+    isLoading: boolean;
 }
 
 /**
@@ -11,11 +12,13 @@ interface UncompressedSizeProps {
  *
  * @param props
  * @param props.uncompressedSize
+ * @param props.isLoading
  * @return
  */
-const UncompressedSize = ({uncompressedSize}: UncompressedSizeProps) => {
+const UncompressedSize = ({uncompressedSize, isLoading}: UncompressedSizeProps) => {
     return (
         <DetailsCard
+            isLoading={isLoading}
             stat={formatSizeInBytes(uncompressedSize, false)}
             title={"Uncompressed Size"}/>
     );

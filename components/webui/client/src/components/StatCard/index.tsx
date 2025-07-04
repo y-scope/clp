@@ -15,6 +15,7 @@ interface StatCardProps {
     backgroundColor?: string;
     statSize?: string;
     statColor?: string;
+    isLoading?: boolean;
 }
 
 /**
@@ -27,6 +28,7 @@ interface StatCardProps {
  * @param props.backgroundColor
  * @param props.statSize
  * @param props.statColor
+ * @param props.isLoading
  * @return
  */
 const StatCard = ({
@@ -36,9 +38,11 @@ const StatCard = ({
     backgroundColor,
     statSize,
     statColor,
+    isLoading = false,
 }: StatCardProps) => {
     const props: DashboardCardProps = {
         title,
+        isLoading,
         ...(titleColor ?
             {titleColor} :
             {}),
