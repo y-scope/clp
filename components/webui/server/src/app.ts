@@ -7,7 +7,6 @@ import settings from "../settings.json" with {type: "json"};
 import MongoSocketIoServer from "./plugins/MongoSocketIoServer/index.js";
 import S3Manager from "./plugins/S3Manager.js";
 import exampleRoutes from "./routes/example.js";
-import queryRoutes from "./routes/query.js";
 import staticRoutes from "./routes/static.js";
 
 
@@ -18,7 +17,6 @@ import staticRoutes from "./routes/static.js";
  * removed.
  *
  * @param fastify
- * @param opts
  * @return
  */
 const FastifyV1App: FastifyPluginAsync = async (
@@ -42,7 +40,6 @@ const FastifyV1App: FastifyPluginAsync = async (
     // Register the routes
     await fastify.register(staticRoutes);
     await fastify.register(exampleRoutes);
-    await fastify.register(queryRoutes);
 };
 
 export default FastifyV1App;

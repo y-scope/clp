@@ -26,7 +26,7 @@ const submitExtractStreamJob = async (
     onUploadProgress: (progressEvent: AxiosProgressEvent) => void,
 ): Promise<AxiosResponse<ExtractStreamResp>> => {
     return await axios.post(
-        "/query/extract-stream",
+        "/api/stream-files/extract",
         {
             extractJobType,
             streamId,

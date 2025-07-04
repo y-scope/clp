@@ -1,9 +1,7 @@
 import {Type} from "@sinclair/typebox";
 
 import {QUERY_JOB_TYPE} from "../../typings/query.js";
-import {
-    StringSchema,
-} from "./common.js";
+import {StringSchema} from "./common.js";
 
 
 /**

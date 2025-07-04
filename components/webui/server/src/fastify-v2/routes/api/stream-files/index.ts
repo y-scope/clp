@@ -1,12 +1,8 @@
-import {
-    FastifyPluginAsyncTypebox,
-} from "@fastify/type-provider-typebox";
+import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
 import {StatusCodes} from "http-status-codes";
 
 import settings from "../../../../../settings.json" with {type: "json"};
-import {
-    EXTRACT_JOB_TYPES,
-} from "../../../../typings/query.js";
+import {EXTRACT_JOB_TYPES} from "../../../../typings/query.js";
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
     StreamFileExtractionSchema,
@@ -56,7 +52,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
                 if (null === extractResult) {
                     return reply.badRequest(
-                        `Unable to extract stream with streamId=${streamId} at logEventIdx=${logEventIdx}`
+                        `Unable to extract stream with streamId=${streamId} at ` +
+                        `logEventIdx=${logEventIdx}`
                     );
                 }
 
@@ -67,7 +64,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
                 if (null === streamMetadata) {
                     return reply.badRequest(
-                        `Unable to extract stream with streamId=${streamId} at logEventIdx=${logEventIdx}`
+                        `Unable to extract stream with streamId=${streamId} at ` +
+                        `logEventIdx=${logEventIdx}`
                     );
                 }
             }

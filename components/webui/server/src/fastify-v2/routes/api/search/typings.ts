@@ -11,7 +11,6 @@ import {
     SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
 } from "../../../../../../common/index.js";
-import {QueryJobDbManager} from "../../../plugins/app/QueryJobDbManager/index.js";
 
 
 /**

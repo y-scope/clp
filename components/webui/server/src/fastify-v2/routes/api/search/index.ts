@@ -9,7 +9,7 @@ import {
     type SearchResultsMetadataDocument,
 } from "../../../../../../common/index.js";
 import settings from "../../../../../settings.json" with {type: "json"};
-import {QUERY_JOB_TYPE} from "../../../../../typings/query.js";
+import {QUERY_JOB_TYPE} from "../../../../typings/query.js";
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
     QueryJobCreationSchema,
@@ -59,6 +59,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 tags: ["Search"],
             },
         },
+        // eslint-disable-next-line max-lines-per-function
         async (request, reply) => {
             const {
                 timestampBegin,
@@ -82,16 +83,20 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             let aggregationJobId: number;
 
             try {
-                searchJobId = await QueryJobDbManager.submitJob(args, QUERY_JOB_TYPE.SEARCH_OR_AGGREGATION);
+                searchJobId = await QueryJobDbManager.submitJob(
+                    args,
+                    QUERY_JOB_TYPE.SEARCH_OR_AGGREGATION
+                );
 
-                const aggregationArgs = {
-                    ...args,
-                    aggregation_config: {
-                        count_by_time_bucket_size: timeRangeBucketSizeMillis,
+                aggregationJobId = await QueryJobDbManager.submitJob(
+                    {
+                        ...args,
+                        aggregation_config: {
+                            count_by_time_bucket_size: timeRangeBucketSizeMillis,
+                        },
                     },
-                };
-
-                aggregationJobId = await QueryJobDbManager.submitJob(aggregationArgs, QUERY_JOB_TYPE.SEARCH_OR_AGGREGATION);
+                    QUERY_JOB_TYPE.SEARCH_OR_AGGREGATION
+                );
             } catch (err: unknown) {
                 const errMsg = "Unable to submit search/aggregation job to the SQL database";
                 request.log.error(err, errMsg);
