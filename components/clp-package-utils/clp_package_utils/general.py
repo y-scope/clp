@@ -564,16 +564,18 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
 
 def validate_dataset(db_config: Database, dataset: str) -> None:
     """
-    Checks if `dataset` currently exists in the metadata database.
+    Validates that `dataset` exists in the metadata database.
+
     :param db_config:
     :param dataset:
-    :raise: ValueError
+    :raise: ValueError if the dataset doesn't exist.
     """
-    sql_adapter: SQL_Adapter = SQL_Adapter(db_config)
-    clp_db_connection_params: dict[str, any] = db_config.get_clp_connection_params_and_type(True)
-    table_prefix: str = clp_db_connection_params["table_prefix"]
+    sql_adapter = SQL_Adapter(db_config)
+    clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
+    table_prefix = clp_db_connection_params["table_prefix"]
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
         if dataset not in fetch_existing_datasets(db_cursor, table_prefix):
-            raise ValueError(f"Dataset `{dataset}` does not exist.")
+            raise ValueError(f"Dataset `{dataset}` doesn't exist.")
+
