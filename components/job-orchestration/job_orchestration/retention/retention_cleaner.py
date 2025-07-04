@@ -64,16 +64,16 @@ async def main(argv: List[str]) -> int:
     for task_name, (retention_period, task_method) in retention_tasks.items():
         if retention_period is not None:
             logger.info(f"Creating {task_name} task with retention = {retention_period} minutes")
-            archive_retention_handle = asyncio.create_task(
+            retention_task = asyncio.create_task(
                 task_method(clp_config, logs_directory, logging_level), name=task_name
             )
-            tasks_handler.append(archive_retention_handle)
+            tasks_handler.append(retention_task)
         else:
             logger.info(f"No retention period configured, skip creating {task_name} task.")
 
     # Poll and report any task that finishes unexpectedly
     while tasks_handler:
-        done, pending = await asyncio.wait(tasks_handler, return_when=asyncio.FIRST_COMPLETED)
+        done, _ = await asyncio.wait(tasks_handler, return_when=asyncio.FIRST_COMPLETED)
         for task in done:
             tasks_handler.remove(task)
             task_name = task.get_name()
@@ -83,9 +83,8 @@ async def main(argv: List[str]) -> int:
             except Exception as e:
                 logger.exception(f"Task {task_name} failed with exception: {e}")
 
-    logger.error(f"All retention tasks unexpectedly terminated.")
+    logger.error("All retention tasks unexpectedly terminated.")
     return -1
-
 
 if "__main__" == __name__:
     sys.exit(asyncio.run(main(sys.argv)))

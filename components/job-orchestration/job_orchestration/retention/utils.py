@@ -137,7 +137,7 @@ class TargetsBuffer:
     def flush(self):
         """
         Clear the in-memory buffer of targets and remove the recovery file.
-        This is intended to be called after the caller finishing processing all targets (i.e. when
+        This is intended to be called after the caller finished processing all targets (i.e. when
         recovery is no longer needed for the targets.)
         """
         self._targets.clear()
