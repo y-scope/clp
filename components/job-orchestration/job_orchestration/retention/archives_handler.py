@@ -163,10 +163,7 @@ def _handle_archive_retention(
 
 
 async def archive_retention(
-async def archive_retention(
     clp_config: CLPConfig, log_directory: pathlib.Path, logging_level: str
-) -> None:
-    ...
 ) -> None:
     configure_logger(logger, logging_level, log_directory, ARCHIVES_RETENTION_HANDLER_NAME)
 

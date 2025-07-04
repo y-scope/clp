@@ -86,5 +86,6 @@ async def main(argv: List[str]) -> int:
     logger.error("All retention tasks unexpectedly terminated.")
     return -1
 
+
 if "__main__" == __name__:
     sys.exit(asyncio.run(main(sys.argv)))
