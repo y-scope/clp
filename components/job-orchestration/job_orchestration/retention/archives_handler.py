@@ -101,7 +101,7 @@ def _get_archive_safe_expiry_epoch(
         SELECT id, creation_time
         FROM `{QUERY_JOBS_TABLE_NAME}`
         WHERE {QUERY_JOBS_TABLE_NAME}.status = {QueryJobStatus.RUNNING}
-        AND {QUERY_JOBS_TABLE_NAME}.creation_time 
+        AND {QUERY_JOBS_TABLE_NAME}.creation_time
         BETWEEN FROM_UNIXTIME(%s) AND FROM_UNIXTIME(%s)
         ORDER BY creation_time ASC
         LIMIT 1
