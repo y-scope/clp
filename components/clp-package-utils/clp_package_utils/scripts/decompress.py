@@ -27,6 +27,7 @@ from clp_package_utils.general import (
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
+    validate_dataset_name,
     validate_path_could_be_dir,
 )
 
@@ -187,6 +188,11 @@ def handle_extract_stream_cmd(
     dataset = parsed_args.dataset
     if StorageEngine.CLP_S == storage_engine:
         dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
+        try:
+            validate_dataset_name(dataset)
+        except Exception as e:
+            logger.error(e)
+            return -1
     elif dataset is not None:
         logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
         return -1

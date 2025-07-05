@@ -2,6 +2,7 @@ import enum
 import errno
 import os
 import pathlib
+import re
 import secrets
 import socket
 import subprocess
@@ -578,3 +579,23 @@ def validate_dataset_exists(db_config: Database, dataset: str) -> None:
     ) as db_cursor:
         if dataset not in fetch_existing_datasets(db_cursor, table_prefix):
             raise ValueError(f"Dataset `{dataset}` doesn't exist.")
+
+
+def validate_dataset_name(dataset: str) -> None:
+    """
+    Validates that the given dataset name abides by the following rules:
+    - Its length is between 1 and 44 characters.
+    - It only contains alphanumeric characters and underscores.
+
+    :param dataset:
+    :raise: ValueError if the dataset name is invalid.
+    """
+    if re.fullmatch(r"\w+", dataset) is None:
+        raise ValueError(
+            f"Invalid dataset name: `{dataset}`. It must only contain alphanumeric characters and"
+            f" underscores."
+        )
+    if len(dataset) > 44:
+        raise ValueError(
+            f"Invalid dataset name: `{dataset}`. It mustn't be longer than 44 characters."
+        )
