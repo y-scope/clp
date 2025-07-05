@@ -143,7 +143,11 @@ def handle_extract_stream_cmd(
         if dataset is None:
             logger.error(f"Dataset unspecified, but must be specified for command `{command}'.")
             return -1
-        validate_dataset_exists(clp_config.database, dataset)
+        try:
+            validate_dataset_exists(clp_config.database, dataset)
+        except Exception as e:
+            logger.error(e)
+            return -1
 
         job_type = QueryJobType.EXTRACT_JSON
         job_config = ExtractJsonJobConfig(

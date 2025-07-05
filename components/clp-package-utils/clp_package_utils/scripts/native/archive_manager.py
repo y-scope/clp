@@ -192,7 +192,11 @@ def main(argv: typing.List[str]) -> int:
     database_config: Database = clp_config.database
     dataset = parsed_args.dataset
     if dataset is not None:
-        validate_dataset_exists(database_config, dataset)
+        try:
+            validate_dataset_exists(database_config, dataset)
+        except Exception as e:
+            logger.error(e)
+            return -1
 
     archives_dir: Path = clp_config.archive_output.get_directory()
     if not archives_dir.exists():
