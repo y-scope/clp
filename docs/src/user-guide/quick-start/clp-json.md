@@ -45,7 +45,7 @@ sbin/compress.sh --timestamp-key '<timestamp-key>' <path1> [<path2> ...]
 
 * `<path...>` are paths to JSON log files or directories containing such files.
   * Each JSON log file should contain each log event as a
-    [separate JSON object](./index.md#clp-json), i.e., *not* as an array.
+    [separate JSON object](./index.md#clp-json), e.g., *not* as an array.
 
 The compression script will output the compression ratio of each dataset you compress, or you can
 use the UI to view overall statistics.
@@ -138,7 +138,7 @@ The numbered circles in [Figure 3](#figure-3) correspond to the following featur
    [JSON search syntax](../reference-json-search-syntax.md).
 2. Toggle case sensitivity by clicking here.
 3. Filter for logs in a specific timeframe by setting the start time and end time, or you can
-   select a preset filter (i.e. `Last 15 minutes`; `Yesterday`) from the dropdown list. The default
+   select a preset filter (e.g. `Last 15 minutes`; `Yesterday`) from the dropdown list. The default
    filter is `All time`.
 4. After you submit a query, the timeline shows the number of results across the specified time
    range of your query.

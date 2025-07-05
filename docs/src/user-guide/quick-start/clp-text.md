@@ -117,7 +117,7 @@ The numbered circles in [Figure 3](#figure-3) correspond to the following featur
    [unstructured text search syntax](../reference-text-search-syntax.md).
 2. Toggle case sensitivity by clicking here.
 3. Filter for logs in a specific timeframe by setting the start time and end time, or you can
-   select a preset filter (i.e. `Last 15 minutes`; `Yesterday`) from the dropdown list. The default
+   select a preset filter (e.g. `Last 15 minutes`; `Yesterday`) from the dropdown list. The default
    filter is `All time`.
 4. After you submit a query, the timeline shows the number of results across the specified time
    range of your query.
