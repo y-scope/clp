@@ -25,9 +25,9 @@ import styles from "./index.module.css";
 const SubmitButton = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const timeRange = useSearchStore((state) => state.timeRange);
+    const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
     const queryString = useSearchStore((state) => state.queryString);
     const selectDataset = useSearchStore((state) => state.selectDataset);
-    const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
     const updateCachedDataset = useSearchStore((state) => state.updateCachedDataset);
 
     /**
@@ -36,6 +36,7 @@ const SubmitButton = () => {
     const handleSubmitButtonClick = useCallback(() => {
         // Update timeline to match range picker selection.
         const newTimelineConfig = computeTimelineConfig(timeRange);
+        const {updateTimelineConfig} = useSearchStore.getState();
         updateTimelineConfig(newTimelineConfig);
 
         if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
@@ -50,14 +51,14 @@ const SubmitButton = () => {
 
         handleQuerySubmit({
             dataset: selectDataset,
-            ignoreCase: false,
+            ignoreCase: false === queryIsCaseSensitive,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
             timestampBegin: timeRange[0].valueOf(),
             timestampEnd: timeRange[1].valueOf(),
         });
     }, [queryString,
-        updateTimelineConfig,
+        queryIsCaseSensitive,
         timeRange,
         selectDataset,
         updateCachedDataset]);
@@ -80,6 +81,7 @@ const SubmitButton = () => {
         <Tooltip title={tooltipTitle}>
             <Button
                 className={styles["gradientButton"] || ""}
+                htmlType={"submit"}
                 icon={<SearchOutlined/>}
                 size={"large"}
                 type={"primary"}
