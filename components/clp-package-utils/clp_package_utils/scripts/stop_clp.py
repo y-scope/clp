@@ -17,6 +17,7 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    RETENTION_CLEANER_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
 )
 
@@ -84,6 +85,7 @@ def main(argv):
     component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(QUERY_WORKER_COMPONENT_NAME)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
+    component_args_parser.add_parser(RETENTION_CLEANER_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -130,6 +132,9 @@ def main(argv):
 
         already_exited_containers = []
         force = parsed_args.force
+        if target in (ALL_TARGET_NAME, RETENTION_CLEANER_COMPONENT_NAME):
+            container_name = f"clp-{RETENTION_CLEANER_COMPONENT_NAME}-{instance_id}"
+            stop_running_container(container_name, already_exited_containers, force)
         if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
             container_name = f"clp-{WEBUI_COMPONENT_NAME}-{instance_id}"
             stop_running_container(container_name, already_exited_containers, force)
