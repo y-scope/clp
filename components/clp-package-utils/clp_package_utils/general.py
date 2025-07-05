@@ -562,7 +562,7 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
             )
 
 
-def validate_dataset(db_config: Database, dataset: str) -> None:
+def validate_dataset_exists(db_config: Database, dataset: str) -> None:
     """
     Validates that `dataset` exists in the metadata database.
 

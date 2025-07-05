@@ -20,7 +20,7 @@ from clp_package_utils.general import (
     CLPConfig,
     get_clp_home,
     load_config_file,
-    validate_dataset,
+    validate_dataset_exists,
 )
 
 # Command/Argument Constants
@@ -192,7 +192,7 @@ def main(argv: typing.List[str]) -> int:
     database_config: Database = clp_config.database
     dataset = parsed_args.dataset
     if dataset is not None:
-        validate_dataset(database_config, dataset)
+        validate_dataset_exists(database_config, dataset)
 
     archives_dir: Path = clp_config.archive_output.get_directory()
     if not archives_dir.exists():

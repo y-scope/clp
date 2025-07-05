@@ -22,7 +22,7 @@ from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     get_clp_home,
     load_config_file,
-    validate_dataset,
+    validate_dataset_exists,
 )
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
@@ -301,7 +301,7 @@ def main(argv):
     database_config: Database = clp_config.database
     dataset = parsed_args.dataset
     if dataset is not None:
-        validate_dataset(database_config, dataset)
+        validate_dataset_exists(database_config, dataset)
 
     try:
         asyncio.run(

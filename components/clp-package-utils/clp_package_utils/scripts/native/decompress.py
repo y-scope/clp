@@ -29,7 +29,7 @@ from clp_package_utils.general import (
     EXTRACT_JSON_CMD,
     get_clp_home,
     load_config_file,
-    validate_dataset,
+    validate_dataset_exists,
 )
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
@@ -143,7 +143,7 @@ def handle_extract_stream_cmd(
         if dataset is None:
             logger.error(f"Dataset unspecified, but must be specified for command `{command}'.")
             return -1
-        validate_dataset(clp_config.database, dataset)
+        validate_dataset_exists(clp_config.database, dataset)
 
         job_type = QueryJobType.EXTRACT_JSON
         job_config = ExtractJsonJobConfig(
