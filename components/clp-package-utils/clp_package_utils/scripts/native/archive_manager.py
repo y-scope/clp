@@ -189,11 +189,11 @@ def main(argv: typing.List[str]) -> int:
         logger.exception("Failed to load config.")
         return -1
 
+    database_config: Database = clp_config.database
     dataset = parsed_args.dataset
     if dataset is not None:
-        validate_dataset(clp_config, dataset)
+        validate_dataset(database_config, dataset)
 
-    database_config: Database = clp_config.database
     archives_dir: Path = clp_config.archive_output.get_directory()
     if not archives_dir.exists():
         logger.error("`archive_output.directory` doesn't exist.")
