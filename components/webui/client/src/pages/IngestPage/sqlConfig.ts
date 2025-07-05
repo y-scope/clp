@@ -1,6 +1,3 @@
-import axios from "axios";
-
-
 /**
  * Column names for the `clp_archives` table.
  */
@@ -39,19 +36,8 @@ enum COMPRESSION_JOBS_TABLE_COLUMN_NAMES {
     UPDATE_TIME = "update_time",
 }
 
-/**
- * Query the SQL server with the queryString.
- *
- * @param queryString
- * @return
- */
-const querySql = async <T>(queryString: string) => {
-    return axios.post<T>("/query/sql", {queryString});
-};
-
 export {
     CLP_ARCHIVES_TABLE_COLUMN_NAMES,
     CLP_FILES_TABLE_COLUMN_NAMES,
     COMPRESSION_JOBS_TABLE_COLUMN_NAMES,
-    querySql,
 };

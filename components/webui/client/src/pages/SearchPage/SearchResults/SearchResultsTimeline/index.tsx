@@ -8,6 +8,10 @@ import {Dayjs} from "dayjs";
 import {TimelineConfig} from "src/components/ResultsTimeline/typings";
 
 import ResultsTimeline from "../../../../components/ResultsTimeline/index";
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../../../../config";
 import {handleQuerySubmit} from "../../SearchControls/search-requests";
 import {TIME_RANGE_OPTION} from "../../SearchControls/TimeRangeInput/utils";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
@@ -25,6 +29,7 @@ const SearchResultsTimeline = () => {
     const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
     const queryString = useSearchStore((state) => state.queryString);
     const searchUiState = useSearchStore((state) => state.searchUiState);
+    const selectDataset = useSearchStore((state) => state.selectDataset);
     const timelineConfig = useSearchStore((state) => state.timelineConfig);
 
     const aggregationResults = useAggregationResults();
@@ -32,7 +37,10 @@ const SearchResultsTimeline = () => {
     const handleTimelineZoom = useCallback((newTimeRange: [Dayjs, Dayjs]) => {
         const newTimelineConfig: TimelineConfig = computeTimelineConfig(newTimeRange);
         const {
-            updateTimeRange, updateTimeRangeOption, updateTimelineConfig,
+            updateTimeRange,
+            updateTimeRangeOption,
+            updateTimelineConfig,
+            updateCachedDataset,
         } = useSearchStore.getState();
 
         // Update range picker selection to match zoomed range.
@@ -45,7 +53,18 @@ const SearchResultsTimeline = () => {
             return;
         }
 
+        if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
+            if (null !== selectDataset) {
+                updateCachedDataset(selectDataset);
+            } else {
+                console.error("Cannot submit a clp-s query without a dataset selection.");
+
+                return;
+            }
+        }
+
         handleQuerySubmit({
+            dataset: selectDataset,
             ignoreCase: false === queryIsCaseSensitive,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
@@ -55,6 +74,7 @@ const SearchResultsTimeline = () => {
     }, [
         queryIsCaseSensitive,
         queryString,
+        selectDataset,
     ]);
 
     useEffect(() => {

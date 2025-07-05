@@ -38,13 +38,14 @@ const routes: FastifyPluginAsync = async (app) => {
     fastify.post("/query/extract-stream", {
         schema: {
             body: Type.Object({
+                dataset: Type.String(),
                 extractJobType: Type.Enum(QUERY_JOB_TYPE),
                 logEventIdx: Type.Integer(),
                 streamId: Type.String({minLength: 1}),
             }),
         },
     }, async (req, resp) => {
-        const {extractJobType, logEventIdx, streamId} = req.body;
+        const {dataset, extractJobType, logEventIdx, streamId} = req.body;
         if (false === EXTRACT_JOB_TYPES.has(extractJobType)) {
             resp.code(StatusCodes.BAD_REQUEST);
             throw new Error(`Invalid extractJobType="${extractJobType}".`);
@@ -57,6 +58,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
         if (null === streamMetadata) {
             const extractResult = await fastify.dbManager.submitAndWaitForExtractStreamJob({
+                dataset: dataset,
                 jobType: extractJobType,
                 logEventIdx: logEventIdx,
                 streamId: streamId,

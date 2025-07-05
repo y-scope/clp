@@ -7,11 +7,7 @@ from abc import ABC, abstractmethod
 from contextlib import closing
 from pathlib import Path
 
-from clp_py_utils.clp_config import (
-    CLP_DEFAULT_DATASET_NAME,
-    Database,
-    StorageEngine,
-)
+from clp_py_utils.clp_config import Database
 from clp_py_utils.clp_metadata_db_utils import (
     get_archive_tags_table_name,
     get_archives_table_name,
@@ -24,6 +20,7 @@ from clp_package_utils.general import (
     CLPConfig,
     get_clp_home,
     load_config_file,
+    validate_dataset_exists,
 )
 
 # Command/Argument Constants
@@ -98,6 +95,12 @@ def main(argv: typing.List[str]) -> int:
         "-c",
         default=str(default_config_file_path),
         help="CLP configuration file.",
+    )
+    args_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
     )
 
     # Top-level commands
@@ -186,16 +189,19 @@ def main(argv: typing.List[str]) -> int:
         logger.exception("Failed to load config.")
         return -1
 
-    storage_engine: StorageEngine = clp_config.package.storage_engine
     database_config: Database = clp_config.database
+    dataset = parsed_args.dataset
+    if dataset is not None:
+        try:
+            validate_dataset_exists(database_config, dataset)
+        except Exception as e:
+            logger.error(e)
+            return -1
+
     archives_dir: Path = clp_config.archive_output.get_directory()
     if not archives_dir.exists():
         logger.error("`archive_output.directory` doesn't exist.")
         return -1
-
-    dataset: typing.Optional[str] = None
-    if StorageEngine.CLP_S == storage_engine:
-        dataset = CLP_DEFAULT_DATASET_NAME
 
     if FIND_COMMAND == parsed_args.subcommand:
         return _find_archives(
@@ -302,7 +308,7 @@ def _find_archives(
 def _delete_archives(
     archives_dir: Path,
     database_config: Database,
-    dataset: str,
+    dataset: typing.Optional[str],
     delete_handler: DeleteHandler,
     dry_run: bool = False,
 ) -> int:

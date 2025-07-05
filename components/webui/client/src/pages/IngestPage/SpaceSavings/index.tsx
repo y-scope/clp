@@ -6,9 +6,9 @@ import {
 
 import {theme} from "antd";
 
+import {querySql} from "../../../api/sql";
 import StatCard from "../../../components/StatCard";
 import useIngestStatsStore from "../ingestStatsStore";
-import {querySql} from "../sqlConfig";
 import CompressedSize from "./CompressedSize";
 import styles from "./index.module.css";
 import {
