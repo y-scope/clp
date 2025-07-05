@@ -77,7 +77,7 @@ private:
     }
 
 public:
-    static std::string unquote_string(std::string const& text) {
+    static auto unquote_string(std::string const& text) -> std::string {
         if (false == text.empty() && '"' == text.at(0)) {
             return text.substr(1, text.length() - 2);
         } else {
@@ -85,31 +85,31 @@ public:
         }
     }
 
-    static std::string unquote_date_string(std::string const& text) {
+    static auto unquote_date_string(std::string const& text) -> std::string {
         // date(...)
         // 012345
         return unquote_string(text.substr(5, text.size() - 6));
     }
 
-    static std::shared_ptr<Literal> unquote_literal(std::string const& text) {
+    static auto unquote_literal(std::string const& text) -> std::shared_ptr<Literal> {
         std::string token;
         if (false == clp_s::search::ast::unescape_kql_value(unquote_string(text), token)) {
             SPDLOG_ERROR("Can not parse invalid literal: {}", text);
             throw std::runtime_error{"Invalid literal."};
         }
 
-        if (auto ret = Integral::create_from_string(token)) {
+        if (auto ret = Integral::create_from_string(token); nullptr != ret) {
             return ret;
-        } else if (auto ret = BooleanLiteral::create_from_string(token)) {
+        } else if (auto ret = BooleanLiteral::create_from_string(token); nullptr != ret) {
             return ret;
-        } else if (auto ret = NullLiteral::create_from_string(token)) {
+        } else if (auto ret = NullLiteral::create_from_string(token); nullptr != ret) {
             return ret;
         } else {
             return StringLiteral::create(clp::string_utils::clean_up_wildcard_search_string(token));
         }
     }
 
-    static std::shared_ptr<Literal> unquote_date_literal(std::string const& text) {
+    static auto unquote_date_literal(std::string const& text) -> std::shared_ptr<Literal> {
         std::string token;
         if (false == clp_s::search::ast::unescape_kql_value(unquote_date_string(text), token)) {
             SPDLOG_ERROR("Can not parse invalid date literal: {}", text);
@@ -119,13 +119,13 @@ public:
         return DateLiteral::create_from_string(token);
     }
 
-    std::any visitStart(KqlParser::StartContext* ctx) override {
+    auto visitStart(KqlParser::StartContext* ctx) -> std::any override {
         // only go through first child (query) and avoid default
         // behaviour of returning result from last child (EOF in this case)
         return ctx->children[0]->accept(this);
     }
 
-    std::any visitColumn(KqlParser::ColumnContext* ctx) override {
+    auto visitColumn(KqlParser::ColumnContext* ctx) -> std::any override {
         std::string column = unquote_string(ctx->LITERAL()->getText());
 
         std::vector<std::string> descriptor_tokens;
@@ -147,7 +147,7 @@ public:
         );
     }
 
-    std::any visitNestedQuery(KqlParser::NestedQueryContext* ctx) override {
+    auto visitNestedQuery(KqlParser::NestedQueryContext* ctx) -> std::any override {
         auto descriptor = std::any_cast<std::shared_ptr<ColumnDescriptor>>(ctx->col->accept(this));
 
         auto nested_expr = std::any_cast<std::shared_ptr<Expression>>(ctx->q->accept(this));
@@ -156,7 +156,7 @@ public:
         return nested_expr;
     }
 
-    std::any visitOrAndQuery(KqlParser::OrAndQueryContext* ctx) override {
+    auto visitOrAndQuery(KqlParser::OrAndQueryContext* ctx) -> std::any override {
         auto lhs = std::any_cast<std::shared_ptr<Expression>>(ctx->lhs->accept(this));
         auto rhs = std::any_cast<std::shared_ptr<Expression>>(ctx->rhs->accept(this));
         if (ctx->op->getType() == KqlParser::AND) {
@@ -166,43 +166,45 @@ public:
         }
     }
 
-    std::any visitNotQuery(KqlParser::NotQueryContext* ctx) override {
+    auto visitNotQuery(KqlParser::NotQueryContext* ctx) -> std::any override {
         auto q = std::any_cast<std::shared_ptr<Expression>>(ctx->q->accept(this));
         q->invert();
         return q;
     }
 
-    std::any visitSubQuery(KqlParser::SubQueryContext* ctx) override {
+    auto visitSubQuery(KqlParser::SubQueryContext* ctx) -> std::any override {
         return ctx->q->accept(this);
     }
 
-    std::any visitColumn_value_expression(KqlParser::Column_value_expressionContext* ctx) override {
+    auto visitColumn_value_expression(KqlParser::Column_value_expressionContext* ctx)
+            -> std::any override {
         auto descriptor = std::any_cast<std::shared_ptr<ColumnDescriptor>>(ctx->col->accept(this));
 
-        if (ctx->lit) {
+        if (nullptr != ctx->lit) {
             auto lit = unquote_literal(ctx->lit->getText());
             return FilterExpr::create(descriptor, FilterOperation::EQ, lit);
-        } else if (ctx->date_lit) {
+        } else if (nullptr != ctx->date_lit) {
             auto lit = unquote_date_literal(ctx->date_lit->getText());
             return FilterExpr::create(descriptor, FilterOperation::EQ, lit);
-        } else /*if (ctx->list) */ {
+        } else /*if (nullptr != ctx->list) */ {
             auto list_expr = std::any_cast<std::shared_ptr<Expression>>(ctx->list->accept(this));
             prepend_column(list_expr, descriptor);
             return list_expr;
         }
     }
 
-    std::any visitColumn_range_expression(KqlParser::Column_range_expressionContext* ctx) override {
+    auto visitColumn_range_expression(KqlParser::Column_range_expressionContext* ctx)
+            -> std::any override {
         auto descriptor = std::any_cast<std::shared_ptr<ColumnDescriptor>>(ctx->col->accept(this));
         std::shared_ptr<Literal> lit;
-        if (ctx->lit) {
+        if (nullptr != ctx->lit) {
             lit = unquote_literal(ctx->lit->getText());
-        } else /*if (ctx->date_lit)*/ {
+        } else /*if (nullptr != ctx->date_lit)*/ {
             lit = unquote_date_literal(ctx->date_lit->getText());
         }
         std::string range_op = ctx->RANGE_OPERATOR()->getText();
 
-        FilterOperation op = FilterOperation::EQ;
+        FilterOperation op{FilterOperation::EQ};
         if (range_op == "<=") {
             op = FilterOperation::LTE;
         } else if (range_op == ">=") {
@@ -216,7 +218,7 @@ public:
         return FilterExpr::create(descriptor, op, lit);
     }
 
-    std::any visitValue_expression(KqlParser::Value_expressionContext* ctx) override {
+    auto visitValue_expression(KqlParser::Value_expressionContext* ctx) -> std::any override {
         auto lit = unquote_literal(ctx->LITERAL()->getText());
         // TODO: consider if this should somehow be allowed to match all namespaces. "*" namespace?
         auto descriptor
@@ -224,15 +226,15 @@ public:
         return FilterExpr::create(descriptor, FilterOperation::EQ, lit);
     }
 
-    std::any visitList_of_values(KqlParser::List_of_valuesContext* ctx) override {
-        std::shared_ptr<Expression> base(nullptr);
+    auto visitList_of_values(KqlParser::List_of_valuesContext* ctx) -> std::any override {
+        std::shared_ptr<Expression> base{nullptr};
         bool invert_each_filter = false;
-        if (ctx->condition) {
-            if (ctx->AND()) {
+        if (nullptr != ctx->condition) {
+            if (nullptr != ctx->AND()) {
                 base = AndExpr::create();
-            } else if (ctx->OR()) {
+            } else if (nullptr != ctx->OR()) {
                 base = OrExpr::create();
-            } else if (ctx->NOT()) {
+            } else if (nullptr != ctx->NOT()) {
                 invert_each_filter = true;
                 base = AndExpr::create();
             }
@@ -259,16 +261,16 @@ public:
 };
 }  // namespace
 
-std::shared_ptr<Expression> parse_kql_expression(std::istream& in) {
+auto parse_kql_expression(std::istream& in) -> std::shared_ptr<Expression> {
     ErrorListener lexer_error_listener;
     ErrorListener parser_error_listener;
 
-    ANTLRInputStream input(in);
-    KqlLexer lexer(&input);
+    ANTLRInputStream input{in};
+    KqlLexer lexer{&input};
     lexer.removeErrorListeners();
     lexer.addErrorListener(&lexer_error_listener);
-    CommonTokenStream tokens(&lexer);
-    KqlParser parser(&tokens);
+    CommonTokenStream tokens{&lexer};
+    KqlParser parser{&tokens};
     parser.removeErrorListeners();
     parser.addErrorListener(&parser_error_listener);
     KqlParser::StartContext* tree = parser.start();
