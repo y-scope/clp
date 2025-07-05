@@ -498,7 +498,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
 
 void replace_unescaped_wildcards(std::string& search_string) {
     auto unescaped = [escaped = false](char c) mutable {
-        bool should_replace = ('?' == c && !escaped);
+        bool should_replace = ('?' == c && false == escaped);
         if ('\\' == c) {
             escaped = !escaped;
         } else {
