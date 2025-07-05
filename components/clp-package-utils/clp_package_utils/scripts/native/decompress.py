@@ -141,12 +141,13 @@ def handle_extract_stream_cmd(
     elif EXTRACT_JSON_CMD == command:
         dataset = parsed_args.dataset
         if dataset is None:
-            logger.error("Dataset not specified for JSON extraction. Check the storage engine.")
+            logger.error(f"Dataset unspecified, but must be specified for command `{command}'.")
             return -1
         validate_dataset(clp_config.database, dataset)
+
         job_type = QueryJobType.EXTRACT_JSON
         job_config = ExtractJsonJobConfig(
-            dataset=parsed_args.dataset,
+            dataset=dataset,
             archive_id=parsed_args.archive_id,
             target_chunk_size=parsed_args.target_chunk_size,
         )

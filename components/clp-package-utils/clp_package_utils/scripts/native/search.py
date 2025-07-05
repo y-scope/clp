@@ -240,13 +240,13 @@ def main(argv):
 
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
+    args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
         "--dataset",
         type=str,
         default=None,
         help="The dataset that the archives belong to.",
     )
-    args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
         "-t", "--tags", help="Comma-separated list of tags of archives to search."
     )
@@ -298,15 +298,17 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    if parsed_args.dataset is not None:
-        validate_dataset(clp_config.database, parsed_args.dataset)
+    database_config: Database = clp_config.database
+    dataset = parsed_args.dataset
+    if dataset is not None:
+        validate_dataset(database_config, dataset)
 
     try:
         asyncio.run(
             do_search(
-                clp_config.database,
+                database_config,
                 clp_config.results_cache,
-                parsed_args.dataset,
+                dataset,
                 parsed_args.wildcard_query,
                 parsed_args.tags,
                 parsed_args.begin_time,

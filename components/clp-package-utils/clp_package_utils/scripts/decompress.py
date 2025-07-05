@@ -172,8 +172,6 @@ def handle_extract_stream_cmd(
 
     storage_type = clp_config.archive_output.storage.type
     storage_engine = clp_config.package.storage_engine
-    job_command = parsed_args.command
-
     if StorageType.S3 == storage_type and StorageEngine.CLP == storage_engine:
         logger.error(
             f"Stream extraction is not supported for archive storage type `{storage_type}` with"
@@ -181,8 +179,9 @@ def handle_extract_stream_cmd(
         )
         return -1
 
+    job_command = parsed_args.command
     if EXTRACT_JSON_CMD == job_command and StorageEngine.CLP_S != storage_engine:
-        logger.error(f"Json extraction is only supported with storage engine `{storage_engine}`.")
+        logger.error(f"JSON extraction is not supported for storage engine `{storage_engine}`.")
         return -1
 
     dataset = parsed_args.dataset

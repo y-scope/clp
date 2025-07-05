@@ -39,13 +39,13 @@ def main(argv):
         default=str(default_config_file_path),
         help="CLP package configuration file.",
     )
+    args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
         "--dataset",
         type=str,
         default=None,
         help="The dataset that the archives belong to.",
     )
-    args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
         "-t", "--tags", help="Comma-separated list of tags of archives to search."
     )

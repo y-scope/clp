@@ -139,7 +139,6 @@ def _generate_clp_io_config(
     parsed_args: argparse.Namespace,
 ) -> Union[S3InputConfig, FsInputConfig]:
     input_type = clp_config.logs_input.type
-
     if InputType.FS == input_type:
         if len(logs_to_compress) == 0:
             raise ValueError("No input paths given.")
