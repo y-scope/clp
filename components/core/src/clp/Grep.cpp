@@ -496,6 +496,28 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
 }
 }  // namespace
 
+void replace_unescaped_wildcards(
+        std::string& search_string
+) {
+    auto unescaped = [escaped = false](char c) mutable
+    {
+        bool should_replace = ('?' == c && !escaped);
+        if ('\\' == c) {
+            escaped = !escaped;
+        } else {
+            escaped = false;
+        }
+        return should_replace;
+    };
+    
+    std::replace_if(
+        search_string.begin(),
+        search_string.end(),
+        unescaped,
+        '*'
+    );
+}
+
 std::optional<Query> Grep::process_raw_query(
         Archive const& archive,
         string const& search_string,
@@ -522,12 +544,9 @@ std::optional<Query> Grep::process_raw_query(
         // Replace '?' wildcards with '*' wildcards since we currently have no support for
         // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
         // message uses the original wildcards, so correctness will be maintained.
-        std::replace(
-                search_string_for_sub_queries.begin(),
-                search_string_for_sub_queries.end(),
-                '?',
-                '*'
-        );
+        // Use replace_unescaped_wildcards() to avoid changing escaped wildcard characters.        
+        replace_unescaped_wildcards(search_string_for_sub_queries);
+
         // Clean-up in case any instances of "?*" or "*?" were changed into "**"
         search_string_for_sub_queries
                 = clean_up_wildcard_search_string(search_string_for_sub_queries);
