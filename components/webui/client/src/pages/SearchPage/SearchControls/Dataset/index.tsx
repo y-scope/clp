@@ -8,6 +8,7 @@ import {
 
 import useIngestStatsStore from "../../../IngestPage/ingestStatsStore";
 import useSearchStore from "../../SearchState/index";
+import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import DatasetLabel from "./DatasetLabel";
 import styles from "./index.module.css";
 import {fetchDatasetNames} from "./sql";
@@ -23,6 +24,7 @@ const Dataset = () => {
 
     const dataset = useSearchStore((state) => state.selectDataset);
     const updateDataset = useSearchStore((state) => state.updateSelectDataset);
+    const searchUiState = useSearchStore((state) => state.searchUiState);
 
     const [messageApi, contextHolder] = message.useMessage();
 
@@ -84,6 +86,10 @@ const Dataset = () => {
             <DatasetLabel/>
             <Select
                 className={styles["select"] || ""}
+                disabled={
+                    searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
+                    searchUiState === SEARCH_UI_STATE.QUERYING
+                }
                 loading={isPending}
                 options={(data || []).map((option) => ({label: option, value: option}))}
                 placeholder={"None"}
