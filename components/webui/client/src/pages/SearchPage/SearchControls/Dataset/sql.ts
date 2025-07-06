@@ -8,7 +8,7 @@ const SqlDbClpDatasetsTableName = "clp_datasets";
 
 
 /**
- * Column names for the `clp_datasets` table.
+ * Column names for the datasets table.
  */
 enum CLP_DATASETS_TABLE_COLUMN_NAMES {
     NAME = "name",
@@ -29,7 +29,7 @@ interface DatasetItem {
 }
 
 /**
- * Fetches all datasets names from the `clp_datasets` table.
+ * Fetches all datasets names from the datasets table.
  *
  * @return
  */

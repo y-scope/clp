@@ -32,8 +32,8 @@ const Dataset = () => {
         staleTime: refreshInterval,
     });
 
-    // Update the selected dataset to the first dataset in the the reponse. The dataset is only
-    // updated if the dataset is not already set (i.e. on initial response).
+    // Update the selected dataset to the first dataset in the response. The dataset is only
+    // updated if it isn't already set (i.e., on initial response).
     useEffect(() => {
         if (isSuccess) {
             if ("undefined" !== typeof data[0] && null === dataset) {
@@ -62,7 +62,7 @@ const Dataset = () => {
         if (isSuccess && 0 === data.length) {
             messageApi.warning({
                 key: "noData",
-                content: "There is no data ingested yet. Please ingest data to search.",
+                content: "No data has been ingested. Please ingest data to search.",
             });
 
             // If all datasets were deleted, the dataset state must be reset to null to disable
