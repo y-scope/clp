@@ -86,16 +86,16 @@ const Dataset = () => {
             <DatasetLabel/>
             <Select
                 className={styles["select"] || ""}
-                disabled={
-                    searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
-                    searchUiState === SEARCH_UI_STATE.QUERYING
-                }
                 loading={isPending}
                 options={(data || []).map((option) => ({label: option, value: option}))}
                 placeholder={"None"}
                 showSearch={true}
                 size={"large"}
                 value={dataset}
+                disabled={
+                    searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
+                    searchUiState === SEARCH_UI_STATE.QUERYING
+                }
                 onChange={handleDatasetChange}/>
         </div>
     );
