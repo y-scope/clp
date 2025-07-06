@@ -102,7 +102,8 @@ def main(argv):
     if StorageEngine.CLP_S == storage_engine:
         dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
         try:
-            validate_dataset_name(dataset)
+            clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+            validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
         except Exception as e:
             logger.error(e)
             return -1
