@@ -8,7 +8,7 @@ COPY ./tools/scripts/lib_install ./tools/scripts/lib_install
 RUN ./tools/scripts/lib_install/musllinux_1_2/install-all.sh
 
 # Remove cached files
-RUN apk cache clean && rm -rf /var/cache/apk/* /tmp/* /var/tmp/*
+RUN apk cache clean --all && rm -rf /var/cache/apk/* /tmp/* /var/tmp/*
 
 # NOTE: Don't flatten the image or else we'll lose any environment modifications from the base
 # image.
