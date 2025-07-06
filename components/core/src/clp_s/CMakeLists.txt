@@ -97,9 +97,10 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 Boost::regex
                 ${CURL_LIBRARIES}
                 fmt::fmt
-                spdlog::spdlog
+                msgpack-cxx
                 nlohmann_json::nlohmann_json
                 OpenSSL::Crypto
+                spdlog::spdlog
                 ystdlib::error_handling
                 ZStd::ZStd
         )
@@ -239,6 +240,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 PUBLIC
                 absl::flat_hash_map
                 clp_s::io
+                msgpack-cxx
                 nlohmann_json::nlohmann_json
                 simdjson::simdjson
                 PRIVATE
@@ -247,7 +249,6 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 clp_s::timestamp_pattern
                 ${CURL_LIBRARIES}
                 fmt::fmt
-                msgpack-cxx
                 spdlog::spdlog
         )
 endif()
@@ -302,6 +303,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 PUBLIC
                 absl::flat_hash_map
                 clp_s::io
+                msgpack-cxx
                 nlohmann_json::nlohmann_json
                 PRIVATE
                 Boost::url
@@ -309,7 +311,6 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 clp_s::timestamp_pattern
                 ${CURL_LIBRARIES}
                 fmt::fmt
-                msgpack-cxx
                 spdlog::spdlog
         )
 endif()

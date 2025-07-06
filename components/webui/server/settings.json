@@ -1,4 +1,6 @@
 {
+    "ClpStorageEngine": "clp",
+
     "SqlDbHost": "localhost",
     "SqlDbPort": 3306,
     "SqlDbName": "clp-db",
