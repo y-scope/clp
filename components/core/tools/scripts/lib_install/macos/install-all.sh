@@ -18,8 +18,7 @@ curl \
   --location \
   --output "$cmake_formula_path" \
   --show-error \
-  https://raw.githubusercontent.com/Homebrew/homebrew-core/b4e46db74e74a8c1650b38b1da222284ce1ec5ce\
-/Formula/c/cmake.rb
+  https://raw.githubusercontent.com/Homebrew/homebrew-core/b4e46db74e74a8c1650b38b1da222284ce1ec5ce/Formula/c/cmake.rb
 brew install --formula "$cmake_formula_path"
 
 # Install a version of `task` < 3.43 to avoid https://github.com/y-scope/clp/issues/872
@@ -29,8 +28,7 @@ curl \
   --location \
   --output "$task_formula_path" \
   --show-error \
-  https://raw.githubusercontent.com/Homebrew/homebrew-core/356f8408263b6a06e8f5f83cad574773d8054e1c\
-/Formula/g/go-task.rb
+  https://raw.githubusercontent.com/Homebrew/homebrew-core/356f8408263b6a06e8f5f83cad574773d8054e1c/Formula/g/go-task.rb
 brew install --formula "$task_formula_path"
 
 rm -rf "$formula_dir"
@@ -48,7 +46,7 @@ brew install \
   xz \
   zstd
 
-if [[ -n "${GITHUB_ENV}" ]]; then
+if [ "${GITHUB_ACTIONS:-}" == "true" ]; then
   LLVM_PREFIX=$(brew --prefix llvm@16)
   {
     echo "LLVM_PREFIX=$LLVM_PREFIX"
@@ -56,17 +54,17 @@ if [[ -n "${GITHUB_ENV}" ]]; then
     echo "CXX=$LLVM_PREFIX/bin/clang++"
     echo "AR=$LLVM_PREFIX/bin/llvm-ar"
     echo "RANLIB=$LLVM_PREFIX/bin/llvm-ranlib"
-  } >> "$GITHUB_ENV"
+  } >>"$GITHUB_ENV"
 fi
 
 # Install pkg-config if it isn't already installed
 # NOTE: We might expect that pkg-config is installed through brew, so trying to install it again
 # would be harmless; however, in certain environments, like the macOS GitHub hosted runner,
 # pkg-config is installed by other means, meaning a brew install would cause conflicts.
-if ! command -v pkg-config ; then
-    brew install pkg-config
+if ! command -v pkg-config; then
+  brew install pkg-config
 fi
 
 # TODO: https://github.com/y-scope/clp/issues/795
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 "${script_dir}/../check-cmake-version.sh"
