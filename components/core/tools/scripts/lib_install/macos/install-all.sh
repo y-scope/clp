@@ -48,6 +48,13 @@ brew install \
   xz \
   zstd
 
+LLVM_PREFIX=$(brew --prefix llvm@16)
+echo "LLVM_PREFIX=$LLVM_PREFIX" >> "$GITHUB_ENV"
+echo "CC=$LLVM_PREFIX/bin/clang" >> "$GITHUB_ENV"
+echo "CXX=$LLVM_PREFIX/bin/clang++" >> "$GITHUB_ENV"
+echo "AR=$LLVM_PREFIX/bin/llvm-ar" >> "$GITHUB_ENV"
+echo "RANLIB=$LLVM_PREFIX/bin/llvm-ranlib" >> "$GITHUB_ENV"
+
 # Install pkg-config if it isn't already installed
 # NOTE: We might expect that pkg-config is installed through brew, so trying to install it again
 # would be harmless; however, in certain environments, like the macOS GitHub hosted runner,
