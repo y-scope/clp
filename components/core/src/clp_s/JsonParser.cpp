@@ -511,10 +511,11 @@ bool JsonParser::parse() {
         size_t file_split_number{0ULL};
         int32_t log_event_idx_node_id{};
         auto initialize_fields_for_archive = [&]() -> bool {
-            if (m_record_log_order) {
-                log_event_idx_node_id
-                        = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
+            if (false == m_record_log_order) {
+                return true;
             }
+            log_event_idx_node_id
+                    = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
             if (auto const rc = m_archive_writer->add_field_to_current_range(
                         std::string{constants::range_index::cFilename},
                         path.path
@@ -657,10 +658,12 @@ bool JsonParser::parse() {
             return false;
         }
 
-        if (auto const rc = m_archive_writer->close_current_range(); ErrorCodeSuccess != rc) {
-            SPDLOG_ERROR("Failed to close metadata range: {}", static_cast<int64_t>(rc));
-            std::ignore = m_archive_writer->close();
-            return false;
+        if (m_record_log_order) {
+            if (auto const rc = m_archive_writer->close_current_range(); ErrorCodeSuccess != rc) {
+                SPDLOG_ERROR("Failed to close metadata range: {}", static_cast<int64_t>(rc));
+                std::ignore = m_archive_writer->close();
+                return false;
+            }
         }
     }
     return true;
@@ -980,10 +983,11 @@ auto JsonParser::parse_from_ir() -> bool {
         size_t file_split_number{0ULL};
         int32_t log_event_idx_node_id{};
         auto initialize_fields_for_archive = [&]() -> bool {
-            if (m_record_log_order) {
-                log_event_idx_node_id
-                        = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
+            if (false == m_record_log_order) {
+                return true;
             }
+            log_event_idx_node_id
+                    = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
             if (auto const rc = m_archive_writer->add_field_to_current_range(
                         std::string{constants::range_index::cFilename},
                         path.path
@@ -1138,10 +1142,13 @@ auto JsonParser::parse_from_ir() -> bool {
         curr_pos = decompressor.get_pos();
         m_archive_writer->increment_uncompressed_size(curr_pos - last_pos);
         decompressor.close();
-        if (auto const rc = m_archive_writer->close_current_range(); ErrorCodeSuccess != rc) {
-            SPDLOG_ERROR("Failed to close metadata range: {}", static_cast<int64_t>(rc));
-            std::ignore = m_archive_writer->close();
-            return false;
+
+        if (m_record_log_order) {
+            if (auto const rc = m_archive_writer->close_current_range(); ErrorCodeSuccess != rc) {
+                SPDLOG_ERROR("Failed to close metadata range: {}", static_cast<int64_t>(rc));
+                std::ignore = m_archive_writer->close();
+                return false;
+            }
         }
     }
     return true;

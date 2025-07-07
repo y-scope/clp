@@ -62,10 +62,10 @@ def _make_core_clp_s_command_and_env_vars(
     dataset = search_config.dataset
     if StorageType.S3 == worker_config.archive_output.storage.type:
         s3_config = worker_config.archive_output.storage.s3_config
-        s3_config.key_prefix = f"{s3_config.key_prefix}{dataset}/"
+        s3_object_key = f"{s3_config.key_prefix}{dataset}/{archive_id}"
         try:
             s3_url = generate_s3_virtual_hosted_style_url(
-                s3_config.region_code, s3_config.bucket, f"{s3_config.key_prefix}{archive_id}"
+                s3_config.region_code, s3_config.bucket, s3_object_key
             )
         except ValueError as ex:
             logger.error(f"Encountered error while generating S3 url: {ex}")
