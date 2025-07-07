@@ -19,7 +19,6 @@ import {fetchDatasetNames} from "./sql";
  * @return
  */
 const Dataset = () => {
-
     const dataset = useSearchStore((state) => state.selectDataset);
     const updateDataset = useSearchStore((state) => state.updateSelectDataset);
     const searchUiState = useSearchStore((state) => state.searchUiState);
