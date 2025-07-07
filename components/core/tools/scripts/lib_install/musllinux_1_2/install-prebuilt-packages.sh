@@ -15,7 +15,7 @@ apk update && apk add --no-cache \
     zlib-static
 
 # Install `task`
-# NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/
+# NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
 VERSION=3.42.1
 ARCH=$(uname -m)
 case "$ARCH" in
