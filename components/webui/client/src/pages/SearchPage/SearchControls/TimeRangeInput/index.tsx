@@ -72,7 +72,6 @@ const TimeRangeInput = () => {
                 onChange={handleSelectChange}/>
             {timeRangeOption === TIME_RANGE_OPTION.CUSTOM && (
                 <DatePicker.RangePicker
-
                     allowClear={true}
                     className={styles["rangePicker"] || ""}
                     showTime={true}
