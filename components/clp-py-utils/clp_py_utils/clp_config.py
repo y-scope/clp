@@ -36,13 +36,6 @@ QUERY_TASKS_TABLE_NAME = "query_tasks"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 
-ARCHIVE_TAGS_TABLE_SUFFIX = "archive_tags"
-ARCHIVES_TABLE_SUFFIX = "archives"
-COLUMN_METADATA_TABLE_SUFFIX = "column_metadata"
-DATASETS_TABLE_SUFFIX = "datasets"
-FILES_TABLE_SUFFIX = "files"
-TAGS_TABLE_SUFFIX = "tags"
-
 OS_RELEASE_FILE_PATH = pathlib.Path("etc") / "os-release"
 
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
