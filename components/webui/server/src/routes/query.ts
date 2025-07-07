@@ -58,7 +58,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
         if (null === streamMetadata) {
             const extractResult = await fastify.dbManager.submitAndWaitForExtractStreamJob({
-                dataset: dataset,
+                dataset: ("" === dataset ? null : dataset),
                 jobType: extractJobType,
                 logEventIdx: logEventIdx,
                 streamId: streamId,
