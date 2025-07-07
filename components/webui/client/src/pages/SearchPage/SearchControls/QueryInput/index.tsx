@@ -1,4 +1,6 @@
 import {
+    ChangeEvent,
+    useCallback,
     useEffect,
     useRef,
     useState,
@@ -21,15 +23,21 @@ import {
  * @return
  */
 const QueryInput = () => {
-    const {
-        queryString,
-        queryIsCaseSensitive,
-        updateQueryString,
-        updateQueryIsCaseSensitive,
-        searchUiState,
-    } = useSearchStore();
+    const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
+    const queryString = useSearchStore((state) => state.queryString);
+    const searchUiState = useSearchStore((state) => state.searchUiState);
     const [pseudoProgress, setPseudoProgress] = useState<Nullable<number>>(null);
     const intervalIdRef = useRef<number>(0);
+
+    const handleCaseSensitiveChange = useCallback((newValue: boolean) => {
+        const {updateQueryIsCaseSensitive} = useSearchStore.getState();
+        updateQueryIsCaseSensitive(newValue);
+    }, []);
+
+    const handleChange = useCallback((ev: ChangeEvent<HTMLInputElement>) => {
+        const {updateQueryString} = useSearchStore.getState();
+        updateQueryString(ev.target.value);
+    }, []);
 
     useEffect(() => {
         if (searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING) {
@@ -70,12 +78,8 @@ const QueryInput = () => {
                 searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                 searchUiState === SEARCH_UI_STATE.QUERYING
             }
-            onCaseSensitiveChange={(newValue) => {
-                updateQueryIsCaseSensitive(newValue);
-            }}
-            onChange={(e) => {
-                updateQueryString(e.target.value);
-            }}/>
+            onCaseSensitiveChange={handleCaseSensitiveChange}
+            onChange={handleChange}/>
     );
 };
 
