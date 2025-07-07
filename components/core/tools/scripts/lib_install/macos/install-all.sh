@@ -48,7 +48,7 @@ brew install \
   xz \
   zstd
 
-if [[ -n "${GITHUB_ENV}" ]]; then
+if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
   LLVM_PREFIX=$(brew --prefix llvm@16)
   {
     echo "LLVM_PREFIX=$LLVM_PREFIX"
