@@ -601,15 +601,14 @@ def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
             f" characters and underscores."
         )
 
-    num_underscores_in_table_name = 2
-    dataset_max_len = (
+    dataset_name_max_len = (
         MYSQL_TABLE_NAME_MAX_LEN
         - len(clp_table_prefix)
+        - 1  # For the separator between the dataset name and the table suffix
         - TABLE_SUFFIX_MAX_LEN
-        - num_underscores_in_table_name
     )
-    if len(dataset_name) > dataset_max_len:
+    if len(dataset_name) > dataset_name_max_len:
         raise ValueError(
             f"Invalid dataset name: `{dataset_name}`. Names can only be a maximum of"
-            f" {dataset_max_len} characters long."
+            f" {dataset_name_max_len} characters long."
         )
