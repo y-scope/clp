@@ -10,7 +10,6 @@ from typing import Optional
 
 import yaml
 from clp_py_utils.clp_config import (
-    CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     Database,
 )
@@ -30,6 +29,7 @@ from clp_package_utils.general import (
     EXTRACT_JSON_CMD,
     get_clp_home,
     load_config_file,
+    validate_dataset_exists,
 )
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
@@ -139,9 +139,19 @@ def handle_extract_stream_cmd(
             target_uncompressed_size=parsed_args.target_uncompressed_size,
         )
     elif EXTRACT_JSON_CMD == command:
+        dataset = parsed_args.dataset
+        if dataset is None:
+            logger.error(f"Dataset unspecified, but must be specified for command `{command}'.")
+            return -1
+        try:
+            validate_dataset_exists(clp_config.database, dataset)
+        except Exception as e:
+            logger.error(e)
+            return -1
+
         job_type = QueryJobType.EXTRACT_JSON
         job_config = ExtractJsonJobConfig(
-            dataset=CLP_DEFAULT_DATASET_NAME,
+            dataset=dataset,
             archive_id=parsed_args.archive_id,
             target_chunk_size=parsed_args.target_chunk_size,
         )
@@ -300,6 +310,12 @@ def main(argv):
     # JSON extraction command parser
     json_extraction_parser = command_args_parser.add_parser(EXTRACT_JSON_CMD)
     json_extraction_parser.add_argument("archive_id", type=str, help="Archive ID")
+    json_extraction_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
+    )
     json_extraction_parser.add_argument(
         "--target-chunk-size", type=int, help="Target chunk size (B)."
     )
