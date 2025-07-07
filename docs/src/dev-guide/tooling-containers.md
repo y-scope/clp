@@ -40,8 +40,8 @@ distros using glibc 2.28+, including:
 Images containing the dependencies necessary to build CLP core in a [musllinux_1_2][musllinux_1_2]
 environment (aarch64 or x86).
 
-Binaries built on musllinux_1_2 (based on Alpine Linux 3.22) are expected to be compatible with other
-distros using musl 1.2, including:
+Binaries built on musllinux_1_2 (based on Alpine Linux 3.22) are expected to be compatible with
+other distros using musl 1.2, including:
 
 * Alpine Linux 3.13+
 
