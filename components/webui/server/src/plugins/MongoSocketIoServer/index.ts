@@ -3,6 +3,10 @@
 // TODO: Move listeners to a separate file to reduce lines
 // Reference: https://github.com/socketio/socket.io/blob/main/examples/basic-crud-application/server/lib/todo-management/todo.handlers.ts
 
+
+import {lookup as dnsLookup} from "node:dns";
+
+import fastifyHttpProxy from "@fastify/http-proxy";
 import {
     FastifyInstance,
     FastifyPluginAsync,
@@ -77,6 +81,35 @@ class MongoSocketIoServer {
             InterServerEvents,
             SocketData
         >(fastify.server);
+
+        // Fastify listens on all resolved addresses for localhost (e.g. `127.0.0.1`, `::1`), but
+        // socket.io only uses the main one. When multiple addresses are resolved, we proxy
+        // socket.io requests from secondary addresses to the main server.
+        dnsLookup(fastify.config.HOST, {all: true}, (err, addresses) => {
+            if (null !== err) {
+                fastify.log.error(`DNS lookup failed: ${err.message}`);
+
+                return;
+            }
+            const [firstAddress] = addresses;
+            if ("undefined" === typeof firstAddress) {
+                fastify.log.error("No addresses found for the provided host.");
+
+                return;
+            }
+            if (1 < addresses.length) {
+                fastify.log.warn(
+                    `Multiple addresses found for ${fastify.config.HOST}: ${
+                        JSON.stringify(addresses)}. ` +
+                    "Proxying all socket.io requests to the main server."
+                );
+                fastify.register(fastifyHttpProxy, {
+                    upstream: `http://${fastify.config.HOST}:${fastify.config.PORT}/socket.io/`,
+                    prefix: "/socket.io/",
+                });
+            }
+        });
+
         this.#registerEventListeners();
     }
 
