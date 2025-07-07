@@ -48,16 +48,14 @@ brew install \
   xz \
   zstd
 
-if [-n "${GITHUB_ENV}"]; then
-  LLVM_PREFIX=$(brew --prefix llvm@16)
-  {
-    echo "LLVM_PREFIX=$LLVM_PREFIX"
-    echo "CC=$LLVM_PREFIX/bin/clang"
-    echo "CXX=$LLVM_PREFIX/bin/clang++"
-    echo "AR=$LLVM_PREFIX/bin/llvm-ar"
-    echo "RANLIB=$LLVM_PREFIX/bin/llvm-ranlib"
-  } >> "$GITHUB_ENV"
-fi
+LLVM_PREFIX=$(brew --prefix llvm@16)
+{
+  echo "LLVM_PREFIX=$LLVM_PREFIX"
+  echo "CC=$LLVM_PREFIX/bin/clang"
+  echo "CXX=$LLVM_PREFIX/bin/clang++"
+  echo "AR=$LLVM_PREFIX/bin/llvm-ar"
+  echo "RANLIB=$LLVM_PREFIX/bin/llvm-ranlib"
+} >> "$GITHUB_ENV"
 
 # Install pkg-config if it isn't already installed
 # NOTE: We might expect that pkg-config is installed through brew, so trying to install it again
