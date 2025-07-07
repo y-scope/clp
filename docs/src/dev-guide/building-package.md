@@ -10,7 +10,7 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
     environment.
   * It should be possible to build a package for a different environment, it just requires a some
     extra configuration.
-* Python 3.8 or newer
+* Python 3.10 or newer
 * python3-dev
 * python3-venv
 * [Task] >= 3.38.0 and < 3.43.0
