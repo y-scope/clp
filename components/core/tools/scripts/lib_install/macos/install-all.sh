@@ -48,6 +48,7 @@ brew install \
   xz \
   zstd
 
+echo "$GITHUB_ENV"
 LLVM_PREFIX=$(brew --prefix llvm@16)
 {
   echo "LLVM_PREFIX=$LLVM_PREFIX"
