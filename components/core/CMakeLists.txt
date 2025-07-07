@@ -284,9 +284,7 @@ endif()
 
 # Add ystdlib
 find_package(ystdlib REQUIRED)
-if (ystdlib_FOUND)
-    message(STATUS "Found ystdlib ${ystdlib_VERSION}")
-endif()
+message(STATUS "Found ystdlib ${ystdlib_VERSION}")
 
 # Find and setup ZStd Library
 if(CLP_NEED_ZSTD)
