@@ -10,7 +10,6 @@ import THEME_CONFIG from "./theme";
 
 import "@ant-design/v5-patch-for-react-19";
 
-
 /**
  * Renders Web UI app.
  *

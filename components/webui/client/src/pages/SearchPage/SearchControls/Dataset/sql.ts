@@ -1,14 +1,9 @@
 import {querySql} from "../../../../api/sql";
+import {settings} from "../../../../settings";
 
 
 /**
- * Table name for dataset queries.
- */
-const SqlDbClpDatasetsTableName = "clp_datasets";
-
-
-/**
- * Column names for the `clp_datasets` table.
+ * Column names for the datasets table.
  */
 enum CLP_DATASETS_TABLE_COLUMN_NAMES {
     NAME = "name",
@@ -20,7 +15,7 @@ enum CLP_DATASETS_TABLE_COLUMN_NAMES {
 const GET_DATASETS_SQL = `
     SELECT
         ${CLP_DATASETS_TABLE_COLUMN_NAMES.NAME} AS name
-    FROM ${SqlDbClpDatasetsTableName}
+    FROM ${settings.SqlDbClpDatasetsTableName}
     ORDER BY ${CLP_DATASETS_TABLE_COLUMN_NAMES.NAME};
 `;
 
@@ -29,7 +24,7 @@ interface DatasetItem {
 }
 
 /**
- * Fetches all datasets names from the `clp_datasets` table.
+ * Fetches all datasets names from the datasets table.
  *
  * @return
  */

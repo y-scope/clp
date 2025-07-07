@@ -8,6 +8,7 @@ import {
 } from "antd";
 
 import {STREAM_TYPE} from "../../../../../config";
+import useSearchStore from "../../../../SearchPage/SearchState";
 import styles from "./index.module.css";
 
 
@@ -32,6 +33,7 @@ const LogViewerLink = ({
     streamId,
 }: LogViewerLinkProps) => {
     const {token} = theme.useToken();
+    const cachedDataset = useSearchStore((state) => state.cachedDataset);
 
     return (
         <Tooltip title={"Open file"}>
@@ -45,7 +47,8 @@ const LogViewerLink = ({
                         search:
                             `?type=${encodeURIComponent(STREAM_TYPE)}` +
                             `&streamId=${encodeURIComponent(streamId)}` +
-                            `&logEventIdx=${encodeURIComponent(logEventIdx)}`,
+                            `&logEventIdx=${encodeURIComponent(logEventIdx)}` +
+                            `&dataset=${encodeURIComponent(cachedDataset)}`,
                     }}
                 >
                     <LinkOutlined/>
