@@ -1,10 +1,5 @@
 import {querySql} from "../../../../api/sql";
-
-
-/**
- * Table name for dataset queries.
- */
-const SqlDbClpDatasetsTableName = "clp_datasets";
+import {settings} from "../../../../settings";
 
 
 /**
@@ -20,7 +15,7 @@ enum CLP_DATASETS_TABLE_COLUMN_NAMES {
 const GET_DATASETS_SQL = `
     SELECT
         ${CLP_DATASETS_TABLE_COLUMN_NAMES.NAME} AS name
-    FROM ${SqlDbClpDatasetsTableName}
+    FROM ${settings.SqlDbClpDatasetsTableName}
     ORDER BY ${CLP_DATASETS_TABLE_COLUMN_NAMES.NAME};
 `;
 
