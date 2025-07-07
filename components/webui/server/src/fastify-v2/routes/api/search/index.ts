@@ -70,9 +70,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
             const args = {
                 begin_timestamp: timestampBegin,
-                dataset: ("" === dataset ?
-                    null :
-                    dataset),
+                dataset: dataset,
                 end_timestamp: timestampEnd,
                 ignore_case: ignoreCase,
                 max_num_results: SEARCH_MAX_NUM_RESULTS,

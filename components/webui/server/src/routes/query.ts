@@ -38,7 +38,10 @@ const routes: FastifyPluginAsync = async (app) => {
     fastify.post("/query/extract-stream", {
         schema: {
             body: Type.Object({
-                dataset: Type.String(),
+                // Type.Null must come before Type.String;
+                // otherwise, `{dataset: null}` gets converted to `{dataset: ""}`.
+                dataset: Type.Union([Type.Null(),
+                    Type.String()]),
                 extractJobType: Type.Enum(QUERY_JOB_TYPE),
                 logEventIdx: Type.Integer(),
                 streamId: Type.String({minLength: 1}),
@@ -58,9 +61,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
         if (null === streamMetadata) {
             const extractResult = await fastify.dbManager.submitAndWaitForExtractStreamJob({
-                dataset: ("" === dataset ?
-                    null :
-                    dataset),
+                dataset: dataset,
                 jobType: extractJobType,
                 logEventIdx: logEventIdx,
                 streamId: streamId,
