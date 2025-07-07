@@ -33,7 +33,14 @@ const LogViewerLink = ({
     streamId,
 }: LogViewerLinkProps) => {
     const {token} = theme.useToken();
-    const cachedDataset = useSearchStore((state) => state.cachedDataset);
+    const nullableCachedDataset = useSearchStore((state) => state.cachedDataset);
+    // eslint-disable-next-line no-warning-comments
+    // TODO: URL search parameters can't be null, so we need a way to
+    // handle the nullable dataset parameter.
+    // For now, we'll use an empty string to represent null.
+    const cachedDataset = null === nullableCachedDataset ?
+        "" :
+        nullableCachedDataset;
 
     return (
         <Tooltip title={"Open file"}>

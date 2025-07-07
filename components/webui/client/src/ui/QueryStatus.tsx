@@ -66,7 +66,9 @@ const QueryStatus = () => {
         }
 
         submitExtractStreamJob({
-            dataset: parseResult.dataset,
+            dataset: "" === parseResult.dataset ?
+                null :
+                parseResult.dataset,
 
             // `parseResult.type` must be valid key since parsed using with typebox type
             // `ExtractJobSearchParams`.
