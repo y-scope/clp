@@ -50,10 +50,10 @@ tasks:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
-          FILE_SHA256: "de0600b505545f1bceb7ff5725941035f7c1dc875d08249d9b6d679e3ba77f26"
+          FILE_SHA256: "d2becd90fc4a4e5660013af15a4f718bfb7e0c7fb86bdf6b8a464f134fe2fdb2"
           OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer"
           TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
-          URL: "https://github.com/y-scope/yscope-log-viewer/archive/969ff35.tar.gz"
+          URL: "https://github.com/y-scope/yscope-log-viewer/archive/07cf097.tar.gz"
 
   core-all-parallel:
     internal: true
