@@ -3,7 +3,6 @@
 // TODO: Move listeners to a separate file to reduce lines
 // Reference: https://github.com/socketio/socket.io/blob/main/examples/basic-crud-application/server/lib/todo-management/todo.handlers.ts
 
-
 import {lookup as dnsLookup} from "node:dns/promises";
 
 import fastifyHttpProxy from "@fastify/http-proxy";
