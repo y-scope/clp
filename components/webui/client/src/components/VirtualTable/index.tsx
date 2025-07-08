@@ -23,19 +23,15 @@ const VirtualTable = <RecordType extends object = Record<string, unknown>>({
     ...tableProps
 }: VirtualTableProps<RecordType>) => {
     const containerRef = useRef<HTMLDivElement>(null);
-    const scrollNodeRef = useRef<HTMLElement>(null);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>) => {
         if (null === containerRef.current) {
             return;
         }
 
-        const scrollNode = scrollNodeRef.current;
-        if (null === scrollNode) {
-            scrollNodeRef.current = containerRef.current.querySelector<HTMLElement>(
+        const scrollNode = containerRef.current.querySelector<HTMLElement>(
                 VIRTUAL_TABLE_HOLDER_SELECTOR
-            );
-        }
+        );
 
         if (null === scrollNode) {
             return;
