@@ -1,4 +1,5 @@
-import DetailsCard from "../Details/DetailsCard";
+import {DashboardCard} from "../../../components/DashboardCard";
+import Stat from "../../../components/Stat";
 import {formatSizeInBytes} from "../Jobs/units";
 
 
@@ -17,10 +18,14 @@ interface CompressedSizeProps {
  */
 const CompressedSize = ({compressedSize, isLoading}: CompressedSizeProps) => {
     return (
-        <DetailsCard
+        <DashboardCard
             isLoading={isLoading}
-            stat={formatSizeInBytes(compressedSize, false)}
-            title={"Compressed Size"}/>
+            title={"Compressed Size"}
+        >
+            <Stat>
+                {formatSizeInBytes(compressedSize, false)}
+            </Stat>
+        </DashboardCard>
     );
 };
 

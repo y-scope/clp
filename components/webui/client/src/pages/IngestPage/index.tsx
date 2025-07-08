@@ -14,7 +14,9 @@ const IngestPage = () => {
         <div className={styles["ingestPageGrid"]}>
             <SpaceSavings/>
             <Details/>
-            <Jobs className={styles["jobs"] || ""}/>
+            <div className={styles["jobs"] || ""}>
+                <Jobs/>
+            </div>
         </div>
     );
 };

@@ -1,6 +1,7 @@
 import {Dayjs} from "dayjs";
 
-import DetailsCard from "./DetailsCard";
+import {DashboardCard} from "../../../components/DashboardCard";
+import Stat from "../../../components/Stat";
 
 
 const DATE_FORMAT = "MMMM D, YYYY";
@@ -29,10 +30,14 @@ const TimeRange = ({beginDate, endDate, isLoading}: TimeRangeProps) => {
     }
 
     return (
-        <DetailsCard
+        <DashboardCard
             isLoading={isLoading}
-            stat={stat}
-            title={"Time Range"}/>
+            title={"Time Range"}
+        >
+            <Stat>
+                {stat}
+            </Stat>
+        </DashboardCard>
     );
 };
 

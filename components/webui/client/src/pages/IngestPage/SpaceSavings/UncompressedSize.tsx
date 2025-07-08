@@ -1,4 +1,5 @@
-import DetailsCard from "../Details/DetailsCard";
+import {DashboardCard} from "../../../components/DashboardCard";
+import Stat from "../../../components/Stat";
 import {formatSizeInBytes} from "../Jobs/units";
 
 
@@ -17,10 +18,14 @@ interface UncompressedSizeProps {
  */
 const UncompressedSize = ({uncompressedSize, isLoading}: UncompressedSizeProps) => {
     return (
-        <DetailsCard
+        <DashboardCard
             isLoading={isLoading}
-            stat={formatSizeInBytes(uncompressedSize, false)}
-            title={"Uncompressed Size"}/>
+            title={"Uncompressed Size"}
+        >
+            <Stat>
+                {formatSizeInBytes(uncompressedSize, false)}
+            </Stat>
+        </DashboardCard>
     );
 };
 

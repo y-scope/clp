@@ -1,6 +1,7 @@
 import {Nullable} from "src/typings/common";
 
-import DetailsCard from "./DetailsCard";
+import {DashboardCard} from "../../../components/DashboardCard";
+import Stat from "../../../components/Stat";
 
 
 interface MessagesProps {
@@ -18,10 +19,14 @@ interface MessagesProps {
  */
 const Messages = ({numMessages, isLoading}: MessagesProps) => {
     return (
-        <DetailsCard
+        <DashboardCard
             isLoading={isLoading}
-            stat={(numMessages ?? 0).toString()}
-            title={"Messages"}/>
+            title={"Messages"}
+        >
+            <Stat>
+                {(numMessages ?? 0).toString()}
+            </Stat>
+        </DashboardCard>
     );
 };
 
