@@ -30,7 +30,7 @@ const VirtualTable = <RecordType extends object = Record<string, unknown>>({
         }
 
         const scrollNode = containerRef.current.querySelector<HTMLElement>(
-                VIRTUAL_TABLE_HOLDER_SELECTOR
+            VIRTUAL_TABLE_HOLDER_SELECTOR
         );
 
         if (null === scrollNode) {
