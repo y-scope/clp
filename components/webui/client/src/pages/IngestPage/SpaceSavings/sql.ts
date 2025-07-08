@@ -122,10 +122,7 @@ const fetchClpsSpaceSavings = async (
 
 export type {SpaceSavingsItem};
 export {
-    buildMultiDatasetSpaceSavingsSql,
-    executeSpaceSavingsQuery,
     fetchClpSpaceSavings,
     fetchClpsSpaceSavings,
-    getSpaceSavingsSql,
     SPACE_SAVINGS_DEFAULT,
 };
