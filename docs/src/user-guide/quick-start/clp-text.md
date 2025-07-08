@@ -105,7 +105,7 @@ values). [Figure 3](#figure-3) shows the search page after running a query.
 (figure-3)=
 :::{card}
 
-:::{image} clp-search-new-ui-text.png
+:::{image} clp-search-new-ui-text-2.png
 
 +++
 **Figure 3**: CLP's web UI search page.

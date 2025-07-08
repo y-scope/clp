@@ -126,7 +126,7 @@ values).
 (figure-3)=
 :::{card}
 
-:::{image} clp-search-new-ui-json.png
+:::{image} clp-search-new-ui-json-2.png
 
 +++
 **Figure 3**: CLP's web UI search page.
@@ -140,15 +140,17 @@ The numbered circles in [Figure 3](#figure-3) correspond to the following featur
 3. Filter for logs in a specific timeframe by setting the start time and end time, or you can
    select a preset filter (e.g. `Last 15 minutes`; `Yesterday`) from the dropdown list. The default
    filter is `All time`.
-4. After you submit a query, the timeline shows the number of results across the specified time
+4. If you've compressed multiple different datasets, and you'd like to confine your search to a
+   specific set, select it from the drop-down menu.
+5. After you submit a query, the timeline shows the number of results across the specified time
    range of your query.
    * You can click and drag to zoom into a time range.
    * When you mouse over a specific timeframe bar, a popup will display the range and the number of
    search results in that range.
-5. The table below the timeline displays the search results for your query.
+6. The table below the timeline displays the search results for your query.
    * You can sort by `Ascending` or `Descending` timestamp by clicking the `Timestamp` header in the table.
    * Each search result will provide a link to the original file in which the log message is found.
-6. Click the `Ingest` link to get statistics about your compression jobs.
+7. Click the `Ingest` link to get statistics about your compression jobs.
 
 :::{note}
 By default, the UI will only return 1,000 of the latest search results. To perform searches which
