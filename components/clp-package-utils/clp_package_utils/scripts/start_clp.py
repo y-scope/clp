@@ -875,8 +875,8 @@ def start_webui(
         archives_table_name = ""
         files_table_name = ""
     else:
-        archives_table_name = get_archives_table_name(table_prefix)
-        files_table_name = get_files_table_name(table_prefix)
+        archives_table_name = get_archives_table_name(table_prefix, None)
+        files_table_name = get_files_table_name(table_prefix, None)
 
     client_settings_json_updates = {
         "ClpStorageEngine": clp_config.package.storage_engine,
