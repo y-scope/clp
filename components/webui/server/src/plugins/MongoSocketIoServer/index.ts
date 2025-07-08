@@ -97,6 +97,7 @@ class MongoSocketIoServer {
 
                 return;
             }
+
             if (1 < addresses.length) {
                 fastify.log.warn(
                     `Multiple addresses found for ${fastify.config.HOST}: ${
