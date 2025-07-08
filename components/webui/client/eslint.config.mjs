@@ -37,6 +37,7 @@ const EslintConfig = [
                         "Encode",
                         "Type.Literal",
                         "Type.Null",
+                        "Type.Optional",
                         "Type.Transform",
                         "Type.Union",
                         "Value.Parse",

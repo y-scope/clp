@@ -65,19 +65,26 @@ const QueryStatus = () => {
             return;
         }
 
+        const {
+            dataset,
+            type,
+            logEventIdx,
+            streamId,
+        } = parseResult;
+
         submitExtractStreamJob({
-            dataset: "undefined" === typeof parseResult.dataset ?
+            dataset: "undefined" === typeof dataset ?
                 null :
-                parseResult.dataset,
+                dataset,
 
             // `parseResult.type` must be valid key since parsed using with typebox type
             // `ExtractJobSearchParams`.
-            extractJobType: EXTRACT_JOB_TYPE[parseResult.type as keyof typeof EXTRACT_JOB_TYPE],
-            logEventIdx: parseResult.logEventIdx,
+            extractJobType: EXTRACT_JOB_TYPE[type as keyof typeof EXTRACT_JOB_TYPE],
+            logEventIdx: logEventIdx,
             onUploadProgress: () => {
                 setQueryState(QUERY_LOADING_STATE.WAITING);
             },
-            streamId: parseResult.streamId,
+            streamId: streamId,
         })
             .then(({data}) => {
                 setQueryState(QUERY_LOADING_STATE.LOADING);

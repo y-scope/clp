@@ -37,7 +37,7 @@ const LogViewerLink = ({
 
     const searchParams = new URLSearchParams({
         type: encodeURIComponent(STREAM_TYPE),
-        searchId: encodeURIComponent(streamId),
+        streamId: encodeURIComponent(streamId),
         logEventIdx: encodeURIComponent(logEventIdx),
     });
 
