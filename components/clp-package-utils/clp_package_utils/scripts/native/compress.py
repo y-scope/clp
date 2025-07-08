@@ -10,10 +10,8 @@ from typing import List, Optional, Union
 import brotli
 import msgpack
 from clp_py_utils.clp_config import (
-    CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
-    StorageEngine,
 )
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.s3_utils import parse_s3_url
@@ -140,18 +138,12 @@ def _generate_clp_io_config(
     logs_to_compress: List[str],
     parsed_args: argparse.Namespace,
 ) -> Union[S3InputConfig, FsInputConfig]:
-    dataset = (
-        CLP_DEFAULT_DATASET_NAME
-        if StorageEngine.CLP_S == clp_config.package.storage_engine
-        else None
-    )
-
     input_type = clp_config.logs_input.type
     if InputType.FS == input_type:
         if len(logs_to_compress) == 0:
             raise ValueError("No input paths given.")
         return FsInputConfig(
-            dataset=dataset,
+            dataset=parsed_args.dataset,
             paths_to_compress=logs_to_compress,
             timestamp_key=parsed_args.timestamp_key,
             path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
@@ -166,7 +158,7 @@ def _generate_clp_io_config(
         region_code, bucket_name, key_prefix = parse_s3_url(s3_url)
         aws_authentication = clp_config.logs_input.aws_authentication
         return S3InputConfig(
-            dataset=dataset,
+            dataset=parsed_args.dataset,
             region_code=region_code,
             bucket=bucket_name,
             key_prefix=key_prefix,
@@ -202,6 +194,12 @@ def main(argv):
         "-c",
         default=str(default_config_file_path),
         help="CLP package configuration file.",
+    )
+    args_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
     )
     args_parser.add_argument(
         "-f",
