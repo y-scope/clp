@@ -64,8 +64,11 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
         return;
     }
 
-    if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
+    if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
         try {
+            // Some users wrap their query strings in double quotes (perhaps for clarity or because
+            // they think it's required to keep spaces in the query string), so we need to unquote
+            // the query string if it's quoted.
             payload.queryString = unquoteString(payload.queryString, '"', "\\");
             if ("" === payload.queryString) {
                 message.error("Query string cannot be empty.");
