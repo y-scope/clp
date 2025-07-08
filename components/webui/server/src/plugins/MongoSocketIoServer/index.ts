@@ -91,6 +91,7 @@ class MongoSocketIoServer {
 
                 return;
             }
+
             const [firstAddress] = addresses;
             if ("undefined" === typeof firstAddress) {
                 fastify.log.error("No addresses found for the provided host.");
