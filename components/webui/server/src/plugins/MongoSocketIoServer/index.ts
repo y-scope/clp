@@ -108,8 +108,13 @@ class MongoSocketIoServer {
                         JSON.stringify(addresses)}. ` +
                     "Proxying all socket.io requests to the main server."
                 );
+
+                const protocol = fastify.initialConfig.https ?
+                    "https" :
+                    "http";
+
                 fastify.register(fastifyHttpProxy, {
-                    upstream: `http://${fastify.config.HOST}:${fastify.config.PORT}/socket.io/`,
+                    upstream: `${protocol}://${fastify.config.HOST}:${fastify.config.PORT}/socket.io/`,
                     prefix: "/socket.io/",
                 });
             }
