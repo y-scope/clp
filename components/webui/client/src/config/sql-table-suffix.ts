@@ -1,5 +1,5 @@
 /**
- * Hardcoded table suffixes for CLP database tables
+ * Table suffixes for CLP database tables
  */
 export enum SqlTableSuffix {
     ARCHIVES = "archives",
