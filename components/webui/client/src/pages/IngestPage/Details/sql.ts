@@ -9,7 +9,7 @@ import {
 
 
 /**
- * Result from sql details query.
+ * Result from SQL details query.
  */
 interface DetailsItem {
     begin_timestamp: Nullable<number>;
@@ -154,10 +154,7 @@ const fetchClpsDetails = async (
 
 export type {DetailsItem};
 export {
-    buildMultiDatasetDetailsSql,
     DETAILS_DEFAULT,
-    executeDetailsQuery,
     fetchClpDetails,
     fetchClpsDetails,
-    getDetailsSql,
 };
