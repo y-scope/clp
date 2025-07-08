@@ -81,7 +81,6 @@ class MongoSocketIoServer {
             InterServerEvents,
             SocketData
         >(fastify.server);
-
         this.#registerEventListeners();
     }
 
