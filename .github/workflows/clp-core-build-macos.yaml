@@ -105,6 +105,16 @@ jobs:
           # violations.
           key: "main-branch-${{matrix.os}}-lint:check-cpp-static-full"
 
+      - run: >-
+          {
+            echo "LLVM_PREFIX="
+            echo "CC="
+            echo "CXX="
+            echo "AR="
+            echo "RANLIB="
+          } >> "$GITHUB_ENV"
+        shell: "bash"
+
       # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
       # - run: >-
       #     task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
