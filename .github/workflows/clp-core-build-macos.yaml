@@ -105,7 +105,9 @@ jobs:
           # violations.
           key: "main-branch-${{matrix.os}}-lint:check-cpp-static-full"
 
-      - run: >-
+      - name: "Unset LLVM environment variables"
+        shell: "bash"
+        run: >-
           {
             echo "LLVM_PREFIX="
             echo "CC="
@@ -113,7 +115,6 @@ jobs:
             echo "AR="
             echo "RANLIB="
           } >> "$GITHUB_ENV"
-        shell: "bash"
 
       # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
       # - run: >-
