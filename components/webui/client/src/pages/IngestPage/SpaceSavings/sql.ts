@@ -1,4 +1,5 @@
 import {querySql} from "../../../api/sql";
+import {SqlTableSuffix} from "../../../config/sql-table-suffix";
 import {settings} from "../../../settings";
 import {CLP_ARCHIVES_TABLE_COLUMN_NAMES} from "../sqlConfig";
 
@@ -54,7 +55,7 @@ const buildMultiDatasetSpaceSavingsSql = (datasetNames: string[]): string => {
     SELECT
         ${CLP_ARCHIVES_TABLE_COLUMN_NAMES.UNCOMPRESSED_SIZE},
         ${CLP_ARCHIVES_TABLE_COLUMN_NAMES.SIZE}
-    FROM clp_${name}_archives
+    FROM ${settings.SqlDbClpTablePrefix}${name}_${SqlTableSuffix.ARCHIVES}
     `);
 
     return `

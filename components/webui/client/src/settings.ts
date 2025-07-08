@@ -7,6 +7,7 @@ type Settings = {
     SqlDbClpArchivesTableName: string;
     SqlDbClpDatasetsTableName: string;
     SqlDbClpFilesTableName: string;
+    SqlDbClpTablePrefix: string;
     SqlDbCompressionJobsTableName: string;
 };
 

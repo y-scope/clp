@@ -1,6 +1,7 @@
 import {Nullable} from "src/typings/common";
 
 import {querySql} from "../../../api/sql";
+import {SqlTableSuffix} from "../../../config/sql-table-suffix";
 import {settings} from "../../../settings";
 import {
     CLP_ARCHIVES_TABLE_COLUMN_NAMES,
@@ -71,7 +72,7 @@ const buildMultiDatasetDetailsSql = (datasetNames: string[]): string => {
     SELECT
       MIN(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.BEGIN_TIMESTAMP}) AS begin_timestamp,
       MAX(${CLP_ARCHIVES_TABLE_COLUMN_NAMES.END_TIMESTAMP}) AS end_timestamp
-    FROM clp_${name}_archives
+    FROM ${settings.SqlDbClpTablePrefix}${name}_${SqlTableSuffix.ARCHIVES}
   `);
 
     const fileQueries = datasetNames.map((name) => `
@@ -80,7 +81,7 @@ const buildMultiDatasetDetailsSql = (datasetNames: string[]): string => {
       CAST(
         COALESCE(SUM(${CLP_FILES_TABLE_COLUMN_NAMES.NUM_MESSAGES}), 0) AS INTEGER
       ) AS num_messages
-    FROM clp_${name}_files
+    FROM ${settings.SqlDbClpTablePrefix}${name}_${SqlTableSuffix.FILES}
   `);
 
     return `
