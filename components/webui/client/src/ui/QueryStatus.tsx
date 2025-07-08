@@ -66,7 +66,7 @@ const QueryStatus = () => {
         }
 
         submitExtractStreamJob({
-            dataset: "" === parseResult.dataset ?
+            dataset: "undefined" === typeof parseResult.dataset ?
                 null :
                 parseResult.dataset,
 

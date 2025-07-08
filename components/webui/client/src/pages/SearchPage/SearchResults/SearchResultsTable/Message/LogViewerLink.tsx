@@ -33,14 +33,17 @@ const LogViewerLink = ({
     streamId,
 }: LogViewerLinkProps) => {
     const {token} = theme.useToken();
-    const nullableCachedDataset = useSearchStore((state) => state.cachedDataset);
-    // eslint-disable-next-line no-warning-comments
-    // TODO: URL search parameters can't be null, so we need a way to
-    // handle the nullable dataset parameter.
-    // For now, we'll use an empty string to represent null.
-    const cachedDataset = null === nullableCachedDataset ?
-        "" :
-        nullableCachedDataset;
+    const cachedDataset = useSearchStore((state) => state.cachedDataset);
+
+    const searchParams = new URLSearchParams({
+        type: encodeURIComponent(STREAM_TYPE),
+        searchId: encodeURIComponent(streamId),
+        logEventIdx: encodeURIComponent(logEventIdx),
+    });
+
+    if (null !== cachedDataset) {
+        searchParams.append("dataset", cachedDataset);
+    }
 
     return (
         <Tooltip title={"Open file"}>
@@ -51,11 +54,7 @@ const LogViewerLink = ({
                     target={"_blank"}
                     to={{
                         pathname: "/streamFile",
-                        search:
-                            `?type=${encodeURIComponent(STREAM_TYPE)}` +
-                            `&streamId=${encodeURIComponent(streamId)}` +
-                            `&logEventIdx=${encodeURIComponent(logEventIdx)}` +
-                            `&dataset=${encodeURIComponent(cachedDataset)}`,
+                        search: `?${searchParams.toString()}`,
                     }}
                 >
                     <LinkOutlined/>
