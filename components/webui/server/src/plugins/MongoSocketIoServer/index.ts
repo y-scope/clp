@@ -4,7 +4,7 @@
 // Reference: https://github.com/socketio/socket.io/blob/main/examples/basic-crud-application/server/lib/todo-management/todo.handlers.ts
 
 
-import {lookup as dnsLookup} from "node:dns";
+import {lookup as dnsLookup} from "node:dns/promises";
 
 import fastifyHttpProxy from "@fastify/http-proxy";
 import {
@@ -82,29 +82,6 @@ class MongoSocketIoServer {
             SocketData
         >(fastify.server);
 
-        // Fastify listens on all resolved addresses for localhost (e.g. `127.0.0.1`, `::1`), but
-        // socket.io only uses the main one. When multiple addresses are resolved, we proxy
-        // socket.io requests from secondary addresses to the main server.
-        dnsLookup(fastify.config.HOST, {all: true}, (err, addresses) => {
-            if (null !== err) {
-                fastify.log.error(`DNS lookup failed: ${err.message}`);
-
-                return;
-            }
-
-            if (1 < addresses.length) {
-                fastify.log.warn(
-                    `Multiple addresses found for ${fastify.config.HOST}: ${
-                        JSON.stringify(addresses)}. ` +
-                    "Proxying all socket.io requests to the main server."
-                );
-                fastify.register(fastifyHttpProxy, {
-                    upstream: `http://${fastify.config.HOST}:${fastify.config.PORT}/socket.io/`,
-                    prefix: "/socket.io/",
-                });
-            }
-        });
-
         this.#registerEventListeners();
     }
 
@@ -120,6 +97,29 @@ class MongoSocketIoServer {
         options: DbOptions
     ): Promise<MongoSocketIoServer> {
         const mongoDb = await initializeMongoClient(options);
+
+        // Fastify listens on all resolved addresses for localhost (e.g. `127.0.0.1`, `::1`), but
+        // socket.io only uses the main one. When multiple addresses are resolved, we proxy
+        // socket.io requests from secondary addresses to the main server.
+        try {
+            const addresses = await dnsLookup(fastify.config.HOST, {all: true});
+            if (1 < addresses.length) {
+                fastify.log.warn(
+                    `Multiple addresses found for ${fastify.config.HOST}: ${
+                        JSON.stringify(addresses)}. ` +
+                    "Proxying all socket.io requests to the main server."
+                );
+                fastify.register(fastifyHttpProxy, {
+                    upstream: `http://${fastify.config.HOST}:${fastify.config.PORT}/socket.io/`,
+                    prefix: "/socket.io/",
+                });
+            }
+        } catch (e) {
+            fastify.log.error(`DNS lookup failed: ${e instanceof Error ?
+                e.message :
+                JSON.stringify(e)}`);
+        }
+
         return new MongoSocketIoServer(fastify, mongoDb);
     }
 
