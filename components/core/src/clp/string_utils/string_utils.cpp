@@ -129,6 +129,20 @@ bool is_wildcard(char c) {
     return false;
 }
 
+void replace_unescaped_char(std::string& search_string) {
+    auto unescaped = [escaped = false](char c) mutable {
+        bool should_replace = ('?' == c && false == escaped);
+        if ('\\' == c) {
+            escaped = !escaped;
+        } else {
+            escaped = false;
+        }
+        return should_replace;
+    };
+
+    std::replace_if(search_string.begin(), search_string.end(), unescaped, '*');
+}
+
 string clean_up_wildcard_search_string(string_view str) {
     string cleaned_str;
 

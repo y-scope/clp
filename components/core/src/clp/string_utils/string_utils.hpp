@@ -62,6 +62,12 @@ std::string replace_characters(
 void to_lower(std::string& str);
 
 /**
+ * Replace unescaped instances of "?" with "*"
+ * @param search_string
+ */
+void replace_unescaped_char(std::string& search_string);
+
+/**
  * Cleans wildcard search string
  * <ul>
  *   <li>Removes consecutive '*'</li>
