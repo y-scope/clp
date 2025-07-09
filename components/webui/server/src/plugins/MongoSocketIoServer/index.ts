@@ -96,8 +96,8 @@ class MongoSocketIoServer {
     ): Promise<MongoSocketIoServer> {
         const mongoDb = await initializeMongoClient(options);
 
-        // Fastify listens on all resolved addresses for localhost (e.g. `127.0.0.1`, `::1`), but
-        // socket.io only uses the main one. When multiple addresses are resolved, we proxy
+        // Fastify listens on all resolved addresses for localhost (e.g. `::1` and `127.0.0.1`), but
+        // socket.io can only intercept requests on the main server which listens only on the primary address. When multiple addresses are resolved, we proxy
         // socket.io requests from secondary addresses to the main server.
         try {
             const addresses = await dnsLookup(fastify.config.HOST, {all: true});
