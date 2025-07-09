@@ -79,7 +79,7 @@ jobs:
       # See https://github.com/y-scope/clp/issues/1080 for details and exploration of solutions.
       - name: "Set up environment variables for LLVM"
         shell: "bash"
-        run: >-
+        run: |
           LLVM_PREFIX=$(brew --prefix llvm@16)
           {
             echo "LLVM_PREFIX=$LLVM_PREFIX"
