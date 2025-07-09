@@ -1,8 +1,8 @@
 import {useQuery} from "@tanstack/react-query";
 import {theme} from "antd";
 
-import Stat from "../../..//components/Stat";
 import {DashboardCard} from "../../../components/DashboardCard";
+import Stat from "../../../components/Stat";
 import {
     CLP_STORAGE_ENGINES,
     SETTINGS_STORAGE_ENGINE,
@@ -68,9 +68,7 @@ const SpaceSavings = () => {
                     <Stat
                         color={token.colorWhite}
                         fontSize={"5.5rem"}
-                    >
-                        {spaceSavingsPercentText}
-                    </Stat>
+                        text={spaceSavingsPercentText}/>
                 </DashboardCard>
             </div>
             <UncompressedSize

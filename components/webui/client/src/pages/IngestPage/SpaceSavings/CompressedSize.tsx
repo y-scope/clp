@@ -22,9 +22,7 @@ const CompressedSize = ({compressedSize, isLoading}: CompressedSizeProps) => {
             isLoading={isLoading}
             title={"Compressed Size"}
         >
-            <Stat>
-                {formatSizeInBytes(compressedSize, false)}
-            </Stat>
+            <Stat text={formatSizeInBytes(compressedSize, false)}/>
         </DashboardCard>
     );
 };

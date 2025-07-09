@@ -23,9 +23,7 @@ const Messages = ({numMessages, isLoading}: MessagesProps) => {
             isLoading={isLoading}
             title={"Messages"}
         >
-            <Stat>
-                {(numMessages ?? 0).toString()}
-            </Stat>
+            <Stat text={(numMessages ?? 0).toString()}/>
         </DashboardCard>
     );
 };

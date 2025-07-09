@@ -22,9 +22,7 @@ const UncompressedSize = ({uncompressedSize, isLoading}: UncompressedSizeProps) 
             isLoading={isLoading}
             title={"Uncompressed Size"}
         >
-            <Stat>
-                {formatSizeInBytes(uncompressedSize, false)}
-            </Stat>
+            <Stat text={formatSizeInBytes(uncompressedSize, false)}/>
         </DashboardCard>
     );
 };

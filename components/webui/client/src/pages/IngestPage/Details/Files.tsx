@@ -23,9 +23,7 @@ const Files = ({numFiles, isLoading}: FilesProps) => {
             isLoading={isLoading}
             title={"Files"}
         >
-            <Stat>
-                {(numFiles ?? 0).toString()}
-            </Stat>
+            <Stat text={(numFiles ?? 0).toString()}/>
         </DashboardCard>
     );
 };

@@ -34,9 +34,7 @@ const TimeRange = ({beginDate, endDate, isLoading}: TimeRangeProps) => {
             isLoading={isLoading}
             title={"Time Range"}
         >
-            <Stat>
-                {stat}
-            </Stat>
+            <Stat text={stat}/>
         </DashboardCard>
     );
 };
