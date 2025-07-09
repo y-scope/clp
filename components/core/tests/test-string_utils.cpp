@@ -24,7 +24,6 @@ TEST_CASE("to_lower", "[to_lower]") {
 }
 
 TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
-
     auto check = [](string in, string const& expected) {
         replace_unescaped_char('\\', '?', '*', in);
         REQUIRE(in == expected);
