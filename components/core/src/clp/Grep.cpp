@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include <log_surgeon/Constants.hpp>
+#include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 
 #include "EncodedVariableInterpreter.hpp"
@@ -16,7 +17,10 @@ using clp::ir::is_delim;
 using clp::streaming_archive::reader::Archive;
 using clp::streaming_archive::reader::File;
 using clp::streaming_archive::reader::Message;
+using clp::string_utils::cEscapeChar;
 using clp::string_utils::clean_up_wildcard_search_string;
+using clp::string_utils::cSingleCharWildcard;
+using clp::string_utils::cZeroOrMoreCharsWildcard;
 using clp::string_utils::is_alphabet;
 using clp::string_utils::is_wildcard;
 using clp::string_utils::replace_unescaped_char;
@@ -523,7 +527,12 @@ std::optional<Query> Grep::process_raw_query(
         // Replace unescaped '?' wildcards with '*' wildcards since we currently have no support
         // for generating sub-queries with '?' wildcards. The final wildcard match on the
         // decompressed message uses the original wildcards, so correctness will be maintained.
-        replace_unescaped_char('\\', '?', '*', search_string_for_sub_queries);
+        replace_unescaped_char(
+                cEscapeChar,
+                cSingleCharWildcard,
+                cZeroOrMoreCharsWildcard,
+                search_string_for_sub_queries
+        );
 
         // Clean-up in case any instances of "?*" or "*?" were changed into "**"
         search_string_for_sub_queries

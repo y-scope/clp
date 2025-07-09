@@ -24,17 +24,12 @@ constexpr size_t cCharBitarraySize = 128;
     return bit_array;
 }
 
-// Wildcard meta characters
-constexpr char cZeroOrMoreCharsWildcard{'*'};
-constexpr char cSingleCharWildcard{'?'};
-
 // Regex meta characters
 constexpr char cRegexZeroOrMore{'*'};
 constexpr char cRegexOneOrMore{'+'};
 constexpr char cRegexZeroOrOne{'?'};
 constexpr char cRegexStartAnchor{'^'};
 constexpr char cRegexEndAnchor{'$'};
-constexpr char cEscapeChar{'\\'};
 constexpr char cCharsetNegate{'^'};
 
 // Character bitmaps
