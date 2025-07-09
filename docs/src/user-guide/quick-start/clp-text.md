@@ -100,7 +100,9 @@ A complete reference for clp-text's query syntax is available on the
 
 To search your compressed logs from CLP's UI, open [http://localhost:4000](http://localhost:4000) in
 your browser (if you changed `webui.host` or `webui.port` in `etc/clp-config.yml`, use the new
-values). [Figure 3](#figure-3) shows the search page after running a query.
+values).
+
+[Figure 3](#figure-3) shows the search page after running a query.
 
 (figure-3)=
 :::{card}
@@ -113,8 +115,8 @@ values). [Figure 3](#figure-3) shows the search page after running a query.
 
 The numbered circles in [Figure 3](#figure-3) correspond to the following elements:
 
-1. **The query input box**. The format of your query should conform to
-   CLP's [unstructured text search syntax](../reference-text-search-syntax.md).
+1. **The query input box**. The format of your query should conform to CLP's
+   [unstructured text search syntax](../reference-text-search-syntax.md).
 2. **The query case-sensitivity toggle**. When turned on, CLP will search for log events that match
    the case of your query.
 3. **The time range selector**. CLP will search for log events that are in the specified time range.

@@ -45,7 +45,7 @@ sbin/compress.sh --timestamp-key '<timestamp-key>' <path1> [<path2> ...]
 
 * `<path...>` are paths to JSON log files or directories containing such files.
   * Each JSON log file should contain each log event as a
-    [separate JSON object](./index.md#clp-json), e.g., *not* as an array.
+    [separate JSON object](./index.md#clp-json), i.e., *not* as an array.
 
 The compression script will output the compression ratio of each dataset you compress, or you can
 use the UI to view overall statistics.
@@ -134,8 +134,8 @@ values).
 
 The numbered circles in [Figure 3](#figure-3) correspond to the following elements:
 
-1. **The query input box**. The format of your query should conform to
-   CLP's [JSON search syntax](../reference-json-search-syntax.md).
+1. **The query input box**. The format of your query should conform to CLP's
+   [JSON search syntax](../reference-json-search-syntax.md).
 2. **The query case-sensitivity toggle**. When turned on, CLP will search for log events that match
    the case of your query.
 3. **The time range selector**. CLP will search for log events that are in the specified time range.
