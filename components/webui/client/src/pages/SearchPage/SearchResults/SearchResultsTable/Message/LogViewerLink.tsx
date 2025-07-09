@@ -35,6 +35,16 @@ const LogViewerLink = ({
     const {token} = theme.useToken();
     const cachedDataset = useSearchStore((state) => state.cachedDataset);
 
+    const searchParams = new URLSearchParams({
+        type: encodeURIComponent(STREAM_TYPE),
+        streamId: encodeURIComponent(streamId),
+        logEventIdx: encodeURIComponent(logEventIdx),
+    });
+
+    if (null !== cachedDataset) {
+        searchParams.append("dataset", cachedDataset);
+    }
+
     return (
         <Tooltip title={"Open file"}>
             <Typography.Text>
@@ -44,11 +54,7 @@ const LogViewerLink = ({
                     target={"_blank"}
                     to={{
                         pathname: "/streamFile",
-                        search:
-                            `?type=${encodeURIComponent(STREAM_TYPE)}` +
-                            `&streamId=${encodeURIComponent(streamId)}` +
-                            `&logEventIdx=${encodeURIComponent(logEventIdx)}` +
-                            `&dataset=${encodeURIComponent(cachedDataset)}`,
+                        search: `?${searchParams.toString()}`,
                     }}
                 >
                     <LinkOutlined/>

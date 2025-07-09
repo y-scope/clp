@@ -871,15 +871,20 @@ def start_webui(
     # Read, update, and write back client's and server's settings.json
     clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
-    dataset: Optional[str] = None
     if StorageEngine.CLP_S == clp_config.package.storage_engine:
-        dataset = CLP_DEFAULT_DATASET_NAME
+        archives_table_name = ""
+        files_table_name = ""
+    else:
+        archives_table_name = get_archives_table_name(table_prefix, None)
+        files_table_name = get_files_table_name(table_prefix, None)
+
     client_settings_json_updates = {
         "ClpStorageEngine": clp_config.package.storage_engine,
         "MongoDbSearchResultsMetadataCollectionName": clp_config.webui.results_metadata_collection_name,
-        "SqlDbClpArchivesTableName": get_archives_table_name(table_prefix, dataset),
+        "SqlDbClpArchivesTableName": archives_table_name,
         "SqlDbClpDatasetsTableName": get_datasets_table_name(table_prefix),
-        "SqlDbClpFilesTableName": get_files_table_name(table_prefix, dataset),
+        "SqlDbClpFilesTableName": files_table_name,
+        "SqlDbClpTablePrefix": table_prefix,
         "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
     }
     client_settings_json = read_and_update_settings_json(

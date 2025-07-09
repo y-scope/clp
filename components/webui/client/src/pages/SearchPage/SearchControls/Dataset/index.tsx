@@ -6,7 +6,6 @@ import {
     Select,
 } from "antd";
 
-import useIngestStatsStore from "../../../IngestPage/ingestStatsStore";
 import useSearchStore from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import DatasetLabel from "./DatasetLabel";
@@ -20,8 +19,6 @@ import {fetchDatasetNames} from "./sql";
  * @return
  */
 const Dataset = () => {
-    const {refreshInterval} = useIngestStatsStore();
-
     const dataset = useSearchStore((state) => state.selectDataset);
     const updateDataset = useSearchStore((state) => state.updateSelectDataset);
     const searchUiState = useSearchStore((state) => state.searchUiState);
@@ -31,7 +28,6 @@ const Dataset = () => {
     const {data, isPending, isSuccess, error} = useQuery({
         queryKey: ["datasets"],
         queryFn: fetchDatasetNames,
-        staleTime: refreshInterval,
     });
 
     // Update the selected dataset to the first dataset in the response. The dataset is only
