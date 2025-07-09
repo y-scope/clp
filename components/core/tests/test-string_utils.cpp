@@ -52,6 +52,12 @@ TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
     check("a\\\\?b a\\?b a?b", "a\\\\*b a\\?b a*b");
     check("\\\\?abc \\?abc a?b", "\\\\*abc \\?abc a*b");
     check("abc\\\\? abc\\? a?b", "abc\\\\* abc\\? a*b");
+
+    // additional edge cases
+    check("", "");
+    check("\\", "\\");
+    check("\\\\", "\\\\");
+    check("?\\", "*\\");
 }
 
 TEST_CASE("clean_up_wildcard_search_string", "[clean_up_wildcard_search_string]") {
