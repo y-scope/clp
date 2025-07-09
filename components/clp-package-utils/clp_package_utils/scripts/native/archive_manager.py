@@ -20,8 +20,8 @@ from clp_package_utils.general import (
     CLPConfig,
     get_clp_home,
     load_config_file,
-    validate_dataset_exists,
 )
+from clp_package_utils.scripts.native.utils import validate_dataset_exists
 
 # Command/Argument Constants
 FIND_COMMAND: str = "find"

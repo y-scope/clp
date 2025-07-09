@@ -8,7 +8,6 @@ import socket
 import subprocess
 import typing
 import uuid
-from contextlib import closing
 from enum import auto
 from typing import List, Optional, Tuple
 
@@ -16,7 +15,6 @@ import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLPConfig,
-    Database,
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
@@ -27,7 +25,6 @@ from clp_py_utils.clp_config import (
     WorkerConfig,
 )
 from clp_py_utils.clp_metadata_db_utils import (
-    fetch_existing_datasets,
     MYSQL_TABLE_NAME_MAX_LEN,
     TABLE_SUFFIX_MAX_LEN,
 )
@@ -37,7 +34,6 @@ from clp_py_utils.core import (
     read_yaml_config_file,
     validate_path_could_be_dir,
 )
-from clp_py_utils.sql_adapter import SQL_Adapter
 from strenum import KebabCaseStrEnum
 
 # CONSTANTS
@@ -565,24 +561,6 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
                 f"Invalid path: `{path}` cannot be under '{prefix}' which may overlap with a path"
                 f" in the container."
             )
-
-
-def validate_dataset_exists(db_config: Database, dataset: str) -> None:
-    """
-    Validates that `dataset` exists in the metadata database.
-
-    :param db_config:
-    :param dataset:
-    :raise: ValueError if the dataset doesn't exist.
-    """
-    sql_adapter = SQL_Adapter(db_config)
-    clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
-    table_prefix = clp_db_connection_params["table_prefix"]
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
-        if dataset not in fetch_existing_datasets(db_cursor, table_prefix):
-            raise ValueError(f"Dataset `{dataset}` doesn't exist.")
 
 
 def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
