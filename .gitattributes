@@ -1,3 +1,0 @@
-docs/src/user-guide/quick-start/clp-json/clp-search-ui.png filter=lfs diff=lfs merge=lfs -text
-docs/src/user-guide/quick-start/clp-text/clp-search-ui.png filter=lfs diff=lfs merge=lfs -text
-*.png filter=lfs diff=lfs merge=lfs -text
