@@ -7,6 +7,7 @@
 
 using clp::string_utils::clean_up_wildcard_search_string;
 using clp::string_utils::convert_string_to_int;
+using clp::string_utils::replace_unescaped_char;
 using clp::string_utils::wildcard_match_unsafe;
 using clp::string_utils::wildcard_match_unsafe_case_sensitive;
 using std::chrono::duration;
@@ -20,6 +21,38 @@ TEST_CASE("to_lower", "[to_lower]") {
     string str = "test123TEST";
     clp::string_utils::to_lower(str);
     REQUIRE(str == "test123test");
+}
+
+TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
+
+    auto check = [](string in, string const& expected) {
+        replace_unescaped_char('\\', '?', '*', in);
+        REQUIRE(in == expected);
+    };
+
+    // initial
+    check("no change", "no change");
+
+    // replacements with no backslashes present
+    check("a?b", "a*b");
+    check("?leading", "*leading");
+    check("trailing?", "trailing*");
+    check("multiple??q", "multiple**q");
+
+    // replacements with backslashes present
+    check("a\\\\?b", "a\\\\*b");
+    check("\\\\?abc", "\\\\*abc");
+    check("abc\\\\?", "abc\\\\*");
+
+    // no replacements with backslashes present
+    check("a\\?b", "a\\?b");
+    check("\\?abc", "\\?abc");
+    check("abc\\?", "abc\\?");
+
+    // mixed
+    check("a\\\\?b a\\?b a?b", "a\\\\*b a\\?b a*b");
+    check("\\\\?abc \\?abc a?b", "\\\\*abc \\?abc a*b");
+    check("abc\\\\? abc\\? a?b", "abc\\\\* abc\\? a*b");
 }
 
 TEST_CASE("clean_up_wildcard_search_string", "[clean_up_wildcard_search_string]") {
