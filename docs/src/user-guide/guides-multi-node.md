@@ -7,7 +7,7 @@ A multi-node deployment allows you to run CLP across a distributed set of hosts.
 * [Docker]
   * If you're not running as root, ensure docker can be run
     [without superuser privileges][docker-non-root].
-* Python 3.10 or higher
+* Python 3.9 or higher
 * One or more hosts networked together
 * A distributed filesystem (e.g. [SeaweedFS]) accessible by all worker hosts through a filesystem
   mount
