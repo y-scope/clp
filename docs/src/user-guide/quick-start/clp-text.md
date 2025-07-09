@@ -105,29 +105,30 @@ values). [Figure 3](#figure-3) shows the search page after running a query.
 (figure-3)=
 :::{card}
 
-:::{image} clp-search-new-ui-text-2.png
+:::{image} clp-text-search-ui.png
 
 +++
-**Figure 3**: CLP's web UI search page.
+**Figure 3**: The search page in CLP's UI.
 :::
 
-The numbered circles in [Figure 3](#figure-3) correspond to the following features:
+The numbered circles in [Figure 3](#figure-3) correspond to the following elements:
 
-1. Enter a query in the search box. The format of your query should conform to CLP's
-   [unstructured text search syntax](../reference-text-search-syntax.md).
-2. Toggle case sensitivity by clicking here.
-3. Filter for logs in a specific timeframe by setting the start time and end time, or you can
-   select a preset filter (e.g. `Last 15 minutes`; `Yesterday`) from the dropdown list. The default
-   filter is `All time`.
-4. After you submit a query, the timeline shows the number of results across the specified time
-   range of your query.
+1. **The query input box**. The format of your query should conform to
+   CLP's [unstructured text search syntax](../reference-text-search-syntax.md).
+2. **The query case-sensitivity toggle**. When turned on, CLP will search for log events that match
+   the case of your query.
+3. **The time range selector**. CLP will search for log events that are in the specified time range.
+   You can select a preset filter (e.g., `Last 15 minutes`; `Yesterday`) from the dropdown, or
+   choose `Custom` and set the start time and end time directly.
+4. **The search results timeline**. After a query, the timeline will show the number of results
+   across the time range of your query.
    * You can click and drag to zoom into a time range.
-   * When you mouse over a specific timeframe bar, a popup will display the range and the number of
-   search results in that range.
-5. The table below the timeline displays the search results for your query.
-   * You can sort by `Ascending` or `Descending` timestamp by clicking the `Timestamp` header in the table.
-   * Each search result will provide a link to the original file in which the log message is found.
-6. Click the `Ingest` link to get statistics about your compression jobs.
+   * When you mouse over a bar in the timeline, a popup will display the range and the number of
+     search results in that range.
+5. **The search results**.
+   * You can sort by `Ascending` or `Descending` timestamp by clicking the `Timestamp` header in the
+     table.
+   * Each search result includes a link to the original file in which the log event was found.
 
 :::{note}
 By default, the UI will only return 1,000 of the latest search results. To perform searches which
