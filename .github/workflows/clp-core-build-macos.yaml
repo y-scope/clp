@@ -45,8 +45,11 @@ jobs:
     strategy:
       matrix:
         os:
-          - "macos-13"
-          - "macos-14"
+          # NOTE: We temporarily disable macOS 13 and 14 since older versions of `AppleClang` do
+          # not support C++ 20 required by `ystdlib`.
+          # See https://github.com/y-scope/clp/issues/1090 for more details.
+          # - "macos-13"
+          # - "macos-14"
           - "macos-15"
         use_shared_libs:
           - true
