@@ -23,41 +23,42 @@ TEST_CASE("to_lower", "[to_lower]") {
     REQUIRE(str == "test123test");
 }
 
-TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
-    auto check = [](string in, string const& expected) {
+TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]")
+{
+    auto check = [](std::string in, const std::string& expected) {
         replace_unescaped_char('\\', '?', '*', in);
         REQUIRE(in == expected);
     };
 
     // initial
-    check("no change", "no change");
+    check(R"(no change)", R"(no change)");
 
     // replacements with no backslashes present
-    check("a?b", "a*b");
-    check("?leading", "*leading");
-    check("trailing?", "trailing*");
-    check("multiple??q", "multiple**q");
+    check(R"(a?b)", R"(a*b)");
+    check(R"(?leading)", R"(*leading)");
+    check(R"(trailing?)", R"(trailing*)");
+    check(R"(multiple??q)", R"(multiple**q)");
 
     // replacements with backslashes present
-    check("a\\\\?b", "a\\\\*b");
-    check("\\\\?abc", "\\\\*abc");
-    check("abc\\\\?", "abc\\\\*");
+    check(R"(a\\?b)", R"(a\\*b)");
+    check(R"(\\?abc)", R"(\\*abc)");
+    check(R"(abc\\?)", R"(abc\\*)");
 
     // no replacements with backslashes present
-    check("a\\?b", "a\\?b");
-    check("\\?abc", "\\?abc");
-    check("abc\\?", "abc\\?");
+    check(R"(a\?b)", R"(a\?b)");
+    check(R"(\?abc)", R"(\?abc)");
+    check(R"(abc\?)", R"(abc\?)");
 
     // mixed
-    check("a\\\\?b a\\?b a?b", "a\\\\*b a\\?b a*b");
-    check("\\\\?abc \\?abc a?b", "\\\\*abc \\?abc a*b");
-    check("abc\\\\? abc\\? a?b", "abc\\\\* abc\\? a*b");
+    check(R"(a\\?b a\?b a?b)", R"(a\\*b a\?b a*b)");
+    check(R"(\\?abc \?abc a?b)", R"(\\*abc \?abc a*b)");
+    check(R"(abc\\? abc\? a?b)", R"(abc\\* abc\? a*b)");
 
     // additional edge cases
-    check("", "");
-    check("\\", "\\");
-    check("\\\\", "\\\\");
-    check("?\\", "*\\");
+    check(R"()", R"()");
+    check(R"(\)", R"(\)");
+    check(R"(\\)", R"(\\)");
+    check(R"(?\)", R"(*\)");
 }
 
 TEST_CASE("clean_up_wildcard_search_string", "[clean_up_wildcard_search_string]") {
