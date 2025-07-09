@@ -9,12 +9,23 @@ from clp_py_utils.clp_config import (
 )
 
 # Constants
+MYSQL_TABLE_NAME_MAX_LEN = 64
+
 ARCHIVE_TAGS_TABLE_SUFFIX = "archive_tags"
 ARCHIVES_TABLE_SUFFIX = "archives"
 COLUMN_METADATA_TABLE_SUFFIX = "column_metadata"
 DATASETS_TABLE_SUFFIX = "datasets"
 FILES_TABLE_SUFFIX = "files"
 TAGS_TABLE_SUFFIX = "tags"
+
+TABLE_SUFFIX_MAX_LEN = max(
+    len(ARCHIVE_TAGS_TABLE_SUFFIX),
+    len(ARCHIVES_TABLE_SUFFIX),
+    len(COLUMN_METADATA_TABLE_SUFFIX),
+    len(DATASETS_TABLE_SUFFIX),
+    len(FILES_TABLE_SUFFIX),
+    len(TAGS_TABLE_SUFFIX),
+)
 
 
 def _create_archives_table(db_cursor, archives_table_name: str) -> None:
