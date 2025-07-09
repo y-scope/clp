@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import {Nullable} from "src/typings/common";
 import {create} from "zustand";
 
 import {TimelineConfig} from "../../../components/ResultsTimeline/typings";
@@ -16,7 +17,7 @@ import {SEARCH_UI_STATE} from "./typings";
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
-    cachedDataset: "",
+    cachedDataset: null,
     numSearchResultsTable: 0,
     numSearchResultsTimeline: 0,
     queryIsCaseSensitive: false,
@@ -40,7 +41,7 @@ interface SearchState {
      * dataset so modifications to the selector do not change dataset used in extract stream job for
      * log viewer links.
      */
-    cachedDataset: string;
+    cachedDataset: Nullable<string>;
 
     /**
      * The number of search table results.
