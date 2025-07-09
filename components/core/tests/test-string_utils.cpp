@@ -23,9 +23,8 @@ TEST_CASE("to_lower", "[to_lower]") {
     REQUIRE(str == "test123test");
 }
 
-TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]")
-{
-    auto check = [](std::string in, const std::string& expected) {
+TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
+    auto check = [](std::string in, std::string const& expected) {
         replace_unescaped_char('\\', '?', '*', in);
         REQUIRE(in == expected);
     };
