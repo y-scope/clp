@@ -5,7 +5,12 @@ import subprocess
 import sys
 from typing import Optional
 
-from clp_py_utils.clp_config import CLPConfig, StorageEngine, StorageType
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
+    CLPConfig,
+    StorageEngine,
+    StorageType,
+)
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -22,6 +27,7 @@ from clp_package_utils.general import (
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
+    validate_dataset_name,
     validate_path_could_be_dir,
 )
 
@@ -174,6 +180,24 @@ def handle_extract_stream_cmd(
         )
         return -1
 
+    job_command = parsed_args.command
+    if EXTRACT_JSON_CMD == job_command and StorageEngine.CLP_S != storage_engine:
+        logger.error(f"JSON extraction is not supported for storage engine `{storage_engine}`.")
+        return -1
+
+    dataset = parsed_args.dataset
+    if StorageEngine.CLP_S == storage_engine:
+        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
+        try:
+            clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+            validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
+        except Exception as e:
+            logger.error(e)
+            return -1
+    elif dataset is not None:
+        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+        return -1
+
     container_name = generate_container_name(str(JobType.IR_EXTRACTION))
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
@@ -185,7 +209,6 @@ def handle_extract_stream_cmd(
     )
 
     # fmt: off
-    job_command = parsed_args.command
     extract_cmd = [
         "python3",
         "-m", "clp_package_utils.scripts.native.decompress",
@@ -207,6 +230,9 @@ def handle_extract_stream_cmd(
             extract_cmd.append(str(parsed_args.target_uncompressed_size))
     elif EXTRACT_JSON_CMD == job_command:
         extract_cmd.append(str(parsed_args.archive_id))
+        if dataset is not None:
+            extract_cmd.append("--dataset")
+            extract_cmd.append(dataset)
         if parsed_args.target_chunk_size:
             extract_cmd.append("--target-chunk-size")
             extract_cmd.append(str(parsed_args.target_chunk_size))
@@ -267,6 +293,12 @@ def main(argv):
     # JSON extraction command parser
     json_extraction_parser = command_args_parser.add_parser(EXTRACT_JSON_CMD)
     json_extraction_parser.add_argument("archive_id", type=str, help="Archive ID")
+    json_extraction_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
+    )
     json_extraction_parser.add_argument(
         "--target-chunk-size",
         type=int,
