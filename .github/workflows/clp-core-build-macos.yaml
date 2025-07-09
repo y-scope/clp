@@ -74,6 +74,21 @@ jobs:
       - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
 
+      # NOTE: We set up the environment variables for LLVM so that the dependencies and CLP core
+      # are built with clang/clang++ from homebrew installed LLVM. Need to unset for clang-tidy.
+      # See https://github.com/y-scope/clp/issues/1080 for details and exploration of solutions.
+      - name: "Set up environment variables for LLVM"
+        shell: "bash"
+        run: >-
+          LLVM_PREFIX=$(brew --prefix llvm@16)
+          {
+            echo "LLVM_PREFIX=$LLVM_PREFIX"
+            echo "CC=$LLVM_PREFIX/bin/clang"
+            echo "CXX=$LLVM_PREFIX/bin/clang++"
+            echo "AR=$LLVM_PREFIX/bin/llvm-ar"
+            echo "RANLIB=$LLVM_PREFIX/bin/llvm-ranlib"
+          } >> "$GITHUB_ENV"
+
       - run: "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core"
         shell: "bash"
 
