@@ -9,7 +9,7 @@ authors = ["YScope Inc. <dev@yscope.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.9 || ^3.10"
+python = ">= 3.9"
 Brotli = "^1.1.0"
 celery = "^5.3.6"
 # mariadb version must be compatible with libmariadev installed in runtime env.
