@@ -29,11 +29,11 @@ from clp_package_utils.general import (
     EXTRACT_JSON_CMD,
     get_clp_home,
     load_config_file,
-    validate_dataset_exists,
 )
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
     submit_query_job,
+    validate_dataset_exists,
     wait_for_query_job,
 )
 
