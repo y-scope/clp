@@ -7,7 +7,7 @@ import {Nullable} from "src/typings/common";
 import {
     ExtractStreamResp,
     QUERY_JOB_TYPE,
-} from "../typings/query";
+} from "../../typings/query";
 
 
 interface SubmitExtractStreamJobProps {

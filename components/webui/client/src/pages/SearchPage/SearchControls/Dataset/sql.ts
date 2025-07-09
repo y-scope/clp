@@ -10,7 +10,7 @@ enum CLP_DATASETS_TABLE_COLUMN_NAMES {
 }
 
 /**
- * SQL query to get all datasets names.
+ * SQL query to get all dataset names.
  */
 const GET_DATASETS_SQL = `
     SELECT
@@ -24,7 +24,7 @@ interface DatasetItem {
 }
 
 /**
- * Fetches all datasets names from the datasets table.
+ * Fetches all dataset names from the datasets table.
  *
  * @return
  */

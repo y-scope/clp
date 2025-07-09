@@ -1,6 +1,6 @@
 import axios, {AxiosResponse} from "axios";
 
-import {Nullable} from "../typings/common";
+import {Nullable} from "../../typings/common";
 
 
 // eslint-disable-next-line no-warning-comments
