@@ -18,18 +18,12 @@ import {convertQueryJobsItemToJobData} from "./utils";
 
 const DAYS_TO_SHOW: number = 30;
 
-interface JobsProps {
-    className: string;
-}
-
 /**
  * Renders table with ingestion jobs inside a card.
  *
- * @param props
- * @param props.className
  * @return
  */
-const Jobs = ({className}: JobsProps) => {
+const Jobs = () => {
     const {data: jobs = [], isPending} = useQuery({
         queryKey: ["jobs"],
         queryFn: async () => {
@@ -41,17 +35,17 @@ const Jobs = ({className}: JobsProps) => {
     });
 
     return (
-        <div className={className}>
-            <DashboardCard title={"Ingestion Jobs"}>
-                <VirtualTable<JobData>
-                    className={styles["jobs"] || ""}
-                    columns={jobColumns}
-                    dataSource={jobs}
-                    loading={isPending}
-                    pagination={false}
-                    scroll={{y: 400}}/>
-            </DashboardCard>
-        </div>
+        <DashboardCard
+            isLoading={isPending}
+            title={"Ingestion Jobs"}
+        >
+            <VirtualTable<JobData>
+                className={styles["jobs"] || ""}
+                columns={jobColumns}
+                dataSource={jobs}
+                pagination={false}
+                scroll={{y: 400}}/>
+        </DashboardCard>
     );
 };
 
