@@ -135,7 +135,7 @@ auto replace_unescaped_char(
         char const target_char,
         std::string& src_string
 ) -> void {
-    bool escaped = false;
+    bool escaped{false};
 
     auto unescaped = [&](char c) {
         auto const should_replace = (src_char == c && false == escaped);
