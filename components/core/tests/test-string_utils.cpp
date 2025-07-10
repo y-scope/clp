@@ -24,40 +24,48 @@ TEST_CASE("to_lower", "[to_lower]") {
 }
 
 TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
-    auto check = [](std::string in, std::string const& expected) {
-        replace_unescaped_char('\\', '?', '*', in);
+    auto check = [](char escape_char,
+                    char src_char,
+                    char target_char,
+                    std::string in,
+                    std::string const& expected) {
+        replace_unescaped_char(escape_char, src_char, target_char, in);
         REQUIRE(in == expected);
     };
 
-    // initial
-    check(R"(no change)", R"(no change)");
+    SECTION("Default characters '\\', '?', and '*'") {
+        // replacements with no escape chars present
+        check('\\', '?', '*', R"(a?b)", R"(a*b)");
+        check('\\', '?', '*', R"(?leading)", R"(*leading)");
+        check('\\', '?', '*', R"(trailing?)", R"(trailing*)");
+        check('\\', '?', '*', R"(multiple??q)", R"(multiple**q)");
 
-    // replacements with no backslashes present
-    check(R"(a?b)", R"(a*b)");
-    check(R"(?leading)", R"(*leading)");
-    check(R"(trailing?)", R"(trailing*)");
-    check(R"(multiple??q)", R"(multiple**q)");
+        // replacements with escape chars present
+        check('\\', '?', '*', R"(a\\?b)", R"(a\\*b)");
+        check('\\', '?', '*', R"(\\?abc)", R"(\\*abc)");
+        check('\\', '?', '*', R"(abc\\?)", R"(abc\\*)");
 
-    // replacements with backslashes present
-    check(R"(a\\?b)", R"(a\\*b)");
-    check(R"(\\?abc)", R"(\\*abc)");
-    check(R"(abc\\?)", R"(abc\\*)");
+        // no replacements with escape chars present
+        check('\\', '?', '*', R"(a\?b)", R"(a\?b)");
+        check('\\', '?', '*', R"(\?abc)", R"(\?abc)");
+        check('\\', '?', '*', R"(abc\?)", R"(abc\?)");
 
-    // no replacements with backslashes present
-    check(R"(a\?b)", R"(a\?b)");
-    check(R"(\?abc)", R"(\?abc)");
-    check(R"(abc\?)", R"(abc\?)");
+        // mixed
+        check('\\', '?', '*', R"(a\\?b a\?b a?b)", R"(a\\*b a\?b a*b)");
+        check('\\', '?', '*', R"(\\?abc \?abc a?b)", R"(\\*abc \?abc a*b)");
+        check('\\', '?', '*', R"(abc\\? abc\? a?b)", R"(abc\\* abc\? a*b)");
 
-    // mixed
-    check(R"(a\\?b a\?b a?b)", R"(a\\*b a\?b a*b)");
-    check(R"(\\?abc \?abc a?b)", R"(\\*abc \?abc a*b)");
-    check(R"(abc\\? abc\? a?b)", R"(abc\\* abc\? a*b)");
+        // additional edge cases
+        check('\\', '?', '*', R"(no change)", R"(no change)");
+        check('\\', '?', '*', R"()", R"()");
+        check('\\', '?', '*', R"(\)", R"(\)");
+        check('\\', '?', '*', R"(\\)", R"(\\)");
+        check('\\', '?', '*', R"(?\)", R"(*\)");
+    }
 
-    // additional edge cases
-    check(R"()", R"()");
-    check(R"(\)", R"(\)");
-    check(R"(\\)", R"(\\)");
-    check(R"(?\)", R"(*\)");
+    SECTION("Custom escape character and default replacement characters '?' and '*'") {
+        check('q', 'w', 'e', R"(aqqwb aqwb awb)", R"(aqqeb aqwb aeb)");
+    }
 }
 
 TEST_CASE("clean_up_wildcard_search_string", "[clean_up_wildcard_search_string]") {
