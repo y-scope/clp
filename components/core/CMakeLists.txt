@@ -312,6 +312,11 @@ if(CLP_NEED_LZMA)
         message(STATUS "Found Lzma ${LIBLZMA_VERSION_STRING}")
         message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
         message(STATUS "Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
+
+        # Using version 3.8.1. or later guards against CVE-2024-3094 and CVE-2025-31115.
+        if(LIBLZMA_VERSION_STRING VERSION_LESS "3.8.1")
+            message(FATAL_ERROR "Detected LibLZMA version ${LIBLZMA_VERSION_STRING} is older than required 3.8.1")
+        endif()
     else()
         message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
     endif()
