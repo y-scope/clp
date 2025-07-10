@@ -63,7 +63,7 @@ TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
         check('\\', '?', '*', R"(?\)", R"(*\)");
     }
 
-    SECTION("Custom escape character and default replacement characters '?' and '*'") {
+    SECTION("Custom escape character with custom src/target ('w' → 'e')") {
         check('q', 'w', 'e', R"(aqqwb aqwb awb)", R"(aqqeb aqwb aeb)");
     }
 }
