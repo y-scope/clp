@@ -3,10 +3,14 @@
 #include <boost/foreach.hpp>
 #include <boost/range/combine.hpp>
 #include <catch2/catch.hpp>
+#include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 
+using clp::string_utils::cEscapeChar;
 using clp::string_utils::clean_up_wildcard_search_string;
 using clp::string_utils::convert_string_to_int;
+using clp::string_utils::cSingleCharWildcard;
+using clp::string_utils::cZeroOrMoreCharsWildcard;
 using clp::string_utils::replace_unescaped_char;
 using clp::string_utils::wildcard_match_unsafe;
 using clp::string_utils::wildcard_match_unsafe_case_sensitive;
@@ -35,32 +39,60 @@ TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
 
     SECTION("Default characters '\\', '?', and '*'") {
         // replacements with no escape chars present
-        check('\\', '?', '*', R"(a?b)", R"(a*b)");
-        check('\\', '?', '*', R"(?leading)", R"(*leading)");
-        check('\\', '?', '*', R"(trailing?)", R"(trailing*)");
-        check('\\', '?', '*', R"(multiple??q)", R"(multiple**q)");
+        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(a?b)", R"(a*b)");
+        check(cEscapeChar,
+              cSingleCharWildcard,
+              cZeroOrMoreCharsWildcard,
+              R"(?leading)",
+              R"(*leading)");
+        check(cEscapeChar,
+              cSingleCharWildcard,
+              cZeroOrMoreCharsWildcard,
+              R"(trailing?)",
+              R"(trailing*)");
+        check(cEscapeChar,
+              cSingleCharWildcard,
+              cZeroOrMoreCharsWildcard,
+              R"(multiple??q)",
+              R"(multiple**q)");
 
         // replacements with escape chars present
-        check('\\', '?', '*', R"(a\\?b)", R"(a\\*b)");
-        check('\\', '?', '*', R"(\\?abc)", R"(\\*abc)");
-        check('\\', '?', '*', R"(abc\\?)", R"(abc\\*)");
+        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(a\\?b)", R"(a\\*b)");
+        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(\\?abc)", R"(\\*abc)");
+        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(abc\\?)", R"(abc\\*)");
 
         // no replacements with escape chars present
-        check('\\', '?', '*', R"(a\?b)", R"(a\?b)");
-        check('\\', '?', '*', R"(\?abc)", R"(\?abc)");
-        check('\\', '?', '*', R"(abc\?)", R"(abc\?)");
+        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(a\?b)", R"(a\?b)");
+        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(\?abc)", R"(\?abc)");
+        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(abc\?)", R"(abc\?)");
 
         // mixed
-        check('\\', '?', '*', R"(a\\?b a\?b a?b)", R"(a\\*b a\?b a*b)");
-        check('\\', '?', '*', R"(\\?abc \?abc a?b)", R"(\\*abc \?abc a*b)");
-        check('\\', '?', '*', R"(abc\\? abc\? a?b)", R"(abc\\* abc\? a*b)");
+        check(cEscapeChar,
+              cSingleCharWildcard,
+              cZeroOrMoreCharsWildcard,
+              R"(a\\?b a\?b a?b)",
+              R"(a\\*b a\?b a*b)");
+        check(cEscapeChar,
+              cSingleCharWildcard,
+              cZeroOrMoreCharsWildcard,
+              R"(\\?abc \?abc a?b)",
+              R"(\\*abc \?abc a*b)");
+        check(cEscapeChar,
+              cSingleCharWildcard,
+              cZeroOrMoreCharsWildcard,
+              R"(abc\\? abc\? a?b)",
+              R"(abc\\* abc\? a*b)");
 
         // additional edge cases
-        check('\\', '?', '*', R"(no change)", R"(no change)");
-        check('\\', '?', '*', R"()", R"()");
-        check('\\', '?', '*', R"(\)", R"(\)");
-        check('\\', '?', '*', R"(\\)", R"(\\)");
-        check('\\', '?', '*', R"(?\)", R"(*\)");
+        check(cEscapeChar,
+              cSingleCharWildcard,
+              cZeroOrMoreCharsWildcard,
+              R"(no change)",
+              R"(no change)");
+        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"()", R"()");
+        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(\)", R"(\)");
+        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(\\)", R"(\\)");
+        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(?\)", R"(*\)");
     }
 
     SECTION("Custom escape character with custom src/target ('w' → 'e')") {
