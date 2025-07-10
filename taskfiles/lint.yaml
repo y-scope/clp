@@ -776,6 +776,7 @@ tasks:
           - "components/job-orchestration/job_orchestration"
           - "tools/scripts"
           - "docs/conf"
+          - "integration-tests"
         cmd: |-
           . "{{.G_LINT_VENV_DIR}}/bin/activate"
           cd "{{.ITEM}}"
