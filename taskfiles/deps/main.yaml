@@ -380,6 +380,8 @@ tasks:
         vars:
           CMAKE_GEN_ARGS:
             - "-Dystdlib_BUILD_TESTING=OFF"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DCMAKE_POLICY_DEFAULT_CMP0144=NEW"
           LIB_NAME: "ystdlib"
           WORK_DIR: "{{.G_DEPS_DIR}}/ystdlib"
