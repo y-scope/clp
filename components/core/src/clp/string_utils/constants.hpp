@@ -6,7 +6,6 @@ namespace clp::string_utils {
 constexpr char cZeroOrMoreCharsWildcard{'*'};
 constexpr char cSingleCharWildcard{'?'};
 
-// Escape meta characters
 constexpr char cEscapeChar{'\\'};
 }  // namespace clp::string_utils
 
