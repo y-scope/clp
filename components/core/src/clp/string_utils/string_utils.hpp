@@ -63,7 +63,7 @@ void to_lower(std::string& str);
 
 /**
  * Replace unescaped instances of `from_char` with `to_char` in `src_string`
- * @param escape_char The user-specified character used for escape.
+ * @param escape_char The character used for escaping.
  * @param from_char
  * @param to_char
  * @param src_string
