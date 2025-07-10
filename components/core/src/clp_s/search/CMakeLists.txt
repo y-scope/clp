@@ -5,6 +5,10 @@ add_subdirectory(sql)
 set(
         CLP_S_SEARCH_SOURCES
         ../Defs.hpp
+        ../DictionaryEntry.cpp
+        ../DictionaryEntry.hpp
+        ../DictionaryWriter.cpp
+        ../DictionaryWriter.hpp
         ../VariableEncoder.cpp
         ../VariableEncoder.hpp
         AddTimestampConditions.cpp
@@ -47,6 +51,7 @@ if(CLP_BUILD_CLP_S_SEARCH)
                 simdjson::simdjson
                 PRIVATE
                 clp_s::clp_dependencies
+                clp_s::io
                 spdlog::spdlog
         )
 endif()

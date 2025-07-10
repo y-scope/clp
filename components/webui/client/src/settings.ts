@@ -5,7 +5,9 @@ type Settings = {
     ClpStorageEngine: string;
     MongoDbSearchResultsMetadataCollectionName: string;
     SqlDbClpArchivesTableName: string;
+    SqlDbClpDatasetsTableName: string;
     SqlDbClpFilesTableName: string;
+    SqlDbClpTablePrefix: string;
     SqlDbCompressionJobsTableName: string;
 };
 

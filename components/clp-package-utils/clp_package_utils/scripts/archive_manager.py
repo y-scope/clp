@@ -5,7 +5,11 @@ import sys
 import typing
 from pathlib import Path
 
-from clp_py_utils.clp_config import StorageType
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
+    StorageEngine,
+    StorageType,
+)
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -18,6 +22,7 @@ from clp_package_utils.general import (
     get_clp_home,
     load_config_file,
     validate_and_load_db_credentials_file,
+    validate_dataset_name,
 )
 
 # Command/Argument Constants
@@ -60,6 +65,12 @@ def main(argv: typing.List[str]) -> int:
         "-c",
         default=str(default_config_file_path),
         help="CLP package configuration file.",
+    )
+    args_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
     )
 
     # Top-level commands
@@ -163,6 +174,20 @@ def main(argv: typing.List[str]) -> int:
         logger.error(f"Archive deletion is not supported for storage type: {storage_type}.")
         return -1
 
+    storage_engine: StorageEngine = clp_config.package.storage_engine
+    dataset = parsed_args.dataset
+    if StorageEngine.CLP_S == storage_engine:
+        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
+        try:
+            clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+            validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
+        except Exception as e:
+            logger.error(e)
+            return -1
+    elif dataset is not None:
+        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+        return -1
+
     # Validate input depending on subcommands
     if (DEL_COMMAND == subcommand and DEL_BY_FILTER_SUBCOMMAND == parsed_args.del_subcommand) or (
         FIND_COMMAND == subcommand
@@ -196,9 +221,12 @@ def main(argv: typing.List[str]) -> int:
         "python3",
         "-m", "clp_package_utils.scripts.native.archive_manager",
         "--config", str(generated_config_path_on_container),
-        str(subcommand),
     ]
     # fmt : on
+    if dataset is not None:
+        archive_manager_cmd.append("--dataset")
+        archive_manager_cmd.append(dataset)
+    archive_manager_cmd.append(subcommand)
 
     # Add subcommand-specific arguments
     if DEL_COMMAND == subcommand:

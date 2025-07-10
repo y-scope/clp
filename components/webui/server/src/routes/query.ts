@@ -16,35 +16,23 @@ import {
  * @param app
  * @return
  */
-// eslint-disable-next-line max-lines-per-function
 const routes: FastifyPluginAsync = async (app) => {
     const fastify = app.withTypeProvider<TypeBoxTypeProvider>();
-
-    fastify.post(
-        "/query/sql",
-        {
-            schema: {
-                body: Type.Object({
-                    queryString: Type.String({minLength: 1}),
-                }),
-            },
-        },
-        async (req) => {
-            const {queryString} = req.body;
-            return await fastify.dbManager.queryMySql(queryString);
-        },
-    );
 
     fastify.post("/query/extract-stream", {
         schema: {
             body: Type.Object({
+                // Type.Null must come before Type.String;
+                // otherwise, `{dataset: null}` gets converted to `{dataset: ""}`.
+                dataset: Type.Union([Type.Null(),
+                    Type.String()]),
                 extractJobType: Type.Enum(QUERY_JOB_TYPE),
                 logEventIdx: Type.Integer(),
                 streamId: Type.String({minLength: 1}),
             }),
         },
     }, async (req, resp) => {
-        const {extractJobType, logEventIdx, streamId} = req.body;
+        const {dataset, extractJobType, logEventIdx, streamId} = req.body;
         if (false === EXTRACT_JOB_TYPES.has(extractJobType)) {
             resp.code(StatusCodes.BAD_REQUEST);
             throw new Error(`Invalid extractJobType="${extractJobType}".`);
@@ -57,6 +45,7 @@ const routes: FastifyPluginAsync = async (app) => {
 
         if (null === streamMetadata) {
             const extractResult = await fastify.dbManager.submitAndWaitForExtractStreamJob({
+                dataset: dataset,
                 jobType: extractJobType,
                 logEventIdx: logEventIdx,
                 streamId: streamId,
