@@ -258,7 +258,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                     "disable-log-order",
                     po::bool_switch(&m_disable_log_order),
-                    "Do not record log order at ingestion time."
+                    "Do not record log order at ingestion time; Do not record the archive range"
+                    " index."
             )(
                     "file-type",
                     po::value<std::string>(&file_type)->value_name("FILE_TYPE")->default_value(file_type),
