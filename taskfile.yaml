@@ -15,6 +15,7 @@ vars:
   G_CORE_COMPONENT_DIR: "{{.G_COMPONENTS_DIR}}/core"
   G_CORE_COMPONENT_SUBMODULES_DIR: "{{.G_CORE_COMPONENT_DIR}}/submodules"
   G_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/webui"
+  G_INTEGRATION_TESTS_DIR: "{{.ROOT_DIR}}/integration-tests"
 
   # Build paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
@@ -161,6 +162,11 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
+  test-package:
+    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
+    cmds:
+      - "uv run pytest"
 
   clp-s-generate-parsers:
     vars:
