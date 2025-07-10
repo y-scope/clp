@@ -66,7 +66,7 @@ void to_lower(std::string& str);
  * @param escape_char The user-specified character used for escape.
  * @param from_char
  * @param to_char
- * @param src_string The string which needs to have `from_char` replaced
+ * @param src_string
  */
 auto replace_unescaped_char(char escape_char, char from_char, char to_char, std::string& src_string)
         -> void;
