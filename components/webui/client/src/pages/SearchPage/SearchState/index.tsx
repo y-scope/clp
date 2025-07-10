@@ -1,4 +1,5 @@
 import dayjs from "dayjs";
+import {Nullable} from "src/typings/common";
 import {create} from "zustand";
 
 import {TimelineConfig} from "../../../components/ResultsTimeline/typings";
@@ -16,13 +17,14 @@ import {SEARCH_UI_STATE} from "./typings";
  */
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
+    cachedDataset: null,
     numSearchResultsTable: 0,
     numSearchResultsTimeline: 0,
     queryIsCaseSensitive: false,
     queryString: "",
     searchJobId: null,
-    searchResultsMetadata: null,
     searchUiState: SEARCH_UI_STATE.DEFAULT,
+    selectDataset: null,
     timeRange: TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE](),
     timeRangeOption: DEFAULT_TIME_RANGE,
     timelineConfig: computeTimelineConfig(TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE]()),
@@ -33,6 +35,13 @@ interface SearchState {
      * Unique ID from the database for the aggregation job.
      */
     aggregationJobId: string | null;
+
+    /**
+     * Clp-s dataset filter submitted as part of query. There is a separate state for the submitted
+     * dataset so modifications to the selector do not change dataset used in extract stream job for
+     * log viewer links.
+     */
+    cachedDataset: Nullable<string>;
 
     /**
      * The number of search table results.
@@ -65,6 +74,11 @@ interface SearchState {
     searchUiState: SEARCH_UI_STATE;
 
     /**
+     * Clp-s dataset filter shown in UI selector.
+     */
+    selectDataset: string | null;
+
+    /**
      * Time range for search query.
      */
     timeRange: [dayjs.Dayjs, dayjs.Dayjs];
@@ -82,12 +96,14 @@ interface SearchState {
     timelineConfig: TimelineConfig;
 
     updateAggregationJobId: (id: string | null) => void;
+    updateCachedDataset: (dataset: string) => void;
     updateNumSearchResultsTable: (num: number) => void;
     updateNumSearchResultsTimeline: (num: number) => void;
     updateQueryIsCaseSensitive: (newValue: boolean) => void;
     updateQueryString: (query: string) => void;
     updateSearchJobId: (id: string | null) => void;
     updateSearchUiState: (state: SEARCH_UI_STATE) => void;
+    updateSelectDataset: (dataset: string | null) => void;
     updateTimeRange: (range: [dayjs.Dayjs, dayjs.Dayjs]) => void;
     updateTimeRangeOption: (option: TIME_RANGE_OPTION) => void;
     updateTimelineConfig: (config: TimelineConfig) => void;
@@ -97,6 +113,9 @@ const useSearchStore = create<SearchState>((set) => ({
     ...SEARCH_STATE_DEFAULT,
     updateAggregationJobId: (id) => {
         set({aggregationJobId: id});
+    },
+    updateCachedDataset: (dataset) => {
+        set({cachedDataset: dataset});
     },
     updateNumSearchResultsTable: (num) => {
         set({numSearchResultsTable: num});
@@ -115,6 +134,9 @@ const useSearchStore = create<SearchState>((set) => ({
     },
     updateSearchUiState: (state) => {
         set({searchUiState: state});
+    },
+    updateSelectDataset: (dataset) => {
+        set({selectDataset: dataset});
     },
     updateTimeRange: (range) => {
         set({timeRange: range});

@@ -102,23 +102,35 @@ To search your compressed logs from CLP's UI, open [http://localhost:4000](http:
 your browser (if you changed `webui.host` or `webui.port` in `etc/clp-config.yml`, use the new
 values).
 
-:::{image} clp-search-ui.png
+[Figure 3](#figure-3) shows the search page after running a query.
+
+(figure-3)=
+:::{card}
+
+:::{image} clp-text-search-ui.png
+
++++
+**Figure 3**: The search page in CLP's UI.
 :::
 
-The image above shows the search page after running a query. The numbered circles correspond to the
-following features:
+The numbered circles in [Figure 3](#figure-3) correspond to the following elements:
 
-1. The search box is where you can enter your query.
-2. The timeline shows the number of results across the time range of your query.
-   * You can click and drag to zoom into a time range, or use the time range filter in (4).
-3. The table displays the search results for your query.
-4. Clicking the <i class="fa fa-bars"></i> icon reveals additional filters for your query.
-   * The time range filter allows you to specify the period of time that matching log events must be
-     in.
-   * The case sensitivity filter allows you to specify whether CLP should respect the case of your
-     query.
-5. Clicking the <i class="fa fa-cog"></i> icon reveals options for displaying results.
-6. The <i class="fa fa-trash"></i> icon clears the results of the last query.
+1. **The query input box**. The format of your query should conform to CLP's
+   [unstructured text search syntax](../reference-text-search-syntax.md).
+2. **The query case-sensitivity toggle**. When turned on, CLP will search for log events that match
+   the case of your query.
+3. **The time range selector**. CLP will search for log events that are in the specified time range.
+   You can select a preset filter (e.g., `Last 15 minutes`; `Yesterday`) from the dropdown, or
+   choose `Custom` and set the start time and end time directly.
+4. **The search results timeline**. After a query, the timeline will show the number of results
+   across the time range of your query.
+   * You can click and drag to zoom into a time range.
+   * When you mouse over a bar in the timeline, a popup will display the range and the number of
+     search results in that range.
+5. **The search results**.
+   * You can sort by `Ascending` or `Descending` timestamp by clicking the `Timestamp` header in the
+     table.
+   * Each search result includes a link to the original file in which the log event was found.
 
 :::{note}
 By default, the UI will only return 1,000 of the latest search results. To perform searches which
