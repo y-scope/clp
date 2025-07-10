@@ -68,9 +68,9 @@ void to_lower(std::string& str);
  * @param target_char
  * @param src_string The string which needs to have src_char replaced
  */
-void
-replace_unescaped_char(char escape_char, char src_char, char target_char, std::string& src_string);
-
+auto
+replace_unescaped_char(char escape_char, char src_char, char target_char, std::string& src_string)
+        -> void;
 /**
  * Cleans wildcard search string
  * <ul>

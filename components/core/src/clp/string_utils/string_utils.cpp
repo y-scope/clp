@@ -129,12 +129,12 @@ bool is_wildcard(char c) {
     return false;
 }
 
-void replace_unescaped_char(
+auto replace_unescaped_char(
         char const escape_char,
         char const src_char,
         char const target_char,
         std::string& src_string
-) {
+) -> void {
     bool escaped = false;
 
     auto unescaped = [&](char c) {
