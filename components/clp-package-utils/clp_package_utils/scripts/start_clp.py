@@ -1108,10 +1108,14 @@ def main(argv):
         config_file_path = pathlib.Path(parsed_args.config)
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
 
-        # Early exit if targeting query components when using Presto
+        # Exit early if target part of native query engine but Presto is configured
         if QueryEngine.PRESTO == clp_config.package.query_engine:
-            if target in (QUERY_SCHEDULER_COMPONENT_NAME, QUERY_WORKER_COMPONENT_NAME, REDUCER_COMPONENT_NAME):
-                logger.info(f"Cannot start {target} when using Presto as query engine")
+            if target in (
+                QUERY_SCHEDULER_COMPONENT_NAME,
+                QUERY_WORKER_COMPONENT_NAME,
+                REDUCER_COMPONENT_NAME
+            ):
+                logger.error(f"{target} not available when using Presto as query engine")
                 return 0
 
         # Validate and load necessary credentials
