@@ -26,6 +26,24 @@ if [ "$#" -lt 1 ] ; then
 fi
 version=$1
 
+# Ensure version must be greater or equal to 5.8.1 to mitigate both
+# CVE-2024-3094 (resolved in version >5.6.1) and
+# CVE-2025-31115 (resolved in version >5.8.0)
+min_required_major=5
+min_required_minor=8
+min_required_patch=1
+version_greater_or_equal() {
+    IFS='.' read -r major minor patch <<< "$version"
+    (( major > min_required_major )) && return 0
+    (( major == min_required_major && minor > min_required_minor )) && return 0
+    (( major == min_required_major && minor == min_required_minor && patch >= min_required_patch )) && return 0
+    return 1
+}
+if ! version_greater_or_equal "$version"; then
+    echo "Error: Version $version must be greater or equal to 5.6.2 to mitigate CVE-2024-3094."
+    exit 1
+fi
+
 package_name=liblzma
 temp_dir=/tmp/${package_name}-installation
 deb_output_dir=${temp_dir}
