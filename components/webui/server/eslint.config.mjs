@@ -22,6 +22,7 @@ const EslintConfig = [
                 {
                     // TypeBox imports
                     capIsNewExceptions: [
+                        "Type.Any",
                         "Type.Enum",
                         "Type.Integer",
                         "Type.Literal",
