@@ -62,7 +62,7 @@ std::string replace_characters(
 void to_lower(std::string& str);
 
 /**
- * Replace unescaped instances of `from_char` with `to_char` in `src_string`
+ * Replace unescaped instances of `from_char` with `to_char` in `src_string`.
  * @param escape_char The character used for escaping.
  * @param from_char
  * @param to_char
