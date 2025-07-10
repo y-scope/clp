@@ -131,14 +131,14 @@ bool is_wildcard(char c) {
 
 auto replace_unescaped_char(
         char const escape_char,
-        char const src_char,
-        char const target_char,
+        char const from_char,
+        char const to_char,
         std::string& src_string
 ) -> void {
     bool escaped{false};
 
-    auto unescaped = [&](char c) {
-        auto const should_replace = (src_char == c && false == escaped);
+    auto should_replace_char = [&](char c) -> bool {
+        auto const should_replace = (from_char == c && false == escaped);
         if (escape_char == c) {
             escaped = !escaped;
         } else {
@@ -147,7 +147,7 @@ auto replace_unescaped_char(
         return should_replace;
     };
 
-    std::replace_if(src_string.begin(), src_string.end(), unescaped, target_char);
+    std::replace_if(src_string.begin(), src_string.end(), should_replace_char, to_char);
 }
 
 string clean_up_wildcard_search_string(string_view str) {

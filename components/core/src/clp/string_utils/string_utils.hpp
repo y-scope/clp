@@ -62,14 +62,13 @@ std::string replace_characters(
 void to_lower(std::string& str);
 
 /**
- * Replace unescaped instances of `src_char` with `target_char` in `src_string`
- * @param escape_char
- * @param src_char
- * @param target_char
- * @param src_string The string which needs to have src_char replaced
+ * Replace unescaped instances of `from_char` with `to_char` in `src_string`
+ * @param escape_char The character which indicates escape; can be any character
+ * @param from_char
+ * @param to_char
+ * @param src_string The string which needs to have `from_char` replaced
  */
-auto
-replace_unescaped_char(char escape_char, char src_char, char target_char, std::string& src_string)
+auto replace_unescaped_char(char escape_char, char from_char, char to_char, std::string& src_string)
         -> void;
 /**
  * Cleans wildcard search string

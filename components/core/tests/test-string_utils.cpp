@@ -29,11 +29,11 @@ TEST_CASE("to_lower", "[to_lower]") {
 
 TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
     auto check = [](char escape_char,
-                    char src_char,
-                    char target_char,
+                    char from_char,
+                    char to_char,
                     std::string in,
                     std::string const& expected) {
-        replace_unescaped_char(escape_char, src_char, target_char, in);
+        replace_unescaped_char(escape_char, from_char, to_char, in);
         REQUIRE(in == expected);
     };
 
