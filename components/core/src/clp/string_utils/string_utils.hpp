@@ -62,11 +62,11 @@ std::string replace_characters(
 void to_lower(std::string& str);
 
 /**
- * Replace unescaped instances of src_char with target_char in src_string
- * @param escape_char The character which indicates escape
- * @param src_char The character which should be replaced if unescaped
- * @param target_char The character which should replace src_char
- * @param search_string The string which needs to have src_char replaced
+ * Replace unescaped instances of `src_char` with `target_char` in `src_string`
+ * @param escape_char
+ * @param src_char
+ * @param target_char
+ * @param src_string The string which needs to have src_char replaced
  */
 void
 replace_unescaped_char(char escape_char, char src_char, char target_char, std::string& src_string);
