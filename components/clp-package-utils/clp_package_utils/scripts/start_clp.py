@@ -1113,7 +1113,7 @@ def main(argv):
             if target in (
                 QUERY_SCHEDULER_COMPONENT_NAME,
                 QUERY_WORKER_COMPONENT_NAME,
-                REDUCER_COMPONENT_NAME
+                REDUCER_COMPONENT_NAME,
             ):
                 logger.error(f"{target} not available when using Presto as query engine")
                 return 0
@@ -1219,7 +1219,9 @@ def main(argv):
             )
         if target in (ALL_TARGET_NAME, QUERY_WORKER_COMPONENT_NAME):
             if QueryEngine.PRESTO != clp_config.package.query_engine:
-                start_query_worker(instance_id, clp_config, container_clp_config, num_workers, mounts)
+                start_query_worker(
+                    instance_id, clp_config, container_clp_config, num_workers, mounts
+                )
         if target in (ALL_TARGET_NAME, REDUCER_COMPONENT_NAME):
             if QueryEngine.PRESTO != clp_config.package.query_engine:
                 start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
