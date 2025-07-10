@@ -1,7 +1,8 @@
 import {useQuery} from "@tanstack/react-query";
 import {theme} from "antd";
 
-import StatCard from "../../../components/StatCard";
+import {DashboardCard} from "../../../components/DashboardCard";
+import Stat from "../../../components/Stat";
 import {
     CLP_STORAGE_ENGINES,
     SETTINGS_STORAGE_ENGINE,
@@ -58,14 +59,17 @@ const SpaceSavings = () => {
     return (
         <div className={styles["spaceSavingsGrid"]}>
             <div className={styles["spaceSavingsCard"]}>
-                <StatCard
+                <DashboardCard
                     backgroundColor={token.colorPrimary}
                     isLoading={isPending}
-                    stat={spaceSavingsPercentText}
-                    statColor={token.colorWhite}
-                    statSize={"5.5rem"}
                     title={"Space Savings"}
-                    titleColor={token.colorWhite}/>
+                    titleColor={token.colorWhite}
+                >
+                    <Stat
+                        color={token.colorWhite}
+                        fontSize={"5.5rem"}
+                        text={spaceSavingsPercentText}/>
+                </DashboardCard>
             </div>
             <UncompressedSize
                 isLoading={isPending}
