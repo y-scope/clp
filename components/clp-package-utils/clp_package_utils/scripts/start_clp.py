@@ -14,7 +14,6 @@ from typing import Any, Dict, List, Optional
 import yaml
 from clp_py_utils.clp_config import (
     ALL_TARGET_NAME,
-    ARCHIVES_TABLE_SUFFIX,
     AwsAuthType,
     CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
@@ -23,7 +22,6 @@ from clp_py_utils.clp_config import (
     COMPRESSION_WORKER_COMPONENT_NAME,
     CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
-    FILES_TABLE_SUFFIX,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -35,6 +33,11 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
+)
+from clp_py_utils.clp_metadata_db_utils import (
+    get_archives_table_name,
+    get_datasets_table_name,
+    get_files_table_name,
 )
 from clp_py_utils.s3_utils import generate_container_auth_options
 from job_orchestration.scheduler.constants import QueueName
@@ -870,13 +873,20 @@ def start_webui(
     clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
     if StorageEngine.CLP_S == clp_config.package.storage_engine:
-        table_prefix = f"{table_prefix}{CLP_DEFAULT_DATASET_NAME}_"
+        archives_table_name = ""
+        files_table_name = ""
+    else:
+        archives_table_name = get_archives_table_name(table_prefix, None)
+        files_table_name = get_files_table_name(table_prefix, None)
+
     client_settings_json_updates = {
         "ClpStorageEngine": clp_config.package.storage_engine,
         "ClpQueryEngine": clp_config.package.query_engine,
         "MongoDbSearchResultsMetadataCollectionName": clp_config.webui.results_metadata_collection_name,
-        "SqlDbClpArchivesTableName": f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}",
-        "SqlDbClpFilesTableName": f"{table_prefix}{FILES_TABLE_SUFFIX}",
+        "SqlDbClpArchivesTableName": archives_table_name,
+        "SqlDbClpDatasetsTableName": get_datasets_table_name(table_prefix),
+        "SqlDbClpFilesTableName": files_table_name,
+        "SqlDbClpTablePrefix": table_prefix,
         "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
     }
     client_settings_json = read_and_update_settings_json(

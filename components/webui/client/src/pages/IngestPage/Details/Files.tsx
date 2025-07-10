@@ -5,6 +5,7 @@ import DetailsCard from "./DetailsCard";
 
 interface FilesProps {
     numFiles: Nullable<number>;
+    isLoading: boolean;
 }
 
 /**
@@ -12,11 +13,13 @@ interface FilesProps {
  *
  * @param props
  * @param props.numFiles
+ * @param props.isLoading
  * @return
  */
-const Files = ({numFiles}: FilesProps) => {
+const Files = ({numFiles, isLoading}: FilesProps) => {
     return (
         <DetailsCard
+            isLoading={isLoading}
             stat={(numFiles ?? 0).toString()}
             title={"Files"}/>
     );

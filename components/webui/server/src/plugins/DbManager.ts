@@ -98,6 +98,7 @@ class DbManager {
      * Submits a stream extraction job to the scheduler and waits for it to finish.
      *
      * @param props
+     * @param props.dataset
      * @param props.jobType
      * @param props.logEventIdx
      * @param props.streamId
@@ -105,11 +106,13 @@ class DbManager {
      * @return The ID of the job or null if an error occurred.
      */
     async submitAndWaitForExtractStreamJob ({
+        dataset,
         jobType,
         logEventIdx,
         streamId,
         targetUncompressedSize,
     }: {
+        dataset: string | null;
         jobType: QUERY_JOB_TYPE;
         logEventIdx: number;
         streamId: string;
@@ -125,6 +128,7 @@ class DbManager {
             };
         } else if (QUERY_JOB_TYPE.EXTRACT_JSON === jobType) {
             jobConfig = {
+                dataset: dataset,
                 archive_id: streamId,
                 target_chunk_size: targetUncompressedSize,
             };
