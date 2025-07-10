@@ -7,7 +7,6 @@ authors = [
     { name = "YScope Inc.", email = "dev@yscope.com" }
 ]
 requires-python = ">=3.10"
-dependencies = []
 
 [project.scripts]
 integration-tests = "integration_tests:main"
