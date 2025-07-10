@@ -40,7 +40,7 @@ version_greater_or_equal() {
     return 1
 }
 if ! version_greater_or_equal "$version"; then
-    echo "Error: Version $version must be greater or equal to 5.6.2 to mitigate CVE-2024-3094 and CVE-2025-31115."
+    echo "Error: Version $version must be greater or equal to 5.8.1 to mitigate CVE-2024-3094 and CVE-2025-31115."
     exit 1
 fi
 

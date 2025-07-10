@@ -313,11 +313,11 @@ if(CLP_NEED_LZMA)
         message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
         message(STATUS "Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
 
-        # Version 3.8.1 and above address CVE-2024-3094 and CVE-2025-31115.
+        # Version 5.8.1 and above address CVE-2024-3094 and CVE-2025-31115.
         # Platform checks are enforced universally, with the exception of macOS,
         # where source compilation of xz/lzma presents challenges.
         # On macOS, a warning is issued in lieu of enforcement.
-        set(REQUIRED_LIBLZMA_VERSION "3.8.1")
+        set(REQUIRED_LIBLZMA_VERSION "5.8.1")
         if(LIBLZMA_VERSION_STRING VERSION_LESS ${REQUIRED_LIBLZMA_VERSION})
             if(NOT APPLE)
                 message(
