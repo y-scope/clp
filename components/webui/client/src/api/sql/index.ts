@@ -8,7 +8,7 @@ import axios from "axios";
  * @return
  */
 const querySql = async <T>(queryString: string) => {
-    return axios.post<T>("/query/sql", {queryString});
+    return axios.post<T>("/api/archive-metadata/sql", {queryString});
 };
 
 export {querySql};
