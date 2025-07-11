@@ -5,7 +5,6 @@ import {
 
 import settings from "../settings.json" with {type: "json"};
 import DbManager from "./plugins/DbManager.js";
-import S3Manager from "./plugins/S3Manager.js";
 import exampleRoutes from "./routes/example.js";
 import queryRoutes from "./routes/query.js";
 import staticRoutes from "./routes/static.js";
@@ -48,13 +47,6 @@ const FastifyV1App: FastifyPluginAsync<AppPluginOptions> = async (
                 port: settings.MongoDbPort,
             },
         });
-        await fastify.register(
-            S3Manager,
-            {
-                region: settings.StreamFilesS3Region,
-                profile: settings.StreamFilesS3Profile,
-            }
-        );
     }
 
     // Register the routes

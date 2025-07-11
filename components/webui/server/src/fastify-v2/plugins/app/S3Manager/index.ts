@@ -3,15 +3,12 @@ import {
     S3Client,
 } from "@aws-sdk/client-s3";
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
-import fastifyPlugin from "fastify-plugin";
+import fp from "fastify-plugin";
 
-import {Nullable} from "../typings/common.js";
+import settings from "../../../../../settings.json" with {type: "json"};
+import {Nullable} from "../../../../typings/common.js";
+import {PRE_SIGNED_URL_EXPIRY_TIME_SECONDS} from "./typings.js";
 
-
-/**
- * Expiry time in seconds for pre-signed URLs.
- */
-const PRE_SIGNED_URL_EXPIRY_TIME_SECONDS = 3600;
 
 /**
  * Class to manage Simple Storage Service (S3) objects.
@@ -61,24 +58,20 @@ class S3Manager {
     }
 }
 
-/**
- * Initializes a Fastify plugin, which decorates the application with an S3 manager at the
- * "s3Manager" property only when all plugin options are valid.
- */
-export default fastifyPlugin(
-    async (app, options: {region: Nullable<string>; profile: Nullable<string>}) => {
-        const {region, profile} = options;
-        if (null === region) {
-            return;
-        }
-
-        console.log(`Initializing S3Manager with region="${region}" and profile="${profile}"...`);
-        app.decorate("s3Manager", new S3Manager(region, profile));
-    }
-);
-
 declare module "fastify" {
-    interface FastifyInstance {
-        s3Manager?: S3Manager;
+    export interface FastifyInstance {
+        S3Manager?: S3Manager;
     }
 }
+
+export default fp(
+    (fastify) => {
+        const region = settings.StreamFilesS3Region;
+        const profile = settings.StreamFilesS3Profile;
+        // Only decorate if the region is set (i.e. s3 support is configured in package)
+        if (region) { qq
+            fastify.log.info(`Initializing S3Manager with region="${region}" and profile="${profile}"...`);
+            fastify.decorate("S3Manager", new S3Manager(region, profile));
+        }
+    },
+);
