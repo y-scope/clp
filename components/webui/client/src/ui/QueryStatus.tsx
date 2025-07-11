@@ -10,7 +10,7 @@ import {
 } from "@sinclair/typebox/value";
 import {isAxiosError} from "axios";
 
-import {submitExtractStreamJob} from "../api/query";
+import {submitExtractStreamJob} from "../api/stream-files";
 import {Nullable} from "../typings/common";
 import {
     EXTRACT_JOB_TYPE,

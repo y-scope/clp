@@ -39,10 +39,7 @@ export default async function serviceApp (
     // eslint-disable-next-line no-warning-comments
     // TODO: Refactor old webui code to use more modular fastify style. Temporarily, the old webui
     // code is loaded as a separate plugin.
-    await fastify.register(FastifyV1App, {
-        sqlDbUser: fastify.config.CLP_DB_USER,
-        sqlDbPass: fastify.config.CLP_DB_PASS,
-    });
+    await fastify.register(FastifyV1App);
 
     // Loads all application plugins.
     fastify.register(fastifyAutoload, {

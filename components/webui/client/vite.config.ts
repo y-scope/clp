@@ -22,12 +22,8 @@ export default defineConfig({
     server: {
         port: 8080,
         proxy: {
-            "/query/": {
-                // Below target should match the server's configuration in
-                // `components/webui/server/.env` (or `.env.local` if overridden)
-                target: "http://localhost:3000/",
-                changeOrigin: true,
-            },
+            // Below targets should match the server's configuration in
+            // `components/webui/server/.env` (or `.env.local` if overridden)
             "/api/": {
                 target: "http://localhost:3000/",
                 changeOrigin: true,
