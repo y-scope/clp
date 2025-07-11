@@ -89,6 +89,10 @@ class StreamFileManager {
             };
         }
 
+        if ("undefined" === typeof jobConfig) {
+            throw new Error("Invalid job type");
+        }
+
         try {
             return await this.#queryJobDbManager.submitAndWaitForJob(jobConfig, jobType);
         } catch (e) {
