@@ -9,7 +9,7 @@ import {Nullable} from "../../../typings/common.js";
 import {
     StreamFileMongoDocument,
     StreamFilesCollection,
-} from "../../../typings/DbManager.js";
+} from "../../../typings/StreamFileManager.js";
 import {QUERY_JOB_TYPE} from "../../../typings/query.js";
 
 
