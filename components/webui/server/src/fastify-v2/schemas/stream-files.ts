@@ -13,7 +13,7 @@ const StreamFileExtractionSchema = Type.Object({
     dataset: Type.Union(
         [
             Type.Null(),
-            Type.String()
+            Type.String(),
         ]
     ),
     extractJobType: Type.Enum(QUERY_JOB_TYPE),
