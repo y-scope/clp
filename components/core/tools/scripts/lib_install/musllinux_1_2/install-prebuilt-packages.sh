@@ -14,22 +14,33 @@ apk update && apk add --no-cache \
     zlib-dev \
     zlib-static
 
-# Install `task`
-# NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
-VERSION=3.42.1
-ARCH=$(uname -m)
-case "$ARCH" in
-    x86_64) ARCH=amd64 ;;
-    aarch64) ARCH=arm64 ;;
-    *) echo "Unsupported architecture: $ARCH"; exit 1 ;;
+# Determine architecture for `task` release to install
+arch=$(uname -m)
+case "$arch" in
+    "x86_64")
+        task_pkg_arch="amd64"
+        ;;
+    "aarch64")
+        task_pkg_arch="arm64"
+        ;;
+    *)
+        echo "Error: Unsupported architecture - $rpm_arch"
+        exit 1
+        ;;
 esac
 
-wget -O /tmp/task.tar.gz \
-    "https://github.com/go-task/task/releases/download/v${VERSION}/task_linux_${ARCH}.tar.gz"
-
-tar -C /usr/local/bin -xzf /tmp/task.tar.gz task
+# Install `task`
+# NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
+task_pkg_path=$(mktemp -t task-pkg.XXXXXXXXXX).tar.gz || exit 1
+curl \
+    --fail \
+    --location \
+    --output "$task_pkg_path" \
+    --show-error \
+    "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.tar.gz"
+tar -C /usr/local/bin -xzf "$task_pkg_path" task
 chmod +x /usr/local/bin/task
-rm /tmp/task.tar.gz
+rm "$task_pkg_path"
 
 # Downgrade to CMake v3 to work around https://github.com/y-scope/clp/issues/795
 pipx uninstall cmake
