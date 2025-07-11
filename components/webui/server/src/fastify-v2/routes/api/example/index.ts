@@ -1,16 +1,13 @@
-import {TypeBoxTypeProvider} from "@fastify/type-provider-typebox";
+import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
 import {Type} from "@sinclair/typebox";
-import {FastifyPluginAsync} from "fastify";
 
 
 /**
  * Creates example routes.
  *
- * @param app
+ * @param fastify
  */
-const routes: FastifyPluginAsync = async (app) => {
-    const fastify = app.withTypeProvider<TypeBoxTypeProvider>();
-
+const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     fastify.get("/example/get/:name", {
         schema: {
             params: Type.Object({
@@ -32,4 +29,4 @@ const routes: FastifyPluginAsync = async (app) => {
     });
 };
 
-export default routes;
+export default plugin;

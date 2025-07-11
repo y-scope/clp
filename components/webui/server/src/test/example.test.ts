@@ -1,11 +1,13 @@
+import fastify from "fastify";
 import {StatusCodes} from "http-status-codes";
 import tap, {Test} from "tap";
 
-import {build} from "./tap.js";
+import routes from "../fastify-v2/routes/api/example/index.js";
 
 
 tap.test("Tests the example routes", async (t: Test) => {
-    const server = await build(t);
+    const server = fastify();
+    server.register(routes);
 
     let resp = await server.inject({
         method: "GET",
@@ -23,6 +25,3 @@ tap.test("Tests the example routes", async (t: Test) => {
     t.equal(resp.statusCode, StatusCodes.OK);
     t.match(JSON.parse(resp.body), {msg: String});
 });
-
-// eslint-disable-next-line no-warning-comments
-// TODO: Add tests for `query` routes.
