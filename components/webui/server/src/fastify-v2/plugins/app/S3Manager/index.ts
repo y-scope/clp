@@ -68,9 +68,14 @@ export default fp(
     (fastify) => {
         const region = settings.StreamFilesS3Region;
         const profile = settings.StreamFilesS3Profile;
+
         // Only decorate if the region is set (i.e. s3 support is configured in package)
-        if (region) { qq
-            fastify.log.info(`Initializing S3Manager with region="${region}" and profile="${profile}"...`);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (region) {
+            fastify.log.info(
+                {region, profile},
+                "Initializing S3Manager"
+            );
             fastify.decorate("S3Manager", new S3Manager(region, profile));
         }
     },
