@@ -62,6 +62,16 @@ std::string replace_characters(
 void to_lower(std::string& str);
 
 /**
+ * Replace unescaped instances of `from_char` with `to_char` in `src_string`.
+ *
+ * @param escape_char The character used for escaping
+ * @param from_char
+ * @param to_char
+ * @param src_string
+ */
+auto replace_unescaped_char(char escape_char, char from_char, char to_char, std::string& src_string)
+        -> void;
+/**
  * Cleans wildcard search string
  * <ul>
  *   <li>Removes consecutive '*'</li>
