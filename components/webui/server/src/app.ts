@@ -4,7 +4,6 @@ import {
 } from "fastify";
 
 import settings from "../settings.json" with {type: "json"};
-import MongoSocketIoServer from "./plugins/MongoSocketIoServer/index.js";
 import S3Manager from "./plugins/S3Manager.js";
 import exampleRoutes from "./routes/example.js";
 import staticRoutes from "./routes/static.js";
@@ -30,11 +29,6 @@ const FastifyV1App: FastifyPluginAsync = async (
                 profile: settings.StreamFilesS3Profile,
             }
         );
-        await fastify.register(MongoSocketIoServer, {
-            host: settings.MongoDbHost,
-            port: settings.MongoDbPort,
-            database: settings.MongoDbName,
-        });
     }
 
     // Register the routes

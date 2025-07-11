@@ -46,7 +46,11 @@ const TimeRangeInput = () => {
             return;
         }
 
-        updateTimeRange(dates);
+        // Treat range picker selection as UTC by dropping any timezone offset supplied by antd.
+        updateTimeRange([
+            dates[0].utc(true),
+            dates[1].utc(true),
+        ]);
     };
 
     return (
@@ -68,8 +72,8 @@ const TimeRangeInput = () => {
                 onChange={handleSelectChange}/>
             {timeRangeOption === TIME_RANGE_OPTION.CUSTOM && (
                 <DatePicker.RangePicker
+                    allowClear={true}
                     className={styles["rangePicker"] || ""}
-                    showNow={true}
                     showTime={true}
                     size={"large"}
                     value={timeRange}

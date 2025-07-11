@@ -1,10 +1,17 @@
-import {useEffect} from "react";
+import {
+    useCallback,
+    useEffect,
+} from "react";
 
 import {Card} from "antd";
 import {Dayjs} from "dayjs";
 import {TimelineConfig} from "src/components/ResultsTimeline/typings";
 
 import ResultsTimeline from "../../../../components/ResultsTimeline/index";
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../../../../config";
 import {handleQuerySubmit} from "../../SearchControls/search-requests";
 import {TIME_RANGE_OPTION} from "../../SearchControls/TimeRangeInput/utils";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
@@ -19,32 +26,22 @@ import {computeTimelineConfig} from "./utils";
  * @return
  */
 const SearchResultsTimeline = () => {
-    const {
-        queryString,
-        updateTimeRange,
-        updateTimeRangeOption,
-        timelineConfig,
-        searchUiState,
-        updateTimelineConfig,
-        updateNumSearchResultsTimeline,
-    } = useSearchStore();
+    const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
+    const queryString = useSearchStore((state) => state.queryString);
+    const searchUiState = useSearchStore((state) => state.searchUiState);
+    const selectDataset = useSearchStore((state) => state.selectDataset);
+    const timelineConfig = useSearchStore((state) => state.timelineConfig);
 
     const aggregationResults = useAggregationResults();
 
-    useEffect(() => {
-        const numSearchResultsTimeline = aggregationResults?.reduce(
-            (acc, curr) => acc + curr.count,
-            0
-        ) ?? 0;
-
-        updateNumSearchResultsTimeline(numSearchResultsTimeline);
-    }, [
-        aggregationResults,
-        updateNumSearchResultsTimeline,
-    ]);
-
-    const handleTimelineZoom = (newTimeRange: [Dayjs, Dayjs]) => {
+    const handleTimelineZoom = useCallback((newTimeRange: [Dayjs, Dayjs]) => {
         const newTimelineConfig: TimelineConfig = computeTimelineConfig(newTimeRange);
+        const {
+            updateTimeRange,
+            updateTimeRangeOption,
+            updateTimelineConfig,
+            updateCachedDataset,
+        } = useSearchStore.getState();
 
         // Update range picker selection to match zoomed range.
         updateTimeRange(newTimeRange);
@@ -56,14 +53,44 @@ const SearchResultsTimeline = () => {
             return;
         }
 
+        if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
+            if (null !== selectDataset) {
+                updateCachedDataset(selectDataset);
+            } else {
+                console.error("Cannot submit a clp-s query without a dataset selection.");
+
+                return;
+            }
+        }
+
         handleQuerySubmit({
-            ignoreCase: false,
+            dataset: selectDataset,
+            ignoreCase: false === queryIsCaseSensitive,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
             timestampBegin: newTimeRange[0].valueOf(),
             timestampEnd: newTimeRange[1].valueOf(),
         });
-    };
+    }, [
+        queryIsCaseSensitive,
+        queryString,
+        selectDataset,
+    ]);
+
+    useEffect(() => {
+        const numSearchResultsTimeline = aggregationResults?.reduce(
+            (acc, curr) => acc + curr.count,
+            0
+        ) ?? 0;
+
+        const {
+            updateNumSearchResultsTimeline,
+        } = useSearchStore.getState();
+
+        updateNumSearchResultsTimeline(numSearchResultsTimeline);
+    }, [
+        aggregationResults,
+    ]);
 
     return (
         <Card>

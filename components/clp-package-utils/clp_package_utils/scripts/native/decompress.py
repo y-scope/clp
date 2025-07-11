@@ -10,11 +10,10 @@ from typing import Optional
 
 import yaml
 from clp_py_utils.clp_config import (
-    CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     Database,
-    FILES_TABLE_SUFFIX,
 )
+from clp_py_utils.clp_metadata_db_utils import get_files_table_name
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
 from job_orchestration.scheduler.job_config import (
@@ -34,6 +33,7 @@ from clp_package_utils.general import (
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
     submit_query_job,
+    validate_dataset_exists,
     wait_for_query_job,
 )
 
@@ -54,8 +54,9 @@ def get_orig_file_id(db_config: Database, path: str) -> Optional[str]:
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
+        files_table_name = get_files_table_name(table_prefix, None)
         db_cursor.execute(
-            f"SELECT orig_file_id FROM `{table_prefix}{FILES_TABLE_SUFFIX}` WHERE path = (%s)",
+            f"SELECT orig_file_id FROM `{files_table_name}` WHERE path = (%s)",
             (path,),
         )
         results = db_cursor.fetchall()
@@ -138,9 +139,19 @@ def handle_extract_stream_cmd(
             target_uncompressed_size=parsed_args.target_uncompressed_size,
         )
     elif EXTRACT_JSON_CMD == command:
+        dataset = parsed_args.dataset
+        if dataset is None:
+            logger.error(f"Dataset unspecified, but must be specified for command `{command}'.")
+            return -1
+        try:
+            validate_dataset_exists(clp_config.database, dataset)
+        except Exception as e:
+            logger.error(e)
+            return -1
+
         job_type = QueryJobType.EXTRACT_JSON
         job_config = ExtractJsonJobConfig(
-            dataset=CLP_DEFAULT_DATASET_NAME,
+            dataset=dataset,
             archive_id=parsed_args.archive_id,
             target_chunk_size=parsed_args.target_chunk_size,
         )
@@ -299,6 +310,12 @@ def main(argv):
     # JSON extraction command parser
     json_extraction_parser = command_args_parser.add_parser(EXTRACT_JSON_CMD)
     json_extraction_parser.add_argument("archive_id", type=str, help="Archive ID")
+    json_extraction_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
+    )
     json_extraction_parser.add_argument(
         "--target-chunk-size", type=int, help="Target chunk size (B)."
     )

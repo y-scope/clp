@@ -62,6 +62,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         // eslint-disable-next-line max-lines-per-function
         async (request, reply) => {
             const {
+                dataset,
                 timestampBegin,
                 timestampEnd,
                 ignoreCase,
@@ -71,6 +72,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
             const args = {
                 begin_timestamp: timestampBegin,
+                dataset: dataset,
                 end_timestamp: timestampEnd,
                 ignore_case: ignoreCase,
                 max_num_results: SEARCH_MAX_NUM_RESULTS,

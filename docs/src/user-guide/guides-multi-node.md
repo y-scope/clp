@@ -7,7 +7,7 @@ A multi-node deployment allows you to run CLP across a distributed set of hosts.
 * [Docker]
   * If you're not running as root, ensure docker can be run
     [without superuser privileges][docker-non-root].
-* Python 3.8 or higher
+* Python 3.9 or higher
 * One or more hosts networked together
 * A distributed filesystem (e.g. [SeaweedFS]) accessible by all worker hosts through a filesystem
   mount
@@ -110,8 +110,26 @@ Where `<component>` is the name of the component in the groups above.
 
 ## Using CLP
 
-Check out the [compression](../quick-start-compression/index) and
-[search](../quick-start-search/index) guides to compress and search your logs.
+To learn how to compress and search your logs, check out the quick-start guide that corresponds to
+the flavor of CLP you're running:
+
+::::{grid} 1 1 2 2
+:gutter: 2
+
+:::{grid-item-card}
+:link: quick-start/clp-json
+Using clp-json
+^^^
+How to compress and search JSON logs.
+:::
+
+:::{grid-item-card}
+:link: quick-start/clp-text
+Using clp-text
+^^^
+How to compress and search unstructured text logs.
+:::
+::::
 
 ## Stopping CLP
 

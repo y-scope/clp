@@ -7,7 +7,11 @@ import sys
 import uuid
 
 import yaml
-from clp_py_utils.clp_config import StorageEngine, StorageType
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
+    StorageEngine,
+    StorageType,
+)
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -19,6 +23,7 @@ from clp_package_utils.general import (
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
+    validate_dataset_name,
 )
 
 logger = logging.getLogger(__file__)
@@ -36,6 +41,12 @@ def main(argv):
         help="CLP package configuration file.",
     )
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
+    args_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
+    )
     args_parser.add_argument(
         "-t", "--tags", help="Comma-separated list of tags of archives to search."
     )
@@ -87,6 +98,19 @@ def main(argv):
         )
         return -1
 
+    dataset = parsed_args.dataset
+    if StorageEngine.CLP_S == storage_engine:
+        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
+        try:
+            clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+            validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
+        except Exception as e:
+            logger.error(e)
+            return -1
+    elif dataset is not None:
+        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+        return -1
+
     container_name = generate_container_name(str(JobType.SEARCH))
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
@@ -107,6 +131,9 @@ def main(argv):
         parsed_args.wildcard_query,
     ]
     # fmt: on
+    if dataset is not None:
+        search_cmd.append("--dataset")
+        search_cmd.append(dataset)
     if parsed_args.tags:
         search_cmd.append("--tags")
         search_cmd.append(parsed_args.tags)
