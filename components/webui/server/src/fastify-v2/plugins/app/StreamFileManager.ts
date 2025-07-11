@@ -6,11 +6,11 @@ import fp from "fastify-plugin";
 
 import settings from "../../../../settings.json" with {type: "json"};
 import {Nullable} from "../../../typings/common.js";
+import {QUERY_JOB_TYPE} from "../../../typings/query.js";
 import {
     StreamFileMongoDocument,
     StreamFilesCollection,
 } from "../../../typings/stream-files.js";
-import {QUERY_JOB_TYPE} from "../../../typings/query.js";
 
 
 /**
