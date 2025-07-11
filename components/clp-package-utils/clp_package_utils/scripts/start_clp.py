@@ -25,6 +25,7 @@ from clp_py_utils.clp_config import (
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
+    QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
@@ -880,6 +881,7 @@ def start_webui(
 
     client_settings_json_updates = {
         "ClpStorageEngine": clp_config.package.storage_engine,
+        "ClpQueryEngine": clp_config.package.query_engine,
         "MongoDbSearchResultsMetadataCollectionName": clp_config.webui.results_metadata_collection_name,
         "SqlDbClpArchivesTableName": archives_table_name,
         "SqlDbClpDatasetsTableName": get_datasets_table_name(table_prefix),
@@ -1106,6 +1108,16 @@ def main(argv):
         config_file_path = pathlib.Path(parsed_args.config)
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
 
+        # Exit early if target part of native query engine but Presto is configured
+        if QueryEngine.PRESTO == clp_config.package.query_engine:
+            if target in (
+                QUERY_SCHEDULER_COMPONENT_NAME,
+                QUERY_WORKER_COMPONENT_NAME,
+                REDUCER_COMPONENT_NAME,
+            ):
+                logger.error(f"{target} not available when using Presto as query engine")
+                return 0
+
         # Validate and load necessary credentials
         if target in (
             ALL_TARGET_NAME,
@@ -1199,15 +1211,20 @@ def main(argv):
         ):
             start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUERY_SCHEDULER_COMPONENT_NAME):
-            start_query_scheduler(instance_id, clp_config, container_clp_config, mounts)
+            if QueryEngine.PRESTO != clp_config.package.query_engine:
+                start_query_scheduler(instance_id, clp_config, container_clp_config, mounts)
         if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
             start_compression_worker(
                 instance_id, clp_config, container_clp_config, num_workers, mounts
             )
         if target in (ALL_TARGET_NAME, QUERY_WORKER_COMPONENT_NAME):
-            start_query_worker(instance_id, clp_config, container_clp_config, num_workers, mounts)
+            if QueryEngine.PRESTO != clp_config.package.query_engine:
+                start_query_worker(
+                    instance_id, clp_config, container_clp_config, num_workers, mounts
+                )
         if target in (ALL_TARGET_NAME, REDUCER_COMPONENT_NAME):
-            start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
+            if QueryEngine.PRESTO != clp_config.package.query_engine:
+                start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
         if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
             start_webui(instance_id, clp_config, container_clp_config, mounts)
 
