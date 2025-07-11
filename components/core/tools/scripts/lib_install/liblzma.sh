@@ -29,18 +29,39 @@ version=$1
 # Ensure version must be greater or equal to 5.8.1 to mitigate both
 # CVE-2024-3094 (resolved in version >5.6.1) and
 # CVE-2025-31115 (resolved in version >5.8.0)
-min_required_major=5
-min_required_minor=8
-min_required_patch=1
-version_greater_or_equal() {
+validate_minimum_required_version() {
+    min_required_major=5
+    min_required_minor=8
+    min_required_patch=1
+
+    local major minor patch
+
     IFS='.' read -r major minor patch <<< "$version"
-    (( major > min_required_major )) && return 0
-    (( major == min_required_major && minor > min_required_minor )) && return 0
-    (( major == min_required_major && minor == min_required_minor && patch >= min_required_patch )) && return 0
+
+    # Check the major version
+    if (( major > min_required_major )); then
+        return 0
+    elif (( major < min_required_major )); then
+        return 1
+    fi
+
+    # Check the minor version
+    if (( minor > min_required_minor )); then
+        return 0
+    elif (( minor < min_required_minor )); then
+        return 1
+    fi
+
+    # Check the patch version
+    if (( patch >= min_required_patch )); then
+        return 0
+    fi
+
     return 1
 }
-if ! version_greater_or_equal "$version"; then
-    echo "Error: Version $version must be greater or equal to 5.8.1 to mitigate CVE-2024-3094 and CVE-2025-31115."
+if ! validate_minimum_required_version "$version"; then
+    echo "Error: Version $version must be greater or equal to 5.8.1 to mitigate" \
+         "CVE-2024-3094 and CVE-2025-31115."
     exit 1
 fi
 
