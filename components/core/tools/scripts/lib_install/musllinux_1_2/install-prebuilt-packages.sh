@@ -24,7 +24,7 @@ case "$arch" in
         task_pkg_arch="arm64"
         ;;
     *)
-        echo "Error: Unsupported architecture - $rpm_arch"
+        echo "Error: Unsupported architecture - $arch"
         exit 1
         ;;
 esac

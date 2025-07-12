@@ -214,7 +214,7 @@ tasks:
             - "-DFMT_DOC=OFF"
             - "-DFMT_TEST=OFF"
           LIB_NAME: "{{.G_FMT_LIB_NAME}}"
-          TARBALL_SHA256: "15a04e69c222eb6c01094b5c7ff8a249b36bb22788d72519646fb85feb267e67"
+          TARBALL_SHA256: "1250e4cc58bf06ee631567523f48848dc4596133e163f02615c97f78bab6c811"
           TARBALL_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.tar.gz"
 
   log-surgeon:
