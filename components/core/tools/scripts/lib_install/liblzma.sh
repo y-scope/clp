@@ -58,6 +58,7 @@ validate_minimum_required_version() {
 
     return 1
 }
+
 if ! validate_minimum_required_version "$version"; then
     echo "Error: Version $version must be greater or equal to 5.8.1 to mitigate CVE-2024-3094 and" \
          " CVE-2025-31115."
