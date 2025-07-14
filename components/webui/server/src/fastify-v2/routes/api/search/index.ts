@@ -9,6 +9,7 @@ import {
     type SearchResultsMetadataDocument,
 } from "../../../../../../common/index.js";
 import settings from "../../../../../settings.json" with {type: "json"};
+import {QUERY_JOB_TYPE} from "../../../../typings/query.js";
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
     QueryJobCreationSchema,
@@ -30,7 +31,7 @@ import {
 // eslint-disable-next-line max-lines-per-function
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     const {
-        QueryJobsDbManager,
+        QueryJobDbManager,
         mongo,
     } = fastify;
     const mongoDb = mongo.db;
@@ -58,6 +59,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 tags: ["Search"],
             },
         },
+        // eslint-disable-next-line max-lines-per-function
         async (request, reply) => {
             const {
                 dataset,
@@ -83,10 +85,19 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             let aggregationJobId: number;
 
             try {
-                searchJobId = await QueryJobsDbManager.submitSearchJob(args);
-                aggregationJobId = await QueryJobsDbManager.submitAggregationJob(
+                searchJobId = await QueryJobDbManager.submitJob(
                     args,
-                    timeRangeBucketSizeMillis
+                    QUERY_JOB_TYPE.SEARCH_OR_AGGREGATION
+                );
+
+                aggregationJobId = await QueryJobDbManager.submitJob(
+                    {
+                        ...args,
+                        aggregation_config: {
+                            count_by_time_bucket_size: timeRangeBucketSizeMillis,
+                        },
+                    },
+                    QUERY_JOB_TYPE.SEARCH_OR_AGGREGATION
                 );
             } catch (err: unknown) {
                 const errMsg = "Unable to submit search/aggregation job to the SQL database";
@@ -110,7 +121,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     aggregationJobId: aggregationJobId,
                     logger: request.log,
                     mongoDb: mongoDb,
-                    queryJobsDbManager: QueryJobsDbManager,
+                    queryJobDbManager: QueryJobDbManager,
                     searchJobId: searchJobId,
                     searchResultsMetadataCollection: searchResultsMetadataCollection,
                 }).catch((err: unknown) => {
@@ -183,8 +194,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             }, "api/search/cancel args");
 
             try {
-                await QueryJobsDbManager.submitQueryCancellation(searchJobId);
-                await QueryJobsDbManager.submitQueryCancellation(aggregationJobId);
+                await QueryJobDbManager.cancelJob(searchJobId);
+                await QueryJobDbManager.cancelJob(aggregationJobId);
 
                 await updateSearchResultsMeta({
                     fields: {
