@@ -1,15 +1,14 @@
 from pathlib import Path
 
 import pytest
-
 from tests.utils.config import BaseConfig
 from tests.utils.utils import get_env_var
 
 
 @pytest.fixture(scope="session")
 def base_config() -> BaseConfig:
-    clp_build_dir = Path(get_env_var("CLP_BUILD_DIR"))
-    clp_package_dir = Path(get_env_var("CLP_PACKAGE_DIR"))
+    clp_build_dir = Path(get_env_var("CLP_BUILD_DIR")).resolve()
+    clp_package_dir = Path(get_env_var("CLP_PACKAGE_DIR")).resolve()
 
     base_config = BaseConfig(
         clp_bin_dir=clp_package_dir / "bin",

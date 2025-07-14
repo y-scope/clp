@@ -1,6 +1,16 @@
 import os
 import subprocess
+from pathlib import Path
 from typing import List
+
+
+def diff_equal(path1: Path, path2: Path) -> None:
+    cmd = ["diff", "--brief", "--recursive", str(path1), str(path2)]
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE)
+    if 0 != proc.returncode:
+        if 1 == proc.returncode:
+            assert False, "Files/Directories don't match."
+        assert False, f"Command failed {' '.join(cmd)}"
 
 
 def get_env_var(var_name: str) -> str:

@@ -1,11 +1,12 @@
 import shutil
-import pytest
 
+import pytest
 from tests.utils.config import (
     BaseConfig,
     DatasetLogs,
 )
 from tests.utils.utils import run_and_assert
+
 
 @pytest.fixture(scope="session")
 def hive_24hr() -> DatasetLogs:
