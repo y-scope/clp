@@ -8,7 +8,7 @@ import settings from "../../../../settings.json" with {type: "json"};
 import {Nullable} from "../../../typings/common.js";
 import {QUERY_JOB_TYPE} from "../../../typings/query.js";
 import {
-    StreamFileMongoDocument,
+    StreamFileMetadata,
     StreamFilesCollection,
 } from "../../../typings/stream-files.js";
 
@@ -38,7 +38,7 @@ class StreamFileManager {
             throw new Error("MongoDB database not found");
         }
         const streamFilesCollection =
-            app.mongo.db.collection<StreamFileMongoDocument>(
+            app.mongo.db.collection<StreamFileMetadata>(
                 settings.MongoDbStreamFilesCollectionName
             );
 
@@ -111,7 +111,7 @@ class StreamFileManager {
      * @return A promise that resolves to the extracted stream's metadata.
      */
     async getExtractedStreamFileMetadata (streamId: string, logEventIdx: number)
-        : Promise<Nullable<StreamFileMongoDocument>> {
+        : Promise<Nullable<StreamFileMetadata>> {
         return await this.#streamFilesCollection.findOne({
             stream_id: streamId,
             begin_msg_ix: {$lte: logEventIdx},

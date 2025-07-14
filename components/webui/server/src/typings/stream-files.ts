@@ -16,12 +16,12 @@ const StreamFileMetadataSchema = Type.Object({
     stream_id: Type.String(),
 });
 
-type StreamFileMongoDocument = Static<typeof StreamFileMetadataSchema>;
+type StreamFileMetadata = Static<typeof StreamFileMetadataSchema>;
 
-type StreamFilesCollection = Collection<StreamFileMongoDocument>;
+type StreamFilesCollection = Collection<StreamFileMetadata>;
 
 export {StreamFileMetadataSchema};
 export type {
-    StreamFileMongoDocument,
+    StreamFileMetadata,
     StreamFilesCollection,
 };
