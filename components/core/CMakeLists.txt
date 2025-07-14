@@ -21,6 +21,15 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
+include(CheckIPOSupported)
+check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT IPO_CHECK_MSG)
+if (IPO_SUPPORTED)
+    message(STATUS "Link-time optimization enabled.")
+    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+else()
+    message(WARNING "Link-time optimization is not enabled: ${IPO_CHECK_MSG}")
+endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Set general compressor
