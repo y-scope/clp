@@ -1115,7 +1115,9 @@ def main(argv):
                 QUERY_WORKER_COMPONENT_NAME,
                 REDUCER_COMPONENT_NAME,
             ):
-                logger.error(f"{target} not available when using Presto as query engine")
+                logger.error(
+                    f"{target} not available when using {QueryEngine.PRESTO} as query engine"
+                )
                 return 0
 
         # Validate and load necessary credentials
