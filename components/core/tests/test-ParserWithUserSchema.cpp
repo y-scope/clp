@@ -9,6 +9,7 @@
 #include <boost/filesystem.hpp>
 #include <catch2/catch.hpp>
 #include <log_surgeon/LogParser.hpp>
+#include <log_surgeon/SchemaParser.hpp>
 
 #include "../src/clp/clp/run.hpp"
 #include "../src/clp/GlobalMySQLMetadataDB.hpp"
@@ -19,18 +20,15 @@ using clp::FileReader;
 using clp::load_lexer_from_file;
 using clp::LogSurgeonReader;
 using log_surgeon::DelimiterStringAST;
-using log_surgeon::LALR1Parser;
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::LogParser;
 using log_surgeon::ParserAST;
 using log_surgeon::SchemaAST;
-using log_surgeon::SchemaParser;
 using log_surgeon::SchemaVarAST;
 using log_surgeon::Token;
 
 std::unique_ptr<SchemaAST> generate_schema_ast(std::string const& schema_file) {
-    SchemaParser schema_parser;
-    std::unique_ptr<SchemaAST> schema_ast = SchemaParser::try_schema_file(schema_file);
+    std::unique_ptr<SchemaAST> schema_ast = log_surgeon::SchemaParser::try_schema_file(schema_file);
     REQUIRE(schema_ast.get() != nullptr);
     return schema_ast;
 }
@@ -167,17 +165,19 @@ TEST_CASE("Test forward lexer", "[Search]") {
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);
     forward_lexer.reset();
-    Token token;
-    auto error_code = forward_lexer.scan(parser_input_buffer, token);
+    auto [error_code, opt_token] = forward_lexer.scan(parser_input_buffer);
     REQUIRE(error_code == log_surgeon::ErrorCode::Success);
-    while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolId::TokenEndID)) {
+    Token token{opt_token.value()};
+    REQUIRE(error_code == log_surgeon::ErrorCode::Success);
+    while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolId::TokenEnd)) {
         SPDLOG_INFO("token:" + token.to_string() + "\n");
         SPDLOG_INFO(
                 "token.m_type_ids->back():"
                 + forward_lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n"
         );
-        error_code = forward_lexer.scan(parser_input_buffer, token);
+        auto [error_code, opt_token] = forward_lexer.scan(parser_input_buffer);
         REQUIRE(error_code == log_surgeon::ErrorCode::Success);
+        token = opt_token.value();
     }
 }
 
@@ -191,16 +191,17 @@ TEST_CASE("Test reverse lexer", "[Search]") {
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);
     reverse_lexer.reset();
-    Token token;
-    auto error_code = reverse_lexer.scan(parser_input_buffer, token);
+    auto [error_code, opt_token] = reverse_lexer.scan(parser_input_buffer);
     REQUIRE(error_code == log_surgeon::ErrorCode::Success);
-    while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolId::TokenEndID)) {
+    Token token{opt_token.value()};
+    while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolId::TokenEnd)) {
         SPDLOG_INFO("token:" + token.to_string() + "\n");
         SPDLOG_INFO(
                 "token.m_type_ids->back():"
                 + reverse_lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n"
         );
-        error_code = reverse_lexer.scan(parser_input_buffer, token);
+        auto [error_code, opt_token] = reverse_lexer.scan(parser_input_buffer);
         REQUIRE(error_code == log_surgeon::ErrorCode::Success);
+        token = opt_token.value();
     }
 }

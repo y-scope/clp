@@ -48,7 +48,7 @@ string(LENGTH "${CMAKE_SOURCE_DIR}/" SOURCE_PATH_SIZE)
 add_definitions("-DSOURCE_PATH_SIZE=${SOURCE_PATH_SIZE}")
 
 # Profiling options
-add_definitions(-DPROF_ENABLED=1)
+add_definitions(-DPROF_ENABLED=0)
 
 # Compile-in debug logging statements
 #add_definitions(-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG)
@@ -72,7 +72,15 @@ if (CLP_USE_STATIC_LIBS)
     if (APPLE)
         set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "macOS")
     elseif (EXISTS "/etc/centos-release")
-        set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
+        # NOTE:
+        # 1. We don't support static linking on any CentOS-based distro except manylinux_2_28 (which
+        #    shows up as "AlmaLinux").
+        # 2. A release called "AlmaLinux" doesn't guarantee we're running on a manylinux distro, but
+        #    we can improve this check when someone reports an issue.
+        file(READ "/etc/centos-release" CENTOS_RELEASE_CONTENT)
+        if(NOT "${CENTOS_RELEASE_CONTENT}" MATCHES "AlmaLinux")
+            set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
+        endif()
     endif()
 
     if (DEFINED CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM)
@@ -212,7 +220,7 @@ endif()
 # Find and setup libcurl
 # By default, CURL does not provide static libraries
 if(CLP_NEED_CURL)
-    find_package(CURL 7.68.0 REQUIRED)
+    find_package(CURL 7.61.1 REQUIRED)
     if(CURL_FOUND)
         message(STATUS "Found CURL ${CURL_VERSION_STRING}")
     else()
@@ -679,6 +687,7 @@ set(SOURCE_FILES_unitTest
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedFileReader.cpp
+        tests/test-clp_s-delta-encode-log-order.cpp
         tests/test-clp_s-end_to_end.cpp
         tests/test-clp_s-range_index.cpp
         tests/test-clp_s-search.cpp

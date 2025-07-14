@@ -11,6 +11,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
@@ -178,7 +179,7 @@ void load_lexer_from_file(
     for (auto const& delimiters_ast : schema_ast->m_delimiters) {
         auto* delimiters_ptr = dynamic_cast<log_surgeon::DelimiterStringAST*>(delimiters_ast.get());
         if (delimiters_ptr != nullptr) {
-            lexer.add_delimiters(delimiters_ptr->m_delimiters);
+            lexer.set_delimiters(delimiters_ptr->m_delimiters);
         }
     }
     vector<uint32_t> delimiters;
