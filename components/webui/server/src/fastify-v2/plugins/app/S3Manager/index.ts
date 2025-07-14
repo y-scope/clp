@@ -59,7 +59,7 @@ class S3Manager {
 }
 
 declare module "fastify" {
-    export interface FastifyInstance {
+    interface FastifyInstance {
         S3Manager?: S3Manager;
     }
 }
@@ -71,7 +71,7 @@ export default fp(
 
         // Only decorate if the region is set (i.e. s3 support is configured in package)
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (region) {
+        if (region !== null && region !== "") {
             fastify.log.info(
                 {region, profile},
                 "Initializing S3Manager"
