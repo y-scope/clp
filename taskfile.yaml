@@ -168,8 +168,8 @@ tasks:
     cmds:
       - |-
         CLP_BUILD_DIR="{{.G_BUILD_DIR}}" \
-        CLP_PACKAGE_BUILD_DIR="{{.G_PACKAGE_BUILD_DIR}}" \
-        uv run pytest
+        CLP_PACKAGE_DIR="{{.G_PACKAGE_BUILD_DIR}}" \
+        uv run python -m pytest
 
   clp-s-generate-parsers:
     vars:

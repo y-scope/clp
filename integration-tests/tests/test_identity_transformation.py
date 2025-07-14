@@ -1,6 +1,9 @@
 import pytest
-from fixtures.fixture_types import DatasetParams, PackageTestConfig
-from fixtures.utils import run_and_assert
+from tests.utils.config import (
+    BaseConfig,
+    DatasetLogs,
+)
+from tests.utils.utils import run_and_assert
 
 pytestmark = pytest.mark.binaries
 
@@ -32,16 +35,16 @@ def test_clp_identity_transform(download_and_extract_dataset, request) -> None:
 @pytest.mark.clp_s
 @json_datasets
 def test_clp_s_identity_transform(
-    request, config: PackageTestConfig, download_and_extract_dataset: DatasetParams
+    request, base_config: BaseConfig, download_and_extract_dataset: DatasetLogs
 ) -> None:
-    dataset_name = download_and_extract_dataset.dataset_name
-    download_dir = config.uncompressed_logs_dir / dataset_name
-    archives_dir = config.test_output_dir / f"{dataset_name}-archives"
-    extract_dir = config.test_output_dir / f"{dataset_name}-logs"
+    dataset_name = download_and_extract_dataset.name
+    download_dir = base_config.uncompressed_logs_dir / dataset_name
+    archives_dir = base_config.test_output_dir / f"{dataset_name}-archives"
+    extract_dir = base_config.test_output_dir / f"{dataset_name}-logs"
 
-    compression_cmd = [config.clp_bin_dir / "clp-s", "c", archives_dir, download_dir]
+    compression_cmd = [base_config.clp_bin_dir / "clp-s", "c", archives_dir, download_dir]
     print(compression_cmd)
     run_and_assert(compression_cmd)
 
-    decompression_cmd = [config.clp_bin_dir / "clp-s", "x", archives_dir, extract_dir]
+    decompression_cmd = [base_config.clp_bin_dir / "clp-s", "x", archives_dir, extract_dir]
     run_and_assert(decompression_cmd)

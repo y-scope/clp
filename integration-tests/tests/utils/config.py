@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
-class PackageTestConfig:
+class BaseConfig:
     clp_bin_dir: Path
     clp_package_dir: Path
     clp_sbin_dir: Path
@@ -12,6 +12,6 @@ class PackageTestConfig:
 
 
 @dataclass(frozen=True)
-class DatasetParams:
-    dataset_name: str
+class DatasetLogs:
+    name: str
     tar_url: str
