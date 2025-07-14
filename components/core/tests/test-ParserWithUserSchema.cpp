@@ -168,7 +168,6 @@ TEST_CASE("Test forward lexer", "[Search]") {
     auto [error_code, opt_token] = forward_lexer.scan(parser_input_buffer);
     REQUIRE(error_code == log_surgeon::ErrorCode::Success);
     Token token{opt_token.value()};
-    REQUIRE(error_code == log_surgeon::ErrorCode::Success);
     while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolId::TokenEnd)) {
         SPDLOG_INFO("token:" + token.to_string() + "\n");
         SPDLOG_INFO(
