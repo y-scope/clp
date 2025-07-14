@@ -319,7 +319,8 @@ if(CLP_NEED_LZMA)
             message(
                 FATAL_ERROR
                 "Detected LibLZMA version ${LIBLZMA_VERSION_STRING} is older than required"
-                " ${REQUIRED_LIBLZMA_VERSION}")
+                " ${REQUIRED_LIBLZMA_VERSION}"
+            )
         endif()
     else()
         message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
