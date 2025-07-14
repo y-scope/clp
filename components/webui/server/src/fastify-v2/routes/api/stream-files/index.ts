@@ -69,7 +69,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 }
             }
 
-            if (fastify.hasDecorator("s3Manager") && "undefined" !== typeof fastify.S3Manager) {
+            if (fastify.hasDecorator("S3Manager") && "undefined" !== typeof fastify.S3Manager) {
                 streamMetadata.path = await fastify.S3Manager.getPreSignedUrl(
                     `s3://${settings.StreamFilesS3PathPrefix}${streamMetadata.path}`
                 );
