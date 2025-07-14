@@ -26,9 +26,8 @@ if [ "$#" -lt 1 ] ; then
 fi
 version=$1
 
-# Ensure version must be greater or equal to 5.8.1 to mitigate both
-# CVE-2024-3094 (resolved in version >5.6.1) and
-# CVE-2025-31115 (resolved in version >5.8.0)
+# Ensure version must be greater or equal to 5.8.1 to mitigate both CVE-2024-3094 (resolved in
+# version >5.6.1) and CVE-2025-31115 (resolved in version >5.8.0).
 validate_minimum_required_version() {
     min_required_major=5
     min_required_minor=8
