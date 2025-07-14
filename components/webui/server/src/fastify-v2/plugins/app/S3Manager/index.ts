@@ -70,6 +70,8 @@ export default fp(
         const profile = settings.StreamFilesS3Profile;
 
         // Only decorate if the region is set (i.e. s3 support is configured in package)
+        // No unecessary condition is ignored since linter dosen't understand that settings is not
+        // hardcoded.
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
         if (region !== null && region !== "") {
             fastify.log.info(
