@@ -51,7 +51,6 @@ const FastifyV1App: FastifyPluginAsync<AppPluginOptions> = async (
 
     // Register the routes
     await fastify.register(staticRoutes);
-    await fastify.register(exampleRoutes);
     await fastify.register(queryRoutes);
 };
 
