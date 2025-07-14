@@ -37,65 +37,43 @@ TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
         REQUIRE(in == expected);
     };
 
-    SECTION("Default characters '\\', '?', and '*'") {
-        // replacements with no escape chars present
-        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(a?b)", R"(a*b)");
-        check(cEscapeChar,
-              cSingleCharWildcard,
-              cZeroOrMoreCharsWildcard,
-              R"(?leading)",
-              R"(*leading)");
-        check(cEscapeChar,
-              cSingleCharWildcard,
-              cZeroOrMoreCharsWildcard,
-              R"(trailing?)",
-              R"(trailing*)");
-        check(cEscapeChar,
-              cSingleCharWildcard,
-              cZeroOrMoreCharsWildcard,
-              R"(multiple??q)",
-              R"(multiple**q)");
+    SECTION("Conventional escape and wildcard characters") {
+        auto [str, expected] = GENERATE(
+                as<std::pair<string, string>>{},
 
-        // replacements with escape chars present
-        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(a\\?b)", R"(a\\*b)");
-        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(\\?abc)", R"(\\*abc)");
-        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(abc\\?)", R"(abc\\*)");
+                // Replacements with no escape chars present
+                std::pair{R"(a?b)", R"(a*b)"},
+                std::pair{R"(?leading)", R"(*leading)"},
+                std::pair{R"(trailing?)", R"(trailing*)"},
+                std::pair{R"(multiple??q)", R"(multiple**q)"},
 
-        // no replacements with escape chars present
-        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(a\?b)", R"(a\?b)");
-        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(\?abc)", R"(\?abc)");
-        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(abc\?)", R"(abc\?)");
+                // Replacements with escape chars present
+                std::pair{R"(a\\?b)", R"(a\\*b)"},
+                std::pair{R"(\\?abc)", R"(\\*abc)"},
+                std::pair{R"(abc\\?)", R"(abc\\*)"},
 
-        // mixed
-        check(cEscapeChar,
-              cSingleCharWildcard,
-              cZeroOrMoreCharsWildcard,
-              R"(a\\?b a\?b a?b)",
-              R"(a\\*b a\?b a*b)");
-        check(cEscapeChar,
-              cSingleCharWildcard,
-              cZeroOrMoreCharsWildcard,
-              R"(\\?abc \?abc a?b)",
-              R"(\\*abc \?abc a*b)");
-        check(cEscapeChar,
-              cSingleCharWildcard,
-              cZeroOrMoreCharsWildcard,
-              R"(abc\\? abc\? a?b)",
-              R"(abc\\* abc\? a*b)");
+                // No replacements with escape chars present
+                std::pair{R"(a\?b)", R"(a\?b)"},
+                std::pair{R"(\?abc)", R"(\?abc)"},
+                std::pair{R"(abc\?)", R"(abc\?)"},
 
-        // additional edge cases
-        check(cEscapeChar,
-              cSingleCharWildcard,
-              cZeroOrMoreCharsWildcard,
-              R"(no change)",
-              R"(no change)");
-        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"()", R"()");
-        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(\)", R"(\)");
-        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(\\)", R"(\\)");
-        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, R"(?\)", R"(*\)");
+                // Mixed
+                std::pair{R"(a\\?b a\?b a?b)", R"(a\\*b a\?b a*b)"},
+                std::pair{R"(\\?abc \?abc a?b)", R"(\\*abc \?abc a*b)"},
+                std::pair{R"(abc\\? abc\? a?b)", R"(abc\\* abc\? a*b)"},
+
+                // Additional edge cases
+                std::pair{R"(no change)", R"(no change)"},
+                std::pair{R"()", R"()"},
+                std::pair{R"(\)", R"(\)"},
+                std::pair{R"(\\)", R"(\\)"},
+                std::pair{R"(?\)", R"(*\)"}
+        );
+
+        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, str, expected);
     }
 
-    SECTION("Custom escape character with custom src/target ('w' → 'e')") {
+    SECTION("Unconventional escape and wildcard characters") {
         check('q', 'w', 'e', R"(aqqwb aqwb awb)", R"(aqqeb aqwb aeb)");
     }
 }
