@@ -21,17 +21,4 @@ const StreamFileExtractionSchema = Type.Object({
     streamId: StringSchema,
 });
 
-/**
- * Schema for stream file metadata response.
- */
-const StreamFileMetadataSchema = Type.Object({
-    path: StringSchema,
-    stream_id: StringSchema,
-    begin_msg_ix: Type.Integer(),
-    end_msg_ix: Type.Integer(),
-});
-
-export {
-    StreamFileExtractionSchema,
-    StreamFileMetadataSchema,
-};
+export {StreamFileExtractionSchema};
