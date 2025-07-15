@@ -12,8 +12,7 @@ validate_compiler_versions()
 # Include options for CLP build
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Options/options.cmake")
 
-validate_and_setup_all_clp_dependency_flags()
-convert_clp_dependency_properties_to_variables()
+validate_all_clp_dependency_flags()
 
 # Include utilities to find and configure dependencies
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils/utils.cmake")
@@ -128,93 +127,6 @@ if(PROJECT_IS_TOP_LEVEL)
             cmake_policy(SET "CMP0144" "NEW")
         endif()
     endif()
-endif()
-
-if(CLP_NEED_ABSL)
-    find_absl()
-endif()
-
-if(CLP_NEED_ANTLR)
-    find_antlr()
-endif()
-
-if(CLP_NEED_BOOST)
-    find_boost()
-endif()
-
-if(CLP_NEED_CATCH2)
-    find_catch2()
-endif()
-
-if(CLP_NEED_DATE)
-    find_date()
-endif()
-
-if(CLP_NEED_FMT)
-    find_fmt()
-endif()
-
-if(CLP_NEED_LOG_SURGEON)
-    find_log_surgeon()
-endif()
-
-if(CLP_NEED_NLOHMANN_JSON)
-    find_nlohmann_json()
-endif()
-
-if(CLP_NEED_SIMDJSON)
-    find_simdjson()
-endif()
-
-if(CLP_NEED_SPDLOG)
-    find_spdlog()
-endif()
-
-if(CLP_NEED_LIBARCHIVE)
-    find_libarchive()
-endif()
-
-if(CLP_NEED_CURL)
-    find_curl()
-endif()
-
-if(CLP_NEED_OPENSSL)
-    find_openssl()
-endif()
-
-if(CLP_NEED_MARIADB)
-    find_mariadb()
-endif()
-
-if(CLP_NEED_MONGOCXX)
-    find_mongocxx()
-endif()
-
-if(CLP_NEED_MSGPACKCXX)
-    find_msgpack()
-endif()
-
-find_package(Threads REQUIRED)
-
-if(CLP_NEED_YAMLCPP)
-    find_yamlcpp()
-endif()
-
-if(CLP_NEED_YSTDLIB)
-    find_ystdlib()
-endif()
-
-if(CLP_NEED_ZSTD)
-    find_zstd()
-endif()
-
-if(CLP_NEED_LZMA)
-    find_lzma()
-endif()
-
-# sqlite dependencies
-if(CLP_NEED_SQLITE)
-    find_sqlite()
 endif()
 
 add_subdirectory(src/clp/regex_utils)
@@ -614,6 +526,26 @@ set(SOURCE_FILES_unitTest
         )
 
 if(CLP_BUILD_TESTING)
+    find_absl()
+    find_boost()
+    find_catch2()
+    find_curl()
+    find_date()
+    find_fmt()
+    find_libarchive()
+    find_log_surgeon()
+    find_mariadb()
+    find_mongocxx()
+    find_nlohmann_json()
+    find_openssl()
+    find_simdjson()
+    find_spdlog()
+    find_sqlite()
+    find_yamlcpp()
+    find_ystdlib()
+    find_lzma()
+    find_zstd()
+
     add_executable(unitTest
             ${SOURCE_FILES_unitTest}
             ${SOURCE_FILES_clp_s_unitTest}

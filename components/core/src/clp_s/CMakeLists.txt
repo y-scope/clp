@@ -82,6 +82,16 @@ set(
 
 # This library is intended as a temporary stand-in until clp has been packaged into libraries.
 if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
+        find_boost()
+        find_curl()
+        find_fmt()
+        find_msgpack()
+        find_nlohmann_json()
+        find_openssl()
+        find_spdlog()
+        find_ystdlib()
+        find_zstd()
+
         add_library(
                 clp_s_clp_dependencies
                 ${CLP_S_CLP_SOURCES}
@@ -132,6 +142,8 @@ set(
 # This library is intended as a temporary stand-in until the reducer has been packaged into
 # libraries.
 if(CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES)
+        find_nlohmann_json()
+
         add_library(
                 clp_s_reducer_dependencies
                 ${CLP_S_REDUCER_SOURCES}
@@ -168,6 +180,11 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_IO)
+        find_boost()
+        find_fmt()
+        find_spdlog()
+        find_zstd()
+
         add_library(
                 clp_s_io
                 ${CLP_S_IO_SOURCES}
@@ -228,6 +245,15 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
+        find_absl()
+        find_boost()
+        find_curl()
+        find_fmt()
+        find_msgpack()
+        find_nlohmann_json()
+        find_simdjson()
+        find_spdlog()
+
         add_library(
                 clp_s_archive_writer
                 ${CLP_S_ARCHIVE_WRITER_SOURCES}
@@ -291,6 +317,14 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_ARCHIVEREADER)
+        find_absl()
+        find_boost()
+        find_curl()
+        find_fmt()
+        find_msgpack()
+        find_nlohmann_json()
+        find_spdlog()
+
         add_library(
                 clp_s_archive_reader
                 ${CLP_S_ARCHIVE_READER_SOURCES}
@@ -324,6 +358,10 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
+        find_fmt()
+        find_mongocxx()
+        find_spdlog()
+
         add_library(
                 clp_s_json_constructor
                 ${CLP_S_JSON_CONSTRUCTOR_SOURCES}
@@ -352,6 +390,9 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
+        find_date()
+        find_spdlog()
+
         add_library(
                 clp_s_timestamp_pattern
                 ${CLP_S_TIMESTAMP_PATTERN_SOURCES}
@@ -381,6 +422,12 @@ set(
 )
 
 if(CLP_BUILD_EXECUTABLES)
+        find_boost()
+        find_mongocxx()
+        find_msgpack()
+        find_spdlog()
+        find_ystdlib()
+
         add_executable(
                 clp-s
                 clp-s.cpp

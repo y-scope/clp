@@ -81,6 +81,19 @@ set(
 )
 
 if(CLP_BUILD_EXECUTABLES)
+        find_absl()
+        find_boost()
+        find_curl()
+        find_date()
+        find_mariadb()
+        find_nlohmann_json()
+        find_openssl()
+        find_simdjson()
+        find_spdlog()
+        find_yamlcpp()
+        find_ystdlib()
+        find_zstd()
+
         add_executable(indexer ${INDEXER_SOURCES})
         target_compile_features(indexer PRIVATE cxx_std_20)
         target_link_libraries(indexer

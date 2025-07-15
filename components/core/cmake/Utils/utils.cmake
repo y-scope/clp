@@ -1,7 +1,24 @@
 # This file contains utility functions for our other cmake scripts.
 
+# @param {string} LIBRARY
+# @return {bool} Whether we have already run the find function for LIBRARY in the CLP_CHECKED_FIND
+# variable.
+function(get_clp_checked_find LIBRARY)
+    get_property(CLP_CHECKED_FIND 
+        DIRECTORY "${PROJECT_SOURCE_DIR}"
+        PROPERTY "clp_checked_find_${LIBRARY}"
+    )
+    set(CLP_CHECKED_FIND "${CLP_CHECKED_FIND}" PARENT_SCOPE)
+endfunction()
+
+# Sets a flag indicating that we have run the find function for LIBRARY.
+# @param {string} LIBRARY
+function(set_clp_checked_find LIBRARY)
+    set_property(DIRECTORY "${PROJECT_SOURCE_DIR}" PROPERTY "clp_checked_find_${LIBRARY}" TRUE)
+endfunction()
+
 # Find and setup abseil library.
-function(find_absl)
+function(find_absl)    
     find_package(absl REQUIRED)
     if (absl_FOUND)
         message(STATUS "Found absl ${absl_VERSION}")
@@ -188,7 +205,7 @@ endfunction()
 # Find and setup sqlite library.
 function(find_sqlite)
     set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
-    include(cmake/Modules/FindLibraryDependencies.cmake)
+    include("${PROJECT_SOURCE_DIR}/cmake/Modules/FindLibraryDependencies.cmake")
     FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 endfunction()
 
@@ -202,6 +219,12 @@ endfunction()
 
 # Find and setup ystdlib.
 function(find_ystdlib)
+    get_clp_checked_find(ystdlib)
+    if (CLP_CHECKED_FIND)
+        return()
+    endif()
+    set_clp_checked_find(ystdlib)
+
     set(YSTDLIB_CPP_BUILD_TESTING OFF)
     add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
 endfunction()

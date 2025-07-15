@@ -40,6 +40,12 @@ set(
 )
 
 if(CLP_BUILD_EXECUTABLES)
+        find_boost()
+        find_log_surgeon()
+        find_spdlog()
+        find_ystdlib()
+        find_zstd()
+
         add_executable(make-dictionaries-readable ${MAKE_DICTIONARIES_READABLE_SOURCES})
         target_compile_features(make-dictionaries-readable PRIVATE cxx_std_20)
         target_link_libraries(make-dictionaries-readable
