@@ -7,9 +7,9 @@ import {StatusCodes} from "http-status-codes";
 import {
     SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
-} from "../../../../../../common/index.js";
-import settings from "../../../../../settings.json" with {type: "json"};
-import {QUERY_JOB_TYPE} from "../../../../typings/query.js";
+} from "../../../../../common/index.js";
+import settings from "../../../../settings.json" with {type: "json"};
+import {QUERY_JOB_TYPE} from "../../../typings/query.js";
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
     QueryJobCreationSchema,

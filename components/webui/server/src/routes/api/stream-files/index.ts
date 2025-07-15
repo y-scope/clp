@@ -1,9 +1,9 @@
 import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
 import {StatusCodes} from "http-status-codes";
 
-import settings from "../../../../../settings.json" with {type: "json"};
-import {EXTRACT_JOB_TYPES} from "../../../../typings/query.js";
-import {StreamFileMetadataSchema} from "../../../../typings/stream-files.js";
+import settings from "../../../../settings.json" with {type: "json"};
+import {EXTRACT_JOB_TYPES} from "../../../typings/query.js";
+import {StreamFileMetadataSchema} from "../../../typings/stream-files.js";
 import {ErrorSchema} from "../../../schemas/error.js";
 import {StreamFileExtractionSchema} from "../../../schemas/stream-files.js";
 
