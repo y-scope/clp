@@ -66,6 +66,7 @@ PRESTO_RUNNABLE_COMPONENTS = [
     WEBUI_COMPONENT_NAME,
 ]
 
+
 class StorageEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
@@ -113,6 +114,19 @@ class Package(BaseModel):
                 f" {'|'.join(VALID_QUERY_ENGINES)}"
             )
         return field
+
+    @root_validator
+    def validate_query_engine_package_compatibility(cls, values):
+        query_engine = values.get("query_engine")
+        storage_engine = values.get("storage_engine")
+
+        if query_engine == QueryEngine.PRESTO and storage_engine == StorageEngine.CLP:
+            raise ValueError(
+                f"Query engine '{QueryEngine.PRESTO}' is not compatible with "
+                f"storage engine '{StorageEngine.CLP}'. "
+            )
+
+        return values
 
 
 class Database(BaseModel):
