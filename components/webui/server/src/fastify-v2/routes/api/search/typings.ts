@@ -30,7 +30,7 @@ type UpdateSearchSignalWhenJobsFinishProps = {
     aggregationJobId: number;
     logger: FastifyBaseLogger;
     mongoDb: Db;
-    queryJobsDbManager: FastifyInstance["QueryJobsDbManager"];
+    queryJobDbManager: FastifyInstance["QueryJobDbManager"];
     searchJobId: number;
     searchResultsMetadataCollection: Collection<SearchResultsMetadataDocument>;
 
