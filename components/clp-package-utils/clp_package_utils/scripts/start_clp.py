@@ -1112,9 +1112,7 @@ def main(argv):
 
         # Exit early if target is not runnable with current configuration
         if target not in [ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, *runnable_components]:
-            logger.error(
-                f"{target} not available with current configuration "
-            )
+            logger.error(f"{target} not available with current configuration")
             return 0
 
         # Validate and load necessary credentials
