@@ -3,6 +3,7 @@
 
 #include <array>
 #include <charconv>
+#include <cstdint>
 #include <cstring>
 #include <sstream>
 #include <string>
