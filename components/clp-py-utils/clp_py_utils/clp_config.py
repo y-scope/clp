@@ -1,6 +1,6 @@
 import pathlib
 from enum import auto
-from typing import Literal, Optional, Union
+from typing import List, Literal, Optional, Union
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, root_validator, validator
@@ -43,6 +43,28 @@ CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
 
+ALL_RUNNABLE_COMPONENTS = [
+    DB_COMPONENT_NAME,
+    QUEUE_COMPONENT_NAME,
+    REDIS_COMPONENT_NAME,
+    RESULTS_CACHE_COMPONENT_NAME,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
+    COMPRESSION_WORKER_COMPONENT_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
+    QUERY_WORKER_COMPONENT_NAME,
+    REDUCER_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME,
+]
+
+PRESTO_RUNNABLE_COMPONENTS = [
+    DB_COMPONENT_NAME,
+    QUEUE_COMPONENT_NAME,
+    REDIS_COMPONENT_NAME,
+    RESULTS_CACHE_COMPONENT_NAME,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
+    COMPRESSION_WORKER_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME,
+]
 
 class StorageEngine(KebabCaseStrEnum):
     CLP = auto()
@@ -772,6 +794,12 @@ class CLPConfig(BaseModel):
             raise ValueError(
                 f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
             )
+
+    def get_runnable_components(self) -> List[str]:
+        if QueryEngine.PRESTO == self.package.query_engine:
+            return PRESTO_RUNNABLE_COMPONENTS
+        else:
+            return ALL_RUNNABLE_COMPONENTS
 
     def dump_to_primitive_dict(self):
         d = self.dict()
