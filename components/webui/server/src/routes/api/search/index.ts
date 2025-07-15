@@ -9,12 +9,12 @@ import {
     type SearchResultsMetadataDocument,
 } from "../../../../../common/index.js";
 import settings from "../../../../settings.json" with {type: "json"};
-import {QUERY_JOB_TYPE} from "../../../typings/query.js";
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
     QueryJobCreationSchema,
     QueryJobSchema,
 } from "../../../schemas/search.js";
+import {QUERY_JOB_TYPE} from "../../../typings/query.js";
 import {SEARCH_MAX_NUM_RESULTS} from "./typings.js";
 import {
     createMongoIndexes,

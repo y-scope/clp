@@ -7,7 +7,6 @@ import {build as buildApplication} from "fastify-cli/helper.js";
 import type {Test} from "tap";
 
 
-// eslint-disable-next-line no-warning-comments
 const appPath = path.join(import.meta.dirname, "../app.ts");
 
 /**
