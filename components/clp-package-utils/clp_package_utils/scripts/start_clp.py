@@ -138,9 +138,7 @@ def wait_for_container_cmd(container_name: str, cmd_to_run: [str], timeout: int)
 
     while True:
         try:
-            subprocess.run(
-                cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True
-            )
+            subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
             return True
         except subprocess.CalledProcessError:
             if time.time() - begin_time > timeout:
@@ -148,9 +146,7 @@ def wait_for_container_cmd(container_name: str, cmd_to_run: [str], timeout: int)
             time.sleep(1)
 
     cmd_str = " ".join(cmd_to_run)
-    logger.error(
-        f"Timeout while waiting for command {cmd_str} to run after {timeout} seconds"
-    )
+    logger.error(f"Timeout while waiting for command {cmd_str} to run after {timeout} seconds")
     return False
 
 
@@ -179,16 +175,8 @@ def start_db(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
             pathlib.Path("/") / "etc" / "mysql" / "conf.d",
             True,
         ),
-        DockerMount(
-            DockerMountType.BIND,
-            db_data_dir,
-            pathlib.Path("/") / "var" / "lib" / "mysql",
-        ),
-        DockerMount(
-            DockerMountType.BIND,
-            db_logs_dir,
-            pathlib.Path("/") / "var" / "log" / "mysql",
-        ),
+        DockerMount(DockerMountType.BIND, db_data_dir, pathlib.Path("/") / "var" / "lib" / "mysql"),
+        DockerMount(DockerMountType.BIND, db_logs_dir, pathlib.Path("/") / "var" / "log" / "mysql"),
     ]
     env_vars = [
         f"MYSQL_ROOT_PASSWORD={clp_config.database.password}",
@@ -376,9 +364,7 @@ def start_queue(instance_id: str, clp_config: CLPConfig):
         container_user = "rabbitmq"
         default_container_user_id = 999
         default_container_group_id = 999
-        chown_recursively(
-            queue_logs_dir, default_container_user_id, default_container_group_id
-        )
+        chown_recursively(queue_logs_dir, default_container_user_id, default_container_group_id)
 
     # fmt: off
     cmd = [
@@ -421,16 +407,11 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
     redis_data_dir = clp_config.data_directory / component_name
 
     base_config_file_path = conf_dir / "redis" / "redis.conf"
-    validate_redis_config(
-        clp_config, redis_data_dir, redis_logs_dir, base_config_file_path
-    )
+    validate_redis_config(clp_config, redis_data_dir, redis_logs_dir, base_config_file_path)
 
     config_filename = f"{container_name}.conf"
     host_config_file_path = clp_config.logs_directory / config_filename
-    with (
-        open(base_config_file_path, "r") as base,
-        open(host_config_file_path, "w") as full,
-    ):
+    with open(base_config_file_path, "r") as base, open(host_config_file_path, "w") as full:
         for line in base.readlines():
             full.write(line)
         full.write(f"requirepass {clp_config.redis.password}\n")
@@ -439,17 +420,11 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
     redis_logs_dir.mkdir(exist_ok=True, parents=True)
 
     # Start container
-    config_file_path = (
-        pathlib.Path("/") / "usr" / "local" / "etc" / "redis" / "redis.conf"
-    )
+    config_file_path = pathlib.Path("/") / "usr" / "local" / "etc" / "redis" / "redis.conf"
     mounts = [
+        DockerMount(DockerMountType.BIND, host_config_file_path, config_file_path, True),
         DockerMount(
-            DockerMountType.BIND, host_config_file_path, config_file_path, True
-        ),
-        DockerMount(
-            DockerMountType.BIND,
-            redis_logs_dir,
-            pathlib.Path("/") / "var" / "log" / "redis",
+            DockerMountType.BIND, redis_logs_dir, pathlib.Path("/") / "var" / "log" / "redis"
         ),
         DockerMount(DockerMountType.BIND, redis_data_dir, pathlib.Path("/") / "data"),
     ]
@@ -464,12 +439,8 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
         container_user = "redis"
         default_container_user_id = 999
         default_container_group_id = 999
-        chown_recursively(
-            redis_data_dir, default_container_user_id, default_container_group_id
-        )
-        chown_recursively(
-            redis_logs_dir, default_container_user_id, default_container_group_id
-        )
+        chown_recursively(redis_data_dir, default_container_user_id, default_container_group_id)
+        chown_recursively(redis_logs_dir, default_container_user_id, default_container_group_id)
 
     # fmt: off
     cmd = [
@@ -505,9 +476,7 @@ def start_redis(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path)
     logger.info(f"Started {component_name}.")
 
 
-def start_results_cache(
-    instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path
-):
+def start_results_cache(instance_id: str, clp_config: CLPConfig, conf_dir: pathlib.Path):
     component_name = RESULTS_CACHE_COMPONENT_NAME
     logger.info(f"Starting {component_name}...")
 
@@ -525,17 +494,10 @@ def start_results_cache(
 
     mounts = [
         DockerMount(
-            DockerMountType.BIND,
-            conf_dir / "mongo",
-            pathlib.Path("/") / "etc" / "mongo",
-            True,
+            DockerMountType.BIND, conf_dir / "mongo", pathlib.Path("/") / "etc" / "mongo", True
         ),
         DockerMount(DockerMountType.BIND, data_dir, pathlib.Path("/") / "data" / "db"),
-        DockerMount(
-            DockerMountType.BIND,
-            logs_dir,
-            pathlib.Path("/") / "var" / "log" / "mongodb",
-        ),
+        DockerMount(DockerMountType.BIND, logs_dir, pathlib.Path("/") / "var" / "log" / "mongodb"),
     ]
 
     host_user_id = os.getuid()
@@ -548,12 +510,8 @@ def start_results_cache(
         container_user = "mongodb"
         default_container_user_id = 999
         default_container_group_id = 999
-        chown_recursively(
-            data_dir, default_container_user_id, default_container_group_id
-        )
-        chown_recursively(
-            logs_dir, default_container_user_id, default_container_group_id
-        )
+        chown_recursively(data_dir, default_container_user_id, default_container_group_id)
+        chown_recursively(logs_dir, default_container_user_id, default_container_group_id)
 
     # fmt: off
     cmd = [
@@ -664,9 +622,7 @@ def generic_start_scheduler(
         f"CLP_LOGGING_LEVEL={clp_config.query_scheduler.logging_level}",
     ]
     necessary_mounts = [mounts.clp_home, mounts.logs_dir]
-    aws_mount, aws_env_vars = generate_container_auth_options(
-        clp_config, component_name
-    )
+    aws_mount, aws_env_vars = generate_container_auth_options(clp_config, component_name)
     if aws_mount:
         necessary_mounts.append(mounts.aws_config_dir)
     if aws_env_vars:
@@ -820,9 +776,7 @@ def generic_start_worker(
     if worker_specific_mounts:
         necessary_mounts.extend(worker_specific_mounts)
 
-    aws_mount, aws_env_vars = generate_container_auth_options(
-        clp_config, component_name
-    )
+    aws_mount, aws_env_vars = generate_container_auth_options(clp_config, component_name)
     if aws_mount:
         necessary_mounts.append(mounts.aws_config_dir)
     if aws_env_vars:
@@ -877,9 +831,7 @@ def update_settings_object(
             settings[key] = updates[key]
 
 
-def read_and_update_settings_json(
-    settings_file_path: pathlib.Path, updates: Dict[str, Any]
-):
+def read_and_update_settings_json(settings_file_path: pathlib.Path, updates: Dict[str, Any]):
     """
     Reads and updates a settings JSON file.
 
@@ -912,24 +864,13 @@ def start_webui(
         get_clp_home() / "var" / "www" / "webui" / "client" / "settings.json"
     )
     server_settings_json_path = (
-        get_clp_home()
-        / "var"
-        / "www"
-        / "webui"
-        / "server"
-        / "dist"
-        / "server"
-        / "settings.json"
+        get_clp_home() / "var" / "www" / "webui" / "server" / "dist" / "server" / "settings.json"
     )
 
-    validate_webui_config(
-        clp_config, client_settings_json_path, server_settings_json_path
-    )
+    validate_webui_config(clp_config, client_settings_json_path, server_settings_json_path)
 
     # Read, update, and write back client's and server's settings.json
-    clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(
-        True
-    )
+    clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
     if StorageEngine.CLP_S == clp_config.package.storage_engine:
         archives_table_name = ""
@@ -1025,9 +966,7 @@ def start_webui(
         if AwsAuthType.credentials == auth.type:
             credentials = auth.credentials
             necessary_env_vars.append(f"AWS_ACCESS_KEY_ID={credentials.access_key_id}")
-            necessary_env_vars.append(
-                f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}"
-            )
+            necessary_env_vars.append(f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}")
         else:
             aws_mount, aws_env_vars = generate_container_auth_options(
                 clp_config, WEBUI_COMPONENT_NAME
@@ -1143,9 +1082,7 @@ def main(argv):
     component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
     component_args_parser.add_parser(COMPRESSION_SCHEDULER_COMPONENT_NAME)
     component_args_parser.add_parser(QUERY_SCHEDULER_COMPONENT_NAME)
-    compression_worker_parser = component_args_parser.add_parser(
-        COMPRESSION_WORKER_COMPONENT_NAME
-    )
+    compression_worker_parser = component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
     add_num_workers_argument(compression_worker_parser)
     query_worker_parser = component_args_parser.add_parser(QUERY_WORKER_COMPONENT_NAME)
     add_num_workers_argument(query_worker_parser)
@@ -1169,19 +1106,15 @@ def main(argv):
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = load_config_file(
-            config_file_path, default_config_file_path, clp_home
-        )
+        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
 
         runnable_components = clp_config.get_runnable_components()
 
         # Exit early if target is not runnable with current configuration
-        if target not in [
-            ALL_TARGET_NAME,
-            CONTROLLER_TARGET_NAME,
-            *runnable_components,
-        ]:
-            logger.error(f"{target} not available with current configuration ")
+        if target not in [ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, *runnable_components]:
+            logger.error(
+                f"{target} not available with current configuration "
+            )
             return 0
 
         # Validate and load necessary credentials
@@ -1273,33 +1206,19 @@ def main(argv):
         if target in (ALL_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
             if RESULTS_CACHE_COMPONENT_NAME in runnable_components:
                 start_results_cache(instance_id, clp_config, conf_dir)
-        if target in (
-            ALL_TARGET_NAME,
-            CONTROLLER_TARGET_NAME,
-            RESULTS_CACHE_COMPONENT_NAME,
-        ):
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
             if RESULTS_CACHE_COMPONENT_NAME in runnable_components:
-                create_results_cache_indices(
-                    instance_id, clp_config, container_clp_config, mounts
-                )
+                create_results_cache_indices(instance_id, clp_config, container_clp_config, mounts)
         if target in (
             ALL_TARGET_NAME,
             CONTROLLER_TARGET_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
         ):
             if COMPRESSION_SCHEDULER_COMPONENT_NAME in runnable_components:
-                start_compression_scheduler(
-                    instance_id, clp_config, container_clp_config, mounts
-                )
-        if target in (
-            ALL_TARGET_NAME,
-            CONTROLLER_TARGET_NAME,
-            QUERY_SCHEDULER_COMPONENT_NAME,
-        ):
+                start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
+        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUERY_SCHEDULER_COMPONENT_NAME):
             if QUERY_SCHEDULER_COMPONENT_NAME in runnable_components:
-                start_query_scheduler(
-                    instance_id, clp_config, container_clp_config, mounts
-                )
+                start_query_scheduler(instance_id, clp_config, container_clp_config, mounts)
         if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
             if COMPRESSION_WORKER_COMPONENT_NAME in runnable_components:
                 start_compression_worker(
@@ -1312,9 +1231,7 @@ def main(argv):
                 )
         if target in (ALL_TARGET_NAME, REDUCER_COMPONENT_NAME):
             if REDUCER_COMPONENT_NAME in runnable_components:
-                start_reducer(
-                    instance_id, clp_config, container_clp_config, num_workers, mounts
-                )
+                start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
         if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
             if WEBUI_COMPONENT_NAME in runnable_components:
                 start_webui(instance_id, clp_config, container_clp_config, mounts)

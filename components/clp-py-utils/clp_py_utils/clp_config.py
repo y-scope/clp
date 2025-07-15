@@ -66,7 +66,6 @@ PRESTO_RUNNABLE_COMPONENTS = [
     WEBUI_COMPONENT_NAME,
 ]
 
-
 class StorageEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
@@ -153,9 +152,7 @@ class Database(BaseModel):
         if self.username is None or self.password is None:
             raise ValueError("Credentials not loaded.")
 
-    def get_mysql_connection_params(
-        self, disable_localhost_socket_connection: bool = False
-    ):
+    def get_mysql_connection_params(self, disable_localhost_socket_connection: bool = False):
         self.ensure_credentials_loaded()
 
         host = self.host
@@ -176,9 +173,7 @@ class Database(BaseModel):
             connection_params["ssl_cert"] = self.ssl_cert
         return connection_params
 
-    def get_clp_connection_params_and_type(
-        self, disable_localhost_socket_connection: bool = False
-    ):
+    def get_clp_connection_params_and_type(self, disable_localhost_socket_connection: bool = False):
         self.ensure_credentials_loaded()
 
         host = self.host
@@ -220,8 +215,7 @@ def _validate_port(cls, field):
     max_valid_port = 2**16 - 1
     if min_valid_port > field or max_valid_port < field:
         raise ValueError(
-            f"{cls.__name__}.port is not within valid range "
-            f"{min_valid_port}-{max_valid_port}."
+            f"{cls.__name__}.port is not within valid range " f"{min_valid_port}-{max_valid_port}."
         )
 
 
@@ -406,12 +400,8 @@ class AwsAuthentication(BaseModel):
             raise ValueError(f"profile must be set when type is '{auth_enum}.'")
         if AwsAuthType.credentials == auth_enum and not credentials:
             raise ValueError(f"credentials must be set when type is '{auth_enum}.'")
-        if auth_enum in [AwsAuthType.ec2, AwsAuthType.env_vars] and (
-            profile or credentials
-        ):
-            raise ValueError(
-                f"profile and credentials must not be set when type is '{auth_enum}.'"
-            )
+        if auth_enum in [AwsAuthType.ec2, AwsAuthType.env_vars] and (profile or credentials):
+            raise ValueError(f"profile and credentials must not be set when type is '{auth_enum}.'")
         return values
 
 
@@ -485,9 +475,7 @@ class S3Storage(BaseModel):
         return values
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
-        self.staging_directory = make_config_path_absolute(
-            clp_home, self.staging_directory
-        )
+        self.staging_directory = make_config_path_absolute(clp_home, self.staging_directory)
 
     def dump_to_primitive_dict(self):
         d = self.dict()
@@ -508,9 +496,7 @@ class StreamFsStorage(FsStorage):
 
 
 class ArchiveS3Storage(S3Storage):
-    staging_directory: pathlib.Path = (
-        CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
-    )
+    staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
 
 
 class StreamS3Storage(S3Storage):
@@ -666,16 +652,12 @@ class CLPConfig(BaseModel):
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         if StorageType.FS == self.logs_input.type:
             self.logs_input.make_config_paths_absolute(clp_home)
-        self.credentials_file_path = make_config_path_absolute(
-            clp_home, self.credentials_file_path
-        )
+        self.credentials_file_path = make_config_path_absolute(clp_home, self.credentials_file_path)
         self.archive_output.storage.make_config_paths_absolute(clp_home)
         self.stream_output.storage.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
-        self._os_release_file_path = make_config_path_absolute(
-            clp_home, self._os_release_file_path
-        )
+        self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
 
     def validate_logs_input_config(self):
         logs_input_type = self.logs_input.type
@@ -684,17 +666,10 @@ class CLPConfig(BaseModel):
             # package-relative path that will only be resolved after pydantic validation
             input_logs_dir = self.logs_input.directory
             if not input_logs_dir.exists():
-                raise ValueError(
-                    f"logs_input.directory '{input_logs_dir}' doesn't exist."
-                )
+                raise ValueError(f"logs_input.directory '{input_logs_dir}' doesn't exist.")
             if not input_logs_dir.is_dir():
-                raise ValueError(
-                    f"logs_input.directory '{input_logs_dir}' is not a directory."
-                )
-        if (
-            StorageType.S3 == logs_input_type
-            and StorageEngine.CLP_S != self.package.storage_engine
-        ):
+                raise ValueError(f"logs_input.directory '{input_logs_dir}' is not a directory.")
+        if StorageType.S3 == logs_input_type and StorageEngine.CLP_S != self.package.storage_engine:
             raise ValueError(
                 f"logs_input.type = 's3' is only supported with package.storage_engine"
                 f" = '{StorageEngine.CLP_S}'"
@@ -747,9 +722,7 @@ class CLPConfig(BaseModel):
         if StorageType.S3 == self.logs_input.type:
             auth_configs.append(self.logs_input.aws_authentication)
         if StorageType.S3 == self.archive_output.storage.type:
-            auth_configs.append(
-                self.archive_output.storage.s3_config.aws_authentication
-            )
+            auth_configs.append(self.archive_output.storage.s3_config.aws_authentication)
         if StorageType.S3 == self.stream_output.storage.type:
             auth_configs.append(self.stream_output.storage.s3_config.aws_authentication)
 
@@ -777,7 +750,9 @@ class CLPConfig(BaseModel):
 
         os_release = dotenv_values(self._os_release_file_path)
         if "ubuntu" == os_release["ID"]:
-            self.execution_container = f"clp-execution-x86-{os_release['ID']}-{os_release['VERSION_CODENAME']}:main"
+            self.execution_container = (
+                f"clp-execution-x86-{os_release['ID']}-{os_release['VERSION_CODENAME']}:main"
+            )
         else:
             raise NotImplementedError(
                 f"Unsupported OS {os_release['ID']} in {OS_RELEASE_FILE_PATH}"
@@ -788,16 +763,10 @@ class CLPConfig(BaseModel):
     def load_database_credentials_from_file(self):
         config = read_yaml_config_file(self.credentials_file_path)
         if config is None:
-            raise ValueError(
-                f"Credentials file '{self.credentials_file_path}' is empty."
-            )
+            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
         try:
-            self.database.username = get_config_value(
-                config, f"{DB_COMPONENT_NAME}.user"
-            )
-            self.database.password = get_config_value(
-                config, f"{DB_COMPONENT_NAME}.password"
-            )
+            self.database.username = get_config_value(config, f"{DB_COMPONENT_NAME}.user")
+            self.database.password = get_config_value(config, f"{DB_COMPONENT_NAME}.password")
         except KeyError as ex:
             raise ValueError(
                 f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
@@ -806,16 +775,10 @@ class CLPConfig(BaseModel):
     def load_queue_credentials_from_file(self):
         config = read_yaml_config_file(self.credentials_file_path)
         if config is None:
-            raise ValueError(
-                f"Credentials file '{self.credentials_file_path}' is empty."
-            )
+            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
         try:
-            self.queue.username = get_config_value(
-                config, f"{QUEUE_COMPONENT_NAME}.user"
-            )
-            self.queue.password = get_config_value(
-                config, f"{QUEUE_COMPONENT_NAME}.password"
-            )
+            self.queue.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.user")
+            self.queue.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
         except KeyError as ex:
             raise ValueError(
                 f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
@@ -824,13 +787,9 @@ class CLPConfig(BaseModel):
     def load_redis_credentials_from_file(self):
         config = read_yaml_config_file(self.credentials_file_path)
         if config is None:
-            raise ValueError(
-                f"Credentials file '{self.credentials_file_path}' is empty."
-            )
+            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
         try:
-            self.redis.password = get_config_value(
-                config, f"{REDIS_COMPONENT_NAME}.password"
-            )
+            self.redis.password = get_config_value(config, f"{REDIS_COMPONENT_NAME}.password")
         except KeyError as ex:
             raise ValueError(
                 f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
