@@ -27,13 +27,8 @@ if(CMAKE_BUILD_TYPE MATCHES "Release")
     if(IPO_SUPPORTED)
         message(STATUS "Link-time optimization enabled.")
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
-    else()
-        message(WARNING "Link-time optimization is not enabled: ${IPO_CHECK_MSG}.")
     endif()
 else()
-    message(STATUS "Link-time optimization is disabled for non-Release builds.")
-    set(CMAKE_INTERPROCEDURAL_OPTIMIZATION OFF)
-endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
