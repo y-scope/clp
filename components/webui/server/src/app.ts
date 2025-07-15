@@ -3,8 +3,6 @@ import {
     FastifyPluginAsync,
 } from "fastify";
 
-import settings from "../settings.json" with {type: "json"};
-import S3Manager from "./plugins/S3Manager.js";
 import staticRoutes from "./routes/static.js";
 
 
@@ -20,16 +18,6 @@ import staticRoutes from "./routes/static.js";
 const FastifyV1App: FastifyPluginAsync = async (
     fastify: FastifyInstance
 ) => {
-    if ("test" !== process.env.NODE_ENV) {
-        await fastify.register(
-            S3Manager,
-            {
-                region: settings.StreamFilesS3Region,
-                profile: settings.StreamFilesS3Profile,
-            }
-        );
-    }
-
     // Register the routes
     await fastify.register(staticRoutes);
 };
