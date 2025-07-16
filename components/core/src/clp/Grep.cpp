@@ -842,11 +842,7 @@ bool Grep::get_bounds_of_next_potential_var(
                     string_reader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
                     parser_input_buffer.read_if_safe(reader_wrapper);
                     lexer.reset();
-                    lexer.scan_with_wildcard(
-                            parser_input_buffer,
-                            value[end_pos - 1],
-                            search_token
-                    );
+                    lexer.scan_with_wildcard(parser_input_buffer, value[end_pos - 1], search_token);
                 } else {  // no wildcards
                     string_reader.open(value.substr(begin_pos, end_pos - begin_pos));
                     parser_input_buffer.read_if_safe(reader_wrapper);
