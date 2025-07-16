@@ -601,13 +601,13 @@ int main(int argc, char const* argv[]) {
                     auto insert_result
                             = forward_lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
                     forward_lexer_ptr = &insert_result.first->second;
-                    load_lexer_from_file(schema_file_path, false, *forward_lexer_ptr);
+                    load_lexer_from_file(schema_file_path, *forward_lexer_ptr);
 
                     // Create reverse lexer
                     insert_result
                             = reverse_lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
                     reverse_lexer_ptr = &insert_result.first->second;
-                    load_lexer_from_file(schema_file_path, true, *reverse_lexer_ptr);
+                    load_lexer_from_file(schema_file_path, *reverse_lexer_ptr);
                 } else {
                     // load the lexers if they already exist
                     forward_lexer_ptr = &forward_lexer_map_it->second;
@@ -616,11 +616,11 @@ int main(int argc, char const* argv[]) {
             } else {
                 // Create forward lexer
                 forward_lexer_ptr = &one_time_use_forward_lexer;
-                load_lexer_from_file(schema_file_path, false, one_time_use_forward_lexer);
+                load_lexer_from_file(schema_file_path, one_time_use_forward_lexer);
 
                 // Create reverse lexer
                 reverse_lexer_ptr = &one_time_use_reverse_lexer;
-                load_lexer_from_file(schema_file_path, false, one_time_use_reverse_lexer);
+                load_lexer_from_file(schema_file_path, one_time_use_reverse_lexer);
             }
         }
 

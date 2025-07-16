@@ -159,7 +159,7 @@ TEST_CASE("Test forward lexer", "[Search]") {
     ByteLexer forward_lexer;
     std::string schema_file_name = "../tests/test_schema_files/search_schema.txt";
     std::string schema_file_path = boost::filesystem::weakly_canonical(schema_file_name).string();
-    load_lexer_from_file(schema_file_path, false, forward_lexer);
+    load_lexer_from_file(schema_file_path, forward_lexer);
     FileReader file_reader{"../tests/test_search_queries/easy.txt"};
     LogSurgeonReader reader_wrapper(file_reader);
     log_surgeon::ParserInputBuffer parser_input_buffer;
@@ -184,7 +184,7 @@ TEST_CASE("Test reverse lexer", "[Search]") {
     ByteLexer reverse_lexer;
     std::string schema_file_name = "../tests/test_schema_files/search_schema.txt";
     std::string schema_file_path = boost::filesystem::weakly_canonical(schema_file_name).string();
-    load_lexer_from_file(schema_file_path, false, reverse_lexer);
+    load_lexer_from_file(schema_file_path, reverse_lexer);
     FileReader file_reader{"../tests/test_search_queries/easy.txt"};
     LogSurgeonReader reader_wrapper(file_reader);
     log_surgeon::ParserInputBuffer parser_input_buffer;

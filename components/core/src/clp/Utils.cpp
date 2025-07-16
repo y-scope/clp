@@ -123,7 +123,6 @@ ErrorCode read_list_of_paths(string const& list_path, vector<string>& paths) {
 // lexer.m_symbol_id, contains_delimiter error, and add_rule logic.
 void load_lexer_from_file(
         std::string const& schema_file_path,
-        bool reverse,
         log_surgeon::lexers::ByteLexer& lexer
 ) {
     std::unique_ptr<log_surgeon::SchemaAST> schema_ast
@@ -242,11 +241,6 @@ void load_lexer_from_file(
         }
         lexer.add_rule(lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
     }
-    if (reverse) {
-        // TODO: This isn't used anymore for the new search, supporting it here is a waste of time
-        // lexer.generate_reverse();
-    } else {
-        lexer.generate();
-    }
+    lexer.generate();
 }
 }  // namespace clp

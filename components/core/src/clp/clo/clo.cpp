@@ -482,11 +482,11 @@ static bool search_archive(
         use_heuristic = false;
         // Create forward lexer
         forward_lexer.reset(new log_surgeon::lexers::ByteLexer());
-        load_lexer_from_file(schema_file_path.string(), false, *forward_lexer);
+        load_lexer_from_file(schema_file_path.string(), *forward_lexer);
 
         // Create reverse lexer
         reverse_lexer.reset(new log_surgeon::lexers::ByteLexer());
-        load_lexer_from_file(schema_file_path.string(), true, *reverse_lexer);
+        load_lexer_from_file(schema_file_path.string(), *reverse_lexer);
     }
 
     Archive archive_reader;
