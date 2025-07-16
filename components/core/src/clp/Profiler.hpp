@@ -41,19 +41,11 @@ public:
     // Types
     enum class ContinuousMeasurementIndex : size_t {
         Compression = 0,
+        ParseLogFile,
         Search,
         Length
     };
     enum class FragmentedMeasurementIndex : size_t {
-        Watch,
-        ParseLogFile,
-        Parse,
-        GetNext,
-        ProcessState,
-        ScanWhileLoop,
-        TokenCreation,
-        ProcessCharWatch,
-        ProcessChar,
         Length
     };
 
@@ -62,20 +54,12 @@ public:
     static constexpr auto cContinuousMeasurementEnabled = []() {
         std::array<bool, enum_to_underlying_type(ContinuousMeasurementIndex::Length)> enabled{};
         enabled[enum_to_underlying_type(ContinuousMeasurementIndex::Compression)] = false;
+        enabled[enum_to_underlying_type(ContinuousMeasurementIndex::ParseLogFile)] = false;
         enabled[enum_to_underlying_type(ContinuousMeasurementIndex::Search)] = false;
         return enabled;
     }();
     static constexpr auto cFragmentedMeasurementEnabled = []() {
         std::array<bool, enum_to_underlying_type(FragmentedMeasurementIndex::Length)> enabled{};
-        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::ParseLogFile)] = false;
-        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::Parse)] = false;
-        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::GetNext)] = false;
-        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::ProcessState)] = false;
-        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::ScanWhileLoop)] = false;
-        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::Watch)] = true;
-        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::TokenCreation)] = true;
-        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::ProcessCharWatch)] = false;
-        enabled[enum_to_underlying_type(FragmentedMeasurementIndex::ProcessChar)] = false;
         return enabled;
     }();
 

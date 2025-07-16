@@ -17,15 +17,11 @@ set(
         ../LogTypeDictionaryReader.hpp
         ../ParsedMessage.cpp
         ../ParsedMessage.hpp
-        ../Profiler.hpp
-        ../Profiler.cpp
         ../ReaderInterface.cpp
         ../ReaderInterface.hpp
         ../ReadOnlyMemoryMappedFile.cpp
         ../ReadOnlyMemoryMappedFile.hpp
         ../spdlog_with_specializations.hpp
-        ../Stopwatch.cpp
-        ../Stopwatch.hpp
         ../streaming_compression/Decompressor.hpp
         ../streaming_compression/passthrough/Decompressor.cpp
         ../streaming_compression/passthrough/Decompressor.hpp
