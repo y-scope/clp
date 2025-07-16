@@ -235,7 +235,6 @@ macro(clp_find_yamlcpp)
 endmacro()
 
 # Find and setup ystdlib.
-# @return Forwards any variables from the `find_package` call.
 function(clp_find_ystdlib)
     # We can not call `add_subdirectory` for the same directory multiple times.
     get_clp_checked_find(ystdlib)
