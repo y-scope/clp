@@ -46,7 +46,6 @@ jobs:
       matrix:
         os:
           - "macos-13"
-          - "macos-14"
           - "macos-15"
         use_shared_libs:
           - true
