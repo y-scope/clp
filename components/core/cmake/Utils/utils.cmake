@@ -17,24 +17,6 @@ function(set_clp_checked_find LIBRARY)
     set_property(DIRECTORY "${PROJECT_SOURCE_DIR}" PROPERTY "clp_checked_find_${LIBRARY}" TRUE)
 endfunction()
 
-# Find and setup abseil library.
-# @return Forwards any variables from the `find_package` call.
-macro(clp_find_absl)    
-    find_package(absl REQUIRED)
-    if (absl_FOUND)
-        #message(STATUS "Found absl ${absl_VERSION}")
-    endif()
-endmacro()
-
-# Find and setup ANTLR library.
-# @return Forwards any variables from the `find_package` call.
-macro(clp_find_antlr)
-    find_package(antlr4-runtime REQUIRED)
-    if (antlr4-runtime_FOUND)
-        #message(STATUS "Found antlr4-runtime ${antlr4-runtime_VERSION}")
-    endif()
-endmacro()
-
 # Find and setup Boost library.
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_boost)
@@ -46,15 +28,6 @@ macro(clp_find_boost)
         #message(STATUS "Found Boost ${Boost_VERSION}")
     else()
         message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
-    endif()
-endmacro()
-
-# Find and setup Catch2 library.
-# @return Forwards any variables from the `find_package` call.
-macro(clp_find_catch2)
-    find_package(Catch2 REQUIRED)
-    if (Catch2_FOUND)
-        #message(STATUS "Found Catch2 ${Catch2_VERSION}")
     endif()
 endmacro()
 
@@ -70,26 +43,6 @@ macro(clp_find_curl)
     endif()
 endmacro()
 
-# Find and setup date library.
-# @return Forwards any variables from the `find_package` call.
-macro(clp_find_date)
-    find_package(date REQUIRED)
-    if (date_FOUND)
-        #message(STATUS "Found date ${date_VERSION}")
-    endif()
-endmacro()
-
-# Find and setup fmt library.
-# @return Forwards any variables from the `find_package` call.
-macro(clp_find_fmt)
-    if(CLP_NEED_FMT)
-        find_package(fmt REQUIRED)
-        if(fmt_FOUND)
-            #message(STATUS "Found fmt ${fmt_VERSION}")
-        endif()
-    endif()
-endmacro()
-
 # Find and setup libarchive.
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_libarchive)
@@ -99,15 +52,6 @@ macro(clp_find_libarchive)
     find_package(LibArchive REQUIRED)
     if(LibArchive_FOUND)
         #message(STATUS "Found LibArchive ${LibArchive_VERSION}")
-    endif()
-endmacro()
-
-# Find and setup log_surgeon library.
-# @return Forwards any variables from the `find_package` call.
-macro(clp_find_log_surgeon)
-    find_package(log_surgeon REQUIRED)
-    if(log_surgeon_FOUND)
-        #message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
     endif()
 endmacro()
 
@@ -179,59 +123,12 @@ macro(clp_find_msgpack)
     endif()
 endmacro()
 
-# Find and setup nlohmann_json library.
-# @return Forwards any variables from the `find_package` call.
-macro(clp_find_nlohmann_json)
-    find_package(nlohmann_json REQUIRED)
-    if(nlohmann_json_FOUND)
-        #message(STATUS "Found nlohmann_json ${nlohmann_json_VERSION}")
-    endif()
-endmacro()
-
-# Find and setup OpenSSL library.
-# @return Forwards any variables from the `find_package` call.
-macro(clp_find_openssl)
-    find_package(OpenSSL REQUIRED)
-    if(OPENSSL_FOUND)
-        #message(STATUS "Found OpenSSL (${OPENSSL_VERSION})")
-    else()
-        message(FATAL_ERROR "OpenSSL not found")
-    endif()
-endmacro()
-
-# Find and setup simdjson library.
-# @return Forwards any variables from the `find_package` call.
-macro(clp_find_simdjson)
-    find_package(simdjson REQUIRED)
-    if(simdjson_FOUND)
-        #message(STATUS "Found simdjson ${simdjson_VERSION}")
-    endif()
-endmacro()
-
-# Find and setup spdlog library.
-# @return Forwards any variables from the `find_package` call.
-macro(clp_find_spdlog)
-    find_package(spdlog REQUIRED)
-    if(spdlog_FOUND)
-        #message(STATUS "Found spdlog ${spdlog_VERSION}")
-    endif()
-endmacro()
-
 # Find and setup sqlite library.
 # @return Forwards any variables from the `FindDynamicLibraryDependencies` call.
 macro(clp_find_sqlite)
     set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
     include("${PROJECT_SOURCE_DIR}/cmake/Modules/FindLibraryDependencies.cmake")
     FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
-endmacro()
-
-# Find and setup yamlcpp library.
-# @return Forwards any variables from the `find_package` call.
-macro(clp_find_yamlcpp)
-    find_package(yaml-cpp REQUIRED)
-    if(yaml-cpp_FOUND)
-        #message(STATUS "Found yaml-cpp ${yaml-cpp_VERSION}")
-    endif()
 endmacro()
 
 # Find and setup ystdlib.

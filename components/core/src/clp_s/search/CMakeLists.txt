@@ -35,9 +35,9 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_SEARCH)
-        clp_find_absl()
-        clp_find_simdjson()
-        clp_find_spdlog()
+        find_package(absl REQUIRED)
+        find_package(simdjson REQUIRED)
+        find_package(spdlog REQUIRED)
 
         add_library(
                 clp_s_search

@@ -84,11 +84,11 @@ set(
 if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
         clp_find_boost()
         clp_find_curl()
-        clp_find_fmt()
+        find_package(fmt REQUIRED)
         clp_find_msgpack()
-        clp_find_nlohmann_json()
-        clp_find_openssl()
-        clp_find_spdlog()
+        find_package(nlohmann_json REQUIRED)
+        find_package(OpenSSL REQUIRED)
+        find_package(spdlog REQUIRED)
         clp_find_ystdlib()
         clp_find_zstd()
 
@@ -142,7 +142,7 @@ set(
 # This library is intended as a temporary stand-in until the reducer has been packaged into
 # libraries.
 if(CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES)
-        clp_find_nlohmann_json()
+        find_package(nlohmann_json REQUIRED)
 
         add_library(
                 clp_s_reducer_dependencies
@@ -181,8 +181,8 @@ set(
 
 if(CLP_BUILD_CLP_S_IO)
         clp_find_boost()
-        clp_find_fmt()
-        clp_find_spdlog()
+        find_package(fmt REQUIRED)
+        find_package(spdlog REQUIRED)
         clp_find_zstd()
 
         add_library(
@@ -245,14 +245,14 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
-        clp_find_absl()
+        find_package(absl REQUIRED)
         clp_find_boost()
         clp_find_curl()
-        clp_find_fmt()
+        find_package(fmt REQUIRED)
         clp_find_msgpack()
-        clp_find_nlohmann_json()
-        clp_find_simdjson()
-        clp_find_spdlog()
+        find_package(nlohmann_json REQUIRED)
+        find_package(simdjson REQUIRED)
+        find_package(spdlog REQUIRED)
 
         add_library(
                 clp_s_archive_writer
@@ -317,13 +317,13 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_ARCHIVEREADER)
-        clp_find_absl()
+        find_package(absl REQUIRED)
         clp_find_boost()
         clp_find_curl()
-        clp_find_fmt()
+        find_package(fmt REQUIRED)
         clp_find_msgpack()
-        clp_find_nlohmann_json()
-        clp_find_spdlog()
+        find_package(nlohmann_json REQUIRED)
+        find_package(spdlog REQUIRED)
 
         add_library(
                 clp_s_archive_reader
@@ -358,9 +358,9 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
-        clp_find_fmt()
+        find_package(fmt REQUIRED)
         clp_find_mongocxx()
-        clp_find_spdlog()
+        find_package(spdlog REQUIRED)
 
         add_library(
                 clp_s_json_constructor
@@ -390,8 +390,8 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
-        clp_find_date()
-        clp_find_spdlog()
+        find_package(date REQUIRED)
+        find_package(spdlog REQUIRED)
 
         add_library(
                 clp_s_timestamp_pattern
@@ -425,7 +425,7 @@ if(CLP_BUILD_EXECUTABLES)
         clp_find_boost()
         clp_find_mongocxx()
         clp_find_msgpack()
-        clp_find_spdlog()
+        find_package(spdlog REQUIRED)
         clp_find_ystdlib()
 
         add_executable(
