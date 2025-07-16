@@ -53,9 +53,9 @@ public:
     // NOTE: We use lambdas so that we can programmatically initialize the constexpr array
     static constexpr auto cContinuousMeasurementEnabled = []() {
         std::array<bool, enum_to_underlying_type(ContinuousMeasurementIndex::Length)> enabled{};
-        enabled[enum_to_underlying_type(ContinuousMeasurementIndex::Compression)] = false;
-        enabled[enum_to_underlying_type(ContinuousMeasurementIndex::ParseLogFile)] = false;
-        enabled[enum_to_underlying_type(ContinuousMeasurementIndex::Search)] = false;
+        enabled[enum_to_underlying_type(ContinuousMeasurementIndex::Compression)] = true;
+        enabled[enum_to_underlying_type(ContinuousMeasurementIndex::ParseLogFile)] = true;
+        enabled[enum_to_underlying_type(ContinuousMeasurementIndex::Search)] = true;
         return enabled;
     }();
     static constexpr auto cFragmentedMeasurementEnabled = []() {
