@@ -101,7 +101,7 @@ TEST_CASE("Test error for colon missing schema file", "[LALR1Parser][SchemaParse
     std::string file_path = "../tests/test_schema_files/colon_missing_schema.txt";
     REQUIRE_THROWS_WITH(
             generate_schema_ast(file_path),
-            "Schema:3:4: error: expected '.', ':', 'AlphaNumeric' before ' ' token\n"
+            "Schema:3:4: error: expected '>',':','AlphaNumeric' before ' ' token\n"
             "          int [0-9]+\n"
             "             ^\n"
     );
