@@ -12,8 +12,8 @@ set(ANTLR_GENERATED_SOURCES
 )
 
 if(CLP_BUILD_CLP_S_SEARCH_KQL)
-        find_antlr()
-        find_spdlog()
+        clp_find_antlr()
+        clp_find_spdlog()
 
         add_library(
                 clp_s_search_kql

@@ -39,12 +39,12 @@ set(
 )
 
 if(CLP_BUILD_EXECUTABLES)
-        find_boost()
-        find_fmt()
-        find_mongocxx()
-        find_msgpack()
-        find_nlohmann_json()
-        find_spdlog()
+        clp_find_boost()
+        clp_find_fmt()
+        clp_find_mongocxx()
+        clp_find_msgpack()
+        clp_find_nlohmann_json()
+        clp_find_spdlog()
 
         add_executable(reducer-server ${REDUCER_SOURCES})
         target_compile_features(reducer-server PRIVATE cxx_std_20)

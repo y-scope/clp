@@ -6,7 +6,7 @@ set(
         "RegexToWildcardTranslatorConfig.hpp"
 )
 if(CLP_BUILD_CLP_REGEX_UTILS)
-        find_ystdlib()
+        clp_find_ystdlib()
 
         add_library(
                 regex_utils
