@@ -24,11 +24,6 @@ macro(clp_find_boost)
         set(Boost_USE_STATIC_LIBS ON)
     endif()
     find_package(Boost 1.81 REQUIRED iostreams program_options filesystem system regex url)
-    if(Boost_FOUND)
-        #message(STATUS "Found Boost ${Boost_VERSION}")
-    else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
-    endif()
 endmacro()
 
 # Find and setup libcurl.
@@ -36,11 +31,6 @@ endmacro()
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_curl)
     find_package(CURL 7.61.1 REQUIRED)
-    if(CURL_FOUND)
-        #message(STATUS "Found CURL ${CURL_VERSION_STRING}")
-    else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
-    endif()
 endmacro()
 
 # Find and setup libarchive.
@@ -50,9 +40,6 @@ macro(clp_find_libarchive)
         set(LibArchive_USE_STATIC_LIBS ON)
     endif()
     find_package(LibArchive REQUIRED)
-    if(LibArchive_FOUND)
-        #message(STATUS "Found LibArchive ${LibArchive_VERSION}")
-    endif()
 endmacro()
 
 # Find and setup LZMA library.
@@ -64,10 +51,6 @@ macro(clp_find_lzma)
     endif()
     find_package(LibLZMA REQUIRED)
     if(LIBLZMA_FOUND)
-        #message(STATUS "Found Lzma ${LIBLZMA_VERSION_STRING}")
-        #message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
-        #message(STATUS "Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
-
         # Version 5.8.1 and above address CVE-2024-3094 and CVE-2025-31115.
         set(REQUIRED_LIBLZMA_VERSION "5.8.1")
         if(LIBLZMA_VERSION_STRING VERSION_LESS ${REQUIRED_LIBLZMA_VERSION})
@@ -77,26 +60,22 @@ macro(clp_find_lzma)
                 " ${REQUIRED_LIBLZMA_VERSION}"
             )
         endif()
-    else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
+        include_directories(${LIBLZMA_INCLUDE_DIRS})
     endif()
-    include_directories(${LIBLZMA_INCLUDE_DIRS})
 endmacro()
 
 
 # Find and setup MariaDBClient library.
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_mariadb_client)
-    if(CLP_USE_STATIC_LIBS)
+    # Only log static linking warning one time
+    get_clp_checked_find(mariadb_client)
+    if(CLP_USE_STATIC_LIBS AND NOT CLP_CHECKED_FIND)
         # NOTE: We can't statically link to MariaDBClient since it's GPL
-        #message(AUTHOR_WARNING "MariaDBClient cannot be statically linked due to its license.")
+        message(AUTHOR_WARNING "MariaDBClient cannot be statically linked due to its license.")
     endif()
     find_package(MariaDBClient 3.1.0 REQUIRED)
-    if(MariaDBClient_FOUND)
-        #message(STATUS "Found MariaDBClient ${MariaDBClient_VERSION}")
-    else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for MariaDBClient")
-    endif()
+    set_clp_checked_find(mariadb_client)
 endmacro()
 
 # Find and setup mongocxx library.
@@ -104,7 +83,6 @@ endmacro()
 # forwards any variables from the `find_package` call.
 macro(clp_find_mongocxx)
     find_package(mongocxx REQUIRED)
-    #message(STATUS "Found mongocxx ${mongocxx_VERSION}")
     if(CLP_USE_STATIC_LIBS)
         set(MONGOCXX_TARGET mongo::mongocxx_static)
     else()
@@ -116,11 +94,6 @@ endmacro()
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_msgpack)
     find_package(msgpack-cxx 7.0.0 REQUIRED)
-    if(msgpack-cxx_FOUND)
-        #message(STATUS "Found msgpack-cxx ${msgpack-cxx_VERSION}")
-    else()
-        message(FATAL_ERROR "Could not find msgpack-cxx")
-    endif()
 endmacro()
 
 # Find and setup sqlite library.
@@ -151,9 +124,4 @@ macro(clp_find_zstd)
         set(ZStd_USE_STATIC_LIBS ON)
     endif()
     find_package(ZStd 1.4.4 REQUIRED)
-    if(ZStd_FOUND)
-        #message(STATUS "Found ZStd ${ZStd_VERSION}")
-    else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
-    endif()
 endmacro()
