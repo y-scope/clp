@@ -476,17 +476,12 @@ static bool search_archive(
 
     // Load lexers from schema file if it exists
     auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
-    unique_ptr<log_surgeon::lexers::ByteLexer> forward_lexer, reverse_lexer;
+    unique_ptr<log_surgeon::lexers::ByteLexer> lexer;
     bool use_heuristic = true;
     if (std::filesystem::exists(schema_file_path)) {
         use_heuristic = false;
-        // Create forward lexer
-        forward_lexer.reset(new log_surgeon::lexers::ByteLexer());
-        load_lexer_from_file(schema_file_path.string(), *forward_lexer);
-
-        // Create reverse lexer
-        reverse_lexer.reset(new log_surgeon::lexers::ByteLexer());
-        load_lexer_from_file(schema_file_path.string(), *reverse_lexer);
+        lexer.reset(new log_surgeon::lexers::ByteLexer());
+        load_lexer_from_file(schema_file_path.string(), *lexer);
     }
 
     Archive archive_reader;
@@ -502,8 +497,7 @@ static bool search_archive(
             search_begin_ts,
             search_end_ts,
             command_line_args.ignore_case(),
-            *forward_lexer,
-            *reverse_lexer,
+            *lexer,
             use_heuristic
     );
     if (false == query_processing_result.has_value()) {

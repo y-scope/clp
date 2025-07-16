@@ -502,8 +502,7 @@ std::optional<Query> Grep::process_raw_query(
         epochtime_t search_begin_ts,
         epochtime_t search_end_ts,
         bool ignore_case,
-        log_surgeon::lexers::ByteLexer& forward_lexer,
-        log_surgeon::lexers::ByteLexer& reverse_lexer,
+        log_surgeon::lexers::ByteLexer& lexer,
         bool use_heuristic
 ) {
     // Add prefix and suffix '*' to make the search a sub-string match
@@ -546,8 +545,7 @@ std::optional<Query> Grep::process_raw_query(
                 begin_pos,
                 end_pos,
                 is_var,
-                forward_lexer,
-                reverse_lexer
+                lexer
         ))
         {
             query_tokens.emplace_back(search_string_for_sub_queries, begin_pos, end_pos, is_var);
@@ -752,8 +750,7 @@ bool Grep::get_bounds_of_next_potential_var(
         size_t& begin_pos,
         size_t& end_pos,
         bool& is_var,
-        log_surgeon::lexers::ByteLexer& forward_lexer,
-        log_surgeon::lexers::ByteLexer& reverse_lexer
+        log_surgeon::lexers::ByteLexer& lexer
 ) {
     size_t const value_length = value.length();
     if (end_pos >= value_length) {
@@ -774,7 +771,7 @@ bool Grep::get_bounds_of_next_potential_var(
             if (is_escaped) {
                 is_escaped = false;
 
-                if (false == forward_lexer.is_delimiter(c)) {
+                if (false == lexer.is_delimiter(c)) {
                     // Found escaped non-delimiter, so reverse the index to retain the escape
                     // character
                     --begin_pos;
@@ -788,7 +785,7 @@ bool Grep::get_bounds_of_next_potential_var(
                     contains_wildcard = true;
                     break;
                 }
-                if (false == forward_lexer.is_delimiter(c)) {
+                if (false == lexer.is_delimiter(c)) {
                     break;
                 }
             }
@@ -803,7 +800,7 @@ bool Grep::get_bounds_of_next_potential_var(
             if (is_escaped) {
                 is_escaped = false;
 
-                if (forward_lexer.is_delimiter(c)) {
+                if (lexer.is_delimiter(c)) {
                     // Found escaped delimiter, so reverse the index to retain the escape character
                     --end_pos;
                     break;
@@ -814,7 +811,7 @@ bool Grep::get_bounds_of_next_potential_var(
             } else {
                 if (is_wildcard(c)) {
                     contains_wildcard = true;
-                } else if (forward_lexer.is_delimiter(c)) {
+                } else if (lexer.is_delimiter(c)) {
                     // Found delimiter that's not also a wildcard
                     break;
                 }
@@ -832,7 +829,7 @@ bool Grep::get_bounds_of_next_potential_var(
                 }
             }
             SearchToken search_token;
-            if (has_wildcard_in_middle || (has_prefix_wildcard && has_suffix_wildcard)) {
+            if (has_wildcard_in_middle || has_prefix_wildcard) {
                 // DO NOTHING
             } else {
                 StringReader string_reader;
@@ -844,29 +841,17 @@ bool Grep::get_bounds_of_next_potential_var(
                     // string, should be improved when adding a SearchParser to log_surgeon
                     string_reader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
                     parser_input_buffer.read_if_safe(reader_wrapper);
-                    forward_lexer.reset();
-                    forward_lexer.scan_with_wildcard(
+                    lexer.reset();
+                    lexer.scan_with_wildcard(
                             parser_input_buffer,
                             value[end_pos - 1],
-                            search_token
-                    );
-                } else if (has_prefix_wildcard) {  // *text
-                    std::string value_reverse
-                            = value.substr(begin_pos + 1, end_pos - begin_pos - 1);
-                    std::reverse(value_reverse.begin(), value_reverse.end());
-                    string_reader.open(value_reverse);
-                    parser_input_buffer.read_if_safe(reader_wrapper);
-                    reverse_lexer.reset();
-                    reverse_lexer.scan_with_wildcard(
-                            parser_input_buffer,
-                            value[begin_pos],
                             search_token
                     );
                 } else {  // no wildcards
                     string_reader.open(value.substr(begin_pos, end_pos - begin_pos));
                     parser_input_buffer.read_if_safe(reader_wrapper);
-                    forward_lexer.reset();
-                    auto [err, token] = forward_lexer.scan(parser_input_buffer);
+                    lexer.reset();
+                    auto [err, token] = lexer.scan(parser_input_buffer);
                     if (log_surgeon::ErrorCode::Success != err) {
                         return false;
                     }

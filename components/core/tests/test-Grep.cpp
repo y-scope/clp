@@ -17,10 +17,8 @@ using log_surgeon::SchemaVarAST;
 using std::string;
 
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
-    ByteLexer forward_lexer;
-    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", forward_lexer);
-    ByteLexer reverse_lexer;
-    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", reverse_lexer);
+    ByteLexer lexer;
+    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", lexer);
 
     string str;
     size_t begin_pos;
@@ -36,8 +34,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == false);
 
@@ -50,8 +47,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == false);
 
@@ -64,8 +60,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == false);
 
@@ -79,8 +74,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == true);
     REQUIRE("95" == str.substr(begin_pos, end_pos - begin_pos));
@@ -91,8 +85,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == true);
     REQUIRE("ad" == str.substr(begin_pos, end_pos - begin_pos));
@@ -103,8 +96,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == true);
     REQUIRE("ff" == str.substr(begin_pos, end_pos - begin_pos));
@@ -115,8 +107,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == true);
     REQUIRE("95" == str.substr(begin_pos, end_pos - begin_pos));
@@ -127,8 +118,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == true);
     REQUIRE("24" == str.substr(begin_pos, end_pos - begin_pos));
@@ -139,8 +129,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == true);
     REQUIRE("0d" == str.substr(begin_pos, end_pos - begin_pos));
@@ -151,8 +140,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == true);
     REQUIRE("ff" == str.substr(begin_pos, end_pos - begin_pos));
@@ -167,8 +155,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == false);
     REQUIRE(str.length() == begin_pos);
@@ -183,8 +170,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == true);
     REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "1\\*x");
@@ -196,8 +182,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == true);
     REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "abc*123");
@@ -209,8 +194,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == true);
     REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "1.2");
@@ -221,8 +205,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == true);
     REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "+394/-");
@@ -233,8 +216,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == true);
     REQUIRE(str.substr(begin_pos, end_pos - begin_pos) == "-*abc-");
@@ -245,8 +227,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
                     begin_pos,
                     end_pos,
                     is_var,
-                    forward_lexer,
-                    reverse_lexer
+                    lexer
             )
             == false);
 }
