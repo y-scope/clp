@@ -28,7 +28,7 @@ if(CMAKE_BUILD_TYPE MATCHES "Release")
         message(STATUS "Link-time optimization enabled.")
         set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
     endif()
-else()
+endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
