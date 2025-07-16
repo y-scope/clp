@@ -18,23 +18,26 @@ function(set_clp_checked_find LIBRARY)
 endfunction()
 
 # Find and setup abseil library.
-function(clp_find_absl)    
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_absl)    
     find_package(absl REQUIRED)
     if (absl_FOUND)
         #message(STATUS "Found absl ${absl_VERSION}")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup ANTLR library.
-function(clp_find_antlr)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_antlr)
     find_package(antlr4-runtime REQUIRED)
     if (antlr4-runtime_FOUND)
         #message(STATUS "Found antlr4-runtime ${antlr4-runtime_VERSION}")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup Boost library.
-function(clp_find_boost)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_boost)
     if(CLP_USE_STATIC_LIBS)
         set(Boost_USE_STATIC_LIBS ON)
     endif()
@@ -44,49 +47,52 @@ function(clp_find_boost)
     else()
         message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup Catch2 library.
-function(clp_find_catch2)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_catch2)
     find_package(Catch2 REQUIRED)
     if (Catch2_FOUND)
         #message(STATUS "Found Catch2 ${Catch2_VERSION}")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup libcurl.
 # By default, CURL does not provide static libraries.
-# @return The list of libraries needed to link against CURL in the CURL_LIBRARIES variable.
-function(clp_find_curl)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_curl)
     find_package(CURL 7.61.1 REQUIRED)
     if(CURL_FOUND)
         #message(STATUS "Found CURL ${CURL_VERSION_STRING}")
-        set(CURL_LIBRARIES ${CURL_LIBRARIES} PARENT_SCOPE)
     else()
         message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup date library.
-function(clp_find_date)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_date)
     find_package(date REQUIRED)
     if (date_FOUND)
         #message(STATUS "Found date ${date_VERSION}")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup fmt library.
-function(clp_find_fmt)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_fmt)
     if(CLP_NEED_FMT)
         find_package(fmt REQUIRED)
         if(fmt_FOUND)
             #message(STATUS "Found fmt ${fmt_VERSION}")
         endif()
     endif()
-endfunction()
+endmacro()
 
 # Find and setup libarchive.
-function(clp_find_libarchive)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_libarchive)
     if(CLP_USE_STATIC_LIBS)
         set(LibArchive_USE_STATIC_LIBS ON)
     endif()
@@ -94,19 +100,21 @@ function(clp_find_libarchive)
     if(LibArchive_FOUND)
         #message(STATUS "Found LibArchive ${LibArchive_VERSION}")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup log_surgeon library.
-function(clp_find_log_surgeon)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_log_surgeon)
     find_package(log_surgeon REQUIRED)
     if(log_surgeon_FOUND)
         #message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup LZMA library.
 # TODO: Add a script in ./cmake/Modules to properly import LZMA in find_package()'s module mode.
-function(clp_find_lzma)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_lzma)
     if(CLP_USE_STATIC_LIBS)
         set(LIBLZMA_USE_STATIC_LIBS ON)
     endif()
@@ -129,11 +137,12 @@ function(clp_find_lzma)
         message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
     endif()
     include_directories(${LIBLZMA_INCLUDE_DIRS})
-endfunction()
+endmacro()
 
 
 # Find and setup MariaDBClient library.
-function(clp_find_mariadb_client)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_mariadb_client)
     if(CLP_USE_STATIC_LIBS)
         # NOTE: We can't statically link to MariaDBClient since it's GPL
         #message(AUTHOR_WARNING "MariaDBClient cannot be statically linked due to its license.")
@@ -144,80 +153,89 @@ function(clp_find_mariadb_client)
     else()
         message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for MariaDBClient")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup mongocxx library.
-# @return The name of the mongocxx target in the `MONGOCXX_TARGET` variable.
-function(clp_find_mongocxx)
+# @return The name of the mongocxx target in the `MONGOCXX_TARGET` variable, and
+# forwards any variables from the `find_package` call.
+macro(clp_find_mongocxx)
     find_package(mongocxx REQUIRED)
     #message(STATUS "Found mongocxx ${mongocxx_VERSION}")
     if(CLP_USE_STATIC_LIBS)
-        set(MONGOCXX_TARGET mongo::mongocxx_static PARENT_SCOPE)
+        set(MONGOCXX_TARGET mongo::mongocxx_static)
     else()
-        set(MONGOCXX_TARGET mongo::mongocxx_shared PARENT_SCOPE)
+        set(MONGOCXX_TARGET mongo::mongocxx_shared)
     endif()
-endfunction()
+endmacro()
 
 # Find and setup msgpack library.
-function(clp_find_msgpack)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_msgpack)
     find_package(msgpack-cxx 7.0.0 REQUIRED)
     if(msgpack-cxx_FOUND)
         #message(STATUS "Found msgpack-cxx ${msgpack-cxx_VERSION}")
     else()
         message(FATAL_ERROR "Could not find msgpack-cxx")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup nlohmann_json library.
-function(clp_find_nlohmann_json)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_nlohmann_json)
     find_package(nlohmann_json REQUIRED)
     if(nlohmann_json_FOUND)
         #message(STATUS "Found nlohmann_json ${nlohmann_json_VERSION}")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup OpenSSL library.
-function(clp_find_openssl)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_openssl)
     find_package(OpenSSL REQUIRED)
     if(OPENSSL_FOUND)
         #message(STATUS "Found OpenSSL (${OPENSSL_VERSION})")
     else()
         message(FATAL_ERROR "OpenSSL not found")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup simdjson library.
-function(clp_find_simdjson)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_simdjson)
     find_package(simdjson REQUIRED)
     if(simdjson_FOUND)
         #message(STATUS "Found simdjson ${simdjson_VERSION}")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup spdlog library.
-function(clp_find_spdlog)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_spdlog)
     find_package(spdlog REQUIRED)
     if(spdlog_FOUND)
         #message(STATUS "Found spdlog ${spdlog_VERSION}")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup sqlite library.
-function(clp_find_sqlite)
+# @return Forwards any variables from the `FindDynamicLibraryDependencies` call.
+macro(clp_find_sqlite)
     set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
     include("${PROJECT_SOURCE_DIR}/cmake/Modules/FindLibraryDependencies.cmake")
     FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
-endfunction()
+endmacro()
 
 # Find and setup yamlcpp library.
-function(clp_find_yamlcpp)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_yamlcpp)
     find_package(yaml-cpp REQUIRED)
     if(yaml-cpp_FOUND)
         #message(STATUS "Found yaml-cpp ${yaml-cpp_VERSION}")
     endif()
-endfunction()
+endmacro()
 
 # Find and setup ystdlib.
+# @return Forwards any variables from the `find_package` call.
 function(clp_find_ystdlib)
     # We can not call `add_subdirectory` for the same directory multiple times.
     get_clp_checked_find(ystdlib)
@@ -231,7 +249,8 @@ function(clp_find_ystdlib)
 endfunction()
 
 # Find and setup ZStd library.
-function(clp_find_zstd)
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_zstd)
     if(CLP_USE_STATIC_LIBS)
         set(ZStd_USE_STATIC_LIBS ON)
     endif()
@@ -241,4 +260,4 @@ function(clp_find_zstd)
     else()
         message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
     endif()
-endfunction()
+endmacro()
