@@ -4,7 +4,7 @@ import closeWithGrace from "close-with-grace";
 import fastify from "fastify";
 import fp from "fastify-plugin";
 
-import serviceApp from "./fastify-v2/app.js";
+import serviceApp from "./app.js";
 
 
 const DEFAULT_FASTIFY_CLOSE_GRACE_DELAY = 500;
