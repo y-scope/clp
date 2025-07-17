@@ -1,4 +1,6 @@
+// ===
 // Timestamps
+// ===
 
 // E.g. 2015-01-31T15:50:45.392
 timestamp:\d{4}\-\d{2}\-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}
@@ -71,14 +73,25 @@ timestamp:\d{2}\-\d{2} \d{2}:\d{2}:\d{2}.\d{3}
 // E.g. 2016-05-08 11:34:04.083464
 timestamp:\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}.\d{6}
 
+// ===
 // Delimiters
+// ===
+
 delimiters: \t\r\n!"#$%&'\(\)\*,:;\<\>\?@\[\]\^_`\{\|\}~=
 
+// ===
 // Specially-encoded variables (using the `int` and `float` keywords)
+// ===
+
 int:\-{0,1}[0-9]+
 float:\-{0,1}[0-9]+\.[0-9]+
 
-// Dictionary variables (the way `equals` and `hasNumber` are written only work if `=` is a delim)
+// ===
+// Dictionary variables
+// ===
+
 hex:[a-fA-F]+
+
+// Note: the way `equals` and `hasNumber` are written only work if `=` is a delim
 equals:.*=(?<val>.*[a-zA-Z0-9].*)
 hasNumber:.*\d.*
