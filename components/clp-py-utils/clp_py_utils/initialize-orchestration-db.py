@@ -108,6 +108,7 @@ def main(argv):
                     `duration` FLOAT NULL DEFAULT NULL,
                     `job_config` VARBINARY(60000) NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
+                    INDEX `CREATION_TIME` (`creation_time`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 """
