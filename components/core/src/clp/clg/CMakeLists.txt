@@ -124,6 +124,18 @@ set(
 )
 
 if(CLP_BUILD_EXECUTABLES)
+        clp_find_boost()
+        find_package(date REQUIRED)
+        find_package(fmt REQUIRED)
+        find_package(log_surgeon REQUIRED)
+        clp_find_mariadb_client()
+        find_package(nlohmann_json REQUIRED)
+        find_package(spdlog REQUIRED)
+        clp_find_sqlite()
+        find_package(yaml-cpp REQUIRED)
+        clp_find_ystdlib()
+        clp_find_zstd()
+
         add_executable(clg ${CLG_SOURCES})
         target_compile_features(clg PRIVATE cxx_std_20)
         target_include_directories(clg
