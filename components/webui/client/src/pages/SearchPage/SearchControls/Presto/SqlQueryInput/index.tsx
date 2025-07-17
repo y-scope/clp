@@ -1,9 +1,13 @@
-import { useCallback } from "react";
+import {useCallback} from "react";
+
 import SqlEditor from "../../../../../components/SqlEditor";
 import useSearchStore from "../../../SearchState/index";
 
+
 /**
  * Renders SQL query input.
+ *
+ * @return
  */
 const SqlQueryInput = () => {
     const handleChange = useCallback((value: string | undefined) => {
@@ -13,9 +17,8 @@ const SqlQueryInput = () => {
 
     return (
         <SqlEditor
-            height="150px"
-            onChange={handleChange}
-        />
+            height={"150px"}
+            onChange={handleChange}/>
     );
 };
 

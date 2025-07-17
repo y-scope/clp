@@ -7,6 +7,7 @@ import {
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../SearchState/index";
 import styles from "../../SearchButton/SubmitButton/index.module.css";
 
+
 /**
  * Renders a button to run the SQL query.
  *
