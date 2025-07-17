@@ -1,6 +1,6 @@
 import fastifyMongoDb from "@fastify/mongodb";
 
-import settings from "../../../../settings.json" with {type: "json"};
+import settings from "../../../settings.json" with {type: "json"};
 
 
 export const autoConfig = () => {

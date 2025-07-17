@@ -4,7 +4,7 @@ import {
 } from "@fastify/mysql";
 import {FastifyInstance} from "fastify";
 
-import settings from "../../../../settings.json" with {type: "json"};
+import settings from "../../../settings.json" with {type: "json"};
 
 
 // The typing of `@fastify/mysql` needs to be manually specified.

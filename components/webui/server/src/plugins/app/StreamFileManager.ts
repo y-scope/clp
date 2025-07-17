@@ -4,13 +4,13 @@ import {
 } from "fastify";
 import fp from "fastify-plugin";
 
-import settings from "../../../../settings.json" with {type: "json"};
-import {Nullable} from "../../../typings/common.js";
-import {QUERY_JOB_TYPE} from "../../../typings/query.js";
+import settings from "../../../settings.json" with {type: "json"};
+import {Nullable} from "../../typings/common.js";
+import {QUERY_JOB_TYPE} from "../../typings/query.js";
 import {
     StreamFileMetadata,
     StreamFilesCollection,
-} from "../../../typings/stream-files.js";
+} from "../../typings/stream-files.js";
 
 
 /**
