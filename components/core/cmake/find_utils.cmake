@@ -1,4 +1,4 @@
-# This file contains utility functions for our other cmake scripts.
+# This file contains utility functions for finding dependencies.
 
 # @param {string} LIBRARY
 # @return {bool} Whether we have already run the find function for LIBRARY in the CLP_CHECKED_FIND

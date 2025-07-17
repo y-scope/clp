@@ -15,7 +15,7 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Options/options.cmake")
 validate_all_clp_dependency_flags()
 
 # Include utilities to find and configure dependencies
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils/utils.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/find_utils.cmake")
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
