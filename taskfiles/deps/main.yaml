@@ -165,9 +165,9 @@ tasks:
       - task: "yscope-dev-utils:cmake:install"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
+          CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
           INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
-          NAME: "{{.LIB_NAME}}"
 
       # This command must be last
       - task: "yscope-dev-utils:checksum:compute"
@@ -214,8 +214,8 @@ tasks:
             - "-DFMT_DOC=OFF"
             - "-DFMT_TEST=OFF"
           LIB_NAME: "{{.G_FMT_LIB_NAME}}"
-          TARBALL_SHA256: "b06ca3130158c625848f3fb7418f235155a4d389b2abc3a6245fb01cb0eb1e01"
-          TARBALL_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/8.0.1.tar.gz"
+          TARBALL_SHA256: "1250e4cc58bf06ee631567523f48848dc4596133e163f02615c97f78bab6c811"
+          TARBALL_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.tar.gz"
 
   log-surgeon:
     internal: true
@@ -302,11 +302,11 @@ tasks:
             - "-DSPDLOG_BUILD_EXAMPLE_HO=OFF"
             - "-DSPDLOG_FMT_EXTERNAL=ON"
           LIB_NAME: "spdlog"
-          TARBALL_SHA256: "6fff9215f5cb81760be4cc16d033526d1080427d236e86d70bb02994f85e3d38"
+          TARBALL_SHA256: "1586508029a7d0670dfcb2d97575dcdc242d3868a259742b69f100801ab4e16b"
 
           # NOTE: Since spdlog depends on fmt, we need to choose a version of spdlog that's
           # compatible with the version of fmt we use.
-          TARBALL_URL: "https://github.com/gabime/spdlog/archive/refs/tags/v1.9.2.tar.gz"
+          TARBALL_URL: "https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz"
 
   sqlite3:
     internal: true

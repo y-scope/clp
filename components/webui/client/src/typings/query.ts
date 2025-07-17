@@ -49,6 +49,7 @@ const ExtractJobSearchParams = Type.Object({
     ),
     streamId: Type.String(),
     logEventIdx: Type.Number(),
+    dataset: Type.Optional(Type.String()),
 });
 
 interface ExtractStreamResp {

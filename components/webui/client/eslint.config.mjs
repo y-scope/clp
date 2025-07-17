@@ -35,9 +35,10 @@ const EslintConfig = [
                         // TypeBox imports
                         "Decode",
                         "Encode",
+                        "Type.Literal",
+                        "Type.Optional",
                         "Type.Transform",
                         "Type.Union",
-                        "Type.Literal",
                         "Value.Parse",
                     ],
                 },
