@@ -155,51 +155,25 @@ TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParse
 //                   "Specified schema file does not exist.");
 //}
 
-TEST_CASE("Test forward lexer", "[Search]") {
-    ByteLexer forward_lexer;
+TEST_CASE("Test lexer", "[Search]") {
+    ByteLexer lexer;
     std::string schema_file_name = "../tests/test_schema_files/search_schema.txt";
     std::string schema_file_path = boost::filesystem::weakly_canonical(schema_file_name).string();
-    load_lexer_from_file(schema_file_path, forward_lexer);
+    load_lexer_from_file(schema_file_path, lexer);
     FileReader file_reader{"../tests/test_search_queries/easy.txt"};
     LogSurgeonReader reader_wrapper(file_reader);
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);
-    forward_lexer.reset();
-    auto [error_code, opt_token] = forward_lexer.scan(parser_input_buffer);
+    lexer.reset();
+    auto [error_code, opt_token] = lexer.scan(parser_input_buffer);
     REQUIRE(error_code == log_surgeon::ErrorCode::Success);
     Token token{opt_token.value()};
     while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolId::TokenEnd)) {
         SPDLOG_INFO("token:" + token.to_string() + "\n");
         SPDLOG_INFO(
-                "token.m_type_ids->back():"
-                + forward_lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n"
+                "token.m_type_ids->back():" + lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n"
         );
-        auto [error_code, opt_token] = forward_lexer.scan(parser_input_buffer);
-        REQUIRE(error_code == log_surgeon::ErrorCode::Success);
-        token = opt_token.value();
-    }
-}
-
-TEST_CASE("Test reverse lexer", "[Search]") {
-    ByteLexer reverse_lexer;
-    std::string schema_file_name = "../tests/test_schema_files/search_schema.txt";
-    std::string schema_file_path = boost::filesystem::weakly_canonical(schema_file_name).string();
-    load_lexer_from_file(schema_file_path, reverse_lexer);
-    FileReader file_reader{"../tests/test_search_queries/easy.txt"};
-    LogSurgeonReader reader_wrapper(file_reader);
-    log_surgeon::ParserInputBuffer parser_input_buffer;
-    parser_input_buffer.read_if_safe(reader_wrapper);
-    reverse_lexer.reset();
-    auto [error_code, opt_token] = reverse_lexer.scan(parser_input_buffer);
-    REQUIRE(error_code == log_surgeon::ErrorCode::Success);
-    Token token{opt_token.value()};
-    while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolId::TokenEnd)) {
-        SPDLOG_INFO("token:" + token.to_string() + "\n");
-        SPDLOG_INFO(
-                "token.m_type_ids->back():"
-                + reverse_lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n"
-        );
-        auto [error_code, opt_token] = reverse_lexer.scan(parser_input_buffer);
+        auto [error_code, opt_token] = lexer.scan(parser_input_buffer);
         REQUIRE(error_code == log_surgeon::ErrorCode::Success);
         token = opt_token.value();
     }
