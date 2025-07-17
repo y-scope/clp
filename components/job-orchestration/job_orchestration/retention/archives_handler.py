@@ -44,13 +44,15 @@ def _remove_expired_archives(
     dataset: Optional[str],
 ):
     archives_table = get_archives_table_name(table_prefix, dataset)
+    target_archive_end_ts = archive_expiry_epoch_secs * SECOND_TO_MILLISECOND
+    logger.debug(f"Searching for archives with end_ts < {target_archive_end_ts}")
     db_cursor.execute(
         f"""
         SELECT id FROM `{archives_table}`
         WHERE end_timestamp <= %s
         AND end_timestamp != 0
         """,
-        [archive_expiry_epoch_secs * SECOND_TO_MILLISECOND],
+        [target_archive_end_ts],
     )
 
     results = db_cursor.fetchall()
@@ -101,21 +103,23 @@ def _get_archive_safe_expiry_epoch(
         SELECT id, creation_time
         FROM `{QUERY_JOBS_TABLE_NAME}`
         WHERE {QUERY_JOBS_TABLE_NAME}.status = {QueryJobStatus.RUNNING}
-        AND {QUERY_JOBS_TABLE_NAME}.creation_time
-        BETWEEN FROM_UNIXTIME(%s) AND FROM_UNIXTIME(%s)
+        AND {QUERY_JOBS_TABLE_NAME}.creation_time < FROM_UNIXTIME(%s)
         ORDER BY creation_time ASC
         LIMIT 1
         """,
-        [archive_expiry_epoch, current_epoch_secs],
+        [current_epoch_secs],
     )
 
     row = db_cursor.fetchone()
     if row is not None:
         job_creation_time = row.get("creation_time")
         logger.debug(f"Discovered running query job created at {job_creation_time}")
-        return int(job_creation_time.timestamp()) - retention_period_secs
+        archive_expiry_epoch = int(job_creation_time.timestamp()) - retention_period_secs
+    else:
+        archive_expiry_epoch = int(current_epoch_secs) - retention_period_secs
 
-    return int(archive_expiry_epoch)
+    return archive_expiry_epoch
+
 
 
 def _handle_archive_retention(
