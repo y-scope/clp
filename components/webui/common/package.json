@@ -1,3 +1,14 @@
 {
-  "type": "module"
+  "name": "@webui/common",
+  "version": "0.1.0",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc"
+  },
+  "devDependencies": {
+    "typescript": "~5.6.2"
+  },
+  "dependencies": {
+    "@sinclair/typebox": "^0.31.3"
+  }
 }

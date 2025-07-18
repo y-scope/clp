@@ -1,6 +1,6 @@
 import {useEffect} from "react";
 
-import {SEARCH_SIGNAL} from "@common/index.js";
+import {SEARCH_SIGNAL} from "@webui/common";
 
 import useSearchStore from "./index";
 import {SEARCH_UI_STATE} from "./typings";

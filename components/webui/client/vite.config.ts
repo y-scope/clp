@@ -1,5 +1,3 @@
-import path from "node:path";
-
 import react from "@vitejs/plugin-react";
 import {defineConfig} from "vite";
 
@@ -14,11 +12,6 @@ export default defineConfig({
         react(),
     ],
     publicDir: "public",
-    resolve: {
-        alias: {
-            "@common": path.resolve(__dirname, "../common"),
-        },
-    },
     server: {
         port: 8080,
         proxy: {
@@ -33,10 +26,6 @@ export default defineConfig({
                 changeOrigin: true,
                 ws: true,
             },
-        },
-        fs: {
-            // allow serving files from one level up (common folder)
-            allow: [".."],
         },
     },
 });
