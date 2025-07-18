@@ -7,6 +7,8 @@ import {
 } from "@monaco-editor/react";
 import {language as sqlLanguage} from "monaco-editor/esm/vs/basic-languages/sql/sql.js";
 
+import "./monaco-config";
+
 
 type SqlEditorProps = Omit<EditorProps, "language">;
 
