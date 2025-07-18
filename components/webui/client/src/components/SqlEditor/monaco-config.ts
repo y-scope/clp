@@ -1,6 +1,8 @@
-import { loader } from '@monaco-editor/react';
-import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
-import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+/* eslint-disable import/default */
+import {loader} from "@monaco-editor/react";
+import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
+import EditorWorker from "monaco-editor/esm/vs/editor/editor.worker?worker";
+
 
 self.MonacoEnvironment = {
     getWorker: () => {
@@ -8,4 +10,4 @@ self.MonacoEnvironment = {
     },
 };
 
-loader.config({ monaco });
+loader.config({monaco});
