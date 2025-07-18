@@ -69,9 +69,7 @@ const SqlEditor = (props: SqlEditorProps) => {
                 placeholder: "Enter your SQL query",
                 scrollBeyondLastLine: false,
                 wordWrap: "on",
-                automaticLayout: true,
             }}
-            width="100%"
             {...props}/>
     );
 };

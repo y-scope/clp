@@ -15,17 +15,19 @@ import useSearchStore from "../../../SearchState/index";
 const RunButton = () => {
     const queryString = useSearchStore((state) => state.queryString);
 
-    const isQueryStringEmpty = queryString === "";
-    const tooltipTitle = isQueryStringEmpty ? "Enter SQL query to run" : "";
+    const isQueryStringEmpty = "" === queryString;
+    const tooltipTitle = isQueryStringEmpty ?
+        "Enter SQL query to run" :
+        "";
 
     return (
         <Tooltip title={tooltipTitle}>
             <Button
-                icon={<CaretRightOutlined/>}
-                color="green"
-                variant ="solid"
-                size={"large"}
+                color={"green"}
                 disabled={isQueryStringEmpty}
+                icon={<CaretRightOutlined/>}
+                size={"large"}
+                variant={"solid"}
             >
                 Run
             </Button>

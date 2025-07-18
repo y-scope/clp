@@ -17,7 +17,7 @@ const SqlQueryInput = () => {
     }, []);
 
     return (
-        <div className={styles[`editorWrapper`] || "" }>
+        <div className={styles["editorWrapper"] || ""}>
             <SqlEditor
                 height={"150px"}
                 onChange={handleChange}/>
