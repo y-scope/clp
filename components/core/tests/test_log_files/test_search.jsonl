@@ -8,3 +8,6 @@
 {"idx": 7, "arr": [{"a": 999}, {"b": 1001}]}
 {"idx": 8, "arr": {"a": 999, "b": 1001}}
 {"idx": 9, "var_string": "a", "clp_string": "a b", "float": 1.1, "int": 1, "bool": true, "array": [], "object": {}}
+{"idx": 10, "ambiguous_varstring": "abcde"}
+{"idx": 11, "ambiguous_varstring": "ae"}
+{"idx": 12, "ambiguous_varstring": "a*e"}
