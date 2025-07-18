@@ -1,4 +1,5 @@
-.editorWrapper {
+/* Allows the editor to shrink when page width decreases */
+.input {
     width: 100%;
     min-width: 0;
 }
