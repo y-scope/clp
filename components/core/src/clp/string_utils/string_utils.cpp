@@ -113,6 +113,27 @@ string replace_characters(
     return new_value;
 }
 
+auto replace_unescaped_char(
+        char const escape_char,
+        char const from_char,
+        char const to_char,
+        std::string& str
+) -> void {
+    bool escaped{false};
+
+    auto should_replace_char = [&](char c) -> bool {
+        auto const should_replace = (from_char == c && false == escaped);
+        if (escape_char == c) {
+            escaped = !escaped;
+        } else {
+            escaped = false;
+        }
+        return should_replace;
+    };
+
+    std::replace_if(str.begin(), str.end(), should_replace_char, to_char);
+}
+
 void to_lower(string& str) {
     std::transform(str.cbegin(), str.cend(), str.begin(), [](unsigned char c) {
         return std::tolower(c);
