@@ -2,6 +2,7 @@ import {useCallback} from "react";
 
 import SqlEditor from "../../../../../components/SqlEditor";
 import useSearchStore from "../../../SearchState/index";
+import styles from "./index.module.css";
 
 
 /**
@@ -16,9 +17,11 @@ const SqlQueryInput = () => {
     }, []);
 
     return (
-        <SqlEditor
-            height={"150px"}
-            onChange={handleChange}/>
+        <div className={styles[`editorWrapper`] || "" }>
+            <SqlEditor
+                height={"150px"}
+                onChange={handleChange}/>
+        </div>
     );
 };
 
