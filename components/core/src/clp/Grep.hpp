@@ -37,8 +37,7 @@ public:
      * @param search_begin_ts
      * @param search_end_ts
      * @param ignore_case
-     * @param forward_lexer DFA for determining if input is in the schema
-     * @param reverse_lexer DFA for determining if reverse of input is in the schema
+     * @param lexer DFA for determining if input is in the schema
      * @param use_heuristic
      * @return Query if it may match a message, std::nullopt otherwise
      */
@@ -48,8 +47,7 @@ public:
             epochtime_t search_begin_ts,
             epochtime_t search_end_ts,
             bool ignore_case,
-            log_surgeon::lexers::ByteLexer& forward_lexer,
-            log_surgeon::lexers::ByteLexer& reverse_lexer,
+            log_surgeon::lexers::ByteLexer& lexer,
             bool use_heuristic
     );
 
@@ -76,8 +74,7 @@ public:
      * @param begin_pos Begin position of last token, changes to begin position of next token
      * @param end_pos End position of last token, changes to end position of next token
      * @param is_var Whether the token is definitely a variable
-     * @param forward_lexer DFA for determining if input is in the schema
-     * @param reverse_lexer DFA for determining if reverse of input is in the schema
+     * @param lexer DFA for determining if input is in the schema
      * @return true if another potential variable was found, false otherwise
      */
     static bool get_bounds_of_next_potential_var(
@@ -85,8 +82,7 @@ public:
             size_t& begin_pos,
             size_t& end_pos,
             bool& is_var,
-            log_surgeon::lexers::ByteLexer& forward_lexer,
-            log_surgeon::lexers::ByteLexer& reverse_lexer
+            log_surgeon::lexers::ByteLexer& lexer
     );
     /**
      * Marks which sub-queries in each query are relevant to the given file
