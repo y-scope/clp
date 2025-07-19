@@ -7,9 +7,6 @@ import {build as buildApplication} from "fastify-cli/helper.js";
 import type {Test} from "tap";
 
 
-// eslint-disable-next-line no-warning-comments
-// TODO: Setup testing for new webui fastify app in `fastify-v2/app.ts`. Testing will need
-// to be split into unit tests and integration tests (require clp package running).
 const appPath = path.join(import.meta.dirname, "../app.ts");
 
 /**
