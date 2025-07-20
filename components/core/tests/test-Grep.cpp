@@ -33,7 +33,6 @@ auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path {
 }
 }  // namespace
 
-
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
     ByteLexer forward_lexer;
     load_lexer_from_file(get_test_input_local_path(), false, forward_lexer);
