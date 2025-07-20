@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <string>
 
 #include <catch2/catch.hpp>
@@ -16,11 +17,28 @@ using log_surgeon::SchemaParser;
 using log_surgeon::SchemaVarAST;
 using std::string;
 
+namespace {
+[[nodiscard]] auto get_test_input_local_path() -> std::string;
+
+[[nodiscard]] auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path;
+
+auto get_test_input_local_path() -> std::string {
+    std::filesystem::path const current_file_path{__FILE__};
+    auto const tests_dir{current_file_path.parent_path()};
+    return (tests_dir / get_test_input_path_relative_to_tests_dir()).string();
+}
+
+auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path {
+    return std::filesystem::path{"test_schema_files"} / "search_schema.txt";
+}
+}  // namespace
+
+
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
     ByteLexer forward_lexer;
-    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, forward_lexer);
+    load_lexer_from_file(get_test_input_local_path(), false, forward_lexer);
     ByteLexer reverse_lexer;
-    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", true, reverse_lexer);
+    load_lexer_from_file(get_test_input_local_path(), true, reverse_lexer);
 
     string str;
     size_t begin_pos;
