@@ -18,24 +18,24 @@ using log_surgeon::SchemaVarAST;
 using std::string;
 
 namespace {
-[[nodiscard]] auto get_test_dir() -> std::string;
+[[nodiscard]] auto get_test_dir() -> std::filesystem::path;
 
-auto get_test_dir() -> std::string {
+auto get_test_dir() -> std::filesystem::path {
     std::filesystem::path const current_file_path{__FILE__};
-    return current_file_path.parent_path().string();
+    return current_file_path.parent_path();
 }
 }  // namespace
 
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
     ByteLexer forward_lexer;
     load_lexer_from_file(
-            get_test_dir() + "/test_schema_files/search_schema.txt",
+            (get_test_dir() / "test_schema_files/search_schema.txt").string(),
             false,
             forward_lexer
     );
     ByteLexer reverse_lexer;
     load_lexer_from_file(
-            get_test_dir() + "/test_schema_files/search_schema.txt",
+            (get_test_dir() / "test_schema_files/search_schema.txt").string(),
             true,
             reverse_lexer
     );

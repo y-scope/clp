@@ -30,11 +30,11 @@ using log_surgeon::SchemaVarAST;
 using log_surgeon::Token;
 
 namespace {
-[[nodiscard]] auto get_test_dir() -> std::string;
+[[nodiscard]] auto get_test_dir() -> std::filesystem::path;
 
-auto get_test_dir() -> std::string {
+auto get_test_dir() -> std::filesystem::path {
     std::filesystem::path const current_file_path{__FILE__};
-    return current_file_path.parent_path().string();
+    return current_file_path.parent_path();
 }
 }  // namespace
 
@@ -90,7 +90,7 @@ void decompress(std::string archive_dir, std::string output_dir) {
 }
 
 TEST_CASE("Test error for missing schema file", "[LALR1Parser][SchemaParser]") {
-    std::string file_path = get_test_dir() + "/test_schema_files/missing_schema.txt";
+    std::string file_path = (get_test_dir() / "test_schema_files/missing_schema.txt").string();
     REQUIRE_THROWS_WITH(
             generate_schema_ast(file_path),
             "Failed to read '" + file_path + "', error_code="
@@ -99,7 +99,7 @@ TEST_CASE("Test error for missing schema file", "[LALR1Parser][SchemaParser]") {
 }
 
 TEST_CASE("Test error for empty schema file", "[LALR1Parser][SchemaParser]") {
-    std::string file_path = get_test_dir() + "/test_schema_files/empty_schema.txt";
+    std::string file_path = (get_test_dir() / "test_schema_files/empty_schema.txt").string();
     REQUIRE_THROWS_WITH(
             generate_schema_ast(file_path),
             "Schema:1:1: error: empty file\n"
@@ -109,7 +109,8 @@ TEST_CASE("Test error for empty schema file", "[LALR1Parser][SchemaParser]") {
 }
 
 TEST_CASE("Test error for colon missing schema file", "[LALR1Parser][SchemaParser]") {
-    std::string file_path = get_test_dir() + "/test_schema_files/colon_missing_schema.txt";
+    std::string file_path
+            = (get_test_dir() / "test_schema_files/colon_missing_schema.txt").string();
     REQUIRE_THROWS_WITH(
             generate_schema_ast(file_path),
             "Schema:3:4: error: expected ':','AlphaNumeric' before ' ' token\n"
@@ -120,7 +121,8 @@ TEST_CASE("Test error for colon missing schema file", "[LALR1Parser][SchemaParse
 
 TEST_CASE("Test error for multi-character tokens in schema file", "[LALR1Parser][SchemaParser]") {
     std::string file_path
-            = get_test_dir() + "/test_schema_files/schema_with_multicharacter_token_error.txt";
+            = (get_test_dir() / "test_schema_files/schema_with_multicharacter_token_error.txt")
+                      .string();
     REQUIRE_THROWS_WITH(
             generate_schema_ast(file_path),
             "Schema:2:11: error: expected ':' before ' ' token\n"
@@ -130,17 +132,17 @@ TEST_CASE("Test error for multi-character tokens in schema file", "[LALR1Parser]
 }
 
 TEST_CASE("Test creating schema parser", "[LALR1Parser][SchemaParser]") {
-    generate_schema_ast(get_test_dir() + "/test_schema_files/easy_schema.txt");
+    generate_schema_ast((get_test_dir() / "test_schema_files/easy_schema.txt").string());
 }
 
 TEST_CASE("Test creating log parser with delimiters", "[LALR1Parser][LogParser]") {
-    generate_log_parser(get_test_dir() + "/test_schema_files/schema_with_delimiters.txt");
+    generate_log_parser((get_test_dir() / "test_schema_files/schema_with_delimiters.txt").string());
 }
 
 TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParser]") {
     REQUIRE_THROWS_WITH(
             generate_log_parser(
-                    get_test_dir() + "/test_schema_files/schema_without_delimiters.txt"
+                    (get_test_dir() / "test_schema_files/schema_without_delimiters.txt").string()
             ),
             "When using --schema-path, \"delimiters:\" line must be used."
     );
@@ -171,10 +173,11 @@ TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParse
 
 TEST_CASE("Test forward lexer", "[Search]") {
     ByteLexer forward_lexer;
-    std::string schema_file_name = get_test_dir() + "/test_schema_files/search_schema.txt";
+    std::string schema_file_name
+            = (get_test_dir() / "test_schema_files/search_schema.txt").string();
     std::string schema_file_path = boost::filesystem::weakly_canonical(schema_file_name).string();
     load_lexer_from_file(schema_file_path, false, forward_lexer);
-    FileReader file_reader{get_test_dir() + "/test_search_queries/easy.txt"};
+    FileReader file_reader{(get_test_dir() / "test_search_queries/easy.txt").string()};
     LogSurgeonReader reader_wrapper(file_reader);
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);
@@ -195,10 +198,11 @@ TEST_CASE("Test forward lexer", "[Search]") {
 
 TEST_CASE("Test reverse lexer", "[Search]") {
     ByteLexer reverse_lexer;
-    std::string schema_file_name = get_test_dir() + "/test_schema_files/search_schema.txt";
+    std::string schema_file_name
+            = (get_test_dir() / "test_schema_files/search_schema.txt").string();
     std::string schema_file_path = boost::filesystem::weakly_canonical(schema_file_name).string();
     load_lexer_from_file(schema_file_path, false, reverse_lexer);
-    FileReader file_reader{get_test_dir() + "/test_search_queries/easy.txt"};
+    FileReader file_reader{(get_test_dir() / "test_search_queries/easy.txt").string()};
     LogSurgeonReader reader_wrapper(file_reader);
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);
