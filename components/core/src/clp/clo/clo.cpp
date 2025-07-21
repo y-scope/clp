@@ -480,7 +480,6 @@ static bool search_archive(
     bool use_heuristic = true;
     if (std::filesystem::exists(schema_file_path)) {
         use_heuristic = false;
-        lexer = std::make_unique<log_surgeon::lexers::ByteLexer>();
         load_lexer_from_file(schema_file_path.string(), *lexer);
     }
 
