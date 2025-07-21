@@ -29,7 +29,7 @@ timestamp:[ \d]\d [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2},\d{3}
 timestamp:[A-Z][a-z]{2} [ \d]\d, \d{4} [ \d]\d:\d{2}:\d{2} [AP]M
 
 // E.g. January 31, 2015 15:50
-timestamp:[A-Z][a-z]+ \d{2}, \d{4} \d{2}:\d{2}
+timestamp:[A-Z][a-z]+ [ \d]\d, \d{4} \d{2}:\d{2}
 
 // E.g. E [31/Jan/2015:15:50:45
 // E.g. localhost - - [01/Jan/2016:15:50:17
