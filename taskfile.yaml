@@ -156,8 +156,8 @@ tasks:
         "{{.G_WEBUI_BUILD_DIR}}/"
         "{{.OUTPUT_DIR}}/var/www/webui"
       - |-
-        cd "{{.OUTPUT_DIR}}/var/www/webui/server"
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
+        cd "{{.OUTPUT_DIR}}/var/www/webui"
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm ci --omit=dev
       # This command must be last
       - task: "utils:checksum:compute"
         vars:
@@ -294,13 +294,13 @@ tasks:
       - |-
         cd common
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
-        --outDir '{{.OUTPUT_DIR}}/server/common'
+        --outDir '{{.OUTPUT_DIR}}/common'
       - |-
         cd server
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npx tsc --outDir '{{.OUTPUT_DIR}}/server/dist'
-        rsync -a \
-        package.json ../package-lock.json \
-        "{{.OUTPUT_DIR}}/server/"
+        rsync -a package.json "{{.OUTPUT_DIR}}/server/"
+      - |-
+        rsync -a package.json package-lock.json "{{.OUTPUT_DIR}}/"
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
