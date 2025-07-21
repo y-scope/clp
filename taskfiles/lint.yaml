@@ -670,8 +670,6 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/glt/streaming_compression/zstd/Constants.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/glt/streaming_compression/zstd/Decompressor.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/glt/streaming_compression/zstd/Decompressor.hpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/glt/string_utils/string_utils.cpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/glt/string_utils/string_utils.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/glt/StringReader.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/glt/StringReader.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/glt/TimestampPattern.cpp"

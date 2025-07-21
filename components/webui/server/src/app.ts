@@ -1,66 +1,106 @@
+// Reference: https://github.com/fastify/demo/blob/main/src/app.ts
+
+import path from "node:path";
+
+import {fastifyAutoload} from "@fastify/autoload";
 import {
     FastifyInstance,
-    FastifyPluginAsync,
+    FastifyPluginOptions,
 } from "fastify";
-
-import settings from "../settings.json" with {type: "json"};
-import DbManager from "./plugins/DbManager.js";
-import S3Manager from "./plugins/S3Manager.js";
-import exampleRoutes from "./routes/example.js";
-import queryRoutes from "./routes/query.js";
-import staticRoutes from "./routes/static.js";
+import {StatusCodes} from "http-status-codes";
 
 
-interface AppPluginOptions {
-    sqlDbUser: string;
-    sqlDbPass: string;
-}
+const RATE_LIMIT_MAX_REQUESTS = 3;
+const RATE_LIMIT_TIME_WINDOW_MS = 500;
 
 /**
- * Creates the Fastify app with the given options.
- *
- * TODO: Once old webui code is refactored to new modlular fastify style, this plugin should be
- * removed.
+ * Registers all plugins and routes.
  *
  * @param fastify
  * @param opts
- * @return
  */
-const FastifyV1App: FastifyPluginAsync<AppPluginOptions> = async (
+// eslint-disable-next-line max-lines-per-function
+export default async function serviceApp (
     fastify: FastifyInstance,
-    opts: AppPluginOptions
-) => {
-    const {sqlDbUser, sqlDbPass} = opts;
-    if ("test" !== process.env.NODE_ENV) {
-        await fastify.register(DbManager, {
-            mysqlConfig: {
-                database: settings.SqlDbName,
-                host: settings.SqlDbHost,
-                password: sqlDbPass,
-                port: settings.SqlDbPort,
-                queryJobsTableName: settings.SqlDbQueryJobsTableName,
-                user: sqlDbUser,
-            },
-            mongoConfig: {
-                database: settings.MongoDbName,
-                host: settings.MongoDbHost,
-                streamFilesCollectionName: settings.MongoDbStreamFilesCollectionName,
-                port: settings.MongoDbPort,
-            },
-        });
-        await fastify.register(
-            S3Manager,
+    opts: FastifyPluginOptions
+) {
+    // Option only serves testing purpose. It's used in testing to expose all decorators to the
+    // test app. Some decorators may not be exposed in production.
+    delete opts.skipOverride;
+
+    // Loads all external plugins. Registered first as application plugins might depend on them.
+    await fastify.register(fastifyAutoload, {
+        dir: path.join(import.meta.dirname, "plugins/external"),
+        options: {...opts},
+    });
+
+    // Loads all application plugins.
+    fastify.register(fastifyAutoload, {
+        dir: path.join(import.meta.dirname, "plugins/app"),
+        options: {...opts},
+    });
+
+    // Loads all routes.
+    fastify.register(fastifyAutoload, {
+        autoHooks: true,
+        cascadeHooks: true,
+        dir: path.join(import.meta.dirname, "routes"),
+        options: {...opts},
+    });
+
+    fastify.setErrorHandler((err, request, reply) => {
+        fastify.log.error(
             {
-                region: settings.StreamFilesS3Region,
-                profile: settings.StreamFilesS3Profile,
-            }
+                err: err,
+                request: {
+                    method: request.method,
+                    url: request.url,
+                    query: request.query,
+                    params: request.params,
+                },
+            },
+            "Unhandled error occurred"
         );
-    }
 
-    // Register the routes
-    await fastify.register(staticRoutes);
-    await fastify.register(exampleRoutes);
-    await fastify.register(queryRoutes);
-};
+        if ("undefined" !== typeof err.statusCode &&
+            Number(StatusCodes.INTERNAL_SERVER_ERROR) > err.statusCode
+        ) {
+            reply.code(err.statusCode);
 
-export default FastifyV1App;
+            return err.message;
+        }
+
+        reply.internalServerError();
+
+        return {
+            message: "Internal Server Error",
+        };
+    });
+
+    // An attacker could search for valid URLs if 404 error handling is not rate limited.
+    fastify.setNotFoundHandler(
+        {
+            preHandler: fastify.rateLimit({
+                max: RATE_LIMIT_MAX_REQUESTS,
+                timeWindow: RATE_LIMIT_TIME_WINDOW_MS,
+            }),
+        },
+        (request, reply) => {
+            request.log.warn(
+                {
+                    request: {
+                        method: request.method,
+                        url: request.url,
+                        query: request.query,
+                        params: request.params,
+                    },
+                },
+                "Resource not found"
+            );
+
+            reply.notFound();
+
+            return {message: "Not Found"};
+        }
+    );
+}
