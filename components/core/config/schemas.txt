@@ -35,10 +35,10 @@ timestamp:\d{2}/\d{2}/\d{2} \d{2}:\d{2}:\d{2}
 timestamp:\d{2}\d{2}\d{2} [ \d]\d:\d{2}:\d{2}
 
 // E.g. 01 Jan 2016 15:50:17,085
-timestamp:\d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2},\d{3}
+timestamp:[ \d]\d [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2},\d{3}
 
 // E.g. Jan 01, 2016 3:50:17 PM
-timestamp:[A-Z][a-z]{2} \d{2}, \d{4} [ \d]\d:\d{2}:\d{2} [AP]M
+timestamp:[A-Z][a-z]{2} [ \d]\d, \d{4} [ \d]\d:\d{2}:\d{2} [AP]M
 
 // E.g. January 31, 2015 15:50
 timestamp:[A-Z][a-z]+ \d{2}, \d{4} \d{2}:\d{2}
@@ -58,7 +58,7 @@ timestamp:[A-Z][a-z]{2} [A-Z][a-z]{2} [ \d]\d \d{2}:\d{2}:\d{2} \d{4}
 timestamp:\<\<\<\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}:\d{3}
 
 // E.g. Jan 21 11:56:42
-timestamp:[A-Z][a-z]{2} \d{2} \d{2}:\d{2}:\d{2}
+timestamp:[A-Z][a-z]{2} [ \d]\d \d{2}:\d{2}:\d{2}
 
 // E.g. 01-21 11:56:42.392
 timestamp:\d{2}\-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}
