@@ -328,6 +328,9 @@ void Archive::write_msg_using_schema(LogEventView const& log_view) {
                 start,
                 end
         );
+        if(timestamp_pattern == nullptr) {
+            throw(std::runtime_error("Timestamp encoding failed"));
+        }
         if (m_old_ts_pattern != timestamp_pattern) {
             change_ts_pattern(timestamp_pattern);
             m_old_ts_pattern = timestamp_pattern;
