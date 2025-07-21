@@ -77,7 +77,7 @@ timestamp:\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}\.\d{6}
 // Delimiters
 // ===
 
-delimiters: \t\r\n!"#$%&'\(\)\*,:;\<\>\?@\[\]\^_`\{\|\}~=
+delimiters: \t\r\n!"#$%&'\(\)\*,:;\<=\>\?@\[\]\^_`\{\|\}~
 
 // ===
 // Specially-encoded variables (using the `int` and `float` keywords)
