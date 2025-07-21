@@ -286,23 +286,21 @@ tasks:
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
-      - |-
-        cd common
-        rsync -a \
-        src/ \
-        "{{.OUTPUT_DIR}}/common/"
       - for: ["client", "yscope-log-viewer"]
         cmd: |-
           cd "{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}"
           PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
           --emptyOutDir --outDir '{{.OUTPUT_DIR}}/{{.ITEM}}'
       - |-
+        cd common
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
+        --emptyOutDir --outDir '{{.OUTPUT_DIR}}/server/common'
+      - |-
         cd server
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npx tsc --outDir '{{.OUTPUT_DIR}}/server/dist'
         rsync -a \
-        package.json package-lock.json \
+        package.json ../package-lock.json \
         "{{.OUTPUT_DIR}}/server/"
-      # This command must be last
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
@@ -362,7 +360,6 @@ tasks:
   # * log-viewer submodule
   # * the top-level one we call "package"
   webui-node-modules:
-    internal: true
     vars:
       SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
       CLIENT_OUTPUT_DIR: "{{.SRC_DIR}}/client/node_modules"
