@@ -11,7 +11,7 @@
     "client:lint:check": "npm run lint:check --workspace=client",
     "client:lint:fix": "npm run lint:fix --workspace=client",
     "client:start": "npm start --workspace=client",
-    "init": "npm clean-install",
+    "init": "npm clean-install --workspaces",
     "lint:check": "npm run lint:check --workspaces --if-present",
     "lint:fix": "npm run lint:fix --workspaces --if-present",
     "server:lint:check": "npm run lint:check --workspace=server",

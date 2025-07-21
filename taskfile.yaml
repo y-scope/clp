@@ -294,7 +294,7 @@ tasks:
       - |-
         cd common
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
-        --emptyOutDir --outDir '{{.OUTPUT_DIR}}/server/common'
+        --outDir '{{.OUTPUT_DIR}}/server/common'
       - |-
         cd server
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npx tsc --outDir '{{.OUTPUT_DIR}}/server/dist'
@@ -418,9 +418,6 @@ tasks:
       - "PATH='{{.G_NODEJS_22_BIN_DIR}}':$PATH npm run init"
       - |-
         cd yscope-log-viewer
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
-      - |-
-        cd common
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
       # These commands must be last
       - task: "utils:checksum:compute"
