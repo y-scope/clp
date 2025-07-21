@@ -49,19 +49,6 @@ using std::vector;
  */
 static bool open_archive(string const& archive_path, Archive& archive_reader);
 /**
- * Searches the archive with the given parameters
- * @param search_strings
- * @param command_line_args
- * @param archive
- * @return true on success, false otherwise
- */
-static bool search(
-        vector<string> const& search_strings,
-        CommandLineArguments& command_line_args,
-        Archive& archive,
-        bool use_heuristic
-);
-/**
  * Opens a compressed file or logs any errors if it couldn't be opened
  * @param file_metadata_ix
  * @param archive

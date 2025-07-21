@@ -476,11 +476,11 @@ static bool search_archive(
 
     // Load lexers from schema file if it exists
     auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
-    unique_ptr<log_surgeon::lexers::ByteLexer> lexer;
+    auto lexer{std::make_unique<log_surgeon::lexers::ByteLexer>()};
     bool use_heuristic = true;
     if (std::filesystem::exists(schema_file_path)) {
         use_heuristic = false;
-        lexer.reset(new log_surgeon::lexers::ByteLexer());
+        lexer = std::make_unique<log_surgeon::lexers::ByteLexer>();
         load_lexer_from_file(schema_file_path.string(), *lexer);
     }
 
