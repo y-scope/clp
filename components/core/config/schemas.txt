@@ -30,6 +30,9 @@ timestamp:[A-Z][a-z]{2} [ \d]\d \d{2}:\d{2}:\d{2}
 // E.g. 01-21 11:56:42.392
 timestamp:\d{2}\-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}
 
+// E.g. 916321
+timestamp:\d+
+
 // ===
 // Timestamps currently missing log boundary support
 // ===
