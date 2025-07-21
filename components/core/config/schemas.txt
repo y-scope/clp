@@ -92,7 +92,7 @@ float:\-{0,1}[0-9]+\.[0-9]+
 
 hex:[a-fA-F]+
 
-// Note: the way `equals` and `hasNumber` are written only work if `=` is a delimiter, due to
+// NOTE: `equals` and `hasNumber` only work if `=` is a delimiter, due to
 // https://github.com/y-scope/log-surgeon/issues/131
 equals:.*=(?<val>.*[a-zA-Z0-9].*)
 hasNumber:.*\d.*
