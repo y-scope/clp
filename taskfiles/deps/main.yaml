@@ -233,7 +233,8 @@ tasks:
             - "-DENABLE_OPENSSL=OFF"
           LIB_NAME: "LibArchive"
           TARBALL_SHA256: "169b56714b620c3f8f07bf7975aba8573b9bd25e423e5c4f0cc9b52450a2403d"
-          TARBALL_URL: "https://github.com/libarchive/libarchive/releases/download/v3.8.1/libarchive-3.8.1.tar.gz"
+          TARBALL_URL: "https://github.com/libarchive/libarchive/releases/download/v3.8.1\
+          /libarchive-3.8.1.tar.gz"
 
   log-surgeon:
     internal: true
