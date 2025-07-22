@@ -65,6 +65,7 @@ tasks:
       - task: "catch2"
       - task: "date"
       - task: "fmt"
+      - task: "libarchive"
       - task: "log-surgeon"
       - task: "mongocxx"
       - task: "nlohmann_json"
@@ -216,6 +217,23 @@ tasks:
           LIB_NAME: "{{.G_FMT_LIB_NAME}}"
           TARBALL_SHA256: "1250e4cc58bf06ee631567523f48848dc4596133e163f02615c97f78bab6c811"
           TARBALL_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.tar.gz"
+
+  libarchive:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_LIBDIR=lib"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CORE_DIR}}/libarchive-install"
+            - "-DENABLE_EXPAT=OFF"
+            - "-DENABLE_OPENSSL=OFF"
+          LIB_NAME: "LibArchive"
+          TARBALL_SHA256: "169b56714b620c3f8f07bf7975aba8573b9bd25e423e5c4f0cc9b52450a2403d"
+          TARBALL_URL: "https://github.com/libarchive/libarchive/releases/download/v3.8.1/libarchive-3.8.1.tar.gz"
 
   log-surgeon:
     internal: true
