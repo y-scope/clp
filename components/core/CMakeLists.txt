@@ -183,6 +183,16 @@ if(CLP_NEED_LOG_SURGEON)
     endif()
 endif()
 
+if(CLP_NEED_LZ4)
+    if(CLP_USE_STATIC_LIBS)
+        set(LZ4_USE_STATIC_LIBS ON)
+    endif()
+    find_package(LZ4 REQUIRED)
+    if (LZ4_FOUND)
+        message(STATUS "Found LZ4 ${LZ4_VERSION}")
+    endif()
+endif()
+
 if(CLP_NEED_NLOHMANN_JSON)
     find_package(nlohmann_json REQUIRED)
     if(nlohmann_json_FOUND)
@@ -286,6 +296,16 @@ endif()
 if(CLP_NEED_YSTDLIB)
     set(YSTDLIB_CPP_BUILD_TESTING OFF)
     add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
+endif()
+
+# Find and setup ZLIB
+if(CLP_NEED_ZLIB)
+    find_package(ZLIB REQUIRED)
+    if(ZLIB_FOUND)
+        message(STATUS "Found ZLIB ${ZLIB_VERSION_STRING}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZLIB")
+    endif()
 endif()
 
 # Find and setup ZStd Library
@@ -743,32 +763,33 @@ if(CLP_BUILD_TESTING)
             )
     target_link_libraries(unitTest
             PRIVATE
+            ${CURL_LIBRARIES}
+            ${LIBLZMA_LIBRARIES}
+            ${MONGOCXX_TARGET}
+            ${sqlite_LIBRARY_DEPENDENCIES}
+            ${STD_FS_LIBS}
             absl::flat_hash_map
             Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
             Catch2::Catch2
-            ${CURL_LIBRARIES}
+            clp::regex_utils
+            clp::string_utils
             clp_s::search::ast
             clp_s::search::kql
             clp_s::search::sql
             clp_s::timestamp_pattern
             date::date
             fmt::fmt
-            log_surgeon::log_surgeon
             LibArchive::LibArchive
+            LZ4::LZ4
+            log_surgeon::log_surgeon
             MariaDBClient::MariaDBClient
-            ${MONGOCXX_TARGET}
             nlohmann_json::nlohmann_json
+            OpenSSL::Crypto
             simdjson::simdjson
             spdlog::spdlog
-            OpenSSL::Crypto
-            ${sqlite_LIBRARY_DEPENDENCIES}
-            ${STD_FS_LIBS}
-            clp::regex_utils
-            clp::string_utils
             yaml-cpp
             ystdlib::containers
             ystdlib::error_handling
-            ${LIBLZMA_LIBRARIES}
             ZStd::ZStd
             )
     target_compile_features(unitTest

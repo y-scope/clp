@@ -138,6 +138,8 @@ function(set_clp_binaries_dependencies)
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_LOG_SURGEON
+        CLP_NEED_LZ4
+        CLP_NEED_LZMA
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
         CLP_NEED_MSGPACKCXX
@@ -148,6 +150,7 @@ function(set_clp_binaries_dependencies)
         CLP_NEED_SQLITE
         CLP_NEED_YAMLCPP
         CLP_NEED_YSTDLIB
+        CLP_NEED_ZLIB
         CLP_NEED_ZSTD
     )
 endfunction()
@@ -172,6 +175,7 @@ function(set_clp_tests_dependencies)
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
         CLP_NEED_LOG_SURGEON
+        CLP_NEED_LZ4
         CLP_NEED_LZMA
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
@@ -456,6 +460,7 @@ function (convert_clp_dependency_properties_to_variables)
         CLP_NEED_FMT
         CLP_NEED_LOG_SURGEON
         CLP_NEED_LIBARCHIVE
+        CLP_NEED_LZ4
         CLP_NEED_LZMA
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
@@ -467,6 +472,7 @@ function (convert_clp_dependency_properties_to_variables)
         CLP_NEED_SQLITE
         CLP_NEED_YAMLCPP
         CLP_NEED_YSTDLIB
+        CLP_NEED_ZLIB
         CLP_NEED_ZSTD
     )
 
