@@ -228,7 +228,7 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_LIBDIR=lib"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-            - "-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CORE_DIR}}/libarchive-install"
+            - "-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CORE_DIR}}/LibArchive-install"
             - "-DENABLE_EXPAT=OFF"
             - "-DENABLE_OPENSSL=OFF"
           LIB_NAME: "LibArchive"
