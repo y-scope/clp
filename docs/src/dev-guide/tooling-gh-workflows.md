@@ -21,23 +21,20 @@ shown below.
       "primaryColor": "#0066cc",
       "primaryTextColor": "#fff",
       "primaryBorderColor": "transparent",
-      "lineColor": "#9580ff",
-      "secondaryColor": "#9580ff",
+      "lineColor": "#007fff",
+      "secondaryColor": "#007fff",
       "tertiaryColor": "#fff"
     }
   }
 }%%
-flowchart LR
+flowchart TD
     filter-relevant-changes --> centos-stream-9-deps-image
-    filter-relevant-changes --> ubuntu-focal-deps-image
     filter-relevant-changes --> ubuntu-jammy-deps-image
     filter-relevant-changes --> centos-stream-9-binaries
-    filter-relevant-changes --> ubuntu-focal-binaries
     filter-relevant-changes --> ubuntu-jammy-binaries
     centos-stream-9-deps-image --> centos-stream-9-binaries
-    ubuntu-focal-deps-image --> ubuntu-focal-binaries
     ubuntu-jammy-deps-image --> ubuntu-jammy-binaries
-    ubuntu-focal-binaries --> ubuntu-focal-binaries-image
+    ubuntu-jammy-binaries --> ubuntu-jammy-binaries-image
 :::
 
 Arrows between jobs indicate a dependency. The jobs are as follows:
@@ -46,18 +43,14 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
   the following jobs should run.
 * `centos-stream-9-deps-image`: Builds a container image containing the dependencies necessary to
   build CLP-core in a CentOS Stream 9 x86 environment.
-* `ubuntu-focal-deps-image`: Builds a container image containing the dependencies necessary to build
-  CLP-core in an Ubuntu Focal x86 environment.
 * `ubuntu-jammy-deps-image`: Builds a container image containing the dependencies necessary to build
   CLP-core in an Ubuntu Jammy x86 environment.
 * `centos-stream-9-binaries`: Builds the CLP-core binaries in the built CentOS Stream 9 container
   and runs core's unit tests.
-* `ubuntu-focal-binaries`: Builds the CLP-core binaries in the built Ubuntu Focal container and runs
-  core's unit tests.
 * `ubuntu-jammy-binaries`: Builds the CLP-core binaries in the built Ubuntu Jammy container and runs
   core's unit tests.
-* `ubuntu-focal-binaries-image`: Builds an Ubuntu Focal container image containing CLP-core's
-  binaries built in the `ubuntu-focal-binaries` job.
+* `ubuntu-jammy-binaries-image`: Builds an Ubuntu Jammy container image containing CLP-core's
+  binaries built in the `ubuntu-jammy-binaries` job.
 
 When the PR or commit doesn't change any of the files that affect CLP's dependencies (or the
 dependency container images), then the dependency container images won't be rebuilt; instead the
@@ -71,7 +64,7 @@ Actions, and then dependent jobs will download and load the image(s) from there.
 
 Note that for the images containing CLP's dependencies (built by the `xxx-deps-image` jobs), we need
 to build and test an image for each Linux distro where we support building CLP natively. However,
-for the image containing CLP's binaries (built by the `ubuntu-focal-binaries-image` job), we only
+for the image containing CLP's binaries (built by the `ubuntu-jammy-binaries-image` job), we only
 need it for one OS since users can use the container on any OS.
 
 ## clp-core-build-macos

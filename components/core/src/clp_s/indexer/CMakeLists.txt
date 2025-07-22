@@ -1,0 +1,108 @@
+set(
+        INDEXER_SOURCES
+        ../../clp/aws/AwsAuthenticationSigner.cpp
+        ../../clp/aws/AwsAuthenticationSigner.hpp
+        ../../clp/BoundedReader.cpp
+        ../../clp/BoundedReader.hpp
+        ../../clp/CurlDownloadHandler.cpp
+        ../../clp/CurlDownloadHandler.hpp
+        ../../clp/CurlEasyHandle.hpp
+        ../../clp/CurlGlobalInstance.cpp
+        ../../clp/CurlGlobalInstance.hpp
+        ../../clp/CurlOperationFailed.hpp
+        ../../clp/CurlStringList.hpp
+        ../../clp/database_utils.cpp
+        ../../clp/database_utils.hpp
+        ../../clp/FileReader.cpp
+        ../../clp/FileReader.hpp
+        ../../clp/GlobalMetadataDBConfig.cpp
+        ../../clp/GlobalMetadataDBConfig.hpp
+        ../../clp/hash_utils.cpp
+        ../../clp/hash_utils.hpp
+        ../../clp/MySQLDB.cpp
+        ../../clp/MySQLDB.hpp
+        ../../clp/MySQLParamBindings.cpp
+        ../../clp/MySQLParamBindings.hpp
+        ../../clp/MySQLPreparedStatement.cpp
+        ../../clp/MySQLPreparedStatement.hpp
+        ../../clp/NetworkReader.cpp
+        ../../clp/NetworkReader.hpp
+        ../../clp/ReaderInterface.cpp
+        ../../clp/ReaderInterface.hpp
+        ../../clp/Thread.cpp
+        ../../clp/Thread.hpp
+        ../archive_constants.hpp
+        ../ArchiveReader.cpp
+        ../ArchiveReader.hpp
+        ../ArchiveReaderAdaptor.cpp
+        ../ArchiveReaderAdaptor.hpp
+        ../ColumnReader.cpp
+        ../ColumnReader.hpp
+        ../DictionaryReader.hpp
+        ../DictionaryEntry.cpp
+        ../DictionaryEntry.hpp
+        ../FileReader.cpp
+        ../FileReader.hpp
+        ../FileWriter.cpp
+        ../FileWriter.hpp
+        ../InputConfig.cpp
+        ../InputConfig.hpp
+        ../PackedStreamReader.cpp
+        ../PackedStreamReader.hpp
+        ../ReaderUtils.cpp
+        ../ReaderUtils.hpp
+        ../SchemaReader.cpp
+        ../SchemaReader.hpp
+        ../SchemaTree.cpp
+        ../SchemaTree.hpp
+        ../search/ast/SearchUtils.cpp
+        ../search/ast/SearchUtils.hpp
+        ../TimestampDictionaryReader.cpp
+        ../TimestampDictionaryReader.hpp
+        ../TimestampEntry.cpp
+        ../TimestampEntry.hpp
+        ../TimestampPattern.cpp
+        ../TimestampPattern.hpp
+        ../Utils.cpp
+        ../Utils.hpp
+        ../VariableDecoder.cpp
+        ../VariableDecoder.hpp
+        ../ZstdCompressor.cpp
+        ../ZstdCompressor.hpp
+        ../ZstdDecompressor.cpp
+        ../ZstdDecompressor.hpp
+        CommandLineArguments.cpp
+        CommandLineArguments.hpp
+        indexer.cpp
+        IndexManager.cpp
+        IndexManager.hpp
+        MySQLIndexStorage.cpp
+        MySQLIndexStorage.hpp
+)
+
+if(CLP_BUILD_EXECUTABLES)
+        add_executable(indexer ${INDEXER_SOURCES})
+        target_compile_features(indexer PRIVATE cxx_std_20)
+        target_link_libraries(indexer
+                PRIVATE
+                absl::flat_hash_map
+                Boost::iostreams Boost::program_options Boost::url
+                ${CURL_LIBRARIES}
+                clp::string_utils
+                date::date
+                MariaDBClient::MariaDBClient
+                nlohmann_json::nlohmann_json
+                OpenSSL::Crypto
+                simdjson::simdjson
+                spdlog::spdlog
+                yaml-cpp
+                ystdlib::containers
+                ZStd::ZStd
+        )
+        # Put the built executable at the root of the build directory
+        set_target_properties(
+                indexer
+                PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+        )
+endif()

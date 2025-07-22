@@ -1,0 +1,113 @@
+version: "3"
+
+vars:
+  # Paths
+  G_DOCS_BUILD_DIR: "{{.G_BUILD_DIR}}/docs/html"
+  G_DOCS_VENV_DIR: "{{.G_BUILD_DIR}}/docs-venv"
+  G_NODE_DEPS_DIR: "{{.G_BUILD_DIR}}/docs-node"
+
+tasks:
+  clean:
+    cmds:
+      - "rm -rf '{{.G_DOCS_BUILD_DIR}}'"
+
+  serve:
+    deps:
+      - "http-server"
+      - "site"
+    cmds:
+      - "npm --prefix '{{.G_NODE_DEPS_DIR}}' exec http-server '{{.G_DOCS_BUILD_DIR}}' -c-1"
+
+  site:
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.G_DOCS_BUILD_DIR}}"
+    sources:
+      - "{{.G_BUILD_DIR}}/docs-venv.md5"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.TASKFILE}}"
+      - "conf/**/*"
+      - "src/**/*"
+    dir: "{{.ROOT_DIR}}/docs"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - ":init"
+      - task: ":utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+      - "docs-venv"
+    cmds:
+      # Call `clean` before building since `sphinx-build --write-all --fresh-env` isn't always
+      # equivalent to building from scratch.
+      - task: "clean"
+      - "python3 '{{.ROOT_DIR}}/tools/scripts/find-broken-docs-links.py'"
+      - |-
+        . "{{.G_DOCS_VENV_DIR}}/bin/activate"
+        sphinx-build \
+          --write-all \
+          --fresh-env \
+          --conf-dir conf \
+          --nitpicky \
+          --fail-on-warning \
+          --keep-going \
+          --builder html \
+          src "{{.OUTPUT_DIR}}"
+      # This command must be last
+      - task: ":utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
+  docs-venv:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.G_DOCS_VENV_DIR}}"
+      REQUIREMENTS_FILE: "{{.ROOT_DIR}}/docs/requirements.txt"
+    sources:
+      - "{{.REQUIREMENTS_FILE}}"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - ":init"
+      - task: ":utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    cmds:
+      - task: ":utils:misc:create-venv"
+        vars:
+          LABEL: "docs"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          REQUIREMENTS_FILE: "{{.REQUIREMENTS_FILE}}"
+      # This command must be last
+      - task: ":utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
+  http-server:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.G_NODE_DEPS_DIR}}"
+    sources:
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.TASKFILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - ":init"
+      - task: ":utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "npm --prefix '{{.OUTPUT_DIR}}' install http-server"
+      # This command must be last
+      - task: ":utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]

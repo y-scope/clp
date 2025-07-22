@@ -2,6 +2,7 @@ import enum
 import errno
 import os
 import pathlib
+import re
 import secrets
 import socket
 import subprocess
@@ -15,12 +16,17 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLPConfig,
     DB_COMPONENT_NAME,
-    LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    StorageType,
     WEBUI_COMPONENT_NAME,
+    WorkerConfig,
+)
+from clp_py_utils.clp_metadata_db_utils import (
+    MYSQL_TABLE_NAME_MAX_LEN,
+    TABLE_SUFFIX_MAX_LEN,
 )
 from clp_py_utils.core import (
     get_config_value,
@@ -33,8 +39,10 @@ from strenum import KebabCaseStrEnum
 # CONSTANTS
 EXTRACT_FILE_CMD = "x"
 EXTRACT_IR_CMD = "i"
+EXTRACT_JSON_CMD = "j"
 
 # Paths
+CONTAINER_AWS_CONFIG_DIRECTORY = pathlib.Path("/") / ".aws"
 CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
 CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
 CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yml"
@@ -84,7 +92,8 @@ class CLPDockerMounts:
         self.data_dir: typing.Optional[DockerMount] = None
         self.logs_dir: typing.Optional[DockerMount] = None
         self.archives_output_dir: typing.Optional[DockerMount] = None
-        self.ir_output_dir: typing.Optional[DockerMount] = None
+        self.stream_output_dir: typing.Optional[DockerMount] = None
+        self.aws_config_dir: typing.Optional[DockerMount] = None
 
 
 def get_clp_home():
@@ -106,7 +115,7 @@ def get_clp_home():
     return clp_home.resolve()
 
 
-def generate_container_name(job_type: JobType) -> str:
+def generate_container_name(job_type: str) -> str:
     """
     :param job_type:
     :return: A unique container name for the given job type.
@@ -214,15 +223,15 @@ def generate_container_config(
 
     docker_mounts = CLPDockerMounts(clp_home, CONTAINER_CLP_HOME)
 
-    input_logs_dir = clp_config.input_logs_directory.resolve()
-    container_clp_config.input_logs_directory = (
-        CONTAINER_INPUT_LOGS_ROOT_DIR / input_logs_dir.relative_to(input_logs_dir.anchor)
-    )
-    docker_mounts.input_logs_dir = DockerMount(
-        DockerMountType.BIND, input_logs_dir, container_clp_config.input_logs_directory, True
-    )
+    if StorageType.FS == clp_config.logs_input.type:
+        input_logs_dir = clp_config.logs_input.directory.resolve()
+        container_clp_config.logs_input.directory = (
+            CONTAINER_INPUT_LOGS_ROOT_DIR / input_logs_dir.relative_to(input_logs_dir.anchor)
+        )
+        docker_mounts.input_logs_dir = DockerMount(
+            DockerMountType.BIND, input_logs_dir, container_clp_config.logs_input.directory, True
+        )
 
-    container_clp_config.data_directory = CONTAINER_CLP_HOME / "var" / "data"
     if not is_path_already_mounted(
         clp_home, CONTAINER_CLP_HOME, clp_config.data_directory, container_clp_config.data_directory
     ):
@@ -230,7 +239,6 @@ def generate_container_config(
             DockerMountType.BIND, clp_config.data_directory, container_clp_config.data_directory
         )
 
-    container_clp_config.logs_directory = CONTAINER_CLP_HOME / "var" / "log"
     if not is_path_already_mounted(
         clp_home, CONTAINER_CLP_HOME, clp_config.logs_directory, container_clp_config.logs_directory
     ):
@@ -238,33 +246,51 @@ def generate_container_config(
             DockerMountType.BIND, clp_config.logs_directory, container_clp_config.logs_directory
         )
 
-    container_clp_config.archive_output.directory = pathlib.Path("/") / "mnt" / "archive-output"
     if not is_path_already_mounted(
         clp_home,
         CONTAINER_CLP_HOME,
-        clp_config.archive_output.directory,
-        container_clp_config.archive_output.directory,
+        clp_config.archive_output.get_directory(),
+        container_clp_config.archive_output.get_directory(),
     ):
         docker_mounts.archives_output_dir = DockerMount(
             DockerMountType.BIND,
-            clp_config.archive_output.directory,
-            container_clp_config.archive_output.directory,
+            clp_config.archive_output.get_directory(),
+            container_clp_config.archive_output.get_directory(),
         )
 
-    container_clp_config.ir_output.directory = pathlib.Path("/") / "mnt" / "ir-output"
     if not is_path_already_mounted(
         clp_home,
         CONTAINER_CLP_HOME,
-        clp_config.ir_output.directory,
-        container_clp_config.ir_output.directory,
+        clp_config.stream_output.get_directory(),
+        container_clp_config.stream_output.get_directory(),
     ):
-        docker_mounts.ir_output_dir = DockerMount(
+        docker_mounts.stream_output_dir = DockerMount(
             DockerMountType.BIND,
-            clp_config.ir_output.directory,
-            container_clp_config.ir_output.directory,
+            clp_config.stream_output.get_directory(),
+            container_clp_config.stream_output.get_directory(),
         )
 
+    # Only create the mount if the directory exists
+    if clp_config.aws_config_directory is not None:
+        container_clp_config.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
+        docker_mounts.aws_config_dir = DockerMount(
+            DockerMountType.BIND,
+            clp_config.aws_config_directory,
+            container_clp_config.aws_config_directory,
+        )
     return container_clp_config, docker_mounts
+
+
+def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
+    worker_config = WorkerConfig()
+    worker_config.package = clp_config.package.copy(deep=True)
+    worker_config.archive_output = clp_config.archive_output.copy(deep=True)
+    worker_config.data_directory = clp_config.data_directory
+
+    worker_config.stream_output = clp_config.stream_output
+    worker_config.stream_collection_name = clp_config.results_cache.stream_collection_name
+
+    return worker_config
 
 
 def dump_container_config(
@@ -343,6 +369,9 @@ def load_config_file(
 
     clp_config.make_config_paths_absolute(clp_home)
     clp_config.load_execution_container_name()
+
+    validate_path_for_container_mount(clp_config.data_directory)
+    validate_path_for_container_mount(clp_config.logs_directory)
 
     # Make data and logs directories node-specific
     hostname = socket.gethostname()
@@ -480,35 +509,84 @@ def validate_results_cache_config(
 
 
 def validate_worker_config(clp_config: CLPConfig):
-    clp_config.validate_input_logs_dir()
-    clp_config.validate_archive_output_dir()
-    clp_config.validate_ir_output_dir()
+    clp_config.validate_logs_input_config()
+    clp_config.validate_archive_output_config()
+    clp_config.validate_stream_output_config()
+
+    validate_path_for_container_mount(clp_config.archive_output.get_directory())
+    validate_path_for_container_mount(clp_config.stream_output.get_directory())
 
 
 def validate_webui_config(
-    clp_config: CLPConfig, logs_dir: pathlib.Path, settings_json_path: pathlib.Path
+    clp_config: CLPConfig,
+    client_settings_json_path: pathlib.Path,
+    server_settings_json_path: pathlib.Path,
 ):
-    if not settings_json_path.exists():
-        raise ValueError(
-            f"{WEBUI_COMPONENT_NAME} {settings_json_path} is not a valid path to Meteor settings.json"
-        )
-
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{WEBUI_COMPONENT_NAME} logs directory is invalid: {ex}")
+    for path in [client_settings_json_path, server_settings_json_path]:
+        if not path.exists():
+            raise ValueError(f"{WEBUI_COMPONENT_NAME} {path} is not a valid path to settings.json")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
 
 
-def validate_log_viewer_webui_config(clp_config: CLPConfig, settings_json_path: pathlib.Path):
-    if not settings_json_path.exists():
+def validate_path_for_container_mount(path: pathlib.Path) -> None:
+    RESTRICTED_PREFIXES: List[pathlib.Path] = [
+        CONTAINER_AWS_CONFIG_DIRECTORY,
+        CONTAINER_CLP_HOME,
+        CONTAINER_INPUT_LOGS_ROOT_DIR,
+        pathlib.Path("/bin"),
+        pathlib.Path("/boot"),
+        pathlib.Path("/dev"),
+        pathlib.Path("/etc"),
+        pathlib.Path("/lib"),
+        pathlib.Path("/lib32"),
+        pathlib.Path("/lib64"),
+        pathlib.Path("/libx32"),
+        pathlib.Path("/proc"),
+        pathlib.Path("/root"),
+        pathlib.Path("/run"),
+        pathlib.Path("/sbin"),
+        pathlib.Path("/srv"),
+        pathlib.Path("/sys"),
+        pathlib.Path("/usr"),
+        pathlib.Path("/var"),
+    ]
+
+    if not path.is_absolute():
+        raise ValueError(f"Path: `{path}` must be absolute:")
+
+    for prefix in RESTRICTED_PREFIXES:
+        if path.is_relative_to(prefix):
+            raise ValueError(
+                f"Invalid path: `{path}` cannot be under '{prefix}' which may overlap with a path"
+                f" in the container."
+            )
+
+
+def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
+    """
+    Validates that the given dataset name abides by the following rules:
+    - Its length won't cause any metadata table names to exceed MySQL's max table name length.
+    - It only contains alphanumeric characters and underscores.
+
+    :param clp_table_prefix:
+    :param dataset_name:
+    :raise: ValueError if the dataset name is invalid.
+    """
+    if re.fullmatch(r"\w+", dataset_name) is None:
         raise ValueError(
-            f"{WEBUI_COMPONENT_NAME} {settings_json_path} is not a valid path to settings.json"
+            f"Invalid dataset name: `{dataset_name}`. Names can only contain alphanumeric"
+            f" characters and underscores."
         )
 
-    validate_port(
-        f"{LOG_VIEWER_WEBUI_COMPONENT_NAME}.port",
-        clp_config.log_viewer_webui.host,
-        clp_config.log_viewer_webui.port,
+    dataset_name_max_len = (
+        MYSQL_TABLE_NAME_MAX_LEN
+        - len(clp_table_prefix)
+        - 1  # For the separator between the dataset name and the table suffix
+        - TABLE_SUFFIX_MAX_LEN
     )
+    if len(dataset_name) > dataset_name_max_len:
+        raise ValueError(
+            f"Invalid dataset name: `{dataset_name}`. Names can only be a maximum of"
+            f" {dataset_name_max_len} characters long."
+        )

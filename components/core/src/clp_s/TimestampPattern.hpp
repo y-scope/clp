@@ -6,10 +6,12 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <utility>
 
 #include "Defs.hpp"
-#include "FileWriter.hpp"
+#include "ErrorCode.hpp"
 #include "TraceableException.hpp"
 
 namespace clp_s {
@@ -69,7 +71,10 @@ public:
 
     // Methods
     /**
-     * Static initializer for class. This must be called before using the class.
+     * Initializes global data required by this class. This function must be called before any other
+     * methods of the class are used.
+     *
+     * Note: this function is NOT thread-safe.
      */
     static void init();
 
@@ -83,7 +88,7 @@ public:
      * @return pointer to the timestamp pattern if found, nullptr otherwise
      */
     static TimestampPattern const* search_known_ts_patterns(
-            std::string const& line,
+            std::string_view line,
             epochtime_t& timestamp,
             size_t& timestamp_begin_pos,
             size_t& timestamp_end_pos
@@ -121,7 +126,7 @@ public:
      * @return true if parsed successfully, false otherwise
      */
     bool parse_timestamp(
-            std::string const& line,
+            std::string_view line,
             epochtime_t& timestamp,
             size_t& timestamp_begin_pos,
             size_t& timestamp_end_pos

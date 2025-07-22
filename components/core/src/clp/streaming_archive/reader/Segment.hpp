@@ -2,12 +2,12 @@
 #define CLP_STREAMING_ARCHIVE_READER_SEGMENT_HPP
 
 #include <memory>
+#include <optional>
 #include <string>
-
-#include <boost/iostreams/device/mapped_file.hpp>
 
 #include "../../Defs.h"
 #include "../../ErrorCode.hpp"
+#include "../../ReadOnlyMemoryMappedFile.hpp"
 #include "../../streaming_compression/passthrough/Decompressor.hpp"
 #include "../../streaming_compression/zstd/Decompressor.hpp"
 #include "../Constants.hpp"
@@ -20,7 +20,7 @@ namespace clp::streaming_archive::reader {
 class Segment {
 public:
     // Constructor
-    Segment() : m_segment_path({}) {};
+    Segment() : m_segment_path({}) {}
 
     // Destructor
     ~Segment();
@@ -53,7 +53,7 @@ public:
 
 private:
     std::string m_segment_path;
-    boost::iostreams::mapped_file_source m_memory_mapped_segment_file;
+    std::optional<ReadOnlyMemoryMappedFile> m_memory_mapped_segment_file;
 
 #if USE_PASSTHROUGH_COMPRESSION
     streaming_compression::passthrough::Decompressor m_decompressor;

@@ -3,9 +3,9 @@
 
 #include <map>
 #include <optional>
+#include <utility>
 
 #include "FileReader.hpp"
-#include "search/FilterOperation.hpp"
 #include "TimestampEntry.hpp"
 #include "TimestampPattern.hpp"
 #include "ZstdDecompressor.hpp"
@@ -21,25 +21,13 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    // Constructors
-    TimestampDictionaryReader() : m_is_open(false) {}
-
     // Methods
     /**
-     * Opens dictionary for reading
-     * @param dictionary_path
+     * Reads the timestamp dictionary from a decompressor
+     * @param decompressor
+     * @return ErrorCodeSuccess on success, and the relevant ErrorCode otherwise
      */
-    void open(std::string const& dictionary_path);
-
-    /**
-     * Closes the dictionary
-     */
-    void close();
-
-    /**
-     * Reads any new entries from disk
-     */
-    void read_new_entries();
+    ErrorCode read(ZstdDecompressor& decompressor);
 
     /**
      * Gets the string encoding for a given epoch and format ID
@@ -64,7 +52,8 @@ public:
 
     auto tokenized_column_to_range_end() const { return m_tokenized_column_to_range.end(); }
 
-    std::optional<std::vector<std::string>>& get_authoritative_timestamp_tokenized_column() {
+    std::optional<std::pair<std::vector<std::string>, std::string>>&
+    get_authoritative_timestamp_tokenized_column() {
         return m_authoritative_timestamp_tokenized_column;
     }
 
@@ -78,15 +67,12 @@ private:
             = std::vector<std::pair<std::vector<std::string>, TimestampEntry*>>;
 
     // Variables
-    bool m_is_open;
-    FileReader m_dictionary_file_reader;
-    ZstdDecompressor m_dictionary_decompressor;
-
     id_to_pattern_t m_patterns;
     std::vector<TimestampEntry> m_entries;
     tokenized_column_to_range_t m_tokenized_column_to_range;
 
-    std::optional<std::vector<std::string>> m_authoritative_timestamp_tokenized_column;
+    std::optional<std::pair<std::vector<std::string>, std::string>>
+            m_authoritative_timestamp_tokenized_column;
     std::unordered_set<int32_t> m_authoritative_timestamp_column_ids;
 };
 }  // namespace clp_s

@@ -3,8 +3,9 @@
 #include "ZstdDecompressor.hpp"
 
 #include <algorithm>
+#include <filesystem>
 
-#include <boost/filesystem.hpp>
+#include <boost/iostreams/device/mapped_file.hpp>
 #include <spdlog/spdlog.h>
 
 namespace clp_s {
@@ -75,6 +76,30 @@ ZstdDecompressor::try_read(char const* buf, size_t num_bytes_to_read, size_t& nu
                             }
                         } else {
                             return error_code;
+                        }
+                    }
+
+                    m_compressed_stream_block.pos = 0;
+                    m_compressed_stream_block.size = m_file_read_buffer_length;
+                    break;
+                }
+                case InputType::ClpReader: {
+                    auto error_code = m_reader->try_read(
+                            reinterpret_cast<char*>(m_file_read_buffer.get()),
+                            m_file_read_buffer_capacity,
+                            m_file_read_buffer_length
+                    );
+                    if (clp::ErrorCode::ErrorCode_Success != error_code) {
+                        if (clp::ErrorCode::ErrorCode_EndOfFile == error_code) {
+                            num_bytes_read = decompressed_stream_block.pos;
+                            if (0 == decompressed_stream_block.pos) {
+                                return ErrorCodeEndOfFile;
+                            } else {
+                                return ErrorCodeSuccess;
+                            }
+                        } else {
+                            // TODO: attempt to translate clp error codes
+                            return ErrorCodeFailure;
                         }
                     }
 
@@ -161,6 +186,28 @@ void ZstdDecompressor::open(FileReader& file_reader, size_t file_read_buffer_cap
     reset_stream();
 }
 
+void ZstdDecompressor::open(clp::ReaderInterface& reader, size_t file_read_buffer_capacity) {
+    if (InputType::NotInitialized != m_input_type) {
+        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
+    }
+    m_input_type = InputType::ClpReader;
+
+    m_reader = &reader;
+    m_file_reader_initial_pos = m_reader->get_pos();
+
+    // Avoid reallocating the internal buffer if this instance is being re-used with an
+    // unchanged buffer size.
+    if (file_read_buffer_capacity != m_file_read_buffer_capacity) {
+        m_file_read_buffer_capacity = file_read_buffer_capacity;
+        m_file_read_buffer = std::make_unique<char[]>(m_file_read_buffer_capacity);
+    }
+    m_file_read_buffer_length = 0;
+
+    m_compressed_stream_block = {m_file_read_buffer.get(), m_file_read_buffer_length, 0};
+
+    reset_stream();
+}
+
 void ZstdDecompressor::close() {
     switch (m_input_type) {
         case InputType::MemoryMappedCompressedFile:
@@ -170,10 +217,12 @@ void ZstdDecompressor::close() {
             }
             break;
         case InputType::File:
+        case InputType::ClpReader:
             m_file_read_buffer.reset();
             m_file_read_buffer_capacity = 0;
             m_file_read_buffer_length = 0;
             m_file_reader = nullptr;
+            m_reader = nullptr;
             break;
         case InputType::CompressedDataBuf:
         case InputType::NotInitialized:
@@ -186,7 +235,7 @@ void ZstdDecompressor::close() {
 }
 
 void ZstdDecompressor::close_for_reuse() {
-    if (InputType::File != m_input_type) {
+    if (false == (InputType::File == m_input_type || InputType::ClpReader == m_input_type)) {
         close();
         return;
     }
@@ -202,14 +251,13 @@ ErrorCode ZstdDecompressor::open(std::string const& compressed_file_path) {
     m_input_type = InputType::MemoryMappedCompressedFile;
 
     // Create memory mapping for compressed_file_path, use boost read only memory mapped file
-    boost::system::error_code boost_error_code;
-    size_t compressed_file_size
-            = boost::filesystem::file_size(compressed_file_path, boost_error_code);
-    if (boost_error_code) {
+    std::error_code error_code;
+    size_t compressed_file_size = std::filesystem::file_size(compressed_file_path, error_code);
+    if (error_code) {
         SPDLOG_ERROR(
                 "ZstdDecompressor: Unable to obtain file size for '{}' - {}.",
                 compressed_file_path.c_str(),
-                boost_error_code.message().c_str()
+                error_code.message().c_str()
         );
         return ErrorCodeFailure;
     }
@@ -218,8 +266,9 @@ ErrorCode ZstdDecompressor::open(std::string const& compressed_file_path) {
     memory_map_params.path = compressed_file_path;
     memory_map_params.flags = boost::iostreams::mapped_file::readonly;
     memory_map_params.length = compressed_file_size;
-    memory_map_params.hint = m_memory_mapped_compressed_file.data(
-    );  // Try to map it to the same memory location as previous memory mapped file
+    memory_map_params.hint
+            = m_memory_mapped_compressed_file.data();  // Try to map it to the same memory location
+                                                       // as previous memory mapped file
     m_memory_mapped_compressed_file.open(memory_map_params);
     if (false == m_memory_mapped_compressed_file.is_open()) {
         SPDLOG_ERROR(
@@ -239,9 +288,23 @@ ErrorCode ZstdDecompressor::open(std::string const& compressed_file_path) {
 
 void ZstdDecompressor::reset_stream() {
     if (InputType::File == m_input_type) {
-        m_file_reader->seek_from_begin(m_file_reader_initial_pos);
+        if (auto rc = m_file_reader->try_seek_from_begin(m_file_reader_initial_pos);
+            ErrorCodeSuccess != rc && ErrorCodeEndOfFile != rc)
+        {
+            throw OperationFailed(rc, __FILENAME__, __LINE__);
+        }
         m_file_read_buffer_length = 0;
         m_compressed_stream_block.size = m_file_read_buffer_length;
+    } else if (InputType::ClpReader == m_input_type) {
+        auto rc = m_reader->try_seek_from_begin(m_file_reader_initial_pos);
+        m_file_read_buffer_length = 0;
+        m_compressed_stream_block.size = m_file_read_buffer_length;
+        if (false
+            == (clp::ErrorCode::ErrorCode_Success == rc
+                || clp::ErrorCode::ErrorCode_EndOfFile == rc))
+        {
+            throw OperationFailed(static_cast<ErrorCode>(rc), __FILENAME__, __LINE__);
+        }
     }
 
     ZSTD_initDStream(m_decompression_stream);

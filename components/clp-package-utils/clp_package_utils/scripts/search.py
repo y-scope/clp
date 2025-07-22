@@ -7,6 +7,11 @@ import sys
 import uuid
 
 import yaml
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATASET_NAME,
+    StorageEngine,
+    StorageType,
+)
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -18,17 +23,10 @@ from clp_package_utils.general import (
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
+    validate_dataset_name,
 )
 
-# Setup logging
-# Create logger
 logger = logging.getLogger(__file__)
-logger.setLevel(logging.INFO)
-# Setup console logging
-logging_console_handler = logging.StreamHandler()
-logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] [%(name)s] %(message)s")
-logging_console_handler.setFormatter(logging_formatter)
-logger.addHandler(logging_console_handler)
 
 
 def main(argv):
@@ -44,17 +42,23 @@ def main(argv):
     )
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
+    )
+    args_parser.add_argument(
         "-t", "--tags", help="Comma-separated list of tags of archives to search."
     )
     args_parser.add_argument(
         "--begin-time",
         type=int,
-        help="Time range filter lower-bound (inclusive) as milliseconds" " from the UNIX epoch.",
+        help="Time range filter lower-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
     args_parser.add_argument(
         "--end-time",
         type=int,
-        help="Time range filter upper-bound (inclusive) as milliseconds" " from the UNIX epoch.",
+        help="Time range filter upper-bound (inclusive) as milliseconds from the UNIX epoch.",
     )
     args_parser.add_argument(
         "--ignore-case",
@@ -67,6 +71,9 @@ def main(argv):
         "--count-by-time",
         type=int,
         help="Count the number of results in each time span of the given size (ms).",
+    )
+    args_parser.add_argument(
+        "--raw", action="store_true", help="Output the search results as raw logs."
     )
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -82,7 +89,29 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    container_name = generate_container_name(JobType.SEARCH)
+    storage_type = clp_config.archive_output.storage.type
+    storage_engine = clp_config.package.storage_engine
+    if StorageType.S3 == storage_type and StorageEngine.CLP == storage_engine:
+        logger.error(
+            f"Search is not supported for archive storage type `{storage_type}` with storage engine"
+            f" `{storage_engine}`."
+        )
+        return -1
+
+    dataset = parsed_args.dataset
+    if StorageEngine.CLP_S == storage_engine:
+        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
+        try:
+            clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+            validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
+        except Exception as e:
+            logger.error(e)
+            return -1
+    elif dataset is not None:
+        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+        return -1
+
+    container_name = generate_container_name(str(JobType.SEARCH))
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
@@ -102,6 +131,9 @@ def main(argv):
         parsed_args.wildcard_query,
     ]
     # fmt: on
+    if dataset is not None:
+        search_cmd.append("--dataset")
+        search_cmd.append(dataset)
     if parsed_args.tags:
         search_cmd.append("--tags")
         search_cmd.append(parsed_args.tags)
@@ -121,6 +153,8 @@ def main(argv):
     if parsed_args.count_by_time is not None:
         search_cmd.append("--count-by-time")
         search_cmd.append(str(parsed_args.count_by_time))
+    if parsed_args.raw:
+        search_cmd.append("--raw")
     cmd = container_start_cmd + search_cmd
     subprocess.run(cmd, check=True)
 

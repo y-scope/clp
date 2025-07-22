@@ -1,31 +1,3 @@
-[submodule "components/core/submodules/Catch2"]
-	path = components/core/submodules/Catch2
-	url = https://github.com/catchorg/Catch2.git
-[submodule "components/core/submodules/date"]
-	path = components/core/submodules/date
-	url = https://github.com/HowardHinnant/date.git
-[submodule "components/core/submodules/json"]
-	path = components/core/submodules/json
-	url = https://github.com/nlohmann/json.git
-	shallow = true
-[submodule "components/core/submodules/yaml-cpp"]
-	path = components/core/submodules/yaml-cpp
-	url = https://github.com/jbeder/yaml-cpp.git
-[submodule "components/core/submodules/log-surgeon"]
-	path = components/core/submodules/log-surgeon
-	url = https://github.com/y-scope/log-surgeon.git
-[submodule "components/core/submodules/simdjson"]
-	path = components/core/submodules/simdjson
-	url = https://github.com/simdjson/simdjson.git
-[submodule "components/core/submodules/abseil-cpp"]
-	path = components/core/submodules/abseil-cpp
-	url = https://github.com/abseil/abseil-cpp.git
 [submodule "tools/yscope-dev-utils"]
 	path = tools/yscope-dev-utils
 	url = https://github.com/y-scope/yscope-dev-utils.git
-[submodule "components/core/submodules/outcome"]
-	path = components/core/submodules/outcome
-	url = https://github.com/ned14/outcome.git
-[submodule "components/log-viewer-webui/yscope-log-viewer"]
-	path = components/log-viewer-webui/yscope-log-viewer
-	url = https://github.com/y-scope/yscope-log-viewer.git

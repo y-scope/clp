@@ -1,0 +1,31 @@
+{
+  "extends": "./tsconfig.base.json",
+  "include": [
+    "../src",
+    "../common/**/*"
+  ],
+
+  "compilerOptions": {
+    "lib": [
+      "ES2022",
+      "DOM",
+      "DOM.Iterable"
+    ],
+    "module": "ESNext",
+    "skipLibCheck": true,
+    "target": "ES2022",
+    "tsBuildInfoFile": "../node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "useDefineForClassFields": true,
+    "baseUrl": "../",
+    "paths": {
+      "@common/*": ["../common/*"], // Map imports from "@common/*" to the shared folder
+    },
+
+    /* Bundler mode */
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "moduleDetection": "force",
+    "moduleResolution": "bundler",
+    "noEmit": true
+  }
+}

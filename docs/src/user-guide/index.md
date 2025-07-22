@@ -9,10 +9,18 @@ The sections are as follows:
 :gutter: 2
 
 :::{grid-item-card}
-:link: quick-start-overview
+:link: quick-start/index
 Quick start
 ^^^
-A quick start guide for setting up a CLP cluster, compressing your logs, and searching them.
+A quick-start guide for choosing a flavor of CLP, setting it up, compressing your logs, and
+searching them.
+:::
+
+:::{grid-item-card}
+:link: guides-overview
+Guides
+^^^
+Guides for using CLP in various use cases.
 :::
 
 :::{grid-item-card}
@@ -41,10 +49,19 @@ Reference docs like format specifications, etc.
 :hidden:
 :caption: Quick start
 
-quick-start-overview
-quick-start-cluster-setup/index
-quick-start-compression/index
-quick-start-search/index
+quick-start/index
+quick-start/clp-json
+quick-start/clp-text
+:::
+
+:::{toctree}
+:hidden:
+:caption: Guides
+:glob:
+
+guides-overview
+guides-using-object-storage/index
+guides-multi-node
 :::
 
 :::{toctree}

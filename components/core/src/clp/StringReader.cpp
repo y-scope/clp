@@ -40,6 +40,10 @@ ErrorCode StringReader::try_read(char* buf, size_t num_bytes_to_read, size_t& nu
 }
 
 ErrorCode StringReader::try_seek_from_begin(size_t pos) {
+    if (pos > m_input_string.size()) {
+        m_pos = m_input_string.size();
+        return ErrorCode_EndOfFile;
+    }
     m_pos = pos;
     return ErrorCode_Success;
 }

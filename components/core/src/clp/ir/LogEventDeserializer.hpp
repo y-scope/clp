@@ -3,7 +3,7 @@
 
 #include <optional>
 
-#include <outcome/single-header/outcome.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../ReaderInterface.hpp"
 #include "../time_types.hpp"
@@ -34,8 +34,8 @@ public:
      * - std::errc::protocol_not_supported if the IR stream contains an unsupported metadata format
      *   or uses an unsupported version
      */
-    static auto create(ReaderInterface& reader
-    ) -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>>;
+    static auto create(ReaderInterface& reader)
+            -> ystdlib::error_handling::Result<LogEventDeserializer<encoded_variable_t>>;
 
     // Delete copy constructor and assignment
     LogEventDeserializer(LogEventDeserializer const&) = delete;
@@ -57,12 +57,12 @@ public:
     /**
      * Deserializes a log event from the stream
      * @return A result containing the log event or an error code indicating the failure:
-     * - std::errc::no_message_available on reaching the end of the IR stream
+     * - std::errc::no_message on reaching the end of the IR stream
      * - std::errc::result_out_of_range if the IR stream is truncated
      * - std::errc::protocol_error if the IR stream is corrupted
      */
-    [[nodiscard]] auto deserialize_log_event(
-    ) -> OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>>;
+    [[nodiscard]] auto deserialize_log_event()
+            -> ystdlib::error_handling::Result<LogEvent<encoded_variable_t>>;
 
 private:
     // Constructors

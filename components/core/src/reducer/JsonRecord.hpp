@@ -1,7 +1,7 @@
 #ifndef REDUCER_JSONRECORD_HPP
 #define REDUCER_JSONRECORD_HPP
 
-#include <json/single_include/nlohmann/json.hpp>
+#include <nlohmann/json.hpp>
 
 #include "Record.hpp"
 

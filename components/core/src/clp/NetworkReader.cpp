@@ -6,7 +6,10 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <string>
 #include <string_view>
+#include <unordered_map>
+#include <utility>
 
 #include <curl/curl.h>
 
@@ -105,8 +108,8 @@ extern "C" auto curl_progress_callback(
  * @return On success, the number of bytes processed. If this is less than `nmemb`, the download
  * will be aborted.
  */
-extern "C" auto
-curl_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr) -> size_t {
+extern "C" auto curl_write_callback(char* ptr, size_t size, size_t nmemb, void* reader_ptr)
+        -> size_t {
     return static_cast<NetworkReader*>(reader_ptr)->buffer_downloaded_data({ptr, size * nmemb});
 }
 }  // namespace
@@ -118,7 +121,8 @@ NetworkReader::NetworkReader(
         std::chrono::seconds overall_timeout,
         std::chrono::seconds connection_timeout,
         size_t buffer_pool_size,
-        size_t buffer_size
+        size_t buffer_size,
+        std::optional<std::unordered_map<std::string, std::string>> http_header_kv_pairs
 )
         : m_src_url{src_url},
           m_offset{offset},
@@ -130,7 +134,12 @@ NetworkReader::NetworkReader(
     for (size_t i = 0; i < m_buffer_pool_size; ++i) {
         m_buffer_pool.emplace_back(m_buffer_size);
     }
-    m_downloader_thread = std::make_unique<DownloaderThread>(*this, offset, disable_caching);
+    m_downloader_thread = std::make_unique<DownloaderThread>(
+            *this,
+            offset,
+            disable_caching,
+            std::move(http_header_kv_pairs)
+    );
     m_downloader_thread->start();
 }
 
@@ -215,7 +224,8 @@ auto NetworkReader::DownloaderThread::thread_method() -> void {
                 m_offset,
                 m_disable_caching,
                 m_reader.m_connection_timeout,
-                m_reader.m_overall_timeout
+                m_reader.m_overall_timeout,
+                m_http_header_kv_pairs
         };
         auto const ret_code{curl_handler.perform()};
         // Enqueue the last filled buffer, if any
@@ -242,10 +252,10 @@ auto NetworkReader::acquire_empty_buffer() -> void {
     }
     std::unique_lock<std::mutex> buffer_resource_lock{m_buffer_resource_mutex};
     while (m_filled_buffer_queue.size() == m_buffer_pool_size) {
-        m_downloader_cv.wait(buffer_resource_lock);
         if (is_abort_download_requested()) {
             return;
         }
+        m_downloader_cv.wait(buffer_resource_lock);
     }
     m_curr_downloader_buf.emplace(
             m_buffer_pool.at(m_curr_downloader_buf_idx).data(),
@@ -294,11 +304,9 @@ auto NetworkReader::get_filled_buffer() -> void {
     m_curr_reader_buf.emplace(next_reader_buffer);
 }
 
-auto NetworkReader::read_from_filled_buffers(
-        size_t num_bytes_to_read,
-        size_t& num_bytes_read,
-        char* dst
-) -> ErrorCode {
+auto
+NetworkReader::read_from_filled_buffers(size_t num_bytes_to_read, size_t& num_bytes_read, char* dst)
+        -> ErrorCode {
     num_bytes_read = 0;
     std::optional<BufferView> dst_view;
     if (nullptr != dst) {

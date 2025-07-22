@@ -9,7 +9,6 @@
 #include "LogtypeTable.hpp"
 
 namespace glt::streaming_archive::reader {
-
 class LogtypeTableManager {
 public:
     // Types
@@ -25,7 +24,7 @@ public:
         }
     };
 
-    LogtypeTableManager() : m_is_open(false) {};
+    LogtypeTableManager() : m_is_open(false) {}
 
     /**
      * Open the concated variable segment file and metadata associated with the segment

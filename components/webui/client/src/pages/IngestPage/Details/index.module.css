@@ -1,0 +1,14 @@
+.detailsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(200px, 1fr));
+    gap: 8px;
+}
+
+.timeRange {
+    display: flex;
+    grid-column: span 2;
+}
+
+.timeRange :global(.ant-card) {
+    flex: 1;
+}

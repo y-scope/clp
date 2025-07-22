@@ -2,11 +2,13 @@
 #define CLP_STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP
 
 #include <memory>
+#include <optional>
 #include <string>
 
+#include <ystdlib/containers/Array.hpp>
 #include <zstd.h>
 
-#include "../../FileReader.hpp"
+#include "../../ReaderInterface.hpp"
 #include "../../ReadOnlyMemoryMappedFile.hpp"
 #include "../../TraceableException.hpp"
 #include "../Decompressor.hpp"
@@ -22,7 +24,7 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        char const* what() const noexcept override {
+        [[nodiscard]] auto what() const noexcept -> char const* override {
             return "streaming_compression::zstd::Decompressor operation failed";
         }
     };
@@ -35,11 +37,15 @@ public:
     Decompressor();
 
     // Destructor
-    ~Decompressor();
+    ~Decompressor() override;
 
-    // Explicitly disable copy and move constructor/assignment
+    // Delete copy constructor and assignment operator
     Decompressor(Decompressor const&) = delete;
-    Decompressor& operator=(Decompressor const&) = delete;
+    auto operator=(Decompressor const&) -> Decompressor& = delete;
+
+    // Default move constructor and assignment operator
+    Decompressor(Decompressor&&) noexcept = default;
+    auto operator=(Decompressor&&) noexcept -> Decompressor& = default;
 
     // Methods implementing the ReaderInterface
     /**
@@ -54,7 +60,8 @@ public:
      * @return ErrorCode_Failure on decompression failure
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
+    [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+            -> ErrorCode override;
     /**
      * Tries to seek from the beginning to the given position
      * @param pos
@@ -62,19 +69,19 @@ public:
      * @return Same as ReaderInterface::try_read_exact_length
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_seek_from_begin(size_t pos) override;
+    [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override;
     /**
      * Tries to get the current position of the read head
      * @param pos Position of the read head in the file
      * @return ErrorCode_NotInit if the decompressor is not open
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_get_pos(size_t& pos) override;
+    [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override;
 
     // Methods implementing the Decompressor interface
-    void open(char const* compressed_data_buf, size_t compressed_data_buf_size) override;
-    void open(FileReader& file_reader, size_t file_read_buffer_capacity) override;
-    void close() override;
+    auto open(char const* compressed_data_buf, size_t compressed_data_buf_size) -> void override;
+    auto open(ReaderInterface& reader, size_t read_buffer_capacity) -> void override;
+    auto close() -> void override;
     /**
      * Decompresses and copies the range of uncompressed data described by
      * decompressed_stream_pos and extraction_len into extraction_buf
@@ -84,11 +91,11 @@ public:
      * @return Same as streaming_compression::zstd::Decompressor::try_seek_from_begin
      * @return Same as ReaderInterface::try_read_exact_length
      */
-    ErrorCode get_decompressed_stream_region(
+    [[nodiscard]] auto get_decompressed_stream_region(
             size_t decompressed_stream_pos,
             char* extraction_buf,
             size_t extraction_len
-    ) override;
+    ) -> ErrorCode override;
 
     // Methods
     /***
@@ -99,7 +106,7 @@ public:
      * @return ErrorCode_Failure if the provided path cannot be memory mapped
      * @return ErrorCode_Success on success
      */
-    ErrorCode open(std::string const& compressed_file_path);
+    [[nodiscard]] auto open(std::string const& compressed_file_path) -> ErrorCode;
 
 private:
     // Enum class
@@ -109,10 +116,19 @@ private:
         NotInitialized,
         CompressedDataBuf,
         MemoryMappedCompressedFile,
-        File
+        ReaderInterface
     };
 
     // Methods
+    /**
+     * Refills m_compressed_stream_block with data from the underlying input medium.
+     *
+     * @return ErrorCode_Success on success
+     * @return ErrorCode_EndOfFile if no more data is available
+     * @return Forwards `ReaderInterface::try_read`'s return values.
+     */
+    [[nodiscard]] auto refill_compressed_stream_block() -> ErrorCode;
+
     /**
      * Reset streaming decompression state so it will start decompressing from the beginning of
      * the stream afterwards
@@ -120,23 +136,24 @@ private:
     void reset_stream();
 
     // Variables
-    InputType m_input_type;
+    InputType m_input_type{InputType::NotInitialized};
 
     // Compressed stream variables
-    ZSTD_DStream* m_decompression_stream;
+    ZSTD_DStream* m_decompression_stream{nullptr};
 
     std::unique_ptr<ReadOnlyMemoryMappedFile> m_memory_mapped_file;
-    FileReader* m_file_reader;
-    size_t m_file_reader_initial_pos;
-    std::unique_ptr<char[]> m_file_read_buffer;
-    size_t m_file_read_buffer_length;
-    size_t m_file_read_buffer_capacity;
+    ReaderInterface* m_reader{nullptr};
+    size_t m_reader_initial_pos{0ULL};
 
-    ZSTD_inBuffer m_compressed_stream_block;
+    std::optional<ystdlib::containers::Array<char>> m_read_buffer;
+    size_t m_read_buffer_length{0ULL};
 
-    size_t m_decompressed_stream_pos;
-    size_t m_unused_decompressed_stream_block_size;
-    std::unique_ptr<char[]> m_unused_decompressed_stream_block_buffer;
+    ZSTD_inBuffer m_compressed_stream_block{};
+
+    size_t m_decompressed_stream_pos{0ULL};
+    bool m_zstd_frame_might_have_more_data{false};
+
+    ystdlib::containers::Array<char> m_unused_decompressed_stream_block_buffer;
 };
 }  // namespace clp::streaming_compression::zstd
 #endif  // CLP_STREAMING_COMPRESSION_ZSTD_DECOMPRESSOR_HPP

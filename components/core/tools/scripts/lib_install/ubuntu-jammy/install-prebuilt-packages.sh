@@ -14,15 +14,29 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   curl \
   build-essential \
   git \
-  libboost-filesystem-dev \
-  libboost-iostreams-dev \
-  libboost-program-options-dev \
+  jq \
   libcurl4 \
   libcurl4-openssl-dev \
+  liblzma-dev \
   libmariadb-dev \
   libssl-dev \
   openjdk-11-jdk \
   pkg-config \
   python3 \
   python3-pip \
-  software-properties-common
+  python3-venv \
+  software-properties-common \
+  unzip
+
+# Install `task`
+# NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
+task_pkg_arch=$(dpkg --print-architecture)
+task_pkg_path="$(mktemp -t --suffix ".deb" task-pkg.XXXXXXXXXX)"
+curl \
+    --fail \
+    --location \
+    --output "$task_pkg_path" \
+    --show-error \
+    "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.deb"
+dpkg --install "$task_pkg_path"
+rm "$task_pkg_path"

@@ -1,10 +1,21 @@
 #include "AddTimestampConditions.hpp"
 
-#include "AndExpr.hpp"
-#include "ColumnDescriptor.hpp"
-#include "DateLiteral.hpp"
-#include "EmptyExpr.hpp"
-#include "FilterExpr.hpp"
+#include "../Utils.hpp"
+#include "ast/AndExpr.hpp"
+#include "ast/ColumnDescriptor.hpp"
+#include "ast/DateLiteral.hpp"
+#include "ast/EmptyExpr.hpp"
+#include "ast/Expression.hpp"
+#include "ast/FilterExpr.hpp"
+#include "ast/FilterOperation.hpp"
+
+using clp_s::search::ast::AndExpr;
+using clp_s::search::ast::ColumnDescriptor;
+using clp_s::search::ast::DateLiteral;
+using clp_s::search::ast::EmptyExpr;
+using clp_s::search::ast::Expression;
+using clp_s::search::ast::FilterExpr;
+using clp_s::search::ast::FilterOperation;
 
 namespace clp_s::search {
 std::shared_ptr<Expression> AddTimestampConditions::run(std::shared_ptr<Expression>& expr) {
@@ -18,7 +29,10 @@ std::shared_ptr<Expression> AddTimestampConditions::run(std::shared_ptr<Expressi
         return EmptyExpr::create();
     }
 
-    auto timestamp_column = ColumnDescriptor::create(m_timestamp_column.value());
+    auto timestamp_column = ColumnDescriptor::create_from_escaped_tokens(
+            m_timestamp_column.value().first,
+            m_timestamp_column.value().second
+    );
 
     auto and_expr = AndExpr::create();
     if (m_begin_ts.has_value()) {

@@ -63,7 +63,6 @@ contributing-linting
 :hidden:
 
 components-core/index
-components-log-viewer-webui
 components-webui
 :::
 
@@ -80,5 +79,8 @@ tooling-gh-workflows
 :hidden:
 
 design-project-structure
+
+design-kv-ir-streams/index
+design-metadata-db
 design-parsing-wildcard-queries
 :::

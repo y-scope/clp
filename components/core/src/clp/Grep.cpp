@@ -20,10 +20,8 @@ using clp::string_utils::clean_up_wildcard_search_string;
 using clp::string_utils::is_alphabet;
 using clp::string_utils::is_wildcard;
 using clp::string_utils::wildcard_match_unsafe;
-using log_surgeon::finite_automata::RegexDFA;
-using log_surgeon::finite_automata::RegexDFAByteState;
-using log_surgeon::finite_automata::RegexNFA;
-using log_surgeon::finite_automata::RegexNFAByteState;
+using log_surgeon::finite_automata::Nfa;
+using log_surgeon::finite_automata::ByteNfaState;
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::ParserAST;
 using log_surgeon::SchemaAST;
@@ -761,10 +759,151 @@ bool Grep::get_bounds_of_next_potential_var(
     return (value_length != begin_pos);
 }
 
-void Grep::calculate_sub_queries_relevant_to_file(
-        File const& compressed_file,
-        vector<Query>& queries
+bool Grep::get_bounds_of_next_potential_var(
+        string const& value,
+        size_t& begin_pos,
+        size_t& end_pos,
+        bool& is_var,
+        log_surgeon::lexers::ByteLexer& forward_lexer,
+        log_surgeon::lexers::ByteLexer& reverse_lexer
 ) {
+    size_t const value_length = value.length();
+    if (end_pos >= value_length) {
+        return false;
+    }
+
+    is_var = false;
+    bool contains_wildcard = false;
+    while (false == is_var && false == contains_wildcard && begin_pos < value_length) {
+        // Start search at end of last token
+        begin_pos = end_pos;
+
+        // Find variable begin or wildcard
+        bool is_escaped = false;
+        for (; begin_pos < value_length; ++begin_pos) {
+            char c = value[begin_pos];
+
+            if (is_escaped) {
+                is_escaped = false;
+
+                if (false == forward_lexer.is_delimiter(c)) {
+                    // Found escaped non-delimiter, so reverse the index to retain the escape
+                    // character
+                    --begin_pos;
+                    break;
+                }
+            } else if ('\\' == c) {
+                // Escape character
+                is_escaped = true;
+            } else {
+                if (is_wildcard(c)) {
+                    contains_wildcard = true;
+                    break;
+                }
+                if (false == forward_lexer.is_delimiter(c)) {
+                    break;
+                }
+            }
+        }
+
+        // Find next delimiter
+        is_escaped = false;
+        end_pos = begin_pos;
+        for (; end_pos < value_length; ++end_pos) {
+            char c = value[end_pos];
+
+            if (is_escaped) {
+                is_escaped = false;
+
+                if (forward_lexer.is_delimiter(c)) {
+                    // Found escaped delimiter, so reverse the index to retain the escape character
+                    --end_pos;
+                    break;
+                }
+            } else if ('\\' == c) {
+                // Escape character
+                is_escaped = true;
+            } else {
+                if (is_wildcard(c)) {
+                    contains_wildcard = true;
+                } else if (forward_lexer.is_delimiter(c)) {
+                    // Found delimiter that's not also a wildcard
+                    break;
+                }
+            }
+        }
+
+        if (end_pos > begin_pos) {
+            bool has_prefix_wildcard = ('*' == value[begin_pos]) || ('?' == value[begin_pos]);
+            bool has_suffix_wildcard = ('*' == value[end_pos - 1]) || ('?' == value[begin_pos]);
+            bool has_wildcard_in_middle = false;
+            for (size_t i = begin_pos + 1; i < end_pos - 1; ++i) {
+                if (('*' == value[i] || '?' == value[i]) && value[i - 1] != '\\') {
+                    has_wildcard_in_middle = true;
+                    break;
+                }
+            }
+            SearchToken search_token;
+            if (has_wildcard_in_middle || (has_prefix_wildcard && has_suffix_wildcard)) {
+                // DO NOTHING
+            } else {
+                StringReader string_reader;
+                LogSurgeonReader reader_wrapper(string_reader);
+                log_surgeon::ParserInputBuffer parser_input_buffer;
+                if (has_suffix_wildcard) {  // text*
+                    // TODO: creating a string reader, setting it equal to a string, to read it into
+                    // the ParserInputBuffer, seems like a convoluted way to set a string equal to a
+                    // string, should be improved when adding a SearchParser to log_surgeon
+                    string_reader.open(value.substr(begin_pos, end_pos - begin_pos - 1));
+                    parser_input_buffer.read_if_safe(reader_wrapper);
+                    forward_lexer.reset();
+                    forward_lexer.scan_with_wildcard(
+                            parser_input_buffer,
+                            value[end_pos - 1],
+                            search_token
+                    );
+                } else if (has_prefix_wildcard) {  // *text
+                    std::string value_reverse
+                            = value.substr(begin_pos + 1, end_pos - begin_pos - 1);
+                    std::reverse(value_reverse.begin(), value_reverse.end());
+                    string_reader.open(value_reverse);
+                    parser_input_buffer.read_if_safe(reader_wrapper);
+                    reverse_lexer.reset();
+                    reverse_lexer.scan_with_wildcard(
+                            parser_input_buffer,
+                            value[begin_pos],
+                            search_token
+                    );
+                } else {  // no wildcards
+                    string_reader.open(value.substr(begin_pos, end_pos - begin_pos));
+                    parser_input_buffer.read_if_safe(reader_wrapper);
+                    forward_lexer.reset();
+                    forward_lexer.scan(parser_input_buffer, search_token);
+                    search_token.m_type_ids_set.insert(search_token.m_type_ids_ptr->at(0));
+                }
+                // TODO: use a set so its faster
+                // auto const& set = search_token.m_type_ids_set;
+                // if (set.find(static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString))
+                //            == set.end()
+                //     && set.find(static_cast<int>(log_surgeon::SymbolId::TokenEnd))
+                //            == set.end())
+                // {
+                //     is_var = true;
+                // }
+                auto const& type = search_token.m_type_ids_ptr->at(0);
+                if (type != static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString)
+                    && type != static_cast<int>(log_surgeon::SymbolId::TokenEnd))
+                {
+                    is_var = true;
+                }
+            }
+        }
+    }
+    return (value_length != begin_pos);
+}
+
+void
+Grep::calculate_sub_queries_relevant_to_file(File const& compressed_file, vector<Query>& queries) {
     for (auto& query : queries) {
         query.make_sub_queries_relevant_to_segment(compressed_file.get_segment_id());
     }
@@ -810,8 +949,8 @@ size_t Grep::search_and_output(
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
         if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required())
-            || (query.contains_sub_queries() == false && query.search_string_matches_all() == false
-            ))
+            || (query.contains_sub_queries() == false
+                && query.search_string_matches_all() == false))
         {
             bool matched = wildcard_match_unsafe(
                     decompressed_msg,
@@ -867,8 +1006,8 @@ bool Grep::search_and_decompress(
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
         if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required())
-            || (query.contains_sub_queries() == false && query.search_string_matches_all() == false
-            ))
+            || (query.contains_sub_queries() == false
+                && query.search_string_matches_all() == false))
         {
             matched = wildcard_match_unsafe(
                     decompressed_msg,
@@ -909,8 +1048,8 @@ size_t Grep::search(Query const& query, size_t limit, Archive& archive, File& co
         // - Sub-query requires wildcard match, or
         // - no subqueries exist and the search string is not a match-all
         if ((query.contains_sub_queries() && matching_sub_query->wildcard_match_required())
-            || (query.contains_sub_queries() == false && query.search_string_matches_all() == false
-            ))
+            || (query.contains_sub_queries() == false
+                && query.search_string_matches_all() == false))
         {
             // Decompress match
             bool decompress_successful
@@ -1172,7 +1311,7 @@ tuple<set<uint32_t>, bool> Grep::get_matching_variable_types(
     log_surgeon::NonTerminal::m_next_children_start = 0;
     // TODO: Optimize NFA creation.
     substring_schema.add_variable("search", regex_search_string, -1);
-    RegexNFA<RegexNFAByteState> nfa;
+    Nfa<ByteNfaState> nfa;
     auto schema_ast = substring_schema.release_schema_ast_ptr();
     for (auto const& parser_ast : schema_ast->m_schema_vars) {
         auto* schema_var_ast = dynamic_cast<SchemaVarAST*>(parser_ast.get());

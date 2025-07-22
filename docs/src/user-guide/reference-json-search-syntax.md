@@ -33,13 +33,16 @@ To search for a key or value with multiple words, you must quote the key/value w
 "multi-word key": "multi-word value"
 ```
 
-Queries for keys or values with the following literal characters must escape the characters using a
-`\` (backslash): `\`, `(`, `)`, `:`, `<`, `>`, `"`, `*`, `{`, `}`.
-
 :::{caution}
 Currently, a query that contains spaces is interpreted as a substring search, i.e., it will match
 log events that contain the value as a *substring*. In a future version of CLP, these queries will
 be interpreted as _exact_ searches unless they include [wildcards](#wildcards-in-values).
+:::
+
+:::{note}
+Certain characters have special meanings when used in keys or values, so to search for the
+characters literally, you must escape them. For a list of such characters, see
+[Characters that require escaping](#characters-that-require-escaping).
 :::
 
 ### Querying nested kv-pairs
@@ -57,6 +60,47 @@ parent1: {parent2: {child: value}}
 ```
 
 The kv-pair may be nested one or more levels deep.
+
+### Querying auto-generated kv-pairs
+
+If the kv-pair is an auto-generated kv-pair ingested from a kv-ir stream, you can specify that the
+key exists within the auto-generated namespace by prefixing the key with `@` as follows:
+
+```
+@key: value
+```
+
+In the query above, the key's name is `key` and the `@` only indicates the namespace (i.e., `@` is
+not considered to be part of the key).
+
+To query for a key named `@key` within the default namespace, the `@` character can be escaped as
+follows:
+
+```
+\@key: value
+```
+
+### Querying file-level metadata kv-pairs
+
+clp-json stores some metadata about each file that is compressed into an archive (e.g., the file's
+name). To filter for log events that correspond to some kv-pair in this metadata, you can prefix the
+key with `$`:
+
+```
+$key: value
+```
+
+For example, to query for log events that were compressed from a file whose name was `test.jsonl`:
+
+```
+$_filename: "test.jsonl"
+```
+
+To query for a key named `$key` in an event, the `$` character can be escaped as follows:
+
+```
+\$key: value
+```
 
 ### Wildcards in values
 
@@ -160,6 +204,60 @@ There are three supported boolean operators:
 * `NOT` - the expression after the operator must _not_ be true.
 
 You can use parentheses (`()`) to apply an operator to a group of expressions.
+
+### Characters that require escaping
+
+Keys containing the following literal characters must escape the characters using a `\` (backslash):
+
+* `\`
+* `"`
+* `.`
+* `*`
+
+Furthermore, keys that _start_ with the following literal characters must escape the characters
+using a `\` (backslash):
+
+* `@`
+* `$`
+* `!`
+* `#`
+
+Values containing the following literal characters must escape the characters using a `\`
+(backslash):
+
+* `\`
+* `"`
+* `?`
+* `*`
+
+_Unquoted_ keys or values containing the following literal characters must also escape the
+characters using a `\` (backslash):
+
+* `(`
+* `)`
+* `:`
+* `<`
+* `>`
+* `{`
+* `}`
+
+### Supported escape sequences
+
+Keys and values can represent Unicode codepoints using the `\uXXXX` escape sequence, where each `X`
+is a hexadecimal character.
+
+Keys and values also support the following escape sequences to represent control characters:
+
+* `\b`
+* `\f`
+* `\n`
+* `\r`
+* `\t`
+
+:::{note}
+The escape sequences in this section are described verbatim and don't need an extra backslash to
+escape the backslash at the beginning of each sequence.
+:::
 
 ## Examples
 

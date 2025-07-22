@@ -1,18 +1,17 @@
 #ifndef CLP_S_TIMESTAMPENTRY_HPP
 #define CLP_S_TIMESTAMPENTRY_HPP
 
+#include <sstream>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <variant>
 
 #include "Defs.hpp"
 #include "ErrorCode.hpp"
-#include "search/FilterOperation.hpp"
+#include "search/ast/FilterOperation.hpp"
 #include "Utils.hpp"
-#include "ZstdCompressor.hpp"
 #include "ZstdDecompressor.hpp"
-
-using clp_s::search::FilterOperation;
 
 namespace clp_s {
 class TimestampEntry {
@@ -43,7 +42,7 @@ public:
               m_epoch_start(cEpochTimeMax),
               m_epoch_end(cEpochTimeMin) {}
 
-    TimestampEntry(std::string const& key_name)
+    TimestampEntry(std::string_view key_name)
             : m_encoding(UnkownTimestampEncoding),
               m_epoch_start_double(cDoubleEpochTimeMax),
               m_epoch_end_double(cDoubleEpochTimeMin),
@@ -66,10 +65,10 @@ public:
     void merge_range(TimestampEntry const& entry);
 
     /**
-     * Write the timestamp entry to a file
+     * Write the timestamp entry to a buffered stream.
      * @param compressor
      */
-    void write_to_file(ZstdCompressor& compressor) const;
+    void write_to_stream(std::stringstream& stream) const;
 
     /**
      * Try to read the timestamp entry from a file
@@ -90,8 +89,8 @@ public:
      * @param timestamp
      * @return
      */
-    EvaluatedValue evaluate_filter(FilterOperation op, double timestamp);
-    EvaluatedValue evaluate_filter(FilterOperation op, epochtime_t timestamp);
+    EvaluatedValue evaluate_filter(clp_s::search::ast::FilterOperation op, double timestamp);
+    EvaluatedValue evaluate_filter(clp_s::search::ast::FilterOperation op, epochtime_t timestamp);
 
     std::string get_key_name() const { return m_key_name; }
 

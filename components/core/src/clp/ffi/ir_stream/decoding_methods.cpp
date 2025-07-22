@@ -1,6 +1,10 @@
 #include "decoding_methods.hpp"
 
+#include <algorithm>
+#include <array>
 #include <regex>
+#include <string>
+#include <string_view>
 
 #include "../../ir/types.hpp"
 #include "byteswap.hpp"
@@ -104,8 +108,8 @@ static IRErrorCode deserialize_metadata(
 template <typename encoded_variable_t>
 static bool is_variable_tag(encoded_tag_t tag, bool& is_encoded_var) {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
-             || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     if (tag == cProtocol::Payload::VarStrLenUByte || tag == cProtocol::Payload::VarStrLenUShort
@@ -198,8 +202,8 @@ template <typename encoded_variable_t>
 static IRErrorCode
 deserialize_timestamp(ReaderInterface& reader, encoded_tag_t encoded_tag, epoch_time_ms_t& ts) {
     static_assert(
-            (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
-             || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>)
+            is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
+            || is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
     );
 
     if constexpr (is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
@@ -468,13 +472,23 @@ IRErrorCode deserialize_preamble(
     return IRErrorCode_Success;
 }
 
-IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version) {
-    if ("v0.0.0" == protocol_version) {
-        // This version is hardcoded to support the oldest IR protocol version. When this version is
-        // no longer supported, this branch should be removed.
-        return IRProtocolErrorCode_Supported;
+auto validate_protocol_version(std::string_view protocol_version) -> IRProtocolErrorCode {
+    // These versions are hardcoded to support the IR protocol version that predates the key-value
+    // pair IR format.
+    constexpr std::array<std::string_view, 3> cBackwardCompatibleVersions{
+            "v0.0.0",
+            "0.0.1",
+            cProtocol::Metadata::LatestBackwardCompatibleVersion
+    };
+    if (cBackwardCompatibleVersions.cend()
+        != std::ranges::find(cBackwardCompatibleVersions, protocol_version))
+    {
+        return IRProtocolErrorCode::BackwardCompatible;
     }
-    std::regex const protocol_version_regex{cProtocol::Metadata::VersionRegex};
+
+    std::regex const protocol_version_regex{
+            static_cast<char const*>(cProtocol::Metadata::VersionRegex)
+    };
     if (false
         == std::regex_match(
                 protocol_version.begin(),
@@ -482,19 +496,16 @@ IRProtocolErrorCode validate_protocol_version(std::string_view protocol_version)
                 protocol_version_regex
         ))
     {
-        return IRProtocolErrorCode_Invalid;
+        return IRProtocolErrorCode::Invalid;
     }
-    std::string_view current_build_protocol_version{cProtocol::Metadata::VersionValue};
-    auto get_major_version{[](std::string_view version) {
-        return version.substr(0, version.find('.'));
-    }};
-    if (current_build_protocol_version < protocol_version) {
-        return IRProtocolErrorCode_Too_New;
+
+    // TODO: Currently, we hardcode the supported versions. This should be removed once we
+    // implement a proper version parser.
+    if (cProtocol::Metadata::VersionValue == protocol_version) {
+        return IRProtocolErrorCode::Supported;
     }
-    if (get_major_version(current_build_protocol_version) > get_major_version(protocol_version)) {
-        return IRProtocolErrorCode_Too_Old;
-    }
-    return IRProtocolErrorCode_Supported;
+
+    return IRProtocolErrorCode::Unsupported;
 }
 
 IRErrorCode deserialize_utc_offset_change(ReaderInterface& reader, UtcOffset& utc_offset) {
