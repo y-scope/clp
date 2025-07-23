@@ -11,6 +11,7 @@
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
+#include <log_surgeon/Constants.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
@@ -120,11 +121,8 @@ ErrorCode read_list_of_paths(string const& list_path, vector<string>& paths) {
 // TODO: duplicates code in log_surgeon/parser.tpp, should implement a
 // SearchParser in log_surgeon instead and use it here. Specifically, initialization of
 // lexer.m_symbol_id, contains_delimiter error, and add_rule logic.
-void load_lexer_from_file(
-        std::string const& schema_file_path,
-        bool reverse,
-        log_surgeon::lexers::ByteLexer& lexer
-) {
+void
+load_lexer_from_file(std::string const& schema_file_path, log_surgeon::lexers::ByteLexer& lexer) {
     std::unique_ptr<log_surgeon::SchemaAST> schema_ast
             = log_surgeon::SchemaParser::try_schema_file(schema_file_path);
     if (!lexer.m_symbol_id.empty()) {
@@ -198,7 +196,7 @@ void load_lexer_from_file(
         // transform '.' from any-character into any non-delimiter character
         rule->m_regex_ptr->remove_delimiters_from_wildcard(delimiters);
 
-        std::array<bool,log_surgeon::cUnicodeMax + 1> is_possible_input{false};
+        std::array<bool, log_surgeon::cSizeOfUnicode> is_possible_input{};
         rule->m_regex_ptr->set_possible_inputs_to_true(is_possible_input);
         bool contains_delimiter = false;
         uint32_t delimiter_name;
@@ -237,10 +235,6 @@ void load_lexer_from_file(
         }
         lexer.add_rule(lexer.m_symbol_id[rule->m_name], std::move(rule->m_regex_ptr));
     }
-    if (reverse) {
-        lexer.generate_reverse();
-    } else {
-        lexer.generate();
-    }
+    lexer.generate();
 }
 }  // namespace clp

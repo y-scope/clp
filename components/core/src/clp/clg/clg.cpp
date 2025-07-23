@@ -49,22 +49,6 @@ using std::vector;
  */
 static bool open_archive(string const& archive_path, Archive& archive_reader);
 /**
- * Searches the archive with the given parameters
- * @param search_strings
- * @param command_line_args
- * @param archive
- * @param lexer
- * @param use_heuristic
- * @return true on success, false otherwise
- */
-static bool search(
-        vector<string> const& search_strings,
-        CommandLineArguments& command_line_args,
-        Archive& archive,
-        log_surgeon::lexers::ByteLexer& lexer,
-        bool use_heuristic
-);
-/**
  * Opens a compressed file or logs any errors if it couldn't be opened
  * @param file_metadata_ix
  * @param archive
@@ -594,18 +578,15 @@ int main(int argc, char const* argv[]) {
                 // if there is a chance there might be a difference make a new lexer as it's pretty
                 // fast to create
                 if (lexer_map_it == lexer_map.end()) {
-                    // Create forward lexer
                     auto insert_result = lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
                     lexer_ptr = &insert_result.first->second;
-                    load_lexer_from_file(schema_file_path, false, *lexer_ptr);
+                    load_lexer_from_file(schema_file_path, *lexer_ptr);
                 } else {
-                    // load the lexer if it already exists
                     lexer_ptr = &lexer_map_it->second;
                 }
             } else {
-                // Create lexer
                 lexer_ptr = &one_time_use_lexer;
-                load_lexer_from_file(schema_file_path, false, one_time_use_lexer);
+                load_lexer_from_file(schema_file_path, one_time_use_lexer);
             }
         }
 

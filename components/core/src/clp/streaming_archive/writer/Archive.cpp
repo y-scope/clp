@@ -328,6 +328,13 @@ void Archive::write_msg_using_schema(LogEventView const& log_view) {
                 start,
                 end
         );
+        if (nullptr == timestamp_pattern) {
+            throw(std::runtime_error(
+                    "Schema contains a timestamp regex that matches "
+                    + log_output_buffer->get_mutable_token(0).to_string()
+                    + " which does not match any known timestamp pattern."
+            ));
+        }
         if (m_old_ts_pattern != timestamp_pattern) {
             change_ts_pattern(timestamp_pattern);
             m_old_ts_pattern = timestamp_pattern;

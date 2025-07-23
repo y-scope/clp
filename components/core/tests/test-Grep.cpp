@@ -56,25 +56,21 @@ auto operator<<(ostream& os, unordered_map<uint32_t, string> const& map) -> ostr
 
 class ExpectedInterpretation {
 public:
-    explicit ExpectedInterpretation(ByteLexer& lexer) : lexer(lexer) {}
-
-    // Handles the case where `force_add_to_dictionary_list` is empty
-    static auto get_placeholder(string const& variable_type_name) -> char {
-        if (variable_type_name == "int") {
-            return enum_to_underlying_type(VariablePlaceholder::Integer);
-        }
-        if (variable_type_name == "float") {
-            return enum_to_underlying_type(VariablePlaceholder::Float);
-        }
-        return enum_to_underlying_type(VariablePlaceholder::Dictionary);
-    }
-
-    static auto
-    get_placeholder(string const& variable_type_name, bool const force_add_to_dictionary) -> char {
-        if (force_add_to_dictionary) {
-            return enum_to_underlying_type(VariablePlaceholder::Dictionary);
-        }
-        return get_placeholder(variable_type_name);
+    explicit ExpectedInterpretation(ByteLexer& lexer) : lexer(lexer) {
+      m_placeholder_map = {
+        {{"int",false}, enum_to_underlying_type(VariablePlaceholder::Integer)},
+        {{"int",true}, enum_to_underlying_type(VariablePlaceholder::Dictionary)},
+        {{"float",false}, enum_to_underlying_type(VariablePlaceholder::Float)},
+        {{"float",true}, enum_to_underlying_type(VariablePlaceholder::Dictionary)},
+        {{"hex",false}, enum_to_underlying_type(VariablePlaceholder::Dictionary)},
+        {{"hex",true}, enum_to_underlying_type(VariablePlaceholder::Dictionary)},
+        {{"hasNumber",false}, enum_to_underlying_type(VariablePlaceholder::Dictionary)},
+        {{"hasNumber",true}, enum_to_underlying_type(VariablePlaceholder::Dictionary)},
+        {{"uniqueVariable",false}, enum_to_underlying_type(VariablePlaceholder::Dictionary)},
+        {{"uniqueVariable",true}, enum_to_underlying_type(VariablePlaceholder::Dictionary)},
+        {{"test",false}, enum_to_underlying_type(VariablePlaceholder::Dictionary)},
+        {{"test",true}, enum_to_underlying_type(VariablePlaceholder::Dictionary)}
+      };
     }
 
     // Handles the case where there are no variable types because we can't call `get_placeholder`.
@@ -94,7 +90,6 @@ public:
         );
     }
 
-    // TODO: Fix this so you can omit force_add_to_dictionary_list for multiple variable types.
     template <typename... VariableTypeNames, typename... ForceAddToDictionaryList>
     auto add_string(
             string const& logtype,
@@ -110,16 +105,15 @@ public:
         if constexpr (0 == sizeof...(force_add_to_dictionary_list)) {
             formatted_logtype_string = vformat(
                     logtype_string,
-                    make_format_args((get_placeholder(variable_type_names), ...))
+                    make_format_args(m_placeholder_map[{variable_type_names, false}]...)
             );
         } else {
             formatted_logtype_string = vformat(
                     logtype_string,
-                    make_format_args(get_placeholder(
+                    make_format_args(m_placeholder_map[{
                             variable_type_names,
-                            force_add_to_dictionary_list
-
-                    )...)
+                            force_add_to_dictionary_list}
+                    ]...)
             );
         }
         add_string(
@@ -162,6 +156,7 @@ public:
     }
 
 private:
+    std::map<std::pair<string, bool>, char> m_placeholder_map;
     set<std::string> expected_strings;
     ByteLexer& lexer;
 };
@@ -260,7 +255,7 @@ TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var
 
 TEST_CASE("SearchString", "[SearchString][schema_search]") {
     ByteLexer lexer;
-    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
+    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", lexer);
 
     WildcardExpression const search_string("* test\\* *");
     REQUIRE(search_string.substr(0, search_string.length()) == "* test\\* *");
@@ -348,7 +343,7 @@ TEST_CASE("SearchString", "[SearchString][schema_search]") {
 
 TEST_CASE("get_matching_variable_types", "[get_matching_variable_types][schema_search]") {
     ByteLexer lexer;
-    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
+    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", lexer);
 
     SECTION("Non-wildcard search query") {
         constexpr std::string_view cWildcardExprValue("* 10000 reply: *");
@@ -434,7 +429,7 @@ TEST_CASE(
         "[get_interpretations_for_whole_wildcard_expr][schema_search]"
 ) {
     ByteLexer lexer;
-    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
+    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", lexer);
 
     SECTION("Non-wildcard search query") {
         constexpr string_view cWildcardExprValue("* 10000 reply: *");
@@ -531,7 +526,7 @@ TEST_CASE(
         "[generate_query_substring_interpretations][schema_search]"
 ) {
     ByteLexer lexer;
-    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", false, lexer);
+    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", lexer);
 
     SECTION("Query with static text") {
         ExpectedInterpretation exp_interp(lexer);

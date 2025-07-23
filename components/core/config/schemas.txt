@@ -1,19 +1,80 @@
+// ===
+// Timestamps
+// ===
+
+// E.g. 2015-01-31T15:50:45,123
+// supported options:
+// - date punctuation: "2015-01-31" "2015/01/31" "20150131"
+// - date-time separator: "31 15" "31-15" "31T15"
+// - enclosing symbols:
+//   - prefixes: "2015" "<<<2015" "[2015"
+//   - suffixes: ":45,123" ":45,123]"
+// - hour leading digit: "T05:50" "T 5:50"
+// - precision from tenths to microseconds: ":45,123" ":45,123456"
+//   - separator: ":45,123" ":45.123" ":45:123"
+// - year notation: "2015-01" "15-01"
+timestamp:(\<{3}|\[){0,1}(\d{2}|\d{4})[\-/]{0,1}\d{2}[\-/]{0,1}\d{2}[ -T][ \d]\d:\d{2}:\d{2}([,\.:]\d{1,6}){0,1}(\]){0,1}
+
+// E.g. 01 Jan 2016 15:50:17,085
+timestamp:[ \d]\d [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2},\d{3}
+
+// E.g. Jan 01, 2016 3:50:17 PM
+timestamp:[A-Z][a-z]{2} [ \d]\d, \d{4} [ \d]\d:\d{2}:\d{2} [AP]M
+
+// E.g. January 31, 2015 15:50
+timestamp:[A-Z][a-z]+ [ \d]\d, \d{4} \d{2}:\d{2}
+
+// E.g. Jan 21 11:56:42
+timestamp:[A-Z][a-z]{2} [ \d]\d \d{2}:\d{2}:\d{2}
+
+// E.g. 01-21 11:56:42.392
+timestamp:\d{2}\-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}
+
+// E.g. 916321
+timestamp:\d+
+
+// ===
+// Timestamps currently missing log boundary support
+// ===
+
+// E.g. Started POST /api/v3/internal/allowed for 127.0.0.1 at 2017-06-18 00:20:44
+// E.g. update-alternatives 2015-01-31 15:50:45
+timestamp:\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}
+
+// E.g. Start-Date: 2015-01-31  15:50:45
+timestamp:\d{4}\-\d{2}\-\d{2}  \d{2}:\d{2}:\d{2}
+
+// E.g. E [31/Jan/2015:15:50:45
+// E.g. localhost - - [01/Jan/2016:15:50:17
+// E.g. 192.168.4.5 - - [01/Jan/2016:15:50:17
+timestamp:\[\d{2}/[A-Z][a-z]{2}/\d{4}:\d{2}:\d{2}:\d{2}
+
+// E.g. 192.168.4.5 - - [01/01/2016:15:50:17
+timestamp:\[\d{2}/\d{2}/\d{4}:\d{2}:\d{2}:\d{2}
+
+// E.g. ERROR: apport (pid 4557) Sun Jan  1 15:50:45 2015
+timestamp:[A-Z][a-z]{2} [A-Z][a-z]{2} [ \d]\d \d{2}:\d{2}:\d{2} \d{4}
+
+// ===
 // Delimiters
-delimiters: \t\r\n!"#$%&'\(\)\*,:;<>?@\[\]\^_`\{\|\}~
+// ===
 
-// Timestamps (using the `timestamp` keyword)
-// E.g. 2015-01-31 15:50:45,392
-// E.g. 2015-01-31 15:50:45.392
-// E.g. 2015-01-31 15:50:45
-timestamp:\d{4}\-\d{2}\-\d{2} \d{2}:\d{2}:\d{2}(\.\d{3}){0,1}
-// E.g. [20150131-15:50:45]
-timestamp:\[\d{8}\-\d{2}:\d{2}:\d{2}\]
+delimiters: \t\r\n!"#$%&'\(\)\*,:;\<=\>\?@\[\]\^_`\{\|\}~
 
+// ===
 // Specially-encoded variables (using the `int` and `float` keywords)
+// ===
+
 int:\-{0,1}[0-9]+
 float:\-{0,1}[0-9]+\.[0-9]+
 
+// ===
 // Dictionary variables
+// ===
+
 hex:[a-fA-F]+
+
+// NOTE: `equals` and `hasNumber` only work if `=` is a delimiter, due to
+// https://github.com/y-scope/log-surgeon/issues/131
+equals:.*=(?<val>.*[a-zA-Z0-9].*)
 hasNumber:.*\d.*
-equals:.*=.*[a-zA-Z0-9].*
