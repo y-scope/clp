@@ -188,6 +188,7 @@ function(set_clp_tests_dependencies)
         CLP_NEED_SQLITE
         CLP_NEED_YAMLCPP
         CLP_NEED_YSTDLIB
+        CLP_NEED_ZLIB
         CLP_NEED_ZSTD
     )
 endfunction()

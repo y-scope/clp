@@ -181,7 +181,8 @@ if(CLP_BUILD_EXECUTABLES)
                 date::date
                 fmt::fmt
                 LibArchive::LibArchive
-                ${BZIP2_LIBRARIES}
+                # BZip2 must be linked after static LibArchive for musllinux
+                BZip2::BZip2
                 LibLZMA::LibLZMA
                 log_surgeon::log_surgeon
                 LZ4::LZ4

@@ -787,7 +787,6 @@ if(CLP_BUILD_TESTING)
             date::date
             fmt::fmt
             LibArchive::LibArchive
-            LibLZMA::LibLZMA
             LZ4::LZ4
             log_surgeon::log_surgeon
             MariaDBClient::MariaDBClient
