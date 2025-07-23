@@ -12,6 +12,8 @@ validate_compiler_versions()
 # Include options for CLP build
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Options/options.cmake")
 
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindLibraryDependencies.cmake")
+
 validate_and_setup_all_clp_dependency_flags()
 convert_clp_dependency_properties_to_variables()
 
@@ -224,6 +226,10 @@ if(CLP_NEED_LIBARCHIVE)
     endif()
     find_package(LibArchive 3.8.1 REQUIRED)
     message(STATUS "Found LibArchive ${LibArchive_VERSION}")
+    set(LibArchive_STATIC_LIBS "lzma")
+    FindStaticLibraryDependencies(archive LibArchive "${LibArchive_STATIC_LIBS}")
+    set(LibArchive_DYNAMIC_LIBS "bz2;lz4;z")
+    FindDynamicLibraryDependencies(LibArchive "${LibArchive_DYNAMIC_LIBS}")
 endif()
 
 # Find and setup libcurl
@@ -346,7 +352,6 @@ endif()
 # sqlite dependencies
 if(CLP_NEED_SQLITE)
     set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
-    include(cmake/Modules/FindLibraryDependencies.cmake)
     FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 endif()
 
@@ -759,7 +764,6 @@ if(CLP_BUILD_TESTING)
     target_link_libraries(unitTest
             PRIVATE
             ${CURL_LIBRARIES}
-            ${LIBLZMA_LIBRARIES}
             ${MONGOCXX_TARGET}
             ${sqlite_LIBRARY_DEPENDENCIES}
             ${STD_FS_LIBS}
@@ -775,7 +779,7 @@ if(CLP_BUILD_TESTING)
             date::date
             fmt::fmt
             LibArchive::LibArchive
-            LZ4::LZ4
+            ${LibArchive_LIBRARY_DEPENDENCIES}
             log_surgeon::log_surgeon
             MariaDBClient::MariaDBClient
             nlohmann_json::nlohmann_json

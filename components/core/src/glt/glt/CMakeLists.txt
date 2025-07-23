@@ -180,7 +180,6 @@ if(CLP_BUILD_EXECUTABLES)
         )
         target_link_libraries(glt
                 PRIVATE
-                ${LIBLZMA_LIBRARIES}
                 ${sqlite_LIBRARY_DEPENDENCIES}
                 ${STD_FS_LIBS}
                 Boost::filesystem Boost::iostreams Boost::program_options
@@ -188,7 +187,7 @@ if(CLP_BUILD_EXECUTABLES)
                 date::date
                 fmt::fmt
                 LibArchive::LibArchive
-                LZ4::LZ4
+                ${LibArchive_LIBRARY_DEPENDENCIES}
                 MariaDBClient::MariaDBClient
                 nlohmann_json::nlohmann_json
                 spdlog::spdlog
