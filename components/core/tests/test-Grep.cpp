@@ -69,7 +69,9 @@ public:
         {{"uniqueVariable",false}, enum_to_underlying_type(VariablePlaceholder::Dictionary)},
         {{"uniqueVariable",true}, enum_to_underlying_type(VariablePlaceholder::Dictionary)},
         {{"test",false}, enum_to_underlying_type(VariablePlaceholder::Dictionary)},
-        {{"test",true}, enum_to_underlying_type(VariablePlaceholder::Dictionary)}
+        {{"test",true}, enum_to_underlying_type(VariablePlaceholder::Dictionary)},
+        {{"timestamp",false}, enum_to_underlying_type(VariablePlaceholder::Dictionary)},
+        {{"timestamp",true}, enum_to_underlying_type(VariablePlaceholder::Dictionary)}
       };
     }
 
