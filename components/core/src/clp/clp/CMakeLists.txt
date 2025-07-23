@@ -174,6 +174,7 @@ if(CLP_BUILD_EXECUTABLES)
         )
         target_link_libraries(clp
                 PRIVATE
+                ${LIBLZMA_LIBRARIES}
                 ${sqlite_LIBRARY_DEPENDENCIES}
                 ${STD_FS_LIBS}
                 Boost::filesystem Boost::program_options
@@ -183,7 +184,6 @@ if(CLP_BUILD_EXECUTABLES)
                 LibArchive::LibArchive
                 # BZip2 must be linked after static LibArchive for musllinux
                 BZip2::BZip2
-                LibLZMA::LibLZMA
                 log_surgeon::log_surgeon
                 LZ4::LZ4
                 MariaDBClient::MariaDBClient
