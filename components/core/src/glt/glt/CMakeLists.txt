@@ -187,6 +187,7 @@ if(CLP_BUILD_EXECUTABLES)
                 date::date
                 fmt::fmt
                 LibArchive::LibArchive
+                LibLZMA::LibLZMA
                 LZ4::LZ4
                 MariaDBClient::MariaDBClient
                 nlohmann_json::nlohmann_json

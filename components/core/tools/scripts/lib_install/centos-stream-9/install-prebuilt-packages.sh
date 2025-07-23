@@ -7,6 +7,7 @@ set -e
 set -u
 
 dnf install -y \
+    bzip2-devel \
     cmake \
     diffutils \
     gcc-c++ \

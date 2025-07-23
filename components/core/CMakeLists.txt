@@ -155,6 +155,13 @@ if(CLP_NEED_BOOST)
     endif()
 endif()
 
+if(CLP_NEED_BZIP2)
+    find_package(BZip2 REQUIRED)
+    if (BZip2_FOUND)
+        message(STATUS "Found BZip2")
+    endif()
+endif()
+
 if(CLP_NEED_CATCH2)
     find_package(Catch2 REQUIRED)
     if (Catch2_FOUND)
@@ -780,6 +787,7 @@ if(CLP_BUILD_TESTING)
             date::date
             fmt::fmt
             LibArchive::LibArchive
+            LibLZMA::LibLZMA
             LZ4::LZ4
             log_surgeon::log_surgeon
             MariaDBClient::MariaDBClient

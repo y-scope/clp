@@ -133,6 +133,7 @@ function(set_clp_binaries_dependencies)
     set_clp_need_flags(
         CLP_NEED_ABSL
         CLP_NEED_BOOST
+        CLP_NEED_BZIP2
         CLP_NEED_CURL
         CLP_NEED_DATE
         CLP_NEED_FMT
@@ -170,6 +171,7 @@ function(set_clp_tests_dependencies)
     set_clp_need_flags(
         CLP_NEED_ABSL
         CLP_NEED_BOOST
+        CLP_NEED_BZIP2
         CLP_NEED_CATCH2
         CLP_NEED_DATE
         CLP_NEED_FMT
@@ -454,6 +456,7 @@ function (convert_clp_dependency_properties_to_variables)
         CLP_NEED_ABSL
         CLP_NEED_ANTLR
         CLP_NEED_BOOST
+        CLP_NEED_BZIP2
         CLP_NEED_CATCH2
         CLP_NEED_CURL
         CLP_NEED_DATE

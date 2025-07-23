@@ -181,6 +181,7 @@ if(CLP_BUILD_EXECUTABLES)
                 date::date
                 fmt::fmt
                 LibArchive::LibArchive
+                ${BZIP2_LIBRARIES}
                 LibLZMA::LibLZMA
                 log_surgeon::log_surgeon
                 LZ4::LZ4
