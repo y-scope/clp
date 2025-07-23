@@ -4,6 +4,7 @@ set -eu
 set -o pipefail
 
 dnf install -y \
+    bzip2-devel \
     gcc-c++ \
     java-11-openjdk \
     jq \
