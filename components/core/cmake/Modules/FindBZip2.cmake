@@ -17,8 +17,11 @@ include(cmake/Modules/FindLibraryDependencies.cmake)
 
 set(bzip2_LIBNAME "bz2")
 set(bzip2_LOCAL_PREFIX "bzip2")
-set(bzip2_PKGCONFIG_DIR "${BZip2_ROOT}/lib/pkgconfig")
 set(bzip2_PKGCONFIG_NAME "bzip2")
+
+if(DEFINED BZip2_ROOT)
+    set(bzip2_PKGCONFIG_DIR "${BZip2_ROOT}/lib/pkgconfig")
+endif()
 
 # Run pkg-config
 find_package(PkgConfig)
@@ -45,10 +48,6 @@ find_library(BZip2_LIBRARY
         PATH_SUFFIXES lib
         )
 
-if(BZip2_LIBRARY)
-    set(BZip2_FOUND ON)
-endif()
-
 if(BZip2_USE_STATIC_LIBS)
     FindStaticLibraryDependencies(${bzip2_LIBNAME} ${bzip2_LOCAL_PREFIX}
                                   "${bzip2_PKGCONF_STATIC_LIBRARIES}")
@@ -67,9 +66,11 @@ set(BZip2_VERSION ${bzip2_PKGCONF_VERSION})
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(BZip2
-        REQUIRED_VARS BZip2_FOUND BZip2_INCLUDE_DIR
+        REQUIRED_VARS BZip2_LIBRARY BZip2_INCLUDE_DIR
         VERSION_VAR BZip2_VERSION
         )
+
+set(BZip2_FOUND ON)
 
 if(NOT TARGET BZip2::BZip2)
     # Add library to build
