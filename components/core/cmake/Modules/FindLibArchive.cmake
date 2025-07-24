@@ -29,6 +29,7 @@ find_path(LibArchive_INCLUDE_DIR archive.h
         )
 
 # Handle static libraries
+set(LibArchive_USE_STATIC_LIBS ON)
 if(LibArchive_USE_STATIC_LIBS)
     # Save current value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(libarchive_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
@@ -55,9 +56,7 @@ if(LibArchive_USE_STATIC_LIBS)
     # Restore original value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${libarchive_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
     unset(libarchive_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
-endif()
-
-if(APPLE)
+else()
     set(libarchive_DYNAMIC_LIBS "${libarchive_PKGCONF_STATIC_LIBRARIES}")
 endif()
 
