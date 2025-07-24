@@ -174,17 +174,17 @@ if(CLP_BUILD_EXECUTABLES)
         )
         target_link_libraries(clp
                 PRIVATE
-                ${sqlite_LIBRARY_DEPENDENCIES}
-                ${STD_FS_LIBS}
                 Boost::filesystem Boost::program_options
-                clp::string_utils
                 date::date
                 fmt::fmt
-                LibArchive::LibArchive
                 log_surgeon::log_surgeon
+                spdlog::spdlog
+                ${sqlite_LIBRARY_DEPENDENCIES}
+                LibArchive::LibArchive
                 MariaDBClient::MariaDBClient
                 nlohmann_json::nlohmann_json
-                spdlog::spdlog
+                ${STD_FS_LIBS}
+                clp::string_utils
                 yaml-cpp
                 ystdlib::containers
                 ystdlib::error_handling

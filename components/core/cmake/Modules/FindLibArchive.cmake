@@ -12,10 +12,10 @@
 # - Variables only for use within the script are prefixed with "libarchive_"
 # - Variables that should be externally visible are prefixed with "LibArchive_"
 
+include(cmake/Modules/FindLibraryDependencies.cmake)
+
 set(libarchive_LIBNAME "archive")
 set(libarchive_PKGCONFIG_DIR "${LibArchive_ROOT}/lib/pkgconfig")
-
-include(cmake/Modules/FindLibraryDependencies.cmake)
 
 # Run pkg-config
 find_package(PkgConfig)
@@ -43,7 +43,7 @@ find_library(LibArchive_LIBRARY
         HINTS ${libarchive_PKGCONF_LIBDIR}
         PATH_SUFFIXES lib
         )
-if (LibArchive_LIBRARY)
+if(LibArchive_LIBRARY)
     # NOTE: This must be set for find_package_handle_standard_args to work
     set(LibArchive_FOUND ON)
 endif()
@@ -57,7 +57,15 @@ if(LibArchive_USE_STATIC_LIBS)
     unset(libarchive_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
 endif()
 
+if(APPLE)
+    set(libarchive_DYNAMIC_LIBS "${libarchive_PKGCONF_STATIC_LIBRARIES}")
+endif()
+
 FindDynamicLibraryDependencies(libarchive "${libarchive_DYNAMIC_LIBS}")
+
+message(STATUS "libarchive_PKGCONF_STATIC_LIBRARIES = ${libarchive_PKGCONF_STATIC_LIBRARIES}")
+message(STATUS "libarchive_DYNAMIC_LIBS = ${libarchive_DYNAMIC_LIBS}")
+message(STATUS "libarchive_LIBRARY_DEPENDENCIES = ${libarchive_LIBRARY_DEPENDENCIES}")
 
 # Set version
 set(LibArchive_VERSION ${libarchive_PKGCONF_VERSION})
@@ -68,8 +76,6 @@ find_package_handle_standard_args(LibArchive
         VERSION_VAR LibArchive_VERSION
         )
 
-message(STATUS "libarchive_PKGCONF_STATIC_LIBRARIES = ${libarchive_PKGCONF_STATIC_LIBRARIES}")
-message(STATUS "libarchive_LIBRARY_DEPENDENCIES = ${libarchive_LIBRARY_DEPENDENCIES}")
 if(NOT TARGET LibArchive::LibArchive)
     # Add library to build
     if (LibArchive_FOUND)
@@ -107,3 +113,4 @@ if(NOT TARGET LibArchive::LibArchive)
         endif()
     endif()
 endif()
+

@@ -12,8 +12,6 @@ validate_compiler_versions()
 # Include options for CLP build
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Options/options.cmake")
 
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules/FindLibraryDependencies.cmake")
-
 validate_and_setup_all_clp_dependency_flags()
 convert_clp_dependency_properties_to_variables()
 
@@ -348,6 +346,7 @@ endif()
 # sqlite dependencies
 if(CLP_NEED_SQLITE)
     set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
+    include(cmake/Modules/FindLibraryDependencies.cmake)
     FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 endif()
 
@@ -758,29 +757,29 @@ if(CLP_BUILD_TESTING)
             ${CLP_SQLITE3_INCLUDE_DIRECTORY}
             )
     target_link_libraries(unitTest
-            PRIVATE
-            ${CURL_LIBRARIES}
-            ${MONGOCXX_TARGET}
-            ${sqlite_LIBRARY_DEPENDENCIES}
-            ${STD_FS_LIBS}
+	    PRIVATE
             absl::flat_hash_map
             Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
             Catch2::Catch2
-            clp::regex_utils
-            clp::string_utils
+            ${CURL_LIBRARIES}
             clp_s::search::ast
             clp_s::search::kql
             clp_s::search::sql
             clp_s::timestamp_pattern
             date::date
             fmt::fmt
-            LibArchive::LibArchive
             log_surgeon::log_surgeon
+            LibArchive::LibArchive
             MariaDBClient::MariaDBClient
+            ${MONGOCXX_TARGET}
             nlohmann_json::nlohmann_json
-            OpenSSL::Crypto
             simdjson::simdjson
             spdlog::spdlog
+            OpenSSL::Crypto
+            ${sqlite_LIBRARY_DEPENDENCIES}
+            ${STD_FS_LIBS}
+            clp::regex_utils
+            clp::string_utils
             yaml-cpp
             ystdlib::containers
             ystdlib::error_handling
