@@ -18,6 +18,7 @@ vars:
   G_DEPS_CORE_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_DIR}}/cmake-settings"
 
   # Library names
+  G_BZIP2_LIB_NAME: "BZip2"
   G_FMT_LIB_NAME: "fmt"
 
   # Antlr
@@ -62,6 +63,7 @@ tasks:
       - task: "absl"
       - task: "antlr-jar"
       - task: "antlr-runtime"
+      - task: "bzip2"
       - task: "catch2"
       - task: "date"
       - task: "fmt"
@@ -174,6 +176,23 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
+
+  bzip2:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CORE_DIR}}/{{.G_BZIP2_LIB_NAME}}-install"
+            - "-DENABLE_LIB_ONLY=ON"
+            - "-DENABLE_SHARED_LIB=ON"
+            - "-DENABLE_STATIC_LIB=ON"
+          LIB_NAME: "{{.G_BZIP2_LIB_NAME}}"
+          TARBALL_SHA256: "72f86f175ebeb5972c2824987ec4ae00c62a96e14768954e189efdc4aac24294"
+          TARBALL_URL: "https://github.com/libarchive/bzip2/archive/1ea1ac1.tar.gz"
 
   catch2:
     internal: true
