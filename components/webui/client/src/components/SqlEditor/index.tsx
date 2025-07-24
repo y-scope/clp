@@ -12,7 +12,7 @@ import {
 import {language as sqlLanguage} from "monaco-editor/esm/vs/basic-languages/sql/sql.js";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 
-import "./monaco-config";
+import "./monaco-loader";
 
 
 const MAX_VISIBLE_LINES: number = 5;
@@ -124,8 +124,11 @@ const SqlEditor = (props: SqlEditorProps) => {
             options={{
                 automaticLayout: true,
                 folding: isContentMultiline,
-                fontSize: 18,
-                lineNumbers: "on",
+                fontSize: 20,
+                lineHeight: 30,
+                lineNumbers: isContentMultiline ?
+                    "on" :
+                    "off",
                 lineNumbersMinChars: 2,
                 minimap: {enabled: false},
                 overviewRulerBorder: false,
