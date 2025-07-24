@@ -15,7 +15,6 @@
 #include "ast/Literal.hpp"
 #include "ast/OrExpr.hpp"
 #include "ast/SearchUtils.hpp"
-#include "clp_search/EncodedVariableInterpreter.hpp"
 #include "clp_search/Grep.hpp"
 #include "EvaluateTimestampIndex.hpp"
 
@@ -868,7 +867,7 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
                     )
             );
         }
-        SubQuery sub_query;
+
         if (filter->get_column()->matches_type(LiteralType::VarStringT)) {
             std::string query_string;
             filter->get_operand()->as_var_string(query_string, filter->get_operation());
@@ -899,25 +898,15 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
                 for (auto const& entry : entries) {
                     matching_vars.insert(entry->get_id());
                 }
-            } else if (EncodedVariableInterpreter::
-                               wildcard_search_dictionary_and_get_encoded_matches(
-                                       query_string,
-                                       *m_var_dict,
-                                       m_ignore_case,
-                                       sub_query
-                               ))
-            {
-                for (auto const& var : sub_query.get_vars()) {
-                    if (var.is_precise_var()) {
-                        auto const* entry = var.get_var_dict_entry();
-                        if (entry != nullptr) {
-                            matching_vars.insert(entry->get_id());
-                        }
-                    } else {
-                        for (auto const* entry : var.get_possible_var_dict_entries()) {
-                            matching_vars.insert(entry->get_id());
-                        }
-                    }
+            } else {
+                std::unordered_set<VariableDictionaryEntry const*> matching_entries;
+                m_var_dict->get_entries_matching_wildcard_string(
+                        query_string,
+                        m_ignore_case,
+                        matching_entries
+                );
+                for (auto const& entry : matching_entries) {
+                    matching_vars.emplace(entry->get_id());
                 }
             }
         }
