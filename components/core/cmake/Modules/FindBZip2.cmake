@@ -1,9 +1,24 @@
+# Try to find BZip2
+# NOTE: The FindBZip2.cmake included with CMake has no support for static libraries, so we use our
+# own.
+#
+# Set BZip2_USE_STATIC_LIBS=ON to look for static libraries.
+#
+# Once done this will define:
+#  BZip2_FOUND - Whether BZip2 was found on the system
+#  BZip2_INCLUDE_DIR - The BZip2 include directories
+#  BZip2_VERSION - The version of BZip2 installed on the system
+#
+# Conventions:
+# - Variables only for use within the script are prefixed with "bzip2_"
+# - Variables that should be externally visible are prefixed with "BZip2_"
+
 include(cmake/Modules/FindLibraryDependencies.cmake)
 
 set(bzip2_LIBNAME "bz2")
+set(bzip2_LOCAL_PREFIX "bzip2")
 set(bzip2_PKGCONFIG_DIR "${BZip2_ROOT}/lib/pkgconfig")
 set(bzip2_PKGCONFIG_NAME "bzip2")
-set(bzip2_LOCAL_PREFIX "bzip2")
 
 # Run pkg-config
 find_package(PkgConfig)
