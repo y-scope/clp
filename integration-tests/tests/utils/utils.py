@@ -6,7 +6,7 @@ from typing import List
 
 def is_dir_tree_content_equal(path1: Path, path2: Path) -> bool:
     cmd = ["diff", "--brief", "--recursive", str(path1), str(path2)]
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE)
+    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     if 0 == proc.returncode:
         return True
     if 1 == proc.returncode:
@@ -22,5 +22,5 @@ def get_env_var(var_name: str) -> str:
 
 def run_and_assert(cmd: List[str], **kwargs) -> subprocess.CompletedProcess:
     proc = subprocess.run(cmd, **kwargs)
-    assert 0 == proc.returncode, f"Command failed: {' '.join(cmd)}: {proc.stderr.decode()}"
+    assert 0 == proc.returncode, f"Command failed: {' '.join(cmd)}"
     return proc

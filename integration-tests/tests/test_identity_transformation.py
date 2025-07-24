@@ -40,7 +40,7 @@ def test_clp_identity_transform(
     package_config: PackageConfig,
     dataset_logs_fixture: str,
 ) -> None:
-    dataset_logs: DaatsetLogs = request.getfixturevalue(dataset_logs_fixture)
+    dataset_logs: DatasetLogs = request.getfixturevalue(dataset_logs_fixture)
     dataset_name = dataset_logs.name
 
     binary_path_str = str(package_config.clp_bin_dir / "clp")
