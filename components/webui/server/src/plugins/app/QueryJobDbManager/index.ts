@@ -6,14 +6,14 @@ import {FastifyInstance} from "fastify";
 import fp from "fastify-plugin";
 import {ResultSetHeader} from "mysql2";
 
-import settings from "../../../../../settings.json" with {type: "json"};
+import settings from "../../../../settings.json" with {type: "json"};
 import {
     QUERY_JOB_STATUS,
     QUERY_JOB_STATUS_WAITING_STATES,
     QUERY_JOB_TYPE,
     QUERY_JOBS_TABLE_COLUMN_NAMES,
     QueryJob,
-} from "../../../../typings/query.js";
+} from "../../../typings/query.js";
 import {JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS} from "./typings.js";
 
 
