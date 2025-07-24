@@ -226,10 +226,6 @@ if(CLP_NEED_LIBARCHIVE)
     endif()
     find_package(LibArchive 3.8.1 REQUIRED)
     message(STATUS "Found LibArchive ${LibArchive_VERSION}")
-    set(LibArchive_STATIC_LIBS "lzma")
-    FindStaticLibraryDependencies(archive LibArchive "${LibArchive_STATIC_LIBS}")
-    set(LibArchive_DYNAMIC_LIBS "bz2;lz4;z")
-    FindDynamicLibraryDependencies(LibArchive "${LibArchive_DYNAMIC_LIBS}")
 endif()
 
 # Find and setup libcurl
@@ -779,7 +775,6 @@ if(CLP_BUILD_TESTING)
             date::date
             fmt::fmt
             LibArchive::LibArchive
-            ${LibArchive_LIBRARY_DEPENDENCIES}
             log_surgeon::log_surgeon
             MariaDBClient::MariaDBClient
             nlohmann_json::nlohmann_json

@@ -13,22 +13,13 @@
 # - Variables that should be externally visible are prefixed with "LibArchive_"
 
 set(libarchive_LIBNAME "archive")
+set(libarchive_PKGCONFIG_DIR "${LibArchive_ROOT}/lib/pkgconfig")
 
 include(cmake/Modules/FindLibraryDependencies.cmake)
 
-# On macOS, libarchive installed through brew is not linked into prefix by default.
-# So it cannot be found by pkg-config and we need to manually find it.
-# For more details, see https://github.com/Homebrew/homebrew-core/issues/117642
-# Find and setup libarchive
-if(APPLE)
-    execute_process(COMMAND brew --prefix libarchive OUTPUT_VARIABLE libarchive_MACOS_PREFIX)
-    string(STRIP "${libarchive_MACOS_PREFIX}" libarchive_MACOS_PREFIX)
-    set(ENV{libarchive_PREV_CMAKE_PATH} "$ENV{CMAKE_PREFIX_PATH}")  # save it so we can revert it later
-    set(ENV{CMAKE_PREFIX_PATH} "${libarchive_MACOS_PREFIX};$ENV{CMAKE_PREFIX_PATH}")
-endif()
-
 # Run pkg-config
 find_package(PkgConfig)
+set(ENV{PKG_CONFIG_PATH} "${libarchive_PKGCONFIG_DIR};$ENV{PKG_CONFIG_PATH}")
 pkg_check_modules(libarchive_PKGCONF QUIET "lib${libarchive_LIBNAME}")
 
 # Set include directory
@@ -77,6 +68,8 @@ find_package_handle_standard_args(LibArchive
         VERSION_VAR LibArchive_VERSION
         )
 
+message(STATUS "libarchive_PKGCONF_STATIC_LIBRARIES = ${libarchive_PKGCONF_STATIC_LIBRARIES}")
+message(STATUS "libarchive_LIBRARY_DEPENDENCIES = ${libarchive_LIBRARY_DEPENDENCIES}")
 if(NOT TARGET LibArchive::LibArchive)
     # Add library to build
     if (LibArchive_FOUND)
@@ -113,9 +106,4 @@ if(NOT TARGET LibArchive::LibArchive)
                     )
         endif()
     endif()
-endif()
-
-if(APPLE)
-    # remove LibArchive-specific path
-    set(ENV{CMAKE_PREFIX_PATH} "$ENV{libarchive_PREV_CMAKE_PATH}")
 endif()
