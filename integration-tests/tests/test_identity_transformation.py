@@ -18,30 +18,32 @@ from tests.utils.utils import (
 pytestmark = pytest.mark.binaries
 
 text_datasets = pytest.mark.parametrize(
-    "download_and_extract_dataset",
+    "dataset_logs_fixture",
     [
         # "hive_24hr",
     ],
-    indirect=["download_and_extract_dataset"],
 )
 
 json_datasets = pytest.mark.parametrize(
-    "download_and_extract_dataset",
+    "dataset_logs_fixture",
     [
         # "spark_event_logs",
         "postgresql",
     ],
-    indirect=["download_and_extract_dataset"],
 )
 
 
 @pytest.mark.clp
 @text_datasets
 def test_clp_identity_transform(
-    request, package_config: PackageConfig, download_and_extract_dataset: DatasetLogs
+    request,
+    package_config: PackageConfig,
+    dataset_logs_fixture: str,
 ) -> None:
+    dataset_logs: DaatsetLogs = request.getfixturevalue(dataset_logs_fixture)
+    dataset_name = dataset_logs.name
+
     binary_path_str = str(package_config.clp_bin_dir / "clp")
-    dataset_name = download_and_extract_dataset.name
     download_dir = package_config.uncompressed_logs_dir / dataset_name
     archives_dir = package_config.test_output_dir / f"{dataset_name}-archives"
     extract_dir = package_config.test_output_dir / f"{dataset_name}-logs"
@@ -75,10 +77,14 @@ def test_clp_identity_transform(
 @pytest.mark.clp_s
 @json_datasets
 def test_clp_s_identity_transform(
-    request, package_config: PackageConfig, download_and_extract_dataset: DatasetLogs
+    request,
+    package_config: PackageConfig,
+    dataset_logs_fixture: str,
 ) -> None:
+    dataset_logs: DaatsetLogs = request.getfixturevalue(dataset_logs_fixture)
+    dataset_name = dataset_logs.name
+
     binary_path_str = str(package_config.clp_bin_dir / "clp-s")
-    dataset_name = download_and_extract_dataset.name
     download_dir = package_config.uncompressed_logs_dir / dataset_name
     archives_dir = package_config.test_output_dir / f"{dataset_name}-archives"
     extract_dir = package_config.test_output_dir / f"{dataset_name}-logs"
