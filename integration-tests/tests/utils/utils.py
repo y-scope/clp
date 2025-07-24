@@ -4,13 +4,14 @@ from pathlib import Path
 from typing import List
 
 
-def diff_equal(path1: Path, path2: Path) -> None:
+def is_dir_tree_content_equal(path1: Path, path2: Path) -> bool:
     cmd = ["diff", "--brief", "--recursive", str(path1), str(path2)]
     proc = subprocess.run(cmd, stdout=subprocess.PIPE)
-    if 0 != proc.returncode:
-        if 1 == proc.returncode:
-            assert False, "Files/Directories don't match."
-        assert False, f"Command failed {' '.join(cmd)}"
+    if 0 == proc.returncode:
+        return True
+    if 1 == proc.returncode:
+        return False
+    raise RuntimeError(f"Command failed {' '.join(cmd)}: {proc.stderr.decode()}")
 
 
 def get_env_var(var_name: str) -> str:
@@ -21,5 +22,5 @@ def get_env_var(var_name: str) -> str:
 
 def run_and_assert(cmd: List[str], **kwargs) -> subprocess.CompletedProcess:
     proc = subprocess.run(cmd, **kwargs)
-    assert 0 == proc.returncode, f"Command failed: {' '.join(cmd)}"
+    assert 0 == proc.returncode, f"Command failed: {' '.join(cmd)}: {proc.stderr.decode()}"
     return proc

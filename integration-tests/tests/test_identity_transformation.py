@@ -1,15 +1,17 @@
 import shutil
+import subprocess
+from contextlib import contextmanager
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import IO
 
 import pytest
 from tests.utils.config import (
-    PackageConfig,
     DatasetLogs,
+    PackageConfig,
 )
 from tests.utils.utils import (
-    diff_equal,
+    is_dir_tree_content_equal,
     run_and_assert,
 )
 
@@ -18,7 +20,7 @@ pytestmark = pytest.mark.binaries
 text_datasets = pytest.mark.parametrize(
     "download_and_extract_dataset",
     [
-        #"hive_24hr",
+        # "hive_24hr",
     ],
     indirect=["download_and_extract_dataset"],
 )
@@ -26,7 +28,7 @@ text_datasets = pytest.mark.parametrize(
 json_datasets = pytest.mark.parametrize(
     "download_and_extract_dataset",
     [
-        #"spark_event_logs",
+        # "spark_event_logs",
         "postgresql",
     ],
     indirect=["download_and_extract_dataset"],
@@ -58,9 +60,13 @@ def test_clp_identity_transform(
     ]
     # fmt: on
     run_and_assert(compression_cmd)
-    run_and_assert([binary_path_str, "x", str(archives_dir), str(extract_dir)])
 
-    diff_equal(download_dir, extract_dir)
+    extraction_cmd = [binary_path_str, "x", str(archives_dir), str(extract_dir)]
+    run_and_assert(extraction_cmd)
+
+    assert is_dir_tree_content_equal(
+        download_dir, extract_dir
+    ), "Mismatch between clp compression input and decompression output."
 
     shutil.rmtree(archives_dir, ignore_errors=True)
     shutil.rmtree(extract_dir, ignore_errors=True)
@@ -87,7 +93,9 @@ def test_clp_s_identity_transform(
     # TODO: Remove this check once we can directly compare decompressed logs (which would preserve
     #       the directory structure and row/key order) with the original downloaded logs.
     # See also: https://docs.yscope.com/clp/main/user-guide/core-clp-s.html#current-limitations
-    single_file_archives_dir = package_config.test_output_dir / f"{dataset_name}-single-file-archives"
+    single_file_archives_dir = (
+        package_config.test_output_dir / f"{dataset_name}-single-file-archives"
+    )
     single_file_extract_dir = package_config.test_output_dir / f"{dataset_name}-single-file-logs"
 
     shutil.rmtree(single_file_archives_dir, ignore_errors=True)
@@ -100,7 +108,9 @@ def test_clp_s_identity_transform(
     with _sort_json_keys_and_rows(extract_dir / "original") as s1, _sort_json_keys_and_rows(
         single_file_extract_dir / "original"
     ) as s2:
-        diff_equal(s1.name, s2.name)
+        assert is_dir_tree_content_equal(
+            s1.name, s2.name
+        ), "Mismatch between clp-s compression input and decompression output."
 
     shutil.rmtree(archives_dir, ignore_errors=True)
     shutil.rmtree(extract_dir, ignore_errors=True)
@@ -108,15 +118,16 @@ def test_clp_s_identity_transform(
     shutil.rmtree(single_file_extract_dir, ignore_errors=True)
 
 
-def _sort_json_keys_and_rows(json_fp: Path) -> IO[bytes]:
+@contextmanager
+def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
     with NamedTemporaryFile(mode="w+", delete=True) as keys_sorted, NamedTemporaryFile(
         mode="w+", delete=True
-    ) as flattened:
+    ) as flattened, NamedTemporaryFile(mode="w+", delete=True) as keys_and_rows_sorted:
         keys_and_rows_sorted = NamedTemporaryFile(mode="w+", delete=True)
-        run_and_assert(["jq", "--sort-keys", ".", str(json_fp)], stdout=keys_sorted)
+        subprocess.run(["jq", "--sort-keys", ".", str(json_fp)], check=True, stdout=keys_sorted)
         keys_sorted.flush()
-        run_and_assert(["jq", ".", keys_sorted.name], stdout=flattened)
+        subprocess.run(["jq", ".", keys_sorted.name], check=True, stdout=flattened)
         flattened.flush()
-        run_and_assert(["sort", flattened.name], stdout=keys_and_rows_sorted)
+        subprocess.run(["sort", flattened.name], check=True, stdout=keys_and_rows_sorted)
         keys_and_rows_sorted.flush()
-        return keys_and_rows_sorted
+        yield keys_and_rows_sorted

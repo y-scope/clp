@@ -4,8 +4,8 @@ import subprocess
 
 import pytest
 from tests.utils.config import (
-    PackageConfig,
     DatasetLogs,
+    PackageConfig,
 )
 
 
@@ -65,7 +65,6 @@ def download_and_extract_dataset(request, package_config: PackageConfig) -> Data
 
         extract_path_str = str(package_config.uncompressed_logs_dir / dataset_name)
         shutil.unpack_archive(download_path_str, extract_path_str)
-        os.remove(download_path_str)
     except Exception as e:
         raise RuntimeError(f"Failed to download and extract dataset `{dataset_name}`: {e}")
 
