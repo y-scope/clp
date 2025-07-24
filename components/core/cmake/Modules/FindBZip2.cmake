@@ -95,5 +95,5 @@ if(NOT TARGET BZip2::BZip2)
 endif()
 
 # Restore original value of PKG_CONFIG_PATH
-set(ENV{PKG_CONFIG_PATH} "ENV{bzip2_ORIG_PKG_CONFIG_PATH}")
+set(ENV{PKG_CONFIG_PATH} "$ENV{bzip2_ORIG_PKG_CONFIG_PATH}")
 unset(ENV{bzip2_ORIG_PKG_CONFIG_PATH})
