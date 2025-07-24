@@ -3,7 +3,7 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
-class BaseConfig:
+class PackageConfig:
     clp_bin_dir: Path
     clp_package_dir: Path
     clp_sbin_dir: Path

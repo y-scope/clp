@@ -163,13 +163,21 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
-  test-package:
+  package-test:
+    deps:
+      - "package"
     dir: "{{.G_INTEGRATION_TESTS_DIR}}"
     cmds:
       - |-
         CLP_BUILD_DIR="{{.G_BUILD_DIR}}" \
         CLP_PACKAGE_DIR="{{.G_PACKAGE_BUILD_DIR}}" \
         uv run python -m pytest
+
+  package-test-cache-clear:
+    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
+    cmds:
+      - >-
+        uv run python -m pytest --cache-clear -q --collect-only
 
   clp-s-generate-parsers:
     vars:

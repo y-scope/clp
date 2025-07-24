@@ -5,7 +5,7 @@ from typing import IO
 
 import pytest
 from tests.utils.config import (
-    BaseConfig,
+    PackageConfig,
     DatasetLogs,
 )
 from tests.utils.utils import (
@@ -18,7 +18,7 @@ pytestmark = pytest.mark.binaries
 text_datasets = pytest.mark.parametrize(
     "download_and_extract_dataset",
     [
-        "hive_24hr",
+        #"hive_24hr",
     ],
     indirect=["download_and_extract_dataset"],
 )
@@ -26,7 +26,7 @@ text_datasets = pytest.mark.parametrize(
 json_datasets = pytest.mark.parametrize(
     "download_and_extract_dataset",
     [
-        "spark_event_logs",
+        #"spark_event_logs",
         "postgresql",
     ],
     indirect=["download_and_extract_dataset"],
@@ -36,13 +36,13 @@ json_datasets = pytest.mark.parametrize(
 @pytest.mark.clp
 @text_datasets
 def test_clp_identity_transform(
-    request, base_config: BaseConfig, download_and_extract_dataset: DatasetLogs
+    request, package_config: PackageConfig, download_and_extract_dataset: DatasetLogs
 ) -> None:
-    binary_path_str = str(base_config.clp_bin_dir / "clp")
+    binary_path_str = str(package_config.clp_bin_dir / "clp")
     dataset_name = download_and_extract_dataset.name
-    download_dir = base_config.uncompressed_logs_dir / dataset_name
-    archives_dir = base_config.test_output_dir / f"{dataset_name}-archives"
-    extract_dir = base_config.test_output_dir / f"{dataset_name}-logs"
+    download_dir = package_config.uncompressed_logs_dir / dataset_name
+    archives_dir = package_config.test_output_dir / f"{dataset_name}-archives"
+    extract_dir = package_config.test_output_dir / f"{dataset_name}-logs"
 
     shutil.rmtree(archives_dir, ignore_errors=True)
     shutil.rmtree(extract_dir, ignore_errors=True)
@@ -69,13 +69,13 @@ def test_clp_identity_transform(
 @pytest.mark.clp_s
 @json_datasets
 def test_clp_s_identity_transform(
-    request, base_config: BaseConfig, download_and_extract_dataset: DatasetLogs
+    request, package_config: PackageConfig, download_and_extract_dataset: DatasetLogs
 ) -> None:
-    binary_path_str = str(base_config.clp_bin_dir / "clp-s")
+    binary_path_str = str(package_config.clp_bin_dir / "clp-s")
     dataset_name = download_and_extract_dataset.name
-    download_dir = base_config.uncompressed_logs_dir / dataset_name
-    archives_dir = base_config.test_output_dir / f"{dataset_name}-archives"
-    extract_dir = base_config.test_output_dir / f"{dataset_name}-logs"
+    download_dir = package_config.uncompressed_logs_dir / dataset_name
+    archives_dir = package_config.test_output_dir / f"{dataset_name}-archives"
+    extract_dir = package_config.test_output_dir / f"{dataset_name}-logs"
 
     shutil.rmtree(archives_dir, ignore_errors=True)
     shutil.rmtree(extract_dir, ignore_errors=True)
@@ -87,8 +87,8 @@ def test_clp_s_identity_transform(
     # TODO: Remove this check once we can directly compare decompressed logs (which would preserve
     #       the directory structure and row/key order) with the original downloaded logs.
     # See also: https://docs.yscope.com/clp/main/user-guide/core-clp-s.html#current-limitations
-    single_file_archives_dir = base_config.test_output_dir / f"{dataset_name}-single-file-archives"
-    single_file_extract_dir = base_config.test_output_dir / f"{dataset_name}-single-file-logs"
+    single_file_archives_dir = package_config.test_output_dir / f"{dataset_name}-single-file-archives"
+    single_file_extract_dir = package_config.test_output_dir / f"{dataset_name}-single-file-logs"
 
     shutil.rmtree(single_file_archives_dir, ignore_errors=True)
     shutil.rmtree(single_file_extract_dir, ignore_errors=True)

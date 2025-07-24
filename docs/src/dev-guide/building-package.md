@@ -67,7 +67,7 @@ values for the fields in angle brackets.
 To test the package, run:
 
 ```shell
-task test-package
+task package-test
 ```
 
 ## Cleanup
