@@ -7,7 +7,7 @@ import {StatusCodes} from "http-status-codes";
 import {
     SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
-} from "../../../../../common/index.js";
+} from "@webui/common";
 import settings from "../../../../settings.json" with {type: "json"};
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
