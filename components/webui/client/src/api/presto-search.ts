@@ -30,7 +30,7 @@ const PrestoJobSchema = Type.Object(
 type PrestoJob = Static<typeof PrestoJobSchema>;
 
 /**
- * Sends post request to server tosubmit presto query.
+ * Sends post request to server to submit presto query.
  *
  * @param payload
  * @return
