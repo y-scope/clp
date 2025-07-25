@@ -76,23 +76,36 @@ def update_compression_task_metadata(db_cursor, task_id, kv):
     db_cursor.execute(query, values)
 
 
-def update_compression_job_metadata(db_cursor, job_id, kv):
+def update_compression_job_metadata(db_cursor, job_id, kv, *, append=False, separator="\n"):
     if not len(kv):
         logger.error("Must specify at least one field to update")
         raise ValueError
 
-    field_set_expressions = [f"{k} = %s" for k in kv.keys()] + ["update_time = CURRENT_TIMESTAMP()"]
+    field_set_expressions = []
+    values = []
+
+    for k, v in kv.items():
+        if append and "status_msg" == k:
+            field_set_expressions += [f"{k} = CONCAT({k}, %s, %s)"]
+            values.extend([v, separator])
+        else:
+            field_set_expressions += [f"{k} = %s"]
+            values.append(v)
+
+    field_set_expressions += ["update_time = CURRENT_TIMESTAMP()"]
+
     query = f"""
         UPDATE {COMPRESSION_JOBS_TABLE_NAME}
         SET {", ".join(field_set_expressions)}
         WHERE id = %s
     """
-    values = list(kv.values()) + [job_id]
+
+    values.append(job_id)
     db_cursor.execute(query, values)
 
 
 def _process_fs_input_paths(
-    fs_input_conf: FsInputConfig, paths_to_compress_buffer: PathsToCompressBuffer
+    fs_input_conf: FsInputConfig, paths_to_compress_buffer: PathsToCompressBuffer, db_cursor, job_id
 ) -> None:
     """
     Iterates through all files in fs_input_conf and adds their metadata to
@@ -100,6 +113,8 @@ def _process_fs_input_paths(
     NOTE: This method skips files that don't exist.
     :param fs_input_conf:
     :param paths_to_compress_buffer:
+    :param db_cursor:
+    :param job_id:
     """
 
     for path_idx, path in enumerate(fs_input_conf.paths_to_compress, start=1):
@@ -108,6 +123,14 @@ def _process_fs_input_paths(
         try:
             file, empty_directory = validate_path_and_get_info(CONTAINER_INPUT_LOGS_ROOT_DIR, path)
         except ValueError as ex:
+            update_compression_job_metadata(
+                db_cursor,
+                job_id,
+                {
+                    "status_msg": str(ex),
+                },
+                append=True,
+            )
             logger.error(str(ex))
             continue
 
@@ -123,6 +146,14 @@ def _process_fs_input_paths(
                         CONTAINER_INPUT_LOGS_ROOT_DIR, internal_path
                     )
                 except ValueError as ex:
+                    update_compression_job_metadata(
+                        db_cursor,
+                        job_id,
+                        {
+                            "status_msg": str(ex),
+                        },
+                        append=True,
+                    )
                     logger.error(str(ex))
                     continue
 
@@ -207,7 +238,7 @@ def search_and_schedule_new_tasks(
 
         input_type = input_config.type
         if input_type == InputType.FS.value:
-            _process_fs_input_paths(input_config, paths_to_compress_buffer)
+            _process_fs_input_paths(input_config, paths_to_compress_buffer, db_cursor, job_id)
         elif input_type == InputType.S3.value:
             try:
                 _process_s3_input(input_config, paths_to_compress_buffer)
