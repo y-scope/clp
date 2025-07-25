@@ -18,7 +18,9 @@ jobs:
     name: "build"
     strategy:
       matrix:
-        os: ["macos-latest", "ubuntu-latest"]
+        os:
+          - "macos-15"
+          - "ubuntu-24.04"
     runs-on: "${{matrix.os}}"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
@@ -34,7 +36,7 @@ jobs:
         shell: "bash"
         run: "npm install -g @go-task/cli"
 
-      - if: "matrix.os == 'macos-latest'"
+      - if: "matrix.os == 'macos-15'"
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
 
@@ -46,7 +48,7 @@ jobs:
       - if: >-
           contains(fromJSON('["push", "workflow_dispatch"]'), github.event_name)
           && ('refs/heads/main' == github.ref || startsWith(github.ref, 'refs/tags/v'))
-          && 'ubuntu-latest' == matrix.os
+          && 'ubuntu-24.04' == matrix.os
         uses: "actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02"
         with:
           name: "docs-html"

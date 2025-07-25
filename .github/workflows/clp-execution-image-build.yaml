@@ -24,7 +24,7 @@ concurrency:
 jobs:
   filter-relevant-changes:
     name: "filter-relevant-changes"
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     outputs:
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
     steps:
@@ -51,7 +51,7 @@ jobs:
     name: "ubuntu-jammy-execution-image"
     if: "'true' == needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed"
     needs: "filter-relevant-changes"
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
