@@ -2,3 +2,4 @@
 .task/
 build/
 **/dist/
+.clang-format
