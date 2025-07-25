@@ -152,6 +152,18 @@ set(
 )
 
 if(CLP_BUILD_EXECUTABLES)
+        clp_find_boost()
+        find_package(date REQUIRED)
+        find_package(fmt REQUIRED)
+        find_package(log_surgeon REQUIRED)
+        clp_find_mongocxx()
+        clp_find_msgpack()
+        find_package(nlohmann_json REQUIRED)
+        find_package(spdlog REQUIRED)
+        clp_find_sqlite()
+        clp_find_ystdlib()
+        clp_find_zstd()
+
         add_executable(clo ${CLO_SOURCES} ${REDUCER_SOURCES})
         target_compile_features(clo PRIVATE cxx_std_20)
         target_include_directories(clo

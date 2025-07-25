@@ -35,6 +35,10 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_SEARCH)
+        find_package(absl REQUIRED)
+        find_package(simdjson REQUIRED)
+        find_package(spdlog REQUIRED)
+
         add_library(
                 clp_s_search
                 ${CLP_S_SEARCH_SOURCES}

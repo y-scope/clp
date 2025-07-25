@@ -13,7 +13,7 @@
 
 set(zstd_LIBNAME "zstd")
 
-include(cmake/Modules/FindLibraryDependencies.cmake)
+include("${PROJECT_SOURCE_DIR}/cmake/Modules/FindLibraryDependencies.cmake")
 
 # Run pkg-config
 find_package(PkgConfig)
