@@ -366,6 +366,12 @@ class AwsAuthentication(BaseModel):
             raise ValueError(f"profile and credentials must not be set when type is '{auth_enum}.'")
         return values
 
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+        if self.credentials is not None:
+            d["credentials"] = self.credentials.dict()
+        return d
+
 
 class S3Config(BaseModel):
     region_code: str
@@ -391,7 +397,9 @@ class S3IngestionConfig(BaseModel):
     aws_authentication: AwsAuthentication
 
     def dump_to_primitive_dict(self):
-        return self.dict()
+        d = self.dict()
+        d["aws_authentication"] = self.aws_authentication.dump_to_primitive_dict()
+        return d
 
 
 class FsStorage(BaseModel):

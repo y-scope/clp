@@ -957,7 +957,6 @@ def start_webui(
     ]
     necessary_mounts = [
         mounts.clp_home,
-        mounts.stream_output_dir,
     ]
     if StorageType.S3 == stream_storage.type:
         auth = stream_storage.s3_config.aws_authentication
@@ -973,6 +972,9 @@ def start_webui(
                 necessary_mounts.append(mounts.aws_config_dir)
             if aws_env_vars:
                 necessary_env_vars.extend(aws_env_vars)
+    else:
+        necessary_mounts.append(mounts.stream_output_dir)
+
     append_docker_options(container_cmd, necessary_mounts, necessary_env_vars)
     container_cmd.append(clp_config.execution_container)
 
