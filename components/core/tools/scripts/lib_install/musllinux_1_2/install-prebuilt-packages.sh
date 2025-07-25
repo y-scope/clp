@@ -42,11 +42,6 @@ tar -C /usr/local/bin -xzf "$task_pkg_path" task
 chmod +x /usr/local/bin/task
 rm "$task_pkg_path"
 
-# Install `uv`
-if ! command -v uv &> /dev/null; then
-    curl --fail --location --silent --show-error https://astral.sh/uv/install.sh | sh
-fi
-
 # Downgrade to CMake v3 to work around https://github.com/y-scope/clp/issues/795
 pipx uninstall cmake
 pipx install cmake~=3.31
