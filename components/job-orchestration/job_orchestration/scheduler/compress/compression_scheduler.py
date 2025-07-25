@@ -76,18 +76,31 @@ def update_compression_task_metadata(db_cursor, task_id, kv):
     db_cursor.execute(query, values)
 
 
-def update_compression_job_metadata(db_cursor, job_id, kv):
+def update_compression_job_metadata(db_cursor, job_id, kv, *, append=False, separator="\n"):
     if not len(kv):
         logger.error("Must specify at least one field to update")
         raise ValueError
 
-    field_set_expressions = [f"{k} = %s" for k in kv.keys()] + ["update_time = CURRENT_TIMESTAMP()"]
+    field_set_expressions = []
+    values = []
+
+    for k, v in kv.items():
+        if append and "status_msg" == k:
+            field_set_expressions += [f"{k} = CONCAT({k}, %s, %s)"]
+            values.extend([v, separator])
+        else:
+            field_set_expressions += [f"{k} = %s"]
+            values.append(v)
+
+    field_set_expressions += ["update_time = CURRENT_TIMESTAMP()"]
+
     query = f"""
         UPDATE {COMPRESSION_JOBS_TABLE_NAME}
         SET {", ".join(field_set_expressions)}
         WHERE id = %s
     """
-    values = list(kv.values()) + [job_id]
+
+    values.append(job_id)
     db_cursor.execute(query, values)
 
 
@@ -116,6 +129,7 @@ def _process_fs_input_paths(
                 {
                     "status_msg": str(ex),
                 },
+                append=True,
             )
             logger.error(str(ex))
             continue
@@ -138,6 +152,7 @@ def _process_fs_input_paths(
                         {
                             "status_msg": str(ex),
                         },
+                        append=True,
                     )
                     logger.error(str(ex))
                     continue
