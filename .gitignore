@@ -2,3 +2,4 @@
 .task/
 build/
 **/dist/
+**/__pycache__/
