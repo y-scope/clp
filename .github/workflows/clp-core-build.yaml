@@ -360,6 +360,7 @@ jobs:
           #   task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
           run_command: >-
             CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
+            UV_CACHE_DIR=/tmp/.cache/uv
             task lint:check-cpp-full
 
       # Cache the source file checksums and the generated files (logs) for the
