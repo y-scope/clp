@@ -17,6 +17,7 @@ To run the linting tools, besides commonly installed tools like `tar`, you'll ne
 * python3-venv (for the version of Python installed)
 * [Task] >= 3.38.0 and < 3.43.0
   * We constrain the version due to unresolved [issues][clp-issue-872].
+* [uv]
 
 ## Running the linters
 
@@ -37,3 +38,4 @@ task lint:fix
 [clp-issue-872]: https://github.com/y-scope/clp/issues/872
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&projects=&template=feature-request.yml
 [Task]: https://taskfile.dev/
+[uv]: https://docs.astral.sh/uv/
