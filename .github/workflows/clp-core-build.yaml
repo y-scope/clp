@@ -350,6 +350,7 @@ jobs:
       - uses: "./.github/actions/run-on-image"
         env:
           OS_NAME: "ubuntu-jammy"
+          XDG_CACHE_HOME: "/tmp/.cache"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_published_image: >-
