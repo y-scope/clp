@@ -187,6 +187,7 @@ tasks:
           #   - tests/test-ffi_IrUnitHandlerInterface.cpp
           # yamllint disable rule:line-length
           EXCLUDE_PATTERNS:
+            # Sources
             - "clp/ArrayBackedPosIntSet.hpp"
             - "clp/aws/AwsAuthenticationSigner.cpp"
             - "clp/BufferedFileReader.cpp"
@@ -710,6 +711,7 @@ tasks:
             - "reducer/reducer_server.cpp"
             - "reducer/ServerContext.cpp"
             - "reducer/ServerContext.hpp"
+            # Tests
             - "LogSuppressor.hpp"
             - "test-Array.cpp"
             - "test-BoundedReader.cpp"
