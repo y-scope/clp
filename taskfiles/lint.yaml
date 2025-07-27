@@ -121,7 +121,11 @@ tasks:
             - "clp_s/search/kql/generated/*"
             - "clp_s/search/sql/generated/*"
           FLAGS: ["--dry-run"]
-          INCLUDE_FILENAME_PATTERNS: &cpp_include_patterns ["*.cpp", "*.h", "*.hpp", "*.inc"]
+          INCLUDE_FILENAME_PATTERNS: &cpp_include_filename_patterns
+            - "*.cpp"
+            - "*.h"
+            - "*.hpp"
+            - "*.inc"
           ROOT_PATHS: &cpp_root_paths
             - "{{.G_CORE_COMPONENT_DIR}}/src"
             - "{{.G_CORE_COMPONENT_DIR}}/tests"
@@ -135,7 +139,7 @@ tasks:
         vars:
           EXCLUDE_PATTERNS: *cpp_exclude_patterns
           FLAGS: ["-i"]
-          INCLUDE_FILENAME_PATTERNS: *cpp_include_patterns
+          INCLUDE_FILENAME_PATTERNS: *cpp_include_filename_patterns
           ROOT_PATHS: *cpp_root_paths
           VENV_DIR: "{{.G_LINT_VENV_DIR}}"
 
