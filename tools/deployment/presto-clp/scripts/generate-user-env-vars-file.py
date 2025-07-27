@@ -57,6 +57,7 @@ def main(argv=None) -> int:
             " reading archives from the fs storage type.",
             clp_archive_output_storage_type,
         )
+        return 1
 
     clp_archives_dir = _get_config_value(
         clp_config,
