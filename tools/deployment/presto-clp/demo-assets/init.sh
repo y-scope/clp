@@ -47,4 +47,3 @@ else
     declare -F | awk '{print $3}'
     exit 1
 fi
-

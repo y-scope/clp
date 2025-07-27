@@ -15,4 +15,3 @@ rm -f ${PRESTO_CONFIG_DIR}/catalog/*
 
 # Copy over files
 mv ${PRESTO_CONFIG_DIR}/clp.properties ${PRESTO_CONFIG_DIR}/catalog
-

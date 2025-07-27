@@ -73,4 +73,3 @@ docker compose down
 [clp-json-v0.4.0]: https://github.com/y-scope/clp/releases/tag/v0.4.0
 [docker]: https://docs.docker.com/engine/install
 [postgresql dataset]: https://zenodo.org/records/10516402
-

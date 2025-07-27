@@ -84,4 +84,3 @@ else
     echo "Warning: 'node.id=REPLACE_ME' not found in $NODE_PROPERTIES_FILE"
     exit 1
 fi
-
