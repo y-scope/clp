@@ -40,7 +40,6 @@ brew install \
   coreutils \
   gcc \
   java11 \
-  libarchive \
   llvm@16 \
   lz4 \
   mariadb-connector-c \
