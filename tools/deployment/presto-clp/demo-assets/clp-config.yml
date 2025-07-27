@@ -36,4 +36,3 @@ webui:
 log_viewer_webui:
   host: "localhost"
   port: 6006
-

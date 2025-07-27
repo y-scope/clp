@@ -103,7 +103,8 @@ tasks:
           components/package-template/src/etc \
           docs \
           taskfile.yaml \
-          taskfiles
+          taskfiles \
+          tools/deployment
 
   check-cpp-format:
     sources: &cpp_source_files
