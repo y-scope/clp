@@ -1,0 +1,39 @@
+version: "3.9"
+
+services:
+  presto-coordinator:
+    image: ghcr.io/y-scope/presto/coordinator:dev
+    entrypoint: ["/bin/bash", "-c", "/scripts/generate-configs.sh && /opt/entrypoint.sh"]
+    env_file:
+      - .env
+    volumes:
+      - ./coordinator/scripts:/scripts:ro
+      - coordinator-config:/opt/presto-server/etc
+      - ./coordinator/config-template:/configs:ro
+    networks:
+      - presto
+
+  presto-worker:
+    image: ghcr.io/y-scope/presto/prestissimo-worker:dev
+    depends_on:
+      presto-coordinator:
+        condition: service_started
+    entrypoint: ["/bin/bash", "-c", "/scripts/generate-configs.sh && /opt/entrypoint.sh"]
+    env_file:
+      - .env
+    volumes:
+      - ./worker/scripts:/scripts:ro
+      - worker-config:/opt/presto-server/etc
+      - ./worker/config-template:/configs:ro
+      - "${CLP_PACKAGE_ARCHIVES}:${CLP_PACKAGE_ARCHIVES}"
+    networks:
+      - presto
+
+volumes:
+  coordinator-config:
+  worker-config:
+
+networks:
+  presto:
+    driver: bridge
+

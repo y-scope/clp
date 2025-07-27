@@ -1,0 +1,39 @@
+package:
+  storage_engine: "clp-s"
+database:
+  type: "mariadb"
+  host: "${REPLACE_IP}"
+  port: 6001
+  name: "clp-db"
+query_scheduler:
+  host: "${REPLACE_IP}"
+  port: 6002
+  jobs_poll_delay: 0.1
+  num_archives_to_search_per_sub_job: 16
+  logging_level: "INFO"
+queue:
+  host: "${REPLACE_IP}"
+  port: 6003
+redis:
+  host: "${REPLACE_IP}"
+  port: 6004
+  query_backend_database: 0
+  compression_backend_database: 1
+reducer:
+  host: "${REPLACE_IP}"
+  base_port: 6100
+  logging_level: "INFO"
+  upsert_interval: 100
+results_cache:
+  host: "${REPLACE_IP}"
+  port: 6005
+  db_name: "clp-query-results"
+  stream_collection_name: "stream-files"
+webui:
+  host: "localhost"
+  port: 6000
+  logging_level: "INFO"
+log_viewer_webui:
+  host: "localhost"
+  port: 6006
+
