@@ -6,6 +6,8 @@ services:
     entrypoint: ["/bin/bash", "-c", "/scripts/generate-configs.sh && /opt/entrypoint.sh"]
     env_file:
       - ".env"
+      - "coordinator-common.env"
+      - "coordinator.env"
     volumes:
       - "./coordinator/scripts:/scripts:ro"
       - "coordinator-config:/opt/presto-server/etc"
@@ -21,6 +23,8 @@ services:
     entrypoint: ["/bin/bash", "-c", "/scripts/generate-configs.sh && /opt/entrypoint.sh"]
     env_file:
       - ".env"
+      - "coordinator-common.env"
+      - "worker.env"
     volumes:
       - "./worker/scripts:/scripts:ro"
       - "worker-config:/opt/presto-server/etc"

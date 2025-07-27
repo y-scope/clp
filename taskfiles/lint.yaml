@@ -773,6 +773,7 @@ tasks:
           - "components/clp-py-utils/clp_py_utils"
           - "components/core/tools/scripts/utils"
           - "components/job-orchestration/job_orchestration"
+          - "tools/deployment"
           - "tools/scripts"
           - "docs/conf"
         cmd: |-

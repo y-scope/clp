@@ -10,9 +10,7 @@ Follow the guide here: [docker]
 
 2. Untar the clp-package and the postgresql dataset.
 
-3. Replace the content of `/path/to/clp-json-package/etc/clp-config.yml` with the output of `demo-assets/init.sh generate_sample_clp_config`.
-
-4. Launch:
+3. Launch:
 
 ```bash
 # You probably want to run a python 3.9 or newer virtual environment
@@ -29,7 +27,7 @@ sbin/compress.sh --timestamp-key 'timestamp' /path/to/postgresql.log
 6. Use the following command to update `.env`:
 
 ```bash
-demo-assets/init.sh update_metadata_config /path/to/clp-json-package
+scripts/set-up-config.sh /path/to/clp-json-package
 ```
 
 # Create Docker Cluster
