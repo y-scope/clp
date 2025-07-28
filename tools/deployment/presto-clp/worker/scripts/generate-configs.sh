@@ -50,7 +50,7 @@ apt-get update && apt-get install --assume-yes --no-install-recommends jq wget
 
 readonly PRESTO_CONFIG_DIR="/opt/presto-server/etc"
 
-# Substitute environemnt variables in config template
+# Substitute environment variables in config template
 find /configs -type f | while read -r f; do
     (
         echo "cat <<EOF"
@@ -59,9 +59,8 @@ find /configs -type f | while read -r f; do
     ) | sh >"${PRESTO_CONFIG_DIR}/$(basename "$f")"
 done
 
-# Setup the config directory hierarchy
+# Remove existing catalog files that exist in the image and add the CLP catalog
 rm -f ${PRESTO_CONFIG_DIR}/catalog/*
-
 mv ${PRESTO_CONFIG_DIR}/clp.properties ${PRESTO_CONFIG_DIR}/catalog
 
 # Update config.properties
