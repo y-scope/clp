@@ -96,6 +96,7 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
+      BUILD_WITH_SYMBOLS: "{{.BUILD_WITH_SYMBOLS | default false}}"
     sources:
       - "{{.G_BUILD_DIR}}/package-venv.md5"
       - "{{.G_BUILD_DIR}}/webui.md5"
@@ -113,7 +114,9 @@ tasks:
       - "components/package-template/src/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
-      - "core"
+      - task: "core"
+        vars:
+          BUILD_WITH_SYMBOLS: "{{.BUILD_WITH_SYMBOLS}}"
       - "clp-package-utils"
       - "clp-py-utils"
       - "init"
@@ -206,11 +209,17 @@ tasks:
             ref: ".OUTPUT_DIRS"
 
   core:
+    vars:
+      BUILD_WITH_SYMBOLS: "{{.BUILD_WITH_SYMBOLS | default false}}"
     cmds:
       - task: "core-generate"
+        vars:
+          BUILD_WITH_SYMBOLS: "{{.BUILD_WITH_SYMBOLS}}"
       - task: "core-build"
 
   core-generate:
+    vars:
+      BUILD_WITH_SYMBOLS: "{{.BUILD_WITH_SYMBOLS | default false}}"
     internal: true
     sources: &core_source_files
       - "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
@@ -219,14 +228,20 @@ tasks:
       - "{{.G_CORE_COMPONENT_DIR}}/src/**/*"
       - "{{.TASKFILE}}"
       - "/etc/os-release"
+    generates:
+      # ugly workaround so that when the var changes, the task gets re-run (triggering core-build re-run)
+      - '.task/build_with_symbols_{{.BUILD_WITH_SYMBOLS}}.stamp'
     deps:
       - "clp-s-generate-parsers"
       - "deps:core"
     cmds:
       - task: "utils:cmake:generate"
         vars:
+          EXTRA_ARGS: ['{{if eq .BUILD_WITH_SYMBOLS "true"}}-DCMAKE_BUILD_TYPE=RelWithDebInfo{{end}}']
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
           SOURCE_DIR: "{{.G_CORE_COMPONENT_DIR}}"
+      - 'rm .task/build_with_symbols_*.stamp'
+      - 'touch .task/build_with_symbols_{{.BUILD_WITH_SYMBOLS}}.stamp'
 
   core-build:
     internal: true
@@ -589,6 +604,8 @@ tasks:
       - "rm -rf dist"
 
   download-dataset:
+    status:
+      - "test -f {{.G_DATASET_LOCATION}}"
     cmds:
       - "curl -o output.tar.gz https://zenodo.org/records/10516387/files/cockroachdb.tar.gz?download=1"
       - "tar -xvzf output.tar.gz"
@@ -600,13 +617,16 @@ tasks:
 
   perf:
     deps:
-      - "package"
       - "download-dataset"
     cmds:
+      - task: "package"
+        vars:
+          BUILD_WITH_SYMBOLS: true
       - 'rm -f perf.data'
-      - 'perf record -F 99 -- ./build/core/clp-s c --timestamp-key "timestamp" --target-encoded-size 268435456 build/clp_cockroachdb_perf_output {{.G_DATASET_LOCATION}}'
+      - 'perf record -F 99 -g -- ./build/core/clp-s c --timestamp-key "timestamp" --target-encoded-size 268435456 build/clp_cockroachdb_perf_output {{.G_DATASET_LOCATION}}'
       - 'chmod +777 perf.data'
-      - 'perf data convert --to-json perf.json'
+      - 'perf report -i perf.data --call-graph=graph,0.5,0,caller,function,percent --stdio --demangle --no-inline > perf-report.txt'
+      # - 'perf data convert --to-json perf.json'
 
   init:
     internal: true
