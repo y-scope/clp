@@ -35,8 +35,14 @@ sample dataset that works well with Presto is the [postgresql] dataset.
 
 ### Setting up Presto
 
-1. Navigate to the `tools/deployment/presto-clp` directory in your terminal.
-2. Run the following script to generate the necessary config for Presto to work with CLP:
+1. Clone the CLP repository:
+
+    ```bash
+    git clone https://github.com/y-scope/clp.git
+    ```
+
+2. Navigate to the `tools/deployment/presto-clp` directory in your terminal.
+3. Run the following script to generate the necessary config for Presto to work with CLP:
 
     ```bash
     scripts/set-up-config.sh <clp-json-dir>
@@ -44,7 +50,7 @@ sample dataset that works well with Presto is the [postgresql] dataset.
 
     * `<clp-json-dir>` is the location of the clp-json package you set up in the previous section.
 
-3. Start a Presto cluster by running:
+4. Start a Presto cluster by running:
 
     ```bash
     docker compose up
