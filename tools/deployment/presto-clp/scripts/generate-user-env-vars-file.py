@@ -74,7 +74,7 @@ def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
     database_port = _get_config_value(clp_config, "database.port", str(3306))
     database_name = _get_config_value(clp_config, "database.name", "clp-db")
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_URL"] = (
-        f"=jdbc:mysql://{database_host}:{database_port}"
+        f"jdbc:mysql://{database_host}:{database_port}"
     )
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_NAME"] = database_name
 
