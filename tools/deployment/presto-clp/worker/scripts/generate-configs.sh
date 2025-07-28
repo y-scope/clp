@@ -26,9 +26,9 @@ get_coordinator_version() {
     local config_properties_file=$1
 
     local discovery_uri
-    discovery_uri=$(awk -F= '/^discovery.uri=/ {print $2}' "$config_properties_file")
+    discovery_uri=$(awk -F "=" '/^discovery.uri=/ {print $2}' "$config_properties_file")
     if response=$(
-        wget --quiet --output-document - --timeout=10 "${discovery_uri}/v1/info" 2>/dev/null
+        wget --quiet --output-document - --timeout 10 "${discovery_uri}/v1/info" 2>/dev/null
     ); then
         version=$(echo "$response" | jq --raw-output '.nodeVersion.version')
         if [[ "$version" = "null" ]]; then
