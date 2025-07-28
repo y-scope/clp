@@ -43,18 +43,19 @@ sample dataset that works well with Presto is [postgresql].
     ```
 
 2. Navigate to the `tools/deployment/presto-clp` directory in your terminal.
-3. Run the following script to generate the necessary config for Presto to work with CLP:
+3. Generate the necessary config for Presto to work with CLP:
 
     ```bash
     scripts/set-up-config.sh <clp-json-dir>
     ```
 
-    * `<clp-json-dir>` is the location of the clp-json package you set up in the previous section.
+    * Replace `<clp-json-dir>` with the location of the clp-json package you set up in the previous
+      section.
 
 4. Configure Presto to use CLP's metadata database as follows:
 
     * Open and edit `coordinator/config-template/metadata-filter.json`.
-    * For each dataset you want to query, add a filter of the form:
+    * For each dataset you want to query, add a filter config of the form:
 
       ```json
       {
@@ -71,10 +72,10 @@ sample dataset that works well with Presto is [postgresql].
       }
       ```
       
-      * `<dataset>` is the name of the dataset you want to query. (If you didn't specify a dataset
-        when compressing your logs, they would be compressed into the `default` dataset.)
-      * `<timestamp-key>` is the timestamp key you specified when compressing logs for this
-        particular dataset.
+      * Replace `<dataset>` with the name of the dataset you want to query. (If you didn't specify a
+        dataset when compressing your logs, they would be compressed into the `default` dataset.)
+      * Replace `<timestamp-key>` with the timestamp key you specified when compressing logs for
+        this particular dataset.
     * The complete syntax for this file is [here][clp-connector-docs].
 
 5. Start a Presto cluster by running:
@@ -89,7 +90,7 @@ sample dataset that works well with Presto is [postgresql].
       docker compose up --scale presto-worker=<num-workers>
       ```
 
-      * `<num-workers>` is the number of Presto worker nodes you want to run.
+      * Replace `<num-workers>` with the number of Presto worker nodes you want to run.
 
 ### Stopping the Presto cluster
 
