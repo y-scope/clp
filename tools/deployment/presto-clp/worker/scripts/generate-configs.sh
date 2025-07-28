@@ -1,7 +1,6 @@
 #!/bin/sh
 
-# Install wget
-apt-get update && apt-get install -y wget
+apt-get update && apt-get install --assume-yes --no-install-recommends jq wget
 
 PRESTO_CONFIG_DIR="/opt/presto-server/etc"
 
@@ -25,8 +24,8 @@ CONFIG_PROPERTIES_FILE="/opt/presto-server/etc/config.properties"
 # 1. Fetch version info from Presto
 DISCOVERY_URI=$(awk -F= '/^discovery.uri=/ {print $2}' "${PRESTO_CONFIG_DIR}/config.properties")
 if response=$(wget -qO- --timeout=10 "${DISCOVERY_URI}/v1/info" 2>/dev/null); then
-    # Check if response is not empty and contains version info
-    if [ -n "$response" ] && echo "$response" | grep -q '"version"'; then
+    version=$(echo "$response" | jq --raw-output '.nodeVersion.version')
+    if [ "$version" != "null" ]; then
         echo "Presto is ready!"
     else
         echo "Error: Presto response is empty or doesn't contain version info."
