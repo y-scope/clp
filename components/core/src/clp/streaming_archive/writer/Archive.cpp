@@ -328,6 +328,13 @@ void Archive::write_msg_using_schema(LogEventView const& log_view) {
                 start,
                 end
         );
+        if (nullptr == timestamp_pattern) {
+            throw(std::runtime_error(
+                    "Schema contains a timestamp regex that matches "
+                    + log_output_buffer->get_mutable_token(0).to_string()
+                    + " which does not match any known timestamp pattern."
+            ));
+        }
         if (m_old_ts_pattern != timestamp_pattern) {
             change_ts_pattern(timestamp_pattern);
             m_old_ts_pattern = timestamp_pattern;
@@ -364,8 +371,8 @@ void Archive::write_msg_using_schema(LogEventView const& log_view) {
         log_surgeon::Token& token = log_output_buffer->get_mutable_token(i);
         int token_type = token.m_type_ids_ptr->at(0);
         if (log_output_buffer->has_delimiters() && (timestamp_pattern != nullptr || i > 1)
-            && token_type != static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID)
-            && token_type != static_cast<int>(log_surgeon::SymbolID::TokenNewlineId))
+            && token_type != static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString)
+            && token_type != static_cast<int>(log_surgeon::SymbolId::TokenNewline))
         {
             m_logtype_dict_entry.add_constant(token.get_delimiter(), 0, 1);
             if (token.m_start_pos == token.m_buffer_size - 1) {
@@ -375,12 +382,12 @@ void Archive::write_msg_using_schema(LogEventView const& log_view) {
             }
         }
         switch (token_type) {
-            case static_cast<int>(log_surgeon::SymbolID::TokenNewlineId):
-            case static_cast<int>(log_surgeon::SymbolID::TokenUncaughtStringID): {
+            case static_cast<int>(log_surgeon::SymbolId::TokenNewline):
+            case static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString): {
                 m_logtype_dict_entry.add_constant(token.to_string(), 0, token.get_length());
                 break;
             }
-            case static_cast<int>(log_surgeon::SymbolID::TokenIntId): {
+            case static_cast<int>(log_surgeon::SymbolId::TokenInt): {
                 encoded_variable_t encoded_var;
                 if (!EncodedVariableInterpreter::convert_string_to_representable_integer_var(
                             token.to_string(),
@@ -397,7 +404,7 @@ void Archive::write_msg_using_schema(LogEventView const& log_view) {
                 m_encoded_vars.push_back(encoded_var);
                 break;
             }
-            case static_cast<int>(log_surgeon::SymbolID::TokenFloatId): {
+            case static_cast<int>(log_surgeon::SymbolId::TokenFloat): {
                 encoded_variable_t encoded_var;
                 if (!EncodedVariableInterpreter::convert_string_to_representable_float_var(
                             token.to_string(),
