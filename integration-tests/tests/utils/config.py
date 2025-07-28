@@ -21,23 +21,6 @@ class DatasetLogs:
     compression_dir: Path
     decompression_dir: Path
 
-    def clear_test_outputs(self) -> None:
-        """
-        Remove compression and decompression directories for test init and cleanup.
-        """
-        shutil.rmtree(self.compression_dir, ignore_errors=True)
-        shutil.rmtree(self.decompression_dir, ignore_errors=True)
-
-
-@dataclass(frozen=True)
-class DatasetLogs:
-    dataset_name: str
-    tarball_url: str
-    download_dir: Path
-    extraction_dir: Path
-    compression_dir: Path
-    decompression_dir: Path
-
     @classmethod
     def create(cls, package_config, dataset_name: str, **kwargs):
         dataset_name = dataset_name.strip()
