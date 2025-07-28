@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+set -eu
+set -o pipefail
+
 # Sets/updates the given kv-pair in the given properties file.
 #
 # @param $1 Path to the properties file.
