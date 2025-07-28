@@ -3,10 +3,10 @@
 set -eu
 set -o pipefail
 
-script_dir=$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
+script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)
 
 cUsage="Usage: ${BASH_SOURCE[0]} <clp-package-dir>"
-if [ "$#" -lt 1 ] ; then
+if [ "$#" -lt 1 ]; then
     echo "$cUsage"
     exit
 fi
