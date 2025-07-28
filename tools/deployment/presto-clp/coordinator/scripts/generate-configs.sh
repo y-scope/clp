@@ -1,17 +1,19 @@
-#!/bin/sh
+#!/usr/bin/env bash
 
-# Exit on error
-set -e
+set -eu
+set -o pipefail
 
-PRESTO_CONFIG_DIR="/opt/presto-server/etc"
+readonly PRESTO_CONFIG_DIR="/opt/presto-server/etc"
 
-# Substitute environemnt variables in config template
+# Substitute environment variables in config template
 find /configs -type f | while read -r f; do
-  ( echo "cat <<EOF"; cat $f; echo "EOF" ) | sh > "${PRESTO_CONFIG_DIR}/$(basename "$f")"
+    (
+        echo "cat <<EOF"
+        cat "$f"
+        echo "EOF"
+    ) | sh >"${PRESTO_CONFIG_DIR}/$(basename "$f")"
 done
 
-# Setup the config directory hierarchy
-rm -f ${PRESTO_CONFIG_DIR}/catalog/*
-
-# Copy over files
-mv ${PRESTO_CONFIG_DIR}/clp.properties ${PRESTO_CONFIG_DIR}/catalog
+# Remove existing catalog files that exist in the image and add the CLP catalog
+rm -f "${PRESTO_CONFIG_DIR}/catalog/"*
+mv "${PRESTO_CONFIG_DIR}/clp.properties" "${PRESTO_CONFIG_DIR}/catalog"
