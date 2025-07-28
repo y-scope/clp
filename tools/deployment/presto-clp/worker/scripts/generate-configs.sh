@@ -3,6 +3,17 @@
 set -eu
 set -o pipefail
 
+# Emits a log event to stderr with an auto-generated ISO timestamp as well as the given level
+# and message.
+#
+# @param $1: Level string
+# @param $2: Message to be logged
+log() {
+    local -r LEVEL=$1
+    local -r MESSAGE=$2
+    echo "$(date --utc --date="now" +"%Y-%m-%dT%H:%M:%SZ") [${LEVEL}] ${MESSAGE}" >&2
+}
+
 # Sets/updates the given kv-pair in the given properties file.
 #
 # @param $1 Path to the properties file.
@@ -18,7 +29,7 @@ update_config_file() {
     else
         echo "${key}=${value}" >>"$file_path"
     fi
-    echo "Set ${key}=${value} in ${file_path}"
+    log "INFO" "Set ${key}=${value} in ${file_path}"
 }
 
 # Gets the Presto coordinator's version or exits on failure.
@@ -35,11 +46,11 @@ get_coordinator_version() {
     ); then
         version=$(echo "$response" | jq --raw-output '.nodeVersion.version')
         if [[ "$version" = "null" ]]; then
-            echo "Error: Presto response is empty or doesn't contain version info."
+            log "ERROR" "Presto response is empty or doesn't contain version info."
             exit 1
         fi
     else
-        echo "Error: Couldn't get Presto version info."
+        log "ERROR" "Couldn't get Presto version info."
         exit 1
     fi
 
@@ -66,7 +77,7 @@ mv "${PRESTO_CONFIG_DIR}/clp.properties" "${PRESTO_CONFIG_DIR}/catalog"
 # Update config.properties
 readonly CONFIG_PROPERTIES_FILE="/opt/presto-server/etc/config.properties"
 version=$(get_coordinator_version "$CONFIG_PROPERTIES_FILE")
-echo "Detected Presto version: $version"
+log "INFO" "Detected Presto version: $version"
 update_config_file "$CONFIG_PROPERTIES_FILE" "presto.version" "$version"
 
 # Update node.properties
