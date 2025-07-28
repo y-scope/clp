@@ -48,7 +48,7 @@ get_coordinator_version() {
 
 apt-get update && apt-get install --assume-yes --no-install-recommends jq wget
 
-PRESTO_CONFIG_DIR="/opt/presto-server/etc"
+readonly PRESTO_CONFIG_DIR="/opt/presto-server/etc"
 
 # Substitute environemnt variables in config template
 find /configs -type f | while read -r f; do
@@ -65,12 +65,12 @@ rm -f ${PRESTO_CONFIG_DIR}/catalog/*
 mv ${PRESTO_CONFIG_DIR}/clp.properties ${PRESTO_CONFIG_DIR}/catalog
 
 # Update config.properties
-CONFIG_PROPERTIES_FILE="/opt/presto-server/etc/config.properties"
+readonly CONFIG_PROPERTIES_FILE="/opt/presto-server/etc/config.properties"
 version=$(get_coordinator_version "$CONFIG_PROPERTIES_FILE")
 echo "Detected Presto version: $version"
 update_config_file "$CONFIG_PROPERTIES_FILE" "presto.version" "$version"
 
 # Update node.properties
-NODE_PROPERTIES_FILE="/opt/presto-server/etc/node.properties"
+readonly NODE_PROPERTIES_FILE="/opt/presto-server/etc/node.properties"
 update_config_file "$NODE_PROPERTIES_FILE" "node.internal-address" "$(hostname -i)"
 update_config_file "$NODE_PROPERTIES_FILE" "node.id" "$(hostname)"
