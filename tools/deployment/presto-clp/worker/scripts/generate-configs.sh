@@ -14,24 +14,6 @@ log() {
     echo "$(date --utc --date="now" +"%Y-%m-%dT%H:%M:%SZ") [${LEVEL}] ${MESSAGE}" >&2
 }
 
-# Sets/updates the given kv-pair in the given properties file.
-#
-# @param $1 Path to the properties file.
-# @param $2 The key to set.
-# @param $3 The value to set.
-update_config_file() {
-    local file_path=$1
-    local key=$2
-    local value=$3
-
-    if grep --quiet "^${key}=.*$" "$file_path"; then
-        sed --in-place "s|^${key}=.*|${key}=${value}|" "$file_path"
-    else
-        echo "${key}=${value}" >>"$file_path"
-    fi
-    log "INFO" "Set ${key}=${value} in ${file_path}"
-}
-
 # Gets the Presto coordinator's version or exits on failure.
 #
 # @param $1 Path to the config.properties file.
@@ -55,6 +37,24 @@ get_coordinator_version() {
     fi
 
     echo "$version"
+}
+
+# Sets/updates the given kv-pair in the given properties file.
+#
+# @param $1 Path to the properties file.
+# @param $2 The key to set.
+# @param $3 The value to set.
+update_config_file() {
+    local file_path=$1
+    local key=$2
+    local value=$3
+
+    if grep --quiet "^${key}=.*$" "$file_path"; then
+        sed --in-place "s|^${key}=.*|${key}=${value}|" "$file_path"
+    else
+        echo "${key}=${value}" >>"$file_path"
+    fi
+    log "INFO" "Set ${key}=${value} in ${file_path}"
 }
 
 apt-get update && apt-get install --assume-yes --no-install-recommends jq wget
