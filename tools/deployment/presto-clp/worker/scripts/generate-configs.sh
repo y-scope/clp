@@ -1,4 +1,22 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
+
+# Sets/updates the given kv-pair in the given properties file.
+#
+# @param $1 The properties file.
+# @param $2 The key to set.
+# @param $3 The value to set.
+update_config_file() {
+    local file_path=$1
+    local key=$2
+    local value=$3
+
+    if grep --quiet "^${key}=.*$" "$file_path"; then
+        sed --in-place "s|^${key}=.*|${key}=${value}|" "$file_path"
+    else
+        echo "${key}=${value}" >> "$file_path"
+    fi
+    echo "Set ${key}=${value} in ${file_path}"
+}
 
 apt-get update && apt-get install --assume-yes --no-install-recommends jq wget
 
@@ -43,34 +61,9 @@ version=$(echo "$response" | grep -o '"version":"[^"]*"' | sed 's/"version":"//;
 
 echo "Detected Presto version: $version"
 
-# 3. Replace `presto.version=REPLACE_ME` with actual version in the config file
-if grep -q '^presto.version=REPLACE_ME' "$CONFIG_PROPERTIES_FILE"; then
-    sed -i "s|^presto.version=REPLACE_ME|presto.version=$version|" "$CONFIG_PROPERTIES_FILE"
-    echo "Updated $CONFIG_PROPERTIES_FILE with version $version"
-else
-    echo "Warning: 'presto.version=REPLACE_ME' not found in $CONFIG_PROPERTIES_FILE"
-    exit 1
-fi
+update_config_file "$CONFIG_PROPERTIES_FILE" "presto.version" "$version"
 
-# Modify node.properties
+# Update node.properties
 NODE_PROPERTIES_FILE="/opt/presto-server/etc/node.properties"
-INTERNAL_ADDRESS=$(hostname -i)
-# Replace `node.internal-address=REPLACE_ME` with actual ip address in the config file
-if grep -q '^node.internal-address=REPLACE_ME' "$NODE_PROPERTIES_FILE"; then
-    sed -i \
-        "s|^node.internal-address=REPLACE_ME|node.internal-address=${INTERNAL_ADDRESS}|" \
-        "$NODE_PROPERTIES_FILE"
-    echo "Updated $NODE_PROPERTIES_FILE with node.internal-address ${INTERNAL_ADDRESS}"
-else
-    echo "Warning: 'node.internal-address=REPLACE_ME' not found in $NODE_PROPERTIES_FILE"
-    exit 1
-fi
-
-# Replace `node.id=REPLACE_ME` with actual hostname in the config file
-if grep -q '^node.id=REPLACE_ME' "$NODE_PROPERTIES_FILE"; then
-    sed -i "s|^node.id=REPLACE_ME|node.id=$(hostname)|" "$NODE_PROPERTIES_FILE"
-    echo "Updated $NODE_PROPERTIES_FILE with node.id $(hostname)"
-else
-    echo "Warning: 'node.id=REPLACE_ME' not found in $NODE_PROPERTIES_FILE"
-    exit 1
-fi
+update_config_file "$NODE_PROPERTIES_FILE" "node.internal-address" "$(hostname -i)"
+update_config_file "$NODE_PROPERTIES_FILE" "node.id" "$(hostname)"
