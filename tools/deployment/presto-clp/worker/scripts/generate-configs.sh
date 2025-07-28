@@ -22,35 +22,18 @@ mv ${PRESTO_CONFIG_DIR}/clp.properties ${PRESTO_CONFIG_DIR}/catalog
 # Update "presto.version" parameter in config.properties file using values from coordinator
 CONFIG_PROPERTIES_FILE="/opt/presto-server/etc/config.properties"
 
-# Retry configuration
-MAX_RETRIES=30
-RETRY_DELAY=10
-
-echo "Init container: Waiting for Presto to be ready..."
-
-# 1. Fetch version info from Presto with retry logic
-retry_count=0
-while [ $retry_count -lt $MAX_RETRIES ]; do
-    echo "Attempt $((retry_count + 1))/$MAX_RETRIES - Checking Presto availability..."
-
-    # Try to fetch the response
-    DISCOVERY_URI=$(awk -F= '/^discovery.uri=/ {print $2}' "${PRESTO_CONFIG_DIR}/config.properties")
-    if response=$(wget -qO- --timeout=10 "${DISCOVERY_URI}/v1/info" 2>/dev/null); then
-        # Check if response is not empty and contains version info
-        if [ -n "$response" ] && echo "$response" | grep -q '"version"'; then
-            echo "Presto is ready!"
-            break
-        fi
+# 1. Fetch version info from Presto
+DISCOVERY_URI=$(awk -F= '/^discovery.uri=/ {print $2}' "${PRESTO_CONFIG_DIR}/config.properties")
+if response=$(wget -qO- --timeout=10 "${DISCOVERY_URI}/v1/info" 2>/dev/null); then
+    # Check if response is not empty and contains version info
+    if [ -n "$response" ] && echo "$response" | grep -q '"version"'; then
+        echo "Presto is ready!"
+    else
+        echo "Error: Presto response is empty or doesn't contain version info."
+        exit 1
     fi
-
-    echo "Presto not ready yet, retrying in ${RETRY_DELAY}s..."
-    sleep $RETRY_DELAY
-    retry_count=$((retry_count + 1))
-done
-
-# Check if we exceeded max retries
-if [ $retry_count -eq $MAX_RETRIES ]; then
-    echo "Error: Presto did not become ready after $MAX_RETRIES attempts"
+else
+    echo "Error: Couldn't get Presto version info."
     exit 1
 fi
 

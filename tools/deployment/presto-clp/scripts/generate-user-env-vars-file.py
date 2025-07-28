@@ -2,9 +2,10 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import Dict, Optional
 
 import yaml
+from dotenv import dotenv_values
 
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
@@ -40,30 +41,60 @@ def main(argv=None) -> int:
     clp_package_dir: Path = parsed_args.clp_package_dir.resolve()
     output_file: Path = parsed_args.output_file
 
+    env_vars: Dict[str, str] = {}
+    if not _add_clp_env_vars(clp_package_dir, env_vars):
+        return 1
+
+    script_dir = Path(__file__).parent.resolve()
+    if not _add_worker_env_vars(script_dir.parent / "coordinator-common.env", env_vars):
+        return 1
+
+    with open(output_file, "w") as output_file_handle:
+        for key, value in env_vars.items():
+            output_file_handle.write(f"{key}={value}\n")
+
+    return 0
+
+
+def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
+    """
+    Adds environment variables for CLP config values to `env_vars`.
+
+    :param clp_package_dir:
+    :param env_vars:
+    :return: Whether the environment variables were successfully added.
+    """
+    env_vars["PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_TABLEPREFIX"] = "clp_"
+
     clp_config_file_path = clp_package_dir / "etc" / "clp-config.yml"
     with open(clp_config_file_path, "r") as clp_config_file:
         clp_config = yaml.safe_load(clp_config_file)
 
     database_host = _get_config_value(clp_config, "database.host", "localhost")
-    database_port = _get_config_value(clp_config, "database.port", 3306)
+    database_port = _get_config_value(clp_config, "database.port", str(3306))
     database_name = _get_config_value(clp_config, "database.name", "clp-db")
+    env_vars["PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_DATABASE_URL"] = (
+        f"=jdbc:mysql://{database_host}:{database_port}"
+    )
+    env_vars["PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_DATABASE_NAME"] = database_name
 
     clp_archive_output_storage_type = _get_config_value(
         clp_config, "archive_output.storage.type", "fs"
     )
     if "fs" != clp_archive_output_storage_type:
         logger.error(
-            "Expected CLP's archive_output.storage.type to be fs but found '%s'. Presto currently only supports"
-            " reading archives from the fs storage type.",
+            "Expected CLP's archive_output.storage.type to be fs but found '%s'. Presto"
+            " currently only supports reading archives from the fs storage type.",
             clp_archive_output_storage_type,
         )
-        return 1
+        return False
 
     clp_archives_dir = _get_config_value(
         clp_config,
         "archive_output.storage.directory",
         str(clp_package_dir / "var" / "data" / "archives"),
     )
+    env_vars["CLP_PACKAGE_ARCHIVES"] = clp_archives_dir
 
     credentials_file_path = clp_package_dir / "etc" / "credentials.yml"
     with open(credentials_file_path, "r") as credentials_file:
@@ -75,26 +106,39 @@ def main(argv=None) -> int:
         logger.error(
             "database.user and database.password must be specified in '%s'.", credentials_file_path
         )
-        return 1
+        return False
+    env_vars["PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_DATABASE_USER"] = database_user
+    env_vars["PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_DATABASE_PASSWORD"] = (
+        database_password
+    )
 
-    with open(output_file, "w") as env_file:
-        env_file.write(
-            "PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_DATABASE_URL"
-            f"=jdbc:mysql://{database_host}:{database_port}\n"
-        )
-        env_file.write(
-            f"PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_DATABASE_NAME={database_name}\n"
-        )
-        env_file.write(
-            f"PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_DATABASE_USER={database_user}\n"
-        )
-        env_file.write(
-            f"PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_DATABASE_PASSWORD={database_password}\n"
-        )
-        env_file.write(f"PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_TABLEPREFIX=clp_\n")
-        env_file.write(f"CLP_PACKAGE_ARCHIVES={clp_archives_dir}\n")
+    return True
 
-    return 0
+
+def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: Dict[str, str]) -> bool:
+    """
+    Adds environment variables for worker config values to `env_vars`.
+
+    :param coordinator_common_env_file_path:
+    :param env_vars:
+    :return: Whether the environment variables were successfully added.
+    """
+    config = dotenv_values(coordinator_common_env_file_path)
+
+    try:
+        env_vars["PRESTO_COORDINATOR_CONFIG_CONFIGPROPERTIES_DISCOVERY_URI"] = (
+            f'http://{config["PRESTO_COORDINATOR_SERVICENAME"]}'
+            f':{config["PRESTO_COORDINATOR_HTTPPORT"]}'
+        )
+    except KeyError as e:
+        logger.error(
+            "Missing required key '%s' in '%s'",
+            e,
+            coordinator_common_env_file_path,
+        )
+        return False
+
+    return True
 
 
 def _get_config_value(config: dict, key: str, default_value: Optional[str] = None) -> str:

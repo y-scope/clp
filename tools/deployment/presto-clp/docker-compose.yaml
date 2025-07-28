@@ -14,12 +14,20 @@ services:
       - "./coordinator/config-template:/configs:ro"
     networks:
       - "presto"
+    healthcheck:
+      test:
+        - "CMD"
+        - "curl"
+        - "-f"
+        - "${PRESTO_COORDINATOR_CONFIG_CONFIGPROPERTIES_DISCOVERY_URI}/v1/info"
+      interval: "10s"
+      retries: 30
 
   presto-worker:
     image: "ghcr.io/y-scope/presto/prestissimo-worker:dev"
     depends_on:
       presto-coordinator:
-        condition: "service_started"
+        condition: "service_healthy"
     entrypoint: ["/bin/bash", "-c", "/scripts/generate-configs.sh && /opt/entrypoint.sh"]
     env_file:
       - ".env"
