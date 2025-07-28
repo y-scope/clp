@@ -70,6 +70,15 @@ def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
     with open(clp_config_file_path, "r") as clp_config_file:
         clp_config = yaml.safe_load(clp_config_file)
 
+    database_type = _get_config_value(clp_config, "database.type", "mariadb")
+    if "mariadb" != database_type and "mysql" != database_type:
+        logger.error(
+            "CLP's database.type must be either mariadb or mysql but found '%s'. Presto"
+            " currently only supports reading metadata from a mariadb or mysql database.",
+            database_type,
+        )
+        return False
+
     database_host = _get_config_value(clp_config, "database.host", "localhost")
     database_port = _get_config_value(clp_config, "database.port", str(3306))
     database_name = _get_config_value(clp_config, "database.name", "clp-db")
