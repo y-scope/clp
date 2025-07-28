@@ -64,7 +64,7 @@ def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
     :param env_vars:
     :return: Whether the environment variables were successfully added.
     """
-    env_vars["PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_TABLEPREFIX"] = "clp_"
+    env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_TABLE_PREFIX"] = "clp_"
 
     clp_config_file_path = clp_package_dir / "etc" / "clp-config.yml"
     with open(clp_config_file_path, "r") as clp_config_file:
@@ -73,10 +73,10 @@ def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
     database_host = _get_config_value(clp_config, "database.host", "localhost")
     database_port = _get_config_value(clp_config, "database.port", str(3306))
     database_name = _get_config_value(clp_config, "database.name", "clp-db")
-    env_vars["PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_DATABASE_URL"] = (
+    env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_URL"] = (
         f"=jdbc:mysql://{database_host}:{database_port}"
     )
-    env_vars["PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_DATABASE_NAME"] = database_name
+    env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_NAME"] = database_name
 
     clp_archive_output_storage_type = _get_config_value(
         clp_config, "archive_output.storage.type", "fs"
@@ -94,7 +94,7 @@ def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
         "archive_output.storage.directory",
         str(clp_package_dir / "var" / "data" / "archives"),
     )
-    env_vars["CLP_PACKAGE_ARCHIVES"] = clp_archives_dir
+    env_vars["CLP_ARCHIVES_DIR"] = clp_archives_dir
 
     credentials_file_path = clp_package_dir / "etc" / "credentials.yml"
     with open(credentials_file_path, "r") as credentials_file:
@@ -107,10 +107,8 @@ def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
             "database.user and database.password must be specified in '%s'.", credentials_file_path
         )
         return False
-    env_vars["PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_DATABASE_USER"] = database_user
-    env_vars["PRESTO_COORDINATOR_CONFIG_CLPPROPERTIES_METADATA_DATABASE_PASSWORD"] = (
-        database_password
-    )
+    env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_USER"] = database_user
+    env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_PASSWORD"] = database_password
 
     return True
 
@@ -126,7 +124,7 @@ def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: Dict[
     config = dotenv_values(coordinator_common_env_file_path)
 
     try:
-        env_vars["PRESTO_COORDINATOR_CONFIG_CONFIGPROPERTIES_DISCOVERY_URI"] = (
+        env_vars["PRESTO_COORDINATOR_CONFIGPROPERTIES_DISCOVERY_URI"] = (
             f'http://{config["PRESTO_COORDINATOR_SERVICENAME"]}'
             f':{config["PRESTO_COORDINATOR_HTTPPORT"]}'
         )

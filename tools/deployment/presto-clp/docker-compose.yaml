@@ -17,7 +17,7 @@ services:
         - "CMD"
         - "curl"
         - "-f"
-        - "${PRESTO_COORDINATOR_CONFIG_CONFIGPROPERTIES_DISCOVERY_URI}/v1/info"
+        - "${PRESTO_COORDINATOR_CONFIGPROPERTIES_DISCOVERY_URI}/v1/info"
       interval: "10s"
       retries: 30
 
@@ -34,7 +34,7 @@ services:
     volumes:
       - "./worker/config-template:/configs:ro"
       - "./worker/scripts:/scripts:ro"
-      - "${CLP_PACKAGE_ARCHIVES}:${CLP_PACKAGE_ARCHIVES}"
+      - "${CLP_ARCHIVES_DIR}:${CLP_ARCHIVES_DIR}"
       - "worker-config:/opt/presto-server/etc"
     networks:
       - "presto"
