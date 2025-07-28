@@ -16,6 +16,8 @@ vars:
   G_CORE_COMPONENT_SUBMODULES_DIR: "{{.G_CORE_COMPONENT_DIR}}/submodules"
   G_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/webui"
 
+  G_DATASET_LOCATION: "{{.ROOT_DIR}}/datasets/dataset.json"
+
   # Build paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
@@ -585,6 +587,26 @@ tasks:
     dir: "components/{{.COMPONENT}}"
     cmds:
       - "rm -rf dist"
+
+  download-dataset:
+    cmds:
+      - "curl -o output.tar.gz https://zenodo.org/records/10516387/files/cockroachdb.tar.gz?download=1"
+      - "tar -xvzf output.tar.gz"
+      - "rm output.tar.gz"
+      - >-
+        mkdir -p "$(dirname "{{.G_DATASET_LOCATION}}")"
+      - "mv cockroachdb/cockroach.node1.log {{.G_DATASET_LOCATION}}"
+      - "rmdir cockroachdb"
+
+  perf:
+    deps:
+      - "package"
+      - "download-dataset"
+    cmds:
+      - 'rm -f perf.data'
+      - 'perf record -F 99 -- ./build/core/clp-s c --timestamp-key "timestamp" --target-encoded-size 268435456 build/clp_cockroachdb_perf_output {{.G_DATASET_LOCATION}}'
+      - 'chmod +777 perf.data'
+      - 'perf data convert --to-json perf.json'
 
   init:
     internal: true
