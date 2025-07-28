@@ -67,6 +67,14 @@ def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_TABLE_PREFIX"] = "clp_"
 
     clp_config_file_path = clp_package_dir / "etc" / "clp-config.yml"
+    if not clp_config_file_path.exists():
+        logger.error(
+            "'%s' doesn't exist. Is '%s' the location of the CLP package?",
+            clp_config_file_path,
+            clp_package_dir.resolve(),
+        )
+        return False
+
     with open(clp_config_file_path, "r") as clp_config_file:
         clp_config = yaml.safe_load(clp_config_file)
 
@@ -106,6 +114,10 @@ def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
     env_vars["CLP_ARCHIVES_DIR"] = clp_archives_dir
 
     credentials_file_path = clp_package_dir / "etc" / "credentials.yml"
+    if not credentials_file_path.exists():
+        logger.error("'%s' doesn't exist. Did you start CLP?", credentials_file_path)
+        return False
+
     with open(credentials_file_path, "r") as credentials_file:
         credentials = yaml.safe_load(credentials_file)
 
