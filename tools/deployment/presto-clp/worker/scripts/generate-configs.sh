@@ -23,7 +23,9 @@ CONFIG_PROPERTIES_FILE="/opt/presto-server/etc/config.properties"
 
 # 1. Fetch version info from Presto
 DISCOVERY_URI=$(awk -F= '/^discovery.uri=/ {print $2}' "${PRESTO_CONFIG_DIR}/config.properties")
-if response=$(wget -qO- --timeout=10 "${DISCOVERY_URI}/v1/info" 2>/dev/null); then
+if response=$(
+    wget --quiet --output-document - --timeout=10 "${DISCOVERY_URI}/v1/info" 2>/dev/null
+); then
     version=$(echo "$response" | jq --raw-output '.nodeVersion.version')
     if [ "$version" != "null" ]; then
         echo "Presto is ready!"
