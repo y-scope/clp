@@ -9,9 +9,9 @@ Presto.
 :::
 
 :::{note}
-Currently, this integration with Presto is under development and may change in the future. It is
-also being maintained in a [fork][yscope-presto] of the Presto project. We are working on merging
-these changes into the main Presto repository so that you can use official Presto releases with CLP.
+This integration with Presto is under development and may change in the future. It is also being
+maintained in a [fork][yscope-presto] of the Presto project. At some point, these changes will have
+been merged into the main Presto repository so that you can use official Presto releases with CLP.
 :::
 
 ## Requirements
@@ -51,58 +51,33 @@ sample dataset that works well with Presto is [postgresql].
 
     * `<clp-json-dir>` is the location of the clp-json package you set up in the previous section.
 
-    Note that for the metadata filter config (i.e., 
-    `tools/deployment/presto-clp/coordinator/config-template/metadata-filter.json`), it is a config
-    to indicate which columns are used for filtering splits that will be processed by Presto. Here
-    is an example:
+4. Configure Presto to use CLP's metadata database as follows:
 
-    ```json
-    {
-      "clp.default.default": [
-        {
-          "columnName": "timestamp",
-          "rangeMapping": {
-            "lowerBound": "begin_timestamp",
-            "upperBound": "end_timestamp"
-          },
-          "required": false
-        }
-      ]
-    }
-    ```
+    * Open and edit `coordinator/config-template/metadata-filter.json`.
+    * For each dataset you want to query, add a filter of the form:
 
-    * `"clp.default.default"` is the filter's scope. A scope can be one of the following:
+      ```json
+      {
+        "clp.default.<dataset>": [
+          {
+            "columnName": "<timestamp-key>",
+            "rangeMapping": {
+              "lowerBound": "begin_timestamp",
+              "upperBound": "end_timestamp"
+            },
+            "required": false
+          }
+        ]
+      }
+      ```
+      
+      * `<dataset>` is the name of the dataset you want to query. (If you didn't specify a dataset
+        when compressing your logs, they would be compressed into the `default` dataset.)
+      * `<timestamp-key>` is the timestamp key you specified when compressing logs for this
+        particular dataset.
+    * The complete syntax for this file is [here][clp-connector-docs].
 
-      * A catalog name
-      * A fully-qualified schema name
-      * A fully-qualified table name
-
-      Filter configs under a particular scope will apply to all child scopes. For example, filter
-      configs at the schema level will apply to all tables within that schema. In this example,
-      the filter will only apply to the `default` table under the `default` schema of the `clp`
-      catalog.
-
-    * `"columnName"` is the data column's name. You can use the column used as `--timestamp-key`
-    when compressing if you want to filter splits by timestamp.
-
-    * `"rangeMapping"` is an optional object with the following properties:
-
-      * `"lowerBound"` is the metadata column that represents the lower bound of values in a split
-      for the data column.
-      * `"upperBound"` is the metadata column that represents the upper bound of values in a split
-      for the data column.
-
-      In this example, since in CLP's metadata database, for each split (i.e., archive) there are
-      two fields `begin_timestamp` and `end_timestamp` to store the earilest and latest timestamps
-      of the log messages compressed in that split, we have to remap the original data column's
-      name to these two fields so that it can query the metadata database to retrieve filtered
-      splits.
-
-    * `"required"` is an optional field (defaults to false) which indicates whether the filter must
-    be present in the translated metadata filter SQL query. If a required filter is missing or
-    cannot be pushed down, the query will be rejected.
-
-4. Start a Presto cluster by running:
+5. Start a Presto cluster by running:
 
     ```bash
     docker compose up
@@ -144,8 +119,7 @@ SHOW TABLES;
 ```
 
 If you didn't specify a dataset when compressing your logs in CLP, your logs will have been stored
-in the `default` dataset. If you also didn't specify any metadata filters, you can query the logs
-in this dataset:
+in the `default` dataset. To query the logs in this dataset:
 
 ```sql
 SELECT * FROM default LIMIT 1;
@@ -162,13 +136,14 @@ SELECT foo.bar FROM default LIMIT 1;
 
 The Presto CLP integration has the following limitations at present:
 
-* Nested fields containing special characters (i.e., any non-alphanumeric characters except `_`;
-see [y-scope/presto#8]). To get around this limitation,you will need to preprocess your logs to
-remove such special characters.
+* Nested fields containing special characters cannot be queried (see [y-scope/presto#8]). Allowed
+  characters are alphanumeric characters and underscores. To get around this limitation, you'll
+  need to preprocess your logs to remove any special characters.
 * Only logs stored on the filesystem, rather than S3, can be queried through Presto.
 
 These limitations will be addressed in a future release of the Presto integration.
 
+[clp-connector-docs]: https://docs.yscope.com/presto/connector/clp.html#metadata-filter-config-file
 [clp-releases]: https://github.com/y-scope/clp/releases
 [docker-compose]: https://docs.docker.com/compose/install/
 [Docker]: https://docs.docker.com/engine/install/
