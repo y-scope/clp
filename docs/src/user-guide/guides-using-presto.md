@@ -110,9 +110,8 @@ SELECT foo.bar FROM default LIMIT 1;
 
 The Presto CLP integration has the following limitations at present:
 
-* Nested-fields that contain special characters (e.g., `t.$date`, where `$` is considered a special
-  character by Presto) cannot be queried (see [y-scope/presto#8]). To get around this limitation,
-  you will need to preprocess your logs to remove such special characters.
+* Nested-fields that contain special characters except `_` (see [y-scope/presto#8]). To get around
+this limitation,you will need to preprocess your logs to remove such special characters.
 * Only logs stored on the filesystem, rather than S3, can be queried through Presto.
 
 These limitations will be addressed in a future release of the Presto integration.
