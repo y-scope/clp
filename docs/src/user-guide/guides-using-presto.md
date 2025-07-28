@@ -16,6 +16,7 @@ these changes into the main Presto repository so that you can use official Prest
 
 ## Requirements
 
+* [CLP][clp-releases] (clp-json) v0.4.0 or higher
 * [Docker] v28 or higher
 * [Docker Compose][docker-compose] v2.20.2 or higher
 * Python
@@ -116,6 +117,7 @@ The Presto CLP integration the following limitations at present:
 
 These limitations will be addressed in a future release of the Presto integration.
 
+[clp-releases]: https://github.com/y-scope/clp/releases
 [docker-compose]: https://docs.docker.com/compose/install/
 [Docker]: https://docs.docker.com/engine/install/
 [postgresql]: https://zenodo.org/records/10516401
