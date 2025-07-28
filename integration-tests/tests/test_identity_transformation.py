@@ -1,8 +1,4 @@
-import subprocess
-from contextlib import contextmanager
 from pathlib import Path
-from tempfile import NamedTemporaryFile
-from typing import IO
 
 import pytest
 from tests.utils.config import (
@@ -11,6 +7,7 @@ from tests.utils.config import (
 )
 from tests.utils.utils import (
     is_dir_tree_content_equal,
+    is_json_file_structurally_equal,
     run_and_assert,
 )
 
@@ -26,7 +23,7 @@ text_datasets = pytest.mark.parametrize(
 json_datasets = pytest.mark.parametrize(
     "dataset_logs_fixture",
     [
-        # "spark_event_logs",
+        "spark_event_logs",
         "postgresql",
     ],
 )
@@ -95,13 +92,10 @@ def test_clp_s_identity_transform(
     )
     _clp_s_compress_and_decompress(package_config, consolidated_json_logs)
 
-    # Key and row orders are not preserved during `clp-s` operations, so sort before diffing.
-    with _sort_json_keys_and_rows(
-        dataset_logs.decompression_dir / "original"
-    ) as s1, _sort_json_keys_and_rows(consolidated_json_logs.decompression_dir / "original") as s2:
-        assert is_dir_tree_content_equal(
-            s1.name, s2.name
-        ), "Mismatch between clp-s compression input and decompression output."
+    assert is_json_file_structurally_equal(
+        dataset_logs.decompression_dir / "original",
+        consolidated_json_logs.decompression_dir / "original",
+    ), "Mismatch between clp-s compression input and decompression output."
 
     # Remove test outputs to save disk space
     dataset_logs.clear_test_outputs()
@@ -112,29 +106,9 @@ def _clp_s_compress_and_decompress(
     package_config: PackageConfig, dataset_logs: DatasetLogs
 ) -> None:
     dataset_logs.clear_test_outputs()
-    binary_path_str = str(package_config.clp_bin_dir / "clp-s")
-    run_and_assert(
-        [binary_path_str, "c", str(dataset_logs.compression_dir), str(dataset_logs.extraction_dir)]
-    )
-    run_and_assert(
-        [
-            binary_path_str,
-            "x",
-            str(dataset_logs.compression_dir),
-            str(dataset_logs.decompression_dir),
-        ]
-    )
-
-
-@contextmanager
-def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
-    with NamedTemporaryFile(mode="w+", delete=True) as keys_sorted, NamedTemporaryFile(
-        mode="w+", delete=True
-    ) as flattened, NamedTemporaryFile(mode="w+", delete=True) as keys_and_rows_sorted:
-        subprocess.run(["jq", "--sort-keys", ".", str(json_fp)], check=True, stdout=keys_sorted)
-        keys_sorted.flush()
-        subprocess.run(["jq", ".", keys_sorted.name], check=True, stdout=flattened)
-        flattened.flush()
-        subprocess.run(["sort", flattened.name], check=True, stdout=keys_and_rows_sorted)
-        keys_and_rows_sorted.flush()
-        yield keys_and_rows_sorted
+    bin_path = str(package_config.clp_bin_dir / "clp-s")
+    ext_path = str(dataset_logs.extraction_dir)
+    comp_path = str(dataset_logs.compression_dir)
+    decomp_path = str(dataset_logs.decompression_dir)
+    run_and_assert([bin_path, "c", comp_path, ext_path])
+    run_and_assert([bin_path, "x", comp_path, decomp_path])
