@@ -7,7 +7,11 @@ PRESTO_CONFIG_DIR="/opt/presto-server/etc"
 
 # Substitute environemnt variables in config template
 find /configs -type f | while read -r f; do
-  ( echo "cat <<EOF"; cat $f; echo "EOF" ) | sh > "${PRESTO_CONFIG_DIR}/$(basename "$f")"
+    (
+        echo "cat <<EOF"
+        cat "$f"
+        echo "EOF"
+    ) | sh >"${PRESTO_CONFIG_DIR}/$(basename "$f")"
 done
 
 # Setup the config directory hierarchy
@@ -27,21 +31,21 @@ echo "Init container: Waiting for Presto to be ready..."
 # 1. Fetch version info from Presto with retry logic
 retry_count=0
 while [ $retry_count -lt $MAX_RETRIES ]; do
-echo "Attempt $((retry_count + 1))/$MAX_RETRIES - Checking Presto availability..."
+    echo "Attempt $((retry_count + 1))/$MAX_RETRIES - Checking Presto availability..."
 
-# Try to fetch the response
-DISCOVERY_URI=$(awk -F= '/^discovery.uri=/ { print $2 }' "${PRESTO_CONFIG_DIR}/config.properties")
-if response=$(wget -qO- --timeout=10 "${DISCOVERY_URI}/v1/info" 2>/dev/null); then
-    # Check if response is not empty and contains version info
-    if [ -n "$response" ] && echo "$response" | grep -q '"version"'; then
-    echo "Presto is ready!"
-    break
+    # Try to fetch the response
+    DISCOVERY_URI=$(awk -F= '/^discovery.uri=/ {print $2}' "${PRESTO_CONFIG_DIR}/config.properties")
+    if response=$(wget -qO- --timeout=10 "${DISCOVERY_URI}/v1/info" 2>/dev/null); then
+        # Check if response is not empty and contains version info
+        if [ -n "$response" ] && echo "$response" | grep -q '"version"'; then
+            echo "Presto is ready!"
+            break
+        fi
     fi
-fi
 
-echo "Presto not ready yet, retrying in ${RETRY_DELAY}s..."
-sleep $RETRY_DELAY
-retry_count=$((retry_count + 1))
+    echo "Presto not ready yet, retrying in ${RETRY_DELAY}s..."
+    sleep $RETRY_DELAY
+    retry_count=$((retry_count + 1))
 done
 
 # Check if we exceeded max retries
@@ -69,7 +73,9 @@ NODE_PROPERTIES_FILE="/opt/presto-server/etc/node.properties"
 INTERNAL_ADDRESS=$(hostname -i)
 # Replace `node.internal-address=REPLACE_ME` with actual ip address in the config file
 if grep -q '^node.internal-address=REPLACE_ME' "$NODE_PROPERTIES_FILE"; then
-    sed -i "s|^node.internal-address=REPLACE_ME|node.internal-address=${INTERNAL_ADDRESS}|" "$NODE_PROPERTIES_FILE"
+    sed -i \
+        "s|^node.internal-address=REPLACE_ME|node.internal-address=${INTERNAL_ADDRESS}|" \
+        "$NODE_PROPERTIES_FILE"
     echo "Updated $NODE_PROPERTIES_FILE with node.internal-address ${INTERNAL_ADDRESS}"
 else
     echo "Warning: 'node.internal-address=REPLACE_ME' not found in $NODE_PROPERTIES_FILE"
@@ -78,8 +84,8 @@ fi
 
 # Replace `node.id=REPLACE_ME` with actual hostname in the config file
 if grep -q '^node.id=REPLACE_ME' "$NODE_PROPERTIES_FILE"; then
-    sed -i "s|^node.id=REPLACE_ME|node.id=$HOSTNAME|" "$NODE_PROPERTIES_FILE"
-    echo "Updated $NODE_PROPERTIES_FILE with node.id $HOSTNAME"
+    sed -i "s|^node.id=REPLACE_ME|node.id=$(hostname)|" "$NODE_PROPERTIES_FILE"
+    echo "Updated $NODE_PROPERTIES_FILE with node.id $(hostname)"
 else
     echo "Warning: 'node.id=REPLACE_ME' not found in $NODE_PROPERTIES_FILE"
     exit 1
