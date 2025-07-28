@@ -32,7 +32,7 @@ Using Presto with CLP requires:
 ### Setting up CLP
 
 Follow the [quick-start](./quick-start/index.md) guide to set up CLP and compress your logs. A
-sample dataset that works well with Presto is the [postgresql] dataset.
+sample dataset that works well with Presto is [postgresql].
 
 ### Setting up Presto
 
@@ -69,7 +69,7 @@ sample dataset that works well with Presto is the [postgresql] dataset.
 
 To stop the Presto cluster, use CTRL + C.
 
-If you want to clean up the Presto cluster entirely:
+To clean up the Presto cluster entirely:
 
 ```bash
 docker compose rm
@@ -108,7 +108,7 @@ SELECT foo.bar FROM default LIMIT 1;
 
 ## Limitations
 
-The Presto CLP integration the following limitations at present:
+The Presto CLP integration has the following limitations at present:
 
 * Nested-fields that contain special characters (e.g., `t.$date`, where `$` is considered a special
   character by Presto) cannot be queried (see [y-scope/presto#8]). To get around this limitation,
