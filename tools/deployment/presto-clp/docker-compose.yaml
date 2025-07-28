@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   presto-coordinator:
     image: "ghcr.io/y-scope/presto/coordinator:dev"
