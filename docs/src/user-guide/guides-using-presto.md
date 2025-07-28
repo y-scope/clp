@@ -71,7 +71,7 @@ sample dataset that works well with Presto is [postgresql].
         ]
       }
       ```
-      
+
       * Replace `<dataset>` with the name of the dataset you want to query. (If you didn't specify a
         dataset when compressing your logs, they would be compressed into the `default` dataset.)
       * Replace `<timestamp-key>` with the timestamp key you specified when compressing logs for
