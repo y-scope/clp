@@ -4,7 +4,10 @@
 
 #include "../src/clp/EncodedVariableInterpreter.hpp"
 #include "../src/clp/ir/types.hpp"
+#include "../src/clp/LogTypeDictionaryEntry.hpp"
 #include "../src/clp/streaming_archive/Constants.hpp"
+#include "../src/clp/VariableDictionaryReader.hpp"
+#include "../src/clp/VariableDictionaryWriter.hpp"
 
 using clp::cVariableDictionaryIdMax;
 using clp::encoded_variable_t;
