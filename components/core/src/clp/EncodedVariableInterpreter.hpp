@@ -56,7 +56,7 @@ public:
      * @param logtype
      */
     static void add_dict_var(std::string& logtype) {
-        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Dictionary);
+        logtype.emplace_back(enum_to_underlying_type(ir::VariablePlaceholder::Dictionary));
     }
 
     /**
@@ -64,7 +64,7 @@ public:
      * @param logtype
      */
     static void add_int_var(std::string& logtype) {
-        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Integer);
+        logtype.emplace_back(enum_to_underlying_type(ir::VariablePlaceholder::Integer));
     }
 
     /**
@@ -72,7 +72,7 @@ public:
      * @param logtype
      */
     static void add_float_var(std::string& logtype) {
-        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Float);
+        logtype.emplace_back(enum_to_underlying_type(ir::VariablePlaceholder::Float));
     }
 
     /**
@@ -80,7 +80,7 @@ public:
      * @param logtype
      */
     static void add_escape(std::string& logtype) {
-        logtype += enum_to_underlying_type(ir::VariablePlaceholder::Escape);
+        logtype.emplace_back(enum_to_underlying_type(ir::VariablePlaceholder::Escape));
     }
 
     /**
@@ -162,7 +162,7 @@ public:
      * Decodes all variables and decompresses them into a message
      * @tparam LogTypeDictionaryEntryType
      * @tparam VariableDictionaryReaderType
-     * @tparam EncodedVariableVectorType A vector of `clp::encoded_variable_t`.
+     * @tparam EncodedVariableContainerType A random access list of `clp::encoded_variable_t`.
      * @param logtype_dict_entry
      * @param var_dict
      * @param encoded_vars
@@ -172,11 +172,11 @@ public:
     template <
             typename LogTypeDictionaryEntryType,
             typename VariableDictionaryReaderType,
-            typename EncodedVariableVectorType>
+            typename EncodedVariableContainerType>
     static bool decode_variables_into_message(
             LogTypeDictionaryEntryType const& logtype_dict_entry,
             VariableDictionaryReaderType const& var_dict,
-            EncodedVariableVectorType const& encoded_vars,
+            EncodedVariableContainerType const& encoded_vars,
             std::string& decompressed_msg
     );
 
@@ -365,11 +365,11 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary(
 template <
         typename LogTypeDictionaryEntryType,
         typename VariableDictionaryReaderType,
-        typename EncodedVariableVectorType>
+        typename EncodedVariableContainerType>
 bool EncodedVariableInterpreter::decode_variables_into_message(
         LogTypeDictionaryEntryType const& logtype_dict_entry,
         VariableDictionaryReaderType const& var_dict,
-        EncodedVariableVectorType const& encoded_vars,
+        EncodedVariableContainerType const& encoded_vars,
         std::string& decompressed_msg
 ) {
     // Ensure the number of variables in the logtype matches the number of encoded variables given

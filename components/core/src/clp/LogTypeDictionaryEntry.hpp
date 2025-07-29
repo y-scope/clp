@@ -1,7 +1,6 @@
 #ifndef CLP_LOGTYPEDICTIONARYENTRY_HPP
 #define CLP_LOGTYPEDICTIONARYENTRY_HPP
 
-#include <string>
 #include <string_view>
 #include <vector>
 
