@@ -56,7 +56,7 @@ public:
      * @param logtype
      */
     static void add_dict_var(std::string& logtype) {
-        logtype.emplace_back(enum_to_underlying_type(ir::VariablePlaceholder::Dictionary));
+        logtype.push_back(enum_to_underlying_type(ir::VariablePlaceholder::Dictionary));
     }
 
     /**
@@ -64,7 +64,7 @@ public:
      * @param logtype
      */
     static void add_int_var(std::string& logtype) {
-        logtype.emplace_back(enum_to_underlying_type(ir::VariablePlaceholder::Integer));
+        logtype.push_back(enum_to_underlying_type(ir::VariablePlaceholder::Integer));
     }
 
     /**
@@ -72,7 +72,7 @@ public:
      * @param logtype
      */
     static void add_float_var(std::string& logtype) {
-        logtype.emplace_back(enum_to_underlying_type(ir::VariablePlaceholder::Float));
+        logtype.push_back(enum_to_underlying_type(ir::VariablePlaceholder::Float));
     }
 
     /**
@@ -80,7 +80,7 @@ public:
      * @param logtype
      */
     static void add_escape(std::string& logtype) {
-        logtype.emplace_back(enum_to_underlying_type(ir::VariablePlaceholder::Escape));
+        logtype.push_back(enum_to_underlying_type(ir::VariablePlaceholder::Escape));
     }
 
     /**
