@@ -2,14 +2,17 @@
 
 #include <filesystem>
 #include <iostream>
+#include <set>
 
 #include <log_surgeon/Lexer.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
+#include <string_utils/string_utils.hpp>
 
 #include "../Defs.h"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
 #include "../Grep.hpp"
+#include "../GrepCore.hpp"
 #include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/Constants.hpp"
@@ -25,7 +28,9 @@ using clp::FileReader;
 using clp::GlobalMetadataDB;
 using clp::GlobalMetadataDBConfig;
 using clp::Grep;
+using clp::GrepCore;
 using clp::load_lexer_from_file;
+using clp::logtype_dictionary_id_t;
 using clp::Profiler;
 using clp::Query;
 using clp::segment_id_t;
@@ -33,7 +38,9 @@ using clp::streaming_archive::MetadataDB;
 using clp::streaming_archive::reader::Archive;
 using clp::streaming_archive::reader::File;
 using clp::streaming_archive::reader::Message;
+using clp::string_utils::clean_up_wildcard_search_string;
 using clp::TraceableException;
+using clp::variable_dictionary_id_t;
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -205,8 +212,11 @@ static bool search(
         std::set<segment_id_t> ids_of_segments_to_search;
         bool is_superseding_query = false;
         for (auto const& search_string : search_strings) {
-            auto query_processing_result = Grep::process_raw_query(
-                    archive,
+            auto const& log_dict{archive.get_logtype_dictionary()};
+            auto const& var_dict{archive.get_var_dictionary()};
+            auto query_processing_result = GrepCore::process_raw_query(
+                    log_dict,
+                    var_dict,
                     search_string,
                     search_begin_ts,
                     search_end_ts,
@@ -228,6 +238,23 @@ static bool search(
                     // All other search strings will be superseded by this one, so break
                     break;
                 }
+
+                // Calculate the IDs of the segments that may contain results for each sub-query.
+                auto get_segments_containing_log_dict_id
+                        = [&log_dict](
+                                  logtype_dictionary_id_t logtype_id
+                          ) -> std::set<segment_id_t> const& {
+                    return log_dict.get_entry(logtype_id).get_ids_of_segments_containing_entry();
+                };
+                auto get_segments_containing_var_dict_id = [&var_dict](
+                                                                   variable_dictionary_id_t var_id
+                                                           ) -> std::set<segment_id_t> const& {
+                    return var_dict.get_entry(var_id).get_ids_of_segments_containing_entry();
+                };
+                query.calculate_ids_of_matching_segments(
+                        get_segments_containing_log_dict_id,
+                        get_segments_containing_var_dict_id
+                );
 
                 queries.push_back(query);
 
@@ -474,16 +501,20 @@ int main(int argc, char const* argv[]) {
 
     Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::Search>();
 
+    auto add_implicit_wildcards = [](string const& search_string) -> string {
+        return clean_up_wildcard_search_string('*' + search_string + '*');
+    };
+
     // Create vector of search strings
     vector<string> search_strings;
     if (command_line_args.get_search_strings_file_path().empty()) {
-        search_strings.push_back(command_line_args.get_search_string());
+        search_strings.emplace_back(add_implicit_wildcards(command_line_args.get_search_string()));
     } else {
         FileReader file_reader{command_line_args.get_search_strings_file_path()};
         string line;
         while (file_reader.read_to_delimiter('\n', false, false, line)) {
             if (!line.empty()) {
-                search_strings.push_back(line);
+                search_strings.emplace_back(add_implicit_wildcards(line));
             }
         }
     }
