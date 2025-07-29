@@ -121,9 +121,7 @@ public:
      * @param encoded_vars
      * @param var_ids
      */
-    template <
-            typename VariableDictionaryWriterType,
-            typename LogTypeDictionaryEntryType>
+    template <typename VariableDictionaryWriterType, typename LogTypeDictionaryEntryType>
     static void encode_and_add_to_dictionary(
             std::string_view message,
             LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -186,6 +184,7 @@ public:
      * Encodes a string-form variable, and if it is dictionary variable, searches for its ID in the
      * given variable dictionary.
      * @tparam VariableDictionaryReaderType
+     * @tparam VariableDictionaryEntryType
      * @param var_str
      * @param var_dict
      * @param ignore_case
@@ -195,7 +194,9 @@ public:
      * dictionary
      * @return false otherwise
      */
-    template <typename VariableDictionaryReaderType>
+    template <
+            typename VariableDictionaryReaderType,
+            typename VariableDictionaryEntryType = VariableDictionaryReaderType::entry_t>
     static bool encode_and_search_dictionary(
             std::string_view var_str,
             VariableDictionaryReaderType const& var_dict,
@@ -216,8 +217,7 @@ public:
      */
     template <
             typename VariableDictionaryReaderType,
-            typename VariableDictionaryEntryType
-            = VariableDictionaryReaderType::entry_t>
+            typename VariableDictionaryEntryType = VariableDictionaryReaderType::entry_t>
     static bool wildcard_search_dictionary_and_get_encoded_matches(
             std::string_view var_wildcard_str,
             VariableDictionaryReaderType const& var_dict,
@@ -238,9 +238,7 @@ private:
      * variable)
      * @return The encoded variable
      */
-    template <
-            typename LogTypeDictionaryEntryType,
-            typename VariableDictionaryWriterType>
+    template <typename LogTypeDictionaryEntryType, typename VariableDictionaryWriterType>
     static encoded_variable_t encode_var(
             std::string_view var,
             LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -259,9 +257,7 @@ private:
      * @param var_ids A container to add the dictionary ID to
      * @return The dictionary ID
      */
-    template <
-            typename LogTypeDictionaryEntryType,
-            typename VariableDictionaryWriterType>
+    template <typename LogTypeDictionaryEntryType, typename VariableDictionaryWriterType>
     static variable_dictionary_id_t add_dict_var(
             std::string_view var,
             LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -270,9 +266,7 @@ private:
     );
 };
 
-template <
-        typename VariableDictionaryWriterType,
-        typename LogTypeDictionaryEntryType>
+template <typename VariableDictionaryWriterType, typename LogTypeDictionaryEntryType>
 void EncodedVariableInterpreter::encode_and_add_to_dictionary(
         std::string_view message,
         LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -443,7 +437,7 @@ bool EncodedVariableInterpreter::decode_variables_into_message(
     return true;
 }
 
-template <typename VariableDictionaryReaderType>
+template <typename VariableDictionaryReaderType, typename VariableDictionaryEntryType>
 bool EncodedVariableInterpreter::encode_and_search_dictionary(
         std::string_view var_str,
         VariableDictionaryReaderType const& var_dict,
@@ -474,26 +468,26 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary(
 
         if (entries.size() == 1) {
             auto const* entry = entries.at(0);
-            sub_query.add_dict_var(encode_var_dict_id(entry->get_id()), entry->get_id());
+            sub_query.add_dict_var(encode_var_dict_id(entry->get_id()), entry);
             return true;
         }
 
+        std::unordered_set<VariableDictionaryEntryType const*> const entries_set{
+                entries.cbegin(),
+                entries.cend()
+        };
         std::unordered_set<encoded_variable_t> encoded_vars;
-        std::unordered_set<variable_dictionary_id_t> var_dict_ids;
         encoded_vars.reserve(entries.size());
         for (auto const* entry : entries) {
             encoded_vars.emplace(encode_var_dict_id(entry->get_id()));
-            var_dict_ids.emplace(entry->get_id());
         }
-        sub_query.add_imprecise_dict_var(encoded_vars, var_dict_ids);
+        sub_query.add_imprecise_dict_var(encoded_vars, entries_set);
     }
 
     return true;
 }
 
-template <
-        typename VariableDictionaryReaderType,
-        typename VariableDictionaryEntryType>
+template <typename VariableDictionaryReaderType, typename VariableDictionaryEntryType>
 bool EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matches(
         std::string_view var_wildcard_str,
         VariableDictionaryReaderType const& var_dict,
@@ -510,20 +504,16 @@ bool EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matc
 
     // Encode matches
     std::unordered_set<encoded_variable_t> encoded_vars;
-    std::unordered_set<variable_dictionary_id_t> var_dict_ids;
     for (auto entry : var_dict_entries) {
         encoded_vars.emplace(encode_var_dict_id(entry->get_id()));
-        var_dict_ids.emplace(entry->get_id());
     }
 
-    sub_query.add_imprecise_dict_var(encoded_vars, var_dict_ids);
+    sub_query.add_imprecise_dict_var(encoded_vars, var_dict_entries);
 
     return true;
 }
 
-template <
-        typename LogTypeDictionaryEntryType,
-        typename VariableDictionaryWriterType>
+template <typename LogTypeDictionaryEntryType, typename VariableDictionaryWriterType>
 encoded_variable_t EncodedVariableInterpreter::encode_var(
         std::string_view var,
         LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -542,9 +532,7 @@ encoded_variable_t EncodedVariableInterpreter::encode_var(
     return encoded_var;
 }
 
-template <
-        typename LogTypeDictionaryEntryType,
-        typename VariableDictionaryWriterType>
+template <typename LogTypeDictionaryEntryType, typename VariableDictionaryWriterType>
 variable_dictionary_id_t EncodedVariableInterpreter::add_dict_var(
         std::string_view var,
         LogTypeDictionaryEntryType& logtype_dict_entry,
