@@ -5,6 +5,9 @@
 
 #include <string_utils/string_utils.hpp>
 
+#include "../../clp/Defs.h"
+#include "../../clp/GrepCore.hpp"
+#include "../../clp/Query.hpp"
 #include "../../clp/type_utils.hpp"
 #include "../SchemaTree.hpp"
 #include "ast/AndExpr.hpp"
@@ -15,7 +18,6 @@
 #include "ast/Literal.hpp"
 #include "ast/OrExpr.hpp"
 #include "ast/SearchUtils.hpp"
-#include "clp_search/Grep.hpp"
 #include "EvaluateTimestampIndex.hpp"
 
 using clp_s::search::ast::AndExpr;
@@ -200,7 +202,7 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
             subtree_type.has_value() && constants::cMetadataSubtreeType == subtree_type.value()
     };
     if (column->matches_type(LiteralType::ClpStringT)) {
-        Query* q = m_expr_clp_query.at(expr);
+        auto* q = m_expr_clp_query.at(expr);
         for (auto const& entry : m_clp_string_readers) {
             if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
                 continue;
@@ -273,7 +275,7 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
     auto* column = expr->get_column().get();
     int32_t column_id = column->get_column_id();
     auto literal = expr->get_operand();
-    Query* q = nullptr;
+    clp::Query* q = nullptr;
     std::unordered_set<int64_t>* matching_vars = nullptr;
     switch (column->get_literal_type()) {
         case LiteralType::IntegerT:
@@ -403,7 +405,7 @@ bool QueryRunner::evaluate_float_filter_core(FilterOperation op, double value, d
 
 bool QueryRunner::evaluate_clp_string_filter(
         FilterOperation op,
-        Query* q,
+        clp::Query* q,
         std::vector<ClpStringColumnReader*> const& readers
 ) const {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
@@ -856,14 +858,18 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
             }
 
             // search on log type dictionary
+            clp::epochtime_t dummy_timestamp{};
             m_string_query_map.emplace(
                     query_string,
-                    Grep::process_raw_query(
-                            m_log_dict,
-                            m_var_dict,
+                    clp::GrepCore::process_raw_query(
+                            *m_log_dict,
+                            *m_var_dict,
                             query_string,
+                            dummy_timestamp,
+                            dummy_timestamp,
                             m_ignore_case,
-                            false
+                            m_dummy_lexer,
+                            true
                     )
             );
         }

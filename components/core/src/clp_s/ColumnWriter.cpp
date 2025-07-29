@@ -1,5 +1,13 @@
 #include "ColumnWriter.hpp"
 
+#include <cstdint>
+#include <variant>
+
+#include "../clp/Defs.h"
+#include "../clp/EncodedVariableInterpreter.hpp"
+#include "ParsedMessage.hpp"
+#include "ZstdCompressor.hpp"
+
 namespace clp_s {
 size_t Int64ColumnWriter::add_value(ParsedMessage::variable_t& value) {
     m_values.push_back(std::get<int64_t>(value));
@@ -49,15 +57,16 @@ void BooleanColumnWriter::store(ZstdCompressor& compressor) {
 }
 
 size_t ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
-    std::string string_var = std::get<std::string>(value);
-    uint64_t id;
-    uint64_t offset = m_encoded_vars.size();
-    VariableEncoder::encode_and_add_to_dictionary(
-            string_var,
+    uint64_t offset{m_encoded_vars.size()};
+    m_temp_var_dict_ids.clear();
+    clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
+            std::get<std::string>(value),
             m_logtype_entry,
             *m_var_dict,
-            m_encoded_vars
+            m_encoded_vars,
+            m_temp_var_dict_ids
     );
+    clp::logtype_dictionary_id_t id{};
     m_log_dict->add_entry(m_logtype_entry, id);
     auto encoded_id = encode_log_dict_id(id, offset);
     m_logtypes.push_back(encoded_id);
@@ -74,15 +83,14 @@ void ClpStringColumnWriter::store(ZstdCompressor& compressor) {
 }
 
 size_t VariableStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
-    std::string string_var = std::get<std::string>(value);
-    uint64_t id;
-    m_var_dict->add_entry(string_var, id);
+    clp::variable_dictionary_id_t id{};
+    m_var_dict->add_entry(std::get<std::string>(value), id);
     m_variables.push_back(id);
-    return sizeof(int64_t);
+    return sizeof(clp::variable_dictionary_id_t);
 }
 
 void VariableStringColumnWriter::store(ZstdCompressor& compressor) {
-    size_t size = m_variables.size() * sizeof(int64_t);
+    size_t size = m_variables.size() * sizeof(clp::variable_dictionary_id_t);
     compressor.write(reinterpret_cast<char const*>(m_variables.data()), size);
 }
 

@@ -14,8 +14,10 @@
 #include <utility>
 #include <vector>
 
+#include <log_surgeon/Lexer.hpp>
 #include <simdjson.h>
 
+#include "../../clp/Query.hpp"
 #include "../ArchiveReader.hpp"
 #include "../ColumnReader.hpp"
 #include "../DictionaryReader.hpp"
@@ -29,11 +31,9 @@
 #include "ast/FilterExpr.hpp"
 #include "ast/FilterOperation.hpp"
 #include "ast/Literal.hpp"
-#include "clp_search/Query.hpp"
 #include "SchemaMatch.hpp"
 
 using namespace simdjson;
-using namespace clp_s::search::clp_search;
 
 namespace clp_s::search {
 /**
@@ -130,9 +130,9 @@ private:
 
     std::shared_ptr<ReaderUtils::SchemaMap> m_schemas;
 
-    std::map<std::string, std::optional<Query>> m_string_query_map;
+    std::map<std::string, std::optional<clp::Query>> m_string_query_map;
     std::map<std::string, std::unordered_set<int64_t>> m_string_var_match_map;
-    std::unordered_map<ast::Expression*, Query*> m_expr_clp_query;
+    std::unordered_map<ast::Expression*, clp::Query*> m_expr_clp_query;
     std::unordered_map<ast::Expression*, std::unordered_set<int64_t>*> m_expr_var_match_map;
     std::unordered_map<int32_t, std::vector<ClpStringColumnReader*>> m_clp_string_readers;
     std::unordered_map<int32_t, std::vector<VariableStringColumnReader*>> m_var_string_readers;
@@ -151,6 +151,8 @@ private:
             std::pair<ExpressionType, ast::OpList::iterator>,
             std::vector<std::pair<ExpressionType, ast::OpList::iterator>>>
             m_expression_state;
+
+    log_surgeon::lexers::ByteLexer m_dummy_lexer;
 
     simdjson::ondemand::parser m_array_parser;
     std::string m_array_search_string;
@@ -244,7 +246,7 @@ private:
      */
     auto evaluate_clp_string_filter(
             ast::FilterOperation op,
-            Query* q,
+            clp::Query* q,
             std::vector<ClpStringColumnReader*> const& readers
     ) const -> bool;
 
