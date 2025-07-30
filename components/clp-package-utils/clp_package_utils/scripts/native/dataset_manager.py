@@ -6,7 +6,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import Dict, List
 
-from clp_py_utils.clp_config import ArchiveOutput, Database, StorageType
+from clp_py_utils.clp_config import ArchiveOutput, Database, S3Config, StorageType
 from clp_py_utils.clp_metadata_db_utils import (
     get_archive_tags_table_name,
     get_archives_table_name,
@@ -84,23 +84,23 @@ def _handle_del_datasets(
 
 def _delete_dataset(dataset: str, dataset_archive_storage_dir: str, clp_config: CLPConfig) -> bool:
     try:
-        _try_deleting_archives(dataset_archive_storage_dir, clp_config.archive_output)
-        logger.info(f"Successfully removed archives for dataset `{dataset}`.")
+        _try_deleting_archives(clp_config.archive_output, dataset_archive_storage_dir)
+        logger.info(f"Successfully deleted archives of dataset `{dataset}`.")
     except:
-        logger.exception(f"Failed to remove archives for dataset `{dataset}`, abort...")
+        logger.exception(f"Failed to delete archives for dataset `{dataset}`, abort...")
         return False
 
     try:
-        _delete_dataset_from_database(dataset, clp_config.database)
-        logger.info(f"Successfully removed dataset `{dataset}` from database.")
+        _delete_dataset_from_database(clp_config.database, dataset)
+        logger.info(f"Successfully deleted dataset `{dataset}` from database.")
     except:
-        logger.exception(f"Failed to remove dataset `{dataset}` from database, abort...")
+        logger.exception(f"Failed to delete dataset `{dataset}` from database, abort...")
         return False
 
     return True
 
 
-def _delete_dataset_from_database(dataset: str, database_config: Database):
+def _delete_dataset_from_database(database_config: Database, dataset: str):
     sql_adapter = SQL_Adapter(database_config)
     clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
 
@@ -135,16 +135,52 @@ def _delete_dataset_from_database(dataset: str, database_config: Database):
         db_conn.commit()
 
 
+def _try_deleting_archives_from_s3(s3_config: S3Config, dataset_archive_storage_dir: str) -> None:
+    # Add trailing '/' to avoid deleting other datasets with similar prefixes
+    if not dataset_archive_storage_dir.endswith("/"):
+        dataset_archive_storage_dir += "/"
+
+    s3_delete_by_key_prefix(
+        s3_config.region_code,
+        s3_config.bucket,
+        dataset_archive_storage_dir,
+        s3_config.aws_authentication,
+    )
+
+
+def _try_deleting_archives_from_fs(
+    archive_output_config: ArchiveOutput, dataset_archive_storage_dir: str
+) -> None:
+    archives_dir = archive_output_config.get_directory()
+    dataset_archive_storage_path = Path(dataset_archive_storage_dir).resolve()
+    if not dataset_archive_storage_path.is_relative_to(archives_dir):
+        raise ValueError(
+            f"Fatal: {dataset_archive_storage_path} is not within top-level archive storage directory {archives_dir}"
+        )
+
+    if not dataset_archive_storage_path.exists():
+        logger.debug(f"{dataset_archive_storage_path} doesn't exist, skip deletion...")
+        return
+
+    if not dataset_archive_storage_path.is_dir():
+        logger.debug(
+            f"{dataset_archive_storage_path} doesn't resolve to a directory, skip deletion..."
+        )
+        return
+
+    shutil.rmtree(dataset_archive_storage_path)
+
+
 def _try_deleting_archives(
-    dataset_archive_storage_dir: str, archive_output_config: ArchiveOutput
+    archive_output_config: ArchiveOutput, dataset_archive_storage_dir: str
 ) -> None:
     archive_storage_config = archive_output_config.storage
     storage_type = archive_storage_config.type
     if StorageType.S3 == storage_type:
+        _try_deleting_archives_from_s3(
+            archive_storage_config.s3_config, dataset_archive_storage_dir
+        )
         s3_config = archive_storage_config.s3_config
-        # Add trailing '/' to avoid deleting other datasets with similar prefixes
-        if not dataset_archive_storage_dir.endswith("/"):
-            dataset_archive_storage_dir += "/"
 
         s3_delete_by_key_prefix(
             s3_config.region_code,
@@ -154,24 +190,7 @@ def _try_deleting_archives(
         )
 
     elif StorageType.FS == storage_type:
-        archives_dir = archive_output_config.get_directory()
-        dataset_archive_storage_path = Path(dataset_archive_storage_dir).resolve()
-        if not dataset_archive_storage_path.is_relative_to(archives_dir):
-            raise ValueError(
-                f"Fatal: {dataset_archive_storage_path} is not within top-level archive storage directory {archives_dir}"
-            )
-
-        if not dataset_archive_storage_path.exists():
-            logger.debug(f"{dataset_archive_storage_path} doesn't exist, skip deletion...")
-            return
-
-        if not dataset_archive_storage_path.is_dir():
-            logger.debug(
-                f"{dataset_archive_storage_path} doesn't resolve to a directory, skip deletion..."
-            )
-            return
-
-        shutil.rmtree(dataset_archive_storage_path)
+        _try_deleting_archives_from_fs(archive_output_config, dataset_archive_storage_dir)
 
     else:
         raise ValueError(f"Unsupported storage type: {storage_type}")
