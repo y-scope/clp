@@ -121,7 +121,6 @@ def _get_archive_safe_expiry_epoch(
     return archive_expiry_epoch
 
 
-
 def _handle_archive_retention(
     archive_output_config: ArchiveOutput,
     storage_engine: str,
