@@ -52,6 +52,7 @@ tasks:
   clean:
     cmds:
       - "rm -rf '{{.G_BUILD_DIR}}'"
+      - "rm -f .task/build_with_symbols_*.stamp"
       - task: "clean-python-component"
         vars:
           COMPONENT: "clp-package-utils"
