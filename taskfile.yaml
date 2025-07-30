@@ -16,7 +16,7 @@ vars:
   G_CORE_COMPONENT_SUBMODULES_DIR: "{{.G_CORE_COMPONENT_DIR}}/submodules"
   G_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/webui"
 
-  G_DATASET_LOCATION: "{{.ROOT_DIR}}/datasets/dataset.json"
+  G_DATASET_LOCATION: "{{.ROOT_DIR}}/datasets/dataset.log"
 
   # Build paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
@@ -243,7 +243,7 @@ tasks:
               {{if eq .BUILD_WITH_SYMBOLS "true"}}-DCMAKE_BUILD_TYPE=RelWithDebInfo{{end}}
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
           SOURCE_DIR: "{{.G_CORE_COMPONENT_DIR}}"
-      - "rm .task/build_with_symbols_*.stamp"
+      - "rm -f .task/build_with_symbols_*.stamp"
       - "touch .task/build_with_symbols_{{.BUILD_WITH_SYMBOLS}}.stamp"
 
   core-build:
@@ -611,10 +611,11 @@ tasks:
       - "test -f {{.G_DATASET_LOCATION}}"
     cmds:
       - >-
-        curl -o output.tar.gz
+        curl --fail --location --show-error --silent
+        --output output.tar.gz
         https://zenodo.org/records/10516387/files/cockroachdb.tar.gz?download=1
-      - "tar -xvzf output.tar.gz"
-      - "rm output.tar.gz"
+      - "tar -xzf output.tar.gz"
+      - "rm -f output.tar.gz"
       - >-
         mkdir -p "$(dirname "{{.G_DATASET_LOCATION}}")"
       - "mv cockroachdb/cockroach.node1.log {{.G_DATASET_LOCATION}}"
@@ -630,8 +631,8 @@ tasks:
       - "rm -f perf.data"
       - >-
         perf record -F 99 -g -- ./build/core/clp-s c --timestamp-key "timestamp"
-        --target-encoded-size 268435456 build/clp_cockroachdb_perf_output {{.G_DATASET_LOCATION}}
-      - "chmod +777 perf.data"
+        --target-encoded-size 268435456 build/clp_cockroachdb_perf_output "{{.G_DATASET_LOCATION}}"
+      - "chmod 644 perf.data"
       - >-
         perf report -i perf.data --call-graph=graph,0.5,0,caller,function,percent --stdio --demangle
         --no-inline > perf-report.txt
