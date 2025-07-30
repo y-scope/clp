@@ -193,9 +193,7 @@ public:
      * dictionary
      * @return false otherwise
      */
-    template <
-            typename VariableDictionaryReaderType,
-            typename VariableDictionaryEntryType = typename VariableDictionaryReaderType::entry_t>
+    template <typename VariableDictionaryReaderType>
     static bool encode_and_search_dictionary(
             std::string_view var_str,
             VariableDictionaryReaderType const& var_dict,
