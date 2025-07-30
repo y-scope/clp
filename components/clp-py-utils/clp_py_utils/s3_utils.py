@@ -30,6 +30,8 @@ AWS_ENV_VAR_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID"
 AWS_ENV_VAR_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY"
 AWS_ENV_VAR_SESSION_TOKEN = "AWS_SESSION_TOKEN"
 
+S3_OBJECTS_DELETE_LIMIT = 1000
+
 
 def _get_session_credentials(aws_profile: Optional[str] = None) -> Optional[S3Credentials]:
     """
@@ -170,28 +172,29 @@ def generate_container_auth_options(
     return (config_mount, credentials_env_vars)
 
 
-def _create_s3_client(s3_config: S3Config, boto3_config: Optional[Config] = None) -> boto3.client:
-    auth = s3_config.aws_authentication
+def _create_s3_client(
+    region_code: str, s3_auth: AwsAuthentication, boto3_config: Optional[Config] = None
+) -> boto3.client:
     aws_session: Optional[boto3.Session] = None
 
-    if AwsAuthType.profile == auth.type:
+    if AwsAuthType.profile == s3_auth.type:
         aws_session = boto3.Session(
-            profile_name=auth.profile,
-            region_name=s3_config.region_code,
+            profile_name=s3_auth.profile,
+            region_name=region_code,
         )
-    elif AwsAuthType.credentials == auth.type:
-        credentials = auth.credentials
+    elif AwsAuthType.credentials == s3_auth.type:
+        credentials = s3_auth.credentials
         aws_session = boto3.Session(
             aws_access_key_id=credentials.access_key_id,
             aws_secret_access_key=credentials.secret_access_key,
-            region_name=s3_config.region_code,
+            region_name=region_code,
             aws_session_token=credentials.session_token,
         )
-    elif AwsAuthType.env_vars == auth.type or AwsAuthType.ec2 == auth.type:
+    elif AwsAuthType.env_vars == s3_auth.type or AwsAuthType.ec2 == s3_auth.type:
         # Use default session which will use environment variables or instance role
-        aws_session = boto3.Session(region_name=s3_config.region_code)
+        aws_session = boto3.Session(region_name=region_code)
     else:
-        raise ValueError(f"Unsupported authentication type: {auth.type}")
+        raise ValueError(f"Unsupported authentication type: {s3_auth.type}")
 
     s3_client = aws_session.client("s3", config=boto3_config)
     return s3_client
@@ -258,7 +261,7 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
     :raises: Propagates `boto3.paginator`'s exceptions.
     """
 
-    s3_client = _create_s3_client(s3_input_config)
+    s3_client = _create_s3_client(s3_input_config.region_code, s3_input_config.aws_authentication)
 
     file_metadata_list: List[FileMetadata] = list()
     paginator = s3_client.get_paginator("list_objects_v2")
@@ -302,9 +305,27 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_path: str) -> None:
         )
 
     boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
-    s3_client = _create_s3_client(s3_config, boto3_config)
+    s3_client = _create_s3_client(s3_config.region_code, s3_config.aws_authentication, boto3_config)
 
     with open(src_file, "rb") as file_data:
         s3_client.put_object(
             Bucket=s3_config.bucket, Body=file_data, Key=s3_config.key_prefix + dest_path
         )
+
+
+def s3_delete_by_key_prefix(
+    region_code: str, bucket: str, key_prefix: str, s3_auth: AwsAuthentication
+) -> None:
+    boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
+    s3_client = _create_s3_client(region_code, s3_auth, boto3_config)
+
+    paginator = s3_client.get_paginator("list_objects_v2")
+    for page in paginator.paginate(
+        Bucket=bucket, Prefix=key_prefix, PaginationConfig={"PageSize": S3_OBJECTS_DELETE_LIMIT}
+    ):
+        contents = page.get("Contents", None)
+        if contents is None:
+            continue
+
+        deletion_config = {"Objects": [{"Key": obj["Key"]} for obj in contents]}
+        s3_client.delete_objects(Bucket=bucket, Delete=deletion_config)
