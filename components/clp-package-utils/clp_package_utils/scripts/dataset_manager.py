@@ -2,19 +2,16 @@ import argparse
 import logging
 import subprocess
 import sys
-import typing
 from pathlib import Path
+from typing import List
 
 from clp_py_utils.clp_config import (
-    CLP_DEFAULT_DATASET_NAME,
     StorageEngine,
     StorageType,
 )
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
-    CLPConfig,
-    CLPDockerMounts,
     dump_container_config,
     generate_container_config,
     generate_container_name,
@@ -34,12 +31,12 @@ from clp_package_utils.scripts.native.dataset_manager import (
 logger: logging.Logger = logging.getLogger(__file__)
 
 
-def main(argv: typing.List[str]) -> int:
-    clp_home: Path = get_clp_home()
-    default_config_file_path: Path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+def main(argv: List[str]) -> int:
+    clp_home = get_clp_home()
+    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     # Top-level parser and options
-    args_parser: argparse.ArgumentParser = argparse.ArgumentParser(
+    args_parser = argparse.ArgumentParser(
         description="Views the list of existing datasets or deletes datasets."
     )
     args_parser.add_argument(
@@ -66,11 +63,18 @@ def main(argv: typing.List[str]) -> int:
     )
     del_parser.add_argument(
         "datasets",
-        nargs="+",
+        nargs="*",
         help="dataset(s) to delete.",
     )
+    del_parser.add_argument(
+        "-a",
+        "--all",
+        dest="del_all",
+        action="store_true",
+        help="Delete all existing datasets.",
+    )
 
-    parsed_args: argparse.Namespace = args_parser.parse_args(argv[1:])
+    parsed_args = args_parser.parse_args(argv[1:])
     subcommand = parsed_args.subcommand
 
     # Validate and load config file
@@ -93,6 +97,12 @@ def main(argv: typing.List[str]) -> int:
     # Validate input depending on subcommands
     if DEL_COMMAND == subcommand:
         datasets = parsed_args.datasets
+        del_all_flag = parsed_args.del_all
+        if not del_all_flag and len(datasets) == 0:
+            args_parser.error("No dataset specified for deletion.")
+        if del_all_flag and len(datasets) != 0:
+            args_parser.error("The --all flag cannot be used together with specific dataset names.")
+
         try:
             clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
             table_prefix = clp_db_connection_params["table_prefix"]
@@ -102,7 +112,7 @@ def main(argv: typing.List[str]) -> int:
             logger.error(e)
             return -1
 
-    container_name: str = generate_container_name("dataset-manager")
+    container_name = generate_container_name("dataset-manager")
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
@@ -131,7 +141,10 @@ def main(argv: typing.List[str]) -> int:
 
     # Add subcommand-specific arguments
     if DEL_COMMAND == subcommand:
-        dataset_manager_cmd.extend(parsed_args.datasets)
+        if parsed_args.del_all:
+            dataset_manager_cmd.append("--all")
+        else:
+            dataset_manager_cmd.extend(parsed_args.datasets)
     elif LIST_COMMAND != subcommand:
         logger.error(f"Unsupported subcommand: `{subcommand}`.")
 
