@@ -111,7 +111,11 @@ def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
         "archive_output.storage.directory",
         str(clp_package_dir / "var" / "data" / "archives"),
     )
-    env_vars["CLP_ARCHIVES_DIR"] = clp_archives_dir
+    
+    if Path(clp_archives_dir).is_absolute():
+        env_vars["CLP_ARCHIVES_DIR"] = clp_archives_dir
+    else:
+        env_vars["CLP_ARCHIVES_DIR"] = str(clp_package_dir / clp_archives_dir)
 
     credentials_file_path = clp_package_dir / "etc" / "credentials.yml"
     if not credentials_file_path.exists():
