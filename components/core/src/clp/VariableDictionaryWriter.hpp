@@ -1,6 +1,8 @@
 #ifndef CLP_VARIABLEDICTIONARYWRITER_HPP
 #define CLP_VARIABLEDICTIONARYWRITER_HPP
 
+#include <string_view>
+
 #include "Defs.h"
 #include "DictionaryWriter.hpp"
 #include "VariableDictionaryEntry.hpp"
@@ -30,7 +32,7 @@ public:
      * @param value
      * @param id ID of the variable matching the given entry
      */
-    bool add_entry(std::string const& value, variable_dictionary_id_t& id);
+    bool add_entry(std::string_view value, variable_dictionary_id_t& id);
 };
 }  // namespace clp
 

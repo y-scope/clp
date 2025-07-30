@@ -2,25 +2,17 @@
 
 #include <cassert>
 #include <cmath>
-#include <unordered_set>
+#include <string>
+#include <string_view>
 
 #include <string_utils/string_utils.hpp>
 
 #include "Defs.h"
-#include "ffi/ir_stream/decoding_methods.hpp"
-#include "ir/LogEvent.hpp"
-#include "ir/types.hpp"
-#include "spdlog_with_specializations.hpp"
 #include "type_utils.hpp"
 
 using clp::ffi::cEightByteEncodedFloatDigitsBitMask;
-using clp::ir::eight_byte_encoded_variable_t;
-using clp::ir::four_byte_encoded_variable_t;
-using clp::ir::LogEvent;
-using clp::ir::VariablePlaceholder;
 using std::string;
-using std::unordered_set;
-using std::vector;
+using std::string_view;
 
 namespace clp {
 variable_dictionary_id_t EncodedVariableInterpreter::decode_var_dict_id(
@@ -30,7 +22,7 @@ variable_dictionary_id_t EncodedVariableInterpreter::decode_var_dict_id(
 }
 
 bool EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-        string const& value,
+        string_view value,
         encoded_variable_t& encoded_var
 ) {
     size_t length = value.length();
@@ -69,7 +61,7 @@ bool EncodedVariableInterpreter::convert_string_to_representable_integer_var(
 }
 
 bool EncodedVariableInterpreter::convert_string_to_representable_float_var(
-        string const& value,
+        string_view value,
         encoded_variable_t& encoded_var
 ) {
     if (value.empty()) {
@@ -204,299 +196,7 @@ void EncodedVariableInterpreter::convert_encoded_float_to_string(
     value[value_length - 1 - decimal_pos] = '.';
 }
 
-void EncodedVariableInterpreter::encode_and_add_to_dictionary(
-        string const& message,
-        LogTypeDictionaryEntry& logtype_dict_entry,
-        VariableDictionaryWriter& var_dict,
-        vector<encoded_variable_t>& encoded_vars,
-        vector<variable_dictionary_id_t>& var_ids
-) {
-    // Extract all variables and add to dictionary while building logtype
-    size_t var_begin_pos = 0;
-    size_t var_end_pos = 0;
-    string var_str;
-    logtype_dict_entry.clear();
-    // To avoid reallocating the logtype as we append to it, reserve enough space to hold the entire
-    // message
-    logtype_dict_entry.reserve_constant_length(message.length());
-    while (logtype_dict_entry.parse_next_var(message, var_begin_pos, var_end_pos, var_str)) {
-        auto encoded_var = encode_var(var_str, logtype_dict_entry, var_dict, var_ids);
-        encoded_vars.push_back(encoded_var);
-    }
-}
-
-template <typename encoded_variable_t>
-void EncodedVariableInterpreter::encode_and_add_to_dictionary(
-        LogEvent<encoded_variable_t> const& log_event,
-        LogTypeDictionaryEntry& logtype_dict_entry,
-        VariableDictionaryWriter& var_dict,
-        std::vector<eight_byte_encoded_variable_t>& encoded_vars,
-        std::vector<variable_dictionary_id_t>& var_ids,
-        size_t& raw_num_bytes
-) {
-    logtype_dict_entry.clear();
-    auto const& log_message = log_event.get_message();
-    logtype_dict_entry.reserve_constant_length(log_message.get_logtype().length());
-
-    raw_num_bytes = 0;
-
-    auto constant_handler = [&](std::string const& value, size_t begin_pos, size_t length) {
-        raw_num_bytes += length;
-        logtype_dict_entry.add_constant(value, begin_pos, length);
-    };
-
-    auto encoded_int_handler = [&](encoded_variable_t encoded_var) {
-        raw_num_bytes += ffi::decode_integer_var(encoded_var).length();
-        logtype_dict_entry.add_int_var();
-
-        eight_byte_encoded_variable_t eight_byte_encoded_var{};
-        if constexpr (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
-            eight_byte_encoded_var = encoded_var;
-        } else {  // std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
-            eight_byte_encoded_var = ffi::encode_four_byte_integer_as_eight_byte(encoded_var);
-        }
-        encoded_vars.push_back(eight_byte_encoded_var);
-    };
-
-    auto encoded_float_handler = [&](four_byte_encoded_variable_t encoded_var) {
-        raw_num_bytes += ffi::decode_float_var(encoded_var).length();
-        logtype_dict_entry.add_float_var();
-
-        eight_byte_encoded_variable_t eight_byte_encoded_var{};
-        if constexpr (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
-            eight_byte_encoded_var = encoded_var;
-        } else {  // std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
-            eight_byte_encoded_var = ffi::encode_four_byte_float_as_eight_byte(encoded_var);
-        }
-        encoded_vars.push_back(eight_byte_encoded_var);
-    };
-
-    auto dict_var_handler = [&](string const& dict_var) {
-        raw_num_bytes += dict_var.length();
-
-        eight_byte_encoded_variable_t encoded_var{};
-        if constexpr (std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>) {
-            encoded_var = encode_var_dict_id(
-                    add_dict_var(dict_var, logtype_dict_entry, var_dict, var_ids)
-            );
-        } else {  // std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
-            encoded_var = encode_var(dict_var, logtype_dict_entry, var_dict, var_ids);
-        }
-        encoded_vars.push_back(encoded_var);
-    };
-
-    ffi::ir_stream::generic_decode_message<false>(
-            log_message.get_logtype(),
-            log_message.get_encoded_vars(),
-            log_message.get_dict_vars(),
-            constant_handler,
-            encoded_int_handler,
-            encoded_float_handler,
-            dict_var_handler
-    );
-}
-
-bool EncodedVariableInterpreter::decode_variables_into_message(
-        LogTypeDictionaryEntry const& logtype_dict_entry,
-        VariableDictionaryReader const& var_dict,
-        vector<encoded_variable_t> const& encoded_vars,
-        string& decompressed_msg
-) {
-    // Ensure the number of variables in the logtype matches the number of encoded variables given
-    auto const& logtype_value = logtype_dict_entry.get_value();
-    size_t const num_vars = logtype_dict_entry.get_num_variables();
-    if (num_vars != encoded_vars.size()) {
-        SPDLOG_ERROR(
-                "EncodedVariableInterpreter: Logtype '{}' contains {} variables, but {} were given "
-                "for decoding.",
-                logtype_value.c_str(),
-                num_vars,
-                encoded_vars.size()
-        );
-        return false;
-    }
-
-    VariablePlaceholder var_placeholder;
-    size_t constant_begin_pos = 0;
-    string float_str;
-    variable_dictionary_id_t var_dict_id;
-    size_t const num_placeholders_in_logtype = logtype_dict_entry.get_num_placeholders();
-    for (size_t placeholder_ix = 0, var_ix = 0; placeholder_ix < num_placeholders_in_logtype;
-         ++placeholder_ix)
-    {
-        size_t placeholder_position
-                = logtype_dict_entry.get_placeholder_info(placeholder_ix, var_placeholder);
-
-        // Add the constant that's between the last placeholder and this one
-        decompressed_msg.append(
-                logtype_value,
-                constant_begin_pos,
-                placeholder_position - constant_begin_pos
-        );
-        switch (var_placeholder) {
-            case VariablePlaceholder::Integer:
-                decompressed_msg += std::to_string(encoded_vars[var_ix++]);
-                break;
-            case VariablePlaceholder::Float:
-                convert_encoded_float_to_string(encoded_vars[var_ix++], float_str);
-                decompressed_msg += float_str;
-                break;
-            case VariablePlaceholder::Dictionary:
-                var_dict_id = decode_var_dict_id(encoded_vars[var_ix++]);
-                decompressed_msg += var_dict.get_value(var_dict_id);
-                break;
-            case VariablePlaceholder::Escape:
-                break;
-            default:
-                SPDLOG_ERROR(
-                        "EncodedVariableInterpreter: Logtype '{}' contains unexpected variable "
-                        "placeholder 0x{:x}",
-                        logtype_value,
-                        enum_to_underlying_type(var_placeholder)
-                );
-                return false;
-        }
-        // Move past the variable placeholder
-        constant_begin_pos = placeholder_position + 1;
-    }
-    // Append remainder of logtype, if any
-    if (constant_begin_pos < logtype_value.length()) {
-        decompressed_msg.append(logtype_value, constant_begin_pos, string::npos);
-    }
-
-    return true;
-}
-
-bool EncodedVariableInterpreter::encode_and_search_dictionary(
-        string const& var_str,
-        VariableDictionaryReader const& var_dict,
-        bool ignore_case,
-        string& logtype,
-        SubQuery& sub_query
-) {
-    size_t length = var_str.length();
-    if (0 == length) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-    }
-
-    encoded_variable_t encoded_var;
-    if (convert_string_to_representable_integer_var(var_str, encoded_var)) {
-        LogTypeDictionaryEntry::add_int_var(logtype);
-        sub_query.add_non_dict_var(encoded_var);
-    } else if (convert_string_to_representable_float_var(var_str, encoded_var)) {
-        LogTypeDictionaryEntry::add_float_var(logtype);
-        sub_query.add_non_dict_var(encoded_var);
-    } else {
-        auto const entries = var_dict.get_entry_matching_value(var_str, ignore_case);
-        if (entries.empty()) {
-            // Not in dictionary
-            return false;
-        }
-
-        LogTypeDictionaryEntry::add_dict_var(logtype);
-
-        if (entries.size() == 1) {
-            auto const* entry = entries.at(0);
-            sub_query.add_dict_var(encode_var_dict_id(entry->get_id()), entry);
-            return true;
-        }
-
-        std::unordered_set<clp::VariableDictionaryEntry const*> const entries_set{
-                entries.cbegin(),
-                entries.cend()
-        };
-        std::unordered_set<encoded_variable_t> encoded_vars;
-        encoded_vars.reserve(entries.size());
-        for (auto const* entry : entries) {
-            encoded_vars.emplace(encode_var_dict_id(entry->get_id()));
-        }
-        sub_query.add_imprecise_dict_var(encoded_vars, entries_set);
-    }
-
-    return true;
-}
-
-bool EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matches(
-        std::string const& var_wildcard_str,
-        VariableDictionaryReader const& var_dict,
-        bool ignore_case,
-        SubQuery& sub_query
-) {
-    // Find matches
-    unordered_set<VariableDictionaryEntry const*> var_dict_entries;
-    var_dict.get_entries_matching_wildcard_string(var_wildcard_str, ignore_case, var_dict_entries);
-    if (var_dict_entries.empty()) {
-        // Not in dictionary
-        return false;
-    }
-
-    // Encode matches
-    unordered_set<encoded_variable_t> encoded_vars;
-    for (auto entry : var_dict_entries) {
-        encoded_vars.insert(encode_var_dict_id(entry->get_id()));
-    }
-
-    sub_query.add_imprecise_dict_var(encoded_vars, var_dict_entries);
-
-    return true;
-}
-
 encoded_variable_t EncodedVariableInterpreter::encode_var_dict_id(variable_dictionary_id_t id) {
     return bit_cast<encoded_variable_t>(id);
 }
-
-encoded_variable_t EncodedVariableInterpreter::encode_var(
-        string const& var,
-        LogTypeDictionaryEntry& logtype_dict_entry,
-        VariableDictionaryWriter& var_dict,
-        vector<variable_dictionary_id_t>& var_ids
-) {
-    encoded_variable_t encoded_var{0};
-    if (convert_string_to_representable_integer_var(var, encoded_var)) {
-        logtype_dict_entry.add_int_var();
-    } else if (convert_string_to_representable_float_var(var, encoded_var)) {
-        logtype_dict_entry.add_float_var();
-    } else {
-        // Variable string looks like a dictionary variable, so encode it as so
-        encoded_var = encode_var_dict_id(add_dict_var(var, logtype_dict_entry, var_dict, var_ids));
-    }
-    return encoded_var;
-}
-
-variable_dictionary_id_t EncodedVariableInterpreter::add_dict_var(
-        string const& var,
-        LogTypeDictionaryEntry& logtype_dict_entry,
-        VariableDictionaryWriter& var_dict,
-        vector<variable_dictionary_id_t>& var_ids
-) {
-    variable_dictionary_id_t id{cVariableDictionaryIdMax};
-    var_dict.add_entry(var, id);
-    var_ids.push_back(id);
-
-    logtype_dict_entry.add_dictionary_var();
-
-    return id;
-}
-
-// Explicitly declare template specializations so that we can define the template methods in this
-// file
-template void
-EncodedVariableInterpreter::encode_and_add_to_dictionary<eight_byte_encoded_variable_t>(
-        LogEvent<eight_byte_encoded_variable_t> const& log_event,
-        LogTypeDictionaryEntry& logtype_dict_entry,
-        VariableDictionaryWriter& var_dict,
-        std::vector<eight_byte_encoded_variable_t>& encoded_vars,
-        std::vector<variable_dictionary_id_t>& var_ids,
-        size_t& raw_num_bytes
-);
-
-template void
-EncodedVariableInterpreter::encode_and_add_to_dictionary<four_byte_encoded_variable_t>(
-        LogEvent<four_byte_encoded_variable_t> const& log_event,
-        LogTypeDictionaryEntry& logtype_dict_entry,
-        VariableDictionaryWriter& var_dict,
-        std::vector<eight_byte_encoded_variable_t>& encoded_vars,
-        std::vector<variable_dictionary_id_t>& var_ids,
-        size_t& raw_num_bytes
-);
 }  // namespace clp
