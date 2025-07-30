@@ -111,7 +111,6 @@ def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
         "archive_output.storage.directory",
         str(clp_package_dir / "var" / "data" / "archives"),
     )
-
     if Path(clp_archives_dir).is_absolute():
         env_vars["CLP_ARCHIVES_DIR"] = clp_archives_dir
     else:
