@@ -113,15 +113,15 @@ public:
     /**
      * Parses all variables from a message (while constructing the logtype) and encodes them (adding
      * them to the variable dictionary if necessary)
-     * @tparam VariableDictionaryWriterType
      * @tparam LogTypeDictionaryEntryType
+     * @tparam VariableDictionaryWriterType
      * @param message
      * @param logtype_dict_entry
      * @param var_dict
      * @param encoded_vars
      * @param var_ids
      */
-    template <typename VariableDictionaryWriterType, typename LogTypeDictionaryEntryType>
+    template <typename LogTypeDictionaryEntryType, typename VariableDictionaryWriterType>
     static void encode_and_add_to_dictionary(
             std::string_view message,
             LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -196,7 +196,7 @@ public:
      */
     template <
             typename VariableDictionaryReaderType,
-            typename VariableDictionaryEntryType = VariableDictionaryReaderType::entry_t>
+            typename VariableDictionaryEntryType = typename VariableDictionaryReaderType::entry_t>
     static bool encode_and_search_dictionary(
             std::string_view var_str,
             VariableDictionaryReaderType const& var_dict,
@@ -217,7 +217,7 @@ public:
      */
     template <
             typename VariableDictionaryReaderType,
-            typename VariableDictionaryEntryType = VariableDictionaryReaderType::entry_t>
+            typename VariableDictionaryEntryType = typename VariableDictionaryReaderType::entry_t>
     static bool wildcard_search_dictionary_and_get_encoded_matches(
             std::string_view var_wildcard_str,
             VariableDictionaryReaderType const& var_dict,
@@ -266,7 +266,7 @@ private:
     );
 };
 
-template <typename VariableDictionaryWriterType, typename LogTypeDictionaryEntryType>
+template <typename LogTypeDictionaryEntryType, typename VariableDictionaryWriterType>
 void EncodedVariableInterpreter::encode_and_add_to_dictionary(
         std::string_view message,
         LogTypeDictionaryEntryType& logtype_dict_entry,

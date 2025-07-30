@@ -412,10 +412,9 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         var_dict_reader.open(std::string{cVarDictPath}, std::string{cVarSegmentIndexPath});
         var_dict_reader.read_new_entries();
 
-        REQUIRE(var_dict_reader.get_entry_matching_value(std::string{var_strs.at(0)}, true).size()
+        REQUIRE(var_dict_reader.get_entry_matching_value(var_strs.at(0), true).size()
                 == var_strs.size());
-        REQUIRE(var_dict_reader.get_entry_matching_value(std::string{var_strs.at(0)}, false).size()
-                == 1);
+        REQUIRE(var_dict_reader.get_entry_matching_value(var_strs.at(0), false).size() == 1);
 
         var_dict_reader.close();
 
