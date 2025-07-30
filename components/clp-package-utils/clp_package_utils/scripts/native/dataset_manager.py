@@ -102,9 +102,7 @@ def _delete_dataset(dataset: str, dataset_archive_storage_dir: str, clp_config: 
 
 def _delete_dataset_from_database(dataset: str, database_config: Database):
     sql_adapter = SQL_Adapter(database_config)
-    clp_db_connection_params = database_config.get_clp_connection_params_and_type(
-        True
-    )
+    clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
 
     table_prefix = clp_db_connection_params["table_prefix"]
 
