@@ -28,7 +28,7 @@ from clp_package_utils.scripts.native.dataset_manager import (
     LIST_COMMAND,
 )
 
-logger: logging.Logger = logging.getLogger(__file__)
+logger = logging.getLogger(__file__)
 
 
 def main(argv: List[str]) -> int:

@@ -101,14 +101,14 @@ def _delete_dataset(dataset: str, dataset_archive_storage_dir: str, clp_config: 
 
 
 def _delete_dataset_from_database(dataset: str, database_config: Database):
-    sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
-    clp_db_connection_params: dict[str, any] = database_config.get_clp_connection_params_and_type(
+    sql_adapter = SQL_Adapter(database_config)
+    clp_db_connection_params = database_config.get_clp_connection_params_and_type(
         True
     )
 
     table_prefix = clp_db_connection_params["table_prefix"]
 
-    # Drop tables in the order such that no foreign key constraint is violated.
+    # Drop tables in an order such that no foreign key constraint is violated.
     tables_remove_order = [
         get_column_metadata_table_name(table_prefix, dataset),
         get_files_table_name(table_prefix, dataset),
