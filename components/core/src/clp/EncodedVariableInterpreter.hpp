@@ -237,9 +237,7 @@ private:
      * variable)
      * @return The encoded variable
      */
-    template <
-            typename LogTypeDictionaryEntryType,
-            typename VariableDictionaryWriterType>
+    template <typename LogTypeDictionaryEntryType, typename VariableDictionaryWriterType>
     static encoded_variable_t encode_var(
             std::string_view var,
             LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -258,9 +256,7 @@ private:
      * @param var_ids A container to add the dictionary ID to
      * @return The dictionary ID
      */
-    template <
-            typename LogTypeDictionaryEntryType,
-            typename VariableDictionaryWriterType>
+    template <typename LogTypeDictionaryEntryType, typename VariableDictionaryWriterType>
     static variable_dictionary_id_t add_dict_var(
             std::string_view var,
             LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -488,9 +484,7 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary(
     return true;
 }
 
-template <
-        typename VariableDictionaryReaderType,
-        typename VariableDictionaryEntryType>
+template <typename VariableDictionaryReaderType, typename VariableDictionaryEntryType>
 bool EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matches(
         std::string_view var_wildcard_str,
         VariableDictionaryReaderType const& var_dict,
@@ -518,9 +512,7 @@ bool EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matc
     return true;
 }
 
-template <
-        typename LogTypeDictionaryEntryType,
-        typename VariableDictionaryWriterType>
+template <typename LogTypeDictionaryEntryType, typename VariableDictionaryWriterType>
 encoded_variable_t EncodedVariableInterpreter::encode_var(
         std::string_view var,
         LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -539,9 +531,7 @@ encoded_variable_t EncodedVariableInterpreter::encode_var(
     return encoded_var;
 }
 
-template <
-        typename LogTypeDictionaryEntryType,
-        typename VariableDictionaryWriterType>
+template <typename LogTypeDictionaryEntryType, typename VariableDictionaryWriterType>
 variable_dictionary_id_t EncodedVariableInterpreter::add_dict_var(
         std::string_view var,
         LogTypeDictionaryEntryType& logtype_dict_entry,
