@@ -39,27 +39,27 @@ QueryVar::QueryVar(encoded_variable_t precise_non_dict_var) {
     m_is_dict_var = false;
 }
 
-QueryVar::QueryVar(encoded_variable_t precise_dict_var, variable_dictionary_id_t var_dict_entry) {
+QueryVar::QueryVar(encoded_variable_t precise_dict_var, variable_dictionary_id_t var_dict_id) {
     m_precise_var = precise_dict_var;
     m_is_precise_var = true;
     m_is_dict_var = true;
-    m_var_dict_entry = var_dict_entry;
+    m_var_dict_id = var_dict_id;
 }
 
 QueryVar::QueryVar(
         unordered_set<encoded_variable_t> const& possible_dict_vars,
-        unordered_set<variable_dictionary_id_t> const& possible_var_dict_entries
+        unordered_set<variable_dictionary_id_t> const& possible_var_dict_ids
 ) {
     m_is_dict_var = true;
     if (possible_dict_vars.size() == 1) {
         // A single possible variable is the same as a precise variable
         m_precise_var = *possible_dict_vars.cbegin();
         m_is_precise_var = true;
-        m_var_dict_entry = *possible_var_dict_entries.cbegin();
+        m_var_dict_id = *possible_var_dict_ids.cbegin();
     } else {
         m_possible_dict_vars = possible_dict_vars;
         m_is_precise_var = false;
-        m_possible_var_dict_entries = possible_var_dict_entries;
+        m_possible_var_dict_ids = possible_var_dict_ids;
     }
 }
 
@@ -80,11 +80,11 @@ void QueryVar::remove_segments_that_dont_contain_dict_var(
 
     if (m_is_precise_var) {
         auto& ids_of_segments_containing_query_var
-                = get_segments_containing_var_dict_id(m_var_dict_entry);
+                = get_segments_containing_var_dict_id(m_var_dict_id);
         inplace_set_intersection(ids_of_segments_containing_query_var, segment_ids);
     } else {
         set<segment_id_t> ids_of_segments_containing_query_var;
-        for (auto entry : m_possible_var_dict_entries) {
+        for (auto entry : m_possible_var_dict_ids) {
             auto& ids_of_segments_containing_var = get_segments_containing_var_dict_id(entry);
             ids_of_segments_containing_query_var.insert(
                     ids_of_segments_containing_var.cbegin(),
@@ -99,18 +99,16 @@ void SubQuery::add_non_dict_var(encoded_variable_t precise_non_dict_var) {
     m_vars.emplace_back(precise_non_dict_var);
 }
 
-void SubQuery::add_dict_var(
-        encoded_variable_t precise_dict_var,
-        variable_dictionary_id_t var_dict_entry
-) {
-    m_vars.emplace_back(precise_dict_var, var_dict_entry);
+void
+SubQuery::add_dict_var(encoded_variable_t precise_dict_var, variable_dictionary_id_t var_dict_id) {
+    m_vars.emplace_back(precise_dict_var, var_dict_id);
 }
 
 void SubQuery::add_imprecise_dict_var(
         unordered_set<encoded_variable_t> const& possible_dict_vars,
-        unordered_set<variable_dictionary_id_t> const& possible_var_dict_entries
+        unordered_set<variable_dictionary_id_t> const& possible_var_dict_ids
 ) {
-    m_vars.emplace_back(possible_dict_vars, possible_var_dict_entries);
+    m_vars.emplace_back(possible_dict_vars, possible_var_dict_ids);
 }
 
 void SubQuery::set_possible_logtypes(unordered_set<logtype_dictionary_id_t> const& logtype_ids) {

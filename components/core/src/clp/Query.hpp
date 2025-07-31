@@ -18,10 +18,10 @@ class QueryVar {
 public:
     // Constructors
     explicit QueryVar(encoded_variable_t precise_non_dict_var);
-    QueryVar(encoded_variable_t precise_dict_var, variable_dictionary_id_t var_dict_entry);
+    QueryVar(encoded_variable_t precise_dict_var, variable_dictionary_id_t var_dict_id);
     QueryVar(
             std::unordered_set<encoded_variable_t> const& possible_dict_vars,
-            std::unordered_set<variable_dictionary_id_t> const& possible_var_dict_entries
+            std::unordered_set<variable_dictionary_id_t> const& possible_var_dict_ids
     );
 
     // Methods
@@ -47,10 +47,10 @@ public:
 
     bool is_dict_var() const { return m_is_dict_var; }
 
-    variable_dictionary_id_t get_var_dict_entry() const { return m_var_dict_entry; }
+    variable_dictionary_id_t get_var_dict_id() const { return m_var_dict_id; }
 
-    std::unordered_set<variable_dictionary_id_t> const& get_possible_var_dict_entries() const {
-        return m_possible_var_dict_entries;
+    std::unordered_set<variable_dictionary_id_t> const& get_possible_var_dict_ids() const {
+        return m_possible_var_dict_ids;
     }
 
 private:
@@ -60,11 +60,11 @@ private:
 
     encoded_variable_t m_precise_var{};
     // Only used if the precise variable is a dictionary variable
-    variable_dictionary_id_t m_var_dict_entry{};
+    variable_dictionary_id_t m_var_dict_id{};
 
     // Only used if the variable is an imprecise dictionary variable
     std::unordered_set<encoded_variable_t> m_possible_dict_vars;
-    std::unordered_set<variable_dictionary_id_t> m_possible_var_dict_entries;
+    std::unordered_set<variable_dictionary_id_t> m_possible_var_dict_ids;
 };
 
 /**
@@ -83,18 +83,18 @@ public:
     /**
      * Adds a precise dictionary variable to the subquery
      * @param precise_dict_var
-     * @param var_dict_entry
+     * @param var_dict_id
      */
-    void add_dict_var(encoded_variable_t precise_dict_var, variable_dictionary_id_t var_dict_entry);
+    void add_dict_var(encoded_variable_t precise_dict_var, variable_dictionary_id_t var_dict_id);
     /**
      * Adds an imprecise dictionary variable (i.e., a set of possible precise dictionary variables)
      * to the subquery
      * @param possible_dict_vars
-     * @param possible_var_dict_entries
+     * @param possible_var_dict_ids
      */
     void add_imprecise_dict_var(
             std::unordered_set<encoded_variable_t> const& possible_dict_vars,
-            std::unordered_set<variable_dictionary_id_t> const& possible_var_dict_entries
+            std::unordered_set<variable_dictionary_id_t> const& possible_var_dict_ids
     );
     /**
      * Add a set of possible logtypes to the subquery
