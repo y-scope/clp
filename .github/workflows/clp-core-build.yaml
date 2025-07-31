@@ -355,11 +355,11 @@ jobs:
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
-          # run_command: >-
-          #   task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
+          # TODO: We set HOME due to permission issues inside the container used in run-on-image.
+          # See: https://github.com/y-scope/clp/issues/1145
           run_command: >-
             CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
+            HOME=/tmp
             task lint:check-cpp-full
 
       # Cache the source file checksums and the generated files (logs) for the
