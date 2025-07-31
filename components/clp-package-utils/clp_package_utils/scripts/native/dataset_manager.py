@@ -42,6 +42,13 @@ def _handle_list_datasets(datasets: Dict[str, str]) -> int:
 def _fetch_existing_datasets_info(
     db_config: Database,
 ) -> Dict[str, str]:
+    """
+    Retrieves a mapping of existing dataset names to their corresponding archive storage directories.
+
+    :param db_config:
+    :return: Dict[str, str] containing the mapping of dataset names to their corresponding archive_storage_directory
+    """
+
     sql_adapter = SQL_Adapter(db_config)
     clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
@@ -60,23 +67,23 @@ def _handle_del_datasets(
     parsed_args: argparse.Namespace,
     existing_datasets_info: Dict[str, str],
 ):
-    datasets_to_delete: List[str] = []
+    datasets_to_delete: Dict[str, str] = dict()
     if parsed_args.del_all:
-        datasets_to_delete = list(existing_datasets_info.keys())
+        datasets_to_delete = existing_datasets_info
     else:
         datasets = parsed_args.datasets
         for dataset in datasets:
             if dataset not in existing_datasets_info:
                 logger.error(f"Dataset `{dataset}` doesn't exist.")
                 continue
-            datasets_to_delete.append(dataset)
+            datasets_to_delete[dataset] = existing_datasets_info[dataset]
 
     if 0 == len(datasets_to_delete):
         logger.warning("No dataset will be deleted...")
         return 0
 
-    for dataset in datasets_to_delete:
-        if not _delete_dataset(dataset, existing_datasets_info[dataset], clp_config):
+    for dataset, dataset_archive_storage_dir in datasets_to_delete.items():
+        if not _delete_dataset(dataset, dataset_archive_storage_dir, clp_config):
             return -1
 
     return 0
@@ -100,14 +107,17 @@ def _delete_dataset(dataset: str, dataset_archive_storage_dir: str, clp_config: 
     return True
 
 
-def _delete_dataset_from_database(database_config: Database, dataset: str):
-    sql_adapter = SQL_Adapter(database_config)
+def _delete_dataset_from_database(database_config: Database, dataset: str) -> None:
+    """
+    Deletes all tables associated with the `dataset` from the metadata database.
+
+    :param database_config:
+    :param dataset:
+    """
     clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
-
     table_prefix = clp_db_connection_params["table_prefix"]
-
     # Drop tables in an order such that no foreign key constraint is violated.
-    tables_remove_order = [
+    tables_removal_order = [
         get_column_metadata_table_name(table_prefix, dataset),
         get_files_table_name(table_prefix, dataset),
         get_archive_tags_table_name(table_prefix, dataset),
@@ -115,16 +125,14 @@ def _delete_dataset_from_database(database_config: Database, dataset: str):
         get_archives_table_name(table_prefix, dataset),
     ]
 
+    sql_adapter = SQL_Adapter(database_config)
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
-        for table in tables_remove_order:
-            db_cursor.execute(
-                f"""
-                DROP TABLE `{table}`
-                """
-            )
+        for table in tables_removal_order:
+            db_cursor.execute(f"DROP TABLE `{table}`")
 
+        # Remove the dataset row from the datasets table
         db_cursor.execute(
             f"""
             DELETE FROM `{get_datasets_table_name(table_prefix)}`
@@ -135,15 +143,15 @@ def _delete_dataset_from_database(database_config: Database, dataset: str):
         db_conn.commit()
 
 
-def _try_deleting_archives_from_s3(s3_config: S3Config, dataset_archive_storage_dir: str) -> None:
+def _try_deleting_archives_from_s3(s3_config: S3Config, archive_storage_key_prefix: str) -> None:
     # Add trailing '/' to avoid deleting other datasets with similar prefixes
-    if not dataset_archive_storage_dir.endswith("/"):
-        dataset_archive_storage_dir += "/"
+    if not archive_storage_key_prefix.endswith("/"):
+        archive_storage_key_prefix += "/"
 
     s3_delete_by_key_prefix(
         s3_config.region_code,
         s3_config.bucket,
-        dataset_archive_storage_dir,
+        archive_storage_key_prefix,
         s3_config.aws_authentication,
     )
 
@@ -180,14 +188,6 @@ def _try_deleting_archives(
         _try_deleting_archives_from_s3(
             archive_storage_config.s3_config, dataset_archive_storage_dir
         )
-        s3_config = archive_storage_config.s3_config
-
-        s3_delete_by_key_prefix(
-            s3_config.region_code,
-            s3_config.bucket,
-            dataset_archive_storage_dir,
-            s3_config.aws_authentication,
-        )
 
     elif StorageType.FS == storage_type:
         _try_deleting_archives_from_fs(archive_output_config, dataset_archive_storage_dir)
@@ -210,12 +210,6 @@ def main(argv: List[str]) -> int:
         default=str(default_config_file_path),
         help="CLP configuration file.",
     )
-    args_parser.add_argument(
-        "--dataset",
-        type=str,
-        default=None,
-        help="The dataset that the archives belong to.",
-    )
 
     # Top-level commands
     subparsers = args_parser.add_subparsers(
@@ -230,7 +224,7 @@ def main(argv: List[str]) -> int:
     # Options for delete subcommand
     del_parser = subparsers.add_parser(
         DEL_COMMAND,
-        help="Deletes datasets from the database and file system.",
+        help="Deletes dataset(s) from the database and the file system.",
     )
     del_parser.add_argument(
         "datasets",
@@ -262,16 +256,13 @@ def main(argv: List[str]) -> int:
         logger.exception("Failed to fetch datasets from the database.")
         return -1
 
-    ret_val: int
     if LIST_COMMAND == parsed_args.subcommand:
-        ret_val = _handle_list_datasets(existing_datasets_info)
+        return _handle_list_datasets(existing_datasets_info)
     elif DEL_COMMAND == parsed_args.subcommand:
-        ret_val = _handle_del_datasets(clp_config, parsed_args, existing_datasets_info)
+        return _handle_del_datasets(clp_config, parsed_args, existing_datasets_info)
     else:
         logger.error(f"Unsupported subcommand: `{parsed_args.subcommand}`.")
-        ret_val = -1
-
-    return ret_val
+        return -1
 
 
 if "__main__" == __name__:

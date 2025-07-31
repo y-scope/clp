@@ -316,6 +316,15 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_path: str) -> None:
 def s3_delete_by_key_prefix(
     region_code: str, bucket: str, key_prefix: str, s3_auth: AwsAuthentication
 ) -> None:
+    """
+    Deletes all objects under the <bucket>/<key_prefix>, using authentication info specified by `s3_auth`.
+
+    :param region_code: region in which the bucket resides
+    :param bucket: name of the bucket
+    :param key_prefix: key prefix of all objects to delete
+    :param s3_auth: configuration specifying the authentication info.
+    :raises: Propagates `boto3.client.delete_objects`'s exceptions.
+    """
     boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
     s3_client = _create_s3_client(region_code, s3_auth, boto3_config)
 

@@ -37,7 +37,7 @@ def main(argv: List[str]) -> int:
 
     # Top-level parser and options
     args_parser = argparse.ArgumentParser(
-        description="Views the list of existing datasets or deletes datasets."
+        description="Views the list of existing datasets or deletes dataset(s)."
     )
     args_parser.add_argument(
         "--config",
@@ -59,7 +59,7 @@ def main(argv: List[str]) -> int:
     # Options for delete subcommand
     del_parser = subparsers.add_parser(
         DEL_COMMAND,
-        help="Deletes datasets from the database and file system.",
+        help="Deletes dataset(s) from the database and the file system.",
     )
     del_parser.add_argument(
         "datasets",
@@ -91,7 +91,7 @@ def main(argv: List[str]) -> int:
 
     storage_engine = clp_config.package.storage_engine
     if StorageEngine.CLP_S != storage_engine:
-        logger.error(f"Dataset operation is not supported for storage engine: {storage_engine}.")
+        logger.error(f"Datasets operation is not supported for storage engine: {storage_engine}.")
         return -1
 
     # Validate input depending on subcommands
@@ -99,9 +99,11 @@ def main(argv: List[str]) -> int:
         datasets = parsed_args.datasets
         del_all_flag = parsed_args.del_all
         if not del_all_flag and len(datasets) == 0:
-            args_parser.error("No dataset specified for deletion.")
+            args_parser.error("No dataset name is specified for deletion.")
         if del_all_flag and len(datasets) != 0:
-            args_parser.error("The --all flag cannot be used together with specific dataset names.")
+            args_parser.error(
+                "The -a/--all flag cannot be used together with specified dataset names."
+            )
 
         try:
             clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
