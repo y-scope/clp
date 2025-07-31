@@ -1,14 +1,11 @@
 import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
 import {StatusCodes} from "http-status-codes";
-import {Client} from "presto-client";
 
-import settings from "../../../../settings.json" with {type: "json"};
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
-    PrestoJobSchema,
-    PrestoSearchJobCreationSchema,
+    PrestoQueryJobCreationSchema,
+    PrestoQueryJobSchema,
 } from "../../../schemas/presto-search.js";
-import {Nullable} from "../../../typings/common.js";
 
 
 /**
@@ -17,11 +14,11 @@ import {Nullable} from "../../../typings/common.js";
  * @param fastify
  */
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-    if (false === settings.EnablePresto) {
-        return;
-    }
+    const {Presto} = fastify;
 
-    const client = new Client({host: settings.PrestoHost, port: settings.PrestoPort});
+    if ("undefined" === typeof Presto) {
+        throw new Error("Presto not available");
+    }
 
     /**
      * Submits a search query and initiates the search process.
@@ -30,56 +27,61 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         "/query",
         {
             schema: {
-                body: PrestoSearchJobCreationSchema,
+                body: PrestoQueryJobCreationSchema,
                 response: {
-                    [StatusCodes.CREATED]: PrestoJobSchema,
+                    [StatusCodes.CREATED]: PrestoQueryJobSchema,
                     [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
-                tags: ["Search"],
+                tags: ["Presto Search"],
             },
         },
 
         async (request, reply) => {
             const {queryString} = request.body;
 
-            let searchJobId: Nullable<string> = null;
+            let searchJobId: string;
 
-            searchJobId = await new Promise((resolve) => {
-                client.execute({
-                    data: (error, data, columns) => {
-                        if (null === searchJobId) {
-                            request.log.error("Data arrived from Presto before the search job id.");
-                        }
-                        request.log.info({error, searchJobId, columns, data}, "Presto data");
-                    },
-                    error: (error) => {
-                        request.log.info(error, "Presto search failed");
+            try {
+                searchJobId = await new Promise<string>((resolve, reject) => {
+                    let isResolved = false;
 
-                        // The `/query` endpoint will catch this error if `resolve` hasn't
-                        // been called.
-                        throw new Error("Presto search failed.");
-                    },
-                    query: queryString,
-                    state: (error, newSearchJobId, stats) => {
-                        request.log.info({
-                            error: error,
-                            searchJobId: newSearchJobId,
-                            state: stats.state,
-                        }, "Presto search state updated");
+                    Presto.client.execute({
+                        // eslint-disable-next-line no-warning-comments
+                        // TODO: Data, error, and success handlers are dummy implementations
+                        // and should be completed.
+                        data: (_, data, columns) => {
+                            request.log.info({columns, data}, "Presto data");
+                        },
+                        error: (error) => {
+                            request.log.info(error, "Presto search failed");
+                            if (false === isResolved) {
+                                isResolved = true;
+                                reject(new Error("Presto search failed"));
+                            }
+                        },
+                        query: queryString,
+                        state: (_, queryId, stats) => {
+                            request.log.info({
+                                searchJobId: queryId,
+                                state: stats.state,
+                            }, "Presto search state updated");
 
-                        resolve(newSearchJobId);
-                    },
-                    success: () => {
-                        request.log.info("Presto search succeeded");
-                    },
+                            if (false === isResolved) {
+                                isResolved = true;
+                                resolve(queryId);
+                            }
+                        },
+                        success: () => {
+                            request.log.info("Presto search succeeded");
+                        },
+                    });
                 });
-            });
+            } catch (error) {
+                request.log.error(error, "Failed to submit Presto query");
+                throw error;
+            }
 
             reply.code(StatusCodes.CREATED);
-
-            if (null === searchJobId) {
-                throw new Error("searchJobId is null");
-            }
 
             return {searchJobId};
         }

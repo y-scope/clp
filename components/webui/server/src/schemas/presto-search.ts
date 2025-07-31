@@ -4,17 +4,20 @@ import {StringSchema} from "./common.js";
 
 
 /**
- * Schema for request to create a new query job.
+ * Schema for request to create a new Presto query job.
  */
-const PrestoSearchJobCreationSchema = Type.Object({
+const PrestoQueryJobCreationSchema = Type.Object({
     queryString: StringSchema,
 });
 
-const PrestoJobSchema = Type.Object({
+/**
+ * Schema to identify a Presto query job.
+ */
+const PrestoQueryJobSchema = Type.Object({
     searchJobId: StringSchema,
 });
 
 export {
-    PrestoJobSchema,
-    PrestoSearchJobCreationSchema,
+    PrestoQueryJobCreationSchema,
+    PrestoQueryJobSchema,
 };
