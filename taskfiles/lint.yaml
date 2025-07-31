@@ -731,7 +731,7 @@ tasks:
             - "test-encoding_methods.cpp"
             - "test-error_handling.cpp"
             - "test-ffi_IrUnitHandlerInterface.cpp"
-            - "test-Grep.cpp"
+            - "test-GrepCore.cpp"
             - "test-hash_utils.cpp"
             - "test-ir_encoding_methods.cpp"
             - "test-ir_parsing.cpp"
