@@ -143,7 +143,6 @@ if(CLP_BUILD_EXECUTABLES)
                 ${sqlite_LIBRARY_DEPENDENCIES}
                 ${STD_FS_LIBS}
                 clp::string_utils
-                yaml-cpp
                 ystdlib::containers
                 ystdlib::error_handling
                 ZStd::ZStd
