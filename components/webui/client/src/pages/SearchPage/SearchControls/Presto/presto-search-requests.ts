@@ -1,5 +1,8 @@
-import {submitQuery} from "../../../../api/presto-search";
-import type {PrestoQueryJobCreationSchema} from "../../../../api/presto-search";
+import {
+    type PrestoQueryJobCreationSchema,
+    submitQuery,
+} from "../../../../api/presto-search";
+
 
 /**
  * Submits a new Presto query to server.
@@ -21,6 +24,4 @@ const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreationSchema) => {
         });
 };
 
-export {
-    handlePrestoQuerySubmit,
-};
+export {handlePrestoQuerySubmit};

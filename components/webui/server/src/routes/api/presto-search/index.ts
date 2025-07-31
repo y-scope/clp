@@ -17,11 +17,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     const {Presto} = fastify;
 
     if ("undefined" === typeof Presto) {
-        throw new Error("Presto not available");
+        // If Presto client is not available, skip the plugin registration.
+        return;
     }
 
     /**
-     * Submits a search query and initiates the search process.
+     * Submits a search query.
      */
     fastify.post(
         "/query",
@@ -48,7 +49,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     Presto.client.execute({
                         // eslint-disable-next-line no-warning-comments
                         // TODO: Data, error, and success handlers are dummy implementations
-                        // and should be completed.
+                        // and will be replaced with proper implementations.
                         data: (_, data, columns) => {
                             request.log.info({columns, data}, "Presto data");
                         },
