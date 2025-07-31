@@ -108,6 +108,7 @@ def _process_fs_input_paths(
         try:
             file, empty_directory = validate_path_and_get_info(CONTAINER_INPUT_LOGS_ROOT_DIR, path)
         except ValueError as ex:
+            logger.error(str(ex))
             raise ValueError(str(ex))
 
         if file:
@@ -122,6 +123,7 @@ def _process_fs_input_paths(
                         CONTAINER_INPUT_LOGS_ROOT_DIR, internal_path
                     )
                 except ValueError as ex:
+                    logger.error(str(ex))
                     raise ValueError(str(ex))
 
                 if file:
