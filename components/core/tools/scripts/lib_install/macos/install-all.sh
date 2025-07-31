@@ -33,7 +33,6 @@ curl \
 /Formula/g/go-task.rb
 brew install --formula "$task_formula_path"
 
-# Install `uv`
 if ! command -v uv ; then
     brew install uv
 fi

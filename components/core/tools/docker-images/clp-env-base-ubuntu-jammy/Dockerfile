@@ -7,8 +7,7 @@ ADD ./tools/scripts/lib_install ./tools/scripts/lib_install
 
 RUN ./tools/scripts/lib_install/ubuntu-jammy/install-all.sh
 
-# Install uv
-RUN pip3 install --no-cache-dir uv==0.8.3
+RUN pip3 install --no-cache-dir uv
 
 # Remove cached files
 RUN apt-get clean \
