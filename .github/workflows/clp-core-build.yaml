@@ -358,6 +358,7 @@ jobs:
           # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
           # run_command: >-
           #   task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
+          # TODO: https://github.com/y-scope/clp/issues/1145
           run_command: >-
             CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
             HOME=/tmp
