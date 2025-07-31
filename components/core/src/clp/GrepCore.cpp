@@ -225,7 +225,7 @@ bool GrepCore::get_bounds_of_next_potential_var(
 
         if (end_pos > begin_pos) {
             bool has_prefix_wildcard = ('*' == value[begin_pos]) || ('?' == value[begin_pos]);
-            bool has_suffix_wildcard = ('*' == value[end_pos - 1]) || ('?' == value[begin_pos]);
+            bool has_suffix_wildcard = ('*' == value[end_pos - 1]) || ('?' == value[end_pos - 1]);
             bool has_wildcard_in_middle = false;
             for (size_t i = begin_pos + 1; i < end_pos - 1; ++i) {
                 if (('*' == value[i] || '?' == value[i]) && value[i - 1] != '\\') {

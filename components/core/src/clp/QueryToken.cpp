@@ -5,9 +5,11 @@
 #include "Defs.h"
 #include "EncodedVariableInterpreter.hpp"
 
+using std::string;
+
 namespace clp {
 QueryToken::QueryToken(
-        std::string const& query_string,
+        string const& query_string,
         size_t const begin_pos,
         size_t const end_pos,
         bool const is_var
@@ -51,7 +53,7 @@ QueryToken::QueryToken(
                 m_possible_types.push_back(Type::DictionaryVar);
             }
         } else {
-            std::string value_without_wildcards = m_value;
+            string value_without_wildcards = m_value;
             if (m_has_prefix_greedy_wildcard) {
                 value_without_wildcards = value_without_wildcards.substr(1);
             }
@@ -154,7 +156,7 @@ size_t QueryToken::get_end_pos() const {
     return m_end_pos;
 }
 
-std::string const& QueryToken::get_value() const {
+string const& QueryToken::get_value() const {
     return m_value;
 }
 
