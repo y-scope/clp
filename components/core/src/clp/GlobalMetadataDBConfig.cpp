@@ -70,9 +70,11 @@ auto GlobalMetadataDBConfig::validate() const -> void {
             throw invalid_argument("Database '--db-host' is empty.");
         }
 
-        if (0 > m_metadata_db_port || 65535 < m_metadata_db_port) {
-            throw invalid_argument("Database '--db-port' is out of range [0, 65535]: "
-                                   + std::to_string(m_metadata_db_port));
+        if (0 > m_metadata_db_port || 65'535 < m_metadata_db_port) {
+            throw invalid_argument(
+                    "Database '--db-port' is out of range [0, 65535]: "
+                    + std::to_string(m_metadata_db_port)
+            );
         }
 
         if (m_metadata_db_name.empty()) {
