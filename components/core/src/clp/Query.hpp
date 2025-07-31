@@ -144,11 +144,11 @@ public:
      * Whether the given variables contain the subquery's variables in order (but not necessarily
      * contiguously)
      * @param vars
-     * @tparam EncodedVariableVectorType a vector of `encoded_variable_t`. TODO: use a concept.
+     * @tparam EncodedVariableContainerType A random access list of `clp::encoded_variable_t`.
      * @return true if matched, false otherwise
      */
-    template <typename EncodedVariableVectorType>
-    bool matches_vars(EncodedVariableVectorType const& vars) const;
+    template <typename EncodedVariableContainerType>
+    bool matches_vars(EncodedVariableContainerType const& vars) const;
 
 private:
     // Variables
@@ -237,8 +237,8 @@ private:
     segment_id_t m_prev_segment_id{cInvalidSegmentId};
 };
 
-template <typename EncodedVariableVectorType>
-bool SubQuery::matches_vars(EncodedVariableVectorType const& vars) const {
+template <typename EncodedVariableContainerType>
+bool SubQuery::matches_vars(EncodedVariableContainerType const& vars) const {
     if (vars.size() < m_vars.size()) {
         // Not enough variables to satisfy query
         return false;
