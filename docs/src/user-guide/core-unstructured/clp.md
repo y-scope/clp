@@ -114,7 +114,7 @@ To enable parallel compression to the same archives directory, `clp`/`clg` can b
 a MySQL-type database (e.g., MariaDB) as follows:
 
 * Install and configure MariaDB using the instructions for your platform
-* Create a user that has privileges to create databases, create tables, insert records, and delete
+* Create a user who has privileges to create databases, create tables, insert records, and delete
   records.
 * Install the MariaDB Python package `pip3 install mariadb`
   * This is necessary to run the database initialization script. If you prefer, you can run the SQL
