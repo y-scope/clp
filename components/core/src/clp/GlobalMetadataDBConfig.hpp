@@ -46,7 +46,7 @@ public:
     auto read_credentials_from_env() -> void;
 
     /**
-     * Validates that all required parameters are provided
+     * Validates that all required parameters are available and well-formed.
      */
     auto validate() const -> void;
 
