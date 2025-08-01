@@ -63,7 +63,7 @@ from clp_package_utils.general import (
     validate_db_config,
     validate_log_directory,
     validate_logs_input_config,
-    validate_output_config,
+    validate_output_storage_config,
     validate_queue_config,
     validate_redis_config,
     validate_reducer_config,
@@ -1227,7 +1227,6 @@ def main(argv):
         if target in (
             ALL_TARGET_NAME,
             COMPRESSION_WORKER_COMPONENT_NAME,
-            QUERY_WORKER_COMPONENT_NAME,
         ):
             validate_logs_input_config(clp_config)
         if target in (
@@ -1236,7 +1235,7 @@ def main(argv):
             QUERY_WORKER_COMPONENT_NAME,
             RETENTION_CLEANER_COMPONENT_NAME,
         ):
-            validate_output_config(clp_config)
+            validate_output_storage_config(clp_config)
 
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()

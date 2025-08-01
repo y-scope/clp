@@ -499,7 +499,7 @@ def validate_logs_input_config(clp_config: CLPConfig):
     clp_config.validate_logs_input_config()
 
 
-def validate_output_config(clp_config: CLPConfig):
+def validate_output_storage_config(clp_config: CLPConfig):
     clp_config.validate_archive_output_config()
     clp_config.validate_stream_output_config()
 
