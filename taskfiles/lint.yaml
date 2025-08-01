@@ -270,7 +270,6 @@ tasks:
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/FileWriter.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/FileWriter.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/GlobalMetadataDB.hpp"
-            - "{{.G_CORE_COMPONENT_DIR}}/src/clp/GlobalMetadataDBConfig.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/GlobalMySQLMetadataDB.cpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/GlobalMySQLMetadataDB.hpp"
             - "{{.G_CORE_COMPONENT_DIR}}/src/clp/GlobalSQLiteMetadataDB.cpp"
