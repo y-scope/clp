@@ -39,7 +39,7 @@ def main(argv):
         raise Exception(f"'{key}' is missing from environment variables.")
 
     try:
-        mysql_conn = mariadb.connect(host=host, port=port, username=username, password=password, )
+        mysql_conn = mariadb.connect(host=host, port=port, username=username, password=password)
         mysql_cursor = mysql_conn.cursor()
     except mariadb.Error as err:
         logger.error("Failed to connect - {}".format(err.msg))
