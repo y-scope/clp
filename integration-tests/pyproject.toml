@@ -1,7 +1,7 @@
 [project]
 name = "integration-tests"
 version = "0.1.0"
-description = "Integration tests for the CLP project."
+description = "Integration tests for the CLP package."
 readme = "README.md"
 authors = [
     { name = "YScope Inc.", email = "dev@yscope.com" }

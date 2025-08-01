@@ -8,7 +8,7 @@ class PackageConfig:
     clp_bin_dir: Path
     clp_package_dir: Path
     clp_sbin_dir: Path
-    test_output_dir: Path
+    test_root_dir: Path
     uncompressed_logs_dir: Path
 
 
@@ -16,31 +16,47 @@ class PackageConfig:
 class DatasetLogs:
     dataset_name: str
     tarball_url: str
-    download_dir: Path
+    tarball_path: Path
     extraction_dir: Path
-    compression_dir: Path
-    decompression_dir: Path
 
     @classmethod
-    def create(cls, package_config, dataset_name: str, **kwargs):
+    def create(cls, package_config: PackageConfig, dataset_name: str, tarball_url: str, **kwargs):
         dataset_name = dataset_name.strip()
         if 0 == len(dataset_name):
             raise ValueError("`dataset_name` cannot be empty.")
         return cls(
             dataset_name=dataset_name,
-            tarball_url=kwargs.get("tarball_url", ""),
-            download_dir=kwargs.get(
-                "download_dir", package_config.uncompressed_logs_dir / f"{dataset_name}.tar.gz"
+            tarball_url=tarball_url,
+            tarball_path=kwargs.get(
+                "tarball_path", package_config.uncompressed_logs_dir / f"{dataset_name}.tar.gz"
             ),
             extraction_dir=kwargs.get(
                 "extraction_dir", package_config.uncompressed_logs_dir / dataset_name
             ),
+        )
+
+
+@dataclass(frozen=True)
+class CompressionTestPaths:
+    test_name: str
+    logs_source_dir: Path
+    compression_dir: Path
+    decompression_dir: Path
+
+    @classmethod
+    def create(cls, package_config: PackageConfig, test_name: str, logs_source_dir: Path, **kwargs):
+        test_name = test_name.strip()
+        if 0 == len(test_name):
+            raise ValueError("`test_name` cannot be empty.")
+        return cls(
+            test_name=test_name,
+            logs_source_dir=logs_source_dir,
             compression_dir=kwargs.get(
-                "compression_dir", package_config.test_output_dir / f"{dataset_name}-archives"
+                "compression_dir", package_config.test_root_dir / f"{test_name}-archives"
             ),
             decompression_dir=kwargs.get(
                 "decompression_dir",
-                package_config.test_output_dir / f"{dataset_name}-decompressed-logs",
+                package_config.test_root_dir / f"{test_name}-decompressed-logs",
             ),
         )
 

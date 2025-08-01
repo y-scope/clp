@@ -6,8 +6,10 @@ from typing import IO, List
 
 
 def is_json_file_structurally_equal(json_fp1: Path, json_fp2: Path) -> bool:
-    with _sort_json_keys_and_rows(json_fp1) as s1, _sort_json_keys_and_rows(json_fp2) as s2:
-        return is_dir_tree_content_equal(s1.name, s2.name)
+    with _sort_json_keys_and_rows(json_fp1) as temp_file_1, _sort_json_keys_and_rows(
+        json_fp2
+    ) as temp_file_2:
+        return is_dir_tree_content_equal(temp_file_1.name, temp_file_2.name)
 
 
 def is_dir_tree_content_equal(path1: Path, path2: Path) -> bool:

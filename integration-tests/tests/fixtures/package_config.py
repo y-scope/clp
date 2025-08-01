@@ -20,9 +20,9 @@ def package_config() -> PackageConfig:
         clp_bin_dir=clp_package_dir / "bin",
         clp_package_dir=clp_package_dir,
         clp_sbin_dir=clp_package_dir / "sbin",
-        test_output_dir=clp_build_dir / "integration-tests",
+        test_root_dir=clp_build_dir / "integration-tests",
         uncompressed_logs_dir=clp_build_dir / "integration-tests" / "downloads",
     )
-    config.test_output_dir.mkdir(parents=True, exist_ok=True)
+    config.test_root_dir.mkdir(parents=True, exist_ok=True)
     config.uncompressed_logs_dir.mkdir(parents=True, exist_ok=True)
     return config

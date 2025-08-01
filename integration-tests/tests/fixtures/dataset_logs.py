@@ -67,13 +67,13 @@ def _download_and_extract_dataset(
             "curl",
             "--fail",
             "--location",
-            "--output", str(dataset_logs.download_dir),
+            "--output", str(dataset_logs.tarball_path),
             "--show-error",
             tarball_url,
         ]
         # fmt: on
         subprocess.run(curl_cmds, check=True)
-        shutil.unpack_archive(str(dataset_logs.download_dir), str(dataset_logs.extraction_dir))
+        shutil.unpack_archive(str(dataset_logs.tarball_path), str(dataset_logs.extraction_dir))
     except Exception as e:
         raise RuntimeError(f"Failed to download and extract dataset `{dataset_name}`: {e}")
 
