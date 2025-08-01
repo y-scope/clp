@@ -57,7 +57,9 @@ def _handle_search_result_garbage_collection(
 
                 if collection_timestamp < expiry_epoch:
                     logger.debug(f"Removing search results for job: {job_id}")
-                    _remove_result_metadata(results_cache_db, results_metadata_collection_name, job_id)
+                    _remove_result_metadata(
+                        results_cache_db, results_metadata_collection_name, job_id
+                    )
                     job_results_collection.drop()
     except Exception:
         logger.exception("Failed to delete search results from the result cache.")

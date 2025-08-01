@@ -325,8 +325,8 @@ def _delete_archives(
     archive_ids: typing.List[str]
     logger.info("Starting to delete archives from the database.")
     sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
-    clp_db_connection_params: dict[str, any] = (
-        database_config.get_clp_connection_params_and_type(True)
+    clp_db_connection_params: dict[str, any] = database_config.get_clp_connection_params_and_type(
+        True
     )
     table_prefix = clp_db_connection_params["table_prefix"]
 

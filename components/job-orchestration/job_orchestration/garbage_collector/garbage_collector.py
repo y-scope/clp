@@ -18,7 +18,9 @@ from job_orchestration.garbage_collector.constants import (
     ARCHIVE_GARBAGE_COLLECTOR_NAME,
     SEARCH_RESULT_GARBAGE_COLLECTOR_NAME,
 )
-from job_orchestration.garbage_collector.search_result_garbage_collector import search_result_garbage_collector
+from job_orchestration.garbage_collector.search_result_garbage_collector import (
+    search_result_garbage_collector,
+)
 from job_orchestration.garbage_collector.utils import configure_logger
 from pydantic import ValidationError
 
