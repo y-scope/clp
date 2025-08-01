@@ -106,7 +106,7 @@ Currently, timestamps must be specified as milliseconds since the UNIX epoch.
 # Parallel Compression
 
 :::{warning}
-By default, `clp` uses an embedded SQLite database. Running multiple clp instances with SQLite 
+By default, `clp` uses an embedded SQLite database. Running multiple clp instances with SQLite
 can fail due to "database is locked" because SQLite does not support concurrent writes.
 :::
 
