@@ -107,15 +107,18 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
     SECTION("With missing credentials") {
         // Neither username nor password set
         SECTION("Neither username nor password") {
+            config.read_credentials_from_env();
             REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
         }
         SECTION("Username set but password missing") {
             set_env_var("CLP_DB_USER", "test-user");
+            config.read_credentials_from_env();
             REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
             unset_env_var("CLP_DB_USER");
         }
         SECTION("Password set but username missing") {
             set_env_var("CLP_DB_PASS", "test-pass");
+            config.read_credentials_from_env();
             REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
             unset_env_var("CLP_DB_PASS");
         }
