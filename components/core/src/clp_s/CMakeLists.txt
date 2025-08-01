@@ -302,6 +302,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 clp_s_archive_reader
                 PUBLIC
                 absl::flat_hash_map
+                clp::string_utils
                 clp_s::io
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
