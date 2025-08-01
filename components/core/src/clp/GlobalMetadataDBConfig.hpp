@@ -18,13 +18,13 @@ public:
         MySQL,
     };
 
-  /**
-   * Overloads operator >> to read MetadataDBType from an input stream.
-   * @param in
-   * @param metadata_db_type
-   * @return std::istream& reference to the input stream
-   */
-    friend auto operator>> (std::istream &in, MetadataDBType &metadata_db_type) -> std::istream&;
+    /**
+     * Overloads operator >> to read MetadataDBType from an input stream.
+     * @param in
+     * @param metadata_db_type
+     * @return std::istream& reference to the input stream
+     */
+    friend auto operator>>(std::istream& in, MetadataDBType& metadata_db_type) -> std::istream&;
 
     // Constructors
     GlobalMetadataDBConfig() = default;
@@ -34,9 +34,8 @@ public:
      * Adds database-related command-line options to the given options_description.
      * @param options_description
      */
-     auto add_command_line_options(
-            boost::program_options::options_description& options_description
-        ) -> void;
+    auto add_command_line_options(boost::program_options::options_description& options_description)
+            -> void;
 
     /**
      * Reads database credentials from environment variables:

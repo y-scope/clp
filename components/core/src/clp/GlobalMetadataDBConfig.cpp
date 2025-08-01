@@ -9,12 +9,12 @@ using std::invalid_argument;
 using std::string;
 
 namespace clp {
-auto operator>> (std::istream &in, GlobalMetadataDBConfig::MetadataDBType &metadata_db_type) -> std::istream& {
+auto operator>>(std::istream& in, GlobalMetadataDBConfig::MetadataDBType& metadata_db_type)
+        -> std::istream& {
     string db_type_string;
     in >> db_type_string;
 
-    if ("sqlite" == db_type_string)
-    {
+    if ("sqlite" == db_type_string) {
         metadata_db_type = GlobalMetadataDBConfig::MetadataDBType::SQLite;
     } else if ("mysql" == db_type_string) {
         metadata_db_type = GlobalMetadataDBConfig::MetadataDBType::MySQL;

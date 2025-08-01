@@ -16,10 +16,8 @@ void unset_env_var(char const* name) {
 }
 
 template <size_t N>
-sauto parse_args(
-    std::array<char const*, N> const& argv,
-    GlobalMetadataDBConfig& config
-) -> boost::program_options::variables_map {
+auto parse_args(std::array<char const*, N> const& argv, GlobalMetadataDBConfig& config)
+        -> boost::program_options::variables_map {
     boost::program_options::options_description options_desc;
     config.add_command_line_options(options_desc);
 
