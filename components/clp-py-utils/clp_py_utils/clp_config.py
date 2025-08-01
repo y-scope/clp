@@ -1,6 +1,6 @@
 import pathlib
 from enum import auto
-from typing import Literal, Optional, Union
+from typing import List, Literal, Optional, Union
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, root_validator, validator
@@ -43,10 +43,39 @@ CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
 
+ALL_RUNNABLE_COMPONENTS = [
+    DB_COMPONENT_NAME,
+    QUEUE_COMPONENT_NAME,
+    REDIS_COMPONENT_NAME,
+    RESULTS_CACHE_COMPONENT_NAME,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
+    COMPRESSION_WORKER_COMPONENT_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
+    QUERY_WORKER_COMPONENT_NAME,
+    REDUCER_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME,
+]
+
+PRESTO_RUNNABLE_COMPONENTS = [
+    DB_COMPONENT_NAME,
+    QUEUE_COMPONENT_NAME,
+    REDIS_COMPONENT_NAME,
+    RESULTS_CACHE_COMPONENT_NAME,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
+    COMPRESSION_WORKER_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME,
+]
+
 
 class StorageEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
+
+
+class QueryEngine(KebabCaseStrEnum):
+    CLP = auto()
+    CLP_S = auto()
+    PRESTO = auto()
 
 
 class StorageType(LowercaseStrEnum):
@@ -62,10 +91,12 @@ class AwsAuthType(LowercaseStrEnum):
 
 
 VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
+VALID_QUERY_ENGINES = [query_engine.value for query_engine in QueryEngine]
 
 
 class Package(BaseModel):
     storage_engine: str = "clp"
+    query_engine: str = "clp"
 
     @validator("storage_engine")
     def validate_storage_engine(cls, field):
@@ -75,6 +106,37 @@ class Package(BaseModel):
                 f" {'|'.join(VALID_STORAGE_ENGINES)}"
             )
         return field
+
+    @validator("query_engine")
+    def validate_query_engine(cls, field):
+        if field not in VALID_QUERY_ENGINES:
+            raise ValueError(
+                f"package.query_engine must be one of the following"
+                f" {'|'.join(VALID_QUERY_ENGINES)}"
+            )
+        return field
+
+    @root_validator
+    def validate_query_engine_package_compatibility(cls, values):
+        query_engine = values.get("query_engine")
+        storage_engine = values.get("storage_engine")
+
+        if query_engine in [QueryEngine.CLP, QueryEngine.CLP_S]:
+            if query_engine != storage_engine:
+                raise ValueError(
+                    f"query_engine '{query_engine}' is only compatible with "
+                    f"storage_engine '{query_engine}'."
+                )
+        elif query_engine == QueryEngine.PRESTO:
+            if storage_engine != StorageEngine.CLP_S:
+                raise ValueError(
+                    f"query_engine '{QueryEngine.PRESTO}' is only compatible with "
+                    f"storage_engine '{StorageEngine.CLP_S}'."
+                )
+        else:
+            raise ValueError(f"Unsupported query_engine '{query_engine}'.")
+
+        return values
 
 
 class Database(BaseModel):
@@ -756,6 +818,12 @@ class CLPConfig(BaseModel):
             raise ValueError(
                 f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
             )
+
+    def get_runnable_components(self) -> List[str]:
+        if QueryEngine.PRESTO == self.package.query_engine:
+            return PRESTO_RUNNABLE_COMPONENTS
+        else:
+            return ALL_RUNNABLE_COMPONENTS
 
     def dump_to_primitive_dict(self):
         d = self.dict()
