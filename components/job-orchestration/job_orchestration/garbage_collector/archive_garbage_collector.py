@@ -19,7 +19,7 @@ from clp_py_utils.clp_metadata_db_utils import (
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.garbage_collector.constants import (
-    ARCHIVE_RETENTION_HANDLER_NAME,
+    ARCHIVE_GARBAGE_COLLECTOR_NAME,
     MIN_TO_SECONDS,
     SECOND_TO_MILLISECOND,
 )
@@ -31,7 +31,7 @@ from job_orchestration.garbage_collector.utils import (
 )
 from job_orchestration.scheduler.constants import QueryJobStatus
 
-logger = get_logger(ARCHIVE_RETENTION_HANDLER_NAME)
+logger = get_logger(ARCHIVE_GARBAGE_COLLECTOR_NAME)
 
 
 def _remove_expired_archives(
@@ -46,28 +46,33 @@ def _remove_expired_archives(
     archives_table = get_archives_table_name(table_prefix, dataset)
     target_archive_end_ts = archive_expiry_epoch_secs * SECOND_TO_MILLISECOND
     logger.debug(f"Searching for archives with end_ts < {target_archive_end_ts}")
-    db_cursor.execute(
-        f"""
-        SELECT id FROM `{archives_table}`
-        WHERE end_timestamp <= %s
-        AND end_timestamp != 0
-        """,
-        [target_archive_end_ts],
-    )
+    try:
+        db_cursor.execute(
+            f"""
+            SELECT id FROM `{archives_table}`
+            WHERE end_timestamp <= %s
+            AND end_timestamp != 0
+            """,
+            [target_archive_end_ts],
+        )
 
-    results = db_cursor.fetchall()
-    archive_ids = [result["id"] for result in results]
-    if len(archive_ids) != 0:
-        logger.debug(f"Deleting {archive_ids}")
-        delete_archives_from_metadata_db(db_cursor, archive_ids, table_prefix, dataset)
+        results = db_cursor.fetchall()
+        archive_ids = [result["id"] for result in results]
+        if len(archive_ids) != 0:
+            logger.debug(f"Deleting {archive_ids}")
+            delete_archives_from_metadata_db(db_cursor, archive_ids, table_prefix, dataset)
 
-        for target in archive_ids:
-            if dataset is not None:
-                target = f"{dataset}/{target}"
-            targets_buffer.add_target(target)
+            for target in archive_ids:
+                if dataset is not None:
+                    target = f"{dataset}/{target}"
+                targets_buffer.add_target(target)
 
-        targets_buffer.persists_new_targets()
-        db_conn.commit()
+            targets_buffer.persists_new_targets()
+            db_conn.commit()
+    except Exception:
+        logger.exception("Failed to delete archives from the database. Aborting deletion.")
+        if db_conn in locals() and db_conn.is_connected():
+            db_conn.rollback()
 
     remove_targets(archive_output_config, targets_buffer.get_targets())
     targets_buffer.flush()
@@ -121,7 +126,7 @@ def _get_archive_safe_expiry_epoch(
     return archive_expiry_epoch
 
 
-def _handle_archive_retention(
+def _handle_archive_garbage_collection(
     archive_output_config: ArchiveOutput,
     storage_engine: str,
     database_config: Database,
@@ -165,21 +170,25 @@ def _handle_archive_retention(
             raise ValueError(f"Unsupported Storage engine: {storage_engine}")
 
 
-async def archive_retention(
+async def archive_garbage_collector(
     clp_config: CLPConfig, log_directory: pathlib.Path, logging_level: str
 ) -> None:
-    configure_logger(logger, logging_level, log_directory, ARCHIVE_RETENTION_HANDLER_NAME)
+    configure_logger(logger, logging_level, log_directory, ARCHIVE_GARBAGE_COLLECTOR_NAME)
 
     archive_output_config = clp_config.archive_output
     storage_engine = clp_config.package.storage_engine
     validate_storage_type(archive_output_config, storage_engine)
 
     sweep_interval_secs = clp_config.garbage_collector.sweep_interval.archive * MIN_TO_SECONDS
-    recovery_file = clp_config.logs_directory / f"{ARCHIVE_RETENTION_HANDLER_NAME}.tmp"
+    recovery_file = clp_config.logs_directory / f"{ARCHIVE_GARBAGE_COLLECTOR_NAME}.tmp"
 
     # Start retention loop
-    while True:
-        _handle_archive_retention(
-            archive_output_config, storage_engine, clp_config.database, recovery_file
-        )
-        await asyncio.sleep(sweep_interval_secs)
+    try:
+        while True:
+            _handle_archive_garbage_collection(
+                archive_output_config, storage_engine, clp_config.database, recovery_file
+            )
+            await asyncio.sleep(sweep_interval_secs)
+    except Exception:
+        logger.exception("Archive garbage collector exit with Failure.")
+        raise

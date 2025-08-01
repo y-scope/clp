@@ -324,13 +324,13 @@ def _delete_archives(
 
     archive_ids: typing.List[str]
     logger.info("Starting to delete archives from the database.")
-    try:
-        sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
-        clp_db_connection_params: dict[str, any] = (
-            database_config.get_clp_connection_params_and_type(True)
-        )
-        table_prefix = clp_db_connection_params["table_prefix"]
+    sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
+    clp_db_connection_params: dict[str, any] = (
+        database_config.get_clp_connection_params_and_type(True)
+    )
+    table_prefix = clp_db_connection_params["table_prefix"]
 
+    try:
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
@@ -369,6 +369,8 @@ def _delete_archives(
 
     except Exception:
         logger.exception("Failed to delete archives from the database. Aborting deletion.")
+        if db_conn in locals() and db_conn.is_connected():
+            db_conn.rollback()
         return -1
 
     logger.info(f"Finished deleting archives from the database.")

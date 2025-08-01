@@ -13,12 +13,12 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import get_logger
 from clp_py_utils.core import read_yaml_config_file
-from job_orchestration.garbage_collector.archive_handler import archive_retention
+from job_orchestration.garbage_collector.archive_garbage_collector import archive_garbage_collector
 from job_orchestration.garbage_collector.constants import (
-    ARCHIVE_RETENTION_HANDLER_NAME,
-    SEARCH_RESULT_RETENTION_HANDLER_NAME,
+    ARCHIVE_GARBAGE_COLLECTOR_NAME,
+    SEARCH_RESULT_GARBAGE_COLLECTOR_NAME,
 )
-from job_orchestration.garbage_collector.search_result_handler import search_result_retention
+from job_orchestration.garbage_collector.search_result_garbage_collector import search_result_garbage_collector
 from job_orchestration.garbage_collector.utils import configure_logger
 from pydantic import ValidationError
 
@@ -47,13 +47,13 @@ async def main(argv: List[str]) -> int:
         return 1
 
     retention_tasks: Dict[str, Tuple[Optional[int], Callable]] = {
-        ARCHIVE_RETENTION_HANDLER_NAME: (
+        ARCHIVE_GARBAGE_COLLECTOR_NAME: (
             clp_config.archive_output.retention_period,
-            archive_retention,
+            archive_garbage_collector,
         ),
-        SEARCH_RESULT_RETENTION_HANDLER_NAME: (
+        SEARCH_RESULT_GARBAGE_COLLECTOR_NAME: (
             clp_config.results_cache.retention_period,
-            search_result_retention,
+            search_result_garbage_collector,
         ),
     }
     tasks_handler: List[asyncio.Task[None]] = []
@@ -62,10 +62,10 @@ async def main(argv: List[str]) -> int:
     for task_name, (retention_period, task_method) in retention_tasks.items():
         if retention_period is not None:
             logger.info(f"Creating {task_name} task with retention = {retention_period} minutes")
-            retention_task = asyncio.create_task(
+            garbage_collection_task = asyncio.create_task(
                 task_method(clp_config, logs_directory, logging_level), name=task_name
             )
-            tasks_handler.append(retention_task)
+            tasks_handler.append(garbage_collection_task)
         else:
             logger.info(f"No retention period configured, skip creating {task_name} task.")
 
@@ -81,7 +81,7 @@ async def main(argv: List[str]) -> int:
             except Exception as e:
                 logger.exception(f"Task {task_name} failed with exception: {e}")
 
-    logger.error("All retention tasks unexpectedly terminated.")
+    logger.error("All garbage collection tasks unexpectedly terminated.")
     return -1
 
 
