@@ -95,7 +95,6 @@ if(CLP_BUILD_EXECUTABLES)
                 OpenSSL::Crypto
                 simdjson::simdjson
                 spdlog::spdlog
-                yaml-cpp
                 ystdlib::containers
                 ZStd::ZStd
         )
