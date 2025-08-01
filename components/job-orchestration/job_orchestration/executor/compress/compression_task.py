@@ -182,24 +182,27 @@ def _upload_archive_to_s3(
     s3_put(s3_config, archive_src_path, dest_path)
 
 
-def _get_db_connection_args(
-    clp_metadata_db_connection_config: Dict[str, Any]
-) -> List[str]:
+def _get_db_connection_args(clp_metadata_db_connection_config: Dict[str, Any]) -> List[str]:
     """
     :param clp_metadata_db_connection_config:
     :return: List of database connection arguments for the clp command.
     """
     return [
-        "--db-type", clp_metadata_db_connection_config["type"],
-        "--db-host", clp_metadata_db_connection_config["host"],
-        "--db-port", str(clp_metadata_db_connection_config["port"]),
-        "--db-name", clp_metadata_db_connection_config["name"],
-        "--db-table-prefix", clp_metadata_db_connection_config["table_prefix"],
+        "--db-type",
+        clp_metadata_db_connection_config["type"],
+        "--db-host",
+        clp_metadata_db_connection_config["host"],
+        "--db-port",
+        str(clp_metadata_db_connection_config["port"]),
+        "--db-name",
+        clp_metadata_db_connection_config["name"],
+        "--db-table-prefix",
+        clp_metadata_db_connection_config["table_prefix"],
     ]
 
 
 def _get_db_connection_env_vars(
-    clp_metadata_db_connection_config: Dict[str, Any]
+    clp_metadata_db_connection_config: Dict[str, Any],
 ) -> Dict[str, str]:
     """
     :param clp_metadata_db_connection_config:
@@ -458,10 +461,12 @@ def run_clp(
                         dataset,
                         archive_path,
                     ]
-                    
+
                     # Set database credentials in environment variables for indexer
                     indexer_env = dict(os.environ)
-                    indexer_env.update(_get_db_connection_env_vars(clp_metadata_db_connection_config))
+                    indexer_env.update(
+                        _get_db_connection_env_vars(clp_metadata_db_connection_config)
+                    )
 
                     try:
                         subprocess.run(
