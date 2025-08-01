@@ -29,7 +29,7 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    RETENTION_CLEANER_COMPONENT_NAME,
+    GARBAGE_COLLECTOR_NAME,
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
@@ -55,7 +55,7 @@ from clp_package_utils.general import (
     get_clp_home,
     is_container_exited,
     is_container_running,
-    is_retention_cleaner_required,
+    is_garbage_collector_required,
     load_config_file,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
@@ -1055,15 +1055,15 @@ def start_reducer(
     logger.info(f"Started {component_name}.")
 
 
-def start_retention_cleaner(
+def start_garbage_collector(
     instance_id: str,
     clp_config: CLPConfig,
     container_clp_config: CLPConfig,
     mounts: CLPDockerMounts,
 ):
-    component_name = RETENTION_CLEANER_COMPONENT_NAME
+    component_name = GARBAGE_COLLECTOR_NAME
 
-    if not is_retention_cleaner_required(clp_config):
+    if not is_garbage_collector_required(clp_config):
         logger.info(f"Retention period is not configured, skipping {component_name} creation...")
         return
 
@@ -1102,7 +1102,7 @@ def start_retention_cleaner(
         f"PYTHONPATH={clp_site_packages_dir}",
         f"CLP_HOME={CONTAINER_CLP_HOME}",
         f"CLP_LOGS_DIR={container_logs_dir}",
-        f"CLP_LOGGING_LEVEL={clp_config.retention_cleaner.logging_level}",
+        f"CLP_LOGGING_LEVEL={clp_config.garbage_collector.logging_level}",
     ]
     necessary_mounts = [
         mounts.clp_home,
@@ -1125,13 +1125,13 @@ def start_retention_cleaner(
     container_start_cmd.append(clp_config.execution_container)
 
     # fmt: off
-    retention_cleaner_cmd = [
+    garbage_collector_cmd = [
         "python3", "-u",
-        "-m", "job_orchestration.retention.retention_cleaner",
+        "-m", "job_orchestration.garbage_collector.garbage_collector",
         "--config", str(container_clp_config.logs_directory / container_config_filename),
     ]
     # fmt: on
-    cmd = container_start_cmd + retention_cleaner_cmd
+    cmd = container_start_cmd + garbage_collector_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Started {component_name}.")
@@ -1173,7 +1173,7 @@ def main(argv):
     reducer_server_parser = component_args_parser.add_parser(REDUCER_COMPONENT_NAME)
     add_num_workers_argument(reducer_server_parser)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
-    component_args_parser.add_parser(RETENTION_CLEANER_COMPONENT_NAME)
+    component_args_parser.add_parser(GARBAGE_COLLECTOR_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -1195,13 +1195,13 @@ def main(argv):
 
         # Validate and load necessary credentials
         if target in (
-            ALL_TARGET_NAME,
-            CONTROLLER_TARGET_NAME,
-            DB_COMPONENT_NAME,
-            RETENTION_CLEANER_COMPONENT_NAME,
-            COMPRESSION_SCHEDULER_COMPONENT_NAME,
-            QUERY_SCHEDULER_COMPONENT_NAME,
-            WEBUI_COMPONENT_NAME,
+                ALL_TARGET_NAME,
+                CONTROLLER_TARGET_NAME,
+                DB_COMPONENT_NAME,
+                GARBAGE_COLLECTOR_NAME,
+                COMPRESSION_SCHEDULER_COMPONENT_NAME,
+                QUERY_SCHEDULER_COMPONENT_NAME,
+                WEBUI_COMPONENT_NAME,
         ):
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if target in (
@@ -1230,10 +1230,10 @@ def main(argv):
         ):
             validate_logs_input_config(clp_config)
         if target in (
-            ALL_TARGET_NAME,
-            COMPRESSION_WORKER_COMPONENT_NAME,
-            QUERY_WORKER_COMPONENT_NAME,
-            RETENTION_CLEANER_COMPONENT_NAME,
+                ALL_TARGET_NAME,
+                COMPRESSION_WORKER_COMPONENT_NAME,
+                QUERY_WORKER_COMPONENT_NAME,
+                GARBAGE_COLLECTOR_NAME,
         ):
             validate_output_storage_config(clp_config)
 
@@ -1304,8 +1304,8 @@ def main(argv):
             start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
         if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
             start_webui(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, RETENTION_CLEANER_COMPONENT_NAME):
-            start_retention_cleaner(instance_id, clp_config, container_clp_config, mounts)
+        if target in (ALL_TARGET_NAME, GARBAGE_COLLECTOR_NAME):
+            start_garbage_collector(instance_id, clp_config, container_clp_config, mounts)
 
     except Exception as ex:
         if type(ex) == ValueError:

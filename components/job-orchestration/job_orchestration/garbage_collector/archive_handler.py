@@ -18,12 +18,12 @@ from clp_py_utils.clp_metadata_db_utils import (
     get_archives_table_name,
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.retention.constants import (
-    ARCHIVES_RETENTION_HANDLER_NAME,
+from job_orchestration.garbage_collector.constants import (
+    ARCHIVE_RETENTION_HANDLER_NAME,
     MIN_TO_SECONDS,
     SECOND_TO_MILLISECOND,
 )
-from job_orchestration.retention.utils import (
+from job_orchestration.garbage_collector.utils import (
     configure_logger,
     remove_targets,
     TargetsBuffer,
@@ -31,7 +31,7 @@ from job_orchestration.retention.utils import (
 )
 from job_orchestration.scheduler.constants import QueryJobStatus
 
-logger = get_logger(ARCHIVES_RETENTION_HANDLER_NAME)
+logger = get_logger(ARCHIVE_RETENTION_HANDLER_NAME)
 
 
 def _remove_expired_archives(
@@ -168,18 +168,18 @@ def _handle_archive_retention(
 async def archive_retention(
     clp_config: CLPConfig, log_directory: pathlib.Path, logging_level: str
 ) -> None:
-    configure_logger(logger, logging_level, log_directory, ARCHIVES_RETENTION_HANDLER_NAME)
+    configure_logger(logger, logging_level, log_directory, ARCHIVE_RETENTION_HANDLER_NAME)
 
     archive_output_config = clp_config.archive_output
     storage_engine = clp_config.package.storage_engine
     validate_storage_type(archive_output_config, storage_engine)
 
-    job_frequency_secs = clp_config.retention_cleaner.job_frequency.archives * MIN_TO_SECONDS
-    recovery_file = clp_config.logs_directory / f"{ARCHIVES_RETENTION_HANDLER_NAME}.tmp"
+    sweep_interval_secs = clp_config.garbage_collector.sweep_interval.archive * MIN_TO_SECONDS
+    recovery_file = clp_config.logs_directory / f"{ARCHIVE_RETENTION_HANDLER_NAME}.tmp"
 
     # Start retention loop
     while True:
         _handle_archive_retention(
             archive_output_config, storage_engine, clp_config.database, recovery_file
         )
-        await asyncio.sleep(job_frequency_secs)
+        await asyncio.sleep(sweep_interval_secs)

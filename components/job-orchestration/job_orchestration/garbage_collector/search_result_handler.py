@@ -7,11 +7,11 @@ import pymongo.database
 from bson import ObjectId
 from clp_py_utils.clp_config import CLPConfig, ResultsCache
 from clp_py_utils.clp_logging import get_logger
-from job_orchestration.retention.constants import (
+from job_orchestration.garbage_collector.constants import (
     MIN_TO_SECONDS,
-    SEARCH_RESULTS_RETENTION_HANDLER_NAME,
+    SEARCH_RESULT_RETENTION_HANDLER_NAME,
 )
-from job_orchestration.retention.utils import (
+from job_orchestration.garbage_collector.utils import (
     configure_logger,
     get_expiry_epoch_secs,
 )
@@ -19,7 +19,7 @@ from job_orchestration.retention.utils import (
 # Constants
 MONGODB_ID_KEY: Final[str] = "_id"
 
-logger = get_logger(SEARCH_RESULTS_RETENTION_HANDLER_NAME)
+logger = get_logger(SEARCH_RESULT_RETENTION_HANDLER_NAME)
 
 
 def _get_latest_doc_timestamp(collection: pymongo.collection.Collection) -> int:
@@ -40,7 +40,7 @@ def _remove_result_metadata(
     results_metadata_collection.delete_one({MONGODB_ID_KEY: job_id})
 
 
-def _handle_search_results_retention(
+def _handle_search_result_retention(
     result_cache_config: ResultsCache, results_metadata_collection_name: str
 ):
     expiry_epoch = get_expiry_epoch_secs(result_cache_config.retention_period)
@@ -55,19 +55,19 @@ def _handle_search_results_retention(
             collection_timestamp = _get_latest_doc_timestamp(job_results_collection)
 
             if collection_timestamp < expiry_epoch:
-                logger.debug(f"Removing search results for job: {job_id}")
+                logger.debug(f"Removing search result for job: {job_id}")
                 _remove_result_metadata(results_cache_db, results_metadata_collection_name, job_id)
                 job_results_collection.drop()
 
 
-async def search_results_retention(
+async def search_result_retention(
     clp_config: CLPConfig, log_directory: pathlib.Path, logging_level: str
 ) -> None:
-    configure_logger(logger, logging_level, log_directory, SEARCH_RESULTS_RETENTION_HANDLER_NAME)
+    configure_logger(logger, logging_level, log_directory, SEARCH_RESULT_RETENTION_HANDLER_NAME)
 
-    job_frequency_secs = clp_config.retention_cleaner.job_frequency.search_results * MIN_TO_SECONDS
+    sweep_interval_secs = clp_config.garbage_collector.sweep_interval.search_result * MIN_TO_SECONDS
     while True:
-        _handle_search_results_retention(
+        _handle_search_result_retention(
             clp_config.results_cache, clp_config.webui.results_metadata_collection_name
         )
-        await asyncio.sleep(job_frequency_secs)
+        await asyncio.sleep(sweep_interval_secs)

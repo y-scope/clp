@@ -48,7 +48,7 @@ from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.query.extract_stream_task import extract_stream
 from job_orchestration.executor.query.fs_search_task import search
-from job_orchestration.retention.constants import MIN_TO_SECONDS, SECOND_TO_MILLISECOND
+from job_orchestration.garbage_collector.constants import MIN_TO_SECONDS, SECOND_TO_MILLISECOND
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType, QueryTaskStatus
 from job_orchestration.scheduler.job_config import (
     ExtractIrJobConfig,

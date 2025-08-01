@@ -26,7 +26,7 @@ QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
-RETENTION_CLEANER_COMPONENT_NAME = "retention_cleaner"
+GARBAGE_COLLECTOR_NAME = "garbage_collector"
 
 # Target names
 ALL_TARGET_NAME = ""
@@ -600,25 +600,25 @@ class WebUi(BaseModel):
         return field
 
 
-class JobFrequency(BaseModel):
-    archives: int = 60
-    search_results: int = 30
+class SweepInterval(BaseModel):
+    archive: int = 60
+    search_result: int = 30
 
     # Explicitly disallow any unexpected key
     class Config:
         extra = "forbid"
 
     @root_validator
-    def validate_job_frequencies(cls, values):
+    def validate_sweep_interval(cls, values):
         for field, value in values.items():
             if value <= 0:
-                raise ValueError(f"Job frequency of {field} must be greater than 0")
+                raise ValueError(f"Sweep interval of {field} must be greater than 0")
         return values
 
 
-class RetentionCleaner(BaseModel):
+class GarbageCollector(BaseModel):
     logging_level: str = "INFO"
-    job_frequency: JobFrequency = JobFrequency()
+    sweep_interval: SweepInterval = SweepInterval()
 
     @validator("logging_level")
     def validate_logging_level(cls, field):
@@ -642,7 +642,7 @@ class CLPConfig(BaseModel):
     compression_worker: CompressionWorker = CompressionWorker()
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
-    retention_cleaner: RetentionCleaner = RetentionCleaner()
+    garbage_collector: GarbageCollector = GarbageCollector()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()

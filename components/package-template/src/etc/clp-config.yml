@@ -105,14 +105,14 @@
 #  # How large each stream file should be before being split into a new stream file
 #  target_uncompressed_size: 134217728  # 128 MB
 #
-## Configuration for retention jobs
-#retention_cleaner:
+## Garbage collector config
+#garbage_collector:
 #  logging_level: "INFO"
 #
-#  # Frequency (in minutes) at which each retention job runs
-#  job_frequency:
-#    archives: 60
-#    search_results: 30
+#  # Interval (in minutes) at which garbage collector jobs run
+#  sweep_interval:
+#    archive: 60
+#    search_result: 30
 #
 ## Location where other data (besides archives) are stored. It will be created if
 ## it doesn't exist.
