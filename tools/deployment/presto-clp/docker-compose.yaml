@@ -1,0 +1,48 @@
+services:
+  presto-coordinator:
+    image: "ghcr.io/y-scope/presto/coordinator:dev"
+    entrypoint: ["/bin/bash", "-c", "/scripts/generate-configs.sh && /opt/entrypoint.sh"]
+    env_file:
+      - ".env"
+      - "coordinator-common.env"
+      - "coordinator.env"
+    volumes:
+      - "./coordinator/config-template:/configs:ro"
+      - "./coordinator/scripts:/scripts:ro"
+      - "coordinator-config:/opt/presto-server/etc"
+    networks:
+      - "presto"
+    healthcheck:
+      test:
+        - "CMD"
+        - "curl"
+        - "-f"
+        - "${PRESTO_COORDINATOR_CONFIGPROPERTIES_DISCOVERY_URI}/v1/info"
+      interval: "10s"
+      retries: 30
+
+  presto-worker:
+    image: "ghcr.io/y-scope/presto/prestissimo-worker:dev"
+    depends_on:
+      presto-coordinator:
+        condition: "service_healthy"
+    entrypoint: ["/bin/bash", "-c", "/scripts/generate-configs.sh && /opt/entrypoint.sh"]
+    env_file:
+      - ".env"
+      - "coordinator-common.env"
+      - "worker.env"
+    volumes:
+      - "./worker/config-template:/configs:ro"
+      - "./worker/scripts:/scripts:ro"
+      - "${CLP_ARCHIVES_DIR}:${CLP_ARCHIVES_DIR}"
+      - "worker-config:/opt/presto-server/etc"
+    networks:
+      - "presto"
+
+volumes:
+  coordinator-config:
+  worker-config:
+
+networks:
+  presto:
+    driver: "bridge"
