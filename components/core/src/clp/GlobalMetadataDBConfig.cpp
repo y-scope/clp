@@ -78,7 +78,7 @@ auto GlobalMetadataDBConfig::validate() const -> void {
         }
 
         if (m_metadata_db_name.empty()) {
-            throw invalid_argument("Database '--db--name' is empty.");
+            throw invalid_argument("Database '--db-name' is empty.");
         }
 
         if (m_metadata_table_prefix.empty()) {
