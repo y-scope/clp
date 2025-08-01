@@ -10,7 +10,7 @@ using std::string;
 
 namespace clp {
 // Constants
-constexpr int cMinPort{0};
+constexpr int cMinPort{1};
 constexpr int cMaxPort{65'535};
 
 auto operator>>(std::istream& in, GlobalMetadataDBConfig::MetadataDBType& metadata_db_type)
