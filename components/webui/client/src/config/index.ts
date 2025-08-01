@@ -13,7 +13,8 @@ enum CLP_STORAGE_ENGINES {
  * Query engine options.
  */
 enum CLP_QUERY_ENGINES {
-    NATIVE = "native",
+    CLP = "clp",
+    CLP_S = "clp-s",
     PRESTO = "presto",
 }
 
