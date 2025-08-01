@@ -1,7 +1,7 @@
 import {
     ClientToServerEvents,
     ServerToClientEvents,
-} from "@common/index.js";
+} from "@webui/common";
 import {
     io,
     Socket,
