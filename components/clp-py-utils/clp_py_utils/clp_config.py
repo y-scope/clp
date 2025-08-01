@@ -73,7 +73,8 @@ class StorageEngine(KebabCaseStrEnum):
 
 
 class QueryEngine(LowercaseStrEnum):
-    NATIVE = auto()
+    CLP = auto()
+    CLP_S = auto()
     PRESTO = auto()
 
 
@@ -95,7 +96,7 @@ VALID_QUERY_ENGINES = [query_engine.value for query_engine in QueryEngine]
 
 class Package(BaseModel):
     storage_engine: str = "clp"
-    query_engine: str = "native"
+    query_engine: str = "clp"
 
     @validator("storage_engine")
     def validate_storage_engine(cls, field):
@@ -120,10 +121,21 @@ class Package(BaseModel):
         query_engine = values.get("query_engine")
         storage_engine = values.get("storage_engine")
 
-        if query_engine == QueryEngine.PRESTO and storage_engine == StorageEngine.CLP:
+        if query_engine in [QueryEngine.CLP, QueryEngine.CLP_S]:
+            if query_engine != storage_engine:
+                raise ValueError(
+                    f"query_engine '{query_engine}' is only compatible with "
+                    f"storage_engine '{query_engine}'."
+                )
+        elif query_engine == QueryEngine.PRESTO:
+            if storage_engine != StorageEngine.CLP_S:
+                raise ValueError(
+                    f"query_engine '{QueryEngine.PRESTO}' is only compatible with "
+                    f"storage_engine '{StorageEngine.CLP_S}'."
+                )
+        else:
             raise ValueError(
-                f"Query engine '{QueryEngine.PRESTO}' is not compatible with "
-                f"storage engine '{StorageEngine.CLP}'. "
+                f"Unsupported query_engine '{query_engine}'."
             )
 
         return values
