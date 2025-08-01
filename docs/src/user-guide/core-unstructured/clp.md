@@ -119,7 +119,7 @@ a MySQL-type database (e.g., MariaDB) as follows:
 * Install the MariaDB Python package `pip3 install mariadb`
   * This is necessary to run the database initialization script. If you prefer, you can run the SQL
     statements in `tools/scripts/db/init-db.py` directly.
-* Run `tools/scripts/db/init-db.py`. This will initialize the database CLP requires. Use 
+* Run `tools/scripts/db/init-db.py`. This will initialize the database CLP requires. Use
   command-line options to configure MySQL connection parameters and set environment variables
   for database credentials:
   * `--db-host <host>` to specify the database host (default: `"localhost"`)
@@ -128,7 +128,7 @@ a MySQL-type database (e.g., MariaDB) as follows:
   * `--db-table-prefix <prefix>` to specify the table prefix (default: `"clp_"`)
   * Set `CLP_DB_USER` environment variable for the database username
   * Set `CLP_DB_PASS` environment variable for the database password
-* Run `clp` or `clg` with the same command options and environment variables, with the addition of 
+* Run `clp` or `clg` with the same command options and environment variables, with the addition of
   the database type command-line option:
   * `--db-type mysql` to specify MySQL as the database type
 * To compress in parallel, simply run another instance of `clp` concurrently.
