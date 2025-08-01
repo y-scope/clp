@@ -221,10 +221,11 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
 
 def delete_archives_from_metadata_db(
     db_cursor, archive_ids: List[str], table_prefix: str, dataset: str | None
-):
+) -> None:
     """
-    Deletes the given list of archives from the metadata database. Also deletes associated entries
-    from `files` and `archive_tags` table that reference the target archives.
+    Deletes archives from the metadata database specified by a list of IDs. It also deletes
+    the associated entries from `files` and `archive_tags` tables that reference these archives.
+
     The order of deletion follows the foreign key constraints, ensuring no violations occur during
     the process.
 

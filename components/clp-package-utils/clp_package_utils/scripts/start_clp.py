@@ -1063,9 +1063,8 @@ def start_retention_cleaner(
 ):
     component_name = RETENTION_CLEANER_COMPONENT_NAME
 
-    retention_cleaner_required = is_retention_cleaner_required(clp_config)
-    if not retention_cleaner_required:
-        logger.info(f"No retention period is configured, skipping {component_name} creation...")
+    if not is_retention_cleaner_required(clp_config):
+        logger.info(f"Retention period is not configured, skipping {component_name} creation...")
         return
 
     logger.info(f"Starting {component_name}...")

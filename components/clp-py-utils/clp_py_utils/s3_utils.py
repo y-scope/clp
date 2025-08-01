@@ -320,7 +320,7 @@ def s3_delete_objects(s3_config: S3Config, object_keys: Set[str]) -> None:
     object keys into chunks of 1000 in size and calls `boto3.delete_objects` multiple times until
     all objects are deleted.
 
-    :param s3_config: S3 configuration specifying the upload destination and credentials.
+    :param s3_config: S3 configuration specifying the credentials and the bucket to perform deletion.
     :param object_keys: The set of object keys to delete, relative to `s3_config.key_prefix`.
     :raises: Propagates `boto3.client`'s exceptions.
     :raises: Propagates `boto3.client.delete_object`'s exceptions.

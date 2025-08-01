@@ -52,7 +52,7 @@
 #  db_name: "clp-query-results"
 #  stream_collection_name: "stream-files"
 #
-#  # Retention period for search results, in minutes. Set to null to disable retention.
+#  # Retention period for search results, in minutes. Set to null to disable automatic deletion.
 #  retention_period: null
 #
 #compression_worker:
@@ -74,7 +74,7 @@
 #    # error will be raised if so.
 #    directory: "var/data/archives"
 #
-#  # Retention period for archives, in minutes. Set to null to disable retention.
+#  # Retention period for archives, in minutes. Set to null to disable automatic deletion.
 #  retention_period: null
 #
 #  # How much data CLP should try to compress into each archive
