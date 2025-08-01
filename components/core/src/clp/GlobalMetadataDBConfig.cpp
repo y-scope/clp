@@ -9,6 +9,10 @@ using std::invalid_argument;
 using std::string;
 
 namespace clp {
+// Constants
+constexpr int cMinPort{0};
+constexpr int cMaxPort{65'535};
+
 auto operator>>(std::istream& in, GlobalMetadataDBConfig::MetadataDBType& metadata_db_type)
         -> std::istream& {
     string db_type_string;
@@ -64,7 +68,7 @@ auto GlobalMetadataDBConfig::validate() const -> void {
             throw invalid_argument("Database '--db-host' is empty.");
         }
 
-        if (0 > m_metadata_db_port || 65'535 < m_metadata_db_port) {
+        if (cMinPort > m_metadata_db_port || cMaxPort < m_metadata_db_port) {
             throw invalid_argument(
                     "Database '--db-port' is out of range [0, 65535]: "
                     + std::to_string(m_metadata_db_port)
