@@ -70,8 +70,12 @@ auto GlobalMetadataDBConfig::validate() const -> void {
 
         if (cMinPort > m_metadata_db_port || cMaxPort < m_metadata_db_port) {
             throw invalid_argument(
-                    "Database '--db-port' is out of range [0, 65535]: "
-                    + std::to_string(m_metadata_db_port)
+                    fmt::format(
+                            "Database '--db-port' is out of range [{}, {}]: {}",
+                            cMinPort,
+                            cMaxPort,
+                            m_metadata_db_port
+                    )
             );
         }
 
