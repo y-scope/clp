@@ -216,7 +216,7 @@ def search_and_schedule_new_tasks(
                     job_id,
                     {
                         "status": CompressionJobStatus.FAILED,
-                        "status_msg": f"Failed to process one or more file input paths.",
+                        "status_msg": f"Failed to process file input path: {str(err)}",
                     },
                 )
                 db_conn.commit()
