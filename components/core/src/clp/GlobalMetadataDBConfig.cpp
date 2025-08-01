@@ -5,7 +5,6 @@
 
 #include <fmt/core.h>
 
-using std::exception;
 using std::invalid_argument;
 using std::string;
 
