@@ -22,6 +22,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_WORKER_COMPONENT_NAME,
     CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
+    GARBAGE_COLLECTOR_NAME,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -29,7 +30,6 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
-    GARBAGE_COLLECTOR_NAME,
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
@@ -1195,13 +1195,13 @@ def main(argv):
 
         # Validate and load necessary credentials
         if target in (
-                ALL_TARGET_NAME,
-                CONTROLLER_TARGET_NAME,
-                DB_COMPONENT_NAME,
-                GARBAGE_COLLECTOR_NAME,
-                COMPRESSION_SCHEDULER_COMPONENT_NAME,
-                QUERY_SCHEDULER_COMPONENT_NAME,
-                WEBUI_COMPONENT_NAME,
+            ALL_TARGET_NAME,
+            CONTROLLER_TARGET_NAME,
+            DB_COMPONENT_NAME,
+            GARBAGE_COLLECTOR_NAME,
+            COMPRESSION_SCHEDULER_COMPONENT_NAME,
+            QUERY_SCHEDULER_COMPONENT_NAME,
+            WEBUI_COMPONENT_NAME,
         ):
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if target in (
@@ -1230,10 +1230,10 @@ def main(argv):
         ):
             validate_logs_input_config(clp_config)
         if target in (
-                ALL_TARGET_NAME,
-                COMPRESSION_WORKER_COMPONENT_NAME,
-                QUERY_WORKER_COMPONENT_NAME,
-                GARBAGE_COLLECTOR_NAME,
+            ALL_TARGET_NAME,
+            COMPRESSION_WORKER_COMPONENT_NAME,
+            QUERY_WORKER_COMPONENT_NAME,
+            GARBAGE_COLLECTOR_NAME,
         ):
             validate_output_storage_config(clp_config)
 

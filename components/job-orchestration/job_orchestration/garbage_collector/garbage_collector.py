@@ -26,9 +26,7 @@ logger = get_logger(GARBAGE_COLLECTOR_NAME)
 
 
 async def main(argv: List[str]) -> int:
-    args_parser = argparse.ArgumentParser(
-        description=f"Spin up the {GARBAGE_COLLECTOR_NAME}."
-    )
+    args_parser = argparse.ArgumentParser(description=f"Spin up the {GARBAGE_COLLECTOR_NAME}.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     parsed_args = args_parser.parse_args(argv[1:])
 
