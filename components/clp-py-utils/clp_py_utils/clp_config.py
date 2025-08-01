@@ -72,7 +72,7 @@ class StorageEngine(KebabCaseStrEnum):
     CLP_S = auto()
 
 
-class QueryEngine(LowercaseStrEnum):
+class QueryEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
     PRESTO = auto()
