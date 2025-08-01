@@ -17,15 +17,15 @@ pytestmark = pytest.mark.binaries
 text_datasets = pytest.mark.parametrize(
     "dataset_logs_fixture",
     [
-        # "hive_24hr",
+        "hive_24hr",
     ],
 )
 
 json_datasets = pytest.mark.parametrize(
     "dataset_logs_fixture",
     [
-        # "elasticsearch",
-        # "spark_event_logs",
+        "elasticsearch",
+        "spark_event_logs",
         "postgresql",
     ],
 )
