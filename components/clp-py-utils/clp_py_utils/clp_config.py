@@ -134,9 +134,7 @@ class Package(BaseModel):
                     f"storage_engine '{StorageEngine.CLP_S}'."
                 )
         else:
-            raise ValueError(
-                f"Unsupported query_engine '{query_engine}'."
-            )
+            raise ValueError(f"Unsupported query_engine '{query_engine}'.")
 
         return values
 
