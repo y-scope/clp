@@ -5,8 +5,8 @@ import {
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
 import fp from "fastify-plugin";
 
-import settings from "../../../../../settings.json" with {type: "json"};
-import {Nullable} from "../../../../typings/common.js";
+import settings from "../../../../settings.json" with {type: "json"};
+import {Nullable} from "../../../typings/common.js";
 import {PRE_SIGNED_URL_EXPIRY_TIME_SECONDS} from "./typings.js";
 
 

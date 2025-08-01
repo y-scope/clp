@@ -22,7 +22,7 @@ from clp_py_utils.clp_config import (
     StorageType,
     WEBUI_COMPONENT_NAME,
 )
-from clp_py_utils.compression import FileMetadata
+from clp_py_utils.core import FileMetadata
 
 # Constants
 AWS_ENDPOINT = "amazonaws.com"

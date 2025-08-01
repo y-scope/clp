@@ -21,7 +21,7 @@ import type {
     Response,
     ServerToClientEvents,
     SocketData,
-} from "../../../../../../../common/index.js";
+} from "../../../../../../common/index.js";
 import MongoWatcherCollection from "./MongoWatcherCollection.js";
 import {
     ConnectionId,

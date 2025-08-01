@@ -2,7 +2,7 @@ import fastify from "fastify";
 import {StatusCodes} from "http-status-codes";
 import tap, {Test} from "tap";
 
-import routes from "../fastify-v2/routes/api/example/index.js";
+import routes from "../routes/api/example/index.js";
 
 
 tap.test("Tests the example routes", async (t: Test) => {
