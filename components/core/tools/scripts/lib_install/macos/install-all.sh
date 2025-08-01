@@ -33,6 +33,10 @@ curl \
 /Formula/g/go-task.rb
 brew install --formula "$task_formula_path"
 
+if ! command -v uv ; then
+    brew install uv
+fi
+
 rm -rf "$formula_dir"
 
 brew install \
