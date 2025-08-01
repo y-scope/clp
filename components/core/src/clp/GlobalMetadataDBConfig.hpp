@@ -18,25 +18,25 @@ public:
         MySQL,
     };
 
-    // Static functions
-    /**
-     * Adds database-related command-line options to the given options_description.
-     * @param options_description
-     */
-    static auto add_command_line_options(
-            boost::program_options::options_description& options_description
-    ) -> void;
+  /**
+   * Overloads operator >> to read MetadataDBType from an input stream.
+   * @param in
+   * @param metadata_db_type
+   * @return std::istream& reference to the input stream
+   */
+    friend auto operator>> (std::istream &in, MetadataDBType &metadata_db_type) -> std::istream&;
 
     // Constructors
     GlobalMetadataDBConfig() = default;
 
     // Methods
     /**
-     * Initializes the configuration from parsed command-line options.
-     * @param parsed_options
+     * Adds database-related command-line options to the given options_description.
+     * @param options_description
      */
-    auto init_from_parsed_options(boost::program_options::variables_map const& parsed_options)
-            -> void;
+     auto add_command_line_options(
+            boost::program_options::options_description& options_description
+        ) -> void;
 
     /**
      * Reads database credentials from environment variables:
@@ -76,18 +76,23 @@ public:
 
 private:
     // Variables
+    static constexpr std::string_view cDefaultMetadataDbTypeName{"sqlite"};
+    static constexpr MetadataDBType cDefaultMetadataDbType{MetadataDBType::SQLite};
+    static constexpr std::string_view cDefaultMetadataDbHost{"127.0.0.1"};
     static constexpr int cDefaultMetadataDbPort{3306};
+    static constexpr std::string_view cDefaultMetadataDbName{"clp-db"};
+    static constexpr std::string_view cDefaultMetadataTablePrefix{"clp_"};
 
-    MetadataDBType m_metadata_db_type{MetadataDBType::SQLite};
+    MetadataDBType m_metadata_db_type{cDefaultMetadataDbType};
 
-    std::string m_metadata_db_host{"127.0.0.1"};
+    std::string m_metadata_db_host{cDefaultMetadataDbHost};
     int m_metadata_db_port{cDefaultMetadataDbPort};
-    std::string m_metadata_db_name;
+    std::string m_metadata_db_name{cDefaultMetadataDbName};
 
     std::string m_metadata_db_username;
     std::string m_metadata_db_password;
 
-    std::string m_metadata_table_prefix;
+    std::string m_metadata_table_prefix{cDefaultMetadataTablePrefix};
 };
 }  // namespace clp
 

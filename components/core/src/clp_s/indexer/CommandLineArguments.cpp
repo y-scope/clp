@@ -29,7 +29,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             "Create the column metadata table if it doesn't exist"
     );
     // clang-format on
-    clp::GlobalMetadataDBConfig::add_command_line_options(output_options);
+    clp::GlobalMetadataDBConfig metadata_db_config;
+    metadata_db_config.add_command_line_options(output_options);
 
     // Define visible options
     po::options_description visible_options;
@@ -93,9 +94,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
         m_archive_path = get_path_object_for_raw_path(archive_path);
 
         // Initialize and validate global metadata DB config
-        clp::GlobalMetadataDBConfig metadata_db_config;
         try {
-            metadata_db_config.init_from_parsed_options(parsed_command_line_options);
             metadata_db_config.read_credentials_from_env();
             metadata_db_config.validate();
         } catch (std::exception& e) {

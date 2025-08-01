@@ -48,7 +48,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     ->default_value(config_file_path),
             "Use configuration options from FILE"
     );
-    GlobalMetadataDBConfig::add_command_line_options(options_general);
+    m_metadata_db_config.add_command_line_options(options_general);
 
     // Define input options
     po::options_description options_input("Input Options");
@@ -190,7 +190,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
         // Initialize and validate global metadata DB config
         try {
-            m_metadata_db_config.init_from_parsed_options(parsed_command_line_options);
             m_metadata_db_config.read_credentials_from_env();
             m_metadata_db_config.validate();
         } catch (std::exception& e) {

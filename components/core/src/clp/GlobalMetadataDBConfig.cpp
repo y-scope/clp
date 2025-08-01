@@ -9,46 +9,41 @@ using std::invalid_argument;
 using std::string;
 
 namespace clp {
+auto operator>> (std::istream &in, GlobalMetadataDBConfig::MetadataDBType &metadata_db_type) -> std::istream& {
+    string db_type_string;
+    in >> db_type_string;
+
+    if ("sqlite" == db_type_string)
+    {
+        metadata_db_type = GlobalMetadataDBConfig::MetadataDBType::SQLite;
+    } else if ("mysql" == db_type_string) {
+        metadata_db_type = GlobalMetadataDBConfig::MetadataDBType::MySQL;
+    } else {
+        throw invalid_argument("Unknown database type: " + db_type_string);
+    }
+
+    return in;
+}
+
 auto GlobalMetadataDBConfig::add_command_line_options(
         boost::program_options::options_description& options_description
 ) -> void {
     options_description.add_options()
             ("db-type",
-             boost::program_options::value<string>()->default_value("sqlite"),
+             boost::program_options::value<MetadataDBType>(&m_metadata_db_type)->default_value(cDefaultMetadataDbType, cDefaultMetadataDbTypeName.data()),
              "Database type [sqlite | mysql]")
             ("db-host",
-             boost::program_options::value<string>()->default_value("127.0.0.1"),
+             boost::program_options::value<string>(&m_metadata_db_host)->default_value(cDefaultMetadataDbHost.data()),
              "[db-type=mysql] Database host")
             ("db-port",
-             boost::program_options::value<int>()->default_value(cDefaultMetadataDbPort),
+             boost::program_options::value<int>(&m_metadata_db_port)->default_value(cDefaultMetadataDbPort),
              "[db-type=mysql] Database port")
             ("db-name",
-             boost::program_options::value<string>()->default_value("clp-db"),
+             boost::program_options::value<string>(&m_metadata_db_name)->default_value(cDefaultMetadataDbName.data()),
              "[db-type=mysql] Database name")
             ("db-table-prefix",
-             boost::program_options::value<string>()->default_value("clp_"),
+             boost::program_options::value<string>(&m_metadata_table_prefix)->default_value(cDefaultMetadataTablePrefix.data()),
              "[db-type=mysql] Database table prefix");
-}
-
-auto GlobalMetadataDBConfig::init_from_parsed_options(
-        boost::program_options::variables_map const& parsed_options
-) -> void {
-    if (auto const db_type_string{parsed_options["db-type"].as<string>()};
-        "sqlite" == db_type_string)
-    {
-        m_metadata_db_type = MetadataDBType::SQLite;
-    } else if ("mysql" == db_type_string) {
-        m_metadata_db_type = MetadataDBType::MySQL;
-    } else {
-        throw invalid_argument("Unknown database type: " + db_type_string);
-    }
-
-    if (m_metadata_db_type == MetadataDBType::MySQL) {
-        m_metadata_db_host = parsed_options["db-host"].as<string>();
-        m_metadata_db_port = parsed_options["db-port"].as<int>();
-        m_metadata_db_name = parsed_options["db-name"].as<string>();
-        m_metadata_table_prefix = parsed_options["db-table-prefix"].as<string>();
-    }
 }
 
 auto GlobalMetadataDBConfig::read_credentials_from_env() -> void {

@@ -16,12 +16,15 @@ void unset_env_var(char const* name) {
 }
 
 template <size_t N>
-auto parse_args(std::array<char const*, N> const& argv) -> boost::program_options::variables_map {
-    constexpr auto argc{static_cast<int>(N)};
+sauto parse_args(
+    std::array<char const*, N> const& argv,
+    GlobalMetadataDBConfig& config
+) -> boost::program_options::variables_map {
     boost::program_options::options_description options_desc;
-    GlobalMetadataDBConfig::add_command_line_options(options_desc);
+    config.add_command_line_options(options_desc);
 
     boost::program_options::variables_map vm;
+    constexpr auto argc{static_cast<int>(N)};
     boost::program_options::store(
             boost::program_options::parse_command_line(
                     argc,
@@ -37,7 +40,7 @@ auto parse_args(std::array<char const*, N> const& argv) -> boost::program_option
 }  // namespace
 
 TEST_CASE(
-        "Test adding command line options for GlobalMetadataDBConfig",
+        "Test parsing command line arguments for GlobalMetadataDBConfig",
         "[GlobalMetadataDBConfig]"
 ) {
     constexpr std::array argv{
@@ -53,10 +56,8 @@ TEST_CASE(
             "--db-table-prefix",
             "test_prefix_"
     };
-    auto const vm = parse_args(argv);
-
     GlobalMetadataDBConfig config;
-    config.init_from_parsed_options(vm);
+    auto const vm = parse_args(argv, config);
 
     REQUIRE(config.get_metadata_db_type() == GlobalMetadataDBConfig::MetadataDBType::MySQL);
     REQUIRE(config.get_metadata_db_host() == "test-host");
@@ -93,10 +94,8 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
             "--db-table-prefix",
             "test_prefix_"
     };
-    auto const vm = parse_args(argv);
-
     GlobalMetadataDBConfig config;
-    config.init_from_parsed_options(vm);
+    auto const vm = parse_args(argv, config);
 
     SECTION("With valid credentials") {
         set_env_var("CLP_DB_USER", "test-user");
@@ -127,10 +126,8 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
 
 TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     constexpr std::array argv{"test", "--db-type", "sqlite"};
-    auto const vm = parse_args(argv);
-
     GlobalMetadataDBConfig config;
-    config.init_from_parsed_options(vm);
+    auto const vm = parse_args(argv, config);
 
     REQUIRE_NOTHROW(config.validate());
 }
