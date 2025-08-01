@@ -97,7 +97,7 @@ def _process_fs_input_paths(
     """
     Iterates through all files in fs_input_conf and adds their metadata to
     `paths_to_compress_buffer`.
-    NOTE: This method skips files that don't exist.
+    NOTE: This method fails on files that don't exist.
     :param fs_input_conf:
     :param paths_to_compress_buffer:
     """
@@ -109,7 +109,7 @@ def _process_fs_input_paths(
             file, empty_directory = validate_path_and_get_info(CONTAINER_INPUT_LOGS_ROOT_DIR, path)
         except ValueError as ex:
             logger.error(str(ex))
-            continue
+            raise ValueError(str(ex))
 
         if file:
             paths_to_compress_buffer.add_file(file)
@@ -124,7 +124,7 @@ def _process_fs_input_paths(
                     )
                 except ValueError as ex:
                     logger.error(str(ex))
-                    continue
+                    raise ValueError(str(ex))
 
                 if file:
                     paths_to_compress_buffer.add_file(file)
@@ -207,7 +207,20 @@ def search_and_schedule_new_tasks(
 
         input_type = input_config.type
         if input_type == InputType.FS.value:
-            _process_fs_input_paths(input_config, paths_to_compress_buffer)
+            try:
+                _process_fs_input_paths(input_config, paths_to_compress_buffer)
+            except Exception as err:
+                logger.exception("Failed to process one or more file input paths.")
+                update_compression_job_metadata(
+                    db_cursor,
+                    job_id,
+                    {
+                        "status": CompressionJobStatus.FAILED,
+                        "status_msg": f"Failed to process file input path: {str(err)}",
+                    },
+                )
+                db_conn.commit()
+                continue
         elif input_type == InputType.S3.value:
             try:
                 _process_s3_input(input_config, paths_to_compress_buffer)
