@@ -648,12 +648,12 @@ def generate_common_environment_variables(
         env_vars.append(f"CLP_HOME={CONTAINER_CLP_HOME}")
 
     if include_db_credentials:
-        env_vars.append(f"CLP_DB_HOST={container_clp_config.database.host}")
-        env_vars.append(f"CLP_DB_PORT={container_clp_config.database.port}")
+        env_vars.append(f"CLP_DB_USER={container_clp_config.database.username}")
+        env_vars.append(f"CLP_DB_PASS={container_clp_config.database.password}")
 
     if include_queue_credentials:
-        env_vars.append(f"CLP_QUEUE_HOST={container_clp_config.queue.host}")
-        env_vars.append(f"CLP_QUEUE_PORT={container_clp_config.queue.port}")
+        env_vars.append(f"CLP_QUEUE_USER={container_clp_config.queue.username}")
+        env_vars.append(f"CLP_QUEUE_PASS={container_clp_config.queue.password}")
 
     if include_redis_credentials:
         env_vars.append(f"CLP_REDIS_PASS={container_clp_config.redis.password}")
