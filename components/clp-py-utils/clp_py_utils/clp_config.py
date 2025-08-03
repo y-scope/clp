@@ -1,3 +1,4 @@
+import os
 import pathlib
 from enum import auto
 from typing import Literal, Optional, Union
@@ -760,6 +761,26 @@ class CLPConfig(BaseModel):
             raise ValueError(
                 f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
             )
+
+    def load_database_credentials_from_env(self):
+        try:
+            self.database.username = os.environ["CLP_DB_USER"]
+            self.database.password = os.environ["CLP_DB_PASS"]
+        except KeyError as ex:
+            raise ValueError(f"Missing environment variable: {ex}")
+
+    def load_queue_credentials_from_env(self):
+        try:
+            self.queue.username = os.environ["CLP_QUEUE_USER"]
+            self.queue.password = os.environ["CLP_QUEUE_PASS"]
+        except KeyError as ex:
+            raise ValueError(f"Missing environment variable: {ex}")
+
+    def load_redis_credentials_from_env(self):
+        try:
+            self.redis.password = os.environ["CLP_REDIS_PASS"]
+        except KeyError as ex:
+            raise ValueError(f"Missing environment variable: {ex}")
 
     def dump_to_primitive_dict(self):
         d = self.dict()

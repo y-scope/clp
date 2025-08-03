@@ -614,3 +614,62 @@ def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
             f"Invalid dataset name: `{dataset_name}`. Names can only be a maximum of"
             f" {dataset_name_max_len} characters long."
         )
+
+
+def generate_common_environment_variables(
+    container_clp_config,
+    include_clp_home=True,
+    include_db_credentials=False,
+    include_queue_credentials=False,
+    include_redis_credentials=False,
+    include_celery_connection_params=False,
+    extra_vars=None,
+) -> List[str]:
+    """
+    Generate a list of common environment variables for Docker containers.
+
+    :param container_clp_config: The CLPConfig object for the container.
+    :param include_clp_home:
+    :param include_db_credentials:
+    :param include_queue_credentials:
+    :param include_redis_credentials:
+    :param include_celery_connection_params:
+    :param extra_vars: Additional environment variables to include in the format "KEY=VALUE".
+    :return: List of environment variable strings in the format "KEY=VALUE".
+    """
+    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
+    env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
+
+    if include_clp_home:
+        env_vars.append(f"CLP_HOME={CONTAINER_CLP_HOME}")
+
+    if include_db_credentials:
+        env_vars.extend([
+            f"CLP_DB_USER={container_clp_config.database.username}",
+            f"CLP_DB_PASS={container_clp_config.database.password}",
+        ])
+
+    if include_queue_credentials:
+        env_vars.extend([
+            f"CLP_QUEUE_USER={container_clp_config.queue.username}",
+            f"CLP_QUEUE_PASS={container_clp_config.queue.password}",
+        ])
+    if include_redis_credentials:
+        env_vars.append(f"CLP_REDIS_PASS={container_clp_config.redis.password}")
+
+    if include_celery_connection_params:
+        env_vars.append(
+            f"BROKER_URL=amqp://"
+            f"{container_clp_config.queue.username}:{container_clp_config.queue.password}@"
+            f"{container_clp_config.queue.host}:{container_clp_config.queue.port}"
+        )
+        env_vars.append(
+            f"RESULT_BACKEND=redis://default:{container_clp_config.redis.password}@"
+            f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/"
+            f"{container_clp_config.redis.query_backend_database}"
+        )
+        
+    if extra_vars:
+        env_vars.extend(extra_vars)
+        
+    return env_vars

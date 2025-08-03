@@ -64,6 +64,7 @@ from clp_package_utils.general import (
     validate_webui_config,
     validate_worker_config,
     dump_container_config,
+    generate_common_environment_variables,
 )
 
 logger = logging.getLogger(__file__)
@@ -240,11 +241,10 @@ def create_db_tables(
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-    env_vars = [
-        f"PYTHONPATH={clp_site_packages_dir}",
-        f"CLP_DB_USER={clp_config.database.username}",
-        f"CLP_DB_PASS={clp_config.database.password}",
-    ]
+    env_vars = generate_common_environment_variables(
+        container_clp_config,
+        include_db_credentials=True
+    )
     necessary_mounts = [
         mounts.clp_home,
         mounts.data_dir,
@@ -600,23 +600,14 @@ def generic_start_scheduler(
     ]
     # fmt: on
 
-    necessary_env_vars = [
-        f"PYTHONPATH={clp_site_packages_dir}",
-        (
-            f"BROKER_URL=amqp://"
-            f"{container_clp_config.queue.username}:{container_clp_config.queue.password}@"
-            f"{container_clp_config.queue.host}:{container_clp_config.queue.port}"
-        ),
-        (
-            f"RESULT_BACKEND=redis://default:{container_clp_config.redis.password}@"
-            f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/"
-            f"{container_clp_config.redis.query_backend_database}"
-        ),
-        f"CLP_LOGS_DIR={container_logs_dir}",
-        f"CLP_LOGGING_LEVEL={clp_config.query_scheduler.logging_level}",
-        f"CLP_DB_USER={container_clp_config.database.username}",
-        f"CLP_DB_PASS={container_clp_config.database.password}",
-    ]
+    necessary_env_vars = generate_common_environment_variables(
+        container_clp_config,
+        include_celery_connection_params=True,
+        extra_vars=[
+            f"CLP_LOGS_DIR={container_logs_dir}",
+            f"CLP_LOGGING_LEVEL={clp_config.query_scheduler.logging_level}",
+        ]
+    )
     necessary_mounts = [mounts.clp_home, mounts.logs_dir, mounts.generated_config_dir]
     aws_mount, aws_env_vars = generate_container_auth_options(clp_config, component_name)
     if aws_mount:
@@ -739,23 +730,17 @@ def generic_start_worker(
     ]
     # fmt: on
 
-    necessary_env_vars = [
-        f"PYTHONPATH={clp_site_packages_dir}",
-        (
-            f"BROKER_URL=amqp://"
-            f"{container_clp_config.queue.username}:{container_clp_config.queue.password}@"
-            f"{container_clp_config.queue.host}:{container_clp_config.queue.port}"
-        ),
-        (
-            f"RESULT_BACKEND=redis://default:{container_clp_config.redis.password}@"
-            f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/{redis_database}"
-        ),
-        f"CLP_HOME={CONTAINER_CLP_HOME}",
-        f"CLP_CONFIG_PATH={container_clp_config.generated_config_file_path}",
-        f"CLP_LOGS_DIR={container_logs_dir}",
-        f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
-        f"CLP_WORKER_LOG_PATH={container_worker_log_path}",
-    ]
+    necessary_env_vars = generate_common_environment_variables(
+        container_clp_config,
+        include_clp_home=True,
+        include_celery_connection_params=True,
+        extra_vars=[
+            f"CLP_CONFIG_PATH={container_clp_config.generated_config_file_path}",
+            f"CLP_LOGS_DIR={container_logs_dir}",
+            f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
+            f"CLP_WORKER_LOG_PATH={container_worker_log_path}",
+        ]
+    )
     necessary_mounts = [
         mounts.clp_home,
         mounts.data_dir,
@@ -938,14 +923,16 @@ def start_webui(
     # fmt: on
     container_cmd.extend(container_cmd_extra_opts)
 
-    necessary_env_vars = [
-        f"NODE_PATH={node_path}",
-        f"HOST={clp_config.webui.host}",
-        f"PORT={clp_config.webui.port}",
-        f"CLP_DB_USER={clp_config.database.username}",
-        f"CLP_DB_PASS={clp_config.database.password}",
-        f"NODE_ENV=production",
-    ]
+    necessary_env_vars = generate_common_environment_variables(
+        container_clp_config,
+        include_db_credentials=True,
+        extra_vars=[
+            f"NODE_PATH={node_path}",
+            f"HOST={clp_config.webui.host}",
+            f"PORT={clp_config.webui.port}",
+            f"NODE_ENV=production",
+        ]
+    )
     necessary_mounts = [
         mounts.clp_home,
         mounts.stream_output_dir,
@@ -1009,17 +996,17 @@ def start_reducer(
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-    env_vars = [
-        f"PYTHONPATH={clp_site_packages_dir}",
-        f"CLP_DB_USER={clp_config.database.username}",
-        f"CLP_DB_PASS={clp_config.database.password}",
-        f"CLP_QUEUE_USER={clp_config.queue.username}",
-        f"CLP_QUEUE_PASS={clp_config.queue.password}",
-        f"CLP_REDIS_PASS={clp_config.redis.password}",
-        f"CLP_LOGS_DIR={container_logs_dir}",
-        f"CLP_LOGGING_LEVEL={clp_config.reducer.logging_level}",
-        f"CLP_HOME={CONTAINER_CLP_HOME}",
-    ]
+    env_vars = generate_common_environment_variables(
+        container_clp_config,
+        include_clp_home=True,
+        include_db_credentials=True,
+        include_queue_credentials=True,
+        include_redis_credentials=True,
+        extra_vars=[
+            f"CLP_LOGS_DIR={container_logs_dir}",
+            f"CLP_LOGGING_LEVEL={clp_config.reducer.logging_level}",
+        ]
+    )
     necessary_mounts = [
         mounts.clp_home,
         mounts.logs_dir,
