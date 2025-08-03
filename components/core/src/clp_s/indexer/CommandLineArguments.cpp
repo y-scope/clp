@@ -94,14 +94,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
         m_archive_path = get_path_object_for_raw_path(archive_path);
 
         // Initialize and validate global metadata DB config
-        try {
-            metadata_db_config.read_credentials_from_env();
-            metadata_db_config.validate();
-        } catch (std::exception& e) {
-            SPDLOG_ERROR("Failed to validate metadata database config - {}.", e.what());
-            return ParsingResult::Failure;
-        }
-
         if (clp::GlobalMetadataDBConfig::MetadataDBType::MySQL
             != metadata_db_config.get_metadata_db_type())
         {
@@ -109,6 +101,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Invalid metadata database type for {}; only supported type is MySQL.",
                     m_program_name
             );
+            return ParsingResult::Failure;
+        }
+
+        try {
+            metadata_db_config.read_credentials_from_env();
+            metadata_db_config.validate();
+        } catch (std::exception& e) {
+            SPDLOG_ERROR("Failed to validate metadata database config - {}.", e.what());
             return ParsingResult::Failure;
         }
 
