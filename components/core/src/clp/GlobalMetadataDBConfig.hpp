@@ -46,6 +46,7 @@ public:
 
     /**
      * Validates that all required parameters are available and well-formed.
+     * @throw std::invalid_argument if validation fails
      */
     auto validate() const -> void;
 
