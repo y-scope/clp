@@ -51,6 +51,11 @@ auto GlobalMetadataDBConfig::add_command_line_options(
 }
 
 auto GlobalMetadataDBConfig::read_credentials_from_env() -> void {
+    if (MetadataDBType::SQLite == m_metadata_db_type) {
+        // SQLite does not require credentials
+        return;
+    }
+
     auto const* db_username{std::getenv("CLP_DB_USER")};
     if (nullptr != db_username) {
         m_metadata_db_username = db_username;
