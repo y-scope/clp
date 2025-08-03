@@ -47,6 +47,8 @@ from clp_package_utils.general import (
     CONTAINER_CLP_HOME,
     DockerMount,
     DockerMountType,
+    dump_container_config,
+    generate_common_environment_variables,
     generate_container_config,
     generate_worker_config,
     get_clp_home,
@@ -63,8 +65,6 @@ from clp_package_utils.general import (
     validate_results_cache_config,
     validate_webui_config,
     validate_worker_config,
-    dump_container_config,
-    generate_common_environment_variables,
 )
 
 logger = logging.getLogger(__file__)
@@ -242,8 +242,7 @@ def create_db_tables(
     ]
     # fmt: on
     env_vars = generate_common_environment_variables(
-        container_clp_config,
-        include_db_credentials=True
+        container_clp_config, include_db_credentials=True
     )
     necessary_mounts = [
         mounts.clp_home,
@@ -606,7 +605,7 @@ def generic_start_scheduler(
         extra_vars=[
             f"CLP_LOGS_DIR={container_logs_dir}",
             f"CLP_LOGGING_LEVEL={clp_config.query_scheduler.logging_level}",
-        ]
+        ],
     )
     necessary_mounts = [mounts.clp_home, mounts.logs_dir, mounts.generated_config_dir]
     aws_mount, aws_env_vars = generate_container_auth_options(clp_config, component_name)
@@ -739,7 +738,7 @@ def generic_start_worker(
             f"CLP_LOGS_DIR={container_logs_dir}",
             f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
             f"CLP_WORKER_LOG_PATH={container_worker_log_path}",
-        ]
+        ],
     )
     necessary_mounts = [
         mounts.clp_home,
@@ -931,7 +930,7 @@ def start_webui(
             f"HOST={clp_config.webui.host}",
             f"PORT={clp_config.webui.port}",
             f"NODE_ENV=production",
-        ]
+        ],
     )
     necessary_mounts = [
         mounts.clp_home,
@@ -1005,7 +1004,7 @@ def start_reducer(
         extra_vars=[
             f"CLP_LOGS_DIR={container_logs_dir}",
             f"CLP_LOGGING_LEVEL={clp_config.reducer.logging_level}",
-        ]
+        ],
     )
     necessary_mounts = [
         mounts.clp_home,

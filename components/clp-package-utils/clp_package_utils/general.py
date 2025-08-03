@@ -333,7 +333,7 @@ def generate_container_start_cmd(
     container_name: str,
     extra_env_vars: dict[str, str],
     container_mounts: List[Optional[DockerMount]],
-    container_image: str
+    container_image: str,
 ) -> List[str]:
     """
     Generates the command to start a container with the given mounts and name.
@@ -400,7 +400,11 @@ def load_config_file(
     hostname = socket.gethostname()
     clp_config.data_directory /= hostname
     clp_config.logs_directory /= hostname
-    clp_config.generated_config_file_path = clp_config.generated_config_file_path.parent / hostname / clp_config.generated_config_file_path.name
+    clp_config.generated_config_file_path = (
+        clp_config.generated_config_file_path.parent
+        / hostname
+        / clp_config.generated_config_file_path.name
+    )
 
     return clp_config
 
@@ -644,16 +648,13 @@ def generate_common_environment_variables(
         env_vars.append(f"CLP_HOME={CONTAINER_CLP_HOME}")
 
     if include_db_credentials:
-        env_vars.extend([
-            f"CLP_DB_USER={container_clp_config.database.username}",
-            f"CLP_DB_PASS={container_clp_config.database.password}",
-        ])
+        env_vars.append(f"CLP_DB_HOST={container_clp_config.database.host}")
+        env_vars.append(f"CLP_DB_PORT={container_clp_config.database.port}")
 
     if include_queue_credentials:
-        env_vars.extend([
-            f"CLP_QUEUE_USER={container_clp_config.queue.username}",
-            f"CLP_QUEUE_PASS={container_clp_config.queue.password}",
-        ])
+        env_vars.append(f"CLP_QUEUE_HOST={container_clp_config.queue.host}")
+        env_vars.append(f"CLP_QUEUE_PORT={container_clp_config.queue.port}")
+
     if include_redis_credentials:
         env_vars.append(f"CLP_REDIS_PASS={container_clp_config.redis.password}")
 
@@ -668,8 +669,8 @@ def generate_common_environment_variables(
             f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/"
             f"{container_clp_config.redis.query_backend_database}"
         )
-        
+
     if extra_vars:
         env_vars.extend(extra_vars)
-        
+
     return env_vars
