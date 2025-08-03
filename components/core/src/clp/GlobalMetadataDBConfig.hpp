@@ -87,11 +87,10 @@ private:
     std::string m_metadata_db_host{cDefaultMetadataDbHost};
     int m_metadata_db_port{cDefaultMetadataDbPort};
     std::string m_metadata_db_name{cDefaultMetadataDbName};
+    std::string m_metadata_table_prefix{cDefaultMetadataTablePrefix};
 
     std::string m_metadata_db_username;
     std::string m_metadata_db_password;
-
-    std::string m_metadata_table_prefix{cDefaultMetadataTablePrefix};
 };
 }  // namespace clp
 
