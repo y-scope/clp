@@ -19,10 +19,10 @@ logger.addHandler(logging_console_handler)
 
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Setup a global MySQL metadata database for CLP.")
-    args_parser.add_argument( "--db-host", default="127.0.0.1", help="Database host" )
-    args_parser.add_argument( "--db-port", type=int, default=3306,  help="Database port" )
-    args_parser.add_argument(  "--db-name",  default="clp-db", help="Database name" )
-    args_parser.add_argument( "--db-table-prefix", default="clp_", help="Database table prefix" )
+    args_parser.add_argument("--db-host", default="127.0.0.1", help="Database host")
+    args_parser.add_argument("--db-port", type=int, default=3306, help="Database port")
+    args_parser.add_argument("--db-name", default="clp-db", help="Database name")
+    args_parser.add_argument("--db-table-prefix", default="clp_", help="Database table prefix")
 
     parsed_args = args_parser.parse_args(argv[1:])
 
