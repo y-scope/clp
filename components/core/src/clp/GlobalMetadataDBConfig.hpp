@@ -38,11 +38,11 @@ public:
             -> void;
 
     /**
-     * Reads database credentials from environment variables:
+     * Reads database credentials from environment variables if required by the database type.
      * - CLP_DB_USER for database username
      * - CLP_DB_PASS for database password
      */
-    auto read_credentials_from_env() -> void;
+    auto read_credentials_from_env_if_needed() -> void;
 
     /**
      * Validates that all required parameters are available and well-formed.

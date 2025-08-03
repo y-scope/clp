@@ -105,7 +105,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
         }
 
         try {
-            metadata_db_config.read_credentials_from_env();
+            metadata_db_config.read_credentials_from_env_if_needed();
             metadata_db_config.validate();
         } catch (std::exception& e) {
             SPDLOG_ERROR("Failed to validate metadata database config - {}.", e.what());

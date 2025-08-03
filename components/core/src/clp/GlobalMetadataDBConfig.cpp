@@ -50,7 +50,7 @@ auto GlobalMetadataDBConfig::add_command_line_options(
              "[db-type=mysql] Database table prefix");
 }
 
-auto GlobalMetadataDBConfig::read_credentials_from_env() -> void {
+auto GlobalMetadataDBConfig::read_credentials_from_env_if_needed() -> void {
     if (MetadataDBType::SQLite == m_metadata_db_type) {
         // SQLite does not require credentials
         return;

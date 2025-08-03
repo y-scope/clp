@@ -113,7 +113,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
         // Initialize and validate global metadata DB config
         try {
-            m_metadata_db_config.read_credentials_from_env();
+            m_metadata_db_config.read_credentials_from_env_if_needed();
             m_metadata_db_config.validate();
         } catch (std::exception& e) {
             SPDLOG_ERROR("Failed to validate metadata database config - {}", e.what());
