@@ -69,7 +69,16 @@ auto GlobalMetadataDBConfig::read_credentials_from_env_if_needed() -> void {
 
 auto GlobalMetadataDBConfig::validate() const -> void {
     if (m_metadata_db_type == MetadataDBType::SQLite) {
-        // Currently, SQLite does not require any additional parameters.
+        // SQLite does not require extra parameters.
+        if (false == m_metadata_db_host.empty() || cDefaultMetadataDbPort != m_metadata_db_port
+            || false == m_metadata_db_name.empty() || false == m_metadata_table_prefix.empty()
+            || false == m_metadata_db_username.empty() || false == m_metadata_db_password.empty())
+        {
+            throw invalid_argument(
+                    "MySQL-specific parameters were provided when '--db-type' is 'SQLite'. "
+                    "Please remove them or set '--db-type=mysql'."
+            );
+        }
         return;
     }
 
