@@ -343,11 +343,11 @@ bool process_var_token(
         }
 
         if (query_token.is_float_var()) {
-            LogTypeDictionaryEntry::add_float_var(logtype);
+            EncodedVariableInterpreter::add_float_var(logtype);
         } else if (query_token.is_int_var()) {
-            LogTypeDictionaryEntry::add_int_var(logtype);
+            EncodedVariableInterpreter::add_int_var(logtype);
         } else {
-            LogTypeDictionaryEntry::add_dict_var(logtype);
+            EncodedVariableInterpreter::add_dict_var(logtype);
 
             if (query_token.cannot_convert_to_non_dict_var()) {
                 // Must be a dictionary variable, so search variable dictionary
@@ -451,7 +451,7 @@ SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
                 logtype += '*';
             } else {
                 logtype += '*';
-                LogTypeDictionaryEntry::add_dict_var(logtype);
+                EncodedVariableInterpreter::add_dict_var(logtype);
                 logtype += '*';
             }
         } else {

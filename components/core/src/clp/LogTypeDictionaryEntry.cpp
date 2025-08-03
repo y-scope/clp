@@ -1,5 +1,6 @@
 #include "LogTypeDictionaryEntry.hpp"
 
+#include "EncodedVariableInterpreter.hpp"
 #include "ir/parsing.hpp"
 #include "ir/types.hpp"
 #include "type_utils.hpp"
@@ -33,7 +34,7 @@ size_t LogTypeDictionaryEntry::get_data_size() const {
 }
 
 void LogTypeDictionaryEntry::add_constant(
-        string const& value_containing_constant,
+        std::string_view value_containing_constant,
         size_t begin_pos,
         size_t length
 ) {
@@ -42,30 +43,30 @@ void LogTypeDictionaryEntry::add_constant(
 
 void LogTypeDictionaryEntry::add_dictionary_var() {
     m_placeholder_positions.push_back(m_value.length());
-    add_dict_var(m_value);
+    EncodedVariableInterpreter::add_dict_var(m_value);
 }
 
 void LogTypeDictionaryEntry::add_int_var() {
     m_placeholder_positions.push_back(m_value.length());
-    add_int_var(m_value);
+    EncodedVariableInterpreter::add_int_var(m_value);
 }
 
 void LogTypeDictionaryEntry::add_float_var() {
     m_placeholder_positions.push_back(m_value.length());
-    add_float_var(m_value);
+    EncodedVariableInterpreter::add_float_var(m_value);
 }
 
 void LogTypeDictionaryEntry::add_escape() {
     m_placeholder_positions.push_back(m_value.length());
-    add_escape(m_value);
+    EncodedVariableInterpreter::add_escape(m_value);
     ++m_num_escaped_placeholders;
 }
 
 bool LogTypeDictionaryEntry::parse_next_var(
-        string const& msg,
+        std::string_view msg,
         size_t& var_begin_pos,
         size_t& var_end_pos,
-        string& var
+        std::string_view& var
 ) {
     auto last_var_end_pos = var_end_pos;
     // clang-format off
@@ -81,21 +82,15 @@ bool LogTypeDictionaryEntry::parse_next_var(
     // clang-format on
     if (ir::get_bounds_of_next_var(msg, var_begin_pos, var_end_pos)) {
         // Append to log type: from end of last variable to start of current variable
-        auto constant = static_cast<string_view>(msg).substr(
-                last_var_end_pos,
-                var_begin_pos - last_var_end_pos
-        );
+        auto constant = msg.substr(last_var_end_pos, var_begin_pos - last_var_end_pos);
         ir::append_constant_to_logtype(constant, escape_handler, m_value);
 
-        var.assign(msg, var_begin_pos, var_end_pos - var_begin_pos);
+        var = msg.substr(var_begin_pos, var_end_pos - var_begin_pos);
         return true;
     }
     if (last_var_end_pos < msg.length()) {
         // Append to log type: from end of last variable to end
-        auto constant = static_cast<string_view>(msg).substr(
-                last_var_end_pos,
-                msg.length() - last_var_end_pos
-        );
+        auto constant = msg.substr(last_var_end_pos, msg.length() - last_var_end_pos);
         ir::append_constant_to_logtype(constant, escape_handler, m_value);
     }
 
