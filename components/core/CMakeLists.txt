@@ -168,7 +168,7 @@ if(CLP_USE_STATIC_LIBS)
     set(BZip2_USE_STATIC_LIBS ON)
 endif()
 find_package(BZip2 REQUIRED)
-message(STATUS "Found BZip2 ${BZip2_VERSION}")
+message(STATUS "Found BZip2")
 
 if(CLP_NEED_CATCH2)
     find_package(Catch2 REQUIRED)

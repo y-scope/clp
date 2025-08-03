@@ -21,12 +21,12 @@ set(bzip2_PKGCONFIG_NAME "bzip2")
 
 if(DEFINED BZip2_ROOT)
     set(bzip2_PKGCONFIG_DIR "${BZip2_ROOT}/lib/pkgconfig")
+    set(ENV{bzip2_ORIG_PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}")
+    set(ENV{PKG_CONFIG_PATH} "${bzip2_PKGCONFIG_DIR};$ENV{PKG_CONFIG_PATH}")
 endif()
 
 # Run pkg-config
 find_package(PkgConfig)
-set(ENV{bzip2_ORIG_PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}")
-set(ENV{PKG_CONFIG_PATH} "${bzip2_PKGCONFIG_DIR};$ENV{PKG_CONFIG_PATH}")
 pkg_check_modules(bzip2_PKGCONF QUIET "${bzip2_PKGCONFIG_NAME}")
 
 # Set include directory
@@ -43,7 +43,7 @@ endif()
 
 # Find library
 find_library(BZip2_LIBRARY
-        NAMES "${bzip2_LIBNAME}" "${bzip2_LIBNAME}_static"
+        NAMES "${bzip2_LIBNAME}"
         HINTS ${bzip2_PKGCONF_LIBDIR}
         PATH_SUFFIXES lib
         )
@@ -55,8 +55,6 @@ if(BZip2_USE_STATIC_LIBS)
     # Restore original value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${bzip2_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
     unset(bzip2_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
-else()
-    list(APPEND bzip2_DYNAMIC_LIBS ${bzip2_PKGCONF_STATIC_LIBRARIES})
 endif()
 
 FindDynamicLibraryDependencies(${bzip2_LOCAL_PREFIX} "${bzip2_DYNAMIC_LIBS}")
@@ -69,8 +67,6 @@ find_package_handle_standard_args(BZip2
         REQUIRED_VARS BZip2_LIBRARY BZip2_INCLUDE_DIR
         VERSION_VAR BZip2_VERSION
         )
-
-set(BZip2_FOUND ON)
 
 if(NOT TARGET BZip2::BZip2)
     # Add library to build
@@ -111,5 +107,7 @@ if(NOT TARGET BZip2::BZip2)
 endif()
 
 # Restore original value of PKG_CONFIG_PATH
-set(ENV{PKG_CONFIG_PATH} "$ENV{bzip2_ORIG_PKG_CONFIG_PATH}")
-unset(ENV{bzip2_ORIG_PKG_CONFIG_PATH})
+if(DEFINED BZip2_ROOT)
+    set(ENV{PKG_CONFIG_PATH} "$ENV{bzip2_ORIG_PKG_CONFIG_PATH}")
+    unset(ENV{bzip2_ORIG_PKG_CONFIG_PATH})
+endif()
