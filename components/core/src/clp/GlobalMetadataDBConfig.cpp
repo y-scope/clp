@@ -52,7 +52,7 @@ auto GlobalMetadataDBConfig::add_command_line_options(
 
 auto GlobalMetadataDBConfig::read_credentials_from_env_if_needed() -> void {
     if (MetadataDBType::SQLite == m_metadata_db_type) {
-        // SQLite does not require credentials
+        // SQLite does not require credentials.
         return;
     }
 
@@ -68,37 +68,40 @@ auto GlobalMetadataDBConfig::read_credentials_from_env_if_needed() -> void {
 }
 
 auto GlobalMetadataDBConfig::validate() const -> void {
-    if (m_metadata_db_type == MetadataDBType::MySQL) {
-        if (m_metadata_db_host.empty()) {
-            throw invalid_argument("Database '--db-host' is empty.");
-        }
+    if (m_metadata_db_type == MetadataDBType::SQLite) {
+        // Currently, SQLite does not require any additional parameters.
+        return;
+    }
 
-        if (cMinPort > m_metadata_db_port || cMaxPort < m_metadata_db_port) {
-            throw invalid_argument(
-                    fmt::format(
-                            "Database '--db-port' is out of range [{}, {}]: {}",
-                            cMinPort,
-                            cMaxPort,
-                            m_metadata_db_port
-                    )
-            );
-        }
+    if (m_metadata_db_host.empty()) {
+        throw invalid_argument("Database '--db-host' is empty.");
+    }
 
-        if (m_metadata_db_name.empty()) {
-            throw invalid_argument("Database '--db-name' is empty.");
-        }
+    if (cMinPort > m_metadata_db_port || cMaxPort < m_metadata_db_port) {
+        throw invalid_argument(
+                fmt::format(
+                        "Database '--db-port' is out of range [{}, {}]: {}",
+                        cMinPort,
+                        cMaxPort,
+                        m_metadata_db_port
+                )
+        );
+    }
 
-        if (m_metadata_table_prefix.empty()) {
-            throw invalid_argument("Database '--db-table_prefix' is empty.");
-        }
+    if (m_metadata_db_name.empty()) {
+        throw invalid_argument("Database '--db-name' is empty.");
+    }
 
-        if (m_metadata_db_username.empty()) {
-            throw invalid_argument("Database 'CLP_DB_USER' not specified or empty.");
-        }
+    if (m_metadata_table_prefix.empty()) {
+        throw invalid_argument("Database '--db-table_prefix' is empty.");
+    }
 
-        if (m_metadata_db_password.empty()) {
-            throw invalid_argument("Database 'CLP_DB_PASS' not specified or empty.");
-        }
+    if (m_metadata_db_username.empty()) {
+        throw invalid_argument("Database 'CLP_DB_USER' not specified or empty.");
+    }
+
+    if (m_metadata_db_password.empty()) {
+        throw invalid_argument("Database 'CLP_DB_PASS' not specified or empty.");
     }
 }
 }  // namespace clp
