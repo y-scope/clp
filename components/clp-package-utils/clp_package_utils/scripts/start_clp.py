@@ -601,6 +601,7 @@ def generic_start_scheduler(
 
     necessary_env_vars = generate_common_environment_variables(
         container_clp_config,
+        include_db_credentials=True,
         include_celery_connection_params=True,
         extra_vars=[
             f"CLP_LOGS_DIR={container_logs_dir}",

@@ -403,7 +403,7 @@ def main(argv):
     # Load configuration
     config_path = Path(args.config)
     try:
-        clp_config = CLPConfig.load_from_generated_config_file(config_path)
+        clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
         clp_config.load_database_credentials_from_env()
     except (ValidationError, KeyError) as err:
         logger.error(err)
