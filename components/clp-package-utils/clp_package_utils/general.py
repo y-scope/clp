@@ -1,5 +1,6 @@
 import enum
 import errno
+import logging
 import os
 import pathlib
 import re
@@ -35,6 +36,8 @@ from clp_py_utils.core import (
     validate_path_could_be_dir,
 )
 from strenum import KebabCaseStrEnum
+
+logger = logging.getLogger(__file__)
 
 # CONSTANTS
 EXTRACT_FILE_CMD = "x"
@@ -94,6 +97,7 @@ class CLPDockerMounts:
         self.archives_output_dir: typing.Optional[DockerMount] = None
         self.stream_output_dir: typing.Optional[DockerMount] = None
         self.aws_config_dir: typing.Optional[DockerMount] = None
+        self.generated_config_dir: typing.Optional[DockerMount] = None
 
 
 def get_clp_home():
@@ -278,6 +282,19 @@ def generate_container_config(
             clp_config.aws_config_directory,
             container_clp_config.aws_config_directory,
         )
+
+    if not is_path_already_mounted(
+        clp_home,
+        CONTAINER_CLP_HOME,
+        clp_config.generated_config_file_path,
+        container_clp_config.generated_config_file_path,
+    ):
+        docker_mounts.generated_config_dir = DockerMount(
+            DockerMountType.BIND,
+            clp_config.generated_config_file_path,
+            container_clp_config.generated_config_file_path,
+        )
+
     return container_clp_config, docker_mounts
 
 
@@ -313,11 +330,15 @@ def dump_container_config(
 
 
 def generate_container_start_cmd(
-    container_name: str, container_mounts: List[Optional[DockerMount]], container_image: str
+    container_name: str,
+    extra_env_vars: dict[str, str],
+    container_mounts: List[Optional[DockerMount]],
+    container_image: str
 ) -> List[str]:
     """
     Generates the command to start a container with the given mounts and name.
     :param container_name:
+    :param extra_env_vars:
     :param container_mounts:
     :param container_image:
     :return: The command.
@@ -335,6 +356,8 @@ def generate_container_start_cmd(
         "--name", container_name,
         "--log-driver", "local"
     ]
+    for key, value in extra_env_vars.items():
+        container_start_cmd.extend(["-e", f"{key}={value}"])
     for mount in container_mounts:
         if mount:
             container_start_cmd.append("--mount")
@@ -377,6 +400,7 @@ def load_config_file(
     hostname = socket.gethostname()
     clp_config.data_directory /= hostname
     clp_config.logs_directory /= hostname
+    clp_config.generated_config_file_path = clp_config.generated_config_file_path.parent / hostname / clp_config.generated_config_file_path.name
 
     return clp_config
 

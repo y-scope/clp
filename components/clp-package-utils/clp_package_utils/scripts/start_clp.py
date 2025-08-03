@@ -11,11 +11,9 @@ import time
 import uuid
 from typing import Any, Dict, List, Optional
 
-import yaml
 from clp_py_utils.clp_config import (
     ALL_TARGET_NAME,
     AwsAuthType,
-    CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -65,6 +63,7 @@ from clp_package_utils.general import (
     validate_results_cache_config,
     validate_webui_config,
     validate_worker_config,
+    dump_container_config,
 )
 
 logger = logging.getLogger(__file__)
@@ -229,12 +228,6 @@ def create_db_tables(
 
     container_name = f"clp-{component_name}-table-creator-{instance_id}"
 
-    # Create database config file
-    db_config_filename = f"{container_name}.yml"
-    db_config_file_path = clp_config.logs_directory / db_config_filename
-    with open(db_config_file_path, "w") as f:
-        yaml.safe_dump(container_clp_config.database.dict(), f)
-
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     # fmt: off
     container_start_cmd = [
@@ -247,8 +240,17 @@ def create_db_tables(
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-    env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
-    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
+    env_vars = [
+        f"PYTHONPATH={clp_site_packages_dir}",
+        f"CLP_DB_USER={clp_config.database.username}",
+        f"CLP_DB_PASS={clp_config.database.password}",
+    ]
+    necessary_mounts = [
+        mounts.clp_home,
+        mounts.data_dir,
+        mounts.logs_dir,
+        mounts.generated_config_dir,
+    ]
     append_docker_options(container_start_cmd, necessary_mounts, env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
@@ -257,7 +259,7 @@ def create_db_tables(
     create_tables_cmd = [
         "python3",
         str(clp_py_utils_dir / "create-db-tables.py"),
-        "--config", str(container_clp_config.logs_directory / db_config_filename),
+        "--config", str(container_clp_config.generated_config_file_path),
         "--storage-engine", str(container_clp_config.package.storage_engine),
     ]
     # fmt: on
@@ -265,8 +267,6 @@ def create_db_tables(
     cmd = container_start_cmd + create_tables_cmd
     logger.debug(" ".join(cmd))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
-
-    db_config_file_path.unlink()
 
     logger.info(f"Created {component_name} tables.")
 
@@ -583,11 +583,6 @@ def generic_start_scheduler(
     if container_exists(container_name):
         return
 
-    container_config_filename = f"{container_name}.yml"
-    container_config_file_path = clp_config.logs_directory / container_config_filename
-    with open(container_config_file_path, "w") as f:
-        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
-
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
     container_logs_dir = container_clp_config.logs_directory / component_name
@@ -619,8 +614,10 @@ def generic_start_scheduler(
         ),
         f"CLP_LOGS_DIR={container_logs_dir}",
         f"CLP_LOGGING_LEVEL={clp_config.query_scheduler.logging_level}",
+        f"CLP_DB_USER={container_clp_config.database.username}",
+        f"CLP_DB_PASS={container_clp_config.database.password}",
     ]
-    necessary_mounts = [mounts.clp_home, mounts.logs_dir]
+    necessary_mounts = [mounts.clp_home, mounts.logs_dir, mounts.generated_config_dir]
     aws_mount, aws_env_vars = generate_container_auth_options(clp_config, component_name)
     if aws_mount:
         necessary_mounts.append(mounts.aws_config_dir)
@@ -638,7 +635,7 @@ def generic_start_scheduler(
     scheduler_cmd = [
         "python3", "-u",
         "-m", module_name,
-        "--config", str(container_clp_config.logs_directory / container_config_filename),
+        "--config", str(container_clp_config.generated_config_file_path),
     ]
     # fmt: on
     cmd = container_start_cmd + scheduler_cmd
@@ -720,12 +717,6 @@ def generic_start_worker(
     if container_exists(container_name):
         return
 
-    container_config_filename = f"{container_name}.yml"
-    container_config_file_path = clp_config.logs_directory / container_config_filename
-    container_worker_config = generate_worker_config(container_clp_config)
-    with open(container_config_file_path, "w") as f:
-        yaml.safe_dump(container_worker_config.dump_to_primitive_dict(), f)
-
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
     container_logs_dir = container_clp_config.logs_directory / component_name
@@ -760,7 +751,7 @@ def generic_start_worker(
             f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/{redis_database}"
         ),
         f"CLP_HOME={CONTAINER_CLP_HOME}",
-        f"CLP_CONFIG_PATH={container_clp_config.logs_directory / container_config_filename}",
+        f"CLP_CONFIG_PATH={container_clp_config.generated_config_file_path}",
         f"CLP_LOGS_DIR={container_logs_dir}",
         f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
         f"CLP_WORKER_LOG_PATH={container_worker_log_path}",
@@ -1000,11 +991,6 @@ def start_reducer(
     if container_exists(container_name):
         return
 
-    container_config_filename = f"{container_name}.yml"
-    container_config_file_path = clp_config.logs_directory / container_config_filename
-    with open(container_config_file_path, "w") as f:
-        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
-
     logs_dir = clp_config.logs_directory / component_name
     validate_reducer_config(clp_config, logs_dir, num_workers)
 
@@ -1025,6 +1011,11 @@ def start_reducer(
     # fmt: on
     env_vars = [
         f"PYTHONPATH={clp_site_packages_dir}",
+        f"CLP_DB_USER={clp_config.database.username}",
+        f"CLP_DB_PASS={clp_config.database.password}",
+        f"CLP_QUEUE_USER={clp_config.queue.username}",
+        f"CLP_QUEUE_PASS={clp_config.queue.password}",
+        f"CLP_REDIS_PASS={clp_config.redis.password}",
         f"CLP_LOGS_DIR={container_logs_dir}",
         f"CLP_LOGGING_LEVEL={clp_config.reducer.logging_level}",
         f"CLP_HOME={CONTAINER_CLP_HOME}",
@@ -1032,6 +1023,7 @@ def start_reducer(
     necessary_mounts = [
         mounts.clp_home,
         mounts.logs_dir,
+        mounts.generated_config_dir,
     ]
     append_docker_options(container_start_cmd, necessary_mounts, env_vars)
     container_start_cmd.append(clp_config.execution_container)
@@ -1040,7 +1032,7 @@ def start_reducer(
     reducer_cmd = [
         "python3", "-u",
         "-m", "job_orchestration.reducer.reducer",
-        "--config", str(container_clp_config.logs_directory / container_config_filename),
+        "--config", str(container_clp_config.generated_config_file_path),
         "--concurrency", str(num_workers),
         "--upsert-interval", str(clp_config.reducer.upsert_interval),
     ]
@@ -1164,6 +1156,9 @@ def main(argv):
     # Create necessary directories
     clp_config.data_directory.mkdir(parents=True, exist_ok=True)
     clp_config.logs_directory.mkdir(parents=True, exist_ok=True)
+
+    # Dump the container config
+    dump_container_config(container_clp_config, clp_config, "clp")
 
     try:
         # Create instance-id file

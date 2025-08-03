@@ -404,8 +404,14 @@ def main(argv):
     config_path = Path(args.config)
     try:
         clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
+        # Override credentials with environment variables
+        clp_config.database.username = os.environ["CLP_DB_USER"]
+        clp_config.database.password = os.environ["CLP_DB_PASS"]
     except ValidationError as err:
         logger.error(err)
+        return -1
+    except KeyError as err:
+        logger.error(f"Missing environment variable: {err}")
         return -1
     except Exception as ex:
         logger.error(ex)

@@ -1,6 +1,7 @@
 import argparse
 import datetime
 import logging
+import os
 import pathlib
 import sys
 import time
@@ -228,6 +229,12 @@ def main(argv):
         clp_config.validate_logs_dir()
     except:
         logger.exception("Failed to load config.")
+        return -1
+    try:
+        clp_config.database.username = os.environ["CLP_DB_USER"]
+        clp_config.database.password = os.environ["CLP_DB_PASS"]
+    except KeyError as e:
+        logger.error(f"Missing environment variable: {e}")
         return -1
 
     comp_jobs_dir = clp_config.logs_directory / "comp-jobs"

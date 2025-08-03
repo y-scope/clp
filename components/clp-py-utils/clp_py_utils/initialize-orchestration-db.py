@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import argparse
 import logging
+import os
+import pathlib
 import sys
 from contextlib import closing
 
@@ -10,12 +12,13 @@ from job_orchestration.scheduler.constants import (
     QueryJobStatus,
     QueryTaskStatus,
 )
+from pydantic import ValidationError
 from sql_adapter import SQL_Adapter
 
 from clp_py_utils.clp_config import (
+    CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
-    Database,
     QUERY_JOBS_TABLE_NAME,
     QUERY_TASKS_TABLE_NAME,
 )
@@ -36,14 +39,28 @@ def main(argv):
     args_parser = argparse.ArgumentParser(
         description="Sets up metadata tables for job orchestration."
     )
-    args_parser.add_argument("--config", required=True, help="Database config file.")
+    args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     parsed_args = args_parser.parse_args(argv[1:])
 
+    # Load configuration
+    config_path = pathlib.Path(parsed_args.config)
     try:
-        database_config = Database.parse_obj(read_yaml_config_file(parsed_args.config))
-        if database_config is None:
-            raise ValueError(f"Database configuration file '{parsed_args.config}' is empty.")
-        sql_adapter = SQL_Adapter(database_config)
+        clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
+        # Override credentials with environment variables
+        clp_config.database.username = os.environ["CLP_DB_USER"]
+        clp_config.database.password = os.environ["CLP_DB_PASS"]
+    except ValidationError as err:
+        logger.error(err)
+        return -1
+    except KeyError as err:
+        logger.error(f"Missing environment variable: {err}")
+        return -1
+    except Exception as ex:
+        logger.error(ex)
+        return -1
+
+    try:
+        sql_adapter = SQL_Adapter(clp_config.database)
         with closing(sql_adapter.create_connection(True)) as scheduling_db, closing(
             scheduling_db.cursor(dictionary=True)
         ) as scheduling_db_cursor:

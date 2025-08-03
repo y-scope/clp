@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import logging
+import os
 import pathlib
 import subprocess
 import sys
@@ -112,10 +113,17 @@ def handle_extract_stream_cmd(
     :return: 0 on success, -1 otherwise.
     """
     # Validate and load config file
-    clp_config = validate_and_load_config_file(
+    clp_config = load_and_validate_config_file(
         clp_home, pathlib.Path(parsed_args.config), default_config_file_path
     )
     if clp_config is None:
+        return -1
+    # Override credentials with environment variables
+    try:
+        clp_config.database.username = os.environ["CLP_DB_USER"]
+        clp_config.database.password = os.environ["CLP_DB_PASS"]
+    except KeyError as e:
+        logger.error(f"Missing environment variable: {e}")
         return -1
 
     command = parsed_args.command
@@ -221,6 +229,13 @@ def handle_extract_file_cmd(
         clp_home, pathlib.Path(parsed_args.config), default_config_file_path
     )
     if clp_config is None:
+        return -1
+    # Override credentials with environment variables
+    try:
+        clp_config.database.username = os.environ["CLP_DB_USER"]
+        clp_config.database.password = os.environ["CLP_DB_PASS"]
+    except KeyError as e:
+        logger.error(f"Missing environment variable: {e}")
         return -1
 
     paths = parsed_args.paths

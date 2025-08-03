@@ -31,6 +31,7 @@ from clp_py_utils.s3_utils import (
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.celery import app
+from job_orchestration.executor.utils import load_worker_config
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,

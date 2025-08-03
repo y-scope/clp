@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import ipaddress
 import logging
+import os
 import pathlib
 import socket
 import sys
@@ -296,6 +297,12 @@ def main(argv):
         clp_config.validate_logs_dir()
     except:
         logger.exception("Failed to load config.")
+        return -1
+    try:
+        clp_config.database.username = os.environ["CLP_DB_USER"]
+        clp_config.database.password = os.environ["CLP_DB_PASS"]
+    except KeyError as e:
+        logger.error(f"Missing environment variable: {e}")
         return -1
 
     database_config: Database = clp_config.database
