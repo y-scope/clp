@@ -23,7 +23,7 @@ auto operator>>(std::istream& in, GlobalMetadataDBConfig::MetadataDBType& metada
     } else if ("mysql" == db_type_string) {
         metadata_db_type = GlobalMetadataDBConfig::MetadataDBType::MySQL;
     } else {
-        throw invalid_argument("Unknown database type: " + db_type_string);
+        throw invalid_argument(fmt::format("Unknown database type: {}",db_type_string));
     }
 
     return in;
