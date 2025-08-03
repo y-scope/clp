@@ -4,10 +4,14 @@
 #
 # Set BZip2_USE_STATIC_LIBS=ON to look for static libraries.
 #
-# Once done this will define:
-#  BZip2_FOUND - Whether BZip2 was found on the system
-#  BZip2_INCLUDE_DIR - The BZip2 include directories
-#  BZip2_VERSION - The version of BZip2 installed on the system
+# Once done, this will define:
+#  BZip2_FOUND - Whether the library was found on the system
+#  BZip2_INCLUDE_DIR - The library include directories
+#  BZip2_LIBRARY - The path to the library file
+#
+# And will define the following if applicable:
+#  BZip2_VERSION - The version of the library installed on the system
+#  BZip2_LIBRARY_DEPENDENCIES - Any additional modules required to link with the library
 #
 # Conventions:
 # - Variables only for use within the script are prefixed with "bzip2_"
@@ -15,6 +19,7 @@
 
 include(cmake/Modules/FindLibraryDependencies.cmake)
 
+set(bzip2_HEADER "bzlib.h")
 set(bzip2_LIBNAME "bz2")
 set(bzip2_LOCAL_PREFIX "bzip2")
 set(bzip2_PKGCONFIG_NAME "bzip2")
@@ -30,7 +35,7 @@ find_package(PkgConfig)
 pkg_check_modules(bzip2_PKGCONF QUIET "${bzip2_PKGCONFIG_NAME}")
 
 # Set include directory
-find_path(BZip2_INCLUDE_DIR bzlib.h
+find_path(BZip2_INCLUDE_DIR ${bzip2_HEADER}
         HINTS ${bzip2_PKGCONF_INCLUDEDIR}
         PATH_SUFFIXES include
         )
@@ -70,14 +75,12 @@ find_package_handle_standard_args(BZip2
 
 if(NOT TARGET BZip2::BZip2)
     # Add library to build
-    if (BZip2_FOUND)
-        if (BZip2_USE_STATIC_LIBS)
-            add_library(BZip2::BZip2 STATIC IMPORTED)
-        else()
-            # NOTE: We use UNKNOWN so that if the user doesn't have the SHARED
-            # libraries installed, we can still use the STATIC libraries
-            add_library(BZip2::BZip2 UNKNOWN IMPORTED)
-        endif()
+    if (BZip2_USE_STATIC_LIBS)
+        add_library(BZip2::BZip2 STATIC IMPORTED)
+    else()
+        # NOTE: We use UNKNOWN so that if the user doesn't have the SHARED
+        # libraries installed, we can still use the STATIC libraries
+        add_library(BZip2::BZip2 UNKNOWN IMPORTED)
     endif()
 
     # Set include directories for library
