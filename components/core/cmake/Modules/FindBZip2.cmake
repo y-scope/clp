@@ -34,6 +34,15 @@ endif()
 find_package(PkgConfig)
 pkg_check_modules(bzip2_PKGCONF QUIET "${bzip2_PKGCONFIG_NAME}")
 
+# Manually set package finding hints in case of failure
+if(NOT bzip2_PKGCONF_FOUND)
+    message(WARNING "Cannot find package config for ${bzip2_PKGCONFIG_NAME}")
+    if(DEFINED BZip2_ROOT)
+        set(bzip2_PKGCONF_INCLUDEDIR "${BZip2_ROOT}/include")
+        set(bzip2_PKGCONF_LIBDIR "${BZip2_ROOT}/lib")
+    endif()
+endif()
+
 # Set include directory
 find_path(BZip2_INCLUDE_DIR ${bzip2_HEADER}
         HINTS ${bzip2_PKGCONF_INCLUDEDIR}
