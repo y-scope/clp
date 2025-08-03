@@ -21,7 +21,7 @@ class StatusIntEnum(IntEnum):
         return str(self.value)
 
     def to_str(self) -> str:
-        return str(self.name)
+        return self.name
 
 
 class CompressionJobStatus(StatusIntEnum):
