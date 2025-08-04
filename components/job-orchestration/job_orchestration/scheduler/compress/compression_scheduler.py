@@ -210,13 +210,14 @@ def search_and_schedule_new_tasks(
             try:
                 _process_fs_input_paths(input_config, paths_to_compress_buffer)
             except Exception as err:
-                logger.exception("Failed to process one or more file input paths.")
+                error_msg = f"Failed to process input: {err}"
+                logger.exception(error_msg)
                 update_compression_job_metadata(
                     db_cursor,
                     job_id,
                     {
                         "status": CompressionJobStatus.FAILED,
-                        "status_msg": f"Failed to process input: {err}",
+                        "status_msg": error_msg,
                     },
                 )
                 db_conn.commit()
