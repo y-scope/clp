@@ -51,6 +51,7 @@ The task will download, build, and install (within the build directory) the foll
 | [yaml-cpp](https://github.com/jbeder/yaml-cpp.git)                    | v0.7.0         |
 | [yscope-log-viewer](https://github.com/y-scope/yscope-log-viewer.git) | 969ff35        |
 | [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp.git)             | d80cf86        |
+| [zstd](https://github.com/facebook/zstd)                              | v1.5.7         |
 
 ### Environment
 
