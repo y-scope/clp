@@ -37,17 +37,19 @@ sample dataset that works well with Presto is [postgresql].
 ### Setting up Presto
 
 1. Navigate to `etc/clp-config.yml` and uncomment the `database` section (lines 16 to 20 inclusive).
-Change the `database.host` parameter to `"127.0.0.1"` so that the `database` section looks like
-this:
+Change the `database.host` parameter to a non-localhost hostname/IP so that the `database` section
+looks like this:
+
     ```yaml
     database:
       type: "mariadb"  # "mariadb" or "mysql"
-      host: "127.0.0.1"
+      host: "<new-IP-address>"
       port: 3306
       name: "clp-db"
     ```
 
 2. Clone the CLP repository:
+
     ```bash
     git clone https://github.com/y-scope/clp.git
     ```
