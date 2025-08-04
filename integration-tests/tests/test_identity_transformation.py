@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 from tests.utils.config import (
     CompressionTestPaths,
-    DatasetLogs,
     PackageConfig,
+    TestLogs,
 )
 from tests.utils.utils import (
     is_dir_tree_content_equal,
@@ -15,14 +15,14 @@ from tests.utils.utils import (
 pytestmark = pytest.mark.binaries
 
 text_datasets = pytest.mark.parametrize(
-    "dataset_logs_fixture",
+    "test_logs_fixture",
     [
         "hive_24hr",
     ],
 )
 
 json_datasets = pytest.mark.parametrize(
-    "dataset_logs_fixture",
+    "test_logs_fixture",
     [
         "elasticsearch",
         "spark_event_logs",
@@ -36,13 +36,13 @@ json_datasets = pytest.mark.parametrize(
 def test_clp_identity_transform(
     request,
     package_config: PackageConfig,
-    dataset_logs_fixture: str,
+    test_logs_fixture: str,
 ) -> None:
-    dataset_logs: DatasetLogs = request.getfixturevalue(dataset_logs_fixture)
+    test_logs: TestLogs = request.getfixturevalue(test_logs_fixture)
     test_paths = CompressionTestPaths.create(
         package_config=package_config,
-        test_name=f"clp-{dataset_logs.name}",
-        logs_source_dir=dataset_logs.extraction_dir,
+        test_name=f"clp-{test_logs.name}",
+        logs_source_dir=test_logs.extraction_dir,
     )
     test_paths.clear_test_outputs()
 
@@ -79,15 +79,15 @@ def test_clp_identity_transform(
 def test_clp_s_identity_transform(
     request,
     package_config: PackageConfig,
-    dataset_logs_fixture: str,
+    test_logs_fixture: str,
 ) -> None:
-    dataset_logs: DaatsetLogs = request.getfixturevalue(dataset_logs_fixture)
-    dataset_name = dataset_logs.dataset_name
+    test_logs: TestLogs = request.getfixturevalue(test_logs_fixture)
+    name = test_logs.name
 
     test_paths = CompressionTestPaths.create(
         package_config=package_config,
-        test_name=f"clp-s-{dataset_name}",
-        logs_source_dir=dataset_logs.extraction_dir,
+        test_name=f"clp-s-{name}",
+        logs_source_dir=test_logs.extraction_dir,
     )
     _clp_s_compress_and_decompress(package_config, test_paths)
 
@@ -99,7 +99,7 @@ def test_clp_s_identity_transform(
     # See also: https://docs.yscope.com/clp/main/user-guide/core-clp-s.html#current-limitations
     consolidated_json_test_paths = CompressionTestPaths.create(
         package_config=package_config,
-        test_name=f"clp-s-{dataset_name}-consolidated-json",
+        test_name=f"clp-s-{name}-consolidated-json",
         logs_source_dir=test_paths.decompression_dir,
     )
     _clp_s_compress_and_decompress(package_config, consolidated_json_test_paths)
