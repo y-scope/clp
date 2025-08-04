@@ -64,20 +64,6 @@ TEST_CASE(
     REQUIRE(config.get_metadata_table_prefix() == "test_prefix_");
 }
 
-TEST_CASE("Test reading credentials from environment variables", "[GlobalMetadataDBConfig]") {
-    set_env_var("CLP_DB_USER", "test-user");
-    set_env_var("CLP_DB_PASS", "test-pass");
-
-    GlobalMetadataDBConfig config;
-    config.read_credentials_from_env_if_needed();
-
-    REQUIRE(config.get_metadata_db_username() == "test-user");
-    REQUIRE(config.get_metadata_db_password() == "test-pass");
-
-    unset_env_var("CLP_DB_USER");
-    unset_env_var("CLP_DB_PASS");
-}
-
 TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBConfig]") {
     constexpr std::array argv{
             "test",
@@ -98,14 +84,17 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
     SECTION("With valid credentials") {
         set_env_var("CLP_DB_USER", "test-user");
         set_env_var("CLP_DB_PASS", "test-pass");
+
         config.read_credentials_from_env_if_needed();
         REQUIRE_NOTHROW(config.validate());
+        REQUIRE(config.get_metadata_db_username() == "test-user");
+        REQUIRE(config.get_metadata_db_password() == "test-pass");
+
         unset_env_var("CLP_DB_USER");
         unset_env_var("CLP_DB_PASS");
     }
 
     SECTION("With missing credentials") {
-        // Neither username nor password set
         SECTION("Neither username nor password") {
             config.read_credentials_from_env_if_needed();
             REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
@@ -130,5 +119,14 @@ TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     GlobalMetadataDBConfig config;
     auto const vm = parse_args(argv, config);
 
+    set_env_var("CLP_DB_USER", "test-user");
+    set_env_var("CLP_DB_PASS", "test-pass");
+
+    config.read_credentials_from_env_if_needed();
+    REQUIRE(config.get_metadata_db_username().empty());
+    REQUIRE(config.get_metadata_db_password().empty());
     REQUIRE_NOTHROW(config.validate());
+
+    unset_env_var("CLP_DB_USER");
+    unset_env_var("CLP_DB_PASS");
 }
