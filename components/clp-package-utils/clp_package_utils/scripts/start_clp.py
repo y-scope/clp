@@ -55,7 +55,7 @@ from clp_package_utils.general import (
     get_clp_home,
     is_container_exited,
     is_container_running,
-    is_garbage_collector_required,
+    is_retention_configured,
     load_config_file,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
@@ -1063,7 +1063,7 @@ def start_garbage_collector(
 ):
     component_name = GARBAGE_COLLECTOR_NAME
 
-    if not is_garbage_collector_required(clp_config):
+    if not is_retention_configured(clp_config):
         logger.info(f"Retention period is not configured, skipping {component_name} creation...")
         return
 

@@ -329,11 +329,16 @@ def s3_delete_objects(s3_config: S3Config, object_keys: Set[str]) -> None:
     boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
     s3_client = _create_s3_client(s3_config, boto3_config)
     max_num_objects_to_delete_per_batch = 1000
+
+    def _gen_deletion_config(objects_list: List[str]):
+        return {"Objects": [{"Key": object_to_delete} for object_to_delete in objects_list]}
+
     objects_to_delete: List[str] = []
     for relative_obj_key in object_keys:
         objects_to_delete.append(s3_config.key_prefix + relative_obj_key)
         if len(objects_to_delete) < max_num_objects_to_delete_per_batch:
             continue
+
         s3_client.delete_objects(
             Bucket=s3_config.bucket,
             Delete=_gen_deletion_config(objects_to_delete),

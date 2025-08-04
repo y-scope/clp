@@ -190,5 +190,5 @@ async def archive_garbage_collector(
             )
             await asyncio.sleep(sweep_interval_secs)
     except Exception:
-        logger.exception("Archive garbage collector exit with Failure.")
+        logger.exception(f"{ARCHIVE_GARBAGE_COLLECTOR_NAME} exited with failure.")
         raise

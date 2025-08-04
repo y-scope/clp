@@ -48,7 +48,7 @@ async def main(argv: List[str]) -> int:
         logger.exception("Failed to parse CLP configuration file.")
         return 1
 
-    retention_tasks: Dict[str, Tuple[Optional[int], Callable]] = {
+    gc_task_configs: Dict[str, Tuple[Optional[int], Callable]] = {
         ARCHIVE_GARBAGE_COLLECTOR_NAME: (
             clp_config.archive_output.retention_period,
             archive_garbage_collector,
@@ -58,33 +58,34 @@ async def main(argv: List[str]) -> int:
             search_result_garbage_collector,
         ),
     }
-    tasks_handler: List[asyncio.Task[None]] = []
+    gc_tasks: List[asyncio.Task[None]] = []
 
     # Create GC tasks
-    for task_name, (retention_period, task_method) in retention_tasks.items():
+    for gc_name, (retention_period, task_method) in gc_task_configs.items():
         if retention_period is None:
-            logger.info(f"No retention period configured, skip creating {task_name} task.")
+            logger.info(f"Retention period is not configured, skip creating {gc_name}.")
             continue
-        logger.info(f"Creating {task_name} task with retention period = {retention_period} minutes")
-        garbage_collection_task = asyncio.create_task(
-            task_method(clp_config, logs_directory, logging_level), name=task_name
+        logger.info(f"Creating {gc_name} with retention period = {retention_period} minutes")
+        gc_tasks.append(
+            asyncio.create_task(
+                task_method(clp_config, logs_directory, logging_level), name=gc_name
+            )
         )
-        tasks_handler.append(garbage_collection_task)
 
     # Poll and report any task that finished unexpectedly
-    while len(tasks_handler) != 0:
-        done, _ = await asyncio.wait(tasks_handler, return_when=asyncio.FIRST_COMPLETED)
+    while len(gc_tasks) != 0:
+        done, _ = await asyncio.wait(gc_tasks, return_when=asyncio.FIRST_COMPLETED)
         for task in done:
-            tasks_handler.remove(task)
-            task_name = task.get_name()
+            gc_tasks.remove(task)
+            gc_name = task.get_name()
             try:
                 _ = task.result()
-                logger.info(f"Task {task_name} unexpectedly terminated without an error.")
+                logger.error(f"{gc_name} unexpectedly terminated without an error.")
             except Exception as e:
-                logger.exception(f"Task {task_name} failed.")
+                logger.exception(f"{gc_name} failed.")
 
-    logger.error("All garbage collection tasks terminated unexpectedly.")
-    return -1
+    logger.error("All garbage collector terminated unexpectedly.")
+    return 1
 
 
 if "__main__" == __name__:

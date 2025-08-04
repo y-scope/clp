@@ -79,5 +79,5 @@ async def search_result_garbage_collector(
             )
             await asyncio.sleep(sweep_interval_secs)
     except Exception:
-        logger.exception("Search result garbage collector exited with Failure.")
+        logger.exception(f"{SEARCH_RESULT_GARBAGE_COLLECTOR_NAME} exited with failure.")
         raise
