@@ -44,6 +44,8 @@ def _handle_search_result_garbage_collection(
     result_cache_config: ResultsCache, results_metadata_collection_name: str
 ):
     expiry_epoch = get_expiry_epoch_secs(result_cache_config.retention_period)
+
+    logger.debug(f"Searching for search jobs finished before {expiry_epoch}.")
     try:
         with pymongo.MongoClient(result_cache_config.get_uri()) as results_cache_client:
             results_cache_db = results_cache_client.get_default_database()
@@ -56,13 +58,13 @@ def _handle_search_result_garbage_collection(
                 collection_timestamp = _get_latest_doc_timestamp(job_results_collection)
 
                 if collection_timestamp < expiry_epoch:
-                    logger.debug(f"Removing search results for job: {job_id}")
+                    logger.debug(f"Removing search results of job: {job_id}.")
                     _remove_result_metadata(
                         results_cache_db, results_metadata_collection_name, job_id
                     )
                     job_results_collection.drop()
     except Exception:
-        logger.exception("Failed to delete search results from the result cache.")
+        logger.exception("Failed to delete search results from the results cache.")
 
 
 async def search_result_garbage_collector(
@@ -72,6 +74,7 @@ async def search_result_garbage_collector(
 
     sweep_interval_secs = clp_config.garbage_collector.sweep_interval.search_result * MIN_TO_SECONDS
 
+    logger.info(f"{SEARCH_RESULT_GARBAGE_COLLECTOR_NAME} started.")
     try:
         while True:
             _handle_search_result_garbage_collection(

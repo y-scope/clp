@@ -55,26 +55,26 @@ def get_oid_with_expiry_time(expiry_epoch_secs: int) -> ObjectId:
     return ObjectId.from_datetime(datetime.utcfromtimestamp(expiry_epoch_secs))
 
 
-def remove_fs_target(fs_storage_config: FsStorage, target: str) -> None:
+def delete_fs_target(fs_storage_config: FsStorage, target: str) -> None:
     """
-    Removes a target (either a directory or a file) from the filesystem storage. The full path
+    Deletes a target (either a directory or a file) from the filesystem storage. The full path
     of the target is constructed as `fs_storage_config.directory / target`. The function performs
     no action if the target does not exist.
 
     :param fs_storage_config:
-    :param target: Relative path of the file or directory to remove.
+    :param target: Relative path of the file or directory to delete.
     """
-    path_to_remove = fs_storage_config.directory / target
-    if not path_to_remove.exists():
+    path_to_delete = fs_storage_config.directory / target
+    if not path_to_delete.exists():
         return
 
-    if path_to_remove.is_dir():
-        shutil.rmtree(path_to_remove)
+    if path_to_delete.is_dir():
+        shutil.rmtree(path_to_delete)
     else:
-        os.remove(path_to_remove)
+        os.remove(path_to_delete)
 
 
-def remove_targets(output_config: ArchiveOutput, targets: Set[str]) -> None:
+def delete_targets(output_config: ArchiveOutput, targets: Set[str]) -> None:
     storage_config = output_config.storage
     storage_type = storage_config.type
 
@@ -82,7 +82,7 @@ def remove_targets(output_config: ArchiveOutput, targets: Set[str]) -> None:
         s3_delete_objects(storage_config.s3_config, targets)
     elif StorageType.FS == storage_type:
         for target in targets:
-            remove_fs_target(storage_config, target)
+            delete_fs_target(storage_config, target)
     else:
         raise ValueError(f"Unsupported Storage type: {storage_type}")
 
