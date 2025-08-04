@@ -160,6 +160,7 @@ if(CLP_BUILD_EXECUTABLES)
         )
         target_link_libraries(clo
                 PRIVATE
+                absl::flat_hash_map
                 Boost::filesystem Boost::program_options
                 date::date
                 fmt::fmt
