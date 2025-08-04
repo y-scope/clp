@@ -44,8 +44,8 @@ async def main(argv: List[str]) -> int:
     except ValidationError as err:
         logger.error(err)
         return 1
-    except Exception as ex:
-        logger.error(ex)
+    except Exception:
+        logger.exception("Failed to parse CLP configuration file.")
         return 1
 
     retention_tasks: Dict[str, Tuple[Optional[int], Callable]] = {
@@ -60,19 +60,19 @@ async def main(argv: List[str]) -> int:
     }
     tasks_handler: List[asyncio.Task[None]] = []
 
-    # Create retention tasks
+    # Create GC tasks
     for task_name, (retention_period, task_method) in retention_tasks.items():
-        if retention_period is not None:
-            logger.info(f"Creating {task_name} task with retention = {retention_period} minutes")
-            garbage_collection_task = asyncio.create_task(
-                task_method(clp_config, logs_directory, logging_level), name=task_name
-            )
-            tasks_handler.append(garbage_collection_task)
-        else:
+        if retention_period is None:
             logger.info(f"No retention period configured, skip creating {task_name} task.")
+            continue
+        logger.info(f"Creating {task_name} task with retention period = {retention_period} minutes")
+        garbage_collection_task = asyncio.create_task(
+            task_method(clp_config, logs_directory, logging_level), name=task_name
+        )
+        tasks_handler.append(garbage_collection_task)
 
-    # Poll and report any task that finishes unexpectedly
-    while tasks_handler:
+    # Poll and report any task that finished unexpectedly
+    while len(tasks_handler) != 0:
         done, _ = await asyncio.wait(tasks_handler, return_when=asyncio.FIRST_COMPLETED)
         for task in done:
             tasks_handler.remove(task)
@@ -81,9 +81,9 @@ async def main(argv: List[str]) -> int:
                 _ = task.result()
                 logger.info(f"Task {task_name} unexpectedly terminated without an error.")
             except Exception as e:
-                logger.exception(f"Task {task_name} failed with exception: {e}")
+                logger.exception(f"Task {task_name} failed.")
 
-    logger.error("All garbage collection tasks unexpectedly terminated.")
+    logger.error("All garbage collection tasks terminated unexpectedly.")
     return -1
 
 
