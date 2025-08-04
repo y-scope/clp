@@ -15,22 +15,39 @@ set(lz4_LIBNAME "lz4")
 
 include(cmake/Modules/FindLibraryDependencies.cmake)
 
+set(lz4_HEADER "lz4.h")
+set(lz4_LIBNAME "lz4")
+set(lz4_LOCAL_PREFIX "lz4")
+set(lz4_PKGCONFIG_NAME "liblz4")
+
+if(DEFINED LZ4_ROOT)
+    set(lz4_PKGCONFIG_DIR "${LZ4_ROOT}/lib/pkgconfig")
+    set(ENV{lz4_ORIG_PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}")
+    set(ENV{PKG_CONFIG_PATH} "${lz4_PKGCONFIG_DIR};$ENV{PKG_CONFIG_PATH}")
+endif()
+
 # Run pkg-config
 find_package(PkgConfig)
-pkg_check_modules(lz4_PKGCONF QUIET "lib${lz4_LIBNAME}")
+pkg_check_modules(lz4_PKGCONF QUIET "${lz4_PKGCONFIG_NAME}")
+
+# Manually set package finding hints in case of failure
+if(NOT lz4_PKGCONF_FOUND)
+    message(WARNING "Cannot find package config for ${lz4_PKGCONFIG_NAME}")
+    if(DEFINED LZ4_ROOT)
+        set(lz4_PKGCONF_INCLUDEDIR "${LZ4_ROOT}/include")
+        set(lz4_PKGCONF_LIBDIR "${LZ4_ROOT}/lib")
+    endif()
+endif()
 
 # Set include directory
-find_path(LZ4_INCLUDE_DIR lz4.h
+find_path(LZ4_INCLUDE_DIR ${lz4_HEADER}
         HINTS ${lz4_PKGCONF_INCLUDEDIR}
         PATH_SUFFIXES include
         )
 
 # Handle static libraries
 if(LZ4_USE_STATIC_LIBS)
-    # Save current value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(lz4_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-
-    # Temporarily change CMAKE_FIND_LIBRARY_SUFFIXES to static library suffix
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
 endif()
 
@@ -40,40 +57,35 @@ find_library(LZ4_LIBRARY
         HINTS ${lz4_PKGCONF_LIBDIR}
         PATH_SUFFIXES lib
         )
-if (LZ4_LIBRARY)
-    # NOTE: This must be set for find_package_handle_standard_args to work
-    set(LZ4_FOUND ON)
-endif()
 
 if(LZ4_USE_STATIC_LIBS)
-    FindStaticLibraryDependencies(${lz4_LIBNAME} lz4 "${lz4_PKGCONF_STATIC_LIBRARIES}")
+    FindStaticLibraryDependencies(${lz4_LIBNAME} ${lz4_LOCAL_PREFIX}
+                                  "${lz4_PKGCONF_STATIC_LIBRARIES}")
 
     # Restore original value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${lz4_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
     unset(lz4_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES)
 endif()
 
-FindDynamicLibraryDependencies(lz4 "${lz4_DYNAMIC_LIBS}")
+FindDynamicLibraryDependencies(${lz4_LOCAL_PREFIX} "${lz4_DYNAMIC_LIBS}")
 
 # Set version
 set(LZ4_VERSION ${lz4_PKGCONF_VERSION})
 
 include(FindPackageHandleStandardArgs)
 find_package_handle_standard_args(LZ4
-        REQUIRED_VARS LZ4_INCLUDE_DIR
+        REQUIRED_VARS LZ4_LIBRARY LZ4_INCLUDE_DIR
         VERSION_VAR LZ4_VERSION
         )
 
 if(NOT TARGET LZ4::LZ4)
     # Add library to build
-    if (LZ4_FOUND)
-        if (LZ4_USE_STATIC_LIBS)
-            add_library(LZ4::LZ4 STATIC IMPORTED)
-        else()
-            # NOTE: We use UNKNOWN so that if the user doesn't have the SHARED
-            # libraries installed, we can still use the STATIC libraries
-            add_library(LZ4::LZ4 UNKNOWN IMPORTED)
-        endif()
+    if (LZ4_USE_STATIC_LIBS)
+        add_library(LZ4::LZ4 STATIC IMPORTED)
+    else()
+        # NOTE: We use UNKNOWN so that if the user doesn't have the SHARED
+        # libraries installed, we can still use the STATIC libraries
+        add_library(LZ4::LZ4 UNKNOWN IMPORTED)
     endif()
 
     # Set include directories for library
@@ -100,4 +112,10 @@ if(NOT TARGET LZ4::LZ4)
                     )
         endif()
     endif()
+endif()
+
+# Restore original value of PKG_CONFIG_PATH
+if(DEFINED LZ4_ROOT)
+    set(ENV{PKG_CONFIG_PATH} "$ENV{lz4_ORIG_PKG_CONFIG_PATH}")
+    unset(ENV{lz4_ORIG_PKG_CONFIG_PATH})
 endif()

@@ -42,6 +42,7 @@ The task will download, build, and install (within the build directory) the foll
 | [fmt](https://github.com/fmtlib/fmt)                                  | v10.2.1        |
 | [json](https://github.com/nlohmann/json.git)                          | v3.11.3        |
 | [log-surgeon](https://github.com/y-scope/log-surgeon)                 | f801a3f        |
+| [LZ4](https://github.com/lz4/lz4)                                     | v1.10.0        |
 | [mongo-cxx-driver](https://github.com/mongodb/mongo-cxx-driver)       | r3.10.2        |
 | [simdjson](https://github.com/simdjson/simdjson)                      | v3.13.0        |
 | [spdlog](https://github.com/gabime/spdlog)                            | v1.14.1        |

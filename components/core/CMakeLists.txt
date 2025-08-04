@@ -192,6 +192,12 @@ if(CLP_NEED_LOG_SURGEON)
     endif()
 endif()
 
+if(CLP_USE_STATIC_LIBS)
+    set(LZ4_USE_STATIC_LIBS ON)
+endif()
+find_package(LZ4 REQUIRED)
+message(STATUS "Found LZ4 ${LZ4_VERSION}")
+
 if(CLP_NEED_NLOHMANN_JSON)
     find_package(nlohmann_json REQUIRED)
     if(nlohmann_json_FOUND)
