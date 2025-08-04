@@ -251,7 +251,7 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           CMAKE_SOURCE_DIR: "build/cmake"
-          LIB_NAME: "LZ4"
+          LIB_NAME: "lz4"
           TARBALL_SHA256: "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b"
           TARBALL_URL: "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz"
 
