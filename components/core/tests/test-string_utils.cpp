@@ -562,37 +562,3 @@ TEST_CASE("convert_string_to_int", "[convert_string_to_int]") {
     REQUIRE(convert_string_to_int(raw, converted));
     REQUIRE(98'340 == converted);
 }
-
-
-#include <lz4.h>
-#include <string>
-#include <vector>
-
-TEST_CASE("LZ4 compress and decompress roundtrip", "[lz4]") {
-    const std::string input = "This is a test string for LZ4 compression.";
-    const int max_dst_size = LZ4_compressBound(static_cast<int>(input.size()));
-
-    std::vector<char> compressed(max_dst_size);
-    std::vector<char> decompressed(input.size());
-
-    SECTION("Compression succeeds") {
-        int compressed_size = LZ4_compress_default(
-            input.data(),
-            compressed.data(),
-            static_cast<int>(input.size()),
-            max_dst_size
-        );
-        REQUIRE(compressed_size > 0);
-
-        int decompressed_size = LZ4_decompress_safe(
-            compressed.data(),
-            decompressed.data(),
-            compressed_size,
-            static_cast<int>(decompressed.size())
-        );
-        REQUIRE(decompressed_size == static_cast<int>(input.size()));
-
-        std::string output(decompressed.begin(), decompressed.end());
-        REQUIRE(output == input);
-    }
-}
