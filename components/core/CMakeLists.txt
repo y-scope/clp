@@ -167,7 +167,7 @@ endif()
 if(CLP_USE_STATIC_LIBS)
     set(BZip2_USE_STATIC_LIBS ON)
 endif()
-find_package(BZip2 REQUIRED)
+find_package(BZip2 REQUIRED HINTS "${BZip2_ROOT}")
 message(STATUS "Found BZip2")
 
 if(CLP_NEED_CATCH2)
