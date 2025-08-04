@@ -26,8 +26,8 @@ public:
     /**
      * Processes a raw user query into a Query.
      *
-     * Note: callers are responsible for ensuring that the search string does not contain repeated
-     * wildcards "**" e.g. by using `clp::string_utils::clean_up_wildcard_search_string`.
+     * NOTE: Callers are responsible for ensuring that the search string is "clean", where clean is
+     * defined by the criteria in `clean_up_wildcard_search_string`.
      *
      * @tparam LogTypeDictionaryReaderType
      * @tparam VariableDictionaryReaderType
