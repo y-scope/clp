@@ -46,7 +46,6 @@ brew install \
   java11 \
   libarchive \
   llvm@16 \
-  lz4 \
   mariadb-connector-c \
   msgpack-cxx \
   xz \
