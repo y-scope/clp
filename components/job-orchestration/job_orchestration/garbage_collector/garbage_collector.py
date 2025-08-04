@@ -84,7 +84,7 @@ async def main(argv: List[str]) -> int:
             except Exception as e:
                 logger.exception(f"{gc_name} failed.")
 
-    logger.error("All garbage collector terminated unexpectedly.")
+    logger.error("All garbage collectors terminated unexpectedly.")
     return 1
 
 
