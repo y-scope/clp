@@ -15,7 +15,6 @@ lib_install_scripts_dir="${script_dir}/.."
 #    repositories are either dated or don't include static libraries, so we install more recent
 #    versions from source.
 "${lib_install_scripts_dir}/liblzma.sh" 5.8.1
-"${lib_install_scripts_dir}/zstandard.sh" 1.5.7
 "${lib_install_scripts_dir}/libarchive.sh" 3.8.0
 
 "${lib_install_scripts_dir}/msgpack.sh" 7.0.0

@@ -306,17 +306,13 @@ if(CLP_NEED_YSTDLIB)
     add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
 endif()
 
-# Find and setup ZStd Library
-if(CLP_NEED_ZSTD)
-    if(CLP_USE_STATIC_LIBS)
-        set(ZStd_USE_STATIC_LIBS ON)
-    endif()
-    find_package(ZStd 1.4.4 REQUIRED)
-    if(ZStd_FOUND)
-        message(STATUS "Found ZStd ${ZStd_VERSION}")
-    else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
-    endif()
+find_package(zstd 1.4.4 REQUIRED)
+message(STATUS "Found zstd ${zstd_VERSION}")
+add_library(zstd_TARGET INTERFACE)
+if(CLP_USE_STATIC_LIBS)
+    target_link_libraries(zstd_TARGET INTERFACE zstd::libzstd_static)
+else()
+    target_link_libraries(zstd_TARGET INTERFACE zstd::libzstd_shared)
 endif()
 
 # Find and setup LZMA Library
@@ -787,7 +783,7 @@ if(CLP_BUILD_TESTING)
             ystdlib::containers
             ystdlib::error_handling
             ${LIBLZMA_LIBRARIES}
-            ZStd::ZStd
+            zstd_TARGET
             )
     target_compile_features(unitTest
             PRIVATE cxx_std_20

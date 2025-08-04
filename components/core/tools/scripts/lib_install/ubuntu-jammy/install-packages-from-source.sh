@@ -15,4 +15,3 @@ lib_install_scripts_dir=$script_dir/..
 "$lib_install_scripts_dir"/libarchive.sh 3.5.1
 "$lib_install_scripts_dir"/liblzma.sh 5.8.1
 "$lib_install_scripts_dir"/msgpack.sh 7.0.0
-"$lib_install_scripts_dir"/zstandard.sh 1.4.9

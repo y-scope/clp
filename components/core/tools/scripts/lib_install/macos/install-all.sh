@@ -48,8 +48,7 @@ brew install \
   llvm@16 \
   mariadb-connector-c \
   msgpack-cxx \
-  xz \
-  zstd
+  xz
 
 # Install pkg-config if it isn't already installed
 # NOTE: We might expect that pkg-config is installed through brew, so trying to install it again
