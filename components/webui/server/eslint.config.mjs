@@ -34,7 +34,30 @@ const EslintConfig = [
             ],
         },
     },
-
+    {
+        files: [
+            "**/*.ts",
+        ],
+        rules: {
+            "@typescript-eslint/no-floating-promises": [
+                "error",
+                {
+                    allowForKnownSafeCalls: [
+                        {
+                            from: "package",
+                            name: "test",
+                            package: "tap",
+                        },
+                    ],
+                },
+            ],
+            "@typescript-eslint/require-await": [
+                // Fastify recommends async syntax, but not all plugins require Promise resolution
+                // in their function bodies.
+                "off",
+            ],
+        },
+    },
 ];
 
 

@@ -8,20 +8,14 @@
     "server"
   ],
   "scripts": {
-    "client:lint:check": "npm run lint:check --workspace=client",
-    "client:lint:fix": "npm run lint:fix --workspace=client",
-    "client:start": "npm start --workspace=client",
     "init": "npm clean-install --workspaces",
-    "lint:check": "npm run lint:check --workspaces --if-present",
-    "lint:fix": "npm run lint:fix --workspaces --if-present",
-    "server:lint:check": "npm run lint:check --workspace=server",
-    "server:lint:fix": "npm run lint:fix --workspace=server",
-    "server:start": "npm start --workspace=server",
+    "lint:check": "npm run lint:check --workspaces",
+    "lint:fix": "npm run lint:fix --workspaces",
     "start": "concurrently \"npm run client:start\" \"npm run server:start\""
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
   "devDependencies": {
-    "concurrently": "^9.2.0"
+    "concurrently": "^8.2.2"
   }
 }
