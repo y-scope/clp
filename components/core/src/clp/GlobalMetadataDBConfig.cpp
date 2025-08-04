@@ -104,9 +104,7 @@ auto GlobalMetadataDBConfig::validate() const -> void {
             || cDefaultMetadataDbPort != m_metadata_db_port
             || cDefaultMetadataDbName != m_metadata_db_name
             || cDefaultMetadataTablePrefix != m_metadata_table_prefix
-            || false == m_metadata_db_username.empty()
-            || false == m_metadata_db_password.empty()
-            )
+            || false == m_metadata_db_username.empty() || false == m_metadata_db_password.empty())
         {
             throw invalid_argument(
                     "MySQL-specific parameters were provided when '--db-type' is 'SQLite'. "
