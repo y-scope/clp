@@ -70,7 +70,7 @@ bool QueryVar::matches(encoded_variable_t var) const {
 
 void QueryVar::remove_segments_that_dont_contain_dict_var(
         set<segment_id_t>& segment_ids,
-        std::function<std::set<segment_id_t> const&(variable_dictionary_id_t)>
+        std::function<std::set<segment_id_t> const&(variable_dictionary_id_t)> const&
                 get_segments_containing_var_dict_id
 ) const {
     if (false == m_is_dict_var) {
@@ -84,8 +84,8 @@ void QueryVar::remove_segments_that_dont_contain_dict_var(
         inplace_set_intersection(ids_of_segments_containing_query_var, segment_ids);
     } else {
         set<segment_id_t> ids_of_segments_containing_query_var;
-        for (auto entry : m_possible_var_dict_ids) {
-            auto& ids_of_segments_containing_var = get_segments_containing_var_dict_id(entry);
+        for (auto var_dict_id : m_possible_var_dict_ids) {
+            auto& ids_of_segments_containing_var = get_segments_containing_var_dict_id(var_dict_id);
             ids_of_segments_containing_query_var.insert(
                     ids_of_segments_containing_var.cbegin(),
                     ids_of_segments_containing_var.cend()
@@ -112,7 +112,7 @@ void SubQuery::add_imprecise_dict_var(
 }
 
 void SubQuery::set_possible_logtypes(unordered_set<logtype_dictionary_id_t> const& logtype_ids) {
-    m_possible_logtype_ids = logtype_ids;
+    m_possible_logtypes = logtype_ids;
 }
 
 void SubQuery::mark_wildcard_match_required() {
@@ -120,16 +120,16 @@ void SubQuery::mark_wildcard_match_required() {
 }
 
 void SubQuery::calculate_ids_of_matching_segments(
-        std::function<std::set<segment_id_t> const&(logtype_dictionary_id_t)>
-                get_segments_containing_log_dict_id,
-        std::function<std::set<segment_id_t> const&(variable_dictionary_id_t)>
+        std::function<std::set<segment_id_t> const&(logtype_dictionary_id_t)> const&
+                get_segments_containing_logtype_dict_id,
+        std::function<std::set<segment_id_t> const&(variable_dictionary_id_t)> const&
                 get_segments_containing_var_dict_id
 ) {
     // Get IDs of segments containing logtypes
     m_ids_of_matching_segments.clear();
-    for (auto logtype_id : m_possible_logtype_ids) {
+    for (auto logtype_id : m_possible_logtypes) {
         auto const& ids_of_segments_containing_logtype
-                = get_segments_containing_log_dict_id(logtype_id);
+                = get_segments_containing_logtype_dict_id(logtype_id);
         m_ids_of_matching_segments.insert(
                 ids_of_segments_containing_logtype.cbegin(),
                 ids_of_segments_containing_logtype.cend()
@@ -147,12 +147,12 @@ void SubQuery::calculate_ids_of_matching_segments(
 
 void SubQuery::clear() {
     m_vars.clear();
-    m_possible_logtype_ids.clear();
+    m_possible_logtypes.clear();
     m_wildcard_match_required = false;
 }
 
 bool SubQuery::matches_logtype(logtype_dictionary_id_t const logtype) const {
-    return m_possible_logtype_ids.count(logtype) > 0;
+    return m_possible_logtypes.count(logtype) > 0;
 }
 
 Query::Query(
@@ -187,14 +187,14 @@ void Query::make_sub_queries_relevant_to_segment(segment_id_t segment_id) {
 }
 
 void Query::calculate_ids_of_matching_segments(
-        std::function<std::set<segment_id_t> const&(logtype_dictionary_id_t)>
-                get_segments_containing_log_dict_id,
-        std::function<std::set<segment_id_t> const&(variable_dictionary_id_t)>
+        std::function<std::set<segment_id_t> const&(logtype_dictionary_id_t)> const&
+                get_segments_containing_logtype_dict_id,
+        std::function<std::set<segment_id_t> const&(variable_dictionary_id_t)> const&
                 get_segments_containing_var_dict_id
 ) {
     for (auto& sub_query : m_sub_queries) {
         sub_query.calculate_ids_of_matching_segments(
-                get_segments_containing_log_dict_id,
+                get_segments_containing_logtype_dict_id,
                 get_segments_containing_var_dict_id
         );
     }

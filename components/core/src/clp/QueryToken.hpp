@@ -56,7 +56,7 @@ private:
     std::string m_value;
 
     // Type if variable has unambiguous type
-    Type m_type{};
+    Type m_type{Type::Wildcard};
     // Types if variable type is ambiguous
     std::vector<Type> m_possible_types;
     // Index of the current possible type selected for generating a subquery

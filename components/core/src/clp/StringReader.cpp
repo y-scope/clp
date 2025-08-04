@@ -7,6 +7,8 @@
 #include <cassert>
 #include <cerrno>
 
+#include <boost/filesystem.hpp>
+
 using std::string;
 
 namespace clp {

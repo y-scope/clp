@@ -212,10 +212,10 @@ static bool search(
         std::set<segment_id_t> ids_of_segments_to_search;
         bool is_superseding_query = false;
         for (auto const& search_string : search_strings) {
-            auto const& log_dict{archive.get_logtype_dictionary()};
+            auto const& logtype_dict{archive.get_logtype_dictionary()};
             auto const& var_dict{archive.get_var_dictionary()};
             auto query_processing_result = GrepCore::process_raw_query(
-                    log_dict,
+                    logtype_dict,
                     var_dict,
                     search_string,
                     search_begin_ts,
@@ -240,11 +240,11 @@ static bool search(
                 }
 
                 // Calculate the IDs of the segments that may contain results for each sub-query.
-                auto get_segments_containing_log_dict_id
-                        = [&log_dict](
+                auto get_segments_containing_logtype_dict_id
+                        = [&logtype_dict](
                                   logtype_dictionary_id_t logtype_id
                           ) -> std::set<segment_id_t> const& {
-                    return log_dict.get_entry(logtype_id).get_ids_of_segments_containing_entry();
+                    return logtype_dict.get_entry(logtype_id).get_ids_of_segments_containing_entry();
                 };
                 auto get_segments_containing_var_dict_id = [&var_dict](
                                                                    variable_dictionary_id_t var_id
@@ -252,7 +252,7 @@ static bool search(
                     return var_dict.get_entry(var_id).get_ids_of_segments_containing_entry();
                 };
                 query.calculate_ids_of_matching_segments(
-                        get_segments_containing_log_dict_id,
+                        get_segments_containing_logtype_dict_id,
                         get_segments_containing_var_dict_id
                 );
 

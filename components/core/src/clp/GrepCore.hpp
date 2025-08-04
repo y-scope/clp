@@ -31,7 +31,7 @@ public:
      *
      * @tparam LogTypeDictionaryReaderType
      * @tparam VariableDictionaryReaderType
-     * @param log_dict
+     * @param logtype_dict
      * @param var_dict
      * @param search_string
      * @param search_begin_ts
@@ -43,7 +43,7 @@ public:
      */
     template <typename LogTypeDictionaryReaderType, typename VariableDictionaryReaderType>
     static std::optional<Query> process_raw_query(
-            LogTypeDictionaryReaderType const& log_dict,
+            LogTypeDictionaryReaderType const& logtype_dict,
             VariableDictionaryReaderType const& var_dict,
             std::string const& search_string,
             epochtime_t search_begin_ts,
@@ -120,7 +120,7 @@ private:
      * @tparam LogTypeDictionaryReaderType
      * @tparam VariableDictionaryReaderType
      * @tparam LogTypeDictionaryEntryType
-     * @param log_dict
+     * @param logtype_dict
      * @param var_dict
      * @param processed_search_string
      * @param query_tokens
@@ -135,7 +135,7 @@ private:
             typename VariableDictionaryReaderType,
             typename LogTypeDictionaryEntryType = typename LogTypeDictionaryReaderType::entry_t>
     static SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
-            LogTypeDictionaryReaderType const& log_dict,
+            LogTypeDictionaryReaderType const& logtype_dict,
             VariableDictionaryReaderType const& var_dict,
             std::string& processed_search_string,
             std::vector<QueryToken>& query_tokens,
@@ -146,7 +146,7 @@ private:
 
 template <typename LogTypeDictionaryReaderType, typename VariableDictionaryReaderType>
 std::optional<Query> GrepCore::process_raw_query(
-        LogTypeDictionaryReaderType const& log_dict,
+        LogTypeDictionaryReaderType const& logtype_dict,
         VariableDictionaryReaderType const& var_dict,
         std::string const& search_string,
         epochtime_t search_begin_ts,
@@ -220,7 +220,7 @@ std::optional<Query> GrepCore::process_raw_query(
 
         // Compute logtypes and variables for query
         auto matchability = generate_logtypes_and_vars_for_subquery(
-                log_dict,
+                logtype_dict,
                 var_dict,
                 search_string_for_sub_queries,
                 query_tokens,
@@ -330,7 +330,7 @@ template <
         typename VariableDictionaryReaderType,
         typename LogTypeDictionaryEntryType>
 GrepCore::SubQueryMatchabilityResult GrepCore::generate_logtypes_and_vars_for_subquery(
-        LogTypeDictionaryReaderType const& log_dict,
+        LogTypeDictionaryReaderType const& logtype_dict,
         VariableDictionaryReaderType const& var_dict,
         std::string& processed_search_string,
         std::vector<QueryToken>& query_tokens,
@@ -406,7 +406,7 @@ GrepCore::SubQueryMatchabilityResult GrepCore::generate_logtypes_and_vars_for_su
 
     // Find matching logtypes
     std::unordered_set<LogTypeDictionaryEntryType const*> possible_logtype_entries;
-    log_dict.get_entries_matching_wildcard_string(logtype, ignore_case, possible_logtype_entries);
+    logtype_dict.get_entries_matching_wildcard_string(logtype, ignore_case, possible_logtype_entries);
     if (possible_logtype_entries.empty()) {
         return SubQueryMatchabilityResult::WontMatch;
     }

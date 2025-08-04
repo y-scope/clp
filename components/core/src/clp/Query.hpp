@@ -39,7 +39,7 @@ public:
      */
     void remove_segments_that_dont_contain_dict_var(
             std::set<segment_id_t>& segment_ids,
-            std::function<std::set<segment_id_t> const&(variable_dictionary_id_t)>
+            std::function<std::set<segment_id_t> const&(variable_dictionary_id_t)> const&
                     get_segments_containing_var_dict_id
     ) const;
 
@@ -106,13 +106,13 @@ public:
     /**
      * Calculates the segment IDs that should contain a match for the subquery's current logtypes
      * and QueryVars.
-     * @param get_segments_containing_log_dict_id
+     * @param get_segments_containing_logtype_dict_id
      * @param get_segments_containing_var_dict_id
      */
     void calculate_ids_of_matching_segments(
-            std::function<std::set<segment_id_t> const&(logtype_dictionary_id_t)>
-                    get_segments_containing_log_dict_id,
-            std::function<std::set<segment_id_t> const&(variable_dictionary_id_t)>
+            std::function<std::set<segment_id_t> const&(logtype_dictionary_id_t)> const&
+                    get_segments_containing_logtype_dict_id,
+            std::function<std::set<segment_id_t> const&(variable_dictionary_id_t)> const&
                     get_segments_containing_var_dict_id
     );
 
@@ -120,10 +120,10 @@ public:
 
     bool wildcard_match_required() const { return m_wildcard_match_required; }
 
-    size_t get_num_possible_logtypes() const { return m_possible_logtype_ids.size(); }
+    size_t get_num_possible_logtypes() const { return m_possible_logtypes.size(); }
 
     std::unordered_set<logtype_dictionary_id_t> const& get_possible_logtypes() const {
-        return m_possible_logtype_ids;
+        return m_possible_logtypes;
     }
 
     size_t get_num_possible_vars() const { return m_vars.size(); }
@@ -152,7 +152,7 @@ public:
 
 private:
     // Variables
-    std::unordered_set<logtype_dictionary_id_t> m_possible_logtype_ids;
+    std::unordered_set<logtype_dictionary_id_t> m_possible_logtypes;
     std::set<segment_id_t> m_ids_of_matching_segments;
     std::vector<QueryVar> m_vars;
     bool m_wildcard_match_required;
@@ -213,13 +213,13 @@ public:
     /**
      * Calculates the segment IDs that should contain a match for each subquery's logtypes and
      * QueryVars.
-     * @param get_segments_containing_log_dict_id
+     * @param get_segments_containing_logtype_dict_id
      * @param get_segments_containing_var_dict_id
      */
     void calculate_ids_of_matching_segments(
-            std::function<std::set<segment_id_t> const&(logtype_dictionary_id_t)>
-                    get_segments_containing_log_dict_id,
-            std::function<std::set<segment_id_t> const&(variable_dictionary_id_t)>
+            std::function<std::set<segment_id_t> const&(logtype_dictionary_id_t)> const&
+                    get_segments_containing_logtype_dict_id,
+            std::function<std::set<segment_id_t> const&(variable_dictionary_id_t)> const&
                     get_segments_containing_var_dict_id
     );
 
