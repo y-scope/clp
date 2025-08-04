@@ -36,9 +36,9 @@ sample dataset that works well with Presto is [postgresql].
 
 ### Setting up Presto
 
-1. Navigate to `etc/clp-config.yml` and uncomment the `database` section (lines 16 to 20 inclusive).
-Change the `database.host` parameter to a non-localhost hostname/IP so that the `database` section
-looks like this:
+1. Navigate to `etc/clp-config.yml`. Locate and uncomment the `database:` section and change the
+`database.host` parameter to a non-localhost hostname/IP. The `database:` section should look like
+this:
 
     ```yaml
     database:
