@@ -77,14 +77,14 @@ Check out the relevant guide below, based on whether you'd like to use or develo
 :gutter: 2
 
 :::{grid-item-card}
-:link: user-guide/index
+:link: user-docs/index
 User guide
 ^^^
 Docs for those interested in using and operating CLP.
 :::
 
 :::{grid-item-card}
-:link: dev-guide/index
+:link: dev-docs/index
 Developer guide
 ^^^
 Docs for those interested in developing CLP.
@@ -107,8 +107,8 @@ Need help? Join us on one of our community servers:
 :::{toctree}
 :hidden:
 
-user-guide/index
-dev-guide/index
+user-docs/index
+dev-docs/index
 :::
 
 [badge-discord]: https://img.shields.io/discord/1377353873068392580?style=flat&logo=discord&logoColor=white&label=Discord&labelColor=%235561f5
@@ -118,7 +118,7 @@ dev-guide/index
 [clp-ffi-py]: https://github.com/y-scope/clp-ffi-py
 [clp-loglib-py]: https://github.com/y-scope/clp-loglib-py
 [clp-paper]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
-[datasets]: user-guide/resources-datasets
+[datasets]: user-docs/resources-datasets
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [log-surgeon]: https://github.com/y-scope/log-surgeon
 [log-viewer]: https://github.com/y-scope/yscope-log-viewer
