@@ -143,8 +143,8 @@ public:
     /**
      * Whether the given variables contain the subquery's variables in order (but not necessarily
      * contiguously)
-     * @param vars
      * @tparam EncodedVariableContainerType A random access list of `clp::encoded_variable_t`.
+     * @param vars
      * @return true if matched, false otherwise
      */
     template <typename EncodedVariableContainerType>
