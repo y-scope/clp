@@ -105,7 +105,7 @@ If you would like a feature or want to report a bug, please file an issue and we
 [clp-ffi-py]: https://github.com/y-scope/clp-ffi-py
 [clp-loglib-py]: https://github.com/y-scope/clp-loglib-py
 [clp-paper-21]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
-[clp-paper-24]: https://www.usenix.org/system/files/osdi24-wang-rui.pdf 
+[clp-paper-24]: https://www.usenix.org/system/files/osdi24-wang-rui.pdf
 [core]: http://docs.yscope.com/clp/main/dev-docs/components-core
 [core-container]: http://docs.yscope.com/clp/main/user-docs/core-container
 [datasets]: https://docs.yscope.com/clp/main/user-docs/resources-datasets
