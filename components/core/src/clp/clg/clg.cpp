@@ -244,7 +244,8 @@ static bool search(
                         = [&logtype_dict](
                                   logtype_dictionary_id_t logtype_id
                           ) -> std::set<segment_id_t> const& {
-                    return logtype_dict.get_entry(logtype_id).get_ids_of_segments_containing_entry();
+                    return logtype_dict.get_entry(logtype_id)
+                            .get_ids_of_segments_containing_entry();
                 };
                 auto get_segments_containing_var_dict_id = [&var_dict](
                                                                    variable_dictionary_id_t var_id
