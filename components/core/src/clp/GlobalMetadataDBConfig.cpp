@@ -5,49 +5,79 @@
 
 #include <fmt/core.h>
 
+#include "type_utils.hpp"
 using std::invalid_argument;
 using std::string;
 
-namespace clp {
+namespace {
 // Constants
 constexpr int cMinPort{1};
 constexpr int cMaxPort{65'535};
+}  // namespace
 
+namespace clp {
 auto operator>>(std::istream& in, GlobalMetadataDBConfig::MetadataDBType& metadata_db_type)
         -> std::istream& {
     string db_type_string;
     in >> db_type_string;
 
-    if ("sqlite" == db_type_string) {
-        metadata_db_type = GlobalMetadataDBConfig::MetadataDBType::SQLite;
-    } else if ("mysql" == db_type_string) {
-        metadata_db_type = GlobalMetadataDBConfig::MetadataDBType::MySQL;
-    } else {
-        throw invalid_argument(fmt::format("Unknown database type: {}",db_type_string));
+    for (size_t i = 0; i < GlobalMetadataDBConfig::cMetadataDBTypeNames.size(); ++i) {
+        if (GlobalMetadataDBConfig::cMetadataDBTypeNames[i] == db_type_string) {
+            metadata_db_type = static_cast<GlobalMetadataDBConfig::MetadataDBType>(i);
+            return in;
+        }
     }
 
-    return in;
+    throw invalid_argument(fmt::format("Unknown database type: {}", db_type_string));
 }
 
 auto GlobalMetadataDBConfig::add_command_line_options(
         boost::program_options::options_description& options_description
 ) -> void {
+    constexpr std::string_view cMetadataDbTypeMysqlOptDescPrefix{"[db-type=mysql]"};
+
     options_description.add_options()
-            ("db-type",
-             boost::program_options::value<MetadataDBType>(&m_metadata_db_type)->default_value(cDefaultMetadataDbType, cDefaultMetadataDbTypeName.data()),
-             "Database type [sqlite | mysql]")
-            ("db-host",
-             boost::program_options::value<string>(&m_metadata_db_host)->default_value(cDefaultMetadataDbHost.data()),
-             "[db-type=mysql] Database host")
-            ("db-port",
-             boost::program_options::value<int>(&m_metadata_db_port)->default_value(cDefaultMetadataDbPort),
-             "[db-type=mysql] Database port")
-            ("db-name",
-             boost::program_options::value<string>(&m_metadata_db_name)->default_value(cDefaultMetadataDbName.data()),
-             "[db-type=mysql] Database name")
-            ("db-table-prefix",
-             boost::program_options::value<string>(&m_metadata_table_prefix)->default_value(cDefaultMetadataTablePrefix.data()),
-             "[db-type=mysql] Database table prefix");
+        ("db-type",
+         boost::program_options::value<MetadataDBType>(&m_metadata_db_type)
+         ->default_value(cDefaultMetadataDbType,
+                         cMetadataDBTypeNames[enum_to_underlying_type(cDefaultMetadataDbType)].
+                         data()),
+         fmt::format("Database type [{} | {}]",
+                        cMetadataDBTypeNames
+                            [enum_to_underlying_type(MetadataDBType::SQLite)],
+                        cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::MySQL)]).c_str()
+             )
+        ("db-host",
+         boost::program_options::value<string>(&m_metadata_db_host)->default_value(
+             cDefaultMetadataDbHost.data()),
+             fmt::format(
+                 "{} Database host",
+                 cMetadataDbTypeMysqlOptDescPrefix
+             ).c_str())
+        ("db-port",
+         boost::program_options::value<int>(&m_metadata_db_port)->default_value(
+             cDefaultMetadataDbPort),
+                fmt::format(
+                    "{} Database port (default: {})",
+                    cMetadataDbTypeMysqlOptDescPrefix,
+                    cDefaultMetadataDbPort
+                ).c_str())
+        ("db-name",
+         boost::program_options::value<string>(&m_metadata_db_name)->default_value(
+             cDefaultMetadataDbName.data()),
+             fmt::format(
+                 "{} Database name (default: {})",
+                 cMetadataDbTypeMysqlOptDescPrefix,
+                 cDefaultMetadataDbName.data()
+             ).c_str())
+        ("db-table-prefix",
+         boost::program_options::value<string>(&m_metadata_table_prefix)->default_value(
+             cDefaultMetadataTablePrefix.data()),
+                fmt::format(
+                    "{} Database table prefix (default: {})",
+                    cMetadataDbTypeMysqlOptDescPrefix,
+                    cDefaultMetadataTablePrefix.data()
+                ).c_str());
 }
 
 auto GlobalMetadataDBConfig::read_credentials_from_env_if_needed() -> void {

@@ -6,6 +6,8 @@
 
 #include <boost/program_options.hpp>
 
+#include "type_utils.hpp"
+
 namespace clp {
 /**
  * Class encapsulating the global metadata database's configuration details
@@ -16,7 +18,13 @@ public:
     enum class MetadataDBType : uint8_t {
         SQLite = 0,
         MySQL,
+        MetadataDBTypeLength
     };
+
+    // Constants
+    static constexpr std::
+            array<std::string_view, enum_to_underlying_type(MetadataDBType::MetadataDBTypeLength)>
+                    cMetadataDBTypeNames{"sqlite", "mysql"};
 
     /**
      * Overloads operator >> to read MetadataDBType from an input stream.
@@ -76,7 +84,6 @@ public:
 
 private:
     // Variables
-    static constexpr std::string_view cDefaultMetadataDbTypeName{"sqlite"};
     static constexpr MetadataDBType cDefaultMetadataDbType{MetadataDBType::SQLite};
     static constexpr std::string_view cDefaultMetadataDbHost{"127.0.0.1"};
     static constexpr int cDefaultMetadataDbPort{3306};
