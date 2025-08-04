@@ -788,6 +788,7 @@ if(CLP_BUILD_TESTING)
             ystdlib::error_handling
             ${LIBLZMA_LIBRARIES}
             ZStd::ZStd
+            lz4_TARGET
             )
     target_compile_features(unitTest
             PRIVATE cxx_std_20

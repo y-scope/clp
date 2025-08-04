@@ -67,7 +67,6 @@ tasks:
       - task: "date"
       - task: "fmt"
       - task: "log-surgeon"
-      - task: "lz4"
       - task: "microsoft.gsl"
       - task: "mongocxx"
       - task: "nlohmann_json"
