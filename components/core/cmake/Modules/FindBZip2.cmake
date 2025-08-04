@@ -109,10 +109,10 @@ if(NOT TARGET BZip2::BZip2)
                 )
 
         # Add component's dependencies for linking
-        if(BZip2_LIBRARY_DEPENDENCIES)
+        if(bzip2_LIBRARY_DEPENDENCIES)
             set_target_properties(BZip2::BZip2
                     PROPERTIES
-                    INTERFACE_LINK_LIBRARIES "${BZip2_LIBRARY_DEPENDENCIES}"
+                    INTERFACE_LINK_LIBRARIES "${bzip2_LIBRARY_DEPENDENCIES}"
                     )
         endif()
     endif()
