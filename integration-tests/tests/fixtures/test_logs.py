@@ -53,9 +53,9 @@ def _download_and_extract_dataset(
     request, package_config: PackageConfig, name: str, tarball_url: str
 ) -> TestLogs:
     test_logs = TestLogs.create(
-        package_config=package_config,
         name=name,
         tarball_url=tarball_url,
+        package_config=package_config,
     )
     if request.config.cache.get(name, False):
         print(f"Test logs `{name}` is up-to-date. Skipping download.")
@@ -73,7 +73,7 @@ def _download_and_extract_dataset(
         ]
         # fmt: on
         subprocess.run(curl_cmds, check=True)
-        shutil.unpack_archive(str(test_logs.tarball_path), str(test_logs.extraction_dir))
+        shutil.unpack_archive(test_logs.tarball_path, test_logs.extraction_dir)
     except Exception as e:
         raise RuntimeError(f"Failed to download and extract dataset `{name}`: {e}")
 

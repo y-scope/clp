@@ -20,7 +20,7 @@ class TestLogs:
     extraction_dir: Path
 
     @classmethod
-    def create(cls, package_config: PackageConfig, name: str, tarball_url: str):
+    def create(cls, name: str, tarball_url: str, package_config: PackageConfig):
         name = name.strip()
         if 0 == len(name):
             raise ValueError("`name` cannot be empty.")
@@ -33,14 +33,14 @@ class TestLogs:
 
 
 @dataclass(frozen=True)
-class CompressionTestPaths:
+class CompressionTestConfig:
     test_name: str
     logs_source_dir: Path
     compression_dir: Path
     decompression_dir: Path
 
     @classmethod
-    def create(cls, package_config: PackageConfig, test_name: str, logs_source_dir: Path):
+    def create(cls, test_name: str, logs_source_dir: Path, package_config: PackageConfig):
         return cls(
             test_name=test_name,
             logs_source_dir=logs_source_dir,
@@ -49,5 +49,7 @@ class CompressionTestPaths:
         )
 
     def clear_test_outputs(self) -> None:
-        shutil.rmtree(self.compression_dir, ignore_errors=True)
-        shutil.rmtree(self.decompression_dir, ignore_errors=True)
+        if self.compression_dir.exists():
+            shutil.rmtree(self.compression_dir)
+        if self.decompression_dir.exists():
+            shutil.rmtree(self.decompression_dir)

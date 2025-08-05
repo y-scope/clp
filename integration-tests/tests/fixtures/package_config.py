@@ -13,8 +13,10 @@ def package_config() -> PackageConfig:
     # Check for required directories
     required_dirs = ["bin", "etc", "lib", "sbin"]
     missing_dirs = [d for d in required_dirs if not (clp_package_dir / d).is_dir()]
-    if missing_dirs:
-        raise ValueError(f"CLP package at {clp_package_dir} is missing: {', '.join(missing_dirs)}")
+    if len(missing_dirs) > 0:
+        raise ValueError(
+            f"CLP package at {clp_package_dir} is incomplete. Missing: {', '.join(missing_dirs)}"
+        )
 
     config = PackageConfig(
         clp_bin_dir=clp_package_dir / "bin",
