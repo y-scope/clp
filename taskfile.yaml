@@ -162,6 +162,17 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
+  docker-image-package:
+    vars:
+      SRC_DIR: "{{.ROOT_DIR}}/tools/docker-images/clp-package-ubuntu-jammy"
+    dir: "{{.SRC_DIR}}"
+    deps:
+      - "package"
+    sources:
+      - "{{.SRC_DIR}}/**/*"
+    cmds:
+      - "./build.sh"
+
   clp-s-generate-parsers:
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"

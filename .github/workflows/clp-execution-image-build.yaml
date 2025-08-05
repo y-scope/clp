@@ -63,6 +63,7 @@ jobs:
 
       - uses: "./.github/actions/clp-execution-image-build"
         with:
+          image_type: "execution"
           image_registry: "ghcr.io"
           image_registry_username: "${{github.actor}}"
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"

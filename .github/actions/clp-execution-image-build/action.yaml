@@ -1,8 +1,14 @@
-name: "clp-execution-image-build"
-description: "Builds a container image that contains the dependencies necessary
-to run the CLP package."
+name: "clp-image-build"
+description: "Builds a CLP container image."
 
 inputs:
+  image_type:
+    description: "Type of image to build"
+    required: true
+    type: "choice"
+    options:
+      - "execution"
+      - "package"
   image_registry:
     default: "ghcr.io"
     description: "Container image registry"
@@ -50,15 +56,29 @@ runs:
       uses: "docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804"
       with:
         images: "${{inputs.image_registry}}/${{steps.sanitization.outputs.REPOSITORY}}\
-          /clp-execution-x86-${{inputs.platform_id}}-${{inputs.platform_version_id}}"
+          /clp-${{inputs.image_type}}-x86-${{inputs.platform_id}}-${{inputs.platform_version_id}}"
+
+    - name: "Determine Dockerfile Path"
+      id: "dockerfile"
+      shell: "bash"
+      run: |
+        base_path="./tools/docker-images"
+        platform="${{inputs.platform_id}}-${{inputs.platform_version_id}}"
+    
+        if [[ "${{inputs.image_type}}" == "execution" ]]; then
+          path="$base_path/clp-execution-base-$platform/Dockerfile"
+        else
+          path="$base_path/clp-package-$platform/Dockerfile"
+        fi
+    
+        echo "DOCKERFILE=$path" >> "$GITHUB_OUTPUT"
 
     - name: "Build and Push"
       if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
       uses: "docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4"
       with:
         context: "./"
-        file: "./tools/docker-images/\
-          clp-execution-base-${{inputs.platform_id}}-${{inputs.platform_version_id}}/Dockerfile"
+        file: "${{steps.dockerfile.outputs.DOCKERFILE}}"
         push: true
         tags: "${{steps.meta.outputs.tags}}"
         labels: "${{steps.meta.outputs.labels}}"
