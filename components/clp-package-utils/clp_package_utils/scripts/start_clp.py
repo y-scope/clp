@@ -972,7 +972,7 @@ def start_webui(
                 necessary_mounts.append(mounts.aws_config_dir)
             if aws_env_vars:
                 necessary_env_vars.extend(aws_env_vars)
-    else:
+    elif StorageType.FS == stream_storage.type:
         necessary_mounts.append(mounts.stream_output_dir)
 
     append_docker_options(container_cmd, necessary_mounts, necessary_env_vars)
