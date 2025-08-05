@@ -1135,7 +1135,7 @@ async def main(argv: List[str]) -> int:
     try:
         clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
         clp_config.load_database_credentials_from_env()
-    except (ValidationError, KeyError) as err:
+    except (ValidationError, ValueError) as err:
         logger.error(err)
         return -1
     except Exception as ex:
