@@ -579,6 +579,8 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalSQLiteMetadataDB.hpp
         src/clp/Grep.cpp
         src/clp/Grep.hpp
+        src/clp/GrepCore.cpp
+        src/clp/GrepCore.hpp
         src/clp/hash_utils.cpp
         src/clp/hash_utils.hpp
         src/clp/ir/constants.hpp
@@ -627,6 +629,8 @@ set(SOURCE_FILES_unitTest
         src/clp/Profiler.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
+        src/clp/QueryToken.cpp
+        src/clp/QueryToken.hpp
         src/clp/ReaderInterface.cpp
         src/clp/ReaderInterface.hpp
         src/clp/ReadOnlyMemoryMappedFile.cpp
@@ -717,7 +721,7 @@ set(SOURCE_FILES_unitTest
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
         tests/test-GlobalMetadataDBConfig.cpp
-        tests/test-Grep.cpp
+        tests/test-GrepCore.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
