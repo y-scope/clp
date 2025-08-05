@@ -25,8 +25,8 @@ from job_orchestration.garbage_collector.constants import (
 )
 from job_orchestration.garbage_collector.utils import (
     configure_logger,
-    delete_targets,
-    TargetsBuffer,
+    DeletionCandidatesBuffer,
+    execute_deletion,
     validate_storage_type,
 )
 from job_orchestration.scheduler.constants import QueryJobStatus
@@ -39,62 +39,61 @@ def _delete_expired_archives(
     db_cursor,
     table_prefix: str,
     archive_expiry_epoch_secs: int,
-    targets_buffer: TargetsBuffer,
+    candidates_buffer: DeletionCandidatesBuffer,
     archive_output_config: ArchiveOutput,
     dataset: Optional[str],
 ) -> None:
     archives_table = get_archives_table_name(table_prefix, dataset)
-    target_archive_end_ts = archive_expiry_epoch_secs * SECOND_TO_MILLISECOND
-    try:
-        db_cursor.execute(
-            f"""
-            SELECT id FROM `{archives_table}`
-            WHERE end_timestamp <= %s
-            AND end_timestamp != 0
-            """,
-            [target_archive_end_ts],
-        )
+    archive_end_ts_upper_bound = archive_expiry_epoch_secs * SECOND_TO_MILLISECOND
 
-        results = db_cursor.fetchall()
-        archive_ids = [result["id"] for result in results]
-        if len(archive_ids) != 0:
-            delete_archives_from_metadata_db(db_cursor, archive_ids, table_prefix, dataset)
+    db_cursor.execute(
+        f"""
+        SELECT id FROM `{archives_table}`
+        WHERE end_timestamp < %s
+        AND end_timestamp != 0
+        """,
+        [archive_end_ts_upper_bound],
+    )
 
-            for target in archive_ids:
-                if dataset is not None:
-                    target = f"{dataset}/{target}"
-                targets_buffer.add_target(target)
+    results = db_cursor.fetchall()
+    archive_ids = [result["id"] for result in results]
+    if len(archive_ids) != 0:
+        delete_archives_from_metadata_db(db_cursor, archive_ids, table_prefix, dataset)
 
-            targets_buffer.persists_new_targets()
-            db_conn.commit()
-    except Exception:
-        logger.exception("Failed to delete archives from the database. Aborting deletion.")
-        if db_conn in locals() and db_conn.is_connected():
-            db_conn.rollback()
+        for candidate in archive_ids:
+            if dataset is not None:
+                candidate = f"{dataset}/{candidate}"
+            candidates_buffer.add_candidate(candidate)
 
-    targets_to_delete = targets_buffer.get_targets()
-    num_targets_to_delete = len(targets_to_delete)
-    if num_targets_to_delete == 0:
+        candidates_buffer.persist_new_candidates()
+        db_conn.commit()
+
+    candidates_to_delete = candidates_buffer.get_candidates()
+    num_candidates_to_delete = len(candidates_to_delete)
+    if 0 == num_candidates_to_delete:
         logger.debug(
-            f"No archives matched the expiry criteria: `end_ts < {target_archive_end_ts}`."
+            f"No archives matched the expiry criteria: `end_ts < {archive_end_ts_upper_bound}`."
         )
         return
 
-    delete_targets(archive_output_config, targets_to_delete)
+    execute_deletion(archive_output_config, candidates_to_delete)
 
     # Prepare the log message
     dataset_msg: str
-    deleted_targets: List[str]
+    deleted_candidates: List[str]
     if dataset is not None:
         dataset_log_msg = f" from dataset `{dataset}`"
-        # Note: If dataset is not None, targets are expected to be in the format `<dataset>/<archive_id>`
-        deleted_targets = [target.split("/")[1] for target in targets_to_delete]
+        # Note: If dataset is not None, candidates are expected to be in the format
+        # `<dataset>/<archive_id>`
+        deleted_candidates = [candidate.split("/")[1] for candidate in candidates_to_delete]
     else:
         dataset_log_msg = ""
-        deleted_targets = list(targets_to_delete)
+        deleted_candidates = list(candidates_to_delete)
 
-    targets_buffer.flush()
-    logger.info(f"Deleted {num_targets_to_delete} archive(s){dataset_log_msg}: {deleted_targets}")
+    candidates_buffer.clear()
+    logger.info(
+        f"Deleted {num_candidates_to_delete} archive(s){dataset_log_msg}: {deleted_candidates}"
+    )
 
 
 def _get_archive_safe_expiry_epoch(
@@ -111,8 +110,8 @@ def _get_archive_safe_expiry_epoch(
     In this case, the expiry time can be safely adjusted to `creation_time - retention_period`.
 
     Note: This function does not consider query jobs that started before
-    `current_time - retention_period`, as such long-running jobs are likely hanging.
-    Including them would prevent the expiry time from advancing.
+    `current_time - retention_period`, as such long-running jobs are likely hanging. Including them
+    would prevent the expiry time from advancing.
 
     :param db_cursor: Database cursor object
     :param retention_period_minutes: Retention window in minutes
@@ -147,13 +146,13 @@ def _get_archive_safe_expiry_epoch(
     return archive_expiry_epoch
 
 
-def _handle_archive_garbage_collection(
+def _collect_and_sweep_expired_archives(
     archive_output_config: ArchiveOutput,
     storage_engine: str,
     database_config: Database,
     recovery_file: pathlib.Path,
 ) -> None:
-    targets_buffer = TargetsBuffer(recovery_file)
+    candidates_buffer = DeletionCandidatesBuffer(recovery_file)
 
     clp_connection_param = database_config.get_clp_connection_params_and_type()
     table_prefix = clp_connection_param["table_prefix"]
@@ -174,7 +173,7 @@ def _handle_archive_garbage_collection(
                     db_cursor,
                     table_prefix,
                     archive_expiry_epoch,
-                    targets_buffer,
+                    candidates_buffer,
                     archive_output_config,
                     dataset,
                 )
@@ -184,7 +183,7 @@ def _handle_archive_garbage_collection(
                 db_cursor,
                 table_prefix,
                 archive_expiry_epoch,
-                targets_buffer,
+                candidates_buffer,
                 archive_output_config,
                 None,
             )
@@ -208,7 +207,7 @@ async def archive_garbage_collector(
     # Start retention loop
     try:
         while True:
-            _handle_archive_garbage_collection(
+            _collect_and_sweep_expired_archives(
                 archive_output_config, storage_engine, clp_config.database, recovery_file
             )
             await asyncio.sleep(sweep_interval_secs)

@@ -369,8 +369,6 @@ def _delete_archives(
 
     except Exception:
         logger.exception("Failed to delete archives from the database. Aborting deletion.")
-        if db_conn in locals() and db_conn.is_connected():
-            db_conn.rollback()
         return -1
 
     logger.info(f"Finished deleting archives from the database.")

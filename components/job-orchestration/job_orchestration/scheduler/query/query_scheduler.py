@@ -391,7 +391,7 @@ def get_archives_for_search(
     db_conn,
     table_prefix: str,
     search_config: SearchJobConfig,
-    cutoff_epoch_msecs: Optional[int],
+    archive_end_ts_lower_bound: Optional[int],
 ):
     dataset = search_config.dataset
     query = f"""SELECT id as archive_id, end_timestamp
@@ -402,8 +402,10 @@ def get_archives_for_search(
         filter_clauses.append(f"begin_timestamp <= {search_config.end_timestamp}")
     if search_config.begin_timestamp is not None:
         filter_clauses.append(f"end_timestamp >= {search_config.begin_timestamp}")
-    if cutoff_epoch_msecs is not None:
-        filter_clauses.append(f"(end_timestamp >= {cutoff_epoch_msecs} OR end_timestamp = 0)")
+    if archive_end_ts_lower_bound is not None:
+        filter_clauses.append(
+            f"(end_timestamp >= {archive_end_ts_lower_bound} OR end_timestamp = 0)"
+        )
     if search_config.tags is not None:
         archive_tags_table_name = get_archive_tags_table_name(table_prefix, dataset)
         tags_table_name = get_tags_table_name(table_prefix, dataset)
@@ -677,14 +679,14 @@ def handle_pending_query_jobs(
                     continue
 
                 search_config = SearchJobConfig.parse_obj(job_config)
-                cutoff_epoch_msecs: Optional[int] = None
+                archive_end_ts_lower_bound: Optional[int] = None
                 if archive_retention_period is not None:
-                    cutoff_epoch_msecs = SECOND_TO_MILLISECOND * (
+                    archive_end_ts_lower_bound = SECOND_TO_MILLISECOND * (
                         job_creation_time - archive_retention_period * MIN_TO_SECONDS
                     )
 
                 archives_for_search = get_archives_for_search(
-                    db_conn, table_prefix, search_config, cutoff_epoch_msecs
+                    db_conn, table_prefix, search_config, archive_end_ts_lower_bound
                 )
                 if len(archives_for_search) == 0:
                     if set_job_or_task_status(

@@ -3,7 +3,7 @@ import os
 import pathlib
 import shutil
 import time
-from datetime import datetime
+from datetime import datetime, UTC
 from typing import List, Set
 
 from bson import ObjectId
@@ -52,19 +52,19 @@ def get_expiry_epoch_secs(retention_minutes: int) -> int:
 
 
 def get_oid_with_expiry_time(expiry_epoch_secs: int) -> ObjectId:
-    return ObjectId.from_datetime(datetime.utcfromtimestamp(expiry_epoch_secs))
+    return ObjectId.from_datetime(datetime.fromtimestamp(expiry_epoch_secs, tz=UTC))
 
 
-def delete_fs_target(fs_storage_config: FsStorage, target: str) -> None:
+def execute_fs_deletion(fs_storage_config: FsStorage, deletion_candidate: str) -> None:
     """
     Deletes a target (either a directory or a file) from the filesystem storage. The full path
     of the target is constructed as `fs_storage_config.directory / target`. The function performs
     no action if the target does not exist.
 
     :param fs_storage_config:
-    :param target: Relative path of the file or directory to delete.
+    :param deletion_candidate: Relative path of the file or directory to delete.
     """
-    path_to_delete = fs_storage_config.directory / target
+    path_to_delete = fs_storage_config.directory / deletion_candidate
     if not path_to_delete.exists():
         return
 
@@ -74,34 +74,35 @@ def delete_fs_target(fs_storage_config: FsStorage, target: str) -> None:
         os.remove(path_to_delete)
 
 
-def delete_targets(output_config: ArchiveOutput, targets: Set[str]) -> None:
+def execute_deletion(output_config: ArchiveOutput, deletion_candidates: Set[str]) -> None:
     storage_config = output_config.storage
     storage_type = storage_config.type
 
     if StorageType.S3 == storage_type:
-        s3_delete_objects(storage_config.s3_config, targets)
+        s3_delete_objects(storage_config.s3_config, deletion_candidates)
     elif StorageType.FS == storage_type:
-        for target in targets:
-            delete_fs_target(storage_config, target)
+        for target in deletion_candidates:
+            execute_fs_deletion(storage_config, target)
     else:
         raise ValueError(f"Unsupported Storage type: {storage_type}")
 
 
-class TargetsBuffer:
+class DeletionCandidatesBuffer:
     """
-    A class representing an in-memory buffer for targets with fault-tolerance support.
-    This class support recovering from a previous failure by reading previously persisted targets
-    from a recovery file. The user is expected to explicitly call `persists_new_targets` to persist
-    any new targets on to the disk for fault-tolerance purposes.
+    A class representing an in-memory buffer for candidates with fault-tolerance support.
 
-    :param recovery_file_path: Path to the file used for recovering and persisting targets.
+    This class support recovering from a previous failure by reading previously persisted candidates
+    from a recovery file. The user is expected to explicitly call `persists_new_candidates` to
+    persist any new candidates on to the disk for fault-tolerance purposes.
+
+    :param recovery_file_path: Path to the file used for recovering and persisting candidates.
     :raises ValueError: If the recovery path exists but is not a file.
     """
 
     def __init__(self, recovery_file_path: pathlib.Path):
         self._recovery_file_path: pathlib.Path = recovery_file_path
-        self._targets: Set[str] = set()
-        self._targets_to_persist: List[str] = list()
+        self._candidates: Set[str] = set()
+        self._candidates_to_persist: List[str] = list()
 
         if not self._recovery_file_path.exists():
             return
@@ -111,35 +112,36 @@ class TargetsBuffer:
 
         with open(self._recovery_file_path, "r") as f:
             for line in f:
-                self._targets.add(line.strip())
+                self._candidates.add(line.strip())
 
-    def add_target(self, target: str) -> None:
-        if target not in self._targets:
-            self._targets.add(target)
-            self._targets_to_persist.append(target)
+    def add_candidate(self, target: str) -> None:
+        if target not in self._candidates:
+            self._candidates.add(target)
+            self._candidates_to_persist.append(target)
 
-    def get_targets(self) -> Set[str]:
-        return self._targets
+    def get_candidates(self) -> Set[str]:
+        return self._candidates
 
-    def persists_new_targets(self) -> None:
+    def persist_new_candidates(self) -> None:
         """
-        Writes any new targets added since initialization to the recovery file.
+        Writes any new candidates added since initialization to the recovery file.
         """
-        if len(self._targets_to_persist) == 0:
+        if len(self._candidates_to_persist) == 0:
             return
 
         with open(self._recovery_file_path, "a") as f:
-            for target in self._targets_to_persist:
+            for target in self._candidates_to_persist:
                 f.write(f"{target}\n")
 
-        self._targets_to_persist.clear()
+        self._candidates_to_persist.clear()
 
-    def flush(self):
+    def clear(self):
         """
-        Clear the in-memory buffer of targets and remove the recovery file.
-        This is intended to be called after the caller finished processing all targets (i.e. when
-        recovery is no longer needed for the targets.)
+        Clear the in-memory buffer of candidates and remove the recovery file.
+
+        This is intended to be called after the caller finished processing all candidates (i.e. when
+        recovery is no longer needed for the candidates.)
         """
-        self._targets.clear()
+        self._candidates.clear()
         if self._recovery_file_path.exists():
             os.unlink(self._recovery_file_path)
