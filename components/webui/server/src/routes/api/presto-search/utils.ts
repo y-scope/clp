@@ -60,8 +60,9 @@ const insertPrestoRowsToMongo = ({
 };
 
 /**
- * Processes Presto state changes - creates metadata on first call and resolves the promise,
- * then updates metadata on subsequent calls.
+ * Processes Presto query state changes. On the first call, creates initial metadata document in
+ * MongoDB and resolves the promise which returns the queryId. On subsequent calls, updates the
+ * metadata document with the current state.
  *
  * @param props
  * @param props.queryId
@@ -80,7 +81,7 @@ const processPrestoStateChange = ({
     searchResultsMetadataCollection,
     resolve,
 }: ProcessPrestoStateChangeProps): boolean => {
-    // Insert metadata on first state callback
+    // Insert metadata and resolve queryId on first call
     if (false === isResolved) {
         searchResultsMetadataCollection.insertOne({
             _id: queryId,
@@ -95,7 +96,7 @@ const processPrestoStateChange = ({
         return true;
     }
 
-    // Update lastSignal in metadata using Presto state names
+    // Update metadata on subsequent calls
     updateSearchResultsMeta({
         fields: {lastSignal: state},
         jobId: queryId,
