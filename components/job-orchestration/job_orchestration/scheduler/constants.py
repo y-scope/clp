@@ -30,22 +30,10 @@ class CompressionJobStatus(StatusIntEnum):
     SUCCEEDED = auto()
     FAILED = auto()
 
-    def __str__(self) -> str:
-        return str(self.value)
-
-    def to_str(self) -> str:
-        return str(self.name)
-
 
 class CompressionJobCompletionStatus(StatusIntEnum):
     SUCCEEDED = 0
     FAILED = auto()
-
-    def __str__(self) -> str:
-        return str(self.value)
-
-    def to_str(self) -> str:
-        return str(self.name)
 
 
 class CompressionTaskStatus(StatusIntEnum):
@@ -53,12 +41,6 @@ class CompressionTaskStatus(StatusIntEnum):
     RUNNING = auto()
     SUCCEEDED = auto()
     FAILED = auto()
-
-    def __str__(self) -> str:
-        return str(self.value)
-
-    def to_str(self) -> str:
-        return str(self.name)
 
 
 # When adding new states always add them to the end of this enum
