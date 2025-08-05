@@ -68,8 +68,8 @@ set(
         ../clp/ir/parsing.cpp
         ../clp/ir/parsing.hpp
         ../clp/ir/parsing.inc
-        ../clp/ir/LogSurgeonReader.cpp
-        ../clp/ir/LogSurgeonReader.hpp    
+        ../clp/LogSurgeonReader.cpp
+        ../clp/LogSurgeonReader.hpp    
         ../clp/NetworkReader.cpp
         ../clp/NetworkReader.hpp
         ../clp/networking/socket_utils.cpp
@@ -92,8 +92,8 @@ set(
         ../clp/StringReader.hpp
         ../clp/Thread.cpp
         ../clp/Thread.hpp
-        ../clp/TraceableException.hpp
         ../clp/time_types.hpp
+        ../clp/TraceableException.hpp
         ../clp/type_utils.hpp
         ../clp/utf8_utils.cpp
         ../clp/utf8_utils.hpp
@@ -245,8 +245,6 @@ set(
         TraceableException.hpp
         Utils.cpp
         Utils.hpp
-        VariableEncoder.cpp
-        VariableEncoder.hpp
 )
 
 if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
@@ -308,8 +306,6 @@ set(
         TraceableException.hpp
         Utils.cpp
         Utils.hpp
-        VariableDecoder.cpp
-        VariableDecoder.hpp
 )
 
 if(CLP_BUILD_CLP_S_ARCHIVEREADER)
