@@ -31,14 +31,10 @@ Using Presto with CLP requires:
 
 ### Setting up CLP
 
-Follow the [quick-start](./quick-start/index.md) guide to set up CLP and compress your logs. A
-sample dataset that works well with Presto is [postgresql].
-
-### Setting up Presto
-
-1. Navigate to `etc/clp-config.yml`. Locate and uncomment the `database:` section and change the
-`database.host` parameter to a non-localhost hostname/IP. The `database:` section should look like
-this:
+1. Follow the [quick-start](./quick-start/index.md) guide to download and extract the CLP package.
+Before proceeding, navigate to `etc/clp-config.yml` in the package. Locate and uncomment the
+`database:` section, and change the`database.host` parameter to a non-localhost hostname/IP. The
+`database:` section should look like this:
 
     ```yaml
     database:
@@ -48,14 +44,25 @@ this:
       name: "clp-db"
     ```
 
-2. Clone the CLP repository:
+    For CLP’s database, `localhost` indicates the host itself, but for the Presto coordinator and
+    worker(s), `localhost` points at the container Presto is running within, as the coordinator and
+    worker(s) run on a kind of virtual network.
+    Infrastructure that will support CLP and the Presto container running within the same network is
+    in development.
+
+2. Continue the [quick-start](./quick-start/index.md#using-clp) guide to start up CLP and compress
+your logs. A sample dataset that works well with Presto is [postgresql].
+
+### Setting up Presto
+
+1. Clone the CLP repository:
 
     ```bash
     git clone https://github.com/y-scope/clp.git
     ```
 
-3. Navigate to the `tools/deployment/presto-clp` directory in your terminal.
-4. Generate the necessary config for Presto to work with CLP:
+2. Navigate to the `tools/deployment/presto-clp` directory in your terminal.
+3. Generate the necessary config for Presto to work with CLP:
 
     ```bash
     scripts/set-up-config.sh <clp-json-dir>
@@ -64,7 +71,7 @@ this:
     * Replace `<clp-json-dir>` with the location of the clp-json package you set up in the previous
       section.
 
-5. Configure Presto to use CLP's metadata database as follows:
+4. Configure Presto to use CLP's metadata database as follows:
 
     * Open and edit `coordinator/config-template/metadata-filter.json`.
     * For each dataset you want to query, add a filter config of the form:
@@ -90,7 +97,7 @@ this:
         this particular dataset.
     * The complete syntax for this file is [here][clp-connector-docs].
 
-6. Start a Presto cluster by running:
+5. Start a Presto cluster by running:
 
     ```bash
     docker compose up
