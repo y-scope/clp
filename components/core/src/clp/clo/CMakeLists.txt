@@ -34,6 +34,8 @@ set(
         ../FileWriter.hpp
         ../Grep.cpp
         ../Grep.hpp
+        ../GrepCore.cpp
+        ../GrepCore.hpp
         ../ir/EncodedTextAst.cpp
         ../ir/EncodedTextAst.hpp
         ../ir/LogEvent.hpp
@@ -59,6 +61,8 @@ set(
         ../Profiler.hpp
         ../Query.cpp
         ../Query.hpp
+        ../QueryToken.cpp
+        ../QueryToken.hpp
         ../ReaderInterface.cpp
         ../ReaderInterface.hpp
         ../ReadOnlyMemoryMappedFile.cpp
