@@ -3,7 +3,7 @@ import os
 import pathlib
 import shutil
 import time
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from typing import List, Set
 
 from bson import ObjectId
@@ -52,7 +52,7 @@ def get_expiry_epoch_secs(retention_minutes: int) -> int:
 
 
 def get_oid_with_expiry_time(expiry_epoch_secs: int) -> ObjectId:
-    return ObjectId.from_datetime(datetime.fromtimestamp(expiry_epoch_secs, tz=UTC))
+    return ObjectId.from_datetime(datetime.fromtimestamp(expiry_epoch_secs, tz=timezone.utc))
 
 
 def execute_fs_deletion(fs_storage_config: FsStorage, deletion_candidate: str) -> None:
