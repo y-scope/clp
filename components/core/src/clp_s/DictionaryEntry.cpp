@@ -116,7 +116,7 @@ void LogTypeDictionaryEntry::clear() {
 }
 
 void LogTypeDictionaryEntry::write_to_file(ZstdCompressor& compressor) const {
-    compressor.write_numeric_value<size_t>(m_value.length());
+    compressor.write_numeric_value<uint64_t>(m_value.length());
     compressor.write_string(m_value);
 }
 
@@ -208,7 +208,7 @@ size_t VariableDictionaryEntry::get_data_size() const {
 }
 
 void VariableDictionaryEntry::write_to_file(ZstdCompressor& compressor) const {
-    compressor.write_numeric_value<clp::variable_dictionary_id_t>(m_value.length());
+    compressor.write_numeric_value<uint64_t>(m_value.length());
     compressor.write_string(m_value);
 }
 
