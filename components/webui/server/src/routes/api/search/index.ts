@@ -5,6 +5,7 @@ import {
 import {StatusCodes} from "http-status-codes";
 
 import {
+    CLP_QUERY_ENGINES,
     SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
 } from "../../../../../common/index.js";
@@ -43,6 +44,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     const searchResultsMetadataCollection = mongoDb.collection<SearchResultsMetadataDocument>(
         settings.MongoDbSearchResultsMetadataCollectionName
     );
+
+    const queryEngine = settings.ClpQueryEngine as CLP_QUERY_ENGINES;
 
     /**
      * Submits a search query and initiates the search process.
@@ -113,6 +116,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 _id: searchJobId.toString(),
                 lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
                 errorMsg: null,
+                queryEngine: queryEngine,
             });
 
             // Defer signal update until after response is sent
@@ -202,7 +206,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                         lastSignal: SEARCH_SIGNAL.RESP_DONE,
                         errorMsg: "Query cancelled before it could be completed.",
                     },
-                    jobId: searchJobId,
+                    jobId: searchJobId.toString(),
                     lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
                     logger: request.log,
                     searchResultsMetadataCollection: searchResultsMetadataCollection,

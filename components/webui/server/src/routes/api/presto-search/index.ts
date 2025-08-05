@@ -1,12 +1,17 @@
 import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
 import {StatusCodes} from "http-status-codes";
 
+import type {SearchResultsMetadataDocument} from "../../../../../common/index.js";
+import settings from "../../../../settings.json" with {type: "json"};
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
     PrestoQueryJobCreationSchema,
     PrestoQueryJobSchema,
 } from "../../../schemas/presto-search.js";
-import {insertPrestoRowsToMongo} from "./utils.js";
+import {
+    insertPrestoRowsToMongo,
+    processPrestoStateChange,
+} from "./utils.js";
 
 
 /**
@@ -27,6 +32,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
     if ("undefined" === typeof mongoDb) {
         throw new Error("MongoDB database not found");
     }
+
+    const searchResultsMetadataCollection = mongoDb.collection<SearchResultsMetadataDocument>(
+        settings.MongoDbSearchResultsMetadataCollectionName
+    );
 
     /**
      * Submits a search query.
@@ -84,10 +93,15 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                 state: stats.state,
                             }, "Presto search state updated");
 
-                            if (false === isResolved) {
-                                isResolved = true;
-                                resolve(queryId);
-                            }
+                            const logger = request.log;
+                            isResolved = processPrestoStateChange({
+                                isResolved: isResolved,
+                                logger: logger,
+                                queryId: queryId,
+                                resolve: resolve,
+                                searchResultsMetadataCollection: searchResultsMetadataCollection,
+                                state: stats.state,
+                            });
                         },
                         success: () => {
                             request.log.info("Presto search succeeded");

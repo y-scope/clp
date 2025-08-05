@@ -1,12 +1,16 @@
-import type {InsertPrestoRowsToMongoProps} from "./typings.js";
+import {CLP_QUERY_ENGINES} from "../../../../../common/index.js";
+import {updateSearchResultsMeta} from "../search/utils.js";
+import type {
+    InsertPrestoRowsToMongoProps,
+    ProcessPrestoStateChangeProps,
+} from "./typings.js";
 
 
 /**
- * Converts a Presto result row (array of values) into an object, using the provided column
- * definitions to assign property names.
+ * Converts a Presto row array to an object mapping column names to values.
  *
- * @param row Array of values representing a single Presto result row.
- * @param columns Array of column definitions, each containing a `name` property.
+ * @param row
+ * @param columns
  * @return An object mapping each column name to its corresponding value from the row.
  */
 const prestoRowToObject = (
@@ -55,4 +59,56 @@ const insertPrestoRowsToMongo = ({
     }
 };
 
-export {insertPrestoRowsToMongo};
+/**
+ * Processes Presto state changes - creates metadata on first call and resolves the promise,
+ * then updates metadata on subsequent calls.
+ *
+ * @param props
+ * @param props.queryId
+ * @param props.state
+ * @param props.isResolved
+ * @param props.logger
+ * @param props.searchResultsMetadataCollection
+ * @param props.resolve
+ * @return Updated isResolved flag
+ */
+const processPrestoStateChange = ({
+    queryId,
+    state,
+    isResolved,
+    logger,
+    searchResultsMetadataCollection,
+    resolve,
+}: ProcessPrestoStateChangeProps): boolean => {
+    // Insert metadata on first state callback
+    if (false === isResolved) {
+        searchResultsMetadataCollection.insertOne({
+            _id: queryId,
+            lastSignal: state,
+            errorMsg: null,
+            queryEngine: CLP_QUERY_ENGINES.PRESTO,
+        }).catch((err: unknown) => {
+            logger.error(err, "Failed to insert Presto metadata");
+        });
+        resolve(queryId);
+
+        return true;
+    }
+
+    // Update lastSignal in metadata using Presto state names
+    updateSearchResultsMeta({
+        fields: {lastSignal: state},
+        jobId: queryId,
+        logger: logger,
+        searchResultsMetadataCollection: searchResultsMetadataCollection,
+    }).catch((err: unknown) => {
+        logger.error(err, "Failed to update Presto metadata");
+    });
+
+    return isResolved;
+};
+
+export {
+    insertPrestoRowsToMongo,
+    processPrestoStateChange,
+};

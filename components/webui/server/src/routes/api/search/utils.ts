@@ -38,10 +38,13 @@ const updateSearchResultsMeta = async ({
     logger,
     searchResultsMetadataCollection,
 }: UpdateSearchResultsMetaProps) => {
-    const filter = {
-        _id: jobId.toString(),
-        lastSignal: lastSignal,
+    const filter: Record<string, unknown> = {
+        _id: jobId,
     };
+
+    if (lastSignal) {
+        filter.lastSignal = lastSignal;
+    }
 
     const modifier = {
         $set: fields,

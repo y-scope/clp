@@ -20,8 +20,8 @@ const SEARCH_MAX_NUM_RESULTS = 1000;
 
 type UpdateSearchResultsMetaProps = {
     fields: Partial<SearchResultsMetadataDocument>;
-    jobId: number;
-    lastSignal: SEARCH_SIGNAL;
+    jobId: string;
+    lastSignal?: SEARCH_SIGNAL;
     logger: FastifyBaseLogger;
     searchResultsMetadataCollection: Collection<SearchResultsMetadataDocument>;
 };
