@@ -52,7 +52,7 @@ def postgresql(request, test_config: TestConfig) -> TestLogs:
 def _download_and_extract_dataset(
     request, test_config: TestConfig, name: str, tarball_url: str
 ) -> TestLogs:
-    test_logs = TestLogs.create(
+    test_logs = TestLogs(
         name=name,
         tarball_url=tarball_url,
         test_config=test_config,

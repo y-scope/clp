@@ -17,15 +17,15 @@ pytestmark = pytest.mark.binaries
 text_datasets = pytest.mark.parametrize(
     "test_logs_fixture",
     [
-        # "hive_24hr",
+        "hive_24hr",
     ],
 )
 
 json_datasets = pytest.mark.parametrize(
     "test_logs_fixture",
     [
-        # "elasticsearch",
-        # "spark_event_logs",
+        "elasticsearch",
+        "spark_event_logs",
         "postgresql",
     ],
 )
@@ -39,7 +39,7 @@ def test_clp_identity_transform(
     test_logs_fixture: str,
 ) -> None:
     test_logs: TestLogs = request.getfixturevalue(test_logs_fixture)
-    test_paths = CompressionTestConfig.create(
+    test_paths = CompressionTestConfig(
         test_name=f"clp-{test_logs.name}",
         logs_source_dir=test_logs.extraction_dir,
         test_config=test_config,
@@ -87,7 +87,7 @@ def test_clp_s_identity_transform(
     test_logs: TestLogs = request.getfixturevalue(test_logs_fixture)
     test_logs_name = test_logs.name
 
-    test_paths = CompressionTestConfig.create(
+    test_paths = CompressionTestConfig(
         test_name=f"clp-s-{test_logs_name}",
         logs_source_dir=test_logs.extraction_dir,
         test_config=test_config,
@@ -100,7 +100,7 @@ def test_clp_s_identity_transform(
     # TODO: Remove this check once we can directly compare decompressed logs (which would preserve
     #       the directory structure and row/key order) with the original downloaded logs.
     # See also: https://docs.yscope.com/clp/main/user-guide/core-clp-s.html#current-limitations
-    consolidated_json_test_paths = CompressionTestConfig.create(
+    consolidated_json_test_paths = CompressionTestConfig(
         test_name=f"clp-s-{test_logs_name}-consolidated-json",
         logs_source_dir=test_paths.decompression_dir,
         test_config=test_config,
