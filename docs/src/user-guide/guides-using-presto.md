@@ -33,7 +33,7 @@ Using Presto with CLP requires:
 
 1. Follow the [quick-start](./quick-start/index.md) guide to download and extract the CLP package.
 Before proceeding, navigate to `etc/clp-config.yml` in the package. Locate and uncomment the
-`database:` section, and change the`database.host` parameter to a non-localhost hostname/IP. The
+`database:` section, and change the `database.host` parameter to a non-localhost hostname/IP. The
 `database:` section should look like this:
 
     ```yaml
