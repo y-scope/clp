@@ -52,7 +52,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             try {
                 searchJobId = await new Promise<string>((resolve, reject) => {
                     let isResolved = false;
-
+                    // eslint-disable-next-line no-warning-comments
+                    // TODO: Data, error, and success handlers are dummy implementations
+                    // and will be replaced with proper implementations.
                     Presto.client.execute({
                         data: (_, data, columns) => {
                             request.log.info(
@@ -69,7 +71,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                             });
                         },
                         error: (error) => {
-                            request.log.error(error, "Presto search failed");
+                            request.log.info(error, "Presto search failed");
                             if (false === isResolved) {
                                 isResolved = true;
                                 reject(new Error("Presto search failed"));
