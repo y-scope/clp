@@ -13,6 +13,13 @@ Using CLP to ingest logs from object storage and store archives on object storag
 :::
 
 :::{grid-item-card}
+:link: guides-using-presto
+Using Presto with CLP
+^^^
+How to use Presto to query compressed logs in CLP.
+:::
+
+:::{grid-item-card}
 :link: guides-multi-node
 Multi-node deployment
 ^^^
