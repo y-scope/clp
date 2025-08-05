@@ -1,3 +1,5 @@
+import type {InsertManyResult} from "mongodb";
+
 import type {InsertPrestoRowsToMongoProps} from "./typings.js";
 
 
@@ -28,31 +30,18 @@ const prestoRowToObject = (
  * @param props.data
  * @param props.columns
  * @param props.searchJobId
- * @param props.isResolved
  * @param props.mongoDb
- * @param props.log
+ * @return Promise that resolves when the insertion is complete
  */
 const insertPrestoRowsToMongo = ({
     columns,
     data,
-    isResolved,
-    log,
     mongoDb,
     searchJobId,
-}: InsertPrestoRowsToMongoProps): void => {
-    if (false === isResolved) {
-        log.error("Presto data received before searchJobId was resolved; skipping insert.");
-
-        return;
-    }
-
-    if (0 < data.length && searchJobId) {
-        const collection = mongoDb.collection(searchJobId);
-        const resultDocs = data.map((row) => prestoRowToObject(row, columns));
-        collection.insertMany(resultDocs).catch((err: unknown) => {
-            log.error(err, "Failed to insert Presto results into MongoDB");
-        });
-    }
+}: InsertPrestoRowsToMongoProps): Promise<InsertManyResult<Document>> => {
+    const collection = mongoDb.collection(searchJobId);
+    const resultDocs = data.map((row) => prestoRowToObject(row, columns));
+    return collection.insertMany(resultDocs);
 };
 
 export {insertPrestoRowsToMongo};

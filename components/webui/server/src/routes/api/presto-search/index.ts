@@ -43,7 +43,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 tags: ["Presto Search"],
             },
         },
-
+        // eslint-disable-next-line max-lines-per-function
         async (request, reply) => {
             const {queryString} = request.body;
 
@@ -61,13 +61,29 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                 `Received ${data.length} rows from Presto query`
                             );
 
+                            if (false === isResolved) {
+                                request.log.error(
+                                    "Presto data received before searchJobId was resolved; " +
+                                    "skipping insert."
+                                );
+
+                                return;
+                            }
+
+                            if (0 === data.length) {
+                                return;
+                            }
+
                             insertPrestoRowsToMongo({
-                                columns: columns,
-                                data: data,
-                                isResolved: isResolved,
-                                log: request.log,
-                                mongoDb: mongoDb,
-                                searchJobId: searchJobId,
+                                columns,
+                                data,
+                                mongoDb,
+                                searchJobId,
+                            }).catch((err: unknown) => {
+                                request.log.error(
+                                    err,
+                                    "Failed to insert Presto results into MongoDB"
+                                );
                             });
                         },
                         error: (error) => {
