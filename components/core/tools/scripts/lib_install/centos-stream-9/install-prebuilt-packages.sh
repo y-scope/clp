@@ -7,18 +7,20 @@ set -e
 set -u
 
 dnf install -y \
+    bzip2-devel \
     cmake \
     diffutils \
     gcc-c++ \
     git \
     java-11-openjdk \
     jq \
-    libarchive-devel \
     libcurl-devel \
     libzstd-devel \
+    lz4-devel \
     make \
     mariadb-connector-c-devel \
     openssl-devel \
+    python3-devel \
     python3-pip \
     unzip
 

@@ -80,16 +80,6 @@ set(CLP_USE_STATIC_LIBS ON CACHE BOOL "Whether to link against static libraries"
 if (CLP_USE_STATIC_LIBS)
     if (APPLE)
         set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "macOS")
-    elseif (EXISTS "/etc/centos-release")
-        # NOTE:
-        # 1. We don't support static linking on any CentOS-based distro except manylinux_2_28 (which
-        #    shows up as "AlmaLinux").
-        # 2. A release called "AlmaLinux" doesn't guarantee we're running on a manylinux distro, but
-        #    we can improve this check when someone reports an issue.
-        file(READ "/etc/centos-release" CENTOS_RELEASE_CONTENT)
-        if(NOT "${CENTOS_RELEASE_CONTENT}" MATCHES "AlmaLinux")
-            set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
-        endif()
     endif()
 
     if (DEFINED CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM)
@@ -164,6 +154,11 @@ if(CLP_NEED_BOOST)
     endif()
 endif()
 
+if(CLP_NEED_BZIP2)
+    find_package(BZip2 REQUIRED)
+    message(STATUS "Found BZip2")
+endif()
+
 if(CLP_NEED_CATCH2)
     find_package(Catch2 REQUIRED)
     if (Catch2_FOUND)
@@ -192,6 +187,14 @@ if(CLP_NEED_LOG_SURGEON)
     endif()
 endif()
 
+if(CLP_NEED_LZ4)
+    if(CLP_USE_STATIC_LIBS)
+        set(LZ4_USE_STATIC_LIBS ON)
+    endif()
+    find_package(LZ4 REQUIRED)
+    message(STATUS "Found LZ4 ${LZ4_VERSION}")
+endif()
+
 if(CLP_NEED_NLOHMANN_JSON)
     find_package(nlohmann_json REQUIRED)
     if(nlohmann_json_FOUND)
@@ -218,12 +221,8 @@ if(CLP_NEED_LIBARCHIVE)
     if(CLP_USE_STATIC_LIBS)
         set(LibArchive_USE_STATIC_LIBS ON)
     endif()
-    find_package(LibArchive REQUIRED)
-    if(LibArchive_FOUND)
-        message(STATUS "Found LibArchive ${LibArchive_VERSION}")
-    else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
-    endif()
+    find_package(LibArchive 3.8.1 REQUIRED)
+    message(STATUS "Found LibArchive ${LibArchive_VERSION}")
 endif()
 
 # Find and setup libcurl
@@ -295,6 +294,12 @@ endif()
 if(CLP_NEED_YSTDLIB)
     set(YSTDLIB_CPP_BUILD_TESTING OFF)
     add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
+endif()
+
+# Find and setup ZLIB
+if(CLP_NEED_ZLIB)
+    find_package(ZLIB REQUIRED)
+    message(STATUS "Found ZLIB ${ZLIB_VERSION_STRING}")
 endif()
 
 # Find and setup ZStd Library
@@ -751,7 +756,7 @@ if(CLP_BUILD_TESTING)
             ${CLP_SQLITE3_INCLUDE_DIRECTORY}
             )
     target_link_libraries(unitTest
-            PRIVATE
+	    PRIVATE
             absl::flat_hash_map
             Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
             Catch2::Catch2
@@ -777,7 +782,6 @@ if(CLP_BUILD_TESTING)
             yaml-cpp
             ystdlib::containers
             ystdlib::error_handling
-            ${LIBLZMA_LIBRARIES}
             ZStd::ZStd
             )
     target_compile_features(unitTest
