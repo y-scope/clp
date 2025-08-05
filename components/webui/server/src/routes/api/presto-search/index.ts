@@ -52,10 +52,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             try {
                 searchJobId = await new Promise<string>((resolve, reject) => {
                     let isResolved = false;
-                    // eslint-disable-next-line no-warning-comments
-                    // TODO: Error, and success handlers are dummy implementations
-                    // and will be replaced with proper implementations.
                     Presto.client.execute({
+                        // eslint-disable-next-line no-warning-comments
+                        // TODO: Error, and success handlers are dummy implementations
+                        // and will be replaced with proper implementations.
                         data: (_, data, columns) => {
                             request.log.info(
                                 `Received ${data.length} rows from Presto query`

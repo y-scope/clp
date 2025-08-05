@@ -2,13 +2,14 @@ import type {InsertPrestoRowsToMongoProps} from "./typings.js";
 
 
 /**
- * Adds column names as keys to a Presto row array, returning an object.
+ * Converts a Presto result row (array of values) into an object, using the provided column
+ * definitions to assign property names.
  *
- * @param row The array of values from Presto.
- * @param columns The array of column definitions, each with a `name` property.
- * @return An object mapping column names to row values.
+ * @param row Array of values representing a single Presto result row.
+ * @param columns Array of column definitions, each containing a `name` property.
+ * @return An object mapping each column name to its corresponding value from the row.
  */
-const addKeysToPrestoRow = (
+const prestoRowToObject = (
     row: unknown[],
     columns: {name: string}[]
 ): Record<string, unknown> => {
@@ -47,13 +48,11 @@ const insertPrestoRowsToMongo = ({
 
     if (0 < data.length && searchJobId) {
         const collection = mongoDb.collection(searchJobId);
-        const resultDocs = data.map((row) => addKeysToPrestoRow(row, columns));
+        const resultDocs = data.map((row) => prestoRowToObject(row, columns));
         collection.insertMany(resultDocs).catch((err: unknown) => {
-            log.error({err}, "Failed to insert Presto results into MongoDB");
+            log.error(err, "Failed to insert Presto results into MongoDB");
         });
     }
 };
 
-export {
-    addKeysToPrestoRow, insertPrestoRowsToMongo,
-};
+export {insertPrestoRowsToMongo};
