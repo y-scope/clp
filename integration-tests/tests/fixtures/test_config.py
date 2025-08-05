@@ -1,12 +1,12 @@
 from pathlib import Path
 
 import pytest
-from tests.utils.config import PackageConfig
+from tests.utils.config import TestConfig
 from tests.utils.utils import get_env_var
 
 
 @pytest.fixture(scope="session")
-def package_config() -> PackageConfig:
+def test_config() -> TestConfig:
     clp_build_dir = Path(get_env_var("CLP_BUILD_DIR")).resolve()
     clp_package_dir = Path(get_env_var("CLP_PACKAGE_DIR")).resolve()
 
@@ -18,10 +18,8 @@ def package_config() -> PackageConfig:
             f"CLP package at {clp_package_dir} is incomplete. Missing: {', '.join(missing_dirs)}"
         )
 
-    config = PackageConfig(
-        clp_bin_dir=clp_package_dir / "bin",
+    config = TestConfig(
         clp_package_dir=clp_package_dir,
-        clp_sbin_dir=clp_package_dir / "sbin",
         logs_source_dir=clp_build_dir / "integration-tests" / "downloads",
         test_root_dir=clp_build_dir / "integration-tests",
     )

@@ -4,58 +4,58 @@ import subprocess
 
 import pytest
 from tests.utils.config import (
-    PackageConfig,
+    TestConfig,
     TestLogs,
 )
 
 
 @pytest.fixture(scope="session")
-def hive_24hr(request, package_config: PackageConfig) -> TestLogs:
+def hive_24hr(request, test_config: TestConfig) -> TestLogs:
     return _download_and_extract_dataset(
         request=request,
-        package_config=package_config,
+        test_config=test_config,
         name="hive-24hr",
         tarball_url="https://zenodo.org/records/7094921/files/hive-24hr.tar.gz?download=1",
     )
 
 
 @pytest.fixture(scope="session")
-def elasticsearch(request, package_config: PackageConfig) -> TestLogs:
+def elasticsearch(request, test_config: TestConfig) -> TestLogs:
     return _download_and_extract_dataset(
         request=request,
-        package_config=package_config,
+        test_config=test_config,
         name="elasticsearch",
         tarball_url="https://zenodo.org/records/10516227/files/elasticsearch.tar.gz?download=1",
     )
 
 
 @pytest.fixture(scope="session")
-def spark_event_logs(request, package_config: PackageConfig) -> TestLogs:
+def spark_event_logs(request, test_config: TestConfig) -> TestLogs:
     return _download_and_extract_dataset(
         request=request,
-        package_config=package_config,
+        test_config=test_config,
         name="spark-event-logs",
         tarball_url="https://zenodo.org/records/10516346/files/spark-event-logs.tar.gz?download=1",
     )
 
 
 @pytest.fixture(scope="session")
-def postgresql(request, package_config: PackageConfig) -> TestLogs:
+def postgresql(request, test_config: TestConfig) -> TestLogs:
     return _download_and_extract_dataset(
         request=request,
-        package_config=package_config,
+        test_config=test_config,
         name="postgresql",
         tarball_url="https://zenodo.org/records/10516402/files/postgresql.tar.gz?download=1",
     )
 
 
 def _download_and_extract_dataset(
-    request, package_config: PackageConfig, name: str, tarball_url: str
+    request, test_config: TestConfig, name: str, tarball_url: str
 ) -> TestLogs:
     test_logs = TestLogs.create(
         name=name,
         tarball_url=tarball_url,
-        package_config=package_config,
+        test_config=test_config,
     )
     if request.config.cache.get(name, False):
         print(f"Test logs `{name}` is up-to-date. Skipping download.")

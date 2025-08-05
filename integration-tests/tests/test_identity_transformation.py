@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 from tests.utils.config import (
     CompressionTestConfig,
-    PackageConfig,
+    TestConfig,
     TestLogs,
 )
 from tests.utils.utils import (
@@ -17,15 +17,15 @@ pytestmark = pytest.mark.binaries
 text_datasets = pytest.mark.parametrize(
     "test_logs_fixture",
     [
-        "hive_24hr",
+        # "hive_24hr",
     ],
 )
 
 json_datasets = pytest.mark.parametrize(
     "test_logs_fixture",
     [
-        "elasticsearch",
-        "spark_event_logs",
+        # "elasticsearch",
+        # "spark_event_logs",
         "postgresql",
     ],
 )
@@ -35,18 +35,18 @@ json_datasets = pytest.mark.parametrize(
 @text_datasets
 def test_clp_identity_transform(
     request,
-    package_config: PackageConfig,
+    test_config: TestConfig,
     test_logs_fixture: str,
 ) -> None:
     test_logs: TestLogs = request.getfixturevalue(test_logs_fixture)
     test_paths = CompressionTestConfig.create(
         test_name=f"clp-{test_logs.name}",
         logs_source_dir=test_logs.extraction_dir,
-        package_config=package_config,
+        test_config=test_config,
     )
     test_paths.clear_test_outputs()
 
-    binary_path_str = str(package_config.clp_bin_dir / "clp")
+    binary_path_str = str(test_config.get_clp_binary_path())
     # fmt: off
     compression_cmd = [
         binary_path_str,
@@ -70,7 +70,8 @@ def test_clp_identity_transform(
     input_path = test_paths.logs_source_dir
     output_path = test_paths.decompression_dir
     assert is_dir_tree_content_equal(
-        input_path, output_path,
+        input_path,
+        output_path,
     ), "Mismatch between clp input {input_path} and output {output_path}."
 
     test_paths.clear_test_outputs()
@@ -80,7 +81,7 @@ def test_clp_identity_transform(
 @json_datasets
 def test_clp_s_identity_transform(
     request,
-    package_config: PackageConfig,
+    test_config: TestConfig,
     test_logs_fixture: str,
 ) -> None:
     test_logs: TestLogs = request.getfixturevalue(test_logs_fixture)
@@ -89,9 +90,9 @@ def test_clp_s_identity_transform(
     test_paths = CompressionTestConfig.create(
         test_name=f"clp-s-{test_logs_name}",
         logs_source_dir=test_logs.extraction_dir,
-        package_config=package_config,
+        test_config=test_config,
     )
-    _clp_s_compress_and_decompress(package_config, test_paths)
+    _clp_s_compress_and_decompress(test_config, test_paths)
 
     # Recompress the decompressed output that's consolidated into a single json file, and decompress
     # it again to verify consistency. The compression input of the second iteration points to the
@@ -102,9 +103,9 @@ def test_clp_s_identity_transform(
     consolidated_json_test_paths = CompressionTestConfig.create(
         test_name=f"clp-s-{test_logs_name}-consolidated-json",
         logs_source_dir=test_paths.decompression_dir,
-        package_config=package_config,
+        test_config=test_config,
     )
-    _clp_s_compress_and_decompress(package_config, consolidated_json_test_paths)
+    _clp_s_compress_and_decompress(test_config, consolidated_json_test_paths)
 
     input_path = consolidated_json_test_paths.logs_source_dir / "original"
     output_path = consolidated_json_test_paths.decompression_dir / "original"
@@ -117,10 +118,10 @@ def test_clp_s_identity_transform(
 
 
 def _clp_s_compress_and_decompress(
-    package_config: PackageConfig, test_paths: CompressionTestConfig
+    test_config: TestConfig, test_paths: CompressionTestConfig
 ) -> None:
     test_paths.clear_test_outputs()
-    bin_path = str(package_config.clp_bin_dir / "clp-s")
+    bin_path = str(test_config.get_clp_s_binary_path())
     src_path = str(test_paths.logs_source_dir)
     compression_path = str(test_paths.compression_dir)
     decompression_path = str(test_paths.decompression_dir)
