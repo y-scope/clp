@@ -1,6 +1,6 @@
 import pathlib
 from enum import auto
-from typing import List, Literal, Optional, Union
+from typing import List, Literal, Optional, Set, Union
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, root_validator, validator
@@ -43,7 +43,7 @@ CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
 
-ALL_RUNNABLE_COMPONENTS = [
+ALL_RUNNABLE_COMPONENTS = {
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
@@ -54,9 +54,9 @@ ALL_RUNNABLE_COMPONENTS = [
     QUERY_WORKER_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
-]
+}
 
-PRESTO_RUNNABLE_COMPONENTS = [
+PRESTO_RUNNABLE_COMPONENTS = {
     DB_COMPONENT_NAME,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
@@ -64,7 +64,14 @@ PRESTO_RUNNABLE_COMPONENTS = [
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
-]
+}
+
+CONTROLLER_COMPONENTS = {
+    QUEUE_COMPONENT_NAME,
+    REDIS_COMPONENT_NAME,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
+}
 
 
 class StorageEngine(KebabCaseStrEnum):
@@ -819,7 +826,7 @@ class CLPConfig(BaseModel):
                 f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
             )
 
-    def get_runnable_components(self) -> List[str]:
+    def get_runnable_components(self) -> Set[str]:
         if QueryEngine.PRESTO == self.package.query_engine:
             return PRESTO_RUNNABLE_COMPONENTS
         else:
@@ -859,3 +866,20 @@ class WorkerConfig(BaseModel):
         d["stream_output"] = self.stream_output.dump_to_primitive_dict()
 
         return d
+
+
+def get_components_for_target(target: str) -> Set[str]:
+    """
+    Returns the set of components that should be started for the given target.
+
+    :param target: The target name (e.g., 'all', 'controller', or a specific component name)
+    :return: Set of component names to start
+    """
+    if target == ALL_TARGET_NAME:
+        return ALL_RUNNABLE_COMPONENTS
+    elif target == CONTROLLER_TARGET_NAME:
+        return CONTROLLER_COMPONENTS
+    elif target in ALL_RUNNABLE_COMPONENTS:
+        return {target}
+    else:
+        return set()
