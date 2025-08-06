@@ -1,4 +1,4 @@
-name: "clp-image-build"
+name: "clp-execution-image-build"
 
 on:
   pull_request:
