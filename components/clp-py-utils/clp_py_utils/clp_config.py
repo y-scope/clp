@@ -869,12 +869,6 @@ class WorkerConfig(BaseModel):
 
 
 def get_components_for_target(target: str) -> Set[str]:
-    """
-    Returns the set of components that should be started for the given target.
-
-    :param target: The target name (e.g., 'all', 'controller', or a specific component name)
-    :return: Set of component names to start
-    """
     if target == ALL_TARGET_NAME:
         return ALL_RUNNABLE_COMPONENTS
     elif target == CONTROLLER_TARGET_NAME:
