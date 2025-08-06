@@ -107,7 +107,7 @@ Currently, timestamps must be specified as milliseconds since the UNIX epoch.
 
 :::{warning}
 By default, `clp` uses an embedded SQLite database. Running multiple `clp` instances with SQLite
-can fail due to "database is locked" because SQLite does not support concurrent writes.
+can fail due to "database is locked" error because SQLite does not support concurrent writes.
 :::
 To enable parallel compression to the same archives directory, `clp`/`clg` can be configured to use
 a MySQL-type database (e.g., MariaDB) as follows:
