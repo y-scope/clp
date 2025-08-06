@@ -16,8 +16,7 @@ void unset_env_var(char const* name) {
 }
 
 template <size_t N>
-auto parse_args(std::array<char const*, N> const& argv, GlobalMetadataDBConfig& config)
-        -> boost::program_options::variables_map {
+auto parse_args(std::array<char const*, N> const& argv, GlobalMetadataDBConfig& config) -> void {
     boost::program_options::options_description options_desc;
     config.add_command_line_options(options_desc);
 
@@ -32,8 +31,6 @@ auto parse_args(std::array<char const*, N> const& argv, GlobalMetadataDBConfig& 
             vm
     );
     boost::program_options::notify(vm);
-
-    return vm;
 }
 }  // namespace
 
@@ -55,7 +52,7 @@ TEST_CASE(
             "test_prefix_"
     };
     GlobalMetadataDBConfig config;
-    auto const vm = parse_args(argv, config);
+    parse_args(argv, config);
 
     REQUIRE(config.get_metadata_db_type() == GlobalMetadataDBConfig::MetadataDBType::MySQL);
     REQUIRE(config.get_metadata_db_host() == "test-host");
@@ -80,7 +77,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                 "test_prefix_"
         };
         GlobalMetadataDBConfig config;
-        auto const vm = parse_args(argv, config);
+        parse_args(argv, config);
 
         SECTION("With valid credentials") {
             set_env_var("CLP_DB_USER", "test-user");
@@ -284,7 +281,7 @@ TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     SECTION("With username and password") {
         constexpr std::array argv{"test", "--db-type", "sqlite"};
         GlobalMetadataDBConfig config;
-        auto const vm = parse_args(argv, config);
+        parse_args(argv, config);
 
         set_env_var("CLP_DB_USER", "test-user");
         set_env_var("CLP_DB_PASS", "test-pass");
