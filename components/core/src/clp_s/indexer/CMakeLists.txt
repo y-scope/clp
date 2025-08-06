@@ -35,14 +35,14 @@ set(
         ../../clp/GlobalMetadataDBConfig.hpp
         ../../clp/hash_utils.cpp
         ../../clp/hash_utils.hpp
-        ../../clp/ir/LogEvent.hpp
-        ../../clp/ir/types.hpp
         ../../clp/ir/constants.hpp
         ../../clp/ir/EncodedTextAst.cpp
         ../../clp/ir/EncodedTextAst.hpp
+        ../../clp/ir/LogEvent.hpp
         ../../clp/ir/parsing.cpp
         ../../clp/ir/parsing.hpp
         ../../clp/ir/parsing.inc
+        ../../clp/ir/types.hpp
         ../../clp/MySQLDB.cpp
         ../../clp/MySQLDB.hpp
         ../../clp/MySQLParamBindings.cpp
