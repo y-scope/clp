@@ -194,11 +194,10 @@ endif()
 
 find_package(lz4 1.10.0 REQUIRED HINTS "${lz4_ROOT}")
 message(STATUS "Found lz4 ${lz4_VERSION}")
-add_library(lz4_TARGET INTERFACE)
 if(CLP_USE_STATIC_LIBS)
-    target_link_libraries(lz4_TARGET INTERFACE LZ4::lz4_static)
+    set(lz4_TARGET LZ4::lz4_static)
 else()
-    target_link_libraries(lz4_TARGET INTERFACE LZ4::lz4_shared)
+    set(lz4_TARGET LZ4::lz4_shared)
 endif()
 
 if(CLP_NEED_NLOHMANN_JSON)
@@ -308,11 +307,10 @@ endif()
 
 find_package(zstd 1.5.7 REQUIRED HINTS "${zstd_ROOT}")
 message(STATUS "Found zstd ${zstd_VERSION}")
-add_library(zstd_TARGET INTERFACE)
 if(CLP_USE_STATIC_LIBS)
-    target_link_libraries(zstd_TARGET INTERFACE zstd::libzstd_static)
+    set(zstd_TARGET zstd::libzstd_static)
 else()
-    target_link_libraries(zstd_TARGET INTERFACE zstd::libzstd_shared)
+    set(zstd_TARGET zstd::libzstd_shared)
 endif()
 
 # Find and setup LZMA Library
@@ -783,7 +781,7 @@ if(CLP_BUILD_TESTING)
             ystdlib::containers
             ystdlib::error_handling
             ${LIBLZMA_LIBRARIES}
-            zstd_TARGET
+            ${zstd_TARGET}
             )
     target_compile_features(unitTest
             PRIVATE cxx_std_20

@@ -102,7 +102,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 OpenSSL::Crypto
                 spdlog::spdlog
                 ystdlib::error_handling
-                zstd_TARGET
+                ${zstd_TARGET}
         )
 endif()
 
@@ -182,7 +182,7 @@ if(CLP_BUILD_CLP_S_IO)
                 clp_s::clp_dependencies
                 fmt::fmt
                 spdlog::spdlog
-                zstd_TARGET
+                ${zstd_TARGET}
         )
 endif()
 
@@ -250,7 +250,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 ${CURL_LIBRARIES}
                 fmt::fmt
                 spdlog::spdlog
-                zstd_TARGET
+                ${zstd_TARGET}
         )
 endif()
 
@@ -314,7 +314,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 ${CURL_LIBRARIES}
                 fmt::fmt
                 spdlog::spdlog
-                zstd_TARGET
+                ${zstd_TARGET}
         )
 endif()
 
@@ -342,7 +342,7 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 fmt::fmt
                 ${MONGOCXX_TARGET}
                 spdlog::spdlog
-                zstd_TARGET
+                ${zstd_TARGET}
         )
 endif()
 
@@ -408,7 +408,7 @@ if(CLP_BUILD_EXECUTABLES)
                 msgpack-cxx
                 spdlog::spdlog
                 ystdlib::error_handling
-                zstd_TARGET
+                ${zstd_TARGET}
         )
         set_target_properties(
                 clp-s
