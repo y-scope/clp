@@ -141,8 +141,6 @@ auto GlobalMetadataDBConfig::validate() const -> void {
         throw invalid_argument("Database 'CLP_DB_USER' not specified or empty.");
     }
 
-    if (m_metadata_db_password.empty()) {
-        throw invalid_argument("Database 'CLP_DB_PASS' not specified or empty.");
-    }
+    // NOTE: No need to check `m_metadata_db_password` because `CLP_DB_PASS` is optional.
 }
 }  // namespace clp
