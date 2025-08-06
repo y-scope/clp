@@ -6,6 +6,7 @@ import {
     PrestoQueryJobCreationSchema,
     PrestoQueryJobSchema,
 } from "../../../schemas/presto-search.js";
+import {insertPrestoRowsToMongo} from "./utils.js";
 
 
 /**
@@ -13,12 +14,18 @@ import {
  *
  * @param fastify
  */
+// eslint-disable-next-line max-lines-per-function
 const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
-    const {Presto} = fastify;
+    const {Presto, mongo} = fastify;
+    const mongoDb = mongo.db;
 
     if ("undefined" === typeof Presto) {
         // If Presto client is not available, skip the plugin registration.
         return;
+    }
+
+    if ("undefined" === typeof mongoDb) {
+        throw new Error("MongoDB database not found");
     }
 
     /**
@@ -36,7 +43,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 tags: ["Presto Search"],
             },
         },
-
+        // eslint-disable-next-line max-lines-per-function
         async (request, reply) => {
             const {queryString} = request.body;
 
@@ -45,13 +52,39 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             try {
                 searchJobId = await new Promise<string>((resolve, reject) => {
                     let isResolved = false;
-
                     Presto.client.execute({
                         // eslint-disable-next-line no-warning-comments
-                        // TODO: Data, error, and success handlers are dummy implementations
+                        // TODO: Error, and success handlers are dummy implementations
                         // and will be replaced with proper implementations.
                         data: (_, data, columns) => {
-                            request.log.info({columns, data}, "Presto data");
+                            request.log.info(
+                                `Received ${data.length} rows from Presto query`
+                            );
+
+                            if (false === isResolved) {
+                                request.log.error(
+                                    "Presto data received before searchJobId was resolved; " +
+                                    "skipping insert."
+                                );
+
+                                return;
+                            }
+
+                            if (0 === data.length) {
+                                return;
+                            }
+
+                            insertPrestoRowsToMongo(
+                                data,
+                                columns,
+                                searchJobId,
+                                mongoDb
+                            ).catch((err: unknown) => {
+                                request.log.error(
+                                    err,
+                                    "Failed to insert Presto results into MongoDB"
+                                );
+                            });
                         },
                         error: (error) => {
                             request.log.info(error, "Presto search failed");
