@@ -72,7 +72,7 @@ def test_clp_identity_transform(
     assert is_dir_tree_content_equal(
         input_path,
         output_path,
-    ), "Mismatch between clp input {input_path} and output {output_path}."
+    ), f"Mismatch between clp input {input_path} and output {output_path}."
 
     test_paths.clear_test_outputs()
 
