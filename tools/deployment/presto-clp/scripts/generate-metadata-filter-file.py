@@ -115,8 +115,7 @@ def _prompt_timestamp_keys(
 
     :param datasets:
     :param default_key:
-    :return: True if list is constructed successfully.
-    :return: False on error.
+    :return: Dictionary mapping dataset names to their timestamp keys.
     """
     print("\nPlease enter the timestamp key that corresponds to each of your archived datasets.")
     print("Press <Enter> to accept the default key.\n")
@@ -126,14 +125,12 @@ def _prompt_timestamp_keys(
 
     data_time_pair: Dict[str, str] = {}
     for dataset in datasets:
-        while True:
-            user_input = input(
-                f">>> {BOLD}{dataset}{RESET} [default key: {BOLD}{default_key}{RESET}]: "
-            )
-            key = user_input if user_input else default_key
-            if key:
-                data_time_pair[dataset] = key
-                break
+        user_input = input(
+            f">>> {BOLD}{dataset}{RESET} [default key: {BOLD}{default_key}{RESET}]: "
+        )
+        key = user_input if user_input else default_key
+        data_time_pair[dataset] = key
+
     return data_time_pair
 
 
