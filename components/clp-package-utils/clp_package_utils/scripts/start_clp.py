@@ -1195,10 +1195,10 @@ def main(argv):
         if DB_COMPONENT_NAME in components_to_start:
             start_db(instance_id, clp_config, conf_dir)
 
-        # Special handling for controller target - create tables even if not starting DB
-        if target == CONTROLLER_TARGET_NAME or DB_COMPONENT_NAME in components_to_start:
-            if DB_COMPONENT_NAME in runnable_components:
-                create_db_tables(instance_id, clp_config, container_clp_config, mounts)
+        if (target == CONTROLLER_TARGET_NAME and
+            DB_COMPONENT_NAME in runnable_components) or \
+            DB_COMPONENT_NAME in components_to_start:
+            create_db_tables(instance_id, clp_config, container_clp_config, mounts)
 
         if QUEUE_COMPONENT_NAME in components_to_start:
             start_queue(instance_id, clp_config)
@@ -1209,10 +1209,10 @@ def main(argv):
         if RESULTS_CACHE_COMPONENT_NAME in components_to_start:
             start_results_cache(instance_id, clp_config, conf_dir)
 
-        # Special handling for controller target - create indices even if not starting results cache
-        if target == CONTROLLER_TARGET_NAME or RESULTS_CACHE_COMPONENT_NAME in components_to_start:
-            if RESULTS_CACHE_COMPONENT_NAME in runnable_components:
-                create_results_cache_indices(instance_id, clp_config, container_clp_config, mounts)
+        if (target == CONTROLLER_TARGET_NAME and
+            RESULTS_CACHE_COMPONENT_NAME in runnable_components) or \
+            RESULTS_CACHE_COMPONENT_NAME in components_to_start:
+            create_results_cache_indices(instance_id, clp_config, container_clp_config, mounts)
 
         if COMPRESSION_SCHEDULER_COMPONENT_NAME in components_to_start:
             start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
