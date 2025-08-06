@@ -1,6 +1,7 @@
-import type {InsertManyResult} from "mongodb";
-
-import type {InsertPrestoRowsToMongoProps} from "./typings.js";
+import type {
+    Db,
+    InsertManyResult,
+} from "mongodb";
 
 
 /**
@@ -26,19 +27,18 @@ const prestoRowToObject = (
 /**
  * Inserts Presto rows into a MongoDB collection for a given search job.
  *
- * @param props
- * @param props.data
- * @param props.columns
- * @param props.searchJobId
- * @param props.mongoDb
+ * @param data Array of Presto result rows
+ * @param columns Array of column definitions
+ * @param searchJobId
+ * @param mongoDb
  * @return Promise that resolves when the insertion is complete
  */
-const insertPrestoRowsToMongo = ({
-    columns,
-    data,
-    mongoDb,
-    searchJobId,
-}: InsertPrestoRowsToMongoProps): Promise<InsertManyResult<Document>> => {
+const insertPrestoRowsToMongo = (
+    data: unknown[][],
+    columns: {name: string}[],
+    searchJobId: string,
+    mongoDb: Db
+): Promise<InsertManyResult<Document>> => {
     const collection = mongoDb.collection(searchJobId);
     const resultDocs = data.map((row) => prestoRowToObject(row, columns));
     return collection.insertMany(resultDocs);

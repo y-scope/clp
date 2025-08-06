@@ -74,12 +74,12 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                 return;
                             }
 
-                            insertPrestoRowsToMongo({
-                                columns,
+                            insertPrestoRowsToMongo(
                                 data,
-                                mongoDb,
+                                columns,
                                 searchJobId,
-                            }).catch((err: unknown) => {
+                                mongoDb
+                            ).catch((err: unknown) => {
                                 request.log.error(
                                     err,
                                     "Failed to insert Presto results into MongoDB"
