@@ -58,13 +58,13 @@ void BooleanColumnWriter::store(ZstdCompressor& compressor) {
 
 size_t ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
     uint64_t offset{m_encoded_vars.size()};
-    m_temp_var_dict_ids.clear();
+    std::vector<clp::variable_dictionary_id_t> temp_var_dict_ids;
     clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
             std::get<std::string>(value),
             m_logtype_entry,
             *m_var_dict,
             m_encoded_vars,
-            m_temp_var_dict_ids
+            temp_var_dict_ids
     );
     clp::logtype_dictionary_id_t id{};
     m_log_dict->add_entry(m_logtype_entry, id);
