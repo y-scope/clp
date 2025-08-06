@@ -1195,9 +1195,9 @@ def main(argv):
         if DB_COMPONENT_NAME in components_to_start:
             start_db(instance_id, clp_config, conf_dir)
 
-        if (target == CONTROLLER_TARGET_NAME and
-            DB_COMPONENT_NAME in runnable_components) or \
-            DB_COMPONENT_NAME in components_to_start:
+        if (
+            target == CONTROLLER_TARGET_NAME and DB_COMPONENT_NAME in runnable_components
+        ) or DB_COMPONENT_NAME in components_to_start:
             create_db_tables(instance_id, clp_config, container_clp_config, mounts)
 
         if QUEUE_COMPONENT_NAME in components_to_start:
@@ -1209,9 +1209,9 @@ def main(argv):
         if RESULTS_CACHE_COMPONENT_NAME in components_to_start:
             start_results_cache(instance_id, clp_config, conf_dir)
 
-        if (target == CONTROLLER_TARGET_NAME and
-            RESULTS_CACHE_COMPONENT_NAME in runnable_components) or \
-            RESULTS_CACHE_COMPONENT_NAME in components_to_start:
+        if (
+            target == CONTROLLER_TARGET_NAME and RESULTS_CACHE_COMPONENT_NAME in runnable_components
+        ) or RESULTS_CACHE_COMPONENT_NAME in components_to_start:
             create_results_cache_indices(instance_id, clp_config, container_clp_config, mounts)
 
         if COMPRESSION_SCHEDULER_COMPONENT_NAME in components_to_start:
@@ -1226,9 +1226,7 @@ def main(argv):
             )
 
         if QUERY_WORKER_COMPONENT_NAME in components_to_start:
-            start_query_worker(
-                instance_id, clp_config, container_clp_config, num_workers, mounts
-            )
+            start_query_worker(instance_id, clp_config, container_clp_config, num_workers, mounts)
 
         if REDUCER_COMPONENT_NAME in components_to_start:
             start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
