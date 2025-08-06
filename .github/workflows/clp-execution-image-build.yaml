@@ -3,12 +3,12 @@ name: "clp-execution-image-build"
 on:
   pull_request:
     paths:
-      - "../actions/clp-image-build/action.yaml"
+      - ".github/actions/clp-image-build/action.yaml"
       - ".github/workflows/clp-execution-image-build.yaml"
       - "tools/docker-images/**/*"
   push:
     paths:
-      - "../actions/clp-image-build/action.yaml"
+      - ".github/actions/clp-image-build/action.yaml"
       - ".github/workflows/clp-execution-image-build.yaml"
       - "tools/docker-images/**/*"
   schedule:
