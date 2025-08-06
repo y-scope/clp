@@ -91,7 +91,7 @@ enum SEARCH_SIGNAL {
 /**
  * Presto search-related signals.
  *
- * This includes Presto query states and their respective signals.
+ * Note: Using type instead of enum match `presto-client-node` type definition.
  */
 type PRESTO_SEARCH_SIGNAL =
     | "WAITING_FOR_PREREQUISITES"

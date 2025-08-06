@@ -5,10 +5,11 @@ import type {
 
 
 /**
- * Converts a Presto row array to an object mapping column names to values.
+ * Converts a Presto result row (array of values) into an object, using the provided column
+ * definitions to assign property names.
  *
- * @param row
- * @param columns
+ * @param row Array of values representing a single Presto result row.
+ * @param columns Array of column definitions, each containing a `name` property.
  * @return An object mapping each column name to its corresponding value from the row.
  */
 const prestoRowToObject = (
