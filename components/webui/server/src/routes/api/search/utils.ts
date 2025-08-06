@@ -115,7 +115,7 @@ const updateSearchSignalWhenJobsFinish = async ({
                 SEARCH_MAX_NUM_RESULTS
             ),
         },
-        jobId: searchJobId,
+        jobId: searchJobId.toString(),
         lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
         logger: logger,
         searchResultsMetadataCollection: searchResultsMetadataCollection,
