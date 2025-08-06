@@ -152,7 +152,7 @@ private:
             std::vector<std::pair<ExpressionType, ast::OpList::iterator>>>
             m_expression_state;
 
-    log_surgeon::lexers::ByteLexer m_dummy_lexer;
+    log_surgeon::lexers::ByteLexer m_placeholder_lexer;
 
     simdjson::ondemand::parser m_array_parser;
     std::string m_array_search_string;

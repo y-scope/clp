@@ -868,7 +868,7 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
                             dummy_timestamp,
                             dummy_timestamp,
                             m_ignore_case,
-                            m_dummy_lexer,
+                            m_placeholder_lexer,
                             true
                     )
             );

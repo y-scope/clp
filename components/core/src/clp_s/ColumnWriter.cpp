@@ -85,13 +85,13 @@ void ClpStringColumnWriter::store(ZstdCompressor& compressor) {
 size_t VariableStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
     clp::variable_dictionary_id_t id{};
     m_var_dict->add_entry(std::get<std::string>(value), id);
-    m_variables.push_back(id);
+    m_var_dict_ids.push_back(id);
     return sizeof(clp::variable_dictionary_id_t);
 }
 
 void VariableStringColumnWriter::store(ZstdCompressor& compressor) {
-    size_t size = m_variables.size() * sizeof(clp::variable_dictionary_id_t);
-    compressor.write(reinterpret_cast<char const*>(m_variables.data()), size);
+    auto size{m_var_dict_ids.size() * sizeof(clp::variable_dictionary_id_t)};
+    compressor.write(reinterpret_cast<char const*>(m_var_dict_ids.data()), size);
 }
 
 size_t DateStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
