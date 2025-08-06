@@ -11,10 +11,8 @@ import sys
 import msgpack
 import pymongo
 from clp_py_utils.clp_config import (
-    CLP_DEFAULT_DATASET_NAME,
     Database,
     ResultsCache,
-    StorageEngine,
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
@@ -28,6 +26,7 @@ from clp_package_utils.general import (
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
     submit_query_job,
+    validate_dataset_exists,
     wait_for_query_job,
 )
 
@@ -243,6 +242,12 @@ def main(argv):
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
+    )
+    args_parser.add_argument(
         "-t", "--tags", help="Comma-separated list of tags of archives to search."
     )
     args_parser.add_argument(
@@ -293,15 +298,19 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    dataset = (
-        CLP_DEFAULT_DATASET_NAME
-        if StorageEngine.CLP_S == clp_config.package.storage_engine
-        else None
-    )
+    database_config: Database = clp_config.database
+    dataset = parsed_args.dataset
+    if dataset is not None:
+        try:
+            validate_dataset_exists(database_config, dataset)
+        except Exception as e:
+            logger.error(e)
+            return -1
+
     try:
         asyncio.run(
             do_search(
-                clp_config.database,
+                database_config,
                 clp_config.results_cache,
                 dataset,
                 parsed_args.wildcard_query,

@@ -10,7 +10,7 @@ import {
 } from "@sinclair/typebox/value";
 import {isAxiosError} from "axios";
 
-import {submitExtractStreamJob} from "../api/query";
+import {submitExtractStreamJob} from "../api/stream-files";
 import {Nullable} from "../typings/common";
 import {
     EXTRACT_JOB_TYPE,
@@ -34,6 +34,7 @@ const QueryStatus = () => {
     const [queryState, setQueryState] = useState<QUERY_LOADING_STATE>(
         QUERY_LOADING_STATE.SUBMITTING
     );
+
     const [errorMsg, setErrorMsg] = useState<Nullable<string>>(null);
 
     useEffect(() => {
@@ -64,17 +65,27 @@ const QueryStatus = () => {
             return;
         }
 
-        submitExtractStreamJob(
+        const {
+            dataset,
+            type,
+            logEventIdx,
+            streamId,
+        } = parseResult;
+
+        submitExtractStreamJob({
+            dataset: "undefined" === typeof dataset ?
+                null :
+                dataset,
 
             // `parseResult.type` must be valid key since parsed using with typebox type
             // `ExtractJobSearchParams`.
-            EXTRACT_JOB_TYPE[parseResult.type as keyof typeof EXTRACT_JOB_TYPE],
-            parseResult.streamId,
-            parseResult.logEventIdx,
-            () => {
+            extractJobType: EXTRACT_JOB_TYPE[type as keyof typeof EXTRACT_JOB_TYPE],
+            logEventIdx: logEventIdx,
+            onUploadProgress: () => {
                 setQueryState(QUERY_LOADING_STATE.WAITING);
-            }
-        )
+            },
+            streamId: streamId,
+        })
             .then(({data}) => {
                 setQueryState(QUERY_LOADING_STATE.LOADING);
 

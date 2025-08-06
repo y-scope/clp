@@ -1,10 +1,12 @@
 import {Nullable} from "src/typings/common";
 
-import DetailsCard from "./DetailsCard";
+import {DashboardCard} from "../../../components/DashboardCard";
+import Stat from "../../../components/Stat";
 
 
 interface FilesProps {
     numFiles: Nullable<number>;
+    isLoading: boolean;
 }
 
 /**
@@ -12,13 +14,17 @@ interface FilesProps {
  *
  * @param props
  * @param props.numFiles
+ * @param props.isLoading
  * @return
  */
-const Files = ({numFiles}: FilesProps) => {
+const Files = ({numFiles, isLoading}: FilesProps) => {
     return (
-        <DetailsCard
-            stat={(numFiles ?? 0).toString()}
-            title={"Files"}/>
+        <DashboardCard
+            isLoading={isLoading}
+            title={"Files"}
+        >
+            <Stat text={(numFiles ?? 0).toString()}/>
+        </DashboardCard>
     );
 };
 

@@ -619,21 +619,6 @@ def dispatch_job_and_update_db(
     )
 
 
-def _validate_dataset(
-    db_cursor,
-    table_prefix: str,
-    dataset: str,
-    existing_datasets: Set[str],
-) -> bool:
-    if dataset in existing_datasets:
-        return True
-
-    # NOTE: This assumes we never delete a dataset.
-    new_datasets = fetch_existing_datasets(db_cursor, table_prefix)
-    existing_datasets.update(new_datasets)
-    return dataset in existing_datasets
-
-
 def handle_pending_query_jobs(
     db_conn_pool,
     clp_metadata_db_conn_params: Dict[str, any],
@@ -662,21 +647,22 @@ def handle_pending_query_jobs(
 
             table_prefix = clp_metadata_db_conn_params["table_prefix"]
             dataset = QueryJobConfig.parse_obj(job_config).dataset
-            if dataset is not None and not _validate_dataset(
-                db_cursor, table_prefix, dataset, existing_datasets
-            ):
-                logger.error(f"Dataset `{dataset}` doesn't exist.")
-                if not set_job_or_task_status(
-                    db_conn,
-                    QUERY_JOBS_TABLE_NAME,
-                    job_id,
-                    QueryJobStatus.FAILED,
-                    QueryJobStatus.PENDING,
-                    start_time=datetime.datetime.now(),
-                    duration=0,
-                ):
-                    logger.error(f"Failed to set job {job_id} as failed.")
-                continue
+            if dataset is not None and dataset not in existing_datasets:
+                # NOTE: This assumes we never delete a dataset.
+                existing_datasets.update(fetch_existing_datasets(db_cursor, table_prefix))
+                if dataset not in existing_datasets:
+                    logger.error(f"Dataset `{dataset}` doesn't exist.")
+                    if not set_job_or_task_status(
+                        db_conn,
+                        QUERY_JOBS_TABLE_NAME,
+                        job_id,
+                        QueryJobStatus.FAILED,
+                        QueryJobStatus.PENDING,
+                        start_time=datetime.datetime.now(),
+                        duration=0,
+                    ):
+                        logger.error(f"Failed to set job {job_id} as failed.")
+                    continue
 
             if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
                 # Avoid double-dispatch when a job is WAITING_FOR_REDUCER
