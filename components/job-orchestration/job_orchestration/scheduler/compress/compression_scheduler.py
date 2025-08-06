@@ -2,6 +2,7 @@ import argparse
 import datetime
 import logging
 import os
+import signal
 import sys
 import time
 from contextlib import closing
@@ -48,6 +49,18 @@ from pydantic import ValidationError
 logger = get_logger("compression_scheduler")
 
 scheduled_jobs = {}
+
+recieved_signal = False
+
+
+def signal_handler(sig, frame):
+    global recieved_signal
+    recieved_signal = True
+    logger.info("Received SIGTERM in compression scheduler")
+
+
+# Register the signal handler
+signal.signal(signal.SIGTERM, signal_handler)
 
 
 def fetch_new_jobs(db_cursor):
@@ -430,13 +443,14 @@ def main(argv):
         # Start Job Processing Loop
         while True:
             try:
-                search_and_schedule_new_tasks(
-                    db_conn,
-                    db_cursor,
-                    clp_metadata_db_connection_config,
-                    clp_config.archive_output,
-                    existing_datasets,
-                )
+                if False == recieved_signal:
+                    search_and_schedule_new_tasks(
+                        db_conn,
+                        db_cursor,
+                        clp_metadata_db_connection_config,
+                        clp_config.archive_output,
+                        existing_datasets,
+                    )
                 poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
