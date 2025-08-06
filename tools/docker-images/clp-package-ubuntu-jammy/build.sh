@@ -22,7 +22,7 @@ fi
 
 build_cmd=(
     docker build
-    --tag clp-package-${arch_name}-ubuntu-jammy:dev
+    --tag "clp-package-${arch_name}-ubuntu-jammy:dev"
     "$repo_root"
     --file "${script_dir}/Dockerfile"
 )
