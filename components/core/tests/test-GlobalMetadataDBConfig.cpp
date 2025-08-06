@@ -122,18 +122,52 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
 }
 
 TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
-    constexpr std::array argv{"test", "--db-type", "sqlite"};
-    GlobalMetadataDBConfig config;
-    auto const vm = parse_args(argv, config);
+    SECTION("SQLite with db-host argument") {
+        constexpr std::array argv{"test", "--db-type", "sqlite", "--db-host", "test-host"};
+        GlobalMetadataDBConfig config;
 
-    set_env_var("CLP_DB_USER", "test-user");
-    set_env_var("CLP_DB_PASS", "test-pass");
+        REQUIRE_NOTHROW(parse_args(argv, config));
+        REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
+    }
 
-    config.read_credentials_from_env_if_needed();
-    REQUIRE(config.get_metadata_db_username().empty());
-    REQUIRE(config.get_metadata_db_password().empty());
-    REQUIRE_NOTHROW(config.validate());
+    SECTION("SQLite with db-port argument") {
+        constexpr std::array argv{"test", "--db-type", "sqlite", "--db-port", "8888"};
+        GlobalMetadataDBConfig config;
 
-    unset_env_var("CLP_DB_USER");
-    unset_env_var("CLP_DB_PASS");
+        REQUIRE_NOTHROW(parse_args(argv, config));
+        REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
+    }
+
+    SECTION("SQLite with db-name argument") {
+        constexpr std::array argv{"test", "--db-type", "sqlite", "--db-name", "test-db"};
+        GlobalMetadataDBConfig config;
+
+        REQUIRE_NOTHROW(parse_args(argv, config));
+        REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
+    }
+
+    SECTION("SQLite with db-table-prefix argument") {
+        constexpr std::array argv{"test", "--db-type", "sqlite", "--db-table-prefix", "test_prefix_"};
+        GlobalMetadataDBConfig config;
+
+        REQUIRE_NOTHROW(parse_args(argv, config));
+        REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
+    }
+
+    SECTION("With username and password") {
+        constexpr std::array argv{"test", "--db-type", "sqlite"};
+        GlobalMetadataDBConfig config;
+        auto const vm = parse_args(argv, config);
+
+        set_env_var("CLP_DB_USER", "test-user");
+        set_env_var("CLP_DB_PASS", "test-pass");
+
+        config.read_credentials_from_env_if_needed();
+        REQUIRE(config.get_metadata_db_username().empty());
+        REQUIRE(config.get_metadata_db_password().empty());
+        REQUIRE_NOTHROW(config.validate());
+
+        unset_env_var("CLP_DB_USER");
+        unset_env_var("CLP_DB_PASS");
+    }
 }
