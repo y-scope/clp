@@ -19,7 +19,8 @@ const routes: FastifyPluginAsync = async (fastify) => {
 
     let streamFilesDir = settings.StreamFilesDir;
 
-    // Only register /streams if `streamFilesDir` is set (i.e. fs support is configured in package)
+    // Register /streams only if `streamFilesDir` is set (i.e., FS support is enabled in the
+    // package)
     // Disable no-unnecessary-condition since linter doesn't understand that settings
     // values are not hardcoded.
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
