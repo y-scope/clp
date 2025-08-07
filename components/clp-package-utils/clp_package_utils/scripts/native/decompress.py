@@ -113,7 +113,7 @@ def handle_extract_stream_cmd(
     :return: 0 on success, -1 otherwise.
     """
     # Validate and load config file
-    clp_config = load_and_validate_config_file(
+    clp_config = validate_and_load_config_file(
         clp_home, pathlib.Path(parsed_args.config), default_config_file_path
     )
     if clp_config is None:
