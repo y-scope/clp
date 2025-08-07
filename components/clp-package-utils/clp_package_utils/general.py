@@ -272,15 +272,6 @@ def generate_container_config(
             container_clp_config.stream_output.get_directory(),
         )
 
-    # Only create the mount if the directory exists
-    if clp_config.aws_config_directory is not None:
-        container_clp_config.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
-        docker_mounts.aws_config_dir = DockerMount(
-            DockerMountType.BIND,
-            clp_config.aws_config_directory,
-            container_clp_config.aws_config_directory,
-        )
-
     if not is_path_already_mounted(
         clp_home,
         CONTAINER_CLP_HOME,
@@ -291,6 +282,15 @@ def generate_container_config(
             DockerMountType.BIND,
             clp_config.generated_config_file_path,
             container_clp_config.generated_config_file_path,
+        )
+
+    # Only create the mount if the directory exists
+    if clp_config.aws_config_directory is not None:
+        container_clp_config.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
+        docker_mounts.aws_config_dir = DockerMount(
+            DockerMountType.BIND,
+            clp_config.aws_config_directory,
+            container_clp_config.aws_config_directory,
         )
 
     return container_clp_config, docker_mounts

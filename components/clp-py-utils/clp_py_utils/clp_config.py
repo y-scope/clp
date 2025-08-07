@@ -608,8 +608,8 @@ class CLPConfig(BaseModel):
     stream_output: StreamOutput = StreamOutput()
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
-    aws_config_directory: Optional[pathlib.Path] = None
     generated_config_file_path: pathlib.Path = logs_directory / ".clp-config.yml"
+    aws_config_directory: Optional[pathlib.Path] = None
 
     _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
 
