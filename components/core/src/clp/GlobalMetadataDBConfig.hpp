@@ -29,9 +29,10 @@ public:
 
     /**
      * Overloads operator >> to read MetadataDBType from an input stream.
+     *
      * @param in
      * @param metadata_db_type
-     * @return std::istream& reference to the input stream
+     * @return The input stream.
      */
     friend auto operator>>(std::istream& in, MetadataDBType& metadata_db_type) -> std::istream&;
 
@@ -41,21 +42,25 @@ public:
     // Methods
     /**
      * Adds database-related command-line options to the given options_description.
+     *
      * @param options_description
      */
     auto add_command_line_options(boost::program_options::options_description& options_description)
             -> void;
 
     /**
-     * Reads database credentials from environment variables if required by the database type.
-     * - CLP_DB_USER for database username
-     * - CLP_DB_PASS for database password
+     * Reads database credentials from the following environment variables, if required by the
+     * database type:
+     *
+     * - CLP_DB_USER for the database username
+     * - CLP_DB_PASS for the database password
      */
     auto read_credentials_from_env_if_needed() -> void;
 
     /**
      * Validates that all required parameters are available and well-formed.
-     * @throw std::invalid_argument if validation fails
+     *
+     * @throw std::invalid_argument if validation fails.
      */
     auto validate() const -> void;
 

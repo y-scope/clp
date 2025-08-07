@@ -462,7 +462,7 @@ def run_clp(
                         archive_path,
                     ]
 
-                    # Set database credentials in environment variables for indexer
+                    # Set environment variables for database credentials
                     indexer_env = dict(os.environ)
                     indexer_env.update(
                         _get_db_connection_env_vars(clp_metadata_db_connection_config)
