@@ -12,6 +12,9 @@ set(ANTLR_GENERATED_SOURCES
 )
 
 if(CLP_BUILD_CLP_S_SEARCH_SQL)
+        find_package(antlr4-runtime REQUIRED)
+        find_package(spdlog REQUIRED)
+
         add_library(
                 clp_s_search_sql
                 ${ANTLR_GENERATED_SOURCES}

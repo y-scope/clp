@@ -81,6 +81,19 @@ set(
 )
 
 if(CLP_BUILD_EXECUTABLES)
+        find_package(absl REQUIRED)
+        clp_find_boost()
+        clp_find_curl()
+        find_package(date REQUIRED)
+        clp_find_mariadb_client()
+        find_package(nlohmann_json REQUIRED)
+        find_package(OpenSSL REQUIRED)
+        find_package(simdjson REQUIRED)
+        find_package(spdlog REQUIRED)
+        find_package(yaml-cpp REQUIRED)
+        clp_find_ystdlib()
+        clp_find_zstd()
+
         add_executable(indexer ${INDEXER_SOURCES})
         target_compile_features(indexer PRIVATE cxx_std_20)
         target_link_libraries(indexer
