@@ -82,7 +82,7 @@ auto GlobalMetadataDBConfig::add_command_line_options(
 
 auto GlobalMetadataDBConfig::read_credentials_from_env_if_needed() -> void {
     if (MetadataDBType::SQLite == m_metadata_db_type) {
-        // SQLite does not require credentials.
+        // SQLite doesn't require extra parameters.
         return;
     }
 
