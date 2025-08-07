@@ -335,7 +335,8 @@ def _delete_archives(
     """
 
     archive_ids: typing.List[str]
-    logger.info("Starting to delete archives from the database.")
+    dataset_specific_message = f" of dataset `{dataset}`" if dataset is not None else ""
+    logger.info(f"Starting to delete archives{dataset_specific_message} from the database.")
     try:
         sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
         clp_db_connection_params: dict[str, any] = (
