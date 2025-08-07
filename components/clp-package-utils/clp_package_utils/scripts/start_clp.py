@@ -48,8 +48,10 @@ from clp_package_utils.general import (
     DockerMount,
     DockerMountType,
     dump_container_config,
-    generate_container_environment_variables,
+    generate_celery_connection_environment_variables,
+    generate_common_environment_variables,
     generate_container_config,
+    generate_credential_environment_variables,
     generate_worker_config,
     get_clp_home,
     is_container_exited,
@@ -241,9 +243,12 @@ def create_db_tables(
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-    env_vars = generate_container_environment_variables(
-        container_clp_config, include_db_credentials=True
-    )
+    env_vars = [
+        *generate_common_environment_variables(container_clp_config),
+        *generate_credential_environment_variables(
+            container_clp_config, include_db_credentials=True
+        ),
+    ]
     necessary_mounts = [
         mounts.clp_home,
         mounts.data_dir,
@@ -599,27 +604,27 @@ def generic_start_scheduler(
     ]
     # fmt: on
 
-    necessary_env_vars = generate_container_environment_variables(
-        container_clp_config,
-        include_db_credentials=True,
-        include_celery_connection_params=True,
-        extra_vars=[
-            f"CLP_LOGS_DIR={container_logs_dir}",
-            f"CLP_LOGGING_LEVEL={clp_config.query_scheduler.logging_level}",
-        ],
-    )
+    env_vars = [
+        *generate_common_environment_variables(container_clp_config),
+        *generate_credential_environment_variables(
+            container_clp_config, include_db_credentials=True
+        ),
+        *generate_celery_connection_environment_variables(container_clp_config),
+        f"CLP_LOGS_DIR={container_logs_dir}",
+        f"CLP_LOGGING_LEVEL={clp_config.query_scheduler.logging_level}",
+    ]
     necessary_mounts = [mounts.clp_home, mounts.logs_dir, mounts.generated_config_dir]
     aws_mount, aws_env_vars = generate_container_auth_options(clp_config, component_name)
     if aws_mount:
         necessary_mounts.append(mounts.aws_config_dir)
     if aws_env_vars:
-        necessary_env_vars.extend(aws_env_vars)
+        env_vars.extend(aws_env_vars)
     if (
         COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name
         and StorageType.FS == clp_config.logs_input.type
     ):
         necessary_mounts.append(mounts.input_logs_dir)
-    append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
+    append_docker_options(container_start_cmd, necessary_mounts, env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
     # fmt: off
@@ -730,17 +735,14 @@ def generic_start_worker(
     ]
     # fmt: on
 
-    necessary_env_vars = generate_container_environment_variables(
-        container_clp_config,
-        include_clp_home=True,
-        include_celery_connection_params=True,
-        extra_vars=[
-            f"CLP_CONFIG_PATH={container_clp_config.generated_config_file_path}",
-            f"CLP_LOGS_DIR={container_logs_dir}",
-            f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
-            f"CLP_WORKER_LOG_PATH={container_worker_log_path}",
-        ],
-    )
+    env_vars = [
+        *generate_common_environment_variables(include_clp_home=True),
+        *generate_celery_connection_environment_variables(container_clp_config),
+        f"CLP_CONFIG_PATH={container_clp_config.generated_config_file_path}",
+        f"CLP_LOGS_DIR={container_logs_dir}",
+        f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
+        f"CLP_WORKER_LOG_PATH={container_worker_log_path}",
+    ]
     necessary_mounts = [
         mounts.clp_home,
         mounts.data_dir,
@@ -755,9 +757,9 @@ def generic_start_worker(
     if aws_mount:
         necessary_mounts.append(mounts.aws_config_dir)
     if aws_env_vars:
-        necessary_env_vars.extend(aws_env_vars)
+        env_vars.extend(aws_env_vars)
 
-    append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
+    append_docker_options(container_start_cmd, necessary_mounts, env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
     worker_cmd = [
@@ -923,16 +925,16 @@ def start_webui(
     # fmt: on
     container_cmd.extend(container_cmd_extra_opts)
 
-    necessary_env_vars = generate_container_environment_variables(
-        container_clp_config,
-        include_db_credentials=True,
-        extra_vars=[
-            f"NODE_PATH={node_path}",
-            f"HOST={clp_config.webui.host}",
-            f"PORT={clp_config.webui.port}",
-            f"NODE_ENV=production",
-        ],
-    )
+    env_vars = [
+        *generate_common_environment_variables(container_clp_config),
+        *generate_credential_environment_variables(
+            container_clp_config, include_db_credentials=True
+        ),
+        f"NODE_PATH={node_path}",
+        f"HOST={clp_config.webui.host}",
+        f"PORT={clp_config.webui.port}",
+        f"NODE_ENV=production",
+    ]
     necessary_mounts = [
         mounts.clp_home,
         mounts.stream_output_dir,
@@ -941,8 +943,8 @@ def start_webui(
         auth = stream_storage.s3_config.aws_authentication
         if AwsAuthType.credentials == auth.type:
             credentials = auth.credentials
-            necessary_env_vars.append(f"AWS_ACCESS_KEY_ID={credentials.access_key_id}")
-            necessary_env_vars.append(f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}")
+            env_vars.append(f"AWS_ACCESS_KEY_ID={credentials.access_key_id}")
+            env_vars.append(f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}")
         else:
             aws_mount, aws_env_vars = generate_container_auth_options(
                 clp_config, WEBUI_COMPONENT_NAME
@@ -950,8 +952,8 @@ def start_webui(
             if aws_mount:
                 necessary_mounts.append(mounts.aws_config_dir)
             if aws_env_vars:
-                necessary_env_vars.extend(aws_env_vars)
-    append_docker_options(container_cmd, necessary_mounts, necessary_env_vars)
+                env_vars.extend(aws_env_vars)
+    append_docker_options(container_cmd, necessary_mounts, env_vars)
     container_cmd.append(clp_config.execution_container)
 
     node_cmd = [
@@ -996,17 +998,17 @@ def start_reducer(
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-    env_vars = generate_container_environment_variables(
-        container_clp_config,
-        include_clp_home=True,
-        include_db_credentials=True,
-        include_queue_credentials=True,
-        include_redis_credentials=True,
-        extra_vars=[
-            f"CLP_LOGS_DIR={container_logs_dir}",
-            f"CLP_LOGGING_LEVEL={clp_config.reducer.logging_level}",
-        ],
-    )
+    env_vars = [
+        *generate_common_environment_variables(container_clp_config, include_clp_home=True),
+        *generate_credential_environment_variables(
+            container_clp_config,
+            include_db_credentials=True,
+            include_queue_credentials=True,
+            include_redis_credentials=True,
+        ),
+        f"CLP_LOGS_DIR={container_logs_dir}",
+        f"CLP_LOGGING_LEVEL={clp_config.reducer.logging_level}",
+    ]
     necessary_mounts = [
         mounts.clp_home,
         mounts.logs_dir,
