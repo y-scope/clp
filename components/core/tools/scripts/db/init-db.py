@@ -48,7 +48,9 @@ def main(argv):
     try:
         # Create database
         try:
-            mysql_cursor.execute("CREATE DATABASE IF NOT EXISTS `{}` DEFAULT CHARACTER SET 'utf8'".format(db_name))
+            mysql_cursor.execute(
+                "CREATE DATABASE IF NOT EXISTS `{}` DEFAULT CHARACTER SET 'utf8'".format(db_name)
+            )
         except mariadb.Error as err:
             logger.error("Failed to create database - {}".format(err.msg))
             return -1
