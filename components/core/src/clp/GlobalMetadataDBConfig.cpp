@@ -59,25 +59,22 @@ auto GlobalMetadataDBConfig::add_command_line_options(
          boost::program_options::value<int>(&m_metadata_db_port)->default_value(
              cDefaultMetadataDbPort),
                 fmt::format(
-                    "{} Database port (default: {})",
-                    cMetadataDbTypeMysqlOptDescPrefix,
-                    cDefaultMetadataDbPort
+                    "{} Database port",
+                    cMetadataDbTypeMysqlOptDescPrefix
                 ).c_str())
         ("db-name",
          boost::program_options::value<string>(&m_metadata_db_name)->default_value(
              cDefaultMetadataDbName.data()),
              fmt::format(
-                 "{} Database name (default: {})",
-                 cMetadataDbTypeMysqlOptDescPrefix,
-                 cDefaultMetadataDbName.data()
+                 "{} Database name",
+                 cMetadataDbTypeMysqlOptDescPrefix
              ).c_str())
         ("db-table-prefix",
          boost::program_options::value<string>(&m_metadata_table_prefix)->default_value(
              cDefaultMetadataTablePrefix.data()),
                 fmt::format(
-                    "{} Database table prefix (default: {})",
-                    cMetadataDbTypeMysqlOptDescPrefix,
-                    cDefaultMetadataTablePrefix.data()
+                    "{} Database table prefix",
+                    cMetadataDbTypeMysqlOptDescPrefix
                 ).c_str());
 }
 
