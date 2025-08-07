@@ -22,6 +22,7 @@ public:
     };
 
     // Constants
+    // NOTE: The strings in the array must match the order of the enums values in `MetadataDBType`.
     static constexpr std::
             array<std::string_view, enum_to_underlying_type(MetadataDBType::MetadataDBTypeLength)>
                     cMetadataDBTypeNames{"sqlite", "mysql"};
