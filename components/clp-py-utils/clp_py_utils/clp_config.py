@@ -586,6 +586,13 @@ class WebUi(BaseModel):
         return field
 
 
+def _get_env_var(name) -> str:
+    try:
+        return os.environ[name]
+    except KeyError as ex:
+        raise ValueError(f"Missing environment variable: {ex}")
+
+
 class CLPConfig(BaseModel):
     execution_container: Optional[str] = None
 
@@ -760,24 +767,15 @@ class CLPConfig(BaseModel):
             )
 
     def load_database_credentials_from_env(self):
-        try:
-            self.database.username = os.environ["CLP_DB_USER"]
-            self.database.password = os.environ["CLP_DB_PASS"]
-        except KeyError as ex:
-            raise ValueError(f"Missing environment variable: {ex}")
+        self.database.username = _get_env_var("CLP_DB_USER")
+        self.database.password = _get_env_var("CLP_DB_PASS")
 
     def load_queue_credentials_from_env(self):
-        try:
-            self.queue.username = os.environ["CLP_QUEUE_USER"]
-            self.queue.password = os.environ["CLP_QUEUE_PASS"]
-        except KeyError as ex:
-            raise ValueError(f"Missing environment variable: {ex}")
+        self.queue.username = _get_env_var("CLP_QUEUE_USER")
+        self.queue.password = _get_env_var("CLP_QUEUE_PASS")
 
     def load_redis_credentials_from_env(self):
-        try:
-            self.redis.password = os.environ["CLP_REDIS_PASS"]
-        except KeyError as ex:
-            raise ValueError(f"Missing environment variable: {ex}")
+        self.redis.password = _get_env_var("CLP_REDIS_PASS")
 
     def get_generated_config_file_path(self) -> pathlib.Path:
         return self.logs_directory / ".clp-config.yml"
