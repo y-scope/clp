@@ -116,6 +116,12 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                 REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
                 unset_env_var("CLP_DB_PASS");
             }
+            SECTION("Username set but password missing") {
+                set_env_var("CLP_DB_USER", "test-user");
+                config.read_credentials_from_env_if_needed();
+                REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
+                unset_env_var("CLP_DB_USER");
+            }
         }
     }
 
@@ -277,8 +283,8 @@ TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
         set_env_var("CLP_DB_PASS", "test-pass");
 
         config.read_credentials_from_env_if_needed();
-        REQUIRE(config.get_metadata_db_username().empty());
-        REQUIRE(config.get_metadata_db_password().empty());
+        REQUIRE_FALSE(config.get_metadata_db_username().has_value());
+        REQUIRE_FALSE(config.get_metadata_db_password().has_value());
         REQUIRE_NOTHROW(config.validate());
 
         unset_env_var("CLP_DB_USER");

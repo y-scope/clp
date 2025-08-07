@@ -110,12 +110,12 @@ auto GlobalMetadataDBConfig::read_credentials_from_env_if_needed() -> void {
 
     auto const* db_username{std::getenv("CLP_DB_USER")};
     if (nullptr != db_username) {
-        m_metadata_db_username = db_username;
+        m_metadata_db_username.emplace(db_username);
     }
 
     auto const* db_password{std::getenv("CLP_DB_PASS")};
     if (nullptr != db_password) {
-        m_metadata_db_password = db_password;
+        m_metadata_db_password.emplace(db_password);
     }
 }
 
@@ -126,7 +126,7 @@ auto GlobalMetadataDBConfig::validate() const -> void {
             || cDefaultMetadataDbPort != m_metadata_db_port
             || cDefaultMetadataDbName != m_metadata_db_name
             || cDefaultMetadataTablePrefix != m_metadata_table_prefix
-            || false == m_metadata_db_username.empty() || false == m_metadata_db_password.empty())
+            || m_metadata_db_username.has_value() || m_metadata_db_password.has_value())
         {
             throw invalid_argument(
                     "MySQL-specific parameters cannot be used with --db-type='sqlite'."
@@ -159,10 +159,12 @@ auto GlobalMetadataDBConfig::validate() const -> void {
         throw invalid_argument("Database '--db-table_prefix' is empty.");
     }
 
-    if (m_metadata_db_username.empty()) {
-        throw invalid_argument("Database 'CLP_DB_USER' not specified or empty.");
+    if (false == m_metadata_db_username.has_value()) {
+        throw invalid_argument("Database 'CLP_DB_USER' not specified.");
     }
 
-    // NOTE: No need to check `m_metadata_db_password` because `CLP_DB_PASS` is optional.
+    if (false == m_metadata_db_password.has_value()) {
+        throw invalid_argument("Database 'CLP_DB_PASS' not specified.");
+    }
 }
 }  // namespace clp

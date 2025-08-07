@@ -2,6 +2,7 @@
 #define CLP_GLOBALMETADATADBCONFIG_HPP
 
 #include <cstdint>
+#include <optional>
 #include <string>
 
 #include <boost/program_options.hpp>
@@ -75,11 +76,11 @@ public:
         return m_metadata_db_name;
     }
 
-    [[nodiscard]] auto get_metadata_db_username() const -> std::string const& {
+    [[nodiscard]] auto get_metadata_db_username() const -> std::optional<std::string> const& {
         return m_metadata_db_username;
     }
 
-    [[nodiscard]] auto get_metadata_db_password() const -> std::string const& {
+    [[nodiscard]] auto get_metadata_db_password() const -> std::optional<std::string> const& {
         return m_metadata_db_password;
     }
 
@@ -96,8 +97,8 @@ private:
     std::string m_metadata_db_name;
     std::string m_metadata_table_prefix;
 
-    std::string m_metadata_db_username;
-    std::string m_metadata_db_password;
+    std::optional<std::string> m_metadata_db_username;
+    std::optional<std::string> m_metadata_db_password;
 };
 }  // namespace clp
 
