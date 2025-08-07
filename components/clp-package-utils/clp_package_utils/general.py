@@ -37,8 +37,6 @@ from clp_py_utils.core import (
 )
 from strenum import KebabCaseStrEnum
 
-logger = logging.getLogger(__file__)
-
 # CONSTANTS
 EXTRACT_FILE_CMD = "x"
 EXTRACT_IR_CMD = "i"
