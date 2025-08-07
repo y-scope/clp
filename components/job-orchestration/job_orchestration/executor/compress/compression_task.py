@@ -431,7 +431,6 @@ def run_clp(
                         # which case the process will still return success.
                         proc.terminate()
 
-            table_prefix = clp_metadata_db_connection_config["table_prefix"]
             if s3_error is None:
                 # We've started a new archive so add the previous archive's last reported size to
                 # the total
@@ -440,6 +439,7 @@ def run_clp(
                 with closing(sql_adapter.create_connection(True)) as db_conn, closing(
                     db_conn.cursor(dictionary=True)
                 ) as db_cursor:
+                    table_prefix = clp_metadata_db_connection_config["table_prefix"]
                     if StorageEngine.CLP_S == clp_storage_engine:
                         update_archive_metadata(
                             db_cursor, table_prefix, dataset, last_archive_stats
