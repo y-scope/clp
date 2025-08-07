@@ -48,7 +48,7 @@ from clp_package_utils.general import (
     DockerMount,
     DockerMountType,
     dump_container_config,
-    generate_common_environment_variables,
+    generate_container_environment_variables,
     generate_container_config,
     generate_worker_config,
     get_clp_home,
@@ -241,7 +241,7 @@ def create_db_tables(
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-    env_vars = generate_common_environment_variables(
+    env_vars = generate_container_environment_variables(
         container_clp_config, include_db_credentials=True
     )
     necessary_mounts = [
@@ -599,7 +599,7 @@ def generic_start_scheduler(
     ]
     # fmt: on
 
-    necessary_env_vars = generate_common_environment_variables(
+    necessary_env_vars = generate_container_environment_variables(
         container_clp_config,
         include_db_credentials=True,
         include_celery_connection_params=True,
@@ -730,7 +730,7 @@ def generic_start_worker(
     ]
     # fmt: on
 
-    necessary_env_vars = generate_common_environment_variables(
+    necessary_env_vars = generate_container_environment_variables(
         container_clp_config,
         include_clp_home=True,
         include_celery_connection_params=True,
@@ -923,7 +923,7 @@ def start_webui(
     # fmt: on
     container_cmd.extend(container_cmd_extra_opts)
 
-    necessary_env_vars = generate_common_environment_variables(
+    necessary_env_vars = generate_container_environment_variables(
         container_clp_config,
         include_db_credentials=True,
         extra_vars=[
@@ -996,7 +996,7 @@ def start_reducer(
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-    env_vars = generate_common_environment_variables(
+    env_vars = generate_container_environment_variables(
         container_clp_config,
         include_clp_home=True,
         include_db_credentials=True,

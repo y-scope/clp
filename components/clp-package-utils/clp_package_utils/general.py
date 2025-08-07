@@ -618,8 +618,8 @@ def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
         )
 
 
-def generate_common_environment_variables(
-    container_clp_config,
+def generate_container_environment_variables(
+    container_clp_config: CLPConfig,
     include_clp_home=True,
     include_db_credentials=False,
     include_queue_credentials=False,
