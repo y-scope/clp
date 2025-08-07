@@ -54,7 +54,6 @@ const RunButton = () => {
                     <Button
                         className={styles["cancelButton"] || ""}
                         color={"red"}
-                        disabled={isQueryStringEmpty}
                         icon={<CloseOutlined/>}
                         size={"large"}
                         variant={"solid"}

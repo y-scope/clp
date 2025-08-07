@@ -15,8 +15,6 @@ import {SEARCH_UI_STATE} from "../../SearchState/typings";
  */
 const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreationSchema) => {
     const {updateSearchJobId, updateSearchUiState, searchUiState} = useSearchStore.getState();
-    updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
-
 
     // User should NOT be able to submit a new query while an existing query is in progress.
     if (
@@ -27,6 +25,8 @@ const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreationSchema) => {
 
         return;
     }
+
+    updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 
     submitQuery(payload)
         .then((result) => {
