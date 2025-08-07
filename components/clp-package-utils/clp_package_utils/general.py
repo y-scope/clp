@@ -10,7 +10,7 @@ import subprocess
 import typing
 import uuid
 from enum import auto
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -329,7 +329,7 @@ def dump_container_config(
 
 def generate_container_start_cmd(
     container_name: str,
-    extra_env_vars: dict[str, str],
+    extra_env_vars: Dict[str, str],
     container_mounts: List[Optional[DockerMount]],
     container_image: str,
 ) -> List[str]:
