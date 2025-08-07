@@ -402,12 +402,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/SchemaWriter.hpp
     src/clp_s/search/AddTimestampConditions.cpp
     src/clp_s/search/AddTimestampConditions.hpp
-    src/clp_s/search/clp_search/EncodedVariableInterpreter.cpp
-    src/clp_s/search/clp_search/EncodedVariableInterpreter.hpp
-    src/clp_s/search/clp_search/Grep.cpp
-    src/clp_s/search/clp_search/Grep.hpp
-    src/clp_s/search/clp_search/Query.cpp
-    src/clp_s/search/clp_search/Query.hpp
     src/clp_s/search/EvaluateRangeIndexFilters.cpp
     src/clp_s/search/EvaluateRangeIndexFilters.hpp
     src/clp_s/search/EvaluateTimestampIndex.cpp
@@ -429,10 +423,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/TimestampEntry.hpp
     src/clp_s/Utils.cpp
     src/clp_s/Utils.hpp
-    src/clp_s/VariableDecoder.cpp
-    src/clp_s/VariableDecoder.hpp
-    src/clp_s/VariableEncoder.cpp
-    src/clp_s/VariableEncoder.hpp
     src/clp_s/ZstdCompressor.cpp
     src/clp_s/ZstdCompressor.hpp
     src/clp_s/ZstdDecompressor.cpp
