@@ -97,6 +97,12 @@ def main(argv: typing.List[str]) -> int:
         help="CLP configuration file.",
     )
     args_parser.add_argument(
+        "--debug",
+        "-d",
+        action="store_true",
+        help="Prints debug log messages.",
+    )
+    args_parser.add_argument(
         "--dataset",
         type=str,
         default=None,
@@ -177,6 +183,10 @@ def main(argv: typing.List[str]) -> int:
     )
 
     parsed_args: argparse.Namespace = args_parser.parse_args(argv[1:])
+    if parsed_args.debug:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     # Validate and load config file
     config_file_path: Path = Path(parsed_args.config)
@@ -259,7 +269,8 @@ def _find_archives(
     :return: 0 on success, 1 on failure.
     """
     archive_ids: typing.List[str]
-    logger.info("Starting to find archives from the database.")
+    dataset_specific_message = f" of dataset `{dataset}`" if dataset is not None else ""
+    logger.info(f"Starting to find archives{dataset_specific_message} from the database.")
     try:
         sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
         clp_db_connection_params: dict[str, any] = (
