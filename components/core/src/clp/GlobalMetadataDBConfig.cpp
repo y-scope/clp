@@ -6,6 +6,7 @@
 #include <fmt/core.h>
 
 #include "type_utils.hpp"
+
 using std::invalid_argument;
 using std::string;
 
