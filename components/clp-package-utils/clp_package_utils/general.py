@@ -331,7 +331,7 @@ def generate_container_start_cmd(
     container_name: str,
     container_mounts: List[Optional[DockerMount]],
     container_image: str,
-    extra_env_vars: Optional[Dict[str, str]] = None
+    extra_env_vars: Optional[Dict[str, str]] = None,
 ) -> List[str]:
     """
     Generates the command to start a container with the given mounts and name.
