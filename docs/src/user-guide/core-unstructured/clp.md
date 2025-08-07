@@ -121,11 +121,11 @@ a MySQL-type database (e.g., MariaDB) as follows:
     statements in `tools/scripts/db/init-db.py` directly.
 * Run `tools/scripts/db/init-db.py`. This will initialize the database that CLP requires. Use
   command-line options to configure database connection parameters and set environment variables
-  for database credentials:
-  * `--db-host <host>` to specify the database host (default: `"localhost"`)
-  * `--db-port <port>` to specify the database port (default: `3306`)
-  * `--db-name <name>` to specify the database name (default: `"clp-db"`)
-  * `--db-table-prefix <prefix>` to specify the table prefix (default: `"clp_"`)
+  for database credentials. If a command-line option isn't specified, the default value is used:
+  * `--db-host <host>` to specify the database host
+  * `--db-port <port>` to specify the database port
+  * `--db-name <name>` to specify the database name
+  * `--db-table-prefix <prefix>` to specify the table prefix
   * Set the `CLP_DB_USER` environment variable for the database username
   * Set the `CLP_DB_PASS` environment variable for the database password
 * Run `clp` or `clg` with the same command-line options and environment variables, with the addition
