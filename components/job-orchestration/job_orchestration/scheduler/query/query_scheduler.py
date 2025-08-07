@@ -1139,7 +1139,7 @@ async def main(argv: List[str]) -> int:
         logger.error(err)
         return -1
     except Exception as ex:
-        logger.error(ex)
+        logger.exception(ex)
         return -1
 
     reducer_connection_queue = asyncio.Queue(32)
