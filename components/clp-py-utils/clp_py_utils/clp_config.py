@@ -608,7 +608,6 @@ class CLPConfig(BaseModel):
     stream_output: StreamOutput = StreamOutput()
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
-    generated_config_file_path: pathlib.Path = logs_directory / ".clp-config.yml"
     aws_config_directory: Optional[pathlib.Path] = None
 
     _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
@@ -621,9 +620,7 @@ class CLPConfig(BaseModel):
         self.stream_output.storage.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
-        self.generated_config_file_path = make_config_path_absolute(
-            clp_home, self.generated_config_file_path
-        )
+
         self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
 
     def validate_logs_input_config(self):
@@ -782,6 +779,9 @@ class CLPConfig(BaseModel):
         except KeyError as ex:
             raise ValueError(f"Missing environment variable: {ex}")
 
+    def get_generated_config_file_path(self) -> pathlib.Path:
+        return self.logs_directory / ".clp-config.yml"
+
     def dump_to_primitive_dict(self):
         d = self.dict()
         d["logs_input"] = self.logs_input.dump_to_primitive_dict()
@@ -795,9 +795,6 @@ class CLPConfig(BaseModel):
             d["aws_config_directory"] = str(self.aws_config_directory)
         else:
             d["aws_config_directory"] = None
-
-        # Remove non-exported fields
-        d.pop("generated_config_file_path", None)
 
         # Remove sensitive information
         d["database"].pop("username", None)

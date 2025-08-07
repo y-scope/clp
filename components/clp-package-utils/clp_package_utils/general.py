@@ -275,13 +275,13 @@ def generate_container_config(
     if not is_path_already_mounted(
         clp_home,
         CONTAINER_CLP_HOME,
-        clp_config.generated_config_file_path,
-        container_clp_config.generated_config_file_path,
+        clp_config.get_generated_config_file_path(),
+        container_clp_config.get_generated_config_file_path(),
     ):
         docker_mounts.generated_config_dir = DockerMount(
             DockerMountType.BIND,
-            clp_config.generated_config_file_path,
-            container_clp_config.generated_config_file_path,
+            clp_config.get_generated_config_file_path(),
+            container_clp_config.get_generated_config_file_path(),
         )
 
     # Only create the mount if the directory exists
@@ -399,11 +399,6 @@ def load_config_file(
     hostname = socket.gethostname()
     clp_config.data_directory /= hostname
     clp_config.logs_directory /= hostname
-    clp_config.generated_config_file_path = (
-        clp_config.generated_config_file_path.parent
-        / hostname
-        / clp_config.generated_config_file_path.name
-    )
 
     return clp_config
 
