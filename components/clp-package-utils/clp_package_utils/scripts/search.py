@@ -117,13 +117,13 @@ def main(argv):
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
         container_clp_config, clp_config, container_name
     )
+    necessary_mounts = [mounts.clp_home, mounts.logs_dir]
     extra_env_vars = {
         "CLP_DB_USER": clp_config.database.username,
         "CLP_DB_PASS": clp_config.database.password,
     }
-    necessary_mounts = [mounts.clp_home, mounts.logs_dir]
     container_start_cmd = generate_container_start_cmd(
-        container_name, extra_env_vars, necessary_mounts, clp_config.execution_container
+        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
     )
 
     # fmt: off

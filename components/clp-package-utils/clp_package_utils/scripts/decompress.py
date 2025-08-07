@@ -102,11 +102,6 @@ def handle_extract_file_cmd(
         container_clp_config, clp_config, container_name
     )
 
-    extra_env_vars = {
-        "CLP_DB_USER": clp_config.database.username,
-        "CLP_DB_PASS": clp_config.database.password,
-    }
-
     # Set up mounts
     extraction_dir.mkdir(exist_ok=True)
     container_extraction_dir = pathlib.Path("/") / "mnt" / "extraction-dir"
@@ -127,8 +122,13 @@ def handle_extract_file_cmd(
                 container_paths_to_extract_file_path,
             )
         )
+
+    extra_env_vars = {
+        "CLP_DB_USER": clp_config.database.username,
+        "CLP_DB_PASS": clp_config.database.password,
+    }
     container_start_cmd = generate_container_start_cmd(
-        container_name, extra_env_vars, necessary_mounts, clp_config.execution_container
+        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
     )
 
     # fmt: off
@@ -214,7 +214,7 @@ def handle_extract_stream_cmd(
     }
     necessary_mounts = [mounts.clp_home, mounts.logs_dir]
     container_start_cmd = generate_container_start_cmd(
-        container_name, extra_env_vars, necessary_mounts, clp_config.execution_container
+        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
     )
 
     # fmt: off

@@ -329,16 +329,16 @@ def dump_container_config(
 
 def generate_container_start_cmd(
     container_name: str,
-    extra_env_vars: Dict[str, str],
     container_mounts: List[Optional[DockerMount]],
     container_image: str,
+    extra_env_vars: Dict[str, str] = [],
 ) -> List[str]:
     """
     Generates the command to start a container with the given mounts and name.
     :param container_name:
-    :param extra_env_vars:
     :param container_mounts:
     :param container_image:
+    :param extra_env_vars:
     :return: The command.
     """
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
