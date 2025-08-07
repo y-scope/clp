@@ -42,11 +42,11 @@ def validate_storage_type(output_config: ArchiveOutput, storage_engine: str) -> 
 def get_expiry_epoch_secs(retention_minutes: int) -> int:
     """
     Returns a cutoff `expiry_epoch` based on the current timestamp and `retention_minutes`. Any
-    target with a timestamp (`ts`) less than `expiry_epoch` are considered expired.
+    candidate with a timestamp (`ts`) less than `expiry_epoch` is considered expired.
     The `expiry_epoch` is calculated as `expiry_epoch = cur_time - retention_secs`.
 
-    :param: retention_minutes: Retention period in minutes.
-    :return: The UTC epoch of the expiry time.
+    :param retention_minutes: Retention period in minutes.
+    :return: The UTC epoch representing the expiry cutoff time.
     """
     return int(time.time() - retention_minutes * MIN_TO_SECONDS)
 
@@ -55,16 +55,16 @@ def get_oid_with_expiry_time(expiry_epoch_secs: int) -> ObjectId:
     return ObjectId.from_datetime(datetime.fromtimestamp(expiry_epoch_secs, tz=timezone.utc))
 
 
-def execute_fs_deletion(fs_storage_config: FsStorage, deletion_candidate: str) -> None:
+def execute_fs_deletion(fs_storage_config: FsStorage, candidate: str) -> None:
     """
-    Deletes a target (either a directory or a file) from the filesystem storage. The full path
-    of the target is constructed as `fs_storage_config.directory / target`. The function performs
-    no action if the target does not exist.
+    Deletes a candidate (either a directory or a file) from the filesystem storage. The full path
+    of the candidate is constructed as `fs_storage_config.directory / candidate`. The function
+    performs no action if the candidate does not exist.
 
     :param fs_storage_config:
-    :param deletion_candidate: Relative path of the file or directory to delete.
+    :param candidate: Relative path of the file or directory to delete.
     """
-    path_to_delete = fs_storage_config.directory / deletion_candidate
+    path_to_delete = fs_storage_config.directory / candidate
     if not path_to_delete.exists():
         return
 
@@ -81,8 +81,8 @@ def execute_deletion(output_config: ArchiveOutput, deletion_candidates: Set[str]
     if StorageType.S3 == storage_type:
         s3_delete_objects(storage_config.s3_config, deletion_candidates)
     elif StorageType.FS == storage_type:
-        for target in deletion_candidates:
-            execute_fs_deletion(storage_config, target)
+        for candidate in deletion_candidates:
+            execute_fs_deletion(storage_config, candidate)
     else:
         raise ValueError(f"Unsupported Storage type: {storage_type}")
 
@@ -115,24 +115,26 @@ class DeletionCandidatesBuffer:
             for line in f:
                 self._candidates.add(line.strip())
 
-    def add_candidate(self, target: str) -> None:
-        if target not in self._candidates:
-            self._candidates.add(target)
-            self._candidates_to_persist.append(target)
+    def add_candidate(self, candidate: str) -> None:
+        if candidate not in self._candidates:
+            self._candidates.add(candidate)
+            self._candidates_to_persist.append(candidate)
 
     def get_candidates(self) -> Set[str]:
         return self._candidates
 
     def persist_new_candidates(self) -> None:
         """
-        Writes any new candidates added since initialization to the recovery file.
+        Writes any new candidates from `_candidates_to_persist` to the recovery file and clears
+        the buffer.
+        The method returns immediately without writing if `_candidates_to_persist` is empty.
         """
         if len(self._candidates_to_persist) == 0:
             return
 
         with open(self._recovery_file_path, "a") as f:
-            for target in self._candidates_to_persist:
-                f.write(f"{target}\n")
+            for candidate in self._candidates_to_persist:
+                f.write(f"{candidate}\n")
 
         self._candidates_to_persist.clear()
 

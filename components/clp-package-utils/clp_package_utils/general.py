@@ -582,7 +582,7 @@ def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
         )
 
 
-def is_retention_configured(clp_config: CLPConfig) -> bool:
+def is_retention_period_configured(clp_config: CLPConfig) -> bool:
     if clp_config.archive_output.retention_period is not None:
         return True
 

@@ -63,8 +63,10 @@ def _collect_and_sweep_expired_search_results(
             job_results_collection.drop()
             deleted_job_ids.append(int(job_id))
 
-    logger.debug(f"Deleted search results of job(s): {deleted_job_ids}.")
-
+    if len(deleted_job_ids) != 0:
+        logger.debug(f"Deleted search results of job(s): {deleted_job_ids}.")
+    else:
+        logger.debug(f"No search results matched the expiry criteria.")
 
 async def search_result_garbage_collector(
     clp_config: CLPConfig, log_directory: pathlib.Path, logging_level: str
