@@ -4,11 +4,11 @@
 #include <utility>
 #include <variant>
 
+#include "../clp/Defs.h"
 #include "DictionaryWriter.hpp"
 #include "FileWriter.hpp"
 #include "ParsedMessage.hpp"
 #include "TimestampDictionaryWriter.hpp"
-#include "VariableEncoder.hpp"
 #include "ZstdCompressor.hpp"
 
 namespace clp_s {
@@ -117,6 +117,9 @@ private:
 
 class ClpStringColumnWriter : public BaseColumnWriter {
 public:
+    // Types
+    using encoded_log_dict_id_t = uint64_t;
+
     // Constructor
     ClpStringColumnWriter(
             int32_t id,
@@ -141,16 +144,16 @@ public:
      * @param encoded_id
      * @return the encoded log dict id
      */
-    static int64_t get_encoded_log_dict_id(uint64_t encoded_id) {
-        return (int64_t)encoded_id & cLogDictIdMask;
+    static clp::logtype_dictionary_id_t get_encoded_log_dict_id(encoded_log_dict_id_t encoded_id) {
+        return static_cast<clp::logtype_dictionary_id_t>(encoded_id & cLogDictIdMask);
     }
 
     /**
      * @param encoded_id
      * @return The encoded offset
      */
-    static int64_t get_encoded_offset(uint64_t encoded_id) {
-        return ((int64_t)encoded_id & cOffsetMask) >> cOffsetBitPosition;
+    static uint64_t get_encoded_offset(encoded_log_dict_id_t encoded_id) {
+        return (encoded_id & cOffsetMask) >> cOffsetBitPosition;
     }
 
 private:
@@ -160,20 +163,21 @@ private:
      * @param offset
      * @return The encoded log dict id
      */
-    static int64_t encode_log_dict_id(uint64_t id, uint64_t offset) {
-        return ((int64_t)id) | ((int64_t)offset) << cOffsetBitPosition;
+    static encoded_log_dict_id_t
+    encode_log_dict_id(clp::logtype_dictionary_id_t id, uint64_t offset) {
+        return static_cast<encoded_log_dict_id_t>(id) | (offset << cOffsetBitPosition);
     }
 
     static constexpr int cOffsetBitPosition = 24;
-    static constexpr int64_t cLogDictIdMask = ~(-1ULL << cOffsetBitPosition);
-    static constexpr int64_t cOffsetMask = ~cLogDictIdMask;
+    static constexpr uint64_t cLogDictIdMask = (1ULL << cOffsetBitPosition) - 1;
+    static constexpr uint64_t cOffsetMask = ~cLogDictIdMask;
 
     std::shared_ptr<VariableDictionaryWriter> m_var_dict;
     std::shared_ptr<LogTypeDictionaryWriter> m_log_dict;
     LogTypeDictionaryEntry m_logtype_entry;
 
-    std::vector<int64_t> m_logtypes;
-    std::vector<int64_t> m_encoded_vars;
+    std::vector<encoded_log_dict_id_t> m_logtypes;
+    std::vector<clp::encoded_variable_t> m_encoded_vars;
 };
 
 class VariableStringColumnWriter : public BaseColumnWriter {
@@ -193,7 +197,7 @@ public:
 
 private:
     std::shared_ptr<VariableDictionaryWriter> m_var_dict;
-    std::vector<int64_t> m_variables;
+    std::vector<clp::variable_dictionary_id_t> m_var_dict_ids;
 };
 
 class DateStringColumnWriter : public BaseColumnWriter {
