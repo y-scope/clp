@@ -35,8 +35,7 @@ def main(argv):
         username = os.environ["CLP_DB_USER"]
         password = os.environ["CLP_DB_PASS"]
     except KeyError as e:
-        key = e.args[0]
-        raise Exception(f"'{key}' is missing from environment variables.")
+        raise Exception(f"Environment variable {e} hasn't been set.")
 
     try:
         mysql_conn = mariadb.connect(host=host, port=port, username=username, password=password)
