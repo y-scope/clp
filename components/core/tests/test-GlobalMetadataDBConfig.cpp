@@ -16,9 +16,9 @@ void unset_env_var(char const* name) {
 }
 
 template <size_t N>
-auto parse_args(std::array<char const*, N> const& argv, GlobalMetadataDBConfig& config) -> void {
+auto parse_args(std::array<char const*, N> const& argv) -> GlobalMetadataDBConfig {
     boost::program_options::options_description options_desc;
-    config.add_command_line_options(options_desc);
+    GlobalMetadataDBConfig config(options_desc);
 
     boost::program_options::variables_map vm;
     constexpr auto argc{static_cast<int>(N)};
@@ -31,6 +31,8 @@ auto parse_args(std::array<char const*, N> const& argv, GlobalMetadataDBConfig& 
             vm
     );
     boost::program_options::notify(vm);
+
+    return config;
 }
 }  // namespace
 
@@ -51,8 +53,7 @@ TEST_CASE(
             "--db-table-prefix",
             "test_prefix_"
     };
-    GlobalMetadataDBConfig config;
-    parse_args(argv, config);
+    GlobalMetadataDBConfig config{parse_args(argv)};
 
     REQUIRE(config.get_metadata_db_type() == GlobalMetadataDBConfig::MetadataDBType::MySQL);
     REQUIRE(config.get_metadata_db_host() == "test-host");
@@ -76,8 +77,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                 "--db-table-prefix",
                 "test_prefix_"
         };
-        GlobalMetadataDBConfig config;
-        parse_args(argv, config);
+        GlobalMetadataDBConfig config{parse_args(argv)};
 
         SECTION("With valid credentials") {
             set_env_var("CLP_DB_USER", "test-user");
@@ -134,12 +134,11 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                     "--db-table-prefix",
                     "test_prefix_"
             };
-            GlobalMetadataDBConfig config_low_port;
-            parse_args(argv_with_low_port, config_low_port);
+            GlobalMetadataDBConfig config{parse_args(argv_with_low_port)};
             set_env_var("CLP_DB_USER", "test-user");
             set_env_var("CLP_DB_PASS", "test-pass");
-            config_low_port.read_credentials_from_env_if_needed();
-            REQUIRE_THROWS_AS(config_low_port.validate(), std::invalid_argument);
+            config.read_credentials_from_env_if_needed();
+            REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
             unset_env_var("CLP_DB_USER");
             unset_env_var("CLP_DB_PASS");
         }
@@ -158,12 +157,11 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                     "--db-table-prefix",
                     "test_prefix_"
             };
-            GlobalMetadataDBConfig config_high_port;
-            parse_args(argv_with_high_port, config_high_port);
+            GlobalMetadataDBConfig config{parse_args(argv_with_high_port)};
             set_env_var("CLP_DB_USER", "test-user");
             set_env_var("CLP_DB_PASS", "test-pass");
-            config_high_port.read_credentials_from_env_if_needed();
-            REQUIRE_THROWS_AS(config_high_port.validate(), std::invalid_argument);
+            config.read_credentials_from_env_if_needed();
+            REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
             unset_env_var("CLP_DB_USER");
             unset_env_var("CLP_DB_PASS");
         }
@@ -184,12 +182,11 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                     "--db-table-prefix",
                     "test_prefix_"
             };
-            GlobalMetadataDBConfig config_empty_host;
-            parse_args(argv_empty_host, config_empty_host);
+            GlobalMetadataDBConfig config{parse_args(argv_empty_host)};
             set_env_var("CLP_DB_USER", "test-user");
             set_env_var("CLP_DB_PASS", "test-pass");
-            config_empty_host.read_credentials_from_env_if_needed();
-            REQUIRE_THROWS_AS(config_empty_host.validate(), std::invalid_argument);
+            config.read_credentials_from_env_if_needed();
+            REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
             unset_env_var("CLP_DB_USER");
             unset_env_var("CLP_DB_PASS");
         }
@@ -208,12 +205,11 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                     "--db-table-prefix",
                     "test_prefix_"
             };
-            GlobalMetadataDBConfig config_empty_name;
-            parse_args(argv_empty_name, config_empty_name);
+            GlobalMetadataDBConfig config{parse_args(argv_empty_name)};
             set_env_var("CLP_DB_USER", "test-user");
             set_env_var("CLP_DB_PASS", "test-pass");
-            config_empty_name.read_credentials_from_env_if_needed();
-            REQUIRE_THROWS_AS(config_empty_name.validate(), std::invalid_argument);
+            config.read_credentials_from_env_if_needed();
+            REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
             unset_env_var("CLP_DB_USER");
             unset_env_var("CLP_DB_PASS");
         }
@@ -232,12 +228,11 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                     "--db-table-prefix",
                     ""
             };
-            GlobalMetadataDBConfig config_empty_prefix;
-            parse_args(argv_empty_prefix, config_empty_prefix);
+            GlobalMetadataDBConfig config{parse_args(argv_empty_prefix)};
             set_env_var("CLP_DB_USER", "test-user");
             set_env_var("CLP_DB_PASS", "test-pass");
-            config_empty_prefix.read_credentials_from_env_if_needed();
-            REQUIRE_THROWS_AS(config_empty_prefix.validate(), std::invalid_argument);
+            config.read_credentials_from_env_if_needed();
+            REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
             unset_env_var("CLP_DB_USER");
             unset_env_var("CLP_DB_PASS");
         }
@@ -247,41 +242,36 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
 TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     SECTION("With non-default db-host argument") {
         constexpr std::array argv{"test", "--db-type", "sqlite", "--db-host", "test-host"};
-        GlobalMetadataDBConfig config;
+        GlobalMetadataDBConfig config{parse_args(argv)};
 
-        REQUIRE_NOTHROW(parse_args(argv, config));
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
     }
 
     SECTION("With non-default db-port argument") {
         constexpr std::array argv{"test", "--db-type", "sqlite", "--db-port", "8888"};
-        GlobalMetadataDBConfig config;
+        GlobalMetadataDBConfig config{parse_args(argv)};
 
-        REQUIRE_NOTHROW(parse_args(argv, config));
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
     }
 
     SECTION("With non-default db-name argument") {
         constexpr std::array argv{"test", "--db-type", "sqlite", "--db-name", "test-db"};
-        GlobalMetadataDBConfig config;
+        GlobalMetadataDBConfig config{parse_args(argv)};
 
-        REQUIRE_NOTHROW(parse_args(argv, config));
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
     }
 
     SECTION("With non-default db-table-prefix argument") {
         constexpr std::array
                 argv{"test", "--db-type", "sqlite", "--db-table-prefix", "test_prefix_"};
-        GlobalMetadataDBConfig config;
+        GlobalMetadataDBConfig config{parse_args(argv)};
 
-        REQUIRE_NOTHROW(parse_args(argv, config));
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
     }
 
     SECTION("With username and password") {
         constexpr std::array argv{"test", "--db-type", "sqlite"};
-        GlobalMetadataDBConfig config;
-        parse_args(argv, config);
+        GlobalMetadataDBConfig config{parse_args(argv)};
 
         set_env_var("CLP_DB_USER", "test-user");
         set_env_var("CLP_DB_PASS", "test-pass");

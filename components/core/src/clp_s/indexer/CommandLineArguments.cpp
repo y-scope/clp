@@ -29,8 +29,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             "Create the column metadata table if it doesn't exist"
     );
     // clang-format on
-    clp::GlobalMetadataDBConfig metadata_db_config;
-    metadata_db_config.add_command_line_options(output_options);
+    clp::GlobalMetadataDBConfig metadata_db_config{output_options};
 
     // Define visible options
     po::options_description visible_options;

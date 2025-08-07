@@ -39,9 +39,9 @@ auto operator>>(std::istream& in, GlobalMetadataDBConfig::MetadataDBType& metada
     throw invalid_argument(fmt::format("Unknown database type: {}", db_type_string));
 }
 
-auto GlobalMetadataDBConfig::add_command_line_options(
+GlobalMetadataDBConfig::GlobalMetadataDBConfig(
         boost::program_options::options_description& options_description
-) -> void {
+) {
     constexpr std::string_view cMetadataDbTypeMysqlOptDescPrefix{"[db-type=mysql]"};
 
     options_description.add_options()

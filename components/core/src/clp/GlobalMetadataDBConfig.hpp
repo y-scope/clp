@@ -37,17 +37,16 @@ public:
     friend auto operator>>(std::istream& in, MetadataDBType& metadata_db_type) -> std::istream&;
 
     // Constructors
-    GlobalMetadataDBConfig() = default;
-
-    // Methods
     /**
      * Adds database-related command-line options to the given options_description.
      *
      * @param options_description
      */
-    auto add_command_line_options(boost::program_options::options_description& options_description)
-            -> void;
+    explicit GlobalMetadataDBConfig(
+            boost::program_options::options_description& options_description
+    );
 
+    // Methods
     /**
      * Reads database credentials from the following environment variables, if required by the
      * database type:
