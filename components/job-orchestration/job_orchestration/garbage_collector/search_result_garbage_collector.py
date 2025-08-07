@@ -68,6 +68,7 @@ def _collect_and_sweep_expired_search_results(
     else:
         logger.debug(f"No search results matched the expiry criteria.")
 
+
 async def search_result_garbage_collector(
     clp_config: CLPConfig, log_directory: pathlib.Path, logging_level: str
 ) -> None:
