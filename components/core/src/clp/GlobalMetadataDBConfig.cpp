@@ -12,6 +12,13 @@ using std::string;
 
 namespace {
 // Constants
+constexpr clp::GlobalMetadataDBConfig::MetadataDBType cDefaultMetadataDbType{
+        clp::GlobalMetadataDBConfig::MetadataDBType::SQLite
+};
+constexpr std::string_view cDefaultMetadataDbHost{"127.0.0.1"};
+constexpr int cDefaultMetadataDbPort{3306};
+constexpr std::string_view cDefaultMetadataDbName{"clp-db"};
+constexpr std::string_view cDefaultMetadataTablePrefix{"clp_"};
 constexpr int cMinPort{1};
 constexpr int cMaxPort{65'535};
 }  // namespace
