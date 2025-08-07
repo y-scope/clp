@@ -44,45 +44,62 @@ GlobalMetadataDBConfig::GlobalMetadataDBConfig(
 ) {
     constexpr std::string_view cMetadataDbTypeMysqlOptDescPrefix{"[db-type=mysql]"};
 
+    // clang-format off
     options_description.add_options()
-        ("db-type",
-         boost::program_options::value<MetadataDBType>(&m_metadata_db_type)
-         ->default_value(cDefaultMetadataDbType,
-                         cMetadataDBTypeNames[enum_to_underlying_type(cDefaultMetadataDbType)].
-                         data()),
-         fmt::format("Database type [{} | {}]",
-                        cMetadataDBTypeNames
-                            [enum_to_underlying_type(MetadataDBType::SQLite)],
-                        cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::MySQL)]).c_str()
-             )
-        ("db-host",
-         boost::program_options::value<string>(&m_metadata_db_host)->default_value(
-             cDefaultMetadataDbHost.data()),
-             fmt::format(
-                 "{} Database host",
-                 cMetadataDbTypeMysqlOptDescPrefix
-             ).c_str())
-        ("db-port",
-         boost::program_options::value<int>(&m_metadata_db_port)->default_value(
-             cDefaultMetadataDbPort),
-                fmt::format(
-                    "{} Database port",
-                    cMetadataDbTypeMysqlOptDescPrefix
-                ).c_str())
-        ("db-name",
-         boost::program_options::value<string>(&m_metadata_db_name)->default_value(
-             cDefaultMetadataDbName.data()),
-             fmt::format(
-                 "{} Database name",
-                 cMetadataDbTypeMysqlOptDescPrefix
-             ).c_str())
-        ("db-table-prefix",
-         boost::program_options::value<string>(&m_metadata_table_prefix)->default_value(
-             cDefaultMetadataTablePrefix.data()),
-                fmt::format(
-                    "{} Database table prefix",
-                    cMetadataDbTypeMysqlOptDescPrefix
-                ).c_str());
+        (
+            "db-type",
+            boost::program_options::value<MetadataDBType>(&m_metadata_db_type)
+                ->default_value(
+                    cDefaultMetadataDbType,
+                    string(
+                        cMetadataDBTypeNames[enum_to_underlying_type(
+                            cDefaultMetadataDbType
+                        )]
+                    )
+                ),
+            fmt::format(
+                "Database type [{} | {}]",
+                cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::SQLite)],
+                cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::MySQL)]
+            ).c_str()
+        )
+        (
+            "db-host",
+            boost::program_options::value<string>(&m_metadata_db_host)
+                ->default_value(string(cDefaultMetadataDbHost)),
+            fmt::format(
+                "{} Database host",
+                cMetadataDbTypeMysqlOptDescPrefix
+            ).c_str()
+        )
+        (
+            "db-port",
+            boost::program_options::value<int>(&m_metadata_db_port)
+                ->default_value(cDefaultMetadataDbPort),
+            fmt::format(
+                "{} Database port",
+                cMetadataDbTypeMysqlOptDescPrefix
+            ).c_str()
+        )
+        (
+            "db-name",
+            boost::program_options::value<string>(&m_metadata_db_name)
+                ->default_value(string(cDefaultMetadataDbName)),
+            fmt::format(
+                "{} Database name",
+                cMetadataDbTypeMysqlOptDescPrefix
+            ).c_str()
+        )
+        (
+            "db-table-prefix",
+            boost::program_options::value<string>(&m_metadata_table_prefix)
+                ->default_value(string(cDefaultMetadataTablePrefix)),
+            fmt::format(
+                "{} Database table prefix",
+                cMetadataDbTypeMysqlOptDescPrefix
+            ).c_str()
+        );
+    // clang-format on
 }
 
 auto GlobalMetadataDBConfig::read_credentials_from_env_if_needed() -> void {
