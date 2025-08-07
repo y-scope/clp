@@ -63,7 +63,7 @@ def _collect_and_sweep_expired_search_results(
             job_results_collection.drop()
             deleted_job_ids.append(int(job_id))
 
-    logger.debug(f"deleted search results of job(s): {deleted_job_ids}.")
+    logger.debug(f"Deleted search results of job(s): {deleted_job_ids}.")
 
 
 async def search_result_garbage_collector(

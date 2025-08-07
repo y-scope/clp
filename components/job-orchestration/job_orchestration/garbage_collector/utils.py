@@ -89,11 +89,12 @@ def execute_deletion(output_config: ArchiveOutput, deletion_candidates: Set[str]
 
 class DeletionCandidatesBuffer:
     """
-    A class representing an in-memory buffer for candidates with fault-tolerance support.
+    Represents an in-memory buffer for deletion candidates with fault-tolerance support.
 
-    This class support recovering from a previous failure by reading previously persisted candidates
-    from a recovery file. The user is expected to explicitly call `persists_new_candidates` to
-    persist any new candidates on to the disk for fault-tolerance purposes.
+    This class supports recovering from a previous failure by reading previously persisted
+    candidates from a recovery file. The user is expected to explicitly call
+    `persist_new_candidates` to persist any new candidates on to the disk for fault-tolerance
+    purposes.
 
     :param recovery_file_path: Path to the file used for recovering and persisting candidates.
     :raises ValueError: If the recovery path exists but is not a file.
@@ -137,10 +138,10 @@ class DeletionCandidatesBuffer:
 
     def clear(self):
         """
-        Clear the in-memory buffer of candidates and remove the recovery file.
+        Clears the in-memory buffer of candidates and removes the recovery file.
 
-        This is intended to be called after the caller finished processing all candidates (i.e. when
-        recovery is no longer needed for the candidates.)
+        This is intended to be called after the caller finished processing all candidates (i.e.,
+        when recovery is no longer needed for the candidates.)
         """
         self._candidates.clear()
         if self._recovery_file_path.exists():

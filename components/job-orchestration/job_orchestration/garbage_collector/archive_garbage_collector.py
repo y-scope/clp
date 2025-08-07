@@ -204,7 +204,6 @@ async def archive_garbage_collector(
     recovery_file = clp_config.logs_directory / f"{ARCHIVE_GARBAGE_COLLECTOR_NAME}.tmp"
 
     logger.info(f"{ARCHIVE_GARBAGE_COLLECTOR_NAME} started.")
-    # Start retention loop
     try:
         while True:
             _collect_and_sweep_expired_archives(
