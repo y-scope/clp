@@ -331,7 +331,7 @@ def generate_container_start_cmd(
     container_name: str,
     container_mounts: List[Optional[DockerMount]],
     container_image: str,
-    extra_env_vars: Dict[str, str] = [],
+    extra_env_vars: Optional[Dict[str, str]] = None
 ) -> List[str]:
     """
     Generates the command to start a container with the given mounts and name.
@@ -354,8 +354,9 @@ def generate_container_start_cmd(
         "--name", container_name,
         "--log-driver", "local"
     ]
-    for key, value in extra_env_vars.items():
-        container_start_cmd.extend(["-e", f"{key}={value}"])
+    if extra_env_vars:
+        for key, value in extra_env_vars.items():
+            container_start_cmd.extend(["-e", f"{key}={value}"])
     for mount in container_mounts:
         if mount:
             container_start_cmd.append("--mount")
