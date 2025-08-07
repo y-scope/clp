@@ -107,8 +107,8 @@ auto GlobalMetadataDBConfig::validate() const -> void {
             || false == m_metadata_db_username.empty() || false == m_metadata_db_password.empty())
         {
             throw invalid_argument(
-                    "MySQL-specific parameters were provided when '--db-type' is 'SQLite'. "
-                    "Please remove them or set '--db-type=mysql'."
+                    "MySQL-specific parameters cannot be used with --db-type='sqlite'."
+                    " Please remove them or set '--db-type=mysql'."
             );
         }
         return;
