@@ -23,7 +23,7 @@ auto operator>>(std::istream& in, GlobalMetadataDBConfig::MetadataDBType& metada
     in >> db_type_string;
 
     for (size_t i = 0; i < GlobalMetadataDBConfig::cMetadataDBTypeNames.size(); ++i) {
-        if (GlobalMetadataDBConfig::cMetadataDBTypeNames[i] == db_type_string) {
+        if (GlobalMetadataDBConfig::cMetadataDBTypeNames.at(i) == db_type_string) {
             metadata_db_type = static_cast<GlobalMetadataDBConfig::MetadataDBType>(i);
             return in;
         }
