@@ -203,15 +203,18 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
                 ondemand::number number_value = cur_value.get_number();
                 if (true == number_value.is_double()) {
                     if (m_retain_float_format) {
-                        const auto double_value_str = cur_value.raw_json_token();
+                        auto const double_value_str = cur_value.raw_json_token();
                         m_current_parsed_message.add_unordered_value(double_value_str);
-                        node_id = m_archive_writer
-                                          ->add_node(node_id_stack.top(), NodeType::FormattedFloat, cur_key);
+                        node_id = m_archive_writer->add_node(
+                                node_id_stack.top(),
+                                NodeType::FormattedFloat,
+                                cur_key
+                        );
                     } else {
                         double double_value = number_value.get_double();
                         m_current_parsed_message.add_unordered_value(double_value);
                         node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::Float, cur_key);
+                                          ->add_node(node_id_stack.top(), NodeType::Float, cur_key);
                     }
                 } else {
                     int64_t i64_value;
@@ -290,7 +293,8 @@ void JsonParser::parse_array(ondemand::array array, int32_t parent_node_id) {
                     if (m_retain_float_format) {
                         auto double_value_str = cur_value.raw_json_token();
                         m_current_parsed_message.add_unordered_value(double_value_str);
-                        node_id = m_archive_writer->add_node(parent_node_id, NodeType::FormattedFloat, "");
+                        node_id = m_archive_writer
+                                          ->add_node(parent_node_id, NodeType::FormattedFloat, "");
                     } else {
                         double double_value = number_value.get_double();
                         m_current_parsed_message.add_unordered_value(double_value);
@@ -425,7 +429,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 } else {
                     double double_value = line.get_double();
                     if (NodeType::FormattedFloat == type) {
-                        const auto double_value_str = line.raw_json_token();
+                        auto const double_value_str = line.raw_json_token();
                         m_current_parsed_message.add_value(node_id, double_value_str);
                     } else {
                         m_current_parsed_message.add_value(node_id, double_value);

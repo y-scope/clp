@@ -6,11 +6,11 @@
 
 #include "DictionaryWriter.hpp"
 #include "FileWriter.hpp"
+#include "FloatFormatEncoding.hpp"
 #include "ParsedMessage.hpp"
 #include "TimestampDictionaryWriter.hpp"
 #include "VariableEncoder.hpp"
 #include "ZstdCompressor.hpp"
-#include "FloatFormatEncoding.hpp"
 
 namespace clp_s {
 class BaseColumnWriter {

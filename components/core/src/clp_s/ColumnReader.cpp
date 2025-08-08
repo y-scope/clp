@@ -88,46 +88,77 @@ FloatColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::s
     buffer.append(std::to_string(m_values[cur_message]));
 }
 
-void
-FormattedFloatColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) {
+void FormattedFloatColumnReader::extract_string_value_into_buffer(
+        uint64_t cur_message,
+        std::string& buffer
+) {
     buffer.append(restore_format(cur_message));
 }
 
 std::string FormattedFloatColumnReader::restore_format(uint64_t cur_message) {
     std::ostringstream oss;
-    const uint16_t significant_digits = (m_format[cur_message] >> float_format_encoding::cSignificantDigitsPos & 0x0F) + 1;
+    uint16_t const significant_digits
+            = (m_format[cur_message] >> float_format_encoding::cSignificantDigitsPos & 0x0F) + 1;
     oss << std::scientific << std::setprecision(significant_digits - 1);
     if (m_format[cur_message] & (1 << float_format_encoding::cScientificExponentNotePos)) {
-        if (m_format[cur_message] & (1 << (float_format_encoding::cScientificExponentNotePos + 1))) {
-             oss << std::uppercase;
+        if (m_format[cur_message] & (1 << (float_format_encoding::cScientificExponentNotePos + 1)))
+        {
+            oss << std::uppercase;
         }
         oss << m_values[cur_message];
         auto formatted_double_str = oss.str();
-        const auto exp_pos = formatted_double_str.find_first_of("Ee");
-        const char maybe_sign = formatted_double_str[exp_pos + 1];
-        const uint16_t exp_digits = (m_format[cur_message] >> float_format_encoding::cScientificExponentDigitsPos & 0x03) + 1;
-        if (0b00 << float_format_encoding::cScientificExponentSignPos == (m_format[cur_message] & 0b11 << float_format_encoding::cScientificExponentSignPos)) {
+        auto const exp_pos = formatted_double_str.find_first_of("Ee");
+        char const maybe_sign = formatted_double_str[exp_pos + 1];
+        uint16_t const exp_digits
+                = (m_format[cur_message] >> float_format_encoding::cScientificExponentDigitsPos
+                   & 0x03)
+                  + 1;
+        if (0b00 << float_format_encoding::cScientificExponentSignPos
+            == (m_format[cur_message] & 0b11 << float_format_encoding::cScientificExponentSignPos))
+        {
             if ('+' == maybe_sign || '-' == maybe_sign) {
                 formatted_double_str.erase(exp_pos + 1, 1);
             }
             if (exp_digits < (formatted_double_str.length() - exp_pos - 1)) {
-                formatted_double_str = trim_leading_zeros(formatted_double_str, exp_pos + 1, formatted_double_str.length() - exp_pos - 1 - exp_digits);
+                formatted_double_str = trim_leading_zeros(
+                        formatted_double_str,
+                        exp_pos + 1,
+                        formatted_double_str.length() - exp_pos - 1 - exp_digits
+                );
             } else {
-                formatted_double_str.insert(exp_pos + 1, exp_digits - (formatted_double_str.length() - exp_pos - 1), '0');
+                formatted_double_str.insert(
+                        exp_pos + 1,
+                        exp_digits - (formatted_double_str.length() - exp_pos - 1),
+                        '0'
+                );
             }
         } else {
             if (exp_digits < (formatted_double_str.length() - exp_pos - 2)) {
-                formatted_double_str = trim_leading_zeros(formatted_double_str, exp_pos + 2, formatted_double_str.length() - exp_pos - 2 - exp_digits);
+                formatted_double_str = trim_leading_zeros(
+                        formatted_double_str,
+                        exp_pos + 2,
+                        formatted_double_str.length() - exp_pos - 2 - exp_digits
+                );
             } else {
-                formatted_double_str.insert(exp_pos + 2, exp_digits - (formatted_double_str.length() - exp_pos - 2), '0');
+                formatted_double_str.insert(
+                        exp_pos + 2,
+                        exp_digits - (formatted_double_str.length() - exp_pos - 2),
+                        '0'
+                );
             }
-            if (0b01 << float_format_encoding::cScientificExponentSignPos == (m_format[cur_message] & 0b11 << float_format_encoding::cScientificExponentSignPos)) {
+            if (0b01 << float_format_encoding::cScientificExponentSignPos
+                == (m_format[cur_message]
+                    & 0b11 << float_format_encoding::cScientificExponentSignPos))
+            {
                 if (std::isdigit(maybe_sign)) {
                     formatted_double_str.insert(exp_pos + 1, "+");
                 } else {
                     formatted_double_str[exp_pos + 1] = '+';
                 }
-            } else if (0b10 << float_format_encoding::cScientificExponentSignPos == (m_format[cur_message] & 0b11 << float_format_encoding::cScientificExponentSignPos)) {
+            } else if (0b10 << float_format_encoding::cScientificExponentSignPos
+                       == (m_format[cur_message]
+                           & 0b11 << float_format_encoding::cScientificExponentSignPos))
+            {
                 if (std::isdigit(maybe_sign)) {
                     formatted_double_str.insert(exp_pos + 1, "-");
                 } else {
@@ -145,7 +176,10 @@ std::string FormattedFloatColumnReader::restore_format(uint64_t cur_message) {
 }
 
 std::string FormattedFloatColumnReader::trim_leading_zeros(
-    std::string_view scientific_notation, size_t start, size_t number_of_zeros_to_trim) {
+        std::string_view scientific_notation,
+        size_t start,
+        size_t number_of_zeros_to_trim
+) {
     auto sci_str = std::string(scientific_notation);
     size_t actual_number_of_zeros_to_trim{0};
     for (size_t i{start}; i < start + number_of_zeros_to_trim; ++i) {
@@ -159,24 +193,24 @@ std::string FormattedFloatColumnReader::trim_leading_zeros(
     return sci_str;
 }
 
-
 std::string FormattedFloatColumnReader::scientific_to_decimal(
-    std::string_view scientific_notation) {
+        std::string_view scientific_notation
+) {
     auto sci_str = std::string(scientific_notation);
     bool isNegative = false;
     if (false == std::isdigit(sci_str[0])) {
         isNegative = true;
         sci_str.erase(0, 1);
     }
-    const size_t exp_pos = sci_str.find_first_of("e");
+    size_t const exp_pos = sci_str.find_first_of("e");
     assert(std::string::npos != exp_pos);
 
     // Split into mantissa and exponent parts
     std::string mantissa_str = sci_str.substr(0, exp_pos);
-    const int exponent = std::stoi(sci_str.substr(exp_pos + 1));
+    int const exponent = std::stoi(sci_str.substr(exp_pos + 1));
 
     // Remove the decimal point from the mantissa
-    const size_t dot_pos = mantissa_str.find('.');
+    size_t const dot_pos = mantissa_str.find('.');
     std::string digits;
     if (dot_pos != std::string::npos) {
         digits = mantissa_str.substr(0, dot_pos) + mantissa_str.substr(dot_pos + 1);
@@ -185,7 +219,7 @@ std::string FormattedFloatColumnReader::scientific_to_decimal(
     }
 
     // Adjust position of decimal point based on exponent
-    const int decimal_pos = static_cast<int>(dot_pos) + exponent;
+    int const decimal_pos = static_cast<int>(dot_pos) + exponent;
 
     std::string result{""};
     if (isNegative) {
@@ -201,7 +235,6 @@ std::string FormattedFloatColumnReader::scientific_to_decimal(
 
     return result;
 }
-
 
 std::variant<int64_t, double, std::string, uint8_t> BooleanColumnReader::extract_value(
         uint64_t cur_message

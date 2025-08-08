@@ -42,22 +42,31 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
     auto float_str = std::get<std::string>(value);
 
     // Trim the raw string
-    float_str.erase(std::remove_if(float_str.begin(), float_str.end(), [](char c) {
-       return !std::isdigit(static_cast<unsigned char>(c)) && '.' != c && '+' != c && '-' != c && 'E' != c && 'e' != c;
-    }), float_str.end());
+    float_str.erase(
+            std::remove_if(
+                    float_str.begin(),
+                    float_str.end(),
+                    [](char c) {
+                        return !std::isdigit(static_cast<unsigned char>(c)) && '.' != c && '+' != c
+                               && '-' != c && 'E' != c && 'e' != c;
+                    }
+            ),
+            float_str.end()
+    );
 
     // If the raw JSON token is an illegal double number then here will throw
     // exception
     m_values.push_back(std::stod(float_str));
 
-    const auto dot_pos = float_str.find('.');
+    auto const dot_pos = float_str.find('.');
     uint16_t format{0};
 
     // Check whether it is the scientific; if so, if the exponent is E or e
     size_t exp_pos = float_str.find_first_of("Ee");
     if (std::string::npos != exp_pos) {
         format |= 1 << float_format_encoding::cScientificExponentNotePos;
-        format |= ('E' == float_str[exp_pos]) << (float_format_encoding::cScientificExponentNotePos + 1);
+        format |= ('E' == float_str[exp_pos])
+                  << (float_format_encoding::cScientificExponentNotePos + 1);
 
         // Check whether there is a sign for the exponent
         if ('+' == float_str[exp_pos + 1]) {
@@ -71,7 +80,8 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
         if (false == std::isdigit(float_str[exp_pos + 1])) {
             exp_digits--;
         }
-        format |= (static_cast<uint16_t>(std::min(exp_digits - 1, 3)) & 0x03) << float_format_encoding::cScientificExponentDigitsPos;
+        format |= (static_cast<uint16_t>(std::min(exp_digits - 1, 3)) & 0x03)
+                  << float_format_encoding::cScientificExponentDigitsPos;
     } else {
         exp_pos = float_str.length();
     }
@@ -87,7 +97,9 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
         first_non_zero_frac_digit_pos = 1;
     } else if (std::string::npos != dot_pos) {
         for (size_t i = dot_pos + 1; i < float_str.length(); ++i) {
-            if (std::isdigit(float_str[i]) && '0' != float_str[i]) {
+            if (false == std::isdigit(float_str[i])) {
+                break;
+            } else if ('0' != float_str[i]) {
                 first_non_zero_frac_digit_pos = i;
                 break;
             }
@@ -99,7 +111,8 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
         significant_digits--;
     }
     assert(significant_digits > 0);
-    const uint16_t compressed_significant_digits = static_cast<uint16_t>(std::min(significant_digits - 1, 15)) & 0x0F;
+    uint16_t const compressed_significant_digits
+            = static_cast<uint16_t>(std::min(significant_digits - 1, 15)) & 0x0F;
 
     format |= compressed_significant_digits << float_format_encoding::cSignificantDigitsPos;
 
@@ -109,8 +122,8 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
 
 void FormattedFloatColumnWriter::store(ZstdCompressor& compressor) {
     assert(m_format.size() == m_values.size());
-    const auto values_size = m_values.size() * sizeof(double);
-    const auto format_size = m_format.size() * sizeof(uint16_t);
+    auto const values_size = m_values.size() * sizeof(double);
+    auto const format_size = m_format.size() * sizeof(uint16_t);
     compressor.write(reinterpret_cast<char const*>(m_values.data()), values_size);
     compressor.write(reinterpret_cast<char const*>(m_format.data()), format_size);
 }

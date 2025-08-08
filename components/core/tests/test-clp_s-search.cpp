@@ -43,7 +43,8 @@ constexpr std::string_view cTestSearchFormattedFloatFile{"test_search_formatted_
 constexpr std::string_view cTestIdxKey{"idx"};
 
 namespace {
-auto get_test_input_path_relative_to_tests_dir(std::string_view test_input_path) -> std::filesystem::path;
+auto get_test_input_path_relative_to_tests_dir(std::string_view test_input_path)
+        -> std::filesystem::path;
 auto get_test_input_local_path(std::string_view test_input_path) -> std::string;
 auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search::ast::Expression>;
 void
@@ -58,7 +59,8 @@ void validate_results(
         std::vector<int64_t> const& expected_results
 );
 
-auto get_test_input_path_relative_to_tests_dir(std::string_view test_input_path) -> std::filesystem::path {
+auto get_test_input_path_relative_to_tests_dir(std::string_view test_input_path)
+        -> std::filesystem::path {
     return std::filesystem::path{cTestInputFileDirectory} / test_input_path;
 }
 
@@ -118,11 +120,11 @@ void validate_results(
         }
     }
     if (expected_results.empty()) {
-            REQUIRE(results.empty());
+        REQUIRE(results.empty());
     } else {
-            std::set<int64_t> expected_results_set{expected_results.begin(), expected_results.end()};
-            REQUIRE(results_set == expected_results_set);
-            REQUIRE(results.size() == expected_results.size());
+        std::set<int64_t> expected_results_set{expected_results.begin(), expected_results.end()};
+        REQUIRE(results_set == expected_results_set);
+        REQUIRE(results.size() == expected_results.size());
     }
 }
 
@@ -255,23 +257,23 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
 }
 
 TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
-        std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{
-                    {R"aa(NOT formattedFloatValue: 0)aa", {0, 1, 2, 6, 7, 8, 9, 10, 11, 12}},
-                  {R"aa(formattedFloatValue: 0)aa", {3, 4, 5}},
-                  {R"aa(formattedFloatValue: 1e-16)aa", {6, 7}},
-                    {R"aa(formattedFloatValue > 0.00)aa", {6, 7, 8, 9, 10, 11, 12}},
-                    {R"aa(formattedFloatValue > 5000.000000000001)aa", {12}},
-                    {R"aa(formattedFloatValue < 0.00 AND formattedFloatValue >= -0.01)aa", {1, 2}},
-                    {R"aa(idx: 0 AND NOT formattedFloatValue: -1000.0)aa", {}},
-                    {R"aa(msg: "xxx" AND formattedFloatValue: 3000.0)aa", {}},
-                  {R"aa(msg: "xxx" OR formattedFloatValue: 3000.0)aa", {0, 9}}
-        };
-        auto structurize_arrays = GENERATE(true, false);
-        auto single_file_archive = GENERATE(true, false);
+    std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{
+            {R"aa(NOT formattedFloatValue: 0)aa", {0, 1, 2, 6, 7, 8, 9, 10, 11, 12}},
+            {R"aa(formattedFloatValue: 0)aa", {3, 4, 5}},
+            {R"aa(formattedFloatValue: 1e-16)aa", {6, 7}},
+            {R"aa(formattedFloatValue > 0.00)aa", {6, 7, 8, 9, 10, 11, 12}},
+            {R"aa(formattedFloatValue > 5000.000000000001)aa", {12}},
+            {R"aa(formattedFloatValue < 0.00 AND formattedFloatValue >= -0.01)aa", {1, 2}},
+            {R"aa(idx: 0 AND NOT formattedFloatValue: -1000.0)aa", {}},
+            {R"aa(msg: "xxx" AND formattedFloatValue: 3000.0)aa", {}},
+            {R"aa(msg: "xxx" OR formattedFloatValue: 3000.0)aa", {0, 9}}
+    };
+    auto structurize_arrays = GENERATE(true, false);
+    auto single_file_archive = GENERATE(true, false);
 
-        TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
 
-        REQUIRE_NOTHROW(
+    REQUIRE_NOTHROW(
             std::ignore = compress_archive(
                     get_test_input_local_path(cTestSearchFormattedFloatFile),
                     std::string{cTestSearchArchiveDirectory},
@@ -280,14 +282,14 @@ TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
                     structurize_arrays,
                     clp_s::FileType::Json
             )
-        );
+    );
 
-        for (auto const& [query, expected_results] : queries_and_results) {
-                CAPTURE(query);
-                REQUIRE_NOTHROW(search(query, false, expected_results));
-        }
+    for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
+        REQUIRE_NOTHROW(search(query, false, expected_results));
+    }
 
-        std::shared_ptr<clp_s::search::ast::Expression> expr{nullptr};
-        REQUIRE_NOTHROW(expr = create_first_record_match_metadata_query());
-        REQUIRE_NOTHROW(search(expr, false, {0}));
+    std::shared_ptr<clp_s::search::ast::Expression> expr{nullptr};
+    REQUIRE_NOTHROW(expr = create_first_record_match_metadata_query());
+    REQUIRE_NOTHROW(search(expr, false, {0}));
 }

@@ -191,7 +191,11 @@ private:
      * the target value stored in the format.
      * @return The scientific notation string with the exponent being trimmed leading zeros.
      */
-    static std::string trim_leading_zeros(std::string_view scientific_notation, size_t start, size_t number_of_zeros_to_trim);
+    static std::string trim_leading_zeros(
+            std::string_view scientific_notation,
+            size_t start,
+            size_t number_of_zeros_to_trim
+    );
 
     /**
      * Convert the scientific notation string to a double value string formatted by the encoded
