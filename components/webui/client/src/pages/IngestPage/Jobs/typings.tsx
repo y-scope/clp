@@ -89,11 +89,9 @@ const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
     },
 ];
 
-export type {
-    JobData,
-};
+export type {JobData};
 
 export {
     CompressionJobStatus,
-    jobColumns
+    jobColumns,
 };
