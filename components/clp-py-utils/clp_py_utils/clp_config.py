@@ -266,6 +266,7 @@ class Redis(BaseModel):
 
         return d
 
+
 class Reducer(BaseModel):
     host: str = "localhost"
     base_port: int = 14009
