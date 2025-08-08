@@ -21,7 +21,7 @@ constexpr std::string_view cTestEndToEndOutputSortedJson{"test-end-to-end_sorted
 constexpr std::string_view cTestEndToEndInputFileDirectory{"test_log_files"};
 constexpr std::string_view cTestEndToEndInputFile{"test_no_floats_sorted.jsonl"};
 constexpr std::string_view cTestEndToEndInputSortedJson{"test-end-to-end_input_sorted.jsonl"};
-constexpr std::string_view cTestEndToEndValidFloatFormatInputFile{"test_valid_float_format.jsonl"};
+constexpr std::string_view cTestEndToEndValidFormattedFloatInputFile{"test_valid_formatted_float.jsonl"};
 
 namespace {
 auto get_test_input_path_relative_to_tests_dir(const std::string_view test_input_path) -> std::filesystem::path;
@@ -162,7 +162,7 @@ TEST_CASE("clp-s-compress-extract-floats", "[clp-s][end-to-end]") {
   // };
 
   std::ignore = compress_archive(
-                    get_test_input_local_path(cTestEndToEndValidFloatFormatInputFile),
+                    get_test_input_local_path(cTestEndToEndValidFormattedFloatInputFile),
                     std::string{cTestEndToEndArchiveDirectory},
                     true,
                     true,
@@ -170,5 +170,5 @@ TEST_CASE("clp-s-compress-extract-floats", "[clp-s][end-to-end]") {
                     clp_s::FileType::Json);
 
   auto extracted_json_path = extract();
-  literallyCompare(get_test_input_local_path(cTestEndToEndValidFloatFormatInputFile), extracted_json_path);
+  literallyCompare(get_test_input_local_path(cTestEndToEndValidFormattedFloatInputFile), extracted_json_path);
 }

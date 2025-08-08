@@ -1,0 +1,13 @@
+{ "idx": 0, "msg": "xxx", "formattedFloatValue": -1.000000E3 }
+{ "idx": 1, "msg": "aaa", "formattedFloatValue": -1.000000E-2 }
+{ "idx": 2, "msg": "bbb", "formattedFloatValue": -1.000000E-30 }
+{ "idx": 3, "msg": "ccc", "formattedFloatValue": 0.000000E+000 }
+{ "idx": 4, "msg": "ddd", "formattedFloatValue": 0.000000E-000 }
+{ "idx": 5, "msg": "eee", "formattedFloatValue": 0.000000E010 }
+{ "idx": 6, "msg": "fff", "formattedFloatValue": 1.000000E-16 }
+{ "idx": 7, "msg": "ggg", "formattedFloatValue": 0.0000000000000001 }
+{ "idx": 8, "msg": "hhh", "formattedFloatValue": 2.000000 }
+{ "idx": 9, "msg": "iii", "formattedFloatValue": 3E3 }
+{ "idx": 10, "msg": "jjj", "formattedFloatValue": 4.000000E+3 }
+{ "idx": 11, "msg": "kkk", "formattedFloatValue": 5.000000000000001E3 }
+{ "idx": 12, "msg": "lll", "formattedFloatValue": 5.000000000000002E3 }
