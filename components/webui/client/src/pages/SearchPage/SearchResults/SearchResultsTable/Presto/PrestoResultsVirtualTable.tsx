@@ -30,8 +30,10 @@ const PrestoResultsVirtualTable = ({tableHeight}: PrestoResultsVirtualTableProps
             0;
 
         updateNumSearchResultsTable(num);
-    }, [prestoSearchResults,
-        updateNumSearchResultsTable]);
+    }, [
+        prestoSearchResults,
+        updateNumSearchResultsTable
+    ]);
 
     return (
         <VirtualTable<PrestoSearchResult>
