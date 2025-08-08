@@ -86,6 +86,7 @@ const updateSearchSignalWhenJobsFinish = async ({
             ),
         },
     };
+
     await searchResultsMetadataCollection.updateOne(filter, modifier);
 };
 

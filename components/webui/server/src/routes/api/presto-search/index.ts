@@ -104,7 +104,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                             }
                         },
                         query: queryString,
-                        timeout: null,
                         state: (_, queryId, stats) => {
                             request.log.info({
                                 searchJobId: queryId,
@@ -136,6 +135,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                         success: () => {
                             request.log.info("Presto search succeeded");
                         },
+                        timeout: null,
                     });
                 });
             } catch (error) {

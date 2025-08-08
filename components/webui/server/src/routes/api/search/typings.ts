@@ -7,10 +7,7 @@ import type {
     Db,
 } from "mongodb";
 
-import {
-    SEARCH_SIGNAL,
-    type SearchResultsMetadataDocument,
-} from "../../../../../common/index.js";
+import {type SearchResultsMetadataDocument} from "../../../../../common/index.js";
 
 
 /**
