@@ -352,7 +352,7 @@ def generate_container_start_cmd(
         "--name", container_name,
         "--log-driver", "local"
     ]
-    if extra_env_vars:
+    if extra_env_vars is not None:
         for key, value in extra_env_vars.items():
             container_start_cmd.extend(["-e", f"{key}={value}"])
     for mount in container_mounts:

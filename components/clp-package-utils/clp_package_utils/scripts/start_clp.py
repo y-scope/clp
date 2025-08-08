@@ -951,8 +951,8 @@ def start_webui(
             )
             if aws_mount:
                 necessary_mounts.append(mounts.aws_config_dir)
-                if aws_env_vars:
-                    env_vars.extend(aws_env_vars)
+            if aws_env_vars:
+                env_vars.extend(aws_env_vars)
     elif StorageType.FS == stream_storage.type:
         necessary_mounts.append(mounts.stream_output_dir)
 
