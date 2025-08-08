@@ -19,7 +19,6 @@ import {QUERY_JOB_TYPE} from "../../../typings/query.js";
 import {SEARCH_MAX_NUM_RESULTS} from "./typings.js";
 import {
     createMongoIndexes,
-    updateSearchResultsMeta,
     updateSearchSignalWhenJobsFinish,
 } from "./utils.js";
 
@@ -201,16 +200,18 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 await QueryJobDbManager.cancelJob(searchJobId);
                 await QueryJobDbManager.cancelJob(aggregationJobId);
 
-                await updateSearchResultsMeta({
-                    fields: {
-                        lastSignal: SEARCH_SIGNAL.RESP_DONE,
-                        errorMsg: "Query cancelled before it could be completed.",
+                await searchResultsMetadataCollection.updateOne(
+                    {
+                        _id: searchJobId.toString(),
+                        lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
                     },
-                    jobId: searchJobId.toString(),
-                    lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
-                    logger: request.log,
-                    searchResultsMetadataCollection: searchResultsMetadataCollection,
-                });
+                    {
+                        $set: {
+                            lastSignal: SEARCH_SIGNAL.RESP_DONE,
+                            errorMsg: "Query cancelled before it could be completed.",
+                        },
+                    }
+                );
             } catch (err: unknown) {
                 const errMsg = "Failed to submit cancel request";
                 request.log.error(

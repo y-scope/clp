@@ -4,7 +4,6 @@ import {SEARCH_SIGNAL} from "../../../../../common/index.js";
 import {
     CreateMongoIndexesProps,
     SEARCH_MAX_NUM_RESULTS,
-    UpdateSearchResultsMetaProps,
     UpdateSearchSignalWhenJobsFinishProps,
 } from "./typings.js";
 
@@ -19,39 +18,6 @@ import {
 const hasCollection = async (mongoDb: Db, collectionName: string): Promise<boolean> => {
     const collections = await mongoDb.listCollections().toArray();
     return collections.some((collection: {name: string}) => collection.name === collectionName);
-};
-
-/**
- * Modifies the search results metadata for a given job ID.
- *
- * @param props
- * @param props.fields
- * @param props.jobId
- * @param props.lastSignal
- * @param props.logger
- * @param props.searchResultsMetadataCollection
- */
-const updateSearchResultsMeta = async ({
-    fields,
-    jobId,
-    lastSignal,
-    logger,
-    searchResultsMetadataCollection,
-}: UpdateSearchResultsMetaProps) => {
-    const filter: Record<string, unknown> = {
-        _id: jobId,
-    };
-
-    if (lastSignal) {
-        filter.lastSignal = lastSignal;
-    }
-
-    const modifier = {
-        $set: fields,
-    };
-
-    logger.debug("SearchResultsMetadataCollection modifier = ", modifier);
-    await searchResultsMetadataCollection.updateOne(filter, modifier);
 };
 
 /**
@@ -106,8 +72,12 @@ const updateSearchSignalWhenJobsFinish = async ({
         return;
     }
 
-    await updateSearchResultsMeta({
-        fields: {
+    const filter = {
+        _id: searchJobId.toString(),
+        lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
+    };
+    const modifier = {
+        $set: {
             lastSignal: SEARCH_SIGNAL.RESP_DONE,
             errorMsg: errorMsg,
             numTotalResults: Math.min(
@@ -115,11 +85,8 @@ const updateSearchSignalWhenJobsFinish = async ({
                 SEARCH_MAX_NUM_RESULTS
             ),
         },
-        jobId: searchJobId.toString(),
-        lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
-        logger: logger,
-        searchResultsMetadataCollection: searchResultsMetadataCollection,
-    });
+    };
+    await searchResultsMetadataCollection.updateOne(filter, modifier);
 };
 
 /**
@@ -161,6 +128,5 @@ const createMongoIndexes = async ({
 export {
     createMongoIndexes,
     hasCollection,
-    updateSearchResultsMeta,
     updateSearchSignalWhenJobsFinish,
 };

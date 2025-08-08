@@ -11,7 +11,6 @@ import {
     PrestoQueryJobCreationSchema,
     PrestoQueryJobSchema,
 } from "../../../schemas/presto-search.js";
-import {updateSearchResultsMeta} from "../search/utils.js";
 import {insertPrestoRowsToMongo} from "./utils.js";
 
 
@@ -105,6 +104,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                             }
                         },
                         query: queryString,
+                        timeout: null,
                         state: (_, queryId, stats) => {
                             request.log.info({
                                 searchJobId: queryId,
@@ -125,13 +125,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                 resolve(queryId);
                             } else {
                                 // Update metadata on subsequent calls
-                                updateSearchResultsMeta({
-                                    fields: {lastSignal: stats.state},
-                                    jobId: queryId,
-                                    logger: request.log,
-                                    searchResultsMetadataCollection:
-                                    searchResultsMetadataCollection,
-                                }).catch((err: unknown) => {
+                                searchResultsMetadataCollection.updateOne(
+                                    {_id: queryId},
+                                    {$set: {lastSignal: stats.state}}
+                                ).catch((err: unknown) => {
                                     request.log.error(err, "Failed to update Presto metadata");
                                 });
                             }
