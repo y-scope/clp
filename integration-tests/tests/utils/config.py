@@ -1,17 +1,18 @@
 import shutil
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
+from typing import Optional
 
 
 @dataclass(frozen=True)
 class IntegrationTestConfig:
     clp_package_dir: Path
     test_root_dir: Path
-    logs_source_dir: Path = field(default=Path("/"))
+    logs_download_dir: Optional[Path] = None
 
     def __post_init__(self):
-        if Path("/") == self.logs_source_dir:
-            object.__setattr__(self, "logs_source_dir", self.test_root_dir / "downloads")
+        if self.logs_download_dir is None:
+            object.__setattr__(self, "logs_download_dir", self.test_root_dir / "downloads")
 
         # Check for required directories
         required_dirs = ["bin", "etc", "lib", "sbin"]
@@ -23,7 +24,7 @@ class IntegrationTestConfig:
             )
 
         self.test_root_dir.mkdir(parents=True, exist_ok=True)
-        self.logs_source_dir.mkdir(parents=True, exist_ok=True)
+        self.logs_download_dir.mkdir(parents=True, exist_ok=True)
 
     def get_clp_binary_path(self) -> Path:
         return self.clp_package_dir / "bin" / "clp"
@@ -47,9 +48,9 @@ class IntegrationTestLogs:
 
         object.__setattr__(self, "name", name)
         object.__setattr__(
-            self, "tarball_path", integration_test_config.logs_source_dir / f"{name}.tar.gz"
+            self, "tarball_path", integration_test_config.logs_download_dir / f"{name}.tar.gz"
         )
-        object.__setattr__(self, "extraction_dir", integration_test_config.logs_source_dir / name)
+        object.__setattr__(self, "extraction_dir", integration_test_config.logs_download_dir / name)
 
 
 @dataclass(frozen=True)
