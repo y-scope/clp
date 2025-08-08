@@ -31,27 +31,30 @@ Using Presto with CLP requires:
 
 ### Setting up CLP
 
-1. Follow the [quick-start](./quick-start/index.md) guide to download and extract the CLP package.
-Before proceeding, navigate to `etc/clp-config.yml` in the package. Locate and uncomment the
-`database:` section, and change the `database.host` parameter to a non-localhost hostname/IP. The
-`database:` section should look like this:
+1. Follow the [quick-start](./quick-start/index.md) guide to download and extract the CLP package,
+   but don't start the package just yet.
+2. Before starting the package, update the package's config as follows:
 
-    ```yaml
-    database:
-      type: "mariadb"  # "mariadb" or "mysql"
-      host: "<new-IP-address>"
-      port: 3306
-      name: "clp-db"
-    ```
+    * Open `etc/clp-config.yml` located within the package.
+    * Uncomment the `database` section.
+    * Change `database.host` value to a non-localhost hostname/IP.
+    * After the change, the `database` section should look something like this:
+        ```yaml
+        database:
+          type: "mariadb"  # "mariadb" or "mysql"
+          host: "<new-IP-address>"
+          port: 3306
+          name: "clp-db"
+        ```
+    :::{note}
+    This change is necessary since the Presto containers run on a Docker network whereas CLP's
+    database runs on the host network. So `localhost` refers to two different entities in those
+    networks. This limitation will be addressed in the future when we unify Presto and CLP's
+    deployment infrastructure. 
+    :::
 
-    For CLP’s database, `localhost` indicates the host itself, but for the Presto coordinator and
-    worker(s), `localhost` points at the container Presto is running within, as the coordinator and
-    worker(s) run on a kind of virtual network.
-    Infrastructure that will support CLP and the Presto container running within the same network is
-    in development.
-
-2. Continue the [quick-start](./quick-start/index.md#using-clp) guide to start up CLP and compress
-your logs. A sample dataset that works well with Presto is [postgresql].
+3. Continue following the [quick-start](./quick-start/index.md#using-clp) guide to start CLP and
+   compress your logs. A sample dataset that works well with Presto is [postgresql].
 
 ### Setting up Presto
 
