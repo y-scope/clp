@@ -550,8 +550,8 @@ int main(int argc, char const* argv[]) {
             global_metadata_db = std::make_unique<clp::GlobalMySQLMetadataDB>(
                     global_metadata_db_config.get_metadata_db_host(),
                     global_metadata_db_config.get_metadata_db_port(),
-                    global_metadata_db_config.get_metadata_db_username(),
-                    global_metadata_db_config.get_metadata_db_password(),
+                    global_metadata_db_config.get_metadata_db_username().value_or(""),
+                    global_metadata_db_config.get_metadata_db_password().value_or(""),
                     global_metadata_db_config.get_metadata_db_name(),
                     global_metadata_db_config.get_metadata_table_prefix()
             );

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 import argparse
 import logging
+import os
+
 import mariadb
-import yaml
 import sys
 
 # Setup logging
@@ -18,27 +19,23 @@ logger.addHandler(logging_console_handler)
 
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Setup a global MySQL metadata database for CLP.")
-    args_parser.add_argument("--config-file", required=True, help="Metadata database basic config file.")
+    args_parser.add_argument("--db-host", default="127.0.0.1", help="Database host")
+    args_parser.add_argument("--db-port", type=int, default=3306, help="Database port")
+    args_parser.add_argument("--db-name", default="clp-db", help="Database name")
+    args_parser.add_argument("--db-table-prefix", default="clp_", help="Database table prefix")
+
     parsed_args = args_parser.parse_args(argv[1:])
 
-    config_file_path = parsed_args.config_file
+    host = parsed_args.db_host
+    port = parsed_args.db_port
+    db_name = parsed_args.db_name
+    table_prefix = parsed_args.db_table_prefix
 
-    with open(config_file_path, 'r') as f:
-        config = yaml.safe_load(f)
-    if config is None:
-        raise Exception(f"Unable to parse configuration from {config_file_path}.")
-
-    required_keys = ["host", "port", "username", "password", "name"]
-    for key in required_keys:
-        if key not in config:
-            raise Exception(f"'{key}' missing from config file.")
-
-    host = config["host"]
-    port = config["port"]
-    username = config["username"]
-    password = config["password"]
-    db_name = config["name"]
-    table_prefix = config["table_prefix"]
+    try:
+        username = os.environ["CLP_DB_USER"]
+        password = os.environ["CLP_DB_PASS"]
+    except KeyError as e:
+        raise Exception(f"Environment variable {e} hasn't been set.")
 
     try:
         mysql_conn = mariadb.connect(host=host, port=port, username=username, password=password)
@@ -50,14 +47,16 @@ def main(argv):
     try:
         # Create database
         try:
-            mysql_cursor.execute("CREATE DATABASE IF NOT EXISTS {} DEFAULT CHARACTER SET 'utf8'".format(db_name))
+            mysql_cursor.execute(
+                "CREATE DATABASE IF NOT EXISTS `{}` DEFAULT CHARACTER SET 'utf8'".format(db_name)
+            )
         except mariadb.Error as err:
             logger.error("Failed to create database - {}".format(err.msg))
             return -1
 
         # Use database
         try:
-            mysql_cursor.execute("USE {}".format(db_name))
+            mysql_cursor.execute("USE `{}`".format(db_name))
         except mariadb.Error as err:
             logger.error("Failed to use database - {}".format(err.msg))
             return -1

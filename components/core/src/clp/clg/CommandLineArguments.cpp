@@ -41,21 +41,18 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         config_file_path += '/';
     }
     config_file_path += cDefaultConfigFilename;
-    string global_metadata_db_config_file_path;
+    // clang-format off
     options_general.add_options()
-            ("help,h", "Print help")
-            ("version,V", "Print version")
-            (
-                    "config-file",
-                    po::value<string>(&config_file_path)->value_name("FILE")
-                            ->default_value(config_file_path),
-                    "Use configuration options from FILE"
-            )(
-                    "db-config-file",
-                    po::value<string>(&global_metadata_db_config_file_path)->value_name("FILE")
-                            ->default_value(global_metadata_db_config_file_path),
-                    "Global metadata DB YAML config"
-            );
+                ("help,h", "Print help")
+                ("version,V", "Print version")
+                (
+                        "config-file",
+                        po::value<string>(&config_file_path)->value_name("FILE")
+                                ->default_value(config_file_path),
+                        "Use configuration options from FILE"
+                );
+    // clang-format on
+    m_metadata_db_config.emplace(options_general);
 
     // Define input options
     po::options_description options_input("Input Options");
@@ -195,14 +192,13 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             return ParsingResult::InfoCommand;
         }
 
-        // Parse and validate global metadata DB config
-        if (false == global_metadata_db_config_file_path.empty()) {
-            try {
-                m_metadata_db_config.parse_config_file(global_metadata_db_config_file_path);
-            } catch (std::exception& e) {
-                SPDLOG_ERROR("Failed to validate metadata database config - {}", e.what());
-                return ParsingResult::Failure;
-            }
+        // Initialize and validate global metadata DB config
+        try {
+            m_metadata_db_config->read_credentials_from_env_if_needed();
+            m_metadata_db_config->validate();
+        } catch (std::exception& e) {
+            SPDLOG_ERROR("Failed to validate metadata database config - {}", e.what());
+            return ParsingResult::Failure;
         }
 
         // Validate archive path was specified

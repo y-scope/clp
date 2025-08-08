@@ -17,8 +17,8 @@ IndexManager::IndexManager(
         m_mysql_index_storage = std::make_unique<MySQLIndexStorage>(
                 db_config->get_metadata_db_host(),
                 db_config->get_metadata_db_port(),
-                db_config->get_metadata_db_username(),
-                db_config->get_metadata_db_password(),
+                db_config->get_metadata_db_username().value(),
+                db_config->get_metadata_db_password().value(),
                 db_config->get_metadata_db_name(),
                 db_config->get_metadata_table_prefix()
         );

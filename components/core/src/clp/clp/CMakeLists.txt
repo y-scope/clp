@@ -186,7 +186,6 @@ if(CLP_BUILD_EXECUTABLES)
                 nlohmann_json::nlohmann_json
                 ${STD_FS_LIBS}
                 clp::string_utils
-                yaml-cpp
                 ystdlib::containers
                 ystdlib::error_handling
                 ZStd::ZStd
