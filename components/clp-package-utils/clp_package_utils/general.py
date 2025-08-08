@@ -291,7 +291,6 @@ def generate_container_config(
             clp_config.aws_config_directory,
             container_clp_config.aws_config_directory,
         )
-
     return container_clp_config, docker_mounts
 
 
