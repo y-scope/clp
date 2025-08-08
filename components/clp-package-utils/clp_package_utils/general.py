@@ -94,7 +94,7 @@ class CLPDockerMounts:
         self.archives_output_dir: typing.Optional[DockerMount] = None
         self.stream_output_dir: typing.Optional[DockerMount] = None
         self.aws_config_dir: typing.Optional[DockerMount] = None
-        self.generated_config_dir: typing.Optional[DockerMount] = None
+        self.generated_config_file: typing.Optional[DockerMount] = None
 
 
 def get_clp_home():
@@ -277,7 +277,7 @@ def generate_container_config(
         clp_config.get_generated_config_file_path(),
         container_clp_config.get_generated_config_file_path(),
     ):
-        docker_mounts.generated_config_dir = DockerMount(
+        docker_mounts.generated_config_file = DockerMount(
             DockerMountType.BIND,
             clp_config.get_generated_config_file_path(),
             container_clp_config.get_generated_config_file_path(),

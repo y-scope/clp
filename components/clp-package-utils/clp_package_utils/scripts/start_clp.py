@@ -252,7 +252,7 @@ def create_db_tables(
         mounts.clp_home,
         mounts.data_dir,
         mounts.logs_dir,
-        mounts.generated_config_dir,
+        mounts.generated_config_file,
     ]
     append_docker_options(container_start_cmd, necessary_mounts, env_vars)
     container_start_cmd.append(clp_config.execution_container)
@@ -612,7 +612,7 @@ def generic_start_scheduler(
         f"CLP_LOGS_DIR={container_logs_dir}",
         f"CLP_LOGGING_LEVEL={clp_config.query_scheduler.logging_level}",
     ]
-    necessary_mounts = [mounts.clp_home, mounts.logs_dir, mounts.generated_config_dir]
+    necessary_mounts = [mounts.clp_home, mounts.logs_dir, mounts.generated_config_file]
     aws_mount, aws_env_vars = generate_container_auth_options(clp_config, component_name)
     if aws_mount:
         necessary_mounts.append(mounts.aws_config_dir)
@@ -1015,7 +1015,7 @@ def start_reducer(
     necessary_mounts = [
         mounts.clp_home,
         mounts.logs_dir,
-        mounts.generated_config_dir,
+        mounts.generated_config_file,
     ]
     append_docker_options(container_start_cmd, necessary_mounts, env_vars)
     container_start_cmd.append(clp_config.execution_container)
