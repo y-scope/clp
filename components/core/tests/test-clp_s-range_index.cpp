@@ -223,6 +223,7 @@ TEST_CASE("clp-s-range-index", "[clp-s][range-index]") {
             archive_stats = compress_archive(
                     input_file,
                     std::string{cTestRangeIndexArchiveDirectory},
+                    false,
                     single_file_archive,
                     false,
                     input_file_type

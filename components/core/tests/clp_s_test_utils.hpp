@@ -14,6 +14,7 @@
  *
  * @param file_path
  * @param archive_directory
+ * @param retain_float_format
  * @param single_file_archive
  * @param structurize_arrays
  * @param file_type
@@ -22,6 +23,7 @@
 [[nodiscard]] auto compress_archive(
         std::string const& file_path,
         std::string const& archive_directory,
+        bool retain_float_format,
         bool single_file_archive,
         bool structurize_arrays,
         clp_s::FileType file_type
