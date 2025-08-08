@@ -69,5 +69,16 @@ To clean up all build artifacts, run:
 task clean
 ```
 
+## Building a Docker image
+
+To build a Docker image containing the CLP package, run:
+
+```shell
+task docker-image-package
+```
+
+This will create a Docker image named `clp-package-<os>-ubuntu-jammy:dev` where `<os>` is `x86` or
+`arm64`.
+
 [clp-issue-872]: https://github.com/y-scope/clp/issues/872
 [Task]: https://taskfile.dev/
