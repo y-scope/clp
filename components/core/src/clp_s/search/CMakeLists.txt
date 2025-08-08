@@ -54,6 +54,5 @@ if(CLP_BUILD_CLP_S_SEARCH)
                 clp_s::clp_dependencies
                 clp_s::io
                 spdlog::spdlog
-                ${zstd_TARGET}
         )
 endif()
