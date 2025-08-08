@@ -111,13 +111,13 @@ std::string FormattedFloatColumnReader::restore_format(uint64_t cur_message) {
                 formatted_double_str.erase(exp_pos + 1, 1);
             }
             if (exp_digits < (formatted_double_str.length() - exp_pos - 1)) {
-                formatted_double_str.erase(exp_pos + 1, (formatted_double_str.length() - exp_pos - 1) - exp_digits);
+                formatted_double_str = trim_leading_zeros(formatted_double_str, exp_pos + 1, formatted_double_str.length() - exp_pos - 1 - exp_digits);
             } else {
                 formatted_double_str.insert(exp_pos + 1, exp_digits - (formatted_double_str.length() - exp_pos - 1), '0');
             }
         } else {
             if (exp_digits < (formatted_double_str.length() - exp_pos - 2)) {
-                formatted_double_str.erase(exp_pos + 2, (formatted_double_str.length() - exp_pos - 2) - exp_digits);
+                formatted_double_str = trim_leading_zeros(formatted_double_str, exp_pos + 2, formatted_double_str.length() - exp_pos - 2 - exp_digits);
             } else {
                 formatted_double_str.insert(exp_pos + 2, exp_digits - (formatted_double_str.length() - exp_pos - 2), '0');
             }
@@ -143,6 +143,22 @@ std::string FormattedFloatColumnReader::restore_format(uint64_t cur_message) {
     oss << m_values[cur_message];
     return scientific_to_decimal(oss.str());
 }
+
+std::string FormattedFloatColumnReader::trim_leading_zeros(
+    std::string_view scientific_notation, size_t start, size_t number_of_zeros_to_trim) {
+    auto sci_str = std::string(scientific_notation);
+    size_t actual_number_of_zeros_to_trim{0};
+    for (size_t i{start}; i < start + number_of_zeros_to_trim; ++i) {
+        if ('0' == sci_str[i]) {
+            actual_number_of_zeros_to_trim++;
+        } else {
+            break;
+        }
+    }
+    sci_str.erase(start, actual_number_of_zeros_to_trim);
+    return sci_str;
+}
+
 
 std::string FormattedFloatColumnReader::scientific_to_decimal(
     std::string_view scientific_notation) {

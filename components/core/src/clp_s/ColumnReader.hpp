@@ -172,6 +172,7 @@ private:
     UnalignedMemSpan<double> m_values;
     UnalignedMemSpan<uint16_t> m_format;
 
+    static std::string trim_leading_zeros(std::string_view scientific_notation, size_t start, size_t number_of_zeros_to_trim);
     static std::string scientific_to_decimal(std::string_view scientific_notation);
 };
 

@@ -24,3 +24,16 @@
 { "negativeScientificNegativeExponentExceedingDigitLimitWithLeadingZeros": -1.234567891234567E-0008 }
 { "scientificSignificandsExceedingPrecisionLimitWithTrailingZerosWithNegativeExponentExceedingDigitLimitWithLeadingZeros": 1.234567891234560E-0008 }
 { "negativeScientificSignificandsExceedingPrecisionLimitWithTrailingZerosWithPositiveExponentExceedingDigitLimitWithLeadingZerosWithPlus": -1.234567891234560E+0008 }
+
+{"scientificWithGreaterThanTenMantissa":1.234567891234567E11}
+{"negativeScientificWithGreaterThanTenMantissa":-1.234567891234567E11}
+{"negativeScientificWithGreaterThanTenMantissaExceedingPrecision":-1.234567891234568E11}
+{"scientificWithGreaterThanTenMantissaExceedingPrecision":1.234567891234568E11}
+{ "scientificWithGreaterThanTenMantissa2": 1.234567891234567E02 }
+{ "-negativeScientificWithGreaterThanTenMantissa2": -1.234567891234567E02 }
+{ "nonZeroScientificWithZeroMantissa": 1.234567891234567E-11 }
+{ "negativeNonZeroScientificWithZeroMantissa": -1.234567891234567E-11 }
+{ "nonZeroScientificWithZeroMantissaExceedingPrecision": 1.234567891234568E-11 }
+{ "negativeNonZeroScientificWithZeroMantissaExceedingPrecision": -1.234567891234568E-11 }
+{ "nonZeroScientificWithZeroMantissa2": 1.234567891234567E-09 }
+{ "negativeNonZeroScientificWithZeroMantissa2": -1.234567891234567E-09 }
