@@ -1,8 +1,13 @@
 #include "GlobalMetadataDBConfig.hpp"
 
 #include <cstdlib>
+#include <istream>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/value_semantic.hpp>
 #include <fmt/core.h>
 
 #include "type_utils.hpp"
@@ -41,7 +46,12 @@ auto operator>>(std::istream& in, GlobalMetadataDBConfig::MetadataDBType& metada
 
 GlobalMetadataDBConfig::GlobalMetadataDBConfig(
         boost::program_options::options_description& options_description
-) {
+)
+        : m_metadata_db_type{cDefaultMetadataDbType},
+          m_metadata_db_host{cDefaultMetadataDbHost},
+          m_metadata_db_port{cDefaultMetadataDbPort},
+          m_metadata_db_name{cDefaultMetadataDbName},
+          m_metadata_table_prefix{cDefaultMetadataTablePrefix} {
     constexpr std::string_view cMetadataDbTypeMysqlOptDescPrefix{"[db-type=mysql]"};
 
     // clang-format off
@@ -108,12 +118,12 @@ auto GlobalMetadataDBConfig::read_credentials_from_env_if_needed() -> void {
         return;
     }
 
-    auto const* db_username{std::getenv("CLP_DB_USER")};
+    auto const* db_username{std::getenv("CLP_DB_USER")};  // NOLINT(concurrency-mt-unsafe)
     if (nullptr != db_username) {
         m_metadata_db_username.emplace(db_username);
     }
 
-    auto const* db_password{std::getenv("CLP_DB_PASS")};
+    auto const* db_password{std::getenv("CLP_DB_PASS")};  // NOLINT(concurrency-mt-unsafe)
     if (nullptr != db_password) {
         m_metadata_db_password.emplace(db_password);
     }
