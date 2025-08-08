@@ -21,7 +21,7 @@ const prestoRowToObject = (
         obj[col.name] = row[idx];
     });
 
-    return { row: obj };
+    return {row: obj};
 };
 
 /**

@@ -115,6 +115,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 throw error;
             }
 
+            await mongoDb.createCollection(searchJobId.toString());
+
             reply.code(StatusCodes.CREATED);
 
             return {searchJobId};

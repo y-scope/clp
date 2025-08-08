@@ -25,7 +25,7 @@ interface SearchResult {
 }
 
 /**
- * Columns configuration for the seach results table.
+ * Columns configuration for the search results table.
  */
 const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]> = [
     {
