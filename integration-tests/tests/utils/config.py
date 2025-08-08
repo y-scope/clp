@@ -4,9 +4,7 @@ from pathlib import Path
 
 
 @dataclass(frozen=True)
-class TestConfig:
-    __test__ = False
-
+class IntegrationTestConfig:
     clp_package_dir: Path
     test_root_dir: Path
     logs_source_dir: Path = field(default=Path("/"))
@@ -35,44 +33,46 @@ class TestConfig:
 
 
 @dataclass(frozen=True)
-class TestLogs:
-    __test__ = False
-
+class IntegrationTestLogs:
     name: str
     tarball_url: str
-    test_config: InitVar[TestConfig]
+    integration_test_config: InitVar[IntegrationTestConfig]
     tarball_path: Path = field(init=False, repr=True)
     extraction_dir: Path = field(init=False, repr=True)
 
-    def __post_init__(self, test_config: TestConfig):
+    def __post_init__(self, integration_test_config: IntegrationTestConfig):
         name = self.name.strip()
         if 0 == len(name):
             raise ValueError("`name` cannot be empty.")
 
         object.__setattr__(self, "name", name)
-        object.__setattr__(self, "tarball_path", test_config.logs_source_dir / f"{name}.tar.gz")
-        object.__setattr__(self, "extraction_dir", test_config.logs_source_dir / name)
+        object.__setattr__(
+            self, "tarball_path", integration_test_config.logs_source_dir / f"{name}.tar.gz"
+        )
+        object.__setattr__(self, "extraction_dir", integration_test_config.logs_source_dir / name)
 
 
 @dataclass(frozen=True)
 class CompressionTestConfig:
     test_name: str
     logs_source_dir: Path
-    test_config: InitVar[TestConfig]
+    integration_test_config: InitVar[IntegrationTestConfig]
     compression_dir: Path = field(init=False, repr=True)
     decompression_dir: Path = field(init=False, repr=True)
 
-    def __post_init__(self, test_config: TestConfig):
+    def __post_init__(self, integration_test_config: IntegrationTestConfig):
         test_name = self.test_name.strip()
         if 0 == len(test_name):
             raise ValueError("`test_name` cannot be empty.")
 
         object.__setattr__(self, "test_name", test_name)
         object.__setattr__(
-            self, "compression_dir", test_config.test_root_dir / f"{test_name}-archives"
+            self, "compression_dir", integration_test_config.test_root_dir / f"{test_name}-archives"
         )
         object.__setattr__(
-            self, "decompression_dir", test_config.test_root_dir / f"{test_name}-decompressed-logs"
+            self,
+            "decompression_dir",
+            integration_test_config.test_root_dir / f"{test_name}-decompressed-logs",
         )
 
     def clear_test_outputs(self) -> None:

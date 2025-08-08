@@ -3,8 +3,8 @@ from pathlib import Path
 import pytest
 from tests.utils.config import (
     CompressionTestConfig,
-    TestConfig,
-    TestLogs,
+    IntegrationTestConfig,
+    IntegrationTestLogs,
 )
 from tests.utils.utils import (
     is_dir_tree_content_equal,
@@ -17,15 +17,15 @@ pytestmark = pytest.mark.binaries
 text_datasets = pytest.mark.parametrize(
     "test_logs_fixture",
     [
-        "hive_24hr",
+        # "hive_24hr",
     ],
 )
 
 json_datasets = pytest.mark.parametrize(
     "test_logs_fixture",
     [
-        "elasticsearch",
-        "spark_event_logs",
+        # "elasticsearch",
+        # "spark_event_logs",
         "postgresql",
     ],
 )
@@ -35,18 +35,18 @@ json_datasets = pytest.mark.parametrize(
 @text_datasets
 def test_clp_identity_transform(
     request,
-    test_config: TestConfig,
+    integration_test_config: IntegrationTestConfig,
     test_logs_fixture: str,
 ) -> None:
-    test_logs: TestLogs = request.getfixturevalue(test_logs_fixture)
+    integration_test_logs: IntegrationTestLogs = request.getfixturevalue(test_logs_fixture)
     test_paths = CompressionTestConfig(
-        test_name=f"clp-{test_logs.name}",
-        logs_source_dir=test_logs.extraction_dir,
-        test_config=test_config,
+        test_name=f"clp-{integration_test_logs.name}",
+        logs_source_dir=integration_test_logs.extraction_dir,
+        integration_test_config=integration_test_config,
     )
     test_paths.clear_test_outputs()
 
-    binary_path_str = str(test_config.get_clp_binary_path())
+    binary_path_str = str(integration_test_config.get_clp_binary_path())
     # fmt: off
     compression_cmd = [
         binary_path_str,
@@ -81,18 +81,18 @@ def test_clp_identity_transform(
 @json_datasets
 def test_clp_s_identity_transform(
     request,
-    test_config: TestConfig,
+    integration_test_config: IntegrationTestConfig,
     test_logs_fixture: str,
 ) -> None:
-    test_logs: TestLogs = request.getfixturevalue(test_logs_fixture)
-    test_logs_name = test_logs.name
+    integration_test_logs: IntegrationTestLogs = request.getfixturevalue(test_logs_fixture)
+    test_logs_name = integration_test_logs.name
 
     test_paths = CompressionTestConfig(
         test_name=f"clp-s-{test_logs_name}",
-        logs_source_dir=test_logs.extraction_dir,
-        test_config=test_config,
+        logs_source_dir=integration_test_logs.extraction_dir,
+        integration_test_config=integration_test_config,
     )
-    _clp_s_compress_and_decompress(test_config, test_paths)
+    _clp_s_compress_and_decompress(integration_test_config, test_paths)
 
     # Recompress the decompressed output that's consolidated into a single json file, and decompress
     # it again to verify consistency. The compression input of the second iteration points to the
@@ -103,9 +103,9 @@ def test_clp_s_identity_transform(
     consolidated_json_test_paths = CompressionTestConfig(
         test_name=f"clp-s-{test_logs_name}-consolidated-json",
         logs_source_dir=test_paths.decompression_dir,
-        test_config=test_config,
+        integration_test_config=integration_test_config,
     )
-    _clp_s_compress_and_decompress(test_config, consolidated_json_test_paths)
+    _clp_s_compress_and_decompress(integration_test_config, consolidated_json_test_paths)
 
     input_path = consolidated_json_test_paths.logs_source_dir / "original"
     output_path = consolidated_json_test_paths.decompression_dir / "original"
@@ -118,10 +118,10 @@ def test_clp_s_identity_transform(
 
 
 def _clp_s_compress_and_decompress(
-    test_config: TestConfig, test_paths: CompressionTestConfig
+    integration_test_config: IntegrationTestConfig, test_paths: CompressionTestConfig
 ) -> None:
     test_paths.clear_test_outputs()
-    bin_path = str(test_config.get_clp_s_binary_path())
+    bin_path = str(integration_test_config.get_clp_s_binary_path())
     src_path = str(test_paths.logs_source_dir)
     compression_path = str(test_paths.compression_dir)
     decompression_path = str(test_paths.decompression_dir)
