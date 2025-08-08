@@ -1,3 +1,4 @@
+import os
 import pathlib
 from enum import auto
 from typing import Literal, Optional, Union
@@ -158,6 +159,15 @@ class Database(BaseModel):
             connection_params_and_type["ssl_cert"] = self.ssl_cert
         return connection_params_and_type
 
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+
+        # Remove sensitive information
+        d.pop("username", None)
+        d.pop("password", None)
+
+        return d
+
 
 def _validate_logging_level(cls, field):
     if not is_valid_logging_level(field):
@@ -248,6 +258,14 @@ class Redis(BaseModel):
             raise ValueError(f"{REDIS_COMPONENT_NAME}.host cannot be empty.")
         return field
 
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+
+        # Remove sensitive information
+        d.pop("password", None)
+
+        return d
+
 
 class Reducer(BaseModel):
     host: str = "localhost"
@@ -315,6 +333,15 @@ class Queue(BaseModel):
 
     username: Optional[str]
     password: Optional[str]
+
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+
+        # Remove sensitive information
+        d.pop("username", None)
+        d.pop("password", None)
+
+        return d
 
 
 class S3Credentials(BaseModel):
@@ -585,6 +612,13 @@ class WebUi(BaseModel):
         return field
 
 
+def _get_env_var(name) -> str:
+    try:
+        return os.environ[name]
+    except KeyError as ex:
+        raise ValueError(f"Missing environment variable: {ex}")
+
+
 class CLPConfig(BaseModel):
     execution_container: Optional[str] = None
 
@@ -619,6 +653,7 @@ class CLPConfig(BaseModel):
         self.stream_output.storage.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
+
         self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
 
     def validate_logs_input_config(self):
@@ -757,9 +792,26 @@ class CLPConfig(BaseModel):
                 f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
             )
 
+    def load_database_credentials_from_env(self):
+        self.database.username = _get_env_var("CLP_DB_USER")
+        self.database.password = _get_env_var("CLP_DB_PASS")
+
+    def load_queue_credentials_from_env(self):
+        self.queue.username = _get_env_var("CLP_QUEUE_USER")
+        self.queue.password = _get_env_var("CLP_QUEUE_PASS")
+
+    def load_redis_credentials_from_env(self):
+        self.redis.password = _get_env_var("CLP_REDIS_PASS")
+
+    def get_generated_config_file_path(self) -> pathlib.Path:
+        return self.logs_directory / ".clp-config.yml"
+
     def dump_to_primitive_dict(self):
         d = self.dict()
         d["logs_input"] = self.logs_input.dump_to_primitive_dict()
+        d["database"] = self.database.dump_to_primitive_dict()
+        d["queue"] = self.queue.dump_to_primitive_dict()
+        d["redis"] = self.redis.dump_to_primitive_dict()
         d["archive_output"] = self.archive_output.dump_to_primitive_dict()
         d["stream_output"] = self.stream_output.dump_to_primitive_dict()
         # Turn paths into primitive strings

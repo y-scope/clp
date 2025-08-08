@@ -1134,11 +1134,12 @@ async def main(argv: List[str]) -> int:
     config_path = pathlib.Path(parsed_args.config)
     try:
         clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
-    except ValidationError as err:
+        clp_config.load_database_credentials_from_env()
+    except (ValidationError, ValueError) as err:
         logger.error(err)
         return -1
-    except Exception as ex:
-        logger.error(ex)
+    except Exception:
+        logger.exception("Failed to initialize query scheduler.")
         return -1
 
     reducer_connection_queue = asyncio.Queue(32)
