@@ -243,7 +243,7 @@ def create_db_tables(
     ]
     # fmt: on
     env_vars = [
-        *generate_common_environment_variables(container_clp_config),
+        *generate_common_environment_variables(),
         *generate_credential_environment_variables(
             container_clp_config, include_db_credentials=True
         ),
@@ -604,7 +604,7 @@ def generic_start_scheduler(
     # fmt: on
 
     env_vars = [
-        *generate_common_environment_variables(container_clp_config),
+        *generate_common_environment_variables(),
         *generate_credential_environment_variables(
             container_clp_config, include_db_credentials=True
         ),
@@ -925,7 +925,7 @@ def start_webui(
     container_cmd.extend(container_cmd_extra_opts)
 
     env_vars = [
-        *generate_common_environment_variables(container_clp_config),
+        *generate_common_environment_variables(),
         *generate_credential_environment_variables(
             container_clp_config, include_db_credentials=True
         ),
@@ -998,7 +998,7 @@ def start_reducer(
     ]
     # fmt: on
     env_vars = [
-        *generate_common_environment_variables(container_clp_config, include_clp_home=True),
+        *generate_common_environment_variables(include_clp_home=True),
         *generate_credential_environment_variables(
             container_clp_config,
             include_db_credentials=True,
