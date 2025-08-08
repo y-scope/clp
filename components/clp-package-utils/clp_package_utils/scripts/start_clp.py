@@ -52,7 +52,6 @@ from clp_package_utils.general import (
     generate_common_environment_variables,
     generate_container_config,
     generate_credential_environment_variables,
-    generate_worker_config,
     get_clp_home,
     is_container_exited,
     is_container_running,
