@@ -25,4 +25,11 @@ Multi-node deployment
 ^^^
 How to deploy CLP across multiple nodes.
 :::
+
+:::{grid-item-card}
+:link: guides-retention
+Retention Control
+^^^
+How to configure retention control for CLP.
+:::
 ::::
