@@ -159,6 +159,15 @@ class Database(BaseModel):
             connection_params_and_type["ssl_cert"] = self.ssl_cert
         return connection_params_and_type
 
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+
+        # Remove sensitive information
+        d.pop("username", None)
+        d.pop("password", None)
+
+        return d
+
 
 def _validate_logging_level(cls, field):
     if not is_valid_logging_level(field):
@@ -249,6 +258,13 @@ class Redis(BaseModel):
             raise ValueError(f"{REDIS_COMPONENT_NAME}.host cannot be empty.")
         return field
 
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+
+        # Remove sensitive information
+        d.pop("password", None)
+
+        return d
 
 class Reducer(BaseModel):
     host: str = "localhost"
@@ -316,6 +332,15 @@ class Queue(BaseModel):
 
     username: Optional[str]
     password: Optional[str]
+
+    def dump_to_primitive_dict(self):
+        d = self.dict()
+
+        # Remove sensitive information
+        d.pop("username", None)
+        d.pop("password", None)
+
+        return d
 
 
 class S3Credentials(BaseModel):
@@ -783,6 +808,9 @@ class CLPConfig(BaseModel):
     def dump_to_primitive_dict(self):
         d = self.dict()
         d["logs_input"] = self.logs_input.dump_to_primitive_dict()
+        d["database"] = self.database.dump_to_primitive_dict()
+        d["queue"] = self.queue.dump_to_primitive_dict()
+        d["redis"] = self.redis.dump_to_primitive_dict()
         d["archive_output"] = self.archive_output.dump_to_primitive_dict()
         d["stream_output"] = self.stream_output.dump_to_primitive_dict()
         # Turn paths into primitive strings
@@ -793,14 +821,6 @@ class CLPConfig(BaseModel):
             d["aws_config_directory"] = str(self.aws_config_directory)
         else:
             d["aws_config_directory"] = None
-
-        # Remove sensitive information
-        d["database"].pop("username", None)
-        d["database"].pop("password", None)
-        d["queue"].pop("username", None)
-        d["queue"].pop("password", None)
-        d["redis"].pop("username", None)
-
         return d
 
 
