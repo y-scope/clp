@@ -1,6 +1,5 @@
 import enum
 import errno
-import logging
 import os
 import pathlib
 import re
