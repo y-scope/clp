@@ -1,0 +1,19 @@
+{ "normal": 123456789.12345678 }
+{ "integerWithTrailingZeros": 123456789.000 }
+{ "floatWithTrailingZeros": 123456789.123000 }
+{ "floatWithLeadingZeros": 0.000000000000000001234567891234500 }
+{ "zeroWithTrailingZeros": 0.00 }
+
+{ "unstructuredArray": [123456789.12345678, 123456789.000, 123456789.123000, 0.00] }
+{ "structuredArray": [{ "floatOfDifferentFormat": 123456789.12345678 }, { "floatOfDifferentFormat": 123456789.000 }, { "floatOfDifferentFormat": 123456789.123000 }, { "floatOfDifferentFormat": 0.00 }] }
+{ "exceedsPrecisionLimit": 123456789.123456789 }
+{ "exceedsPrecisionLimitWithTrailingZeros": 123456789.123000000 }
+{ "exceedsPrecisionLimitWithLeadingZeros": 0.0000000000000000012345678912345678 }
+{ "zeroWithMoreThanSixteenTrailingZeros": 0.00000000000000000 }
+
+{"scientificFloatExceedingPrecisionLimit1": 1.2345678912345678E8}
+{"scientificFloatExceedingPrecisionLimit2": 1.23456789123456789E-8}
+{"exceedsPrecisionLimitWithTrailingZeros1": 1.23456789123450000E8}
+{"exceedsPrecisionLimitWithTrailingZeros2": 1.23456789123450000E-8}
+
+{"overflow": 1.2345678912345678E9999}

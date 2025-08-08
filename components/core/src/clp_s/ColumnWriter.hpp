@@ -10,6 +10,7 @@
 #include "TimestampDictionaryWriter.hpp"
 #include "VariableEncoder.hpp"
 #include "ZstdCompressor.hpp"
+#include "FloatFormatEncoding.hpp"
 
 namespace clp_s {
 class BaseColumnWriter {
@@ -96,6 +97,7 @@ public:
 
 private:
     std::vector<double> m_values;
+    std::vector<uint16_t> m_format;
 };
 
 class BooleanColumnWriter : public BaseColumnWriter {

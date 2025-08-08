@@ -116,14 +116,14 @@ void SchemaReader::generate_json_string() {
                 auto name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
                 m_json_serializer.append_key(name);
                 m_json_serializer.append_value(
-                        std::to_string(std::get<double>(column->extract_value(m_cur_message)))
+                        static_cast<FloatColumnReader*>(column)->restore_format(m_cur_message)
                 );
                 break;
             }
             case JsonSerializer::Op::AddFloatValue: {
                 column = m_reordered_columns[column_id_index++];
                 m_json_serializer.append_value(
-                        std::to_string(std::get<double>(column->extract_value(m_cur_message)))
+                        static_cast<FloatColumnReader*>(column)->restore_format(m_cur_message)
                 );
                 break;
             }

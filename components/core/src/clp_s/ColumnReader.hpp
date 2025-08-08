@@ -143,8 +143,13 @@ public:
 
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
+    std::string restore_format(uint64_t cur_message);
+
 private:
     UnalignedMemSpan<double> m_values;
+    UnalignedMemSpan<uint16_t> m_format;
+
+    static std::string scientific_to_decimal(std::string_view scientific_notation);
 };
 
 class BooleanColumnReader : public BaseColumnReader {

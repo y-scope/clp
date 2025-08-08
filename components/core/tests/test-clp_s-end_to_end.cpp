@@ -20,21 +20,22 @@ constexpr std::string_view cTestEndToEndOutputDirectory{"test-end-to-end-out"};
 constexpr std::string_view cTestEndToEndOutputSortedJson{"test-end-to-end_sorted.jsonl"};
 constexpr std::string_view cTestEndToEndInputFileDirectory{"test_log_files"};
 constexpr std::string_view cTestEndToEndInputFile{"test_no_floats_sorted.jsonl"};
+constexpr std::string_view cTestEndToEndValidFloatFormatInputFile{"test_valid_float_format.jsonl"};
 
 namespace {
-auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path;
-auto get_test_input_local_path() -> std::string;
+auto get_test_input_path_relative_to_tests_dir(const std::string_view test_input_path) -> std::filesystem::path;
+auto get_test_input_local_path(const std::string_view test_input_path) -> std::string;
 auto extract() -> std::filesystem::path;
 void compare(std::filesystem::path const& extracted_json_path);
 
-auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path {
-    return std::filesystem::path{cTestEndToEndInputFileDirectory} / cTestEndToEndInputFile;
+auto get_test_input_path_relative_to_tests_dir(const std::string_view test_input_path) -> std::filesystem::path {
+    return std::filesystem::path{cTestEndToEndInputFileDirectory} / test_input_path;
 }
 
-auto get_test_input_local_path() -> std::string {
+auto get_test_input_local_path(const std::string_view test_input_path) -> std::string {
     std::filesystem::path const current_file_path{__FILE__};
     auto const tests_dir{current_file_path.parent_path()};
-    return (tests_dir / get_test_input_path_relative_to_tests_dir()).string();
+    return (tests_dir / get_test_input_path_relative_to_tests_dir(test_input_path)).string();
 }
 
 auto extract() -> std::filesystem::path {
@@ -59,7 +60,6 @@ auto extract() -> std::filesystem::path {
     std::filesystem::path extracted_json_path{cTestEndToEndOutputDirectory};
     extracted_json_path /= "original";
     REQUIRE(std::filesystem::exists(extracted_json_path));
-
     return extracted_json_path;
 }
 
@@ -83,7 +83,7 @@ void compare(std::filesystem::path const& extracted_json_path) {
     command = fmt::format(
             "diff --unified {} {}  > /dev/null",
             cTestEndToEndOutputSortedJson,
-            get_test_input_local_path()
+            get_test_input_local_path(cTestEndToEndInputFile)
     );
     result = std::system(command.c_str());
     REQUIRE((true == WIFEXITED(result)));
@@ -105,7 +105,7 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
 
     REQUIRE_NOTHROW(
             std::ignore = compress_archive(
-                    get_test_input_local_path(),
+                    get_test_input_local_path(cTestEndToEndInputFile),
                     std::string{cTestEndToEndArchiveDirectory},
                     single_file_archive,
                     structurize_arrays,
@@ -116,4 +116,25 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
     auto extracted_json_path = extract();
 
     compare(extracted_json_path);
+}
+
+TEST_CASE("clp-s-compress-extract-floats", "[clp-s][end-to-end]") {
+  // auto structurize_arrays = GENERATE(true, false);
+  // auto single_file_archive = GENERATE(true, false);
+
+  // TestOutputCleaner const test_cleanup{
+  //             {std::string{cTestEndToEndArchiveDirectory},
+  //              std::string{cTestEndToEndOutputDirectory},
+  //              std::string{cTestEndToEndOutputSortedJson}}
+  // };
+
+  std::ignore = compress_archive(
+                    get_test_input_local_path(cTestEndToEndValidFloatFormatInputFile),
+                    std::string{cTestEndToEndArchiveDirectory},
+                    true,
+                    true,
+                    clp_s::FileType::Json);
+
+  auto extracted_json_path = extract();
+  // compare(extracted_json_path);
 }

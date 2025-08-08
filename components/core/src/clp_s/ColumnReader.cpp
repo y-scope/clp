@@ -48,6 +48,7 @@ std::variant<int64_t, double, std::string, uint8_t> DeltaEncodedInt64ColumnReade
 
 void FloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
     m_values = reader.read_unaligned_span<double>(num_messages);
+    m_format = reader.read_unaligned_span<uint16_t>(num_messages);
 }
 
 void
@@ -74,8 +75,94 @@ void BooleanColumnReader::load(BufferViewReader& reader, uint64_t num_messages) 
 
 void
 FloatColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) {
-    buffer.append(std::to_string(m_values[cur_message]));
+    buffer.append(restore_format(cur_message));
 }
+
+std::string FloatColumnReader::restore_format(uint64_t cur_message) {
+    std::ostringstream oss;
+    const uint16_t significant_digits = (m_format[cur_message] >> float_format_encoding::cSignificantDigitsPos) & 0x1F;
+    oss << std::scientific << std::setprecision(significant_digits - 1);
+    if (m_format[cur_message] & (1 << float_format_encoding::cScientificExponentNotePos)) {
+        if (m_format[cur_message] & (1 << (float_format_encoding::cScientificExponentNotePos + 1))) {
+             oss << std::uppercase;
+        }
+        oss << m_values[cur_message];
+        auto formatted_double_str = oss.str();
+        const auto exp_pos = formatted_double_str.find_first_of("Ee");
+        const char maybe_sign = formatted_double_str[exp_pos + 1];
+        const uint16_t exp_digits = ((m_format[cur_message] >> float_format_encoding::cScientificExponentDigitsPos) & 0x03) + 1;
+        if (0b00 << float_format_encoding::cScientificExponentSignPos == (m_format[cur_message] & 0b11 << float_format_encoding::cScientificExponentSignPos)) {
+            if ('+' == maybe_sign || '-' == maybe_sign) {
+                formatted_double_str.erase(exp_pos + 1, 1);
+            }
+            if (exp_digits < (formatted_double_str.length() - exp_pos - 1)) {
+                formatted_double_str.erase(exp_pos + 1, (formatted_double_str.length() - exp_pos - 1) - exp_digits);
+            } else {
+                formatted_double_str.insert(exp_pos + 1, exp_digits - (formatted_double_str.length() - exp_pos - 1), '0');
+            }
+        } else {
+            if (exp_digits < (formatted_double_str.length() - exp_pos - 2)) {
+                formatted_double_str.erase(exp_pos + 2, (formatted_double_str.length() - exp_pos - 2) - exp_digits);
+            } else {
+                formatted_double_str.insert(exp_pos + 2, exp_digits - (formatted_double_str.length() - exp_pos - 2), '0');
+            }
+            if (0b01 << float_format_encoding::cScientificExponentSignPos == (m_format[cur_message] & 0b11 << float_format_encoding::cScientificExponentSignPos)) {
+                if (std::isdigit(maybe_sign)) {
+                    formatted_double_str.insert(exp_pos + 1, "+");
+                } else {
+                    formatted_double_str[exp_pos + 1] = '+';
+                }
+            } else if (0b10 << float_format_encoding::cScientificExponentSignPos == (m_format[cur_message] & 0b11 << float_format_encoding::cScientificExponentSignPos)) {
+                if (std::isdigit(maybe_sign)) {
+                    formatted_double_str.insert(exp_pos + 1, "-");
+                } else {
+                    formatted_double_str[exp_pos + 1] = '-';
+                }
+            }
+        }
+
+        return formatted_double_str;
+    }
+
+    // Convert the scientific notation to the standard decimal
+    oss << m_values[cur_message];
+    return scientific_to_decimal(oss.str());
+}
+
+std::string FloatColumnReader::scientific_to_decimal(
+    std::string_view scientific_notation) {
+    const auto sci_str = std::string(scientific_notation);
+    const size_t exp_pos = sci_str.find_first_of("e");
+    assert(std::string::npos != exp_pos);
+
+    // Split into mantissa and exponent parts
+    std::string mantissa_str = sci_str.substr(0, exp_pos);
+    const int exponent = std::stoi(sci_str.substr(exp_pos + 1));
+
+    // Remove the decimal point from the mantissa
+    const size_t dot_pos = mantissa_str.find('.');
+    std::string digits;
+    if (dot_pos != std::string::npos) {
+        digits = mantissa_str.substr(0, dot_pos) + mantissa_str.substr(dot_pos + 1);
+    } else {
+        digits = mantissa_str;
+    }
+
+    // Adjust position of decimal point based on exponent
+    const int decimal_pos = static_cast<int>(dot_pos) + exponent;
+
+    std::string result;
+    if (decimal_pos <= 0) {
+        result = "0." + std::string(-decimal_pos, '0') + digits;
+    } else if (decimal_pos < static_cast<int>(digits.size())) {
+        result = digits.substr(0, decimal_pos) + "." + digits.substr(decimal_pos);
+    } else {
+        result = digits + std::string(decimal_pos - digits.size(), '0');
+    }
+
+    return result;
+}
+
 
 std::variant<int64_t, double, std::string, uint8_t> BooleanColumnReader::extract_value(
         uint64_t cur_message
