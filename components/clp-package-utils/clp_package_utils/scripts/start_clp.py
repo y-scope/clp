@@ -882,7 +882,6 @@ def start_webui(
         "MongoDbStreamFilesCollectionName": clp_config.results_cache.stream_collection_name,
         "ClientDir": str(container_webui_dir / "client"),
         "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
-        "StreamFilesDir": str(container_clp_config.stream_output.get_directory()),
         "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
     }
 
@@ -891,7 +890,7 @@ def start_webui(
     stream_storage = clp_config.stream_output.storage
     if StorageType.S3 == stream_storage.type:
         s3_config = stream_storage.s3_config
-
+        server_settings_json_updates["StreamFilesDir"] = None
         server_settings_json_updates["StreamFilesS3Region"] = s3_config.region_code
         server_settings_json_updates["StreamFilesS3PathPrefix"] = (
             f"{s3_config.bucket}/{s3_config.key_prefix}"
@@ -902,6 +901,9 @@ def start_webui(
         else:
             server_settings_json_updates["StreamFilesS3Profile"] = None
     elif StorageType.FS == stream_storage.type:
+        server_settings_json_updates["StreamFilesDir"] = str(
+            container_clp_config.stream_output.get_directory()
+        )
         server_settings_json_updates["StreamFilesS3Region"] = None
         server_settings_json_updates["StreamFilesS3PathPrefix"] = None
         server_settings_json_updates["StreamFilesS3Profile"] = None
@@ -936,7 +938,6 @@ def start_webui(
     ]
     necessary_mounts = [
         mounts.clp_home,
-        mounts.stream_output_dir,
     ]
     if StorageType.S3 == stream_storage.type:
         auth = stream_storage.s3_config.aws_authentication
@@ -950,8 +951,11 @@ def start_webui(
             )
             if aws_mount:
                 necessary_mounts.append(mounts.aws_config_dir)
-            if aws_env_vars:
-                env_vars.extend(aws_env_vars)
+                if aws_env_vars:
+                    env_vars.extend(aws_env_vars)
+    elif StorageType.FS == stream_storage.type:
+        necessary_mounts.append(mounts.stream_output_dir)
+
     append_docker_options(container_cmd, necessary_mounts, env_vars)
     container_cmd.append(clp_config.execution_container)
 
