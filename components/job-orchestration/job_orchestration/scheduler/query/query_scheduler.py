@@ -1138,8 +1138,8 @@ async def main(argv: List[str]) -> int:
     except (ValidationError, ValueError) as err:
         logger.error(err)
         return -1
-    except Exception as ex:
-        logger.exception(ex)
+    except Exception:
+        logger.exception("Failed to initialize query scheduler.")
         return -1
 
     reducer_connection_queue = asyncio.Queue(32)
