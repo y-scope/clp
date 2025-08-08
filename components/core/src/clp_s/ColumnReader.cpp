@@ -131,7 +131,12 @@ std::string FloatColumnReader::restore_format(uint64_t cur_message) {
 
 std::string FloatColumnReader::scientific_to_decimal(
     std::string_view scientific_notation) {
-    const auto sci_str = std::string(scientific_notation);
+    auto sci_str = std::string(scientific_notation);
+    bool isNegative = false;
+    if (false == std::isdigit(sci_str[0])) {
+        isNegative = true;
+        sci_str.erase(0, 1);
+    }
     const size_t exp_pos = sci_str.find_first_of("e");
     assert(std::string::npos != exp_pos);
 
@@ -151,13 +156,16 @@ std::string FloatColumnReader::scientific_to_decimal(
     // Adjust position of decimal point based on exponent
     const int decimal_pos = static_cast<int>(dot_pos) + exponent;
 
-    std::string result;
+    std::string result{""};
+    if (isNegative) {
+        result = "-";
+    }
     if (decimal_pos <= 0) {
-        result = "0." + std::string(-decimal_pos, '0') + digits;
+        result += "0." + std::string(-decimal_pos, '0') + digits;
     } else if (decimal_pos < static_cast<int>(digits.size())) {
-        result = digits.substr(0, decimal_pos) + "." + digits.substr(decimal_pos);
+        result += digits.substr(0, decimal_pos) + "." + digits.substr(decimal_pos);
     } else {
-        result = digits + std::string(decimal_pos - digits.size(), '0');
+        result += digits + std::string(decimal_pos - digits.size(), '0');
     }
 
     return result;
