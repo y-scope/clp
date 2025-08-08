@@ -68,7 +68,7 @@ const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
                             text={"failed"}/>
                     );
                 default:
-                    return "";
+                    return null;
             }
         },
     },
@@ -90,8 +90,10 @@ const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
 ];
 
 export type {
-    CompressionJobStatus,
     JobData,
 };
 
-export {jobColumns};
+export {
+    CompressionJobStatus,
+    jobColumns
+};

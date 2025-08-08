@@ -2,7 +2,7 @@ import dayjs from "dayjs";
 
 import {
     CompressionJobStatus,
-    JobData,
+    type JobData,
 } from "../Jobs/typings";
 import {QueryJobsItem} from "./sql";
 import {formatSizeInBytes} from "./units";
