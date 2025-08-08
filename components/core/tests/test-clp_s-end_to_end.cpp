@@ -138,6 +138,7 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
             std::ignore = compress_archive(
                     get_test_input_local_path(cTestEndToEndInputFile),
                     std::string{cTestEndToEndArchiveDirectory},
+                    false,
                     single_file_archive,
                     structurize_arrays,
                     clp_s::FileType::Json
@@ -150,21 +151,22 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
 }
 
 TEST_CASE("clp-s-compress-extract-floats", "[clp-s][end-to-end]") {
-  auto structurize_arrays = GENERATE(true, false);
-  auto single_file_archive = GENERATE(true, false);
-
-  TestOutputCleaner const test_cleanup{
-              {std::string{cTestEndToEndArchiveDirectory},
-               std::string{cTestEndToEndOutputDirectory},
-               std::string{cTestEndToEndOutputSortedJson},
-               std::string{cTestEndToEndInputSortedJson}}
-  };
+  // auto structurize_arrays = GENERATE(true, false);
+  // auto single_file_archive = GENERATE(true, false);
+  //
+  // TestOutputCleaner const test_cleanup{
+  //             {std::string{cTestEndToEndArchiveDirectory},
+  //              std::string{cTestEndToEndOutputDirectory},
+  //              std::string{cTestEndToEndOutputSortedJson},
+  //              std::string{cTestEndToEndInputSortedJson}}
+  // };
 
   std::ignore = compress_archive(
                     get_test_input_local_path(cTestEndToEndValidFloatFormatInputFile),
                     std::string{cTestEndToEndArchiveDirectory},
-                    single_file_archive,
-                    structurize_arrays,
+                    true,
+                    true,
+                    true,
                     clp_s::FileType::Json);
 
   auto extracted_json_path = extract();

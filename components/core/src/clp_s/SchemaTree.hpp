@@ -32,6 +32,7 @@ namespace clp_s {
 enum class NodeType : uint8_t {
     Integer,
     Float,
+    FormattedFloat,
     ClpString,
     VarString,
     Boolean,

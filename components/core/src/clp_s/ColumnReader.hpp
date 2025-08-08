@@ -143,6 +143,29 @@ public:
 
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
+private:
+    UnalignedMemSpan<double> m_values;
+};
+
+class FormattedFloatColumnReader : public BaseColumnReader {
+public:
+    // Constructor
+    explicit FormattedFloatColumnReader(int32_t id) : BaseColumnReader(id) {}
+
+    // Destructor
+    ~FormattedFloatColumnReader() override = default;
+
+    // Methods inherited from BaseColumnReader
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
+
+    NodeType get_type() override { return NodeType::FormattedFloat; }
+
+    std::variant<int64_t, double, std::string, uint8_t> extract_value(
+            uint64_t cur_message
+    ) override;
+
+    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+
     std::string restore_format(uint64_t cur_message);
 
 private:

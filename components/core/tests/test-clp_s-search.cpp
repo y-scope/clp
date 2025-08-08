@@ -233,6 +233,7 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             std::ignore = compress_archive(
                     get_test_input_local_path(),
                     std::string{cTestSearchArchiveDirectory},
+                    false,
                     single_file_archive,
                     structurize_arrays,
                     clp_s::FileType::Json

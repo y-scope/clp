@@ -29,6 +29,16 @@ void DeltaEncodedInt64ColumnWriter::store(ZstdCompressor& compressor) {
 }
 
 size_t FloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
+    m_values.push_back(std::get<double>(value));
+    return sizeof(double);
+}
+
+void FloatColumnWriter::store(ZstdCompressor& compressor) {
+    size_t size = m_values.size() * sizeof(double);
+    compressor.write(reinterpret_cast<char const*>(m_values.data()), size);
+}
+
+size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
     auto float_str = std::get<std::string>(value);
 
     // Trim the raw string
@@ -96,7 +106,7 @@ size_t FloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
     return sizeof(double) + sizeof(uint16_t);
 }
 
-void FloatColumnWriter::store(ZstdCompressor& compressor) {
+void FormattedFloatColumnWriter::store(ZstdCompressor& compressor) {
     assert(m_format.size() == m_values.size());
     const auto values_size = m_values.size() * sizeof(double);
     const auto format_size = m_format.size() * sizeof(uint16_t);

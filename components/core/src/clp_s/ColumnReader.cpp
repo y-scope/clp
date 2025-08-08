@@ -48,6 +48,10 @@ std::variant<int64_t, double, std::string, uint8_t> DeltaEncodedInt64ColumnReade
 
 void FloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
     m_values = reader.read_unaligned_span<double>(num_messages);
+}
+
+void FormattedFloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_values = reader.read_unaligned_span<double>(num_messages);
     m_format = reader.read_unaligned_span<uint16_t>(num_messages);
 }
 
@@ -69,16 +73,27 @@ std::variant<int64_t, double, std::string, uint8_t> FloatColumnReader::extract_v
     return m_values[cur_message];
 }
 
+std::variant<int64_t, double, std::string, uint8_t> FormattedFloatColumnReader::extract_value(
+        uint64_t cur_message
+) {
+    return m_values[cur_message];
+}
+
 void BooleanColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
     m_values = reader.read_unaligned_span<uint8_t>(num_messages);
 }
 
 void
 FloatColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) {
+    buffer.append(std::to_string(m_values[cur_message]));
+}
+
+void
+FormattedFloatColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) {
     buffer.append(restore_format(cur_message));
 }
 
-std::string FloatColumnReader::restore_format(uint64_t cur_message) {
+std::string FormattedFloatColumnReader::restore_format(uint64_t cur_message) {
     std::ostringstream oss;
     const uint16_t significant_digits = (m_format[cur_message] >> float_format_encoding::cSignificantDigitsPos) & 0x1F;
     oss << std::scientific << std::setprecision(significant_digits - 1);
@@ -129,7 +144,7 @@ std::string FloatColumnReader::restore_format(uint64_t cur_message) {
     return scientific_to_decimal(oss.str());
 }
 
-std::string FloatColumnReader::scientific_to_decimal(
+std::string FormattedFloatColumnReader::scientific_to_decimal(
     std::string_view scientific_notation) {
     auto sci_str = std::string(scientific_notation);
     bool isNegative = false;

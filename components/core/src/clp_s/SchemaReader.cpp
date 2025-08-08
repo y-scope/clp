@@ -112,18 +112,34 @@ void SchemaReader::generate_json_string() {
                 break;
             }
             case JsonSerializer::Op::AddFloatField: {
+                    column = m_reordered_columns[column_id_index++];
+                    auto name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
+                    m_json_serializer.append_key(name);
+                    m_json_serializer.append_value(
+                            std::to_string(std::get<double>(column->extract_value(m_cur_message)))
+                    );
+                    break;
+            }
+            case JsonSerializer::Op::AddFloatValue: {
+                    column = m_reordered_columns[column_id_index++];
+                    m_json_serializer.append_value(
+                            std::to_string(std::get<double>(column->extract_value(m_cur_message)))
+                    );
+                    break;
+            }
+            case JsonSerializer::Op::AddFormattedFloatField: {
                 column = m_reordered_columns[column_id_index++];
                 auto name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
                 m_json_serializer.append_key(name);
                 m_json_serializer.append_value(
-                        static_cast<FloatColumnReader*>(column)->restore_format(m_cur_message)
+                        static_cast<FormattedFloatColumnReader*>(column)->restore_format(m_cur_message)
                 );
                 break;
             }
-            case JsonSerializer::Op::AddFloatValue: {
+            case JsonSerializer::Op::AddFormattedFloatValue: {
                 column = m_reordered_columns[column_id_index++];
                 m_json_serializer.append_value(
-                        static_cast<FloatColumnReader*>(column)->restore_format(m_cur_message)
+                        static_cast<FormattedFloatColumnReader*>(column)->restore_format(m_cur_message)
                 );
                 break;
             }
@@ -444,6 +460,11 @@ size_t SchemaReader::generate_structured_array_template(
                     m_reordered_columns.push_back(m_columns[column_idx++]);
                     break;
                 }
+                case NodeType::FormattedFloat: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddFormattedFloatValue);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
                 case NodeType::Boolean: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddBoolValue);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
@@ -526,6 +547,11 @@ size_t SchemaReader::generate_structured_object_template(
                 }
                 case NodeType::Float: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddFloatField);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
+                case NodeType::FormattedFloat: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddFormattedFloatField);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
                     break;
                 }
@@ -637,6 +663,11 @@ void SchemaReader::generate_json_template(int32_t id) {
                 m_json_serializer.add_op(JsonSerializer::Op::AddFloatField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
                 break;
+            }
+            case NodeType::FormattedFloat: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddFormattedFloatField);
+                    m_reordered_columns.push_back(m_column_map[child_global_id]);
+                    break;
             }
             case NodeType::Boolean: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddBoolField);

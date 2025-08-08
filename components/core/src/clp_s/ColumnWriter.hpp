@@ -97,6 +97,23 @@ public:
 
 private:
     std::vector<double> m_values;
+};
+
+class FormattedFloatColumnWriter : public BaseColumnWriter {
+public:
+    // Constructor
+    explicit FormattedFloatColumnWriter(int32_t id) : BaseColumnWriter(id) {}
+
+    // Destructor
+    ~FormattedFloatColumnWriter() override = default;
+
+    // Methods inherited from BaseColumnWriter
+    size_t add_value(ParsedMessage::variable_t& value) override;
+
+    void store(ZstdCompressor& compressor) override;
+
+private:
+    std::vector<double> m_values;
     std::vector<uint16_t> m_format;
 };
 
