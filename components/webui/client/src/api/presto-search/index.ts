@@ -37,10 +37,10 @@ const submitQuery = async (
  */
 const cancelQuery = async (
     payload: PrestoQueryJobSchema
-): Promise<AxiosResponse<PrestoQueryJobSchema>> => {
+): Promise<AxiosResponse<null>> => {
     console.log("Cancelling query:", JSON.stringify(payload));
 
-    return axios.post<PrestoQueryJobSchema>("/api/presto-search/cancel", payload);
+    return axios.post("/api/presto-search/cancel", payload);
 };
 
 
