@@ -18,7 +18,7 @@
     "StreamFilesS3PathPrefix": null,
     "StreamFilesS3Profile": null,
 
-    "ClpQueryEngine": "native",
+    "ClpQueryEngine": "clp",
     "PrestoHost": "localhost",
     "PrestoPort": 8889
 }
