@@ -98,7 +98,8 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
     if (std::string::npos != dot_pos && first_non_zero_frac_digit_pos < dot_pos) {
         significant_digits--;
     }
-    const uint16_t compressed_significant_digits = static_cast<uint16_t>(std::min(significant_digits, 16)) & 0x1F;
+    assert(significant_digits > 0);
+    const uint16_t compressed_significant_digits = static_cast<uint16_t>(std::min(significant_digits - 1, 15)) & 0x0F;
 
     format |= compressed_significant_digits << float_format_encoding::cSignificantDigitsPos;
 

@@ -31,6 +31,8 @@
 {"scientificWithGreaterThanTenMantissaExceedingPrecision":1.234567891234568E11}
 { "scientificWithGreaterThanTenMantissa2": 1.234567891234567E02 }
 { "-negativeScientificWithGreaterThanTenMantissa2": -1.234567891234567E02 }
+{"scientificWithGreaterThanTenMantissa3":1.234567891234567E+11}
+{"negativeScientificWithGreaterThanTenMantissa3":-1.234567891234567E+11}
 { "nonZeroScientificWithZeroMantissa": 1.234567891234567E-11 }
 { "negativeNonZeroScientificWithZeroMantissa": -1.234567891234567E-11 }
 { "nonZeroScientificWithZeroMantissaExceedingPrecision": 1.234567891234568E-11 }

@@ -95,7 +95,7 @@ FormattedFloatColumnReader::extract_string_value_into_buffer(uint64_t cur_messag
 
 std::string FormattedFloatColumnReader::restore_format(uint64_t cur_message) {
     std::ostringstream oss;
-    const uint16_t significant_digits = (m_format[cur_message] >> float_format_encoding::cSignificantDigitsPos) & 0x1F;
+    const uint16_t significant_digits = (m_format[cur_message] >> float_format_encoding::cSignificantDigitsPos & 0x0F) + 1;
     oss << std::scientific << std::setprecision(significant_digits - 1);
     if (m_format[cur_message] & (1 << float_format_encoding::cScientificExponentNotePos)) {
         if (m_format[cur_message] & (1 << (float_format_encoding::cScientificExponentNotePos + 1))) {
@@ -105,7 +105,7 @@ std::string FormattedFloatColumnReader::restore_format(uint64_t cur_message) {
         auto formatted_double_str = oss.str();
         const auto exp_pos = formatted_double_str.find_first_of("Ee");
         const char maybe_sign = formatted_double_str[exp_pos + 1];
-        const uint16_t exp_digits = ((m_format[cur_message] >> float_format_encoding::cScientificExponentDigitsPos) & 0x03) + 1;
+        const uint16_t exp_digits = (m_format[cur_message] >> float_format_encoding::cScientificExponentDigitsPos & 0x03) + 1;
         if (0b00 << float_format_encoding::cScientificExponentSignPos == (m_format[cur_message] & 0b11 << float_format_encoding::cScientificExponentSignPos)) {
             if ('+' == maybe_sign || '-' == maybe_sign) {
                 formatted_double_str.erase(exp_pos + 1, 1);

@@ -6,49 +6,80 @@
 
 ## Float Format Encoding
 
-Similar to `ClpString`, the format will be stored as extra information on top of the value for a new node type `FormattedFloat`.
-Each `FormattedFloat` node will have a double value stored in IEEE 754 (64 bits) format, and a 2-bytes *format* to store necessary
-format information that used for output when decompression the double value in the exactly same format before compression.
+Similar to `ClpString`, a `FormattedFloat` node stores the original formatting of a floating-point
+value alongside its numeric value.  
+
+Each `FormattedFloat` node contains:
+
+- The double value in IEEE 754 64-bit format.
+- A 2-byte *format* field encoding the necessary output formatting information so that, upon
+  decompression, the value can be reproduced **exactly** as it appeared before compression.
 
 ```
-+-------------------------------------+------------------------+--------------------------+---------------------------------------------+
-| Scientific Notation Marker (2 bits) | Exponent Sign (2 bits) | Exponent Digits (2 bits) | Digits from First Non-Zero to End of Number |
-+-------------------------------------+------------------------+--------------------------+---------------------------------------------+
++-------------------------------------+------------------------+--------------------------+------------------------------------------------------+
+| Scientific Notation Marker (2 bits) | Exponent Sign (2 bits) | Exponent Digits (2 bits) | Digits from First Non-Zero to End of Number (4 bits) |
++-------------------------------------+------------------------+--------------------------+------------------------------------------------------+
 ```
 
 ### Scientific Notation Marker
 
-This part is to mark if the number is scientfic or not. If so, is it using `E` or `e` to denote the exponent. The possible values for these
-two bits:
+Indicates whether the number is in scientific notation, and if so, whether the exponent is denoted
+by `E` or `e`.
 
-* `00`: Not scientific.
-* `01`: It is using `e`.
-* `11`: It is using `E`.
+* `00`: Not scientific
+* `01`: Scientific notation using `e`
+* `11`: Scientific notation using `E`
 
-`10` is skipped because the right bit is used for checking if it is use scientific if it is set. This can make the condition statement cleaner.
+`10` is unused so that the lowest bit can act as a simple “scientific” flag, making condition
+checks cleaner.
 
 ### Exponent Sign
 
-This part is to record if the exponent has any sign. For the positive exponent it could have an optional `+`. If exponent is 0, it could be `+0` or `-0` or `0`.
-So we simply record if there is no sign, or the sign is `+` or `-`, these three possibilities is determined by 2 bits:
+Records whether the exponent has a sign:
 
-* `00`: No sign.
-* `01` `+`.
-* `10` `-`.
+* `00`: No sign
+* `01`: `+`
+* `10`: `-`
+
+For example, exponents of `0` may appear as `0`, `+0`, or `-0`, and these two bits can record the
+format correctly.
 
 ### Exponent Digits
 
-The maximum exponent in double precision is 385, which has three digits. So we need only 2 bits to store the exponent digits. Since there is at least one digit, so
-we use the binary value of these two bits plus one is the actual number of exponent digits (e.g., `00` means the exponent has one digit).
+Since the maximum exponent for a double is `385` (three digits), two bits are enough to represent
+the digit count. 
+
+The stored value is **actual digits − 1**, since there is always at least one digit
+(e.g., `00` → 1 digit).
+
+Note that the stored value is not applied **strictly**.
+
+- If the decompressed double’s scientific exponent has fewer digits than the stored value, leading
+  zeros are inserted until the digit counts match.
+- If it has more digits than the stored value, leading zeros are trimmed where possible until they
+  match.
+
+However, the latter case is not guaranteed. For example, a value like `123456789123456.7E+1` has a
+one-digit exponent, but as noted in the CLP-S's limitations, decompression converts it to
+`1.234567891234567E+15`. Here, trimming either `1` or `5` would alter the value, so the exponent
+remains two digits rather than one. In such cases, **correctness takes precedence over preserving
+the exact format**.
 
 ### Digits from First Non-Zero to End of Number
 
-For example:
+This counts the digits from the first non-zero digit up to the last digit of the integer or
+fractional part (excluding the exponent). Examples:
 
-* for `123456789.1234567000`, it is 19, from the start `1` to end last `0`.
-* for `1.234567890E16`, it is 10, from the start `1` to the `0` before the exponent. It does not counts exponent part.
-* for `0.000000123000`, it is 6, from the `1` to the last `0`.
-* for `0.00`, it is 3. When the number is 0, it counts how many zeros.
+* `123456789.1234567000` → **19** (from first `1` to last `0`)
+* `1.234567890E16` → **10** (from first `1` to `0` before exponent)
+* `0.000000123000` → **6** (from first `1` to last `0`)
+* `0.00` → **3** (counts all zeros for zero value)
 
-According to the IEEE 754 (64 bits), when this digits excceed 16 (if the number is not zero), then there might be precision loss. So we allow the maximum digits from first non-zero to end of number as 16.
-So 
+According to IEEE 754 (64-bit), more than 16 significant digits (for non-zero values) may lead to
+precision loss. Thus, the maximum stored value is 16. This limit also applies to zero; for example,
+if a zero value contains more than 16 digits in total, it will be trimmed to 16 digits.
+
+Per the [JSON grammar][json_grammar], the integer part cannot be empty, so the minimum is **1** digit.  
+We store this as **actual digits − 1**, allowing representation with 4 bits (`0000` → 1 digit).
+
+[json_grammar]: https://www.crockford.com/mckeeman.html

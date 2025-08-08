@@ -7,7 +7,7 @@ namespace clp_s::float_format_encoding {
 constexpr uint16_t cScientificExponentNotePos = 14;
 constexpr uint16_t cScientificExponentSignPos = 12;
 constexpr uint16_t cScientificExponentDigitsPos = 10;
-constexpr uint16_t cSignificantDigitsPos = 5;
+constexpr uint16_t cSignificantDigitsPos = 6;
 
 } // namespace  clp_s::float_format_encoding
 
