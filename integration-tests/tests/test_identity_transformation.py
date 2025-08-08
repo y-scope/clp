@@ -46,7 +46,7 @@ def test_clp_identity_transform(
     )
     test_paths.clear_test_outputs()
 
-    binary_path_str = str(integration_test_config.get_clp_binary_path())
+    binary_path_str = str(integration_test_config.package_config.get_clp_binary_path())
     # fmt: off
     compression_cmd = [
         binary_path_str,
@@ -121,7 +121,7 @@ def _clp_s_compress_and_decompress(
     integration_test_config: IntegrationTestConfig, test_paths: CompressionTestConfig
 ) -> None:
     test_paths.clear_test_outputs()
-    bin_path = str(integration_test_config.get_clp_s_binary_path())
+    bin_path = str(integration_test_config.package_config.get_clp_s_binary_path())
     src_path = str(test_paths.logs_source_dir)
     compression_path = str(test_paths.compression_dir)
     decompression_path = str(test_paths.decompression_dir)

@@ -5,15 +5,10 @@ from typing import Optional
 
 
 @dataclass(frozen=True)
-class IntegrationTestConfig:
+class PackageConfig:
     clp_package_dir: Path
-    test_root_dir: Path
-    logs_download_dir: Optional[Path] = None
 
     def __post_init__(self):
-        if self.logs_download_dir is None:
-            object.__setattr__(self, "logs_download_dir", self.test_root_dir / "downloads")
-
         # Check for required directories
         required_dirs = ["bin", "etc", "lib", "sbin"]
         missing_dirs = [d for d in required_dirs if not (self.clp_package_dir / d).is_dir()]
@@ -23,14 +18,25 @@ class IntegrationTestConfig:
                 f"Missing: {', '.join(missing_dirs)}"
             )
 
-        self.test_root_dir.mkdir(parents=True, exist_ok=True)
-        self.logs_download_dir.mkdir(parents=True, exist_ok=True)
-
     def get_clp_binary_path(self) -> Path:
         return self.clp_package_dir / "bin" / "clp"
 
     def get_clp_s_binary_path(self) -> Path:
         return self.clp_package_dir / "bin" / "clp-s"
+
+
+@dataclass(frozen=True)
+class IntegrationTestConfig:
+    package_config: PackageConfig
+    test_root_dir: Path
+    logs_download_dir: Optional[Path] = None
+
+    def __post_init__(self):
+        if self.logs_download_dir is None:
+            object.__setattr__(self, "logs_download_dir", self.test_root_dir / "downloads")
+
+        self.test_root_dir.mkdir(parents=True, exist_ok=True)
+        self.logs_download_dir.mkdir(parents=True, exist_ok=True)
 
 
 @dataclass(frozen=True)
