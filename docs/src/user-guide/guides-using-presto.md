@@ -46,11 +46,12 @@ Using Presto with CLP requires:
           port: 3306
           name: "clp-db"
         ```
+
     :::{note}
-    This change is necessary since the Presto containers run on a Docker network whereas CLP's
+    This change is necessary since the Presto containers run on a Docker network, whereas CLP's
     database runs on the host network. So `localhost` refers to two different entities in those
     networks. This limitation will be addressed in the future when we unify Presto and CLP's
-    deployment infrastructure. 
+    deployment infrastructure.
     :::
 
 3. Continue following the [quick-start](./quick-start/index.md#using-clp) guide to start CLP and
