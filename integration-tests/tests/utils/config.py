@@ -9,22 +9,20 @@ class PackageConfig:
     clp_package_dir: Path
 
     def __post_init__(self):
+        clp_package_dir = self.clp_package_dir
+
         # Check if package directory exists and is valid
-        if not self.clp_package_dir.exists():
-            raise ValueError(
-                f"CLP package directory does not exist: {self.clp_package_dir}"
-            )
-        if not self.clp_package_dir.is_dir():
-            raise ValueError(
-                f"CLP package path is not a directory: {self.clp_package_dir}"
-            )
-        
+        if not clp_package_dir.exists():
+            raise ValueError(f"CLP package directory does not exist: {clp_package_dir}")
+        if not clp_package_dir.is_dir():
+            raise ValueError(f"CLP package path is not a directory: {clp_package_dir}")
+
         # Check for required directories
         required_dirs = ["bin", "etc", "lib", "sbin"]
-        missing_dirs = [d for d in required_dirs if not (self.clp_package_dir / d).is_dir()]
+        missing_dirs = [d for d in required_dirs if not (clp_package_dir / d).is_dir()]
         if len(missing_dirs) > 0:
             raise ValueError(
-                f"CLP package at {self.clp_package_dir} is incomplete. "
+                f"CLP package at {clp_package_dir} is incomplete. "
                 f"Missing: {', '.join(missing_dirs)}"
             )
 
