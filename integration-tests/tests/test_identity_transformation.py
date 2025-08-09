@@ -85,10 +85,10 @@ def test_clp_s_identity_transform(
     test_logs_fixture: str,
 ) -> None:
     integration_test_logs: IntegrationTestLogs = request.getfixturevalue(test_logs_fixture)
-    test_logs_name = integration_test_logs.name
+    test_log_name = integration_test_logs.name
 
     test_paths = CompressionTestConfig(
-        test_name=f"clp-s-{test_logs_name}",
+        test_name=f"clp-s-{test_log_name}",
         logs_source_dir=integration_test_logs.extraction_dir,
         integration_test_config=integration_test_config,
     )
@@ -101,7 +101,7 @@ def test_clp_s_identity_transform(
     #       the directory structure and row/key order) with the original downloaded logs.
     # See also: https://docs.yscope.com/clp/main/user-guide/core-clp-s.html#current-limitations
     consolidated_json_test_paths = CompressionTestConfig(
-        test_name=f"clp-s-{test_logs_name}-consolidated-json",
+        test_name=f"clp-s-{test_log_name}-consolidated-json",
         logs_source_dir=test_paths.decompression_dir,
         integration_test_config=integration_test_config,
     )
