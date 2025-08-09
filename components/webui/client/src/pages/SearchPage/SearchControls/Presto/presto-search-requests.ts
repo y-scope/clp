@@ -2,6 +2,7 @@ import {
     type PrestoQueryJobCreationSchema,
     submitQuery,
 } from "../../../../api/presto-search";
+import useSearchStore from "../../SearchState/";
 
 
 /**
@@ -10,9 +11,11 @@ import {
  * @param payload
  */
 const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreationSchema) => {
+    const store = useSearchStore.getState();
     submitQuery(payload)
         .then((result) => {
             const {searchJobId} = result.data;
+            store.updateSearchJobId(searchJobId);
             console.debug(
                 "Presto search job created - ",
                 "Search job ID:",
