@@ -6,7 +6,7 @@ import {
 } from "../../../config";
 import Dataset from "./Dataset";
 import styles from "./index.module.css";
-import RunButton from "./Presto/RunButton";
+import PrestoSearchButton from "./Presto/PrestoSearchButton";
 import SqlQueryInput from "./Presto/SqlQueryInput";
 import QueryInput from "./QueryInput";
 import SearchButton from "./SearchButton";
@@ -43,7 +43,7 @@ const SearchControls = () => {
                     (
                         <>
                             <SqlQueryInput/>
-                            <RunButton/>
+                            <PrestoSearchButton/>
                         </>
                     )}
             </div>
