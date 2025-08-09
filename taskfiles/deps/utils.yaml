@@ -68,6 +68,7 @@ tasks:
           CMAKE_JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
           CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
+          CMAKE_SOURCE_DIR: "{{.CMAKE_SOURCE_DIR}}"
           TAR_SHA256: "{{.TARBALL_SHA256}}"
           TAR_URL: "{{.TARBALL_URL}}"
           WORK_DIR: "{{.G_DEPS_CORE_DIR}}"
