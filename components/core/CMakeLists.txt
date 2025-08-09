@@ -310,31 +310,13 @@ if(CLP_NEED_ZSTD)
     endif()
 endif()
 
-# Find and setup LZMA Library
-# TODO: Add a script in ./cmake/Modules to properly import LZMA in find_package()'s module mode
-if(CLP_NEED_LZMA)
+if(CLP_NEED_LIBLZMA)
     if(CLP_USE_STATIC_LIBS)
-        set(LIBLZMA_USE_STATIC_LIBS ON)
+        set(LibLZMA_USE_STATIC_LIBS ON)
     endif()
-    find_package(LibLZMA REQUIRED)
-    if(LIBLZMA_FOUND)
-        message(STATUS "Found Lzma ${LIBLZMA_VERSION_STRING}")
-        message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
-        message(STATUS "Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
-
-        # Version 5.8.1 and above address CVE-2024-3094 and CVE-2025-31115.
-        set(REQUIRED_LIBLZMA_VERSION "5.8.1")
-        if(LIBLZMA_VERSION_STRING VERSION_LESS ${REQUIRED_LIBLZMA_VERSION})
-            message(
-                FATAL_ERROR
-                "Detected LibLZMA version ${LIBLZMA_VERSION_STRING} is older than required"
-                " ${REQUIRED_LIBLZMA_VERSION}"
-            )
-        endif()
-    else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
-    endif()
-    include_directories(${LIBLZMA_INCLUDE_DIRS})
+    # Version 5.8.1 and above address CVE-2024-3094 and CVE-2025-31115.
+    find_package(LibLZMA 5.8.1 REQUIRED MODULE)
+    message(STATUS "Found LibLZMA ${LibLZMA_VERSION}")
 endif()
 
 # sqlite dependencies
@@ -758,6 +740,7 @@ if(CLP_BUILD_TESTING)
             fmt::fmt
             log_surgeon::log_surgeon
             LibArchive::LibArchive
+            LibLZMA::LibLZMA
             MariaDBClient::MariaDBClient
             ${MONGOCXX_TARGET}
             nlohmann_json::nlohmann_json
@@ -771,7 +754,6 @@ if(CLP_BUILD_TESTING)
             yaml-cpp
             ystdlib::containers
             ystdlib::error_handling
-            ${LIBLZMA_LIBRARIES}
             ZStd::ZStd
             )
     target_compile_features(unitTest
