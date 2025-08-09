@@ -12,7 +12,7 @@ import styles from "./index.module.css";
 
 
 /**
- * Renders a button to run the SQL query.
+ * Renders a button to cancel the SQL query.
  *
  * @return
  */

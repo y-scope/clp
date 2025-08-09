@@ -6,7 +6,7 @@ import RunButton from "./RunButton";
 
 
 /**
- * Renders a button to run the SQL query.
+ * Renders a button to submit or cancel the SQL query.
  *
  * @return
  */
