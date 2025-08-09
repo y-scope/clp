@@ -9,6 +9,16 @@ class PackageConfig:
     clp_package_dir: Path
 
     def __post_init__(self):
+        # Check if package directory exists and is valid
+        if not self.clp_package_dir.exists():
+            raise ValueError(
+                f"CLP package directory does not exist: {self.clp_package_dir}"
+            )
+        if not self.clp_package_dir.is_dir():
+            raise ValueError(
+                f"CLP package path is not a directory: {self.clp_package_dir}"
+            )
+        
         # Check for required directories
         required_dirs = ["bin", "etc", "lib", "sbin"]
         missing_dirs = [d for d in required_dirs if not (self.clp_package_dir / d).is_dir()]
