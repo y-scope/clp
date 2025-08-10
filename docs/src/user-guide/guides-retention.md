@@ -75,8 +75,8 @@ garbage_collector:
 
   # Interval (in minutes) at which garbage collector jobs run
   sweep_interval:
-    archive: <sweep_interval>
-    search_result: <sweep_interval>
+    archive: 180
+    search_result: 15
 ```
 
 :::{note}
@@ -84,10 +84,10 @@ If the retention period is set to `null`, the corresponding garbage collection t
 even if `sweep_interval` is configured.
 :::
 
-## Handle race condition
-Retention is designed to avoid the race condition where it deletes archives that might still be in
-use by active search jobs.
-CLP employs the following mechanisms to avoid race conditions:
+## Handling data race conditions
+CLP's retention system is designed to avoid data race conditions that may arise from the deletion of
+archives or search results that may still be in use by active jobs. CLP employs the following
+mechanisms to avoid these conditions:
 
 - If any query job is running, CLP conservatively calculates a **safe expiry timestamp** based on 
   the earliest active search job. This ensures no archive that could be searched is deleted.
@@ -97,19 +97,19 @@ CLP employs the following mechanisms to avoid race conditions:
 
 :::{warning}
 A hanging search job will prevent CLP from deleting expired archives. 
-Restarting the query scheduler will mark such jobs as failed and allow retention to resume.
+Restarting the query scheduler will mark such jobs as failed and allow garbage collection to resume.
 :::
 
 ## Fault tolerance
 The garbage collector can resume execution from where it left off if a previous run fails. 
 This design ensures that CLP does not fall into an inconsistent state due to partial deletions.
 
-If the CLP package stops unexpectedly (for example, due to a host machine shutdown) when a garbage
-collection task was running, simply restart the package and the garbage collector will continue 
+If the CLP package stops unexpectedly (for example, due to a host machine shutdown) while a garbage
+collection task is running, simply restart the package and the garbage collector will continue 
 from the point of failure.
 
 :::{note}
-During failure recovery, there may be a temporary period when an archive is deleted from the
-database but still exists on disk or in object storage. Once recovery completes, the physical
+During failure recovery, there may be a temporary period during which an archive no longer exists in
+the database, but still exists on disk or in object storage. Once recovery is complete, the physical
 archive will also be deleted.
 :::
