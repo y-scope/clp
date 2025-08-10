@@ -1,14 +1,16 @@
 # Retention control in CLP
 
-CLP supports retention control to periodically delete outdated archives and search results to free
-storage space. Retention applies to both the local filesystem and object storage.
+CLP supports retention control to free up storage space by periodically deleting outdated archives
+and search results. Retention applies to both the local filesystem and object storage.
 
 This process is managed by background **garbage collector** jobs, which scan for and delete expired
 data based on configured retention settings in `etc/clp-config.yml`.
 
 :::{note}
-By default, retention control is disabled and data will be kept indefinitely in CLP.
+By default, retention control is disabled, and CLP retains data indefinitely.
 :::
+
+---
 
 ## Definitions
 
@@ -23,20 +25,20 @@ deleted.
 ### Expiry criteria
 
 - **Archive Expiry:**  
-  An archive is considered expired if its largest log message timestamp exceeds the retention
-  period:  
+  An archive is considered expired if the archive's TTL has elapsed since its most recent log event,
+  i.e. that the difference between T and `archive.largest_msg_ts` has surpassed TTL.
   ```text
-  archive.largest_msg_ts < T - TTL
+  if (T - archive.largest_msg_ts > TTL) then EXPIRED
   ```
-:::{note}
-Archives whose log messages do not contain timestamps are not subject to retention.
-:::
-
-:::{caution}
-Archive expiry is based on the `timestamp of the log messages`, not on when the archive is
-compressed. Compressing old logs with retention enabled could cause those archives to be deleted
-immediately after compression.
-:::
+  :::{note}
+  Archives whose log messages do not contain timestamps are not subject to retention.
+  :::
+  
+  :::{caution}
+  Archive expiry is based on the **timestamp of the log messages**, not on when the archive is
+  compressed. Compressing old logs with retention enabled could cause those archives to be deleted
+  immediately after compression.
+  :::
 
 - **Search Result Expiry:** 
   A search result is considered expired if the result's TTL has elapsed since the search was 
