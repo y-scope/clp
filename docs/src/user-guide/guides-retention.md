@@ -39,18 +39,20 @@ immediately after compression.
 :::
 
 - **Search Result Expiry:** 
-  A search result is considered expired if it's finish time exceeds the retention period:
+  A search result is considered expired if the result's TTL has elapsed since the search was 
+  completed, i.e. that the difference between T and `search_job.completion_time` has surpassed TTL.
   ```text
-  search_job.finished_time < T - TTL.
+  if (T - search_job.completion_time > TTL) then EXPIRED
   ```
 
+---
 
 ## Configuration
-Retention setting can be configured in `etc/clp-config.yml`.
+Retention settings can be configured in `etc/clp-config.yml`.
 
 ### Configure retention period
-To configure a retention period, update the `retention_period`
-key in `etc/clp-config.yml` with desired retention period in minutes.
+To configure a retention period, update the `retention_period` key in `etc/clp-config.yml` with the
+desired retention period in minutes.
 
 For example, to configure an archive retention period of 30 days (43,200 minutes):
 ```yaml
@@ -63,11 +65,13 @@ archive_output:
 ```
 
 ### Configure sweep interval
-**Sweep interval** specifies the interval at which garbage collector jobs run to collect and delete
-expired data.
+**Sweep interval** specifies the time interval at which garbage collector jobs run to collect and
+delete expired data.
 
-To configure a custom sweep frequency for different retention targets, set the fields under
-`garbage_collector.sweep_interval` in `etc/clp-config.yml`:
+To configure a custom sweep frequency for different retention targets, you can set the subfields
+under `garbage_collector.sweep_interval` individually in `etc/clp-config.yml`. For example, to
+configure a sweep interval of 15 minutes for search results but 3 hours (180 minutes) for archives,
+enter the following:
 
 ```yaml
 garbage_collector:
