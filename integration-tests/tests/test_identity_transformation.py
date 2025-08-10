@@ -34,7 +34,7 @@ json_datasets = pytest.mark.parametrize(
 @pytest.mark.clp
 @text_datasets
 def test_clp_identity_transform(
-    request,
+    request: pytest.FixtureRequest,
     integration_test_config: IntegrationTestConfig,
     test_logs_fixture: str,
 ) -> None:
@@ -46,25 +46,23 @@ def test_clp_identity_transform(
     )
     test_paths.clear_test_outputs()
 
-    binary_path_str = str(integration_test_config.package_config.get_clp_binary_path())
+    bin_path = str(integration_test_config.package_config.get_clp_binary_path())
+    src_path = str(test_paths.logs_source_dir)
+    compression_path = str(test_paths.compression_dir)
+    decompression_path = str(test_paths.decompression_dir)
     # fmt: off
     compression_cmd = [
-        binary_path_str,
+        bin_path,
         "c",
         "--progress",
-        "--remove-path-prefix", str(test_paths.logs_source_dir),
-        str(test_paths.compression_dir),
-        str(test_paths.logs_source_dir),
+        "--remove-path-prefix", src_path,
+        compression_path,
+        src_path,
     ]
     # fmt: on
     run_and_assert(compression_cmd)
 
-    decompression_cmd = [
-        binary_path_str,
-        "x",
-        str(test_paths.compression_dir),
-        str(test_paths.decompression_dir),
-    ]
+    decompression_cmd = [bin_path, "x", compression_path, decompression_path]
     run_and_assert(decompression_cmd)
 
     input_path = test_paths.logs_source_dir
@@ -80,7 +78,7 @@ def test_clp_identity_transform(
 @pytest.mark.clp_s
 @json_datasets
 def test_clp_s_identity_transform(
-    request,
+    request: pytest.FixtureRequest,
     integration_test_config: IntegrationTestConfig,
     test_logs_fixture: str,
 ) -> None:
@@ -107,8 +105,9 @@ def test_clp_s_identity_transform(
     )
     _clp_s_compress_and_decompress(integration_test_config, consolidated_json_test_paths)
 
-    input_path = consolidated_json_test_paths.logs_source_dir / "original"
-    output_path = consolidated_json_test_paths.decompression_dir / "original"
+    _consolidated_json_file_name = "original"
+    input_path = consolidated_json_test_paths.logs_source_dir / _consolidated_json_file_name 
+    output_path = consolidated_json_test_paths.decompression_dir / _consolidated_json_file_name 
     assert is_json_file_structurally_equal(
         input_path, output_path
     ), f"Mismatch between clp-s input {input_path} and output {output_path}."
