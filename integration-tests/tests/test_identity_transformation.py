@@ -106,8 +106,8 @@ def test_clp_s_identity_transform(
     _clp_s_compress_and_decompress(integration_test_config, consolidated_json_test_paths)
 
     _consolidated_json_file_name = "original"
-    input_path = consolidated_json_test_paths.logs_source_dir / _consolidated_json_file_name 
-    output_path = consolidated_json_test_paths.decompression_dir / _consolidated_json_file_name 
+    input_path = consolidated_json_test_paths.logs_source_dir / _consolidated_json_file_name
+    output_path = consolidated_json_test_paths.decompression_dir / _consolidated_json_file_name
     assert is_json_file_structurally_equal(
         input_path, output_path
     ), f"Mismatch between clp-s input {input_path} and output {output_path}."
