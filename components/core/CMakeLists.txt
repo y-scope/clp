@@ -299,7 +299,7 @@ endif()
 
 if(CLP_NEED_ZSTD)
     # v1.4.8 is the lowest version available in the package managers of the OSes we support.
-    find_package(zstd 1.4.8 REQUIRED HINTS "${zstd_ROOT}")
+    find_package(zstd 1.4.8 REQUIRED)
     message(STATUS "Found zstd ${zstd_VERSION}")
     if(CLP_USE_STATIC_LIBS)
         set(zstd_TARGET zstd::libzstd_static)
