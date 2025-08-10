@@ -34,7 +34,7 @@
     "@types/node": "^22.13.9",
     "close-with-grace": "^2.2.0",
     "dotenv": "^16.4.7",
-    "fastify": "^5.2.1",
+    "fastify": "^5.4.0",
     "fastify-plugin": "^5.0.1",
     "http-status-codes": "^2.3.0",
     "pino-pretty": "^13.0.0",
