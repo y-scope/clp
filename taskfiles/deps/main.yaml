@@ -251,6 +251,7 @@ tasks:
             - "-DBUILD_STATIC_LIBS=ON"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DLZ4_BUILD_CLI=OFF"
           CMAKE_SOURCE_DIR: "build/cmake"
           LIB_NAME: "lz4"
           TARBALL_SHA256: "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b"
