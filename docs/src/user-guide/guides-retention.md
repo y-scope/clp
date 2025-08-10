@@ -73,7 +73,7 @@ delete expired data.
 
 To configure a custom sweep frequency for different retention targets, you can set the subfields
 under `garbage_collector.sweep_interval` individually in `etc/clp-config.yml`. For example, to
-configure a sweep interval of 15 minutes for search results but 3 hours (180 minutes) for archives,
+configure a sweep interval of 15 minutes for search results and 3 hours (180 minutes) for archives,
 enter the following:
 
 ```yaml
