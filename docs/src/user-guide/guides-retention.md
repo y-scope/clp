@@ -19,8 +19,9 @@ deleted.
 
 ### Terms
 
-- **Current Time (T):** The wall-clock time at which the garbage collector job is executed.
-- **Retention Period (TTL):** The configured duration after which data is considered expired.
+- **Current Time (T):** The present wall-clock time when data expiry is being evaluated.
+- **Retention Period (TTL):** The configured duration for which CLP retains data before it is
+  considered expired.
 
 ### Expiry criteria
 
