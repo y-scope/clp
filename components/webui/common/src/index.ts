@@ -116,7 +116,8 @@ const TestTypeBoxSchema = Type.Object({
 });
 
 export {
-    SEARCH_SIGNAL, TestTypeBoxSchema,
+    SEARCH_SIGNAL,
+    TestTypeBoxSchema,
 };
 export type {
     ClientToServerEvents,

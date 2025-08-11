@@ -8,8 +8,8 @@
     "lib": [
       "es2023"
     ],
-    "module": "nodenext",
-    "moduleResolution": "node16",
+    "module": "esnext",
+    "moduleResolution": "bundler",
     "outDir": "dist",
     "removeComments": true,
     "resolveJsonModule": true,

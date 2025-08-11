@@ -286,16 +286,16 @@ tasks:
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
-      - for: ["client", "yscope-log-viewer"]
-        cmd: |-
-          cd "{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}"
-          PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
-          --emptyOutDir --outDir '{{.OUTPUT_DIR}}/{{.ITEM}}'
       - |-
         cd common
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
         --outDir '{{.OUTPUT_DIR}}/common'
         rsync -a package.json "{{.OUTPUT_DIR}}/common/"
+      - for: ["client", "yscope-log-viewer"]
+        cmd: |-
+          cd "{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}"
+          PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
+          --emptyOutDir --outDir '{{.OUTPUT_DIR}}/{{.ITEM}}'
       - |-
         cd server
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npx tsc --outDir '{{.OUTPUT_DIR}}/server/dist'
