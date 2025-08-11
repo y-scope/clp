@@ -39,6 +39,7 @@ Using Presto with CLP requires:
     * Uncomment the `database` section.
     * Change `database.host` value to a non-localhost hostname/IP.
     * After the change, the `database` section should look something like this:
+
       ```yaml
       database:
         type: "mariadb"  # "mariadb" or "mysql"
