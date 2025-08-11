@@ -60,7 +60,7 @@ private:
     std::string m_file_path;
     OutputMethod m_output_method;
     epochtime_t m_search_begin_ts, m_search_end_ts;
-    std::optional<clp::GlobalMetadataDBConfig> m_metadata_db_config;
+    std::optional<GlobalMetadataDBConfig> m_metadata_db_config;
 };
 }  // namespace clp::clg
 
