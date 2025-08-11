@@ -10,6 +10,7 @@
 #include <boost/program_options/value_semantic.hpp>
 #include <fmt/core.h>
 
+#include "GlobalMySQLMetadataDB.hpp"
 #include "type_utils.hpp"
 
 using std::invalid_argument;
@@ -47,7 +48,10 @@ auto operator>>(std::istream& in, GlobalMetadataDBConfig::MetadataDBType& metada
 GlobalMetadataDBConfig::GlobalMetadataDBConfig(
         boost::program_options::options_description& options_description
 ) {
-    constexpr std::string_view cMetadataDbTypeMysqlOptDescPrefix{"(--db-type=mysql only)"};
+    constexpr std::string_view cMetadataDbTypeMysqlOptDescPrefix{fmt::format(
+            "(--db-type={} only)",
+            cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::MYSQL)]
+    )};
 
     // clang-format off
     options_description.add_options()
@@ -138,8 +142,12 @@ auto GlobalMetadataDBConfig::validate() const -> void {
             || m_metadata_db_username.has_value() || m_metadata_db_password.has_value())
         {
             throw invalid_argument(
-                    "MySQL-specific parameters cannot be used with --db-type=sqlite."
-                    " Please remove them or set '--db-type=mysql'."
+                    fmt::format(
+                            "MySQL-specific parameters cannot be used with --db-type={}."
+                            " Please remove them or set '--db-type={}'.",
+                            cMetadataDBTypeNames[enum_to_underlying_type(m_metadata_db_type)],
+                            cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::MYSQL)]
+                    )
             );
         }
         return;
