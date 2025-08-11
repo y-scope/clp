@@ -182,7 +182,9 @@ def _upload_archive_to_s3(
     s3_put(s3_config, archive_src_path, dest_path)
 
 
-def _get_db_connection_args(clp_metadata_db_connection_config: Dict[str, Any]) -> List[str]:
+def _get_db_connection_args_for_clp_cmd(
+    clp_metadata_db_connection_config: Dict[str, Any],
+) -> List[str]:
     """
     :param clp_metadata_db_connection_config:
     :return: List of database connection arguments for the clp command.
@@ -201,7 +203,7 @@ def _get_db_connection_args(clp_metadata_db_connection_config: Dict[str, Any]) -
     ]
 
 
-def _get_db_connection_env_vars(
+def _get_db_connection_env_vars_for_clp_cmd(
     clp_metadata_db_connection_config: Dict[str, Any],
 ) -> Dict[str, str]:
     """
@@ -253,9 +255,11 @@ def _make_clp_command_and_env(
         compression_cmd.append(str(schema_path))
 
     # Set database connection parameters
-    compression_cmd.extend(_get_db_connection_args(clp_metadata_db_connection_config))
+    compression_cmd.extend(_get_db_connection_args_for_clp_cmd(clp_metadata_db_connection_config))
     compression_env_vars = dict(os.environ)
-    compression_env_vars.update(_get_db_connection_env_vars(clp_metadata_db_connection_config))
+    compression_env_vars.update(
+        _get_db_connection_env_vars_for_clp_cmd(clp_metadata_db_connection_config)
+    )
 
     return compression_cmd, compression_env_vars
 
@@ -457,7 +461,7 @@ def run_clp(
                 if StorageEngine.CLP_S == clp_storage_engine:
                     indexer_cmd = [
                         str(clp_home / "bin" / "indexer"),
-                        *_get_db_connection_args(clp_metadata_db_connection_config),
+                        *_get_db_connection_args_for_clp_cmd(clp_metadata_db_connection_config),
                         dataset,
                         archive_path,
                     ]
@@ -465,7 +469,7 @@ def run_clp(
                     # Set environment variables for database credentials
                     indexer_env = dict(os.environ)
                     indexer_env.update(
-                        _get_db_connection_env_vars(clp_metadata_db_connection_config)
+                        _get_db_connection_env_vars_for_clp_cmd(clp_metadata_db_connection_config)
                     )
 
                     try:
