@@ -48,9 +48,9 @@ auto operator>>(std::istream& in, GlobalMetadataDBConfig::MetadataDBType& metada
 GlobalMetadataDBConfig::GlobalMetadataDBConfig(
         boost::program_options::options_description& options_description
 ) {
-    constexpr std::string_view cMetadataDbTypeMysqlOptDescPrefix{fmt::format(
+    std::string_view const cMetadataDbTypeMysqlOptDescPrefix{fmt::format(
             "(--db-type={} only)",
-            cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::MYSQL)]
+            cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::MySQL)]
     )};
 
     // clang-format off
@@ -144,7 +144,7 @@ auto GlobalMetadataDBConfig::validate() const -> void {
                             "MySQL-specific parameters cannot be used with --db-type={}."
                             " Please remove them or set '--db-type={}'.",
                             cMetadataDBTypeNames[enum_to_underlying_type(m_metadata_db_type)],
-                            cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::MYSQL)]
+                            cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::MySQL)]
                     )
             );
         }
