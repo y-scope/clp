@@ -52,7 +52,7 @@ GlobalMetadataDBConfig::GlobalMetadataDBConfig(
           m_metadata_db_port{cDefaultMetadataDbPort},
           m_metadata_db_name{cDefaultMetadataDbName},
           m_metadata_table_prefix{cDefaultMetadataTablePrefix} {
-    constexpr std::string_view cMetadataDbTypeMysqlOptDescPrefix{"[db-type=mysql]"};
+    constexpr std::string_view cMetadataDbTypeMysqlOptDescPrefix{"(--db-type=mysql only)"};
 
     // clang-format off
     options_description.add_options()
