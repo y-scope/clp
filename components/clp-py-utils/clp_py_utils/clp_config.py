@@ -830,7 +830,7 @@ class CLPConfig(BaseModel):
         if QueryEngine.PRESTO == self.package.query_engine:
             return COMPRESSION_COMPONENTS | UI_COMPONENTS
         else:
-            return ALL_RUNNABLE_COMPONENTS
+            return ALL_COMPONENTS
 
     def dump_to_primitive_dict(self):
         d = self.dict()
