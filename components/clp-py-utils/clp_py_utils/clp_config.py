@@ -828,7 +828,7 @@ class CLPConfig(BaseModel):
 
     def get_runnable_components(self) -> Set[str]:
         if QueryEngine.PRESTO == self.package.query_engine:
-            return PRESTO_RUNNABLE_COMPONENTS
+            return COMPRESSION_COMPONENTS | UI_COMPONENTS
         else:
             return ALL_RUNNABLE_COMPONENTS
 
