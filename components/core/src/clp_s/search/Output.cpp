@@ -15,8 +15,6 @@
 #include "ast/FilterOperation.hpp"
 #include "ast/Literal.hpp"
 #include "ast/OrExpr.hpp"
-#include "clp_search/EncodedVariableInterpreter.hpp"
-#include "clp_search/Grep.hpp"
 #include "EvaluateTimestampIndex.hpp"
 
 using clp_s::search::ast::AndExpr;

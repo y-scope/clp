@@ -21,6 +21,15 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
+if (CMAKE_BUILD_TYPE MATCHES "Release")
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT)
+    if(IPO_SUPPORTED)
+        message(STATUS "Link-time optimization enabled.")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
+endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Set general compressor
@@ -288,16 +297,14 @@ if(CLP_NEED_YSTDLIB)
     add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
 endif()
 
-# Find and setup ZStd Library
 if(CLP_NEED_ZSTD)
+    # v1.4.8 is the lowest version available in the package managers of the OSes we support.
+    find_package(zstd 1.4.8 REQUIRED)
+    message(STATUS "Found zstd ${zstd_VERSION}")
     if(CLP_USE_STATIC_LIBS)
-        set(ZStd_USE_STATIC_LIBS ON)
-    endif()
-    find_package(ZStd 1.4.4 REQUIRED)
-    if(ZStd_FOUND)
-        message(STATUS "Found ZStd ${ZStd_VERSION}")
+        set(zstd_TARGET zstd::libzstd_static)
     else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
+        set(zstd_TARGET zstd::libzstd_shared)
     endif()
 endif()
 
@@ -312,6 +319,16 @@ if(CLP_NEED_LZMA)
         message(STATUS "Found Lzma ${LIBLZMA_VERSION_STRING}")
         message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
         message(STATUS "Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
+
+        # Version 5.8.1 and above address CVE-2024-3094 and CVE-2025-31115.
+        set(REQUIRED_LIBLZMA_VERSION "5.8.1")
+        if(LIBLZMA_VERSION_STRING VERSION_LESS ${REQUIRED_LIBLZMA_VERSION})
+            message(
+                FATAL_ERROR
+                "Detected LibLZMA version ${LIBLZMA_VERSION_STRING} is older than required"
+                " ${REQUIRED_LIBLZMA_VERSION}"
+            )
+        endif()
     else()
         message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
     endif()
@@ -383,12 +400,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/SchemaWriter.hpp
     src/clp_s/search/AddTimestampConditions.cpp
     src/clp_s/search/AddTimestampConditions.hpp
-    src/clp_s/search/clp_search/EncodedVariableInterpreter.cpp
-    src/clp_s/search/clp_search/EncodedVariableInterpreter.hpp
-    src/clp_s/search/clp_search/Grep.cpp
-    src/clp_s/search/clp_search/Grep.hpp
-    src/clp_s/search/clp_search/Query.cpp
-    src/clp_s/search/clp_search/Query.hpp
     src/clp_s/search/EvaluateRangeIndexFilters.cpp
     src/clp_s/search/EvaluateRangeIndexFilters.hpp
     src/clp_s/search/EvaluateTimestampIndex.cpp
@@ -410,10 +421,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/TimestampEntry.hpp
     src/clp_s/Utils.cpp
     src/clp_s/Utils.hpp
-    src/clp_s/VariableDecoder.cpp
-    src/clp_s/VariableDecoder.hpp
-    src/clp_s/VariableEncoder.cpp
-    src/clp_s/VariableEncoder.hpp
     src/clp_s/ZstdCompressor.cpp
     src/clp_s/ZstdCompressor.hpp
     src/clp_s/ZstdDecompressor.cpp
@@ -560,6 +567,8 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalSQLiteMetadataDB.hpp
         src/clp/Grep.cpp
         src/clp/Grep.hpp
+        src/clp/GrepCore.cpp
+        src/clp/GrepCore.hpp
         src/clp/hash_utils.cpp
         src/clp/hash_utils.hpp
         src/clp/ir/constants.hpp
@@ -608,6 +617,8 @@ set(SOURCE_FILES_unitTest
         src/clp/Profiler.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
+        src/clp/QueryToken.cpp
+        src/clp/QueryToken.hpp
         src/clp/ReaderInterface.cpp
         src/clp/ReaderInterface.hpp
         src/clp/ReadOnlyMemoryMappedFile.cpp
@@ -697,7 +708,7 @@ set(SOURCE_FILES_unitTest
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
-        tests/test-Grep.cpp
+        tests/test-GrepCore.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
@@ -759,7 +770,7 @@ if(CLP_BUILD_TESTING)
             ystdlib::containers
             ystdlib::error_handling
             ${LIBLZMA_LIBRARIES}
-            ZStd::ZStd
+            ${zstd_TARGET}
             )
     target_compile_features(unitTest
             PRIVATE cxx_std_20

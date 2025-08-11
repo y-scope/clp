@@ -198,6 +198,7 @@ endfunction()
 
 function(validate_clp_s_archivereader_dependencies)
     validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_ARCHIVEREADER
+        CLP_BUILD_CLP_STRING_UTILS
         CLP_BUILD_CLP_S_CLP_DEPENDENCIES
         CLP_BUILD_CLP_S_IO
         CLP_BUILD_CLP_S_TIMESTAMPPATTERN
@@ -248,6 +249,7 @@ function(set_clp_s_clp_dependencies_dependencies)
         CLP_NEED_BOOST
         CLP_NEED_CURL
         CLP_NEED_FMT
+        CLP_NEED_LOG_SURGEON
         CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
         CLP_NEED_OPENSSL
@@ -300,6 +302,7 @@ endfunction()
 
 function(validate_clp_s_search_dependencies)
     validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_SEARCH
+        CLP_BUILD_CLP_STRING_UTILS
         CLP_BUILD_CLP_S_ARCHIVEREADER
         CLP_BUILD_CLP_S_CLP_DEPENDENCIES
         CLP_BUILD_CLP_S_SEARCH_AST
@@ -309,6 +312,7 @@ endfunction()
 function(set_clp_s_search_dependencies)
     set_clp_need_flags(
         CLP_NEED_ABSL
+        CLP_NEED_LOG_SURGEON
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
     )
