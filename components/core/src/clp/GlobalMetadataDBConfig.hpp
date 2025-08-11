@@ -89,20 +89,13 @@ public:
     }
 
 private:
-    // Constants
-    static constexpr MetadataDBType cDefaultMetadataDbType{MetadataDBType::SQLite};
-    static constexpr std::string_view cDefaultMetadataDbHost{"127.0.0.1"};
-    static constexpr int cDefaultMetadataDbPort{3306};
-    static constexpr std::string_view cDefaultMetadataDbName{"clp-db"};
-    static constexpr std::string_view cDefaultMetadataTablePrefix{"clp_"};
-
     // Variables
-    MetadataDBType m_metadata_db_type{cDefaultMetadataDbType};
+    MetadataDBType m_metadata_db_type{};
 
-    std::string m_metadata_db_host{cDefaultMetadataDbHost};
-    int m_metadata_db_port{cDefaultMetadataDbPort};
-    std::string m_metadata_db_name{cDefaultMetadataDbName};
-    std::string m_metadata_table_prefix{cDefaultMetadataTablePrefix};
+    std::string m_metadata_db_host;
+    int m_metadata_db_port{};
+    std::string m_metadata_db_name;
+    std::string m_metadata_table_prefix;
 
     std::optional<std::string> m_metadata_db_username;
     std::optional<std::string> m_metadata_db_password;
