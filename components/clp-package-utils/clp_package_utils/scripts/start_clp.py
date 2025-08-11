@@ -1113,7 +1113,7 @@ def main(argv):
         components_to_start = components_to_start.intersection(runnable_components)
 
         # Exit early if no components to start
-        if not components_to_start:
+        if len(components_to_start) == 0:
             logger.error(f"{target} not available with current configuration")
             return -1
 
