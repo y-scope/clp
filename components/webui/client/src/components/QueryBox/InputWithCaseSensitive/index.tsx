@@ -1,6 +1,7 @@
 import {
     Input,
     InputProps,
+    InputRef,
 } from "antd";
 
 import CaseSensitiveToggle, {CaseSensitiveToggleProps} from "./CaseSenstiveToggle";
@@ -9,7 +10,8 @@ import CaseSensitiveToggle, {CaseSensitiveToggleProps} from "./CaseSenstiveToggl
 /**
  * Antd Input props and case sensitive toggle props with suffix omitted since set by component.
  */
-type InputWithCaseSensitiveProps = Omit<InputProps, "suffix"> & CaseSensitiveToggleProps;
+type InputWithCaseSensitiveProps =
+    Omit<InputProps, "suffix"> & CaseSensitiveToggleProps & React.RefAttributes<InputRef>;
 
 /**
  * Antd Input with a built-in case sensitivity toggle.
