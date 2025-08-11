@@ -31,7 +31,7 @@ const SearchControls = () => {
     return (
         <form onSubmit={handleSubmit}>
             <div className={styles["searchControlsContainer"]}>
-                {SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.NATIVE ?
+                {SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO ?
                     (
                         <>
                             {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && <Dataset/>}
