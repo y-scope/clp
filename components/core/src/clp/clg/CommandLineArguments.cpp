@@ -43,14 +43,14 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
     config_file_path += cDefaultConfigFilename;
     // clang-format off
     options_general.add_options()
-                ("help,h", "Print help")
-                ("version,V", "Print version")
-                (
-                        "config-file",
-                        po::value<string>(&config_file_path)->value_name("FILE")
-                                ->default_value(config_file_path),
-                        "Use configuration options from FILE"
-                );
+            ("help,h", "Print help")
+            ("version,V", "Print version")
+            (
+                    "config-file",
+                    po::value<string>(&config_file_path)->value_name("FILE")
+                            ->default_value(config_file_path),
+                    "Use configuration options from FILE"
+            );
     // clang-format on
     m_metadata_db_config.emplace(options_general);
 
