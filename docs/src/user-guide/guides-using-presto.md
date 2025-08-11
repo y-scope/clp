@@ -39,13 +39,13 @@ Using Presto with CLP requires:
     * Uncomment the `database` section.
     * Change `database.host` value to a non-localhost hostname/IP.
     * After the change, the `database` section should look something like this:
-        ```yaml
-        database:
-          type: "mariadb"  # "mariadb" or "mysql"
-          host: "<new-IP-address>"
-          port: 3306
-          name: "clp-db"
-        ```
+      ```yaml
+      database:
+        type: "mariadb"  # "mariadb" or "mysql"
+        host: "<new-IP-address>"
+        port: 3306
+        name: "clp-db"
+      ```
 
     :::{note}
     This change is necessary since the Presto containers run on a Docker network, whereas CLP's
