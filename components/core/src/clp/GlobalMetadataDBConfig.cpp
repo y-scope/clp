@@ -118,7 +118,9 @@ auto GlobalMetadataDBConfig::read_credentials_from_env_if_needed() -> void {
         return;
     }
 
-    auto const* db_username{std::getenv("CLP_DB_USER")};  // NOLINT(concurrency-mt-unsafe)
+    // Silence the check since this class won't be used in a multithreaded context.
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    auto const* db_username{std::getenv("CLP_DB_USER")};
     if (nullptr != db_username) {
         m_metadata_db_username.emplace(db_username);
     }
