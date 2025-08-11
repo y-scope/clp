@@ -131,7 +131,7 @@ auto GlobalMetadataDBConfig::read_credentials_from_env_if_needed() -> void {
 
 auto GlobalMetadataDBConfig::validate() const -> void {
     if (m_metadata_db_type == MetadataDBType::SQLite) {
-        // SQLite does not require extra parameters.
+        // SQLite doesn't require extra parameters.
         if (cDefaultMetadataDbHost != m_metadata_db_host
             || cDefaultMetadataDbPort != m_metadata_db_port
             || cDefaultMetadataDbName != m_metadata_db_name
