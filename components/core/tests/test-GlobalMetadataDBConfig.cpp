@@ -22,7 +22,7 @@ constexpr std::string_view cMysqlDbName{"test-db"};
 constexpr std::string_view cMysqlDbTablePrefix{"test_prefix_"};
 constexpr std::string_view cMysqlDbUser{"test-user"};
 constexpr std::string_view cMysqlDbPass{"test-pass"};
-constexpr std::array cCommonMysqlArgs{
+constexpr std::array cCommonMysqlArgv{
         "test",
         "--db-type",
         cMysqlDbType.data(),
@@ -41,7 +41,7 @@ constexpr size_t cArgIdxDbName{8};
 constexpr size_t cArgIdxDbTablePrefix{10};
 
 constexpr std::string_view cSqliteDbType{"sqlite"};
-constexpr std::array cCommonSqliteArgs{
+constexpr std::array cCommonSqliteArgv{
         "test",
         "--db-type",
         cSqliteDbType.data(),
@@ -86,7 +86,7 @@ TEST_CASE(
         "Test parsing command line arguments for GlobalMetadataDBConfig",
         "[GlobalMetadataDBConfig]"
 ) {
-    auto const config{parse_args(cCommonMysqlArgs)};
+    auto const config{parse_args(cCommonMysqlArgv)};
 
     REQUIRE((config.get_metadata_db_type() == GlobalMetadataDBConfig::MetadataDBType::MySQL));
     REQUIRE((config.get_metadata_db_host() == cMysqlDbHost));
@@ -97,7 +97,7 @@ TEST_CASE(
 
 TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBConfig]") {
     SECTION("With all arguments") {
-        auto config{parse_args(cCommonMysqlArgs)};
+        auto config{parse_args(cCommonMysqlArgv)};
 
         SECTION("With valid credentials") {
             set_env_var("CLP_DB_USER", cMysqlDbUser.data());
@@ -139,7 +139,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
 
     SECTION("With invalid port values") {
         SECTION("Port too low") {
-            auto cArgV{cCommonMysqlArgs};
+            auto cArgV{cCommonMysqlArgv};
             cArgV[cArgIdxDbPort] = "0";
             auto config{parse_args(cArgV)};
             set_env_var("CLP_DB_USER", cMysqlDbUser.data());
@@ -149,7 +149,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
         }
 
         SECTION("Port too high") {
-            auto cArgV{cCommonMysqlArgs};
+            auto cArgV{cCommonMysqlArgv};
             cArgV[cArgIdxDbPort] = "65536";
             auto config{parse_args(cArgV)};
             set_env_var("CLP_DB_USER", cMysqlDbUser.data());
@@ -161,7 +161,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
 
     SECTION("With empty required arguments") {
         SECTION("Empty db-host") {
-            auto cArgV{cCommonMysqlArgs};
+            auto cArgV{cCommonMysqlArgv};
             cArgV[cArgIdxDbHost] = "";
             auto config{parse_args(cArgV)};
             set_env_var("CLP_DB_USER", cMysqlDbUser.data());
@@ -171,7 +171,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
         }
 
         SECTION("Empty db-name") {
-            auto cArgV{cCommonMysqlArgs};
+            auto cArgV{cCommonMysqlArgv};
             cArgV[cArgIdxDbName] = "";
             auto config{parse_args(cArgV)};
             set_env_var("CLP_DB_USER", cMysqlDbUser.data());
@@ -181,7 +181,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
         }
 
         SECTION("Empty db-table-prefix") {
-            auto cArgV{cCommonMysqlArgs};
+            auto cArgV{cCommonMysqlArgv};
             cArgV[cArgIdxDbTablePrefix] = "";
             auto config{parse_args(cArgV)};
             set_env_var("CLP_DB_USER", cMysqlDbUser.data());
@@ -198,7 +198,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
 
 TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     SECTION("With non-default db-host argument") {
-        auto cArgV{cCommonSqliteArgs};
+        auto cArgV{cCommonSqliteArgv};
         cArgV[cArgIdxOverwriteArgName] = "--db-host";
         cArgV[cArgIdxOverwriteArgValue] = cMysqlDbHost.data();
         auto const config{parse_args(cArgV)};
@@ -207,7 +207,7 @@ TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     }
 
     SECTION("With non-default db-port argument") {
-        auto cArgV{cCommonSqliteArgs};
+        auto cArgV{cCommonSqliteArgv};
         cArgV[cArgIdxOverwriteArgName] = "--db-port";
         cArgV[cArgIdxOverwriteArgValue] = cMysqlDbPort.data();
         auto const config{parse_args(cArgV)};
@@ -216,7 +216,7 @@ TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     }
 
     SECTION("With non-default db-name argument") {
-        auto cArgV{cCommonSqliteArgs};
+        auto cArgV{cCommonSqliteArgv};
         cArgV[cArgIdxOverwriteArgName] = "--db-name";
         cArgV[cArgIdxOverwriteArgValue] = cMysqlDbName.data();
         auto const config{parse_args(cArgV)};
@@ -225,7 +225,7 @@ TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     }
 
     SECTION("With non-default db-table-prefix argument") {
-        auto cArgV{cCommonSqliteArgs};
+        auto cArgV{cCommonSqliteArgv};
         cArgV[cArgIdxOverwriteArgName] = "--db-table-prefix";
         cArgV[cArgIdxOverwriteArgValue] = cMysqlDbTablePrefix.data();
         auto const config{parse_args(cArgV)};
@@ -234,7 +234,7 @@ TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     }
 
     SECTION("With username and password") {
-        auto config{parse_args(cCommonSqliteArgs)};
+        auto config{parse_args(cCommonSqliteArgv)};
 
         set_env_var("CLP_DB_USER", cMysqlDbUser.data());
         set_env_var("CLP_DB_PASS", cMysqlDbPass.data());
