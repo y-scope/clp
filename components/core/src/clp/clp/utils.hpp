@@ -77,6 +77,7 @@ bool validate_paths_exist(std::vector<std::string> const& paths);
  * @param global_metadata_db_config
  * @param archives_dir
  * @return The relevant global metadata DB class.
+ * @throw ClpOperationFailed if the initialization failed.
  */
 std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
         GlobalMetadataDBConfig const& global_metadata_db_config,
