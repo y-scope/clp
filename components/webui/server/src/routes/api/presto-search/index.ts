@@ -180,6 +180,33 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             return null;
         }
     );
+
+    fastify.delete(
+        "/results",
+        {
+            schema: {
+                body: PrestoQueryJobSchema,
+                response: {
+                    [StatusCodes.NO_CONTENT]: Type.Null(),
+                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
+                },
+                tags: ["Search"],
+            },
+        },
+        async (request, reply) => {
+            const {searchJobId} = request.body;
+
+            request.log.info({
+                searchJobId,
+            }, "api/presto-search/results args");
+
+            await mongoDb.collection(searchJobId).drop();
+
+            reply.code(StatusCodes.NO_CONTENT);
+
+            return null;
+        }
+    );
 };
 
 export default plugin;

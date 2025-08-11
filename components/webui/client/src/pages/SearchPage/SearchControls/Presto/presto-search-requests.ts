@@ -1,11 +1,37 @@
 import {
     cancelQuery,
+    clearQueryResults,
     type PrestoQueryJobCreationSchema,
     type PrestoQueryJobSchema,
     submitQuery,
 } from "../../../../api/presto-search";
 import useSearchStore from "../../SearchState";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
+
+
+/**
+ * Clears current presto query results on server.
+ */
+const handlePrestoClearResults = () => {
+    const {searchUiState, searchJobId} = useSearchStore.getState();
+
+    // In the starting state, there are no results to clear.
+    if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
+        return;
+    }
+
+    if (null === searchJobId) {
+        console.error("Cannot clear results: searchJobId is not set.");
+
+        return;
+    }
+
+    clearQueryResults(
+        {searchJobId}
+    ).catch((err: unknown) => {
+        console.error("Failed to clear query results:", err);
+    });
+};
 
 
 /**
@@ -26,18 +52,15 @@ const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreationSchema) => {
         return;
     }
 
+    handlePrestoClearResults();
+
     updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 
     submitQuery(payload)
         .then((result) => {
             const {searchJobId} = result.data;
-
             updateSearchJobId(searchJobId);
             updateSearchUiState(SEARCH_UI_STATE.QUERYING);
-
-            // eslint-disable-next-line no-warning-comments
-            // TODO: Delete previous query results when the backend is ready
-
             console.debug(
                 "Presto search job created - ",
                 "Search job ID:",
@@ -73,5 +96,7 @@ const handlePrestoQueryCancel = (payload: PrestoQueryJobSchema) => {
 };
 
 export {
-    handlePrestoQueryCancel, handlePrestoQuerySubmit,
+    handlePrestoClearResults,
+    handlePrestoQueryCancel,
+    handlePrestoQuerySubmit,
 };
