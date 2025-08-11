@@ -234,7 +234,8 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
           LIB_NAME: "LibLZMA"
           TARBALL_SHA256: "507825b599356c10dca1cd720c9d0d0c9d5400b9de300af00e4d1ea150795543"
-          TARBALL_URL: "https://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1.tar.gz"
+          TARBALL_URL: "https://github.com/tukaani-project/xz/releases/download/v5.8.1\
+          /xz-5.8.1.tar.gz"
 
   log-surgeon:
     internal: true
