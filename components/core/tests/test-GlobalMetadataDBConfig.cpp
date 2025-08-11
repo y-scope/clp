@@ -29,11 +29,7 @@ auto parse_args(std::array<char const*, n> const& argV) -> GlobalMetadataDBConfi
     boost::program_options::variables_map vm;
     constexpr auto cArgC{static_cast<int>(n)};
     boost::program_options::store(
-            boost::program_options::parse_command_line(
-                    cArgC,
-                    argV.data(),
-                    options_desc
-            ),
+            boost::program_options::parse_command_line(cArgC, argV.data(), options_desc),
             vm
     );
     boost::program_options::notify(vm);
