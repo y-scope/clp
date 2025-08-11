@@ -98,6 +98,22 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                         },
                         error: (error) => {
                             request.log.info(error, "Presto search failed");
+
+                            // Update metadata with error information
+                            if (isResolved) {
+                                searchResultsMetadataCollection.updateOne(
+                                    {_id: searchJobId},
+                                    {
+                                        $set: {
+                                            lastSignal: "ERROR",
+                                            errorMsg: error?.message || "Presto search failed"
+                                        }
+                                    }
+                                ).catch((err: unknown) => {
+                                    request.log.error(err, "Failed to update Presto error metadata");
+                                });
+                            }
+
                             if (false === isResolved) {
                                 isResolved = true;
                                 reject(new Error("Presto search failed"));
