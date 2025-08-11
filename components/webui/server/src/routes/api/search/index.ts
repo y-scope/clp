@@ -2,12 +2,12 @@ import {
     FastifyPluginAsyncTypebox,
     Type,
 } from "@fastify/type-provider-typebox";
-import {StatusCodes} from "http-status-codes";
-
 import {
     SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
 } from "@webui/common";
+import {StatusCodes} from "http-status-codes";
+
 import settings from "../../../../settings.json" with {type: "json"};
 import {ErrorSchema} from "../../../schemas/error.js";
 import {

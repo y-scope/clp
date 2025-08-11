@@ -1,6 +1,6 @@
+import {SEARCH_SIGNAL} from "@webui/common";
 import type {Db} from "mongodb";
 
-import {SEARCH_SIGNAL} from "@webui/common";
 import {
     CreateMongoIndexesProps,
     SEARCH_MAX_NUM_RESULTS,

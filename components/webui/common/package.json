@@ -9,7 +9,7 @@
     "lint:fix": "npm run lint:check -- --fix"
   },
   "devDependencies": {
-    "eslint-config-yscope": "latest",
+    "eslint-config-yscope": "^1.1.1",
     "typescript": "~5.6.2"
   },
   "dependencies": {

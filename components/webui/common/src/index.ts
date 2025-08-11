@@ -1,3 +1,6 @@
+import {Type} from "@sinclair/typebox";
+
+
 /**
  * Unique ID for each active unique query. Multiple clients can subscribe to the same ID if the
  * queries are identical. The ID is also used to represent the socket room, and MongoDB
@@ -61,6 +64,7 @@ interface ServerToClientEvents {
 /**
  * Empty but required by Socket IO.
  */
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface InterServerEvents {
 }
 
@@ -101,16 +105,26 @@ interface SearchResultsMetadataDocument {
     lastSignal: SEARCH_SIGNAL;
     numTotalResults?: number;
 }
+
+/**
+ * Test TypeBox schema for testing dependency.
+ */
+// eslint-disable-next-line no-warning-comments
+// TODO: Will be removed once shared server/client route types are migrated into common.
+const TestTypeBoxSchema = Type.Object({
+    type: Type.String(),
+});
+
 export {
-    SEARCH_SIGNAL,
+    SEARCH_SIGNAL, TestTypeBoxSchema,
 };
 export type {
-    SearchResultsMetadataDocument,
     ClientToServerEvents,
     Err,
     InterServerEvents,
+    QueryId,
     Response,
+    SearchResultsMetadataDocument,
     ServerToClientEvents,
     SocketData,
-    QueryId
 };

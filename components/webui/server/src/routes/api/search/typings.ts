@@ -1,4 +1,8 @@
 import {
+    SEARCH_SIGNAL,
+    type SearchResultsMetadataDocument,
+} from "@webui/common";
+import {
     FastifyBaseLogger,
     FastifyInstance,
 } from "fastify";
@@ -6,11 +10,6 @@ import type {
     Collection,
     Db,
 } from "mongodb";
-
-import {
-    SEARCH_SIGNAL,
-    type SearchResultsMetadataDocument,
-} from "@webui/common";
 
 
 /**

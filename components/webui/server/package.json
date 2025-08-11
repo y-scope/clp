@@ -44,7 +44,7 @@
   },
   "devDependencies": {
     "concurrently": "^9.1.2",
-    "eslint-config-yscope": "latest",
+    "eslint-config-yscope": "^1.1.1",
     "fastify-cli": "^7.4.0",
     "tap": "^21.1.0"
   }

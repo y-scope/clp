@@ -6,14 +6,6 @@
 import {lookup as dnsLookup} from "node:dns/promises";
 
 import fastifyHttpProxy from "@fastify/http-proxy";
-import {
-    FastifyBaseLogger,
-    FastifyInstance,
-} from "fastify";
-import fastifyPlugin from "fastify-plugin";
-import {Db} from "mongodb";
-import {Server} from "socket.io";
-
 import type {
     ClientToServerEvents,
     InterServerEvents,
@@ -22,6 +14,14 @@ import type {
     ServerToClientEvents,
     SocketData,
 } from "@webui/common";
+import {
+    FastifyBaseLogger,
+    FastifyInstance,
+} from "fastify";
+import fastifyPlugin from "fastify-plugin";
+import {Db} from "mongodb";
+import {Server} from "socket.io";
+
 import MongoWatcherCollection from "./MongoWatcherCollection.js";
 import {
     ConnectionId,
