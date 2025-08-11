@@ -31,7 +31,7 @@ auto parse_args(std::array<char const*, n> const& argV) -> GlobalMetadataDBConfi
     boost::program_options::store(
             boost::program_options::parse_command_line(
                     cArgC,
-                    const_cast<char* const*>(argV.data()),
+                    argV.data(),
                     options_desc
             ),
             vm
