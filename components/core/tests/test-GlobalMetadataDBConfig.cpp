@@ -66,14 +66,14 @@ void unset_env_var(char const* name) {
 }
 
 template <size_t n>
-auto parse_args(std::array<char const*, n> const& argV) -> GlobalMetadataDBConfig {
+auto parse_args(std::array<char const*, n> const& argv) -> GlobalMetadataDBConfig {
     boost::program_options::options_description options_desc;
     GlobalMetadataDBConfig config{options_desc};
 
     boost::program_options::variables_map vm;
-    constexpr auto cArgC{static_cast<int>(n)};
+    constexpr auto cArgc{static_cast<int>(n)};
     boost::program_options::store(
-            boost::program_options::parse_command_line(cArgC, argV.data(), options_desc),
+            boost::program_options::parse_command_line(cArgc, argv.data(), options_desc),
             vm
     );
     boost::program_options::notify(vm);
@@ -139,9 +139,9 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
 
     SECTION("With invalid port values") {
         SECTION("Port too low") {
-            auto cArgV{cCommonMysqlArgv};
-            cArgV[cArgIdxDbPort] = "0";
-            auto config{parse_args(cArgV)};
+            auto cArgv{cCommonMysqlArgv};
+            cArgv[cArgIdxDbPort] = "0";
+            auto config{parse_args(cArgv)};
             set_env_var("CLP_DB_USER", cMysqlDbUser.data());
             set_env_var("CLP_DB_PASS", cMysqlDbPass.data());
             config.read_credentials_from_env_if_needed();
@@ -149,9 +149,9 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
         }
 
         SECTION("Port too high") {
-            auto cArgV{cCommonMysqlArgv};
-            cArgV[cArgIdxDbPort] = "65536";
-            auto config{parse_args(cArgV)};
+            auto cArgv{cCommonMysqlArgv};
+            cArgv[cArgIdxDbPort] = "65536";
+            auto config{parse_args(cArgv)};
             set_env_var("CLP_DB_USER", cMysqlDbUser.data());
             set_env_var("CLP_DB_PASS", cMysqlDbPass.data());
             config.read_credentials_from_env_if_needed();
@@ -161,9 +161,9 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
 
     SECTION("With empty required arguments") {
         SECTION("Empty db-host") {
-            auto cArgV{cCommonMysqlArgv};
-            cArgV[cArgIdxDbHost] = "";
-            auto config{parse_args(cArgV)};
+            auto cArgv{cCommonMysqlArgv};
+            cArgv[cArgIdxDbHost] = "";
+            auto config{parse_args(cArgv)};
             set_env_var("CLP_DB_USER", cMysqlDbUser.data());
             set_env_var("CLP_DB_PASS", cMysqlDbPass.data());
             config.read_credentials_from_env_if_needed();
@@ -171,9 +171,9 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
         }
 
         SECTION("Empty db-name") {
-            auto cArgV{cCommonMysqlArgv};
-            cArgV[cArgIdxDbName] = "";
-            auto config{parse_args(cArgV)};
+            auto cArgv{cCommonMysqlArgv};
+            cArgv[cArgIdxDbName] = "";
+            auto config{parse_args(cArgv)};
             set_env_var("CLP_DB_USER", cMysqlDbUser.data());
             set_env_var("CLP_DB_PASS", cMysqlDbPass.data());
             config.read_credentials_from_env_if_needed();
@@ -181,9 +181,9 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
         }
 
         SECTION("Empty db-table-prefix") {
-            auto cArgV{cCommonMysqlArgv};
-            cArgV[cArgIdxDbTablePrefix] = "";
-            auto config{parse_args(cArgV)};
+            auto cArgv{cCommonMysqlArgv};
+            cArgv[cArgIdxDbTablePrefix] = "";
+            auto config{parse_args(cArgv)};
             set_env_var("CLP_DB_USER", cMysqlDbUser.data());
             set_env_var("CLP_DB_PASS", cMysqlDbPass.data());
             config.read_credentials_from_env_if_needed();
@@ -198,37 +198,37 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
 
 TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     SECTION("With non-default db-host argument") {
-        auto cArgV{cCommonSqliteArgv};
-        cArgV[cArgIdxOverwriteArgName] = "--db-host";
-        cArgV[cArgIdxOverwriteArgValue] = cMysqlDbHost.data();
-        auto const config{parse_args(cArgV)};
+        auto cArgv{cCommonSqliteArgv};
+        cArgv[cArgIdxOverwriteArgName] = "--db-host";
+        cArgv[cArgIdxOverwriteArgValue] = cMysqlDbHost.data();
+        auto const config{parse_args(cArgv)};
 
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
     }
 
     SECTION("With non-default db-port argument") {
-        auto cArgV{cCommonSqliteArgv};
-        cArgV[cArgIdxOverwriteArgName] = "--db-port";
-        cArgV[cArgIdxOverwriteArgValue] = cMysqlDbPort.data();
-        auto const config{parse_args(cArgV)};
+        auto cArgv{cCommonSqliteArgv};
+        cArgv[cArgIdxOverwriteArgName] = "--db-port";
+        cArgv[cArgIdxOverwriteArgValue] = cMysqlDbPort.data();
+        auto const config{parse_args(cArgv)};
 
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
     }
 
     SECTION("With non-default db-name argument") {
-        auto cArgV{cCommonSqliteArgv};
-        cArgV[cArgIdxOverwriteArgName] = "--db-name";
-        cArgV[cArgIdxOverwriteArgValue] = cMysqlDbName.data();
-        auto const config{parse_args(cArgV)};
+        auto cArgv{cCommonSqliteArgv};
+        cArgv[cArgIdxOverwriteArgName] = "--db-name";
+        cArgv[cArgIdxOverwriteArgValue] = cMysqlDbName.data();
+        auto const config{parse_args(cArgv)};
 
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
     }
 
     SECTION("With non-default db-table-prefix argument") {
-        auto cArgV{cCommonSqliteArgv};
-        cArgV[cArgIdxOverwriteArgName] = "--db-table-prefix";
-        cArgV[cArgIdxOverwriteArgValue] = cMysqlDbTablePrefix.data();
-        auto const config{parse_args(cArgV)};
+        auto cArgv{cCommonSqliteArgv};
+        cArgv[cArgIdxOverwriteArgName] = "--db-table-prefix";
+        cArgv[cArgIdxOverwriteArgValue] = cMysqlDbTablePrefix.data();
+        auto const config{parse_args(cArgv)};
 
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
     }
