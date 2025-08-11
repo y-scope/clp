@@ -1,7 +1,3 @@
-/**
- * Reference:
- * https://github.com/tsconfig/bases/blob/2604892973bcb1822c204e2aa2add10a8b0d1c8c/bases/node22.json
- */
 {
   "compilerOptions": {
     "esModuleInterop": true,
@@ -10,13 +6,10 @@
     ],
     "module": "esnext",
     "moduleResolution": "bundler",
-    "outDir": "dist",
-    "removeComments": true,
-    "resolveJsonModule": true,
-    "skipLibCheck": true,
-    "target": "es2022",
     "declaration": true,
     "declarationMap": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false,
     "alwaysStrict": true,
     "exactOptionalPropertyTypes": true,
     "noFallthroughCasesInSwitch": true,
@@ -24,15 +17,13 @@
     "noImplicitOverride": true,
     "noImplicitReturns": true,
     "noImplicitThis": true,
+    "noPropertyAccessFromIndexSignature": true,
     "noUncheckedIndexedAccess": true,
+    "noUncheckedSideEffectImports": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "strictBindCallApply": true,
-    "strictFunctionTypes": true,
-    "strictNullChecks": true,
-    "strictPropertyInitialization": true,
+    "strict": true,
     "useUnknownInCatchVariables": true,
-    "strict": true
   },
   "include": [
     "src/**/*"
