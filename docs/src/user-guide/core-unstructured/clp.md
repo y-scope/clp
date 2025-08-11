@@ -107,7 +107,8 @@ Currently, timestamps must be specified as milliseconds since the UNIX epoch.
 
 :::{warning}
 By default, `clp` uses an embedded SQLite database. Running multiple `clp` instances with SQLite
-can fail due to the error "database is locked" because SQLite doesn't support concurrent writes.
+(rather than a MySQL-type database) can fail due to the error "database is locked" because SQLite
+doesn't support concurrent writes.
 :::
 
 To enable parallel compression to the same archives directory, `clp`/`clg` can be configured to use
@@ -116,18 +117,18 @@ a MySQL-type database (e.g., MariaDB) as follows:
 * Install and configure MariaDB using the instructions for your platform
 * Create a user that has privileges to create databases, create tables, insert records, and delete
   records.
-* Install the MariaDB Python package `pip3 install mariadb`
+* Install the MariaDB Python package: `pip3 install mariadb`
   * This is necessary to run the database initialization script. If you prefer, you can run the SQL
     statements in `tools/scripts/db/init-db.py` directly.
-* Run `tools/scripts/db/init-db.py`. This will initialize the database that CLP requires. Use
-  command-line options to configure database connection parameters and set environment variables
-  for database credentials. If a command-line option isn't specified, the default value is used:
+* Run `tools/scripts/db/init-db.py` to initialize the database that CLP requires. Use the following
+  command-line options to configure database connection parameters and set environment variables for
+  database credentials. If a command-line option isn't specified, its default value will be used:
   * `--db-host <host>` to specify the database host
   * `--db-port <port>` to specify the database port
   * `--db-name <name>` to specify the database name
   * `--db-table-prefix <prefix>` to specify the table prefix
-  * Set the `CLP_DB_USER` environment variable for the database username
-  * Set the `CLP_DB_PASS` environment variable for the database password
+  * Set the `CLP_DB_USER` environment variable for the database user's username
+  * Set the `CLP_DB_PASS` environment variable for the database user's password
 * Run `clp` or `clg` with the same command-line options and environment variables, with the addition
   of the database type command-line option:
   * `--db-type mysql` to specify MySQL as the database type
