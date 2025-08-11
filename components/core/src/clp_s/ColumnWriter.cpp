@@ -54,8 +54,7 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
             float_str.end()
     );
 
-    // If the raw JSON token is an illegal double number then here will throw
-    // exception
+    // If the raw JSON token is an illegal double number then here will throw exception
     m_values.push_back(std::stod(float_str));
 
     auto const dot_pos = float_str.find('.');
@@ -86,10 +85,9 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
         exp_pos = float_str.length();
     }
 
-    // According to the JSON grammar, there is no leading zeros for the integer
-    // part of a number, so we can check whether the first or the second (if the
-    // there is a sign) digit is 0 to know if the first non-zero number is in
-    // integer part.
+    // According to the JSON grammar, there is no leading zeros for the integer part of a number,
+    // so we can check whether the first or the second (if the there is a sign) digit is 0 to know
+    // if the first non-zero number is in integer part.
     size_t first_non_zero_frac_digit_pos = std::isdigit(float_str[0]) ? 0 : 1;
     if (std::isdigit(float_str[0]) && '0' != float_str[0]) {
         first_non_zero_frac_digit_pos = 0;
