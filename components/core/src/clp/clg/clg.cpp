@@ -547,11 +547,18 @@ int main(int argc, char const* argv[]) {
             break;
         }
         case GlobalMetadataDBConfig::MetadataDBType::MySQL:
+            auto const& global_metadata_db_username = global_metadata_db_config.get_metadata_db_username();
+            auto const& global_metadata_db_password = global_metadata_db_config.get_metadata_db_password();
+            if (false == global_metadata_db_username.has_value() ||
+                false == global_metadata_db_password.has_value()) {
+                SPDLOG_ERROR("Unexpected missing MySQL credentials for global metadata DB.");
+                return -1;
+            }
             global_metadata_db = std::make_unique<clp::GlobalMySQLMetadataDB>(
                     global_metadata_db_config.get_metadata_db_host(),
                     global_metadata_db_config.get_metadata_db_port(),
-                    global_metadata_db_config.get_metadata_db_username().value_or(""),
-                    global_metadata_db_config.get_metadata_db_password().value_or(""),
+                    global_metadata_db_username.value(),
+                    global_metadata_db_password.value(),
                     global_metadata_db_config.get_metadata_db_name(),
                     global_metadata_db_config.get_metadata_table_prefix()
             );
