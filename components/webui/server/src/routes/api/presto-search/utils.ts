@@ -38,7 +38,7 @@ const insertPrestoRowsToMongo = (
     columns: {name: string}[],
     searchJobId: string,
     mongoDb: Db
-): Promise<InsertManyResult<Document>> => {
+): Promise<InsertManyResult> => {
     const collection = mongoDb.collection(searchJobId);
     const resultDocs = data.map((row) => prestoRowToObject(row, columns));
     return collection.insertMany(resultDocs);
