@@ -15,6 +15,7 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "target": "es2022",
+    "baseUrl": ".",
     "alwaysStrict": true,
     "exactOptionalPropertyTypes": true,
     "noFallthroughCasesInSwitch": true,

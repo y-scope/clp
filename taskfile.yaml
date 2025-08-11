@@ -295,6 +295,7 @@ tasks:
         cd common
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
         --outDir '{{.OUTPUT_DIR}}/common'
+        rsync -a package.json "{{.OUTPUT_DIR}}/common/"
       - |-
         cd server
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npx tsc --outDir '{{.OUTPUT_DIR}}/server/dist'
