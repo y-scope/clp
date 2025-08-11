@@ -5,6 +5,8 @@
 #include <stack>
 #include <string>
 
+#include <spdlog/spdlog.h>
+
 #include "../archive_constants.hpp"
 #include "../TimestampDictionaryReader.hpp"
 
@@ -13,24 +15,31 @@ IndexManager::IndexManager(
         std::optional<clp::GlobalMetadataDBConfig> const& db_config,
         bool should_create_table
 ) {
-    if (db_config.has_value()) {
-        m_mysql_index_storage = std::make_unique<MySQLIndexStorage>(
-                db_config->get_metadata_db_host(),
-                db_config->get_metadata_db_port(),
-                db_config->get_metadata_db_username().value(),
-                db_config->get_metadata_db_password().value(),
-                db_config->get_metadata_db_name(),
-                db_config->get_metadata_table_prefix()
-        );
-        m_mysql_index_storage->open();
-        m_field_update_callback = [this](std::string& field_name, NodeType field_type) {
-            m_mysql_index_storage->add_field(field_name, field_type);
-        };
-        m_should_create_table = should_create_table;
-        m_output_type = OutputType::Database;
-    } else {
+    if (false == db_config.has_value()) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
+
+    auto const& db_username = db_config->get_metadata_db_username();
+    auto const& db_password = db_config->get_metadata_db_password();
+    if (false == db_username.has_value() || false == db_password.has_value()) {
+        SPDLOG_ERROR("Unexpected missing MySQL credentials for global metadata DB.");
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+
+    m_mysql_index_storage = std::make_unique<MySQLIndexStorage>(
+            db_config->get_metadata_db_host(),
+            db_config->get_metadata_db_port(),
+            db_username.value(),
+            db_password.value(),
+            db_config->get_metadata_db_name(),
+            db_config->get_metadata_table_prefix()
+    );
+    m_mysql_index_storage->open();
+    m_field_update_callback = [this](std::string& field_name, NodeType field_type) {
+        m_mysql_index_storage->add_field(field_name, field_type);
+    };
+    m_should_create_table = should_create_table;
+    m_output_type = OutputType::Database;
 }
 
 IndexManager::~IndexManager() {

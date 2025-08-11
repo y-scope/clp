@@ -39,6 +39,9 @@ public:
     };
 
     // Constructors
+    /**
+     * @throw OperationFailed if the global metadata DB config is invalid.
+     */
     IndexManager(
             std::optional<clp::GlobalMetadataDBConfig> const& db_config = std::nullopt,
             bool should_create_table = false
