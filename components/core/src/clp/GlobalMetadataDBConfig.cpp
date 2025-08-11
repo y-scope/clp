@@ -17,13 +17,6 @@ using std::string;
 
 namespace {
 // Constants
-constexpr clp::GlobalMetadataDBConfig::MetadataDBType cDefaultMetadataDbType{
-        clp::GlobalMetadataDBConfig::MetadataDBType::SQLite
-};
-constexpr std::string_view cDefaultMetadataDbHost{"127.0.0.1"};
-constexpr int cDefaultMetadataDbPort{3306};
-constexpr std::string_view cDefaultMetadataDbName{"clp-db"};
-constexpr std::string_view cDefaultMetadataTablePrefix{"clp_"};
 constexpr int cMinPort{1};
 constexpr int cMaxPort{65'535};
 }  // namespace
@@ -46,12 +39,7 @@ auto operator>>(std::istream& in, GlobalMetadataDBConfig::MetadataDBType& metada
 
 GlobalMetadataDBConfig::GlobalMetadataDBConfig(
         boost::program_options::options_description& options_description
-)
-        : m_metadata_db_type{cDefaultMetadataDbType},
-          m_metadata_db_host{cDefaultMetadataDbHost},
-          m_metadata_db_port{cDefaultMetadataDbPort},
-          m_metadata_db_name{cDefaultMetadataDbName},
-          m_metadata_table_prefix{cDefaultMetadataTablePrefix} {
+) {
     constexpr std::string_view cMetadataDbTypeMysqlOptDescPrefix{"(--db-type=mysql only)"};
 
     // clang-format off
