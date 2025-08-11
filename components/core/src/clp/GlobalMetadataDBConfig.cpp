@@ -139,7 +139,7 @@ auto GlobalMetadataDBConfig::validate() const -> void {
             || m_metadata_db_username.has_value() || m_metadata_db_password.has_value())
         {
             throw invalid_argument(
-                    "MySQL-specific parameters cannot be used with --db-type='sqlite'."
+                    "MySQL-specific parameters cannot be used with --db-type=sqlite."
                     " Please remove them or set '--db-type=mysql'."
             );
         }
@@ -170,11 +170,11 @@ auto GlobalMetadataDBConfig::validate() const -> void {
     }
 
     if (false == m_metadata_db_username.has_value()) {
-        throw invalid_argument("Database 'CLP_DB_USER' not specified.");
+        throw invalid_argument("Environment variable 'CLP_DB_USER' not set.");
     }
 
     if (false == m_metadata_db_password.has_value()) {
-        throw invalid_argument("Database 'CLP_DB_PASS' not specified.");
+        throw invalid_argument("Environment variable 'CLP_DB_PASS' not set.");
     }
 }
 }  // namespace clp
