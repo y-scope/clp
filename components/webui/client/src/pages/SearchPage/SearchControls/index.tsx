@@ -6,8 +6,8 @@ import {
 } from "../../../config";
 import Dataset from "./Dataset";
 import styles from "./index.module.css";
-import PrestoSearchButton from "./Presto/PrestoSearchButton";
 import SqlQueryInput from "./Presto/SqlQueryInput";
+import SqlSearchButton from "./Presto/SqlSearchButton";
 import QueryInput from "./QueryInput";
 import SearchButton from "./SearchButton";
 import TimeRangeInput from "./TimeRangeInput";
@@ -43,7 +43,7 @@ const SearchControls = () => {
                     (
                         <>
                             <SqlQueryInput/>
-                            <PrestoSearchButton/>
+                            <SqlSearchButton/>
                         </>
                     )}
             </div>

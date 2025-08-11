@@ -10,7 +10,7 @@ import RunButton from "./RunButton";
  *
  * @return
  */
-const PrestoSearchButton = () => {
+const SqlSearchButton = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
 
     return (
@@ -22,4 +22,4 @@ const PrestoSearchButton = () => {
     );
 };
 
-export default PrestoSearchButton;
+export default SqlSearchButton;
