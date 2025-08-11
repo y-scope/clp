@@ -123,7 +123,7 @@ if(CLP_BUILD_EXECUTABLES)
                 simdjson::simdjson
                 spdlog::spdlog
                 ystdlib::containers
-                ZStd::ZStd
+                ${zstd_TARGET}
         )
         # Put the built executable at the root of the build directory
         set_target_properties(
