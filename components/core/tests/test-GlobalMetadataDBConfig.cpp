@@ -24,7 +24,7 @@ void unset_env_var(char const* name) {
 template <size_t n>
 auto parse_args(std::array<char const*, n> const& argv) -> GlobalMetadataDBConfig {
     boost::program_options::options_description options_desc;
-    GlobalMetadataDBConfig config(options_desc);
+    GlobalMetadataDBConfig config{options_desc};
 
     boost::program_options::variables_map vm;
     constexpr auto cArgc{static_cast<int>(n)};
