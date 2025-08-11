@@ -15,7 +15,7 @@ import settings from "../../settings.json" with {type: "json"};
 const routes: FastifyPluginAsync = async (fastify) => {
     const filename = fileURLToPath(import.meta.url);
     const dirname = path.dirname(filename);
-    const rootDirname = path.resolve(dirname, "../../../..");
+    const rootDirname = path.resolve(dirname, "../../..");
 
     let streamFilesDir = settings.StreamFilesDir;
 

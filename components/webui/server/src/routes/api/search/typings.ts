@@ -10,7 +10,7 @@ import type {
 import {
     SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
-} from "../../../../../common/index.js";
+} from "@webui/common";
 
 
 /**
