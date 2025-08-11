@@ -15,25 +15,25 @@ using namespace clp;
 
 namespace {
 // Constants
-constexpr std::string_view cMysqlDbType{"mysql"};
-constexpr std::string_view cMysqlDbHost{"test-host"};
-constexpr std::string_view cMysqlDbPort{"8888"};
-constexpr std::string_view cMysqlDbName{"test-db"};
-constexpr std::string_view cMysqlDbTablePrefix{"test_prefix_"};
-constexpr std::string_view cMysqlDbUser{"test-user"};
-constexpr std::string_view cMysqlDbPass{"test-pass"};
-constexpr std::array cCommonMysqlArgs{
+constexpr std::string_view cMySqlDbType{"mysql"};
+constexpr std::string_view cMySqlDbHost{"test-host"};
+constexpr std::string_view cMySqlDbPort{"8888"};
+constexpr std::string_view cMySqlDbName{"test-db"};
+constexpr std::string_view cMySqlDbTablePrefix{"test_prefix_"};
+constexpr std::string_view cMySqlDbUser{"test-user"};
+constexpr std::string_view cMySqlDbPass{"test-pass"};
+constexpr std::array cCommonMySqlArgs{
         "test",
         "--db-type",
-        cMysqlDbType.data(),
+        cMySqlDbType.data(),
         "--db-host",
-        cMysqlDbHost.data(),
+        cMySqlDbHost.data(),
         "--db-port",
-        cMysqlDbPort.data(),
+        cMySqlDbPort.data(),
         "--db-name",
-        cMysqlDbName.data(),
+        cMySqlDbName.data(),
         "--db-table-prefix",
-        cMysqlDbTablePrefix.data()
+        cMySqlDbTablePrefix.data()
 };
 constexpr size_t cArgIdxDbHost{4};
 constexpr size_t cArgIdxDbPort{6};
@@ -86,36 +86,36 @@ TEST_CASE(
         "Test parsing command line arguments for GlobalMetadataDBConfig",
         "[GlobalMetadataDBConfig]"
 ) {
-    auto const config{parse_args(cCommonMysqlArgs)};
+    auto const config{parse_args(cCommonMySqlArgs)};
 
     REQUIRE((config.get_metadata_db_type() == GlobalMetadataDBConfig::MetadataDBType::MySQL));
-    REQUIRE((config.get_metadata_db_host() == cMysqlDbHost));
-    REQUIRE((config.get_metadata_db_port() == std::stoi(std::string(cMysqlDbPort))));
-    REQUIRE((config.get_metadata_db_name() == cMysqlDbName));
-    REQUIRE((config.get_metadata_table_prefix() == cMysqlDbTablePrefix));
+    REQUIRE((config.get_metadata_db_host() == cMySqlDbHost));
+    REQUIRE((config.get_metadata_db_port() == std::stoi(std::string(cMySqlDbPort))));
+    REQUIRE((config.get_metadata_db_name() == cMySqlDbName));
+    REQUIRE((config.get_metadata_table_prefix() == cMySqlDbTablePrefix));
 }
 
 TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBConfig]") {
     SECTION("With all arguments") {
-        auto config{parse_args(cCommonMysqlArgs)};
+        auto config{parse_args(cCommonMySqlArgs)};
 
         SECTION("With valid credentials") {
-            set_env_var("CLP_DB_USER", cMysqlDbUser.data());
-            set_env_var("CLP_DB_PASS", cMysqlDbPass.data());
+            set_env_var("CLP_DB_USER", cMySqlDbUser.data());
+            set_env_var("CLP_DB_PASS", cMySqlDbPass.data());
 
             config.read_credentials_from_env_if_needed();
             REQUIRE_NOTHROW(config.validate());
-            REQUIRE((config.get_metadata_db_username() == cMysqlDbUser));
-            REQUIRE((config.get_metadata_db_password() == cMysqlDbPass));
+            REQUIRE((config.get_metadata_db_username() == cMySqlDbUser));
+            REQUIRE((config.get_metadata_db_password() == cMySqlDbPass));
         }
 
         SECTION("With empty password") {
-            set_env_var("CLP_DB_USER", cMysqlDbUser.data());
+            set_env_var("CLP_DB_USER", cMySqlDbUser.data());
             set_env_var("CLP_DB_PASS", "");
 
             config.read_credentials_from_env_if_needed();
             REQUIRE_NOTHROW(config.validate());
-            REQUIRE((config.get_metadata_db_username() == cMysqlDbUser));
+            REQUIRE((config.get_metadata_db_username() == cMySqlDbUser));
             REQUIRE((config.get_metadata_db_password() == ""));
         }
 
@@ -125,12 +125,12 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                 REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
             }
             SECTION("Password set but username missing") {
-                set_env_var("CLP_DB_PASS", cMysqlDbPass.data());
+                set_env_var("CLP_DB_PASS", cMySqlDbPass.data());
                 config.read_credentials_from_env_if_needed();
                 REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
             }
             SECTION("Username set but password missing") {
-                set_env_var("CLP_DB_USER", cMysqlDbUser.data());
+                set_env_var("CLP_DB_USER", cMySqlDbUser.data());
                 config.read_credentials_from_env_if_needed();
                 REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
             }
@@ -139,21 +139,21 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
 
     SECTION("With invalid port values") {
         SECTION("Port too low") {
-            auto cArgV{cCommonMysqlArgs};
+            auto cArgV{cCommonMySqlArgs};
             cArgV[cArgIdxDbPort] = "0";
             auto config{parse_args(cArgV)};
-            set_env_var("CLP_DB_USER", cMysqlDbUser.data());
-            set_env_var("CLP_DB_PASS", cMysqlDbPass.data());
+            set_env_var("CLP_DB_USER", cMySqlDbUser.data());
+            set_env_var("CLP_DB_PASS", cMySqlDbPass.data());
             config.read_credentials_from_env_if_needed();
             REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
         }
 
         SECTION("Port too high") {
-            auto cArgV{cCommonMysqlArgs};
+            auto cArgV{cCommonMySqlArgs};
             cArgV[cArgIdxDbPort] = "65536";
             auto config{parse_args(cArgV)};
-            set_env_var("CLP_DB_USER", cMysqlDbUser.data());
-            set_env_var("CLP_DB_PASS", cMysqlDbPass.data());
+            set_env_var("CLP_DB_USER", cMySqlDbUser.data());
+            set_env_var("CLP_DB_PASS", cMySqlDbPass.data());
             config.read_credentials_from_env_if_needed();
             REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
         }
@@ -161,31 +161,31 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
 
     SECTION("With empty required arguments") {
         SECTION("Empty db-host") {
-            auto cArgV{cCommonMysqlArgs};
+            auto cArgV{cCommonMySqlArgs};
             cArgV[cArgIdxDbHost] = "";
             auto config{parse_args(cArgV)};
-            set_env_var("CLP_DB_USER", cMysqlDbUser.data());
-            set_env_var("CLP_DB_PASS", cMysqlDbPass.data());
+            set_env_var("CLP_DB_USER", cMySqlDbUser.data());
+            set_env_var("CLP_DB_PASS", cMySqlDbPass.data());
             config.read_credentials_from_env_if_needed();
             REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
         }
 
         SECTION("Empty db-name") {
-            auto cArgV{cCommonMysqlArgs};
+            auto cArgV{cCommonMySqlArgs};
             cArgV[cArgIdxDbName] = "";
             auto config{parse_args(cArgV)};
-            set_env_var("CLP_DB_USER", cMysqlDbUser.data());
-            set_env_var("CLP_DB_PASS", cMysqlDbPass.data());
+            set_env_var("CLP_DB_USER", cMySqlDbUser.data());
+            set_env_var("CLP_DB_PASS", cMySqlDbPass.data());
             config.read_credentials_from_env_if_needed();
             REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
         }
 
         SECTION("Empty db-table-prefix") {
-            auto cArgV{cCommonMysqlArgs};
+            auto cArgV{cCommonMySqlArgs};
             cArgV[cArgIdxDbTablePrefix] = "";
             auto config{parse_args(cArgV)};
-            set_env_var("CLP_DB_USER", cMysqlDbUser.data());
-            set_env_var("CLP_DB_PASS", cMysqlDbPass.data());
+            set_env_var("CLP_DB_USER", cMySqlDbUser.data());
+            set_env_var("CLP_DB_PASS", cMySqlDbPass.data());
             config.read_credentials_from_env_if_needed();
             REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
         }
@@ -200,7 +200,7 @@ TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     SECTION("With non-default db-host argument") {
         auto cArgV{cCommonSqliteArgs};
         cArgV[cArgIdxOverwriteArgName] = "--db-host";
-        cArgV[cArgIdxOverwriteArgValue] = cMysqlDbHost.data();
+        cArgV[cArgIdxOverwriteArgValue] = cMySqlDbHost.data();
         auto const config{parse_args(cArgV)};
 
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
@@ -209,7 +209,7 @@ TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     SECTION("With non-default db-port argument") {
         auto cArgV{cCommonSqliteArgs};
         cArgV[cArgIdxOverwriteArgName] = "--db-port";
-        cArgV[cArgIdxOverwriteArgValue] = cMysqlDbPort.data();
+        cArgV[cArgIdxOverwriteArgValue] = cMySqlDbPort.data();
         auto const config{parse_args(cArgV)};
 
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
@@ -218,7 +218,7 @@ TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     SECTION("With non-default db-name argument") {
         auto cArgV{cCommonSqliteArgs};
         cArgV[cArgIdxOverwriteArgName] = "--db-name";
-        cArgV[cArgIdxOverwriteArgValue] = cMysqlDbName.data();
+        cArgV[cArgIdxOverwriteArgValue] = cMySqlDbName.data();
         auto const config{parse_args(cArgV)};
 
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
@@ -227,7 +227,7 @@ TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     SECTION("With non-default db-table-prefix argument") {
         auto cArgV{cCommonSqliteArgs};
         cArgV[cArgIdxOverwriteArgName] = "--db-table-prefix";
-        cArgV[cArgIdxOverwriteArgValue] = cMysqlDbTablePrefix.data();
+        cArgV[cArgIdxOverwriteArgValue] = cMySqlDbTablePrefix.data();
         auto const config{parse_args(cArgV)};
 
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
@@ -236,8 +236,8 @@ TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     SECTION("With username and password") {
         auto config{parse_args(cCommonSqliteArgs)};
 
-        set_env_var("CLP_DB_USER", cMysqlDbUser.data());
-        set_env_var("CLP_DB_PASS", cMysqlDbPass.data());
+        set_env_var("CLP_DB_USER", cMySqlDbUser.data());
+        set_env_var("CLP_DB_PASS", cMySqlDbPass.data());
 
         config.read_credentials_from_env_if_needed();
         REQUIRE_FALSE(config.get_metadata_db_username().has_value());
