@@ -48,7 +48,7 @@ auto operator>>(std::istream& in, GlobalMetadataDBConfig::MetadataDBType& metada
 GlobalMetadataDBConfig::GlobalMetadataDBConfig(
         boost::program_options::options_description& options_description
 ) {
-    std::string_view const cMetadataDbTypeMySqlOptDescPrefix{fmt::format(
+    std::string_view const cMetadataDbTypeMysqlOptDescPrefix{fmt::format(
             "(--db-type={} only)",
             cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::MySQL)]
     )};
@@ -78,7 +78,7 @@ GlobalMetadataDBConfig::GlobalMetadataDBConfig(
                 ->default_value(string(cDefaultMetadataDbHost)),
             fmt::format(
                 "{} Database host",
-                cMetadataDbTypeMySqlOptDescPrefix
+                cMetadataDbTypeMysqlOptDescPrefix
             ).c_str()
         )
         (
@@ -87,7 +87,7 @@ GlobalMetadataDBConfig::GlobalMetadataDBConfig(
                 ->default_value(cDefaultMetadataDbPort),
             fmt::format(
                 "{} Database port",
-                cMetadataDbTypeMySqlOptDescPrefix
+                cMetadataDbTypeMysqlOptDescPrefix
             ).c_str()
         )
         (
@@ -96,7 +96,7 @@ GlobalMetadataDBConfig::GlobalMetadataDBConfig(
                 ->default_value(string(cDefaultMetadataDbName)),
             fmt::format(
                 "{} Database name",
-                cMetadataDbTypeMySqlOptDescPrefix
+                cMetadataDbTypeMysqlOptDescPrefix
             ).c_str()
         )
         (
@@ -105,7 +105,7 @@ GlobalMetadataDBConfig::GlobalMetadataDBConfig(
                 ->default_value(string(cDefaultMetadataTablePrefix)),
             fmt::format(
                 "{} Database table prefix",
-                cMetadataDbTypeMySqlOptDescPrefix
+                cMetadataDbTypeMysqlOptDescPrefix
             ).c_str()
         );
     // clang-format on
