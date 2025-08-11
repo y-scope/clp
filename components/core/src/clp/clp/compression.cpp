@@ -81,7 +81,7 @@ bool compress(
                     = std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
             break;
         }
-        case GlobalMetadataDBConfig::MetadataDBType::MySQL:
+        case GlobalMetadataDBConfig::MetadataDBType::MySQL: {
             auto const& global_metadata_db_username
                     = global_metadata_db_config.get_metadata_db_username();
             auto const& global_metadata_db_password
@@ -101,6 +101,7 @@ bool compress(
                     global_metadata_db_config.get_metadata_table_prefix()
             );
             break;
+        }
         default:
             throw ClpOperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
     }

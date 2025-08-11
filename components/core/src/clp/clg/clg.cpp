@@ -546,7 +546,7 @@ int main(int argc, char const* argv[]) {
             );
             break;
         }
-        case GlobalMetadataDBConfig::MetadataDBType::MySQL:
+        case GlobalMetadataDBConfig::MetadataDBType::MySQL: {
             auto const& global_metadata_db_username
                     = global_metadata_db_config.get_metadata_db_username();
             auto const& global_metadata_db_password
@@ -566,6 +566,7 @@ int main(int argc, char const* argv[]) {
                     global_metadata_db_config.get_metadata_table_prefix()
             );
             break;
+        }
     }
     global_metadata_db->open();
 

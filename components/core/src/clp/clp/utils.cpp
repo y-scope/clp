@@ -183,7 +183,7 @@ std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
                       / static_cast<char const*>(streaming_archive::cMetadataDBFileName);
             return std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
         }
-        case GlobalMetadataDBConfig::MetadataDBType::MySQL:
+        case GlobalMetadataDBConfig::MetadataDBType::MySQL: {
             auto const& global_metadata_db_username
                     = global_metadata_db_config.get_metadata_db_username();
             auto const& global_metadata_db_password
@@ -202,6 +202,7 @@ std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
                     global_metadata_db_config.get_metadata_db_name(),
                     global_metadata_db_config.get_metadata_table_prefix()
             );
+        }
         default:
             throw ClpOperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
     }
