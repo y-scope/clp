@@ -62,9 +62,9 @@ GlobalMetadataDBConfig::GlobalMetadataDBConfig(
                 ->default_value(
                     cDefaultMetadataDbType,
                     string(
-                        cMetadataDBTypeNames[enum_to_underlying_type(
-                            cDefaultMetadataDbType
-                        )]
+                        cMetadataDBTypeNames[
+                            enum_to_underlying_type(cDefaultMetadataDbType)
+                        ]
                     )
                 ),
             fmt::format(
