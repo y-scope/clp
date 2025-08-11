@@ -14,11 +14,15 @@ using namespace clp;
 
 namespace {
 void set_env_var(char const* name, char const* value) {
-    setenv(name, value, 1);  // NOLINT(concurrency-mt-unsafe)
+    // Silence the check since this class won't be used in a multithreaded context.
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    setenv(name, value, 1);
 }
 
 void unset_env_var(char const* name) {
-    unsetenv(name);  // NOLINT(concurrency-mt-unsafe)
+    // Silence the check since this class won't be used in a multithreaded context.
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    unsetenv(name);
 }
 
 template <size_t n>
