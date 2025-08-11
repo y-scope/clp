@@ -124,7 +124,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 OpenSSL::Crypto
                 spdlog::spdlog
                 ystdlib::error_handling
-                ZStd::ZStd
+                ${zstd_TARGET}
         )
 endif()
 
@@ -204,7 +204,7 @@ if(CLP_BUILD_CLP_S_IO)
                 clp_s::clp_dependencies
                 fmt::fmt
                 spdlog::spdlog
-                ZStd::ZStd
+                ${zstd_TARGET}
         )
 endif()
 
