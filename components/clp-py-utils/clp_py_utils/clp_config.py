@@ -869,11 +869,9 @@ class WorkerConfig(BaseModel):
 
 
 def get_components_for_target(target: str) -> Set[str]:
-    if target == ALL_TARGET_NAME:
-        return ALL_RUNNABLE_COMPONENTS
-    elif target == CONTROLLER_TARGET_NAME:
-        return CONTROLLER_COMPONENTS
-    elif target in ALL_RUNNABLE_COMPONENTS:
+    if target in TARGET_TO_COMPONENTS:
+        return TARGET_TO_COMPONENTS[target]
+    elif target in ALL_COMPONENTS:
         return {target}
     else:
         return set()
