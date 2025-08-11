@@ -22,16 +22,16 @@ void unset_env_var(char const* name) {
 }
 
 template <size_t n>
-auto parse_args(std::array<char const*, n> const& argv) -> GlobalMetadataDBConfig {
+auto parse_args(std::array<char const*, n> const& argV) -> GlobalMetadataDBConfig {
     boost::program_options::options_description options_desc;
     GlobalMetadataDBConfig config{options_desc};
 
     boost::program_options::variables_map vm;
-    constexpr auto cArgc{static_cast<int>(n)};
+    constexpr auto cArgC{static_cast<int>(n)};
     boost::program_options::store(
             boost::program_options::parse_command_line(
-                    cArgc,
-                    const_cast<char* const*>(argv.data()),
+                    cArgC,
+                    const_cast<char* const*>(argV.data()),
                     options_desc
             ),
             vm
@@ -46,7 +46,7 @@ TEST_CASE(
         "Test parsing command line arguments for GlobalMetadataDBConfig",
         "[GlobalMetadataDBConfig]"
 ) {
-    constexpr std::array cArgv{
+    constexpr std::array cArgV{
             "test",
             "--db-type",
             "mysql",
@@ -59,7 +59,7 @@ TEST_CASE(
             "--db-table-prefix",
             "test_prefix_"
     };
-    auto const config{parse_args(cArgv)};
+    auto const config{parse_args(cArgV)};
 
     REQUIRE((config.get_metadata_db_type() == GlobalMetadataDBConfig::MetadataDBType::MySQL));
     REQUIRE((config.get_metadata_db_host() == "test-host"));
@@ -70,7 +70,7 @@ TEST_CASE(
 
 TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBConfig]") {
     SECTION("With all arguments") {
-        constexpr std::array cArgv{
+        constexpr std::array cArgV{
                 "test",
                 "--db-type",
                 "mysql",
@@ -83,7 +83,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                 "--db-table-prefix",
                 "test_prefix_"
         };
-        auto config{parse_args(cArgv)};
+        auto config{parse_args(cArgV)};
 
         SECTION("With valid credentials") {
             set_env_var("CLP_DB_USER", "test-user");
@@ -133,7 +133,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
 
     SECTION("With invalid port values") {
         SECTION("Port too low") {
-            constexpr std::array cArgvWithLowPort{
+            constexpr std::array cArgVWithLowPort{
                     "test",
                     "--db-type",
                     "mysql",
@@ -146,7 +146,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                     "--db-table-prefix",
                     "test_prefix_"
             };
-            auto config{parse_args(cArgvWithLowPort)};
+            auto config{parse_args(cArgVWithLowPort)};
             set_env_var("CLP_DB_USER", "test-user");
             set_env_var("CLP_DB_PASS", "test-pass");
             config.read_credentials_from_env_if_needed();
@@ -156,7 +156,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
         }
 
         SECTION("Port too high") {
-            constexpr std::array cArgvWithHighPort{
+            constexpr std::array cArgVWithHighPort{
                     "test",
                     "--db-type",
                     "mysql",
@@ -169,7 +169,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                     "--db-table-prefix",
                     "test_prefix_"
             };
-            auto config{parse_args(cArgvWithHighPort)};
+            auto config{parse_args(cArgVWithHighPort)};
             set_env_var("CLP_DB_USER", "test-user");
             set_env_var("CLP_DB_PASS", "test-pass");
             config.read_credentials_from_env_if_needed();
@@ -181,7 +181,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
 
     SECTION("With empty required arguments") {
         SECTION("Empty db-host") {
-            constexpr std::array cArgvEmptyHost{
+            constexpr std::array cArgVEmptyHost{
                     "test",
                     "--db-type",
                     "mysql",
@@ -194,7 +194,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                     "--db-table-prefix",
                     "test_prefix_"
             };
-            auto config{parse_args(cArgvEmptyHost)};
+            auto config{parse_args(cArgVEmptyHost)};
             set_env_var("CLP_DB_USER", "test-user");
             set_env_var("CLP_DB_PASS", "test-pass");
             config.read_credentials_from_env_if_needed();
@@ -204,7 +204,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
         }
 
         SECTION("Empty db-name") {
-            constexpr std::array cArgvEmptyName{
+            constexpr std::array cArgVEmptyName{
                     "test",
                     "--db-type",
                     "mysql",
@@ -217,7 +217,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                     "--db-table-prefix",
                     "test_prefix_"
             };
-            auto config{parse_args(cArgvEmptyName)};
+            auto config{parse_args(cArgVEmptyName)};
             set_env_var("CLP_DB_USER", "test-user");
             set_env_var("CLP_DB_PASS", "test-pass");
             config.read_credentials_from_env_if_needed();
@@ -227,7 +227,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
         }
 
         SECTION("Empty db-table-prefix") {
-            constexpr std::array cArgvEmptyPrefix{
+            constexpr std::array cArgVEmptyPrefix{
                     "test",
                     "--db-type",
                     "mysql",
@@ -240,7 +240,7 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
                     "--db-table-prefix",
                     ""
             };
-            auto config{parse_args(cArgvEmptyPrefix)};
+            auto config{parse_args(cArgVEmptyPrefix)};
             set_env_var("CLP_DB_USER", "test-user");
             set_env_var("CLP_DB_PASS", "test-pass");
             config.read_credentials_from_env_if_needed();
@@ -253,37 +253,37 @@ TEST_CASE("Test MySQL arguments and credential validation", "[GlobalMetadataDBCo
 
 TEST_CASE("Test SQLite arguments", "[GlobalMetadataDBConfig]") {
     SECTION("With non-default db-host argument") {
-        constexpr std::array cArgv{"test", "--db-type", "sqlite", "--db-host", "test-host"};
-        auto const config{parse_args(cArgv)};
+        constexpr std::array cArgV{"test", "--db-type", "sqlite", "--db-host", "test-host"};
+        auto const config{parse_args(cArgV)};
 
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
     }
 
     SECTION("With non-default db-port argument") {
-        constexpr std::array cArgv{"test", "--db-type", "sqlite", "--db-port", "8888"};
-        auto const config{parse_args(cArgv)};
+        constexpr std::array cArgV{"test", "--db-type", "sqlite", "--db-port", "8888"};
+        auto const config{parse_args(cArgV)};
 
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
     }
 
     SECTION("With non-default db-name argument") {
-        constexpr std::array cArgv{"test", "--db-type", "sqlite", "--db-name", "test-db"};
-        auto const config{parse_args(cArgv)};
+        constexpr std::array cArgV{"test", "--db-type", "sqlite", "--db-name", "test-db"};
+        auto const config{parse_args(cArgV)};
 
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
     }
 
     SECTION("With non-default db-table-prefix argument") {
         constexpr std::array
-                cArgv{"test", "--db-type", "sqlite", "--db-table-prefix", "test_prefix_"};
-        auto const config{parse_args(cArgv)};
+                cArgV{"test", "--db-type", "sqlite", "--db-table-prefix", "test_prefix_"};
+        auto const config{parse_args(cArgV)};
 
         REQUIRE_THROWS_AS(config.validate(), std::invalid_argument);
     }
 
     SECTION("With username and password") {
-        constexpr std::array cArgv{"test", "--db-type", "sqlite"};
-        auto config{parse_args(cArgv)};
+        constexpr std::array cArgV{"test", "--db-type", "sqlite"};
+        auto config{parse_args(cArgV)};
 
         set_env_var("CLP_DB_USER", "test-user");
         set_env_var("CLP_DB_PASS", "test-pass");
