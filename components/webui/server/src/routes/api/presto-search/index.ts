@@ -1,6 +1,11 @@
 import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
 import {StatusCodes} from "http-status-codes";
 
+import {
+    CLP_QUERY_ENGINES,
+    type SearchResultsMetadataDocument,
+} from "../../../../../common/index.js";
+import settings from "../../../../settings.json" with {type: "json"};
 import {ErrorSchema} from "../../../schemas/error.js";
 import {
     PrestoQueryJobCreationSchema,
@@ -28,6 +33,10 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         throw new Error("MongoDB database not found");
     }
 
+    const searchResultsMetadataCollection = mongoDb.collection<SearchResultsMetadataDocument>(
+        settings.MongoDbSearchResultsMetadataCollectionName
+    );
+
     /**
      * Submits a search query.
      */
@@ -50,6 +59,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             let searchJobId: string;
 
             try {
+                // eslint-disable-next-line max-lines-per-function
                 searchJobId = await new Promise<string>((resolve, reject) => {
                     let isResolved = false;
                     Presto.client.execute({
@@ -100,14 +110,32 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                 state: stats.state,
                             }, "Presto search state updated");
 
+                            // Insert metadata and resolve queryId on first call
                             if (false === isResolved) {
+                                searchResultsMetadataCollection.insertOne({
+                                    _id: queryId,
+                                    lastSignal: stats.state,
+                                    errorMsg: null,
+                                    queryEngine: CLP_QUERY_ENGINES.PRESTO,
+                                }).catch((err: unknown) => {
+                                    request.log.error(err, "Failed to insert Presto metadata");
+                                });
                                 isResolved = true;
                                 resolve(queryId);
+                            } else {
+                                // Update metadata on subsequent calls
+                                searchResultsMetadataCollection.updateOne(
+                                    {_id: queryId},
+                                    {$set: {lastSignal: stats.state}}
+                                ).catch((err: unknown) => {
+                                    request.log.error(err, "Failed to update Presto metadata");
+                                });
                             }
                         },
                         success: () => {
                             request.log.info("Presto search succeeded");
                         },
+                        timeout: null,
                     });
                 });
             } catch (error) {
