@@ -146,8 +146,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     resolve();
                 });
             });
-            reply.code(StatusCodes.OK);
             request.log.info(searchJobId, "Presto search cancelled");
+            reply.code(StatusCodes.NO_CONTENT);
 
             return null;
         }
