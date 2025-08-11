@@ -3,7 +3,6 @@
 #include <string>
 #include <vector>
 
-#include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 
 #include "streaming_archive/reader/Archive.hpp"
@@ -13,13 +12,6 @@
 using clp::streaming_archive::reader::Archive;
 using clp::streaming_archive::reader::File;
 using clp::streaming_archive::reader::Message;
-using clp::string_utils::cEscapeChar;
-using clp::string_utils::clean_up_wildcard_search_string;
-using clp::string_utils::cSingleCharWildcard;
-using clp::string_utils::cZeroOrMoreCharsWildcard;
-using clp::string_utils::is_alphabet;
-using clp::string_utils::is_wildcard;
-using clp::string_utils::replace_unescaped_char;
 using clp::string_utils::wildcard_match_unsafe;
 using std::string;
 using std::vector;
