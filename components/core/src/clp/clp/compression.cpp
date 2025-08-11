@@ -91,6 +91,8 @@ bool compress(
                     global_metadata_db_config.get_metadata_table_prefix()
             );
             break;
+        default:
+            throw ClpOperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
     }
 
     auto uuid_generator = boost::uuids::random_generator();
