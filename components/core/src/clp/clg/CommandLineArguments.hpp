@@ -46,7 +46,7 @@ public:
 
     epochtime_t get_search_end_ts() const { return m_search_end_ts; }
 
-    GlobalMetadataDBConfig const& get_metadata_db_config() const { return *m_metadata_db_config; }
+    GlobalMetadataDBConfig const& get_metadata_db_config() const { return m_metadata_db_config.value(); }
 
 private:
     // Methods
