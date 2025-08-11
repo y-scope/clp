@@ -21,6 +21,7 @@ const prestoRowToObject = (
         obj[col.name] = row[idx];
     });
 
+    // Object is wrapped in a `row` property to prevent conflicts with MongoDB's `_id` field.
     return {row: obj};
 };
 

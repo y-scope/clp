@@ -2,7 +2,7 @@ import {TableProps} from "antd";
 
 
 /**
- * Structure of Presto search results data (dynamic properties).
+ * Structure of dynamic Presto search results data.
  */
 interface PrestoSearchResult {
     _id: string;
@@ -10,7 +10,7 @@ interface PrestoSearchResult {
 }
 
 /**
- * Columns configuration for Presto query engine (dynamic based on data).
+ * Generates dynamic columns configuration for Presto query engine.
  *
  * @param data Array of Presto search results
  * @return

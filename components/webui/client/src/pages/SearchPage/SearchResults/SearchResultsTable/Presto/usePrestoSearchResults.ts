@@ -11,7 +11,7 @@ import {PrestoSearchResult} from "./typings";
  * @return
  */
 const usePrestoSearchResults = () => {
-    const {searchJobId} = useSearchStore();
+    const searchJobId = useSearchStore((state) => state.searchJobId);
 
     const searchResultsCursor = useCursor<PrestoSearchResult>(
         () => {

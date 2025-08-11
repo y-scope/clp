@@ -1,4 +1,7 @@
-import {useEffect} from "react";
+import {
+    useEffect,
+    useMemo,
+} from "react";
 
 import VirtualTable from "../../../../../components/VirtualTable";
 import useSearchStore from "../../../SearchState/index";
@@ -24,6 +27,11 @@ const PrestoResultsVirtualTable = ({tableHeight}: PrestoResultsVirtualTableProps
     const {updateNumSearchResultsTable} = useSearchStore();
     const prestoSearchResults = usePrestoSearchResults();
 
+    const columns = useMemo(
+        () => getPrestoSearchResultsTableColumns(prestoSearchResults || []),
+        [prestoSearchResults]
+    );
+
     useEffect(() => {
         const num = prestoSearchResults ?
             prestoSearchResults.length :
@@ -32,12 +40,12 @@ const PrestoResultsVirtualTable = ({tableHeight}: PrestoResultsVirtualTableProps
         updateNumSearchResultsTable(num);
     }, [
         prestoSearchResults,
-        updateNumSearchResultsTable
+        updateNumSearchResultsTable,
     ]);
 
     return (
         <VirtualTable<PrestoSearchResult>
-            columns={getPrestoSearchResultsTableColumns(prestoSearchResults || [])}
+            columns={columns}
             dataSource={prestoSearchResults || []}
             pagination={false}
             rowKey={(record) => record._id}
