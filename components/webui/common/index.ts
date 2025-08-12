@@ -89,6 +89,33 @@ enum SEARCH_SIGNAL {
 }
 
 /**
+ * Presto search-related signals.
+ *
+ * Note: Using type instead of enum to match `presto-client-node` type definition.
+ */
+type PRESTO_SEARCH_SIGNAL =
+    | "WAITING_FOR_PREREQUISITES"
+    | "QUEUED"
+    | "WAITING_FOR_RESOURCES"
+    | "DISPATCHING"
+    | "PLANNING"
+    | "STARTING"
+    | "RUNNING"
+    | "FINISHING"
+    | "FINISHED"
+    | "CANCELED"
+    | "FAILED";
+
+/**
+ * CLP query engines.
+ */
+enum CLP_QUERY_ENGINES {
+    CLP = "clp",
+    CLP_S = "clp-s",
+    PRESTO = "presto",
+}
+
+/**
  * MongoDB document for search results metadata. `numTotalResults` is optional
  * since it is only set when the search job is completed.
  */
@@ -98,13 +125,16 @@ interface SearchResultsMetadataDocument {
     // eslint-disable-next-line no-warning-comments
     // TODO: Replace with Nullable<string> when the `@common` directory refactoring is completed.
     errorMsg: string | null;
-    lastSignal: SEARCH_SIGNAL;
+    lastSignal: SEARCH_SIGNAL | PRESTO_SEARCH_SIGNAL;
     numTotalResults?: number;
+    queryEngine: CLP_QUERY_ENGINES;
 }
 export {
+    CLP_QUERY_ENGINES,
     SEARCH_SIGNAL,
 };
 export type {
+    PRESTO_SEARCH_SIGNAL,
     SearchResultsMetadataDocument,
     ClientToServerEvents,
     Err,

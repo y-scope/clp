@@ -33,6 +33,8 @@ set(
         ../GlobalSQLiteMetadataDB.hpp
         ../Grep.cpp
         ../Grep.hpp
+        ../GrepCore.cpp
+        ../GrepCore.hpp
         ../ir/EncodedTextAst.cpp
         ../ir/EncodedTextAst.hpp
         ../ir/LogEvent.hpp
@@ -59,6 +61,8 @@ set(
         ../Profiler.hpp
         ../Query.cpp
         ../Query.hpp
+        ../QueryToken.cpp
+        ../QueryToken.hpp
         ../ReaderInterface.cpp
         ../ReaderInterface.hpp
         ../ReadOnlyMemoryMappedFile.cpp
@@ -146,7 +150,7 @@ if(CLP_BUILD_EXECUTABLES)
                 yaml-cpp
                 ystdlib::containers
                 ystdlib::error_handling
-                ZStd::ZStd
+                ${zstd_TARGET}
         )
         # Put the built executable at the root of the build directory
         set_target_properties(
