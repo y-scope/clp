@@ -6,8 +6,8 @@ import {
 import VirtualTable from "../../../../../../components/VirtualTable";
 import useSearchStore from "../../../../SearchState/index";
 import {PrestoSearchResult} from "./typings";
-import {getPrestoSearchResultsTableColumns} from "../utils";
-import {usePrestoSearchResults} from "../usePrestoSearchResults";
+import {usePrestoSearchResults} from "./usePrestoSearchResults";
+import {getPrestoSearchResultsTableColumns} from "./utils";
 
 
 interface PrestoResultsVirtualTableProps {

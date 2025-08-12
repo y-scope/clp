@@ -1,11 +1,11 @@
 import {TableProps} from "antd";
 import dayjs from "dayjs";
 
-import {DATETIME_FORMAT_TEMPLATE} from "../../../../../typings/datetime";
 import {
     CLP_STORAGE_ENGINES,
     SETTINGS_STORAGE_ENGINE,
 } from "../../../../../config";
+import {DATETIME_FORMAT_TEMPLATE} from "../../../../../typings/datetime";
 import Message from "../Message";
 import {getStreamId} from "../utils";
 
@@ -71,6 +71,4 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
 ];
 
 export type {SearchResult};
-export {
-    searchResultsTableColumns,
-};
+export {searchResultsTableColumns};

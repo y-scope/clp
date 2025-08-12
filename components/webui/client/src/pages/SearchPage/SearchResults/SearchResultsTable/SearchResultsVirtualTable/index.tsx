@@ -6,7 +6,7 @@ import {
     SearchResult,
     searchResultsTableColumns,
 } from "./typings";
-import {useSearchResults} from "../useSearchResults";
+import {useSearchResults} from "./useSearchResults";
 
 
 interface SearchResultsVirtualTableProps {

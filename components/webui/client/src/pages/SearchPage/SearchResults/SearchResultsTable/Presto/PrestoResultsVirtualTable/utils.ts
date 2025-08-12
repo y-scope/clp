@@ -1,6 +1,7 @@
 import {TableProps} from "antd";
 
-import {PrestoSearchResult} from "./PrestoResultsVirtualTable/typings";
+import {PRESTO_DATA_PROPERTY} from "../../../../../../../../common";
+import {PrestoSearchResult} from "./typings";
 
 
 /**
@@ -18,7 +19,7 @@ const getPrestoSearchResultsTableColumns = (
 
     return Object.keys(data[0].row)
         .map((key) => ({
-            dataIndex: ["row",
+            dataIndex: [PRESTO_DATA_PROPERTY,
                 key],
             key: key,
             title: key,
