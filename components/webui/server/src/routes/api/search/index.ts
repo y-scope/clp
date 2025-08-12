@@ -113,9 +113,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
             await searchResultsMetadataCollection.insertOne({
                 _id: searchJobId.toString(),
-                lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
                 errorMsg: null,
-                errorType: null,
+                errorName: null,
+                lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
                 queryEngine: queryEngine,
             });
 
@@ -208,8 +208,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     },
                     {
                         $set: {
-                            lastSignal: SEARCH_SIGNAL.RESP_DONE,
                             errorMsg: "Query cancelled before it could be completed.",
+                            lastSignal: SEARCH_SIGNAL.RESP_DONE,
                         },
                     }
                 );

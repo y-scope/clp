@@ -6,8 +6,8 @@ import {StatusCodes} from "http-status-codes";
 
 import {
     CLP_QUERY_ENGINES,
-    type SearchResultsMetadataDocument,
     PRESTO_SEARCH_SIGNAL,
+    type SearchResultsMetadataDocument,
 } from "../../../../../common/index.js";
 import settings from "../../../../settings.json" with {type: "json"};
 import {ErrorSchema} from "../../../schemas/error.js";
@@ -16,7 +16,6 @@ import {
     PrestoQueryJobSchema,
 } from "../../../schemas/presto-search.js";
 import {insertPrestoRowsToMongo} from "./utils.js";
-
 
 
 /**
@@ -103,37 +102,32 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                         },
                         error: (error) => {
                             request.log.info(error, "Presto search failed");
-
                             if (false === isResolved) {
                                 isResolved = true;
                                 reject(new Error("Presto search failed"));
                             } else {
-                                const updateFields: any = {
-                                    lastSignal: PRESTO_SEARCH_SIGNAL.FAILED,
-                                    errorMsg: error.message,
-                                };
-
-                                if ('errorType' in error && error.errorType) {
-                                    updateFields.errorType = error.errorType;
-                                }
-
                                 searchResultsMetadataCollection.updateOne(
                                     {_id: searchJobId},
                                     {
                                         $set: {
-                                            lastSignal: PRESTO_SEARCH_SIGNAL.FAILED,
                                             errorMsg: error.message,
-                                            errorType: ('errorType' in error) ? error.errorType : null,
-                                        }
+                                            errorName: ("errorName" in error) ?
+                                                error.errorName :
+                                                null,
+                                            lastSignal: PRESTO_SEARCH_SIGNAL.FAILED,
+                                        },
                                     }
                                 ).catch((err: unknown) => {
-                                    request.log.error(err, "Failed to update Presto error metadata");
+                                    request.log.error(
+                                        err,
+                                        "Failed to update Presto error metadata"
+                                    );
                                 });
                             }
                         },
                         query: queryString,
                         state: (_, queryId, stats) => {
-                            // Type cast `presto-client` string literal type to our identical enum type.
+                            // Type cast `presto-client` string literal type to our enum type.
                             const newState = stats.state as PRESTO_SEARCH_SIGNAL;
                             request.log.info({
                                 searchJobId: queryId,
@@ -144,9 +138,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                             if (false === isResolved) {
                                 searchResultsMetadataCollection.insertOne({
                                     _id: queryId,
-                                    lastSignal: newState,
                                     errorMsg: null,
-                                    errorType: null,
+                                    errorName: null,
+                                    lastSignal: newState,
                                     queryEngine: CLP_QUERY_ENGINES.PRESTO,
                                 }).catch((err: unknown) => {
                                     request.log.error(err, "Failed to insert Presto metadata");

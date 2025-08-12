@@ -58,7 +58,7 @@ const Results = () => {
             strong={true}
             type={textType}
         >
-            {searchUiState === SEARCH_UI_STATE.FAILED ? 0 : numResults}
+            {numResults}
         </Text>
     );
 };

@@ -1,7 +1,10 @@
 import {useEffect} from "react";
-import {notification} from "antd";
 
-import {SEARCH_SIGNAL, PRESTO_SEARCH_SIGNAL} from "@common/index.js";
+import {
+    PRESTO_SEARCH_SIGNAL,
+    SEARCH_SIGNAL,
+} from "@common/index.js";
+import {notification} from "antd";
 
 import useSearchStore from "./index";
 import {SEARCH_UI_STATE} from "./typings";
@@ -15,7 +18,6 @@ import {useResultsMetadata} from "./useResultsMetadata";
 const useUiUpdateOnDoneSignal = () => {
     const {updateSearchUiState} = useSearchStore();
     const resultsMetadata = useResultsMetadata();
-
     useEffect(() => {
         if (null === resultsMetadata) {
             return;
@@ -27,9 +29,10 @@ const useUiUpdateOnDoneSignal = () => {
             updateSearchUiState(SEARCH_UI_STATE.FAILED);
             notification.error({
                 key: `search-failed-${resultsMetadata._id}`,
-                message: resultsMetadata.errorType || "Search Failed",
+                message: resultsMetadata.errorName || "Search Failed",
                 description: resultsMetadata.errorMsg || "An error occurred during search",
-                duration: null,
+                duration: 10,
+                showProgress: true,
                 placement: "bottomRight",
             });
         }

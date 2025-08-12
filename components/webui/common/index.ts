@@ -124,7 +124,7 @@ interface SearchResultsMetadataDocument {
     // eslint-disable-next-line no-warning-comments
     // TODO: Replace with Nullable<string> when the `@common` directory refactoring is completed.
     errorMsg: string | null;
-    errorType: string | null;
+    errorName: string | null;
     lastSignal: SEARCH_SIGNAL | PRESTO_SEARCH_SIGNAL;
     numTotalResults?: number;
     queryEngine: CLP_QUERY_ENGINES;
