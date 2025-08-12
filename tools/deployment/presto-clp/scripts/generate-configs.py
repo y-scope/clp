@@ -28,7 +28,9 @@ def main(argv=None) -> int:
         argv = sys.argv
 
     args_parser = argparse.ArgumentParser(
-        description="Generates an environment variables file for any user-configured properties."
+        description=(
+            "Generates any necessary config files corresponding to user-configured properties."
+        )
     )
     args_parser.add_argument(
         "--clp-package-dir", help="CLP package directory.", required=True, type=Path
