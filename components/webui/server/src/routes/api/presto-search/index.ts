@@ -190,7 +190,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     [StatusCodes.NO_CONTENT]: Type.Null(),
                     [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
-                tags: ["Search"],
+                tags: ["Presto Search"],
             },
         },
         async (request, reply) => {
