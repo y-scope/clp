@@ -174,6 +174,7 @@ if(CLP_BUILD_EXECUTABLES)
         )
         target_link_libraries(clp
                 PRIVATE
+                absl::flat_hash_map
                 Boost::filesystem Boost::program_options
                 date::date
                 fmt::fmt
@@ -188,7 +189,7 @@ if(CLP_BUILD_EXECUTABLES)
                 yaml-cpp
                 ystdlib::containers
                 ystdlib::error_handling
-                ZStd::ZStd
+                ${zstd_TARGET}
         )
         # Put the built executable at the root of the build directory
         set_target_properties(
