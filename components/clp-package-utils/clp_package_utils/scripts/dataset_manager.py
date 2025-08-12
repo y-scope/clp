@@ -23,10 +23,8 @@ from clp_package_utils.general import (
 )
 
 # Command/Argument Constants
-from clp_package_utils.scripts.native.dataset_manager import (
-    DEL_COMMAND,
-    LIST_COMMAND,
-)
+LIST_COMMAND: str = "list"
+DEL_COMMAND: str = "del"
 
 logger = logging.getLogger(__file__)
 
