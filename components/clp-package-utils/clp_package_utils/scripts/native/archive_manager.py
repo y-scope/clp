@@ -24,13 +24,15 @@ from clp_package_utils.general import (
 from clp_package_utils.scripts.native.utils import validate_dataset_exists
 
 # Command/Argument Constants
-FIND_COMMAND: str = "find"
-DEL_COMMAND: str = "del"
-DEL_BY_IDS_SUBCOMMAND: str = "by-ids"
-DEL_BY_FILTER_SUBCOMMAND: str = "by-filter"
-BEGIN_TS_ARG: str = "--begin-ts"
-END_TS_ARG: str = "--end-ts"
-DRY_RUN_ARG: str = "--dry-run"
+from clp_package_utils.scripts.archive_manager import (
+    BEGIN_TS_ARG,
+    DEL_BY_FILTER_SUBCOMMAND,
+    DEL_BY_IDS_SUBCOMMAND,
+    DEL_COMMAND,
+    DRY_RUN_ARG,
+    END_TS_ARG,
+    FIND_COMMAND,
+)
 
 logger: logging.Logger = logging.getLogger(__file__)
 
