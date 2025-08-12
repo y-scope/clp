@@ -297,16 +297,14 @@ if(CLP_NEED_YSTDLIB)
     add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
 endif()
 
-# Find and setup ZStd Library
 if(CLP_NEED_ZSTD)
+    # v1.4.8 is the lowest version available in the package managers of the OSes we support.
+    find_package(zstd 1.4.8 REQUIRED)
+    message(STATUS "Found zstd ${zstd_VERSION}")
     if(CLP_USE_STATIC_LIBS)
-        set(ZStd_USE_STATIC_LIBS ON)
-    endif()
-    find_package(ZStd 1.4.4 REQUIRED)
-    if(ZStd_FOUND)
-        message(STATUS "Found ZStd ${ZStd_VERSION}")
+        set(zstd_TARGET zstd::libzstd_static)
     else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
+        set(zstd_TARGET zstd::libzstd_shared)
     endif()
 endif()
 
@@ -402,12 +400,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/SchemaWriter.hpp
     src/clp_s/search/AddTimestampConditions.cpp
     src/clp_s/search/AddTimestampConditions.hpp
-    src/clp_s/search/clp_search/EncodedVariableInterpreter.cpp
-    src/clp_s/search/clp_search/EncodedVariableInterpreter.hpp
-    src/clp_s/search/clp_search/Grep.cpp
-    src/clp_s/search/clp_search/Grep.hpp
-    src/clp_s/search/clp_search/Query.cpp
-    src/clp_s/search/clp_search/Query.hpp
     src/clp_s/search/EvaluateRangeIndexFilters.cpp
     src/clp_s/search/EvaluateRangeIndexFilters.hpp
     src/clp_s/search/EvaluateTimestampIndex.cpp
@@ -429,10 +421,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/TimestampEntry.hpp
     src/clp_s/Utils.cpp
     src/clp_s/Utils.hpp
-    src/clp_s/VariableDecoder.cpp
-    src/clp_s/VariableDecoder.hpp
-    src/clp_s/VariableEncoder.cpp
-    src/clp_s/VariableEncoder.hpp
     src/clp_s/ZstdCompressor.cpp
     src/clp_s/ZstdCompressor.hpp
     src/clp_s/ZstdDecompressor.cpp
@@ -782,7 +770,7 @@ if(CLP_BUILD_TESTING)
             ystdlib::containers
             ystdlib::error_handling
             ${LIBLZMA_LIBRARIES}
-            ZStd::ZStd
+            ${zstd_TARGET}
             )
     target_compile_features(unitTest
             PRIVATE cxx_std_20
