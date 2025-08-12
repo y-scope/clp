@@ -46,6 +46,9 @@ const Results = () => {
         case SEARCH_UI_STATE.DONE:
             textType = "success";
             break;
+        case SEARCH_UI_STATE.FAILED:
+            textType = "danger";
+            break;
         default:
             textType = "secondary";
     }
@@ -55,7 +58,7 @@ const Results = () => {
             strong={true}
             type={textType}
         >
-            {numResults}
+            {searchUiState === SEARCH_UI_STATE.FAILED ? 0 : numResults}
         </Text>
     );
 };

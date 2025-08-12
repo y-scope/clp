@@ -115,6 +115,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 _id: searchJobId.toString(),
                 lastSignal: SEARCH_SIGNAL.RESP_QUERYING,
                 errorMsg: null,
+                errorType: null,
                 queryEngine: queryEngine,
             });
 

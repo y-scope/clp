@@ -90,21 +90,20 @@ enum SEARCH_SIGNAL {
 
 /**
  * Presto search-related signals.
- *
- * Note: Using type instead of enum to match `presto-client-node` type definition.
  */
-type PRESTO_SEARCH_SIGNAL =
-    | "WAITING_FOR_PREREQUISITES"
-    | "QUEUED"
-    | "WAITING_FOR_RESOURCES"
-    | "DISPATCHING"
-    | "PLANNING"
-    | "STARTING"
-    | "RUNNING"
-    | "FINISHING"
-    | "FINISHED"
-    | "CANCELED"
-    | "FAILED";
+enum PRESTO_SEARCH_SIGNAL {
+    WAITING_FOR_PREREQUISITES = "WAITING_FOR_PREREQUISITES",
+    QUEUED = "QUEUED",
+    WAITING_FOR_RESOURCES = "WAITING_FOR_RESOURCES",
+    DISPATCHING = "DISPATCHING",
+    PLANNING = "PLANNING",
+    STARTING = "STARTING",
+    RUNNING = "RUNNING",
+    FINISHING = "FINISHING",
+    FINISHED = "FINISHED",
+    CANCELED = "CANCELED",
+    FAILED = "FAILED",
+}
 
 /**
  * CLP query engines.
@@ -125,16 +124,17 @@ interface SearchResultsMetadataDocument {
     // eslint-disable-next-line no-warning-comments
     // TODO: Replace with Nullable<string> when the `@common` directory refactoring is completed.
     errorMsg: string | null;
+    errorType: string | null;
     lastSignal: SEARCH_SIGNAL | PRESTO_SEARCH_SIGNAL;
     numTotalResults?: number;
     queryEngine: CLP_QUERY_ENGINES;
 }
 export {
     CLP_QUERY_ENGINES,
+    PRESTO_SEARCH_SIGNAL,
     SEARCH_SIGNAL,
 };
 export type {
-    PRESTO_SEARCH_SIGNAL,
     SearchResultsMetadataDocument,
     ClientToServerEvents,
     Err,
