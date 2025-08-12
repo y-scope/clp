@@ -79,7 +79,7 @@ const TimeRangeInput = () => {
                     value={timeRange}
                     disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                                 searchUiState === SEARCH_UI_STATE.QUERYING}
-                    onChange={(dates) => {
+                    onCalendarChange={(dates) => {
                         handleRangePickerChange(dates);
                     }}/>
             )}
