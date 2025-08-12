@@ -13,13 +13,17 @@ import {PrestoSearchResult} from "./typings";
 const getPrestoSearchResultsTableColumns = (
     data: PrestoSearchResult[]
 ): NonNullable<TableProps<PrestoSearchResult>["columns"]> => {
-    if (0 === data.length || "undefined" === typeof data[0] || "undefined" === typeof data[0].row) {
+    if (0 === data.length ||
+        "undefined" === typeof data[0] ||
+        "undefined" === typeof data[0][PRESTO_DATA_PROPERTY]
+    ) {
         return [];
     }
 
     return Object.keys(data[0].row)
         .map((key) => ({
-            dataIndex: [PRESTO_DATA_PROPERTY,
+            dataIndex: [
+                PRESTO_DATA_PROPERTY,
                 key],
             key: key,
             title: key,
