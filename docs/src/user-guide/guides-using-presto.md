@@ -31,8 +31,32 @@ Using Presto with CLP requires:
 
 ### Setting up CLP
 
-Follow the [quick-start](./quick-start/index.md) guide to set up CLP and compress your logs. A
-sample dataset that works well with Presto is [postgresql].
+1. Follow the [quick-start](./quick-start/index.md) guide to download and extract the CLP package,
+   but don't start the package just yet.
+2. Before starting the package, update the package's config as follows:
+
+    * Open `etc/clp-config.yml` located within the package.
+    * Uncomment the `database` section.
+    * Change `database.host` value to a non-localhost hostname/IP.
+    * After the change, the `database` section should look something like this:
+
+      ```yaml
+      database:
+        type: "mariadb"  # "mariadb" or "mysql"
+        host: "<new-IP-address>"
+        port: 3306
+        name: "clp-db"
+      ```
+
+    :::{note}
+    This change is necessary since the Presto containers run on a Docker network, whereas CLP's
+    database runs on the host network. So `localhost` refers to two different entities in those
+    networks. This limitation will be addressed in the future when we unify Presto and CLP's
+    deployment infrastructure.
+    :::
+
+3. Continue following the [quick-start](./quick-start/index.md#using-clp) guide to start CLP and
+   compress your logs. A sample dataset that works well with Presto is [postgresql].
 
 ### Setting up Presto
 
