@@ -1,12 +1,12 @@
 import {useEffect} from "react";
 
-import VirtualTable from "../../../../components/VirtualTable";
-import useSearchStore from "../../SearchState/index";
+import VirtualTable from "../../../../../components/VirtualTable";
+import useSearchStore from "../../../SearchState/index";
 import {
     SearchResult,
     searchResultsTableColumns,
 } from "./typings";
-import {useSearchResults} from "./useSearchResults";
+import {useSearchResults} from "../useSearchResults";
 
 
 interface SearchResultsVirtualTableProps {

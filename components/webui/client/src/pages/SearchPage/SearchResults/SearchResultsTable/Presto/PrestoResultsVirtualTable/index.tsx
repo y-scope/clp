@@ -3,13 +3,11 @@ import {
     useMemo,
 } from "react";
 
-import VirtualTable from "../../../../../components/VirtualTable";
-import useSearchStore from "../../../SearchState/index";
-import {
-    getPrestoSearchResultsTableColumns,
-    PrestoSearchResult,
-} from "./typings";
-import {usePrestoSearchResults} from "./usePrestoSearchResults";
+import VirtualTable from "../../../../../../components/VirtualTable";
+import useSearchStore from "../../../../SearchState/index";
+import {PrestoSearchResult} from "./typings";
+import {getPrestoSearchResultsTableColumns} from "../utils";
+import {usePrestoSearchResults} from "../usePrestoSearchResults";
 
 
 interface PrestoResultsVirtualTableProps {

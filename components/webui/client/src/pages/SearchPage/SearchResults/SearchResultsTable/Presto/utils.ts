@@ -1,13 +1,7 @@
 import {TableProps} from "antd";
 
+import {PrestoSearchResult} from "./PrestoResultsVirtualTable/typings";
 
-/**
- * Structure of dynamic Presto search results data.
- */
-interface PrestoSearchResult {
-    _id: string;
-    row: Record<string, unknown>;
-}
 
 /**
  * Generates dynamic columns configuration for Presto query engine.
@@ -31,5 +25,4 @@ const getPrestoSearchResultsTableColumns = (
         }));
 };
 
-export type {PrestoSearchResult};
 export {getPrestoSearchResultsTableColumns};

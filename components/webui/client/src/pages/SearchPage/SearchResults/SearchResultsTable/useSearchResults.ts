@@ -4,7 +4,7 @@ import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
 import {
     SEARCH_MAX_NUM_RESULTS,
     SearchResult,
-} from "./typings";
+} from "./SearchResultsVirtualTable/typings";
 
 
 /**

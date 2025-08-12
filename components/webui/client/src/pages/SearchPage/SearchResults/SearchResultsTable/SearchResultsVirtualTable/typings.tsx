@@ -1,13 +1,13 @@
 import {TableProps} from "antd";
 import dayjs from "dayjs";
 
-import {DATETIME_FORMAT_TEMPLATE} from "../../../../typings/datetime";
+import {DATETIME_FORMAT_TEMPLATE} from "../../../../../typings/datetime";
 import {
     CLP_STORAGE_ENGINES,
     SETTINGS_STORAGE_ENGINE,
-} from ".././../../../config";
-import Message from "./Message";
-import {getStreamId} from "./utils";
+} from "../../../../../config";
+import Message from "../Message";
+import {getStreamId} from "../utils";
 
 
 /**
@@ -70,20 +70,7 @@ const searchResultsTableColumns: NonNullable<TableProps<SearchResult>["columns"]
     },
 ];
 
-/**
- * Padding for the table to the bottom of the page.
- */
-const TABLE_BOTTOM_PADDING = 75;
-
-/**
- * The maximum number of results to retrieve for a search.
- */
-const SEARCH_MAX_NUM_RESULTS = 1000;
-
-
 export type {SearchResult};
 export {
-    SEARCH_MAX_NUM_RESULTS,
     searchResultsTableColumns,
-    TABLE_BOTTOM_PADDING,
 };
