@@ -1,4 +1,7 @@
-import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
+import {
+    FastifyPluginAsyncTypebox,
+    Type,
+} from "@fastify/type-provider-typebox";
 import {StatusCodes} from "http-status-codes";
 
 import {
@@ -162,6 +165,35 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             reply.code(StatusCodes.CREATED);
 
             return {searchJobId};
+        }
+    );
+
+    fastify.post(
+        "/cancel",
+        {
+            schema: {
+                body: PrestoQueryJobSchema,
+                response: {
+                    [StatusCodes.NO_CONTENT]: Type.Null(),
+                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
+                },
+                tags: ["Presto Search"],
+            },
+        },
+        async (request, reply) => {
+            const {searchJobId} = request.body;
+            await new Promise<void>((resolve, reject) => {
+                Presto.client.kill(searchJobId, (error) => {
+                    if (null !== error) {
+                        reject(new Error("Failed to kill the Presto query job.", {cause: error}));
+                    }
+                    resolve();
+                });
+            });
+            request.log.info(searchJobId, "Presto search cancelled");
+            reply.code(StatusCodes.NO_CONTENT);
+
+            return null;
         }
     );
 };

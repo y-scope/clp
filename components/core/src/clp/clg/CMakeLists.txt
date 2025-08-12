@@ -150,7 +150,7 @@ if(CLP_BUILD_EXECUTABLES)
                 yaml-cpp
                 ystdlib::containers
                 ystdlib::error_handling
-                ZStd::ZStd
+                ${zstd_TARGET}
         )
         # Put the built executable at the root of the build directory
         set_target_properties(
