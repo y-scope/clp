@@ -130,13 +130,11 @@ You can configure `clp` and `clg` to use a MySQL-type database as follows:
   * `--db-table-prefix <prefix>` to specify the table prefix
   * Set the `CLP_DB_USER` environment variable for the database user's username
   * Set the `CLP_DB_PASS` environment variable for the database user's password
-
-To compress logs in parallel using the MySQL database:
-
 * Run `clp` or `clg` with the same command-line options and environment variables, with the addition
   of the database type command-line option:
   * `--db-type mysql` to specify MySQL as the database type
-* Run as many parallel `clp` or `clg` instances as desired.
+
+To compress logs in parallel, you can now run as many parallel instances of `clp` as desired.
 
 Note that currently, decompression (`clp x`) and search (`clg`) can only be run with a single
 instance. We are in the process of open-sourcing parallelized versions of these as well.
