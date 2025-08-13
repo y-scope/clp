@@ -248,7 +248,7 @@ def _find_archives(
     database_config: Database,
     dataset: Optional[str],
     begin_ts: int,
-    end_ts: int = Optional[int],
+    end_ts: int,
 ) -> int:
     """
     Lists all archive IDs, if begin_ts and end_ts are provided, only lists archives where

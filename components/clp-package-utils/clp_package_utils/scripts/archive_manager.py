@@ -14,7 +14,7 @@ from clp_py_utils.clp_config import (
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLPConfig,
-    CLPDockerMounts,
+    DockerMount,
     dump_container_config,
     generate_container_config,
     generate_container_name,
@@ -149,8 +149,8 @@ def main(argv: List[str]) -> int:
 
     parsed_args: argparse.Namespace = args_parser.parse_args(argv[1:])
 
-    begin_timestamp: Optional[int]
-    end_timestamp: Optional[int]
+    begin_timestamp: Optional[int] = None
+    end_timestamp: Optional[int] = None
     subcommand: str = parsed_args.subcommand
 
     # Validate and load config file
@@ -205,7 +205,7 @@ def main(argv: List[str]) -> int:
         container_clp_config, clp_config, container_name
     )
 
-    necessary_mounts: List[CLPDockerMounts] = [
+    necessary_mounts: List[Optional[DockerMount]] = [
         mounts.clp_home,
         mounts.logs_dir,
         mounts.archives_output_dir,
