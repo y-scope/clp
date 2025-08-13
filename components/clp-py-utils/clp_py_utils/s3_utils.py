@@ -8,6 +8,7 @@ from botocore.config import Config
 from job_orchestration.scheduler.job_config import S3InputConfig
 
 from clp_py_utils.clp_config import (
+    ARCHIVE_MANAGER_PSEUDO_COMPONENT_NAME,
     AwsAuthentication,
     AwsAuthType,
     CLPConfig,
@@ -117,6 +118,8 @@ def generate_container_auth_options(
     ):
         output_storages_by_component_type = [clp_config.archive_output.storage]
         input_storage_needed = True
+    elif component_type in (ARCHIVE_MANAGER_PSEUDO_COMPONENT_NAME,):
+        output_storages_by_component_type = [clp_config.archive_output.storage]
     elif component_type in (WEBUI_COMPONENT_NAME,):
         output_storages_by_component_type = [clp_config.stream_output.storage]
     elif component_type in (
@@ -176,7 +179,6 @@ def _create_s3_client(
     region_code: str, s3_auth: AwsAuthentication, boto3_config: Optional[Config] = None
 ) -> boto3.client:
     aws_session: Optional[boto3.Session] = None
-
     if AwsAuthType.profile == s3_auth.type:
         aws_session = boto3.Session(
             profile_name=s3_auth.profile,
@@ -314,27 +316,38 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_path: str) -> None:
 
 
 def s3_delete_by_key_prefix(
-    region_code: str, bucket: str, key_prefix: str, s3_auth: AwsAuthentication
+    region_code: str, bucket_name: str, key_prefix: str, s3_auth: AwsAuthentication
 ) -> None:
     """
     Deletes all objects under the <bucket>/<key_prefix>, using authentication info specified by `s3_auth`.
 
     :param region_code: region in which the bucket resides
-    :param bucket: name of the bucket
+    :param bucket_name: name of the bucket
     :param key_prefix: key prefix of all objects to delete
     :param s3_auth: configuration specifying the authentication info.
+    :raises: ValueError if parameters are invalid.
     :raises: Propagates `boto3.client.delete_objects`'s exceptions.
     """
+
+    if not bool(region_code):
+        raise ValueError("Region code is not specified")
+    if not bool(bucket_name):
+        raise ValueError("Bucket name is not specified")
+    if not bool(key_prefix):
+        raise ValueError("Key prefix is not specified")
+
     boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
     s3_client = _create_s3_client(region_code, s3_auth, boto3_config)
 
     paginator = s3_client.get_paginator("list_objects_v2")
     for page in paginator.paginate(
-        Bucket=bucket, Prefix=key_prefix, PaginationConfig={"PageSize": S3_OBJECTS_DELETE_LIMIT}
+        Bucket=bucket_name,
+        Prefix=key_prefix,
+        PaginationConfig={"PageSize": S3_OBJECTS_DELETE_LIMIT},
     ):
         contents = page.get("Contents", None)
         if contents is None:
             continue
 
         deletion_config = {"Objects": [{"Key": obj["Key"]} for obj in contents]}
-        s3_client.delete_objects(Bucket=bucket, Delete=deletion_config)
+        s3_client.delete_objects(Bucket=bucket_name, Delete=deletion_config)

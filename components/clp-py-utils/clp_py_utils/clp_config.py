@@ -27,6 +27,9 @@ COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
 
+# Pseudo component names
+ARCHIVE_MANAGER_PSEUDO_COMPONENT_NAME = "archive_manager"
+
 # Target names
 ALL_TARGET_NAME = ""
 CONTROLLER_TARGET_NAME = "controller"

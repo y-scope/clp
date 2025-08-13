@@ -132,7 +132,7 @@ def _delete_dataset_from_database(database_config: Database, dataset: str) -> No
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
         for table in tables_removal_order:
-            db_cursor.execute(f"DROP TABLE `{table}`")
+            db_cursor.execute(f"DROP TABLE IF EXISTS `{table}`")
 
         # Remove the dataset row from the datasets table
         db_cursor.execute(
@@ -204,7 +204,7 @@ def main(argv: List[str]) -> int:
 
     # Top-level parser and options
     args_parser = argparse.ArgumentParser(
-        description="View list of archive IDs or delete compressed archives."
+        description="Views the list of existing datasets or deletes dataset(s)."
     )
     args_parser.add_argument(
         "--config",
@@ -254,7 +254,7 @@ def main(argv: List[str]) -> int:
 
     try:
         existing_datasets_info = _fetch_existing_datasets_info(clp_config.database)
-    except Exception:
+    except:
         logger.exception("Failed to fetch datasets from the database.")
         return -1
 

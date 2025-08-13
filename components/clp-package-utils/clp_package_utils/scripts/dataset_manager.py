@@ -6,9 +6,11 @@ from pathlib import Path
 from typing import Final, List
 
 from clp_py_utils.clp_config import (
+    ARCHIVE_MANAGER_PSEUDO_COMPONENT_NAME,
     StorageEngine,
     StorageType,
 )
+from clp_py_utils.s3_utils import generate_container_auth_options
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -108,8 +110,8 @@ def main(argv: List[str]) -> int:
             table_prefix = clp_db_connection_params["table_prefix"]
             for dataset in datasets:
                 validate_dataset_name(table_prefix, dataset)
-        except Exception as e:
-            logger.error(e)
+        except:
+            logger.exception("Invalid dataset name.")
             return -1
 
     container_name = generate_container_name("dataset-manager")
@@ -126,9 +128,19 @@ def main(argv: List[str]) -> int:
     if clp_config.archive_output.storage.type == StorageType.FS:
         necessary_mounts.append(mounts.archives_output_dir)
 
+    aws_mount, aws_env_vars = generate_container_auth_options(
+        clp_config, ARCHIVE_MANAGER_PSEUDO_COMPONENT_NAME
+    )
+    if aws_mount:
+        necessary_mounts.append(mounts.aws_config_dir)
+
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.execution_container
     )
+
+    if len(aws_env_vars) != 0:
+        for aws_env_var in aws_env_vars:
+            container_start_cmd.extend(["-e", aws_env_var])
 
     # fmt: off
     dataset_manager_cmd = [
@@ -136,7 +148,8 @@ def main(argv: List[str]) -> int:
         "-m", "clp_package_utils.scripts.native.dataset_manager",
         "--config", str(generated_config_path_on_container),
     ]
-    # fmt : on
+    # fmt: on
+
     dataset_manager_cmd.append(subcommand)
 
     # Add subcommand-specific arguments
@@ -147,6 +160,7 @@ def main(argv: List[str]) -> int:
             dataset_manager_cmd.extend(parsed_args.datasets)
     elif LIST_COMMAND != subcommand:
         logger.error(f"Unsupported subcommand: `{subcommand}`.")
+        return -1
 
     cmd = container_start_cmd + dataset_manager_cmd
 
