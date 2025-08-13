@@ -7,4 +7,3 @@ interface PrestoSearchResult {
 }
 
 export type {PrestoSearchResult};
-export {getPrestoSearchResultsTableColumns} from "./utils";
