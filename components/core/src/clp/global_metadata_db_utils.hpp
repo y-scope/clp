@@ -1,6 +1,10 @@
 #ifndef CLP_GLOBAL_METADATA_DB_UTILS_HPP
 #define CLP_GLOBAL_METADATA_DB_UTILS_HPP
 
+#include <filesystem>
+#include <memory>
+#include <optional>
+
 #include "GlobalMetadataDB.hpp"
 #include "GlobalMetadataDBConfig.hpp"
 

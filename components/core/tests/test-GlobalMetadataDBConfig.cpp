@@ -15,6 +15,7 @@ using namespace clp;
 
 namespace {
 // Constants
+constexpr std::string_view cMysqlDbType{"mysql"};
 constexpr std::string_view cMysqlDbHost{"test-host"};
 constexpr std::string_view cMysqlDbPort{"8888"};
 constexpr std::string_view cMysqlDbName{"test-db"};
@@ -24,9 +25,7 @@ constexpr std::string_view cMysqlDbPass{"test-pass"};
 constexpr std::array cCommonMysqlArgv{
         "test",
         "--db-type",
-        GlobalMetadataDBConfig::cMetadataDBTypeNames
-                [enum_to_underlying_type(GlobalMetadataDBConfig::MetadataDBType::MySQL)]
-                        .data(),
+        cMysqlDbType.data(),
         "--db-host",
         cMysqlDbHost.data(),
         "--db-port",
@@ -41,12 +40,11 @@ constexpr size_t cArgIdxDbPort{6};
 constexpr size_t cArgIdxDbName{8};
 constexpr size_t cArgIdxDbTablePrefix{10};
 
+constexpr std::string_view cSqliteDbType{"sqlite"};
 constexpr std::array cCommonSqliteArgv{
         "test",
         "--db-type",
-        GlobalMetadataDBConfig::cMetadataDBTypeNames
-                [enum_to_underlying_type(GlobalMetadataDBConfig::MetadataDBType::SQLite)]
-                        .data(),
+        cSqliteDbType.data(),
 
         // Placeholders for overwriting with MySQL-specific arguments like `--db-host`.
         "",

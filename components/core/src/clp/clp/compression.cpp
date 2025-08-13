@@ -8,8 +8,6 @@
 #include <boost/uuid/random_generator.hpp>
 
 #include "../global_metadata_db_utils.hpp"
-#include "../GlobalMySQLMetadataDB.hpp"
-#include "../GlobalSQLiteMetadataDB.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
 #include "../streaming_archive/writer/utils.hpp"

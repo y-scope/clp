@@ -10,8 +10,6 @@
 
 #include "../Defs.h"
 #include "../global_metadata_db_utils.hpp"
-#include "../GlobalMySQLMetadataDB.hpp"
-#include "../GlobalSQLiteMetadataDB.hpp"
 #include "../Grep.hpp"
 #include "../GrepCore.hpp"
 #include "../Profiler.hpp"
