@@ -3,8 +3,6 @@ import type {
     InsertManyResult,
 } from "mongodb";
 
-import {PRESTO_DATA_PROPERTY} from "../../../../../common/index.js";
-
 
 /**
  * Converts a Presto result row (array of values) into an object, using the provided column
@@ -24,7 +22,7 @@ const prestoRowToObject = (
     });
 
     // Object is wrapped in a `row` property to prevent conflicts with MongoDB's `_id` field.
-    return {[PRESTO_DATA_PROPERTY]: obj};
+    return {row: obj};
 };
 
 /**

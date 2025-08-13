@@ -1,6 +1,4 @@
 import {TableProps} from "antd";
-
-import {PRESTO_DATA_PROPERTY} from "../../../../../../../../common";
 import {PrestoSearchResult} from "./typings";
 
 
@@ -15,7 +13,7 @@ const getPrestoSearchResultsTableColumns = (
 ): NonNullable<TableProps<PrestoSearchResult>["columns"]> => {
     if (0 === data.length ||
         "undefined" === typeof data[0] ||
-        "undefined" === typeof data[0][PRESTO_DATA_PROPERTY]
+        "undefined" === typeof data[0].row
     ) {
         return [];
     }
@@ -23,7 +21,7 @@ const getPrestoSearchResultsTableColumns = (
     return Object.keys(data[0].row)
         .map((key) => ({
             dataIndex: [
-                PRESTO_DATA_PROPERTY,
+                "row",
                 key,
             ],
             key: key,

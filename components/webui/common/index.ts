@@ -107,11 +107,6 @@ type PRESTO_SEARCH_SIGNAL =
     | "FAILED";
 
 /**
- * Property name used to wrap result objects to prevent conflicts with MongoDB's _id field.
- */
-const PRESTO_DATA_PROPERTY = "row";
-
-/**
  * CLP query engines.
  */
 enum CLP_QUERY_ENGINES {
@@ -136,7 +131,6 @@ interface SearchResultsMetadataDocument {
 }
 export {
     CLP_QUERY_ENGINES,
-    PRESTO_DATA_PROPERTY,
     SEARCH_SIGNAL,
 };
 export type {
