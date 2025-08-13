@@ -63,6 +63,10 @@
 #  port: 4000
 #  results_metadata_collection_name: "results-metadata"
 #
+#presto:
+#  host: "localhost"
+#  port: 8889
+#
 ## Where archives should be output to
 #archive_output:
 #  storage:
