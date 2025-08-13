@@ -28,9 +28,28 @@ const submitQuery = async (
     return axios.post<PrestoQueryJobSchema>("/api/presto-search/query", payload);
 };
 
+
+/**
+ * Sends post request to server to cancel presto query.
+ *
+ * @param payload
+ * @return
+ */
+const cancelQuery = async (
+    payload: PrestoQueryJobSchema
+): Promise<AxiosResponse<null>> => {
+    console.log("Cancelling query:", JSON.stringify(payload));
+
+    return axios.post("/api/presto-search/cancel", payload);
+};
+
+
 export type {
     PrestoQueryJobCreationSchema,
     PrestoQueryJobSchema,
 };
 
-export {submitQuery};
+export {
+    cancelQuery,
+    submitQuery,
+};
