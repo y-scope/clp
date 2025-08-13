@@ -45,6 +45,12 @@ def main(argv: List[str]) -> int:
         default=str(default_config_file_path),
         help="CLP package configuration file.",
     )
+    args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
 
     # Top-level commands
     subparsers = args_parser.add_subparsers(
@@ -76,6 +82,10 @@ def main(argv: List[str]) -> int:
 
     parsed_args = args_parser.parse_args(argv[1:])
     subcommand = parsed_args.subcommand
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     # Validate and load config file
     try:
@@ -164,12 +174,16 @@ def main(argv: List[str]) -> int:
 
     cmd = container_start_cmd + dataset_manager_cmd
 
-    subprocess.run(cmd, check=True)
+    proc = subprocess.run(cmd)
+    ret_code = proc.returncode
+    if 0 != ret_code:
+        logger.error("Dataset manager failed.")
+        logger.debug(f"Docker command failed: {' '.join(cmd)}")
 
     # Remove generated files
     generated_config_path_on_host.unlink()
 
-    return 0
+    return ret_code
 
 
 if "__main__" == __name__:

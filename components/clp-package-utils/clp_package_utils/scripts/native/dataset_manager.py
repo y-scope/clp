@@ -69,6 +69,10 @@ def _handle_del_datasets(
     parsed_args: argparse.Namespace,
     existing_datasets_info: Dict[str, str],
 ):
+    if len(existing_datasets_info) == 0:
+        logger.warning("No datasets exist in the database. Skip deletion.")
+        return 0
+
     datasets_to_delete: Dict[str, str] = dict()
     if parsed_args.del_all:
         datasets_to_delete = existing_datasets_info
@@ -76,13 +80,10 @@ def _handle_del_datasets(
         datasets = parsed_args.datasets
         for dataset in datasets:
             if dataset not in existing_datasets_info:
-                logger.error(f"Dataset `{dataset}` doesn't exist.")
-                continue
-            datasets_to_delete[dataset] = existing_datasets_info[dataset]
+                logger.error(f"Dataset `{dataset}` doesn't exist. Aborting deletion.")
+                return -1
 
-    if 0 == len(datasets_to_delete):
-        logger.warning("No dataset will be deleted...")
-        return 0
+        datasets_to_delete = {dataset: existing_datasets_info[dataset] for dataset in datasets}
 
     for dataset, dataset_archive_storage_dir in datasets_to_delete.items():
         if not _delete_dataset(dataset, dataset_archive_storage_dir, clp_config):
@@ -212,6 +213,12 @@ def main(argv: List[str]) -> int:
         default=str(default_config_file_path),
         help="CLP configuration file.",
     )
+    args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
 
     # Top-level commands
     subparsers = args_parser.add_subparsers(
@@ -242,6 +249,10 @@ def main(argv: List[str]) -> int:
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     # Validate and load config file
     config_file_path = Path(parsed_args.config)
