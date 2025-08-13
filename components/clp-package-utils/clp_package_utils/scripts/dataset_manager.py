@@ -3,7 +3,7 @@ import logging
 import subprocess
 import sys
 from pathlib import Path
-from typing import List
+from typing import Final, List
 
 from clp_py_utils.clp_config import (
     StorageEngine,
@@ -23,8 +23,8 @@ from clp_package_utils.general import (
 )
 
 # Command/Argument Constants
-LIST_COMMAND: str = "list"
-DEL_COMMAND: str = "del"
+LIST_COMMAND: Final[str] = "list"
+DEL_COMMAND: Final[str] = "del"
 
 logger = logging.getLogger(__file__)
 
