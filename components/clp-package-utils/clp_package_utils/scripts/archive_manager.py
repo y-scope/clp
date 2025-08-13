@@ -67,10 +67,10 @@ def main(argv: typing.List[str]) -> int:
         help="CLP package configuration file.",
     )
     args_parser.add_argument(
-        "--debug",
-        "-d",
+        "--verbose",
+        "-v",
         action="store_true",
-        help="Prints debug log messages.",
+        help="Enable debug logging.",
     )
     args_parser.add_argument(
         "--dataset",
