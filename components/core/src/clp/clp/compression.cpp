@@ -62,7 +62,7 @@ bool compress(
         std::unique_ptr<log_surgeon::ReaderParser> reader_parser,
         bool use_heuristic
 ) {
-    auto output_dir = std::filesystem::path(command_line_args.get_archives_dir());
+    auto output_dir = std::filesystem::path(command_line_args.get_output_dir());
 
     // Create output directory in case it doesn't exist
     auto error_code = create_directory(output_dir.parent_path().string(), 0700, true);
