@@ -10,15 +10,6 @@ enum CLP_STORAGE_ENGINES {
     CLP_S = "clp-s",
 }
 
-/**
- * Query engine options.
- */
-enum CLP_QUERY_ENGINES {
-    CLP = "clp",
-    CLP_S = "clp-s",
-    PRESTO = "presto",
-}
-
 const SETTINGS_STORAGE_ENGINE = settings.ClpStorageEngine as CLP_STORAGE_ENGINES;
 const SETTINGS_QUERY_ENGINE = settings.ClpQueryEngine as CLP_QUERY_ENGINES;
 
