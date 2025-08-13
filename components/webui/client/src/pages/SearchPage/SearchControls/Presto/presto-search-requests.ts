@@ -96,7 +96,6 @@ const handlePrestoQueryCancel = (payload: PrestoQueryJobSchema) => {
 };
 
 export {
-    handlePrestoClearResults,
     handlePrestoQueryCancel,
     handlePrestoQuerySubmit,
 };
