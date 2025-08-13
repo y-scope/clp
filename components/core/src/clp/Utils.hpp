@@ -47,13 +47,11 @@ ErrorCode read_list_of_paths(std::string const& list_path, std::vector<std::stri
 /**
  * Loads a lexer from a file
  * @param schema_file_path
- * @param done
- * @param forward_lexer_ptr
+ * @param lexer_ptr
  */
 void load_lexer_from_file(
         std::string const& schema_file_path,
-        bool done,
-        log_surgeon::lexers::ByteLexer& forward_lexer_ptr
+        log_surgeon::lexers::ByteLexer& lexer_ptr
 );
 }  // namespace clp
 
