@@ -10,10 +10,6 @@ macro(FindStaticLibraryDependencies fld_LIBNAME fld_PREFIX fld_STATIC_LIBS)
     # NOTE: libc, libm, libpthread, and librt should be dynamically linked
     set(fld_DYNAMIC_LIBS "c;m;pthread;rt")
 
-    if("${fld_PREFIX}" STREQUAL "libarchive")
-        set(fld_ALLOW_SHARED_LIBS_FALLBACK ON)
-    endif()
-
     # Get absolute path of dependent libraries
     foreach(fld_DEP_LIB ${fld_STATIC_LIBS})
         # Skip dynamic libs
@@ -35,8 +31,6 @@ macro(FindStaticLibraryDependencies fld_LIBNAME fld_PREFIX fld_STATIC_LIBS)
         if(${fld_PREFIX}_${fld_DEP_LIB}_LIBRARY)
             list(APPEND ${fld_PREFIX}_LIBRARY_DEPENDENCIES
                  "${${fld_PREFIX}_${fld_DEP_LIB}_LIBRARY}")
-        elseif(fld_ALLOW_SHARED_LIBS_FALLBACK)
-	    list(APPEND ${fld_PREFIX}_DYNAMIC_LIBS "${fld_DEP_LIB}")
         else()
             message(SEND_ERROR "Static ${fld_DEP_LIB} library not found")
         endif()
