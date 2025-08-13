@@ -1,6 +1,6 @@
 import pathlib
 from enum import auto
-from typing import Literal, Optional, Union
+from typing import Literal, Optional, Set, Union
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, root_validator, validator
@@ -28,9 +28,40 @@ QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
 GARBAGE_COLLECTOR_NAME = "garbage_collector"
 
+# Component groups
+GENERAL_SCHEDULING_COMPONENTS = {
+    QUEUE_COMPONENT_NAME,
+    REDIS_COMPONENT_NAME,
+}
+COMPRESSION_COMPONENTS = GENERAL_SCHEDULING_COMPONENTS | {
+    DB_COMPONENT_NAME,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
+    COMPRESSION_WORKER_COMPONENT_NAME,
+}
+QUERY_COMPONENTS = GENERAL_SCHEDULING_COMPONENTS | {
+    DB_COMPONENT_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
+    QUERY_WORKER_COMPONENT_NAME,
+    REDUCER_COMPONENT_NAME,
+}
+UI_COMPONENTS = {
+    RESULTS_CACHE_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME,
+}
+ALL_COMPONENTS = COMPRESSION_COMPONENTS | QUERY_COMPONENTS | UI_COMPONENTS
+
 # Target names
 ALL_TARGET_NAME = ""
 CONTROLLER_TARGET_NAME = "controller"
+
+TARGET_TO_COMPONENTS = {
+    ALL_TARGET_NAME: ALL_COMPONENTS,
+    CONTROLLER_TARGET_NAME: GENERAL_SCHEDULING_COMPONENTS
+    | {
+        COMPRESSION_SCHEDULER_COMPONENT_NAME,
+        QUERY_SCHEDULER_COMPONENT_NAME,
+    },
+}
 
 QUERY_JOBS_TABLE_NAME = "query_jobs"
 QUERY_TASKS_TABLE_NAME = "query_tasks"
@@ -50,6 +81,12 @@ class StorageEngine(KebabCaseStrEnum):
     CLP_S = auto()
 
 
+class QueryEngine(KebabCaseStrEnum):
+    CLP = auto()
+    CLP_S = auto()
+    PRESTO = auto()
+
+
 class StorageType(LowercaseStrEnum):
     FS = auto()
     S3 = auto()
@@ -63,10 +100,12 @@ class AwsAuthType(LowercaseStrEnum):
 
 
 VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
+VALID_QUERY_ENGINES = [query_engine.value for query_engine in QueryEngine]
 
 
 class Package(BaseModel):
     storage_engine: str = "clp"
+    query_engine: str = "clp"
 
     @validator("storage_engine")
     def validate_storage_engine(cls, field):
@@ -76,6 +115,37 @@ class Package(BaseModel):
                 f" {'|'.join(VALID_STORAGE_ENGINES)}"
             )
         return field
+
+    @validator("query_engine")
+    def validate_query_engine(cls, field):
+        if field not in VALID_QUERY_ENGINES:
+            raise ValueError(
+                f"package.query_engine must be one of the following"
+                f" {'|'.join(VALID_QUERY_ENGINES)}"
+            )
+        return field
+
+    @root_validator
+    def validate_query_engine_package_compatibility(cls, values):
+        query_engine = values.get("query_engine")
+        storage_engine = values.get("storage_engine")
+
+        if query_engine in [QueryEngine.CLP, QueryEngine.CLP_S]:
+            if query_engine != storage_engine:
+                raise ValueError(
+                    f"query_engine '{query_engine}' is only compatible with "
+                    f"storage_engine '{query_engine}'."
+                )
+        elif query_engine == QueryEngine.PRESTO:
+            if storage_engine != StorageEngine.CLP_S:
+                raise ValueError(
+                    f"query_engine '{QueryEngine.PRESTO}' is only compatible with "
+                    f"storage_engine '{StorageEngine.CLP_S}'."
+                )
+        else:
+            raise ValueError(f"Unsupported query_engine '{query_engine}'.")
+
+        return values
 
 
 class Database(BaseModel):
@@ -799,6 +869,12 @@ class CLPConfig(BaseModel):
                 f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
             )
 
+    def get_runnable_components(self) -> Set[str]:
+        if QueryEngine.PRESTO == self.package.query_engine:
+            return COMPRESSION_COMPONENTS | UI_COMPONENTS
+        else:
+            return ALL_COMPONENTS
+
     def dump_to_primitive_dict(self):
         d = self.dict()
         d["logs_input"] = self.logs_input.dump_to_primitive_dict()
@@ -833,3 +909,12 @@ class WorkerConfig(BaseModel):
         d["stream_output"] = self.stream_output.dump_to_primitive_dict()
 
         return d
+
+
+def get_components_for_target(target: str) -> Set[str]:
+    if target in TARGET_TO_COMPONENTS:
+        return TARGET_TO_COMPONENTS[target]
+    elif target in ALL_COMPONENTS:
+        return {target}
+    else:
+        return set()
