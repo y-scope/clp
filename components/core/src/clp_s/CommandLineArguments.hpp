@@ -102,7 +102,7 @@ public:
 
     OutputHandlerType get_output_handler_type() const { return m_output_handler_type; }
 
-    bool get_retain_float_format() const { return m_retain_float_format; }
+    [[nodiscard]] bool get_retain_float_format() const { return m_retain_float_format; }
 
     bool get_single_file_archive() const { return m_single_file_archive; }
 

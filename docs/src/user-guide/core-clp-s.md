@@ -79,9 +79,9 @@ AWS_ACCESS_KEY_ID='...' AWS_SECRET_ACCESS_KEY='...' \
 ```
 
 :::{tip}
-Use the `--retain-float-format` flag to output decompressed data in exactly the same format it had
-before compression. For example, values like `1.000e+00` or `0.000000012300` will be printed 
-without any change.
+Use the `--retain-float-format` flag to output decompressed data in the same format it had before
+compression. For example, values like `1.000e+00` or `0.000000012300` will be printed without any
+change.
 :::
 
 **Enable retaining float numbers' formats:**
@@ -175,9 +175,9 @@ compressed data:**
   * For both standard decimal and scientific notation, the maximum number of significant digits is
     **16** (e.g., `123456789.12345678` will be rounded to `123456789.1234567`). Values exceeding
     this limit will be rounded.
-  * In scientific notation, the exponent can have at most **4 digits**, and any extra leading zeros  
+  * In scientific notation, the exponent can have at most **4 digits**, and any extra leading zeros
     will be removed (e.g., `1.0e00000` becomes `1.0e0000`).
-  * In scientific notation, the mantissa (significand) must be between **1** and **9** (or **0** 
+  * In scientific notation, the mantissa (significand) must be between **1** and **9** (or **0**
     only if the number equals to 0). If it falls outside this range, the output mantissa will 
     differ from the input, as only values within 0 to 9 are supported (e.g., `123456789.12345678E3`
     becomes `1.234567891234568E8`, which is also rounded because it has more than 16 significant

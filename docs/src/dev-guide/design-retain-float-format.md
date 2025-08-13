@@ -15,7 +15,7 @@ Each `FormattedFloat` node contains:
 - A 2-byte *format* field encoding the necessary output formatting information so that, upon
   decompression, the value can be reproduced **exactly** as it appeared before compression.
 
-```
+```text
 +-------------------------------------+------------------------+--------------------------+------------------------------------------------------+
 | Scientific Notation Marker (2 bits) | Exponent Sign (2 bits) | Exponent Digits (2 bits) | Digits from First Non-Zero to End of Number (4 bits) |
 +-------------------------------------+------------------------+--------------------------+------------------------------------------------------+
@@ -26,9 +26,9 @@ Each `FormattedFloat` node contains:
 Indicates whether the number is in scientific notation, and if so, whether the exponent is denoted
 by `E` or `e`.
 
-* `00`: Not scientific
-* `01`: Scientific notation using `e`
-* `11`: Scientific notation using `E`
+- `00`: Not scientific
+- `01`: Scientific notation using `e`
+- `11`: Scientific notation using `E`
 
 `10` is unused so that the lowest bit can act as a simple “scientific” flag, making condition
 checks cleaner.
@@ -37,9 +37,9 @@ checks cleaner.
 
 Records whether the exponent has a sign:
 
-* `00`: No sign
-* `01`: `+`
-* `10`: `-`
+- `00`: No sign
+- `01`: `+`
+- `10`: `-`
 
 For example, exponents of `0` may appear as `0`, `+0`, or `-0`, and these two bits can record the
 format correctly.
@@ -47,7 +47,7 @@ format correctly.
 ### Exponent Digits
 
 Since the maximum exponent for a double is `385` (three digits), two bits are enough to represent
-the digit count. 
+the digit count.
 
 The stored value is **actual digits − 1**, since there is always at least one digit
 (e.g., `00` → 1 digit).
@@ -70,10 +70,10 @@ the exact format**.
 This counts the digits from the first non-zero digit up to the last digit of the integer or
 fractional part (excluding the exponent). Examples:
 
-* `123456789.1234567000` → **19** (from first `1` to last `0`)
-* `1.234567890E16` → **10** (from first `1` to `0` before exponent)
-* `0.000000123000` → **6** (from first `1` to last `0`)
-* `0.00` → **3** (counts all zeros for zero value)
+- `123456789.1234567000` → **19** (from first `1` to last `0`)
+- `1.234567890E16` → **10** (from first `1` to `0` before exponent)
+- `0.000000123000` → **6** (from first `1` to last `0`)
+- `0.00` → **3** (counts all zeros for zero value)
 
 According to IEEE 754 (64-bit), more than 16 significant digits (for non-zero values) may lead to
 precision loss. Thus, the maximum stored value is 16. This limit also applies to zero; for example,

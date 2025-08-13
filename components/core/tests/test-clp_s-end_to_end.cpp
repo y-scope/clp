@@ -181,13 +181,15 @@ TEST_CASE("clp-s-compress-extract-valid-formatted-floats", "[clp-s][end-to-end]"
              std::string{cTestEndToEndExpectedOutputSortedFile}}
     };
 
-    std::ignore = compress_archive(
-            get_test_input_local_path(cTestEndToEndValidFormattedFloatInputFile),
-            std::string{cTestEndToEndArchiveDirectory},
-            true,
-            single_file_archive,
-            structurize_arrays,
-            clp_s::FileType::Json
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestEndToEndValidFormattedFloatInputFile),
+                    std::string{cTestEndToEndArchiveDirectory},
+                    true,
+                    single_file_archive,
+                    structurize_arrays,
+                    clp_s::FileType::Json
+            )
     );
 
     auto extracted_json_path = extract();
@@ -208,13 +210,15 @@ TEST_CASE("clp-s-compress-extract-rounded-valid-formatted-floats", "[clp-s][end-
              std::string{cTestEndToEndExpectedOutputSortedFile}}
     };
 
-    std::ignore = compress_archive(
-            get_test_input_local_path(cTestEndToEndRoundedFormattedFloatInputFile),
-            std::string{cTestEndToEndArchiveDirectory},
-            true,
-            single_file_archive,
-            structurize_arrays,
-            clp_s::FileType::Json
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestEndToEndRoundedFormattedFloatInputFile),
+                    std::string{cTestEndToEndArchiveDirectory},
+                    true,
+                    single_file_archive,
+                    structurize_arrays,
+                    clp_s::FileType::Json
+            )
     );
 
     auto extracted_json_path = extract();

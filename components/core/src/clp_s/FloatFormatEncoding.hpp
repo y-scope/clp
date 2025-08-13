@@ -4,6 +4,7 @@
 #include <cstdint>
 
 namespace clp_s::float_format_encoding {
+// The 14~15 bits are for
 constexpr uint16_t cScientificExponentNotePos = 14;
 constexpr uint16_t cScientificExponentSignPos = 12;
 constexpr uint16_t cScientificExponentDigitsPos = 10;

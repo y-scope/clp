@@ -71,6 +71,8 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
     // Check whether it is the scientific; if so, if the exponent is E or e
     size_t exp_pos = float_str.find_first_of("Ee");
     if (std::string::npos != exp_pos) {
+        // Exponent must follow by an integer (e.g., 1E is illegal)
+        assert(exp_pos + 1 < float_str.length());
         format |= 1 << float_format_encoding::cScientificExponentNotePos;
         format |= ('E' == float_str[exp_pos])
                   << (float_format_encoding::cScientificExponentNotePos + 1);
@@ -116,6 +118,8 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
     if (std::string::npos != dot_pos && first_non_zero_frac_digit_pos < dot_pos) {
         significant_digits--;
     }
+
+    // Number of significant digits must be greater than zero (e.g., E0 or . is illegal)
     assert(significant_digits > 0);
     uint16_t const compressed_significant_digits
             = static_cast<uint16_t>(std::min(significant_digits - 1, 15)) & 0x0F;
