@@ -22,6 +22,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_WORKER_COMPONENT_NAME,
     CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
+    get_components_for_target,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -880,6 +881,7 @@ def start_webui(
 
     client_settings_json_updates = {
         "ClpStorageEngine": clp_config.package.storage_engine,
+        "ClpQueryEngine": clp_config.package.query_engine,
         "MongoDbSearchResultsMetadataCollectionName": clp_config.webui.results_metadata_collection_name,
         "SqlDbClpArchivesTableName": archives_table_name,
         "SqlDbClpDatasetsTableName": get_datasets_table_name(table_prefix),
@@ -1110,6 +1112,15 @@ def main(argv):
         config_file_path = pathlib.Path(parsed_args.config)
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
 
+        runnable_components = clp_config.get_runnable_components()
+        components_to_start = get_components_for_target(target)
+        components_to_start = components_to_start.intersection(runnable_components)
+
+        # Exit early if no components to start
+        if len(components_to_start) == 0:
+            logger.error(f"{target} not available with current configuration")
+            return -1
+
         # Validate and load necessary credentials
         if target in (
             ALL_TARGET_NAME,
@@ -1184,35 +1195,46 @@ def main(argv):
         conf_dir = clp_home / "etc"
 
         # Start components
-        if target in (ALL_TARGET_NAME, DB_COMPONENT_NAME):
+        if DB_COMPONENT_NAME in components_to_start:
             start_db(instance_id, clp_config, conf_dir)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
+
+        if (
+            target == CONTROLLER_TARGET_NAME and DB_COMPONENT_NAME in runnable_components
+        ) or DB_COMPONENT_NAME in components_to_start:
             create_db_tables(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUEUE_COMPONENT_NAME):
+
+        if QUEUE_COMPONENT_NAME in components_to_start:
             start_queue(instance_id, clp_config)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, REDIS_COMPONENT_NAME):
+
+        if REDIS_COMPONENT_NAME in components_to_start:
             start_redis(instance_id, clp_config, conf_dir)
-        if target in (ALL_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
+
+        if RESULTS_CACHE_COMPONENT_NAME in components_to_start:
             start_results_cache(instance_id, clp_config, conf_dir)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
+
+        if (
+            target == CONTROLLER_TARGET_NAME and RESULTS_CACHE_COMPONENT_NAME in runnable_components
+        ) or RESULTS_CACHE_COMPONENT_NAME in components_to_start:
             create_results_cache_indices(instance_id, clp_config, container_clp_config, mounts)
-        if target in (
-            ALL_TARGET_NAME,
-            CONTROLLER_TARGET_NAME,
-            COMPRESSION_SCHEDULER_COMPONENT_NAME,
-        ):
+
+        if COMPRESSION_SCHEDULER_COMPONENT_NAME in components_to_start:
             start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUERY_SCHEDULER_COMPONENT_NAME):
+
+        if QUERY_SCHEDULER_COMPONENT_NAME in components_to_start:
             start_query_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
+
+        if COMPRESSION_WORKER_COMPONENT_NAME in components_to_start:
             start_compression_worker(
                 instance_id, clp_config, container_clp_config, num_workers, mounts
             )
-        if target in (ALL_TARGET_NAME, QUERY_WORKER_COMPONENT_NAME):
+
+        if QUERY_WORKER_COMPONENT_NAME in components_to_start:
             start_query_worker(instance_id, clp_config, container_clp_config, num_workers, mounts)
-        if target in (ALL_TARGET_NAME, REDUCER_COMPONENT_NAME):
+
+        if REDUCER_COMPONENT_NAME in components_to_start:
             start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
-        if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
+
+        if WEBUI_COMPONENT_NAME in components_to_start:
             start_webui(instance_id, clp_config, container_clp_config, mounts)
 
     except Exception as ex:
