@@ -106,8 +106,8 @@ Currently, timestamps must be specified as milliseconds since the UNIX epoch.
 # Parallel Compression
 
 To enable parallel compression to the same archives directory, `clp` (and by extension, `clg`) needs
-to be configured to use a MySQL-compatible database (e.g., MariaDB) rather than the default---an embedded
-SQLite database (which doesn't support concurrent writes).
+to be configured to use a MySQL-compatible database (e.g., MariaDB) rather than the default---an
+embedded SQLite database (which doesn't support concurrent writes).
 
 :::{warning}
 Running multiple `clp` instances with SQLite can fail due to the error "database is locked".
