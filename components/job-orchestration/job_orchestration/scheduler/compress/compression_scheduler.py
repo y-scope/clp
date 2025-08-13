@@ -386,6 +386,26 @@ def poll_running_jobs(db_conn, db_cursor):
         del scheduled_jobs[job_id]
 
 
+def mark_running_job_as_failed(
+    sql_adapter: SQL_Adapter
+):
+    with closing(sql_adapter.create_mysql_connection()) as db_conn, closing(
+            db_conn.cursor(dictionary=True)
+    ) as db_cursor:
+        message = "GGG"
+        db_cursor.execute(
+            f"""
+            UPDATE {COMPRESSION_JOBS_TABLE_NAME}
+            SET {COMPRESSION_JOBS_TABLE_NAME}.status={CompressionJobStatus.FAILED},
+                {COMPRESSION_JOBS_TABLE_NAME}.status_msg='{message}'
+            WHERE {COMPRESSION_JOBS_TABLE_NAME}.status={CompressionJobStatus.RUNNING}
+            """
+        )
+        update_count = db_cursor.rowcount
+        db_conn.commit()
+        logger.info(f"Updated {update_count} rows")
+
+
 def main(argv):
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
@@ -414,6 +434,7 @@ def main(argv):
 
     logger.info("Starting compression scheduler")
     sql_adapter = SQL_Adapter(clp_config.database)
+    mark_running_job_as_failed(sql_adapter)
 
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
@@ -437,7 +458,7 @@ def main(argv):
                     clp_config.archive_output,
                     existing_datasets,
                 )
-                poll_running_jobs(db_conn, db_cursor)
+                #poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
                 logger.info("Gracefully shutting down")
