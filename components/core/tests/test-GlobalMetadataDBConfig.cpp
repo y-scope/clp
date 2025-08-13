@@ -3,7 +3,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-#include <vector>
 
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/parsers.hpp>
@@ -74,11 +73,11 @@ auto parse_args(std::array<std::string_view, n> const& argv) -> GlobalMetadataDB
     boost::program_options::variables_map vm;
     constexpr auto cArgc{static_cast<int>(n)};
 
-    std::vector<std::string> argv_strings;
-    std::vector<char const*> argv_c_strs;
-    for (auto const& arg : argv) {
-        argv_strings.emplace_back(arg);
-        argv_c_strs.emplace_back(argv_strings.back().c_str());
+    std::array<std::string, n> argv_strings;
+    std::array<char const*, n> argv_c_strs{};
+    for (size_t i = 0; i < n; ++i) {
+        argv_strings.at(i) = argv.at(i);
+        argv_c_strs.at(i) = argv_strings.at(i).c_str();
     }
     boost::program_options::store(
             boost::program_options::parse_command_line(cArgc, argv_c_strs.data(), options_desc),
