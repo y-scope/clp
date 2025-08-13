@@ -32,7 +32,6 @@ namespace clp_s {
 enum class NodeType : uint8_t {
     Integer,
     Float,
-    FormattedFloat,
     ClpString,
     VarString,
     Boolean,
@@ -43,6 +42,7 @@ enum class NodeType : uint8_t {
     StructuredArray,
     Metadata,
     DeltaInteger,
+    FormattedFloat,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 
