@@ -32,8 +32,9 @@ const useUiUpdateOnDoneSignal = () => {
                 key: `search-failed-${resultsMetadata._id}`,
                 message: resultsMetadata.errorName || "Search Failed",
                 description: resultsMetadata.errorMsg || "An error occurred during search",
-                duration: 10,
+                duration: 15,
                 showProgress: true,
+                pauseOnHover: true,
                 placement: "bottomRight",
             });
         }
