@@ -74,17 +74,23 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
     // Check whether it is the scientific; if so, if the exponent is E or e
     size_t exp_pos = float_str.find_first_of("Ee");
     if (std::string::npos != exp_pos) {
-        // Exponent must be followed by an integer (e.g., 1E is illegal)
-        assert(std::string::npos != exp_pos && exp_pos + 1 < float_str.length());
-        format |= 1 << float_format_encoding::cScientificExponentNotePos;
-        format |= ('E' == float_str[exp_pos])
+        // Exponent must be followed by an integer (e.g., "1E" or "1e+" are illegal)
+        assert(exp_pos + 1 < float_str.length()
+               && (std::isdigit(static_cast<unsigned char>(float_str[exp_pos + 1]))
+                   || (exp_pos + 2 < float_str.length()
+                       && (('+' == float_str[exp_pos + 1]) || ('-' == float_str[exp_pos + 1]))
+                       && std::isdigit(static_cast<unsigned char>(float_str[exp_pos + 2])))));
+        format |= static_cast<uint16_t>(1u) << float_format_encoding::cScientificExponentNotePos;
+        format |= static_cast<uint16_t>('E' == float_str[exp_pos] ? 1u : 0u)
                   << (float_format_encoding::cScientificExponentNotePos + 1);
 
         // Check whether there is a sign for the exponent
         if ('+' == float_str[exp_pos + 1]) {
-            format |= 1 << float_format_encoding::cScientificExponentSignPos;
+            format |= static_cast<uint16_t>(1u)
+                      << float_format_encoding::cScientificExponentSignPos;
         } else if ('-' == float_str[exp_pos + 1]) {
-            format |= 1 << (float_format_encoding::cScientificExponentSignPos + 1);
+            format |= static_cast<uint16_t>(1u)
+                      << (float_format_encoding::cScientificExponentSignPos + 1);
         }
 
         // Set the number of exponent digits
@@ -92,7 +98,7 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
         if (false == std::isdigit(static_cast<unsigned char>(float_str[exp_pos + 1]))) {
             exp_digits--;
         }
-        format |= (static_cast<uint16_t>(std::min(exp_digits - 1, 3)) & 0x03)
+        format |= (static_cast<uint16_t>(std::min(exp_digits - 1, 3)) & static_cast<uint16_t>(0x03))
                   << float_format_encoding::cScientificExponentDigitsPos;
     } else {
         exp_pos = float_str.length();
@@ -141,7 +147,8 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
     uint16_t const compressed_significant_digits
             = static_cast<uint16_t>(std::min(significant_digits - 1, 15)) & 0x0F;
 
-    format |= compressed_significant_digits << float_format_encoding::cSignificantDigitsPos;
+    format |= static_cast<uint16_t>(compressed_significant_digits)
+              << float_format_encoding::cSignificantDigitsPos;
 
     m_format.push_back(format);
     return sizeof(double) + sizeof(uint16_t);

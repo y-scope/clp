@@ -13,9 +13,10 @@ Each `FormattedFloat` node contains:
 
 - The double value in IEEE 754 64-bit format.
 - A 2-byte *format* field encoding the necessary output formatting information so that, upon
-  decompression, the value can be reproduced **exactly** as it appeared before compression. Note
-  that the remaining bits of the 2‑byte field are currently reserved. Encoders must write them as
-  0, and decoders must ignore them (treat as “don’t care”) for forward compatibility.
+  decompression, the value can be reproduced to match the original text as closely as possible
+  (see limitations below). Note that the remaining bits of the 2‑byte field are currently reserved.
+  Encoders must write them as 0, and decoders must ignore them (treat as “don’t care”) for forward
+  compatibility.
 
 ```text
 +-------------------------------------+------------------------+--------------------------+------------------------------------------------------+
@@ -43,16 +44,23 @@ Records whether the exponent has a sign:
 - `01`: `+`
 - `10`: `-`
 
+`11` is reserved (encoders must write 0; decoders must ignore).
+
 For example, exponents of `0` may appear as `0`, `+0`, or `-0`, and these two bits can record the
 format correctly.
 
 ### Exponent Digits
 
 Since the maximum decimal exponent for a double is `308` (three digits), two bits are enough to
-represent the digit count.
+represent the digit count (range 1–4 digits to allow preserving leading zeros).
 
 The stored value is **actual digits − 1**, since there is always at least one digit
-(e.g., `00` → 1 digit).
+(e.g., `00` → 1 digit). The two-bit mapping is:
+
+- `00` → 1 digit
+- `01` → 2 digits
+- `10` → 3 digits
+- `11` → 4 digits
 
 Note that the stored value is not applied **strictly**.
 
