@@ -71,8 +71,8 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
     // Check whether it is the scientific; if so, if the exponent is E or e
     size_t exp_pos = float_str.find_first_of("Ee");
     if (std::string::npos != exp_pos) {
-        // Exponent must follow by an integer (e.g., 1E is illegal)
-        assert(exp_pos + 1 < float_str.length());
+        // Exponent must be followed by an integer (e.g., 1E is illegal)
+        assert(std::string::npos != exp_pos && exp_pos + 1 < float_str.length());
         format |= 1 << float_format_encoding::cScientificExponentNotePos;
         format |= ('E' == float_str[exp_pos])
                   << (float_format_encoding::cScientificExponentNotePos + 1);
@@ -86,7 +86,7 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
 
         // Set the number of exponent digits
         int exp_digits = float_str.length() - exp_pos - 1;
-        if (false == std::isdigit(float_str[exp_pos + 1])) {
+        if (false == std::isdigit(static_cast<unsigned char>(float_str[exp_pos + 1]))) {
             exp_digits--;
         }
         format |= (static_cast<uint16_t>(std::min(exp_digits - 1, 3)) & 0x03)
@@ -95,21 +95,35 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
         exp_pos = float_str.length();
     }
 
-    // According to the JSON grammar, there is no leading zeros for the integer part of a number,
-    // so we can check whether the first or the second (if the there is a sign) digit is 0 to know
-    // if the first non-zero number is in integer part.
-    size_t first_non_zero_frac_digit_pos = std::isdigit(float_str[0]) ? 0 : 1;
-    if (std::isdigit(float_str[0]) && '0' != float_str[0]) {
-        first_non_zero_frac_digit_pos = 0;
-    } else if (std::isdigit(float_str[1]) && '0' != float_str[1]) {
-        first_non_zero_frac_digit_pos = 1;
-    } else if (std::string::npos != dot_pos) {
-        for (size_t i = dot_pos + 1; i < float_str.length(); ++i) {
-            if (false == std::isdigit(float_str[i])) {
+    size_t first_non_zero_frac_digit_pos
+            = std::isdigit(static_cast<unsigned char>(float_str[0])) ? 0 : 1;
+    if ('0' == float_str[first_non_zero_frac_digit_pos]) {
+        // According to the JSON grammar, there is no leading zeros for the integer part of a
+        // number, if there are leading 0(s), throw exception
+        assert(first_non_zero_frac_digit_pos + 1 >= float_str.length()
+               || false
+                          == std::isdigit(
+                                  static_cast<unsigned char>(
+                                          float_str[first_non_zero_frac_digit_pos + 1]
+                                  )
+                          ));
+        if (std::string::npos != dot_pos) {
+            bool found_non_zero{false};
+            size_t first_non_zero_frac_digit_pos_bak{first_non_zero_frac_digit_pos};
+            for (size_t i = dot_pos + 1; i < float_str.length(); ++i) {
+                bool const is_digit = std::isdigit(static_cast<unsigned char>(float_str[i]));
+                bool const is_zero = '0' == float_str[i];
+                if (is_digit && is_zero) {
+                    continue;
+                }
+                if (is_digit && false == is_zero) {
+                    found_non_zero = true;
+                    first_non_zero_frac_digit_pos = i;
+                }
                 break;
-            } else if ('0' != float_str[i]) {
-                first_non_zero_frac_digit_pos = i;
-                break;
+            }
+            if (false == found_non_zero) {
+                first_non_zero_frac_digit_pos = first_non_zero_frac_digit_pos_bak;
             }
         }
     }

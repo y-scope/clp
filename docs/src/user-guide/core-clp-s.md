@@ -178,7 +178,7 @@ compressed data:**
   * In scientific notation, the exponent can have at most **4 digits**, and any extra leading zeros
     will be removed (e.g., `1.0e00000` becomes `1.0e0000`).
   * In scientific notation, the mantissa (significand) must be between **1** and **9** (or **0**
-    only if the number equals to 0). If it falls outside this range, the output mantissa will 
+    only if the number equals to 0). If it falls outside this range, the output mantissa will
     differ from the input, as only values within 0 to 9 are supported (e.g., `123456789.12345678E3`
     becomes `1.234567891234568E8`, which is also rounded because it has more than 16 significant
     digits).

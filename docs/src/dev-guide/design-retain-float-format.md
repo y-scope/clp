@@ -13,7 +13,9 @@ Each `FormattedFloat` node contains:
 
 - The double value in IEEE 754 64-bit format.
 - A 2-byte *format* field encoding the necessary output formatting information so that, upon
-  decompression, the value can be reproduced **exactly** as it appeared before compression.
+  decompression, the value can be reproduced **exactly** as it appeared before compression. Note
+  that the remaining bits of the 2‑byte field are currently reserved. Encoders must write them as
+  0, and decoders must ignore them (treat as “don’t care”) for forward compatibility.
 
 ```text
 +-------------------------------------+------------------------+--------------------------+------------------------------------------------------+
@@ -63,7 +65,7 @@ However, the latter case is not guaranteed. For example, a value like `123456789
 one-digit exponent, but as noted in the CLP-S's limitations, decompression converts it to
 `1.234567891234567E+15`. Here, trimming either `1` or `5` would alter the value, so the exponent
 remains two digits rather than one. In such cases, **correctness takes precedence over preserving
-the exact format**.
+the exact format**; this rule supersedes all formatting metadata to ensure numeric fidelity.
 
 ### Digits from First Non-Zero to End of Number
 
