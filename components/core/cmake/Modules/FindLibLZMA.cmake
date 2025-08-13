@@ -21,7 +21,7 @@ set(liblzma_PKGCONFIG_NAME "liblzma")
 if(DEFINED LibLZMA_ROOT)
     set(liblzma_PKGCONFIG_DIR "${LibLZMA_ROOT}/lib/pkgconfig")
     set(ENV{liblzma_ORIG_PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}")
-    set(ENV{PKG_CONFIG_PATH} "${liblzma_PKGCONFIG_DIR};$ENV{PKG_CONFIG_PATH}")
+    set(ENV{PKG_CONFIG_PATH} "${liblzma_PKGCONFIG_DIR}:$ENV{PKG_CONFIG_PATH}")
 endif()
 
 # Run pkg-config
