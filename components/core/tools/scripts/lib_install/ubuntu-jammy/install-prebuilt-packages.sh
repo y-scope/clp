@@ -28,7 +28,8 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   python3-pip \
   python3-venv \
   software-properties-common \
-  unzip
+  unzip \
+  zlib1g-dev
 
 # Install `task`
 # NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872

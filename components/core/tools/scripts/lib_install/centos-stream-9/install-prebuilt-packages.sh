@@ -14,6 +14,7 @@ dnf install -y \
     git \
     java-11-openjdk \
     jq \
+    libarchive-devel \
     libcurl-devel \
     libzstd-devel \
     lz4-devel \
@@ -22,7 +23,8 @@ dnf install -y \
     openssl-devel \
     python3-devel \
     python3-pip \
-    unzip
+    unzip \
+    zlib-devel
 
 # Determine architecture for `task` release to install
 rpm_arch=$(rpm --eval "%{_arch}")

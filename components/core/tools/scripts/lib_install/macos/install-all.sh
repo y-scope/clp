@@ -37,14 +37,17 @@ rm -rf "$formula_dir"
 
 brew install \
   boost \
+  bzip2 \
   coreutils \
   gcc \
   java11 \
+  libarchive \
   llvm@16 \
   lz4 \
   mariadb-connector-c \
   msgpack-cxx \
   xz \
+  zlib \
   zstd
 
 # Install pkg-config if it isn't already installed
