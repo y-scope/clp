@@ -105,14 +105,15 @@ Currently, timestamps must be specified as milliseconds since the UNIX epoch.
 
 # Parallel Compression
 
+To enable parallel compression to the same archives directory, `clp`/`clg` need to be configured to
+use a MySQL-type database (e.g., MariaDB) rather than the default---an embedded SQLite database
+(which doesn't support concurrent writes).
+
 :::{warning}
-By default, `clp` uses an embedded SQLite database. Running multiple `clp` instances with SQLite
-(rather than a MySQL-type database) can fail due to the error "database is locked" because SQLite
-doesn't support concurrent writes.
+Running multiple `clp` instances with SQLite can fail due to the error "database is locked".
 :::
 
-To enable parallel compression to the same archives directory, `clp`/`clg` can be configured to use
-a MySQL-type database (e.g., MariaDB) as follows:
+You can configure `clp` and `clg` to use a MySQL-type database as follows:
 
 * Install and configure MariaDB using the instructions for your platform
 * Create a user that has privileges to create databases, create tables, insert records, and delete
@@ -129,10 +130,13 @@ a MySQL-type database (e.g., MariaDB) as follows:
   * `--db-table-prefix <prefix>` to specify the table prefix
   * Set the `CLP_DB_USER` environment variable for the database user's username
   * Set the `CLP_DB_PASS` environment variable for the database user's password
+
+To compress logs in parallel using the MySQL database:
+
 * Run `clp` or `clg` with the same command-line options and environment variables, with the addition
   of the database type command-line option:
   * `--db-type mysql` to specify MySQL as the database type
-* To compress in parallel, simply run another instance of `clp` concurrently.
+* Run as many parallel `clp` or `clg` instances as desired.
 
 Note that currently, decompression (`clp x`) and search (`clg`) can only be run with a single
 instance. We are in the process of open-sourcing parallelized versions of these as well.
