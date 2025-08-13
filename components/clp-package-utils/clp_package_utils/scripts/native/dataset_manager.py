@@ -24,8 +24,6 @@ from clp_package_utils.general import (
     get_clp_home,
     load_config_file,
 )
-
-# Command/Argument Constants
 from clp_package_utils.scripts.dataset_manager import (
     DEL_COMMAND,
     LIST_COMMAND,
