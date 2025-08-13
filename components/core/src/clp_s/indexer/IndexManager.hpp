@@ -45,7 +45,7 @@ public:
      * @throw OperationFailed if `optional_db_config` is invalid.
      */
     IndexManager(
-            std::optional<clp::GlobalMetadataDBConfig> const& optional_db_config = std::nullopt,
+            std::optional<clp::GlobalMetadataDBConfig> const& optional_db_config,
             bool should_create_table = false
     );
 
