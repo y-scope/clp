@@ -29,13 +29,13 @@ const useUiUpdateOnDoneSignal = () => {
         } else if (resultsMetadata.lastSignal === PRESTO_SEARCH_SIGNAL.FAILED) {
             updateSearchUiState(SEARCH_UI_STATE.FAILED);
             notification.error({
-                key: `search-failed-${resultsMetadata._id}`,
-                message: resultsMetadata.errorName || "Search Failed",
                 description: resultsMetadata.errorMsg || "An error occurred during search",
                 duration: 15,
-                showProgress: true,
+                key: `search-failed-${resultsMetadata._id}`,
+                message: resultsMetadata.errorName || "Search Failed",
                 pauseOnHover: true,
                 placement: "bottomRight",
+                showProgress: true,
             });
         }
     }, [
