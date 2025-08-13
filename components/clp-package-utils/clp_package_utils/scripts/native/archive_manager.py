@@ -21,7 +21,6 @@ from clp_package_utils.general import (
     get_clp_home,
     load_config_file,
 )
-from clp_package_utils.scripts.native.utils import validate_dataset_exists
 
 # Command/Argument Constants
 from clp_package_utils.scripts.archive_manager import (
@@ -33,6 +32,7 @@ from clp_package_utils.scripts.archive_manager import (
     END_TS_ARG,
     FIND_COMMAND,
 )
+from clp_package_utils.scripts.native.utils import validate_dataset_exists
 
 logger: logging.Logger = logging.getLogger(__file__)
 
