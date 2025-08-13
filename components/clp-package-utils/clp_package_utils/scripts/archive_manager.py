@@ -264,6 +264,7 @@ def main(argv: typing.List[str]) -> int:
             archive_manager_cmd.extend([END_TS_ARG, str(end_timestamp)])
     else:
         logger.error(f"Unsupported subcommand: `{subcommand}`.")
+        return -1
 
     cmd: typing.List[str] = container_start_cmd + archive_manager_cmd
     ret_code: int
