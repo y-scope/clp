@@ -24,7 +24,8 @@ const getPrestoSearchResultsTableColumns = (
         .map((key) => ({
             dataIndex: [
                 PRESTO_DATA_PROPERTY,
-                key],
+                key,
+            ],
             key: key,
             title: key,
         }));
