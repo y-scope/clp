@@ -65,7 +65,7 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
             float_str.end()
     );
 
-    // If the raw JSON token is an illegal double number then here will throw exception
+    // If the raw JSON token is an illegal double, this will throw an exception
     m_values.push_back(std::stod(float_str));
 
     auto const dot_pos = float_str.find('.');
@@ -138,6 +138,7 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
     }
 
     int significant_digits = exp_pos - first_non_zero_frac_digit_pos;
+    assert(first_non_zero_frac_digit_pos < exp_pos);
     if (std::string::npos != dot_pos && first_non_zero_frac_digit_pos < dot_pos) {
         significant_digits--;
     }
