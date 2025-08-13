@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import yaml
 from dotenv import dotenv_values
@@ -43,8 +43,20 @@ def main(argv=None) -> int:
     clp_package_dir: Path = parsed_args.clp_package_dir.resolve()
     output_file: Path = parsed_args.output_file
 
+    clp_config_file_path = clp_package_dir / "etc" / "clp-config.yml"
+    if not clp_config_file_path.exists():
+        logger.error(
+            "'%s' doesn't exist. Is '%s' the location of the CLP package?",
+            clp_config_file_path,
+            clp_package_dir.resolve(),
+        )
+        return False
+
+    with open(clp_config_file_path, "r") as clp_config_file:
+        clp_config = yaml.safe_load(clp_config_file)
+
     env_vars: Dict[str, str] = {}
-    if not _add_clp_env_vars(clp_package_dir, env_vars):
+    if not _add_clp_env_vars(clp_config, clp_package_dir, env_vars):
         return 1
 
     script_dir = Path(__file__).parent.resolve()
@@ -58,27 +70,18 @@ def main(argv=None) -> int:
     return 0
 
 
-def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
+def _add_clp_env_vars(
+    clp_config: Dict[str, Any], clp_package_dir: Path, env_vars: Dict[str, str]
+) -> bool:
     """
     Adds environment variables for CLP config values to `env_vars`.
 
+    :param clp_config:
     :param clp_package_dir:
     :param env_vars:
     :return: Whether the environment variables were successfully added.
     """
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_TABLE_PREFIX"] = "clp_"
-
-    clp_config_file_path = clp_package_dir / "etc" / "clp-config.yml"
-    if not clp_config_file_path.exists():
-        logger.error(
-            "'%s' doesn't exist. Is '%s' the location of the CLP package?",
-            clp_config_file_path,
-            clp_package_dir.resolve(),
-        )
-        return False
-
-    with open(clp_config_file_path, "r") as clp_config_file:
-        clp_config = yaml.safe_load(clp_config_file)
 
     database_type = _get_config_value(clp_config, "database.type", "mariadb")
     if "mariadb" != database_type and "mysql" != database_type:
