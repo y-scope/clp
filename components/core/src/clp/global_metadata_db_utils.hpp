@@ -14,7 +14,7 @@ namespace clp {
  *
  * @param optional_metadata_db_config
  * @param archives_dir
- * @return The created GlobalMetadataDB instance.
+ * @return The created GlobalMetadataDB instance, or nullptr on failure.
  */
 auto create_global_metadata_db(
         std::optional<GlobalMetadataDBConfig> const& optional_metadata_db_config,
