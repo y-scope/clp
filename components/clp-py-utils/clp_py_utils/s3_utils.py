@@ -1,7 +1,7 @@
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Set, Tuple, Union
 
 import boto3
 from botocore.config import Config
@@ -15,6 +15,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     FsStorage,
+    GARBAGE_COLLECTOR_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
     S3Config,
@@ -123,6 +124,7 @@ def generate_container_auth_options(
     elif component_type in (WEBUI_COMPONENT_NAME,):
         output_storages_by_component_type = [clp_config.stream_output.storage]
     elif component_type in (
+        GARBAGE_COLLECTOR_NAME,
         QUERY_SCHEDULER_COMPONENT_NAME,
         QUERY_WORKER_COMPONENT_NAME,
     ):
@@ -351,3 +353,42 @@ def s3_delete_by_key_prefix(
 
         deletion_config = {"Objects": [{"Key": obj["Key"]} for obj in contents]}
         s3_client.delete_objects(Bucket=bucket_name, Delete=deletion_config)
+
+
+def s3_delete_objects(s3_config: S3Config, object_keys: Set[str]) -> None:
+    """
+    Deletes objects from an S3 bucket. The objects are identified by keys relative to
+    `s3_config.key_prefix`.
+
+    Note: The AWS S3 `DeleteObjects` API, used by `boto3.client.delete_objects`, supports a maximum
+    of 1,000 objects per request. This method splits the provided keys into batches of up to 1,000
+    and issues multiple delete requests until all objects are removed.
+
+    :param s3_config: The S3 config specifying the credentials and the bucket to perform deletion.
+    :param object_keys: The set of object keys to delete, relative to `s3_config.key_prefix`.
+    :raises: Propagates `boto3.client`'s exceptions.
+    :raises: Propagates `boto3.client.delete_object`'s exceptions.
+    """
+    boto3_config = Config(retries=dict(total_max_attempts=3, mode="adaptive"))
+    s3_client = _create_s3_client(s3_config.region_code, s3_config.aws_authentication, boto3_config)
+
+    def _gen_deletion_config(objects_list: List[str]):
+        return {"Objects": [{"Key": object_to_delete} for object_to_delete in objects_list]}
+
+    objects_to_delete: List[str] = []
+    for relative_obj_key in object_keys:
+        objects_to_delete.append(s3_config.key_prefix + relative_obj_key)
+        if len(objects_to_delete) < S3_OBJECTS_DELETE_LIMIT:
+            continue
+
+        s3_client.delete_objects(
+            Bucket=s3_config.bucket,
+            Delete=_gen_deletion_config(objects_to_delete),
+        )
+        objects_to_delete = []
+
+    if len(objects_to_delete) != 0:
+        s3_client.delete_objects(
+            Bucket=s3_config.bucket,
+            Delete=_gen_deletion_config(objects_to_delete),
+        )
