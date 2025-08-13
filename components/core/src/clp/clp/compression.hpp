@@ -22,7 +22,6 @@ namespace clp::clp {
  * @param reader_parser
  * @param use_heuristic
  * @return true if compression was successful, false otherwise
- * @throw ClpOperationFailed if the global metadata DB cannot be initialized.
  */
 bool compress(
         CommandLineArguments& command_line_args,

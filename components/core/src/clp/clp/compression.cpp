@@ -7,6 +7,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/uuid/random_generator.hpp>
 
+#include "../global_metadata_db_utils.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
 #include "../spdlog_with_specializations.hpp"
@@ -63,7 +64,7 @@ bool compress(
         std::unique_ptr<log_surgeon::ReaderParser> reader_parser,
         bool use_heuristic
 ) {
-    auto output_dir = boost::filesystem::path(command_line_args.get_output_dir());
+    auto output_dir = std::filesystem::path(command_line_args.get_archives_dir());
 
     // Create output directory in case it doesn't exist
     auto error_code = create_directory(output_dir.parent_path().string(), 0700, true);
@@ -72,38 +73,10 @@ bool compress(
         return false;
     }
 
-    auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
-    std::unique_ptr<GlobalMetadataDB> global_metadata_db;
-    switch (global_metadata_db_config.get_metadata_db_type()) {
-        case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
-            auto global_metadata_db_path = output_dir / streaming_archive::cMetadataDBFileName;
-            global_metadata_db
-                    = std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
-            break;
-        }
-        case GlobalMetadataDBConfig::MetadataDBType::MySQL: {
-            auto const& global_metadata_db_username
-                    = global_metadata_db_config.get_metadata_db_username();
-            auto const& global_metadata_db_password
-                    = global_metadata_db_config.get_metadata_db_password();
-            if (false == global_metadata_db_username.has_value()
-                || false == global_metadata_db_password.has_value())
-            {
-                SPDLOG_ERROR("Unexpected missing MySQL credentials for global metadata DB.");
-                return false;
-            }
-            global_metadata_db = std::make_unique<GlobalMySQLMetadataDB>(
-                    global_metadata_db_config.get_metadata_db_host(),
-                    global_metadata_db_config.get_metadata_db_port(),
-                    global_metadata_db_username.value(),
-                    global_metadata_db_password.value(),
-                    global_metadata_db_config.get_metadata_db_name(),
-                    global_metadata_db_config.get_metadata_table_prefix()
-            );
-            break;
-        }
-        default:
-            throw ClpOperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
+    auto global_metadata_db
+            = create_global_metadata_db(command_line_args.get_metadata_db_config(), output_dir);
+    if (nullptr == global_metadata_db) {
+        return false;
     }
 
     auto uuid_generator = boost::uuids::random_generator();

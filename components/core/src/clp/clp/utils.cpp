@@ -171,40 +171,4 @@ bool validate_paths_exist(vector<string> const& paths) {
 
     return all_paths_exist;
 }
-
-std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
-        GlobalMetadataDBConfig const& global_metadata_db_config,
-        std::filesystem::path const& archives_dir
-) {
-    switch (global_metadata_db_config.get_metadata_db_type()) {
-        case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
-            auto global_metadata_db_path
-                    = archives_dir
-                      / static_cast<char const*>(streaming_archive::cMetadataDBFileName);
-            return std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
-        }
-        case GlobalMetadataDBConfig::MetadataDBType::MySQL: {
-            auto const& global_metadata_db_username
-                    = global_metadata_db_config.get_metadata_db_username();
-            auto const& global_metadata_db_password
-                    = global_metadata_db_config.get_metadata_db_password();
-            if (false == global_metadata_db_username.has_value()
-                || false == global_metadata_db_password.has_value())
-            {
-                SPDLOG_ERROR("Unexpected missing MySQL credentials for global metadata DB.");
-                throw ClpOperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
-            }
-            return std::make_unique<GlobalMySQLMetadataDB>(
-                    global_metadata_db_config.get_metadata_db_host(),
-                    global_metadata_db_config.get_metadata_db_port(),
-                    global_metadata_db_username.value(),
-                    global_metadata_db_password.value(),
-                    global_metadata_db_config.get_metadata_db_name(),
-                    global_metadata_db_config.get_metadata_table_prefix()
-            );
-        }
-        default:
-            throw ClpOperationFailed(ErrorCode_Unsupported, __FILENAME__, __LINE__);
-    }
-}
 }  // namespace clp::clp
