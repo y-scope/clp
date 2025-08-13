@@ -181,7 +181,7 @@ def main(argv: typing.List[str]) -> int:
 
     storage_type: StorageType = clp_config.archive_output.storage.type
     if StorageType.FS != storage_type:
-        logger.error(f"Archive manager is not supported for storage type:  {storage_type}.")
+        logger.error(f"Archive manager is not supported for storage type: {storage_type}.")
         return -1
 
     storage_engine: StorageEngine = clp_config.package.storage_engine
