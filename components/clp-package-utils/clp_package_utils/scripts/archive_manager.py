@@ -26,15 +26,13 @@ from clp_package_utils.general import (
 )
 
 # Command/Argument Constants
-from clp_package_utils.scripts.native.archive_manager import (
-    BEGIN_TS_ARG,
-    DEL_BY_FILTER_SUBCOMMAND,
-    DEL_BY_IDS_SUBCOMMAND,
-    DEL_COMMAND,
-    DRY_RUN_ARG,
-    END_TS_ARG,
-    FIND_COMMAND,
-)
+FIND_COMMAND: typing.Final[str] = "find"
+DEL_COMMAND: typing.Final[str] = "del"
+DEL_BY_IDS_SUBCOMMAND: typing.Final[str] = "by-ids"
+DEL_BY_FILTER_SUBCOMMAND: typing.Final[str] = "by-filter"
+BEGIN_TS_ARG: typing.Final[str] = "--begin-ts"
+END_TS_ARG: typing.Final[str] = "--end-ts"
+DRY_RUN_ARG: typing.Final[str] = "--dry-run"
 
 logger: logging.Logger = logging.getLogger(__file__)
 
