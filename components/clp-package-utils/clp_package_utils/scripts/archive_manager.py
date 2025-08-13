@@ -2,8 +2,8 @@ import argparse
 import logging
 import subprocess
 import sys
-import typing
 from pathlib import Path
+from typing import Final, List, Optional
 
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_DATASET_NAME,
@@ -26,18 +26,18 @@ from clp_package_utils.general import (
 )
 
 # Command/Argument Constants
-FIND_COMMAND: str = "find"
-DEL_COMMAND: str = "del"
-DEL_BY_IDS_SUBCOMMAND: str = "by-ids"
-DEL_BY_FILTER_SUBCOMMAND: str = "by-filter"
-BEGIN_TS_ARG: str = "--begin-ts"
-END_TS_ARG: str = "--end-ts"
-DRY_RUN_ARG: str = "--dry-run"
+FIND_COMMAND: Final[str] = "find"
+DEL_COMMAND: Final[str] = "del"
+DEL_BY_IDS_SUBCOMMAND: Final[str] = "by-ids"
+DEL_BY_FILTER_SUBCOMMAND: Final[str] = "by-filter"
+BEGIN_TS_ARG: Final[str] = "--begin-ts"
+END_TS_ARG: Final[str] = "--end-ts"
+DRY_RUN_ARG: Final[str] = "--dry-run"
 
 logger: logging.Logger = logging.getLogger(__file__)
 
 
-def _validate_timestamps(begin_ts: int, end_ts: typing.Optional[int]) -> bool:
+def _validate_timestamps(begin_ts: int, end_ts: Optional[int]) -> bool:
     if begin_ts < 0:
         logger.error("begin-ts must be non-negative.")
         return False
@@ -50,7 +50,7 @@ def _validate_timestamps(begin_ts: int, end_ts: typing.Optional[int]) -> bool:
     return True
 
 
-def main(argv: typing.List[str]) -> int:
+def main(argv: List[str]) -> int:
     clp_home: Path = get_clp_home()
     default_config_file_path: Path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -149,8 +149,8 @@ def main(argv: typing.List[str]) -> int:
 
     parsed_args: argparse.Namespace = args_parser.parse_args(argv[1:])
 
-    begin_timestamp: typing.Optional[int]
-    end_timestamp: typing.Optional[int]
+    begin_timestamp: Optional[int]
+    end_timestamp: Optional[int]
     subcommand: str = parsed_args.subcommand
 
     # Validate and load config file
@@ -205,17 +205,17 @@ def main(argv: typing.List[str]) -> int:
         container_clp_config, clp_config, container_name
     )
 
-    necessary_mounts: typing.List[CLPDockerMounts] = [
+    necessary_mounts: List[CLPDockerMounts] = [
         mounts.clp_home,
         mounts.logs_dir,
         mounts.archives_output_dir,
     ]
-    container_start_cmd: typing.List[str] = generate_container_start_cmd(
+    container_start_cmd: List[str] = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.execution_container
     )
 
     # fmt: off
-    archive_manager_cmd: typing.List[str] = [
+    archive_manager_cmd: List[str] = [
         "python3",
         "-m", "clp_package_utils.scripts.native.archive_manager",
         "--config", str(generated_config_path_on_container),
@@ -250,7 +250,7 @@ def main(argv: typing.List[str]) -> int:
     else:
         logger.error(f"Unsupported subcommand: `{subcommand}`.")
 
-    cmd: typing.List[str] = container_start_cmd + archive_manager_cmd
+    cmd: List[str] = container_start_cmd + archive_manager_cmd
 
     subprocess.run(cmd, check=True)
 
