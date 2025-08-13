@@ -104,11 +104,14 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
         exp_pos = float_str.length();
     }
 
-    size_t first_non_zero_frac_digit_pos
-            = std::isdigit(static_cast<unsigned char>(float_str[0])) ? 0 : 1;
+    // Find first non-zero digit position
+    size_t first_non_zero_frac_digit_pos = 0;
+    if (false == std::isdigit(static_cast<unsigned char>(float_str[0]))) {
+        first_non_zero_frac_digit_pos = 1;  // Skip sign
+    }
+
     if ('0' == float_str[first_non_zero_frac_digit_pos]) {
-        // According to the JSON grammar, there is no leading zeros for the integer part of a
-        // number, if there are leading 0(s), throw exception
+        // JSON doesn't allow leading zeros in integer part
         assert(first_non_zero_frac_digit_pos + 1 >= float_str.length()
                || false
                           == std::isdigit(
@@ -116,23 +119,14 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
                                           float_str[first_non_zero_frac_digit_pos + 1]
                                   )
                           ));
+
+        // For "0.xxx", find first non-zero in fractional part
         if (std::string::npos != dot_pos) {
-            bool found_non_zero{false};
-            size_t first_non_zero_frac_digit_pos_bak{first_non_zero_frac_digit_pos};
-            for (size_t i = dot_pos + 1; i < float_str.length(); ++i) {
-                bool const is_digit = std::isdigit(static_cast<unsigned char>(float_str[i]));
-                bool const is_zero = '0' == float_str[i];
-                if (is_digit && is_zero) {
-                    continue;
-                }
-                if (is_digit && false == is_zero) {
-                    found_non_zero = true;
+            for (size_t i = dot_pos + 1; i < exp_pos; ++i) {
+                if (std::isdigit(static_cast<unsigned char>(float_str[i])) && '0' != float_str[i]) {
                     first_non_zero_frac_digit_pos = i;
+                    break;
                 }
-                break;
-            }
-            if (false == found_non_zero) {
-                first_non_zero_frac_digit_pos = first_non_zero_frac_digit_pos_bak;
             }
         }
     }
