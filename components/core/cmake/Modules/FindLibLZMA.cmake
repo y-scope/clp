@@ -95,4 +95,3 @@ if(DEFINED LibLZMA_ROOT)
     set(ENV{PKG_CONFIG_PATH} "$ENV{liblzma_ORIG_PKG_CONFIG_PATH}")
     unset(ENV{liblzma_ORIG_PKG_CONFIG_PATH})
 endif()
-
