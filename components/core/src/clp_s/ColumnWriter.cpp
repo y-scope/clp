@@ -52,7 +52,7 @@ void FloatColumnWriter::store(ZstdCompressor& compressor) {
 size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
     auto float_str = std::get<std::string>(value);
 
-    // Trim the raw string
+    // Filter to allowed numeric/exponent characters (digits, '.', '+', '-', 'E', 'e')
     float_str.erase(
             std::remove_if(
                     float_str.begin(),

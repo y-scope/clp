@@ -28,7 +28,9 @@ Usage:
     * This option significantly affects compression ratio.
   * `--retain-float-format` specifies that float numbers should be stored with format information
     to allow retaining original float numbers' formats after decompression (see “Current
-    limitations” below and the design notes in the dev guide).
+    limitations” below and the design notes in the dev guide). Note: This currently applies to
+    JSON files; KV‑IR streams support for preserving original printed float formats is under
+    evaluation.
   * `--structurize-arrays` specifies that arrays should be fully parsed and array entries should be
     encoded into dedicated columns.
   * `--auth <s3|none>` specifies the authentication method that should be used for network requests
@@ -184,6 +186,8 @@ compressed data:**
     from the input, as only values within 0 to 9 are supported (e.g., `123456789.12345678E3`
     becomes `1.234567891234568E8`, which is also rounded because it has more than 16 significant
     digits).
+  * KV-IR streams currently don't support preserving original printed float formats, only JSON
+    file is suppoerted.
 * In addition, there are a few limitations, related to querying arrays, described in the search
   syntax [reference](reference-json-search-syntax).
 
