@@ -48,8 +48,8 @@ format correctly.
 
 ### Exponent Digits
 
-Since the maximum exponent for a double is `385` (three digits), two bits are enough to represent
-the digit count.
+Since the maximum decimal exponent for a double is `308` (three digits), two bits are enough to
+represent the digit count.
 
 The stored value is **actual digits − 1**, since there is always at least one digit
 (e.g., `00` → 1 digit).

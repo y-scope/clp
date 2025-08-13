@@ -12,6 +12,6 @@ constexpr uint16_t cScientificExponentSignPos = 12;
 constexpr uint16_t cScientificExponentDigitsPos = 10;
 // Number of significant digits (4 bits)
 constexpr uint16_t cSignificantDigitsPos = 6;
-}  // namespace  clp_s::float_format_encoding
+}  // namespace clp_s::float_format_encoding
 
 #endif  // CLP_S_FLOATFORMATENCODING_HPP
