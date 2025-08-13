@@ -125,9 +125,9 @@ class DeletionCandidatesBuffer:
 
     def persist_new_candidates(self) -> None:
         """
-        Writes any new candidates from `_candidates_to_persist` to the recovery file and clears
-        the buffer.
-        The method returns immediately without writing if `_candidates_to_persist` is empty.
+        Persists any new deletion candidates buffered in `_candidates_to_persist` by appending them
+        to the recovery file, then clears `_candidates_to_persist`.
+        This method returns immediately if `_candidates_to_persist` is empty.
         """
         if len(self._candidates_to_persist) == 0:
             return
