@@ -13,7 +13,7 @@ import {useResultsMetadata} from "./useResultsMetadata";
 
 /**
  * Custom hook to update the UI state to `DONE` when the results metadata signal indicates
- * that the query is complete, or `FAILURE` if the query fails. If there is an error, it will
+ * that the query is complete, or `FAILED` if the query fails. If there is an error, it will
  * also display a notification with the error message.
  */
 const useUiUpdateOnDoneSignal = () => {
