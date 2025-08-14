@@ -39,8 +39,13 @@ public:
     };
 
     // Constructors
+    /**
+     * @param optional_db_config
+     * @param should_create_table
+     * @throw OperationFailed if `optional_db_config` is invalid.
+     */
     IndexManager(
-            std::optional<clp::GlobalMetadataDBConfig> const& db_config = std::nullopt,
+            std::optional<clp::GlobalMetadataDBConfig> const& optional_db_config,
             bool should_create_table = false
     );
 
