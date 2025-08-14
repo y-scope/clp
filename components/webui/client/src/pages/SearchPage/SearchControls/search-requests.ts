@@ -57,7 +57,9 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
     // User should NOT be able to submit a new query while an existing query is in progress.
     if (
         store.searchUiState !== SEARCH_UI_STATE.DEFAULT &&
-        store.searchUiState !== SEARCH_UI_STATE.DONE
+        store.searchUiState !== SEARCH_UI_STATE.DONE &&
+        store.searchUiState !== SEARCH_UI_STATE.FAILED
+
     ) {
         console.error("Cannot submit query while existing query is in progress.");
 
