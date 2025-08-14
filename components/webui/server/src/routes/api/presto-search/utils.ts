@@ -5,6 +5,7 @@ import type {
 
 import type {PrestoRowObject} from "../../../../../common/index.js";
 
+
 /**
  * Converts a Presto result row (array of values) into an object, using the provided column
  * definitions to assign property names.
