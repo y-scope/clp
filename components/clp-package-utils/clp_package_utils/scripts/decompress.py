@@ -208,12 +208,6 @@ def handle_extract_stream_cmd(
     # fmt: on
 
     if EXTRACT_IR_CMD == job_command:
-        if hasattr(parsed_args, "dataset"):
-            logger.error(
-                f"Dataset selection is not supported for storage engine: {storage_engine}."
-            )
-            return -1
-
         extract_cmd.append(str(parsed_args.msg_ix))
         if parsed_args.orig_file_id:
             extract_cmd.append("--orig-file-id")
