@@ -4,7 +4,6 @@ import argparse
 import asyncio
 import ipaddress
 import logging
-import os
 import pathlib
 import socket
 import sys
