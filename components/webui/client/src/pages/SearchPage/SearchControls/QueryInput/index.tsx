@@ -57,7 +57,10 @@ const QueryInput = () => {
                     return (v ?? 0) + PROGRESS_INCREMENT;
                 });
             }, PROGRESS_INTERVAL_MILLIS);
-        } else if (searchUiState === SEARCH_UI_STATE.DONE) {
+        } else if (
+            searchUiState === SEARCH_UI_STATE.DONE ||
+            searchUiState === SEARCH_UI_STATE.FAILED
+        ) {
             clearInterval(intervalIdRef.current);
             intervalIdRef.current = 0;
             setPseudoProgress(null);
@@ -72,7 +75,8 @@ const QueryInput = () => {
     useEffect(() => {
         if (
             searchUiState === SEARCH_UI_STATE.DEFAULT ||
-            searchUiState === SEARCH_UI_STATE.DONE
+            searchUiState === SEARCH_UI_STATE.DONE ||
+            searchUiState === SEARCH_UI_STATE.FAILED
         ) {
             inputRef.current?.focus();
         }
