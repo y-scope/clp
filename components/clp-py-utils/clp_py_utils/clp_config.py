@@ -339,7 +339,7 @@ class Redis(BaseModel):
     query_backend_database: int = 0
     compression_backend_database: int = 1
     # redis can perform authentication without a username
-    password: Optional[str]
+    password: Optional[str] = None
 
     @validator("host")
     def validate_host(cls, field):
@@ -436,8 +436,8 @@ class Queue(BaseModel):
     host: str = "localhost"
     port: int = 5672
 
-    username: Optional[str]
-    password: Optional[str]
+    username: Optional[str] = None
+    password: Optional[str] = None
 
     def dump_to_primitive_dict(self):
         return self.dict(exclude={"username", "password"})
