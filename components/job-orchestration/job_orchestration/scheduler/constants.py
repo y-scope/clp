@@ -6,7 +6,7 @@ TASK_QUEUE_LOWEST_PRIORITY = 1
 TASK_QUEUE_HIGHEST_PRIORITY = 3
 
 
-class QueueName:
+class SchedulerType:
     COMPRESSION = "compression"
     QUERY = "query"
 

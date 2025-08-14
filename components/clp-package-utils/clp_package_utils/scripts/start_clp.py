@@ -41,7 +41,7 @@ from clp_py_utils.clp_metadata_db_utils import (
     get_files_table_name,
 )
 from clp_py_utils.s3_utils import generate_container_auth_options
-from job_orchestration.scheduler.constants import QueueName
+from job_orchestration.scheduler.constants import SchedulerType
 from pydantic import BaseModel
 
 from clp_package_utils.general import (
@@ -660,7 +660,7 @@ def start_compression_worker(
     mounts: CLPDockerMounts,
 ):
     celery_method = "job_orchestration.executor.compress"
-    celery_route = f"{QueueName.COMPRESSION}"
+    celery_route = f"{SchedulerType.COMPRESSION}"
     compression_worker_mounts = [mounts.archives_output_dir]
     generic_start_worker(
         COMPRESSION_WORKER_COMPONENT_NAME,
@@ -685,7 +685,7 @@ def start_query_worker(
     mounts: CLPDockerMounts,
 ):
     celery_method = "job_orchestration.executor.query"
-    celery_route = f"{QueueName.QUERY}"
+    celery_route = f"{SchedulerType.QUERY}"
 
     query_worker_mounts = [mounts.stream_output_dir]
     if StorageType.FS == clp_config.archive_output.storage.type:

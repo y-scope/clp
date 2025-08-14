@@ -31,7 +31,11 @@ from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
-from job_orchestration.scheduler.constants import CompressionJobStatus, CompressionTaskStatus
+from job_orchestration.scheduler.constants import (
+    CompressionJobStatus,
+    CompressionTaskStatus,
+    SchedulerType,
+)
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
     FsInputConfig,
@@ -42,6 +46,7 @@ from job_orchestration.scheduler.scheduler_data import (
     CompressionJob,
     CompressionTaskResult,
 )
+from job_orchestration.scheduler.utils import kill_hanging_jobs
 from pydantic import ValidationError
 
 # Setup logging
@@ -386,45 +391,6 @@ def poll_running_jobs(db_conn, db_cursor):
         del scheduled_jobs[job_id]
 
 
-def kill_hanging_jobs(sql_adapter: SQL_Adapter):
-    with closing(sql_adapter.create_mysql_connection()) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
-        db_cursor.execute(
-            f"""
-            SELECT id
-            FROM {COMPRESSION_JOBS_TABLE_NAME}
-            WHERE status={CompressionJobStatus.RUNNING}
-            """
-        )
-        hanging_job_ids = [row["id"] for row in db_cursor.fetchall()]
-        num_hanging_jobs = len(hanging_job_ids)
-        if 0 == num_hanging_jobs:
-            return
-
-        job_id_placeholders_str = ",".join(["%s"] * len(hanging_job_ids))
-        db_cursor.execute(
-            f"""
-            UPDATE {COMPRESSION_TASKS_TABLE_NAME}
-            SET status={CompressionTaskStatus.FAILED}
-            WHERE status={CompressionTaskStatus.RUNNING}
-            AND job_id IN ({job_id_placeholders_str})
-            """,
-            hanging_job_ids,
-        )
-        db_cursor.execute(
-            f"""
-            UPDATE {COMPRESSION_JOBS_TABLE_NAME}
-            SET status={CompressionJobStatus.FAILED},
-                update_time = CURRENT_TIMESTAMP()
-            WHERE id in ({job_id_placeholders_str})
-            """,
-            hanging_job_ids,
-        )
-        db_conn.commit()
-        logger.info(f"Killed {num_hanging_jobs} hanging compression jobs.")
-
-
 def main(argv):
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
@@ -453,8 +419,11 @@ def main(argv):
 
     logger.info("Starting compression scheduler")
     sql_adapter = SQL_Adapter(clp_config.database)
+
     try:
-        kill_hanging_jobs(sql_adapter)
+        killed_jobs = kill_hanging_jobs(sql_adapter, SchedulerType.COMPRESSION)
+        if killed_jobs is not None:
+            logger.info(f"Killed {len(killed_jobs)} hanging compression jobs.")
     except Exception:
         logger.exception("Failed to kill hanging query jobs.")
         return -1
