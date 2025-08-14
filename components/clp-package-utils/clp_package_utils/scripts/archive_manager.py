@@ -265,17 +265,14 @@ def main(argv: typing.List[str]) -> int:
         return -1
 
     cmd: typing.List[str] = container_start_cmd + archive_manager_cmd
-    ret_code: int
-    try:
-        subprocess.run(cmd, check=True)
-        ret_code = 0
-    except Exception:
-        logger.error("Archive manager failed.")
+    proc = subprocess.run(cmd)
+    ret_code = proc.returncode
+    if 0 != ret_code:
+        logger.error("Dataset manager failed.")
         logger.debug(f"Docker command failed: {' '.join(cmd)}")
-        ret_code = -1
-    finally:
-        # Remove generated files
-        generated_config_path_on_host.unlink()
+
+    # Remove generated files
+    generated_config_path_on_host.unlink()
 
     return ret_code
 
