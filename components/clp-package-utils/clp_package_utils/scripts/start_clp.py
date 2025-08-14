@@ -69,6 +69,7 @@ from clp_package_utils.general import (
     validate_redis_config,
     validate_reducer_config,
     validate_results_cache_config,
+    validate_retention_config,
     validate_webui_config,
 )
 
@@ -1251,6 +1252,12 @@ def main(argv):
             GARBAGE_COLLECTOR_NAME,
         ):
             validate_output_storage_config(clp_config)
+        if target in (
+            ALL_TARGET_NAME,
+            CONTROLLER_TARGET_NAME,
+            GARBAGE_COLLECTOR_NAME,
+        ):
+            validate_retention_config(clp_config)
 
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()
@@ -1288,51 +1295,51 @@ def main(argv):
 
         conf_dir = clp_home / "etc"
 
-        # Start components
-        if DB_COMPONENT_NAME in components_to_start:
-            start_db(instance_id, clp_config, conf_dir)
-
-        if (
-            target == CONTROLLER_TARGET_NAME and DB_COMPONENT_NAME in runnable_components
-        ) or DB_COMPONENT_NAME in components_to_start:
-            create_db_tables(instance_id, clp_config, container_clp_config, mounts)
-
-        if QUEUE_COMPONENT_NAME in components_to_start:
-            start_queue(instance_id, clp_config)
-
-        if REDIS_COMPONENT_NAME in components_to_start:
-            start_redis(instance_id, clp_config, conf_dir)
-
-        if RESULTS_CACHE_COMPONENT_NAME in components_to_start:
-            start_results_cache(instance_id, clp_config, conf_dir)
-
-        if (
-            target == CONTROLLER_TARGET_NAME and RESULTS_CACHE_COMPONENT_NAME in runnable_components
-        ) or RESULTS_CACHE_COMPONENT_NAME in components_to_start:
-            create_results_cache_indices(instance_id, clp_config, container_clp_config, mounts)
-
-        if COMPRESSION_SCHEDULER_COMPONENT_NAME in components_to_start:
-            start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
-
-        if QUERY_SCHEDULER_COMPONENT_NAME in components_to_start:
-            start_query_scheduler(instance_id, clp_config, container_clp_config, mounts)
-
-        if COMPRESSION_WORKER_COMPONENT_NAME in components_to_start:
-            start_compression_worker(
-                instance_id, clp_config, container_clp_config, num_workers, mounts
-            )
-
-        if QUERY_WORKER_COMPONENT_NAME in components_to_start:
-            start_query_worker(instance_id, clp_config, container_clp_config, num_workers, mounts)
-
-        if REDUCER_COMPONENT_NAME in components_to_start:
-            start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
-
-        if WEBUI_COMPONENT_NAME in components_to_start:
-            start_webui(instance_id, clp_config, container_clp_config, mounts)
-
-        if GARBAGE_COLLECTOR_NAME in components_to_start:
-            start_garbage_collector(instance_id, clp_config, container_clp_config, mounts)
+        # # Start components
+        # if DB_COMPONENT_NAME in components_to_start:
+        #     start_db(instance_id, clp_config, conf_dir)
+        #
+        # if (
+        #     target == CONTROLLER_TARGET_NAME and DB_COMPONENT_NAME in runnable_components
+        # ) or DB_COMPONENT_NAME in components_to_start:
+        #     create_db_tables(instance_id, clp_config, container_clp_config, mounts)
+        #
+        # if QUEUE_COMPONENT_NAME in components_to_start:
+        #     start_queue(instance_id, clp_config)
+        #
+        # if REDIS_COMPONENT_NAME in components_to_start:
+        #     start_redis(instance_id, clp_config, conf_dir)
+        #
+        # if RESULTS_CACHE_COMPONENT_NAME in components_to_start:
+        #     start_results_cache(instance_id, clp_config, conf_dir)
+        #
+        # if (
+        #     target == CONTROLLER_TARGET_NAME and RESULTS_CACHE_COMPONENT_NAME in runnable_components
+        # ) or RESULTS_CACHE_COMPONENT_NAME in components_to_start:
+        #     create_results_cache_indices(instance_id, clp_config, container_clp_config, mounts)
+        #
+        # if COMPRESSION_SCHEDULER_COMPONENT_NAME in components_to_start:
+        #     start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
+        #
+        # if QUERY_SCHEDULER_COMPONENT_NAME in components_to_start:
+        #     start_query_scheduler(instance_id, clp_config, container_clp_config, mounts)
+        #
+        # if COMPRESSION_WORKER_COMPONENT_NAME in components_to_start:
+        #     start_compression_worker(
+        #         instance_id, clp_config, container_clp_config, num_workers, mounts
+        #     )
+        #
+        # if QUERY_WORKER_COMPONENT_NAME in components_to_start:
+        #     start_query_worker(instance_id, clp_config, container_clp_config, num_workers, mounts)
+        #
+        # if REDUCER_COMPONENT_NAME in components_to_start:
+        #     start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
+        #
+        # if WEBUI_COMPONENT_NAME in components_to_start:
+        #     start_webui(instance_id, clp_config, container_clp_config, mounts)
+        #
+        # if GARBAGE_COLLECTOR_NAME in components_to_start:
+        #     start_garbage_collector(instance_id, clp_config, container_clp_config, mounts)
 
     except Exception as ex:
         if type(ex) == ValueError:
