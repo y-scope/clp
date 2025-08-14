@@ -22,6 +22,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_WORKER_COMPONENT_NAME,
     CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
+    GARBAGE_COLLECTOR_NAME,
     get_components_for_target,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
@@ -55,17 +56,20 @@ from clp_package_utils.general import (
     get_clp_home,
     is_container_exited,
     is_container_running,
+    is_retention_period_configured,
     load_config_file,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
     validate_db_config,
+    validate_log_directory,
+    validate_logs_input_config,
+    validate_output_storage_config,
     validate_queue_config,
     validate_redis_config,
     validate_reducer_config,
     validate_results_cache_config,
     validate_webui_config,
-    validate_worker_config,
 )
 
 logger = logging.getLogger(__file__)
@@ -1057,6 +1061,88 @@ def start_reducer(
     logger.info(f"Started {component_name}.")
 
 
+def start_garbage_collector(
+    instance_id: str,
+    clp_config: CLPConfig,
+    container_clp_config: CLPConfig,
+    mounts: CLPDockerMounts,
+):
+    component_name = GARBAGE_COLLECTOR_NAME
+
+    if not is_retention_period_configured(clp_config):
+        logger.info(f"Retention period is not configured, skipping {component_name} creation...")
+        return
+
+    logger.info(f"Starting {component_name}...")
+
+    container_name = f"clp-{component_name}-{instance_id}"
+    if container_exists(container_name):
+        return
+
+    container_config_filename = f"{container_name}.yml"
+    container_config_file_path = clp_config.logs_directory / container_config_filename
+    with open(container_config_file_path, "w") as f:
+        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
+
+    logs_dir = clp_config.logs_directory / component_name
+    validate_log_directory(logs_dir, component_name)
+    # Create logs directory if necessary
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    container_logs_dir = container_clp_config.logs_directory / component_name
+
+    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
+
+    # fmt: off
+    container_start_cmd = [
+        "docker", "run",
+        "-di",
+        "--network", "host",
+        "-w", str(CONTAINER_CLP_HOME),
+        "--name", container_name,
+        "--log-driver", "local",
+        "-u", f"{os.getuid()}:{os.getgid()}",
+    ]
+    # fmt: on
+
+    necessary_env_vars = [
+        f"PYTHONPATH={clp_site_packages_dir}",
+        f"CLP_HOME={CONTAINER_CLP_HOME}",
+        f"CLP_LOGS_DIR={container_logs_dir}",
+        f"CLP_LOGGING_LEVEL={clp_config.garbage_collector.logging_level}",
+    ]
+    necessary_mounts = [
+        mounts.clp_home,
+        mounts.logs_dir,
+    ]
+
+    # Add necessary mounts for archives and streams.
+    if StorageType.FS == clp_config.archive_output.storage.type:
+        necessary_mounts.append(mounts.archives_output_dir)
+    if StorageType.FS == clp_config.stream_output.storage.type:
+        necessary_mounts.append(mounts.stream_output_dir)
+
+    aws_mount, aws_env_vars = generate_container_auth_options(clp_config, component_name)
+    if aws_mount:
+        necessary_mounts.append(mounts.aws_config_dir)
+    if aws_env_vars:
+        necessary_env_vars.extend(aws_env_vars)
+
+    append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
+    container_start_cmd.append(clp_config.execution_container)
+
+    # fmt: off
+    garbage_collector_cmd = [
+        "python3", "-u",
+        "-m", "job_orchestration.garbage_collector.garbage_collector",
+        "--config", str(container_clp_config.logs_directory / container_config_filename),
+    ]
+    # fmt: on
+    cmd = container_start_cmd + garbage_collector_cmd
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Started {component_name}.")
+
+
 def add_num_workers_argument(parser):
     parser.add_argument(
         "--num-workers",
@@ -1093,6 +1179,7 @@ def main(argv):
     reducer_server_parser = component_args_parser.add_parser(REDUCER_COMPONENT_NAME)
     add_num_workers_argument(reducer_server_parser)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
+    component_args_parser.add_parser(GARBAGE_COLLECTOR_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -1126,6 +1213,7 @@ def main(argv):
             ALL_TARGET_NAME,
             CONTROLLER_TARGET_NAME,
             DB_COMPONENT_NAME,
+            GARBAGE_COLLECTOR_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
             QUERY_SCHEDULER_COMPONENT_NAME,
             WEBUI_COMPONENT_NAME,
@@ -1154,9 +1242,15 @@ def main(argv):
         if target in (
             ALL_TARGET_NAME,
             COMPRESSION_WORKER_COMPONENT_NAME,
-            QUERY_WORKER_COMPONENT_NAME,
         ):
-            validate_worker_config(clp_config)
+            validate_logs_input_config(clp_config)
+        if target in (
+            ALL_TARGET_NAME,
+            COMPRESSION_WORKER_COMPONENT_NAME,
+            QUERY_WORKER_COMPONENT_NAME,
+            GARBAGE_COLLECTOR_NAME,
+        ):
+            validate_output_storage_config(clp_config)
 
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()
@@ -1236,6 +1330,8 @@ def main(argv):
 
         if WEBUI_COMPONENT_NAME in components_to_start:
             start_webui(instance_id, clp_config, container_clp_config, mounts)
+        if target in (ALL_TARGET_NAME, GARBAGE_COLLECTOR_NAME):
+            start_garbage_collector(instance_id, clp_config, container_clp_config, mounts)
 
     except Exception as ex:
         if type(ex) == ValueError:
