@@ -386,14 +386,10 @@ def poll_running_jobs(db_conn, db_cursor):
         del scheduled_jobs[job_id]
 
 
-def mark_running_job_as_failed(
-    sql_adapter: SQL_Adapter
-):
+def mark_running_job_as_failed(sql_adapter: SQL_Adapter):
     with closing(sql_adapter.create_mysql_connection()) as db_conn, closing(
-            db_conn.cursor(dictionary=True)
+        db_conn.cursor(dictionary=True)
     ) as db_cursor:
-        message = "Mark failure due to unexpected"
-        # TODO: update durations?
         db_cursor.execute(
             f"""
             SELECT id
@@ -402,11 +398,12 @@ def mark_running_job_as_failed(
             """
         )
         hanging_job_ids = [row["id"] for row in db_cursor.fetchall()]
-
-        if len(hanging_job_ids) == 0:
+        num_hanging_jobs = len(hanging_job_ids)
+        if 0 == num_hanging_jobs:
             return
 
         job_id_placeholders_str = ",".join(["%s"] * len(hanging_job_ids))
+        message = "Job marked as failed due to hang."
 
         db_cursor.execute(
             f"""
@@ -416,19 +413,20 @@ def mark_running_job_as_failed(
                 update_time = CURRENT_TIMESTAMP()
             WHERE id in ({job_id_placeholders_str})
             """,
-            hanging_job_ids
+            hanging_job_ids,
         )
 
         db_cursor.execute(
             f"""
             UPDATE {COMPRESSION_TASKS_TABLE_NAME}
             SET status={CompressionTaskStatus.FAILED}
-            WHERE status={CompressionTaskStatus.RUNNING} AND job_id IN ({job_id_placeholders_str})
+            WHERE status={CompressionTaskStatus.RUNNING}
+            AND job_id IN ({job_id_placeholders_str})
             """,
-            hanging_job_ids
+            hanging_job_ids,
         )
         db_conn.commit()
-        logger.info(f"Updated {len(hanging_job_ids)} rows")
+        logger.info(f"Updated {num_hanging_jobs} rows")
 
 
 def main(argv):
@@ -483,7 +481,7 @@ def main(argv):
                     clp_config.archive_output,
                     existing_datasets,
                 )
-                #poll_running_jobs(db_conn, db_cursor)
+                poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
                 logger.info("Gracefully shutting down")
