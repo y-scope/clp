@@ -707,10 +707,10 @@ class GarbageCollector(BaseModel):
 
 
 def _get_env_var(name) -> str:
-    try:
-        return os.environ[name]
-    except KeyError as ex:
-        raise ValueError(f"Missing environment variable: {ex}")
+    value = os.getenv(name)
+    if value is None:
+        raise ValueError(f"Missing environment variable: {name}")
+    return value
 
 
 class CLPConfig(BaseModel):
