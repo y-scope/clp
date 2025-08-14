@@ -611,6 +611,7 @@ def is_retention_period_configured(clp_config: CLPConfig) -> bool:
 
     return False
 
+
 def generate_common_environment_variables(
     include_clp_home=True,
 ) -> List[str]:
