@@ -231,13 +231,7 @@ class Database(BaseModel):
         return connection_params_and_type
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
-
-        # Remove sensitive information
-        d.pop("username", None)
-        d.pop("password", None)
-
-        return d
+        return self.dict(exclude={"username", "password"})
 
 
 def _validate_logging_level(cls, field):
@@ -330,12 +324,7 @@ class Redis(BaseModel):
         return field
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
-
-        # Remove sensitive information
-        d.pop("password", None)
-
-        return d
+        return self.dict(exclude={"password"})
 
 
 class Reducer(BaseModel):
@@ -413,13 +402,7 @@ class Queue(BaseModel):
     password: Optional[str]
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
-
-        # Remove sensitive information
-        d.pop("username", None)
-        d.pop("password", None)
-
-        return d
+        return self.dict(exclude={"username", "password"})
 
 
 class S3Credentials(BaseModel):
