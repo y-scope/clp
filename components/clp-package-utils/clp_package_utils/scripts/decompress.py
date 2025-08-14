@@ -185,7 +185,7 @@ def handle_extract_stream_cmd(
         logger.error(f"JSON extraction is not supported for storage engine `{storage_engine}`.")
         return -1
 
-    dataset = parsed_args.dataset
+    dataset = getattr(parsed_args, "dataset", None)
     if StorageEngine.CLP_S == storage_engine:
         dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
         try:
