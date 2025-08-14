@@ -63,7 +63,8 @@ TARGET_TO_COMPONENTS = {
     | {
         COMPRESSION_SCHEDULER_COMPONENT_NAME,
         QUERY_SCHEDULER_COMPONENT_NAME,
-    },
+    }
+    | STORAGE_MANAGEMENT_COMPONENTS,
 }
 
 QUERY_JOBS_TABLE_NAME = "query_jobs"
@@ -874,7 +875,7 @@ class CLPConfig(BaseModel):
 
     def get_runnable_components(self) -> Set[str]:
         if QueryEngine.PRESTO == self.package.query_engine:
-            return COMPRESSION_COMPONENTS | UI_COMPONENTS | STORAGE_MANAGEMENT_COMPONENTS
+            return COMPRESSION_COMPONENTS | UI_COMPONENTS
         else:
             return ALL_COMPONENTS
 
