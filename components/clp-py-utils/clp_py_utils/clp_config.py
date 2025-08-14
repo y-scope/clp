@@ -77,6 +77,13 @@ CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
 
 
+# Environment variable names
+CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
+CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
+CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
+CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
+CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
+
 class StorageEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
@@ -887,15 +894,15 @@ class CLPConfig(BaseModel):
             )
 
     def load_database_credentials_from_env(self):
-        self.database.username = _get_env_var("CLP_DB_USER")
-        self.database.password = _get_env_var("CLP_DB_PASS")
+        self.database.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
+        self.database.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
 
     def load_queue_credentials_from_env(self):
-        self.queue.username = _get_env_var("CLP_QUEUE_USER")
-        self.queue.password = _get_env_var("CLP_QUEUE_PASS")
+        self.queue.username = _get_env_var(CLP_QUEUE_USER_ENV_VAR_NAME)
+        self.queue.password = _get_env_var(CLP_QUEUE_PASS_ENV_VAR_NAME)
 
     def load_redis_credentials_from_env(self):
-        self.redis.password = _get_env_var("CLP_REDIS_PASS")
+        self.redis.password = _get_env_var(CLP_REDIS_PASS_ENV_VAR_NAME)
 
     def get_generated_config_file_path(self) -> pathlib.Path:
         return self.logs_directory / ".clp-config.yml"
