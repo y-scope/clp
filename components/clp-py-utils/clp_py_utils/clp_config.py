@@ -26,6 +26,7 @@ QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
+GARBAGE_COLLECTOR_NAME = "garbage_collector"
 
 # Component groups
 GENERAL_SCHEDULING_COMPONENTS = {
@@ -354,6 +355,7 @@ class ResultsCache(BaseModel):
     port: int = 27017
     db_name: str = "clp-query-results"
     stream_collection_name: str = "stream-files"
+    retention_period: Optional[int] = None
 
     @validator("host")
     def validate_host(cls, field):
@@ -373,6 +375,12 @@ class ResultsCache(BaseModel):
             raise ValueError(
                 f"{RESULTS_CACHE_COMPONENT_NAME}.stream_collection_name cannot be empty."
             )
+        return field
+
+    @validator("retention_period")
+    def validate_retention_period(cls, field):
+        if field is not None and field <= 0:
+            raise ValueError("retention_period must be greater than 0")
         return field
 
     def get_uri(self):
@@ -566,6 +574,7 @@ class ArchiveOutput(BaseModel):
     target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB
     target_segment_size: int = 256 * 1024 * 1024  # 256 MB
     compression_level: int = 3
+    retention_period: Optional[int] = None
 
     @validator("target_archive_size")
     def validate_target_archive_size(cls, field):
@@ -595,6 +604,12 @@ class ArchiveOutput(BaseModel):
     def validate_compression_level(cls, field):
         if field < 1 or 19 < field:
             raise ValueError("compression_level must be a value from 1 to 19")
+        return field
+
+    @validator("retention_period")
+    def validate_retention_period(cls, field):
+        if field is not None and field <= 0:
+            raise ValueError("retention_period must be greater than 0")
         return field
 
     def set_directory(self, directory: pathlib.Path):
@@ -655,6 +670,32 @@ class WebUi(BaseModel):
         return field
 
 
+class SweepInterval(BaseModel):
+    archive: int = 60
+    search_result: int = 30
+
+    # Explicitly disallow any unexpected key
+    class Config:
+        extra = "forbid"
+
+    @root_validator
+    def validate_sweep_interval(cls, values):
+        for field, value in values.items():
+            if value <= 0:
+                raise ValueError(f"Sweep interval of {field} must be greater than 0")
+        return values
+
+
+class GarbageCollector(BaseModel):
+    logging_level: str = "INFO"
+    sweep_interval: SweepInterval = SweepInterval()
+
+    @validator("logging_level")
+    def validate_logging_level(cls, field):
+        _validate_logging_level(cls, field)
+        return field
+
+
 class CLPConfig(BaseModel):
     execution_container: Optional[str] = None
 
@@ -671,6 +712,7 @@ class CLPConfig(BaseModel):
     compression_worker: CompressionWorker = CompressionWorker()
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
+    garbage_collector: GarbageCollector = GarbageCollector()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
