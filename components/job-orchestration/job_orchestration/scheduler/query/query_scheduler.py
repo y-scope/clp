@@ -868,22 +868,44 @@ def found_max_num_latest_results(
         return max_timestamp_in_remaining_archives <= min_timestamp_in_top_results
 
 
-def mark_running_job_as_failed(
-    sql_adapter: SQL_Adapter
-):
+def kill_hanging_jobs(sql_adapter: SQL_Adapter):
     with contextlib.closing(sql_adapter.create_mysql_connection()) as db_conn, contextlib.closing(
-            db_conn.cursor(dictionary=True)
+        db_conn.cursor(dictionary=True)
     ) as db_cursor:
         db_cursor.execute(
             f"""
-            UPDATE {QUERY_JOBS_TABLE_NAME}
-            SET {QUERY_JOBS_TABLE_NAME}.status={QueryJobStatus.FAILED}
-            WHERE {QUERY_JOBS_TABLE_NAME}.status={QueryJobStatus.RUNNING}
+            SELECT id
+            FROM {QUERY_JOBS_TABLE_NAME}
+            WHERE status={QueryJobStatus.RUNNING}
             """
         )
-        update_count = db_cursor.rowcount
+        hanging_job_ids = [row["id"] for row in db_cursor.fetchall()]
+        num_hanging_jobs = len(hanging_job_ids)
+        if 0 == num_hanging_jobs:
+            return
+
+        job_id_placeholders_str = ",".join(["%s"] * len(hanging_job_ids))
+        db_cursor.execute(
+            f"""
+            UPDATE {QUERY_TASKS_TABLE_NAME}
+            SET status={QueryTaskStatus.FAILED}
+            WHERE status={QueryTaskStatus.RUNNING}
+            AND job_id IN ({job_id_placeholders_str})
+            """,
+            hanging_job_ids,
+        )
+
+        db_cursor.execute(
+            f"""
+            UPDATE {QUERY_JOBS_TABLE_NAME}
+            SET status={QueryJobStatus.FAILED}
+            WHERE id in ({job_id_placeholders_str})
+            """,
+            hanging_job_ids,
+        )
         db_conn.commit()
-        logger.info(f"Updated {update_count} rows")
+        logger.info(f"Killed {num_hanging_jobs} hanging query jobs.")
+
 
 async def handle_finished_search_job(
     db_conn, job: SearchJob, task_results: Optional[Any], results_cache_uri: str
@@ -1161,7 +1183,11 @@ async def main(argv: List[str]) -> int:
     reducer_connection_queue = asyncio.Queue(32)
 
     sql_adapter = SQL_Adapter(clp_config.database)
-    mark_running_job_as_failed(sql_adapter)
+    try:
+        kill_hanging_jobs(sql_adapter)
+    except Exception:
+        logger.exception("Failed to kill hanging query jobs.")
+        return -1
 
     logger.debug(f"Job polling interval {clp_config.query_scheduler.jobs_poll_delay} seconds.")
     try:

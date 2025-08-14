@@ -386,7 +386,7 @@ def poll_running_jobs(db_conn, db_cursor):
         del scheduled_jobs[job_id]
 
 
-def mark_running_job_as_failed(sql_adapter: SQL_Adapter):
+def kill_hanging_jobs(sql_adapter: SQL_Adapter):
     with closing(sql_adapter.create_mysql_connection()) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
@@ -403,19 +403,6 @@ def mark_running_job_as_failed(sql_adapter: SQL_Adapter):
             return
 
         job_id_placeholders_str = ",".join(["%s"] * len(hanging_job_ids))
-        message = "Job marked as failed due to hang."
-
-        db_cursor.execute(
-            f"""
-            UPDATE {COMPRESSION_JOBS_TABLE_NAME}
-            SET status={CompressionJobStatus.FAILED},
-                status_msg='{message}',
-                update_time = CURRENT_TIMESTAMP()
-            WHERE id in ({job_id_placeholders_str})
-            """,
-            hanging_job_ids,
-        )
-
         db_cursor.execute(
             f"""
             UPDATE {COMPRESSION_TASKS_TABLE_NAME}
@@ -425,8 +412,17 @@ def mark_running_job_as_failed(sql_adapter: SQL_Adapter):
             """,
             hanging_job_ids,
         )
+        db_cursor.execute(
+            f"""
+            UPDATE {COMPRESSION_JOBS_TABLE_NAME}
+            SET status={CompressionJobStatus.FAILED},
+                update_time = CURRENT_TIMESTAMP()
+            WHERE id in ({job_id_placeholders_str})
+            """,
+            hanging_job_ids,
+        )
         db_conn.commit()
-        logger.info(f"Updated {num_hanging_jobs} rows")
+        logger.info(f"Killed {num_hanging_jobs} hanging compression jobs.")
 
 
 def main(argv):
@@ -457,7 +453,11 @@ def main(argv):
 
     logger.info("Starting compression scheduler")
     sql_adapter = SQL_Adapter(clp_config.database)
-    mark_running_job_as_failed(sql_adapter)
+    try:
+        kill_hanging_jobs(sql_adapter)
+    except Exception:
+        logger.exception("Failed to kill hanging query jobs.")
+        return -1
 
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
