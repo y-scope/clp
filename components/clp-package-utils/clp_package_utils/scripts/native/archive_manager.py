@@ -182,7 +182,7 @@ def main(argv: typing.List[str]) -> int:
     )
 
     parsed_args: argparse.Namespace = args_parser.parse_args(argv[1:])
-    if parsed_args.debug:
+    if parsed_args.verbose:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)

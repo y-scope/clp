@@ -234,8 +234,8 @@ def main(argv: typing.List[str]) -> int:
     if dataset is not None:
         archive_manager_cmd.append("--dataset")
         archive_manager_cmd.append(dataset)
-    if parsed_args.debug:
-        archive_manager_cmd.append("--debug")
+    if parsed_args.verbose:
+        archive_manager_cmd.append("--verbose")
 
     archive_manager_cmd.append(subcommand)
 
