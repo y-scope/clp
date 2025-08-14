@@ -181,21 +181,11 @@ def handle_extract_stream_cmd(
         return -1
 
     job_command = parsed_args.command
+    if EXTRACT_IR_CMD == job_command and StorageEngine.CLP != storage_engine:
+        logger.error(f"IR extraction is not supported for storage engine `{storage_engine}`.")
+        return -1
     if EXTRACT_JSON_CMD == job_command and StorageEngine.CLP_S != storage_engine:
         logger.error(f"JSON extraction is not supported for storage engine `{storage_engine}`.")
-        return -1
-
-    dataset = getattr(parsed_args, "dataset", None)
-    if StorageEngine.CLP_S == storage_engine:
-        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
-        try:
-            clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
-            validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
-        except Exception as e:
-            logger.error(e)
-            return -1
-    elif dataset is not None:
-        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
         return -1
 
     container_name = generate_container_name(str(JobType.IR_EXTRACTION))
@@ -218,6 +208,12 @@ def handle_extract_stream_cmd(
     # fmt: on
 
     if EXTRACT_IR_CMD == job_command:
+        if hasattr(parsed_args, "dataset"):
+            logger.error(
+                f"Dataset selection is not supported for storage engine: {storage_engine}."
+            )
+            return -1
+
         extract_cmd.append(str(parsed_args.msg_ix))
         if parsed_args.orig_file_id:
             extract_cmd.append("--orig-file-id")
@@ -229,6 +225,15 @@ def handle_extract_stream_cmd(
             extract_cmd.append("--target-uncompressed-size")
             extract_cmd.append(str(parsed_args.target_uncompressed_size))
     elif EXTRACT_JSON_CMD == job_command:
+        dataset = parsed_args.dataset
+        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
+        try:
+            clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+            validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
+        except Exception as e:
+            logger.error(e)
+            return -1
+
         extract_cmd.append(str(parsed_args.archive_id))
         if dataset is not None:
             extract_cmd.append("--dataset")
