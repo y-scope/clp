@@ -1,6 +1,6 @@
 import {TableProps} from "antd";
 
-import {PrestoSearchResult} from "./typings";
+import type {PrestoSearchResult} from "../../../../../../../../common/index.js";
 
 
 /**

@@ -3,9 +3,9 @@ import {
     useMemo,
 } from "react";
 
+import type {PrestoSearchResult} from "../../../../../../../../common/index.js";
 import VirtualTable from "../../../../../../components/VirtualTable";
 import useSearchStore from "../../../../SearchState/index";
-import {PrestoSearchResult} from "./typings";
 import {usePrestoSearchResults} from "./usePrestoSearchResults";
 import {getPrestoSearchResultsTableColumns} from "./utils";
 

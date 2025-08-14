@@ -137,14 +137,21 @@ interface PrestoRowObject {
     row: Record<string, unknown>;
 }
 
+/**
+ * Presto search result in MongoDB.
+ */
+interface PrestoSearchResult extends PrestoRowObject {
+    _id: string;
+}
+
 export {
     CLP_QUERY_ENGINES,
     PRESTO_SEARCH_SIGNAL,
     SEARCH_SIGNAL,
 };
 export type {
-    PRESTO_SEARCH_SIGNAL,
     PrestoRowObject,
+    PrestoSearchResult,
     SearchResultsMetadataDocument,
     ClientToServerEvents,
     Err,

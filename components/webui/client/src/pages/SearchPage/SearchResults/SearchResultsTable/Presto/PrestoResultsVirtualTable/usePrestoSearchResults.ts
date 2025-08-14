@@ -1,8 +1,8 @@
+import type {PrestoSearchResult} from "../../../../../../../../common/index.js";
 import MongoSocketCollection from "../../../../../../api/socket/MongoSocketCollection";
 import {useCursor} from "../../../../../../api/socket/useCursor";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../../SearchState/index";
 import {SEARCH_MAX_NUM_RESULTS} from "../../typings";
-import {PrestoSearchResult} from "./typings";
 
 
 /**
