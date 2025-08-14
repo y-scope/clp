@@ -3,6 +3,7 @@ import type {
     InsertManyResult,
 } from "mongodb";
 
+import type {PrestoRowObject} from "../../../../../common/index.js";
 
 /**
  * Converts a Presto result row (array of values) into an object, using the provided column
@@ -15,7 +16,7 @@ import type {
 const prestoRowToObject = (
     row: unknown[],
     columns: {name: string}[]
-): Record<string, unknown> => {
+): PrestoRowObject => {
     const obj: Record<string, unknown> = {};
     columns.forEach((col, idx) => {
         obj[col.name] = row[idx];

@@ -1,9 +1,11 @@
+import type {PrestoRowObject} from "../../../../../../../../common/index.js";
+
+
 /**
  * Structure of dynamic Presto search results data.
  */
-interface PrestoSearchResult {
+interface PrestoSearchResult extends PrestoRowObject {
     _id: string;
-    row: Record<string, unknown>;
 }
 
 export type {PrestoSearchResult};

@@ -129,12 +129,21 @@ interface SearchResultsMetadataDocument {
     numTotalResults?: number;
     queryEngine: CLP_QUERY_ENGINES;
 }
+
+/**
+ * Presto row wrapped in a `row` property to prevent conflicts with MongoDB's `_id` field.
+ */
+interface PrestoRowObject {
+    row: Record<string, unknown>;
+}
+
 export {
     CLP_QUERY_ENGINES,
     SEARCH_SIGNAL,
 };
 export type {
     PRESTO_SEARCH_SIGNAL,
+    PrestoRowObject,
     SearchResultsMetadataDocument,
     ClientToServerEvents,
     Err,
