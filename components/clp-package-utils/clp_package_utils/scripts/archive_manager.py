@@ -265,6 +265,7 @@ def main(argv: typing.List[str]) -> int:
         return -1
 
     cmd: typing.List[str] = container_start_cmd + archive_manager_cmd
+
     proc = subprocess.run(cmd)
     ret_code = proc.returncode
     if 0 != ret_code:
