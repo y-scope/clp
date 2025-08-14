@@ -295,14 +295,9 @@ def main(argv):
         config_file_path = pathlib.Path(parsed_args.config)
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_logs_dir()
+        clp_config.database.load_credentials_from_env()
     except:
         logger.exception("Failed to load config.")
-        return -1
-    try:
-        clp_config.database.username = os.environ["CLP_DB_USER"]
-        clp_config.database.password = os.environ["CLP_DB_PASS"]
-    except KeyError as e:
-        logger.error(f"Missing environment variable: {e}")
         return -1
 
     database_config: Database = clp_config.database

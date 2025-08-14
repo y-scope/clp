@@ -118,13 +118,6 @@ def handle_extract_stream_cmd(
     )
     if clp_config is None:
         return -1
-    # Override credentials with environment variables
-    try:
-        clp_config.database.username = os.environ["CLP_DB_USER"]
-        clp_config.database.password = os.environ["CLP_DB_PASS"]
-    except KeyError as e:
-        logger.error(f"Missing environment variable: {e}")
-        return -1
 
     command = parsed_args.command
 
@@ -197,6 +190,7 @@ def validate_and_load_config_file(
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_archive_output_config()
         clp_config.validate_logs_dir()
+        clp_config.database.load_credentials_from_env()
         return clp_config
     except Exception:
         logger.exception("Failed to load config.")
@@ -229,13 +223,6 @@ def handle_extract_file_cmd(
         clp_home, pathlib.Path(parsed_args.config), default_config_file_path
     )
     if clp_config is None:
-        return -1
-    # Override credentials with environment variables
-    try:
-        clp_config.database.username = os.environ["CLP_DB_USER"]
-        clp_config.database.password = os.environ["CLP_DB_PASS"]
-    except KeyError as e:
-        logger.error(f"Missing environment variable: {e}")
         return -1
 
     paths = parsed_args.paths
