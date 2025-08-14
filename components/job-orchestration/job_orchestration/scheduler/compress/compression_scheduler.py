@@ -392,18 +392,43 @@ def mark_running_job_as_failed(
     with closing(sql_adapter.create_mysql_connection()) as db_conn, closing(
             db_conn.cursor(dictionary=True)
     ) as db_cursor:
-        message = "GGG"
+        message = "Mark failure due to unexpected"
+        # TODO: update durations?
+        db_cursor.execute(
+            f"""
+            SELECT id
+            FROM {COMPRESSION_JOBS_TABLE_NAME}
+            WHERE status={CompressionJobStatus.RUNNING}
+            """
+        )
+        hanging_job_ids = [row["id"] for row in db_cursor.fetchall()]
+
+        if len(hanging_job_ids) == 0:
+            return
+
+        job_id_placeholders_str = ",".join(["%s"] * len(hanging_job_ids))
+
         db_cursor.execute(
             f"""
             UPDATE {COMPRESSION_JOBS_TABLE_NAME}
-            SET {COMPRESSION_JOBS_TABLE_NAME}.status={CompressionJobStatus.FAILED},
-                {COMPRESSION_JOBS_TABLE_NAME}.status_msg='{message}'
-            WHERE {COMPRESSION_JOBS_TABLE_NAME}.status={CompressionJobStatus.RUNNING}
-            """
+            SET status={CompressionJobStatus.FAILED},
+                status_msg='{message}',
+                update_time = CURRENT_TIMESTAMP()
+            WHERE id in ({job_id_placeholders_str})
+            """,
+            hanging_job_ids
         )
-        update_count = db_cursor.rowcount
+
+        db_cursor.execute(
+            f"""
+            UPDATE {COMPRESSION_TASKS_TABLE_NAME}
+            SET status={CompressionTaskStatus.FAILED}
+            WHERE status={CompressionTaskStatus.RUNNING} AND job_id IN ({job_id_placeholders_str})
+            """,
+            hanging_job_ids
+        )
         db_conn.commit()
-        logger.info(f"Updated {update_count} rows")
+        logger.info(f"Updated {len(hanging_job_ids)} rows")
 
 
 def main(argv):
