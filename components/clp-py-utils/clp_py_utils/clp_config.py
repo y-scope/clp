@@ -760,7 +760,7 @@ class GarbageCollector(BaseModel):
         return field
 
 
-def _get_env_var(name) -> str:
+def _get_env_var(name: str) -> str:
     value = os.getenv(name)
     if value is None:
         raise ValueError(f"Missing environment variable: {name}")
