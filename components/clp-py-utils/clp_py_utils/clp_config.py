@@ -84,6 +84,7 @@ CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 
+
 class StorageEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
