@@ -447,21 +447,21 @@ def validate_and_load_db_credentials_file(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
 ):
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
-    clp_config.load_database_credentials_from_file()
+    clp_config.database.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_and_load_queue_credentials_file(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
 ):
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
-    clp_config.load_queue_credentials_from_file()
+    clp_config.queue.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_and_load_redis_credentials_file(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
 ):
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
-    clp_config.load_redis_credentials_from_file()
+    clp_config.redis.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_db_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):

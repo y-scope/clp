@@ -46,7 +46,7 @@ def main(argv):
     config_path = pathlib.Path(parsed_args.config)
     try:
         clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
-        clp_config.load_database_credentials_from_env()
+        clp_config.database.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
         logger.error(err)
         return -1

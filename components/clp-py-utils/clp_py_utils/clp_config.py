@@ -240,6 +240,22 @@ class Database(BaseModel):
     def dump_to_primitive_dict(self):
         return self.dict(exclude={"username", "password"})
 
+    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        config = read_yaml_config_file(credentials_file_path)
+        if config is None:
+            raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
+        try:
+            self.username = get_config_value(config, f"{DB_COMPONENT_NAME}.user")
+            self.password = get_config_value(config, f"{DB_COMPONENT_NAME}.password")
+        except KeyError as ex:
+            raise ValueError(
+                f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
+            )
+
+    def load_credentials_from_env(self):
+        self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
+        self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
+
 
 def _validate_logging_level(cls, field):
     if not is_valid_logging_level(field):
@@ -333,6 +349,20 @@ class Redis(BaseModel):
     def dump_to_primitive_dict(self):
         return self.dict(exclude={"password"})
 
+    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        config = read_yaml_config_file(credentials_file_path)
+        if config is None:
+            raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
+        try:
+            self.password = get_config_value(config, f"{REDIS_COMPONENT_NAME}.password")
+        except KeyError as ex:
+            raise ValueError(
+                f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
+            )
+
+    def load_credentials_from_env(self):
+        self.password = _get_env_var(CLP_REDIS_PASS_ENV_VAR_NAME)
+
 
 class Reducer(BaseModel):
     host: str = "localhost"
@@ -410,6 +440,22 @@ class Queue(BaseModel):
 
     def dump_to_primitive_dict(self):
         return self.dict(exclude={"username", "password"})
+
+    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        config = read_yaml_config_file(credentials_file_path)
+        if config is None:
+            raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
+        try:
+            self.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.user")
+            self.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
+        except KeyError as ex:
+            raise ValueError(
+                f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
+            )
+
+    def load_credentials_from_env(self):
+        self.username = _get_env_var(CLP_QUEUE_USER_ENV_VAR_NAME)
+        self.password = _get_env_var(CLP_QUEUE_PASS_ENV_VAR_NAME)
 
 
 class S3Credentials(BaseModel):
@@ -857,52 +903,6 @@ class CLPConfig(BaseModel):
             )
 
         self.execution_container = "ghcr.io/y-scope/clp/" + self.execution_container
-
-    def load_database_credentials_from_file(self):
-        config = read_yaml_config_file(self.credentials_file_path)
-        if config is None:
-            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
-        try:
-            self.database.username = get_config_value(config, f"{DB_COMPONENT_NAME}.user")
-            self.database.password = get_config_value(config, f"{DB_COMPONENT_NAME}.password")
-        except KeyError as ex:
-            raise ValueError(
-                f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
-            )
-
-    def load_queue_credentials_from_file(self):
-        config = read_yaml_config_file(self.credentials_file_path)
-        if config is None:
-            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
-        try:
-            self.queue.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.user")
-            self.queue.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
-        except KeyError as ex:
-            raise ValueError(
-                f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
-            )
-
-    def load_redis_credentials_from_file(self):
-        config = read_yaml_config_file(self.credentials_file_path)
-        if config is None:
-            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
-        try:
-            self.redis.password = get_config_value(config, f"{REDIS_COMPONENT_NAME}.password")
-        except KeyError as ex:
-            raise ValueError(
-                f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
-            )
-
-    def load_database_credentials_from_env(self):
-        self.database.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
-        self.database.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
-
-    def load_queue_credentials_from_env(self):
-        self.queue.username = _get_env_var(CLP_QUEUE_USER_ENV_VAR_NAME)
-        self.queue.password = _get_env_var(CLP_QUEUE_PASS_ENV_VAR_NAME)
-
-    def load_redis_credentials_from_env(self):
-        self.redis.password = _get_env_var(CLP_REDIS_PASS_ENV_VAR_NAME)
 
     def get_generated_config_file_path(self) -> pathlib.Path:
         return self.logs_directory / ".clp-config.yml"
