@@ -6,6 +6,7 @@ import {StatusCodes} from "http-status-codes";
 
 import {
     CLP_QUERY_ENGINES,
+    PRESTO_SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
 } from "../../../../../common/index.js";
 import settings from "../../../../settings.json" with {type: "json"};
@@ -104,10 +105,30 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                             if (false === isResolved) {
                                 isResolved = true;
                                 reject(new Error("Presto search failed"));
+                            } else {
+                                searchResultsMetadataCollection.updateOne(
+                                    {_id: searchJobId},
+                                    {
+                                        $set: {
+                                            errorMsg: error.message,
+                                            errorName: ("errorName" in error) ?
+                                                error.errorName :
+                                                null,
+                                            lastSignal: PRESTO_SEARCH_SIGNAL.FAILED,
+                                        },
+                                    }
+                                ).catch((err: unknown) => {
+                                    request.log.error(
+                                        err,
+                                        "Failed to update Presto error metadata"
+                                    );
+                                });
                             }
                         },
                         query: queryString,
                         state: (_, queryId, stats) => {
+                            // Type cast `presto-client` string literal type to our enum type.
+                            const newState = stats.state as PRESTO_SEARCH_SIGNAL;
                             request.log.info({
                                 searchJobId: queryId,
                                 state: stats.state,
@@ -117,8 +138,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                             if (false === isResolved) {
                                 searchResultsMetadataCollection.insertOne({
                                     _id: queryId,
-                                    lastSignal: stats.state,
                                     errorMsg: null,
+                                    errorName: null,
+                                    lastSignal: newState,
                                     queryEngine: CLP_QUERY_ENGINES.PRESTO,
                                 }).catch((err: unknown) => {
                                     request.log.error(err, "Failed to insert Presto metadata");
@@ -129,7 +151,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                 // Update metadata on subsequent calls
                                 searchResultsMetadataCollection.updateOne(
                                     {_id: queryId},
-                                    {$set: {lastSignal: stats.state}}
+                                    {$set: {lastSignal: newState}}
                                 ).catch((err: unknown) => {
                                     request.log.error(err, "Failed to update Presto metadata");
                                 });
@@ -145,6 +167,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 request.log.error(error, "Failed to submit Presto query");
                 throw error;
             }
+
+            await mongoDb.createCollection(searchJobId);
 
             reply.code(StatusCodes.CREATED);
 
@@ -174,7 +198,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     resolve();
                 });
             });
-            request.log.info(searchJobId, "Presto search cancelled");
+            request.log.info({searchJobId}, "Presto search cancelled");
             reply.code(StatusCodes.NO_CONTENT);
 
             return null;
