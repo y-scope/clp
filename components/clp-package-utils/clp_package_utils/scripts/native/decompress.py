@@ -235,7 +235,7 @@ def handle_extract_file_cmd(
     extract_cmd = [
         str(clp_home / "bin" / "clp"),
         "x", str(archives_dir), str(extraction_dir),
-        "--db-type", "mysql",
+        "--db-type", clp_db_connection_params["type"],
         "--db-host", clp_db_connection_params["host"],
         "--db-port", str(clp_db_connection_params["port"]),
         "--db-name", clp_db_connection_params["name"],
