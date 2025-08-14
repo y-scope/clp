@@ -9,9 +9,8 @@ from pathlib import Path
 
 from clp_py_utils.clp_config import Database
 from clp_py_utils.clp_metadata_db_utils import (
-    get_archive_tags_table_name,
+    delete_archives_from_metadata_db,
     get_archives_table_name,
-    get_files_table_name,
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
 
@@ -21,16 +20,16 @@ from clp_package_utils.general import (
     get_clp_home,
     load_config_file,
 )
+from clp_package_utils.scripts.archive_manager import (
+    BEGIN_TS_ARG,
+    DEL_BY_FILTER_SUBCOMMAND,
+    DEL_BY_IDS_SUBCOMMAND,
+    DEL_COMMAND,
+    DRY_RUN_ARG,
+    END_TS_ARG,
+    FIND_COMMAND,
+)
 from clp_package_utils.scripts.native.utils import validate_dataset_exists
-
-# Command/Argument Constants
-FIND_COMMAND: str = "find"
-DEL_COMMAND: str = "del"
-DEL_BY_IDS_SUBCOMMAND: str = "by-ids"
-DEL_BY_FILTER_SUBCOMMAND: str = "by-filter"
-BEGIN_TS_ARG: str = "--begin-ts"
-END_TS_ARG: str = "--end-ts"
-DRY_RUN_ARG: str = "--dry-run"
 
 logger: logging.Logger = logging.getLogger(__file__)
 
@@ -325,13 +324,13 @@ def _delete_archives(
 
     archive_ids: typing.List[str]
     logger.info("Starting to delete archives from the database.")
-    try:
-        sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
-        clp_db_connection_params: dict[str, any] = (
-            database_config.get_clp_connection_params_and_type(True)
-        )
-        table_prefix = clp_db_connection_params["table_prefix"]
+    sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
+    clp_db_connection_params: dict[str, any] = database_config.get_clp_connection_params_and_type(
+        True
+    )
+    table_prefix = clp_db_connection_params["table_prefix"]
 
+    try:
         with closing(sql_adapter.create_connection(True)) as db_conn, closing(
             db_conn.cursor(dictionary=True)
         ) as db_cursor:
@@ -343,9 +342,8 @@ def _delete_archives(
 
             db_cursor.execute(
                 f"""
-                DELETE FROM `{get_archives_table_name(table_prefix, dataset)}`
+                SELECT id FROM `{get_archives_table_name(table_prefix, dataset)}`
                 WHERE {query_criteria}
-                RETURNING id
                 """,
                 query_params,
             )
@@ -358,21 +356,7 @@ def _delete_archives(
             archive_ids: typing.List[str] = [result["id"] for result in results]
             delete_handler.validate_results(archive_ids)
 
-            ids_list_string: str = ", ".join(["'%s'"] * len(archive_ids))
-
-            db_cursor.execute(
-                f"""
-                DELETE FROM `{get_files_table_name(table_prefix, dataset)}`
-                WHERE archive_id in ({ids_list_string})
-                """
-            )
-
-            db_cursor.execute(
-                f"""
-                DELETE FROM `{get_archive_tags_table_name(table_prefix, dataset)}`
-                WHERE archive_id in ({ids_list_string})
-                """
-            )
+            delete_archives_from_metadata_db(db_cursor, archive_ids, table_prefix, dataset)
             for archive_id in archive_ids:
                 logger.info(f"Deleted archive {archive_id} from the database.")
 
