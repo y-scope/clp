@@ -43,7 +43,7 @@ const PrestoProgress = () => {
             style={{lineHeight: 0,
                 opacity: null === progress ?
                     0 :
-                    100}}/>
+                    1}}/>
     );
 };
 

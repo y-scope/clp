@@ -1,5 +1,6 @@
 import {
     useCallback,
+    useEffect,
     useRef,
     useState,
 } from "react";
@@ -52,6 +53,15 @@ const usePseudoProgress = (): {
         clearInterval(intervalIdRef.current);
         intervalIdRef.current = 0;
         setProgress(null);
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            if (0 !== intervalIdRef.current) {
+                clearInterval(intervalIdRef.current);
+                intervalIdRef.current = 0;
+            }
+        };
     }, []);
 
     return {
