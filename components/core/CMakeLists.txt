@@ -297,16 +297,14 @@ if(CLP_NEED_YSTDLIB)
     add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
 endif()
 
-# Find and setup ZStd Library
 if(CLP_NEED_ZSTD)
+    # v1.4.8 is the lowest version available in the package managers of the OSes we support.
+    find_package(zstd 1.4.8 REQUIRED)
+    message(STATUS "Found zstd ${zstd_VERSION}")
     if(CLP_USE_STATIC_LIBS)
-        set(ZStd_USE_STATIC_LIBS ON)
-    endif()
-    find_package(ZStd 1.4.4 REQUIRED)
-    if(ZStd_FOUND)
-        message(STATUS "Found ZStd ${ZStd_VERSION}")
+        set(zstd_TARGET zstd::libzstd_static)
     else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
+        set(zstd_TARGET zstd::libzstd_shared)
     endif()
 endif()
 
@@ -560,6 +558,8 @@ set(SOURCE_FILES_unitTest
         src/clp/FileReader.hpp
         src/clp/FileWriter.cpp
         src/clp/FileWriter.hpp
+        src/clp/global_metadata_db_utils.hpp
+        src/clp/global_metadata_db_utils.cpp
         src/clp/GlobalMetadataDB.hpp
         src/clp/GlobalMetadataDBConfig.cpp
         src/clp/GlobalMetadataDBConfig.hpp
@@ -710,6 +710,7 @@ set(SOURCE_FILES_unitTest
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
+        tests/test-GlobalMetadataDBConfig.cpp
         tests/test-GrepCore.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
@@ -768,11 +769,10 @@ if(CLP_BUILD_TESTING)
             ${STD_FS_LIBS}
             clp::regex_utils
             clp::string_utils
-            yaml-cpp
             ystdlib::containers
             ystdlib::error_handling
             ${LIBLZMA_LIBRARIES}
-            ZStd::ZStd
+            ${zstd_TARGET}
             )
     target_compile_features(unitTest
             PRIVATE cxx_std_20

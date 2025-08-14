@@ -67,6 +67,7 @@ tasks:
       - task: "date"
       - task: "fmt"
       - task: "log-surgeon"
+      - task: "lz4"
       - task: "microsoft.gsl"
       - task: "mongocxx"
       - task: "nlohmann_json"
@@ -76,6 +77,7 @@ tasks:
       - task: "utfcpp"
       - task: "yaml-cpp"
       - task: "ystdlib"
+      - task: "zstd"
 
   absl:
     internal: true
@@ -235,8 +237,25 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-Dlog_surgeon_BUILD_TESTING=OFF"
           LIB_NAME: "log_surgeon"
-          TARBALL_SHA256: "d91a7469db437162d518eb0f9175268084b478b5003163d0f6233abbbce9b0f8"
-          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/dfd5c79.tar.gz"
+          TARBALL_SHA256: "6053f7e26ff21aef0c4cf409502d3abb0cfcf76d8f76786c3bb1bcc03e8f5df2"
+          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/a82ad13.tar.gz"
+
+  lz4:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_SHARED_LIBS=ON"
+            - "-DBUILD_STATIC_LIBS=ON"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DLZ4_BUILD_CLI=OFF"
+          CMAKE_SOURCE_DIR: "build/cmake"
+          LIB_NAME: "lz4"
+          TARBALL_SHA256: "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b"
+          TARBALL_URL: "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz"
 
   microsoft.gsl:
     internal: true
@@ -413,3 +432,22 @@ tasks:
         echo "set(
         CLP_YSTDLIB_SOURCE_DIRECTORY \"{{.YSTDLIB_OUTPUT_DIR}}\"
         )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+
+  zstd:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DZSTD_BUILD_CONTRIB=OFF"
+            - "-DZSTD_BUILD_PROGRAMS=OFF"
+            - "-DZSTD_BUILD_SHARED=ON"
+            - "-DZSTD_BUILD_STATIC=ON"
+            - "-DZSTD_BUILD_TESTS=OFF"
+          CMAKE_SOURCE_DIR: "build/cmake"
+          LIB_NAME: "zstd"
+          TARBALL_SHA256: "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
+          TARBALL_URL: "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz"

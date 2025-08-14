@@ -97,6 +97,13 @@ class CLPDockerMounts:
         self.generated_config_file: typing.Optional[DockerMount] = None
 
 
+def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
+    try:
+        validate_path_could_be_dir(data_dir)
+    except ValueError as ex:
+        raise ValueError(f"{component_name} data directory is invalid: {ex}")
+
+
 def get_clp_home():
     # Determine CLP_HOME from an environment variable or this script's path
     clp_home = None
@@ -174,6 +181,13 @@ def is_container_exited(container_name):
         return True
 
     return False
+
+
+def validate_log_directory(logs_dir: pathlib.Path, component_name: str) -> None:
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{component_name} logs directory is invalid: {ex}")
 
 
 def validate_port(port_name: str, hostname: str, port: int):
@@ -451,24 +465,14 @@ def validate_and_load_redis_credentials_file(
 
 
 def validate_db_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):
-    try:
-        validate_path_could_be_dir(data_dir)
-    except ValueError as ex:
-        raise ValueError(f"{DB_COMPONENT_NAME} data directory is invalid: {ex}")
-
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{DB_COMPONENT_NAME} logs directory is invalid: {ex}")
+    _validate_data_directory(data_dir, DB_COMPONENT_NAME)
+    validate_log_directory(logs_dir, DB_COMPONENT_NAME)
 
     validate_port(f"{DB_COMPONENT_NAME}.port", clp_config.database.host, clp_config.database.port)
 
 
 def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{QUEUE_COMPONENT_NAME} logs directory is invalid: {ex}")
+    validate_log_directory(logs_dir, QUEUE_COMPONENT_NAME)
 
     validate_port(f"{QUEUE_COMPONENT_NAME}.port", clp_config.queue.host, clp_config.queue.port)
 
@@ -476,15 +480,8 @@ def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
 def validate_redis_config(
     clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path, base_config: pathlib.Path
 ):
-    try:
-        validate_path_could_be_dir(data_dir)
-    except ValueError as ex:
-        raise ValueError(f"{REDIS_COMPONENT_NAME} data directory is invalid {ex}")
-
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{REDIS_COMPONENT_NAME} logs directory is invalid: {ex}")
+    _validate_data_directory(data_dir, REDIS_COMPONENT_NAME)
+    validate_log_directory(logs_dir, REDIS_COMPONENT_NAME)
 
     if not base_config.exists():
         raise ValueError(
@@ -495,10 +492,7 @@ def validate_redis_config(
 
 
 def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_workers: int):
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{REDUCER_COMPONENT_NAME} logs directory is invalid: {ex}")
+    validate_log_directory(logs_dir, REDUCER_COMPONENT_NAME)
 
     for i in range(0, num_workers):
         validate_port(
@@ -511,15 +505,8 @@ def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_w
 def validate_results_cache_config(
     clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path
 ):
-    try:
-        validate_path_could_be_dir(data_dir)
-    except ValueError as ex:
-        raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME} data directory is invalid: {ex}")
-
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME} logs directory is invalid: {ex}")
+    _validate_data_directory(data_dir, RESULTS_CACHE_COMPONENT_NAME)
+    validate_log_directory(logs_dir, RESULTS_CACHE_COMPONENT_NAME)
 
     validate_port(
         f"{RESULTS_CACHE_COMPONENT_NAME}.port",
@@ -528,8 +515,11 @@ def validate_results_cache_config(
     )
 
 
-def validate_worker_config(clp_config: CLPConfig):
+def validate_logs_input_config(clp_config: CLPConfig) -> None:
     clp_config.validate_logs_input_config()
+
+
+def validate_output_storage_config(clp_config: CLPConfig) -> None:
     clp_config.validate_archive_output_config()
     clp_config.validate_stream_output_config()
 
@@ -611,6 +601,15 @@ def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
             f" {dataset_name_max_len} characters long."
         )
 
+
+def is_retention_period_configured(clp_config: CLPConfig) -> bool:
+    if clp_config.archive_output.retention_period is not None:
+        return True
+
+    if clp_config.results_cache.retention_period is not None:
+        return True
+
+    return False
 
 def generate_common_environment_variables(
     include_clp_home=True,
