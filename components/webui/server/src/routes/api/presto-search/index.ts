@@ -168,6 +168,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 throw error;
             }
 
+            await mongoDb.createCollection(searchJobId);
+
             reply.code(StatusCodes.CREATED);
 
             return {searchJobId};
@@ -196,7 +198,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     resolve();
                 });
             });
-            request.log.info(searchJobId, "Presto search cancelled");
+            request.log.info({searchJobId}, "Presto search cancelled");
             reply.code(StatusCodes.NO_CONTENT);
 
             return null;

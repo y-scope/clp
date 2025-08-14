@@ -2,7 +2,7 @@ import {
     CLP_STORAGE_ENGINES,
     SETTINGS_STORAGE_ENGINE,
 } from "../../../../config";
-import type {SearchResult} from "./typings";
+import type {SearchResult} from "./SearchResultsVirtualTable/typings";
 
 
 /**
