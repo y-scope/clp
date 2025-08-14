@@ -1330,7 +1330,8 @@ def main(argv):
 
         if WEBUI_COMPONENT_NAME in components_to_start:
             start_webui(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, GARBAGE_COLLECTOR_NAME):
+
+        if GARBAGE_COLLECTOR_NAME in components_to_start:
             start_garbage_collector(instance_id, clp_config, container_clp_config, mounts)
 
     except Exception as ex:
