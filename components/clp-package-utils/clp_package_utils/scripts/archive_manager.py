@@ -268,7 +268,7 @@ def main(argv: typing.List[str]) -> int:
     proc = subprocess.run(cmd)
     ret_code = proc.returncode
     if 0 != ret_code:
-        logger.error("Dataset manager failed.")
+        logger.error("Archive manager failed.")
         logger.debug(f"Docker command failed: {' '.join(cmd)}")
 
     # Remove generated files
