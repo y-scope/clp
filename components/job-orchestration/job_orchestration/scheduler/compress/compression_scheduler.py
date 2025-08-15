@@ -383,6 +383,7 @@ def poll_running_jobs(db_conn, db_cursor):
         jobs_to_delete.append(job_id)
 
     for job_id in jobs_to_delete:
+        scheduled_jobs[job_id].async_task_result.forget()
         del scheduled_jobs[job_id]
 
 
