@@ -7,6 +7,7 @@
 #include "../clp/Defs.h"
 #include "DictionaryWriter.hpp"
 #include "FileWriter.hpp"
+#include "FloatFormatEncoding.hpp"
 #include "ParsedMessage.hpp"
 #include "TimestampDictionaryWriter.hpp"
 #include "ZstdCompressor.hpp"
@@ -96,6 +97,24 @@ public:
 
 private:
     std::vector<double> m_values;
+};
+
+class FormattedFloatColumnWriter : public BaseColumnWriter {
+public:
+    // Constructor
+    explicit FormattedFloatColumnWriter(int32_t id) : BaseColumnWriter(id) {}
+
+    // Destructor
+    ~FormattedFloatColumnWriter() override = default;
+
+    // Methods inherited from BaseColumnWriter
+    size_t add_value(ParsedMessage::variable_t& value) override;
+
+    void store(ZstdCompressor& compressor) override;
+
+private:
+    std::vector<double> m_values;
+    std::vector<uint16_t> m_format;
 };
 
 class BooleanColumnWriter : public BaseColumnWriter {
