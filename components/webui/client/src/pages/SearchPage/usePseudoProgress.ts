@@ -5,7 +5,7 @@ import {
     useState,
 } from "react";
 
-import {Nullable} from "../typings/common";
+import {Nullable} from "../../typings/common";
 
 
 /**
@@ -20,7 +20,7 @@ const PROGRESS_INTERVAL_MILLIS = 100;
 
 /**
  * A custom hook to manage a pseudo progress value.
- * The progress increases gradually to a random value and then can be reset.
+ * The progress increases gradually and can be reset.
  *
  * @return
  */

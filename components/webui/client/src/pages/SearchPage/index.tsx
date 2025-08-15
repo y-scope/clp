@@ -3,7 +3,7 @@ import {
     SETTINGS_QUERY_ENGINE,
 } from "../../config";
 import styles from "./index.module.css";
-import {PrestoProgress} from "./PrestoProgress";
+import {PageProgress} from "./Presto/PageProgress";
 import SearchControls from "./SearchControls";
 import SearchQueryStatus from "./SearchQueryStatus";
 import SearchResultsTable from "./SearchResults/SearchResultsTable";
@@ -21,7 +21,7 @@ const SearchPage = () => {
 
     return (
         <>
-            {SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO && <PrestoProgress/>}
+            {SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO && <PageProgress/>}
             <div className={styles["searchPageContainer"]}>
                 <div>
                     <SearchControls/>

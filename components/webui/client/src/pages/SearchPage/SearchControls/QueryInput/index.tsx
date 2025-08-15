@@ -8,9 +8,9 @@ import {
 import type {InputRef} from "antd";
 
 import QueryBox from "../../../../components/QueryBox";
-import {usePseudoProgress} from "../../../../components/usePseudoProgress";
 import useSearchStore from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
+import {usePseudoProgress} from "../../usePseudoProgress";
 
 
 /**
@@ -23,7 +23,6 @@ const QueryInput = () => {
     const queryString = useSearchStore((state) => state.queryString);
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const {progress: pseudoProgress, start, stop} = usePseudoProgress();
-    const intervalIdRef = useRef<number>(0);
     const inputRef = useRef<InputRef>(null);
 
     const handleCaseSensitiveChange = useCallback((newValue: boolean) => {
@@ -48,11 +47,6 @@ const QueryInput = () => {
     }, [searchUiState,
         start,
         stop]);
-
-    // Clear the interval if the component unmounts.
-    useEffect(() => {
-        clearInterval(intervalIdRef.current);
-    }, []);
 
     useEffect(() => {
         if (

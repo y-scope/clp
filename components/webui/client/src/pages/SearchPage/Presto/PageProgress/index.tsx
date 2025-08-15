@@ -2,9 +2,9 @@ import {useEffect} from "react";
 
 import {Progress} from "antd";
 
-import {usePseudoProgress} from "../../../components/usePseudoProgress";
-import useSearchStore from "../SearchState";
-import {SEARCH_UI_STATE} from "../SearchState/typings";
+import useSearchStore from "../../SearchState";
+import {SEARCH_UI_STATE} from "../../SearchState/typings";
+import {usePseudoProgress} from "../../usePseudoProgress";
 import styles from "./index.module.css";
 
 
@@ -13,7 +13,7 @@ import styles from "./index.module.css";
  *
  * @return
  */
-const PrestoProgress = () => {
+const PageProgress = () => {
     const {searchUiState} = useSearchStore.getState();
     const {
         progress,
@@ -42,10 +42,10 @@ const PrestoProgress = () => {
             size={"small"}
             status={"active"}
             strokeLinecap={"butt"}
-            style={{opacity: null === progress ?
-                0 :
-                1}}/>
+            style={{display: null === progress ?
+                "none" :
+                "block"}}/>
     );
 };
 
-export {PrestoProgress};
+export {PageProgress};
