@@ -22,7 +22,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_WORKER_COMPONENT_NAME,
     CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
-    GARBAGE_COLLECTOR_NAME,
+    GARBAGE_COLLECTOR_COMPONENT_NAME,
     get_components_for_target,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
@@ -69,6 +69,7 @@ from clp_package_utils.general import (
     validate_redis_config,
     validate_reducer_config,
     validate_results_cache_config,
+    validate_retention_config,
     validate_webui_config,
 )
 
@@ -1067,7 +1068,7 @@ def start_garbage_collector(
     container_clp_config: CLPConfig,
     mounts: CLPDockerMounts,
 ):
-    component_name = GARBAGE_COLLECTOR_NAME
+    component_name = GARBAGE_COLLECTOR_COMPONENT_NAME
 
     if not is_retention_period_configured(clp_config):
         logger.info(f"Retention period is not configured, skipping {component_name} creation...")
@@ -1179,7 +1180,7 @@ def main(argv):
     reducer_server_parser = component_args_parser.add_parser(REDUCER_COMPONENT_NAME)
     add_num_workers_argument(reducer_server_parser)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
-    component_args_parser.add_parser(GARBAGE_COLLECTOR_NAME)
+    component_args_parser.add_parser(GARBAGE_COLLECTOR_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -1213,7 +1214,7 @@ def main(argv):
             ALL_TARGET_NAME,
             CONTROLLER_TARGET_NAME,
             DB_COMPONENT_NAME,
-            GARBAGE_COLLECTOR_NAME,
+            GARBAGE_COLLECTOR_COMPONENT_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
             QUERY_SCHEDULER_COMPONENT_NAME,
             WEBUI_COMPONENT_NAME,
@@ -1248,9 +1249,15 @@ def main(argv):
             ALL_TARGET_NAME,
             COMPRESSION_WORKER_COMPONENT_NAME,
             QUERY_WORKER_COMPONENT_NAME,
-            GARBAGE_COLLECTOR_NAME,
+            GARBAGE_COLLECTOR_COMPONENT_NAME,
         ):
             validate_output_storage_config(clp_config)
+        if target in (
+            ALL_TARGET_NAME,
+            CONTROLLER_TARGET_NAME,
+            GARBAGE_COLLECTOR_COMPONENT_NAME,
+        ):
+            validate_retention_config(clp_config)
 
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()
@@ -1330,7 +1337,8 @@ def main(argv):
 
         if WEBUI_COMPONENT_NAME in components_to_start:
             start_webui(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, GARBAGE_COLLECTOR_NAME):
+
+        if GARBAGE_COLLECTOR_COMPONENT_NAME in components_to_start:
             start_garbage_collector(instance_id, clp_config, container_clp_config, mounts)
 
     except Exception as ex:
