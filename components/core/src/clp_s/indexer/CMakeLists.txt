@@ -122,7 +122,6 @@ if(CLP_BUILD_EXECUTABLES)
                 OpenSSL::Crypto
                 simdjson::simdjson
                 spdlog::spdlog
-                yaml-cpp
                 ystdlib::containers
                 ${zstd_TARGET}
         )
