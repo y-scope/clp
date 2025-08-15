@@ -180,7 +180,6 @@ function(set_clp_tests_dependencies)
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
         CLP_NEED_SQLITE
-        CLP_NEED_YAMLCPP
         CLP_NEED_YSTDLIB
         CLP_NEED_ZSTD
     )
@@ -249,6 +248,7 @@ function(set_clp_s_clp_dependencies_dependencies)
         CLP_NEED_BOOST
         CLP_NEED_CURL
         CLP_NEED_FMT
+        CLP_NEED_LOG_SURGEON
         CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
         CLP_NEED_OPENSSL
@@ -311,6 +311,7 @@ endfunction()
 function(set_clp_s_search_dependencies)
     set_clp_need_flags(
         CLP_NEED_ABSL
+        CLP_NEED_LOG_SURGEON
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
     )

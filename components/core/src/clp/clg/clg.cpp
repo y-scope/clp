@@ -2,14 +2,16 @@
 
 #include <filesystem>
 #include <iostream>
+#include <set>
 
 #include <log_surgeon/Lexer.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
+#include <string_utils/string_utils.hpp>
 
 #include "../Defs.h"
-#include "../GlobalMySQLMetadataDB.hpp"
-#include "../GlobalSQLiteMetadataDB.hpp"
+#include "../global_metadata_db_utils.hpp"
 #include "../Grep.hpp"
+#include "../GrepCore.hpp"
 #include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/Constants.hpp"
@@ -25,7 +27,9 @@ using clp::FileReader;
 using clp::GlobalMetadataDB;
 using clp::GlobalMetadataDBConfig;
 using clp::Grep;
+using clp::GrepCore;
 using clp::load_lexer_from_file;
+using clp::logtype_dictionary_id_t;
 using clp::Profiler;
 using clp::Query;
 using clp::segment_id_t;
@@ -33,7 +37,9 @@ using clp::streaming_archive::MetadataDB;
 using clp::streaming_archive::reader::Archive;
 using clp::streaming_archive::reader::File;
 using clp::streaming_archive::reader::Message;
+using clp::string_utils::clean_up_wildcard_search_string;
 using clp::TraceableException;
+using clp::variable_dictionary_id_t;
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -48,19 +54,6 @@ using std::vector;
  * @return true on success, false otherwise
  */
 static bool open_archive(string const& archive_path, Archive& archive_reader);
-/**
- * Searches the archive with the given parameters
- * @param search_strings
- * @param command_line_args
- * @param archive
- * @return true on success, false otherwise
- */
-static bool search(
-        vector<string> const& search_strings,
-        CommandLineArguments& command_line_args,
-        Archive& archive,
-        bool use_heuristic
-);
 /**
  * Opens a compressed file or logs any errors if it couldn't be opened
  * @param file_metadata_ix
@@ -205,8 +198,7 @@ static bool search(
         vector<string> const& search_strings,
         CommandLineArguments& command_line_args,
         Archive& archive,
-        log_surgeon::lexers::ByteLexer& forward_lexer,
-        log_surgeon::lexers::ByteLexer& reverse_lexer,
+        log_surgeon::lexers::ByteLexer& lexer,
         bool use_heuristic
 ) {
     ErrorCode error_code;
@@ -219,14 +211,16 @@ static bool search(
         std::set<segment_id_t> ids_of_segments_to_search;
         bool is_superseding_query = false;
         for (auto const& search_string : search_strings) {
-            auto query_processing_result = Grep::process_raw_query(
-                    archive,
+            auto const& logtype_dict{archive.get_logtype_dictionary()};
+            auto const& var_dict{archive.get_var_dictionary()};
+            auto query_processing_result = GrepCore::process_raw_query(
+                    logtype_dict,
+                    var_dict,
                     search_string,
                     search_begin_ts,
                     search_end_ts,
                     command_line_args.ignore_case(),
-                    forward_lexer,
-                    reverse_lexer,
+                    lexer,
                     use_heuristic
             );
             if (query_processing_result.has_value()) {
@@ -243,6 +237,24 @@ static bool search(
                     // All other search strings will be superseded by this one, so break
                     break;
                 }
+
+                // Calculate the IDs of the segments that may contain results for each sub-query.
+                auto get_segments_containing_logtype_dict_id
+                        = [&logtype_dict](
+                                  logtype_dictionary_id_t logtype_id
+                          ) -> std::set<segment_id_t> const& {
+                    return logtype_dict.get_entry(logtype_id)
+                            .get_ids_of_segments_containing_entry();
+                };
+                auto get_segments_containing_var_dict_id = [&var_dict](
+                                                                   variable_dictionary_id_t var_id
+                                                           ) -> std::set<segment_id_t> const& {
+                    return var_dict.get_entry(var_id).get_ids_of_segments_containing_entry();
+                };
+                query.calculate_ids_of_matching_segments(
+                        get_segments_containing_logtype_dict_id,
+                        get_segments_containing_var_dict_id
+                );
 
                 queries.push_back(query);
 
@@ -489,16 +501,20 @@ int main(int argc, char const* argv[]) {
 
     Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::Search>();
 
+    auto add_implicit_wildcards = [](string const& search_string) -> string {
+        return clean_up_wildcard_search_string('*' + search_string + '*');
+    };
+
     // Create vector of search strings
     vector<string> search_strings;
     if (command_line_args.get_search_strings_file_path().empty()) {
-        search_strings.push_back(command_line_args.get_search_string());
+        search_strings.emplace_back(add_implicit_wildcards(command_line_args.get_search_string()));
     } else {
         FileReader file_reader{command_line_args.get_search_strings_file_path()};
         string line;
         while (file_reader.read_to_delimiter('\n', false, false, line)) {
             if (!line.empty()) {
-                search_strings.push_back(line);
+                search_strings.emplace_back(add_implicit_wildcards(line));
             }
         }
     }
@@ -518,39 +534,19 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
 
-    auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
-    std::unique_ptr<GlobalMetadataDB> global_metadata_db;
-    switch (global_metadata_db_config.get_metadata_db_type()) {
-        case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
-            auto global_metadata_db_path
-                    = archives_dir / clp::streaming_archive::cMetadataDBFileName;
-            global_metadata_db = std::make_unique<clp::GlobalSQLiteMetadataDB>(
-                    global_metadata_db_path.string()
-            );
-            break;
-        }
-        case GlobalMetadataDBConfig::MetadataDBType::MySQL:
-            global_metadata_db = std::make_unique<clp::GlobalMySQLMetadataDB>(
-                    global_metadata_db_config.get_metadata_db_host(),
-                    global_metadata_db_config.get_metadata_db_port(),
-                    global_metadata_db_config.get_metadata_db_username(),
-                    global_metadata_db_config.get_metadata_db_password(),
-                    global_metadata_db_config.get_metadata_db_name(),
-                    global_metadata_db_config.get_metadata_table_prefix()
-            );
-            break;
+    auto global_metadata_db
+            = create_global_metadata_db(command_line_args.get_metadata_db_config(), archives_dir);
+    if (nullptr == global_metadata_db) {
+        return -1;
     }
     global_metadata_db->open();
 
     // TODO: if performance is too slow, can make this more efficient by only diffing files with the
     // same checksum
     uint32_t const max_map_schema_length = 100'000;
-    std::map<std::string, log_surgeon::lexers::ByteLexer> forward_lexer_map;
-    std::map<std::string, log_surgeon::lexers::ByteLexer> reverse_lexer_map;
-    log_surgeon::lexers::ByteLexer one_time_use_forward_lexer;
-    log_surgeon::lexers::ByteLexer one_time_use_reverse_lexer;
-    log_surgeon::lexers::ByteLexer* forward_lexer_ptr;
-    log_surgeon::lexers::ByteLexer* reverse_lexer_ptr;
+    std::map<std::string, log_surgeon::lexers::ByteLexer> lexer_map;
+    log_surgeon::lexers::ByteLexer one_time_use_lexer;
+    log_surgeon::lexers::ByteLexer* lexer_ptr;
 
     string archive_id;
     Archive archive_reader;
@@ -592,46 +588,24 @@ int main(int argc, char const* argv[]) {
             size_t num_bytes_read;
             file_reader.read(buf, max_map_schema_length, num_bytes_read);
             if (num_bytes_read < max_map_schema_length) {
-                auto forward_lexer_map_it = forward_lexer_map.find(buf);
-                auto reverse_lexer_map_it = reverse_lexer_map.find(buf);
+                auto lexer_map_it = lexer_map.find(buf);
                 // if there is a chance there might be a difference make a new lexer as it's pretty
                 // fast to create
-                if (forward_lexer_map_it == forward_lexer_map.end()) {
-                    // Create forward lexer
-                    auto insert_result
-                            = forward_lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
-                    forward_lexer_ptr = &insert_result.first->second;
-                    load_lexer_from_file(schema_file_path, false, *forward_lexer_ptr);
-
-                    // Create reverse lexer
-                    insert_result
-                            = reverse_lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
-                    reverse_lexer_ptr = &insert_result.first->second;
-                    load_lexer_from_file(schema_file_path, true, *reverse_lexer_ptr);
+                if (lexer_map_it == lexer_map.end()) {
+                    auto insert_result = lexer_map.emplace(buf, log_surgeon::lexers::ByteLexer());
+                    lexer_ptr = &insert_result.first->second;
+                    load_lexer_from_file(schema_file_path, *lexer_ptr);
                 } else {
-                    // load the lexers if they already exist
-                    forward_lexer_ptr = &forward_lexer_map_it->second;
-                    reverse_lexer_ptr = &reverse_lexer_map_it->second;
+                    lexer_ptr = &lexer_map_it->second;
                 }
             } else {
-                // Create forward lexer
-                forward_lexer_ptr = &one_time_use_forward_lexer;
-                load_lexer_from_file(schema_file_path, false, one_time_use_forward_lexer);
-
-                // Create reverse lexer
-                reverse_lexer_ptr = &one_time_use_reverse_lexer;
-                load_lexer_from_file(schema_file_path, false, one_time_use_reverse_lexer);
+                lexer_ptr = &one_time_use_lexer;
+                load_lexer_from_file(schema_file_path, one_time_use_lexer);
             }
         }
 
         // Perform search
-        if (!search(search_strings,
-                    command_line_args,
-                    archive_reader,
-                    *forward_lexer_ptr,
-                    *reverse_lexer_ptr,
-                    use_heuristic))
-        {
+        if (!search(search_strings, command_line_args, archive_reader, *lexer_ptr, use_heuristic)) {
             return -1;
         }
         archive_reader.close();

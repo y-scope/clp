@@ -6,6 +6,7 @@ import {
     useState,
 } from "react";
 
+import type {InputRef} from "antd";
 import {Nullable} from "src/typings/common";
 
 import QueryBox from "../../../../components/QueryBox";
@@ -28,6 +29,7 @@ const QueryInput = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const [pseudoProgress, setPseudoProgress] = useState<Nullable<number>>(null);
     const intervalIdRef = useRef<number>(0);
+    const inputRef = useRef<InputRef>(null);
 
     const handleCaseSensitiveChange = useCallback((newValue: boolean) => {
         const {updateQueryIsCaseSensitive} = useSearchStore.getState();
@@ -55,7 +57,10 @@ const QueryInput = () => {
                     return (v ?? 0) + PROGRESS_INCREMENT;
                 });
             }, PROGRESS_INTERVAL_MILLIS);
-        } else if (searchUiState === SEARCH_UI_STATE.DONE) {
+        } else if (
+            searchUiState === SEARCH_UI_STATE.DONE ||
+            searchUiState === SEARCH_UI_STATE.FAILED
+        ) {
             clearInterval(intervalIdRef.current);
             intervalIdRef.current = 0;
             setPseudoProgress(null);
@@ -67,11 +72,22 @@ const QueryInput = () => {
         clearInterval(intervalIdRef.current);
     }, []);
 
+    useEffect(() => {
+        if (
+            searchUiState === SEARCH_UI_STATE.DEFAULT ||
+            searchUiState === SEARCH_UI_STATE.DONE ||
+            searchUiState === SEARCH_UI_STATE.FAILED
+        ) {
+            inputRef.current?.focus();
+        }
+    }, [searchUiState]);
+
     return (
         <QueryBox
             isCaseSensitive={queryIsCaseSensitive}
             placeholder={"Enter your query"}
             progress={pseudoProgress}
+            ref={inputRef}
             size={"large"}
             value={queryString}
             disabled={
