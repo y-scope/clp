@@ -10,7 +10,7 @@ if [ "$#" -lt 1 ] ; then
 fi
 version="$1"
 prefix="${2:-/opt/openssl-${version}}"
-openssldir="${3:-$prefix/ssl}"  # Default to prefix if not specified
+openssldir="${3:-$prefix/ssl}"  # Default to prefix/ssl if not specified
 
 package_name=openssl-${version}
 temp_dir="/tmp/${package_name}-installation"
