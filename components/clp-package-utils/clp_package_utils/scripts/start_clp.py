@@ -913,6 +913,9 @@ def start_webui(
         "ClientDir": str(container_webui_dir / "client"),
         "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
         "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
+        "ClpQueryEngine": clp_config.package.query_engine,
+        "PrestoHost": clp_config.presto.host,
+        "PrestoPort": clp_config.presto.port,
     }
 
     container_cmd_extra_opts = []

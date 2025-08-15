@@ -700,6 +700,21 @@ class GarbageCollector(BaseModel):
         return field
 
 
+class Presto(BaseModel):
+    host: str = "localhost"
+    port: int = 8889
+
+    @validator("host")
+    def validate_host(cls, field):
+        _validate_host(cls, field)
+        return field
+
+    @validator("port")
+    def validate_port(cls, field):
+        _validate_port(cls, field)
+        return field
+
+
 class CLPConfig(BaseModel):
     execution_container: Optional[str] = None
 
@@ -717,6 +732,7 @@ class CLPConfig(BaseModel):
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
+    presto: Presto = Presto()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
