@@ -5,6 +5,7 @@ import {
     Button,
     Tooltip,
 } from "antd";
+import dayjs from "dayjs";
 
 import {
     CLP_STORAGE_ENGINES,
@@ -14,6 +15,7 @@ import {computeTimelineConfig} from "../../../SearchResults/SearchResultsTimelin
 import useSearchStore from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import {handleQuerySubmit} from "../../search-requests";
+import {TIME_RANGE_OPTION} from "../../TimeRangeInput/utils";
 import styles from "./index.module.css";
 
 
@@ -25,6 +27,7 @@ import styles from "./index.module.css";
 const SubmitButton = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const timeRange = useSearchStore((state) => state.timeRange);
+    const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
     const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
     const queryString = useSearchStore((state) => state.queryString);
     const selectDataset = useSearchStore((state) => state.selectDataset);
@@ -39,7 +42,9 @@ const SubmitButton = () => {
         const {updateTimelineConfig} = useSearchStore.getState();
         updateTimelineConfig(newTimelineConfig);
 
-        if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
+        const usingClpS = (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE);
+
+        if (usingClpS) {
             if (null !== selectDataset) {
                 updateCachedDataset(selectDataset);
             } else {
@@ -49,17 +54,32 @@ const SubmitButton = () => {
             }
         }
 
+        let tBegin: dayjs.Dayjs | null;
+        let tEnd: dayjs.Dayjs | null;
+
+        if (usingClpS && TIME_RANGE_OPTION.ALL_TIME === timeRangeOption) {
+            tBegin = null;
+            tEnd = null;
+        } else {
+            [tBegin, tEnd] = timeRange;
+        }
+
         handleQuerySubmit({
             dataset: selectDataset,
             ignoreCase: false === queryIsCaseSensitive,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
-            timestampBegin: timeRange[0].valueOf(),
-            timestampEnd: timeRange[1].valueOf(),
+            timestampBegin: tBegin ?
+                tBegin.valueOf() :
+                null,
+            timestampEnd: tEnd ?
+                tEnd.valueOf() :
+                null,
         });
     }, [queryString,
         queryIsCaseSensitive,
         timeRange,
+        timeRangeOption,
         selectDataset,
         updateCachedDataset]);
 
