@@ -166,9 +166,7 @@ endif()
 
 if(CLP_NEED_CATCH2)
     find_package(Catch2 3.8.0 REQUIRED)
-    if (Catch2_FOUND)
-        message(STATUS "Found Catch2 ${Catch2_VERSION}")
-    endif()
+    message(STATUS "Found Catch2 ${Catch2_VERSION}")
 endif()
 
 if(CLP_NEED_DATE)
