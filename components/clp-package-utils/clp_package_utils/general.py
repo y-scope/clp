@@ -621,7 +621,7 @@ def generate_common_environment_variables(
     Generate a list of common environment variables for Docker containers.
 
     :param include_clp_home:
-    :return: List of environment variable strings in the format "KEY=VALUE".
+    :return: A list of common environment variables for Docker containers in the format "KEY=VALUE".
     """
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
@@ -645,7 +645,7 @@ def generate_credential_environment_variables(
     :param include_db_credentials:
     :param include_queue_credentials:
     :param include_redis_credentials:
-    :return: List of environment variable strings in the format "KEY=VALUE".
+    :return: A list of common environment variables for Docker containers in the format "KEY=VALUE".
     """
     env_vars = []
 
@@ -668,7 +668,7 @@ def generate_celery_connection_environment_variables(container_clp_config: CLPCo
     Generate a list of Celery connection environment variables for Docker containers.
 
     :param container_clp_config:
-    :return: List of environment variable strings in the format "KEY=VALUE".
+    :return: A list of common environment variables for Docker containers in the format "KEY=VALUE".
     """
     env_vars = [
         f"BROKER_URL=amqp://"
