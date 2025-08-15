@@ -20,14 +20,14 @@ from job_orchestration.scheduler.constants import (
 
 
 def kill_hanging_jobs(sql_adapter: SQL_Adapter, scheduler_type: str) -> Optional[List[str]]:
-    if scheduler_type == SchedulerType.QUERY:
+    if SchedulerType.COMPRESSION == scheduler_type:
         jobs_table_name = COMPRESSION_JOBS_TABLE_NAME
         job_status_running = CompressionJobStatus.RUNNING
         job_status_failed = CompressionJobStatus.FAILED
         tasks_table_name = COMPRESSION_TASKS_TABLE_NAME
         task_status_running = CompressionTaskStatus.RUNNING
         task_status_failed = CompressionTaskStatus.FAILED
-    elif scheduler_type == SchedulerType.COMPRESSION:
+    elif SchedulerType.QUERY == scheduler_type:
         jobs_table_name = QUERY_JOBS_TABLE_NAME
         job_status_running = QueryJobStatus.RUNNING
         job_status_failed = QueryJobStatus.FAILED
@@ -62,15 +62,20 @@ def kill_hanging_jobs(sql_adapter: SQL_Adapter, scheduler_type: str) -> Optional
             """,
             hanging_job_ids,
         )
+
+        jobs_update_config = {"status": job_status_failed, "duration": 0}
+        field_set_expressions = [f"{k} = %s" for k in jobs_update_config.keys()]
+        if SchedulerType.COMPRESSION == scheduler_type:
+            field_set_expressions.append("update_time = CURRENT_TIMESTAMP()")
+
+        values = list(jobs_update_config.values()) + hanging_job_ids
         db_cursor.execute(
             f"""
             UPDATE {jobs_table_name}
-            SET status={job_status_failed},
-                update_time = CURRENT_TIMESTAMP(),
-                duration=0
+            SET {", ".join(field_set_expressions)}
             WHERE id in ({job_id_placeholders_str})
             """,
-            hanging_job_ids,
+            values,
         )
         db_conn.commit()
         return hanging_job_ids
