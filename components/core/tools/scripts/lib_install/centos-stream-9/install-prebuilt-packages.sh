@@ -7,6 +7,7 @@ set -e
 set -u
 
 dnf install -y \
+    bzip2-devel \
     cmake \
     diffutils \
     gcc-c++ \
@@ -20,8 +21,10 @@ dnf install -y \
     make \
     mariadb-connector-c-devel \
     openssl-devel \
+    python3-devel \
     python3-pip \
-    unzip
+    unzip \
+    zlib-devel
 
 # Determine architecture for `task` release to install
 rpm_arch=$(rpm --eval "%{_arch}")
