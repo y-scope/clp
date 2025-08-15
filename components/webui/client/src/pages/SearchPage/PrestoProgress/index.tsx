@@ -5,6 +5,7 @@ import {Progress} from "antd";
 import {usePseudoProgress} from "../../../components/usePseudoProgress";
 import useSearchStore from "../SearchState";
 import {SEARCH_UI_STATE} from "../SearchState/typings";
+import styles from "./index.module.css";
 
 
 /**
@@ -35,15 +36,15 @@ const PrestoProgress = () => {
 
     return (
         <Progress
+            className={styles["prestoProgress"] || ""}
             percent={progress ?? 0}
             showInfo={false}
             size={"small"}
             status={"active"}
             strokeLinecap={"butt"}
-            style={{lineHeight: 0,
-                opacity: null === progress ?
-                    0 :
-                    1}}/>
+            style={{opacity: null === progress ?
+                0 :
+                1}}/>
     );
 };
 
