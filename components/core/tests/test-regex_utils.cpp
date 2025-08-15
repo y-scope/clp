@@ -1,6 +1,6 @@
 #include <string>
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <regex_utils/ErrorCode.hpp>
 #include <regex_utils/regex_translation_utils.hpp>
 #include <regex_utils/RegexToWildcardTranslatorConfig.hpp>

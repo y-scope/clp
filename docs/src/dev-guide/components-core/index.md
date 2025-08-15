@@ -37,7 +37,7 @@ The task will download, build, and install (within the build directory) the foll
 |-----------------------------------------------------------------------|----------------|
 | [abseil-cpp](https://github.com/abseil/abseil-cpp)                    | 20250512.0     |
 | [ANTLR](https://www.antlr.org)                                        | v4.13.2        |
-| [Catch2](https://github.com/catchorg/Catch2.git)                      | v2.13.7        |
+| [Catch2](https://github.com/catchorg/Catch2.git)                      | v3.8.0         |
 | [date](https://github.com/HowardHinnant/date.git)                     | v3.0.1         |
 | [fmt](https://github.com/fmtlib/fmt)                                  | v10.2.1        |
 | [json](https://github.com/nlohmann/json.git)                          | v3.11.3        |

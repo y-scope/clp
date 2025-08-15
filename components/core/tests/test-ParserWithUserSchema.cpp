@@ -7,7 +7,8 @@
 #include <utility>
 
 #include <boost/filesystem.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
 #include <log_surgeon/LogParser.hpp>
 #include <log_surgeon/SchemaParser.hpp>
 
