@@ -10,7 +10,7 @@ import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_DATASET_NAME,
     StorageEngine,
-    StorageType,
+    StorageType, CLP_DB_PASS_ENV_VAR_NAME, CLP_DB_USER_ENV_VAR_NAME,
 )
 
 from clp_package_utils.general import (
@@ -119,8 +119,8 @@ def main(argv):
     )
     necessary_mounts = [mounts.clp_home, mounts.logs_dir]
     extra_env_vars = {
-        "CLP_DB_USER": clp_config.database.username,
-        "CLP_DB_PASS": clp_config.database.password,
+        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
+        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
     }
     container_start_cmd = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
