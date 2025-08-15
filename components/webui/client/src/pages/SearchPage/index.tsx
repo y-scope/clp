@@ -1,4 +1,9 @@
+import {
+    CLP_QUERY_ENGINES,
+    SETTINGS_QUERY_ENGINE,
+} from "../../config";
 import styles from "./index.module.css";
+import {ProgressBar} from "./Presto/ProgressBar";
 import SearchControls from "./SearchControls";
 import SearchQueryStatus from "./SearchQueryStatus";
 import SearchResultsTable from "./SearchResults/SearchResultsTable";
@@ -15,14 +20,17 @@ const SearchPage = () => {
     useUiUpdateOnDoneSignal();
 
     return (
-        <div className={styles["searchPageContainer"]}>
-            <div>
-                <SearchControls/>
-                <SearchQueryStatus/>
+        <>
+            {SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO && <ProgressBar/>}
+            <div className={styles["searchPageContainer"]}>
+                <div>
+                    <SearchControls/>
+                    <SearchQueryStatus/>
+                </div>
+                <SearchResultsTimeline/>
+                <SearchResultsTable/>
             </div>
-            <SearchResultsTimeline/>
-            <SearchResultsTable/>
-        </div>
+        </>
     );
 };
 
