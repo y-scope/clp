@@ -4,8 +4,6 @@ set -eu
 set -o pipefail
 
 apk update && apk add --no-cache \
-    bzip2-dev \
-    bzip2-static \
     curl-dev \
     jq \
     mariadb-connector-c-dev \
