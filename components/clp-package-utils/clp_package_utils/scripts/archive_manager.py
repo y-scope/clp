@@ -65,6 +65,12 @@ def main(argv: typing.List[str]) -> int:
         help="CLP package configuration file.",
     )
     args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
+    args_parser.add_argument(
         "--dataset",
         type=str,
         default=None,
@@ -148,6 +154,10 @@ def main(argv: typing.List[str]) -> int:
     )
 
     parsed_args: argparse.Namespace = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     begin_timestamp: typing.Optional[int]
     end_timestamp: typing.Optional[int]
@@ -169,7 +179,7 @@ def main(argv: typing.List[str]) -> int:
 
     storage_type: StorageType = clp_config.archive_output.storage.type
     if StorageType.FS != storage_type:
-        logger.error(f"Archive deletion is not supported for storage type: {storage_type}.")
+        logger.error(f"Archive manager is not supported for storage type: {storage_type}.")
         return -1
 
     storage_engine: StorageEngine = clp_config.package.storage_engine
@@ -224,6 +234,9 @@ def main(argv: typing.List[str]) -> int:
     if dataset is not None:
         archive_manager_cmd.append("--dataset")
         archive_manager_cmd.append(dataset)
+    if parsed_args.verbose:
+        archive_manager_cmd.append("--verbose")
+
     archive_manager_cmd.append(subcommand)
 
     # Add subcommand-specific arguments
@@ -249,15 +262,20 @@ def main(argv: typing.List[str]) -> int:
             archive_manager_cmd.extend([END_TS_ARG, str(end_timestamp)])
     else:
         logger.error(f"Unsupported subcommand: `{subcommand}`.")
+        return -1
 
     cmd: typing.List[str] = container_start_cmd + archive_manager_cmd
 
-    subprocess.run(cmd, check=True)
+    proc = subprocess.run(cmd)
+    ret_code = proc.returncode
+    if 0 != ret_code:
+        logger.error("Archive manager failed.")
+        logger.debug(f"Docker command failed: {' '.join(cmd)}")
 
     # Remove generated files
     generated_config_path_on_host.unlink()
 
-    return 0
+    return ret_code
 
 
 if "__main__" == __name__:
