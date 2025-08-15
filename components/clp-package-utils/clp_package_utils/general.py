@@ -16,6 +16,7 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLPConfig,
     DB_COMPONENT_NAME,
+    QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
@@ -601,6 +602,14 @@ def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
         raise ValueError(
             f"Invalid dataset name: `{dataset_name}`. Names can only be a maximum of"
             f" {dataset_name_max_len} characters long."
+        )
+
+
+def validate_retention_config(clp_config: CLPConfig) -> None:
+    clp_query_engine = clp_config.package.query_engine
+    if is_retention_period_configured(clp_config) and clp_query_engine == QueryEngine.PRESTO:
+        raise ValueError(
+            f"Retention control is not supported with query_engine `{clp_query_engine}`"
         )
 
 
