@@ -1010,12 +1010,6 @@ def start_reducer(
     # fmt: on
     env_vars = [
         *generate_common_environment_variables(include_clp_home_env_var=True),
-        *generate_credential_environment_variables(
-            container_clp_config,
-            include_db_credentials=True,
-            include_queue_credentials=True,
-            include_redis_credentials=True,
-        ),
         f"CLP_LOGS_DIR={container_logs_dir}",
         f"CLP_LOGGING_LEVEL={clp_config.reducer.logging_level}",
     ]
