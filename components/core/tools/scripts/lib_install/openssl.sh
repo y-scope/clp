@@ -10,11 +10,11 @@ if [ "$#" -lt 1 ] ; then
 fi
 version="$1"
 prefix="${2:-/opt/openssl-${version}}"
-openssldir="${3:-$prefix}"  # Default to prefix if not specified
+openssldir="${3:-$prefix/ssl}"  # Default to prefix if not specified
 
-package_name=openssh-${version}
-temp_dir=/tmp/${package_name}-installation
-mkdir -p $temp_dir
+package_name=openssl-${version}
+temp_dir="/tmp/${package_name}-installation"
+mkdir -p "$temp_dir"
 
 echo "🔧 OpenSSL version: $version"
 echo "📁 Install prefix: $prefix"
@@ -26,10 +26,10 @@ if [ ${EUID:-$(id -u)} -ne 0 ] ; then
 fi
 
 # Download and extract
-cd ${temp_dir}
+cd "${temp_dir}"
 curl -LO "https://www.openssl.org/source/openssl-${version}.tar.gz"
-tar -xf "openssl-${version}.tar.gz" -C /tmp
-cd "/tmp/openssl-${version}"
+tar -xf "openssl-${version}.tar.gz"
+cd "openssl-${version}"
 
 # Configure and build
 ./config --prefix="$prefix" --openssldir="$openssldir" -fPIC
@@ -40,4 +40,4 @@ echo "✅ OpenSSL $version installed to $prefix"
 echo "📄 Runtime config expected at $openssldir"
 
 # Clean up
-rm -rf $temp_dir
+rm -rf "$temp_dir"
