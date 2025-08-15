@@ -15,7 +15,7 @@ from clp_py_utils.clp_config import (
     S3Config,
     StorageEngine,
     StorageType,
-    WorkerConfig,
+    WorkerConfig, CLP_DB_USER_ENV_VAR_NAME, CLP_DB_PASS_ENV_VAR_NAME,
 )
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
@@ -211,8 +211,8 @@ def _get_db_connection_env_vars_for_clp_cmd(
     :return: Dictionary of database connection environment variables for the clp command.
     """
     return {
-        "CLP_DB_USER": clp_metadata_db_connection_config["username"],
-        "CLP_DB_PASS": clp_metadata_db_connection_config["password"],
+        CLP_DB_USER_ENV_VAR_NAME: clp_metadata_db_connection_config["username"],
+        CLP_DB_PASS_ENV_VAR_NAME: clp_metadata_db_connection_config["password"],
     }
 
 

@@ -11,7 +11,7 @@ from typing import Optional
 
 from clp_py_utils.clp_config import (
     CLPConfig,
-    Database,
+    Database, CLP_DB_USER_ENV_VAR_NAME, CLP_DB_PASS_ENV_VAR_NAME,
 )
 from clp_py_utils.clp_metadata_db_utils import get_files_table_name
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -189,6 +189,7 @@ def validate_and_load_config_file(
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_archive_output_config()
         clp_config.validate_logs_dir()
+        clp_config.database.load_credentials_from_env()
         return clp_config
     except Exception:
         logger.exception("Failed to load config.")
@@ -244,8 +245,8 @@ def handle_extract_file_cmd(
     # fmt: on
     extract_env = {
         **os.environ,
-        "CLP_DB_USER": clp_db_connection_params["username"],
-        "CLP_DB_PASS": clp_db_connection_params["password"],
+        CLP_DB_USER_ENV_VAR_NAME: clp_db_connection_params["username"],
+        CLP_DB_PASS_ENV_VAR_NAME: clp_db_connection_params["password"],
     }
 
     files_to_extract_list_path = None

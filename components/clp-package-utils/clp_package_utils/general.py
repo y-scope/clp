@@ -9,7 +9,7 @@ import subprocess
 import typing
 import uuid
 from enum import auto
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -95,6 +95,7 @@ class CLPDockerMounts:
         self.archives_output_dir: typing.Optional[DockerMount] = None
         self.stream_output_dir: typing.Optional[DockerMount] = None
         self.aws_config_dir: typing.Optional[DockerMount] = None
+        self.generated_config_file: typing.Optional[DockerMount] = None
 
 
 def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
@@ -285,6 +286,18 @@ def generate_container_config(
             container_clp_config.stream_output.get_directory(),
         )
 
+    if not is_path_already_mounted(
+        clp_home,
+        CONTAINER_CLP_HOME,
+        clp_config.get_generated_config_file_path(),
+        container_clp_config.get_generated_config_file_path(),
+    ):
+        docker_mounts.generated_config_file = DockerMount(
+            DockerMountType.BIND,
+            clp_config.get_generated_config_file_path(),
+            container_clp_config.get_generated_config_file_path(),
+        )
+
     # Only create the mount if the directory exists
     if clp_config.aws_config_directory is not None:
         container_clp_config.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
@@ -328,13 +341,19 @@ def dump_container_config(
 
 
 def generate_container_start_cmd(
-    container_name: str, container_mounts: List[Optional[DockerMount]], container_image: str
+    container_name: str,
+    container_mounts: List[Optional[DockerMount]],
+    container_image: str,
+    extra_env_vars: Optional[Dict[str, str]] = None,
 ) -> List[str]:
     """
-    Generates the command to start a container with the given mounts and name.
+    Generates the command to start a container with the given mounts, environment variables, and
+    name.
+
     :param container_name:
     :param container_mounts:
     :param container_image:
+    :param extra_env_vars:
     :return: The command.
     """
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
@@ -350,6 +369,9 @@ def generate_container_start_cmd(
         "--name", container_name,
         "--log-driver", "local"
     ]
+    if extra_env_vars is not None:
+        for key, value in extra_env_vars.items():
+            container_start_cmd.extend(["-e", f"{key}={value}"])
     for mount in container_mounts:
         if mount:
             container_start_cmd.append("--mount")
@@ -428,21 +450,21 @@ def validate_and_load_db_credentials_file(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
 ):
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
-    clp_config.load_database_credentials_from_file()
+    clp_config.database.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_and_load_queue_credentials_file(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
 ):
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
-    clp_config.load_queue_credentials_from_file()
+    clp_config.queue.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_and_load_redis_credentials_file(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
 ):
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
-    clp_config.load_redis_credentials_from_file()
+    clp_config.redis.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_db_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):
@@ -599,3 +621,71 @@ def is_retention_period_configured(clp_config: CLPConfig) -> bool:
         return True
 
     return False
+
+
+def generate_common_environment_variables(
+    include_clp_home_env_var=True,
+) -> List[str]:
+    """
+    Generate a list of common environment variables for Docker containers.
+
+    :param include_clp_home_env_var:
+    :return: A list of common environment variables for Docker containers in the format "KEY=VALUE".
+    """
+    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
+    env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
+
+    if include_clp_home_env_var:
+        env_vars.append(f"CLP_HOME={CONTAINER_CLP_HOME}")
+
+    return env_vars
+
+
+def generate_credential_environment_variables(
+    container_clp_config: CLPConfig,
+    include_db_credentials=False,
+    include_queue_credentials=False,
+    include_redis_credentials=False,
+) -> List[str]:
+    """
+    Generates a list of credential environment variables for Docker containers.
+
+    :param container_clp_config:
+    :param include_db_credentials:
+    :param include_queue_credentials:
+    :param include_redis_credentials:
+    :return: A list of common environment variables for Docker containers in the format "KEY=VALUE".
+    """
+    env_vars = []
+
+    if include_db_credentials:
+        env_vars.append(f"CLP_DB_USER={container_clp_config.database.username}")
+        env_vars.append(f"CLP_DB_PASS={container_clp_config.database.password}")
+
+    if include_queue_credentials:
+        env_vars.append(f"CLP_QUEUE_USER={container_clp_config.queue.username}")
+        env_vars.append(f"CLP_QUEUE_PASS={container_clp_config.queue.password}")
+
+    if include_redis_credentials:
+        env_vars.append(f"CLP_REDIS_PASS={container_clp_config.redis.password}")
+
+    return env_vars
+
+
+def generate_celery_connection_environment_variables(container_clp_config: CLPConfig) -> List[str]:
+    """
+    Generate a list of Celery connection environment variables for Docker containers.
+
+    :param container_clp_config:
+    :return: A list of common environment variables for Docker containers in the format "KEY=VALUE".
+    """
+    env_vars = [
+        f"BROKER_URL=amqp://"
+        f"{container_clp_config.queue.username}:{container_clp_config.queue.password}@"
+        f"{container_clp_config.queue.host}:{container_clp_config.queue.port}",
+        f"RESULT_BACKEND=redis://default:{container_clp_config.redis.password}@"
+        f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/"
+        f"{container_clp_config.redis.query_backend_database}",
+    ]
+
+    return env_vars

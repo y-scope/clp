@@ -404,11 +404,12 @@ def main(argv):
     config_path = Path(args.config)
     try:
         clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
-    except ValidationError as err:
+        clp_config.database.load_credentials_from_env()
+    except (ValidationError, ValueError) as err:
         logger.error(err)
         return -1
-    except Exception as ex:
-        logger.error(ex)
+    except Exception:
+        logger.exception("Failed to initialize compression scheduler.")
         # read_yaml_config_file already logs the parsing error inside
         return -1
 

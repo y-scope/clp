@@ -8,7 +8,7 @@ from typing import List, Optional
 
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_DATASET_NAME,
-    StorageEngine,
+    StorageEngine, CLP_DB_USER_ENV_VAR_NAME, CLP_DB_PASS_ENV_VAR_NAME,
 )
 from job_orchestration.scheduler.job_config import InputType
 
@@ -222,8 +222,12 @@ def main(argv):
 
     _generate_logs_list(clp_config.logs_input.type, container_logs_list_path, parsed_args)
 
+    extra_env_vars = {
+        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
+        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+    }
     container_start_cmd = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container
+        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
     )
     compress_cmd = _generate_compress_cmd(
         parsed_args, dataset, generated_config_path_on_container, logs_list_path_on_container
