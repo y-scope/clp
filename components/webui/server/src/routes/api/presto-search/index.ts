@@ -15,8 +15,9 @@ import {
     PrestoQueryJobCreationSchema,
     PrestoQueryJobSchema,
 } from "../../../schemas/presto-search.js";
-import {insertPrestoRowsToMongo} from "./utils.js";
 import {MAX_PRESTO_SEARCH_RESULTS} from "./typings.js";
+import {insertPrestoRowsToMongo} from "./utils.js";
+
 
 /**
  * Presto search API routes.
@@ -73,7 +74,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                             totalResultsCount += data.length;
 
                             request.log.info(
-                                `Received ${data.length} rows from Presto query (total: ${totalResultsCount})`
+                                `Received ${data.length} rows from Presto query ` +
+                                `(total: ${totalResultsCount})`
                             );
 
                             if (false === isResolved) {
@@ -81,6 +83,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                     "Presto data received before searchJobId was resolved; " +
                                     "skipping insert."
                                 );
+
                                 return;
                             }
 
@@ -89,10 +92,11 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                             }
 
                             if (storedResultsCount < MAX_PRESTO_SEARCH_RESULTS) {
-                                const remainingSlots = MAX_PRESTO_SEARCH_RESULTS - storedResultsCount;
+                                const remainingSlots =
+                                    MAX_PRESTO_SEARCH_RESULTS - storedResultsCount;
                                 const dataToInsert = data.slice(0, remainingSlots);
 
-                                if (dataToInsert.length > 0) {
+                                if (0 < dataToInsert.length) {
                                     storedResultsCount += dataToInsert.length;
                                     insertPrestoRowsToMongo(
                                         dataToInsert,
