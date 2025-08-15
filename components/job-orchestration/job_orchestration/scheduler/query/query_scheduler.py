@@ -925,6 +925,7 @@ async def handle_finished_search_job(
             ):
                 new_job_status = QueryJobStatus.SUCCEEDED
     if new_job_status == QueryJobStatus.RUNNING:
+        job.current_sub_job_async_task_result.forget()
         job.current_sub_job_async_task_result = None
         job.state = InternalJobState.WAITING_FOR_DISPATCH
         logger.info(f"Job {job_id} waiting for more archives to search.")
@@ -968,6 +969,8 @@ async def handle_finished_search_job(
             logger.error(f"Completed job {job_id} with failing reducer.")
         else:
             logger.info(f"Completed job {job_id} with failing tasks.")
+
+    job.current_sub_job_async_task_result.forget()
     del active_jobs[job_id]
 
 
@@ -1038,6 +1041,7 @@ async def handle_finished_stream_extraction_job(
             duration=(datetime.datetime.now() - job.start_time).total_seconds(),
         )
 
+    job.current_sub_job_async_task_result.forget()
     del active_jobs[job_id]
 
 
@@ -1059,6 +1063,8 @@ async def check_job_status_and_update_db(db_conn_pool, results_cache_uri):
                         msg = ReducerHandlerMessage(ReducerHandlerMessageType.FAILURE)
                         await job.reducer_handler_msg_queues.put_to_handler(msg)
 
+                if job.current_sub_job_async_task_result is not None:
+                    job.current_sub_job_async_task_result.forget()
                 del active_jobs[job_id]
                 set_job_or_task_status(
                     db_conn,
