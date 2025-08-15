@@ -142,16 +142,17 @@ def handle_extract_file_cmd(
         extract_cmd.append(container_paths_to_extract_file_path)
 
     cmd = container_start_cmd + extract_cmd
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError:
-        logger.exception("Docker or file extraction command failed.")
-        return -1
+
+    proc = subprocess.run(cmd)
+    ret_code = proc.returncode
+    if 0 != ret_code:
+        logger.error("file extraction failed.")
+        logger.debug(f"Docker command failed: {' '.join(cmd)}")
 
     # Remove generated files
     generated_config_path_on_host.unlink()
 
-    return 0
+    return ret_code
 
 
 def handle_extract_stream_cmd(
@@ -241,16 +242,16 @@ def handle_extract_stream_cmd(
 
     cmd = container_start_cmd + extract_cmd
 
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError:
-        logger.exception("Docker or stream extraction command failed.")
-        return -1
+    proc = subprocess.run(cmd)
+    ret_code = proc.returncode
+    if 0 != ret_code:
+        logger.error("stream extraction failed.")
+        logger.debug(f"Docker command failed: {' '.join(cmd)}")
 
     # Remove generated files
     generated_config_path_on_host.unlink()
 
-    return 0
+    return ret_code
 
 
 def main(argv):
@@ -263,6 +264,12 @@ def main(argv):
         "-c",
         default=str(default_config_file_path),
         help="CLP configuration file.",
+    )
+    args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
     )
     command_args_parser = args_parser.add_subparsers(dest="command", required=True)
 
@@ -305,6 +312,10 @@ def main(argv):
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:

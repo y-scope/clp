@@ -196,6 +196,12 @@ def main(argv):
         help="CLP package configuration file.",
     )
     args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
+    args_parser.add_argument(
         "--dataset",
         type=str,
         default=None,
@@ -219,6 +225,10 @@ def main(argv):
         "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
     )
     parsed_args = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     # Validate and load config file
     try:
