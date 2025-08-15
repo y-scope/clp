@@ -4,7 +4,7 @@ import {Progress} from "antd";
 
 import useSearchStore from "../../SearchState";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
-import {usePseudoProgress} from "../../usePseudoProgress";
+import {usePseudoProgress} from "../../SearchState/usePseudoProgress";
 import styles from "./index.module.css";
 
 
@@ -13,7 +13,7 @@ import styles from "./index.module.css";
  *
  * @return
  */
-const PageProgress = () => {
+const ProgressBar = () => {
     const {searchUiState} = useSearchStore.getState();
     const {
         progress,
@@ -48,4 +48,4 @@ const PageProgress = () => {
     );
 };
 
-export {PageProgress};
+export {ProgressBar};

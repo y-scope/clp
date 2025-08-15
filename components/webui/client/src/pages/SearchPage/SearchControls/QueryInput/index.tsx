@@ -10,7 +10,7 @@ import type {InputRef} from "antd";
 import QueryBox from "../../../../components/QueryBox";
 import useSearchStore from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
-import {usePseudoProgress} from "../../usePseudoProgress";
+import {usePseudoProgress} from "../../SearchState/usePseudoProgress";
 
 
 /**
