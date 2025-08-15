@@ -31,6 +31,7 @@ worker components. The tables below list the components and their functions.
 | query_scheduler       | Scheduler for search/aggregation jobs                           |
 | results_cache         | Storage for the workers to return search results to the UI      |
 | webui                 | Web server for the UI                                           |
+| garbage_collector     | Background process for retention control                        |
 :::
 
 :::{table} Worker components
@@ -71,7 +72,9 @@ Running additional workers increases the parallelism of compression and search/a
     4. Set `archive_output.directory` to a directory on the distributed filesystem.
        * Ideally, the directory should be empty or should not yet exist (CLP will create it) since
          CLP will write several files and directories directly to the given directory.
-
+    5. (Optional) Configure retention periods for archives and search results. For details, see
+       [retention control](guides-retention) for details.
+       
 5. Download and extract the package on all nodes.
 6. Copy the `credentials.yml` and `clp-config.yml` files that you created above and paste them
    into `etc` on all the hosts where you extracted the package.
@@ -93,6 +96,7 @@ but all components in a group must be started before starting a component in the
 
 * `compression_scheduler`
 * `query_scheduler`
+* `garbage_collector`
 
 **Group 3 components:**
 
@@ -175,6 +179,7 @@ cases, see the [SeaweedFS docs][seaweedfs-docs].
 
 [Docker]: https://docs.docker.com/engine/install/
 [docker-non-root]: https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user
+[Retention control]: 
 [SeaweedFS]: https://github.com/seaweedfs/seaweedfs
 [seaweedfs-docs]: https://github.com/seaweedfs/seaweedfs/blob/master/README.md
 [seaweedfs-install-docs]: https://github.com/seaweedfs/seaweedfs?tab=readme-ov-file#quick-start-with-single-binary
