@@ -540,6 +540,8 @@ set(SOURCE_FILES_unitTest
         src/clp/FileReader.hpp
         src/clp/FileWriter.cpp
         src/clp/FileWriter.hpp
+        src/clp/global_metadata_db_utils.hpp
+        src/clp/global_metadata_db_utils.cpp
         src/clp/GlobalMetadataDB.hpp
         src/clp/GlobalMetadataDBConfig.cpp
         src/clp/GlobalMetadataDBConfig.hpp
@@ -690,6 +692,7 @@ set(SOURCE_FILES_unitTest
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
+        tests/test-GlobalMetadataDBConfig.cpp
         tests/test-GrepCore.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
@@ -749,7 +752,6 @@ if(CLP_BUILD_TESTING)
             ${STD_FS_LIBS}
             clp::regex_utils
             clp::string_utils
-            yaml-cpp
             ystdlib::containers
             ystdlib::error_handling
             ${zstd_TARGET}
