@@ -740,7 +740,7 @@ def generic_start_worker(
     # fmt: on
 
     env_vars = [
-        *generate_common_environment_variables(include_clp_home=True),
+        *generate_common_environment_variables(include_clp_home_env_var=True),
         *generate_celery_connection_environment_variables(container_clp_config),
         f"CLP_CONFIG_PATH={container_clp_config.get_generated_config_file_path()}",
         f"CLP_LOGS_DIR={container_logs_dir}",
@@ -1008,7 +1008,7 @@ def start_reducer(
     ]
     # fmt: on
     env_vars = [
-        *generate_common_environment_variables(include_clp_home=True),
+        *generate_common_environment_variables(include_clp_home_env_var=True),
         *generate_credential_environment_variables(
             container_clp_config,
             include_db_credentials=True,

@@ -615,18 +615,18 @@ def is_retention_period_configured(clp_config: CLPConfig) -> bool:
 
 
 def generate_common_environment_variables(
-    include_clp_home=True,
+    include_clp_home_env_var=True,
 ) -> List[str]:
     """
     Generate a list of common environment variables for Docker containers.
 
-    :param include_clp_home:
+    :param include_clp_home_env_var:
     :return: A list of common environment variables for Docker containers in the format "KEY=VALUE".
     """
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
 
-    if include_clp_home:
+    if include_clp_home_env_var:
         env_vars.append(f"CLP_HOME={CONTAINER_CLP_HOME}")
 
     return env_vars
