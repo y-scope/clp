@@ -1,7 +1,6 @@
 import argparse
 import datetime
 import logging
-import os
 import pathlib
 import sys
 import time
