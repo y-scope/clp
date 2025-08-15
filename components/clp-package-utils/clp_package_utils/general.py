@@ -346,7 +346,9 @@ def generate_container_start_cmd(
     extra_env_vars: Optional[Dict[str, str]] = None,
 ) -> List[str]:
     """
-    Generates the command to start a container with the given mounts and name.
+    Generates the command to start a container with the given mounts, environment variables, and
+    name.
+
     :param container_name:
     :param container_mounts:
     :param container_image:
@@ -637,7 +639,7 @@ def generate_credential_environment_variables(
     include_redis_credentials=False,
 ) -> List[str]:
     """
-    Generate a list of credential environment variables for Docker containers.
+    Generates a list of credential environment variables for Docker containers.
 
     :param container_clp_config:
     :param include_db_credentials:
