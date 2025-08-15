@@ -171,8 +171,8 @@ function(set_clp_tests_dependencies)
         CLP_NEED_DATE
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
+        CLP_NEED_LIBLZMA
         CLP_NEED_LOG_SURGEON
-        CLP_NEED_LZMA
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
         CLP_NEED_NLOHMANN_JSON
@@ -455,9 +455,9 @@ function (convert_clp_dependency_properties_to_variables)
         CLP_NEED_CURL
         CLP_NEED_DATE
         CLP_NEED_FMT
-        CLP_NEED_LOG_SURGEON
         CLP_NEED_LIBARCHIVE
-        CLP_NEED_LZMA
+        CLP_NEED_LIBLZMA
+        CLP_NEED_LOG_SURGEON
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
         CLP_NEED_MSGPACKCXX
