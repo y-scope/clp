@@ -26,8 +26,8 @@ const PROGRESS_INTERVAL_MILLIS = 100;
  */
 const usePseudoProgress = (): {
     progress: Nullable<number>;
-    start: ()=> void;
-    stop: ()=> void;
+    start: () => void;
+    stop: () => void;
 } => {
     const [progress, setProgress] = useState<Nullable<number>>(null);
     const intervalIdRef = useRef<number>(0);
