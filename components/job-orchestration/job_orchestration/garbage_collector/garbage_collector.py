@@ -9,7 +9,7 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from clp_py_utils.clp_config import (
     CLPConfig,
-    GARBAGE_COLLECTOR_NAME,
+    GARBAGE_COLLECTOR_COMPONENT_NAME,
 )
 from clp_py_utils.clp_logging import get_logger
 from clp_py_utils.core import read_yaml_config_file
@@ -24,18 +24,20 @@ from job_orchestration.garbage_collector.search_result_garbage_collector import 
 from job_orchestration.garbage_collector.utils import configure_logger
 from pydantic import ValidationError
 
-logger = get_logger(GARBAGE_COLLECTOR_NAME)
+logger = get_logger(GARBAGE_COLLECTOR_COMPONENT_NAME)
 
 
 async def main(argv: List[str]) -> int:
-    args_parser = argparse.ArgumentParser(description=f"Spin up the {GARBAGE_COLLECTOR_NAME}.")
+    args_parser = argparse.ArgumentParser(
+        description=f"Spin up the {GARBAGE_COLLECTOR_COMPONENT_NAME}."
+    )
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     parsed_args = args_parser.parse_args(argv[1:])
 
     # Setup logging to file
     logs_directory = Path(os.getenv("CLP_LOGS_DIR"))
     logging_level = os.getenv("CLP_LOGGING_LEVEL")
-    configure_logger(logger, logging_level, logs_directory, GARBAGE_COLLECTOR_NAME)
+    configure_logger(logger, logging_level, logs_directory, GARBAGE_COLLECTOR_COMPONENT_NAME)
 
     # Load configuration
     config_path = Path(parsed_args.config)
