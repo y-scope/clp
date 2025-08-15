@@ -16,7 +16,7 @@ import {
     PrestoQueryJobSchema,
 } from "../../../schemas/presto-search.js";
 import {insertPrestoRowsToMongo} from "./utils.js";
-
+import {MAX_PRESTO_SEARCH_RESULTS} from "./typings.js";
 
 /**
  * Presto search API routes.
@@ -61,18 +61,19 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             const {queryString} = request.body;
 
             let searchJobId: string;
+            let totalResultsCount = 0;
+            let storedResultsCount = 0;
 
             try {
                 // eslint-disable-next-line max-lines-per-function
                 searchJobId = await new Promise<string>((resolve, reject) => {
                     let isResolved = false;
                     Presto.client.execute({
-                        // eslint-disable-next-line no-warning-comments
-                        // TODO: Error, and success handlers are dummy implementations
-                        // and will be replaced with proper implementations.
                         data: (_, data, columns) => {
+                            totalResultsCount += data.length;
+
                             request.log.info(
-                                `Received ${data.length} rows from Presto query`
+                                `Received ${data.length} rows from Presto query (total: ${totalResultsCount})`
                             );
 
                             if (false === isResolved) {
@@ -80,7 +81,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                     "Presto data received before searchJobId was resolved; " +
                                     "skipping insert."
                                 );
-
                                 return;
                             }
 
@@ -88,15 +88,34 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                 return;
                             }
 
-                            insertPrestoRowsToMongo(
-                                data,
-                                columns,
-                                searchJobId,
-                                mongoDb
+                            if (storedResultsCount < MAX_PRESTO_SEARCH_RESULTS) {
+                                const remainingSlots = MAX_PRESTO_SEARCH_RESULTS - storedResultsCount;
+                                const dataToInsert = data.slice(0, remainingSlots);
+
+                                if (dataToInsert.length > 0) {
+                                    storedResultsCount += dataToInsert.length;
+                                    insertPrestoRowsToMongo(
+                                        dataToInsert,
+                                        columns,
+                                        searchJobId,
+                                        mongoDb
+                                    ).catch((err: unknown) => {
+                                        request.log.error(
+                                            err,
+                                            "Failed to insert Presto results into MongoDB"
+                                        );
+                                    });
+                                }
+                            }
+
+                            // Always update metadata with total count
+                            searchResultsMetadataCollection.updateOne(
+                                {_id: searchJobId},
+                                {$set: {numTotalResults: totalResultsCount}}
                             ).catch((err: unknown) => {
                                 request.log.error(
                                     err,
-                                    "Failed to insert Presto results into MongoDB"
+                                    "Failed to update total results count in metadata"
                                 );
                             });
                         },
