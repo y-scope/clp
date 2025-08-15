@@ -14,15 +14,15 @@ from clp_py_utils.clp_config import (
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     FsStorage,
-    LOG_VIEWER_WEBUI_COMPONENT_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
     S3Config,
     S3Credentials,
     S3Storage,
     StorageType,
+    WEBUI_COMPONENT_NAME,
 )
-from clp_py_utils.compression import FileMetadata
+from clp_py_utils.core import FileMetadata
 
 # Constants
 AWS_ENDPOINT = "amazonaws.com"
@@ -115,7 +115,7 @@ def generate_container_auth_options(
     ):
         output_storages_by_component_type = [clp_config.archive_output.storage]
         input_storage_needed = True
-    elif component_type in (LOG_VIEWER_WEBUI_COMPONENT_NAME,):
+    elif component_type in (WEBUI_COMPONENT_NAME,):
         output_storages_by_component_type = [clp_config.stream_output.storage]
     elif component_type in (
         QUERY_SCHEDULER_COMPONENT_NAME,
@@ -279,12 +279,14 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
     return file_metadata_list
 
 
-def s3_put(s3_config: S3Config, src_file: Path, dest_file_name: str) -> None:
+def s3_put(s3_config: S3Config, src_file: Path, dest_path: str) -> None:
     """
     Uploads a local file to an S3 bucket using AWS's PutObject operation.
+
     :param s3_config: S3 configuration specifying the upload destination and credentials.
     :param src_file: Local file to upload.
-    :param dest_file_name: The name for the uploaded file in the S3 bucket.
+    :param dest_path: The destination path for the uploaded file in the S3 bucket, relative to
+    `s3_config.key_prefix` (the file's S3 key will be `s3_config.key_prefix` + `dest_path`).
     :raises: ValueError if `src_file` doesn't exist, doesn't resolve to a file or is larger than the
     S3 PutObject limit.
     :raises: Propagates `boto3.client`'s exceptions.
@@ -304,5 +306,5 @@ def s3_put(s3_config: S3Config, src_file: Path, dest_file_name: str) -> None:
 
     with open(src_file, "rb") as file_data:
         s3_client.put_object(
-            Bucket=s3_config.bucket, Body=file_data, Key=s3_config.key_prefix + dest_file_name
+            Bucket=s3_config.bucket, Body=file_data, Key=s3_config.key_prefix + dest_path
         )

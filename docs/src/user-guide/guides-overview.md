@@ -11,4 +11,11 @@ Using object storage
 ^^^
 Using CLP to ingest logs from object storage and store archives on object storage.
 :::
+
+:::{grid-item-card}
+:link: guides-multi-node
+Multi-node deployment
+^^^
+How to deploy CLP across multiple nodes.
+:::
 ::::
