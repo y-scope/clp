@@ -3,6 +3,8 @@ from dataclasses import dataclass, field, InitVar
 from pathlib import Path
 from typing import Optional
 
+from tests.utils.utils import validate_dir_exists
+
 
 @dataclass(frozen=True)
 class CoreConfig:
@@ -10,14 +12,9 @@ class CoreConfig:
 
     def __post_init__(self):
         clp_core_bins_dir = self.clp_core_bins_dir
+        validate_dir_exists(clp_core_bins_dir)
 
-        # Check if CLP core directory exists and is valid
-        if not clp_core_bins_dir.exists():
-            raise ValueError(f"CLP core bins directory does not exist: {clp_core_bins_dir}")
-        if not clp_core_bins_dir.is_dir():
-            raise ValueError(f"CLP core bins path is not a directory: {clp_core_bins_dir}")
-
-        # Check for required directories
+        # Check for required CLP core binaries
         required_binaries = ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
         missing_binaries = [b for b in required_binaries if not (clp_core_bins_dir / b).is_file()]
         if len(missing_binaries) > 0:
@@ -39,14 +36,9 @@ class PackageConfig:
 
     def __post_init__(self):
         clp_package_dir = self.clp_package_dir
+        validate_dir_exists(clp_package_dir)
 
-        # Check if package directory exists and is valid
-        if not clp_package_dir.exists():
-            raise ValueError(f"CLP package directory does not exist: {clp_package_dir}")
-        if not clp_package_dir.is_dir():
-            raise ValueError(f"CLP package path is not a directory: {clp_package_dir}")
-
-        # Check for required directories
+        # Check for required package script directories
         required_dirs = ["bin", "etc", "lib", "sbin"]
         missing_dirs = [d for d in required_dirs if not (clp_package_dir / d).is_dir()]
         if len(missing_dirs) > 0:
@@ -84,11 +76,12 @@ class IntegrationTestLogs:
         if 0 == len(name):
             raise ValueError("`name` cannot be empty.")
 
+        logs_download_dir = integration_test_config.logs_download_dir
+        validate_dir_exists(logs_download_dir)
+
         object.__setattr__(self, "name", name)
-        object.__setattr__(
-            self, "tarball_path", integration_test_config.logs_download_dir / f"{name}.tar.gz"
-        )
-        object.__setattr__(self, "extraction_dir", integration_test_config.logs_download_dir / name)
+        object.__setattr__(self, "tarball_path", logs_download_dir / f"{name}.tar.gz")
+        object.__setattr__(self, "extraction_dir", logs_download_dir / name)
 
 
 @dataclass(frozen=True)
@@ -104,14 +97,13 @@ class CompressionTestConfig:
         if 0 == len(test_name):
             raise ValueError("`test_name` cannot be empty.")
 
+        test_root_dir = integration_test_config.test_root_dir
+        validate_dir_exists(test_root_dir)
+
         object.__setattr__(self, "test_name", test_name)
+        object.__setattr__(self, "compression_dir", test_root_dir / f"{test_name}-archives")
         object.__setattr__(
-            self, "compression_dir", integration_test_config.test_root_dir / f"{test_name}-archives"
-        )
-        object.__setattr__(
-            self,
-            "decompression_dir",
-            integration_test_config.test_root_dir / f"{test_name}-decompressed-logs",
+            self, "decompression_dir", test_root_dir / f"{test_name}-decompressed-logs"
         )
 
     def clear_test_outputs(self) -> None:

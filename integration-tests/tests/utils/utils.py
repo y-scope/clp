@@ -35,6 +35,13 @@ def run_and_assert(cmd: List[str], **kwargs) -> subprocess.CompletedProcess:
     return proc
 
 
+def validate_dir_exists(dir_path: Path) -> None:
+    if not dir_path.exists():
+        raise ValueError(f"Directory does not exist: {dir_path}")
+    if not dir_path.is_dir():
+        raise ValueError(f"Path is not a directory: {dir_path}")
+
+
 def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
     sorted_fp = NamedTemporaryFile(mode="w+", delete=True)
     jq_proc = subprocess.Popen(
