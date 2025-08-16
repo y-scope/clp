@@ -8,12 +8,8 @@ from typing import Dict, List
 
 from clp_py_utils.clp_config import ArchiveOutput, Database, S3Config, StorageType
 from clp_py_utils.clp_metadata_db_utils import (
-    get_archive_tags_table_name,
-    get_archives_table_name,
-    get_column_metadata_table_name,
+    delete_dataset_from_metadata_db,
     get_datasets_table_name,
-    get_files_table_name,
-    get_tags_table_name,
 )
 from clp_py_utils.s3_utils import s3_delete_by_key_prefix
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -39,7 +35,7 @@ def _handle_list_datasets(datasets: Dict[str, str]) -> int:
     return 0
 
 
-def _fetch_existing_datasets_info(
+def _get_dataset_info(
     db_config: Database,
 ) -> Dict[str, str]:
     """
@@ -82,13 +78,13 @@ def _handle_del_datasets(
         datasets_to_delete = {dataset: existing_datasets_info[dataset] for dataset in datasets}
 
     for dataset, dataset_archive_storage_dir in datasets_to_delete.items():
-        if not _delete_dataset(dataset, dataset_archive_storage_dir, clp_config):
+        if not _delete_dataset(clp_config, dataset, dataset_archive_storage_dir):
             return -1
 
     return 0
 
 
-def _delete_dataset(dataset: str, dataset_archive_storage_dir: str, clp_config: CLPConfig) -> bool:
+def _delete_dataset(clp_config: CLPConfig, dataset: str, dataset_archive_storage_dir: str) -> bool:
     try:
         _try_deleting_archives(clp_config.archive_output, dataset_archive_storage_dir)
         logger.info(f"Deleted archives of dataset `{dataset}`.")
@@ -107,39 +103,14 @@ def _delete_dataset(dataset: str, dataset_archive_storage_dir: str, clp_config: 
 
 
 def _delete_dataset_from_database(database_config: Database, dataset: str) -> None:
-    """
-    Deletes all tables associated with `dataset` from the metadata database.
-
-    :param database_config:
-    :param dataset:
-    """
+    sql_adapter = SQL_Adapter(database_config)
     clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
 
-    # Drop tables in an order such that no foreign key constraint is violated.
-    tables_removal_order = [
-        get_column_metadata_table_name(table_prefix, dataset),
-        get_files_table_name(table_prefix, dataset),
-        get_archive_tags_table_name(table_prefix, dataset),
-        get_tags_table_name(table_prefix, dataset),
-        get_archives_table_name(table_prefix, dataset),
-    ]
-
-    sql_adapter = SQL_Adapter(database_config)
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
-        for table in tables_removal_order:
-            db_cursor.execute(f"DROP TABLE IF EXISTS `{table}`")
-
-        # Remove the dataset row from the datasets table
-        db_cursor.execute(
-            f"""
-            DELETE FROM `{get_datasets_table_name(table_prefix)}`
-            WHERE name = %s
-            """,
-            (dataset,),
-        )
+        delete_dataset_from_metadata_db(db_cursor, table_prefix, dataset)
         db_conn.commit()
 
 
@@ -172,9 +143,7 @@ def _try_deleting_archives_from_fs(
         return
 
     if not dataset_archive_storage_path.is_dir():
-        logger.debug(
-            f"'{dataset_archive_storage_path}' isn't a directory. Skipping deletion."
-        )
+        logger.debug(f"'{dataset_archive_storage_path}' isn't a directory. Skipping deletion.")
         return
 
     shutil.rmtree(dataset_archive_storage_path)
@@ -185,12 +154,12 @@ def _try_deleting_archives(
 ) -> None:
     archive_storage_config = archive_output_config.storage
     storage_type = archive_storage_config.type
-    if StorageType.S3 == storage_type:
+    if StorageType.FS == storage_type:
+        _try_deleting_archives_from_fs(archive_output_config, dataset_archive_storage_dir)
+    elif StorageType.S3 == storage_type:
         _try_deleting_archives_from_s3(
             archive_storage_config.s3_config, dataset_archive_storage_dir
         )
-    elif StorageType.FS == storage_type:
-        _try_deleting_archives_from_fs(archive_output_config, dataset_archive_storage_dir)
     else:
         raise ValueError(f"Unsupported storage type: {storage_type}")
 
@@ -200,9 +169,7 @@ def main(argv: List[str]) -> int:
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     # Top-level parser and options
-    args_parser = argparse.ArgumentParser(
-        description="Views the list of existing datasets or deletes dataset(s)."
-    )
+    args_parser = argparse.ArgumentParser(description="List or delete datasets.")
     args_parser.add_argument(
         "--config",
         "-c",
@@ -223,18 +190,18 @@ def main(argv: List[str]) -> int:
     )
     subparsers.add_parser(
         LIST_COMMAND,
-        help="Lists existing datasets.",
+        help="List existing datasets.",
     )
 
     # Options for delete subcommand
     del_parser = subparsers.add_parser(
         DEL_COMMAND,
-        help="Deletes dataset(s) from the database and the file system.",
+        help="Delete datasets from the database and file storage.",
     )
     del_parser.add_argument(
         "datasets",
         nargs="*",
-        help="dataset(s) to delete.",
+        help="Datasets to delete.",
     )
     del_parser.add_argument(
         "-a",
@@ -260,7 +227,7 @@ def main(argv: List[str]) -> int:
         return -1
 
     try:
-        existing_datasets_info = _fetch_existing_datasets_info(clp_config.database)
+        existing_datasets_info = _get_dataset_info(clp_config.database)
     except:
         logger.exception("Failed to fetch datasets from the database.")
         return -1

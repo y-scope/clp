@@ -1,7 +1,7 @@
 import os
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple, Union
+from typing import Dict, Final, List, Optional, Set, Tuple, Union
 
 import boto3
 from botocore.config import Config
@@ -27,12 +27,12 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.core import FileMetadata
 
 # Constants
-AWS_ENDPOINT = "amazonaws.com"
-AWS_ENV_VAR_ACCESS_KEY_ID = "AWS_ACCESS_KEY_ID"
-AWS_ENV_VAR_SECRET_ACCESS_KEY = "AWS_SECRET_ACCESS_KEY"
-AWS_ENV_VAR_SESSION_TOKEN = "AWS_SESSION_TOKEN"
+AWS_ENDPOINT: Final[str] = "amazonaws.com"
+AWS_ENV_VAR_ACCESS_KEY_ID: Final[str] = "AWS_ACCESS_KEY_ID"
+AWS_ENV_VAR_SECRET_ACCESS_KEY: Final[str] = "AWS_SECRET_ACCESS_KEY"
+AWS_ENV_VAR_SESSION_TOKEN: Final[str] = "AWS_SESSION_TOKEN"
 
-S3_OBJECTS_DELETE_LIMIT = 1000
+S3_OBJECT_DELETION_BATCH_SIZE_MAX: Final[int] = 1000
 
 
 def _get_session_credentials(aws_profile: Optional[str] = None) -> Optional[S3Credentials]:
@@ -345,7 +345,7 @@ def s3_delete_by_key_prefix(
     for page in paginator.paginate(
         Bucket=bucket_name,
         Prefix=key_prefix,
-        PaginationConfig={"PageSize": S3_OBJECTS_DELETE_LIMIT},
+        PaginationConfig={"PageSize": S3_OBJECT_DELETION_BATCH_SIZE_MAX},
     ):
         contents = page.get("Contents", None)
         if contents is None:
@@ -378,7 +378,7 @@ def s3_delete_objects(s3_config: S3Config, object_keys: Set[str]) -> None:
     objects_to_delete: List[str] = []
     for relative_obj_key in object_keys:
         objects_to_delete.append(s3_config.key_prefix + relative_obj_key)
-        if len(objects_to_delete) < S3_OBJECTS_DELETE_LIMIT:
+        if len(objects_to_delete) < S3_OBJECT_DELETION_BATCH_SIZE_MAX:
             continue
 
         s3_client.delete_objects(

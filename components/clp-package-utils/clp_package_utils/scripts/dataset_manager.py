@@ -36,9 +36,7 @@ def main(argv: List[str]) -> int:
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
     # Top-level parser and options
-    args_parser = argparse.ArgumentParser(
-        description="Views the list of existing datasets or deletes dataset(s)."
-    )
+    args_parser = argparse.ArgumentParser(description="List or delete datasets.")
     args_parser.add_argument(
         "--config",
         "-c",
@@ -59,18 +57,18 @@ def main(argv: List[str]) -> int:
     )
     subparsers.add_parser(
         LIST_COMMAND,
-        help="Lists existing datasets.",
+        help="List existing datasets.",
     )
 
     # Options for delete subcommand
     del_parser = subparsers.add_parser(
         DEL_COMMAND,
-        help="Deletes dataset(s) from the database and the file system.",
+        help="Delete datasets from the database and file storage.",
     )
     del_parser.add_argument(
         "datasets",
         nargs="*",
-        help="dataset(s) to delete.",
+        help="Datasets to delete.",
     )
     del_parser.add_argument(
         "-a",
@@ -111,9 +109,7 @@ def main(argv: List[str]) -> int:
         if not del_all_flag and len(datasets) == 0:
             args_parser.error("No datasets specified for deletion.")
         if del_all_flag and len(datasets) != 0:
-            args_parser.error(
-                "The -a/--all flag cannot be used together with a dataset name."
-            )
+            args_parser.error("The -a/--all flag cannot be used together with a dataset name.")
 
         try:
             clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
