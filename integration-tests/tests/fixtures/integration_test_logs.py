@@ -53,11 +53,13 @@ def _download_and_extract_dataset(
         ]
         # fmt: on
         subprocess.run(curl_cmds, check=True)
+        if integration_test_logs.extraction_dir.exists():
+            shutil.rmtree(integration_test_logs.extraction_dir)
         shutil.unpack_archive(
             integration_test_logs.tarball_path, integration_test_logs.extraction_dir
         )
     except Exception as e:
-        raise RuntimeError(f"Failed to download and extract dataset `{name}`: {e}")
+        raise RuntimeError(f"Failed to download and extract dataset `{name}`: {e}") from e
 
     print(f"Downloaded and extracted uncompressed logs for dataset `{name}`.")
     request.config.cache.set(name, True)
