@@ -23,7 +23,7 @@ class CoreConfig:
         if len(missing_binaries) > 0:
             raise ValueError(
                 f"CLP core bins at {clp_core_bins_dir} is incomplete. "
-                f"Missing binaries: {', '.join(missing_dirs)}"
+                f"Missing binaries: {', '.join(missing_binaries)}"
             )
 
     def get_clp_binary_path(self) -> Path:

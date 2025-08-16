@@ -24,7 +24,8 @@ def is_dir_tree_content_equal(path1: Path, path2: Path) -> bool:
 
 def get_env_var(var_name: str) -> str:
     value = os.environ.get(var_name)
-    assert value is not None, f"Environment variable {var_name} is not set."
+    if value is None:
+        raise RuntimeError(f"Environment variable {var_name} is not set.")
     return value
 
 
