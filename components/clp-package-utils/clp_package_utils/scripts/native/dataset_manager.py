@@ -37,11 +37,11 @@ def _get_dataset_info(
     """
 
     sql_adapter = SQL_Adapter(db_config)
-    clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
-    table_prefix = clp_db_connection_params["table_prefix"]
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
+        clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
+        table_prefix = clp_db_connection_params["table_prefix"]
         db_cursor.execute(
             f"SELECT name, archive_storage_directory FROM `{get_datasets_table_name(table_prefix)}`"
         )
@@ -51,8 +51,8 @@ def _get_dataset_info(
 
 def _handle_list_datasets(datasets: Dict[str, str]) -> int:
     logger.info(f"Found {len(datasets)} datasets.")
-    for dataset_name in datasets.keys():
-        logger.info(dataset_name)
+    for dataset in datasets.keys():
+        logger.info(dataset)
     return 0
 
 
@@ -154,12 +154,12 @@ def _try_deleting_archives_from_s3(s3_config: S3Config, archive_storage_key_pref
 
 def _delete_dataset_from_database(database_config: Database, dataset: str) -> None:
     sql_adapter = SQL_Adapter(database_config)
-    clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
-    table_prefix = clp_db_connection_params["table_prefix"]
 
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
+        clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
+        table_prefix = clp_db_connection_params["table_prefix"]
         delete_dataset_from_metadata_db(db_cursor, table_prefix, dataset)
         db_conn.commit()
 
