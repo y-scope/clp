@@ -8,7 +8,7 @@ from botocore.config import Config
 from job_orchestration.scheduler.job_config import S3InputConfig
 
 from clp_py_utils.clp_config import (
-    ARCHIVE_MANAGER_PSEUDO_COMPONENT_NAME,
+    ARCHIVE_MANAGER_ACTION_NAME,
     AwsAuthentication,
     AwsAuthType,
     CLPConfig,
@@ -99,31 +99,31 @@ def get_credential_env_vars(auth: AwsAuthentication) -> Dict[str, str]:
 
 
 def generate_container_auth_options(
-    clp_config: CLPConfig, component_type: str
+    clp_config: CLPConfig, container_type: str
 ) -> Tuple[bool, List[str]]:
     """
     Generates Docker container authentication options for AWS S3 access based on the given type.
     Handles authentication methods that require extra configuration (profile, env_vars).
 
     :param clp_config: CLPConfig containing storage configurations.
-    :param component_type: Type of calling container (compression, log_viewer, or query).
+    :param container_type: Type of calling container.
     :return: Tuple of (whether aws config mount is needed, credential env_vars to set).
     :raises: ValueError if environment variables are not set correctly.
     """
     output_storages_by_component_type: List[Union[S3Storage, FsStorage]] = []
     input_storage_needed = False
 
-    if component_type in (
+    if container_type in (
         COMPRESSION_SCHEDULER_COMPONENT_NAME,
         COMPRESSION_WORKER_COMPONENT_NAME,
     ):
         output_storages_by_component_type = [clp_config.archive_output.storage]
         input_storage_needed = True
-    elif component_type in (ARCHIVE_MANAGER_PSEUDO_COMPONENT_NAME,):
+    elif container_type in (ARCHIVE_MANAGER_ACTION_NAME,):
         output_storages_by_component_type = [clp_config.archive_output.storage]
-    elif component_type in (WEBUI_COMPONENT_NAME,):
+    elif container_type in (WEBUI_COMPONENT_NAME,):
         output_storages_by_component_type = [clp_config.stream_output.storage]
-    elif component_type in (
+    elif container_type in (
         GARBAGE_COLLECTOR_NAME,
         QUERY_SCHEDULER_COMPONENT_NAME,
         QUERY_WORKER_COMPONENT_NAME,
@@ -133,7 +133,7 @@ def generate_container_auth_options(
             clp_config.stream_output.storage,
         ]
     else:
-        raise ValueError(f"Component type {component_type} is not valid.")
+        raise ValueError(f"Container type {container_type} is not valid.")
     config_mount = False
     add_env_vars = False
 

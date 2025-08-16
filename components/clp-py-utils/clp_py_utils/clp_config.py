@@ -63,8 +63,8 @@ TARGET_TO_COMPONENTS = {
     },
 }
 
-# Pseudo component names
-ARCHIVE_MANAGER_PSEUDO_COMPONENT_NAME = "archive_manager"
+# action names
+ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
 
 QUERY_JOBS_TABLE_NAME = "query_jobs"
 QUERY_TASKS_TABLE_NAME = "query_tasks"

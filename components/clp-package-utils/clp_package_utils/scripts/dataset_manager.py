@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Final, List
 
 from clp_py_utils.clp_config import (
-    ARCHIVE_MANAGER_PSEUDO_COMPONENT_NAME,
+    ARCHIVE_MANAGER_ACTION_NAME,
     StorageEngine,
     StorageType,
 )
@@ -135,7 +135,7 @@ def main(argv: List[str]) -> int:
         necessary_mounts.append(mounts.archives_output_dir)
 
     aws_mount, aws_env_vars = generate_container_auth_options(
-        clp_config, ARCHIVE_MANAGER_PSEUDO_COMPONENT_NAME
+        clp_config, ARCHIVE_MANAGER_ACTION_NAME
     )
     if aws_mount:
         necessary_mounts.append(mounts.aws_config_dir)
