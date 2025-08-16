@@ -28,13 +28,6 @@ from clp_package_utils.scripts.dataset_manager import (
 logger: logging.Logger = logging.getLogger(__file__)
 
 
-def _handle_list_datasets(datasets: Dict[str, str]) -> int:
-    logger.info(f"Found {len(datasets)} datasets.")
-    for dataset_name in datasets.keys():
-        logger.info(dataset_name)
-    return 0
-
-
 def _get_dataset_info(
     db_config: Database,
 ) -> Dict[str, str]:
@@ -54,6 +47,13 @@ def _get_dataset_info(
         )
         rows = db_cursor.fetchall()
         return {row["name"]: row["archive_storage_directory"] for row in rows}
+
+
+def _handle_list_datasets(datasets: Dict[str, str]) -> int:
+    logger.info(f"Found {len(datasets)} datasets.")
+    for dataset_name in datasets.keys():
+        logger.info(dataset_name)
+    return 0
 
 
 def _handle_del_datasets(
@@ -102,29 +102,19 @@ def _delete_dataset(clp_config: CLPConfig, dataset: str, dataset_archive_storage
     return True
 
 
-def _delete_dataset_from_database(database_config: Database, dataset: str) -> None:
-    sql_adapter = SQL_Adapter(database_config)
-    clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
-    table_prefix = clp_db_connection_params["table_prefix"]
-
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
-        delete_dataset_from_metadata_db(db_cursor, table_prefix, dataset)
-        db_conn.commit()
-
-
-def _try_deleting_archives_from_s3(s3_config: S3Config, archive_storage_key_prefix: str) -> None:
-    # Add trailing '/' to avoid deleting other datasets with similar prefixes
-    if not archive_storage_key_prefix.endswith("/"):
-        archive_storage_key_prefix += "/"
-
-    s3_delete_by_key_prefix(
-        s3_config.region_code,
-        s3_config.bucket,
-        archive_storage_key_prefix,
-        s3_config.aws_authentication,
-    )
+def _try_deleting_archives(
+    archive_output_config: ArchiveOutput, dataset_archive_storage_dir: str
+) -> None:
+    archive_storage_config = archive_output_config.storage
+    storage_type = archive_storage_config.type
+    if StorageType.FS == storage_type:
+        _try_deleting_archives_from_fs(archive_output_config, dataset_archive_storage_dir)
+    elif StorageType.S3 == storage_type:
+        _try_deleting_archives_from_s3(
+            archive_storage_config.s3_config, dataset_archive_storage_dir
+        )
+    else:
+        raise ValueError(f"Unsupported storage type: {storage_type}")
 
 
 def _try_deleting_archives_from_fs(
@@ -149,19 +139,29 @@ def _try_deleting_archives_from_fs(
     shutil.rmtree(dataset_archive_storage_path)
 
 
-def _try_deleting_archives(
-    archive_output_config: ArchiveOutput, dataset_archive_storage_dir: str
-) -> None:
-    archive_storage_config = archive_output_config.storage
-    storage_type = archive_storage_config.type
-    if StorageType.FS == storage_type:
-        _try_deleting_archives_from_fs(archive_output_config, dataset_archive_storage_dir)
-    elif StorageType.S3 == storage_type:
-        _try_deleting_archives_from_s3(
-            archive_storage_config.s3_config, dataset_archive_storage_dir
-        )
-    else:
-        raise ValueError(f"Unsupported storage type: {storage_type}")
+def _try_deleting_archives_from_s3(s3_config: S3Config, archive_storage_key_prefix: str) -> None:
+    # Add trailing '/' to avoid deleting other datasets with similar prefixes
+    if not archive_storage_key_prefix.endswith("/"):
+        archive_storage_key_prefix += "/"
+
+    s3_delete_by_key_prefix(
+        s3_config.region_code,
+        s3_config.bucket,
+        archive_storage_key_prefix,
+        s3_config.aws_authentication,
+    )
+
+
+def _delete_dataset_from_database(database_config: Database, dataset: str) -> None:
+    sql_adapter = SQL_Adapter(database_config)
+    clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
+    table_prefix = clp_db_connection_params["table_prefix"]
+
+    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
+        db_conn.cursor(dictionary=True)
+    ) as db_cursor:
+        delete_dataset_from_metadata_db(db_cursor, table_prefix, dataset)
+        db_conn.commit()
 
 
 def main(argv: List[str]) -> int:
