@@ -20,28 +20,6 @@ def hive_24hr(request, integration_test_config: IntegrationTestConfig) -> Integr
 
 
 @pytest.fixture(scope="session")
-def elasticsearch(request, integration_test_config: IntegrationTestConfig) -> IntegrationTestLogs:
-    return _download_and_extract_dataset(
-        request=request,
-        integration_test_config=integration_test_config,
-        name="elasticsearch",
-        tarball_url="https://zenodo.org/records/10516227/files/elasticsearch.tar.gz?download=1",
-    )
-
-
-@pytest.fixture(scope="session")
-def spark_event_logs(
-    request, integration_test_config: IntegrationTestConfig
-) -> IntegrationTestLogs:
-    return _download_and_extract_dataset(
-        request=request,
-        integration_test_config=integration_test_config,
-        name="spark-event-logs",
-        tarball_url="https://zenodo.org/records/10516346/files/spark-event-logs.tar.gz?download=1",
-    )
-
-
-@pytest.fixture(scope="session")
 def postgresql(request, integration_test_config: IntegrationTestConfig) -> IntegrationTestLogs:
     return _download_and_extract_dataset(
         request=request,

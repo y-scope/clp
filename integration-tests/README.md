@@ -1,25 +1,41 @@
-# CLP Integration Tests
+# CLP integration tests
 
-This Python module provides end-to-end tests for the CLP package using the `pytest` framework.
-It covers package lifecycle scripts and validates compression and search functionality for
-performance and correctness on large [datasets].
-
+This Python project provides end-to-end tests for CLP using the `pytest` framework.
 
 ## Running tests
-To build the package and run all integration tests:
+
+To run all integration tests:
+
 ```
-task package-test
+task tests:integration
 ```
 
-With the package already built, you can leverage `pytest` markers to selectively run tests, e.g.
+To test the core CLP binaries:
+
 ```
-# Inside the integration-tests top-level directory
+task tests:integration:core
+```
+
+## Testing customizations
+
+### Using pytest markers
+
+One can leverage `pytest` markers to selectively run tests, e.g.
+
+```
+# From the integration-tests directory
 uv run python -m pytest -m clp_s
 ```
+
 only runs `clp-s` related tests.
 
-To test CLP package at a custom location, override default paths with the environment variable
-`CLP_PACKAGE_DIR`, and then run the `uv` command above.
+Before running tests, ensure all package script dependencies and binaries are built.
 
+### Specifying custom test directories
 
-[datasets]: https://docs.yscope.com/clp/main/user-guide/resources-datasets
+You can override the default test paths by setting the following environment variables:
+
+- **`CLP_PACKAGE_DIR`** — Path to a custom CLP package directory (where package scripts live).
+- **`CLP_CORE_BINS_DIR`** — Path to CLP core binaries, for testing only the core executables.
+
+These variables let you point the test suite at non-default build or install locations.

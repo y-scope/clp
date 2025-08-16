@@ -105,6 +105,12 @@ the relevant paths on your machine.
   make -j
   ```
 
+## Test
+
+```shell
+task tests:integration:core
+```
+
 :::{toctree}
 :hidden:
 

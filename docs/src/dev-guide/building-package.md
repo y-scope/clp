@@ -15,7 +15,7 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
 * python3-venv (for the version of Python installed)
 * [Task] >= 3.40.0 and < 3.43.0
   * We constrain the version due to unresolved [issues][clp-issue-872].
-* [uv] 0.7.19 or newer
+* [uv] >= 0.8
 
 ## Setup
 
@@ -61,14 +61,6 @@ where `<flavour>` is `json` or `text`.
 
 The tar will be written to `build/clp-<flavour>-<os>-<arch>-v<version>.tar.gz`, with appropriate
 values for the fields in angle brackets.
-
-## Test
-
-To test the package, run:
-
-```shell
-task package-test
-```
 
 ## Cleanup
 

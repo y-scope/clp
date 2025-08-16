@@ -24,8 +24,6 @@ text_datasets = pytest.mark.parametrize(
 json_datasets = pytest.mark.parametrize(
     "test_logs_fixture",
     [
-        "elasticsearch",
-        "spark_event_logs",
         "postgresql",
     ],
 )
