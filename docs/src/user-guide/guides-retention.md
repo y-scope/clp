@@ -50,19 +50,20 @@ search results.
   we omit dates and seconds from the timestamp).
 
   :::{caution}
-  Retention control operates on **UTC timestamps** and assumes that archive timestamps are also in
-  UTC. Using archives with local timestamps can lead to an effective `TTL` that is different from 
-  the intended value.
+  Retention control assumes that archive timestamps are given in **UTC** time. Using retention
+  control on archives with local (i.e., non-UTC) timestamps can lead to an effective `TTL` that is
+  different from the intended value.
 
-  In the example above, if the package operates in EST (UTC-4) and `archive.T = 16:00` is a local
-  timestamp, then at 16:30 local time, the garbage collector first converts 16:30 EST to 20:30 UTC
-  and the calculation would be `20:30 - 16:00 > 1:00`.
-  In this case, the archive would be determined to be expired and deleted, even though it has not 
+  In the example above, if the package operates on a system in EDT (UTC-4) and `archive.T = 16:00`
+  is a local timestamp, then a garbage collection job operating at 16:30 local time will convert
+  `16:30 EDT` to `20:30 UTC`, and the expiry calculation will be `20:30 - 16:00 > 1:00`. In this
+  case, the archive would be considered expired, and would be deleted, even though it wouldn't have
   actually reached its intended retention period.
 
   To avoid this issue, either generate logs with UTC timestamps or adjust the retention period to
   account for the offset:
-  `adjusted_retention_period = retention_period - UTC offset`
+  
+  `adjusted_retention_period = retention_period - signed_UTC_offset`
   :::
 
 - **Search Result Expiry:** 
@@ -81,13 +82,13 @@ frequently its garbage collection job is executed. These settings can be configu
 `etc/clp-config.yml`. 
 
 ### Configure retention period
-To configure a retention period, update the `retention_period` key in `etc/clp-config.yml` with the
-desired retention period in minutes.
+To configure a retention period, update the appropriate `.retention_period` key in
+`etc/clp-config.yml` with the desired retention period in minutes.
 
 For example, to configure an archive retention period of 30 days (43,200 minutes):
 ```yaml
 archive_output:
-  # Other archive output specific settings
+  # Other archive_output settings
 
   # Retention period for archives, in minutes. 
   # Set to null to disable automatic deletion.
@@ -105,6 +106,7 @@ results_cache:
 ```
 
 ### Configure sweep interval
+
 **Sweep interval** specifies the time interval at which garbage collector jobs run to collect and
 delete expired data.
 
@@ -128,8 +130,12 @@ If the retention period is set to `null`, the corresponding garbage collection t
 even if `sweep_interval` is configured.
 :::
 
+---
 
 ## Internal
+
+This section documents some of CLP’s internal behavior for retention and garbage collection.
+
 ### Handling data race conditions
 CLP's retention system is designed to avoid data race conditions that may arise from the deletion of
 archives or search results that may still be in use by active jobs. CLP employs the following
@@ -150,9 +156,9 @@ Restarting the query scheduler will mark such jobs as failed and allow garbage c
 The garbage collector can resume execution from where it left off if a previous run fails. 
 This design ensures that CLP does not fall into an inconsistent state due to partial deletions.
 
-If the CLP package stops unexpectedly (for example, due to a host machine shutdown) while a garbage
-collection task is running, simply restart the package and the garbage collector will continue 
-from the point of failure.
+If the CLP package stops unexpectedly while a garbage collection task is running (for example, due
+to a host machine shutdown), simply restart the package and the garbage collector will continue from
+the point of failure.
 
 :::{note}
 During failure recovery, there may be a temporary period during which an archive no longer exists in
