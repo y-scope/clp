@@ -158,7 +158,6 @@ def search_and_schedule_new_tasks(
     db_cursor,
     clp_metadata_db_connection_config: Dict[str, Any],
     clp_archive_output: ArchiveOutput,
-    existing_datasets: Set[str],
 ):
     """
     For all jobs with PENDING status, splits the job into tasks and schedules them.
@@ -166,9 +165,12 @@ def search_and_schedule_new_tasks(
     :param db_cursor:
     :param clp_metadata_db_connection_config:
     :param clp_archive_output:
-    :param existing_datasets:
     """
     global scheduled_jobs
+
+    existing_datasets = fetch_existing_datasets(
+        db_cursor, clp_metadata_db_connection_config["table_prefix"]
+    )
 
     logger.debug("Search and schedule new tasks")
 
@@ -194,7 +196,7 @@ def search_and_schedule_new_tasks(
                 clp_archive_output,
             )
 
-            # NOTE: This assumes we never delete a dataset
+            # NOTE: This assumes we never delete a dataset when compression jobs are being scheduled
             existing_datasets.add(dataset)
 
         paths_to_compress_buffer = PathsToCompressBuffer(
@@ -421,11 +423,6 @@ def main(argv):
         clp_metadata_db_connection_config = (
             sql_adapter.database_config.get_clp_connection_params_and_type(True)
         )
-        existing_datasets: Set[str] = set()
-        if StorageEngine.CLP_S == clp_config.package.storage_engine:
-            existing_datasets = fetch_existing_datasets(
-                db_cursor, clp_metadata_db_connection_config["table_prefix"]
-            )
 
         # Start Job Processing Loop
         while True:
@@ -435,7 +432,6 @@ def main(argv):
                     db_cursor,
                     clp_metadata_db_connection_config,
                     clp_config.archive_output,
-                    existing_datasets,
                 )
                 poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
