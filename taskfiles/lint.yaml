@@ -275,7 +275,6 @@ tasks:
             - "clp/FileWriter.cpp"
             - "clp/FileWriter.hpp"
             - "clp/GlobalMetadataDB.hpp"
-            - "clp/GlobalMetadataDBConfig.cpp"
             - "clp/GlobalMySQLMetadataDB.cpp"
             - "clp/GlobalMySQLMetadataDB.hpp"
             - "clp/GlobalSQLiteMetadataDB.cpp"
