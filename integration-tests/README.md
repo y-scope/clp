@@ -6,13 +6,13 @@ This Python project provides end-to-end tests for CLP using the `pytest` framewo
 
 To run all integration tests:
 
-```
+```shell
 task tests:integration
 ```
 
 To test the core CLP binaries:
 
-```
+```shell
 task tests:integration:core
 ```
 
@@ -22,7 +22,7 @@ task tests:integration:core
 
 One can leverage `pytest` markers to selectively run tests, e.g.
 
-```
+```shell
 # From the integration-tests directory
 uv run python -m pytest -m clp_s
 ```
