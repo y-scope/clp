@@ -22,19 +22,14 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
     // Define output options
     po::options_description output_options("Output Options");
-    std::string metadata_db_config_file_path;
     // clang-format off
     output_options.add_options()(
-            "db-config-file",
-            po::value<std::string>(&metadata_db_config_file_path)->value_name("FILE")
-                ->default_value(metadata_db_config_file_path),
-            "Path to the YAML DB config file for metadata storage"
-    )(
             "create-table",
             po::bool_switch(&m_should_create_table),
             "Create the column metadata table if it doesn't exist"
     );
     // clang-format on
+    clp::GlobalMetadataDBConfig metadata_db_config{output_options};
 
     // Define visible options
     po::options_description visible_options;
@@ -96,27 +91,20 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             throw std::invalid_argument("Archive path not specified or empty.");
         }
         m_archive_path = get_path_object_for_raw_path(archive_path);
-        if (false == metadata_db_config_file_path.empty()) {
-            clp::GlobalMetadataDBConfig metadata_db_config;
-            try {
-                metadata_db_config.parse_config_file(metadata_db_config_file_path);
-            } catch (std::exception& e) {
-                SPDLOG_ERROR("Failed to validate metadata database config - {}.", e.what());
-                return ParsingResult::Failure;
-            }
 
-            if (clp::GlobalMetadataDBConfig::MetadataDBType::MySQL
-                != metadata_db_config.get_metadata_db_type())
-            {
-                SPDLOG_ERROR(
-                        "Invalid metadata database type for {}; only supported type is MySQL.",
-                        m_program_name
-                );
-                return ParsingResult::Failure;
-            }
-
-            m_metadata_db_config = std::move(metadata_db_config);
+        // Initialize and validate global metadata DB config
+        if (clp::GlobalMetadataDBConfig::MetadataDBType::MySQL
+            != metadata_db_config.get_metadata_db_type())
+        {
+            SPDLOG_ERROR(
+                    "Invalid metadata database type for {}; only supported type is MySQL.",
+                    m_program_name
+            );
+            return ParsingResult::Failure;
         }
+        metadata_db_config.read_credentials_from_env_if_needed();
+        metadata_db_config.validate();
+        m_metadata_db_config = std::move(metadata_db_config);
     } catch (std::exception& e) {
         SPDLOG_ERROR("{}", e.what());
         print_basic_usage();
