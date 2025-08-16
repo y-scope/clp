@@ -106,7 +106,7 @@ def generate_container_auth_options(
     Handles authentication methods that require extra configuration (profile, env_vars).
 
     :param clp_config: CLPConfig containing storage configurations.
-    :param container_type: Type of calling container.
+    :param container_type: Type of the calling container.
     :return: Tuple of (whether aws config mount is needed, credential env_vars to set).
     :raises: ValueError if environment variables are not set correctly.
     """
@@ -321,7 +321,7 @@ def s3_delete_by_key_prefix(
     region_code: str, bucket_name: str, key_prefix: str, s3_auth: AwsAuthentication
 ) -> None:
     """
-    Deletes all objects under the S3 path `bucket_name/`key_prefix`.
+    Deletes all objects under the S3 path `bucket_name`/`key_prefix`.
 
     :param region_code:
     :param bucket_name:
