@@ -13,11 +13,11 @@ By default, retention control is disabled, and CLP retains data indefinitely.
 ---
 
 ## Definitions
+This section explains the terms and criteria CLP uses to decide when data should be deleted.
+
 At a high level, CLP compares a data item's timestamp with the current time to determine whether
 it has expired. The criteria used to assess this expiration differs slightly between archives and
 search results.
-
-This section explains the terms and criteria CLP uses to decide when data should be deleted.
 
 ### Terms
 - **Current Time (T):** The present wall-clock time when data expiry is being evaluated.
