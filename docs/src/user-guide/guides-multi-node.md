@@ -72,7 +72,7 @@ Running additional workers increases the parallelism of compression and search/a
     4. Set `archive_output.directory` to a directory on the distributed filesystem.
        * Ideally, the directory should be empty or should not yet exist (CLP will create it) since
          CLP will write several files and directories directly to the given directory.
-    5. (Optional) Configure retention periods for archives and search results. For details, see
+    5. (Optional) Configure retention periods for archives and search results. See
        [retention control](guides-retention) for details.
        
 5. Download and extract the package on all nodes.
@@ -179,7 +179,6 @@ cases, see the [SeaweedFS docs][seaweedfs-docs].
 
 [Docker]: https://docs.docker.com/engine/install/
 [docker-non-root]: https://docs.docker.com/engine/install/linux-postinstall/#manage-docker-as-a-non-root-user
-[Retention control]: 
 [SeaweedFS]: https://github.com/seaweedfs/seaweedfs
 [seaweedfs-docs]: https://github.com/seaweedfs/seaweedfs/blob/master/README.md
 [seaweedfs-install-docs]: https://github.com/seaweedfs/seaweedfs?tab=readme-ov-file#quick-start-with-single-binary
