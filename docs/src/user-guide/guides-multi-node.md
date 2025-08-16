@@ -74,7 +74,7 @@ Running additional workers increases the parallelism of compression and search/a
          CLP will write several files and directories directly to the given directory.
     5. (Optional) Configure retention periods for archives and search results. See
        [retention control](guides-retention) for details.
-       
+
 5. Download and extract the package on all nodes.
 6. Copy the `credentials.yml` and `clp-config.yml` files that you created above and paste them
    into `etc` on all the hosts where you extracted the package.

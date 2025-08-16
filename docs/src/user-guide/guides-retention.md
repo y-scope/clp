@@ -20,20 +20,20 @@ it has expired. The criteria used to assess this expiration differs slightly bet
 search results.
 
 ### Terms
-- **Current Time (T):** The present wall-clock time when data expiry is being evaluated.
-- **Retention Period (TTL):** The configured duration for which CLP retains data before it is
+- **Current Time (`T`):** The current time (UTC) when a garbage collector job evaluates data
+  expiration.
+- **Retention Period (`TTL`):** The configured duration for which CLP retains data before it is
   considered expired.
-- **Archive's timestamp (archive.T):** The most recent timestamp among all log messages
-  contained in the archive.
-- **Search result's timestamp (search_result.T):** The timestamp when a search result is inserted
+- **Archive timestamp (`archive.T`):** The most recent timestamp among all log messages
+  contained in the archive. Not related to the time at which the logs were compressed.
+
+  Note that logs with outdated timestamps may be deleted immediately, depending on your retention
+  settings.
+- **Search result timestamp (`search_result.T`):** The timestamp when a search result is inserted
   into the results_cache.
 
   :::{Note}
-  1. Archive's timestamp is based on the **timestamp of its log messages**, not on when the archive
-  is compressed. Compressing old logs with retention enabled could cause those archives to be
-  deleted immediately after compression.
-  
-  2. Archives whose log messages do not contain timestamps are not subject to retention.
+  Archives whose log messages do not contain timestamps are not subject to retention.
   :::
 
 ### Expiry criteria
@@ -45,9 +45,9 @@ search results.
   if (T - archive.T > TTL) then EXPIRED
   ```
 
-  For example, if a compressed archive has `archive.T = 16:00` with a `TTL = 1 hour`, it will be
-  considered expired after `T = 17:00` since `T - 16:00 > 1:00` for all `T > 17:00`(for simplicity,
-  we omit dates and seconds from the timestamp).
+  For example, if a compressed archive has `archive.T = 16:00`(for simplicity,
+  we omit dates and seconds from the timestamp), and `TTL = 1 hour`, it will be
+  considered expired after `T = 17:00` since `T - 16:00 > 1:00` for all `T > 17:00`.
 
   :::{caution}
   Retention control assumes that archive timestamps are given in **UTC** time. Using retention
@@ -76,9 +76,9 @@ search results.
 ---
 
 ## Configuration
-CLP allows users to configure different **retention_periods** for different types of data. 
-Additionally, a custom **sweep_interval** can be set for each type of data, which determines how
-frequently its garbage collection job is executed. These settings can be configured in 
+CLP allows users to specify different **retention_periods** for different types of data. 
+Additionally, the frequency of garbage collection job execution for each type of data can be 
+configured to a customized **sweep_interval**. These settings can be configured in 
 `etc/clp-config.yml`. 
 
 ### Configure retention period
@@ -107,8 +107,8 @@ results_cache:
 
 ### Configure sweep interval
 
-**Sweep interval** specifies the time interval at which garbage collector jobs run to collect and
-delete expired data.
+The **`garbage_collector.sweep_interval`** parameter specifies the time interval at which garbage
+collector jobs run to collect and delete expired data.
 
 To configure a custom sweep frequency for different retention targets, you can set the subfields
 under `garbage_collector.sweep_interval` individually in `etc/clp-config.yml`. For example, to
@@ -126,8 +126,8 @@ garbage_collector:
 ```
 
 :::{note}
-If the retention period is set to `null`, the corresponding garbage collection task will not run 
-even if `sweep_interval` is configured.
+If the `.retention_period` for a data type is set to `null`, the corresponding garbage collection
+task will not run even if `garbage_collector.sweep_interval.<datatype>` is configured.
 :::
 
 ---
