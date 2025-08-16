@@ -1,0 +1,22 @@
+[project]
+name = "integration-tests"
+version = "0.1.0"
+description = "Integration tests for CLP."
+readme = "README.md"
+authors = [
+    { name = "YScope Inc.", email = "dev@yscope.com" }
+]
+requires-python = ">=3.9"
+
+[project.scripts]
+integration-tests = "integration_tests:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "pytest-env>=1.1.5",
+]

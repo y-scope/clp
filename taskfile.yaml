@@ -7,6 +7,7 @@ includes:
   deps: "taskfiles/deps/main.yaml"
   docs: "taskfiles/docs.yaml"
   lint: "taskfiles/lint.yaml"
+  tests: "taskfiles/tests/main.yaml"
   utils: "tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 vars:

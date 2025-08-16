@@ -15,6 +15,7 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
 * python3-venv (for the version of Python installed)
 * [Task] >= 3.40.0 and < 3.43.0
   * We constrain the version due to unresolved [issues][clp-issue-872].
+* [uv] >= 0.8
 
 ## Setup
 
@@ -71,3 +72,4 @@ task clean
 
 [clp-issue-872]: https://github.com/y-scope/clp/issues/872
 [Task]: https://taskfile.dev/
+[uv]: https://docs.astral.sh/uv/

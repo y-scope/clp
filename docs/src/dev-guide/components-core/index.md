@@ -11,6 +11,7 @@ CLP core is the low-level component that performs compression, decompression, an
   * std::source_location
 * [Task] >= 3.40.0 and < 3.43.0
   * We constrain the version due to unresolved [issues][clp-issue-872].
+* [uv] >= 0.8
 
 To build, we require some source dependencies, packages from package managers, and libraries built
 from source.
@@ -105,6 +106,12 @@ the relevant paths on your machine.
   make -j
   ```
 
+## Test
+
+```shell
+task tests:integration:core
+```
+
 :::{toctree}
 :hidden:
 
@@ -117,3 +124,4 @@ regex-utils
 [clp-issue-872]: https://github.com/y-scope/clp/issues/872
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [Task]: https://taskfile.dev/
+[uv]: https://docs.astral.sh/uv/
