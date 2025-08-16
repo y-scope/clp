@@ -5,6 +5,35 @@ from typing import Optional
 
 
 @dataclass(frozen=True)
+class CoreConfig:
+    clp_core_bins_dir: Path
+
+    def __post_init__(self):
+        clp_core_bins_dir = self.clp_core_bins_dir
+
+        # Check if CLP core directory exists and is valid
+        if not clp_core_bins_dir.exists():
+            raise ValueError(f"CLP core bins directory does not exist: {clp_core_bins_dir}")
+        if not clp_core_bins_dir.is_dir():
+            raise ValueError(f"CLP core bins path is not a directory: {clp_core_bins_dir}")
+
+        # Check for required directories
+        required_binaries = ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
+        missing_binaries = [b for b in required_binaries if not (clp_core_bins_dir / b).is_file()]
+        if len(missing_binaries) > 0:
+            raise ValueError(
+                f"CLP core bins at {clp_core_bins_dir} is incomplete. "
+                f"Missing binaries: {', '.join(missing_dirs)}"
+            )
+
+    def get_clp_binary_path(self) -> Path:
+        return self.clp_core_bins_dir / "clp"
+
+    def get_clp_s_binary_path(self) -> Path:
+        return self.clp_core_bins_dir / "clp-s"
+
+
+@dataclass(frozen=True)
 class PackageConfig:
     clp_package_dir: Path
 
@@ -26,15 +55,10 @@ class PackageConfig:
                 f"Missing: {', '.join(missing_dirs)}"
             )
 
-    def get_clp_binary_path(self) -> Path:
-        return self.clp_package_dir / "bin" / "clp"
-
-    def get_clp_s_binary_path(self) -> Path:
-        return self.clp_package_dir / "bin" / "clp-s"
-
 
 @dataclass(frozen=True)
 class IntegrationTestConfig:
+    core_config: CoreConfig
     package_config: PackageConfig
     test_root_dir: Path
     logs_download_dir: Optional[Path] = None
