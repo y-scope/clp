@@ -173,6 +173,7 @@ def search_and_schedule_new_tasks(
     )
 
     logger.debug("Search and schedule new tasks")
+
     # Poll for new compression jobs
     jobs = fetch_new_jobs(db_cursor)
     db_conn.commit()
@@ -195,7 +196,7 @@ def search_and_schedule_new_tasks(
                 clp_archive_output,
             )
 
-            # NOTE: This assumes we never delete a dataset when compression jobs are scheduled
+            # NOTE: This assumes we never delete a dataset when compression jobs are being scheduled
             existing_datasets.add(dataset)
 
         paths_to_compress_buffer = PathsToCompressBuffer(

@@ -321,13 +321,13 @@ def s3_delete_by_key_prefix(
     region_code: str, bucket_name: str, key_prefix: str, s3_auth: AwsAuthentication
 ) -> None:
     """
-    Deletes all objects under the <bucket>/<key_prefix>, using authentication info specified by `s3_auth`.
+    Deletes all objects under the S3 path `bucket_name/`key_prefix`.
 
-    :param region_code: region in which the bucket resides
-    :param bucket_name: name of the bucket
-    :param key_prefix: key prefix of all objects to delete
-    :param s3_auth: configuration specifying the authentication info.
-    :raises: ValueError if parameters are invalid.
+    :param region_code:
+    :param bucket_name:
+    :param key_prefix:
+    :param s3_auth:
+    :raises: ValueError if any parameter is invalid.
     :raises: Propagates `boto3.client.delete_objects`'s exceptions.
     """
 

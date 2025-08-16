@@ -34,7 +34,7 @@ logger: logging.Logger = logging.getLogger(__file__)
 
 def _handle_list_datasets(datasets: Dict[str, str]) -> int:
     logger.info(f"Found {len(datasets)} datasets.")
-    for dataset_name, _ in datasets.items():
+    for dataset_name in datasets.keys():
         logger.info(dataset_name)
     return 0
 
@@ -43,10 +43,8 @@ def _fetch_existing_datasets_info(
     db_config: Database,
 ) -> Dict[str, str]:
     """
-    Retrieves a mapping of existing dataset names to their corresponding archive storage directories.
-
     :param db_config:
-    :return: Dict[str, str] containing the mapping of dataset names to their corresponding archive_storage_directory
+    :return: A map of name -> archive_storage_directory for each dataset that exists.
     """
 
     sql_adapter = SQL_Adapter(db_config)
@@ -68,10 +66,10 @@ def _handle_del_datasets(
     existing_datasets_info: Dict[str, str],
 ):
     if len(existing_datasets_info) == 0:
-        logger.warning("No datasets exist in the database. Skip deletion.")
+        logger.warning("No datasets exist.")
         return 0
 
-    datasets_to_delete: Dict[str, str] = dict()
+    datasets_to_delete: Dict[str, str] = {}
     if parsed_args.del_all:
         datasets_to_delete = existing_datasets_info
     else:
@@ -93,16 +91,16 @@ def _handle_del_datasets(
 def _delete_dataset(dataset: str, dataset_archive_storage_dir: str, clp_config: CLPConfig) -> bool:
     try:
         _try_deleting_archives(clp_config.archive_output, dataset_archive_storage_dir)
-        logger.info(f"Successfully deleted archives of dataset `{dataset}`.")
+        logger.info(f"Deleted archives of dataset `{dataset}`.")
     except:
-        logger.exception(f"Failed to delete archives for dataset `{dataset}`, abort...")
+        logger.exception(f"Failed to delete archives of dataset `{dataset}`.")
         return False
 
     try:
         _delete_dataset_from_database(clp_config.database, dataset)
-        logger.info(f"Successfully deleted dataset `{dataset}` from database.")
+        logger.info(f"Deleted dataset `{dataset}` from the metadata database.")
     except:
-        logger.exception(f"Failed to delete dataset `{dataset}` from database, abort...")
+        logger.exception(f"Failed to delete dataset `{dataset}` from the metadata database.")
         return False
 
     return True
@@ -110,13 +108,14 @@ def _delete_dataset(dataset: str, dataset_archive_storage_dir: str, clp_config: 
 
 def _delete_dataset_from_database(database_config: Database, dataset: str) -> None:
     """
-    Deletes all tables associated with the `dataset` from the metadata database.
+    Deletes all tables associated with `dataset` from the metadata database.
 
     :param database_config:
     :param dataset:
     """
     clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
+
     # Drop tables in an order such that no foreign key constraint is violated.
     tables_removal_order = [
         get_column_metadata_table_name(table_prefix, dataset),
@@ -164,16 +163,17 @@ def _try_deleting_archives_from_fs(
     dataset_archive_storage_path = Path(dataset_archive_storage_dir).resolve()
     if not dataset_archive_storage_path.is_relative_to(archives_dir):
         raise ValueError(
-            f"Fatal: {dataset_archive_storage_path} is not within top-level archive storage directory {archives_dir}"
+            f"'{dataset_archive_storage_path}' is not within top-level archive storage directory"
+            f" '{archives_dir}'"
         )
 
     if not dataset_archive_storage_path.exists():
-        logger.debug(f"{dataset_archive_storage_path} doesn't exist, skip deletion...")
+        logger.debug(f"'{dataset_archive_storage_path}' doesn't exist.")
         return
 
     if not dataset_archive_storage_path.is_dir():
         logger.debug(
-            f"{dataset_archive_storage_path} doesn't resolve to a directory, skip deletion..."
+            f"'{dataset_archive_storage_path}' isn't a directory. Skipping deletion."
         )
         return
 
@@ -189,10 +189,8 @@ def _try_deleting_archives(
         _try_deleting_archives_from_s3(
             archive_storage_config.s3_config, dataset_archive_storage_dir
         )
-
     elif StorageType.FS == storage_type:
         _try_deleting_archives_from_fs(archive_output_config, dataset_archive_storage_dir)
-
     else:
         raise ValueError(f"Unsupported storage type: {storage_type}")
 

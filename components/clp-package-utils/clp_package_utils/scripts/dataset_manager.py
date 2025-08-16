@@ -101,7 +101,7 @@ def main(argv: List[str]) -> int:
 
     storage_engine = clp_config.package.storage_engine
     if StorageEngine.CLP_S != storage_engine:
-        logger.error(f"Datasets operation is not supported for storage engine: {storage_engine}.")
+        logger.error(f"Datasets aren't supported for storage engine: {storage_engine}.")
         return -1
 
     # Validate input depending on subcommands
@@ -109,10 +109,10 @@ def main(argv: List[str]) -> int:
         datasets = parsed_args.datasets
         del_all_flag = parsed_args.del_all
         if not del_all_flag and len(datasets) == 0:
-            args_parser.error("No dataset name is specified for deletion.")
+            args_parser.error("No datasets specified for deletion.")
         if del_all_flag and len(datasets) != 0:
             args_parser.error(
-                "The -a/--all flag cannot be used together with specified dataset names."
+                "The -a/--all flag cannot be used together with a dataset name."
             )
 
         try:
