@@ -18,10 +18,9 @@ set(liblzma_HEADER "lzma.h")
 set(liblzma_LIBNAME "lzma")
 set(liblzma_PKGCONFIG_NAME "liblzma")
 
-if(DEFINED LibLZMA_ROOT)
-    set(liblzma_PKGCONFIG_DIR "${LibLZMA_ROOT}/lib/pkgconfig")
+if(DEFINED CLP_CORE_DEPS_DIR)
     set(ENV{liblzma_ORIG_PKG_CONFIG_PATH} "$ENV{PKG_CONFIG_PATH}")
-    set(ENV{PKG_CONFIG_PATH} "${liblzma_PKGCONFIG_DIR}:$ENV{PKG_CONFIG_PATH}")
+    set(ENV{PKG_CONFIG_PATH} "${CLP_CORE_DEPS_DIR}:$ENV{PKG_CONFIG_PATH}")
 endif()
 
 # Run pkg-config
@@ -91,7 +90,7 @@ if(NOT TARGET LibLZMA::LibLZMA)
 endif()
 
 # Restore original value of PKG_CONFIG_PATH
-if(DEFINED LibLZMA_ROOT)
+if(DEFINED CLP_CORE_DEPS_DIR)
     set(ENV{PKG_CONFIG_PATH} "$ENV{liblzma_ORIG_PKG_CONFIG_PATH}")
     unset(ENV{liblzma_ORIG_PKG_CONFIG_PATH})
 endif()

@@ -225,14 +225,52 @@ tasks:
   liblzma:
     internal: true
     run: "once"
+    deps:
+      - task: "liblzma-shared"
+      - task: "liblzma-static"
+
+  liblzma-shared:
+    internal: true
+    run: "once"
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
             - "-DBUILD_SHARED_LIBS=ON"
+            - "-DBUILD_TESTING=OFF"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-          LIB_NAME: "LibLZMA"
+            - "-DXZ_DOC=OFF"
+            - "-DXZ_TOOL_LZMADEC=OFF"
+            - "-DXZ_TOOL_LZMAINFO=OFF"
+            - "-DXZ_TOOL_SCRIPTS=OFF"
+            - "-DXZ_TOOL_SYMLINKS_LZMA=OFF"
+            - "-DXZ_TOOL_XZ=OFF"
+            - "-DXZ_TOOL_XZDEC=OFF"
+          LIB_NAME: "LibLZMA-shared"
+          TARBALL_SHA256: "507825b599356c10dca1cd720c9d0d0c9d5400b9de300af00e4d1ea150795543"
+          TARBALL_URL: "https://github.com/tukaani-project/xz/releases/download/v5.8.1\
+          /xz-5.8.1.tar.gz"
+
+  liblzma-static:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_SHARED_LIBS=OFF"
+            - "-DBUILD_TESTING=OFF"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DXZ_DOC=OFF"
+            - "-DXZ_TOOL_LZMADEC=OFF"
+            - "-DXZ_TOOL_LZMAINFO=OFF"
+            - "-DXZ_TOOL_SCRIPTS=OFF"
+            - "-DXZ_TOOL_SYMLINKS_LZMA=OFF"
+            - "-DXZ_TOOL_XZ=OFF"
+            - "-DXZ_TOOL_XZDEC=OFF"
+          LIB_NAME: "LibLZMA-static"
           TARBALL_SHA256: "507825b599356c10dca1cd720c9d0d0c9d5400b9de300af00e4d1ea150795543"
           TARBALL_URL: "https://github.com/tukaani-project/xz/releases/download/v5.8.1\
           /xz-5.8.1.tar.gz"
