@@ -9,6 +9,7 @@ from tests.utils.utils import validate_dir_exists
 @dataclass(frozen=True)
 class CoreConfig:
     """The configuration for the clp core binaries subject to testing."""
+
     #:
     clp_core_bins_dir: Path
 
@@ -35,6 +36,7 @@ class CoreConfig:
 @dataclass(frozen=True)
 class PackageConfig:
     """The configuration for the clp package subject to testing."""
+
     #:
     clp_package_dir: Path
 
@@ -55,6 +57,7 @@ class PackageConfig:
 @dataclass(frozen=True)
 class IntegrationTestConfig:
     """The general configuration for integration tests."""
+
     #:
     core_config: CoreConfig
     #:
@@ -75,6 +78,7 @@ class IntegrationTestConfig:
 @dataclass(frozen=True)
 class IntegrationTestLogs:
     """Metadata for the downloaded logs used for integration tests."""
+
     #:
     name: str
     #:
@@ -101,6 +105,7 @@ class IntegrationTestLogs:
 @dataclass(frozen=True)
 class CompressionTestConfig:
     """Compression test configuration providing per-test metadata for artifacts and directories."""
+
     #:
     test_name: str
     #: Directory containing the original (uncompressed) log files used by this test.
