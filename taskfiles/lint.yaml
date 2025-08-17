@@ -770,6 +770,9 @@ tasks:
 
   py:
     internal: true
+    vars:
+      UV_PYTHON_PROJECTS:
+        - "{{.G_INTEGRATION_TESTS_DIR}}"
     requires:
       vars: ["BLACK_FLAGS", "RUFF_FLAGS"]
     deps: ["venv"]
@@ -782,16 +785,17 @@ tasks:
           - "tools/deployment"
           - "tools/scripts"
           - "docs/conf"
-          - "integration-tests"
         cmd: |-
           . "{{.G_LINT_VENV_DIR}}/bin/activate"
           cd "{{.ITEM}}"
           black --color --line-length 100 {{.BLACK_FLAGS}} .
           ruff check {{.RUFF_FLAGS}} .
       - for:
-          - "{{.G_INTEGRATION_TESTS_DIR}}"
+          var: UV_PYTHON_PROJECTS
         cmd: |-
-          uv run --directory {{.ITEM}} mypy .
+          uv run --directory "{{.ITEM}}" black --color --line-length 100 {{.BLACK_FLAGS}} .
+          uv run --directory "{{.ITEM}}" mypy .
+          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_FLAGS}} .
 
   venv:
     internal: true
