@@ -787,6 +787,7 @@ tasks:
           . "{{.G_LINT_VENV_DIR}}/bin/activate"
           cd "{{.ITEM}}"
           black --color --line-length 100 {{.BLACK_FLAGS}} .
+          uv run --directory {{.G_INTEGRATION_TESTS_DIR}} mypy .
           ruff check {{.RUFF_FLAGS}} .
 
   venv:

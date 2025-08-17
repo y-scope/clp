@@ -1,12 +1,15 @@
-import os
+import logging
 import shutil
 import subprocess
 
 import pytest
+
 from tests.utils.config import (
     IntegrationTestConfig,
     IntegrationTestLogs,
 )
+
+logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(scope="session")
@@ -14,6 +17,7 @@ def hive_24hr(
     request: pytest.FixtureRequest,
     integration_test_config: IntegrationTestConfig,
 ) -> IntegrationTestLogs:
+    """Fixture that provides `hive_24hr` test logs shared across tests."""
     return _download_and_extract_dataset(
         request=request,
         integration_test_config=integration_test_config,
@@ -27,6 +31,7 @@ def postgresql(
     request: pytest.FixtureRequest,
     integration_test_config: IntegrationTestConfig,
 ) -> IntegrationTestLogs:
+    """Fixture that provides `postgresql` test logs shared across tests."""
     return _download_and_extract_dataset(
         request=request,
         integration_test_config=integration_test_config,
@@ -47,7 +52,7 @@ def _download_and_extract_dataset(
         integration_test_config=integration_test_config,
     )
     if request.config.cache.get(name, False):
-        print(f"Test logs `{name}` is up-to-date. Skipping download.")
+        logger.info(f"Test logs `{name}` is up-to-date. Skipping download.")
         return integration_test_logs
 
     try:
@@ -68,8 +73,9 @@ def _download_and_extract_dataset(
             integration_test_logs.tarball_path, integration_test_logs.extraction_dir
         )
     except Exception as e:
-        raise RuntimeError(f"Failed to download and extract dataset `{name}`: {e}") from e
+        err_msg = f"Failed to download and extract dataset `{name}`."
+        raise RuntimeError(err_msg) from e
 
-    print(f"Downloaded and extracted uncompressed logs for dataset `{name}`.")
+    logger.info(f"Downloaded and extracted uncompressed logs for dataset `{name}`.")
     request.config.cache.set(name, True)
     return integration_test_logs

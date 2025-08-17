@@ -1,8 +1,5 @@
 version: "3"
 
-vars:
-  G_INTEGRATION_TESTS_DIR: "{{.ROOT_DIR}}/integration-tests"
-
 env:
   CLP_BUILD_DIR: "{{.G_BUILD_DIR}}"
   CLP_CORE_BINS_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"

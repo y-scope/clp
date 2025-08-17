@@ -1,8 +1,11 @@
 import os
+import shutil
 import subprocess
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Any, IO, List
+from typing import Any, IO
+
+import pytest
 
 
 def is_json_file_structurally_equal(json_fp1: Path, json_fp2: Path) -> bool:
@@ -26,12 +29,13 @@ def is_dir_tree_content_equal(path1: Path, path2: Path) -> bool:
     :raise: RuntimeError if the diff command fails due to execution errors.
     """
     cmd = ["diff", "--brief", "--recursive", str(path1), str(path2)]
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    if 0 == proc.returncode:
+    proc = subprocess.run(cmd, check=False, capture_output=True)
+    if proc.returncode == 0:
         return True
-    if 1 == proc.returncode:
+    if proc.returncode == 1:
         return False
-    raise RuntimeError(f"Command failed {' '.join(cmd)}: {proc.stderr.decode()}")
+    err_msg = f"Command failed {' '.join(cmd)}: {proc.stderr.decode()}"
+    raise RuntimeError(err_msg)
 
 
 def get_env_var(var_name: str) -> str:
@@ -42,11 +46,12 @@ def get_env_var(var_name: str) -> str:
     """
     value = os.environ.get(var_name)
     if value is None:
-        raise ValueError(f"Environment variable {var_name} is not set.")
+        err_msg = f"Environment variable {var_name} is not set."
+        raise ValueError(err_msg)
     return value
 
 
-def run_and_assert(cmd: List[str], **kwargs: Any) -> subprocess.CompletedProcess[Any]:
+def run_and_assert(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess[Any]:
     """
     Runs a command with subprocess and asserts that it succeeds with pytest.
 
@@ -55,8 +60,10 @@ def run_and_assert(cmd: List[str], **kwargs: Any) -> subprocess.CompletedProcess
     :return: The completed process object, for inspection or further handling.
     :raise: AssertionError if the command exits with a non-zero return code.
     """
-    proc = subprocess.run(cmd, **kwargs)
-    assert 0 == proc.returncode, f"Command failed: {' '.join(cmd)}"
+    try:
+        proc = subprocess.run(cmd, check=True, **kwargs)
+    except subprocess.CalledProcessError as e:
+        pytest.fail(f"Command failed: {' '.join(cmd)}: {e}")
     return proc
 
 
@@ -66,9 +73,10 @@ def validate_dir_exists(dir_path: Path) -> None:
     :raise: ValueError if the path does not exist or is not a directory.
     """
     if not dir_path.exists():
-        raise ValueError(f"Directory does not exist: {dir_path}")
-    if not dir_path.is_dir():
-        raise ValueError(f"Path is not a directory: {dir_path}")
+        err_msg = f"Directory does not exist: {dir_path}"
+    elif not dir_path.is_dir():
+        err_msg = f"Path is not a directory: {dir_path}"
+    raise ValueError(err_msg)
 
 
 def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
@@ -77,24 +85,32 @@ def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
 
     :param json_fp:
     :return: A named temoprary file (delete on close) that contains the sorted JSON content.
-    :raise: RuntimeError if either jq or sort fails due to execution errors.
+    :raise: RuntimeError if either jq or sort is missing or fails due to execution errors.
     """
-    sorted_fp = NamedTemporaryFile(mode="w+", delete=True)
+    jq_bin = shutil.which("jq")
+    sort_bin = shutil.which("sort")
+    if jq_bin is None or sort_bin is None:
+        err_msg = "jq/sort executable not found"
+        raise RuntimeError(err_msg)
+
+    sorted_fp = NamedTemporaryFile(mode="w+", delete=True)  # noqa: SIM115
     jq_proc = subprocess.Popen(
-        ["jq", "--sort-keys", "--compact-output", ".", str(json_fp)],
+        [jq_bin, "--sort-keys", "--compact-output", ".", str(json_fp)],
         stdout=subprocess.PIPE,
     )
     try:
-        sort_proc = subprocess.run(["sort"], stdin=jq_proc.stdout, stdout=sorted_fp, check=True)
+        sort_proc = subprocess.run([sort_bin], stdin=jq_proc.stdout, stdout=sorted_fp, check=True)
         sort_rc = sort_proc.returncode
         if sort_rc != 0:
-            raise RuntimeError(f"sort failed with exist code {sort_rc} for {json_fp}")
+            err_msg = f"sort failed with exist code {sort_rc} for {json_fp}"
+            raise RuntimeError(err_msg)
     finally:
         if jq_proc.stdout is not None:
             jq_proc.stdout.close()
         jq_rc = jq_proc.wait()
         if jq_rc != 0:
-            raise RuntimeError(f"jq failed with exit code {jq_rc} for {json_fp}")
+            err_msg = f"jq failed with exit code {jq_rc} for {json_fp}"
+            raise RuntimeError(err_msg)
 
     sorted_fp.flush()
     sorted_fp.seek(0)

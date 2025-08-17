@@ -1,6 +1,5 @@
-from pathlib import Path
-
 import pytest
+
 from tests.utils.config import (
     CompressionTestConfig,
     IntegrationTestConfig,
@@ -36,6 +35,13 @@ def test_clp_identity_transform(
     integration_test_config: IntegrationTestConfig,
     test_logs_fixture: str,
 ) -> None:
+    """
+    Validate that compression and decompression by the core binary `clp` are lossless.
+
+    :param request:
+    :param integration_test_config:
+    :param test_logs_fixture:
+    """
     integration_test_logs: IntegrationTestLogs = request.getfixturevalue(test_logs_fixture)
     test_paths = CompressionTestConfig(
         test_name=f"clp-{integration_test_logs.name}",
@@ -80,6 +86,13 @@ def test_clp_s_identity_transform(
     integration_test_config: IntegrationTestConfig,
     test_logs_fixture: str,
 ) -> None:
+    """
+    Validate that compression and decompression by the core binary `clp-s` are lossless.
+
+    :param request:
+    :param integration_test_config:
+    :param test_logs_fixture:
+    """
     integration_test_logs: IntegrationTestLogs = request.getfixturevalue(test_logs_fixture)
     test_logs_name = integration_test_logs.name
 
@@ -106,9 +119,9 @@ def test_clp_s_identity_transform(
     _consolidated_json_file_name = "original"
     input_path = consolidated_json_test_paths.logs_source_dir / _consolidated_json_file_name
     output_path = consolidated_json_test_paths.decompression_dir / _consolidated_json_file_name
-    assert is_json_file_structurally_equal(input_path, output_path), (
-        f"Mismatch between clp-s input {input_path} and output {output_path}."
-    )
+    assert is_json_file_structurally_equal(
+        input_path, output_path
+    ), f"Mismatch between clp-s input {input_path} and output {output_path}."
 
     test_paths.clear_test_outputs()
     consolidated_json_test_paths.clear_test_outputs()

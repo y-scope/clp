@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import shutil
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
-from typing import Optional
 
 from tests.utils.utils import validate_dir_exists
 
@@ -21,15 +22,18 @@ class CoreConfig:
         required_binaries = ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
         missing_binaries = [b for b in required_binaries if not (clp_core_bins_dir / b).is_file()]
         if len(missing_binaries) > 0:
-            raise ValueError(
-                f"CLP core bins at {clp_core_bins_dir} is incomplete. "
-                f"Missing binaries: {', '.join(missing_binaries)}"
+            err_msg = (
+                f"CLP core bins at {clp_core_bins_dir} is incomplete."
+                f" Missing binaries: {', '.join(missing_binaries)}"
             )
+            raise ValueError(err_msg)
 
     def get_clp_binary_path(self) -> Path:
+        """:return: The absolute path to the core binary `clp`."""
         return self.clp_core_bins_dir / "clp"
 
     def get_clp_s_binary_path(self) -> Path:
+        """:return: The absolute path to the core binary `clp-s`."""
         return self.clp_core_bins_dir / "clp-s"
 
 
@@ -48,10 +52,11 @@ class PackageConfig:
         required_dirs = ["bin", "etc", "lib", "sbin"]
         missing_dirs = [d for d in required_dirs if not (clp_package_dir / d).is_dir()]
         if len(missing_dirs) > 0:
-            raise ValueError(
-                f"CLP package at {clp_package_dir} is incomplete. "
-                f"Missing: {', '.join(missing_dirs)}"
+            err_msg = (
+                f"CLP package at {clp_package_dir} is incomplete."
+                f" Missing directories: {', '.join(missing_dirs)}"
             )
+            raise ValueError(err_msg)
 
 
 @dataclass(frozen=True)
@@ -64,11 +69,11 @@ class IntegrationTestConfig:
     package_config: PackageConfig
     #: Root directory for integration tests output.
     test_root_dir: Path
-    logs_download_dir_init: InitVar[Optional[Path]] = None
+    logs_download_dir_init: InitVar[Path | None] = None
     #: Directory to store the downloaded logs.
     logs_download_dir: Path = field(init=False, repr=True)
 
-    def __post_init__(self, logs_download_dir_init: Optional[Path]) -> None:
+    def __post_init__(self, logs_download_dir_init: Path | None) -> None:
         if logs_download_dir_init is not None:
             object.__setattr__(self, "logs_download_dir", logs_download_dir_init)
         else:
@@ -94,8 +99,9 @@ class IntegrationTestLogs:
 
     def __post_init__(self, integration_test_config: IntegrationTestConfig) -> None:
         name = self.name.strip()
-        if 0 == len(name):
-            raise ValueError("`name` cannot be empty.")
+        if len(name) == 0:
+            err_msg = "`name` cannot be empty."
+            raise ValueError(err_msg)
 
         logs_download_dir = integration_test_config.logs_download_dir
         validate_dir_exists(logs_download_dir)
@@ -121,8 +127,9 @@ class CompressionTestConfig:
 
     def __post_init__(self, integration_test_config: IntegrationTestConfig) -> None:
         test_name = self.test_name.strip()
-        if 0 == len(test_name):
-            raise ValueError("`test_name` cannot be empty.")
+        if len(test_name) == 0:
+            err_msg = "`test_name` cannot be empty."
+            raise ValueError(err_msg)
 
         test_root_dir = integration_test_config.test_root_dir
         validate_dir_exists(test_root_dir)
