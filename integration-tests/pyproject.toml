@@ -49,6 +49,7 @@ ignore = [
     "FIX002",  # Allow todo statements
     "PERF401",  # Allow for loops when creating lists
     "PERF403",  # Allow for loops when creating dicts
+    "S101", # Allow usage of pytest `assert`
     "S311",  # Allow usage of `random` package
     "SIM102",  # Allow collapsible if statements for readability
     "TD002",  # Author unnecessary for todo statement
