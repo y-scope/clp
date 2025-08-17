@@ -788,10 +788,10 @@ tasks:
           cd "{{.ITEM}}"
           black --color --line-length 100 {{.BLACK_FLAGS}} .
           ruff check {{.RUFF_FLAGS}} .
-     - for:
-         - "{{.G_INTEGRATION_TESTS_DIR}}"
-       cmd: |-
-         uv run --directory {{.ITEM}} mypy .
+      - for:
+          - "{{.G_INTEGRATION_TESTS_DIR}}"
+        cmd: |-
+          uv run --directory {{.ITEM}} mypy .
 
   venv:
     internal: true
