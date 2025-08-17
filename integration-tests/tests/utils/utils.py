@@ -11,9 +11,10 @@ def is_json_file_structurally_equal(json_fp1: Path, json_fp2: Path) -> bool:
     :param json_fp2:
     :return: Whether two JSON files are structurally equal after sorting has been applied.
     """
-    with _sort_json_keys_and_rows(json_fp1) as temp_file_1, _sort_json_keys_and_rows(
-        json_fp2
-    ) as temp_file_2:
+    with (
+        _sort_json_keys_and_rows(json_fp1) as temp_file_1,
+        _sort_json_keys_and_rows(json_fp2) as temp_file_2,
+    ):
         return is_dir_tree_content_equal(Path(temp_file_1.name), Path(temp_file_2.name))
 
 
