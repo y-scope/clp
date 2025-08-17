@@ -8,6 +8,7 @@ set -u
 
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
+  libbz2-dev \
   ca-certificates \
   checkinstall \
   cmake \
@@ -23,10 +24,12 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   openjdk-11-jdk \
   pkg-config \
   python3 \
+  python3-dev \
   python3-pip \
   python3-venv \
   software-properties-common \
-  unzip
+  unzip \
+  zlib1g-dev
 
 # Install `task`
 # NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
