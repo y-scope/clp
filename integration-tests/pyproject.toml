@@ -59,6 +59,7 @@ ignore = [
     "S311",  # Allow usage of `random` package
     "S603",  # Automatically trust inputs of subprocess execution
     "SIM102",  # Allow collapsible if statements for readability
+    "SIM300",  # Skip Yoda-condition format fixes
     "TD002",  # Author unnecessary for todo statement
     "TD003",  # Issue link unnecessary for todo statement
     "UP015",  # Explicit open modes are helpful
