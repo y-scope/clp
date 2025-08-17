@@ -76,6 +76,6 @@ To run ruff static checks:
 uv run ruff --check .
 ```
 
-
+[Task]: https://taskfile.dev
 [Task]: https://taskfile.dev
 [uv]: https://docs.astral.sh/uv
