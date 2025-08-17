@@ -99,7 +99,7 @@ def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
         stdout=subprocess.PIPE,
     )
     try:
-        sort_proc = subprocess.run([sort_bin], stdin=jq_proc.stdout, stdout=sorted_fp, check=True)
+        subprocess.run([sort_bin], stdin=jq_proc.stdout, stdout=sorted_fp, check=True)
     finally:
         if jq_proc.stdout is not None:
             jq_proc.stdout.close()
