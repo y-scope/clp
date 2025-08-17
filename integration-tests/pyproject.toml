@@ -64,7 +64,8 @@ ignore = [
     "TD003",  # Issue link unnecessary for todo statement
     "UP015",  # Explicit open modes are helpful
 ]
-isort.order-by-type = false
+[tool.ruff.lint.isort]
+order-by-type = false
 
 [tool.ruff.format]
 docstring-code-format = true
