@@ -43,7 +43,7 @@ ignore = [
     "TC003",  # Ignore performance overhead of imports only used for type checking
     "D100",  # Allow missing docstrings in modules
     "D104",  # Allow missing docstrings in public packages
-    "D105",  # Allow missing docstrings in magic methods beceause they are usually self-explanatory
+    "D105",  # Allow missing docstrings in magic methods because they are usually self-explanatory
     "D203",  # No blank line before docstrings (D211)
     "D205",  # Breaks if summary is larger than one line due to wrapping or if no summary exists
     "D212",  # Enforce docstring summary line on the next line after quotes (D213)

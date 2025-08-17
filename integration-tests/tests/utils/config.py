@@ -99,10 +99,9 @@ class IntegrationTestLogs:
 
     def __post_init__(self, integration_test_config: IntegrationTestConfig) -> None:
         name = self.name.strip()
-        if len(name) == 0:
+        if 0 == len(name):
             err_msg = "`name` cannot be empty."
             raise ValueError(err_msg)
-
         logs_download_dir = integration_test_config.logs_download_dir
         validate_dir_exists(logs_download_dir)
 
@@ -127,10 +126,9 @@ class CompressionTestConfig:
 
     def __post_init__(self, integration_test_config: IntegrationTestConfig) -> None:
         test_name = self.test_name.strip()
-        if len(test_name) == 0:
+        if 0 == len(test_name):
             err_msg = "`test_name` cannot be empty."
             raise ValueError(err_msg)
-
         test_root_dir = integration_test_config.test_root_dir
         validate_dir_exists(test_root_dir)
 
