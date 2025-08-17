@@ -8,7 +8,7 @@ env:
 tasks:
   default:
     deps:
-      - "core"
+      - task: "core"
 
   cache-clear:
     dir: "{{.G_INTEGRATION_TESTS_DIR}}"
@@ -19,7 +19,7 @@ tasks:
 
   core:
     deps:
-      - "::core"
+      - task: "::core"
     dir: "{{.G_INTEGRATION_TESTS_DIR}}"
     cmds:
       - >-
