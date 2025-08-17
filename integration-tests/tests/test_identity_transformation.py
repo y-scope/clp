@@ -36,7 +36,8 @@ def test_clp_identity_transform(
     test_logs_fixture: str,
 ) -> None:
     """
-    Validate that compression and decompression by the core binary `clp` are lossless.
+    Validate that compression and decompression by the core binary `clp` run successfully and are
+    lossless.
 
     :param request:
     :param integration_test_config:
@@ -87,7 +88,8 @@ def test_clp_s_identity_transform(
     test_logs_fixture: str,
 ) -> None:
     """
-    Validate that compression and decompression by the core binary `clp-s` are lossless.
+    Validate that compression and decompression by the core binary `clp-s` run successfully and are
+    lossless.
 
     :param request:
     :param integration_test_config:

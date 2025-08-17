@@ -58,7 +58,7 @@ def run_and_assert(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess
     :param cmd: Command and arguments to execute.
     :param kwargs: Additional keyword arguments passed through to the subprocess.
     :return: The completed process object, for inspection or further handling.
-    :raise: AssertionError if the command exits with a non-zero return code.
+    :raise: pytest.fail if the command exits with a non-zero return code.
     """
     try:
         proc = subprocess.run(cmd, check=True, **kwargs)
