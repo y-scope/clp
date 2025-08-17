@@ -84,7 +84,7 @@ def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
     Normalize a JSON file to a stable, deterministically ordered form for comparison.
 
     :param json_fp:
-    :return: A named temoprary file (delete on close) that contains the sorted JSON content.
+    :return: A named temporary file (delete on close) that contains the sorted JSON content.
     :raise: RuntimeError if either jq or sort is missing or fails due to execution errors.
     """
     jq_bin = shutil.which("jq")
@@ -100,10 +100,6 @@ def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
     )
     try:
         sort_proc = subprocess.run([sort_bin], stdin=jq_proc.stdout, stdout=sorted_fp, check=True)
-        sort_rc = sort_proc.returncode
-        if sort_rc != 0:
-            err_msg = f"sort failed with exist code {sort_rc} for {json_fp}"
-            raise RuntimeError(err_msg)
     finally:
         if jq_proc.stdout is not None:
             jq_proc.stdout.close()
