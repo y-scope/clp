@@ -28,11 +28,13 @@ class CoreConfig:
             )
             raise ValueError(err_msg)
 
-    def get_clp_binary_path(self) -> Path:
+    @property
+    def clp_binary_path(self) -> Path:
         """:return: The absolute path to the core binary `clp`."""
         return self.clp_core_bins_dir / "clp"
 
-    def get_clp_s_binary_path(self) -> Path:
+    @property
+    def clp_s_binary_path(self) -> Path:
         """:return: The absolute path to the core binary `clp-s`."""
         return self.clp_core_bins_dir / "clp-s"
 
