@@ -57,21 +57,25 @@ violations and suppressed all warnings.
 The following commands should be run from the integration-tests directory.
 
 To run ruff format checks:
+
 ```shell
 uv run ruff format --check .
 ```
 
 To run ruff format fixes:
+
 ```shell
 uv run ruff format .
 ```
 
 To run mypy static checks:
+
 ```shell
 uv run mypy .
 ```
 
 To run ruff static checks:
+
 ```shell
 uv run ruff --check .
 ```
