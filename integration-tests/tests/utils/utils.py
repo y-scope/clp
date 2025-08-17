@@ -74,9 +74,10 @@ def validate_dir_exists(dir_path: Path) -> None:
     """
     if not dir_path.exists():
         err_msg = f"Directory does not exist: {dir_path}"
-    elif not dir_path.is_dir():
+        raise ValueError(err_msg)
+    if not dir_path.is_dir():
         err_msg = f"Path is not a directory: {dir_path}"
-    raise ValueError(err_msg)
+        raise ValueError(err_msg)
 
 
 def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
