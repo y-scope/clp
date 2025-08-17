@@ -10,7 +10,10 @@ from tests.utils.config import (
 
 
 @pytest.fixture(scope="session")
-def hive_24hr(request, integration_test_config: IntegrationTestConfig) -> IntegrationTestLogs:
+def hive_24hr(
+    request: pytest.FixtureRequest,
+    integration_test_config: IntegrationTestConfig,
+) -> IntegrationTestLogs:
     return _download_and_extract_dataset(
         request=request,
         integration_test_config=integration_test_config,
@@ -20,7 +23,10 @@ def hive_24hr(request, integration_test_config: IntegrationTestConfig) -> Integr
 
 
 @pytest.fixture(scope="session")
-def postgresql(request, integration_test_config: IntegrationTestConfig) -> IntegrationTestLogs:
+def postgresql(
+    request: pytest.FixtureRequest,
+    integration_test_config: IntegrationTestConfig,
+) -> IntegrationTestLogs:
     return _download_and_extract_dataset(
         request=request,
         integration_test_config=integration_test_config,
@@ -30,7 +36,10 @@ def postgresql(request, integration_test_config: IntegrationTestConfig) -> Integ
 
 
 def _download_and_extract_dataset(
-    request, integration_test_config: IntegrationTestConfig, name: str, tarball_url: str
+    request: pytest.FixtureRequest,
+    integration_test_config: IntegrationTestConfig,
+    name: str,
+    tarball_url: str,
 ) -> IntegrationTestLogs:
     integration_test_logs = IntegrationTestLogs(
         name=name,

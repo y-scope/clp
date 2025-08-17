@@ -2,7 +2,7 @@ import os
 import subprocess
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import IO, List
+from typing import Any, IO, List
 
 
 def is_json_file_structurally_equal(json_fp1: Path, json_fp2: Path) -> bool:
@@ -46,7 +46,7 @@ def get_env_var(var_name: str) -> str:
     return value
 
 
-def run_and_assert(cmd: List[str], **kwargs) -> subprocess.CompletedProcess:
+def run_and_assert(cmd: List[str], **kwargs: Any) -> subprocess.CompletedProcess[Any]:
     """
     Runs a command with subprocess and asserts that it succeeds with pytest.
 
