@@ -17,6 +17,46 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 dev = [
+    "mypy>=1.16.0",
+    "ruff>=0.11.12",
     "pytest>=8.3.5",
     "pytest-env>=1.1.5",
 ]
+
+[tool.mypy]
+strict = true
+
+# Additional output
+pretty = true
+show_error_code_links = true
+show_error_context = true
+show_error_end = true
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "COM812",  # Redundant and conflicts with ruff format
+    "D203",  # No blank line before docstrings (D211)
+    "D205",  # Breaks if summary is larger than one line due to wrapping or if no summary exists
+    "D212",  # Enforce docstring summary line on the next line after quotes (D213)
+    "D400",  # First line of docstrings may not end in period
+    "D401",  # Docstrings should be written in present tense (not imperative)
+    "D415",  # First line of docstrings may not end in a period, question mark, or exclamation point
+    "FBT",  # Allow bool positional parameters since other value positions are allowed
+    "FIX002",  # Allow todo statements
+    "PERF401",  # Allow for loops when creating lists
+    "PERF403",  # Allow for loops when creating dicts
+    "S311",  # Allow usage of `random` package
+    "SIM102",  # Allow collapsible if statements for readability
+    "TD002",  # Author unnecessary for todo statement
+    "TD003",  # Issue link unnecessary for todo statement
+    "UP015",  # Explicit open modes are helpful
+]
+isort.order-by-type = false
+
+[tool.ruff.format]
+docstring-code-format = true
+docstring-code-line-length = 100
