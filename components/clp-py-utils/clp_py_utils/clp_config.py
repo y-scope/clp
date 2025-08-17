@@ -258,6 +258,9 @@ class Database(BaseModel):
             )
 
     def load_credentials_from_env(self):
+        """
+        :raise ValueError if any expected environment variable is not set.
+        """
         self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
 
@@ -366,6 +369,9 @@ class Redis(BaseModel):
             )
 
     def load_credentials_from_env(self):
+        """
+        :raise ValueError if any expected environment variable is not set.
+        """
         self.password = _get_env_var(CLP_REDIS_PASS_ENV_VAR_NAME)
 
 
@@ -459,6 +465,9 @@ class Queue(BaseModel):
             )
 
     def load_credentials_from_env(self):
+        """
+        :raise ValueError if any expected environment variable is not set.
+        """
         self.username = _get_env_var(CLP_QUEUE_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_QUEUE_PASS_ENV_VAR_NAME)
 
