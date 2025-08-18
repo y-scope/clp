@@ -8,7 +8,14 @@ set -u
 
 brew update
 
-formula_dir="$(mktemp -d -t "clp-dep-formulas")"
+#formula_dir="$(mktemp -d -t "clp-dep-formulas")"
+
+tap_name="clp-dep-formulas"
+formula_dir="/tmp/clp-dep-formulas"
+mkdir -p "$formula_dir"
+git -C "$formula_dir" init -q
+brew untap "$tap_name" >/dev/null 2>&1 || true
+brew tap "$tap_name" "$formula_dir"
 
 # Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
 # See also: https://github.com/y-scope/clp/issues/795
