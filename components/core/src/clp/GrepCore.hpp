@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <log_surgeon/Lexer.hpp>
+#include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 
 #include "Defs.h"
@@ -162,15 +163,16 @@ std::optional<Query> GrepCore::process_raw_query(
     bool is_var;
     std::string search_string_for_sub_queries{search_string};
     if (use_heuristic) {
-        // Replace '?' wildcards with '*' wildcards since we currently have no support for
+        // Replace unescaped '?' wildcards with '*' wildcards since we currently have no support for
         // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
         // message uses the original wildcards, so correctness will be maintained.
-        std::replace(
-                search_string_for_sub_queries.begin(),
-                search_string_for_sub_queries.end(),
-                '?',
-                '*'
+        string_utils::replace_unescaped_char(
+                string_utils::cWildcardEscapeChar,
+                string_utils::cSingleCharWildcard,
+                string_utils::cZeroOrMoreCharsWildcard,
+                search_string_for_sub_queries
         );
+
         // Clean-up in case any instances of "?*" or "*?" were changed into "**"
         search_string_for_sub_queries
                 = string_utils::clean_up_wildcard_search_string(search_string_for_sub_queries);

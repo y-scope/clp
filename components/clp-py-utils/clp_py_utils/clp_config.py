@@ -68,6 +68,9 @@ TARGET_TO_COMPONENTS = {
     | STORAGE_MANAGEMENT_COMPONENTS,
 }
 
+# Action names
+ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
+
 QUERY_JOBS_TABLE_NAME = "query_jobs"
 QUERY_TASKS_TABLE_NAME = "query_tasks"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
