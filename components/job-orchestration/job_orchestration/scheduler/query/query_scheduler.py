@@ -33,6 +33,7 @@ import pymongo
 from clp_py_utils.clp_config import (
     CLPConfig,
     QUERY_JOBS_TABLE_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_TASKS_TABLE_NAME,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
@@ -1158,7 +1159,7 @@ async def main(argv: List[str]) -> int:
         logger.error(err)
         return -1
     except Exception:
-        logger.exception("Failed to initialize query scheduler.")
+        logger.exception(f"Failed to initialize {QUERY_SCHEDULER_COMPONENT_NAME}.")
         return -1
 
     reducer_connection_queue = asyncio.Queue(32)
@@ -1189,7 +1190,7 @@ async def main(argv: List[str]) -> int:
             f"Connected to archive database"
             f" {clp_config.database.host}:{clp_config.database.port}."
         )
-        logger.info("Query scheduler started.")
+        logger.info(f"{QUERY_SCHEDULER_COMPONENT_NAME} started.")
         batch_size = clp_config.query_scheduler.num_archives_to_search_per_sub_job
         job_handler = asyncio.create_task(
             handle_jobs(
