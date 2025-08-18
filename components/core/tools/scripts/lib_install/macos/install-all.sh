@@ -17,7 +17,7 @@ pipx install cmake~=3.31
 pipx install "go-task-bin>=3.42,<3.43"
 
 brew install \
-  boost==1.87.0 \
+  boost@1.85 \
   coreutils \
   gcc \
   java11 \
