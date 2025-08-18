@@ -2,6 +2,7 @@
  * Column names for the `clp_archives` table.
  */
 enum CLP_ARCHIVES_TABLE_COLUMN_NAMES {
+    ID = "id",
     BEGIN_TIMESTAMP = "begin_timestamp",
     END_TIMESTAMP = "end_timestamp",
     UNCOMPRESSED_SIZE = "uncompressed_size",
@@ -14,6 +15,9 @@ enum CLP_ARCHIVES_TABLE_COLUMN_NAMES {
 enum CLP_FILES_TABLE_COLUMN_NAMES {
     ORIG_FILE_ID = "orig_file_id",
     NUM_MESSAGES = "num_messages",
+    BEGIN_TIMESTAMP = "begin_timestamp",
+    END_TIMESTAMP = "end_timestamp",
+    ARCHIVE_ID = "archive_id",
 }
 
 /**

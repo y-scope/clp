@@ -10,6 +10,7 @@ type Settings = {
     SqlDbClpFilesTableName: string;
     SqlDbClpTablePrefix: string;
     SqlDbCompressionJobsTableName: string;
+    ArchiveRetentionPeriod: number | null;
 };
 
 /**
@@ -31,6 +32,5 @@ const loadSettings = async (): Promise<Settings> => {
 };
 
 const settings: Settings = await loadSettings();
-
 
 export {settings};
