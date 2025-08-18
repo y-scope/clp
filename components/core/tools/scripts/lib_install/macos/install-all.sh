@@ -17,8 +17,6 @@ formula_dir="${tap_dir}/Formula"
 mkdir -p "${formula_dir}"
 git -C "${tap_dir}" init -q
 git -C "${tap_dir}" commit --allow-empty -qm "init tap"
-brew untap "${tap_name}" >/dev/null 2>&1 || true
-brew tap "${tap_name}" "${tap_dir}"
 
 # Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
 # See also: https://github.com/y-scope/clp/issues/795
@@ -32,6 +30,8 @@ curl \
 /Formula/c/cmake.rb
 git -C "${tap_dir}" add "Formula/cmake.rb"
 git -C "${tap_dir}" commit -qm "add cmake formula"
+brew untap "${tap_name}" || true
+brew tap "${tap_name}" "${tap_dir}"
 brew install "${tap_name}/cmake"
 
 # Install a version of `task` < 3.43 to avoid https://github.com/y-scope/clp/issues/872
@@ -45,6 +45,8 @@ curl \
 /Formula/g/go-task.rb
 git -C "${tap_dir}" add "Formula/go-task.rb"
 git -C "${tap_dir}" commit -qm "add go-task formula"
+brew untap "${tap_name}" || true
+brew tap "${tap_name}" "${tap_dir}"
 brew install "${tap_name}/go-task"
 
 if ! command -v uv ; then
