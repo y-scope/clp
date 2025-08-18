@@ -25,4 +25,11 @@ Multi-node deployment
 ^^^
 How to deploy CLP across multiple nodes.
 :::
+
+:::{grid-item-card}
+:link: guides-admin-tools
+Using admin-tools
+^^^
+Using admin-tools scripts to manage datasets and archives.
+:::
 ::::
