@@ -14,6 +14,7 @@ from typing import Dict, List, Optional, Tuple
 import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
+    CLP_GENERATED_CONFIG_FILENAME,
     CLPConfig,
     DB_COMPONENT_NAME,
     QueryEngine,
@@ -321,23 +322,32 @@ def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
     return worker_config
 
 
-def dump_container_config(
-    container_clp_config: CLPConfig, clp_config: CLPConfig, container_name: str
-) -> Tuple[pathlib.Path, pathlib.Path]:
+def dump_config(container_clp_config: CLPConfig, clp_config: CLPConfig, config_filename: str):
     """
     Writes the given config to the logs directory so that it's accessible in the container.
     :param container_clp_config: The config to write.
     :param clp_config: The corresponding config on the host (used to determine the logs directory).
-    :param container_name:
+    :param config_filename:
     :return: The path to the config file in the container and on the host.
     """
-    container_config_filename = f".{container_name}-config.yml"
-    config_file_path_on_host = clp_config.logs_directory / container_config_filename
-    config_file_path_on_container = container_clp_config.logs_directory / container_config_filename
+    config_file_path_on_host = clp_config.logs_directory / config_filename
+    config_file_path_on_container = container_clp_config.logs_directory / config_filename
     with open(config_file_path_on_host, "w") as f:
         yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
 
     return config_file_path_on_container, config_file_path_on_host
+
+
+def dump_container_config(
+    container_clp_config: CLPConfig, clp_config: CLPConfig, container_name: str
+) -> Tuple[pathlib.Path, pathlib.Path]:
+    return dump_config(container_clp_config, clp_config, f".{container_name}-config.yml")
+
+
+def dump_shared_config(
+    container_clp_config: CLPConfig, clp_config: CLPConfig
+) -> Tuple[pathlib.Path, pathlib.Path]:
+    return dump_config(container_clp_config, clp_config, CLP_GENERATED_CONFIG_FILENAME)
 
 
 def generate_container_start_cmd(
