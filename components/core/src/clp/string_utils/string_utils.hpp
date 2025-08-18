@@ -66,12 +66,8 @@ std::string replace_characters(
  * @param to_char
  * @param str String in which to replace the characters
  */
-auto replace_unescaped_char(
-        char const escape_char,
-        char const from_char,
-        char const to_char,
-        std::string& str
-) -> void;
+auto replace_unescaped_char(char escape_char, char from_char, char to_char, std::string& str)
+        -> void;
 
 /**
  * Converts a string to lowercase

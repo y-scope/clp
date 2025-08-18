@@ -30,6 +30,7 @@ constexpr char cRegexOneOrMore{'+'};
 constexpr char cRegexZeroOrOne{'?'};
 constexpr char cRegexStartAnchor{'^'};
 constexpr char cRegexEndAnchor{'$'};
+constexpr char cEscapeChar{'\\'};
 constexpr char cCharsetNegate{'^'};
 
 // Character bitmaps
