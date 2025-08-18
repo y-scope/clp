@@ -122,13 +122,14 @@ auto replace_unescaped_char(
     bool escaped{false};
 
     auto should_replace_char = [&](char c) -> bool {
-        auto const should_replace = (from_char == c && false == escaped);
-        if (escape_char == c) {
-            escaped = !escaped;
-        } else {
+        if (escaped) {
             escaped = false;
+        } else if (escape_char == c) {
+            escaped = true;
+        } else if (from_char == c) {
+            return true;
         }
-        return should_replace;
+        return false;
     };
 
     std::replace_if(str.begin(), str.end(), should_replace_char, to_char);

@@ -14,7 +14,7 @@
 #include "RegexToWildcardTranslatorConfig.hpp"
 
 namespace clp::regex_utils {
-using clp::string_utils::cEscapeChar;
+using clp::string_utils::cWildcardEscapeChar;
 using clp::string_utils::cSingleCharWildcard;
 using clp::string_utils::cZeroOrMoreCharsWildcard;
 using clp::string_utils::is_alphabet;
@@ -181,7 +181,7 @@ auto normal_state_transition(
         case '.':
             state.set_next_state(TranslatorState::RegexPatternState::Dot);
             break;
-        case cEscapeChar:
+        case cWildcardEscapeChar:
             state.set_next_state(TranslatorState::RegexPatternState::Escaped);
             break;
         case '[':
@@ -261,7 +261,7 @@ auto charset_state_transition(
     string_view::const_iterator const charset_begin_it = charset_begin_it_opt.value();
 
     auto const ch{*it};
-    if (cEscapeChar == ch) {
+    if (cWildcardEscapeChar == ch) {
         state.set_next_state(TranslatorState::RegexPatternState::CharsetEscaped);
         return ErrorCodeEnum::Success;
     }
@@ -279,12 +279,12 @@ auto charset_state_transition(
     char parsed_char{};
 
     if (1 == charset_len) {
-        if (cCharsetNegate == ch0 || cEscapeChar == ch0) {
+        if (cCharsetNegate == ch0 || cWildcardEscapeChar == ch0) {
             return ErrorCodeEnum::UnsupportedCharsetPattern;
         }
         parsed_char = ch0;
     } else {  // 2 == charset_len
-        if (cEscapeChar == ch0 && cRegexCharsetEscapeSeqMetaCharsLut.at(ch1)) {
+        if (cWildcardEscapeChar == ch0 && cRegexCharsetEscapeSeqMetaCharsLut.at(ch1)) {
             parsed_char = ch1;
         } else if (config.case_insensitive_wildcard() && is_same_char_opposite_case(ch0, ch1)) {
             parsed_char = ch0 > ch1 ? ch0 : ch1;  // choose the lower case character
@@ -350,7 +350,7 @@ auto final_state_cleanup(
 
 auto append_char_to_wildcard(char ch, string& wildcard_str) -> void {
     if (cWildcardMetaCharsLut.at(ch)) {
-        wildcard_str += cEscapeChar;
+        wildcard_str += cWildcardEscapeChar;
     }
     wildcard_str += ch;
 }

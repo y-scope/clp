@@ -163,11 +163,11 @@ std::optional<Query> GrepCore::process_raw_query(
     bool is_var;
     std::string search_string_for_sub_queries{search_string};
     if (use_heuristic) {
-        // Replace unescaped '?' wildcards with '*' wildcards since we currently have no support
-        // for generating sub-queries with '?' wildcards. The final wildcard match on the
-        // decompressed message uses the original wildcards, so correctness will be maintained.
+        // Replace unescaped '?' wildcards with '*' wildcards since we currently have no support for
+        // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
+        // message uses the original wildcards, so correctness will be maintained.
         string_utils::replace_unescaped_char(
-                string_utils::cEscapeChar,
+                string_utils::cWildcardEscapeChar,
                 string_utils::cSingleCharWildcard,
                 string_utils::cZeroOrMoreCharsWildcard,
                 search_string_for_sub_queries

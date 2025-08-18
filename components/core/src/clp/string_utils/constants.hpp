@@ -6,7 +6,7 @@ namespace clp::string_utils {
 constexpr char cZeroOrMoreCharsWildcard{'*'};
 constexpr char cSingleCharWildcard{'?'};
 
-constexpr char cEscapeChar{'\\'};
+constexpr char cWildcardEscapeChar{'\\'};
 }  // namespace clp::string_utils
 
 #endif  // CLP_STRING_UTILS_CONSTANTS_HPP

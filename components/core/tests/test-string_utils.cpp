@@ -6,7 +6,7 @@
 #include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 
-using clp::string_utils::cEscapeChar;
+using clp::string_utils::cWildcardEscapeChar;
 using clp::string_utils::clean_up_wildcard_search_string;
 using clp::string_utils::convert_string_to_int;
 using clp::string_utils::cSingleCharWildcard;
@@ -34,7 +34,7 @@ TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
                     std::string in,
                     std::string const& expected) {
         replace_unescaped_char(escape_char, from_char, to_char, in);
-        REQUIRE(in == expected);
+        REQUIRE((in == expected));
     };
 
     SECTION("Conventional escape and wildcard characters") {
@@ -70,7 +70,7 @@ TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
                 std::pair{R"(?\)", R"(*\)"}
         );
 
-        check(cEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, str, expected);
+        check(cWildcardEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, str, expected);
     }
 
     SECTION("Unconventional escape and wildcard characters") {

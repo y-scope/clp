@@ -58,6 +58,9 @@ std::string replace_characters(
 /**
  * Replace unescaped instances of `from_char` with `to_char` in `str`.
  *
+ * NOTE: `from_char` and `escape_char` must not be the same character. If they are, the function's
+ * behaviour is undefined.
+ *
  * @param escape_char The character used for escaping
  * @param from_char
  * @param to_char
