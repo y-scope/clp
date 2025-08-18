@@ -1,12 +1,9 @@
 import argparse
 import logging
-import os
 import pathlib
 import subprocess
 import sys
-import uuid
 
-import yaml
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
