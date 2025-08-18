@@ -10,11 +10,22 @@ brew update
 
 # Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
 # See also: https://github.com/y-scope/clp/issues/795
-brew uninstall --force cmake
-pipx install cmake~=3.31
+if command -v cmake ; then
+  brew uninstall --force cmake
+fi
+pipx install "cmake~=3.31"
 
 # Install a version of `task` < 3.43 to avoid https://github.com/y-scope/clp/issues/872
+if command -v task ; then
+  brew uninstall --force task
+fi
 pipx install "go-task-bin>=3.42,<3.43"
+
+# Install uv
+if command -v uv ; then
+  brew uninstall --force uv
+fi
+pipx install "uv>=0.8"
 
 brew install \
   boost \
@@ -26,7 +37,6 @@ brew install \
   lz4 \
   mariadb-connector-c \
   msgpack-cxx \
-  uv \
   xz \
   zstd
 
