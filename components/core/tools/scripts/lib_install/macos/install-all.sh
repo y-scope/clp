@@ -8,42 +8,13 @@ set -u
 
 brew update
 
-#formula_dir="$(mktemp -d -t "clp-dep-formulas")"
-
-tap_name="y-scope/clp-dep-formulas"
-tap_dir="/tmp/clp-dep-formulas"
-formula_dir="${tap_dir}/Formula"
-
-mkdir -p "${formula_dir}"
-git -C "${tap_dir}" init -q
-git -C "${tap_dir}" commit --allow-empty -qm "init tap"
-
 # Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
 # See also: https://github.com/y-scope/clp/issues/795
-pipx uninstall cmake
+brew uninstall --force cmake
 pipx install cmake~=3.31
 
 # Install a version of `task` < 3.43 to avoid https://github.com/y-scope/clp/issues/872
-task_formula_path="${formula_dir}/go-task.rb"
-curl \
-  --fail \
-  --location \
-  --output "$task_formula_path" \
-  --show-error \
-  https://raw.githubusercontent.com/Homebrew/homebrew-core/356f8408263b6a06e8f5f83cad574773d8054e1c\
-/Formula/g/go-task.rb
-git -C "${tap_dir}" add "Formula/go-task.rb"
-git -C "${tap_dir}" commit -qm "add go-task formula"
-brew untap "${tap_name}" || true
-brew tap "${tap_name}" "${tap_dir}"
-brew install "${tap_name}/go-task"
-
-if ! command -v uv ; then
-    brew install uv
-fi
-
-brew untap "${tap_name}" || true
-rm -rf "${formula_dir}"
+pipx install go-task-bin~=3.42
 
 brew install \
   boost \
@@ -55,6 +26,7 @@ brew install \
   lz4 \
   mariadb-connector-c \
   msgpack-cxx \
+  uv \
   xz \
   zstd
 
