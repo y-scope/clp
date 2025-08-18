@@ -14,7 +14,7 @@ import {useResultsMetadata} from "./useResultsMetadata";
 /*
 * Presto error name for user cancellation
 */
-const CANCEL_ERROR_NAME = "USER_CANCELED";
+const PRESTO_CANCEL_ERROR_NAME = "USER_CANCELED";
 
 /**
  * Custom hook to update the UI state to `DONE` when the results metadata signal indicates
