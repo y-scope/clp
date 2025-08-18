@@ -12,12 +12,12 @@ brew update
 
 tap_name="y-scope/clp-dep-formulas"
 tap_dir="/tmp/clp-dep-formulas"
-formula_dir="$tap_dir/Formula"
+formula_dir="${tap_dir}/Formula"
 
-mkdir -p "$formula_dir"
-git -C "$formula_dir" init -q
-brew untap "$tap_name" >/dev/null 2>&1 || true
-brew tap "$tap_name" "$formula_dir"
+mkdir -p "${formula_dir}"
+git -C "${tap_dir}" init -q
+brew untap "${tap_name}" >/dev/null 2>&1 || true
+brew tap "${tap_name}" "${tap_dir}"
 
 # Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
 # See also: https://github.com/y-scope/clp/issues/795
@@ -46,7 +46,7 @@ if ! command -v uv ; then
     brew install uv
 fi
 
-rm -rf "$formula_dir"
+rm -rf "${formula_dir}"
 
 brew install \
   boost \
