@@ -16,6 +16,8 @@
 #include "../clp/spdlog_with_specializations.hpp"
 #include "Utils.hpp"
 
+#include <iostream>
+
 namespace clp_s {
 auto get_source_for_path(std::string_view const path) -> InputSource {
     try {
@@ -146,9 +148,11 @@ auto try_create_network_reader(std::string_view const url, NetworkAuthOption con
     std::string request_url{url};
     switch (auth.method) {
         case AuthMethod::S3PresignedUrlV4:
+            std::cout << "XWEI before sign: " << request_url << std::endl;
             if (false == try_sign_url(request_url)) {
                 return nullptr;
             }
+            std::cout << "XWEI after sign: " << request_url << std::endl;
             break;
         case AuthMethod::None:
             break;
