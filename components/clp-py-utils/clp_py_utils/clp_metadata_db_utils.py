@@ -261,6 +261,37 @@ def delete_archives_from_metadata_db(
     )
 
 
+def delete_dataset_from_metadata_db(db_cursor, table_prefix: str, dataset: str) -> None:
+    """
+    Deletes all tables associated with `dataset` from the metadata database.
+
+    :param db_cursor:
+    :param table_prefix:
+    :param dataset:
+    """
+
+    # Drop tables in an order such that no foreign key constraint is violated.
+    tables_in_removal_order = [
+        get_column_metadata_table_name(table_prefix, dataset),
+        get_files_table_name(table_prefix, dataset),
+        get_archive_tags_table_name(table_prefix, dataset),
+        get_tags_table_name(table_prefix, dataset),
+        get_archives_table_name(table_prefix, dataset),
+    ]
+
+    for table in tables_in_removal_order:
+        db_cursor.execute(f"DROP TABLE IF EXISTS `{table}`")
+
+    # Remove the dataset row from the datasets table
+    db_cursor.execute(
+        f"""
+        DELETE FROM `{get_datasets_table_name(table_prefix)}`
+        WHERE name = %s
+        """,
+        (dataset,),
+    )
+
+
 def get_archive_tags_table_name(table_prefix: str, dataset: str | None) -> str:
     return _get_table_name(table_prefix, ARCHIVE_TAGS_TABLE_SUFFIX, dataset)
 
