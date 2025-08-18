@@ -1054,11 +1054,6 @@ def start_garbage_collector(
     if container_exists(container_name):
         return
 
-    container_config_filename = f"{container_name}.yml"
-    container_config_file_path = clp_config.logs_directory / container_config_filename
-    with open(container_config_file_path, "w") as f:
-        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
-
     logs_dir = clp_config.logs_directory / component_name
     validate_log_directory(logs_dir, component_name)
     # Create logs directory if necessary
@@ -1079,15 +1074,17 @@ def start_garbage_collector(
     ]
     # fmt: on
 
-    necessary_env_vars = [
-        f"PYTHONPATH={clp_site_packages_dir}",
-        f"CLP_HOME={CONTAINER_CLP_HOME}",
-        f"CLP_LOGS_DIR={container_logs_dir}",
-        f"CLP_LOGGING_LEVEL={clp_config.garbage_collector.logging_level}",
-    ]
     necessary_mounts = [
         mounts.clp_home,
         mounts.logs_dir,
+    ]
+    env_vars = [
+        *generate_common_environment_variables(include_clp_home_env_var=True),
+        *generate_credential_environment_variables(
+            container_clp_config, include_db_credentials=True
+        ),
+        f"CLP_LOGS_DIR={container_logs_dir}",
+        f"CLP_LOGGING_LEVEL={clp_config.garbage_collector.logging_level}",
     ]
 
     # Add necessary mounts for archives and streams.
@@ -1100,16 +1097,16 @@ def start_garbage_collector(
     if aws_mount:
         necessary_mounts.append(mounts.aws_config_dir)
     if aws_env_vars:
-        necessary_env_vars.extend(aws_env_vars)
+        env_vars.extend(aws_env_vars)
 
-    append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
+    append_docker_options(container_start_cmd, necessary_mounts, env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
     # fmt: off
     garbage_collector_cmd = [
         "python3", "-u",
         "-m", "job_orchestration.garbage_collector.garbage_collector",
-        "--config", str(container_clp_config.logs_directory / container_config_filename),
+        "--config", str(container_clp_config.get_generated_config_file_path()),
     ]
     # fmt: on
     cmd = container_start_cmd + garbage_collector_cmd
