@@ -930,10 +930,10 @@ class CLPConfig(BaseModel):
 
     def dump_to_primitive_dict(self):
         d = self.dict()
-        d["logs_input"] = self.logs_input.dump_to_primitive_dict()
         d["database"] = self.database.dump_to_primitive_dict()
         d["queue"] = self.queue.dump_to_primitive_dict()
         d["redis"] = self.redis.dump_to_primitive_dict()
+        d["logs_input"] = self.logs_input.dump_to_primitive_dict()
         d["archive_output"] = self.archive_output.dump_to_primitive_dict()
         d["stream_output"] = self.stream_output.dump_to_primitive_dict()
         # Turn paths into primitive strings
