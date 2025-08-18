@@ -28,9 +28,9 @@ Otherwise, the behavior is undefined.
 
 ---
 
-## Archive-manager.sh
+## archive-manager.sh
 `sbin/admin-tools/archive-manager.sh` allows user to list and delete archives on both `clp-text` and 
-`clp-json`, with `find` and `del` subcommand.
+`clp-json`.
 
 For example, to list all archives compressed by `clp-text`, run:
 
@@ -49,17 +49,13 @@ before a certain time.
 To delete archives, user can either specify one or more archive IDs to delete for example:
 
 ```bash
-sbin/admin-tools/archive-manager.sh del \
-  <archive_id_0> \
-  <archive_id_1> \
-  ... \ 
-  <archive_id_n>
+sbin/admin-tools/archive-manager.sh del <archive_id_0> <archive_id_1> ... <archive_id_n>
 ```
 
 Alternatively, user can use the time range filtering as `find` command:
 
 ```bash
-sbin/admin-tools/archive-manager.sh del --begin-ts <epoch-timestamp-millis> 
+sbin/admin-tools/archive-manager.sh del --begin-ts <epoch-timestamp-millis> \
 --end-ts <epoch-timestamp-millis>
 ```
 
@@ -83,7 +79,30 @@ different from the intended value.
 
 ---
 
-## Archive-manager.sh
-`sbin/admin-tools/dataset-manager.sh` allows user to list and delete datasets on `clp-json`. Note
-this scripts does not run on `clp-test`, which doesn't have dataset support.
+## dataset-manager.sh
+`sbin/admin-tools/dataset-manager.sh` allows user to list and delete datasets on `clp-json`. 
+When deleting a dataset, the `dataset-manager.sh` removes all compressed archives under the target
+dataset, and also all associated tables in the metadata database.
 
+:::{note}
+`dataset-manager.sh` is not supported on `clp-text`, which doesn't have support the dataset feature.
+:::
+
+For example, to list all existing datasets in the metadata database, run:
+
+```bash
+sbin/admin-tools/dataset-manager.sh list
+```
+
+To delete dataset(s) by name, run
+
+```bash
+sbin/admin-tools/dataset-manager.sh del <dataset_0> <dataset_1> ... <dataset_n>
+```
+
+:::{caution}
+`dataset-manager.sh` removes files based on the path prefix (or `key_prefix` in object storage).  
+Any non-archive files in the dataset storage directory will also be deleted.  
+As a best practice, do not store non-archive files in the archive storage directory or under the 
+archive storage key prefix.
+:::
