@@ -23,17 +23,17 @@ def kill_hanging_jobs(sql_adapter: SQL_Adapter, scheduler_type: str) -> Optional
     if SchedulerType.COMPRESSION == scheduler_type:
         jobs_table_name = COMPRESSION_JOBS_TABLE_NAME
         job_status_running = CompressionJobStatus.RUNNING
-        job_status_failed = CompressionJobStatus.FAILED
+        job_status_killed = CompressionJobStatus.KILLED
         tasks_table_name = COMPRESSION_TASKS_TABLE_NAME
         task_status_running = CompressionTaskStatus.RUNNING
-        task_status_failed = CompressionTaskStatus.FAILED
+        task_status_killed = CompressionTaskStatus.KILLED
     elif SchedulerType.QUERY == scheduler_type:
         jobs_table_name = QUERY_JOBS_TABLE_NAME
         job_status_running = QueryJobStatus.RUNNING
-        job_status_failed = QueryJobStatus.FAILED
+        job_status_killed = QueryJobStatus.KILLED
         tasks_table_name = QUERY_TASKS_TABLE_NAME
         task_status_running = QueryTaskStatus.RUNNING
-        task_status_failed = QueryTaskStatus.FAILED
+        task_status_killed = QueryTaskStatus.KILLED
     else:
         raise ValueError(f"Unexpected scheduler type {scheduler_type}")
 
@@ -56,14 +56,14 @@ def kill_hanging_jobs(sql_adapter: SQL_Adapter, scheduler_type: str) -> Optional
         db_cursor.execute(
             f"""
             UPDATE {tasks_table_name}
-            SET status={task_status_failed}, duration=0
+            SET status={task_status_killed}, duration=0
             WHERE status={task_status_running}
             AND job_id IN ({job_id_placeholders_str})
             """,
             hanging_job_ids,
         )
 
-        jobs_update_config = {"status": job_status_failed, "duration": 0}
+        jobs_update_config = {"status": int(job_status_killed), "duration": 0}
         field_set_expressions = [f"{k} = %s" for k in jobs_update_config.keys()]
         if SchedulerType.COMPRESSION == scheduler_type:
             field_set_expressions.append("update_time = CURRENT_TIMESTAMP()")
