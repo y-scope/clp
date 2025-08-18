@@ -633,7 +633,7 @@ def is_retention_period_configured(clp_config: CLPConfig) -> bool:
     return False
 
 
-def generate_common_environment_variables(
+def get_common_env_vars_list(
     include_clp_home_env_var=True,
 ) -> List[str]:
     """
@@ -651,7 +651,7 @@ def generate_common_environment_variables(
     return env_vars
 
 
-def generate_credential_environment_variables(
+def generate_credential_env_vars_list(
     container_clp_config: CLPConfig,
     include_db_credentials=False,
     include_queue_credentials=False,
@@ -682,7 +682,7 @@ def generate_credential_environment_variables(
     return env_vars
 
 
-def generate_celery_connection_environment_variables(container_clp_config: CLPConfig) -> List[str]:
+def generate_celery_connection_env_vars_list(container_clp_config: CLPConfig) -> List[str]:
     """
     Generate a list of Celery connection environment variables for Docker containers.
 
