@@ -18,7 +18,7 @@ To run the linting tools, besides commonly installed tools like `tar`, you'll ne
 * [Task] >= 3.40.0 and < 3.43.0
   * Minimum version 3.40.0 is required for [yscope-dev-utils].
   * We constrain the version to < 3.43.0 due to unresolved [issues][clp-issue-872].
-* [uv] >= 0.7.10
+* [uv] >= 0.8
 
 ## Running the linters
 
