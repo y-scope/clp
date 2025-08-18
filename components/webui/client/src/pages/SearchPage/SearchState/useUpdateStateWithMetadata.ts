@@ -37,10 +37,10 @@ const useUiUpdateOnDoneSignal = () => {
             case PRESTO_SEARCH_SIGNAL.FAILED:
                 // Presto reports query cancellation as a failure, but we treat as a successful
                 // completion.
-                if (resultsMetadata.errorMsg === CANCEL_ERROR_NAME) {
+                if (resultsMetadata.errorName === PRESTO_CANCEL_ERROR_NAME) {
                     updateSearchUiState(SEARCH_UI_STATE.DONE);
 
-                    return;
+                    break;
                 }
                 updateSearchUiState(SEARCH_UI_STATE.FAILED);
                 notification.error({
