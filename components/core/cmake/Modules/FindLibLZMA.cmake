@@ -36,7 +36,7 @@ find_path(LibLZMA_INCLUDE_DIR ${liblzma_HEADER}
 # Handle static libraries
 if(LibLZMA_USE_STATIC_LIBS)
     set(liblzma_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
-    set(CMAKE_FIND_LIBRARY_SUFFIXES .a)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_STATIC_LIBRARY_SUFFIX}")
 endif()
 
 # Find library
