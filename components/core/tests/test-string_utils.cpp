@@ -6,10 +6,10 @@
 #include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 
-using clp::string_utils::cWildcardEscapeChar;
 using clp::string_utils::clean_up_wildcard_search_string;
 using clp::string_utils::convert_string_to_int;
 using clp::string_utils::cSingleCharWildcard;
+using clp::string_utils::cWildcardEscapeChar;
 using clp::string_utils::cZeroOrMoreCharsWildcard;
 using clp::string_utils::replace_unescaped_char;
 using clp::string_utils::wildcard_match_unsafe;

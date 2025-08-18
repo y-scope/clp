@@ -14,8 +14,8 @@
 #include "RegexToWildcardTranslatorConfig.hpp"
 
 namespace clp::regex_utils {
-using clp::string_utils::cWildcardEscapeChar;
 using clp::string_utils::cSingleCharWildcard;
+using clp::string_utils::cWildcardEscapeChar;
 using clp::string_utils::cZeroOrMoreCharsWildcard;
 using clp::string_utils::is_alphabet;
 using std::optional;
