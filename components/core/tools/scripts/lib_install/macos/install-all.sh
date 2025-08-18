@@ -16,6 +16,7 @@ formula_dir="${tap_dir}/Formula"
 
 mkdir -p "${formula_dir}"
 git -C "${tap_dir}" init -q
+git -C "${tap_dir}" commit --allow-empty -qm "init tap"
 brew untap "${tap_name}" >/dev/null 2>&1 || true
 brew tap "${tap_name}" "${tap_dir}"
 
@@ -29,7 +30,9 @@ curl \
   --show-error \
   https://raw.githubusercontent.com/Homebrew/homebrew-core/b4e46db74e74a8c1650b38b1da222284ce1ec5ce\
 /Formula/c/cmake.rb
-brew install --formula "$cmake_formula_path"
+git -C "${tap_dir}" add "Formula/cmake.rb"
+git -C "${tap_dir}" commit -qm "add cmake formula"
+brew install "${tap_name}/cmake"
 
 # Install a version of `task` < 3.43 to avoid https://github.com/y-scope/clp/issues/872
 task_formula_path="${formula_dir}/go-task.rb"
@@ -40,12 +43,15 @@ curl \
   --show-error \
   https://raw.githubusercontent.com/Homebrew/homebrew-core/356f8408263b6a06e8f5f83cad574773d8054e1c\
 /Formula/g/go-task.rb
-brew install --formula "$task_formula_path"
+git -C "${tap_dir}" add "Formula/go-task.rb"
+git -C "${tap_dir}" commit -qm "add go-task formula"
+brew install "${tap_name}/go-task"
 
 if ! command -v uv ; then
     brew install uv
 fi
 
+brew untap "${tap_name}" || true
 rm -rf "${formula_dir}"
 
 brew install \
