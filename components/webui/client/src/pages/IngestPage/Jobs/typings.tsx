@@ -10,9 +10,10 @@ import {
  */
 enum CompressionJobStatus {
     PENDING = 0,
-    RUNNING = 1,
-    SUCCEEDED = 2,
-    FAILED = 3,
+    RUNNING,
+    SUCCEEDED,
+    FAILED,
+    KILLED,
 }
 
 /**
@@ -66,6 +67,12 @@ const jobColumns: NonNullable<TableProps<JobData>["columns"]> = [
                         <Badge
                             status={"error"}
                             text={"failed"}/>
+                    );
+                case CompressionJobStatus.KILLED:
+                    return (
+                        <Badge
+                            color={"#000000"}
+                            text={"killed"}/>
                     );
                 default:
                     return null;

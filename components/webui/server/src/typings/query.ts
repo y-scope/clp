@@ -31,6 +31,7 @@ enum QUERY_JOB_STATUS {
     FAILED,
     CANCELLING,
     CANCELLED,
+    KILLED,
 }
 
 /**
