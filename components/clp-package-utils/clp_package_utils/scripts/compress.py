@@ -7,8 +7,10 @@ import uuid
 from typing import List, Optional
 
 from clp_py_utils.clp_config import (
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_DATASET_NAME,
-    StorageEngine, CLP_DB_USER_ENV_VAR_NAME, CLP_DB_PASS_ENV_VAR_NAME,
+    StorageEngine,
 )
 from job_orchestration.scheduler.job_config import InputType
 
