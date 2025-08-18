@@ -1,9 +1,9 @@
 # Admin-tools
 
-Admin-tools contain a set of scripts that allow user to manage the logs compressed by CLP, locating
+Admin-tools is a set of scripts that allow user to manage logs compressed by CLP, located
 under `sbin/admin-tools/`.
-Currently, CLP provides `archive-mananger.sh` and `dataset-manager.sh` that manages at the level of
-archives and datasets.
+Currently, CLP provides `archive-mananger.sh` and `dataset-manager.sh`, which manages compressed 
+logs at the level of archives and datasets.
 
 :::{note}
 Admin-tools scripts can only be used after CLP starts. To start CLP, see 
@@ -12,8 +12,8 @@ for details.
 :::
 
 :::{caution}
-The admin-tools scripts requires that when running, user will not compress or search logs with CLP. 
-Otherwise, the behavior is undefined.
+When running the admin-tools scripts, users must not compress or search logs with CLP.  
+Doing so may result in undefined behavior.
 :::
 
 ---
@@ -29,7 +29,7 @@ Otherwise, the behavior is undefined.
 ---
 
 ## archive-manager.sh
-`sbin/admin-tools/archive-manager.sh` allows user to list and delete archives on both `clp-text` and 
+`sbin/admin-tools/archive-manager.sh` allows users to list and delete archives for both `clp-text` and 
 `clp-json`.
 
 For example, to list all archives compressed by `clp-text`, run:
@@ -46,13 +46,13 @@ after a certain time.
 * Add `--end-ts <epoch-timestamp-millis>` to filter for archives whose most recent log events is 
 before a certain time.
 
-To delete archives, user can either specify one or more archive IDs to delete for example:
+To delete archives, users can specify one or more archive IDs, for example:
 
 ```bash
 sbin/admin-tools/archive-manager.sh del <archive_id_0> <archive_id_1> ... <archive_id_n>
 ```
 
-Alternatively, user can use the time range filtering as `find` command:
+Alternatively, users can delete archives using the time range filtering, similar to the `find` command:
 
 ```bash
 sbin/admin-tools/archive-manager.sh del --begin-ts <epoch-timestamp-millis> \
@@ -71,21 +71,23 @@ on archives with local (i.e., non-UTC) timestamps can lead to an effective time 
 different from the intended value. 
 
   To avoid this issue, either generate logs with UTC timestamps or adjust the 
-`<epoch-timestamp-millis>` to account for the offset:
-`adjusted_epoch-timestamp-millis = epoch-timestamp-millis - signed_UTC_offset`
+  `<epoch-timestamp-millis>` to account for the offset:
+
+  `adjusted-epoch-timestamp-millis = epoch-timestamp-millis - signed_UTC_offset`
+
 
 - `archive-manager.sh` does not support managing archives stored on object storage. This limitation
-  will be addressed in future release.
+  will be addressed in a future release.
 
 ---
 
 ## dataset-manager.sh
-`sbin/admin-tools/dataset-manager.sh` allows user to list and delete datasets on `clp-json`. 
-When deleting a dataset, the `dataset-manager.sh` removes all compressed archives under the target
-dataset, and also all associated tables in the metadata database.
+`sbin/admin-tools/dataset-manager.sh` allows users to list and delete datasets for `clp-json`. 
+When deleting a dataset, the `dataset-manager.sh` removes all compressed archives of the target
+dataset, as well as all associated tables in the metadata database.
 
 :::{note}
-`dataset-manager.sh` is not supported on `clp-text`, which doesn't have support the dataset feature.
+`dataset-manager.sh` is not supported on `clp-text`, which doesn't have the dataset feature.
 :::
 
 For example, to list all existing datasets in the metadata database, run:
