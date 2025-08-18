@@ -50,7 +50,7 @@ The task will download, build, and install (within the build directory) the foll
 | [uftcpp](https://github.com/nemtrif/utfcpp.git)                       | v4.0.6         |
 | [yaml-cpp](https://github.com/jbeder/yaml-cpp.git)                    | v0.7.0         |
 | [yscope-log-viewer](https://github.com/y-scope/yscope-log-viewer.git) | 969ff35        |
-| [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp.git)             | d80cf86        |
+| [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp.git)             | 9ed78cd        |
 | [zstd](https://github.com/facebook/zstd)                              | v1.5.7         |
 
 ### Environment

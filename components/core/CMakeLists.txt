@@ -1,17 +1,11 @@
 cmake_minimum_required(VERSION 3.21)
 
-# Toolchain setup must come before the first project() call in the entire CMake buildsystem.
-# If CLP is not the top-level project, the following setup has no effect.
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Toolchains/utils.cmake")
-setup_toolchains()
-
 project(CLP LANGUAGES CXX C)
 
-validate_compiler_versions()
-
-# Include options for CLP build
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Options/options.cmake")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Toolchains/utils.cmake")
 
+validate_compiler_versions()
 validate_and_setup_all_clp_dependency_flags()
 convert_clp_dependency_properties_to_variables()
 
