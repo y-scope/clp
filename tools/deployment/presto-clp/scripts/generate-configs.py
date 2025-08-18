@@ -103,23 +103,51 @@ def _add_clp_env_vars(
     clp_archive_output_storage_type = _get_config_value(
         clp_config, "archive_output.storage.type", "fs"
     )
-    if "fs" != clp_archive_output_storage_type:
+    if "fs" == clp_archive_output_storage_type:
+        clp_archives_dir = _get_config_value(
+            clp_config,
+            "archive_output.storage.directory",
+            str(clp_package_dir / "var" / "data" / "archives"),
+        )
+        if Path(clp_archives_dir).is_absolute():
+            env_vars["CLP_ARCHIVES_DIR"] = clp_archives_dir
+        else:
+            env_vars["CLP_ARCHIVES_DIR"] = str(clp_package_dir / clp_archives_dir)
+    elif "s3" == clp_archive_output_storage_type:
+        # This will not be used, just to ensure CLP_ARCHIVES_DIR is not an empty string
+        clp_archives_dir = _get_config_value(
+            clp_config,
+            "archive_output.storage.directory",
+            str(clp_package_dir / "var" / "data" / "staged-archives"),
+        )
+        if Path(clp_archives_dir).is_absolute():
+            env_vars["CLP_ARCHIVES_DIR"] = clp_archives_dir
+        else:
+            env_vars["CLP_ARCHIVES_DIR"] = str(clp_package_dir / clp_archives_dir)
+
+        s3_config_key_prefix = f"archive_output.storage.s3_config"
+        s3_credentials_key_prefix = f"{s3_config_key_prefix}.aws_authentication.credentials"
+
+        s3_access_key_id = _get_config_value(clp_config, f"{s3_credentials_key_prefix}.access_key_id")
+
+        s3_bucket = _get_config_value(clp_config, f"{s3_config_key_prefix}.bucket")
+        s3_region_code = _get_config_value(clp_config, f"{s3_config_key_prefix}.region_code")
+        s3_end_point = f"https://{s3_bucket}.s3.{s3_region_code}.amazonaws.com/"
+
+        s3_secret_access_key = _get_config_value(clp_config, f"{s3_credentials_key_prefix}.secret_access_key")
+
+        env_vars["PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE"] = "s3"
+        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER"] = "clp_package"
+        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID"] = s3_access_key_id
+        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT"] = s3_end_point
+        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY"] = s3_secret_access_key
+    else:
         logger.error(
-            "Expected CLP's archive_output.storage.type to be fs but found '%s'. Presto"
-            " currently only supports reading archives from the fs storage type.",
+            "Expected CLP's archive_output.storage.type to be fs or s3 but found '%s'. Presto"
+            " currently only supports reading archives from the fs or s3 storage type.",
             clp_archive_output_storage_type,
         )
         return False
-
-    clp_archives_dir = _get_config_value(
-        clp_config,
-        "archive_output.storage.directory",
-        str(clp_package_dir / "var" / "data" / "archives"),
-    )
-    if Path(clp_archives_dir).is_absolute():
-        env_vars["CLP_ARCHIVES_DIR"] = clp_archives_dir
-    else:
-        env_vars["CLP_ARCHIVES_DIR"] = str(clp_package_dir / clp_archives_dir)
 
     credentials_file_path = clp_package_dir / "etc" / "credentials.yml"
     if not credentials_file_path.exists():
@@ -138,26 +166,6 @@ def _add_clp_env_vars(
         return False
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_USER"] = database_user
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_PASSWORD"] = database_password
-
-    archive_out_storage_key_prefix = "archive_output.storage"
-    archive_out_storage_type = _get_config_value(clp_config, f"{archive_out_storage_key_prefix}.type")
-    if "s3" == archive_out_storage_type:
-        s3_config_key_prefix = f"{archive_out_storage_key_prefix}.s3_config"
-        s3_credentials_key_prefix = f"{s3_config_key_prefix}.aws_authentication.credentials"
-
-        s3_access_key_id = _get_config_value(clp_config, f"{s3_credentials_key_prefix}.access_key_id")
-
-        s3_bucket = _get_config_value(clp_config, f"{s3_config_key_prefix}.bucket")
-        s3_region_code = _get_config_value(clp_config, f"{s3_config_key_prefix}.region_code")
-        s3_end_point = f"https://{s3_bucket}.s3.{s3_region_code}.amazonaws.com/"
-
-        s3_secret_access_key = _get_config_value(clp_config, f"{s3_credentials_key_prefix}.secret_access_key")
-
-        env_vars["PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE"] = "s3"
-        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER"] = "clp_package"
-        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID"] = s3_access_key_id
-        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT"] = s3_end_point
-        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY"] = s3_secret_access_key
 
     return True
 
