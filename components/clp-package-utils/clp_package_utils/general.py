@@ -363,7 +363,7 @@ def generate_container_start_cmd(
     :param container_name:
     :param container_mounts:
     :param container_image:
-    :param extra_env_vars:
+    :param extra_env_vars: Environment variables to set on top of predefined ones.
     :return: The command.
     """
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
@@ -379,9 +379,12 @@ def generate_container_start_cmd(
         "--name", container_name,
         "--log-driver", "local"
     ]
-    if extra_env_vars is not None:
-        for key, value in extra_env_vars.items():
-            container_start_cmd.extend(["-e", f"{key}={value}"])
+    env_vars = {
+        "PYTHONPATH": clp_site_packages_dir,
+        **(extra_env_vars if extra_env_vars is not None else {}),
+    }
+    for key, value in env_vars.items():
+        container_start_cmd.extend(["-e", f"{key}={value}"])
     for mount in container_mounts:
         if mount:
             container_start_cmd.append("--mount")

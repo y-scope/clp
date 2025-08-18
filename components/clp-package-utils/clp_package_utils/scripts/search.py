@@ -8,9 +8,11 @@ import uuid
 
 import yaml
 from clp_py_utils.clp_config import (
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_DATASET_NAME,
     StorageEngine,
-    StorageType, CLP_DB_PASS_ENV_VAR_NAME, CLP_DB_USER_ENV_VAR_NAME,
+    StorageType,
 )
 
 from clp_package_utils.general import (
