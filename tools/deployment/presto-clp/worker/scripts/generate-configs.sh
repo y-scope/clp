@@ -61,17 +61,6 @@ apt-get update && apt-get install --assume-yes --no-install-recommends jq wget
 
 readonly PRESTO_CONFIG_DIR="/opt/presto-server/etc"
 
-# Update clp.properties to insert the environment variable templates
-readonly CLP_PROPERTIES_FILE="/opt/presto-server/etc/catalog/clp.properties"
-if [ -n "${PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER:-}" ]; then
-    log "INFO" "Enable S3 support"
-    update_config_file "$CLP_PROPERTIES_FILE" "clp.storage-type" "\${PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE}"
-    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-auth-provider" "\${PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER}"
-    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-access-key-id" "\${PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID}"
-    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-end-point" "\${PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT}"
-    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-secret-access-key" "\{PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY}"
-fi
-
 # Substitute environment variables in config template
 find /configs -type f | while read -r f; do
     (
@@ -84,6 +73,17 @@ done
 # Remove existing catalog files that exist in the image and add the CLP catalog
 rm -f "${PRESTO_CONFIG_DIR}/catalog/"*
 mv "${PRESTO_CONFIG_DIR}/clp.properties" "${PRESTO_CONFIG_DIR}/catalog"
+
+# Update clp.properties
+readonly CLP_PROPERTIES_FILE="/opt/presto-server/etc/catalog/clp.properties"
+if [ -n "${PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER:-}" ]; then
+    log "INFO" "Enable S3 support"
+    update_config_file "$CLP_PROPERTIES_FILE" "clp.storage-type" "${PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE}"
+    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-auth-provider" "${PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER}"
+    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-access-key-id" "${PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID}"
+    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-end-point" "${PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT}"
+    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-secret-access-key" "${PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY}"
+fi
 
 # Update config.properties
 readonly CONFIG_PROPERTIES_FILE="/opt/presto-server/etc/config.properties"
