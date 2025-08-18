@@ -19,13 +19,12 @@ pipx install "cmake~=3.31"
 if command -v task ; then
   brew uninstall --force task
 fi
-pipx install "go-task-bin>=3.42,<3.43"
+pipx install "go-task-bin>=3.40,<3.43"
 
 # Install uv
-if command -v uv ; then
-  brew uninstall --force uv
+if ! command -v uv ; then
+  pipx install "uv>=0.8"
 fi
-pipx install "uv>=0.8"
 
 brew install \
   boost \
