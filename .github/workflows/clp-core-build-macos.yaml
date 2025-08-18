@@ -58,7 +58,11 @@ jobs:
           submodules: "recursive"
 
       - name: "Check brew version"
-        run: "brew --version"
+        run: |
+          brew --version
+          brew update
+          brew upgrade brew
+          brew --version
 
       # See https://github.com/actions/setup-python/issues/577
       - name: "Remove preinstalled binaries which conflict with brew's installs"
