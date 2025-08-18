@@ -11,10 +11,10 @@ brew update
 # Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
 # See also: https://github.com/y-scope/clp/issues/795
 brew uninstall --force cmake
-pipx install cmake==3.31.7
+pipx install cmake~=3.31
 
 # Install a version of `task` < 3.43 to avoid https://github.com/y-scope/clp/issues/872
-pipx install go-task-bin==3.42.1
+pipx install "go-task-bin>=3.42,<3.43"
 
 brew install \
   boost \
