@@ -101,8 +101,11 @@ private:
 class IrUnitHandler {
 public:
     // Implements `clp::ffi::ir_stream::IrUnitHandlerReq`
-    [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent&& log_event) -> IRErrorCode {
+    [[nodiscard]] auto
+    handle_log_event(KeyValuePairLogEvent&& log_event, [[maybe_unused]] size_t log_event_ix)
+            -> IRErrorCode {
         m_deserialized_log_events.emplace_back(std::move(log_event));
+        m_deserialized_log_event_indexes.emplace_back(log_event_ix);
         return IRErrorCode::IRErrorCode_Success;
     }
 
@@ -150,8 +153,13 @@ public:
         return m_deserialized_log_events;
     }
 
+    [[nodiscard]] auto get_deserialized_log_event_indexes() const -> vector<size_t> const& {
+        return m_deserialized_log_event_indexes;
+    }
+
 private:
     vector<KeyValuePairLogEvent> m_deserialized_log_events;
+    vector<size_t> m_deserialized_log_event_indexes;
     bool m_is_complete{false};
 };
 
@@ -1311,6 +1319,10 @@ TEMPLATE_TEST_CASE(
     auto const& deserialized_log_events{ir_unit_handler.get_deserialized_log_events()};
     REQUIRE((expected_auto_gen_and_user_gen_object_pairs.size() == deserialized_log_events.size()));
 
+    auto const& deserialized_log_event_indexes{
+            ir_unit_handler.get_deserialized_log_event_indexes()
+    };
+
     auto const num_log_events{expected_auto_gen_and_user_gen_object_pairs.size()};
     for (size_t idx{0}; idx < num_log_events; ++idx) {
         auto const& [expected_auto_gen_json_obj, expected_user_gen_json_obj]{
@@ -1337,6 +1349,9 @@ TEMPLATE_TEST_CASE(
         };
         REQUIRE((expected_auto_gen_json_obj == actual_auto_gen_json_obj));
         REQUIRE((expected_user_gen_json_obj == actual_user_gen_json_obj));
+
+        auto const deserialized_log_event_ix{deserialized_log_event_indexes.at(idx)};
+        REQUIRE((idx == deserialized_log_event_ix));
     }
 
     auto const eof_result{deserializer.deserialize_next_ir_unit(reader)};

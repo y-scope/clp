@@ -196,6 +196,7 @@ private:
     IrUnitHandlerType m_ir_unit_handler;
     bool m_is_complete{false};
     [[no_unique_address]] QueryHandlerType m_query_handler;
+    size_t m_num_log_event{0};
 };
 
 /**
@@ -304,6 +305,9 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
                     m_utc_offset
             ))};
 
+            auto log_event_ix = m_num_log_event;
+            m_num_log_event += 1;
+
             if constexpr (search::IsNonEmptyQueryHandler<QueryHandlerType>::value) {
                 if (search::AstEvaluationResult::True
                     != YSTDLIB_ERROR_HANDLING_TRYX(
@@ -314,11 +318,14 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
                 }
             }
 
-            if (auto const err{m_ir_unit_handler.handle_log_event(std::move(log_event))};
+            if (auto const err{
+                        m_ir_unit_handler.handle_log_event(std::move(log_event), log_event_ix)
+                };
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return ir_error_code_to_errc(err);
             }
+
             break;
         }
 

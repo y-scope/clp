@@ -23,6 +23,7 @@ template <typename IrUnitHandlerType>
 concept IrUnitHandlerInterfaceReq = requires(
         IrUnitHandlerType handler,
         KeyValuePairLogEvent&& log_event,
+        size_t log_event_ix,
         bool is_auto_generated,
         UtcOffset utc_offset_old,
         UtcOffset utc_offset_new,
@@ -35,7 +36,7 @@ concept IrUnitHandlerInterfaceReq = requires(
      * @return IRErrorCode::Success on success, user-defined error code on failures.
      */
     {
-        handler.handle_log_event(std::forward<KeyValuePairLogEvent &&>(log_event))
+        handler.handle_log_event(std::forward<KeyValuePairLogEvent &&>(log_event), log_event_ix)
     } -> std::same_as<IRErrorCode>;
 
     /**

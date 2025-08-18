@@ -38,7 +38,9 @@ using JsonPair = std::pair<nlohmann::json, nlohmann::json>;
  */
 class IrUnitHandler {
 public:
-    [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent&& log_event) -> IRErrorCode {
+    [[nodiscard]] auto
+    handle_log_event(KeyValuePairLogEvent&& log_event, [[maybe_unused]] size_t log_event_ix)
+            -> IRErrorCode {
         m_deserialized_log_events.emplace_back(std::move(log_event));
         return IRErrorCode::IRErrorCode_Success;
     }
