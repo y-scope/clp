@@ -10,8 +10,10 @@ brew update
 
 #formula_dir="$(mktemp -d -t "clp-dep-formulas")"
 
-tap_name="clp-dep-formulas"
-formula_dir="/tmp/clp-dep-formulas"
+tap_name="y-scope/clp-dep-formulas"
+tap_dir="/tmp/clp-dep-formulas"
+formula_dir="$tap_dir/Formula"
+
 mkdir -p "$formula_dir"
 git -C "$formula_dir" init -q
 brew untap "$tap_name" >/dev/null 2>&1 || true
