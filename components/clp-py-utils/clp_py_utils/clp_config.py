@@ -1,3 +1,4 @@
+import os
 import pathlib
 from enum import auto
 from typing import Literal, Optional, Set, Union
@@ -26,7 +27,7 @@ QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
-GARBAGE_COLLECTOR_NAME = "garbage_collector"
+GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
 
 # Component groups
 GENERAL_SCHEDULING_COMPONENTS = {
@@ -48,7 +49,10 @@ UI_COMPONENTS = {
     RESULTS_CACHE_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
 }
-ALL_COMPONENTS = COMPRESSION_COMPONENTS | QUERY_COMPONENTS | UI_COMPONENTS
+STORAGE_MANAGEMENT_COMPONENTS = {GARBAGE_COLLECTOR_COMPONENT_NAME}
+ALL_COMPONENTS = (
+    COMPRESSION_COMPONENTS | QUERY_COMPONENTS | UI_COMPONENTS | STORAGE_MANAGEMENT_COMPONENTS
+)
 
 # Target names
 ALL_TARGET_NAME = ""
@@ -60,8 +64,12 @@ TARGET_TO_COMPONENTS = {
     | {
         COMPRESSION_SCHEDULER_COMPONENT_NAME,
         QUERY_SCHEDULER_COMPONENT_NAME,
-    },
+    }
+    | STORAGE_MANAGEMENT_COMPONENTS,
 }
+
+# Action names
+ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
 
 QUERY_JOBS_TABLE_NAME = "query_jobs"
 QUERY_TASKS_TABLE_NAME = "query_tasks"
@@ -74,6 +82,15 @@ CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
 CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
+CLP_SHARED_CONFIG_FILENAME = ".clp-config.yml"
+
+
+# Environment variable names
+CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
+CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
+CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
+CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
+CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 
 
 class StorageEngine(KebabCaseStrEnum):
@@ -229,6 +246,28 @@ class Database(BaseModel):
             connection_params_and_type["ssl_cert"] = self.ssl_cert
         return connection_params_and_type
 
+    def dump_to_primitive_dict(self):
+        return self.dict(exclude={"username", "password"})
+
+    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        config = read_yaml_config_file(credentials_file_path)
+        if config is None:
+            raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
+        try:
+            self.username = get_config_value(config, f"{DB_COMPONENT_NAME}.user")
+            self.password = get_config_value(config, f"{DB_COMPONENT_NAME}.password")
+        except KeyError as ex:
+            raise ValueError(
+                f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
+            )
+
+    def load_credentials_from_env(self):
+        """
+        :raise ValueError: if any expected environment variable is not set.
+        """
+        self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
+        self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
+
 
 def _validate_logging_level(cls, field):
     if not is_valid_logging_level(field):
@@ -311,13 +350,33 @@ class Redis(BaseModel):
     query_backend_database: int = 0
     compression_backend_database: int = 1
     # redis can perform authentication without a username
-    password: Optional[str]
+    password: Optional[str] = None
 
     @validator("host")
     def validate_host(cls, field):
         if "" == field:
             raise ValueError(f"{REDIS_COMPONENT_NAME}.host cannot be empty.")
         return field
+
+    def dump_to_primitive_dict(self):
+        return self.dict(exclude={"password"})
+
+    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        config = read_yaml_config_file(credentials_file_path)
+        if config is None:
+            raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
+        try:
+            self.password = get_config_value(config, f"{REDIS_COMPONENT_NAME}.password")
+        except KeyError as ex:
+            raise ValueError(
+                f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
+            )
+
+    def load_credentials_from_env(self):
+        """
+        :raise ValueError: if any expected environment variable is not set.
+        """
+        self.password = _get_env_var(CLP_REDIS_PASS_ENV_VAR_NAME)
 
 
 class Reducer(BaseModel):
@@ -355,7 +414,7 @@ class ResultsCache(BaseModel):
     port: int = 27017
     db_name: str = "clp-query-results"
     stream_collection_name: str = "stream-files"
-    retention_period: Optional[int] = None
+    retention_period: Optional[int] = 60
 
     @validator("host")
     def validate_host(cls, field):
@@ -391,8 +450,30 @@ class Queue(BaseModel):
     host: str = "localhost"
     port: int = 5672
 
-    username: Optional[str]
-    password: Optional[str]
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+    def dump_to_primitive_dict(self):
+        return self.dict(exclude={"username", "password"})
+
+    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        config = read_yaml_config_file(credentials_file_path)
+        if config is None:
+            raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
+        try:
+            self.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.user")
+            self.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
+        except KeyError as ex:
+            raise ValueError(
+                f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
+            )
+
+    def load_credentials_from_env(self):
+        """
+        :raise ValueError: if any expected environment variable is not set.
+        """
+        self.username = _get_env_var(CLP_QUEUE_USER_ENV_VAR_NAME)
+        self.password = _get_env_var(CLP_QUEUE_PASS_ENV_VAR_NAME)
 
 
 class S3Credentials(BaseModel):
@@ -696,6 +777,13 @@ class GarbageCollector(BaseModel):
         return field
 
 
+def _get_env_var(name: str) -> str:
+    value = os.getenv(name)
+    if value is None:
+        raise ValueError(f"Missing environment variable: {name}")
+    return value
+
+
 class CLPConfig(BaseModel):
     execution_container: Optional[str] = None
 
@@ -834,40 +922,8 @@ class CLPConfig(BaseModel):
 
         self.execution_container = "ghcr.io/y-scope/clp/" + self.execution_container
 
-    def load_database_credentials_from_file(self):
-        config = read_yaml_config_file(self.credentials_file_path)
-        if config is None:
-            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
-        try:
-            self.database.username = get_config_value(config, f"{DB_COMPONENT_NAME}.user")
-            self.database.password = get_config_value(config, f"{DB_COMPONENT_NAME}.password")
-        except KeyError as ex:
-            raise ValueError(
-                f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
-            )
-
-    def load_queue_credentials_from_file(self):
-        config = read_yaml_config_file(self.credentials_file_path)
-        if config is None:
-            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
-        try:
-            self.queue.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.user")
-            self.queue.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
-        except KeyError as ex:
-            raise ValueError(
-                f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
-            )
-
-    def load_redis_credentials_from_file(self):
-        config = read_yaml_config_file(self.credentials_file_path)
-        if config is None:
-            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
-        try:
-            self.redis.password = get_config_value(config, f"{REDIS_COMPONENT_NAME}.password")
-        except KeyError as ex:
-            raise ValueError(
-                f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
-            )
+    def get_shared_config_file_path(self) -> pathlib.Path:
+        return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
 
     def get_runnable_components(self) -> Set[str]:
         if QueryEngine.PRESTO == self.package.query_engine:
@@ -876,10 +932,18 @@ class CLPConfig(BaseModel):
             return ALL_COMPONENTS
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
-        d["logs_input"] = self.logs_input.dump_to_primitive_dict()
-        d["archive_output"] = self.archive_output.dump_to_primitive_dict()
-        d["stream_output"] = self.stream_output.dump_to_primitive_dict()
+        custom_serialized_fields = (
+            "database",
+            "queue",
+            "redis",
+            "logs_input",
+            "archive_output",
+            "stream_output",
+        )
+        d = self.dict(exclude=set(custom_serialized_fields))
+        for key in custom_serialized_fields:
+            d[key] = getattr(self, key).dump_to_primitive_dict()
+
         # Turn paths into primitive strings
         d["credentials_file_path"] = str(self.credentials_file_path)
         d["data_directory"] = str(self.data_directory)
@@ -888,6 +952,7 @@ class CLPConfig(BaseModel):
             d["aws_config_directory"] = str(self.aws_config_directory)
         else:
             d["aws_config_directory"] = None
+
         return d
 
 

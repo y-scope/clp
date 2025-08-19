@@ -2,10 +2,12 @@ import argparse
 import logging
 import subprocess
 import sys
-import typing
 from pathlib import Path
+from typing import Final, List, Optional
 
 from clp_py_utils.clp_config import (
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_DATASET_NAME,
     StorageEngine,
     StorageType,
@@ -14,30 +16,31 @@ from clp_py_utils.clp_config import (
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLPConfig,
-    CLPDockerMounts,
+    DockerMount,
     dump_container_config,
     generate_container_config,
     generate_container_name,
     generate_container_start_cmd,
     get_clp_home,
+    get_container_config_filename,
     load_config_file,
     validate_and_load_db_credentials_file,
     validate_dataset_name,
 )
 
 # Command/Argument Constants
-FIND_COMMAND: typing.Final[str] = "find"
-DEL_COMMAND: typing.Final[str] = "del"
-DEL_BY_IDS_SUBCOMMAND: typing.Final[str] = "by-ids"
-DEL_BY_FILTER_SUBCOMMAND: typing.Final[str] = "by-filter"
-BEGIN_TS_ARG: typing.Final[str] = "--begin-ts"
-END_TS_ARG: typing.Final[str] = "--end-ts"
-DRY_RUN_ARG: typing.Final[str] = "--dry-run"
+FIND_COMMAND: Final[str] = "find"
+DEL_COMMAND: Final[str] = "del"
+DEL_BY_IDS_SUBCOMMAND: Final[str] = "by-ids"
+DEL_BY_FILTER_SUBCOMMAND: Final[str] = "by-filter"
+BEGIN_TS_ARG: Final[str] = "--begin-ts"
+END_TS_ARG: Final[str] = "--end-ts"
+DRY_RUN_ARG: Final[str] = "--dry-run"
 
 logger: logging.Logger = logging.getLogger(__file__)
 
 
-def _validate_timestamps(begin_ts: int, end_ts: typing.Optional[int]) -> bool:
+def _validate_timestamps(begin_ts: int, end_ts: Optional[int]) -> bool:
     if begin_ts < 0:
         logger.error("begin-ts must be non-negative.")
         return False
@@ -50,7 +53,7 @@ def _validate_timestamps(begin_ts: int, end_ts: typing.Optional[int]) -> bool:
     return True
 
 
-def main(argv: typing.List[str]) -> int:
+def main(argv: List[str]) -> int:
     clp_home: Path = get_clp_home()
     default_config_file_path: Path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -63,6 +66,12 @@ def main(argv: typing.List[str]) -> int:
         "-c",
         default=str(default_config_file_path),
         help="CLP package configuration file.",
+    )
+    args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
     )
     args_parser.add_argument(
         "--dataset",
@@ -148,9 +157,13 @@ def main(argv: typing.List[str]) -> int:
     )
 
     parsed_args: argparse.Namespace = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
-    begin_timestamp: typing.Optional[int]
-    end_timestamp: typing.Optional[int]
+    begin_timestamp: Optional[int] = None
+    end_timestamp: Optional[int] = None
     subcommand: str = parsed_args.subcommand
 
     # Validate and load config file
@@ -169,7 +182,7 @@ def main(argv: typing.List[str]) -> int:
 
     storage_type: StorageType = clp_config.archive_output.storage.type
     if StorageType.FS != storage_type:
-        logger.error(f"Archive deletion is not supported for storage type: {storage_type}.")
+        logger.error(f"Archive manager is not supported for storage type: {storage_type}.")
         return -1
 
     storage_engine: StorageEngine = clp_config.package.storage_engine
@@ -202,20 +215,24 @@ def main(argv: typing.List[str]) -> int:
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
-        container_clp_config, clp_config, container_name
+        container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
-    necessary_mounts: typing.List[CLPDockerMounts] = [
+    necessary_mounts: List[Optional[DockerMount]] = [
         mounts.clp_home,
         mounts.logs_dir,
         mounts.archives_output_dir,
     ]
-    container_start_cmd: typing.List[str] = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container
+    extra_env_vars = {
+        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
+        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+    }
+    container_start_cmd: List[str] = generate_container_start_cmd(
+        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
     )
 
     # fmt: off
-    archive_manager_cmd: typing.List[str] = [
+    archive_manager_cmd: List[str] = [
         "python3",
         "-m", "clp_package_utils.scripts.native.archive_manager",
         "--config", str(generated_config_path_on_container),
@@ -224,6 +241,9 @@ def main(argv: typing.List[str]) -> int:
     if dataset is not None:
         archive_manager_cmd.append("--dataset")
         archive_manager_cmd.append(dataset)
+    if parsed_args.verbose:
+        archive_manager_cmd.append("--verbose")
+
     archive_manager_cmd.append(subcommand)
 
     # Add subcommand-specific arguments
@@ -249,15 +269,20 @@ def main(argv: typing.List[str]) -> int:
             archive_manager_cmd.extend([END_TS_ARG, str(end_timestamp)])
     else:
         logger.error(f"Unsupported subcommand: `{subcommand}`.")
+        return -1
 
-    cmd: typing.List[str] = container_start_cmd + archive_manager_cmd
+    cmd: List[str] = container_start_cmd + archive_manager_cmd
 
-    subprocess.run(cmd, check=True)
+    proc = subprocess.run(cmd)
+    ret_code = proc.returncode
+    if 0 != ret_code:
+        logger.error("Archive manager failed.")
+        logger.debug(f"Docker command failed: {' '.join(cmd)}")
 
     # Remove generated files
     generated_config_path_on_host.unlink()
 
-    return 0
+    return ret_code
 
 
 if "__main__" == __name__:
