@@ -1,8 +1,8 @@
 #ifndef CLP_FFI_IR_STREAM_DESERIALIZER_HPP
 #define CLP_FFI_IR_STREAM_DESERIALIZER_HPP
 
-#include <cstdint>
 #include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <system_error>
