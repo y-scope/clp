@@ -1069,6 +1069,7 @@ def start_garbage_collector(
     necessary_mounts = [
         mounts.clp_home,
         mounts.logs_dir,
+        mounts.generated_config_file,
     ]
     env_vars = [
         *get_common_env_vars_list(include_clp_home_env_var=True),
