@@ -322,7 +322,7 @@ def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
     return worker_config
 
 
-def dump_config(container_clp_config: CLPConfig, clp_config: CLPConfig, config_filename: str):
+def dump_container_config(container_clp_config: CLPConfig, clp_config: CLPConfig, config_filename: str):
     """
     Writes the given container config to the logs directory, so that it's accessible in the
     container.
@@ -340,12 +340,6 @@ def dump_config(container_clp_config: CLPConfig, clp_config: CLPConfig, config_f
     return config_file_path_on_container, config_file_path_on_host
 
 
-def dump_container_config(
-    container_clp_config: CLPConfig, clp_config: CLPConfig, container_name: str
-) -> Tuple[pathlib.Path, pathlib.Path]:
-    return dump_config(container_clp_config, clp_config, f".{container_name}-config.yml")
-
-
 def dump_shared_container_config(
     container_clp_config: CLPConfig, clp_config: CLPConfig
 ) -> Tuple[pathlib.Path, pathlib.Path]:
@@ -356,7 +350,7 @@ def dump_shared_container_config(
     :param container_clp_config:
     :param clp_config:
     """
-    return dump_config(container_clp_config, clp_config, CLP_GENERATED_CONFIG_FILENAME)
+    return dump_container_config(container_clp_config, clp_config, CLP_GENERATED_CONFIG_FILENAME)
 
 
 def generate_container_start_cmd(
