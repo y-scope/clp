@@ -20,3 +20,5 @@ ENV PATH="/opt/clp/sbin:${PATH}"
 ENV PATH="/opt/clp/bin:${PATH}"
 ENV PYTHONPATH="/opt/clp/lib/python3/site-packages"
 ENV CLP_HOME="/opt/clp"
+
+USER 1000:1000
