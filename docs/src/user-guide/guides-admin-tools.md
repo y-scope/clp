@@ -83,15 +83,15 @@ described above to manage the archives in a specific dataset.
 ---
 
 ## dataset-manager.sh
-`sbin/admin-tools/dataset-manager.sh` allows users to list and delete datasets for `clp-json`. 
-When deleting a dataset, the `dataset-manager.sh` removes all compressed archives of the target
-dataset, as well as all associated tables in the metadata database.
+`dataset-manager.sh` allows users to list and delete datasets for `clp-json`. When deleting a
+dataset, the dataset manager removes all compressed archives of the target dataset, as well as all
+associated tables in the metadata database.
 
 :::{note}
 `dataset-manager.sh` is not supported on `clp-text`, which doesn't have the dataset feature.
 :::
 
-For example, to list all existing datasets in the metadata database, run:
+To list all existing datasets in the metadata database, run:
 
 ```bash
 sbin/admin-tools/dataset-manager.sh list
@@ -104,8 +104,8 @@ sbin/admin-tools/dataset-manager.sh del <dataset_0> <dataset_1> ... <dataset_n>
 ```
 
 :::{caution}
-`dataset-manager.sh` removes files based on the path prefix (or `key_prefix` in object storage).  
-Any non-archive files in the dataset storage directory will also be deleted.  
-As a best practice, do not store non-archive files in the archive storage directory or under the 
-archive storage key prefix.
+`dataset-manager.sh` removes files based on the path prefix (or `key_prefix` in object storage). Any
+non-archive files in the dataset storage directory will also be deleted. As a precaution, do not
+store non-archive files in the archive storage directory or under the archive storage key prefix.
 :::
+
