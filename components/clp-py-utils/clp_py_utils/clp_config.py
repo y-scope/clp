@@ -81,8 +81,8 @@ OS_RELEASE_FILE_PATH = pathlib.Path("etc") / "os-release"
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
 CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
 CLP_DEFAULT_DATASET_NAME = "default"
-CLP_SHARED_CONFIG_FILENAME = ".clp-config.yml"
 CLP_METADATA_TABLE_PREFIX = "clp_"
+CLP_SHARED_CONFIG_FILENAME = ".clp-config.yml"
 
 
 # Environment variable names
