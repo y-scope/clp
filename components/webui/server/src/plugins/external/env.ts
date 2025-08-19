@@ -52,6 +52,7 @@ const schema = {
         RATE_LIMIT_MAX: {
             type: "number",
             default: 1_000,
+            minimum: 0,
         },
     },
 };
