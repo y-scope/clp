@@ -160,10 +160,8 @@ if(CLP_NEED_BOOST)
 endif()
 
 if(CLP_NEED_CATCH2)
-    find_package(Catch2 REQUIRED)
-    if (Catch2_FOUND)
-        message(STATUS "Found Catch2 ${Catch2_VERSION}")
-    endif()
+    find_package(Catch2 3.8.0 REQUIRED)
+    message(STATUS "Found Catch2 ${Catch2_VERSION}")
 endif()
 
 if(CLP_NEED_DATE)
@@ -697,7 +695,6 @@ set(SOURCE_FILES_unitTest
         tests/test-ir_parsing.cpp
         tests/test-ir_serializer.cpp
         tests/test-kql.cpp
-        tests/test-main.cpp
         tests/test-math_utils.cpp
         tests/test-MemoryMappedFile.cpp
         tests/test-NetworkReader.cpp
@@ -729,7 +726,7 @@ if(CLP_BUILD_TESTING)
             PRIVATE
             absl::flat_hash_map
             Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
-            Catch2::Catch2
+            Catch2::Catch2WithMain
             ${CURL_LIBRARIES}
             clp_s::search::ast
             clp_s::search::kql
