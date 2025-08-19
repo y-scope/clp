@@ -923,7 +923,7 @@ class CLPConfig(BaseModel):
         self.execution_container = "ghcr.io/y-scope/clp/" + self.execution_container
 
     def get_generated_config_file_path(self) -> pathlib.Path:
-        return self.logs_directory / ".clp-config.yml"
+        return self.logs_directory / CLP_GENERATED_CONFIG_FILENAME
 
     def get_runnable_components(self) -> Set[str]:
         if QueryEngine.PRESTO == self.package.query_engine:
