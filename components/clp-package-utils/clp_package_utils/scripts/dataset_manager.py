@@ -7,6 +7,8 @@ from typing import Final, List
 
 from clp_py_utils.clp_config import (
     ARCHIVE_MANAGER_ACTION_NAME,
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
     StorageEngine,
     StorageType,
 )
@@ -141,8 +143,12 @@ def main(argv: List[str]) -> int:
     if aws_mount:
         necessary_mounts.append(mounts.aws_config_dir)
 
+    extra_env_vars = {
+        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
+        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+    }
     container_start_cmd = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container
+        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
     )
 
     if len(aws_env_vars) != 0:
