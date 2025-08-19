@@ -322,7 +322,9 @@ def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
     return worker_config
 
 
-def dump_container_config(container_clp_config: CLPConfig, clp_config: CLPConfig, config_filename: str):
+def dump_container_config(
+    container_clp_config: CLPConfig, clp_config: CLPConfig, config_filename: str
+):
     """
     Writes the given container config to the logs directory, so that it's accessible in the
     container.
