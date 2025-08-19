@@ -27,7 +27,7 @@ const Results = () => {
     // Number of results is the maximum from timeline, table, and server metadata sources.
     // Multiple sources provide more timely updates. Source behavior differs by query engine:
     // - clp/clp-s: table and server metadata counts are capped
-    // - presto: table count is capped, no timeline available
+    // - presto: table count is capped, no timeline count available
     const numResults = useMemo(
         () => Math.max(numSearchResultsMetadata, numSearchResultsTimeline, numSearchResultsTable),
         [

@@ -45,7 +45,7 @@ interface SearchState {
     cachedDataset: Nullable<string>;
 
     /**
-     * The number of search results from metadata (total results when search is complete).
+     * The number of search results from server metadata.
      */
     numSearchResultsMetadata: number;
 
