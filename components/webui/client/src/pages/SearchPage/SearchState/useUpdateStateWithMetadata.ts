@@ -24,19 +24,25 @@ const useUiUpdateOnDoneSignal = () => {
             return;
         }
 
-        if (resultsMetadata.lastSignal === SEARCH_SIGNAL.RESP_DONE) {
-            updateSearchUiState(SEARCH_UI_STATE.DONE);
-        } else if (resultsMetadata.lastSignal === PRESTO_SEARCH_SIGNAL.FAILED) {
-            updateSearchUiState(SEARCH_UI_STATE.FAILED);
-            notification.error({
-                description: resultsMetadata.errorMsg || "An error occurred during search",
-                duration: 15,
-                key: `search-failed-${resultsMetadata._id}`,
-                message: resultsMetadata.errorName || "Search Failed",
-                pauseOnHover: true,
-                placement: "bottomRight",
-                showProgress: true,
-            });
+        switch (resultsMetadata.lastSignal) {
+            case SEARCH_SIGNAL.RESP_DONE:
+            case PRESTO_SEARCH_SIGNAL.FINISHED:
+                updateSearchUiState(SEARCH_UI_STATE.DONE);
+                break;
+            case PRESTO_SEARCH_SIGNAL.FAILED:
+                updateSearchUiState(SEARCH_UI_STATE.FAILED);
+                notification.error({
+                    description: resultsMetadata.errorMsg || "An error occurred during search",
+                    duration: 15,
+                    key: `search-failed-${resultsMetadata._id}`,
+                    message: resultsMetadata.errorName || "Search Failed",
+                    pauseOnHover: true,
+                    placement: "bottomRight",
+                    showProgress: true,
+                });
+                break;
+            default:
+                break;
         }
     }, [
         resultsMetadata,

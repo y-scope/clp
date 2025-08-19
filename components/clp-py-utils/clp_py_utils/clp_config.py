@@ -67,6 +67,9 @@ TARGET_TO_COMPONENTS = {
     | STORAGE_MANAGEMENT_COMPONENTS,
 }
 
+# Action names
+ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
+
 QUERY_JOBS_TABLE_NAME = "query_jobs"
 QUERY_TASKS_TABLE_NAME = "query_tasks"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
@@ -359,7 +362,7 @@ class ResultsCache(BaseModel):
     port: int = 27017
     db_name: str = "clp-query-results"
     stream_collection_name: str = "stream-files"
-    retention_period: Optional[int] = None
+    retention_period: Optional[int] = 60
 
     @validator("host")
     def validate_host(cls, field):

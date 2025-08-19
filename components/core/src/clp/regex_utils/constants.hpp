@@ -24,10 +24,6 @@ constexpr size_t cCharBitarraySize = 128;
     return bit_array;
 }
 
-// Wildcard meta characters
-constexpr char cZeroOrMoreCharsWildcard{'*'};
-constexpr char cSingleCharWildcard{'?'};
-
 // Regex meta characters
 constexpr char cRegexZeroOrMore{'*'};
 constexpr char cRegexOneOrMore{'+'};

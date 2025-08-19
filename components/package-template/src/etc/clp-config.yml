@@ -54,7 +54,7 @@
 #  stream_collection_name: "stream-files"
 #
 #  # Retention period for search results, in minutes. Set to null to disable automatic deletion.
-#  retention_period: null
+#  retention_period: 60
 #
 #compression_worker:
 #  logging_level: "INFO"
