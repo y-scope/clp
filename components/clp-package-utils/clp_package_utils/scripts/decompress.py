@@ -6,6 +6,8 @@ import sys
 from typing import Optional
 
 from clp_py_utils.clp_config import (
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     StorageEngine,
@@ -24,6 +26,7 @@ from clp_package_utils.general import (
     generate_container_name,
     generate_container_start_cmd,
     get_clp_home,
+    get_container_config_filename,
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
@@ -99,7 +102,7 @@ def handle_extract_file_cmd(
     container_name = generate_container_name(str(JobType.FILE_EXTRACTION))
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
-        container_clp_config, clp_config, container_name
+        container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
     # Set up mounts
@@ -122,8 +125,13 @@ def handle_extract_file_cmd(
                 container_paths_to_extract_file_path,
             )
         )
+
+    extra_env_vars = {
+        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
+        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+    }
     container_start_cmd = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container
+        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
     )
 
     # fmt: off
@@ -181,31 +189,25 @@ def handle_extract_stream_cmd(
         return -1
 
     job_command = parsed_args.command
+    if EXTRACT_IR_CMD == job_command and StorageEngine.CLP != storage_engine:
+        logger.error(f"IR extraction is not supported for storage engine `{storage_engine}`.")
+        return -1
     if EXTRACT_JSON_CMD == job_command and StorageEngine.CLP_S != storage_engine:
         logger.error(f"JSON extraction is not supported for storage engine `{storage_engine}`.")
-        return -1
-
-    dataset = parsed_args.dataset
-    if StorageEngine.CLP_S == storage_engine:
-        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
-        try:
-            clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
-            validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
-        except Exception as e:
-            logger.error(e)
-            return -1
-    elif dataset is not None:
-        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
         return -1
 
     container_name = generate_container_name(str(JobType.IR_EXTRACTION))
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
-        container_clp_config, clp_config, container_name
+        container_clp_config, clp_config, get_container_config_filename(container_name)
     )
     necessary_mounts = [mounts.clp_home, mounts.logs_dir]
+    extra_env_vars = {
+        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
+        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+    }
     container_start_cmd = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container
+        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
     )
 
     # fmt: off
@@ -229,6 +231,15 @@ def handle_extract_stream_cmd(
             extract_cmd.append("--target-uncompressed-size")
             extract_cmd.append(str(parsed_args.target_uncompressed_size))
     elif EXTRACT_JSON_CMD == job_command:
+        dataset = parsed_args.dataset
+        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
+        try:
+            clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+            validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
+        except Exception as e:
+            logger.error(e)
+            return -1
+
         extract_cmd.append(str(parsed_args.archive_id))
         if dataset is not None:
             extract_cmd.append("--dataset")

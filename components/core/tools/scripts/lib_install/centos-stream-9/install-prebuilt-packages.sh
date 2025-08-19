@@ -16,6 +16,7 @@ dnf install -y \
     libarchive-devel \
     libcurl-devel \
     libzstd-devel \
+    lz4-devel \
     make \
     mariadb-connector-c-devel \
     openssl-devel \

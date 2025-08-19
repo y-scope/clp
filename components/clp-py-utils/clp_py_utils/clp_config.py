@@ -1,6 +1,7 @@
+import os
 import pathlib
 from enum import auto
-from typing import Literal, Optional, Union
+from typing import Literal, Optional, Set, Union
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, root_validator, validator
@@ -26,10 +27,49 @@ QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
+GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
+
+# Component groups
+GENERAL_SCHEDULING_COMPONENTS = {
+    QUEUE_COMPONENT_NAME,
+    REDIS_COMPONENT_NAME,
+}
+COMPRESSION_COMPONENTS = GENERAL_SCHEDULING_COMPONENTS | {
+    DB_COMPONENT_NAME,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
+    COMPRESSION_WORKER_COMPONENT_NAME,
+}
+QUERY_COMPONENTS = GENERAL_SCHEDULING_COMPONENTS | {
+    DB_COMPONENT_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
+    QUERY_WORKER_COMPONENT_NAME,
+    REDUCER_COMPONENT_NAME,
+}
+UI_COMPONENTS = {
+    RESULTS_CACHE_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME,
+}
+STORAGE_MANAGEMENT_COMPONENTS = {GARBAGE_COLLECTOR_COMPONENT_NAME}
+ALL_COMPONENTS = (
+    COMPRESSION_COMPONENTS | QUERY_COMPONENTS | UI_COMPONENTS | STORAGE_MANAGEMENT_COMPONENTS
+)
 
 # Target names
 ALL_TARGET_NAME = ""
 CONTROLLER_TARGET_NAME = "controller"
+
+TARGET_TO_COMPONENTS = {
+    ALL_TARGET_NAME: ALL_COMPONENTS,
+    CONTROLLER_TARGET_NAME: GENERAL_SCHEDULING_COMPONENTS
+    | {
+        COMPRESSION_SCHEDULER_COMPONENT_NAME,
+        QUERY_SCHEDULER_COMPONENT_NAME,
+    }
+    | STORAGE_MANAGEMENT_COMPONENTS,
+}
+
+# Action names
+ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
 
 QUERY_JOBS_TABLE_NAME = "query_jobs"
 QUERY_TASKS_TABLE_NAME = "query_tasks"
@@ -42,11 +82,26 @@ CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
 CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
+CLP_SHARED_CONFIG_FILENAME = ".clp-config.yml"
+
+
+# Environment variable names
+CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
+CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
+CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
+CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
+CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 
 
 class StorageEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
+
+
+class QueryEngine(KebabCaseStrEnum):
+    CLP = auto()
+    CLP_S = auto()
+    PRESTO = auto()
 
 
 class StorageType(LowercaseStrEnum):
@@ -62,10 +117,12 @@ class AwsAuthType(LowercaseStrEnum):
 
 
 VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
+VALID_QUERY_ENGINES = [query_engine.value for query_engine in QueryEngine]
 
 
 class Package(BaseModel):
     storage_engine: str = "clp"
+    query_engine: str = "clp"
 
     @validator("storage_engine")
     def validate_storage_engine(cls, field):
@@ -75,6 +132,37 @@ class Package(BaseModel):
                 f" {'|'.join(VALID_STORAGE_ENGINES)}"
             )
         return field
+
+    @validator("query_engine")
+    def validate_query_engine(cls, field):
+        if field not in VALID_QUERY_ENGINES:
+            raise ValueError(
+                f"package.query_engine must be one of the following"
+                f" {'|'.join(VALID_QUERY_ENGINES)}"
+            )
+        return field
+
+    @root_validator
+    def validate_query_engine_package_compatibility(cls, values):
+        query_engine = values.get("query_engine")
+        storage_engine = values.get("storage_engine")
+
+        if query_engine in [QueryEngine.CLP, QueryEngine.CLP_S]:
+            if query_engine != storage_engine:
+                raise ValueError(
+                    f"query_engine '{query_engine}' is only compatible with "
+                    f"storage_engine '{query_engine}'."
+                )
+        elif query_engine == QueryEngine.PRESTO:
+            if storage_engine != StorageEngine.CLP_S:
+                raise ValueError(
+                    f"query_engine '{QueryEngine.PRESTO}' is only compatible with "
+                    f"storage_engine '{StorageEngine.CLP_S}'."
+                )
+        else:
+            raise ValueError(f"Unsupported query_engine '{query_engine}'.")
+
+        return values
 
 
 class Database(BaseModel):
@@ -158,6 +246,28 @@ class Database(BaseModel):
             connection_params_and_type["ssl_cert"] = self.ssl_cert
         return connection_params_and_type
 
+    def dump_to_primitive_dict(self):
+        return self.dict(exclude={"username", "password"})
+
+    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        config = read_yaml_config_file(credentials_file_path)
+        if config is None:
+            raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
+        try:
+            self.username = get_config_value(config, f"{DB_COMPONENT_NAME}.user")
+            self.password = get_config_value(config, f"{DB_COMPONENT_NAME}.password")
+        except KeyError as ex:
+            raise ValueError(
+                f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
+            )
+
+    def load_credentials_from_env(self):
+        """
+        :raise ValueError: if any expected environment variable is not set.
+        """
+        self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
+        self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
+
 
 def _validate_logging_level(cls, field):
     if not is_valid_logging_level(field):
@@ -240,13 +350,33 @@ class Redis(BaseModel):
     query_backend_database: int = 0
     compression_backend_database: int = 1
     # redis can perform authentication without a username
-    password: Optional[str]
+    password: Optional[str] = None
 
     @validator("host")
     def validate_host(cls, field):
         if "" == field:
             raise ValueError(f"{REDIS_COMPONENT_NAME}.host cannot be empty.")
         return field
+
+    def dump_to_primitive_dict(self):
+        return self.dict(exclude={"password"})
+
+    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        config = read_yaml_config_file(credentials_file_path)
+        if config is None:
+            raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
+        try:
+            self.password = get_config_value(config, f"{REDIS_COMPONENT_NAME}.password")
+        except KeyError as ex:
+            raise ValueError(
+                f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
+            )
+
+    def load_credentials_from_env(self):
+        """
+        :raise ValueError: if any expected environment variable is not set.
+        """
+        self.password = _get_env_var(CLP_REDIS_PASS_ENV_VAR_NAME)
 
 
 class Reducer(BaseModel):
@@ -284,6 +414,7 @@ class ResultsCache(BaseModel):
     port: int = 27017
     db_name: str = "clp-query-results"
     stream_collection_name: str = "stream-files"
+    retention_period: Optional[int] = 60
 
     @validator("host")
     def validate_host(cls, field):
@@ -305,6 +436,12 @@ class ResultsCache(BaseModel):
             )
         return field
 
+    @validator("retention_period")
+    def validate_retention_period(cls, field):
+        if field is not None and field <= 0:
+            raise ValueError("retention_period must be greater than 0")
+        return field
+
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
@@ -313,8 +450,30 @@ class Queue(BaseModel):
     host: str = "localhost"
     port: int = 5672
 
-    username: Optional[str]
-    password: Optional[str]
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+    def dump_to_primitive_dict(self):
+        return self.dict(exclude={"username", "password"})
+
+    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        config = read_yaml_config_file(credentials_file_path)
+        if config is None:
+            raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
+        try:
+            self.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.user")
+            self.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
+        except KeyError as ex:
+            raise ValueError(
+                f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
+            )
+
+    def load_credentials_from_env(self):
+        """
+        :raise ValueError: if any expected environment variable is not set.
+        """
+        self.username = _get_env_var(CLP_QUEUE_USER_ENV_VAR_NAME)
+        self.password = _get_env_var(CLP_QUEUE_PASS_ENV_VAR_NAME)
 
 
 class S3Credentials(BaseModel):
@@ -496,6 +655,7 @@ class ArchiveOutput(BaseModel):
     target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB
     target_segment_size: int = 256 * 1024 * 1024  # 256 MB
     compression_level: int = 3
+    retention_period: Optional[int] = None
 
     @validator("target_archive_size")
     def validate_target_archive_size(cls, field):
@@ -525,6 +685,12 @@ class ArchiveOutput(BaseModel):
     def validate_compression_level(cls, field):
         if field < 1 or 19 < field:
             raise ValueError("compression_level must be a value from 1 to 19")
+        return field
+
+    @validator("retention_period")
+    def validate_retention_period(cls, field):
+        if field is not None and field <= 0:
+            raise ValueError("retention_period must be greater than 0")
         return field
 
     def set_directory(self, directory: pathlib.Path):
@@ -585,6 +751,39 @@ class WebUi(BaseModel):
         return field
 
 
+class SweepInterval(BaseModel):
+    archive: int = 60
+    search_result: int = 30
+
+    # Explicitly disallow any unexpected key
+    class Config:
+        extra = "forbid"
+
+    @root_validator
+    def validate_sweep_interval(cls, values):
+        for field, value in values.items():
+            if value <= 0:
+                raise ValueError(f"Sweep interval of {field} must be greater than 0")
+        return values
+
+
+class GarbageCollector(BaseModel):
+    logging_level: str = "INFO"
+    sweep_interval: SweepInterval = SweepInterval()
+
+    @validator("logging_level")
+    def validate_logging_level(cls, field):
+        _validate_logging_level(cls, field)
+        return field
+
+
+def _get_env_var(name: str) -> str:
+    value = os.getenv(name)
+    if value is None:
+        raise ValueError(f"Missing environment variable: {name}")
+    return value
+
+
 class CLPConfig(BaseModel):
     execution_container: Optional[str] = None
 
@@ -601,6 +800,7 @@ class CLPConfig(BaseModel):
     compression_worker: CompressionWorker = CompressionWorker()
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
+    garbage_collector: GarbageCollector = GarbageCollector()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     archive_output: ArchiveOutput = ArchiveOutput()
@@ -722,46 +922,28 @@ class CLPConfig(BaseModel):
 
         self.execution_container = "ghcr.io/y-scope/clp/" + self.execution_container
 
-    def load_database_credentials_from_file(self):
-        config = read_yaml_config_file(self.credentials_file_path)
-        if config is None:
-            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
-        try:
-            self.database.username = get_config_value(config, f"{DB_COMPONENT_NAME}.user")
-            self.database.password = get_config_value(config, f"{DB_COMPONENT_NAME}.password")
-        except KeyError as ex:
-            raise ValueError(
-                f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
-            )
+    def get_shared_config_file_path(self) -> pathlib.Path:
+        return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
 
-    def load_queue_credentials_from_file(self):
-        config = read_yaml_config_file(self.credentials_file_path)
-        if config is None:
-            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
-        try:
-            self.queue.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.user")
-            self.queue.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
-        except KeyError as ex:
-            raise ValueError(
-                f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
-            )
-
-    def load_redis_credentials_from_file(self):
-        config = read_yaml_config_file(self.credentials_file_path)
-        if config is None:
-            raise ValueError(f"Credentials file '{self.credentials_file_path}' is empty.")
-        try:
-            self.redis.password = get_config_value(config, f"{REDIS_COMPONENT_NAME}.password")
-        except KeyError as ex:
-            raise ValueError(
-                f"Credentials file '{self.credentials_file_path}' does not contain key '{ex}'."
-            )
+    def get_runnable_components(self) -> Set[str]:
+        if QueryEngine.PRESTO == self.package.query_engine:
+            return COMPRESSION_COMPONENTS | UI_COMPONENTS
+        else:
+            return ALL_COMPONENTS
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
-        d["logs_input"] = self.logs_input.dump_to_primitive_dict()
-        d["archive_output"] = self.archive_output.dump_to_primitive_dict()
-        d["stream_output"] = self.stream_output.dump_to_primitive_dict()
+        custom_serialized_fields = (
+            "database",
+            "queue",
+            "redis",
+            "logs_input",
+            "archive_output",
+            "stream_output",
+        )
+        d = self.dict(exclude=set(custom_serialized_fields))
+        for key in custom_serialized_fields:
+            d[key] = getattr(self, key).dump_to_primitive_dict()
+
         # Turn paths into primitive strings
         d["credentials_file_path"] = str(self.credentials_file_path)
         d["data_directory"] = str(self.data_directory)
@@ -770,6 +952,7 @@ class CLPConfig(BaseModel):
             d["aws_config_directory"] = str(self.aws_config_directory)
         else:
             d["aws_config_directory"] = None
+
         return d
 
 
@@ -791,3 +974,12 @@ class WorkerConfig(BaseModel):
         d["stream_output"] = self.stream_output.dump_to_primitive_dict()
 
         return d
+
+
+def get_components_for_target(target: str) -> Set[str]:
+    if target in TARGET_TO_COMPONENTS:
+        return TARGET_TO_COMPONENTS[target]
+    elif target in ALL_COMPONENTS:
+        return {target}
+    else:
+        return set()

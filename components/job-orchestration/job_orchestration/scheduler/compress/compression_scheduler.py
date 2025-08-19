@@ -16,6 +16,7 @@ from clp_py_utils.clp_config import (
     ArchiveOutput,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     StorageEngine,
 )
@@ -154,21 +155,25 @@ def _process_s3_input(
 
 
 def search_and_schedule_new_tasks(
+    clp_config: CLPConfig,
     db_conn,
     db_cursor,
     clp_metadata_db_connection_config: Dict[str, Any],
-    clp_archive_output: ArchiveOutput,
-    existing_datasets: Set[str],
 ):
     """
     For all jobs with PENDING status, splits the job into tasks and schedules them.
+    :param clp_config:
     :param db_conn:
     :param db_cursor:
     :param clp_metadata_db_connection_config:
-    :param clp_archive_output:
-    :param existing_datasets:
     """
     global scheduled_jobs
+
+    existing_datasets: Set[str] = set()
+    if StorageEngine.CLP_S == clp_config.package.storage_engine:
+        existing_datasets = fetch_existing_datasets(
+            db_cursor, clp_metadata_db_connection_config["table_prefix"]
+        )
 
     logger.debug("Search and schedule new tasks")
 
@@ -191,10 +196,10 @@ def search_and_schedule_new_tasks(
                 db_cursor,
                 table_prefix,
                 dataset,
-                clp_archive_output,
+                clp_config.archive_output,
             )
 
-            # NOTE: This assumes we never delete a dataset
+            # NOTE: This assumes we never delete a dataset when compression jobs are being scheduled
             existing_datasets.add(dataset)
 
         paths_to_compress_buffer = PathsToCompressBuffer(
@@ -404,15 +409,16 @@ def main(argv):
     config_path = Path(args.config)
     try:
         clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
-    except ValidationError as err:
+        clp_config.database.load_credentials_from_env()
+    except (ValidationError, ValueError) as err:
         logger.error(err)
         return -1
-    except Exception as ex:
-        logger.error(ex)
+    except Exception:
+        logger.exception(f"Failed to initialize {COMPRESSION_SCHEDULER_COMPONENT_NAME}.")
         # read_yaml_config_file already logs the parsing error inside
         return -1
 
-    logger.info("Starting compression scheduler")
+    logger.info(f"Starting {COMPRESSION_SCHEDULER_COMPONENT_NAME}")
     sql_adapter = SQL_Adapter(clp_config.database)
 
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
@@ -421,21 +427,15 @@ def main(argv):
         clp_metadata_db_connection_config = (
             sql_adapter.database_config.get_clp_connection_params_and_type(True)
         )
-        existing_datasets: Set[str] = set()
-        if StorageEngine.CLP_S == clp_config.package.storage_engine:
-            existing_datasets = fetch_existing_datasets(
-                db_cursor, clp_metadata_db_connection_config["table_prefix"]
-            )
 
         # Start Job Processing Loop
         while True:
             try:
                 search_and_schedule_new_tasks(
+                    clp_config,
                     db_conn,
                     db_cursor,
                     clp_metadata_db_connection_config,
-                    clp_config.archive_output,
-                    existing_datasets,
                 )
                 poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
