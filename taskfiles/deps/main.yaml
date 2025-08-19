@@ -495,6 +495,7 @@ tasks:
           CMAKE_GEN_ARGS:
             - "-DBUILD_SHARED_LIBS=ON"
             - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install"
             - "-DZLIB_BUILD_EXAMPLES=OFF"
           LIB_NAME: "{{.LIB_NAME}}"
