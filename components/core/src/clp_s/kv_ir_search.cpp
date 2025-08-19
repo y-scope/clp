@@ -75,7 +75,7 @@ public:
 
     // Methods implementing `IrUnitHandlerInterface`
     [[nodiscard]] auto
-    handle_log_event(KeyValuePairLogEvent log_event, [[maybe_unused]] size_t log_event_ix)
+    handle_log_event(KeyValuePairLogEvent log_event, [[maybe_unused]] size_t log_event_idx)
             -> IRErrorCode;
 
     [[nodiscard]] static auto handle_utc_offset_change(
@@ -155,7 +155,7 @@ auto IrUnitHandler::create(
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 auto IrUnitHandler::handle_log_event(
         clp::ffi::KeyValuePairLogEvent log_event,
-        [[maybe_unused]] size_t log_event_ix
+        [[maybe_unused]] size_t log_event_idx
 ) -> IRErrorCode {
     auto const serialize_result{log_event.serialize_to_json()};
     if (serialize_result.has_error()) {

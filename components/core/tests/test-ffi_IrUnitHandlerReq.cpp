@@ -29,7 +29,7 @@ class TrivialIrUnitHandler {
 public:
     // Implements `clp::ffi::ir_stream::IrUnitHandlerReq`
     [[nodiscard]] auto
-    handle_log_event(KeyValuePairLogEvent&& log_event, [[maybe_unused]] size_t log_event_ix)
+    handle_log_event(KeyValuePairLogEvent&& log_event, [[maybe_unused]] size_t log_event_idx)
             -> IRErrorCode {
         m_log_event.emplace(std::move(log_event));
         return IRErrorCode::IRErrorCode_Success;

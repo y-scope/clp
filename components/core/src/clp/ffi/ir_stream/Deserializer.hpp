@@ -305,7 +305,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
                     m_utc_offset
             ))};
 
-            auto log_event_ix = m_num_log_event;
+            auto log_event_idx = m_num_log_event;
             m_num_log_event += 1;
 
             if constexpr (search::IsNonEmptyQueryHandler<QueryHandlerType>::value) {
@@ -319,7 +319,7 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
             }
 
             if (auto const err{
-                        m_ir_unit_handler.handle_log_event(std::move(log_event), log_event_ix)
+                        m_ir_unit_handler.handle_log_event(std::move(log_event), log_event_idx)
                 };
                 IRErrorCode::IRErrorCode_Success != err)
             {

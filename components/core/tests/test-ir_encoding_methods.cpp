@@ -104,10 +104,10 @@ class IrUnitHandler {
 public:
     // Implements `clp::ffi::ir_stream::IrUnitHandlerReq`
     [[nodiscard]] auto
-    handle_log_event(KeyValuePairLogEvent&& log_event, [[maybe_unused]] size_t log_event_ix)
+    handle_log_event(KeyValuePairLogEvent&& log_event, [[maybe_unused]] size_t log_event_idx)
             -> IRErrorCode {
         m_deserialized_log_events.emplace_back(std::move(log_event));
-        m_deserialized_log_event_indexes.emplace_back(log_event_ix);
+        m_deserialized_log_event_indexes.emplace_back(log_event_idx);
         return IRErrorCode::IRErrorCode_Success;
     }
 
@@ -1352,8 +1352,8 @@ TEMPLATE_TEST_CASE(
         REQUIRE((expected_auto_gen_json_obj == actual_auto_gen_json_obj));
         REQUIRE((expected_user_gen_json_obj == actual_user_gen_json_obj));
 
-        auto const deserialized_log_event_ix{deserialized_log_event_indexes.at(idx)};
-        REQUIRE((idx == deserialized_log_event_ix));
+        auto const deserialized_log_event_idx{deserialized_log_event_indexes.at(idx)};
+        REQUIRE((idx == deserialized_log_event_idx));
     }
 
     auto const eof_result{deserializer.deserialize_next_ir_unit(reader)};
