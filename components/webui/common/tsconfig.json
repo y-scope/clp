@@ -2,7 +2,8 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "lib": [
-      "es2023", "dom"
+      "DOM"
+      "ES2023", 
     ],
     "module": "esnext",
     "moduleResolution": "bundler",
