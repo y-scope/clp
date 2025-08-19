@@ -25,6 +25,7 @@ const schema = {
         "CLP_DB_PASS",
     ],
     properties: {
+        // Network
         PORT: {
             type: "number",
             default: 3000,
