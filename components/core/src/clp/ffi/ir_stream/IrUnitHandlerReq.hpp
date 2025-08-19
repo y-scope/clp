@@ -33,6 +33,8 @@ concept IrUnitHandlerInterfaceReq = requires(
     /**
      * Handles a log event IR unit.
      * @param log_event The deserialized result from IR deserializer.
+     * @param log_event_ix The index of the log event in the unfiltered logs from the IR
+     * deserializer.
      * @return IRErrorCode::Success on success, user-defined error code on failures.
      */
     {
