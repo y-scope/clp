@@ -23,6 +23,15 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
+if (CMAKE_BUILD_TYPE MATCHES "Release")
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT)
+    if(IPO_SUPPORTED)
+        message(STATUS "Link-time optimization enabled.")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
+endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Set general compressor
@@ -116,7 +125,8 @@ if(PROJECT_IS_TOP_LEVEL)
     # Include dependency settings if the project isn't being included as a subproject.
     # NOTE: We mark the file optional since it's not required if the user happens to have the
     # dependencies installed already.
-    include("${CMAKE_SOURCE_DIR}/../../build/deps/core/cmake-settings/all.cmake"
+    set(CLP_CORE_DEPS_DIR "${CMAKE_SOURCE_DIR}/../../build/deps/core")
+    include("${CLP_CORE_DEPS_DIR}/cmake-settings/all.cmake"
             OPTIONAL
             RESULT_VARIABLE CLP_DEPS_SETTINGS_FILE_PATH
     )
@@ -128,6 +138,8 @@ if(PROJECT_IS_TOP_LEVEL)
         endif()
     endif()
 endif()
+
+find_package(Threads REQUIRED)
 
 add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
@@ -187,12 +199,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/SchemaWriter.hpp
     src/clp_s/search/AddTimestampConditions.cpp
     src/clp_s/search/AddTimestampConditions.hpp
-    src/clp_s/search/clp_search/EncodedVariableInterpreter.cpp
-    src/clp_s/search/clp_search/EncodedVariableInterpreter.hpp
-    src/clp_s/search/clp_search/Grep.cpp
-    src/clp_s/search/clp_search/Grep.hpp
-    src/clp_s/search/clp_search/Query.cpp
-    src/clp_s/search/clp_search/Query.hpp
     src/clp_s/search/EvaluateRangeIndexFilters.cpp
     src/clp_s/search/EvaluateRangeIndexFilters.hpp
     src/clp_s/search/EvaluateTimestampIndex.cpp
@@ -214,10 +220,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/TimestampEntry.hpp
     src/clp_s/Utils.cpp
     src/clp_s/Utils.hpp
-    src/clp_s/VariableDecoder.cpp
-    src/clp_s/VariableDecoder.hpp
-    src/clp_s/VariableEncoder.cpp
-    src/clp_s/VariableEncoder.hpp
     src/clp_s/ZstdCompressor.cpp
     src/clp_s/ZstdCompressor.hpp
     src/clp_s/ZstdDecompressor.cpp
@@ -355,6 +357,8 @@ set(SOURCE_FILES_unitTest
         src/clp/FileReader.hpp
         src/clp/FileWriter.cpp
         src/clp/FileWriter.hpp
+        src/clp/global_metadata_db_utils.hpp
+        src/clp/global_metadata_db_utils.cpp
         src/clp/GlobalMetadataDB.hpp
         src/clp/GlobalMetadataDBConfig.cpp
         src/clp/GlobalMetadataDBConfig.hpp
@@ -364,6 +368,8 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalSQLiteMetadataDB.hpp
         src/clp/Grep.cpp
         src/clp/Grep.hpp
+        src/clp/GrepCore.cpp
+        src/clp/GrepCore.hpp
         src/clp/hash_utils.cpp
         src/clp/hash_utils.hpp
         src/clp/ir/constants.hpp
@@ -412,6 +418,8 @@ set(SOURCE_FILES_unitTest
         src/clp/Profiler.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
+        src/clp/QueryToken.cpp
+        src/clp/QueryToken.hpp
         src/clp/ReaderInterface.cpp
         src/clp/ReaderInterface.hpp
         src/clp/ReadOnlyMemoryMappedFile.cpp
@@ -501,13 +509,13 @@ set(SOURCE_FILES_unitTest
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
-        tests/test-Grep.cpp
+        tests/test-GlobalMetadataDBConfig.cpp
+        tests/test-GrepCore.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
         tests/test-ir_serializer.cpp
         tests/test-kql.cpp
-        tests/test-main.cpp
         tests/test-math_utils.cpp
         tests/test-MemoryMappedFile.cpp
         tests/test-NetworkReader.cpp
@@ -528,12 +536,13 @@ set(SOURCE_FILES_unitTest
 if(CLP_BUILD_TESTING)
     find_package(absl REQUIRED)
     clp_find_boost()
-    find_package(Catch2 REQUIRED)
+    clp_find_catch2()
     clp_find_curl()
     find_package(date REQUIRED)
     find_package(fmt REQUIRED)
     clp_find_libarchive()
     find_package(log_surgeon REQUIRED)
+    clp_find_lzma()
     clp_find_mariadb_client()
     clp_find_mongocxx()
     find_package(nlohmann_json REQUIRED)
@@ -543,7 +552,6 @@ if(CLP_BUILD_TESTING)
     clp_find_sqlite()
     find_package(yaml-cpp REQUIRED)
     clp_find_ystdlib()
-    clp_find_lzma()
     clp_find_zstd()
 
     add_executable(unitTest
@@ -559,7 +567,7 @@ if(CLP_BUILD_TESTING)
             PRIVATE
             absl::flat_hash_map
             Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
-            Catch2::Catch2
+            Catch2::Catch2WithMain
             ${CURL_LIBRARIES}
             clp_s::search::ast
             clp_s::search::kql
@@ -569,6 +577,7 @@ if(CLP_BUILD_TESTING)
             fmt::fmt
             log_surgeon::log_surgeon
             LibArchive::LibArchive
+            LibLZMA::LibLZMA
             MariaDBClient::MariaDBClient
             ${MONGOCXX_TARGET}
             nlohmann_json::nlohmann_json
@@ -579,11 +588,9 @@ if(CLP_BUILD_TESTING)
             ${STD_FS_LIBS}
             clp::regex_utils
             clp::string_utils
-            yaml-cpp
             ystdlib::containers
             ystdlib::error_handling
-            ${LIBLZMA_LIBRARIES}
-            ZStd::ZStd
+            ${zstd_TARGET}
             )
     target_compile_features(unitTest
             PRIVATE cxx_std_20

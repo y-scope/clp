@@ -4,7 +4,7 @@
 #include <string_view>
 #include <vector>
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <ystdlib/containers/Array.hpp>
 
 #include "../src/clp/FileDescriptorReader.hpp"

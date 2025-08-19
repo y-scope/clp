@@ -23,7 +23,13 @@ macro(clp_find_boost)
     if(CLP_USE_STATIC_LIBS)
         set(Boost_USE_STATIC_LIBS ON)
     endif()
-    find_package(Boost 1.81 REQUIRED iostreams program_options filesystem system regex url)
+    find_package(Boost 1.89 REQUIRED iostreams program_options filesystem regex url)
+endmacro()
+
+# Find and setup Catch2.
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_catch2)
+    find_package(Catch2 3.8.0 REQUIRED)
 endmacro()
 
 # Find and setup libcurl.
@@ -47,23 +53,14 @@ endmacro()
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_lzma)
     if(CLP_USE_STATIC_LIBS)
-        set(LIBLZMA_USE_STATIC_LIBS ON)
+        set(LibLZMA_ROOT ${LibLZMA-static_ROOT})
+        set(LibLZMA_USE_STATIC_LIBS ON)
+    else()
+        set(LibLZMA_ROOT ${LibLZMA-shared_ROOT})
     endif()
-    find_package(LibLZMA REQUIRED)
-    if(LIBLZMA_FOUND)
-        # Version 5.8.1 and above address CVE-2024-3094 and CVE-2025-31115.
-        set(REQUIRED_LIBLZMA_VERSION "5.8.1")
-        if(LIBLZMA_VERSION_STRING VERSION_LESS ${REQUIRED_LIBLZMA_VERSION})
-            message(
-                FATAL_ERROR
-                "Detected LibLZMA version ${LIBLZMA_VERSION_STRING} is older than required"
-                " ${REQUIRED_LIBLZMA_VERSION}"
-            )
-        endif()
-        include_directories(${LIBLZMA_INCLUDE_DIRS})
-    endif()
+    # Version 5.8.1 and above address CVE-2024-3094 and CVE-2025-31115.
+    find_package(LibLZMA 5.8.1 REQUIRED)
 endmacro()
-
 
 # Find and setup MariaDBClient library.
 # @return Forwards any variables from the `find_package` call.
@@ -120,8 +117,11 @@ endfunction()
 # Find and setup ZStd library.
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_zstd)
+    # v1.4.8 is the lowest version available in the package managers of the OSes we support.
+    find_package(zstd 1.4.8 REQUIRED)
     if(CLP_USE_STATIC_LIBS)
-        set(ZStd_USE_STATIC_LIBS ON)
+        set(zstd_TARGET zstd::libzstd_static)
+    else()
+        set(zstd_TARGET zstd::libzstd_shared)
     endif()
-    find_package(ZStd 1.4.4 REQUIRED)
 endmacro()

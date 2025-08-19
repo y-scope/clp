@@ -105,25 +105,36 @@ Currently, timestamps must be specified as milliseconds since the UNIX epoch.
 
 # Parallel Compression
 
-By default, `clp` uses an embedded SQLite database, so each directory containing archives can only
-be accessed by a single `clp` instance.
+To enable parallel compression to the same archives directory, `clp` (and by extension, `clg`) needs
+to be configured to use a MySQL-compatible database (e.g., MariaDB) rather than the default---an
+embedded SQLite database (which doesn't support concurrent writes).
 
-To enable parallel compression to the same archives directory, `clp`/`clg` can be configured to use
-a MySQL-type database (e.g., MariaDB) as follows:
+:::{warning}
+Running multiple `clp` instances with SQLite can fail due to the error "database is locked".
+:::
+
+You can configure `clp` and `clg` to use a MySQL-compatible database as follows:
 
 * Install and configure MariaDB using the instructions for your platform
 * Create a user that has privileges to create databases, create tables, insert records, and delete
   records.
-* Copy and change `config/metadata-db.yml`, setting the type to `mysql` and uncommenting the MySQL
-  parameters.
-* Install the MariaDB and PyYAML Python packages `pip3 install mariadb PyYAML`
+* Install the MariaDB Python package: `pip3 install mariadb`
   * This is necessary to run the database initialization script. If you prefer, you can run the SQL
     statements in `tools/scripts/db/init-db.py` directly.
-* Run `tools/scripts/db/init-db.py` with the updated config file. This will initialize the database
-  CLP requires.
-* Run `clp` or `clg` as before, with the addition of the `--db-config-file` option pointing at the
-  updated config file.
-* To compress in parallel, simply run another instance of `clp` concurrently.
+* Run `tools/scripts/db/init-db.py` to initialize the database that CLP requires. Use the following
+  command-line options to configure database connection parameters and set environment variables for
+  database credentials. If a command-line option isn't specified, its default value will be used:
+  * `--db-host <host>` to specify the database host
+  * `--db-port <port>` to specify the database port
+  * `--db-name <name>` to specify the database name
+  * `--db-table-prefix <prefix>` to specify the table prefix
+  * Set the `CLP_DB_USER` environment variable for the database user's username
+  * Set the `CLP_DB_PASS` environment variable for the database user's password
+* Run `clp` or `clg` with the same command-line options and environment variables, with the addition
+  of the database type command-line option:
+  * `--db-type mysql` to specify MySQL as the database type
+
+To compress logs in parallel, run as many parallel instances of `clp` as desired.
 
 Note that currently, decompression (`clp x`) and search (`clg`) can only be run with a single
 instance. We are in the process of open-sourcing parallelized versions of these as well.

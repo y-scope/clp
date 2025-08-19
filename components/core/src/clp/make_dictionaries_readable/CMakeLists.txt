@@ -55,7 +55,7 @@ if(CLP_BUILD_EXECUTABLES)
                 spdlog::spdlog
                 clp::string_utils
                 ystdlib::containers
-                ZStd::ZStd
+                ${zstd_TARGET}
         )
         # Put the built executable at the root of the build directory
         set_target_properties(
