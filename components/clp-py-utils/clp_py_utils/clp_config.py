@@ -362,7 +362,7 @@ class ResultsCache(BaseModel):
     port: int = 27017
     db_name: str = "clp-query-results"
     stream_collection_name: str = "stream-files"
-    retention_period: Optional[int] = None
+    retention_period: Optional[int] = 60
 
     @validator("host")
     def validate_host(cls, field):
