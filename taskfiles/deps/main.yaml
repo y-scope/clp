@@ -486,6 +486,7 @@ tasks:
         )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   zlib:
+    internal: true
     vars:
       LIB_NAME: "zlib"
     run: "once"
