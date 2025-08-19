@@ -1,18 +1,18 @@
-# Admin-tools
+# Using the admin tools
 
-Admin-tools is a set of scripts that allow user to manage logs compressed by CLP, located
+CLP provides a set of admin scripts that allow user to manage logs compressed by CLP, located
 under `sbin/admin-tools/`.
-Currently, CLP provides `archive-mananger.sh` and `dataset-manager.sh`, which manages compressed 
+Currently, CLP supports `archive-mananger.sh` and `dataset-manager.sh`, which manage compressed 
 logs at the level of archives and datasets.
 
 :::{note}
-Admin-tools scripts can only be used after CLP starts. For help using CLP, see the
+The admin scripts can only be used after CLP starts. For help using CLP, see the
 [clp-json quick start](quick-start/clp-json.md) or [clp-text quick start](quick-start/clp-text.md)
 pages for details.
 :::
 
 :::{caution}
-When running the admin-tools scripts, users must not compress or search logs with CLP.  
+When running the admin scripts, users must not compress or search logs with CLP.  
 Doing so may result in undefined behavior.
 :::
 
@@ -29,8 +29,8 @@ Doing so may result in undefined behavior.
 ---
 
 ## archive-manager.sh
-`sbin/admin-tools/archive-manager.sh` allows users to list and delete archives for both `clp-text` and 
-`clp-json`.
+`sbin/admin-tools/archive-manager.sh` allows users to list and delete archives for both `clp-text` 
+and `clp-json`.
 
 For example, to list all archives compressed by `clp-text`, run:
 
@@ -84,8 +84,8 @@ described above to manage the archives in a specific dataset.
 
 ## dataset-manager.sh
 `dataset-manager.sh` allows users to list and delete datasets for `clp-json`. When deleting a
-dataset, the dataset manager removes all compressed archives of the target dataset, as well as all
-associated tables in the metadata database.
+dataset, the script removes all compressed archives of the target dataset, as well as all associated
+tables in the metadata database.
 
 :::{note}
 `dataset-manager.sh` is not supported on `clp-text`, which doesn't have the dataset feature.
