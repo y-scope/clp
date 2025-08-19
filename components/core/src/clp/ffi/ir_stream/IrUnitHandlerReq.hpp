@@ -2,7 +2,7 @@
 #define CLP_FFI_IR_STREAM_IRUNITHANDLERREQ_HPP
 
 #include <concepts>
-#include <cstdint>
+#include <cstddef>
 #include <memory>
 #include <utility>
 
