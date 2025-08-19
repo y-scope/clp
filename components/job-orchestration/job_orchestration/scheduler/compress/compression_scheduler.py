@@ -16,6 +16,7 @@ from clp_py_utils.clp_config import (
     ArchiveOutput,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     StorageEngine,
 )
@@ -408,15 +409,16 @@ def main(argv):
     config_path = Path(args.config)
     try:
         clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
-    except ValidationError as err:
+        clp_config.database.load_credentials_from_env()
+    except (ValidationError, ValueError) as err:
         logger.error(err)
         return -1
-    except Exception as ex:
-        logger.error(ex)
+    except Exception:
+        logger.exception(f"Failed to initialize {COMPRESSION_SCHEDULER_COMPONENT_NAME}.")
         # read_yaml_config_file already logs the parsing error inside
         return -1
 
-    logger.info("Starting compression scheduler")
+    logger.info(f"Starting {COMPRESSION_SCHEDULER_COMPONENT_NAME}")
     sql_adapter = SQL_Adapter(clp_config.database)
 
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
