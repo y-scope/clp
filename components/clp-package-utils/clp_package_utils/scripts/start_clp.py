@@ -1243,7 +1243,6 @@ def main(argv):
     clp_config.data_directory.mkdir(parents=True, exist_ok=True)
     clp_config.logs_directory.mkdir(parents=True, exist_ok=True)
 
-    # Dump the container config
     dump_shared_container_config(container_clp_config, clp_config)
 
     try:
