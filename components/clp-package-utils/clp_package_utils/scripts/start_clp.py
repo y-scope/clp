@@ -963,6 +963,7 @@ def start_webui(
         f"CLP_DB_USER={clp_config.database.username}",
         f"CLP_DB_PASS={clp_config.database.password}",
         f"NODE_ENV=production",
+        f"RATE_LIMIT_MAX={clp_config.webui.rate_limit_max}",
     ]
     necessary_mounts = [
         mounts.clp_home,

@@ -50,7 +50,7 @@ const schema = {
         // Security
         RATE_LIMIT_MAX: {
             type: "number",
-            default: 100,
+            default: 1_000,
         },
     },
 };

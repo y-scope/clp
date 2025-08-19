@@ -657,6 +657,7 @@ class WebUi(BaseModel):
     host: str = "localhost"
     port: int = 4000
     results_metadata_collection_name: str = "results-metadata"
+    rate_limit_max: int = 1000
 
     @validator("host")
     def validate_host(cls, field):
@@ -674,6 +675,12 @@ class WebUi(BaseModel):
             raise ValueError(
                 f"{WEBUI_COMPONENT_NAME}.results_metadata_collection_name cannot be empty."
             )
+        return field
+
+    @validator("rate_limit_max")
+    def validate_rate_limit_max(cls, field):
+        if field <= 0:
+            raise ValueError(f"rate_limit_max must be greater than 0")
         return field
 
 
