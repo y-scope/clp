@@ -288,9 +288,8 @@ tasks:
       - "mkdir -p '{{.OUTPUT_DIR}}'"
       - |-
         cd common
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build -- \
-        --outDir '{{.OUTPUT_DIR}}/common'
-        rsync -a package.json "{{.OUTPUT_DIR}}/common/"
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build
+        rsync -a package.json dist/ "{{.OUTPUT_DIR}}/common/"
       - for: ["client", "yscope-log-viewer"]
         cmd: |-
           cd "{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}"
@@ -372,15 +371,8 @@ tasks:
       - "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
       - "{{.G_BUILD_DIR}}/nodejs-22.md5"
       - "{{.TASKFILE}}"
-      - "client/package.json"
-      - "client/package-lock.json"
-      - "common/package.json"
-      - "package.json"
-      - "package-lock.json"
-      - "server/package.json"
-      - "server/package-lock.json"
-      - "yscope-log-viewer/package.json"
-      - "yscope-log-viewer/package-lock.json"
+      - "**/{,client,common,server,yscope-log-viewer}/package.json"
+      - "**/{,client,common,server,yscope-log-viewer}/package-lock.json"
     dir: "{{.SRC_DIR}}"
     generates:
       - "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
