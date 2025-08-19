@@ -2,6 +2,7 @@
 #define CLP_FFI_IR_STREAM_DESERIALIZER_HPP
 
 #include <cstdint>
+#include <cstddef>
 #include <memory>
 #include <string>
 #include <system_error>
