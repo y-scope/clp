@@ -662,7 +662,7 @@ def get_common_env_vars_list(
     return env_vars
 
 
-def generate_credential_env_vars_list(
+def get_credential_env_vars_list(
     container_clp_config: CLPConfig,
     include_db_credentials=False,
     include_queue_credentials=False,
@@ -692,7 +692,7 @@ def generate_credential_env_vars_list(
     return env_vars
 
 
-def generate_celery_connection_env_vars_list(container_clp_config: CLPConfig) -> List[str]:
+def get_celery_connection_env_vars_list(container_clp_config: CLPConfig) -> List[str]:
     """
     :param container_clp_config:
     :return: A list of Celery connection environment variables for Docker containers, in the format

@@ -50,9 +50,9 @@ from clp_package_utils.general import (
     DockerMount,
     DockerMountType,
     dump_shared_config,
-    generate_celery_connection_env_vars_list,
+    get_celery_connection_env_vars_list,
     generate_container_config,
-    generate_credential_env_vars_list,
+    get_credential_env_vars_list,
     get_clp_home,
     get_common_env_vars_list,
     is_container_exited,
@@ -250,7 +250,7 @@ def create_db_tables(
     # fmt: on
     env_vars = [
         *get_common_env_vars_list(),
-        *generate_credential_env_vars_list(container_clp_config, include_db_credentials=True),
+        *get_credential_env_vars_list(container_clp_config, include_db_credentials=True),
     ]
     necessary_mounts = [
         mounts.clp_home,
@@ -609,8 +609,8 @@ def generic_start_scheduler(
 
     env_vars = [
         *get_common_env_vars_list(),
-        *generate_credential_env_vars_list(container_clp_config, include_db_credentials=True),
-        *generate_celery_connection_env_vars_list(container_clp_config),
+        *get_credential_env_vars_list(container_clp_config, include_db_credentials=True),
+        *get_celery_connection_env_vars_list(container_clp_config),
         f"CLP_LOGS_DIR={container_logs_dir}",
         f"CLP_LOGGING_LEVEL={clp_config.query_scheduler.logging_level}",
     ]
@@ -738,7 +738,7 @@ def generic_start_worker(
 
     env_vars = [
         *get_common_env_vars_list(include_clp_home_env_var=True),
-        *generate_celery_connection_env_vars_list(container_clp_config),
+        *get_celery_connection_env_vars_list(container_clp_config),
         f"CLP_CONFIG_PATH={container_clp_config.get_generated_config_file_path()}",
         f"CLP_LOGS_DIR={container_logs_dir}",
         f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
@@ -931,7 +931,7 @@ def start_webui(
 
     env_vars = [
         *get_common_env_vars_list(),
-        *generate_credential_env_vars_list(container_clp_config, include_db_credentials=True),
+        *get_credential_env_vars_list(container_clp_config, include_db_credentials=True),
         f"NODE_PATH={node_path}",
         f"HOST={clp_config.webui.host}",
         f"PORT={clp_config.webui.port}",
@@ -1073,7 +1073,7 @@ def start_garbage_collector(
     ]
     env_vars = [
         *get_common_env_vars_list(include_clp_home_env_var=True),
-        *generate_credential_env_vars_list(container_clp_config, include_db_credentials=True),
+        *get_credential_env_vars_list(container_clp_config, include_db_credentials=True),
         f"CLP_LOGS_DIR={container_logs_dir}",
         f"CLP_LOGGING_LEVEL={clp_config.garbage_collector.logging_level}",
     ]
