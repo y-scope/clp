@@ -19,6 +19,7 @@ from clp_package_utils.general import (
     generate_container_name,
     generate_container_start_cmd,
     get_clp_home,
+    get_container_config_filename,
     load_config_file,
     validate_and_load_db_credentials_file,
     validate_dataset_name,
@@ -124,7 +125,7 @@ def main(argv: List[str]) -> int:
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
-        container_clp_config, clp_config, container_name
+        container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
     necessary_mounts = [
