@@ -13,6 +13,7 @@ By default, retention control is disabled, and CLP retains data indefinitely.
 ---
 
 ## Definitions
+
 This section explains the terms and criteria CLP uses to decide when data should be deleted.
 
 At a high level, CLP compares a data item's timestamp with the current time to determine whether
@@ -20,16 +21,17 @@ it has expired. The criteria used to assess this expiration differs slightly bet
 search results.
 
 ### Terms
-- **Current Time (`T`):** The current time (UTC) when a garbage collector job evaluates data
+
+* **Current Time (`T`):** The current time (UTC) when a garbage collector job evaluates data
   expiration.
-- **Retention Period (`TTL`):** The configured duration for which CLP retains data before it is
+* **Retention Period (`TTL`):** The configured duration for which CLP retains data before it is
   considered expired.
-- **Archive timestamp (`archive.T`):** The most recent timestamp among all log messages
+* **Archive timestamp (`archive.T`):** The most recent timestamp among all log messages
   contained in the archive. Not related to the time at which the logs were compressed.
 
   Note that logs with outdated timestamps may be deleted immediately, depending on your retention
   settings.
-- **Search result timestamp (`search_result.T`):** The timestamp when a search result is inserted
+* **Search result timestamp (`search_result.T`):** The timestamp when a search result is inserted
   into the results_cache.
 
   :::{Note}
@@ -38,9 +40,10 @@ search results.
 
 ### Expiry criteria
 
-- **Archive Expiry:**  
+* **Archive Expiry:**  
   An archive is considered expired if its retention period has elapsed since archive's timestamp,
   i.e. that the difference between `T` and `archive.T` has surpassed `TTL`.
+
   ```text
   if (T - archive.T > TTL) then EXPIRED
   ```
@@ -66,9 +69,10 @@ search results.
   `adjusted_retention_period = retention_period - signed_UTC_offset`
   :::
 
-- **Search Result Expiry:** 
+* **Search Result Expiry:** 
   A search result is considered expired if its retention period has elapsed since the search was 
   completed, i.e. that the difference between T and `search_result.T` has surpassed TTL.
+
   ```text
   if (T - search_result.T > TTL) then EXPIRED
   ```
@@ -76,16 +80,19 @@ search results.
 ---
 
 ## Configuration
-CLP allows users to specify different **retention_periods** for different types of data. 
-Additionally, the frequency of garbage collection job execution for each type of data can be 
-configured to a customized **sweep_interval**. These settings can be configured in 
-`etc/clp-config.yml`. 
+
+CLP allows users to specify different **retention_periods** for different types of data.
+Additionally, the frequency of garbage collection job execution for each type of data can be
+configured to a customized **sweep_interval**. These settings can be configured in
+`etc/clp-config.yml`.
 
 ### Configure retention period
+
 To configure a retention period, update the appropriate `.retention_period` key in
 `etc/clp-config.yml` with the desired retention period in minutes.
 
 For example, to configure an archive retention period of 30 days (43,200 minutes):
+
 ```yaml
 archive_output:
   # Other archive_output settings
@@ -96,6 +103,7 @@ archive_output:
 ```
 
 Similarly, to configure a search result retention period of 1 day (1440 minutes):
+
 ```yaml
 results_cache:
   # Other results_cache settings
@@ -137,23 +145,25 @@ task will not run even if `garbage_collector.sweep_interval.<datatype>` is confi
 This section documents some of CLP’s internal behavior for retention and garbage collection.
 
 ### Handling data race conditions
+
 CLP's retention system is designed to avoid data race conditions that may arise from the deletion of
 archives or search results that may still be in use by active jobs. CLP employs the following
 mechanisms to avoid these conditions:
 
-- If any query job is running, CLP conservatively calculates a **safe expiry timestamp** based on 
+* If any query job is running, CLP conservatively calculates a **safe expiry timestamp** based on 
   the earliest active search job. This ensures no archive that could be searched is deleted.
 
-- CLP will **not** search an archive once it is considered expired, even if it has not yet been
+* CLP will **not** search an archive once it is considered expired, even if it has not yet been
   deleted by the garbage collector.
 
 :::{warning}
-A hanging search job will prevent CLP from deleting expired archives. 
+A hanging search job will prevent CLP from deleting expired archives.
 Restarting the query scheduler will mark such jobs as failed and allow garbage collection to resume.
 :::
 
 ### Fault tolerance
-The garbage collector can resume execution from where it left off if a previous run fails. 
+
+The garbage collector can resume execution from where it left off if a previous run fails.
 This design ensures that CLP does not fall into an inconsistent state due to partial deletions.
 
 If the CLP package stops unexpectedly while a garbage collection task is running (for example, due
