@@ -14,7 +14,7 @@ from typing import Dict, List, Optional, Tuple
 import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
-    CLP_GENERATED_CONFIG_FILENAME,
+    CLP_SHARED_CONFIG_FILENAME,
     CLPConfig,
     DB_COMPONENT_NAME,
     QueryEngine,
@@ -290,13 +290,13 @@ def generate_container_config(
     if not is_path_already_mounted(
         clp_home,
         CONTAINER_CLP_HOME,
-        clp_config.get_generated_config_file_path(),
-        container_clp_config.get_generated_config_file_path(),
+        clp_config.get_shared_config_file_path(),
+        container_clp_config.get_shared_config_file_path(),
     ):
         docker_mounts.generated_config_file = DockerMount(
             DockerMountType.BIND,
-            clp_config.get_generated_config_file_path(),
-            container_clp_config.get_generated_config_file_path(),
+            clp_config.get_shared_config_file_path(),
+            container_clp_config.get_shared_config_file_path(),
         )
 
     # Only create the mount if the directory exists
@@ -344,13 +344,13 @@ def dump_shared_container_config(
     container_clp_config: CLPConfig, clp_config: CLPConfig
 ) -> Tuple[pathlib.Path, pathlib.Path]:
     """
-    Dumps the given container config to `CLP_GENERATED_CONFIG_FILENAME` in the logs directory, so
-    that it's accessible in the container.
+    Dumps the given container config to `CLP_SHARED_CONFIG_FILENAME` in the logs directory, so that
+    it's accessible in the container.
 
     :param container_clp_config:
     :param clp_config:
     """
-    return dump_container_config(container_clp_config, clp_config, CLP_GENERATED_CONFIG_FILENAME)
+    return dump_container_config(container_clp_config, clp_config, CLP_SHARED_CONFIG_FILENAME)
 
 
 def generate_container_start_cmd(

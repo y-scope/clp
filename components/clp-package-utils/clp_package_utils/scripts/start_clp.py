@@ -266,7 +266,7 @@ def create_db_tables(
     create_tables_cmd = [
         "python3",
         str(clp_py_utils_dir / "create-db-tables.py"),
-        "--config", str(container_clp_config.get_generated_config_file_path()),
+        "--config", str(container_clp_config.get_shared_config_file_path()),
         "--storage-engine", str(container_clp_config.package.storage_engine),
     ]
     # fmt: on
@@ -632,7 +632,7 @@ def generic_start_scheduler(
     scheduler_cmd = [
         "python3", "-u",
         "-m", module_name,
-        "--config", str(container_clp_config.get_generated_config_file_path()),
+        "--config", str(container_clp_config.get_shared_config_file_path()),
     ]
     # fmt: on
     cmd = container_start_cmd + scheduler_cmd
@@ -739,7 +739,7 @@ def generic_start_worker(
     env_vars = [
         *get_common_env_vars_list(include_clp_home_env_var=True),
         *get_celery_connection_env_vars_list(container_clp_config),
-        f"CLP_CONFIG_PATH={container_clp_config.get_generated_config_file_path()}",
+        f"CLP_CONFIG_PATH={container_clp_config.get_shared_config_file_path()}",
         f"CLP_LOGS_DIR={container_logs_dir}",
         f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
         f"CLP_WORKER_LOG_PATH={container_worker_log_path}",
@@ -1019,7 +1019,7 @@ def start_reducer(
     reducer_cmd = [
         "python3", "-u",
         "-m", "job_orchestration.reducer.reducer",
-        "--config", str(container_clp_config.get_generated_config_file_path()),
+        "--config", str(container_clp_config.get_shared_config_file_path()),
         "--concurrency", str(num_workers),
         "--upsert-interval", str(clp_config.reducer.upsert_interval),
     ]
@@ -1097,7 +1097,7 @@ def start_garbage_collector(
     garbage_collector_cmd = [
         "python3", "-u",
         "-m", "job_orchestration.garbage_collector.garbage_collector",
-        "--config", str(container_clp_config.get_generated_config_file_path()),
+        "--config", str(container_clp_config.get_shared_config_file_path()),
     ]
     # fmt: on
     cmd = container_start_cmd + garbage_collector_cmd
