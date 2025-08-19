@@ -128,13 +128,17 @@ def _add_clp_env_vars(
         s3_config_key_prefix = f"archive_output.storage.s3_config"
         s3_credentials_key_prefix = f"{s3_config_key_prefix}.aws_authentication.credentials"
 
-        s3_access_key_id = _get_config_value(clp_config, f"{s3_credentials_key_prefix}.access_key_id")
+        s3_access_key_id = _get_config_value(
+            clp_config, f"{s3_credentials_key_prefix}.access_key_id"
+        )
 
         s3_bucket = _get_config_value(clp_config, f"{s3_config_key_prefix}.bucket")
         s3_region_code = _get_config_value(clp_config, f"{s3_config_key_prefix}.region_code")
         s3_end_point = f"https://{s3_bucket}.s3.{s3_region_code}.amazonaws.com/"
 
-        s3_secret_access_key = _get_config_value(clp_config, f"{s3_credentials_key_prefix}.secret_access_key")
+        s3_secret_access_key = _get_config_value(
+            clp_config, f"{s3_credentials_key_prefix}.secret_access_key"
+        )
 
         env_vars["PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE"] = "s3"
         env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER"] = "clp_package"
