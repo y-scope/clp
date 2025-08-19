@@ -22,6 +22,7 @@ from clp_package_utils.general import (
     generate_container_name,
     generate_container_start_cmd,
     get_clp_home,
+    get_container_config_filename,
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
@@ -204,7 +205,7 @@ def main(argv):
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
-        container_clp_config, clp_config, f".{container_name}-config.yml"
+        container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
     necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]

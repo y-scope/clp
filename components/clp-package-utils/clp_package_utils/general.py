@@ -322,6 +322,10 @@ def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
     return worker_config
 
 
+def get_container_config_filename(container_name: str) -> str:
+    return f".{container_name}-config.yml"
+
+
 def dump_container_config(
     container_clp_config: CLPConfig, clp_config: CLPConfig, config_filename: str
 ):
