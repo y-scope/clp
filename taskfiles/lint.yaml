@@ -723,7 +723,6 @@ tasks:
             - "test-ir_parsing.cpp"
             - "test-ir_serializer.cpp"
             - "test-kql.cpp"
-            - "test-main.cpp"
             - "test-math_utils.cpp"
             - "test-NetworkReader.cpp"
             - "test-ParserWithUserSchema.cpp"

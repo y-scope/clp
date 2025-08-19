@@ -26,7 +26,7 @@ QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
-GARBAGE_COLLECTOR_NAME = "garbage_collector"
+GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
 
 # Component groups
 GENERAL_SCHEDULING_COMPONENTS = {
@@ -48,7 +48,10 @@ UI_COMPONENTS = {
     RESULTS_CACHE_COMPONENT_NAME,
     WEBUI_COMPONENT_NAME,
 }
-ALL_COMPONENTS = COMPRESSION_COMPONENTS | QUERY_COMPONENTS | UI_COMPONENTS
+STORAGE_MANAGEMENT_COMPONENTS = {GARBAGE_COLLECTOR_COMPONENT_NAME}
+ALL_COMPONENTS = (
+    COMPRESSION_COMPONENTS | QUERY_COMPONENTS | UI_COMPONENTS | STORAGE_MANAGEMENT_COMPONENTS
+)
 
 # Target names
 ALL_TARGET_NAME = ""
@@ -60,8 +63,12 @@ TARGET_TO_COMPONENTS = {
     | {
         COMPRESSION_SCHEDULER_COMPONENT_NAME,
         QUERY_SCHEDULER_COMPONENT_NAME,
-    },
+    }
+    | STORAGE_MANAGEMENT_COMPONENTS,
 }
+
+# Action names
+ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
 
 QUERY_JOBS_TABLE_NAME = "query_jobs"
 QUERY_TASKS_TABLE_NAME = "query_tasks"
@@ -355,7 +362,7 @@ class ResultsCache(BaseModel):
     port: int = 27017
     db_name: str = "clp-query-results"
     stream_collection_name: str = "stream-files"
-    retention_period: Optional[int] = None
+    retention_period: Optional[int] = 60
 
     @validator("host")
     def validate_host(cls, field):
