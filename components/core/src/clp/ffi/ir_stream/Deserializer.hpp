@@ -196,7 +196,7 @@ private:
     IrUnitHandlerType m_ir_unit_handler;
     bool m_is_complete{false};
     [[no_unique_address]] QueryHandlerType m_query_handler;
-    size_t m_num_log_event{0};
+    size_t m_next_log_event_idx{0};
 };
 
 /**
@@ -305,8 +305,8 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
                     m_utc_offset
             ))};
 
-            auto log_event_idx = m_num_log_event;
-            m_num_log_event += 1;
+            auto const log_event_idx{m_next_log_event_idx};
+            m_next_log_event_idx += 1;
 
             if constexpr (search::IsNonEmptyQueryHandler<QueryHandlerType>::value) {
                 if (search::AstEvaluationResult::True
@@ -325,7 +325,6 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
             {
                 return ir_error_code_to_errc(err);
             }
-
             break;
         }
 

@@ -2,6 +2,7 @@
 #define CLP_FFI_IR_STREAM_IRUNITHANDLERREQ_HPP
 
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <utility>
 
@@ -33,8 +34,7 @@ concept IrUnitHandlerInterfaceReq = requires(
     /**
      * Handles a log event IR unit.
      * @param log_event The deserialized result from IR deserializer.
-     * @param log_event_idx The index of the log event in the unfiltered logs from the IR
-     * deserializer.
+     * @param log_event_idx The log event index of `log_event` in the stream.
      * @return IRErrorCode::Success on success, user-defined error code on failures.
      */
     {
