@@ -324,7 +324,9 @@ def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
 
 def dump_config(container_clp_config: CLPConfig, clp_config: CLPConfig, config_filename: str):
     """
-    Writes the given config to the logs directory so that it's accessible in the container.
+    Writes the given container config to the logs directory, so that it's accessible in the
+    container.
+
     :param container_clp_config: The config to write.
     :param clp_config: The corresponding config on the host (used to determine the logs directory).
     :param config_filename:
@@ -347,6 +349,13 @@ def dump_container_config(
 def dump_shared_config(
     container_clp_config: CLPConfig, clp_config: CLPConfig
 ) -> Tuple[pathlib.Path, pathlib.Path]:
+    """
+    Dumps the given container config to `CLP_GENERATED_CONFIG_FILENAME` in the logs directory, so
+    that it's accessible in the container.
+
+    :param container_clp_config:
+    :param clp_config:
+    """
     return dump_config(container_clp_config, clp_config, CLP_GENERATED_CONFIG_FILENAME)
 
 
@@ -363,7 +372,7 @@ def generate_container_start_cmd(
     :param container_name:
     :param container_mounts:
     :param container_image:
-    :param extra_env_vars: Environment variables to set on top of predefined ones.
+    :param extra_env_vars: Environment variables to set on top of the predefined ones.
     :return: The command.
     """
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
@@ -640,10 +649,9 @@ def get_common_env_vars_list(
     include_clp_home_env_var=True,
 ) -> List[str]:
     """
-    Generate a list of common environment variables for Docker containers.
-
     :param include_clp_home_env_var:
-    :return: A list of common environment variables for Docker containers in the format "KEY=VALUE".
+    :return: A list of common environment variables for Docker containers, in the format
+    "KEY=VALUE".
     """
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
@@ -661,13 +669,12 @@ def generate_credential_env_vars_list(
     include_redis_credentials=False,
 ) -> List[str]:
     """
-    Generates a list of credential environment variables for Docker containers.
-
     :param container_clp_config:
     :param include_db_credentials:
     :param include_queue_credentials:
     :param include_redis_credentials:
-    :return: A list of common environment variables for Docker containers in the format "KEY=VALUE".
+    :return: A list of credential environment variables for Docker containers, in the format
+    "KEY=VALUE".
     """
     env_vars = []
 
@@ -687,10 +694,9 @@ def generate_credential_env_vars_list(
 
 def generate_celery_connection_env_vars_list(container_clp_config: CLPConfig) -> List[str]:
     """
-    Generate a list of Celery connection environment variables for Docker containers.
-
     :param container_clp_config:
-    :return: A list of common environment variables for Docker containers in the format "KEY=VALUE".
+    :return: A list of Celery connection environment variables for Docker containers, in the format
+    "KEY=VALUE".
     """
     env_vars = [
         f"BROKER_URL=amqp://"
