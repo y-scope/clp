@@ -18,6 +18,7 @@ vars:
   G_DEPS_CORE_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_DIR}}/cmake-settings"
 
   # Library names
+  G_BZIP2_LIB_NAME: "BZip2"
   G_FMT_LIB_NAME: "fmt"
   G_GSL_LIB_NAME: "Microsoft.GSL"
 
@@ -63,6 +64,7 @@ tasks:
       - task: "absl"
       - task: "antlr-jar"
       - task: "antlr-runtime"
+      - task: "bzip2"
       - task: "catch2"
       - task: "date"
       - task: "fmt"
@@ -179,6 +181,33 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
+
+  bzip2:
+    internal: true
+    vars:
+      EXTRACTION_DIR: "{{.G_DEPS_CORE_DIR}}/{{.G_BZIP2_LIB_NAME}}-extracted"
+      INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.G_BZIP2_LIB_NAME}}-install"
+    run: "once"
+    deps:
+      - task: "utils:init"
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.G_BZIP2_LIB_NAME}}.md5"
+          FILE_SHA256: "db106b740252669664fd8f3a1c69fe7f689d5cd4b132f82ba82b9afba27627df"
+          OUTPUT_DIR: "{{.EXTRACTION_DIR}}"
+          URL: "https://github.com/libarchive/bzip2/archive/refs/tags/bzip2-1.0.8.tar.gz"
+      - >-
+        make
+        --directory {{.EXTRACTION_DIR}}
+        --jobs {{.JOBS}}
+        install PREFIX={{.INSTALL_PREFIX}}
+      - >-
+        echo "set({{.G_BZIP2_LIB_NAME}}_ROOT
+          \"{{.INSTALL_PREFIX}}\"
+          CACHE PATH
+          \"Package root for {{.G_BZIP2_LIB_NAME}}.\"
+        )" >> "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_BZIP2_LIB_NAME}}.cmake"
 
   catch2:
     internal: true
