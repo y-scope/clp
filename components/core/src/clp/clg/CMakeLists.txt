@@ -130,6 +130,7 @@ set(
 )
 
 if(CLP_BUILD_EXECUTABLES)
+        find_package(absl REQUIRED)
         clp_find_boost()
         find_package(date REQUIRED)
         find_package(fmt REQUIRED)
