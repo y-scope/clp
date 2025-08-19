@@ -932,13 +932,18 @@ class CLPConfig(BaseModel):
             return ALL_COMPONENTS
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
-        d["database"] = self.database.dump_to_primitive_dict()
-        d["queue"] = self.queue.dump_to_primitive_dict()
-        d["redis"] = self.redis.dump_to_primitive_dict()
-        d["logs_input"] = self.logs_input.dump_to_primitive_dict()
-        d["archive_output"] = self.archive_output.dump_to_primitive_dict()
-        d["stream_output"] = self.stream_output.dump_to_primitive_dict()
+        custom_serialized_fields = (
+            "database",
+            "queue",
+            "redis",
+            "logs_input",
+            "archive_output",
+            "stream_output",
+        )
+        d = self.dict(exclude=set(custom_serialized_fields))
+        for key in custom_serialized_fields:
+            d[key] = getattr(self, key).dump_to_primitive_dict()
+
         # Turn paths into primitive strings
         d["credentials_file_path"] = str(self.credentials_file_path)
         d["data_directory"] = str(self.data_directory)
@@ -947,6 +952,7 @@ class CLPConfig(BaseModel):
             d["aws_config_directory"] = str(self.aws_config_directory)
         else:
             d["aws_config_directory"] = None
+
         return d
 
 
