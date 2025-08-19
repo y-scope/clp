@@ -6,9 +6,9 @@ Currently, CLP provides `archive-mananger.sh` and `dataset-manager.sh`, which ma
 logs at the level of archives and datasets.
 
 :::{note}
-Admin-tools scripts can only be used after CLP starts. To start CLP, see 
-[clp-json quick start](quick-start/clp-json.md) or [clp-text quick start](quick-start/clp-text.md) 
-for details.
+Admin-tools scripts can only be used after CLP starts. For help using CLP, see the
+[clp-json quick start](quick-start/clp-json.md) or [clp-text quick start](quick-start/clp-text.md)
+pages for details.
 :::
 
 :::{caution}
@@ -40,11 +40,11 @@ sbin/admin-tools/archive-manager.sh find
 
 To narrow the listed archives to a specific time range:
 
-* Add `--begin-ts <epoch-timestamp-millis>` to filter for archives whose earliest log events is 
-after a certain time.
+* Add `--begin-ts <epoch-timestamp-millis>` to the `find` command to filter for archives whose
+  earliest log event is after a certain time.
   * `<epoch-timestamp-millis>` is the timestamp as milliseconds since the UNIX epoch.
-* Add `--end-ts <epoch-timestamp-millis>` to filter for archives whose most recent log events is 
-before a certain time.
+* Add `--end-ts <epoch-timestamp-millis>` to the `find` command to filter for archives whose most
+  recent log event is before a certain time.
 
 To delete archives, users can specify one or more archive IDs, for example:
 
@@ -60,15 +60,16 @@ sbin/admin-tools/archive-manager.sh del --begin-ts <epoch-timestamp-millis> \
 ```
 
 :::{note}
-`clp-json` groups archives under different datasets. By default, `archive-manager.sh` only lists
-and deletes the archive in the `default` dataset. Add `--dataset <dataset>` to manage archives in
-a specific dataset.
+`clp-json` groups archives into different datasets. By default, `archive-manager.sh` only operates
+on the archive in the `default` dataset. Add the `--dataset <dataset>` flag to the commands
+described above to manage the archives in a specific dataset.
 :::
 
-### Limitation
-- `archive-manager.sh` assumes that archive timestamps are given in **UTC** time. Using the script
-on archives with local (i.e., non-UTC) timestamps can lead to an effective time range that is
-different from the intended value. 
+### Limitations
+
+* `archive-manager.sh` assumes that archive timestamps are given in **UTC** time. Using the script
+  on archives with local (i.e., non-UTC) timestamps can lead to an effective time range that is
+  different from the intended value.
 
   To avoid this issue, either generate logs with UTC timestamps or adjust the 
   `<epoch-timestamp-millis>` to account for the offset:
