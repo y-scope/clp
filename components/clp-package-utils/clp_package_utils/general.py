@@ -346,7 +346,7 @@ def dump_container_config(
     return dump_config(container_clp_config, clp_config, f".{container_name}-config.yml")
 
 
-def dump_shared_config(
+def dump_shared_container_config(
     container_clp_config: CLPConfig, clp_config: CLPConfig
 ) -> Tuple[pathlib.Path, pathlib.Path]:
     """

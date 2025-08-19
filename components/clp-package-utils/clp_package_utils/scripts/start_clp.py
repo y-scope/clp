@@ -49,7 +49,7 @@ from clp_package_utils.general import (
     CONTAINER_CLP_HOME,
     DockerMount,
     DockerMountType,
-    dump_shared_config,
+    dump_shared_container_config,
     get_celery_connection_env_vars_list,
     generate_container_config,
     get_credential_env_vars_list,
@@ -1244,7 +1244,7 @@ def main(argv):
     clp_config.logs_directory.mkdir(parents=True, exist_ok=True)
 
     # Dump the container config
-    dump_shared_config(container_clp_config, clp_config)
+    dump_shared_container_config(container_clp_config, clp_config)
 
     try:
         # Create instance-id file
