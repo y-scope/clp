@@ -189,7 +189,6 @@ tasks:
           #   - src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
           #   - src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
           #   - src/clp/ir/EncodedTextAst.cpp
-          #   - tests/test-ffi_IrUnitHandlerInterface.cpp
           # yamllint disable rule:line-length
           EXCLUDE_PATTERNS:
             # Sources
@@ -718,8 +717,6 @@ tasks:
             - "test-clp_s-search.cpp"
             - "test-EncodedVariableInterpreter.cpp"
             - "test-encoding_methods.cpp"
-            - "test-error_handling.cpp"
-            - "test-ffi_IrUnitHandlerInterface.cpp"
             - "test-GrepCore.cpp"
             - "test-hash_utils.cpp"
             - "test-ir_encoding_methods.cpp"
