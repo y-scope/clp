@@ -20,13 +20,13 @@ the following definitions:
 | $current\_time$     | The time at which the garbage collector is performing a check.                                                                                                             |
 | $data\_timestamp$   | The end of the time range for the data being evaluated for expiration (e.g., for an archive, this is the timestamp of the most recent log event contained in the archive). |
 
-When the garbage collector wakes up, it will scan for and delete any data that fits the expiry
+When the garbage collector wakes up, it will scan for and delete any data that satisfies the expiry
 criteria shown in [Figure 1](#figure-1):
 
 (figure-1)=
 :::{card}
 
-$$current\_time - data\_timestamp > retention\_period$$
+$$is\_expired = (current\_time - data\_timestamp > retention\_period)$$
 
 +++
 **Figure 1**: The criteria for determining whether a piece of data has expired and should be
@@ -45,7 +45,7 @@ For example, if...
 
 ## Retention settings
 
-There are three settings that affect how CLP's data retention operates:
+The following settings affect how CLP's data retention operates:
 
 * [Archive retention period](#archive-retention-period)
 * [Search result retention period](#search-result-retention-period)
@@ -107,9 +107,9 @@ For example, let's say:
 
 When the garbage collector runs, it will evaluate the archive's expiry criteria, substituting
 $08:00$ for $data\_timestamp$, and $01:01$ for $current\_time$, since $09:01$ AWST = $01:01$ UTC.
-The equation then becomes $08:00 < 01:01 - 01:00$, which evaluates to false. Thus, the garbage
-collector won't delete the archive; in fact, it won't delete it until $09:01$ UTC, which is 8 hours
-later than it should've been deleted.
+The equation then becomes $is\_expired = (08:00 < 01:01 - 01:00)$, which evaluates to false. Thus,
+the garbage collector won't delete the archive; in fact, it won't delete it until $09:01$ UTC, which
+is 8 hours later than it should've been deleted.
 
 Similarly, archives may be deleted prematurely if your log events use timestamps in a time zone that
 is behind UTC.
@@ -135,6 +135,19 @@ results_cache:
   # Set to null to disable automatic deletion.
   retention_period: 1440
 ```
+
+By default, `results_cache.retention_period` is `60`, which means that search results will be
+retained for 60 minutes (1 hour).
+
+:::{note}
+When a user runs consecutive queries in the webui without refreshing the page, the results of one
+query will be deleted when the next query is run. This means that only the results of the last query
+in a session are ever retained, and thus subject to the configured retention period.
+
+In a future version of CLP, we may change this behavior so that the results of all queries are
+retained until they are either evicted from the results cache, or their retention period expires,
+whichever comes first.
+:::
 
 #### Search result expiry criteria
 
@@ -206,6 +219,6 @@ the point of failure.
 
 :::{note}
 During failure recovery, there may be a temporary period during which an archive no longer exists in
-the database, but still exists on disk or in object storage. Once recovery is complete, the physical
-archive will also be deleted.
+the metadata database, but still exists on disk or in object storage. Once recovery is complete, the
+physical archive will also be deleted.
 :::
