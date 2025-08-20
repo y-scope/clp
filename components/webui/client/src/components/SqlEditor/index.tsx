@@ -103,8 +103,8 @@ const SqlEditor = (props: SqlEditorProps) => {
                 // When SQL keyword suggestions appear (e.g., after "SELECT a"), hitting Enter
                 // accepts the first suggestion. To prevent accidental auto-completion
                 // in multi-line queries and to allow users to dismiss suggestions more easily,
-                // we make the current input the first suggestion.
-                // Users can then use arrow keys to select a keyword if needed.
+                // we make the current input the first suggestion. Users can then use arrow keys
+                // to select a keyword if needed.
                 const typedWord = model.getValueInRange(range);
                 if (0 < typedWord.length) {
                     suggestions.push({
@@ -123,7 +123,6 @@ const SqlEditor = (props: SqlEditorProps) => {
             },
             triggerCharacters: [
                 " ",
-                "\n",
             ],
         });
 
