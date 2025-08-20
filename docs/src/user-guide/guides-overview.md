@@ -14,9 +14,9 @@ Using CLP to ingest logs from object storage and store archives on object storag
 
 :::{grid-item-card}
 :link: guides-retention
-Retention control
+Configuring retention periods
 ^^^
-How to configure retention control for CLP.
+How to configure retention periods for CLP archives and search results.
 :::
 
 :::{grid-item-card}

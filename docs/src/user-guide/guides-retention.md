@@ -1,4 +1,4 @@
-# Setting up data retention periods
+# Configuring retention periods
 
 CLP can automatically delete *archives* and/or *search results* once they're older than a configured
 retention period. This guide explains:
