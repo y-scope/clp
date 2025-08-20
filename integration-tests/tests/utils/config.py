@@ -31,7 +31,7 @@ class CoreConfig:
         missing_binaries = [b for b in required_binaries if not (clp_core_bins_dir / b).is_file()]
         if len(missing_binaries) > 0:
             err_msg = (
-                f"CLP core bins at {clp_core_bins_dir} is incomplete."
+                f"CLP core binaries at {clp_core_bins_dir} are incomplete."
                 f" Missing binaries: {', '.join(missing_binaries)}"
             )
             raise ValueError(err_msg)
