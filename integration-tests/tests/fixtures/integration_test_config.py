@@ -21,8 +21,9 @@ def integration_test_config() -> IntegrationTestConfig:
     package_config = PackageConfig(
         clp_package_dir=Path(get_env_var("CLP_PACKAGE_DIR")).expanduser().resolve()
     )
+    test_root_dir = Path(get_env_var("CLP_BUILD_DIR")).expanduser().resolve() / "integration-tests"
     return IntegrationTestConfig(
         core_config=core_config,
         package_config=package_config,
-        test_root_dir=Path(get_env_var("CLP_BUILD_DIR")).expanduser().resolve() / "integration-tests",
+        test_root_dir=test_root_dir,
     )

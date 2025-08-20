@@ -23,6 +23,3 @@ def run_and_assert(cmd: list[str], **kwargs: Any) -> subprocess.CompletedProcess
     except subprocess.CalledProcessError as e:
         pytest.fail(f"Command failed: {' '.join(cmd)}: {e}")
     return proc
-
-
-

@@ -8,17 +8,17 @@ from tempfile import NamedTemporaryFile
 from typing import IO
 
 
-def is_json_file_structurally_equal(json_fp1: Path, json_fp2: Path) -> bool:
+def get_env_var(var_name: str) -> str:
     """
-    :param json_fp1:
-    :param json_fp2:
-    :return: Whether two JSON files are structurally equal after sorting has been applied.
+    :param var_name:
+    :return: The string value of the specified environment variable.
+    :raise: ValueError if the environment variable is not set
     """
-    with (
-        _sort_json_keys_and_rows(json_fp1) as temp_file_1,
-        _sort_json_keys_and_rows(json_fp2) as temp_file_2,
-    ):
-        return is_dir_tree_content_equal(Path(temp_file_1.name), Path(temp_file_2.name))
+    value = os.environ.get(var_name)
+    if value is None:
+        err_msg = f"Environment variable {var_name} is not set."
+        raise ValueError(err_msg)
+    return value
 
 
 def is_dir_tree_content_equal(path1: Path, path2: Path) -> bool:
@@ -38,17 +38,41 @@ def is_dir_tree_content_equal(path1: Path, path2: Path) -> bool:
     raise RuntimeError(err_msg)
 
 
-def get_env_var(var_name: str) -> str:
+def is_json_file_structurally_equal(json_fp1: Path, json_fp2: Path) -> bool:
     """
-    :param var_name:
-    :return: The string value of the specified environment variable.
-    :raise: ValueError if the environment variable is not set
+    :param json_fp1:
+    :param json_fp2:
+    :return: Whether two JSON files are structurally equal after sorting has been applied.
     """
-    value = os.environ.get(var_name)
-    if value is None:
-        err_msg = f"Environment variable {var_name} is not set."
-        raise ValueError(err_msg)
-    return value
+    with (
+        _sort_json_keys_and_rows(json_fp1) as temp_file_1,
+        _sort_json_keys_and_rows(json_fp2) as temp_file_2,
+    ):
+        return is_dir_tree_content_equal(Path(temp_file_1.name), Path(temp_file_2.name))
+
+
+def unlink(rm_path: Path, force: bool = True) -> None:
+    """
+    Remove a file or directory at `path`.
+
+    :param rm_path:
+    :param force: Whether to force remove with sudo priviledges in case the normal operation fails.
+                  Defaults to True.
+    """
+    try:
+        shutil.rmtree(rm_path)
+    except FileNotFoundError:
+        pass
+    except PermissionError:
+        if not force:
+            raise
+
+        sudo_rm_cmds = ["sudo", "rm", "-rf", str(rm_path)]
+        try:
+            subprocess.run(sudo_rm_cmds, check=True)
+        except subprocess.CalledProcessError as e:
+            err_msg = f"Failed to remove {rm_path} due to lack of superuser privileges (sudo)."
+            raise OSError(err_msg) from e
 
 
 def validate_dir_exists(dir_path: Path) -> None:

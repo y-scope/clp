@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
-import shutil
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
 
-from tests.utils.utils import validate_dir_exists
+from tests.utils.utils import (
+    unlink,
+    validate_dir_exists,
+)
 
 
 @dataclass(frozen=True)
@@ -152,7 +154,5 @@ class CompressionTestConfig:
 
     def clear_test_outputs(self) -> None:
         """Remove any existing output directories created by this compression test."""
-        if self.compression_dir.exists():
-            shutil.rmtree(self.compression_dir, ignore_errors=True)
-        if self.decompression_dir.exists():
-            shutil.rmtree(self.decompression_dir, ignore_errors=True)
+        unlink(self.compression_dir)
+        unlink(self.decompression_dir)
