@@ -32,6 +32,10 @@ jobs:
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
 
+      - name: "Generate parsers"
+        shell: "bash"
+        run: "task clp-s-generate-parsers"
+
       - name: "Check if the generated parsers are the latest"
         shell: "bash"
         run:
