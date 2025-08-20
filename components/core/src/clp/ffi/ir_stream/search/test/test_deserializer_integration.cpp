@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <sstream>
@@ -6,7 +7,9 @@
 #include <utility>
 #include <vector>
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <fmt/core.h>
 #include <nlohmann/json_fwd.hpp>
 
@@ -38,7 +41,9 @@ using JsonPair = std::pair<nlohmann::json, nlohmann::json>;
  */
 class IrUnitHandler {
 public:
-    [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent&& log_event) -> IRErrorCode {
+    [[nodiscard]] auto
+    handle_log_event(KeyValuePairLogEvent&& log_event, [[maybe_unused]] size_t log_event_idx)
+            -> IRErrorCode {
         m_deserialized_log_events.emplace_back(std::move(log_event));
         return IRErrorCode::IRErrorCode_Success;
     }

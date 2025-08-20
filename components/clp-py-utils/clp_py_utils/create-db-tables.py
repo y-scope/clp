@@ -19,7 +19,7 @@ logger.addHandler(logging_console_handler)
 
 def main(argv):
     args_parser = argparse.ArgumentParser(description="Creates database tables for CLP.")
-    args_parser.add_argument("--config", required=True, help="Database config file.")
+    args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     args_parser.add_argument(
         "--storage-engine",
         type=str,

@@ -1,5 +1,6 @@
 #include "JsonParser.hpp"
 
+#include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <memory>
@@ -45,7 +46,9 @@ namespace clp_s {
  */
 class IrUnitHandler {
 public:
-    [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent&& log_event) -> IRErrorCode {
+    [[nodiscard]] auto
+    handle_log_event(KeyValuePairLogEvent&& log_event, [[maybe_unused]] size_t log_event_idx)
+            -> IRErrorCode {
         m_deserialized_log_event.emplace(std::move(log_event));
         return IRErrorCode::IRErrorCode_Success;
     }
