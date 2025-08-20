@@ -34,7 +34,7 @@ public:
      * Constructs a Projection object with the specified mode and column handling behavior.
      *
      * @param mode Projection mode that determines how expressions are projected.
-     * @param allow_duplicate_columns Whether duplicate column descriptiors are permitted in the
+     * @param allow_duplicate_columns Whether duplicate column descriptors are permitted in the
      * projection.
      */
     explicit Projection(ProjectionMode mode, bool allow_duplicate_columns = false)
