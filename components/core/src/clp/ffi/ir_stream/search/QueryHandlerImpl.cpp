@@ -54,6 +54,7 @@ using clp_s::search::ast::literal_type_bitmask_t;
 /**
  * Creates column descriptors and column-to-original-key map from the given projections.
  * @param projections
+ * @param allow_duplicate_projected_columns Whether to allow duplicate projected columns.
  * @return A result containing a pair or an error code indicating the failure:
  * - The pair:
  *   - A vector of projected columns.
@@ -65,7 +66,8 @@ using clp_s::search::ast::literal_type_bitmask_t;
  *     descriptor for the projected key.
  */
 [[nodiscard]] auto create_projected_columns_and_projection_map(
-        std::vector<std::pair<std::string, literal_type_bitmask_t>> const& projections
+        std::vector<std::pair<std::string, literal_type_bitmask_t>> const& projections,
+        bool allow_duplicate_projected_columns
 )
         -> ystdlib::error_handling::Result<std::pair<
                 std::vector<std::shared_ptr<ColumnDescriptor>>,
@@ -182,7 +184,8 @@ auto preprocess_query(std::shared_ptr<Expression> query)
 }
 
 auto create_projected_columns_and_projection_map(
-        std::vector<std::pair<std::string, literal_type_bitmask_t>> const& projections
+        std::vector<std::pair<std::string, literal_type_bitmask_t>> const& projections,
+        bool allow_duplicate_projected_columns
 )
         -> ystdlib::error_handling::Result<std::pair<
                 std::vector<std::shared_ptr<ColumnDescriptor>>,
@@ -192,10 +195,12 @@ auto create_projected_columns_and_projection_map(
     QueryHandlerImpl::ProjectionMap projected_column_to_original_key;
 
     for (auto const& [key, types] : projections) {
-        if (unique_projected_columns.contains(key)) {
-            return ErrorCode{ErrorCodeEnum::DuplicateProjectedColumn};
+        if (false == allow_duplicate_projected_columns) {
+            if (unique_projected_columns.contains(key)) {
+                return ErrorCode{ErrorCodeEnum::DuplicateProjectedColumn};
+            }
+            unique_projected_columns.emplace(key);
         }
-        unique_projected_columns.emplace(key);
 
         std::vector<std::string> descriptor_tokens;
         std::string descriptor_namespace;
@@ -408,11 +413,15 @@ auto evaluate_wildcard_filter(
 auto QueryHandlerImpl::create(
         std::shared_ptr<Expression> query,
         std::vector<std::pair<std::string, literal_type_bitmask_t>> const& projections,
-        bool case_sensitive_match
+        bool case_sensitive_match,
+        bool allow_duplicate_projected_columns
 ) -> ystdlib::error_handling::Result<QueryHandlerImpl> {
     query = YSTDLIB_ERROR_HANDLING_TRYX(preprocess_query(query));
     auto [projected_columns, projected_column_to_original_key]
-            = YSTDLIB_ERROR_HANDLING_TRYX(create_projected_columns_and_projection_map(projections));
+            = YSTDLIB_ERROR_HANDLING_TRYX(create_projected_columns_and_projection_map(
+                    projections,
+                    allow_duplicate_projected_columns
+            ));
     auto [auto_gen_namespace_partial_resolutions, user_gen_namespace_partial_resolutions]
             = YSTDLIB_ERROR_HANDLING_TRYX(
                     create_initial_partial_resolutions(query, projected_column_to_original_key)

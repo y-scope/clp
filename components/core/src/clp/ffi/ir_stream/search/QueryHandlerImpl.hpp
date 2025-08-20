@@ -127,6 +127,7 @@ public:
      * @param query The search query.
      * @param projections The columns to project.
      * @param case_sensitive_match Whether to use case-sensitive match for string comparison.
+     * @param allow_duplicate_projected_columns Whether to allow duplicate projected columns.
      * @return A result containing the newly constructed `QueryHandler` on success, or an error code
      * indicating the failure:
      * - Forwards `preprocess_query`'s return values.
@@ -137,7 +138,8 @@ public:
             std::shared_ptr<clp_s::search::ast::Expression> query,
             std::vector<std::pair<std::string, clp_s::search::ast::literal_type_bitmask_t>> const&
                     projections,
-            bool case_sensitive_match
+            bool case_sensitive_match,
+            bool allow_duplicate_projected_columns
     ) -> ystdlib::error_handling::Result<QueryHandlerImpl>;
 
     // Delete copy constructor and assignment operator

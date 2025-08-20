@@ -410,7 +410,7 @@ TEST_CASE(
     auto query_stream{std::istringstream{kql_query_str}};
     auto query{clp_s::search::kql::parse_kql_expression(query_stream)};
 
-    auto query_handler_impl_result{QueryHandlerImpl::create(query, {}, true)};
+    auto query_handler_impl_result{QueryHandlerImpl::create(query, {}, true, false)};
     REQUIRE_FALSE(query_handler_impl_result.has_error());
     auto& query_handler_impl{query_handler_impl_result.value()};
 
@@ -521,7 +521,7 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
             unresolvable_projections_from_unrecognized_namespaces.cend()
     );
 
-    auto query_handler_impl_result{QueryHandlerImpl::create(null_query, projections, true)};
+    auto query_handler_impl_result{QueryHandlerImpl::create(null_query, projections, true, false)};
     REQUIRE_FALSE(query_handler_impl_result.has_error());
     auto& query_handler_impl{query_handler_impl_result.value()};
 
@@ -615,7 +615,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
         auto query{clp_s::search::kql::parse_kql_expression(query_stream)};
         REQUIRE((nullptr != query));
 
-        auto query_handler_impl_result{QueryHandlerImpl::create(query, {}, true)};
+        auto query_handler_impl_result{QueryHandlerImpl::create(query, {}, true, false)};
         REQUIRE_FALSE(query_handler_impl_result.has_error());
         auto& query_handler_impl{query_handler_impl_result.value()};
 
