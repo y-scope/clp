@@ -4,7 +4,7 @@ CLP can automatically delete *archives* and/or *search results* once they're old
 retention period. This guide explains:
 
 * [How retention works in CLP](#how-retention-works)
-* [How to configure a retention](#retention-settings)
+* [How to configure retention](#retention-settings)
 * [Additional concerns worth noting](#additional-concerns)
 
 ## How retention works
@@ -108,7 +108,7 @@ For example, let's say:
 When the garbage collector runs, it will evaluate the archive's expiry criteria, substituting
 $08:00$ for $data\_timestamp$, and $01:01$ for $current\_time$, since $09:01$ AWST = $01:01$ UTC.
 The equation then becomes $08:00 < 01:01 - 01:00$, which evaluates to false. Thus, the garbage
-collector won't delete the archive; in fact it won't delete it until 09:01 UTC, which is 8 hours
+collector won't delete the archive; in fact, it won't delete it until 09:01 UTC, which is 8 hours
 later than it should've been deleted.
 
 Similarly, archives may be deleted prematurely if your log events use timestamps in a time zone that
@@ -147,9 +147,8 @@ This setting determines how often the garbage collector wakes up to check for an
 data. To configure it, modify the value of `garbage_collector.sweep_interval` in
 `etc/clp-config.yml`.
 
-For example, to configure a sweep interval 3 hours (180 minutes) for archives and 15 minutes for
+For example, to configure a sweep interval of 3 hours (180 minutes) for archives and 15 minutes for
 search results, use:
-
 
 ```yaml
 garbage_collector:
