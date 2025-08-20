@@ -2,6 +2,7 @@
 #define CLP_FFI_IR_STREAM_IRUNITHANDLERREQ_HPP
 
 #include <concepts>
+#include <cstddef>
 #include <memory>
 #include <utility>
 
@@ -23,6 +24,7 @@ template <typename IrUnitHandlerType>
 concept IrUnitHandlerInterfaceReq = requires(
         IrUnitHandlerType handler,
         KeyValuePairLogEvent&& log_event,
+        size_t log_event_idx,
         bool is_auto_generated,
         UtcOffset utc_offset_old,
         UtcOffset utc_offset_new,
@@ -32,10 +34,11 @@ concept IrUnitHandlerInterfaceReq = requires(
     /**
      * Handles a log event IR unit.
      * @param log_event The deserialized result from IR deserializer.
+     * @param log_event_idx The log event index of `log_event` in the stream.
      * @return IRErrorCode::Success on success, user-defined error code on failures.
      */
     {
-        handler.handle_log_event(std::forward<KeyValuePairLogEvent &&>(log_event))
+        handler.handle_log_event(std::forward<KeyValuePairLogEvent &&>(log_event), log_event_idx)
     } -> std::same_as<IRErrorCode>;
 
     /**
