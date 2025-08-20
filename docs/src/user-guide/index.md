@@ -61,9 +61,9 @@ quick-start/clp-text
 
 guides-overview
 guides-using-object-storage/index
+guides-retention
 guides-multi-node
 guides-using-presto
-guides-retention
 :::
 
 :::{toctree}
