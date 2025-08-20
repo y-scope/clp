@@ -10,6 +10,7 @@ import useSearchStore from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import styles from "./index.module.css";
 
+
 /**
  * Renders SQL query input.
  *
@@ -38,20 +39,20 @@ const SqlQueryInput = () => {
         ) {
             editorRef.current?.focus();
         }
-    }, [searchUiState, isEditorReady]);
+    }, [searchUiState,
+        isEditorReady]);
 
     return (
         <div className={styles["input"] || ""}>
             <SqlEditor
                 height={"150px"}
                 ref={editorRef}
-                onChange={handleChange}
-                onDidMount={handleEditorDidMount}
                 disabled={
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                     searchUiState === SEARCH_UI_STATE.QUERYING
                 }
-            />
+                onChange={handleChange}
+                onDidMount={handleEditorDidMount}/>
         </div>
     );
 };

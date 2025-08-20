@@ -3,30 +3,29 @@ import {
     useEffect,
     useImperativeHandle,
     useRef,
-    useState,
 } from "react";
 
-import EditorComponent, {
+import {
     Editor,
     EditorProps,
     useMonaco,
 } from "@monaco-editor/react";
+import {theme} from "antd";
+import color from "color";
 import {language as sqlLanguage} from "monaco-editor/esm/vs/basic-languages/sql/sql.js";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
-import {theme} from "antd";
-import Color from "color";
 
 import "./monaco-loader";
 
 
-const MAX_VISIBLE_LINES: number = 5;
-
-export type SqlEditorRef = {
+type SqlEditorRef = {
     focus: () => void;
 };
 
 type SqlEditorProps = Omit<EditorProps, "language"> & React.RefAttributes<SqlEditorRef> & {
     disabled: boolean;
+
+    /** Callback when the editor is mounted and ref is ready to use. */
     onDidMount?: () => void;
 };
 
@@ -37,17 +36,15 @@ type SqlEditorProps = Omit<EditorProps, "language"> & React.RefAttributes<SqlEdi
  * @return
  */
 const SqlEditor = (props: SqlEditorProps) => {
-    const { ref, disabled, onDidMount, ...editorProps } = props;
-    const monacoEditor = useMonaco();
-    const { token } = theme.useToken();
+    const {ref, disabled, onDidMount, ...editorProps} = props;
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>(null);
+    const monacoEditor = useMonaco();
+    const {token} = theme.useToken();
 
     useImperativeHandle(ref, () => ({
         focus: () => {
-            console.log("Focusing SQL editor2");
-            console.log("Editor ref:", editorRef);
-            editorRef?.current?.focus()
-        }
+            editorRef.current?.focus();
+        },
     }), []);
 
     const handleEditorDidMount = useCallback((
@@ -55,26 +52,26 @@ const SqlEditor = (props: SqlEditorProps) => {
     ) => {
         editorRef.current = editor;
         onDidMount?.();
-        console.log("Editor mounted:", editor);
     }, [onDidMount]);
 
-    console.log(token.colorBgContainerDisabled);
-
-    // Define disabled theme when monaco is available
+    // Define disabled theme for monaco editor
     useEffect(() => {
         if (monacoEditor) {
-            monacoEditor.editor.defineTheme('disabled-theme', {
-                base: 'vs',
+            monacoEditor.editor.defineTheme("disabled-theme", {
+                base: "vs",
                 inherit: true,
                 rules: [],
                 colors: {
-                    'editor.background': Color(token.colorBgContainerDisabled).hexa(),
-                    'editor.foreground': Color(token.colorTextDisabled).hexa(),
-                    'focusBorder': '#00000000', // transparent
-                }
+                    "editor.background": color(token.colorBgContainerDisabled).hexa(),
+                    "editor.foreground": color(token.colorTextDisabled).hexa(),
+
+                    // transparent
+                    "focusBorder": "#00000000",
+                },
             });
         }
-    }, [monacoEditor, token]);
+    }, [monacoEditor,
+        token]);
 
     useEffect(() => {
         if (null === monacoEditor) {
@@ -132,13 +129,23 @@ const SqlEditor = (props: SqlEditorProps) => {
     }, [monacoEditor]);
 
     return (
-        <div style={disabled ? { pointerEvents: 'none' } : {}}>
-            <EditorComponent
+        <div
+            style={
+                disabled ?
+                    {pointerEvents: "none"} :
+                    {}
+            }
+        >
+            <Editor
                 language={"sql"}
-                theme={disabled ? 'disabled-theme' : 'light'}
-                // Use white background while loading (default is grey) so transition to editor with
-                // white background is less jarring.
-                loading={<div style={{backgroundColor: "white", height: "100%", width: "100%"}}/>}
+                loading={
+                    <div
+                        style={{
+                            backgroundColor: "white",
+                            height: "100%",
+                            width: "100%",
+                        }}/>
+                }
                 options={{
                     automaticLayout: true,
                     fontSize: 20,
@@ -150,8 +157,10 @@ const SqlEditor = (props: SqlEditorProps) => {
                     renderLineHighlightOnlyWhenFocus: true,
                     scrollBeyondLastLine: false,
                     wordWrap: "on",
-                    readOnly: disabled,
                 }}
+                theme={disabled ?
+                    "disabled-theme" :
+                    "light"}
                 onMount={handleEditorDidMount}
                 {...editorProps}/>
         </div>
@@ -159,3 +168,4 @@ const SqlEditor = (props: SqlEditorProps) => {
 };
 
 export default SqlEditor;
+export type {SqlEditorRef};
