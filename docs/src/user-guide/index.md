@@ -38,7 +38,7 @@ Resources like log datasets, etc.
 :::
 
 :::{grid-item-card}
-:link: reference-json-search-syntax
+:link: reference-overview
 Reference
 ^^^
 Reference docs like format specifications, etc.
