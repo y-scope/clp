@@ -26,7 +26,7 @@ criteria shown in [Figure 1](#figure-1):
 (figure-1)=
 :::{card}
 
-$$data\_timestamp < current\_time - retention\_period$$
+$$current\_time - data\_timestamp > retention\_period$$
 
 +++
 **Figure 1**: The criteria for determining whether a piece of data has expired and should be
