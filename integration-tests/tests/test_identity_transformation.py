@@ -1,5 +1,11 @@
+"""
+Integration tests verifying that CLP core compression binaries perform lossless round-trip
+compression and decompression.
+"""
+
 import pytest
 
+from tests.utils.assert_utils import run_and_assert
 from tests.utils.config import (
     CompressionTestConfig,
     IntegrationTestConfig,
@@ -8,7 +14,6 @@ from tests.utils.config import (
 from tests.utils.utils import (
     is_dir_tree_content_equal,
     is_json_file_structurally_equal,
-    run_and_assert,
 )
 
 pytestmark = pytest.mark.core

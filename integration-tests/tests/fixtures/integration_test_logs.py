@@ -1,3 +1,5 @@
+"""Define test logs fixtures."""
+
 import logging
 import shutil
 import subprocess
@@ -52,7 +54,7 @@ def _download_and_extract_dataset(
         integration_test_config=integration_test_config,
     )
     if request.config.cache.get(name, False):
-        logger.info(f"Test logs `{name}` is up-to-date. Skipping download.")
+        logger.info("Test logs `%s` is up-to-date. Skipping download.", name)
         return integration_test_logs
 
     try:
@@ -76,6 +78,6 @@ def _download_and_extract_dataset(
         err_msg = f"Failed to download and extract dataset `{name}`."
         raise RuntimeError(err_msg) from e
 
-    logger.info(f"Downloaded and extracted uncompressed logs for dataset `{name}`.")
+    logger.info("Downloaded and extracted uncompressed logs for dataset `%s`.", name)
     request.config.cache.set(name, True)
     return integration_test_logs

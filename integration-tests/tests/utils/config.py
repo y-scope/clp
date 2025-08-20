@@ -1,3 +1,5 @@
+"""Define all python classes used in `integration-tests`."""
+
 from __future__ import annotations
 
 import shutil
@@ -15,6 +17,10 @@ class CoreConfig:
     clp_core_bins_dir: Path
 
     def __post_init__(self) -> None:
+        """
+        Validate that the CLP core binaries directory exists and contains all required
+        executables.
+        """
         clp_core_bins_dir = self.clp_core_bins_dir
         validate_dir_exists(clp_core_bins_dir)
 
@@ -47,6 +53,7 @@ class PackageConfig:
     clp_package_dir: Path
 
     def __post_init__(self) -> None:
+        """Validate that the CLP package directory exists and contains all required directories."""
         clp_package_dir = self.clp_package_dir
         validate_dir_exists(clp_package_dir)
 
@@ -76,6 +83,7 @@ class IntegrationTestConfig:
     logs_download_dir: Path = field(init=False, repr=True)
 
     def __post_init__(self, logs_download_dir_init: Path | None) -> None:
+        """Initialize and create required directories for integration tests."""
         if logs_download_dir_init is not None:
             object.__setattr__(self, "logs_download_dir", logs_download_dir_init)
         else:
@@ -100,6 +108,7 @@ class IntegrationTestLogs:
     extraction_dir: Path = field(init=False, repr=True)
 
     def __post_init__(self, integration_test_config: IntegrationTestConfig) -> None:
+        """Initialize and set tarball and extraction paths for integration test logs."""
         name = self.name.strip()
         if 0 == len(name):
             err_msg = "`name` cannot be empty."
@@ -127,6 +136,7 @@ class CompressionTestConfig:
     decompression_dir: Path = field(init=False, repr=True)
 
     def __post_init__(self, integration_test_config: IntegrationTestConfig) -> None:
+        """Initialize and set required directory paths for compression tests."""
         test_name = self.test_name.strip()
         if 0 == len(test_name):
             err_msg = "`test_name` cannot be empty."

@@ -793,7 +793,6 @@ tasks:
       - for:
           var: "UV_PYTHON_PROJECTS"
         cmd: |-
-          uv run --directory "{{.ITEM}}" black --color --line-length 100 {{.BLACK_FLAGS}} .
           uv run --directory "{{.ITEM}}" mypy .
           uv run --directory "{{.ITEM}}" ruff check {{.RUFF_FLAGS}} .
 
