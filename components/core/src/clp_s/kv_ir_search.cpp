@@ -74,7 +74,9 @@ public:
     ~IrUnitHandler() = default;
 
     // Methods implementing `IrUnitHandlerInterface`
-    [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent log_event) -> IRErrorCode;
+    [[nodiscard]] auto
+    handle_log_event(KeyValuePairLogEvent log_event, [[maybe_unused]] size_t log_event_idx)
+            -> IRErrorCode;
 
     [[nodiscard]] static auto handle_utc_offset_change(
             [[maybe_unused]] UtcOffset utc_offset_old,
@@ -151,7 +153,10 @@ auto IrUnitHandler::create(
  *   necessary validations are performed.
  */
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-auto IrUnitHandler::handle_log_event(clp::ffi::KeyValuePairLogEvent log_event) -> IRErrorCode {
+auto IrUnitHandler::handle_log_event(
+        clp::ffi::KeyValuePairLogEvent log_event,
+        [[maybe_unused]] size_t log_event_idx
+) -> IRErrorCode {
     auto const serialize_result{log_event.serialize_to_json()};
     if (serialize_result.has_error()) {
         SPDLOG_ERROR(
