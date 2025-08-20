@@ -18,7 +18,7 @@ void Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column) {
                    != std::find_if(
                            m_selected_columns.begin(),
                            m_selected_columns.end(),
-                           [column](auto const& rhs) -> bool { return *column == *rhs; }
+                           [&column](auto const& rhs) -> bool { return *column == *rhs; }
                    ))
     {
         // no duplicate columns in projection

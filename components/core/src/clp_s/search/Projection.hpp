@@ -30,6 +30,13 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
+    /**
+     * Constructs a Projection object with the specified mode and column handling behavior.
+     *
+     * @param mode Projection mode that determines how expressions are projected.
+     * @param allow_duplicate_columns Whether duplicate column descriptiors are permitted in the
+     * projection.
+     */
     explicit Projection(ProjectionMode mode, bool allow_duplicate_columns = false)
             : m_projection_mode{mode},
               m_allow_duplicate_columns{allow_duplicate_columns} {}
@@ -88,7 +95,7 @@ private:
     absl::flat_hash_set<int32_t> m_matching_nodes;
     std::vector<std::vector<int32_t>> m_ordered_matching_nodes;
     ProjectionMode m_projection_mode{ProjectionMode::ReturnAllColumns};
-    bool m_allow_duplicate_columns;
+    bool m_allow_duplicate_columns{false};
 };
 }  // namespace clp_s::search
 
