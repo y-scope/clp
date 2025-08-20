@@ -8,16 +8,16 @@ logs.
 
 :::{grid-item-card}
 :link: reference-json-search-syntax
-clp-json search syntax
+`clp-json` search syntax
 ^^^
-Syntax reference for clp-json's (and clp-s') search syntax.
+Syntax reference for `clp-json`'s (and `clp-s`') search syntax.
 :::
 
 :::{grid-item-card}
 :link: reference-text-search-syntax
-clp-text search syntax
+`clp-text` search syntax
 ^^^
-Syntax reference for clp-text's (and clp') search syntax.
+Syntax reference for `clp-text`'s (and `clp`'s) search syntax.
 :::
 
 :::{grid-item-card}
@@ -28,7 +28,7 @@ Reference for a set of tools for managing compressed logs in `clp-json` or `clp-
 :::
 
 :::{grid-item-card}
-:link: reference-text-search-syntax
+:link: reference-unstructured-schema-file
 Schema file syntax
 ^^^
 Syntax reference for clp's schema file for parsing unstructured text logs.
