@@ -108,7 +108,7 @@ For example, let's say:
 When the garbage collector runs, it will evaluate the archive's expiry criteria, substituting
 $08:00$ for $data\_timestamp$, and $01:01$ for $current\_time$, since $09:01$ AWST = $01:01$ UTC.
 The equation then becomes $08:00 < 01:01 - 01:00$, which evaluates to false. Thus, the garbage
-collector won't delete the archive; in fact, it won't delete it until 09:01 UTC, which is 8 hours
+collector won't delete the archive; in fact, it won't delete it until $09:01$ UTC, which is 8 hours
 later than it should've been deleted.
 
 Similarly, archives may be deleted prematurely if your log events use timestamps in a time zone that
@@ -183,7 +183,7 @@ since these may affect the behavior of how long archives remain queryable and wh
 CLP's retention system is designed to avoid deleting expired archives or search results that may
 still be in use by active jobs. To do so, CLP employs the following mechanisms:
 
-* If any query job is running, CLP conservatively calculates a **safe expiry timestamp** based on 
+* If any query job is running, CLP conservatively calculates a **safe expiry timestamp** based on
   the earliest active search job. This ensures no archive which may be searched by the active job is
   deleted.
 
