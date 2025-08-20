@@ -222,6 +222,7 @@ def main(argv: List[str]) -> int:
     try:
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_logs_dir()
+        clp_config.database.load_credentials_from_env()
     except:
         logger.exception("Failed to load config.")
         return -1
