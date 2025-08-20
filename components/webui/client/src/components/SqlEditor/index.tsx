@@ -1,23 +1,34 @@
 import {
     useCallback,
     useEffect,
+    useImperativeHandle,
+    useRef,
     useState,
 } from "react";
 
-import {
+import EditorComponent, {
     Editor,
     EditorProps,
     useMonaco,
 } from "@monaco-editor/react";
 import {language as sqlLanguage} from "monaco-editor/esm/vs/basic-languages/sql/sql.js";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
+import {theme} from "antd";
+import Color from "color";
 
 import "./monaco-loader";
 
 
 const MAX_VISIBLE_LINES: number = 5;
 
-type SqlEditorProps = Omit<EditorProps, "language">;
+export type SqlEditorRef = {
+    focus: () => void;
+};
+
+type SqlEditorProps = Omit<EditorProps, "language"> & React.RefAttributes<SqlEditorRef> & {
+    disabled: boolean;
+    onDidMount?: () => void;
+};
 
 /**
  * Monaco editor with highlighting and autocomplete for SQL syntax.
@@ -26,7 +37,44 @@ type SqlEditorProps = Omit<EditorProps, "language">;
  * @return
  */
 const SqlEditor = (props: SqlEditorProps) => {
+    const { ref, disabled, onDidMount, ...editorProps } = props;
     const monacoEditor = useMonaco();
+    const { token } = theme.useToken();
+    const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>(null);
+
+    useImperativeHandle(ref, () => ({
+        focus: () => {
+            console.log("Focusing SQL editor2");
+            console.log("Editor ref:", editorRef);
+            editorRef?.current?.focus()
+        }
+    }), []);
+
+    const handleEditorDidMount = useCallback((
+        editor: monaco.editor.IStandaloneCodeEditor,
+    ) => {
+        editorRef.current = editor;
+        onDidMount?.();
+        console.log("Editor mounted:", editor);
+    }, [onDidMount]);
+
+    console.log(token.colorBgContainerDisabled);
+
+    // Define disabled theme when monaco is available
+    useEffect(() => {
+        if (monacoEditor) {
+            monacoEditor.editor.defineTheme('disabled-theme', {
+                base: 'vs',
+                inherit: true,
+                rules: [],
+                colors: {
+                    'editor.background': Color(token.colorBgContainerDisabled).hexa(),
+                    'editor.foreground': Color(token.colorTextDisabled).hexa(),
+                    'focusBorder': '#00000000', // transparent
+                }
+            });
+        }
+    }, [monacoEditor, token]);
 
     useEffect(() => {
         if (null === monacoEditor) {
@@ -84,61 +132,30 @@ const SqlEditor = (props: SqlEditorProps) => {
         };
     }, [monacoEditor]);
 
-    const [isContentMultiline, setIsContentMultiline] = useState<boolean>(false);
-
-    const handleMonacoMount = useCallback((editor: monaco.editor.IStandaloneCodeEditor) => {
-        editor.onDidContentSizeChange((ev) => {
-            if (false === ev.contentHeightChanged) {
-                return;
-            }
-            if (null === monacoEditor) {
-                throw new Error("Unexpected null Monaco instance");
-            }
-            const domNode = editor.getDomNode();
-            if (null === domNode) {
-                throw new Error("Unexpected null editor DOM node");
-            }
-            const model = editor.getModel();
-            if (null === model) {
-                throw new Error("Unexpected null editor model");
-            }
-            const lineHeight = editor.getOption(monacoEditor.editor.EditorOption.lineHeight);
-            const contentHeight = editor.getContentHeight();
-            const approxWrappedLines = Math.round(contentHeight / lineHeight);
-            setIsContentMultiline(1 < approxWrappedLines);
-            if (MAX_VISIBLE_LINES >= approxWrappedLines) {
-                domNode.style.height = `${contentHeight}px`;
-            } else {
-                domNode.style.height = `${lineHeight * MAX_VISIBLE_LINES}px`;
-            }
-        });
-    }, [monacoEditor]);
-
     return (
-        <Editor
-            language={"sql"}
-
-            // Use white background while loading (default is grey) so transition to editor with
-            // white background is less jarring.
-            loading={<div style={{backgroundColor: "white", height: "100%", width: "100%"}}/>}
-            options={{
-                automaticLayout: true,
-                folding: isContentMultiline,
-                fontSize: 20,
-                lineHeight: 30,
-                lineNumbers: isContentMultiline ?
-                    "on" :
-                    "off",
-                lineNumbersMinChars: 2,
-                minimap: {enabled: false},
-                overviewRulerBorder: false,
-                placeholder: "Enter your SQL query",
-                renderLineHighlightOnlyWhenFocus: true,
-                scrollBeyondLastLine: false,
-                wordWrap: "on",
-            }}
-            onMount={handleMonacoMount}
-            {...props}/>
+        <div style={disabled ? { pointerEvents: 'none' } : {}}>
+            <EditorComponent
+                language={"sql"}
+                theme={disabled ? 'disabled-theme' : 'light'}
+                // Use white background while loading (default is grey) so transition to editor with
+                // white background is less jarring.
+                loading={<div style={{backgroundColor: "white", height: "100%", width: "100%"}}/>}
+                options={{
+                    automaticLayout: true,
+                    fontSize: 20,
+                    lineHeight: 30,
+                    lineNumbers: "off",
+                    minimap: {enabled: false},
+                    overviewRulerBorder: false,
+                    placeholder: "Enter your SQL query",
+                    renderLineHighlightOnlyWhenFocus: true,
+                    scrollBeyondLastLine: false,
+                    wordWrap: "on",
+                    readOnly: disabled,
+                }}
+                onMount={handleEditorDidMount}
+                {...editorProps}/>
+        </div>
     );
 };
 
