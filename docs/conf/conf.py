@@ -24,6 +24,7 @@ extensions = [
 myst_enable_extensions = [
     "attrs_block",
     "colon_fence",
+    "dollarmath",
 ]
 
 myst_heading_anchors = 4
