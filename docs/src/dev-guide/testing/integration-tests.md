@@ -35,11 +35,7 @@ uv run python -m pytest --markers
 ```
 
 To run tests related to a specific marker (e.g., `clp_s`):
-run:
 
-```shell
-uv run python -m pytest -m clp_s
-```
 
 ### Specifying custom CLP binary paths
 

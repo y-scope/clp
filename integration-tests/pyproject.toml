@@ -20,7 +20,7 @@ dev = [
     "black>=24.4.2",
     "mypy>=1.16.0",
     "ruff>=0.11.12",
-    "pytest>=8.3.5",
+    "pytest>=8.4.1",
     "pytest-env>=1.1.5",
 ]
 
@@ -65,8 +65,7 @@ ignore = [
     "TD003",  # Issue link unnecessary for todo statement
     "UP015",  # Explicit open modes are helpful
 ]
-[tool.ruff.lint.isort]
-order-by-type = false
+isort.order-by-type = false
 
 [tool.ruff.format]
 docstring-code-format = true
