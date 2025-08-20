@@ -1,9 +1,11 @@
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string_view>
 #include <utility>
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
 #include "../src/clp/ffi/ir_stream/IrUnitHandlerReq.hpp"
@@ -27,7 +29,9 @@ constexpr std::string_view cTestSchemaTreeNodeKeyName{"test_key"};
 class TrivialIrUnitHandler {
 public:
     // Implements `clp::ffi::ir_stream::IrUnitHandlerReq`
-    [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent&& log_event) -> IRErrorCode {
+    [[nodiscard]] auto
+    handle_log_event(KeyValuePairLogEvent&& log_event, [[maybe_unused]] size_t log_event_idx)
+            -> IRErrorCode {
         m_log_event.emplace(std::move(log_event));
         return IRErrorCode::IRErrorCode_Success;
     }
@@ -97,7 +101,7 @@ auto test_ir_unit_handler_req(clp::ffi::ir_stream::IrUnitHandlerReq auto& handle
     REQUIRE(
             (false == test_log_event_result.has_error()
              && IRErrorCode::IRErrorCode_Success
-                        == handler.handle_log_event(std::move(test_log_event_result.value())))
+                        == handler.handle_log_event(std::move(test_log_event_result.value()), 0))
     );
     REQUIRE(
             (IRErrorCode::IRErrorCode_Success
