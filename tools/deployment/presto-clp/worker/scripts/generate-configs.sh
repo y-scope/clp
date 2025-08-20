@@ -56,7 +56,7 @@ update_config_file() {
         echo "${key}=${value}" >>"$file_path"
     fi
     if [[ "$sensitive" == "true" ]]; then
-        local masked="****${value: -4}"
+        local masked="****"
         log "INFO" "Set ${key}=${masked} in ${file_path}"
     else
         log "INFO" "Set ${key}=${value} in ${file_path}"
@@ -84,15 +84,20 @@ mv "${PRESTO_CONFIG_DIR}/clp.properties" "${PRESTO_CONFIG_DIR}/catalog"
 readonly CLP_PROPERTIES_FILE="/opt/presto-server/etc/catalog/clp.properties"
 if [ "${PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE:-}" = "s3" ]; then
     log "INFO" "Enable S3 support"
+    missing=()
     for var in PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER \
            PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID \
            PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY \
            PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT; do
         if [ -z "${!var:-}" ]; then
-            log "ERROR" "Missing required env var: $var"
-            exit 1
+            missing+=("$var")
         fi
     done
+    if [ ${#missing[@]} -gt 0 ]; then
+        log "ERROR" "Missing required env var(s): ${missing[*]}"
+        exit 1
+    fi
+
     update_config_file "$CLP_PROPERTIES_FILE" "clp.storage-type" "${PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE}"
     update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-auth-provider" "${PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER}"
     update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-access-key-id" "${PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID}" true

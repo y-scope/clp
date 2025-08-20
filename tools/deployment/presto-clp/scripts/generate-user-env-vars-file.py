@@ -111,7 +111,9 @@ def _add_clp_env_vars(
         / "data"
         / ("archives" if clp_archive_output_storage_type == "fs" else "staged-archives"),
     )
-    if "s3" == clp_archive_output_storage_type:
+    if "fs" == clp_archive_output_storage_type:
+        pass
+    elif "s3" == clp_archive_output_storage_type:
         s3_config_key_prefix = f"archive_output.storage.s3_config"
         s3_credentials_key_prefix = f"{s3_config_key_prefix}.aws_authentication.credentials"
 
@@ -121,15 +123,31 @@ def _add_clp_env_vars(
 
         s3_bucket = _get_config_value(clp_config, f"{s3_config_key_prefix}.bucket")
         s3_region_code = _get_config_value(clp_config, f"{s3_config_key_prefix}.region_code")
-        s3_end_point = f"https://{s3_bucket}.s3.{s3_region_code}.amazonaws.com/"
 
         s3_secret_access_key = _get_config_value(
             clp_config, f"{s3_credentials_key_prefix}.secret_access_key"
         )
 
+        # Validate required S3 fields
+        missing = []
+
+        for k, v in {
+            f"{s3_credentials_key_prefix}.access_key_id": s3_access_key_id,
+            f"{s3_credentials_key_prefix}.secret_access_key": s3_secret_access_key,
+            f"{s3_config_key_prefix}.bucket": s3_bucket,
+            f"{s3_config_key_prefix}.region_code": s3_region_code,
+        }.items():
+            if not v:
+                missing.append(k)
+
+        if missing:
+            logger.error("Missing required S3 config key(s): %s", ", ".join(missing))
+            return False
+
         env_vars["PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE"] = "s3"
         env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER"] = "clp_package"
         env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID"] = s3_access_key_id
+        s3_end_point = f"https://{s3_bucket}.s3.{s3_region_code}.amazonaws.com/"
         env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT"] = s3_end_point
         env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY"] = s3_secret_access_key
     else:
