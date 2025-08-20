@@ -53,10 +53,12 @@ named `default`.
       --end-ts <end-epoch-time-millis>
     ```
 
-    * Replace `<begin-epoch-time-millis>` with the timestamp of the time range's beginning.
-    * Replace `<end-epoch-time-millis>` with the timestamp of time range's end.
+    * Replace `<begin-epoch-time-millis>` with the timestamp of the time range's beginning (in
+      milliseconds since the Unix epoch).
+    * Replace `<end-epoch-time-millis>` with the timestamp of time range's end (in milliseconds
+      since the Unix epoch).
 
-3. Delete archives by ID
+3. Delete archives by ID:
 
     ```bash
     sbin/admin-tools/archive-manager.sh del by-ids <archive_id_0> <archive_id_1>
@@ -74,12 +76,14 @@ named `default`.
 
     ```bash
     sbin/admin-tools/archive-manager.sh del by-filter \
-      <begin-epoch-timestamp-millis> \
-      <end-epoch-timestamp-millis>
+      <begin-epoch-time-millis> \
+      <end-epoch-time-millis>
     ```
 
-    * Replace `<begin-epoch-time-millis>` with the timestamp of the time range's beginning.
-    * Replace `<end-epoch-time-millis>` with the timestamp of time range's end.
+    * Replace `<begin-epoch-time-millis>` with the timestamp of the time range's beginning (in
+      milliseconds since the Unix epoch).
+    * Replace `<end-epoch-time-millis>` with the timestamp of time range's end (in milliseconds
+      since the Unix epoch).
 
 ### Limitations
 
@@ -88,10 +92,11 @@ named `default`.
   information from log events that have it.) Using the script on archives with non-UTC timestamps
   can lead to an effective time range that is different from the intended value.
 
-  To avoid this issue, you can adjust the given timestamps to account for the offset:
+  To avoid this issue, you can adjust the given timestamps to account for the offset (in
+  milliseconds):
 
   ```cpp
-  adjusted_epoch_timestamp_millis = epoch_timestamp_millis - signed_utc_offset
+  adjusted_epoch_timestamp_millis = epoch_timestamp_millis - signed_utc_offset_millis
   ```
 
 * `archive-manager.sh` doesn't support managing archives stored on object storage. This limitation
@@ -101,7 +106,7 @@ named `default`.
 
 ## dataset-manager.sh
 
-`dataset-manager.sh` allows users to list and delete datasets. For complete usage information:
+`dataset-manager.sh` allows users to list and delete datasets. For complete usage information, run:
 
 ```bash
 sbin/admin-tools/dataset-manager.sh --help
