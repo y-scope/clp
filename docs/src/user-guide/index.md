@@ -63,7 +63,6 @@ guides-overview
 guides-using-object-storage/index
 guides-multi-node
 guides-using-presto
-guides-admin-tools
 :::
 
 :::{toctree}
@@ -88,7 +87,9 @@ resources-datasets
 :hidden:
 :caption: Reference
 
+reference-overview
 reference-json-search-syntax
 reference-text-search-syntax
+reference-admin-tools
 reference-unstructured-schema-file
 :::
