@@ -107,9 +107,12 @@ For example, let's say:
 
 When the garbage collector runs, it will evaluate the archive's expiry criteria, substituting
 $08:00$ for $data\_timestamp$, and $01:01$ for $current\_time$, since $09:01$ AWST = $01:01$ UTC.
-The equation then becomes $is\_expired = (08:00 < 01:01 - 01:00)$, which evaluates to false. Thus,
-the garbage collector won't delete the archive; in fact, it won't delete it until $09:01$ UTC, which
-is 8 hours later than it should've been deleted.
+The equation then becomes...
+
+$$is\_expired = (01:01 - 08:00 > 01:00)$$
+
+... which evaluates to false. Thus, the garbage collector won't delete the archive; in fact, it
+won't delete it until $09:01$ UTC, which is 8 hours later than it should've been deleted.
 
 Similarly, archives may be deleted prematurely if your log events use timestamps in a time zone that
 is behind UTC.
