@@ -19,7 +19,7 @@ tasks:
 
   core:
     deps:
-      - task: "::core"
+      - task: "::package"
     dir: "{{.G_INTEGRATION_TESTS_DIR}}"
     cmds:
       - >-
