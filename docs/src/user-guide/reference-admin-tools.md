@@ -9,7 +9,7 @@ Available scripts:
 * [dataset-manager.sh](#dataset-managersh) for listing and deleting datasets (only for `clp-json`).
 
 :::{note}
-The admin scripts can only be used after CLP starts. For help using CLP, see the
+The admin scripts can only be used after CLP starts. For help using CLP, see
 [clp-json quick start](quick-start/clp-json.md) or [clp-text quick start](quick-start/clp-text.md)
 for details.
 :::
@@ -31,7 +31,7 @@ sbin/admin-tools/archive-manager.sh --help
 ```
 
 :::{note}
-`clp-json` groups archives into different datasets whereas `clp-text` currently does not. So when
+`clp-json` groups archives into different datasets, whereas `clp-text` currently does not. When
 using `archive-manager.sh` with `clp-json`, you should specify a specific dataset using
 `--dataset <dataset>`. Otherwise, `archive-manager.sh` will only operate on archives in the dataset
 named `default`.
