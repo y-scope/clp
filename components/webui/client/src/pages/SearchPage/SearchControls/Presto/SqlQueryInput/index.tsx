@@ -28,7 +28,7 @@ const SqlQueryInput = () => {
         updateQueryString(value || "");
     }, []);
 
-    const handleEditorDidMount = useCallback(() => {
+    const handleEditorReady = useCallback(() => {
         setIsEditorReady(true);
     }, []);
 
@@ -41,8 +41,10 @@ const SqlQueryInput = () => {
         ) {
             editorRef.current?.focus();
         }
-    }, [searchUiState,
-        isEditorReady]);
+    }, [
+        searchUiState,
+        isEditorReady
+    ]);
 
     return (
         <div className={styles["input"] || ""}>
@@ -54,7 +56,7 @@ const SqlQueryInput = () => {
                     searchUiState === SEARCH_UI_STATE.QUERYING
                 }
                 onChange={handleChange}
-                onDidMount={handleEditorDidMount}/>
+                onEditorReady={handleEditorReady}/>
         </div>
     );
 };

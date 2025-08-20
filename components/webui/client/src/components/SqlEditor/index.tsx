@@ -26,7 +26,7 @@ type SqlEditorProps = Omit<EditorProps, "language"> & React.RefAttributes<SqlEdi
     disabled: boolean;
 
     /** Callback when the editor is mounted and ref is ready to use. */
-    onDidMount?: () => void;
+    onEditorReady?: () => void;
 };
 
 /**
@@ -36,7 +36,7 @@ type SqlEditorProps = Omit<EditorProps, "language"> & React.RefAttributes<SqlEdi
  * @return
  */
 const SqlEditor = (props: SqlEditorProps) => {
-    const {ref, disabled, onDidMount, ...editorProps} = props;
+    const {ref, disabled, onEditorReady, ...editorProps} = props;
     const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>(null);
     const monacoEditor = useMonaco();
     const {token} = theme.useToken();
@@ -51,27 +51,30 @@ const SqlEditor = (props: SqlEditorProps) => {
         editor: monaco.editor.IStandaloneCodeEditor,
     ) => {
         editorRef.current = editor;
-        onDidMount?.();
-    }, [onDidMount]);
+        onEditorReady?.();
+    }, [onEditorReady]);
 
     // Define disabled theme for monaco editor
     useEffect(() => {
-        if (monacoEditor) {
-            monacoEditor.editor.defineTheme("disabled-theme", {
-                base: "vs",
-                inherit: true,
-                rules: [],
-                colors: {
-                    "editor.background": color(token.colorBgContainerDisabled).hexa(),
-                    "editor.foreground": color(token.colorTextDisabled).hexa(),
-
-                    // transparent
-                    "focusBorder": "#00000000",
-                },
-            });
+        if (null === monacoEditor) {
+            return;
         }
-    }, [monacoEditor,
-        token]);
+        monacoEditor.editor.defineTheme("disabled-theme", {
+            base: "vs",
+            inherit: true,
+            rules: [],
+            colors: {
+                "editor.background": color(token.colorBgContainerDisabled).hexa(),
+                "editor.foreground": color(token.colorTextDisabled).hexa(),
+
+                // transparent
+                "focusBorder": "#00000000",
+            },
+        });
+    }, [
+        monacoEditor,
+        token
+    ]);
 
     useEffect(() => {
         if (null === monacoEditor) {
