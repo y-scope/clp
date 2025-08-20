@@ -9,9 +9,9 @@ retention period. This guide explains:
 
 ## How retention works
 
-To support retention periods, CLP (specifically, the garbage collector component) periodically scans
-for and deletes expired data (archives or search results). To understand the high-level algorithm,
-first consider the following definitions:
+To support retention periods, CLP's garbage collector component periodically scans for and deletes
+expired data (archives or search results). To understand the high-level algorithm, first consider
+the following definitions:
 
 | Term                | Description                                                                                                                                                                |
 |---------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -30,7 +30,7 @@ $$data\_timestamp < current\_time - retention\_period$$
 
 +++
 **Figure 1**: The criteria for determining whether a piece of data has expired and should be
-deleted (i.e., the data's expiry criteria).
+deleted.
 :::
 
 For example, if...
@@ -95,8 +95,8 @@ deleted the next time the garbage collector runs.
 
 If your log events use timestamps that **aren't** in the UTC time zone, you will need to adjust the
 configured retention period to ensure expired archives are deleted at the correct time. This is
-because CLP currently doesn't support parsing time zone information from timestamps that have it,
-whereas the garbage collector runs based on the UTC time zone.
+because CLP currently doesn't support parsing time zone information, and the garbage collector runs
+based on the UTC time zone.
 
 For example, let's say:
 
@@ -192,7 +192,7 @@ still be in use by active jobs. To do so, CLP employs the following mechanisms:
 
 :::{warning}
 A hanging search job will prevent CLP from deleting expired archives. Restarting the query scheduler
-will mark such jobs as failed and allow garbage collection to resume.
+will mark such jobs as killed and allow garbage collection to resume.
 :::
 
 ### Fault tolerance
