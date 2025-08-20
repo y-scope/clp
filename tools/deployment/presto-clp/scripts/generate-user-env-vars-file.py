@@ -50,7 +50,7 @@ def main(argv=None) -> int:
             clp_config_file_path,
             clp_package_dir.resolve(),
         )
-        return False
+        return 1
 
     with open(clp_config_file_path, "r") as clp_config_file:
         clp_config = yaml.safe_load(clp_config_file)
@@ -103,28 +103,15 @@ def _add_clp_env_vars(
     clp_archive_output_storage_type = _get_config_value(
         clp_config, "archive_output.storage.type", "fs"
     )
-    if "fs" == clp_archive_output_storage_type:
-        clp_archives_dir = _get_config_value(
-            clp_config,
-            "archive_output.storage.directory",
-            str(clp_package_dir / "var" / "data" / "archives"),
-        )
-        if Path(clp_archives_dir).is_absolute():
-            env_vars["CLP_ARCHIVES_DIR"] = clp_archives_dir
-        else:
-            env_vars["CLP_ARCHIVES_DIR"] = str(clp_package_dir / clp_archives_dir)
-    elif "s3" == clp_archive_output_storage_type:
-        # This will not be used, just to ensure CLP_ARCHIVES_DIR is not an empty string
-        clp_archives_dir = _get_config_value(
-            clp_config,
-            "archive_output.storage.directory",
-            str(clp_package_dir / "var" / "data" / "staged-archives"),
-        )
-        if Path(clp_archives_dir).is_absolute():
-            env_vars["CLP_ARCHIVES_DIR"] = clp_archives_dir
-        else:
-            env_vars["CLP_ARCHIVES_DIR"] = str(clp_package_dir / clp_archives_dir)
-
+    env_vars["CLP_ARCHIVES_DIR"] = _resolve_archives_dir(
+        clp_package_dir,
+        _get_config_value(clp_config, "archive_output.storage.directory"),
+        clp_package_dir
+        / "var"
+        / "data"
+        / ("archives" if clp_archive_output_storage_type == "fs" else "staged-archives"),
+    )
+    if "s3" == clp_archive_output_storage_type:
         s3_config_key_prefix = f"archive_output.storage.s3_config"
         s3_credentials_key_prefix = f"{s3_config_key_prefix}.aws_authentication.credentials"
 
@@ -172,6 +159,11 @@ def _add_clp_env_vars(
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_PASSWORD"] = database_password
 
     return True
+
+
+def _resolve_archives_dir(base_dir: Path, configured: Optional[str], default: Path) -> str:
+    effective = configured or str(default)
+    return effective if Path(effective).is_absolute() else str(base_dir / effective)
 
 
 def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: Dict[str, str]) -> bool:

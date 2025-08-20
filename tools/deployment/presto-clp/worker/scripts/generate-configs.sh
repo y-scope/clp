@@ -48,13 +48,19 @@ update_config_file() {
     local file_path=$1
     local key=$2
     local value=$3
+    local sensitive=${4:-false}
 
     if grep --quiet "^${key}=.*$" "$file_path"; then
         sed --in-place "s|^${key}=.*|${key}=${value}|" "$file_path"
     else
         echo "${key}=${value}" >>"$file_path"
     fi
-    log "INFO" "Set ${key}=${value} in ${file_path}"
+    if [[ "$sensitive" == "true" ]]; then
+        local masked="****${value: -4}"
+        log "INFO" "Set ${key}=${masked} in ${file_path}"
+    else
+        log "INFO" "Set ${key}=${value} in ${file_path}"
+    fi
 }
 
 apt-get update && apt-get install --assume-yes --no-install-recommends jq wget
@@ -76,13 +82,22 @@ mv "${PRESTO_CONFIG_DIR}/clp.properties" "${PRESTO_CONFIG_DIR}/catalog"
 
 # Update clp.properties
 readonly CLP_PROPERTIES_FILE="/opt/presto-server/etc/catalog/clp.properties"
-if [ -n "${PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER:-}" ]; then
+if [ "${PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE:-}" = "s3" ]; then
     log "INFO" "Enable S3 support"
+    for var in PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER \
+           PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID \
+           PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY \
+           PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT; do
+        if [ -z "${!var:-}" ]; then
+            log "ERROR" "Missing required env var: $var"
+            exit 1
+        fi
+    done
     update_config_file "$CLP_PROPERTIES_FILE" "clp.storage-type" "${PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE}"
     update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-auth-provider" "${PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER}"
-    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-access-key-id" "${PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID}"
+    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-access-key-id" "${PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID}" true
     update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-end-point" "${PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT}"
-    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-secret-access-key" "${PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY}"
+    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-secret-access-key" "${PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY}" true
 fi
 
 # Update config.properties
