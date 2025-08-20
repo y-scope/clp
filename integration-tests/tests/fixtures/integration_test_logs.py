@@ -54,7 +54,7 @@ def _download_and_extract_dataset(
         integration_test_config=integration_test_config,
     )
     if request.config.cache.get(name, False):
-        logger.info("Test logs `%s` is up-to-date. Skipping download.", name)
+        logger.info("Test logs `%s` are up-to-date. Skipping download.", name)
         return integration_test_logs
 
     try:

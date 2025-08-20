@@ -153,6 +153,6 @@ class CompressionTestConfig:
     def clear_test_outputs(self) -> None:
         """Remove any existing output directories created by this compression test."""
         if self.compression_dir.exists():
-            shutil.rmtree(self.compression_dir)
+            shutil.rmtree(self.compression_dir, ignore_errors=True)
         if self.decompression_dir.exists():
-            shutil.rmtree(self.decompression_dir)
+            shutil.rmtree(self.decompression_dir, ignore_errors=True)
