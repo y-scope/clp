@@ -8,7 +8,7 @@
 
 #include <boost/foreach.hpp>
 #include <boost/range/combine.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include "../src/clp/Utils.hpp"
 

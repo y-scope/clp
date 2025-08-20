@@ -9,6 +9,8 @@ from typing import Any, Dict, List, Optional, Tuple
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
@@ -211,8 +213,8 @@ def _get_db_connection_env_vars_for_clp_cmd(
     :return: Dictionary of database connection environment variables for the clp command.
     """
     return {
-        "CLP_DB_USER": clp_metadata_db_connection_config["username"],
-        "CLP_DB_PASS": clp_metadata_db_connection_config["password"],
+        CLP_DB_USER_ENV_VAR_NAME: clp_metadata_db_connection_config["username"],
+        CLP_DB_PASS_ENV_VAR_NAME: clp_metadata_db_connection_config["password"],
     }
 
 
