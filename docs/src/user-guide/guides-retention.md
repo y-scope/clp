@@ -143,7 +143,7 @@ By default, `results_cache.retention_period` is `60`, which means that search re
 retained for 60 minutes (1 hour).
 
 :::{note}
-When a user runs consecutive queries in the webui without refreshing the page, the results of one
+When a user runs consecutive queries in the webui without refreshing the page, the results of a
 query will be deleted when the next query is run. This means that only the results of the last query
 in a session are ever retained, and thus subject to the configured retention period.
 
