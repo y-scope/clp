@@ -6,7 +6,7 @@ TASK_QUEUE_LOWEST_PRIORITY = 1
 TASK_QUEUE_HIGHEST_PRIORITY = 3
 
 
-class QueueName:
+class SchedulerType:
     COMPRESSION = "compression"
     QUERY = "query"
 
@@ -29,6 +29,7 @@ class CompressionJobStatus(StatusIntEnum):
     RUNNING = auto()
     SUCCEEDED = auto()
     FAILED = auto()
+    KILLED = auto()
 
 
 class CompressionJobCompletionStatus(StatusIntEnum):
@@ -41,6 +42,7 @@ class CompressionTaskStatus(StatusIntEnum):
     RUNNING = auto()
     SUCCEEDED = auto()
     FAILED = auto()
+    KILLED = auto()
 
 
 # When adding new states always add them to the end of this enum
@@ -52,6 +54,7 @@ class QueryJobStatus(StatusIntEnum):
     FAILED = auto()
     CANCELLING = auto()
     CANCELLED = auto()
+    KILLED = auto()
 
     @staticmethod
     def from_str(label: str) -> QueryJobStatus:
@@ -64,6 +67,7 @@ class QueryTaskStatus(StatusIntEnum):
     SUCCEEDED = auto()
     FAILED = auto()
     CANCELLED = auto()
+    KILLED = auto()
 
     @staticmethod
     def from_str(label: str) -> QueryTaskStatus:

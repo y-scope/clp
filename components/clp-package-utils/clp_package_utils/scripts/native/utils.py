@@ -112,6 +112,7 @@ def wait_for_query_job(sql_adapter: SQL_Adapter, job_id: int) -> QueryJobStatus:
                 QueryJobStatus.SUCCEEDED,
                 QueryJobStatus.FAILED,
                 QueryJobStatus.CANCELLED,
+                QueryJobStatus.KILLED,
             ):
                 return new_status
 
