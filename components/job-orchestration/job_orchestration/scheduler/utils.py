@@ -19,7 +19,7 @@ from job_orchestration.scheduler.constants import (
 )
 
 
-def kill_hanging_jobs(sql_adapter: SQL_Adapter, scheduler_type: str) -> Optional[List[str]]:
+def kill_hanging_jobs(sql_adapter: SQL_Adapter, scheduler_type: str) -> Optional[List[int]]:
     if SchedulerType.COMPRESSION == scheduler_type:
         jobs_table_name = COMPRESSION_JOBS_TABLE_NAME
         job_status_running = CompressionJobStatus.RUNNING
