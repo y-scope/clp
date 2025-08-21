@@ -91,6 +91,9 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
             # One or more tasks in the job has failed
             logger.error(f"Compression failed. {job_row['status_msg']}")
             break  # Done
+        if CompressionJobStatus.KILLED == job_status:
+            logger.error(f"Compression killed. {job_row['status_msg']}")
+            break
 
         if CompressionJobStatus.RUNNING == job_status:
             if not no_progress_reporting:
