@@ -3,7 +3,7 @@ requires-python = ">= 3.9"
 
 [tool.poetry]
 name = "clp-package-utils"
-version = "0.4.0-dev"
+version = "0.5.0"
 description = "Utilities for the CLP package."
 authors = ["YScope Inc. <dev@yscope.com>"]
 readme = "README.md"
