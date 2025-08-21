@@ -9,6 +9,7 @@ import styles from "./index.module.css";
 import SqlQueryInput from "./Presto/SqlQueryInput";
 import SqlSearchButton from "./Presto/SqlSearchButton";
 import QueryInput from "./QueryInput";
+import QueryStatus from "./QueryStatus";
 import SearchButton from "./SearchButton";
 import TimeRangeInput from "./TimeRangeInput";
 
@@ -23,30 +24,37 @@ const handleSubmit = (ev: React.FormEvent<HTMLFormElement>) => {
 };
 
 /**
- * Renders controls for submitting queries.
+ * Renders controls for submitting queries and the query status.
  *
  * @return
  */
 const SearchControls = () => {
     return (
         <form onSubmit={handleSubmit}>
-            <div className={styles["searchControlsContainer"]}>
-                {SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO ?
-                    (
-                        <>
+            {SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO ?
+                (
+                    <div>
+                        <div className={styles["searchControlsContainer"]}>
                             {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && <Dataset/>}
                             <QueryInput/>
                             <TimeRangeInput/>
                             <SearchButton/>
-                        </>
-                    ) :
-                    (
-                        <>
-                            <SqlQueryInput/>
+                        </div>
+                        <div className={styles["statusRow"]}>
+                            <QueryStatus/>
+                        </div>
+                    </div>
+                ) :
+                (
+
+                    <div className={styles["prestoSearchControlsContainer"]}>
+                        <SqlQueryInput/>
+                        <div className={styles["buttonAndStatusRow"]}>
                             <SqlSearchButton/>
-                        </>
-                    )}
-            </div>
+                            <QueryStatus/>
+                        </div>
+                    </div>
+                )}
         </form>
     );
 };

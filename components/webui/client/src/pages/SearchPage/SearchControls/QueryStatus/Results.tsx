@@ -5,8 +5,8 @@ import {
     Typography,
 } from "antd";
 
-import useSearchStore from "../SearchState/index";
-import {SEARCH_UI_STATE} from "../SearchState/typings";
+import useSearchStore from "../../SearchState/index";
+import {SEARCH_UI_STATE} from "../../SearchState/typings";
 
 
 const {Text} = Typography;

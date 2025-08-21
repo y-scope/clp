@@ -2,3 +2,16 @@
     display: flex;
     gap: 10px;
 }
+
+.prestoSearchControlsContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.buttonAndStatusRow {
+    display: flex;
+    align-items: flex-end;
+    gap: 10px;
+}
+
