@@ -429,7 +429,7 @@ def main(argv):
     try:
         killed_jobs = kill_hanging_jobs(sql_adapter, SchedulerType.COMPRESSION)
         if killed_jobs is not None:
-            logger.info(f"Killed {len(killed_jobs)} hanging compression jobs.")
+            logger.info(f"Killed {len(killed_jobs)} hanging query jobs.")
     except Exception:
         logger.exception("Failed to kill hanging query jobs.")
         return -1
