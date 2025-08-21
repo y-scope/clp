@@ -31,6 +31,7 @@ worker components. The tables below list the components and their functions.
 | query_scheduler       | Scheduler for search/aggregation jobs                           |
 | results_cache         | Storage for the workers to return search results to the UI      |
 | webui                 | Web server for the UI                                           |
+| garbage_collector     | Background process for retention control                        |
 :::
 
 :::{table} Worker components
@@ -93,6 +94,7 @@ but all components in a group must be started before starting a component in the
 
 * `compression_scheduler`
 * `query_scheduler`
+* `garbage_collector`
 
 **Group 3 components:**
 
