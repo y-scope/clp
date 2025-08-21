@@ -42,6 +42,7 @@ The task will download, build, and install (within the build directory) the foll
 | [fmt](https://github.com/fmtlib/fmt)                                  | v10.2.1        |
 | [json](https://github.com/nlohmann/json.git)                          | v3.11.3        |
 | [log-surgeon](https://github.com/y-scope/log-surgeon)                 | f801a3f        |
+| [liblzma](https://github.com/tukaani-project/xz)                      | v5.8.1         |
 | [lz4](https://github.com/lz4/lz4)                                     | v1.10.0        |
 | [mongo-cxx-driver](https://github.com/mongodb/mongo-cxx-driver)       | r3.10.2        |
 | [simdjson](https://github.com/simdjson/simdjson)                      | v3.13.0        |
@@ -51,6 +52,7 @@ The task will download, build, and install (within the build directory) the foll
 | [yaml-cpp](https://github.com/jbeder/yaml-cpp.git)                    | v0.7.0         |
 | [yscope-log-viewer](https://github.com/y-scope/yscope-log-viewer.git) | 969ff35        |
 | [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp.git)             | 9ed78cd        |
+| [zlib](https://github.com/madler/zlib)                                | v1.3.1         |
 | [zstd](https://github.com/facebook/zstd)                              | v1.5.7         |
 
 ### Environment
