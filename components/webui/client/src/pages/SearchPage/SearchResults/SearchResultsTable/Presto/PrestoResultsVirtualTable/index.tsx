@@ -46,8 +46,10 @@ const PrestoResultsVirtualTable = ({tableHeight}: PrestoResultsVirtualTableProps
             columns={columns}
             dataSource={prestoSearchResults || []}
             pagination={false}
+            tableLayout="auto"
             rowKey={(record) => record._id}
-            scroll={{y: tableHeight}}/>
+            scroll={{y: tableHeight, x: `max-content`}}/>
+
     );
 };
 
