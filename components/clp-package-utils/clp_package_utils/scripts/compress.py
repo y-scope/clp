@@ -7,6 +7,8 @@ import uuid
 from typing import List, Optional
 
 from clp_py_utils.clp_config import (
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_DATASET_NAME,
     StorageEngine,
 )
@@ -20,6 +22,7 @@ from clp_package_utils.general import (
     generate_container_name,
     generate_container_start_cmd,
     get_clp_home,
+    get_container_config_filename,
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
@@ -212,7 +215,7 @@ def main(argv):
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
-        container_clp_config, clp_config, container_name
+        container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
     necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
@@ -232,8 +235,12 @@ def main(argv):
 
     _generate_logs_list(clp_config.logs_input.type, container_logs_list_path, parsed_args)
 
+    extra_env_vars = {
+        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
+        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+    }
     container_start_cmd = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container
+        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
     )
     compress_cmd = _generate_compress_cmd(
         parsed_args, dataset, generated_config_path_on_container, logs_list_path_on_container

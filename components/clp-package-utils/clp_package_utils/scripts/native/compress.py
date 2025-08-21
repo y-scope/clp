@@ -236,6 +236,7 @@ def main(argv):
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_logs_input_config()
         clp_config.validate_logs_dir()
+        clp_config.database.load_credentials_from_env()
     except:
         logger.exception("Failed to load config.")
         return -1

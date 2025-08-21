@@ -33,6 +33,7 @@ import pymongo
 from clp_py_utils.clp_config import (
     CLPConfig,
     QUERY_JOBS_TABLE_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_TASKS_TABLE_NAME,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
@@ -1153,11 +1154,12 @@ async def main(argv: List[str]) -> int:
     config_path = pathlib.Path(parsed_args.config)
     try:
         clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
-    except ValidationError as err:
+        clp_config.database.load_credentials_from_env()
+    except (ValidationError, ValueError) as err:
         logger.error(err)
         return -1
-    except Exception as ex:
-        logger.error(ex)
+    except Exception:
+        logger.exception(f"Failed to initialize {QUERY_SCHEDULER_COMPONENT_NAME}.")
         return -1
 
     reducer_connection_queue = asyncio.Queue(32)
@@ -1188,7 +1190,7 @@ async def main(argv: List[str]) -> int:
             f"Connected to archive database"
             f" {clp_config.database.host}:{clp_config.database.port}."
         )
-        logger.info("Query scheduler started.")
+        logger.info(f"{QUERY_SCHEDULER_COMPONENT_NAME} started.")
         batch_size = clp_config.query_scheduler.num_archives_to_search_per_sub_job
         job_handler = asyncio.create_task(
             handle_jobs(
