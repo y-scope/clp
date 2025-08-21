@@ -532,7 +532,7 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
             = [&](bool is_auto_gen,
                   SchemaTree::Node::id_t node_id,
                   std::string_view key,
-                  size_t index) -> ystdlib::error_handling::Result<void> {
+                  [[maybe_unused]] size_t index) -> ystdlib::error_handling::Result<void> {
         REQUIRE((is_auto_generated == is_auto_gen));
         auto [column_it, column_inserted] = actual_resolved_projections.try_emplace(
                 std::string{key},

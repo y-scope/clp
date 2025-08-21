@@ -1,6 +1,7 @@
 #ifndef CLP_FFI_IR_STREAM_SEARCH_QUERYHANDLERIMPL_HPP
 #define CLP_FFI_IR_STREAM_SEARCH_QUERYHANDLERIMPL_HPP
 
+#include <cstddef>
 #include <memory>
 #include <optional>
 #include <string>
@@ -499,12 +500,12 @@ auto QueryHandlerImpl::handle_column_resolution_on_new_schema_tree_node(
     auto* col{token_it.get_column_descriptor()};
     auto const original_key_and_index_it = m_projected_column_to_original_key_and_index.find(col);
     if (m_projected_column_to_original_key_and_index.end() != original_key_and_index_it) {
-        auto const& original_key_and_index_entry = original_key_and_index_it->second;
+        auto const& [original_key, projected_index] = original_key_and_index_it->second;
         YSTDLIB_ERROR_HANDLING_TRYV(new_projected_schema_tree_node_callback(
                 is_auto_generated,
                 node_id,
-                original_key_and_index_entry.first,
-                original_key_and_index_entry.second
+                original_key,
+                projected_index
         ));
         return ystdlib::error_handling::success();
     }
