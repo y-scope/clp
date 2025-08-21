@@ -13,12 +13,13 @@ void Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column) {
     if (ProjectionMode::ReturnAllColumns == m_projection_mode) {
         throw OperationFailed(ErrorCodeUnsupported, __FILE__, __LINE__);
     }
-    if (m_selected_columns.end()
-        != std::find_if(
-                m_selected_columns.begin(),
-                m_selected_columns.end(),
-                [column](auto const& rhs) -> bool { return *column == *rhs; }
-        ))
+    if (false == m_allow_duplicate_columns
+        && m_selected_columns.end()
+                   != std::find_if(
+                           m_selected_columns.begin(),
+                           m_selected_columns.end(),
+                           [&column](auto const& rhs) -> bool { return *column == *rhs; }
+                   ))
     {
         // no duplicate columns in projection
         throw OperationFailed(ErrorCodeBadParam, __FILE__, __LINE__);
