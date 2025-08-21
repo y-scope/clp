@@ -9,7 +9,6 @@ declare module "fastify" {
             HOST: string;
             CLP_DB_USER: string;
             CLP_DB_PASS: string;
-
             RATE_LIMIT_MAX: number;
         };
     }
