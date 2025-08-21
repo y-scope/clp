@@ -289,7 +289,7 @@ tasks:
       - |-
         cd common
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build
-        rsync -a package.json dist/ "{{.OUTPUT_DIR}}/common/"
+        rsync -a package.json dist "{{.OUTPUT_DIR}}/common/"
       - for: ["client", "yscope-log-viewer"]
         cmd: |-
           cd "{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}"
@@ -360,6 +360,7 @@ tasks:
   # * log-viewer submodule
   # * the top-level one we call "package"
   webui-node-modules:
+    internal: true
     vars:
       SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
       CLIENT_OUTPUT_DIR: "{{.SRC_DIR}}/client/node_modules"
