@@ -238,11 +238,11 @@ def main(argv: List[str]) -> int:
         "--config", str(generated_config_path_on_container),
     ]
     # fmt : on
+    if parsed_args.verbose:
+        archive_manager_cmd.append("--verbose")
     if dataset is not None:
         archive_manager_cmd.append("--dataset")
         archive_manager_cmd.append(dataset)
-    if parsed_args.verbose:
-        archive_manager_cmd.append("--verbose")
 
     archive_manager_cmd.append(subcommand)
 

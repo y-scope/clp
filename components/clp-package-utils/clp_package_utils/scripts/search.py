@@ -144,6 +144,8 @@ def main(argv):
         parsed_args.wildcard_query,
     ]
     # fmt: on
+    if parsed_args.verbose:
+        search_cmd.append("--verbose")
     if dataset is not None:
         search_cmd.append("--dataset")
         search_cmd.append(dataset)

@@ -143,6 +143,8 @@ def handle_extract_file_cmd(
         "-d", str(container_extraction_dir),
     ]
     # fmt: on
+    if parsed_args.verbose:
+        extract_cmd.append("--verbose")
     for path in parsed_args.paths:
         extract_cmd.append(path)
     if container_paths_to_extract_file_path:
@@ -219,6 +221,8 @@ def handle_extract_stream_cmd(
         job_command
     ]
     # fmt: on
+    if parsed_args.verbose:
+        extract_cmd.append("--verbose")
 
     if EXTRACT_IR_CMD == job_command:
         extract_cmd.append(str(parsed_args.msg_ix))

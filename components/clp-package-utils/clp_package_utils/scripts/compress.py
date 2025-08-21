@@ -82,6 +82,8 @@ def _generate_compress_cmd(
         "--config", str(config_path),
     ]
     # fmt: on
+    if parsed_args.verbose:
+        compress_cmd.append("--verbose")
     if dataset is not None:
         compress_cmd.append("--dataset")
         compress_cmd.append(dataset)
@@ -245,6 +247,9 @@ def main(argv):
     compress_cmd = _generate_compress_cmd(
         parsed_args, dataset, generated_config_path_on_container, logs_list_path_on_container
     )
+    if parsed_args.verbose:
+        compress_cmd.append("--verbose")
+
     cmd = container_start_cmd + compress_cmd
 
     proc = subprocess.run(cmd)
