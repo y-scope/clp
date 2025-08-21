@@ -76,8 +76,8 @@ named `default`.
 
     ```bash
     sbin/admin-tools/archive-manager.sh del by-filter \
-      <begin-epoch-time-millis> \
-      <end-epoch-time-millis>
+      --begin-ts <begin-epoch-time-millis> \
+      --end-ts <end-epoch-time-millis>
     ```
 
     * Replace `<begin-epoch-time-millis>` with the timestamp of the time range's beginning (in
