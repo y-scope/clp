@@ -35,6 +35,7 @@ public:
      * @param new_projected_schema_tree_node_callback Callback for newly resolved projections.
      * @param query The search query.
      * @param projections The columns to project.
+     * @param case_sensitive_match Whether to use case-sensitive match for string comparison.
      * @param allow_duplicate_projected_columns Whether to allow duplicate projected columns.
      * @return A result containing the newly constructed `QueryHandler` on success, or an error code
      * indicating the failure:
