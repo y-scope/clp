@@ -117,7 +117,8 @@ public:
         clp_s::search::ast::DescriptorList::iterator m_next_token_it;
     };
 
-    using ProjectionMap = std::unordered_map<clp_s::search::ast::ColumnDescriptor*, std::string>;
+    using ProjectionMap = std::
+            unordered_map<clp_s::search::ast::ColumnDescriptor*, std::pair<std::string, size_t>>;
 
     using PartialResolutionMap = std::
             unordered_map<SchemaTree::Node::id_t, std::vector<ColumnDescriptorTokenIterator>>;
@@ -294,7 +295,7 @@ private:
             PartialResolutionMap auto_gen_namespace_partial_resolutions,
             PartialResolutionMap user_gen_namespace_partial_resolutions,
             std::vector<std::shared_ptr<clp_s::search::ast::ColumnDescriptor>> projected_columns,
-            ProjectionMap projected_column_to_original_key,
+            ProjectionMap projected_column_to_original_key_and_index,
             bool case_sensitive_match
     )
             : m_query{std::move(query)},
@@ -308,7 +309,9 @@ private:
                       std::move(user_gen_namespace_partial_resolutions)
               },
               m_projected_columns{std::move(projected_columns)},
-              m_projected_column_to_original_key{std::move(projected_column_to_original_key)},
+              m_projected_column_to_original_key_and_index{
+                      std::move(projected_column_to_original_key_and_index)
+              },
               m_case_sensitive_match{case_sensitive_match} {}
 
     // Methods
@@ -390,7 +393,7 @@ private:
             std::unordered_set<SchemaTree::Node::id_t>>
             m_resolved_column_to_schema_tree_node_ids;
     std::vector<std::shared_ptr<clp_s::search::ast::ColumnDescriptor>> m_projected_columns;
-    ProjectionMap m_projected_column_to_original_key;
+    ProjectionMap m_projected_column_to_original_key_and_index;
     bool m_case_sensitive_match;
     std::vector<std::pair<AstExprIterator, ast_evaluation_result_bitmask_t>> m_ast_dfs_stack;
 };
@@ -494,11 +497,14 @@ auto QueryHandlerImpl::handle_column_resolution_on_new_schema_tree_node(
     }
 
     auto* col{token_it.get_column_descriptor()};
-    if (m_projected_column_to_original_key.contains(col)) {
+    auto const original_key_and_index_it = m_projected_column_to_original_key_and_index.find(col);
+    if (m_projected_column_to_original_key_and_index.end() != original_key_and_index_it) {
+        auto const& original_key_and_index_entry = original_key_and_index_it->second;
         YSTDLIB_ERROR_HANDLING_TRYV(new_projected_schema_tree_node_callback(
                 is_auto_generated,
                 node_id,
-                m_projected_column_to_original_key.at(col)
+                original_key_and_index_entry.first,
+                original_key_and_index_entry.second
         ));
         return ystdlib::error_handling::success();
     }

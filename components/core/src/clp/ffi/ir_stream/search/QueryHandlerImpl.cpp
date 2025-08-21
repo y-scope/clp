@@ -76,7 +76,7 @@ using clp_s::search::ast::literal_type_bitmask_t;
 /**
  * Creates initial partial resolutions for the given query and projections.
  * @param query
- * @param projected_column_to_original_key
+ * @param projected_column_to_original_key_and_index
  * @return A result containing a pair or an error code indicating the failure:
  * - The pair:
  *   - The partial resolution for auto-generated keys.
@@ -88,7 +88,7 @@ using clp_s::search::ast::literal_type_bitmask_t;
  */
 [[nodiscard]] auto create_initial_partial_resolutions(
         std::shared_ptr<Expression> const& query,
-        QueryHandlerImpl::ProjectionMap const& projected_column_to_original_key
+        QueryHandlerImpl::ProjectionMap const& projected_column_to_original_key_and_index
 )
         -> ystdlib::error_handling::Result<std::pair<
                 QueryHandlerImpl::PartialResolutionMap,
@@ -192,9 +192,10 @@ auto create_projected_columns_and_projection_map(
                 QueryHandlerImpl::ProjectionMap>> {
     std::unordered_set<std::string_view> unique_projected_columns;
     std::vector<std::shared_ptr<ColumnDescriptor>> projected_columns;
-    QueryHandlerImpl::ProjectionMap projected_column_to_original_key;
+    QueryHandlerImpl::ProjectionMap projected_column_to_original_key_and_index;
 
-    for (auto const& [key, types] : projections) {
+    for (size_t index = 0; index < projections.size(); ++index) {
+        auto const& [key, types] = projections[index];
         if (false == allow_duplicate_projected_columns) {
             if (unique_projected_columns.contains(key)) {
                 return ErrorCode{ErrorCodeEnum::DuplicateProjectedColumn};
@@ -225,26 +226,29 @@ auto create_projected_columns_and_projection_map(
             {
                 return ErrorCode{ErrorCodeEnum::ProjectionColumnDescriptorCreationFailure};
             }
-            projected_column_to_original_key.emplace(column_descriptor.get(), key);
+            projected_column_to_original_key_and_index.emplace(
+                    column_descriptor.get(),
+                    std::make_pair(key, index)
+            );
             projected_columns.emplace_back(std::move(column_descriptor));
         } catch (std::exception const& e) {
             return ErrorCode{ErrorCodeEnum::ProjectionColumnDescriptorCreationFailure};
         }
     }
 
-    return {std::move(projected_columns), std::move(projected_column_to_original_key)};
+    return {std::move(projected_columns), std::move(projected_column_to_original_key_and_index)};
 }
 
 auto create_initial_partial_resolutions(
         std::shared_ptr<Expression> const& query,
-        QueryHandlerImpl::ProjectionMap const& projected_column_to_original_key
+        QueryHandlerImpl::ProjectionMap const& projected_column_to_original_key_and_index
 )
         -> ystdlib::error_handling::Result<std::pair<
                 QueryHandlerImpl::PartialResolutionMap,
                 QueryHandlerImpl::PartialResolutionMap>> {
     QueryHandlerImpl::PartialResolutionMap auto_gen_namespace_partial_resolutions;
     QueryHandlerImpl::PartialResolutionMap user_gen_namespace_partial_resolutions;
-    for (auto const& [col, key] : projected_column_to_original_key) {
+    for (auto const& [col, key_and_index] : projected_column_to_original_key_and_index) {
         auto const optional_is_auto_gen{is_auto_generated(col->get_namespace())};
         if (false == optional_is_auto_gen.has_value()) {
             // Ignore unrecognized namespace
@@ -417,22 +421,23 @@ auto QueryHandlerImpl::create(
         bool allow_duplicate_projected_columns
 ) -> ystdlib::error_handling::Result<QueryHandlerImpl> {
     query = YSTDLIB_ERROR_HANDLING_TRYX(preprocess_query(query));
-    auto [projected_columns, projected_column_to_original_key]
+    auto [projected_columns, projected_column_to_original_key_and_index]
             = YSTDLIB_ERROR_HANDLING_TRYX(create_projected_columns_and_projection_map(
                     projections,
                     allow_duplicate_projected_columns
             ));
     auto [auto_gen_namespace_partial_resolutions, user_gen_namespace_partial_resolutions]
-            = YSTDLIB_ERROR_HANDLING_TRYX(
-                    create_initial_partial_resolutions(query, projected_column_to_original_key)
-            );
+            = YSTDLIB_ERROR_HANDLING_TRYX(create_initial_partial_resolutions(
+                    query,
+                    projected_column_to_original_key_and_index
+            ));
 
     return QueryHandlerImpl{
             std::move(query),
             std::move(auto_gen_namespace_partial_resolutions),
             std::move(user_gen_namespace_partial_resolutions),
             std::move(projected_columns),
-            std::move(projected_column_to_original_key),
+            std::move(projected_column_to_original_key_and_index),
             case_sensitive_match
     };
 }

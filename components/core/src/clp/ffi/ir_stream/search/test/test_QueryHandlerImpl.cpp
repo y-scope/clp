@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <set>
@@ -530,7 +531,8 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
     auto new_projected_schema_tree_node_callback
             = [&](bool is_auto_gen,
                   SchemaTree::Node::id_t node_id,
-                  std::string_view key) -> ystdlib::error_handling::Result<void> {
+                  std::string_view key,
+                  size_t index) -> ystdlib::error_handling::Result<void> {
         REQUIRE((is_auto_generated == is_auto_gen));
         auto [column_it, column_inserted] = actual_resolved_projections.try_emplace(
                 std::string{key},
