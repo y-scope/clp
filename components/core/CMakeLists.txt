@@ -21,6 +21,15 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
+if (CMAKE_BUILD_TYPE MATCHES "Release")
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT)
+    if(IPO_SUPPORTED)
+        message(STATUS "Link-time optimization enabled.")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
+endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Set general compressor
@@ -72,7 +81,15 @@ if (CLP_USE_STATIC_LIBS)
     if (APPLE)
         set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "macOS")
     elseif (EXISTS "/etc/centos-release")
-        set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
+        # NOTE:
+        # 1. We don't support static linking on any CentOS-based distro except manylinux_2_28 (which
+        #    shows up as "AlmaLinux").
+        # 2. A release called "AlmaLinux" doesn't guarantee we're running on a manylinux distro, but
+        #    we can improve this check when someone reports an issue.
+        file(READ "/etc/centos-release" CENTOS_RELEASE_CONTENT)
+        if(NOT "${CENTOS_RELEASE_CONTENT}" MATCHES "AlmaLinux")
+            set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
+        endif()
     endif()
 
     if (DEFINED CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM)
@@ -106,7 +123,8 @@ if(PROJECT_IS_TOP_LEVEL)
     # Include dependency settings if the project isn't being included as a subproject.
     # NOTE: We mark the file optional since it's not required if the user happens to have the
     # dependencies installed already.
-    include("${CMAKE_SOURCE_DIR}/../../build/deps/core/cmake-settings/all.cmake"
+    set(CLP_CORE_DEPS_DIR "${CMAKE_SOURCE_DIR}/../../build/deps/core")
+    include("${CLP_CORE_DEPS_DIR}/cmake-settings/all.cmake"
             OPTIONAL
             RESULT_VARIABLE CLP_DEPS_SETTINGS_FILE_PATH
     )
@@ -139,7 +157,7 @@ if(CLP_NEED_BOOST)
     if(CLP_USE_STATIC_LIBS)
         set(Boost_USE_STATIC_LIBS ON)
     endif()
-    find_package(Boost 1.81 REQUIRED iostreams program_options filesystem system regex url)
+    find_package(Boost 1.89 REQUIRED iostreams program_options filesystem regex url)
     if(Boost_FOUND)
         message(STATUS "Found Boost ${Boost_VERSION}")
     else()
@@ -148,10 +166,8 @@ if(CLP_NEED_BOOST)
 endif()
 
 if(CLP_NEED_CATCH2)
-    find_package(Catch2 REQUIRED)
-    if (Catch2_FOUND)
-        message(STATUS "Found Catch2 ${Catch2_VERSION}")
-    endif()
+    find_package(Catch2 3.8.0 REQUIRED)
+    message(STATUS "Found Catch2 ${Catch2_VERSION}")
 endif()
 
 if(CLP_NEED_DATE)
@@ -212,7 +228,7 @@ endif()
 # Find and setup libcurl
 # By default, CURL does not provide static libraries
 if(CLP_NEED_CURL)
-    find_package(CURL 7.68.0 REQUIRED)
+    find_package(CURL 7.61.1 REQUIRED)
     if(CURL_FOUND)
         message(STATUS "Found CURL ${CURL_VERSION_STRING}")
     else()
@@ -280,34 +296,27 @@ if(CLP_NEED_YSTDLIB)
     add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
 endif()
 
-# Find and setup ZStd Library
 if(CLP_NEED_ZSTD)
+    # v1.4.8 is the lowest version available in the package managers of the OSes we support.
+    find_package(zstd 1.4.8 REQUIRED)
+    message(STATUS "Found zstd ${zstd_VERSION}")
     if(CLP_USE_STATIC_LIBS)
-        set(ZStd_USE_STATIC_LIBS ON)
-    endif()
-    find_package(ZStd 1.4.4 REQUIRED)
-    if(ZStd_FOUND)
-        message(STATUS "Found ZStd ${ZStd_VERSION}")
+        set(zstd_TARGET zstd::libzstd_static)
     else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
+        set(zstd_TARGET zstd::libzstd_shared)
     endif()
 endif()
 
-# Find and setup LZMA Library
-# TODO: Add a script in ./cmake/Modules to properly import LZMA in find_package()'s module mode
-if(CLP_NEED_LZMA)
+if(CLP_NEED_LIBLZMA)
     if(CLP_USE_STATIC_LIBS)
-        set(LIBLZMA_USE_STATIC_LIBS ON)
-    endif()
-    find_package(LibLZMA REQUIRED)
-    if(LIBLZMA_FOUND)
-        message(STATUS "Found Lzma ${LIBLZMA_VERSION_STRING}")
-        message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
-        message(STATUS "Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
+        set(LibLZMA_ROOT ${LibLZMA-static_ROOT})
+        set(LibLZMA_USE_STATIC_LIBS ON)
     else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
+        set(LibLZMA_ROOT ${LibLZMA-shared_ROOT})
     endif()
-    include_directories(${LIBLZMA_INCLUDE_DIRS})
+    # Version 5.8.1 and above address CVE-2024-3094 and CVE-2025-31115.
+    find_package(LibLZMA 5.8.1 REQUIRED)
+    message(STATUS "Found LibLZMA ${LibLZMA_VERSION}")
 endif()
 
 # sqlite dependencies
@@ -375,12 +384,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/SchemaWriter.hpp
     src/clp_s/search/AddTimestampConditions.cpp
     src/clp_s/search/AddTimestampConditions.hpp
-    src/clp_s/search/clp_search/EncodedVariableInterpreter.cpp
-    src/clp_s/search/clp_search/EncodedVariableInterpreter.hpp
-    src/clp_s/search/clp_search/Grep.cpp
-    src/clp_s/search/clp_search/Grep.hpp
-    src/clp_s/search/clp_search/Query.cpp
-    src/clp_s/search/clp_search/Query.hpp
     src/clp_s/search/EvaluateRangeIndexFilters.cpp
     src/clp_s/search/EvaluateRangeIndexFilters.hpp
     src/clp_s/search/EvaluateTimestampIndex.cpp
@@ -402,10 +405,6 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/TimestampEntry.hpp
     src/clp_s/Utils.cpp
     src/clp_s/Utils.hpp
-    src/clp_s/VariableDecoder.cpp
-    src/clp_s/VariableDecoder.hpp
-    src/clp_s/VariableEncoder.cpp
-    src/clp_s/VariableEncoder.hpp
     src/clp_s/ZstdCompressor.cpp
     src/clp_s/ZstdCompressor.hpp
     src/clp_s/ZstdDecompressor.cpp
@@ -543,6 +542,8 @@ set(SOURCE_FILES_unitTest
         src/clp/FileReader.hpp
         src/clp/FileWriter.cpp
         src/clp/FileWriter.hpp
+        src/clp/global_metadata_db_utils.hpp
+        src/clp/global_metadata_db_utils.cpp
         src/clp/GlobalMetadataDB.hpp
         src/clp/GlobalMetadataDBConfig.cpp
         src/clp/GlobalMetadataDBConfig.hpp
@@ -552,6 +553,8 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalSQLiteMetadataDB.hpp
         src/clp/Grep.cpp
         src/clp/Grep.hpp
+        src/clp/GrepCore.cpp
+        src/clp/GrepCore.hpp
         src/clp/hash_utils.cpp
         src/clp/hash_utils.hpp
         src/clp/ir/constants.hpp
@@ -600,6 +603,8 @@ set(SOURCE_FILES_unitTest
         src/clp/Profiler.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
+        src/clp/QueryToken.cpp
+        src/clp/QueryToken.hpp
         src/clp/ReaderInterface.cpp
         src/clp/ReaderInterface.hpp
         src/clp/ReadOnlyMemoryMappedFile.cpp
@@ -679,6 +684,7 @@ set(SOURCE_FILES_unitTest
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
         tests/test-BufferedFileReader.cpp
+        tests/test-clp_s-delta-encode-log-order.cpp
         tests/test-clp_s-end_to_end.cpp
         tests/test-clp_s-range_index.cpp
         tests/test-clp_s-search.cpp
@@ -688,13 +694,13 @@ set(SOURCE_FILES_unitTest
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
-        tests/test-Grep.cpp
+        tests/test-GlobalMetadataDBConfig.cpp
+        tests/test-GrepCore.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
         tests/test-ir_serializer.cpp
         tests/test-kql.cpp
-        tests/test-main.cpp
         tests/test-math_utils.cpp
         tests/test-MemoryMappedFile.cpp
         tests/test-NetworkReader.cpp
@@ -726,7 +732,7 @@ if(CLP_BUILD_TESTING)
             PRIVATE
             absl::flat_hash_map
             Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
-            Catch2::Catch2
+            Catch2::Catch2WithMain
             ${CURL_LIBRARIES}
             clp_s::search::ast
             clp_s::search::kql
@@ -736,6 +742,7 @@ if(CLP_BUILD_TESTING)
             fmt::fmt
             log_surgeon::log_surgeon
             LibArchive::LibArchive
+            LibLZMA::LibLZMA
             MariaDBClient::MariaDBClient
             ${MONGOCXX_TARGET}
             nlohmann_json::nlohmann_json
@@ -746,11 +753,9 @@ if(CLP_BUILD_TESTING)
             ${STD_FS_LIBS}
             clp::regex_utils
             clp::string_utils
-            yaml-cpp
             ystdlib::containers
             ystdlib::error_handling
-            ${LIBLZMA_LIBRARIES}
-            ZStd::ZStd
+            ${zstd_TARGET}
             )
     target_compile_features(unitTest
             PRIVATE cxx_std_20

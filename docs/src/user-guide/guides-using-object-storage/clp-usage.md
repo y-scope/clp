@@ -1,7 +1,7 @@
 # Using CLP with object storage
 
 To compress logs from S3, follow the steps in the section below. For all other operations, you
-should be able to use CLP as described in the [quick start](../quick-start-overview.md) guide.
+should be able to use CLP as described in the [clp-json quick-start guide](../quick-start/clp-json).
 
 ## Compressing logs from S3
 

@@ -11,20 +11,17 @@ import time
 import uuid
 from typing import Any, Dict, List, Optional
 
-import yaml
 from clp_py_utils.clp_config import (
     ALL_TARGET_NAME,
-    ARCHIVES_TABLE_SUFFIX,
     AwsAuthType,
-    CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
-    FILES_TABLE_SUFFIX,
-    LOG_VIEWER_WEBUI_COMPONENT_NAME,
+    GARBAGE_COLLECTOR_COMPONENT_NAME,
+    get_components_for_target,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -36,8 +33,13 @@ from clp_py_utils.clp_config import (
     StorageType,
     WEBUI_COMPONENT_NAME,
 )
+from clp_py_utils.clp_metadata_db_utils import (
+    get_archives_table_name,
+    get_datasets_table_name,
+    get_files_table_name,
+)
 from clp_py_utils.s3_utils import generate_container_auth_options
-from job_orchestration.scheduler.constants import QueueName
+from job_orchestration.scheduler.constants import SchedulerType
 from pydantic import BaseModel
 
 from clp_package_utils.general import (
@@ -47,23 +49,29 @@ from clp_package_utils.general import (
     CONTAINER_CLP_HOME,
     DockerMount,
     DockerMountType,
+    dump_shared_container_config,
     generate_container_config,
-    generate_worker_config,
+    get_celery_connection_env_vars_list,
     get_clp_home,
+    get_common_env_vars_list,
+    get_credential_env_vars_list,
     is_container_exited,
     is_container_running,
+    is_retention_period_configured,
     load_config_file,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
     validate_db_config,
-    validate_log_viewer_webui_config,
+    validate_log_directory,
+    validate_logs_input_config,
+    validate_output_storage_config,
     validate_queue_config,
     validate_redis_config,
     validate_reducer_config,
     validate_results_cache_config,
+    validate_retention_config,
     validate_webui_config,
-    validate_worker_config,
 )
 
 logger = logging.getLogger(__file__)
@@ -228,12 +236,6 @@ def create_db_tables(
 
     container_name = f"clp-{component_name}-table-creator-{instance_id}"
 
-    # Create database config file
-    db_config_filename = f"{container_name}.yml"
-    db_config_file_path = clp_config.logs_directory / db_config_filename
-    with open(db_config_file_path, "w") as f:
-        yaml.safe_dump(container_clp_config.database.dict(), f)
-
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     # fmt: off
     container_start_cmd = [
@@ -246,8 +248,16 @@ def create_db_tables(
         "-u", f"{os.getuid()}:{os.getgid()}",
     ]
     # fmt: on
-    env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
-    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
+    env_vars = [
+        *get_common_env_vars_list(),
+        *get_credential_env_vars_list(container_clp_config, include_db_credentials=True),
+    ]
+    necessary_mounts = [
+        mounts.clp_home,
+        mounts.data_dir,
+        mounts.logs_dir,
+        mounts.generated_config_file,
+    ]
     append_docker_options(container_start_cmd, necessary_mounts, env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
@@ -256,7 +266,7 @@ def create_db_tables(
     create_tables_cmd = [
         "python3",
         str(clp_py_utils_dir / "create-db-tables.py"),
-        "--config", str(container_clp_config.logs_directory / db_config_filename),
+        "--config", str(container_clp_config.get_shared_config_file_path()),
         "--storage-engine", str(container_clp_config.package.storage_engine),
     ]
     # fmt: on
@@ -264,8 +274,6 @@ def create_db_tables(
     cmd = container_start_cmd + create_tables_cmd
     logger.debug(" ".join(cmd))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
-
-    db_config_file_path.unlink()
 
     logger.info(f"Created {component_name} tables.")
 
@@ -582,11 +590,6 @@ def generic_start_scheduler(
     if container_exists(container_name):
         return
 
-    container_config_filename = f"{container_name}.yml"
-    container_config_file_path = clp_config.logs_directory / container_config_filename
-    with open(container_config_file_path, "w") as f:
-        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
-
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
     container_logs_dir = container_clp_config.logs_directory / component_name
@@ -604,40 +607,32 @@ def generic_start_scheduler(
     ]
     # fmt: on
 
-    necessary_env_vars = [
-        f"PYTHONPATH={clp_site_packages_dir}",
-        (
-            f"BROKER_URL=amqp://"
-            f"{container_clp_config.queue.username}:{container_clp_config.queue.password}@"
-            f"{container_clp_config.queue.host}:{container_clp_config.queue.port}"
-        ),
-        (
-            f"RESULT_BACKEND=redis://default:{container_clp_config.redis.password}@"
-            f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/"
-            f"{container_clp_config.redis.query_backend_database}"
-        ),
+    env_vars = [
+        *get_common_env_vars_list(),
+        *get_credential_env_vars_list(container_clp_config, include_db_credentials=True),
+        *get_celery_connection_env_vars_list(container_clp_config),
         f"CLP_LOGS_DIR={container_logs_dir}",
         f"CLP_LOGGING_LEVEL={clp_config.query_scheduler.logging_level}",
     ]
-    necessary_mounts = [mounts.clp_home, mounts.logs_dir]
+    necessary_mounts = [mounts.clp_home, mounts.logs_dir, mounts.generated_config_file]
     aws_mount, aws_env_vars = generate_container_auth_options(clp_config, component_name)
     if aws_mount:
         necessary_mounts.append(mounts.aws_config_dir)
     if aws_env_vars:
-        necessary_env_vars.extend(aws_env_vars)
+        env_vars.extend(aws_env_vars)
     if (
         COMPRESSION_SCHEDULER_COMPONENT_NAME == component_name
         and StorageType.FS == clp_config.logs_input.type
     ):
         necessary_mounts.append(mounts.input_logs_dir)
-    append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
+    append_docker_options(container_start_cmd, necessary_mounts, env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
     # fmt: off
     scheduler_cmd = [
         "python3", "-u",
         "-m", module_name,
-        "--config", str(container_clp_config.logs_directory / container_config_filename),
+        "--config", str(container_clp_config.get_shared_config_file_path()),
     ]
     # fmt: on
     cmd = container_start_cmd + scheduler_cmd
@@ -654,7 +649,7 @@ def start_compression_worker(
     mounts: CLPDockerMounts,
 ):
     celery_method = "job_orchestration.executor.compress"
-    celery_route = f"{QueueName.COMPRESSION}"
+    celery_route = SchedulerType.COMPRESSION
     compression_worker_mounts = [mounts.archives_output_dir]
     generic_start_worker(
         COMPRESSION_WORKER_COMPONENT_NAME,
@@ -679,7 +674,7 @@ def start_query_worker(
     mounts: CLPDockerMounts,
 ):
     celery_method = "job_orchestration.executor.query"
-    celery_route = f"{QueueName.QUERY}"
+    celery_route = SchedulerType.QUERY
 
     query_worker_mounts = [mounts.stream_output_dir]
     if StorageType.FS == clp_config.archive_output.storage.type:
@@ -719,12 +714,6 @@ def generic_start_worker(
     if container_exists(container_name):
         return
 
-    container_config_filename = f"{container_name}.yml"
-    container_config_file_path = clp_config.logs_directory / container_config_filename
-    container_worker_config = generate_worker_config(container_clp_config)
-    with open(container_config_file_path, "w") as f:
-        yaml.safe_dump(container_worker_config.dump_to_primitive_dict(), f)
-
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
     container_logs_dir = container_clp_config.logs_directory / component_name
@@ -747,19 +736,10 @@ def generic_start_worker(
     ]
     # fmt: on
 
-    necessary_env_vars = [
-        f"PYTHONPATH={clp_site_packages_dir}",
-        (
-            f"BROKER_URL=amqp://"
-            f"{container_clp_config.queue.username}:{container_clp_config.queue.password}@"
-            f"{container_clp_config.queue.host}:{container_clp_config.queue.port}"
-        ),
-        (
-            f"RESULT_BACKEND=redis://default:{container_clp_config.redis.password}@"
-            f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/{redis_database}"
-        ),
-        f"CLP_HOME={CONTAINER_CLP_HOME}",
-        f"CLP_CONFIG_PATH={container_clp_config.logs_directory / container_config_filename}",
+    env_vars = [
+        *get_common_env_vars_list(include_clp_home_env_var=True),
+        *get_celery_connection_env_vars_list(container_clp_config),
+        f"CLP_CONFIG_PATH={container_clp_config.get_shared_config_file_path()}",
         f"CLP_LOGS_DIR={container_logs_dir}",
         f"CLP_LOGGING_LEVEL={worker_config.logging_level}",
         f"CLP_WORKER_LOG_PATH={container_worker_log_path}",
@@ -778,9 +758,9 @@ def generic_start_worker(
     if aws_mount:
         necessary_mounts.append(mounts.aws_config_dir)
     if aws_env_vars:
-        necessary_env_vars.extend(aws_env_vars)
+        env_vars.extend(aws_env_vars)
 
-    append_docker_options(container_start_cmd, necessary_mounts, necessary_env_vars)
+    append_docker_options(container_start_cmd, necessary_mounts, env_vars)
     container_start_cmd.append(clp_config.execution_container)
 
     worker_cmd = [
@@ -843,7 +823,12 @@ def read_and_update_settings_json(settings_file_path: pathlib.Path, updates: Dic
     return settings_object
 
 
-def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts):
+def start_webui(
+    instance_id: str,
+    clp_config: CLPConfig,
+    container_clp_config: CLPConfig,
+    mounts: CLPDockerMounts,
+):
     component_name = WEBUI_COMPONENT_NAME
     logger.info(f"Starting {component_name}...")
 
@@ -851,112 +836,44 @@ def start_webui(instance_id: str, clp_config: CLPConfig, mounts: CLPDockerMounts
     if container_exists(container_name):
         return
 
-    webui_logs_dir = clp_config.logs_directory / component_name
     container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
-    node_path = str(container_webui_dir / "programs" / "server" / "npm" / "node_modules")
-    settings_json_path = get_clp_home() / "var" / "www" / "webui" / "settings.json"
+    node_path = str(container_webui_dir / "server" / "node_modules")
+    client_settings_json_path = (
+        get_clp_home() / "var" / "www" / "webui" / "client" / "settings.json"
+    )
+    server_settings_json_path = (
+        get_clp_home() / "var" / "www" / "webui" / "server" / "dist" / "server" / "settings.json"
+    )
 
-    validate_webui_config(clp_config, webui_logs_dir, settings_json_path)
+    validate_webui_config(clp_config, client_settings_json_path, server_settings_json_path)
 
-    # Create directories
-    webui_logs_dir.mkdir(exist_ok=True, parents=True)
-
-    container_webui_logs_dir = pathlib.Path("/") / "var" / "log" / component_name
-
-    # Read and update settings.json
+    # Read, update, and write back client's and server's settings.json
     clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
     if StorageEngine.CLP_S == clp_config.package.storage_engine:
-        table_prefix = f"{table_prefix}{CLP_DEFAULT_DATASET_NAME}_"
-    meteor_settings_updates = {
-        "private": {
-            "SqlDbHost": clp_config.database.host,
-            "SqlDbPort": clp_config.database.port,
-            "SqlDbName": clp_config.database.name,
-            "SqlDbClpArchivesTableName": f"{table_prefix}{ARCHIVES_TABLE_SUFFIX}",
-            "SqlDbClpFilesTableName": f"{table_prefix}{FILES_TABLE_SUFFIX}",
-            "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
-            "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
-        },
-        "public": {
-            "ClpStorageEngine": clp_config.package.storage_engine,
-            "LogViewerWebuiUrl": (
-                f"http://{clp_config.log_viewer_webui.host}:{clp_config.log_viewer_webui.port}",
-            ),
-        },
+        archives_table_name = ""
+        files_table_name = ""
+    else:
+        archives_table_name = get_archives_table_name(table_prefix, None)
+        files_table_name = get_files_table_name(table_prefix, None)
+
+    client_settings_json_updates = {
+        "ClpStorageEngine": clp_config.package.storage_engine,
+        "ClpQueryEngine": clp_config.package.query_engine,
+        "MongoDbSearchResultsMetadataCollectionName": clp_config.webui.results_metadata_collection_name,
+        "SqlDbClpArchivesTableName": archives_table_name,
+        "SqlDbClpDatasetsTableName": get_datasets_table_name(table_prefix),
+        "SqlDbClpFilesTableName": files_table_name,
+        "SqlDbClpTablePrefix": table_prefix,
+        "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
     }
-    meteor_settings = read_and_update_settings_json(settings_json_path, meteor_settings_updates)
-
-    # Start container
-    # fmt: off
-    container_cmd = [
-        "docker", "run",
-        "-d",
-        "--network", "host",
-        "--name", container_name,
-        "--log-driver", "local",
-        "-u", f"{os.getuid()}:{os.getgid()}",
-    ]
-    # fmt: on
-    env_vars = [
-        f"NODE_PATH={node_path}",
-        f"MONGO_URL={clp_config.results_cache.get_uri()}",
-        f"PORT={clp_config.webui.port}",
-        f"ROOT_URL=http://{clp_config.webui.host}",
-        f"METEOR_SETTINGS={json.dumps(meteor_settings)}",
-        f"CLP_DB_USER={clp_config.database.username}",
-        f"CLP_DB_PASS={clp_config.database.password}",
-        f"WEBUI_LOGS_DIR={container_webui_logs_dir}",
-        f"WEBUI_LOGGING_LEVEL={clp_config.webui.logging_level}",
-    ]
-    necessary_mounts = [
-        mounts.clp_home,
-        DockerMount(DockerMountType.BIND, webui_logs_dir, container_webui_logs_dir),
-    ]
-    append_docker_options(container_cmd, necessary_mounts, env_vars)
-    container_cmd.append(clp_config.execution_container)
-
-    node_cmd = [
-        str(CONTAINER_CLP_HOME / "bin" / "node-14"),
-        str(container_webui_dir / "launcher.js"),
-        str(container_webui_dir / "main.js"),
-    ]
-    cmd = container_cmd + node_cmd
-    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
-
-    logger.info(f"Started {component_name}.")
-
-
-def start_log_viewer_webui(
-    instance_id: str,
-    clp_config: CLPConfig,
-    container_clp_config: CLPConfig,
-    mounts: CLPDockerMounts,
-):
-    component_name = LOG_VIEWER_WEBUI_COMPONENT_NAME
-    logger.info(f"Starting {component_name}...")
-
-    container_name = f"clp-{component_name}-{instance_id}"
-    if container_exists(container_name):
-        return
-
-    container_log_viewer_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "log-viewer-webui"
-    node_path = str(container_log_viewer_webui_dir / "server" / "node_modules")
-    settings_json_path = (
-        get_clp_home()
-        / "var"
-        / "www"
-        / "log-viewer-webui"
-        / "server"
-        / "dist"
-        / "server"
-        / "settings.json"
+    client_settings_json = read_and_update_settings_json(
+        client_settings_json_path, client_settings_json_updates
     )
+    with open(client_settings_json_path, "w") as client_settings_json_file:
+        client_settings_json_file.write(json.dumps(client_settings_json))
 
-    validate_log_viewer_webui_config(clp_config, settings_json_path)
-
-    # Read, update, and write back settings.json
-    settings_json_updates = {
+    server_settings_json_updates = {
         "SqlDbHost": clp_config.database.host,
         "SqlDbPort": clp_config.database.port,
         "SqlDbName": clp_config.database.name,
@@ -964,11 +881,11 @@ def start_log_viewer_webui(
         "MongoDbHost": clp_config.results_cache.host,
         "MongoDbPort": clp_config.results_cache.port,
         "MongoDbName": clp_config.results_cache.db_name,
+        "MongoDbSearchResultsMetadataCollectionName": clp_config.webui.results_metadata_collection_name,
         "MongoDbStreamFilesCollectionName": clp_config.results_cache.stream_collection_name,
-        "ClientDir": str(container_log_viewer_webui_dir / "client"),
-        "StreamFilesDir": str(container_clp_config.stream_output.get_directory()),
+        "ClientDir": str(container_webui_dir / "client"),
+        "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
         "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
-        "LogViewerDir": str(container_log_viewer_webui_dir / "yscope-log-viewer"),
     }
 
     container_cmd_extra_opts = []
@@ -976,24 +893,29 @@ def start_log_viewer_webui(
     stream_storage = clp_config.stream_output.storage
     if StorageType.S3 == stream_storage.type:
         s3_config = stream_storage.s3_config
-
-        settings_json_updates["StreamFilesS3Region"] = s3_config.region_code
-        settings_json_updates["StreamFilesS3PathPrefix"] = (
+        server_settings_json_updates["StreamFilesDir"] = None
+        server_settings_json_updates["StreamFilesS3Region"] = s3_config.region_code
+        server_settings_json_updates["StreamFilesS3PathPrefix"] = (
             f"{s3_config.bucket}/{s3_config.key_prefix}"
         )
         auth = s3_config.aws_authentication
         if AwsAuthType.profile == auth.type:
-            settings_json_updates["StreamFilesS3Profile"] = auth.profile
+            server_settings_json_updates["StreamFilesS3Profile"] = auth.profile
         else:
-            settings_json_updates["StreamFilesS3Profile"] = None
+            server_settings_json_updates["StreamFilesS3Profile"] = None
     elif StorageType.FS == stream_storage.type:
-        settings_json_updates["StreamFilesS3Region"] = None
-        settings_json_updates["StreamFilesS3PathPrefix"] = None
-        settings_json_updates["StreamFilesS3Profile"] = None
+        server_settings_json_updates["StreamFilesDir"] = str(
+            container_clp_config.stream_output.get_directory()
+        )
+        server_settings_json_updates["StreamFilesS3Region"] = None
+        server_settings_json_updates["StreamFilesS3PathPrefix"] = None
+        server_settings_json_updates["StreamFilesS3Profile"] = None
 
-    settings_json = read_and_update_settings_json(settings_json_path, settings_json_updates)
-    with open(settings_json_path, "w") as settings_json_file:
-        settings_json_file.write(json.dumps(settings_json))
+    server_settings_json = read_and_update_settings_json(
+        server_settings_json_path, server_settings_json_updates
+    )
+    with open(server_settings_json_path, "w") as settings_json_file:
+        settings_json_file.write(json.dumps(server_settings_json))
 
     # fmt: off
     container_cmd = [
@@ -1007,38 +929,40 @@ def start_log_viewer_webui(
     # fmt: on
     container_cmd.extend(container_cmd_extra_opts)
 
-    necessary_env_vars = [
+    env_vars = [
+        *get_common_env_vars_list(),
+        *get_credential_env_vars_list(container_clp_config, include_db_credentials=True),
         f"NODE_PATH={node_path}",
-        f"HOST={clp_config.log_viewer_webui.host}",
-        f"PORT={clp_config.log_viewer_webui.port}",
-        f"CLP_DB_USER={clp_config.database.username}",
-        f"CLP_DB_PASS={clp_config.database.password}",
+        f"HOST={clp_config.webui.host}",
+        f"PORT={clp_config.webui.port}",
         f"NODE_ENV=production",
     ]
     necessary_mounts = [
         mounts.clp_home,
-        mounts.stream_output_dir,
     ]
     if StorageType.S3 == stream_storage.type:
         auth = stream_storage.s3_config.aws_authentication
         if AwsAuthType.credentials == auth.type:
             credentials = auth.credentials
-            necessary_env_vars.append(f"AWS_ACCESS_KEY_ID={credentials.access_key_id}")
-            necessary_env_vars.append(f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}")
+            env_vars.append(f"AWS_ACCESS_KEY_ID={credentials.access_key_id}")
+            env_vars.append(f"AWS_SECRET_ACCESS_KEY={credentials.secret_access_key}")
         else:
             aws_mount, aws_env_vars = generate_container_auth_options(
-                clp_config, LOG_VIEWER_WEBUI_COMPONENT_NAME
+                clp_config, WEBUI_COMPONENT_NAME
             )
             if aws_mount:
                 necessary_mounts.append(mounts.aws_config_dir)
             if aws_env_vars:
-                necessary_env_vars.extend(aws_env_vars)
-    append_docker_options(container_cmd, necessary_mounts, necessary_env_vars)
+                env_vars.extend(aws_env_vars)
+    elif StorageType.FS == stream_storage.type:
+        necessary_mounts.append(mounts.stream_output_dir)
+
+    append_docker_options(container_cmd, necessary_mounts, env_vars)
     container_cmd.append(clp_config.execution_container)
 
     node_cmd = [
         str(CONTAINER_CLP_HOME / "bin" / "node-22"),
-        str(container_log_viewer_webui_dir / "server" / "dist" / "server" / "src" / "main.js"),
+        str(container_webui_dir / "server" / "dist" / "server" / "src" / "main.js"),
     ]
     cmd = container_cmd + node_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
@@ -1060,11 +984,6 @@ def start_reducer(
     if container_exists(container_name):
         return
 
-    container_config_filename = f"{container_name}.yml"
-    container_config_file_path = clp_config.logs_directory / container_config_filename
-    with open(container_config_file_path, "w") as f:
-        yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
-
     logs_dir = clp_config.logs_directory / component_name
     validate_reducer_config(clp_config, logs_dir, num_workers)
 
@@ -1084,14 +1003,14 @@ def start_reducer(
     ]
     # fmt: on
     env_vars = [
-        f"PYTHONPATH={clp_site_packages_dir}",
+        *get_common_env_vars_list(include_clp_home_env_var=True),
         f"CLP_LOGS_DIR={container_logs_dir}",
         f"CLP_LOGGING_LEVEL={clp_config.reducer.logging_level}",
-        f"CLP_HOME={CONTAINER_CLP_HOME}",
     ]
     necessary_mounts = [
         mounts.clp_home,
         mounts.logs_dir,
+        mounts.generated_config_file,
     ]
     append_docker_options(container_start_cmd, necessary_mounts, env_vars)
     container_start_cmd.append(clp_config.execution_container)
@@ -1100,12 +1019,88 @@ def start_reducer(
     reducer_cmd = [
         "python3", "-u",
         "-m", "job_orchestration.reducer.reducer",
-        "--config", str(container_clp_config.logs_directory / container_config_filename),
+        "--config", str(container_clp_config.get_shared_config_file_path()),
         "--concurrency", str(num_workers),
         "--upsert-interval", str(clp_config.reducer.upsert_interval),
     ]
     # fmt: on
     cmd = container_start_cmd + reducer_cmd
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
+
+    logger.info(f"Started {component_name}.")
+
+
+def start_garbage_collector(
+    instance_id: str,
+    clp_config: CLPConfig,
+    container_clp_config: CLPConfig,
+    mounts: CLPDockerMounts,
+):
+    component_name = GARBAGE_COLLECTOR_COMPONENT_NAME
+
+    if not is_retention_period_configured(clp_config):
+        logger.info(f"Retention period is not configured, skipping {component_name} creation...")
+        return
+
+    logger.info(f"Starting {component_name}...")
+
+    container_name = f"clp-{component_name}-{instance_id}"
+    if container_exists(container_name):
+        return
+
+    logs_dir = clp_config.logs_directory / component_name
+    validate_log_directory(logs_dir, component_name)
+    # Create logs directory if necessary
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    container_logs_dir = container_clp_config.logs_directory / component_name
+
+    # fmt: off
+    container_start_cmd = [
+        "docker", "run",
+        "-di",
+        "--network", "host",
+        "-w", str(CONTAINER_CLP_HOME),
+        "--name", container_name,
+        "--log-driver", "local",
+        "-u", f"{os.getuid()}:{os.getgid()}",
+    ]
+    # fmt: on
+
+    necessary_mounts = [
+        mounts.clp_home,
+        mounts.logs_dir,
+        mounts.generated_config_file,
+    ]
+    env_vars = [
+        *get_common_env_vars_list(include_clp_home_env_var=True),
+        *get_credential_env_vars_list(container_clp_config, include_db_credentials=True),
+        f"CLP_LOGS_DIR={container_logs_dir}",
+        f"CLP_LOGGING_LEVEL={clp_config.garbage_collector.logging_level}",
+    ]
+
+    # Add necessary mounts for archives and streams.
+    if StorageType.FS == clp_config.archive_output.storage.type:
+        necessary_mounts.append(mounts.archives_output_dir)
+    if StorageType.FS == clp_config.stream_output.storage.type:
+        necessary_mounts.append(mounts.stream_output_dir)
+
+    aws_mount, aws_env_vars = generate_container_auth_options(clp_config, component_name)
+    if aws_mount:
+        necessary_mounts.append(mounts.aws_config_dir)
+    if aws_env_vars:
+        env_vars.extend(aws_env_vars)
+
+    append_docker_options(container_start_cmd, necessary_mounts, env_vars)
+    container_start_cmd.append(clp_config.execution_container)
+
+    # fmt: off
+    garbage_collector_cmd = [
+        "python3", "-u",
+        "-m", "job_orchestration.garbage_collector.garbage_collector",
+        "--config", str(container_clp_config.get_shared_config_file_path()),
+    ]
+    # fmt: on
+    cmd = container_start_cmd + garbage_collector_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Started {component_name}.")
@@ -1147,7 +1142,7 @@ def main(argv):
     reducer_server_parser = component_args_parser.add_parser(REDUCER_COMPONENT_NAME)
     add_num_workers_argument(reducer_server_parser)
     component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
-    component_args_parser.add_parser(LOG_VIEWER_WEBUI_COMPONENT_NAME)
+    component_args_parser.add_parser(GARBAGE_COLLECTOR_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -1167,15 +1162,24 @@ def main(argv):
         config_file_path = pathlib.Path(parsed_args.config)
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
 
+        runnable_components = clp_config.get_runnable_components()
+        components_to_start = get_components_for_target(target)
+        components_to_start = components_to_start.intersection(runnable_components)
+
+        # Exit early if no components to start
+        if len(components_to_start) == 0:
+            logger.error(f"{target} not available with current configuration")
+            return -1
+
         # Validate and load necessary credentials
         if target in (
             ALL_TARGET_NAME,
             CONTROLLER_TARGET_NAME,
             DB_COMPONENT_NAME,
+            GARBAGE_COLLECTOR_COMPONENT_NAME,
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
             QUERY_SCHEDULER_COMPONENT_NAME,
             WEBUI_COMPONENT_NAME,
-            LOG_VIEWER_WEBUI_COMPONENT_NAME,
         ):
             validate_and_load_db_credentials_file(clp_config, clp_home, True)
         if target in (
@@ -1201,9 +1205,21 @@ def main(argv):
         if target in (
             ALL_TARGET_NAME,
             COMPRESSION_WORKER_COMPONENT_NAME,
-            QUERY_WORKER_COMPONENT_NAME,
         ):
-            validate_worker_config(clp_config)
+            validate_logs_input_config(clp_config)
+        if target in (
+            ALL_TARGET_NAME,
+            COMPRESSION_WORKER_COMPONENT_NAME,
+            QUERY_WORKER_COMPONENT_NAME,
+            GARBAGE_COLLECTOR_COMPONENT_NAME,
+        ):
+            validate_output_storage_config(clp_config)
+        if target in (
+            ALL_TARGET_NAME,
+            CONTROLLER_TARGET_NAME,
+            GARBAGE_COLLECTOR_COMPONENT_NAME,
+        ):
+            validate_retention_config(clp_config)
 
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()
@@ -1227,6 +1243,8 @@ def main(argv):
     clp_config.data_directory.mkdir(parents=True, exist_ok=True)
     clp_config.logs_directory.mkdir(parents=True, exist_ok=True)
 
+    dump_shared_container_config(container_clp_config, clp_config)
+
     try:
         # Create instance-id file
         instance_id_file_path = clp_config.logs_directory / "instance-id"
@@ -1242,38 +1260,50 @@ def main(argv):
         conf_dir = clp_home / "etc"
 
         # Start components
-        if target in (ALL_TARGET_NAME, DB_COMPONENT_NAME):
+        if DB_COMPONENT_NAME in components_to_start:
             start_db(instance_id, clp_config, conf_dir)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, DB_COMPONENT_NAME):
+
+        if (
+            target == CONTROLLER_TARGET_NAME and DB_COMPONENT_NAME in runnable_components
+        ) or DB_COMPONENT_NAME in components_to_start:
             create_db_tables(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUEUE_COMPONENT_NAME):
+
+        if QUEUE_COMPONENT_NAME in components_to_start:
             start_queue(instance_id, clp_config)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, REDIS_COMPONENT_NAME):
+
+        if REDIS_COMPONENT_NAME in components_to_start:
             start_redis(instance_id, clp_config, conf_dir)
-        if target in (ALL_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
+
+        if RESULTS_CACHE_COMPONENT_NAME in components_to_start:
             start_results_cache(instance_id, clp_config, conf_dir)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
+
+        if (
+            target == CONTROLLER_TARGET_NAME and RESULTS_CACHE_COMPONENT_NAME in runnable_components
+        ) or RESULTS_CACHE_COMPONENT_NAME in components_to_start:
             create_results_cache_indices(instance_id, clp_config, container_clp_config, mounts)
-        if target in (
-            ALL_TARGET_NAME,
-            CONTROLLER_TARGET_NAME,
-            COMPRESSION_SCHEDULER_COMPONENT_NAME,
-        ):
+
+        if COMPRESSION_SCHEDULER_COMPONENT_NAME in components_to_start:
             start_compression_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUERY_SCHEDULER_COMPONENT_NAME):
+
+        if QUERY_SCHEDULER_COMPONENT_NAME in components_to_start:
             start_query_scheduler(instance_id, clp_config, container_clp_config, mounts)
-        if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
+
+        if COMPRESSION_WORKER_COMPONENT_NAME in components_to_start:
             start_compression_worker(
                 instance_id, clp_config, container_clp_config, num_workers, mounts
             )
-        if target in (ALL_TARGET_NAME, QUERY_WORKER_COMPONENT_NAME):
+
+        if QUERY_WORKER_COMPONENT_NAME in components_to_start:
             start_query_worker(instance_id, clp_config, container_clp_config, num_workers, mounts)
-        if target in (ALL_TARGET_NAME, REDUCER_COMPONENT_NAME):
+
+        if REDUCER_COMPONENT_NAME in components_to_start:
             start_reducer(instance_id, clp_config, container_clp_config, num_workers, mounts)
-        if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
-            start_webui(instance_id, clp_config, mounts)
-        if target in (ALL_TARGET_NAME, LOG_VIEWER_WEBUI_COMPONENT_NAME):
-            start_log_viewer_webui(instance_id, clp_config, container_clp_config, mounts)
+
+        if WEBUI_COMPONENT_NAME in components_to_start:
+            start_webui(instance_id, clp_config, container_clp_config, mounts)
+
+        if GARBAGE_COLLECTOR_COMPONENT_NAME in components_to_start:
+            start_garbage_collector(instance_id, clp_config, container_clp_config, mounts)
 
     except Exception as ex:
         if type(ex) == ValueError:

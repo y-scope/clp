@@ -5,16 +5,12 @@ add_subdirectory(sql)
 set(
         CLP_S_SEARCH_SOURCES
         ../Defs.hpp
-        ../VariableEncoder.cpp
-        ../VariableEncoder.hpp
+        ../DictionaryEntry.cpp
+        ../DictionaryEntry.hpp
+        ../DictionaryWriter.cpp
+        ../DictionaryWriter.hpp
         AddTimestampConditions.cpp
         AddTimestampConditions.hpp
-        clp_search/EncodedVariableInterpreter.cpp
-        clp_search/EncodedVariableInterpreter.hpp
-        clp_search/Grep.cpp
-        clp_search/Grep.hpp
-        clp_search/Query.cpp
-        clp_search/Query.hpp
         EvaluateRangeIndexFilters.cpp
         EvaluateRangeIndexFilters.hpp
         EvaluateTimestampIndex.cpp
@@ -44,9 +40,12 @@ if(CLP_BUILD_CLP_S_SEARCH)
                 absl::flat_hash_map
                 clp_s::archive_reader
                 clp_s::search::ast
+                log_surgeon::log_surgeon
                 simdjson::simdjson
                 PRIVATE
+                clp::string_utils
                 clp_s::clp_dependencies
+                clp_s::io
                 spdlog::spdlog
         )
 endif()

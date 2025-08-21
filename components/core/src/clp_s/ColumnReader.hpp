@@ -91,6 +91,39 @@ private:
     UnalignedMemSpan<int64_t> m_values;
 };
 
+class DeltaEncodedInt64ColumnReader : public BaseColumnReader {
+public:
+    // Constructor
+    explicit DeltaEncodedInt64ColumnReader(int32_t id) : BaseColumnReader(id) {}
+
+    // Destructor
+    ~DeltaEncodedInt64ColumnReader() override = default;
+
+    // Methods inherited from BaseColumnReader
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
+
+    NodeType get_type() override { return NodeType::DeltaInteger; }
+
+    std::variant<int64_t, double, std::string, uint8_t> extract_value(
+            uint64_t cur_message
+    ) override;
+
+    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+
+private:
+    /**
+     * Gets the value stored at a given index by summing up the stored deltas between the requested
+     * index and the last requested index.
+     * @param idx
+     * @return The value stored at the requested index.
+     */
+    int64_t get_value_at_idx(size_t idx);
+
+    UnalignedMemSpan<int64_t> m_values;
+    int64_t m_cur_value{};
+    size_t m_cur_idx{};
+};
+
 class FloatColumnReader : public BaseColumnReader {
 public:
     // Constructor

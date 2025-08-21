@@ -4,9 +4,14 @@ import pathlib
 import subprocess
 import sys
 import uuid
-from typing import List
+from typing import List, Optional
 
-from clp_py_utils.clp_config import StorageEngine
+from clp_py_utils.clp_config import (
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
+    CLP_DEFAULT_DATASET_NAME,
+    StorageEngine,
+)
 from job_orchestration.scheduler.job_config import InputType
 
 from clp_package_utils.general import (
@@ -17,9 +22,11 @@ from clp_package_utils.general import (
     generate_container_name,
     generate_container_start_cmd,
     get_clp_home,
+    get_container_config_filename,
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
+    validate_dataset_name,
 )
 
 logger = logging.getLogger(__file__)
@@ -63,6 +70,7 @@ def _generate_logs_list(
 
 def _generate_compress_cmd(
     parsed_args: argparse.Namespace,
+    dataset: Optional[str],
     config_path: pathlib.Path,
     logs_list_path: pathlib.Path,
 ) -> List[str]:
@@ -74,6 +82,9 @@ def _generate_compress_cmd(
         "--config", str(config_path),
     ]
     # fmt: on
+    if dataset is not None:
+        compress_cmd.append("--dataset")
+        compress_cmd.append(dataset)
     if parsed_args.timestamp_key is not None:
         compress_cmd.append("--timestamp-key")
         compress_cmd.append(parsed_args.timestamp_key)
@@ -132,6 +143,12 @@ def main(argv):
         help="CLP package configuration file.",
     )
     args_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that the archives belong to.",
+    )
+    args_parser.add_argument(
         "--timestamp-key",
         help="The path (e.g. x.y) for the field containing the log event's timestamp.",
     )
@@ -162,11 +179,25 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
+    storage_engine: StorageEngine = clp_config.package.storage_engine
+    dataset = parsed_args.dataset
+    if StorageEngine.CLP_S == storage_engine:
+        dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
+        try:
+            clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+            validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
+        except Exception as e:
+            logger.error(e)
+            return -1
+    elif dataset is not None:
+        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+        return -1
+
     input_type = clp_config.logs_input.type
     if InputType.FS == input_type:
         _validate_fs_input_args(parsed_args, args_parser)
     elif InputType.S3 == input_type:
-        _validate_s3_input_args(parsed_args, args_parser, clp_config.package.storage_engine)
+        _validate_s3_input_args(parsed_args, args_parser, storage_engine)
     else:
         raise ValueError(f"Unsupported input type: {input_type}.")
 
@@ -174,7 +205,7 @@ def main(argv):
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
-        container_clp_config, clp_config, container_name
+        container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
     necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
@@ -194,11 +225,15 @@ def main(argv):
 
     _generate_logs_list(clp_config.logs_input.type, container_logs_list_path, parsed_args)
 
+    extra_env_vars = {
+        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
+        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+    }
     container_start_cmd = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container
+        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
     )
     compress_cmd = _generate_compress_cmd(
-        parsed_args, generated_config_path_on_container, logs_list_path_on_container
+        parsed_args, dataset, generated_config_path_on_container, logs_list_path_on_container
     )
     cmd = container_start_cmd + compress_cmd
     subprocess.run(cmd, check=True)

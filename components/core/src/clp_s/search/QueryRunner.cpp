@@ -3,9 +3,14 @@
 #include <memory>
 #include <vector>
 
+#include <log_surgeon/Lexer.hpp>
+#include <string_utils/string_utils.hpp>
+
+#include "../../clp/Defs.h"
+#include "../../clp/GrepCore.hpp"
+#include "../../clp/Query.hpp"
 #include "../../clp/type_utils.hpp"
 #include "../SchemaTree.hpp"
-#include "../Utils.hpp"
 #include "ast/AndExpr.hpp"
 #include "ast/ColumnDescriptor.hpp"
 #include "ast/Expression.hpp"
@@ -14,8 +19,6 @@
 #include "ast/Literal.hpp"
 #include "ast/OrExpr.hpp"
 #include "ast/SearchUtils.hpp"
-#include "clp_search/EncodedVariableInterpreter.hpp"
-#include "clp_search/Grep.hpp"
 #include "EvaluateTimestampIndex.hpp"
 
 using clp_s::search::ast::AndExpr;
@@ -200,7 +203,7 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
             subtree_type.has_value() && constants::cMetadataSubtreeType == subtree_type.value()
     };
     if (column->matches_type(LiteralType::ClpStringT)) {
-        Query* q = m_expr_clp_query.at(expr);
+        auto* q = m_expr_clp_query.at(expr);
         for (auto const& entry : m_clp_string_readers) {
             if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
                 continue;
@@ -273,7 +276,7 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
     auto* column = expr->get_column().get();
     int32_t column_id = column->get_column_id();
     auto literal = expr->get_operand();
-    Query* q = nullptr;
+    clp::Query* q = nullptr;
     std::unordered_set<int64_t>* matching_vars = nullptr;
     switch (column->get_literal_type()) {
         case LiteralType::IntegerT:
@@ -403,7 +406,7 @@ bool QueryRunner::evaluate_float_filter_core(FilterOperation op, double value, d
 
 bool QueryRunner::evaluate_clp_string_filter(
         FilterOperation op,
-        Query* q,
+        clp::Query* q,
         std::vector<ClpStringColumnReader*> const& readers
 ) const {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
@@ -430,7 +433,7 @@ bool QueryRunner::evaluate_clp_string_filter(
             for (auto const& subquery : q->get_sub_queries()) {
                 if (subquery.matches_logtype(id) && subquery.matches_vars(vars)) {
                     if (subquery.wildcard_match_required()) {
-                        matched = StringUtils::wildcard_match_unsafe(
+                        matched = clp::string_utils::wildcard_match_unsafe(
                                 std::get<std::string>(reader->extract_value(m_cur_message)),
                                 q->get_search_string(),
                                 !q->get_ignore_case()
@@ -442,7 +445,7 @@ bool QueryRunner::evaluate_clp_string_filter(
                 }
             }
         } else {
-            matched = StringUtils::wildcard_match_unsafe(
+            matched = clp::string_utils::wildcard_match_unsafe(
                     std::get<std::string>(reader->extract_value(m_cur_message)),
                     q->get_search_string(),
                     !q->get_ignore_case()
@@ -536,7 +539,7 @@ bool QueryRunner::evaluate_array_filter_value(
         } break;
         case ondemand::json_type::string: {
             if (true == m_maybe_string && unresolved_tokens.size() == cur_idx
-                && StringUtils::wildcard_match_unsafe(
+                && clp::string_utils::wildcard_match_unsafe(
                         item.get_string().value(),
                         m_array_search_string,
                         false == m_ignore_case
@@ -676,7 +679,7 @@ bool QueryRunner::evaluate_wildcard_array_filter(
                 if (false == m_maybe_string) {
                     break;
                 }
-                if (StringUtils::wildcard_match_unsafe(
+                if (clp::string_utils::wildcard_match_unsafe(
                             item.get_string().value(),
                             m_array_search_string,
                             false == m_ignore_case
@@ -750,7 +753,7 @@ bool QueryRunner::evaluate_wildcard_array_filter(
                 if (false == m_maybe_string) {
                     break;
                 }
-                if (StringUtils::wildcard_match_unsafe(
+                if (clp::string_utils::wildcard_match_unsafe(
                             item.get_string().value(),
                             m_array_search_string,
                             false == m_ignore_case
@@ -856,18 +859,23 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
             }
 
             // search on log type dictionary
+            clp::epochtime_t placeholder_timestamp{};
+            log_surgeon::lexers::ByteLexer placeholder_lexer;
             m_string_query_map.emplace(
                     query_string,
-                    Grep::process_raw_query(
-                            m_log_dict,
-                            m_var_dict,
+                    clp::GrepCore::process_raw_query(
+                            *m_log_dict,
+                            *m_var_dict,
                             query_string,
+                            placeholder_timestamp,
+                            placeholder_timestamp,
                             m_ignore_case,
-                            false
+                            placeholder_lexer,
+                            true
                     )
             );
         }
-        SubQuery sub_query;
+
         if (filter->get_column()->matches_type(LiteralType::VarStringT)) {
             std::string query_string;
             filter->get_operand()->as_var_string(query_string, filter->get_operation());
@@ -898,25 +906,15 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
                 for (auto const& entry : entries) {
                     matching_vars.insert(entry->get_id());
                 }
-            } else if (EncodedVariableInterpreter::
-                               wildcard_search_dictionary_and_get_encoded_matches(
-                                       query_string,
-                                       *m_var_dict,
-                                       m_ignore_case,
-                                       sub_query
-                               ))
-            {
-                for (auto const& var : sub_query.get_vars()) {
-                    if (var.is_precise_var()) {
-                        auto const* entry = var.get_var_dict_entry();
-                        if (entry != nullptr) {
-                            matching_vars.insert(entry->get_id());
-                        }
-                    } else {
-                        for (auto const* entry : var.get_possible_var_dict_entries()) {
-                            matching_vars.insert(entry->get_id());
-                        }
-                    }
+            } else {
+                std::unordered_set<VariableDictionaryEntry const*> matching_entries;
+                m_var_dict->get_entries_matching_wildcard_string(
+                        query_string,
+                        m_ignore_case,
+                        matching_entries
+                );
+                for (auto const& entry : matching_entries) {
+                    matching_vars.emplace(entry->get_id());
                 }
             }
         }

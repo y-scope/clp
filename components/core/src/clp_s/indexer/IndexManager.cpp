@@ -5,32 +5,35 @@
 #include <stack>
 #include <string>
 
+#include <spdlog/spdlog.h>
+
 #include "../archive_constants.hpp"
 #include "../TimestampDictionaryReader.hpp"
 
 namespace clp_s::indexer {
 IndexManager::IndexManager(
-        std::optional<clp::GlobalMetadataDBConfig> const& db_config,
+        std::optional<clp::GlobalMetadataDBConfig> const& optional_db_config,
         bool should_create_table
 ) {
-    if (db_config.has_value()) {
+    try {
+        auto const& db_config = optional_db_config.value();
         m_mysql_index_storage = std::make_unique<MySQLIndexStorage>(
-                db_config->get_metadata_db_host(),
-                db_config->get_metadata_db_port(),
-                db_config->get_metadata_db_username(),
-                db_config->get_metadata_db_password(),
-                db_config->get_metadata_db_name(),
-                db_config->get_metadata_table_prefix()
+                db_config.get_metadata_db_host(),
+                db_config.get_metadata_db_port(),
+                db_config.get_metadata_db_username().value(),
+                db_config.get_metadata_db_password().value(),
+                db_config.get_metadata_db_name(),
+                db_config.get_metadata_table_prefix()
         );
-        m_mysql_index_storage->open();
-        m_field_update_callback = [this](std::string& field_name, NodeType field_type) {
-            m_mysql_index_storage->add_field(field_name, field_type);
-        };
-        m_should_create_table = should_create_table;
-        m_output_type = OutputType::Database;
-    } else {
+    } catch (std::bad_optional_access const& e) {
         throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
     }
+    m_mysql_index_storage->open();
+    m_field_update_callback = [this](std::string& field_name, NodeType field_type) {
+        m_mysql_index_storage->add_field(field_name, field_type);
+    };
+    m_should_create_table = should_create_table;
+    m_output_type = OutputType::Database;
 }
 
 IndexManager::~IndexManager() {

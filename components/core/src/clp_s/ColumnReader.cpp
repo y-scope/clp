@@ -1,9 +1,9 @@
 #include "ColumnReader.hpp"
 
+#include "../clp/EncodedVariableInterpreter.hpp"
 #include "BufferViewReader.hpp"
 #include "ColumnWriter.hpp"
 #include "Utils.hpp"
-#include "VariableDecoder.hpp"
 
 namespace clp_s {
 void Int64ColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
@@ -16,6 +16,36 @@ std::variant<int64_t, double, std::string, uint8_t> Int64ColumnReader::extract_v
     return m_values[cur_message];
 }
 
+void DeltaEncodedInt64ColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_values = reader.read_unaligned_span<int64_t>(num_messages);
+    if (num_messages > 0) {
+        m_cur_idx = 0;
+        m_cur_value = m_values[0];
+    }
+}
+
+int64_t DeltaEncodedInt64ColumnReader::get_value_at_idx(size_t idx) {
+    if (m_cur_idx == idx) {
+        return m_cur_value;
+    }
+    if (idx > m_cur_idx) {
+        for (; m_cur_idx < idx; ++m_cur_idx) {
+            m_cur_value += m_values[m_cur_idx + 1];
+        }
+        return m_cur_value;
+    }
+    for (; m_cur_idx > idx; --m_cur_idx) {
+        m_cur_value -= m_values[m_cur_idx];
+    }
+    return m_cur_value;
+}
+
+std::variant<int64_t, double, std::string, uint8_t> DeltaEncodedInt64ColumnReader::extract_value(
+        uint64_t cur_message
+) {
+    return get_value_at_idx(cur_message);
+}
+
 void FloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
     m_values = reader.read_unaligned_span<double>(num_messages);
 }
@@ -23,6 +53,13 @@ void FloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
 void
 Int64ColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) {
     buffer.append(std::to_string(m_values[cur_message]));
+}
+
+void DeltaEncodedInt64ColumnReader::extract_string_value_into_buffer(
+        uint64_t cur_message,
+        std::string& buffer
+) {
+    buffer.append(std::to_string(get_value_at_idx(cur_message)));
 }
 
 std::variant<int64_t, double, std::string, uint8_t> FloatColumnReader::extract_value(
@@ -76,9 +113,14 @@ ClpStringColumnReader::extract_string_value_into_buffer(uint64_t cur_message, st
     }
 
     int64_t encoded_vars_offset = ClpStringColumnWriter::get_encoded_offset(value);
-    auto encoded_vars = m_encoded_vars.sub_span(encoded_vars_offset, entry.get_num_vars());
+    auto encoded_vars = m_encoded_vars.sub_span(encoded_vars_offset, entry.get_num_variables());
 
-    VariableDecoder::decode_variables_into_message(entry, *m_var_dict, encoded_vars, buffer);
+    clp::EncodedVariableInterpreter::decode_variables_into_message(
+            entry,
+            *m_var_dict,
+            encoded_vars,
+            buffer
+    );
 }
 
 void ClpStringColumnReader::extract_escaped_string_value_into_buffer(
@@ -112,7 +154,7 @@ UnalignedMemSpan<int64_t> ClpStringColumnReader::get_encoded_vars(uint64_t cur_m
 
     int64_t encoded_vars_offset = ClpStringColumnWriter::get_encoded_offset(value);
 
-    return m_encoded_vars.sub_span(encoded_vars_offset, entry.get_num_vars());
+    return m_encoded_vars.sub_span(encoded_vars_offset, entry.get_num_variables());
 }
 
 void VariableStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {

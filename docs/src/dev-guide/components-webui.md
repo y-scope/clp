@@ -1,101 +1,67 @@
 # WebUI
 
-The web interface for the CLP package.
+The web interface for the CLP package, which currently consists of a [React] client and a [Fastify]
+server. It also serves the [log-viewer].
 
 ## Requirements
 
-* Node.js v14 for building and running the webui
-  * Meteor.js only [supports](https://docs.meteor.com/install#prereqs-node) Node.js versions >= v10
-    and <= v14.
-* Node.js v18 or higher for linting the webui
+* Node.js v22 or higher
 * (Optional) [nvm (Node Version Manager)][nvm] to manage different versions of Node.js
-* [Meteor.js](https://docs.meteor.com/install.html#installation)
 
-## Install the dependencies
+## Setup
 
-```shell
-meteor npm install
-```
+1. Download the log-viewer's source code:
 
-If you ever add a package manually to `package.json` or `package.json` changes
-for some other reason, you should rerun this command.
+    ```shell
+    task deps:log-viewer
+    ```
 
-## Running in development
+2. Install the app's dependencies:
 
-The full functionality of the webui depends on other components in the CLP
-package:
+    ```shell
+    cd components/webui
+    (cd client && npm i)
+    (cd server && npm i)
+    ```
 
-1. Build the [CLP package](building-package)
-2. Start the package: `<clp-package>/sbin/start-clp.sh`
-3. Stop the webui instance started by the package: `<clp-package>/sbin/stop-clp.sh webui`
-4. Start the webui using meteor (refer to `<clp-package>/etc/clp-config.yml` for the config values):
-   ```shell
-   MONGO_URL="mongodb://<results_cache.host>:<results_cache.port>/<results_cache.db_name>" \
-   ROOT_URL="http://<webui.host>:<webui.port>"                                  \
-   CLP_DB_USER="<database.user>"                                                \
-   CLP_DB_PASS="<database.password>"                                            \
-     meteor --port <webui.port> --settings settings.json
-   ```
-   
-   Here is an example based on the default `clp-config.yml`:
-   ```shell
-   # Please update `<database.password>` accordingly.
-   
-   MONGO_URL="mongodb://localhost:27017/clp-query-results" \
-   ROOT_URL="http://localhost:4000"                 \
-   CLP_DB_USER="clp-user"                           \
-   CLP_DB_PASS="<database.password>"                \
-     meteor --port 4000 --settings settings.json
-   ```
-5. The Web UI should now be available at `http://<webui.host>:<webui.port>`
-   (e.g., http://localhost:4000).
+    If you add a package manually to `package.json` or `package.json` changes for some other reason, 
+    you should rerun the commands above.
+
+## Running
+
+1. To run the client during development:
+
+    ```shell
+    cd components/webui/client
+    npm run start
+    ```
+
+2. To run the server during development:
+
+    ```shell
+    cd components/webui/server
+    npm run dev
+    ```
+
+    If you want to customize what host and port the server binds to, you can copy `.env` to
+    `.env.local` and modify the values there. The `.env.local` file will override settings in
+    `.env`.
 
 ## Linting
 
-We enforce code quality and consistency across our project using [ESLint][eslint]. Due to specific
-dependencies, linting this project requires Node.js v18 or higher. We offer two methods for
-performing linting; you may choose either one according to your preference.
-
-### Method 1: Run `Taskfile` tasks
-
-`Taskfile` tasks are available to automatically manage dependency setup and linting operations.
-
-#### Checking for linting errors
+To check for linting errors:
 
 ```shell
 task lint:check-js
 ```
 
-This will run ESLint on the entire project's source code and report any linting errors.
-
-#### Automatically fixing linting errors
+To also fix linting errors (if applicable):
 
 ```shell
 task lint:fix-js
 ```
 
-This command attempts to automatically fix any linting issues found in the project.
-
-### Method 2: IDE Integration
-
-To integrate ESLint into IDEs like WebStorm and VSCode, follow these steps:
-
-1. Switch to Node.js v18 or higher
-    ```shell
-    # Install the latest node if not already installed
-    nvm install node
-
-    # Switch to the latest node
-    nvm use node
-    ```
-
-2. Install the latest ESLint shared config package.
-    * We use `--package-lock=false` and `--no-save` to avoid adding the package to
-      `package-lock.json` and `package.json`.
-
-    ```shell
-    npm --package-lock=false install --no-save eslint-config-yscope@latest
-    ```
-
-[eslint]: https://eslint.org/
+[Fastify]: https://www.fastify.io/
+[log-viewer]: https://github.com/y-scope/yscope-log-viewer
 [nvm]: https://github.com/nvm-sh/nvm
+[React]: https://reactjs.org/

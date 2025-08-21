@@ -16,15 +16,15 @@ from clp_py_utils.clp_config import (
     ArchiveOutput,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     StorageEngine,
-    StorageType,
-    TAGS_TABLE_SUFFIX,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
     add_dataset,
     fetch_existing_datasets,
+    get_tags_table_name,
 )
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
@@ -32,7 +32,11 @@ from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
-from job_orchestration.scheduler.constants import CompressionJobStatus, CompressionTaskStatus
+from job_orchestration.scheduler.constants import (
+    CompressionJobStatus,
+    CompressionTaskStatus,
+    SchedulerType,
+)
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
     FsInputConfig,
@@ -43,6 +47,7 @@ from job_orchestration.scheduler.scheduler_data import (
     CompressionJob,
     CompressionTaskResult,
 )
+from job_orchestration.scheduler.utils import kill_hanging_jobs
 from pydantic import ValidationError
 
 # Setup logging
@@ -155,23 +160,25 @@ def _process_s3_input(
 
 
 def search_and_schedule_new_tasks(
+    clp_config: CLPConfig,
     db_conn,
     db_cursor,
     clp_metadata_db_connection_config: Dict[str, Any],
-    clp_storage_engine: StorageEngine,
-    clp_archive_output: ArchiveOutput,
-    existing_datasets: Set[str],
 ):
     """
     For all jobs with PENDING status, splits the job into tasks and schedules them.
+    :param clp_config:
     :param db_conn:
     :param db_cursor:
     :param clp_metadata_db_connection_config:
-    :param clp_storage_engine:
-    :param clp_archive_output:
-    :param existing_datasets:
     """
     global scheduled_jobs
+
+    existing_datasets: Set[str] = set()
+    if StorageEngine.CLP_S == clp_config.package.storage_engine:
+        existing_datasets = fetch_existing_datasets(
+            db_cursor, clp_metadata_db_connection_config["table_prefix"]
+        )
 
     logger.debug("Search and schedule new tasks")
 
@@ -186,25 +193,19 @@ def search_and_schedule_new_tasks(
         input_config = clp_io_config.input
 
         table_prefix = clp_metadata_db_connection_config["table_prefix"]
-        if StorageEngine.CLP_S == clp_storage_engine:
-            dataset_name = input_config.dataset
-            if dataset_name not in existing_datasets:
-                archive_storage_directory: Path
-                if StorageType.S3 == clp_archive_output.storage.type:
-                    s3_config = clp_archive_output.storage.s3_config
-                    archive_storage_directory = Path(s3_config.key_prefix) / dataset_name
-                else:
-                    archive_storage_directory = clp_archive_output.get_directory() / dataset_name
-                add_dataset(
-                    db_conn,
-                    db_cursor,
-                    table_prefix,
-                    dataset_name,
-                    clp_archive_output.storage.type,
-                    archive_storage_directory,
-                )
-                existing_datasets.add(dataset_name)
-            table_prefix = f"{table_prefix}{dataset_name}_"
+        dataset = input_config.dataset
+
+        if dataset is not None and dataset not in existing_datasets:
+            add_dataset(
+                db_conn,
+                db_cursor,
+                table_prefix,
+                dataset,
+                clp_config.archive_output,
+            )
+
+            # NOTE: This assumes we never delete a dataset when compression jobs are being scheduled
+            existing_datasets.add(dataset)
 
         paths_to_compress_buffer = PathsToCompressBuffer(
             maintain_file_ordering=False,
@@ -277,13 +278,14 @@ def search_and_schedule_new_tasks(
 
         tag_ids = None
         if clp_io_config.output.tags:
+            tags_table_name = get_tags_table_name(table_prefix, dataset)
             db_cursor.executemany(
-                f"INSERT IGNORE INTO {table_prefix}{TAGS_TABLE_SUFFIX} (tag_name) VALUES (%s)",
+                f"INSERT IGNORE INTO {tags_table_name} (tag_name) VALUES (%s)",
                 [(tag,) for tag in clp_io_config.output.tags],
             )
             db_conn.commit()
             db_cursor.execute(
-                f"SELECT tag_id FROM {table_prefix}{TAGS_TABLE_SUFFIX} WHERE tag_name IN (%s)"
+                f"SELECT tag_id FROM {tags_table_name} WHERE tag_name IN (%s)"
                 % ", ".join(["%s"] * len(clp_io_config.output.tags)),
                 clp_io_config.output.tags,
             )
@@ -412,16 +414,25 @@ def main(argv):
     config_path = Path(args.config)
     try:
         clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
-    except ValidationError as err:
+        clp_config.database.load_credentials_from_env()
+    except (ValidationError, ValueError) as err:
         logger.error(err)
         return -1
-    except Exception as ex:
-        logger.error(ex)
+    except Exception:
+        logger.exception(f"Failed to initialize {COMPRESSION_SCHEDULER_COMPONENT_NAME}.")
         # read_yaml_config_file already logs the parsing error inside
         return -1
 
-    logger.info("Starting compression scheduler")
+    logger.info(f"Starting {COMPRESSION_SCHEDULER_COMPONENT_NAME}")
     sql_adapter = SQL_Adapter(clp_config.database)
+
+    try:
+        killed_jobs = kill_hanging_jobs(sql_adapter, SchedulerType.COMPRESSION)
+        if killed_jobs is not None:
+            logger.info(f"Killed {len(killed_jobs)} hanging compression jobs.")
+    except Exception:
+        logger.exception("Failed to kill hanging compression jobs.")
+        return -1
 
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
@@ -429,23 +440,15 @@ def main(argv):
         clp_metadata_db_connection_config = (
             sql_adapter.database_config.get_clp_connection_params_and_type(True)
         )
-        clp_storage_engine = clp_config.package.storage_engine
-        existing_datasets: Set[str] = set()
-        if StorageEngine.CLP_S == clp_storage_engine:
-            existing_datasets = fetch_existing_datasets(
-                db_cursor, clp_metadata_db_connection_config["table_prefix"]
-            )
 
         # Start Job Processing Loop
         while True:
             try:
                 search_and_schedule_new_tasks(
+                    clp_config,
                     db_conn,
                     db_cursor,
                     clp_metadata_db_connection_config,
-                    clp_storage_engine,
-                    clp_config.archive_output,
-                    existing_datasets,
                 )
                 poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)

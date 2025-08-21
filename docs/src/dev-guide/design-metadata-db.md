@@ -14,11 +14,10 @@ accommodate all expected values.
 (table-1)=
 :::{card}
 
-| Column name               | Type          | Description                                                              |
-|---------------------------|---------------|--------------------------------------------------------------------------|
-| name                      | VARCHAR(255)  | The *unique* name of the dataset.                                        |
-| archive_storage_type      | VARCHAR(64)   | The storage type (e.g., `s3`) where archives are stored.                 |
-| archive_storage_directory | VARCHAR(4096) | The directory (on the `archive_storage_type`) where archives are stored. |
+| Column name               | Type          | Description                                                                         |
+|---------------------------|---------------|-------------------------------------------------------------------------------------|
+| name                      | VARCHAR(255)  | The *unique* name of the dataset.                                                   |
+| archive_storage_directory | VARCHAR(4096) | The directory (relative to the storage type, e.g., `s3`) where archives are stored. |
 
 +++
 **Table 1**: The high-level schema of CLP's datasets table.

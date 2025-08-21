@@ -1,4 +1,4 @@
-# CLP WebUI
+# WebUI
 
 The web interface for the CLP package.
 

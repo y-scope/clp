@@ -3,7 +3,7 @@ from __future__ import annotations
 import typing
 from enum import auto
 
-from clp_py_utils.clp_config import CLP_DEFAULT_DATASET_NAME, S3Config
+from clp_py_utils.clp_config import S3Config
 from pydantic import BaseModel, validator
 from strenum import LowercaseStrEnum
 
@@ -22,7 +22,7 @@ class PathsToCompress(BaseModel):
 
 class FsInputConfig(BaseModel):
     type: typing.Literal[InputType.FS.value] = InputType.FS.value
-    dataset: str = CLP_DEFAULT_DATASET_NAME
+    dataset: typing.Optional[str] = None
     paths_to_compress: typing.List[str]
     path_prefix_to_remove: str = None
     timestamp_key: typing.Optional[str] = None
@@ -30,7 +30,7 @@ class FsInputConfig(BaseModel):
 
 class S3InputConfig(S3Config):
     type: typing.Literal[InputType.S3.value] = InputType.S3.value
-    dataset: str = CLP_DEFAULT_DATASET_NAME
+    dataset: typing.Optional[str] = None
     timestamp_key: typing.Optional[str] = None
 
 
@@ -57,7 +57,7 @@ class AggregationConfig(BaseModel):
 
 
 class QueryJobConfig(BaseModel):
-    dataset: str = CLP_DEFAULT_DATASET_NAME
+    dataset: typing.Optional[str] = None
 
 
 class ExtractIrJobConfig(QueryJobConfig):

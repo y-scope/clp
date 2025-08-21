@@ -2,20 +2,22 @@ import enum
 import errno
 import os
 import pathlib
+import re
 import secrets
 import socket
 import subprocess
 import typing
 import uuid
 from enum import auto
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
+    CLP_SHARED_CONFIG_FILENAME,
     CLPConfig,
     DB_COMPONENT_NAME,
-    LOG_VIEWER_WEBUI_COMPONENT_NAME,
+    QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
@@ -23,6 +25,10 @@ from clp_py_utils.clp_config import (
     StorageType,
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
+)
+from clp_py_utils.clp_metadata_db_utils import (
+    MYSQL_TABLE_NAME_MAX_LEN,
+    TABLE_SUFFIX_MAX_LEN,
 )
 from clp_py_utils.core import (
     get_config_value,
@@ -90,6 +96,14 @@ class CLPDockerMounts:
         self.archives_output_dir: typing.Optional[DockerMount] = None
         self.stream_output_dir: typing.Optional[DockerMount] = None
         self.aws_config_dir: typing.Optional[DockerMount] = None
+        self.generated_config_file: typing.Optional[DockerMount] = None
+
+
+def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
+    try:
+        validate_path_could_be_dir(data_dir)
+    except ValueError as ex:
+        raise ValueError(f"{component_name} data directory is invalid: {ex}")
 
 
 def get_clp_home():
@@ -169,6 +183,13 @@ def is_container_exited(container_name):
         return True
 
     return False
+
+
+def validate_log_directory(logs_dir: pathlib.Path, component_name: str) -> None:
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{component_name} logs directory is invalid: {ex}")
 
 
 def validate_port(port_name: str, hostname: str, port: int):
@@ -266,6 +287,18 @@ def generate_container_config(
             container_clp_config.stream_output.get_directory(),
         )
 
+    if not is_path_already_mounted(
+        clp_home,
+        CONTAINER_CLP_HOME,
+        clp_config.get_shared_config_file_path(),
+        container_clp_config.get_shared_config_file_path(),
+    ):
+        docker_mounts.generated_config_file = DockerMount(
+            DockerMountType.BIND,
+            clp_config.get_shared_config_file_path(),
+            container_clp_config.get_shared_config_file_path(),
+        )
+
     # Only create the mount if the directory exists
     if clp_config.aws_config_directory is not None:
         container_clp_config.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
@@ -289,33 +322,57 @@ def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
     return worker_config
 
 
+def get_container_config_filename(container_name: str) -> str:
+    return f".{container_name}-config.yml"
+
+
 def dump_container_config(
-    container_clp_config: CLPConfig, clp_config: CLPConfig, container_name: str
-) -> Tuple[pathlib.Path, pathlib.Path]:
+    container_clp_config: CLPConfig, clp_config: CLPConfig, config_filename: str
+):
     """
-    Writes the given config to the logs directory so that it's accessible in the container.
+    Writes the given container config to the logs directory, so that it's accessible in the
+    container.
+
     :param container_clp_config: The config to write.
     :param clp_config: The corresponding config on the host (used to determine the logs directory).
-    :param container_name:
+    :param config_filename:
     :return: The path to the config file in the container and on the host.
     """
-    container_config_filename = f".{container_name}-config.yml"
-    config_file_path_on_host = clp_config.logs_directory / container_config_filename
-    config_file_path_on_container = container_clp_config.logs_directory / container_config_filename
+    config_file_path_on_host = clp_config.logs_directory / config_filename
+    config_file_path_on_container = container_clp_config.logs_directory / config_filename
     with open(config_file_path_on_host, "w") as f:
         yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
 
     return config_file_path_on_container, config_file_path_on_host
 
 
+def dump_shared_container_config(
+    container_clp_config: CLPConfig, clp_config: CLPConfig
+) -> Tuple[pathlib.Path, pathlib.Path]:
+    """
+    Dumps the given container config to `CLP_SHARED_CONFIG_FILENAME` in the logs directory, so that
+    it's accessible in the container.
+
+    :param container_clp_config:
+    :param clp_config:
+    """
+    return dump_container_config(container_clp_config, clp_config, CLP_SHARED_CONFIG_FILENAME)
+
+
 def generate_container_start_cmd(
-    container_name: str, container_mounts: List[Optional[DockerMount]], container_image: str
+    container_name: str,
+    container_mounts: List[Optional[DockerMount]],
+    container_image: str,
+    extra_env_vars: Optional[Dict[str, str]] = None,
 ) -> List[str]:
     """
-    Generates the command to start a container with the given mounts and name.
+    Generates the command to start a container with the given mounts, environment variables, and
+    name.
+
     :param container_name:
     :param container_mounts:
     :param container_image:
+    :param extra_env_vars: Environment variables to set on top of the predefined ones.
     :return: The command.
     """
     clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
@@ -331,6 +388,12 @@ def generate_container_start_cmd(
         "--name", container_name,
         "--log-driver", "local"
     ]
+    env_vars = {
+        "PYTHONPATH": clp_site_packages_dir,
+        **(extra_env_vars if extra_env_vars is not None else {}),
+    }
+    for key, value in env_vars.items():
+        container_start_cmd.extend(["-e", f"{key}={value}"])
     for mount in container_mounts:
         if mount:
             container_start_cmd.append("--mount")
@@ -409,42 +472,32 @@ def validate_and_load_db_credentials_file(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
 ):
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
-    clp_config.load_database_credentials_from_file()
+    clp_config.database.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_and_load_queue_credentials_file(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
 ):
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
-    clp_config.load_queue_credentials_from_file()
+    clp_config.queue.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_and_load_redis_credentials_file(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
 ):
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
-    clp_config.load_redis_credentials_from_file()
+    clp_config.redis.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_db_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):
-    try:
-        validate_path_could_be_dir(data_dir)
-    except ValueError as ex:
-        raise ValueError(f"{DB_COMPONENT_NAME} data directory is invalid: {ex}")
-
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{DB_COMPONENT_NAME} logs directory is invalid: {ex}")
+    _validate_data_directory(data_dir, DB_COMPONENT_NAME)
+    validate_log_directory(logs_dir, DB_COMPONENT_NAME)
 
     validate_port(f"{DB_COMPONENT_NAME}.port", clp_config.database.host, clp_config.database.port)
 
 
 def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{QUEUE_COMPONENT_NAME} logs directory is invalid: {ex}")
+    validate_log_directory(logs_dir, QUEUE_COMPONENT_NAME)
 
     validate_port(f"{QUEUE_COMPONENT_NAME}.port", clp_config.queue.host, clp_config.queue.port)
 
@@ -452,15 +505,8 @@ def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
 def validate_redis_config(
     clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path, base_config: pathlib.Path
 ):
-    try:
-        validate_path_could_be_dir(data_dir)
-    except ValueError as ex:
-        raise ValueError(f"{REDIS_COMPONENT_NAME} data directory is invalid {ex}")
-
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{REDIS_COMPONENT_NAME} logs directory is invalid: {ex}")
+    _validate_data_directory(data_dir, REDIS_COMPONENT_NAME)
+    validate_log_directory(logs_dir, REDIS_COMPONENT_NAME)
 
     if not base_config.exists():
         raise ValueError(
@@ -471,10 +517,7 @@ def validate_redis_config(
 
 
 def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_workers: int):
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{REDUCER_COMPONENT_NAME} logs directory is invalid: {ex}")
+    validate_log_directory(logs_dir, REDUCER_COMPONENT_NAME)
 
     for i in range(0, num_workers):
         validate_port(
@@ -487,15 +530,8 @@ def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_w
 def validate_results_cache_config(
     clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path
 ):
-    try:
-        validate_path_could_be_dir(data_dir)
-    except ValueError as ex:
-        raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME} data directory is invalid: {ex}")
-
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME} logs directory is invalid: {ex}")
+    _validate_data_directory(data_dir, RESULTS_CACHE_COMPONENT_NAME)
+    validate_log_directory(logs_dir, RESULTS_CACHE_COMPONENT_NAME)
 
     validate_port(
         f"{RESULTS_CACHE_COMPONENT_NAME}.port",
@@ -504,8 +540,11 @@ def validate_results_cache_config(
     )
 
 
-def validate_worker_config(clp_config: CLPConfig):
+def validate_logs_input_config(clp_config: CLPConfig) -> None:
     clp_config.validate_logs_input_config()
+
+
+def validate_output_storage_config(clp_config: CLPConfig) -> None:
     clp_config.validate_archive_output_config()
     clp_config.validate_stream_output_config()
 
@@ -514,32 +553,15 @@ def validate_worker_config(clp_config: CLPConfig):
 
 
 def validate_webui_config(
-    clp_config: CLPConfig, logs_dir: pathlib.Path, settings_json_path: pathlib.Path
+    clp_config: CLPConfig,
+    client_settings_json_path: pathlib.Path,
+    server_settings_json_path: pathlib.Path,
 ):
-    if not settings_json_path.exists():
-        raise ValueError(
-            f"{WEBUI_COMPONENT_NAME} {settings_json_path} is not a valid path to Meteor settings.json"
-        )
-
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{WEBUI_COMPONENT_NAME} logs directory is invalid: {ex}")
+    for path in [client_settings_json_path, server_settings_json_path]:
+        if not path.exists():
+            raise ValueError(f"{WEBUI_COMPONENT_NAME} {path} is not a valid path to settings.json")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
-
-
-def validate_log_viewer_webui_config(clp_config: CLPConfig, settings_json_path: pathlib.Path):
-    if not settings_json_path.exists():
-        raise ValueError(
-            f"{WEBUI_COMPONENT_NAME} {settings_json_path} is not a valid path to settings.json"
-        )
-
-    validate_port(
-        f"{LOG_VIEWER_WEBUI_COMPONENT_NAME}.port",
-        clp_config.log_viewer_webui.host,
-        clp_config.log_viewer_webui.port,
-    )
 
 
 def validate_path_for_container_mount(path: pathlib.Path) -> None:
@@ -574,3 +596,115 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
                 f"Invalid path: `{path}` cannot be under '{prefix}' which may overlap with a path"
                 f" in the container."
             )
+
+
+def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
+    """
+    Validates that the given dataset name abides by the following rules:
+    - Its length won't cause any metadata table names to exceed MySQL's max table name length.
+    - It only contains alphanumeric characters and underscores.
+
+    :param clp_table_prefix:
+    :param dataset_name:
+    :raise: ValueError if the dataset name is invalid.
+    """
+    if re.fullmatch(r"\w+", dataset_name) is None:
+        raise ValueError(
+            f"Invalid dataset name: `{dataset_name}`. Names can only contain alphanumeric"
+            f" characters and underscores."
+        )
+
+    dataset_name_max_len = (
+        MYSQL_TABLE_NAME_MAX_LEN
+        - len(clp_table_prefix)
+        - 1  # For the separator between the dataset name and the table suffix
+        - TABLE_SUFFIX_MAX_LEN
+    )
+    if len(dataset_name) > dataset_name_max_len:
+        raise ValueError(
+            f"Invalid dataset name: `{dataset_name}`. Names can only be a maximum of"
+            f" {dataset_name_max_len} characters long."
+        )
+
+
+def validate_retention_config(clp_config: CLPConfig) -> None:
+    clp_query_engine = clp_config.package.query_engine
+    if is_retention_period_configured(clp_config) and clp_query_engine == QueryEngine.PRESTO:
+        raise ValueError(
+            f"Retention control is not supported with query_engine `{clp_query_engine}`"
+        )
+
+
+def is_retention_period_configured(clp_config: CLPConfig) -> bool:
+    if clp_config.archive_output.retention_period is not None:
+        return True
+
+    if clp_config.results_cache.retention_period is not None:
+        return True
+
+    return False
+
+
+def get_common_env_vars_list(
+    include_clp_home_env_var=True,
+) -> List[str]:
+    """
+    :param include_clp_home_env_var:
+    :return: A list of common environment variables for Docker containers, in the format
+    "KEY=VALUE".
+    """
+    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
+    env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
+
+    if include_clp_home_env_var:
+        env_vars.append(f"CLP_HOME={CONTAINER_CLP_HOME}")
+
+    return env_vars
+
+
+def get_credential_env_vars_list(
+    container_clp_config: CLPConfig,
+    include_db_credentials=False,
+    include_queue_credentials=False,
+    include_redis_credentials=False,
+) -> List[str]:
+    """
+    :param container_clp_config:
+    :param include_db_credentials:
+    :param include_queue_credentials:
+    :param include_redis_credentials:
+    :return: A list of credential environment variables for Docker containers, in the format
+    "KEY=VALUE".
+    """
+    env_vars = []
+
+    if include_db_credentials:
+        env_vars.append(f"CLP_DB_USER={container_clp_config.database.username}")
+        env_vars.append(f"CLP_DB_PASS={container_clp_config.database.password}")
+
+    if include_queue_credentials:
+        env_vars.append(f"CLP_QUEUE_USER={container_clp_config.queue.username}")
+        env_vars.append(f"CLP_QUEUE_PASS={container_clp_config.queue.password}")
+
+    if include_redis_credentials:
+        env_vars.append(f"CLP_REDIS_PASS={container_clp_config.redis.password}")
+
+    return env_vars
+
+
+def get_celery_connection_env_vars_list(container_clp_config: CLPConfig) -> List[str]:
+    """
+    :param container_clp_config:
+    :return: A list of Celery connection environment variables for Docker containers, in the format
+    "KEY=VALUE".
+    """
+    env_vars = [
+        f"BROKER_URL=amqp://"
+        f"{container_clp_config.queue.username}:{container_clp_config.queue.password}@"
+        f"{container_clp_config.queue.host}:{container_clp_config.queue.port}",
+        f"RESULT_BACKEND=redis://default:{container_clp_config.redis.password}@"
+        f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/"
+        f"{container_clp_config.redis.query_backend_database}",
+    ]
+
+    return env_vars

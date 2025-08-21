@@ -12,11 +12,32 @@ Usage:
 ```
 
 * `archives-dir` is the directory that archives should be written to.
-* `input-path` is any new-line-delimited JSON (ndjson) log file or directory containing such files.
-* `options` allow you to specify things like which field should be considered as the log event's
-  timestamp (`--timestamp-key <field-path>`), or whether to fully parse array entries and encode 
-  them into dedicated columns (`--structurize-arrays`).
-  * For a complete list, run `./clp-s c --help`
+* `input-path` is a filesystem path or URL to either:
+  * a new-line-delimited JSON (ndjson) log file;
+  * a KV-IR file; or
+  * a directory containing such files.
+* `options` allow you to specify how data gets compressed into an archive. For example:
+  * `--single-file-archive` specifies that single-file archives should be produced (i.e., each
+    archive is a single file in `archives-dir`).
+  * `--file-type <json|kv-ir>` specifies whether the input files are encoded as ndjson or KV-IR.
+  * `--timestamp-key <field-path>` specifies which field should be treated as each log event's
+    timestamp.
+  * `--target-encoded-size <size>` specifies the threshold (in bytes) at which archives are split,
+    where `size` is the total size of the dictionaries and encoded messages in an archive.
+    * This option acts as a soft limit on memory usage for compression, decompression, and search.
+    * This option significantly affects compression ratio.
+  * `--structurize-arrays` specifies that arrays should be fully parsed and array entries should be
+    encoded into dedicated columns.
+  * `--auth <s3|none>` specifies the authentication method that should be used for network requests
+    if the input path is a URL.
+    * When S3 authentication is enabled, we issue a GET request following the [AWS Signature Version
+      4 specification][aws-signature-v4]. This request uses the environment variables
+      `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and, optionally, `AWS_SESSION_TOKEN` if it
+      exists.
+    * For more information on usage with S3, see our
+      [dedicated guide](guides-using-object-storage/index).
+
+For a complete list of options, run `./clp-s c --help`.
 
 ### Examples
 
@@ -37,6 +58,14 @@ Specifying the timestamp-key will create a range-index for the timestamp column 
 compression ratio and search performance.
 :::
 
+**Compress a KV-IR file stored on S3 into a single-file archive:**
+
+```shell
+AWS_ACCESS_KEY_ID='...' AWS_SECRET_ACCESS_KEY='...' \
+  ./clp-s c --single-file-archive --file-type kv-ir --auth s3 /mnt/data/archives \
+  https://my-bucket.s3.us-east-2.amazonaws.com/kv-ir-log.clp
+```
+
 **Set the target encoded size to 1 GiB and the compression level to 6 (3 by default)**
 
 ```shell
@@ -52,13 +81,14 @@ compression ratio and search performance.
 Usage:
 
 ```shell
-./clp-s x [<options>] <archives-dir> <output-dir>
+./clp-s x [<options>] <archives-path> <output-dir>
 ```
 
-* `archives-dir` is a directory containing archives.
+* `archives-path` is a directory containing archives, a path to an archive, or a URL pointing to a
+  single-file archive.
 * `output-dir` is the directory that decompressed logs should be written to.
-* `options` allow you to specify things like a specific archive (from within `archives-dir`) to
-  decompress (`--archive-id <archive-id>`).
+* `options` allow you to specify things like a specific archive (from within `archives-path`, if it
+  is a directory) to decompress (`--archive-id <archive-id>`).
   * For a complete list, run `./clp-s x --help`
 
 ### Examples
@@ -74,13 +104,14 @@ Usage:
 Usage:
 
 ```shell
-./clp-s s [<options>] <archives-dir> <kql-query>
+./clp-s s [<options>] <archives-path> <kql-query>
 ```
 
-* `archives-dir` is a directory containing archives.
+* `archives-path` is a directory containing archives, a path to an archive, or a URL pointing to a
+  single-file archive.
 * `kql-query` is a [KQL](reference-json-search-syntax) query.
-* `options` allow you to specify things like a specific archive (from within `archives-dir`) to
-  search (`--archive-id <archive-id>`).
+* `options` allow you to specify things like a specific archive (from within `archives-path`, if it
+  is a directory) to search (`--archive-id <archive-id>`).
   * For a complete list, run `./clp-s s --help`
 
 ### Examples
@@ -125,3 +156,5 @@ compressed data:**
   the same file.
 * In addition, there are a few limitations, related to querying arrays, described in the search
   syntax [reference](reference-json-search-syntax).
+
+[aws-signature-v4]: https://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html

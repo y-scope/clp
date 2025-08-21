@@ -171,8 +171,8 @@ function(set_clp_tests_dependencies)
         CLP_NEED_DATE
         CLP_NEED_FMT
         CLP_NEED_LIBARCHIVE
+        CLP_NEED_LIBLZMA
         CLP_NEED_LOG_SURGEON
-        CLP_NEED_LZMA
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
         CLP_NEED_NLOHMANN_JSON
@@ -180,7 +180,6 @@ function(set_clp_tests_dependencies)
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
         CLP_NEED_SQLITE
-        CLP_NEED_YAMLCPP
         CLP_NEED_YSTDLIB
         CLP_NEED_ZSTD
     )
@@ -198,6 +197,7 @@ endfunction()
 
 function(validate_clp_s_archivereader_dependencies)
     validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_ARCHIVEREADER
+        CLP_BUILD_CLP_STRING_UTILS
         CLP_BUILD_CLP_S_CLP_DEPENDENCIES
         CLP_BUILD_CLP_S_IO
         CLP_BUILD_CLP_S_TIMESTAMPPATTERN
@@ -248,6 +248,8 @@ function(set_clp_s_clp_dependencies_dependencies)
         CLP_NEED_BOOST
         CLP_NEED_CURL
         CLP_NEED_FMT
+        CLP_NEED_LOG_SURGEON
+        CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
         CLP_NEED_OPENSSL
         CLP_NEED_SPDLOG
@@ -299,6 +301,7 @@ endfunction()
 
 function(validate_clp_s_search_dependencies)
     validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_SEARCH
+        CLP_BUILD_CLP_STRING_UTILS
         CLP_BUILD_CLP_S_ARCHIVEREADER
         CLP_BUILD_CLP_S_CLP_DEPENDENCIES
         CLP_BUILD_CLP_S_SEARCH_AST
@@ -308,6 +311,7 @@ endfunction()
 function(set_clp_s_search_dependencies)
     set_clp_need_flags(
         CLP_NEED_ABSL
+        CLP_NEED_LOG_SURGEON
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
     )
@@ -451,9 +455,9 @@ function (convert_clp_dependency_properties_to_variables)
         CLP_NEED_CURL
         CLP_NEED_DATE
         CLP_NEED_FMT
-        CLP_NEED_LOG_SURGEON
         CLP_NEED_LIBARCHIVE
-        CLP_NEED_LZMA
+        CLP_NEED_LIBLZMA
+        CLP_NEED_LOG_SURGEON
         CLP_NEED_MARIADB
         CLP_NEED_MONGOCXX
         CLP_NEED_MSGPACKCXX

@@ -13,6 +13,9 @@
 #include <string>
 #include <string_view>
 
+#include "../type_utils.hpp"
+#include "types.hpp"
+
 namespace clp::ir {
 /**
  * Checks if the given character is a delimiter
@@ -23,10 +26,16 @@ namespace clp::ir {
 bool is_delim(signed char c);
 
 /**
+ * NOTE: This method is marked inline for a ~50% performance improvement to
+ * `append_constant_to_logtype`.
  * @param c
  * @return Whether the character is a variable placeholder
  */
-bool is_variable_placeholder(char c);
+inline bool is_variable_placeholder(char c) {
+    return (enum_to_underlying_type(VariablePlaceholder::Integer) == c)
+           || (enum_to_underlying_type(VariablePlaceholder::Dictionary) == c)
+           || (enum_to_underlying_type(VariablePlaceholder::Float) == c);
+}
 
 /**
  * NOTE: This method is marked inline for a 1-2% performance improvement

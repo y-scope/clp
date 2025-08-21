@@ -1,16 +1,19 @@
 #include <filesystem>
 #include <iostream>
 #include <memory>
+#include <set>
 #include <string>
 
 #include <mongocxx/instance.hpp>
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
+#include <string_utils/string_utils.hpp>
 
 #include "../../reducer/network_utils.hpp"
 #include "../clp/FileDecompressor.hpp"
 #include "../Defs.h"
 #include "../Grep.hpp"
+#include "../GrepCore.hpp"
 #include "../ir/constants.hpp"
 #include "../Profiler.hpp"
 #include "../spdlog_with_specializations.hpp"
@@ -35,14 +38,19 @@ using clp::ErrorCode_errno;
 using clp::ErrorCode_FileExists;
 using clp::ErrorCode_Success;
 using clp::Grep;
+using clp::GrepCore;
 using clp::ir::cIrFileExtension;
 using clp::load_lexer_from_file;
+using clp::logtype_dictionary_id_t;
 using clp::Query;
+using clp::segment_id_t;
 using clp::streaming_archive::MetadataDB;
 using clp::streaming_archive::reader::Archive;
 using clp::streaming_archive::reader::File;
 using clp::streaming_archive::reader::Message;
+using clp::string_utils::clean_up_wildcard_search_string;
 using clp::TraceableException;
+using clp::variable_dictionary_id_t;
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -476,17 +484,11 @@ static bool search_archive(
 
     // Load lexers from schema file if it exists
     auto schema_file_path = archive_path / clp::streaming_archive::cSchemaFileName;
-    unique_ptr<log_surgeon::lexers::ByteLexer> forward_lexer, reverse_lexer;
+    log_surgeon::lexers::ByteLexer lexer;
     bool use_heuristic = true;
     if (std::filesystem::exists(schema_file_path)) {
         use_heuristic = false;
-        // Create forward lexer
-        forward_lexer.reset(new log_surgeon::lexers::ByteLexer());
-        load_lexer_from_file(schema_file_path.string(), false, *forward_lexer);
-
-        // Create reverse lexer
-        reverse_lexer.reset(new log_surgeon::lexers::ByteLexer());
-        load_lexer_from_file(schema_file_path.string(), true, *reverse_lexer);
+        load_lexer_from_file(schema_file_path.string(), lexer);
     }
 
     Archive archive_reader;
@@ -495,15 +497,19 @@ static bool search_archive(
 
     auto search_begin_ts = command_line_args.get_search_begin_ts();
     auto search_end_ts = command_line_args.get_search_end_ts();
+    auto const& logtype_dict{archive_reader.get_logtype_dictionary()};
+    auto const& var_dict{archive_reader.get_var_dictionary()};
 
-    auto query_processing_result = Grep::process_raw_query(
-            archive_reader,
-            command_line_args.get_search_string(),
+    std::string wildcard_search_string
+            = clean_up_wildcard_search_string('*' + command_line_args.get_search_string() + '*');
+    auto query_processing_result = GrepCore::process_raw_query(
+            logtype_dict,
+            var_dict,
+            wildcard_search_string,
             search_begin_ts,
             search_end_ts,
             command_line_args.ignore_case(),
-            *forward_lexer,
-            *reverse_lexer,
+            lexer,
             use_heuristic
     );
     if (false == query_processing_result.has_value()) {
@@ -511,6 +517,20 @@ static bool search_archive(
     }
 
     auto& query = query_processing_result.value();
+    // Calculate the IDs of the segments that may contain results for each sub-query.
+    auto get_segments_containing_logtype_dict_id
+            = [&logtype_dict](logtype_dictionary_id_t logtype_id) -> std::set<segment_id_t> const& {
+        return logtype_dict.get_entry(logtype_id).get_ids_of_segments_containing_entry();
+    };
+    auto get_segments_containing_var_dict_id
+            = [&var_dict](variable_dictionary_id_t var_id) -> std::set<segment_id_t> const& {
+        return var_dict.get_entry(var_id).get_ids_of_segments_containing_entry();
+    };
+    query.calculate_ids_of_matching_segments(
+            get_segments_containing_logtype_dict_id,
+            get_segments_containing_var_dict_id
+    );
+
     // Get all segments potentially containing query results
     std::set<clp::segment_id_t> ids_of_segments_to_search;
     for (auto& sub_query : query.get_sub_queries()) {

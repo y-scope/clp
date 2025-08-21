@@ -1,15 +1,15 @@
 [project]
-requires-python = ">= 3.8"
+requires-python = ">= 3.9"
 
 [tool.poetry]
 name = "clp-package-utils"
-version = "0.2.0-dev"
+version = "0.4.0-dev"
 description = "Utilities for the CLP package."
 authors = ["YScope Inc. <dev@yscope.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8 || ^3.10"
+python = ">= 3.9"
 Brotli = "^1.1.0"
 msgpack = "^1.0.7"
 pymongo = "^4.7.2"

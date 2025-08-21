@@ -13,10 +13,12 @@ To run the linting tools, besides commonly installed tools like `tar`, you'll ne
 
 * `curl`
 * `md5sum`
-* Python 3.8 or newer
-* python3-venv
-* [Task] >= 3.38.0 and < 3.43.0
-  * We constrain the version due to unresolved [issues][clp-issue-872].
+* Python 3.9 or newer
+* python3-venv (for the version of Python installed)
+* [Task] >= 3.40.0 and < 3.43.0
+  * Minimum version 3.40.0 is required for [yscope-dev-utils].
+  * We constrain the version to < 3.43.0 due to unresolved [issues][clp-issue-872].
+* [uv] >= 0.8
 
 ## Running the linters
 
@@ -37,3 +39,5 @@ task lint:fix
 [clp-issue-872]: https://github.com/y-scope/clp/issues/872
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&projects=&template=feature-request.yml
 [Task]: https://taskfile.dev/
+[uv]: https://docs.astral.sh/uv/
+[yscope-dev-utils]: https://github.com/y-scope/yscope-dev-utils
