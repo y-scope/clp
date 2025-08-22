@@ -21,6 +21,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   libmariadb-dev \
   libssl-dev \
   openjdk-11-jdk \
+  pipx \
   pkg-config \
   python3 \
   python3-pip \
@@ -40,3 +41,10 @@ curl \
     "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.deb"
 dpkg --install "$task_pkg_path"
 rm "$task_pkg_path"
+
+# Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
+# See also: https://github.com/y-scope/clp/issues/795
+if command -v cmake ; then
+    apt-get purge cmake
+fi
+pipx install "cmake~=3.31"

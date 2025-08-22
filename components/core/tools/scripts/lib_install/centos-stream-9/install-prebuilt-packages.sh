@@ -23,6 +23,8 @@ dnf install -y \
     python3-pip \
     unzip
 
+python3 -m pip install --user pipx
+
 # Determine architecture for `task` release to install
 rpm_arch=$(rpm --eval "%{_arch}")
 case "$rpm_arch" in
@@ -49,3 +51,10 @@ curl \
     "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.rpm"
 dnf install --assumeyes "$task_pkg_path"
 rm "$task_pkg_path"
+
+# Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
+# See also: https://github.com/y-scope/clp/issues/795
+if command -v cmake ; then
+    dnf remove cmake
+fi
+pipx install "cmake~=3.31"
