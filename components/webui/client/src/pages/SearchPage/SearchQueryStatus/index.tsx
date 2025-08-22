@@ -24,7 +24,8 @@ const SearchQueryStatus = () => {
             {(searchUiState === SEARCH_UI_STATE.QUERYING ||
                 searchUiState === SEARCH_UI_STATE.DONE) && (
                 <Text type={"secondary"}>
-                    Search job id:
+                    Search job
+                    {" "}
                     {searchJobId}
                     {" "}
                     found
