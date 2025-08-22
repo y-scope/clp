@@ -7,7 +7,7 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 lib_install_scripts_dir="${script_dir}/.."
 
 # NOTE: The remaining installation scripts depend on boost, so we install it beforehand.
-"${lib_install_scripts_dir}/install-boost.sh" 1.87.0
+"${lib_install_scripts_dir}/install-boost.sh" 1.89.0
 
 # NOTE:
 # 1. libarchive may statically link with LZMA, LZ4, and Zstandard, so we install them beforehand.
