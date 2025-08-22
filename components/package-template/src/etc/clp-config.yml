@@ -67,10 +67,6 @@
 #  port: 4000
 #  results_metadata_collection_name: "results-metadata"
 #
-#presto:
-#  host: "localhost"
-#  port: 8889
-#
 ## Where archives should be output to
 #archive_output:
 #  storage:
@@ -118,6 +114,11 @@
 #  sweep_interval:
 #    archive: 60
 #    search_result: 30
+#
+## Presto client config
+#presto:
+#  host: "localhost"
+#  port: 8889
 #
 ## Location where other data (besides archives) are stored. It will be created if
 ## it doesn't exist.

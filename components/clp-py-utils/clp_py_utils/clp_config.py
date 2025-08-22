@@ -728,9 +728,9 @@ class CLPConfig(BaseModel):
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
-    presto: Presto = Presto()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
+    presto: Presto = Presto()
     archive_output: ArchiveOutput = ArchiveOutput()
     stream_output: StreamOutput = StreamOutput()
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
