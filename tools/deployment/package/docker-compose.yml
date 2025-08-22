@@ -369,6 +369,35 @@ services:
       results-cache-indices-creator:
         condition: "service_completed_successfully"
 
+  garbage-collector:
+    image: "clp-package-x86-ubuntu-jammy:dev"
+    container_name: "garbage_collector"
+    user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
+    environment:
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      CLP_HOME: "/opt/clp"
+      CLP_LOGS_DIR: "/var/log/garbage_collector"
+      CLP_LOGGING_LEVEL: "${CLP_GC_LOGGING_LEVEL:-INFO}"
+      CLP_DB_USER: "${CLP_DB_USER}"
+      CLP_DB_PASS: "${CLP_DB_PASS}"
+    volumes:
+      - "./var/log/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "${CLP_GC_LOGS_DIR}:/var/log/garbage_collector"
+    networks:
+      - "clp-network"
+    depends_on:
+      query-scheduler:
+        condition: "service_healthy"
+      db-table-creator:
+        condition: "service_completed_successfully"
+      results-cache-indices-creator:
+        condition: "service_completed_successfully"
+    command: [
+      "python3", "-u",
+      "-m", "job_orchestration.garbage_collector.garbage_collector",
+      "--config", "/etc/clp-config.yml",
+    ]
+
 networks:
   clp-network:
     driver: bridge
