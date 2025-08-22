@@ -18,7 +18,7 @@ set(
         ../clp/cli_utils.hpp
         ../clp/Defs.h
         ../clp/EncodedVariableInterpreter.cpp
-        ../clp/EncodedVariableInterpreter.hpp    
+        ../clp/EncodedVariableInterpreter.hpp
         ../clp/ErrorCode.hpp
         ../clp/ffi/encoding_methods.cpp
         ../clp/ffi/encoding_methods.hpp
@@ -69,7 +69,7 @@ set(
         ../clp/ir/parsing.inc
         ../clp/ir/types.hpp
         ../clp/LogSurgeonReader.cpp
-        ../clp/LogSurgeonReader.hpp    
+        ../clp/LogSurgeonReader.hpp
         ../clp/NetworkReader.cpp
         ../clp/NetworkReader.hpp
         ../clp/networking/socket_utils.cpp
@@ -77,7 +77,7 @@ set(
         ../clp/Query.cpp
         ../clp/Query.hpp
         ../clp/QueryToken.cpp
-        ../clp/QueryToken.hpp    
+        ../clp/QueryToken.hpp
         ../clp/ReaderInterface.cpp
         ../clp/ReaderInterface.hpp
         ../clp/ReadOnlyMemoryMappedFile.cpp
@@ -423,6 +423,7 @@ if(CLP_BUILD_EXECUTABLES)
                 msgpack-cxx
                 spdlog::spdlog
                 ystdlib::error_handling
+                ${zstd_TARGET}
         )
         set_target_properties(
                 clp-s
