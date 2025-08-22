@@ -32,7 +32,11 @@ from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.executor.compress.compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
-from job_orchestration.scheduler.constants import CompressionJobStatus, CompressionTaskStatus
+from job_orchestration.scheduler.constants import (
+    CompressionJobStatus,
+    CompressionTaskStatus,
+    SchedulerType,
+)
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
     FsInputConfig,
@@ -43,6 +47,7 @@ from job_orchestration.scheduler.scheduler_data import (
     CompressionJob,
     CompressionTaskResult,
 )
+from job_orchestration.scheduler.utils import kill_hanging_jobs
 from pydantic import ValidationError
 
 # Setup logging
@@ -420,6 +425,14 @@ def main(argv):
 
     logger.info(f"Starting {COMPRESSION_SCHEDULER_COMPONENT_NAME}")
     sql_adapter = SQL_Adapter(clp_config.database)
+
+    try:
+        killed_jobs = kill_hanging_jobs(sql_adapter, SchedulerType.COMPRESSION)
+        if killed_jobs is not None:
+            logger.info(f"Killed {len(killed_jobs)} hanging compression jobs.")
+    except Exception:
+        logger.exception("Failed to kill hanging compression jobs.")
+        return -1
 
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
