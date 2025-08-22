@@ -29,22 +29,16 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   software-properties-common \
   unzip
 
-# Install `task`
-# NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
-task_pkg_arch=$(dpkg --print-architecture)
-task_pkg_path="$(mktemp -t --suffix ".deb" task-pkg.XXXXXXXXXX)"
-curl \
-    --fail \
-    --location \
-    --output "$task_pkg_path" \
-    --show-error \
-    "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.deb"
-dpkg --install "$task_pkg_path"
-rm "$task_pkg_path"
-
 # Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
 # See also: https://github.com/y-scope/clp/issues/795
 if command -v cmake ; then
-    apt-get purge cmake
+    apt-get purge -y cmake
 fi
 pipx install "cmake~=3.31"
+
+# Install a version of `task` < 3.43 to avoid https://github.com/y-scope/clp/issues/872
+if command -v task ; then
+    echo "placeholder"
+    exit 1
+fi
+pipx install "go-task-bin>=3.40,<3.43"
