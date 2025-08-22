@@ -409,10 +409,8 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                     // FIXME: should have separate integer and unsigned
                     // integer types to handle values greater than max int64
                     type = NodeType::Integer;
-                } else if (m_retain_float_format) {
-                    type = NodeType::FormattedFloat;
                 } else {
-                    type = NodeType::Float;
+                    type = m_retain_float_format ? NodeType::FormattedFloat : NodeType::Float;
                 }
                 node_id = m_archive_writer->add_node(node_id_stack.top(), type, cur_key);
 

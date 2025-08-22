@@ -8,18 +8,21 @@ namespace clp_s::float_format_encoding {
 // See docs/src/dev-guide/design-retain-float-format.md for the full layout.
 
 // Scientific notation marker (2 bits)
-constexpr uint16_t cScientificExponentNotePos = 14;
+constexpr uint16_t cExponentNotationPos = 14;
 // Exponent sign presence (2 bits)
-constexpr uint16_t cScientificExponentSignPos = 12;
+constexpr uint16_t cExponentSignPos = 12;
+constexpr uint16_t cEmptyExponentSign = 0b00;
+constexpr uint16_t cPlusExponentSign = 0b01;
+constexpr uint16_t cMinusExponentSign = 0b10;
 // Number of exponent digits (2 bits)
-constexpr uint16_t cScientificExponentDigitsPos = 10;
+constexpr uint16_t cNumExponentDigitsPos = 10;
 // Number of significant digits (4 bits)
-constexpr uint16_t cSignificantDigitsPos = 6;
+constexpr uint16_t cNumSignificantDigitsPos = 6;
 
-static_assert(cScientificExponentNotePos <= 15, "Bit position out of range");
-static_assert(cScientificExponentSignPos <= 15, "Bit position out of range");
-static_assert(cScientificExponentDigitsPos <= 15, "Bit position out of range");
-static_assert(cSignificantDigitsPos <= 15, "Bit position out of range");
+static_assert(cExponentNotationPos <= 15, "Bit position out of range");
+static_assert(cExponentSignPos <= 15, "Bit position out of range");
+static_assert(cNumExponentDigitsPos <= 15, "Bit position out of range");
+static_assert(cNumSignificantDigitsPos <= 15, "Bit position out of range");
 }  // namespace clp_s::float_format_encoding
 
 #endif  // CLP_S_FLOATFORMATENCODING_HPP

@@ -171,6 +171,9 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
     compare(extracted_json_path);
 }
 
+/**
+ * Tests the floats that can retain the formats without rounding.
+ */
 TEST_CASE("clp-s-compress-extract-valid-formatted-floats", "[clp-s][end-to-end]") {
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
@@ -200,6 +203,9 @@ TEST_CASE("clp-s-compress-extract-valid-formatted-floats", "[clp-s][end-to-end]"
     );
 }
 
+/**
+ * Test the floats that need to be rounded to retain the formats.
+ */
 TEST_CASE("clp-s-compress-extract-rounded-valid-formatted-floats", "[clp-s][end-to-end]") {
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);

@@ -114,7 +114,7 @@ public:
 
 private:
     std::vector<double> m_values;
-    std::vector<uint16_t> m_format;
+    std::vector<uint16_t> m_formats;
 };
 
 class BooleanColumnWriter : public BaseColumnWriter {

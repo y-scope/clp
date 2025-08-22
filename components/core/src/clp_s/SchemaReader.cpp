@@ -131,20 +131,12 @@ void SchemaReader::generate_json_string() {
                 column = m_reordered_columns[column_id_index++];
                 auto name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
                 m_json_serializer.append_key(name);
-                m_json_serializer.append_value(
-                        static_cast<FormattedFloatColumnReader*>(column)->restore_format(
-                                m_cur_message
-                        )
-                );
+                m_json_serializer.append_value_from_column(column, m_cur_message);
                 break;
             }
             case JsonSerializer::Op::AddFormattedFloatValue: {
                 column = m_reordered_columns[column_id_index++];
-                m_json_serializer.append_value(
-                        static_cast<FormattedFloatColumnReader*>(column)->restore_format(
-                                m_cur_message
-                        )
-                );
+                m_json_serializer.append_value_from_column(column, m_cur_message);
                 break;
             }
             case JsonSerializer::Op::AddBoolField: {

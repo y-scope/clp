@@ -52,7 +52,7 @@ void FloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
 
 void FormattedFloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
     m_values = reader.read_unaligned_span<double>(num_messages);
-    m_format = reader.read_unaligned_span<uint16_t>(num_messages);
+    m_formats = reader.read_unaligned_span<uint16_t>(num_messages);
 }
 
 void
@@ -110,7 +110,7 @@ std::string FormattedFloatColumnReader::restore_format(uint64_t cur_message) con
         unsigned char const maybe_sign
                 = static_cast<unsigned char>(formatted_double_str[exp_pos + 1]);
         uint16_t const exp_digits = get_exponent_digits(cur_message);
-        if (has_exponent_sign(cur_message, cEmptyExponentSign)) {
+        if (has_exponent_sign(cur_message, float_format_encoding::cEmptyExponentSign)) {
             if ('+' == maybe_sign || '-' == maybe_sign) {
                 formatted_double_str.erase(exp_pos + 1, 1);
             }
@@ -135,13 +135,13 @@ std::string FormattedFloatColumnReader::restore_format(uint64_t cur_message) con
                         '0'
                 );
             }
-            if (has_exponent_sign(cur_message, cPlusExponentSign)) {
+            if (has_exponent_sign(cur_message, float_format_encoding::cPlusExponentSign)) {
                 if (std::isdigit(maybe_sign)) {
                     formatted_double_str.insert(exp_pos + 1, "+");
                 } else {
                     formatted_double_str[exp_pos + 1] = '+';
                 }
-            } else if (has_exponent_sign(cur_message, cMinusExponentSign)) {
+            } else if (has_exponent_sign(cur_message, float_format_encoding::cMinusExponentSign)) {
                 if (std::isdigit(maybe_sign)) {
                     formatted_double_str.insert(exp_pos + 1, "-");
                 } else {
@@ -159,25 +159,24 @@ std::string FormattedFloatColumnReader::restore_format(uint64_t cur_message) con
 }
 
 bool FormattedFloatColumnReader::has_exponent_sign(uint64_t cur_message, uint16_t sign) const {
-    return sign << float_format_encoding::cScientificExponentSignPos
-           == (m_format[cur_message] & 0b11 << float_format_encoding::cScientificExponentSignPos);
+    return sign << float_format_encoding::cExponentSignPos
+           == (m_formats[cur_message] & 0b11 << float_format_encoding::cExponentSignPos);
 }
 
 bool FormattedFloatColumnReader::has_scientific_notation(uint64_t cur_message) const {
-    return m_format[cur_message] & 1 << float_format_encoding::cScientificExponentNotePos;
+    return m_formats[cur_message] & 1 << float_format_encoding::cExponentNotationPos;
 }
 
 bool FormattedFloatColumnReader::is_uppercase_exponent(uint64_t cur_message) const {
-    return m_format[cur_message] & 1 << (float_format_encoding::cScientificExponentNotePos + 1);
+    return m_formats[cur_message] & 1 << (float_format_encoding::cExponentNotationPos + 1);
 }
 
 uint16_t FormattedFloatColumnReader::get_exponent_digits(uint64_t cur_message) const {
-    return (m_format[cur_message] >> float_format_encoding::cScientificExponentDigitsPos & 0x03)
-           + 1;
+    return (m_formats[cur_message] >> float_format_encoding::cNumExponentDigitsPos & 0x03) + 1;
 }
 
 uint16_t FormattedFloatColumnReader::get_significant_digits(uint64_t cur_message) const {
-    return (m_format[cur_message] >> float_format_encoding::cSignificantDigitsPos & 0x0F) + 1;
+    return (m_formats[cur_message] >> float_format_encoding::cNumSignificantDigitsPos & 0x0F) + 1;
 }
 
 std::string FormattedFloatColumnReader::trim_leading_zeros(

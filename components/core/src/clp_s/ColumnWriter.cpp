@@ -65,13 +65,12 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
             float_str.end()
     );
 
-    // If the raw JSON token is an illegal double, this will throw an exception
     m_values.push_back(std::stod(float_str));
 
     auto const dot_pos = float_str.find('.');
     uint16_t format{0};
 
-    // Check whether it is the scientific; if so, if the exponent is E or e
+    // Check whether it is scientific; if so, whether the exponent is E or e
     size_t exp_pos = float_str.find_first_of("Ee");
     if (std::string::npos != exp_pos) {
         // Exponent must be followed by an integer (e.g., "1E" or "1e+" are illegal)
@@ -80,17 +79,15 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
                    || (exp_pos + 2 < float_str.length()
                        && (('+' == float_str[exp_pos + 1]) || ('-' == float_str[exp_pos + 1]))
                        && std::isdigit(static_cast<unsigned char>(float_str[exp_pos + 2])))));
-        format |= static_cast<uint16_t>(1u) << float_format_encoding::cScientificExponentNotePos;
+        format |= static_cast<uint16_t>(1u) << float_format_encoding::cExponentNotationPos;
         format |= static_cast<uint16_t>('E' == float_str[exp_pos] ? 1u : 0u)
-                  << (float_format_encoding::cScientificExponentNotePos + 1);
+                  << (float_format_encoding::cExponentNotationPos + 1);
 
         // Check whether there is a sign for the exponent
         if ('+' == float_str[exp_pos + 1]) {
-            format |= static_cast<uint16_t>(1u)
-                      << float_format_encoding::cScientificExponentSignPos;
+            format |= static_cast<uint16_t>(1u) << float_format_encoding::cExponentSignPos;
         } else if ('-' == float_str[exp_pos + 1]) {
-            format |= static_cast<uint16_t>(1u)
-                      << (float_format_encoding::cScientificExponentSignPos + 1);
+            format |= static_cast<uint16_t>(1u) << (float_format_encoding::cExponentSignPos + 1);
         }
 
         // Set the number of exponent digits
@@ -99,7 +96,7 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
             exp_digits--;
         }
         format |= (static_cast<uint16_t>(std::min(exp_digits - 1, 3)) & static_cast<uint16_t>(0x03))
-                  << float_format_encoding::cScientificExponentDigitsPos;
+                  << float_format_encoding::cNumExponentDigitsPos;
     } else {
         exp_pos = float_str.length();
     }
@@ -123,7 +120,7 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
         // For "0.xxx", find first non-zero in fractional part
         if (std::string::npos != dot_pos) {
             for (size_t i = dot_pos + 1; i < exp_pos; ++i) {
-                if (std::isdigit(static_cast<unsigned char>(float_str[i])) && '0' != float_str[i]) {
+                if ('0' != float_str[i]) {
                     first_non_zero_frac_digit_pos = i;
                     break;
                 }
@@ -143,18 +140,18 @@ size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
             = static_cast<uint16_t>(std::min(significant_digits - 1, 15)) & 0x0F;
 
     format |= static_cast<uint16_t>(compressed_significant_digits)
-              << float_format_encoding::cSignificantDigitsPos;
+              << float_format_encoding::cNumSignificantDigitsPos;
 
-    m_format.push_back(format);
+    m_formats.push_back(format);
     return sizeof(double) + sizeof(uint16_t);
 }
 
 void FormattedFloatColumnWriter::store(ZstdCompressor& compressor) {
-    assert(m_format.size() == m_values.size());
+    assert(m_formats.size() == m_values.size());
     auto const values_size = m_values.size() * sizeof(double);
-    auto const format_size = m_format.size() * sizeof(uint16_t);
+    auto const format_size = m_formats.size() * sizeof(uint16_t);
     compressor.write(reinterpret_cast<char const*>(m_values.data()), values_size);
-    compressor.write(reinterpret_cast<char const*>(m_format.data()), format_size);
+    compressor.write(reinterpret_cast<char const*>(m_formats.data()), format_size);
 }
 
 size_t BooleanColumnWriter::add_value(ParsedMessage::variable_t& value) {

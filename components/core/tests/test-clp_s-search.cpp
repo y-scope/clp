@@ -120,13 +120,9 @@ void validate_results(
             return;
         }
     }
-    if (expected_results.empty()) {
-        REQUIRE(results.empty());
-    } else {
-        std::set<int64_t> expected_results_set{expected_results.begin(), expected_results.end()};
-        REQUIRE(results_set == expected_results_set);
-        REQUIRE(results.size() == expected_results.size());
-    }
+    std::set<int64_t> expected_results_set{expected_results.begin(), expected_results.end()};
+    REQUIRE(results_set == expected_results_set);
+    REQUIRE(results.size() == expected_results.size());
 }
 
 void

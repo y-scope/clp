@@ -176,12 +176,8 @@ public:
     std::string restore_format(uint64_t cur_message) const;
 
 private:
-    static constexpr uint16_t cEmptyExponentSign = 0b00;
-    static constexpr uint16_t cPlusExponentSign = 0b01;
-    static constexpr uint16_t cMinusExponentSign = 0b10;
-
     UnalignedMemSpan<double> m_values;
-    UnalignedMemSpan<uint16_t> m_format;
+    UnalignedMemSpan<uint16_t> m_formats;
 
     bool has_exponent_sign(uint64_t cur_message, uint16_t sign) const;
     bool has_scientific_notation(uint64_t cur_message) const;
