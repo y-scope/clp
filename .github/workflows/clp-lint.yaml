@@ -31,15 +31,6 @@ jobs:
         with:
           python-version: "3.11"
 
-      - if: "matrix.os == 'ubuntu24.04'"
-        name: "Install pipx"
-        shell: "bash"
-        run: "DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y pipx"
-
-      - name: "Install cmake"
-        shell: "bash"
-        run: "pipx install cmake~=3.31"
-
       - name: "Install task"
         shell: "bash"
         run: "npm install -g @go-task/cli"
