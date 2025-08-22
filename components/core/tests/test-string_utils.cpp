@@ -2,7 +2,8 @@
 
 #include <boost/foreach.hpp>
 #include <boost/range/combine.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 

@@ -37,11 +37,12 @@ The task will download, build, and install (within the build directory) the foll
 |-----------------------------------------------------------------------|----------------|
 | [abseil-cpp](https://github.com/abseil/abseil-cpp)                    | 20250512.0     |
 | [ANTLR](https://www.antlr.org)                                        | v4.13.2        |
-| [Catch2](https://github.com/catchorg/Catch2.git)                      | v2.13.7        |
+| [Catch2](https://github.com/catchorg/Catch2.git)                      | v3.8.0         |
 | [date](https://github.com/HowardHinnant/date.git)                     | v3.0.1         |
 | [fmt](https://github.com/fmtlib/fmt)                                  | v10.2.1        |
 | [json](https://github.com/nlohmann/json.git)                          | v3.11.3        |
 | [log-surgeon](https://github.com/y-scope/log-surgeon)                 | f801a3f        |
+| [liblzma](https://github.com/tukaani-project/xz)                      | v5.8.1         |
 | [lz4](https://github.com/lz4/lz4)                                     | v1.10.0        |
 | [mongo-cxx-driver](https://github.com/mongodb/mongo-cxx-driver)       | r3.10.2        |
 | [simdjson](https://github.com/simdjson/simdjson)                      | v3.13.0        |
@@ -51,6 +52,7 @@ The task will download, build, and install (within the build directory) the foll
 | [yaml-cpp](https://github.com/jbeder/yaml-cpp.git)                    | v0.7.0         |
 | [yscope-log-viewer](https://github.com/y-scope/yscope-log-viewer.git) | 969ff35        |
 | [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp.git)             | d80cf86        |
+| [zlib](https://github.com/madler/zlib)                                | v1.3.1         |
 | [zstd](https://github.com/facebook/zstd)                              | v1.5.7         |
 
 ### Environment
