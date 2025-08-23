@@ -26,6 +26,8 @@ vars:
   G_ANTLR_VERSION: "4.13.2"
   G_ANTLR_JAR_FILE: "{{.G_DEPS_CORE_DIR}}/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
 
+# Set CMake policy CMP0074 to NEW whenever a component depends on another via `<lib_name>_ROOT`, but
+# the component's minimum required CMake version is less than 3.27 (policy value defaults to OLD).
 tasks:
   default:
     deps:
@@ -379,6 +381,8 @@ tasks:
         vars:
           CMAKE_GEN_ARGS:
             - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
             - "-DMSGPACK_BUILD_DOCS=OFF"
             - "-DMSGPACK_CXX11=OFF"
@@ -431,11 +435,7 @@ tasks:
             - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-
-            # Set CMP0074 since our minimum required CMake version is less than 3.27, and we
-            # depend on fmt's settings file, which uses `fmt_ROOT`.
             - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
-
             - "-DSPDLOG_BUILD_EXAMPLE=OFF"
             - "-DSPDLOG_BUILD_EXAMPLE_HO=OFF"
             - "-DSPDLOG_FMT_EXTERNAL=ON"
