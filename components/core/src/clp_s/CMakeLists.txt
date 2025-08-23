@@ -115,6 +115,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 clp::string_utils
                 log_surgeon::log_surgeon
                 ystdlib::containers
+                ${zstd_TARGET}
                 PRIVATE
                 Boost::regex
                 ${CURL_LIBRARIES}
@@ -124,7 +125,6 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 OpenSSL::Crypto
                 spdlog::spdlog
                 ystdlib::error_handling
-                ${zstd_TARGET}
         )
 endif()
 
@@ -358,6 +358,7 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 fmt::fmt
                 ${MONGOCXX_TARGET}
                 spdlog::spdlog
+                ${zstd_TARGET}
         )
 endif()
 
@@ -423,7 +424,6 @@ if(CLP_BUILD_EXECUTABLES)
                 msgpack-cxx
                 spdlog::spdlog
                 ystdlib::error_handling
-                ${zstd_TARGET}
         )
         set_target_properties(
                 clp-s
