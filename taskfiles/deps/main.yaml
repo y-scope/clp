@@ -381,7 +381,11 @@ tasks:
             - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
             - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
             - "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+            - "-DMSGPACK_BUILD_DOCS=OFF"
+            - "-DMSGPACK_BUILD_EXAMPLES=OFF"
             - "-DMSGPACK_BUILD_TESTS=OFF"
+            - "-DMSGPACK_CXX20=ON"
+            - "-DMSGPACK_USE_BOOST=ON"
           LIB_NAME: "msgpack-cxx"
           TARBALL_SHA256: "7504b7af7e7b9002ce529d4f941e1b7fb1fb435768780ce7da4abaac79bb156f"
           TARBALL_URL: "https://github.com/msgpack/msgpack-c/releases/download/cpp-{{.VERSION}}\
