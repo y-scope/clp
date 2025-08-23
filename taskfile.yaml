@@ -538,7 +538,8 @@ tasks:
     requires:
       vars: ["COMPONENT"]
     sources:
-      - "{{.G_BUILD_DIR}}/{{.COMPONENT}}_venv.md5"
+      - "{{.G_BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
+      - "{{.PACKAGE}}/**/*"
       - "{{.ROOT_DIR}}/requirements.txt"
       - "{{.TASKFILE}}"
       - "/etc/os-release"
