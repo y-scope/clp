@@ -10,7 +10,6 @@ apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   ca-certificates \
   checkinstall \
-  cmake \
   curl \
   build-essential \
   git \
@@ -29,6 +28,8 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   software-properties-common \
   unzip
 
+export PIPX_BIN_DIR=/usr/bin
+
 # Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
 # See also: https://github.com/y-scope/clp/issues/795
 if command -v cmake ; then
@@ -38,7 +39,7 @@ pipx install "cmake~=3.31"
 
 # Install a version of `task` < 3.43 to avoid https://github.com/y-scope/clp/issues/872
 if command -v task ; then
-    echo "placeholder"
+    echo "Task already installed"
     exit 1
 fi
 pipx install "go-task-bin>=3.40,<3.43"
