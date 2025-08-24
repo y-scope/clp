@@ -204,7 +204,6 @@ if(CLP_BUILD_CLP_S_IO)
                 clp_s::clp_dependencies
                 fmt::fmt
                 spdlog::spdlog
-                ${zstd_TARGET}
         )
 endif()
 
@@ -354,11 +353,11 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 clp_s_json_constructor
                 PUBLIC
                 clp_s::archive_reader
+                ${zstd_TARGET}
                 PRIVATE
                 fmt::fmt
                 ${MONGOCXX_TARGET}
                 spdlog::spdlog
-                ${zstd_TARGET}
         )
 endif()
 
