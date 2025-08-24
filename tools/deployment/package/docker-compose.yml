@@ -1,15 +1,28 @@
 x-service-defaults: &service_defaults
+  networks: ["clp-network"]
   stop_grace_period: "3s"
+  user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
+
+x-healthcheck-defaults: &healthcheck_defaults
+  start_period: "10s"
+  start_interval: "1s"
+  interval: "30s"
+  timeout: "10s"
+  retries: 3
+
+networks:
+  clp-network:
+    driver: "bridge"
 
 secrets:
   CLP_DB_PASS_FILE:
     environment: "CLP_DB_PASS"
+
 services:
   db:
     <<: *service_defaults
     image: "${CLP_DB_IMAGE:-mysql:8.0.23}"
     container_name: "database"
-    user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
     secrets:
       - "CLP_DB_PASS_FILE"
     environment:
@@ -21,11 +34,10 @@ services:
       - "./etc/mysql/conf.d/logging.cnf:/etc/mysql/conf.d/logging.cnf:ro"
       - "${CLP_HOST_DATA_DIR:-./var/data}/database:/var/lib/mysql"
       - "${CLP_HOST_LOGS_DIR:-./var/log}/database:/var/log/mysql"
-    networks:
-      - "clp-network"
     ports:
       - "${CLP_DB_HOST:-127.0.0.1}:${CLP_DB_PORT:-3306}:3306"
     healthcheck:
+      <<: *healthcheck_defaults
       test: [
         "CMD",
         "mysqladmin", "ping",
@@ -34,17 +46,11 @@ services:
         "-u", "${CLP_DB_USER}",
         "--password=${CLP_DB_PASS}"
       ]
-      start_period: "10s"
-      start_interval: "1s"
-      interval: "30s"
-      timeout: "10s"
-      retries: 3
 
   db-table-creator:
     <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "db_table_creator"
-    user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       CLP_DB_USER: "${CLP_DB_USER}"
@@ -58,8 +64,6 @@ services:
     ]
     volumes:
       - "${CLP_HOST_LOGS_DIR:-./var/log}/.clp-config.yml:/etc/clp-config.yml"
-    networks:
-      - "clp-network"
     depends_on:
       db:
         condition: "service_healthy"
@@ -68,33 +72,25 @@ services:
     <<: *service_defaults
     image: "rabbitmq:3.9.8"
     container_name: "queue"
-    user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
     environment:
       RABBITMQ_LOGS: "/var/log/rabbitmq/rabbitmq.log"
       RABBITMQ_DEFAULT_USER: "${CLP_QUEUE_USER}"
       RABBITMQ_DEFAULT_PASS: "${CLP_QUEUE_PASS}"
     volumes:
       - "${CLP_HOST_LOGS_DIR:-./var/log}/queue:/var/log/rabbitmq"
-    networks:
-      - "clp-network"
     ports:
       - "${CLP_QUEUE_HOST:-127.0.0.1}:${CLP_QUEUE_PORT:-5672}:5672"
     healthcheck:
+      <<: *healthcheck_defaults
       test: [
         "CMD",
         "rabbitmq-diagnostics", "check_running"
       ]
-      start_period: "10s"
-      start_interval: "1s"
-      interval: "30s"
-      timeout: "10s"
-      retries: 3
 
   redis:
     <<: *service_defaults
     image: "redis:7.2.4"
     container_name: "redis"
-    user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
     command: [
       "redis-server",
       "/usr/local/etc/redis/redis.conf",
@@ -104,11 +100,10 @@ services:
       - "./etc/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro"
       - "${CLP_HOST_LOGS_DIR:-./var/log}/redis:/var/log/redis"
       - "${CLP_HOST_DATA_DIR:-./var/data}/redis:/data"
-    networks:
-      - "clp-network"
     ports:
       - "${CLP_REDIS_HOST:-127.0.0.1}:${CLP_REDIS_PORT:-6379}:6379"
     healthcheck:
+      <<: *healthcheck_defaults
       test: [
         "CMD",
         "redis-cli",
@@ -117,17 +112,11 @@ services:
         "-a", "${CLP_REDIS_PASS}",
         "PING"
       ]
-      start_period: "10s"
-      start_interval: "1s"
-      interval: "30s"
-      timeout: "10s"
-      retries: 3
 
   results-cache:
     <<: *service_defaults
     image: "mongo:7.0.1"
     container_name: "results_cache"
-    user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
     command: [
       "--config", "/etc/mongo/mongod.conf",
       "--bind_ip", "0.0.0.0",
@@ -136,25 +125,18 @@ services:
       - "./etc/mongo:/etc/mongo:ro"
       - "${CLP_HOST_DATA_DIR:-./var/data}/results_cache:/data/db"
       - "${CLP_HOST_LOGS_DIR:-./var/log}/results_cache:/var/log/mongodb"
-    networks:
-      - "clp-network"
     ports:
       - "${CLP_RESULTS_CACHE_HOST:-127.0.0.1}:${CLP_RESULTS_CACHE_PORT:-6379}:27017"
     healthcheck:
+      <<: *healthcheck_defaults
       test: >-
         echo 'db.runCommand("ping").ok' |
         mongosh 127.0.0.1:${CLP_RESULTS_CACHE_PORT:-27017}/test --quiet
-      start_period: "10s"
-      start_interval: "1s"
-      interval: "30s"
-      timeout: "10s"
-      retries: 3
 
   results-cache-indices-creator:
     <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "results_cache_indices_creator"
-    user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     command: [
@@ -164,8 +146,6 @@ services:
       "--uri", "mongodb://results_cache:27017/${RESULTS_CACHE_CLP_DB_NAME:-clp-query-results}",
       "--stream-collection", "${CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME:-stream-files}",
     ]
-    networks:
-      - "clp-network"
     depends_on:
       results-cache:
         condition: "service_healthy"
@@ -174,7 +154,6 @@ services:
     <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "compression_scheduler"
-    user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
@@ -190,8 +169,6 @@ services:
       # FIXME: why not call this /mnt/input?
       - "/:/mnt/logs:ro"
       - "${CLP_HOST_AWS_CONFIG_DIR:-~/.aws}:/.aws:ro"
-    networks:
-      - "clp-network"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -210,7 +187,6 @@ services:
     <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "query_scheduler"
-    user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
@@ -223,8 +199,6 @@ services:
     volumes:
       - "${CLP_HOST_LOGS_DIR:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "${CLP_HOST_LOGS_DIR:-./var/log}:/var/log"
-    networks:
-      - "clp-network"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -239,6 +213,7 @@ services:
       "--config", "/etc/clp-config.yml"
     ]
     healthcheck:
+      <<: *healthcheck_defaults
       # FIXME: need to suppressing warnings in the schduler for reading 0 out of 8 expected bytes
       test: [
         "CMD",
@@ -246,17 +221,11 @@ services:
         "-c",
         "< /dev/tcp/query_scheduler/7000"
       ]
-      start_period: "10s"
-      start_interval: "1s"
-      interval: "30s"
-      timeout: "10s"
-      retries: 3
 
   compression-worker:
     <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "compression_worker"
-    user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
@@ -277,8 +246,6 @@ services:
       - "/:/mnt/logs:ro"
       - "${CLP_HOST_AWS_CONFIG_DIR:-~/.aws}:/.aws:ro"
       - "${CLP_HOST_ARCHIVE_STAGING_DIR:-./var/data/staged-archives}:/var/data/staged-archives"
-    networks:
-      - "clp-network"
     command: [
       "python3",
       "-u",
@@ -296,7 +263,6 @@ services:
     <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "query_worker"
-    user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
@@ -314,8 +280,6 @@ services:
       - "${CLP_HOST_DATA_DIR:-./var/data}/streams:/var/data/streams"
       - "${CLP_HOST_AWS_CONFIG_DIR:-~/.aws}:/.aws:ro"
       - "${CLP_HOST_STREAM_STAGING_DIR:-./var/data/staged-streams}:/var/data/staged-streams"
-    networks:
-      - "clp-network"
     command: [
       "python3",
       "-u",
@@ -333,7 +297,6 @@ services:
     <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "reducer"
-    user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       CLP_HOME: "/opt/clp"
@@ -342,8 +305,6 @@ services:
     volumes:
       - "${CLP_HOST_LOGS_DIR:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "${CLP_HOST_LOGS_DIR:-./var/log}/reducer:/var/log/reducer"
-    networks:
-      - "clp-network"
     depends_on:
       query-scheduler:
         condition: "service_healthy"
@@ -361,7 +322,6 @@ services:
     <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "webui"
-    user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
     environment:
       NODE_PATH: "/opt/clp/var/www/webui/server/node_modules"
       HOST: "0.0.0.0"
@@ -375,8 +335,6 @@ services:
       - "./var/www/webui/server/dist/server/settings.json\
 :/opt/clp/var/www/webui/server/dist/server/settings.json:ro"
       - "${CLP_HOST_AWS_CONFIG_DIR:-~/.aws}:/.aws:ro"
-    networks:
-      - "clp-network"
     ports:
       - "${CLP_WEBUI_HOST:-127.0.0.1}:${CLP_WEBUI_PORT:-4000}:4000"
     command: [
@@ -389,6 +347,7 @@ services:
       results-cache-indices-creator:
         condition: "service_completed_successfully"
     healthcheck:
+      <<: *healthcheck_defaults
       test: [
         "CMD",
         "bash",
@@ -400,7 +359,6 @@ services:
     <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "garbage_collector"
-    user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       CLP_HOME: "/opt/clp"
@@ -411,8 +369,6 @@ services:
     volumes:
       - "${CLP_HOST_LOGS_DIR:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "${CLP_GC_LOGS_DIR}:/var/log/garbage_collector"
-    networks:
-      - "clp-network"
     depends_on:
       query-scheduler:
         condition: "service_healthy"
@@ -425,7 +381,3 @@ services:
       "-m", "job_orchestration.garbage_collector.garbage_collector",
       "--config", "/etc/clp-config.yml",
     ]
-
-networks:
-  clp-network:
-    driver: "bridge"
