@@ -204,6 +204,7 @@ if(CLP_BUILD_CLP_S_IO)
                 clp_s::clp_dependencies
                 fmt::fmt
                 spdlog::spdlog
+                ${zstd_TARGET}
         )
 endif()
 
