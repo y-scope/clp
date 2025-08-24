@@ -488,23 +488,6 @@ def main(argv):
         help="CLP package configuration file.",
     )
 
-    component_args_parser = args_parser.add_subparsers(dest="target")
-    component_args_parser.add_parser(CONTROLLER_TARGET_NAME)
-    component_args_parser.add_parser(DB_COMPONENT_NAME)
-    component_args_parser.add_parser(QUEUE_COMPONENT_NAME)
-    component_args_parser.add_parser(REDIS_COMPONENT_NAME)
-    component_args_parser.add_parser(RESULTS_CACHE_COMPONENT_NAME)
-    component_args_parser.add_parser(COMPRESSION_SCHEDULER_COMPONENT_NAME)
-    component_args_parser.add_parser(QUERY_SCHEDULER_COMPONENT_NAME)
-    compression_worker_parser = component_args_parser.add_parser(COMPRESSION_WORKER_COMPONENT_NAME)
-    add_num_workers_argument(compression_worker_parser)
-    query_worker_parser = component_args_parser.add_parser(QUERY_WORKER_COMPONENT_NAME)
-    add_num_workers_argument(query_worker_parser)
-    reducer_server_parser = component_args_parser.add_parser(REDUCER_COMPONENT_NAME)
-    add_num_workers_argument(reducer_server_parser)
-    component_args_parser.add_parser(WEBUI_COMPONENT_NAME)
-    component_args_parser.add_parser(GARBAGE_COLLECTOR_COMPONENT_NAME)
-
     parsed_args = args_parser.parse_args(argv[1:])
 
     try:
