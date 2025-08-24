@@ -622,16 +622,17 @@ def main(argv):
             logger.exception("Failed to initialize CLP.")
         return -1
 
-    # try:
-    #     subprocess.run(
-    #         "docker compose up",
-    #         shell=True,
-    #         stderr=subprocess.STDOUT,
-    #         check=True,
-    #     )
-    # except subprocess.CalledProcessError:
-    #     logger.exception("Failed to start CLP.")
-    #     return -1
+    try:
+        logger.info(f"Starting CLP with Docker Compose...")
+        subprocess.run(
+            "docker compose up -d",
+            shell=True,
+            stderr=subprocess.STDOUT,
+            check=True,
+        )
+    except subprocess.CalledProcessError:
+        logger.exception("Failed to start CLP.")
+        return -1
 
     return 0
 
