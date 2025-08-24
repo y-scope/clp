@@ -45,6 +45,8 @@ jobs:
     runs-on: "ubuntu-24.04"
     outputs:
       centos_stream_9_image_changed: "${{steps.filter.outputs.centos_stream_9_image}}"
+      manylinux_2_28_image_changed: "${{steps.filter.outputs.manylinux_2_28_image}}"
+      musllinux_1_2_image_changed: "${{steps.filter.outputs.musllinux_1_2_image}}"
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
       clp_changed: "${{steps.filter.outputs.clp}}"
     steps:
