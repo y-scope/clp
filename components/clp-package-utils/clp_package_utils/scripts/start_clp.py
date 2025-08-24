@@ -523,6 +523,10 @@ def main(argv):
     env_dict["CLP_HOST_ARCHIVE_OUTPUT_DIR"] = str(clp_config.archive_output.get_directory())
     env_dict["CLP_HOST_STREAM_OUTPUT_DIR"] = str(clp_config.stream_output.get_directory())
 
+    # TODO: validate if those are required
+    env_dict["CLP_AWS_ACCESS_KEY_ID"] = os.getenv("AWS_ACCESS_KEY_ID", "")
+    env_dict["CLP_AWS_SECRET_ACCESS_KEY"] = os.getenv("AWS_SECRET_ACCESS_KEY", "")
+
     if clp_config.aws_config_directory is not None:
         env_dict["CLP_HOST_AWS_CONFIG_DIR"] = str(clp_config.aws_config_directory)
     if StorageType.S3 == clp_config.archive_output.storage.type:

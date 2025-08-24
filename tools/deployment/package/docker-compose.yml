@@ -226,6 +226,8 @@ services:
     container_name: "compression_worker"
     image: "${CLP_PACKAGE_CONTAINER}"
     environment:
+      AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${CLP_AWS_SECRET_ACCESS_KEY}"
       BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
       CLP_CONFIG_PATH: "/etc/clp-config.yml"
       CLP_HOME: "/opt/clp"
@@ -261,6 +263,8 @@ services:
     container_name: "query_worker"
     image: "${CLP_PACKAGE_CONTAINER}"
     environment:
+      AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${CLP_AWS_SECRET_ACCESS_KEY}"
       BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
       CLP_CONFIG_PATH: "/etc/clp-config.yml"
       CLP_HOME: "/opt/clp"
