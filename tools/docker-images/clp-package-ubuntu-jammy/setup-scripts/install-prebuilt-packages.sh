@@ -7,5 +7,5 @@ apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   ca-certificates \
   libcurl4 \
-  libmariadb-dev \
+  libmariadb3 \
   python3
