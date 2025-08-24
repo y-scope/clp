@@ -239,10 +239,8 @@ services:
     volumes:
       - "${CLP_HOST_LOGS_DIR:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "${CLP_HOST_LOGS_DIR:-./var/log}/compression_worker:/var/log/compression_worker"
-      # FIXME: why dump "var/data/compression-job-4-task-4-db-config.yml"?
       - "${CLP_HOST_DATA_DIR:-./var/data}:/var/data"
       - "${CLP_HOST_DATA_DIR:-./var/data}/archives:/var/data/archives"
-      # FIXME: why not call this /mnt/input?
       - "/:/mnt/logs:ro"
       - "${CLP_HOST_AWS_CONFIG_DIR:-~/.aws}:/.aws:ro"
       - "${CLP_HOST_ARCHIVE_STAGING_DIR:-./var/data/staged-archives}:/var/data/staged-archives"
