@@ -134,7 +134,9 @@ services:
     ports:
       - "${CLP_RESULTS_CACHE_HOST:-127.0.0.1}:${CLP_RESULTS_CACHE_PORT:-6379}:27017"
     healthcheck:
-      test: "echo 'db.runCommand(\"ping\").ok' | mongosh 127.0.0.1:${CLP_RESULTS_CACHE_PORT:-27017}/test --quiet"
+      test: >-
+        echo 'db.runCommand("ping").ok' |
+        mongosh 127.0.0.1:${CLP_RESULTS_CACHE_PORT:-27017}/test --quiet
       start_period: "10s"
       start_interval: "1s"
       interval: "30s"
@@ -167,7 +169,8 @@ services:
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
-      RESULT_BACKEND: "redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_COMPRESSION_BACKEND_DB:-1}"
+      RESULT_BACKEND: >-
+        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_COMPRESSION_BACKEND_DB:-1}
       CLP_LOGS_DIR: "/var/log"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL:-INFO}"
       CLP_DB_USER: "${CLP_DB_USER}"
@@ -201,7 +204,8 @@ services:
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
-      RESULT_BACKEND: "redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}"
+      RESULT_BACKEND: >-
+        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
       CLP_LOGS_DIR: "/var/log"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_SCHEDULER_LOGGING_LEVEL:-INFO}"
       CLP_DB_USER: "${CLP_DB_USER}"
@@ -245,7 +249,8 @@ services:
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
-      RESULT_BACKEND: "redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_COMPRESSION_BACKEND_DB:-1}"
+      RESULT_BACKEND: >-
+        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_COMPRESSION_BACKEND_DB:-1}
       CLP_HOME: "/opt/clp"
       CLP_LOGS_DIR: "/var/log/compression_worker"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
@@ -283,7 +288,8 @@ services:
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
-      RESULT_BACKEND: "redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}"
+      RESULT_BACKEND: >-
+        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
       CLP_HOME: "/opt/clp"
       CLP_LOGS_DIR: "/var/log/query_worker"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_WORKER_LOGGING_LEVEL:-INFO}"
@@ -352,7 +358,8 @@ services:
     volumes:
       - "${CLP_HOST_DATA_DIR:-./var/data}/streams:/var/data/streams"
       - "./var/www/webui/client/settings.json:/opt/clp/var/www/webui/client/settings.json:ro"
-      - "./var/www/webui/server/dist/server/settings.json:/opt/clp/var/www/webui/server/dist/server/settings.json:ro"
+      - "./var/www/webui/server/dist/server/settings.json\
+:/opt/clp/var/www/webui/server/dist/server/settings.json:ro"
       - "${CLP_HOST_AWS_CONFIG_DIR:-~/.aws}:/.aws:ro"
     networks:
       - "clp-network"
