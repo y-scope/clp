@@ -155,7 +155,7 @@ jobs:
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           docker_context: "components/core"
-          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}-x86_64\
             /Dockerfile"
           push_deps_image: >-
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
