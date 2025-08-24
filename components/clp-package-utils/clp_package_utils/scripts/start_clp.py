@@ -261,7 +261,6 @@ def start_compression_scheduler(
     )
 
 
-
 def start_query_scheduler(
     clp_config: CLPConfig,
 ):
