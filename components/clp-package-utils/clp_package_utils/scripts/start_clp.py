@@ -464,7 +464,6 @@ def start_garbage_collector(
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
 
-    env_dict["CLP_GC_LOGS_DIR"] = str(logs_dir)
     env_dict["CLP_GC_LOGGING_LEVEL"] = clp_config.garbage_collector.logging_level
 
 

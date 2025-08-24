@@ -364,8 +364,8 @@ services:
       CLP_LOGS_DIR: "/var/log/garbage_collector"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
-      - "${CLP_GC_LOGS_DIR}:/var/log/garbage_collector"
       - "${CLP_HOST_LOGS_DIR:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/garbage_collector:/var/log/garbage_collector"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
