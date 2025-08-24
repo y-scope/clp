@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 
-# Exit on any error
-set -e
-
-# Error on undefined variable
-set -u
+# Exit on any error, use of undefined variables, or failure within a pipeline
+set -euo pipefail
 
 # Get the installed go-task version string
 task_version_line=$(task --version 2>/dev/null | head -n1)
@@ -17,7 +14,7 @@ if [[ "${task_version_line}" != Task\ version* ]]; then
 fi
 
 # Parse the version string
-grep_pattern="v\K[0-9]+\.[0-9]+\.[0-9]+"
+grep_pattern="(?:v)?\K[0-9]+\.[0-9]+\.[0-9]+"
 task_version=$(echo "${task_version_line}" | grep --only-matching --perl-regexp "${grep_pattern}")
 task_major_version=$(echo "${task_version}" | cut -d. -f1)
 task_minor_version=$(echo "${task_version}" | cut -d. -f2)
