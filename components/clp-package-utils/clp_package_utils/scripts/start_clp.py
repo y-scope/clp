@@ -8,11 +8,9 @@ import socket
 import subprocess
 import sys
 import time
-import uuid
 from typing import Any, Dict, List, Optional
 
 from clp_py_utils.clp_config import (
-    ALL_TARGET_NAME,
     AwsAuthType,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
@@ -21,7 +19,6 @@ from clp_py_utils.clp_config import (
     CONTROLLER_TARGET_NAME,
     DB_COMPONENT_NAME,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
-    get_components_for_target,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -38,38 +35,26 @@ from clp_py_utils.clp_metadata_db_utils import (
     get_datasets_table_name,
     get_files_table_name,
 )
-from clp_py_utils.s3_utils import generate_container_auth_options
-from job_orchestration.scheduler.constants import QueueName
-from pydantic import BaseModel
 
 from clp_package_utils.general import (
     check_dependencies,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
-    CLPDockerMounts,
     CONTAINER_CLP_HOME,
     DockerMount,
-    DockerMountType,
     dump_shared_container_config,
-    generate_container_config,
     generate_docker_compose_container_config,
-    get_celery_connection_env_vars_list,
     get_clp_home,
-    get_common_env_vars_list,
-    get_credential_env_vars_list,
     is_container_exited,
     is_container_running,
-    is_retention_period_configured,
     load_config_file,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
     validate_db_config,
-    validate_log_directory,
     validate_logs_input_config,
     validate_output_storage_config,
     validate_queue_config,
     validate_redis_config,
-    validate_reducer_config,
     validate_results_cache_config,
     validate_retention_config,
     validate_webui_config,
