@@ -1,7 +1,7 @@
 import os
 import pathlib
 from enum import auto
-from typing import Literal, Optional, Set, Union
+from typing import Literal, Optional, Union
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, root_validator, validator
@@ -28,45 +28,6 @@ COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
-
-# Component groups
-GENERAL_SCHEDULING_COMPONENTS = {
-    QUEUE_COMPONENT_NAME,
-    REDIS_COMPONENT_NAME,
-}
-COMPRESSION_COMPONENTS = GENERAL_SCHEDULING_COMPONENTS | {
-    DB_COMPONENT_NAME,
-    COMPRESSION_SCHEDULER_COMPONENT_NAME,
-    COMPRESSION_WORKER_COMPONENT_NAME,
-}
-QUERY_COMPONENTS = GENERAL_SCHEDULING_COMPONENTS | {
-    DB_COMPONENT_NAME,
-    QUERY_SCHEDULER_COMPONENT_NAME,
-    QUERY_WORKER_COMPONENT_NAME,
-    REDUCER_COMPONENT_NAME,
-}
-UI_COMPONENTS = {
-    RESULTS_CACHE_COMPONENT_NAME,
-    WEBUI_COMPONENT_NAME,
-}
-STORAGE_MANAGEMENT_COMPONENTS = {GARBAGE_COLLECTOR_COMPONENT_NAME}
-ALL_COMPONENTS = (
-    COMPRESSION_COMPONENTS | QUERY_COMPONENTS | UI_COMPONENTS | STORAGE_MANAGEMENT_COMPONENTS
-)
-
-# Target names
-ALL_TARGET_NAME = ""
-CONTROLLER_TARGET_NAME = "controller"
-
-TARGET_TO_COMPONENTS = {
-    ALL_TARGET_NAME: ALL_COMPONENTS,
-    CONTROLLER_TARGET_NAME: GENERAL_SCHEDULING_COMPONENTS
-    | {
-        COMPRESSION_SCHEDULER_COMPONENT_NAME,
-        QUERY_SCHEDULER_COMPONENT_NAME,
-    }
-    | STORAGE_MANAGEMENT_COMPONENTS,
-}
 
 # Action names
 ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
@@ -929,12 +890,6 @@ class CLPConfig(BaseModel):
     def get_shared_config_file_path(self) -> pathlib.Path:
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
 
-    def get_runnable_components(self) -> Set[str]:
-        if QueryEngine.PRESTO == self.package.query_engine:
-            return COMPRESSION_COMPONENTS | UI_COMPONENTS
-        else:
-            return ALL_COMPONENTS
-
     def dump_to_primitive_dict(self):
         custom_serialized_fields = {
             "database",
@@ -978,12 +933,3 @@ class WorkerConfig(BaseModel):
         d["stream_output"] = self.stream_output.dump_to_primitive_dict()
 
         return d
-
-
-def get_components_for_target(target: str) -> Set[str]:
-    if target in TARGET_TO_COMPONENTS:
-        return TARGET_TO_COMPONENTS[target]
-    elif target in ALL_COMPONENTS:
-        return {target}
-    else:
-        return set()
