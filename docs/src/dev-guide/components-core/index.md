@@ -46,7 +46,7 @@ The task will download, build, and install (within the build directory) the foll
 | [liblzma](https://github.com/tukaani-project/xz)                      | v5.8.1         |
 | [lz4](https://github.com/lz4/lz4)                                     | v1.10.0        |
 | [mongo-cxx-driver](https://github.com/mongodb/mongo-cxx-driver)       | r3.10.2        |
-| [msgpack-cxx](https://github.com/msgpack/msgpack-c)                   | v7.0.0         |
+| [msgpack-cxx](https://github.com/msgpack/msgpack-c/tree/cpp_master)   | v7.0.0         |
 | [simdjson](https://github.com/simdjson/simdjson)                      | v3.13.0        |
 | [spdlog](https://github.com/gabime/spdlog)                            | v1.14.1        |
 | [SQLite3](https://www.sqlite.org/download.html)                       | v3.36.0        |
