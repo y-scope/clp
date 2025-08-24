@@ -28,6 +28,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   software-properties-common \
   unzip
 
+export PIPX_HOME=/opt/pipx
 export PIPX_BIN_DIR=/usr/bin
 
 # Install CMake v3.31.x as ANTLR and yaml-cpp do not yet support CMake v4+.

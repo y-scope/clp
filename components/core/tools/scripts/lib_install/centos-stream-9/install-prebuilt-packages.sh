@@ -26,6 +26,7 @@ dnf install -y \
 if ! command -v pipx; then
     python3 -m pip install pipx
 fi
+export PIPX_HOME=/opt/pipx
 export PIPX_BIN_DIR=/usr/bin
 
 # Install CMake v3.31.x as ANTLR and yaml-cpp do not yet support CMake v4+.
