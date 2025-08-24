@@ -13,9 +13,13 @@ from typing import Dict, List, Optional, Tuple
 
 import yaml
 from clp_py_utils.clp_config import (
+    CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH,
+    CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH,
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLP_DEFAULT_DATA_DIRECTORY_PATH,
     CLP_DEFAULT_LOG_DIRECTORY_PATH,
+    CLP_DEFAULT_STREAM_DIRECTORY_PATH,
+    CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH,
     CLP_SHARED_CONFIG_FILENAME,
     CLPConfig,
     DB_COMPONENT_NAME,
@@ -305,21 +309,17 @@ def generate_docker_compose_container_config(clp_config: CLPConfig) -> CLPConfig
         container_clp_config.logs_input.directory = CONTAINER_INPUT_LOGS_ROOT_DIR
 
     if StorageType.FS == clp_config.archive_output.storage.type:
-        container_clp_config.archive_output.storage.directory = (
-            pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
-        )
+        container_clp_config.archive_output.storage.directory = CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
     elif StorageType.S3 == clp_config.archive_output.storage.type:
         container_clp_config.archive_output.storage.staging_directory = (
-            CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
+            CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
         )
 
     if StorageType.FS == clp_config.stream_output.storage.type:
-        container_clp_config.stream_output.storage.directory = (
-            pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
-        )
+        container_clp_config.stream_output.storage.directory = CLP_DEFAULT_STREAM_DIRECTORY_PATH
     elif StorageType.S3 == clp_config.stream_output.storage.type:
         container_clp_config.stream_output.storage.staging_directory = (
-            CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
+            CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
         )
 
     if clp_config.aws_config_directory is not None:
