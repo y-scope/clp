@@ -41,5 +41,6 @@ dnf install --assumeyes "$task_pkg_path"
 rm "$task_pkg_path"
 
 # Downgrade to CMake v3 to work around https://github.com/y-scope/clp/issues/795
-pipx uninstall cmake
-pipx install cmake~=3.31
+if ! command -v cmake ; then
+    pipx install cmake~=3.31
+fi
