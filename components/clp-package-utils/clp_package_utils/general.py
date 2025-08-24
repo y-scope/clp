@@ -14,9 +14,11 @@ from typing import Dict, List, Optional, Tuple
 import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
+    CLP_DEFAULT_DATA_DIRECTORY_PATH,
     CLP_SHARED_CONFIG_FILENAME,
     CLPConfig,
     DB_COMPONENT_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
     QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
@@ -152,7 +154,10 @@ def check_dependencies():
         raise EnvironmentError("docker cannot run without superuser privileges (sudo).")
     try:
         subprocess.run(
-            ["docker", "compose", "version"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
+            ["docker", "compose", "version"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            check=True,
         )
     except subprocess.CalledProcessError:
         raise EnvironmentError("docker-compose is not installed")
@@ -314,6 +319,55 @@ def generate_container_config(
             container_clp_config.aws_config_directory,
         )
     return container_clp_config, docker_mounts
+
+
+def generate_docker_compose_container_config(clp_config: CLPConfig) -> CLPConfig:
+    """
+    Copies the given config and corrects mount paths and hosts for Docker Compose.
+
+    :param clp_config:
+    :return: The container config and the mounts.
+    """
+    container_clp_config = clp_config.copy(deep=True)
+
+    # FIXME: consider removing credentials_file_path
+
+    # Set container paths
+    container_clp_config.data_directory = pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH
+    container_clp_config.logs_directory = pathlib.Path("/") / "var" / "log"
+    if StorageType.FS == clp_config.logs_input.type:
+        container_clp_config.logs_input.directory = CONTAINER_INPUT_LOGS_ROOT_DIR
+
+    if StorageType.FS == clp_config.archive_output.storage.type:
+        container_clp_config.archive_output.storage.directory = (
+            pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
+        )
+    elif StorageType.S3 == clp_config.archive_output.storage.type:
+        container_clp_config.archive_output.storage.staging_directory = (
+            CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
+        )
+
+    if StorageType.FS == clp_config.stream_output.storage.type:
+        container_clp_config.stream_output.storage.directory = (
+            pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
+        )
+    elif StorageType.S3 == clp_config.stream_output.storage.type:
+        container_clp_config.stream_output.storage.staging_directory = (
+            CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
+        )
+
+    if clp_config.aws_config_directory is not None:
+        container_clp_config.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
+
+    # Set container services' hosts
+    container_clp_config.database.host = DB_COMPONENT_NAME
+    container_clp_config.queue.host = QUEUE_COMPONENT_NAME
+    container_clp_config.redis.host = REDIS_COMPONENT_NAME
+    container_clp_config.results_cache.host = RESULTS_CACHE_COMPONENT_NAME
+    container_clp_config.query_scheduler.host = QUERY_SCHEDULER_COMPONENT_NAME
+    container_clp_config.reducer.host = REDUCER_COMPONENT_NAME
+
+    return container_clp_config
 
 
 def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:

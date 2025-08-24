@@ -1,13 +1,14 @@
+# FIXME: avoid hardcoding data / log paths
 secrets:
   CLP_DB_PASS_FILE:
     environment: "CLP_DB_PASS"
 services:
   db:
-    image: ${CLP_DB_IMAGE:-mysql:8.0.23}
+    image: "${CLP_DB_IMAGE:-mysql:8.0.23}"
     container_name: "database"
     user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
     secrets:
-      - CLP_DB_PASS_FILE
+      - "CLP_DB_PASS_FILE"
     environment:
       MYSQL_ROOT_PASSWORD_FILE: "/run/secrets/CLP_DB_PASS_FILE"
       MYSQL_USER: "${CLP_DB_USER}"
@@ -15,8 +16,8 @@ services:
       MYSQL_DATABASE: "${CLP_DB_NAME}"
     volumes:
       - "./etc/mysql/conf.d/logging.cnf:/etc/mysql/conf.d/logging.cnf:ro"
-      - "./var/data/database:/var/lib/mysql"
-      - "./var/log/database:/var/log/mysql"
+      - "${CLP_HOST_DATA_DIR:-./var/data}/database:/var/lib/mysql"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/database:/var/log/mysql"
     networks:
       - "clp-network"
     ports:
@@ -31,7 +32,7 @@ services:
         "--password=${CLP_DB_PASS}"
       ]
       start_period: "10s"
-      start_interval: "2s"
+      start_interval: "1s"
       interval: "30s"
       timeout: "10s"
       retries: 3
@@ -52,7 +53,7 @@ services:
       "--storage-engine", "${CLP_STORAGE_ENGINE}"
     ]
     volumes:
-      - "./var/log/.clp-config.yml:/etc/clp-config.yml"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/.clp-config.yml:/etc/clp-config.yml"
     networks:
       - "clp-network"
     depends_on:
@@ -68,7 +69,7 @@ services:
       RABBITMQ_DEFAULT_USER: "${CLP_QUEUE_USER}"
       RABBITMQ_DEFAULT_PASS: "${CLP_QUEUE_PASS}"
     volumes:
-      - "./var/log/queue:/var/log/rabbitmq"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/queue:/var/log/rabbitmq"
     networks:
       - "clp-network"
     ports:
@@ -79,7 +80,7 @@ services:
         "rabbitmq-diagnostics", "check_running"
       ]
       start_period: "10s"
-      start_interval: "2s"
+      start_interval: "1s"
       interval: "30s"
       timeout: "10s"
       retries: 3
@@ -95,8 +96,8 @@ services:
     ]
     volumes:
       - "./etc/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro"
-      - "./var/log/redis:/var/log/redis"
-      - "./var/data/redis:/data"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/redis:/var/log/redis"
+      - "${CLP_HOST_DATA_DIR:-./var/data}/redis:/data"
     networks:
       - "clp-network"
     ports:
@@ -111,9 +112,9 @@ services:
         "PING"
       ]
       start_period: "10s"
-      start_interval: "2s"
-      interval: 30s
-      timeout: 10s
+      start_interval: "1s"
+      interval: "30s"
+      timeout: "10s"
       retries: 3
 
   results-cache:
@@ -126,18 +127,18 @@ services:
     ]
     volumes:
       - "./etc/mongo:/etc/mongo:ro"
-      - "./var/data/results_cache:/data/db"
-      - "./var/log/results_cache:/var/log/mongodb"
+      - "${CLP_HOST_DATA_DIR:-./var/data}/results_cache:/data/db"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/results_cache:/var/log/mongodb"
     networks:
       - "clp-network"
     ports:
       - "${CLP_RESULTS_CACHE_HOST:-127.0.0.1}:${CLP_RESULTS_CACHE_PORT:-6379}:27017"
     healthcheck:
-      test: echo 'db.runCommand("ping").ok' | mongosh 127.0.0.1:${CLP_RESULTS_CACHE_PORT:-27017}/test --quiet
+      test: "echo 'db.runCommand(\"ping\").ok' | mongosh 127.0.0.1:${CLP_RESULTS_CACHE_PORT:-27017}/test --quiet"
       start_period: "10s"
-      start_interval: "2s"
-      interval: 30s
-      timeout: 10s
+      start_interval: "1s"
+      interval: "30s"
+      timeout: "10s"
       retries: 3
 
   results-cache-indices-creator:
@@ -172,10 +173,11 @@ services:
       CLP_DB_USER: "${CLP_DB_USER}"
       CLP_DB_PASS: "${CLP_DB_PASS}"
     volumes:
-      - "./var/log/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "./var/log:/var/log"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}:/var/log"
       # FIXME: why not call this /mnt/input?
       - "/:/mnt/logs:ro"
+      - "${CLP_HOST_AWS_CONFIG_DIR:-~/.aws}:/.aws:ro"
     networks:
       - "clp-network"
     depends_on:
@@ -191,12 +193,6 @@ services:
       "-m", "job_orchestration.scheduler.compress.compression_scheduler",
       "--config", "/etc/clp-config.yml"
     ]
-    healthcheck:
-      # FIXME
-      test: [
-        "CMD",
-        "true"
-      ]
 
   query-scheduler:
     image: "clp-package-x86-ubuntu-jammy:dev"
@@ -211,8 +207,8 @@ services:
       CLP_DB_USER: "${CLP_DB_USER}"
       CLP_DB_PASS: "${CLP_DB_PASS}"
     volumes:
-      - "./var/log/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "./var/log:/var/log"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}:/var/log"
     networks:
       - "clp-network"
     depends_on:
@@ -229,11 +225,18 @@ services:
       "--config", "/etc/clp-config.yml"
     ]
     healthcheck:
-      # FIXME
+      # FIXME: need to suppressing warnings in the schduler for reading 0 out of 8 expected bytes
       test: [
         "CMD",
-        "true"
+        "bash",
+        "-c",
+        "< /dev/tcp/query_scheduler/7000"
       ]
+      start_period: "10s"
+      start_interval: "1s"
+      interval: "30s"
+      timeout: "10s"
+      retries: 3
 
   compression-worker:
     image: "clp-package-x86-ubuntu-jammy:dev"
@@ -249,19 +252,17 @@ services:
       CLP_WORKER_LOG_PATH: "/var/log/compression_worker/worker.log"
       CLP_CONFIG_PATH: "/etc/clp-config.yml"
     volumes:
-      - "./var/log/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "./var/log/compression_worker:/var/log/compression_worker"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/compression_worker:/var/log/compression_worker"
       # FIXME: why dump "var/data/compression-job-4-task-4-db-config.yml"?
-      - "./var/data:/var/data"
-      - "./var/data/archives:/var/data/archives"
+      - "${CLP_HOST_DATA_DIR:-./var/data}:/var/data"
+      - "${CLP_HOST_DATA_DIR:-./var/data}/archives:/var/data/archives"
       # FIXME: why not call this /mnt/input?
       - "/:/mnt/logs:ro"
+      - "${CLP_HOST_AWS_CONFIG_DIR:-~/.aws}:/.aws:ro"
+      - "${CLP_HOST_ARCHIVE_STAGING_DIR:-./var/data/staged-archives}:/var/data/staged-archives"
     networks:
       - "clp-network"
-    depends_on:
-      compression-scheduler:
-        condition: "service_healthy"
-    # FIXME: add healthcheck
     command: [
       "python3",
       "-u",
@@ -289,15 +290,14 @@ services:
       CLP_WORKER_LOG_PATH: "/var/log/query_worker/worker.log"
       CLP_CONFIG_PATH: "/etc/clp-config.yml"
     volumes:
-      - "./var/log/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "./var/log/query_worker:/var/log/query_worker"
-      - "./var/data/archives:/var/data/archives"
-      - "./var/data/streams:/var/data/streams"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/query_worker:/var/log/query_worker"
+      - "${CLP_HOST_DATA_DIR:-./var/data}/archives:/var/data/archives"
+      - "${CLP_HOST_DATA_DIR:-./var/data}/streams:/var/data/streams"
+      - "${CLP_HOST_AWS_CONFIG_DIR:-~/.aws}:/.aws:ro"
+      - "${CLP_HOST_STREAM_STAGING_DIR:-./var/data/staged-streams}:/var/data/staged-streams"
     networks:
       - "clp-network"
-    depends_on:
-      query-scheduler:
-        condition: "service_healthy"
     command: [
       "python3",
       "-u",
@@ -321,8 +321,8 @@ services:
       CLP_LOGS_DIR: "/var/log/reducer"
       CLP_LOGGING_LEVEL: "${CLP_REDUCER_LOGGING_LEVEL:-INFO}"
     volumes:
-      - "./var/log/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "./var/log/reducer:/var/log/reducer"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/reducer:/var/log/reducer"
     networks:
       - "clp-network"
     depends_on:
@@ -350,11 +350,10 @@ services:
       CLP_DB_PASS: "${CLP_DB_PASS}"
       NODE_ENV: "production"
     volumes:
-      - "./var/data/streams:/var/data/streams"
-      - type: "bind"
-        source: "./var/www/webui/server/dist/server/settings.json"
-        target: "/opt/clp/var/www/webui/server/dist/server/settings.json"
-        read_only: true
+      - "${CLP_HOST_DATA_DIR:-./var/data}/streams:/var/data/streams"
+      - "./var/www/webui/client/settings.json:/opt/clp/var/www/webui/client/settings.json:ro"
+      - "./var/www/webui/server/dist/server/settings.json:/opt/clp/var/www/webui/server/dist/server/settings.json:ro"
+      - "${CLP_HOST_AWS_CONFIG_DIR:-~/.aws}:/.aws:ro"
     networks:
       - "clp-network"
     ports:
@@ -368,6 +367,13 @@ services:
         condition: "service_completed_successfully"
       results-cache-indices-creator:
         condition: "service_completed_successfully"
+    healthcheck:
+      test: [
+        "CMD",
+        "bash",
+        "-c",
+        "< /dev/tcp/webui/4000"
+      ]
 
   garbage-collector:
     image: "clp-package-x86-ubuntu-jammy:dev"
@@ -381,7 +387,7 @@ services:
       CLP_DB_USER: "${CLP_DB_USER}"
       CLP_DB_PASS: "${CLP_DB_PASS}"
     volumes:
-      - "./var/log/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "${CLP_HOST_LOGS_DIR:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "${CLP_GC_LOGS_DIR}:/var/log/garbage_collector"
     networks:
       - "clp-network"
@@ -400,4 +406,4 @@ services:
 
 networks:
   clp-network:
-    driver: bridge
+    driver: "bridge"

@@ -793,7 +793,7 @@ class CLPConfig(BaseModel):
     database: Database = Database()
     queue: Queue = Queue()
     redis: Redis = Redis()
-    reducer: Reducer() = Reducer()
+    reducer: Reducer = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
     query_scheduler: QueryScheduler = QueryScheduler()
@@ -932,15 +932,15 @@ class CLPConfig(BaseModel):
             return ALL_COMPONENTS
 
     def dump_to_primitive_dict(self):
-        custom_serialized_fields = (
+        custom_serialized_fields = {
             "database",
             "queue",
             "redis",
             "logs_input",
             "archive_output",
             "stream_output",
-        )
-        d = self.dict(exclude=set(custom_serialized_fields))
+        }
+        d = self.dict(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
             d[key] = getattr(self, key).dump_to_primitive_dict()
 

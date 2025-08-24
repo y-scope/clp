@@ -51,6 +51,7 @@ from clp_package_utils.general import (
     DockerMountType,
     dump_shared_container_config,
     generate_container_config,
+    generate_docker_compose_container_config,
     get_celery_connection_env_vars_list,
     get_clp_home,
     get_common_env_vars_list,
@@ -76,6 +77,7 @@ from clp_package_utils.general import (
 
 logger = logging.getLogger(__file__)
 env_dict = {}
+
 
 def get_ip_from_hostname(hostname: str) -> str:
     return socket.gethostbyname(hostname)
@@ -231,7 +233,8 @@ def start_redis(clp_config: CLPConfig, conf_dir: pathlib.Path):
     env_dict["CLP_REDIS_PASS"] = clp_config.redis.password
     env_dict["CLP_REDIS_QUERY_BACKEND_DB"] = str(clp_config.redis.query_backend_database)
     env_dict["CLP_REDIS_COMPRESSION_BACKEND_DB"] = str(
-        clp_config.redis.compression_backend_database)
+        clp_config.redis.compression_backend_database
+    )
 
 
 def start_results_cache(clp_config: CLPConfig, conf_dir: pathlib.Path):
@@ -253,12 +256,13 @@ def start_results_cache(clp_config: CLPConfig, conf_dir: pathlib.Path):
     env_dict["CLP_RESULTS_CACHE_HOST"] = get_ip_from_hostname(clp_config.results_cache.host)
     env_dict["CLP_RESULTS_CACHE_PORT"] = str(clp_config.results_cache.port)
     env_dict["CLP_RESULTS_CACHE_DB_NAME"] = clp_config.results_cache.db_name
-    env_dict[
-        "CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME"] = clp_config.results_cache.stream_collection_name
+    env_dict["CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME"] = (
+        clp_config.results_cache.stream_collection_name
+    )
 
 
 def start_compression_scheduler(
-        clp_config: CLPConfig,
+    clp_config: CLPConfig,
 ):
     component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
@@ -267,14 +271,15 @@ def start_compression_scheduler(
     logs_dir.mkdir(parents=True, exist_ok=True)
 
     env_dict["CLP_HOST_COMPRESSION_SCHEDULER_LOGS_DIR"] = str(logs_dir)
-    env_dict[
-        "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL"] = clp_config.compression_scheduler.logging_level
+    env_dict["CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL"] = (
+        clp_config.compression_scheduler.logging_level
+    )
 
     # FIXME: handle S3
 
 
 def start_query_scheduler(
-        clp_config: CLPConfig,
+    clp_config: CLPConfig,
 ):
     component_name = QUERY_SCHEDULER_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
@@ -289,8 +294,8 @@ def start_query_scheduler(
 
 
 def start_compression_worker(
-        clp_config: CLPConfig,
-        num_cpus: int,
+    clp_config: CLPConfig,
+    num_cpus: int,
 ):
     component_name = COMPRESSION_WORKER_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
@@ -310,8 +315,8 @@ def start_compression_worker(
 
 
 def start_query_worker(
-        clp_config: CLPConfig,
-        num_cpus: int,
+    clp_config: CLPConfig,
+    num_cpus: int,
 ):
     component_name = QUERY_WORKER_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
@@ -331,8 +336,8 @@ def start_query_worker(
 
 
 def start_reducer(
-        clp_config: CLPConfig,
-        num_workers: int,
+    clp_config: CLPConfig,
+    num_workers: int,
 ):
     component_name = REDUCER_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
@@ -347,9 +352,9 @@ def start_reducer(
 
 
 def update_settings_object(
-        parent_key_prefix: str,
-        settings: Dict[str, Any],
-        updates: Dict[str, Any],
+    parent_key_prefix: str,
+    settings: Dict[str, Any],
+    updates: Dict[str, Any],
 ):
     """
     Recursively updates the given settings object with the values from `updates`.
@@ -384,18 +389,18 @@ def read_and_update_settings_json(settings_file_path: pathlib.Path, updates: Dic
 
 
 def start_webui(
-        clp_config: CLPConfig,
-        container_clp_config: CLPConfig,
+    clp_config: CLPConfig,
+    container_clp_config: CLPConfig,
 ):
     component_name = WEBUI_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
 
     container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
     client_settings_json_path = (
-            get_clp_home() / "var" / "www" / "webui" / "client" / "settings.json"
+        get_clp_home() / "var" / "www" / "webui" / "client" / "settings.json"
     )
     server_settings_json_path = (
-            get_clp_home() / "var" / "www" / "webui" / "server" / "dist" / "server" / "settings.json"
+        get_clp_home() / "var" / "www" / "webui" / "server" / "dist" / "server" / "settings.json"
     )
 
     validate_webui_config(clp_config, client_settings_json_path, server_settings_json_path)
@@ -472,6 +477,7 @@ def start_webui(
     env_dict["CLP_WEBUI_PORT"] = clp_config.webui.port
 
     # FIXME: Handle S3
+
 
 def start_garbage_collector(
     clp_config: CLPConfig,
@@ -560,19 +566,11 @@ def main(argv):
     # FIXME: handle this
     num_workers = multiprocessing.cpu_count() // 2
 
-    container_clp_config, mounts = generate_container_config(clp_config, clp_home)
+    container_clp_config = generate_docker_compose_container_config(clp_config)
 
     # Create necessary directories
     clp_config.data_directory.mkdir(parents=True, exist_ok=True)
     clp_config.logs_directory.mkdir(parents=True, exist_ok=True)
-
-    # Set container services' hosts in container config
-    container_clp_config.database.host = DB_COMPONENT_NAME
-    container_clp_config.queue.host = QUEUE_COMPONENT_NAME
-    container_clp_config.redis.host = REDIS_COMPONENT_NAME
-    container_clp_config.results_cache.host = RESULTS_CACHE_COMPONENT_NAME
-    container_clp_config.query_scheduler.host = QUERY_SCHEDULER_COMPONENT_NAME
-    container_clp_config.reducer.host = REDUCER_COMPONENT_NAME
 
     dump_shared_container_config(container_clp_config, clp_config)
 
@@ -585,20 +583,33 @@ def main(argv):
     env_dict["CLP_HOST_ARCHIVE_OUTPUT_DIR"] = str(clp_config.archive_output.get_directory())
     env_dict["CLP_HOST_STREAM_OUTPUT_DIR"] = str(clp_config.stream_output.get_directory())
 
+    if clp_config.aws_config_directory is not None:
+        env_dict["CLP_HOST_AWS_CONFIG_DIR"] = str(clp_config.aws_config_directory)
+    if StorageType.S3 == clp_config.archive_output.storage.type:
+        clp_config.archive_output.storage.staging_directory.mkdir(parents=True, exist_ok=True)
+        env_dict["CLP_HOST_ARCHIVE_STAGING_DIR"] = str(
+            clp_config.archive_output.storage.staging_directory
+        )
+    if StorageType.S3 == clp_config.stream_output.storage.type:
+        clp_config.stream_output.storage.staging_directory.mkdir(parents=True, exist_ok=True)
+        env_dict["CLP_HOST_STREAM_STAGING_DIR"] = str(
+            clp_config.stream_output.storage.staging_directory
+        )
+
     try:
         conf_dir = clp_home / "etc"
 
         # Start components
-        start_db( clp_config, conf_dir)
-        start_queue( clp_config)
-        start_redis( clp_config, conf_dir)
-        start_results_cache( clp_config, conf_dir)
+        start_db(clp_config, conf_dir)
+        start_queue(clp_config)
+        start_redis(clp_config, conf_dir)
+        start_results_cache(clp_config, conf_dir)
         start_compression_scheduler(clp_config)
         start_query_scheduler(clp_config)
         start_compression_worker(clp_config, num_workers)
-        start_query_worker( clp_config, num_workers)
-        start_reducer( clp_config, num_workers)
-        start_webui( clp_config, container_clp_config)
+        start_query_worker(clp_config, num_workers)
+        start_reducer(clp_config, num_workers)
+        start_webui(clp_config, container_clp_config)
         start_garbage_collector(clp_config)
 
         with open(f"{clp_home}/.env", "w") as env_file:
