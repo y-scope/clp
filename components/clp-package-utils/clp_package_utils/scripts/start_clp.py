@@ -260,7 +260,6 @@ def start_compression_scheduler(
         clp_config.compression_scheduler.logging_level
     )
 
-    # FIXME: handle S3
 
 
 def start_query_scheduler(
@@ -274,8 +273,6 @@ def start_query_scheduler(
 
     env_dict["CLP_HOST_QUERY_SCHEDULER_LOGS_DIR"] = str(logs_dir)
     env_dict["CLP_QUERY_SCHEDULER_LOGGING_LEVEL"] = clp_config.query_scheduler.logging_level
-
-    # FIXME: handle S3
 
 
 def start_compression_worker(
@@ -296,8 +293,6 @@ def start_compression_worker(
     clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
     clp_config.stream_output.get_directory().mkdir(parents=True, exist_ok=True)
 
-    # FIXME: handle S3
-
 
 def start_query_worker(
     clp_config: CLPConfig,
@@ -316,8 +311,6 @@ def start_query_worker(
     # Create necessary directories
     clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
     clp_config.stream_output.get_directory().mkdir(parents=True, exist_ok=True)
-
-    # FIXME: handle S3
 
 
 def start_reducer(
@@ -461,8 +454,6 @@ def start_webui(
     env_dict["CLP_WEBUI_HOST"] = get_ip_from_hostname(clp_config.webui.host)
     env_dict["CLP_WEBUI_PORT"] = clp_config.webui.port
 
-    # FIXME: Handle S3
-
 
 def start_garbage_collector(
     clp_config: CLPConfig,
@@ -484,7 +475,6 @@ def add_num_workers_argument(parser):
         default=multiprocessing.cpu_count(),
         help="Number of workers to start",
     )
-    # FIXME: handle S3
 
 
 def main(argv):
@@ -548,7 +538,7 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
-    # FIXME: handle this
+    # TODO: Rely on Docker Compose to spawn multiple workers
     num_workers = multiprocessing.cpu_count() // 2
 
     container_clp_config = generate_docker_compose_container_config(clp_config)
