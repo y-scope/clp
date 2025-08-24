@@ -1,9 +1,12 @@
-# FIXME: avoid hardcoding data / log paths
+x-service-defaults: &service_defaults
+  stop_grace_period: "3s"
+
 secrets:
   CLP_DB_PASS_FILE:
     environment: "CLP_DB_PASS"
 services:
   db:
+    <<: *service_defaults
     image: "${CLP_DB_IMAGE:-mysql:8.0.23}"
     container_name: "database"
     user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
@@ -38,6 +41,7 @@ services:
       retries: 3
 
   db-table-creator:
+    <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "db_table_creator"
     user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
@@ -61,6 +65,7 @@ services:
         condition: "service_healthy"
 
   queue:
+    <<: *service_defaults
     image: "rabbitmq:3.9.8"
     container_name: "queue"
     user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
@@ -86,6 +91,7 @@ services:
       retries: 3
 
   redis:
+    <<: *service_defaults
     image: "redis:7.2.4"
     container_name: "redis"
     user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
@@ -118,6 +124,7 @@ services:
       retries: 3
 
   results-cache:
+    <<: *service_defaults
     image: "mongo:7.0.1"
     container_name: "results_cache"
     user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
@@ -144,6 +151,7 @@ services:
       retries: 3
 
   results-cache-indices-creator:
+    <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "results_cache_indices_creator"
     user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
@@ -163,6 +171,7 @@ services:
         condition: "service_healthy"
 
   compression-scheduler:
+    <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "compression_scheduler"
     user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
@@ -198,6 +207,7 @@ services:
     ]
 
   query-scheduler:
+    <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "query_scheduler"
     user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
@@ -243,6 +253,7 @@ services:
       retries: 3
 
   compression-worker:
+    <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "compression_worker"
     user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
@@ -282,6 +293,7 @@ services:
     ]
 
   query-worker:
+    <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "query_worker"
     user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
@@ -318,6 +330,7 @@ services:
     ]
 
   reducer:
+    <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "reducer"
     user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
@@ -345,6 +358,7 @@ services:
     ]
 
   webui:
+    <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "webui"
     user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"
@@ -383,6 +397,7 @@ services:
       ]
 
   garbage-collector:
+    <<: *service_defaults
     image: "clp-package-x86-ubuntu-jammy:dev"
     container_name: "garbage_collector"
     user: "${CLP_USER_ID:-1000}:${CLP_GROUP_ID:-1000}"

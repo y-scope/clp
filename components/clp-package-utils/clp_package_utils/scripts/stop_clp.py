@@ -120,92 +120,16 @@ def main(argv):
         logger.exception("Failed to load config.")
         return -1
 
+    logger.info("Stopping all CLP containers using Docker Compose...")
     try:
-        # Read instance ID from file
-        logs_dir = clp_config.logs_directory
-        instance_id_file_path = logs_dir / "instance-id"
-        if not (logs_dir.exists() and logs_dir.is_dir() and instance_id_file_path.exists()):
-            # No instance ID file, so nothing to do
-            return 0
-        with open(instance_id_file_path, "r") as f:
-            instance_id = f.readline()
-
-        already_exited_containers = []
-        force = parsed_args.force
-        if target in (ALL_TARGET_NAME, GARBAGE_COLLECTOR_COMPONENT_NAME):
-            container_name = f"clp-{GARBAGE_COLLECTOR_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, already_exited_containers, force)
-        if target in (ALL_TARGET_NAME, WEBUI_COMPONENT_NAME):
-            container_name = f"clp-{WEBUI_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, already_exited_containers, force)
-        if target in (ALL_TARGET_NAME, REDUCER_COMPONENT_NAME):
-            container_name = f"clp-{REDUCER_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, already_exited_containers, force)
-
-            container_config_file_path = logs_dir / f"{container_name}.yml"
-            if container_config_file_path.exists():
-                container_config_file_path.unlink()
-        if target in (ALL_TARGET_NAME, QUERY_WORKER_COMPONENT_NAME):
-            container_name = f"clp-{QUERY_WORKER_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, already_exited_containers, force)
-        if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
-            container_name = f"clp-{COMPRESSION_WORKER_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, already_exited_containers, force)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUERY_SCHEDULER_COMPONENT_NAME):
-            container_name = f"clp-{QUERY_SCHEDULER_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, already_exited_containers, force)
-
-            container_config_file_path = logs_dir / f"{container_name}.yml"
-            if container_config_file_path.exists():
-                container_config_file_path.unlink()
-        if target in (
-            ALL_TARGET_NAME,
-            CONTROLLER_TARGET_NAME,
-            COMPRESSION_SCHEDULER_COMPONENT_NAME,
-        ):
-            container_name = f"clp-{COMPRESSION_SCHEDULER_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, already_exited_containers, force)
-
-            container_config_file_path = logs_dir / f"{container_name}.yml"
-            if container_config_file_path.exists():
-                container_config_file_path.unlink()
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, REDIS_COMPONENT_NAME):
-            container_name = f"clp-{REDIS_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, already_exited_containers, force)
-
-            redis_config_file_path = logs_dir / f"{container_name}.conf"
-            if redis_config_file_path.exists():
-                redis_config_file_path.unlink()
-        if target in (ALL_TARGET_NAME, RESULTS_CACHE_COMPONENT_NAME):
-            container_name = f"clp-{RESULTS_CACHE_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, already_exited_containers, force)
-        if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUEUE_COMPONENT_NAME):
-            container_name = f"clp-{QUEUE_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, already_exited_containers, force)
-
-            queue_config_file_path = logs_dir / f"{container_name}.conf"
-            if queue_config_file_path.exists():
-                queue_config_file_path.unlink()
-        if target in (ALL_TARGET_NAME, DB_COMPONENT_NAME):
-            container_name = f"clp-{DB_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, already_exited_containers, force)
-
-        if already_exited_containers:
-            container_list = " ".join(already_exited_containers)
-            logger.warning(
-                f"The following containers have already exited and were not removed:"
-                f" {container_list}"
-            )
-            logger.warning(f"Run with --force to remove them")
-        elif target in ALL_TARGET_NAME:
-            # NOTE: We can only remove the instance ID file if all containers have been stopped.
-            # Currently, we only remove the instance file when all containers are stopped at once.
-            # If a single container is stopped, it's expensive to check if the others are running,
-            # so instead we don't remove the instance file. In the worst case, a user will have to
-            # remove it manually.
-            instance_id_file_path.unlink()
-    except:
-        logger.exception("Failed to stop CLP.")
+        subprocess.run(
+            ["docker", "compose", "down"],
+            stderr=subprocess.STDOUT,
+            check=True,
+        )
+        logger.info("All CLP containers stopped.")
+    except subprocess.CalledProcessError:
+        logger.exception("Failed to stop CLP containers using Docker Compose.")
         return -1
 
     return 0
