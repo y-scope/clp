@@ -15,6 +15,7 @@ import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLP_DEFAULT_DATA_DIRECTORY_PATH,
+    CLP_DEFAULT_LOG_DIRECTORY_PATH,
     CLP_SHARED_CONFIG_FILENAME,
     CLPConfig,
     DB_COMPONENT_NAME,
@@ -297,11 +298,9 @@ def generate_docker_compose_container_config(clp_config: CLPConfig) -> CLPConfig
     """
     container_clp_config = clp_config.copy(deep=True)
 
-    # FIXME: consider removing credentials_file_path
-
     # Set container paths
     container_clp_config.data_directory = pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH
-    container_clp_config.logs_directory = pathlib.Path("/") / "var" / "log"
+    container_clp_config.logs_directory = pathlib.Path("/") / CLP_DEFAULT_LOG_DIRECTORY_PATH
     if StorageType.FS == clp_config.logs_input.type:
         container_clp_config.logs_input.directory = CONTAINER_INPUT_LOGS_ROOT_DIR
 

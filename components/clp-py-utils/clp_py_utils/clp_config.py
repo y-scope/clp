@@ -80,10 +80,10 @@ OS_RELEASE_FILE_PATH = pathlib.Path("etc") / "os-release"
 
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
 CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
+CLP_DEFAULT_LOG_DIRECTORY_PATH = pathlib.Path("var") / "log"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
 CLP_SHARED_CONFIG_FILENAME = ".clp-config.yml"
-
 
 # Environment variable names
 CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
@@ -805,8 +805,8 @@ class CLPConfig(BaseModel):
 
     archive_output: ArchiveOutput = ArchiveOutput()
     stream_output: StreamOutput = StreamOutput()
-    data_directory: pathlib.Path = pathlib.Path("var") / "data"
-    logs_directory: pathlib.Path = pathlib.Path("var") / "log"
+    data_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH
+    logs_directory: pathlib.Path = CLP_DEFAULT_LOG_DIRECTORY_PATH
     aws_config_directory: Optional[pathlib.Path] = None
 
     _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
