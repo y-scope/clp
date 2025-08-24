@@ -332,7 +332,8 @@ services:
       - "${CLP_HOST_AWS_CONFIG_DIR:-~/.aws}:/.aws:ro"
       - "${CLP_HOST_DATA_DIR:-./var/data}/streams:/var/data/streams"
       - "./var/www/webui/client/settings.json:/opt/clp/var/www/webui/client/settings.json:ro"
-      - "./var/www/webui/server/dist/server/settings.json:/opt/clp/var/www/webui/server/dist/server/settings.json:ro"
+      - "./var/www/webui/server/dist/server/settings.json\
+:/opt/clp/var/www/webui/server/dist/server/settings.json:ro"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
