@@ -559,6 +559,8 @@ def main(argv):
 
     dump_shared_container_config(container_clp_config, clp_config)
 
+    env_dict["CLP_PACKAGE_CONTAINER"] = "clp-package-x86-ubuntu-jammy:dev"
+
     env_dict["CLP_USER_ID"] = os.getuid()
     env_dict["CLP_GROUP_ID"] = os.getgid()
     env_dict["CLP_STORAGE_ENGINE"] = clp_config.package.storage_engine

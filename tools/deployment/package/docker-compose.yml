@@ -49,7 +49,7 @@ services:
 
   db-table-creator:
     <<: *service_defaults
-    image: "clp-package-x86-ubuntu-jammy:dev"
+    image: "${CLP_PACKAGE_CONTAINER}"
     container_name: "db_table_creator"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -135,7 +135,7 @@ services:
 
   results-cache-indices-creator:
     <<: *service_defaults
-    image: "clp-package-x86-ubuntu-jammy:dev"
+    image: "${CLP_PACKAGE_CONTAINER}"
     container_name: "results_cache_indices_creator"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -152,7 +152,7 @@ services:
 
   compression-scheduler:
     <<: *service_defaults
-    image: "clp-package-x86-ubuntu-jammy:dev"
+    image: "${CLP_PACKAGE_CONTAINER}"
     container_name: "compression_scheduler"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -185,7 +185,7 @@ services:
 
   query-scheduler:
     <<: *service_defaults
-    image: "clp-package-x86-ubuntu-jammy:dev"
+    image: "${CLP_PACKAGE_CONTAINER}"
     container_name: "query_scheduler"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -224,7 +224,7 @@ services:
 
   compression-worker:
     <<: *service_defaults
-    image: "clp-package-x86-ubuntu-jammy:dev"
+    image: "${CLP_PACKAGE_CONTAINER}"
     container_name: "compression_worker"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -261,7 +261,7 @@ services:
 
   query-worker:
     <<: *service_defaults
-    image: "clp-package-x86-ubuntu-jammy:dev"
+    image: "${CLP_PACKAGE_CONTAINER}"
     container_name: "query_worker"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -295,7 +295,7 @@ services:
 
   reducer:
     <<: *service_defaults
-    image: "clp-package-x86-ubuntu-jammy:dev"
+    image: "${CLP_PACKAGE_CONTAINER}"
     container_name: "reducer"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -320,7 +320,7 @@ services:
 
   webui:
     <<: *service_defaults
-    image: "clp-package-x86-ubuntu-jammy:dev"
+    image: "${CLP_PACKAGE_CONTAINER}"
     container_name: "webui"
     environment:
       NODE_PATH: "/opt/clp/var/www/webui/server/node_modules"
@@ -357,7 +357,7 @@ services:
 
   garbage-collector:
     <<: *service_defaults
-    image: "clp-package-x86-ubuntu-jammy:dev"
+    image: "${CLP_PACKAGE_CONTAINER}"
     container_name: "garbage_collector"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
