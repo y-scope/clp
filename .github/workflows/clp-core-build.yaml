@@ -76,6 +76,18 @@ jobs:
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-centos-stream-9/**"
               - "components/core/tools/scripts/lib_install/centos-stream-9/**"
+            manylinux_2_28_image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-core-build.yaml"
+              - "components/core/tools/scripts/lib_install/*.sh"
+              - "components/core/tools/docker-images/clp-env-base-manylinux_2_28-x86_64/**"
+              - "components/core/tools/scripts/lib_install/manylinux_2_28/**"
+            musllinux_1_2_image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-core-build.yaml"
+              - "components/core/tools/scripts/lib_install/*.sh"
+              - "components/core/tools/docker-images/clp-env-base-musllinux_1_2-x86_64/**"
+              - "components/core/tools/scripts/lib_install/musllinux_1_2/**"
             ubuntu_jammy_image:
               - ".github/actions/**"
               - ".github/workflows/clp-core-build.yaml"
@@ -112,6 +124,32 @@ jobs:
       - uses: "./.github/actions/clp-core-build-containers"
         env:
           OS_NAME: "centos-stream-9"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+            /Dockerfile"
+          push_deps_image: >-
+            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          token: "${{secrets.GITHUB_TOKEN}}"
+
+  manylinux-2-28-deps-image:
+    name: "manylinux-2-28-deps-image"
+    if: "needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'true'"
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-24.04"
+    steps:
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "manylinux_2_28"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           docker_context: "components/core"
