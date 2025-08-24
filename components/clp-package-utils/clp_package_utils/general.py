@@ -135,65 +135,32 @@ def generate_container_name(job_type: str) -> str:
     return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
 
 
-def check_dependencies():
+def is_compose_running():
+    cmd = ["docker", "compose", "ps", "--quiet"]
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        return bool(output.strip())
+    except subprocess.CalledProcessError:
+        raise EnvironmentError("docker-compose is not installed or not functioning properly.")
+
+
+def check_dependencies(should_compose_run: bool = False):
     try:
         subprocess.run(
             "command -v docker",
             shell=True,
-            stdout=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
             stderr=subprocess.STDOUT,
             check=True,
         )
     except subprocess.CalledProcessError:
         raise EnvironmentError("docker is not installed or available on the path")
-    try:
-        subprocess.run(
-            ["docker", "ps"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
-        )
-    except subprocess.CalledProcessError:
-        raise EnvironmentError("docker cannot run without superuser privileges (sudo).")
-    try:
-        subprocess.run(
-            ["docker", "compose", "version"],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            check=True,
-        )
-    except subprocess.CalledProcessError:
-        raise EnvironmentError("docker-compose is not installed")
 
-
-def is_container_running(container_name):
-    # fmt: off
-    cmd = [
-        "docker", "ps",
-        # Only return container IDs
-        "--quiet",
-        "--filter", f"name={container_name}"
-    ]
-    # fmt: on
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE)
-    if proc.stdout.decode("utf-8"):
-        return True
-
-    return False
-
-
-def is_container_exited(container_name):
-    # fmt: off
-    cmd = [
-        "docker", "ps",
-        # Only return container IDs
-        "--quiet",
-        "--filter", f"name={container_name}",
-        "--filter", "status=exited"
-    ]
-    # fmt: on
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE)
-    if proc.stdout.decode("utf-8"):
-        return True
-
-    return False
+    is_running = is_compose_running()
+    if should_compose_run and not is_running:
+        raise EnvironmentError("docker-compose is not running.")
+    if not should_compose_run and is_running:
+        raise EnvironmentError("docker-compose is already running.")
 
 
 def validate_log_directory(logs_dir: pathlib.Path, component_name: str) -> None:

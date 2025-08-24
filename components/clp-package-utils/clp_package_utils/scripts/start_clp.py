@@ -44,8 +44,6 @@ from clp_package_utils.general import (
     dump_shared_container_config,
     generate_docker_compose_container_config,
     get_clp_home,
-    is_container_exited,
-    is_container_running,
     load_config_file,
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
@@ -66,16 +64,6 @@ env_dict = {}
 
 def get_ip_from_hostname(hostname: str) -> str:
     return socket.gethostbyname(hostname)
-
-
-def container_exists(container_name):
-    if is_container_running(container_name):
-        logger.info(f"{container_name} already running.")
-        return True
-    elif is_container_exited(container_name):
-        logger.info(f"{container_name} exited but not removed.")
-        return True
-    return False
 
 
 def append_docker_options(
@@ -490,7 +478,7 @@ def main(argv):
     parsed_args = args_parser.parse_args(argv[1:])
 
     try:
-        check_dependencies()
+        check_dependencies(should_compose_run=False)
     except:
         logger.exception("Dependency checking failed.")
         return -1
@@ -506,11 +494,6 @@ def main(argv):
         validate_logs_input_config(clp_config)
         validate_output_storage_config(clp_config)
         validate_retention_config(clp_config)
-
-        # validate_and_load_db_credentials_file(clp_config, clp_home, True)
-        # validate_and_load_queue_credentials_file(clp_config, clp_home, True)
-        # validate_and_load_redis_credentials_file(clp_config, clp_home, True)
-        # validate_worker_config(clp_config)
 
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()

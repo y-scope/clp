@@ -2,10 +2,18 @@ import logging
 import subprocess
 import sys
 
+from clp_package_utils.general import check_dependencies
+
 logger = logging.getLogger(__file__)
 
 
 def main():
+    try:
+        check_dependencies(should_compose_run=True)
+    except:
+        logger.exception("Dependency checking failed.")
+        return -1
+
     logger.info("Stopping all CLP containers using Docker Compose...")
     try:
         subprocess.run(
