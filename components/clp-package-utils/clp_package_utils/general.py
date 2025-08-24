@@ -141,7 +141,7 @@ def generate_container_name(job_type: str) -> str:
 
 
 def is_compose_running():
-    cmd = ["docker", "compose", "ps", "--quiet"]
+    cmd = ["docker", "compose", "ls", "--quiet"]
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         return bool(output.strip())
