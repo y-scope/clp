@@ -312,14 +312,14 @@ def generate_docker_compose_container_config(clp_config: CLPConfig) -> CLPConfig
         container_clp_config.archive_output.storage.directory = CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
     elif StorageType.S3 == clp_config.archive_output.storage.type:
         container_clp_config.archive_output.storage.staging_directory = (
-            CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
+            pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
         )
 
     if StorageType.FS == clp_config.stream_output.storage.type:
         container_clp_config.stream_output.storage.directory = CLP_DEFAULT_STREAM_DIRECTORY_PATH
     elif StorageType.S3 == clp_config.stream_output.storage.type:
         container_clp_config.stream_output.storage.staging_directory = (
-            CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
+            pathlib.Path("/") / CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
         )
 
     if clp_config.aws_config_directory is not None:
