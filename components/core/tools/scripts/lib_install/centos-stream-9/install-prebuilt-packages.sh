@@ -23,29 +23,19 @@ dnf install -y \
     python3-pip \
     unzip
 
-# Determine architecture for `task` release to install
-rpm_arch=$(rpm --eval "%{_arch}")
-case "$rpm_arch" in
-    "x86_64")
-        task_pkg_arch="amd64"
-        ;;
-    "aarch64")
-        task_pkg_arch="arm64"
-        ;;
-    *)
-        echo "Error: Unsupported architecture - $rpm_arch"
-        exit 1
-        ;;
-esac
+if ! command -v pipx; then
+    python3 -m pip install pipx
+fi
+export PIPX_HOME=/opt/pipx
+export PIPX_BIN_DIR=/usr/bin
 
-# Install `task`
-# NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
-task_pkg_path="$(mktemp -t --suffix ".rpm" task-pkg.XXXXXXXXXX)"
-curl \
-    --fail \
-    --location \
-    --output "$task_pkg_path" \
-    --show-error \
-    "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.rpm"
-dnf install --assumeyes "$task_pkg_path"
-rm "$task_pkg_path"
+# Install CMake v3.31.x as ANTLR and yaml-cpp do not yet support CMake v4+.
+# See also: https://github.com/y-scope/clp/issues/795
+if ! command -v cmake ; then
+    pipx install "cmake~=3.31"
+fi
+
+# Install a version of `task` < 3.43 to avoid https://github.com/y-scope/clp/issues/872
+if ! command -v task ; then
+    pipx install "go-task-bin>=3.40,<3.43"
+fi
