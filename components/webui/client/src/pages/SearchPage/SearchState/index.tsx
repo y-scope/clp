@@ -18,6 +18,7 @@ import {SEARCH_UI_STATE} from "./typings";
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
     cachedDataset: null,
+    numSearchResultsMetadata: 0,
     numSearchResultsTable: 0,
     numSearchResultsTimeline: 0,
     queryIsCaseSensitive: false,
@@ -42,6 +43,11 @@ interface SearchState {
      * log viewer links.
      */
     cachedDataset: Nullable<string>;
+
+    /**
+     * The number of search results from server metadata.
+     */
+    numSearchResultsMetadata: number;
 
     /**
      * The number of search table results.
@@ -97,6 +103,7 @@ interface SearchState {
 
     updateAggregationJobId: (id: string | null) => void;
     updateCachedDataset: (dataset: string) => void;
+    updateNumSearchResultsMetadata: (num: number) => void;
     updateNumSearchResultsTable: (num: number) => void;
     updateNumSearchResultsTimeline: (num: number) => void;
     updateQueryIsCaseSensitive: (newValue: boolean) => void;
@@ -116,6 +123,9 @@ const useSearchStore = create<SearchState>((set) => ({
     },
     updateCachedDataset: (dataset) => {
         set({cachedDataset: dataset});
+    },
+    updateNumSearchResultsMetadata: (num) => {
+        set({numSearchResultsMetadata: num});
     },
     updateNumSearchResultsTable: (num) => {
         set({numSearchResultsTable: num});
