@@ -284,6 +284,7 @@ function(set_clp_s_json_constructor_dependencies)
         CLP_NEED_FMT
         CLP_NEED_MONGOCXX
         CLP_NEED_SPDLOG
+        CLP_NEED_ZSTD
     )
 endfunction()
 
