@@ -78,7 +78,7 @@ Using Presto with CLP requires:
 
 4. Configure Presto to use CLP's metadata database as follows:
 
-    * Open and edit `coordinator/config-template/metadata-filter.json`.
+    * Open and edit `coordinator/config-template/split-filter.json`.
     * For each dataset you want to query, add a filter config of the form:
 
       ```json
@@ -86,9 +86,11 @@ Using Presto with CLP requires:
         "clp.default.<dataset>": [
           {
             "columnName": "<timestamp-key>",
-            "rangeMapping": {
-              "lowerBound": "begin_timestamp",
-              "upperBound": "end_timestamp"
+            "customOptions": {
+              "rangeMapping": {
+                "lowerBound": "begin_timestamp",
+                "upperBound": "end_timestamp"
+              }
             },
             "required": false
           }
@@ -164,7 +166,6 @@ The Presto CLP integration has the following limitations at present:
 * Nested fields containing special characters cannot be queried (see [y-scope/presto#8]). Allowed
   characters are alphanumeric characters and underscores. To get around this limitation, you'll
   need to preprocess your logs to remove any special characters.
-* Only logs stored on the filesystem, rather than S3, can be queried through Presto.
 
 These limitations will be addressed in a future release of the Presto integration.
 
