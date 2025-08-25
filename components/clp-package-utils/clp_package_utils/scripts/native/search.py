@@ -240,6 +240,12 @@ def main(argv):
 
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
+    args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
         "--dataset",
@@ -281,6 +287,10 @@ def main(argv):
         "--raw", action="store_true", help="Output the search results as raw logs."
     )
     parsed_args = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     if (
         parsed_args.begin_time is not None
