@@ -38,7 +38,7 @@ Resources like log datasets, etc.
 :::
 
 :::{grid-item-card}
-:link: reference-json-search-syntax
+:link: reference-overview
 Reference
 ^^^
 Reference docs like format specifications, etc.
@@ -61,6 +61,7 @@ quick-start/clp-text
 
 guides-overview
 guides-using-object-storage/index
+guides-retention
 guides-multi-node
 guides-using-presto
 :::
@@ -87,7 +88,9 @@ resources-datasets
 :hidden:
 :caption: Reference
 
+reference-overview
 reference-json-search-syntax
 reference-text-search-syntax
+reference-admin-tools
 reference-unstructured-schema-file
 :::

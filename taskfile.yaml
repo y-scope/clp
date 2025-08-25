@@ -29,7 +29,7 @@ vars:
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
   # Versions
-  G_PACKAGE_VERSION: "0.4.0-dev"
+  G_PACKAGE_VERSION: "0.5.1-dev"
 
   # Build parameters
   # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
@@ -540,7 +540,7 @@ tasks:
     requires:
       vars: ["COMPONENT"]
     sources:
-      - "{{.G_BUILD_DIR}}/{{.COMPONENT}}_venv.md5"
+      - "{{.G_BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
       - "{{.PACKAGE}}/**/*"
       - "{{.ROOT_DIR}}/requirements.txt"
       - "{{.TASKFILE}}"
