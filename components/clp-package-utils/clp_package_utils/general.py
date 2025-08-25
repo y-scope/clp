@@ -13,10 +13,17 @@ from typing import Dict, List, Optional, Tuple
 
 import yaml
 from clp_py_utils.clp_config import (
+    CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH,
+    CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH,
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
+    CLP_DEFAULT_DATA_DIRECTORY_PATH,
+    CLP_DEFAULT_LOG_DIRECTORY_PATH,
+    CLP_DEFAULT_STREAM_DIRECTORY_PATH,
+    CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH,
     CLP_SHARED_CONFIG_FILENAME,
     CLPConfig,
     DB_COMPONENT_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
     QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
@@ -133,56 +140,32 @@ def generate_container_name(job_type: str) -> str:
     return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
 
 
-def check_dependencies():
+def is_compose_running():
+    cmd = ["docker", "compose", "ls", "--quiet"]
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        return bool(output.strip())
+    except subprocess.CalledProcessError:
+        raise EnvironmentError("docker-compose is not installed or not functioning properly.")
+
+
+def check_dependencies(should_compose_run: bool = False):
     try:
         subprocess.run(
             "command -v docker",
             shell=True,
-            stdout=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
             stderr=subprocess.STDOUT,
             check=True,
         )
     except subprocess.CalledProcessError:
         raise EnvironmentError("docker is not installed or available on the path")
-    try:
-        subprocess.run(
-            ["docker", "ps"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
-        )
-    except subprocess.CalledProcessError:
-        raise EnvironmentError("docker cannot run without superuser privileges (sudo).")
 
-
-def is_container_running(container_name):
-    # fmt: off
-    cmd = [
-        "docker", "ps",
-        # Only return container IDs
-        "--quiet",
-        "--filter", f"name={container_name}"
-    ]
-    # fmt: on
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE)
-    if proc.stdout.decode("utf-8"):
-        return True
-
-    return False
-
-
-def is_container_exited(container_name):
-    # fmt: off
-    cmd = [
-        "docker", "ps",
-        # Only return container IDs
-        "--quiet",
-        "--filter", f"name={container_name}",
-        "--filter", "status=exited"
-    ]
-    # fmt: on
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE)
-    if proc.stdout.decode("utf-8"):
-        return True
-
-    return False
+    is_running = is_compose_running()
+    if should_compose_run and not is_running:
+        raise EnvironmentError("docker-compose is not running.")
+    if not should_compose_run and is_running:
+        raise EnvironmentError("docker-compose is already running.")
 
 
 def validate_log_directory(logs_dir: pathlib.Path, component_name: str) -> None:
@@ -310,6 +293,49 @@ def generate_container_config(
     return container_clp_config, docker_mounts
 
 
+def generate_docker_compose_container_config(clp_config: CLPConfig) -> CLPConfig:
+    """
+    Copies the given config and corrects mount paths and hosts for Docker Compose.
+
+    :param clp_config:
+    :return: The container config and the mounts.
+    """
+    container_clp_config = clp_config.copy(deep=True)
+
+    # Set container paths
+    container_clp_config.data_directory = pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH
+    container_clp_config.logs_directory = pathlib.Path("/") / CLP_DEFAULT_LOG_DIRECTORY_PATH
+    if StorageType.FS == clp_config.logs_input.type:
+        container_clp_config.logs_input.directory = CONTAINER_INPUT_LOGS_ROOT_DIR
+
+    if StorageType.FS == clp_config.archive_output.storage.type:
+        container_clp_config.archive_output.storage.directory = CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
+    elif StorageType.S3 == clp_config.archive_output.storage.type:
+        container_clp_config.archive_output.storage.staging_directory = (
+            pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
+        )
+
+    if StorageType.FS == clp_config.stream_output.storage.type:
+        container_clp_config.stream_output.storage.directory = CLP_DEFAULT_STREAM_DIRECTORY_PATH
+    elif StorageType.S3 == clp_config.stream_output.storage.type:
+        container_clp_config.stream_output.storage.staging_directory = (
+            pathlib.Path("/") / CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
+        )
+
+    if clp_config.aws_config_directory is not None:
+        container_clp_config.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
+
+    # Set container services' hosts
+    container_clp_config.database.host = DB_COMPONENT_NAME
+    container_clp_config.queue.host = QUEUE_COMPONENT_NAME
+    container_clp_config.redis.host = REDIS_COMPONENT_NAME
+    container_clp_config.results_cache.host = RESULTS_CACHE_COMPONENT_NAME
+    container_clp_config.query_scheduler.host = QUERY_SCHEDULER_COMPONENT_NAME
+    container_clp_config.reducer.host = REDUCER_COMPONENT_NAME
+
+    return container_clp_config
+
+
 def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
     worker_config = WorkerConfig()
     worker_config.package = clp_config.package.copy(deep=True)
@@ -432,10 +458,10 @@ def load_config_file(
     validate_path_for_container_mount(clp_config.data_directory)
     validate_path_for_container_mount(clp_config.logs_directory)
 
-    # Make data and logs directories node-specific
-    hostname = socket.gethostname()
-    clp_config.data_directory /= hostname
-    clp_config.logs_directory /= hostname
+    # # Make data and logs directories node-specific
+    # hostname = socket.gethostname()
+    # clp_config.data_directory /= hostname
+    # clp_config.logs_directory /= hostname
 
     return clp_config
 
