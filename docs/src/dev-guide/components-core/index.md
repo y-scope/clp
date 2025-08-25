@@ -70,6 +70,8 @@ A handful of packages and libraries are required to build CLP. There are two opt
 See the relevant README for your OS:
 
 * [CentOS Stream 9](centos-stream-9-deps-install)
+* [Manylinux 2.28](manylinux-2-28-deps-install)
+* [Musllinux 1.2](musllinux-1-2-deps-install)
 * [macOS](macos-deps-install)
 * [Ubuntu 22.04](ubuntu-jammy-deps-install)
 
@@ -113,6 +115,8 @@ the relevant paths on your machine.
 :hidden:
 
 centos-stream-9-deps-install
+manylinux-2-28-deps-install
+musllinux-1-2-deps-install
 macos-deps-install
 ubuntu-jammy-deps-install
 regex-utils
