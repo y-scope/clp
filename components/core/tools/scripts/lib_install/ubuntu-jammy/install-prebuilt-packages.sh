@@ -29,6 +29,7 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   unzip
 
 # Install `task`
+# NOTE: We lock `task` to version 3.44.0 to avoid https://github.com/y-scope/clp-ffi-js/issues/110
 task_pkg_arch=$(dpkg --print-architecture)
 task_pkg_path="$(mktemp -t --suffix ".deb" task-pkg.XXXXXXXXXX)"
 curl \
