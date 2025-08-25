@@ -1,6 +1,7 @@
 import argparse
 import logging
 import pathlib
+import shlex
 import subprocess
 import sys
 
@@ -176,7 +177,7 @@ def main(argv):
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Search failed.")
-        logger.debug(f"Docker command failed: {' '.join(cmd)}")
+        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
     generated_config_path_on_host.unlink()

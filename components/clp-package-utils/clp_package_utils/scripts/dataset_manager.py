@@ -1,5 +1,6 @@
 import argparse
 import logging
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -183,7 +184,7 @@ def main(argv: List[str]) -> int:
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Dataset manager failed.")
-        logger.debug(f"Docker command failed: {' '.join(cmd)}")
+        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
     generated_config_path_on_host.unlink()

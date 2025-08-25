@@ -1,6 +1,7 @@
 import argparse
 import logging
 import pathlib
+import shlex
 import subprocess
 import sys
 import uuid
@@ -247,8 +248,6 @@ def main(argv):
     compress_cmd = _generate_compress_cmd(
         parsed_args, dataset, generated_config_path_on_container, logs_list_path_on_container
     )
-    if parsed_args.verbose:
-        compress_cmd.append("--verbose")
 
     cmd = container_start_cmd + compress_cmd
 
@@ -256,7 +255,7 @@ def main(argv):
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Compression failed.")
-        logger.debug(f"Docker command failed: {' '.join(cmd)}")
+        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
     generated_config_path_on_host.unlink()

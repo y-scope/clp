@@ -1,6 +1,7 @@
 import argparse
 import logging
 import pathlib
+import shlex
 import subprocess
 import sys
 from typing import Optional
@@ -157,7 +158,7 @@ def handle_extract_file_cmd(
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("file extraction failed.")
-        logger.debug(f"Docker command failed: {' '.join(cmd)}")
+        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
     generated_config_path_on_host.unlink()
@@ -262,7 +263,7 @@ def handle_extract_stream_cmd(
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("stream extraction failed.")
-        logger.debug(f"Docker command failed: {' '.join(cmd)}")
+        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
     generated_config_path_on_host.unlink()
