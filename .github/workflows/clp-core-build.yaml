@@ -2,14 +2,13 @@ name: "clp-core-build"
 
 on:
   pull_request:
-    paths: &monitored_paths
-      - "**"
-      - "!.github/ISSUE_TEMPLATE/**"
-      - "!.github/*"
-      - "!components/core/tools/scripts/lib_install/macos/**"
-      - "!docs/**"
+    paths-ignore: &ignored_paths
+      - ".github/ISSUE_TEMPLATE/**"
+      - ".github/*"
+      - "components/core/tools/scripts/lib_install/macos/**"
+      - "docs/**"
   push:
-    paths: *monitored_paths
+    paths-ignore: *ignored_paths
   schedule:
     # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
     - cron: "15 0 * * *"
