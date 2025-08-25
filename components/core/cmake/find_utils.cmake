@@ -23,7 +23,17 @@ macro(clp_find_boost)
     if(CLP_USE_STATIC_LIBS)
         set(Boost_USE_STATIC_LIBS ON)
     endif()
-    find_package(Boost 1.89 REQUIRED iostreams program_options filesystem regex url)
+    find_package(
+        Boost
+        1.81...1.88
+        REQUIRED
+            filesystem
+            iostreams
+            program_options
+            regex
+            system
+            url
+    )
 endmacro()
 
 # Find and setup Catch2.

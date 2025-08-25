@@ -18,7 +18,7 @@ set(
         ../clp/cli_utils.hpp
         ../clp/Defs.h
         ../clp/EncodedVariableInterpreter.cpp
-        ../clp/EncodedVariableInterpreter.hpp    
+        ../clp/EncodedVariableInterpreter.hpp
         ../clp/ErrorCode.hpp
         ../clp/ffi/encoding_methods.cpp
         ../clp/ffi/encoding_methods.hpp
@@ -69,7 +69,7 @@ set(
         ../clp/ir/parsing.inc
         ../clp/ir/types.hpp
         ../clp/LogSurgeonReader.cpp
-        ../clp/LogSurgeonReader.hpp    
+        ../clp/LogSurgeonReader.hpp
         ../clp/NetworkReader.cpp
         ../clp/NetworkReader.hpp
         ../clp/networking/socket_utils.cpp
@@ -77,7 +77,7 @@ set(
         ../clp/Query.cpp
         ../clp/Query.hpp
         ../clp/QueryToken.cpp
-        ../clp/QueryToken.hpp    
+        ../clp/QueryToken.hpp
         ../clp/ReaderInterface.cpp
         ../clp/ReaderInterface.hpp
         ../clp/ReadOnlyMemoryMappedFile.cpp
@@ -126,6 +126,7 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 clp::string_utils
                 log_surgeon::log_surgeon
                 ystdlib::containers
+                ${zstd_TARGET}
                 PRIVATE
                 Boost::regex
                 ${CURL_LIBRARIES}
@@ -135,7 +136,6 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 OpenSSL::Crypto
                 spdlog::spdlog
                 ystdlib::error_handling
-                ${zstd_TARGET}
         )
 endif()
 
@@ -381,6 +381,7 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
         find_package(fmt REQUIRED)
         clp_find_mongocxx()
         find_package(spdlog REQUIRED)
+        clp_find_zstd()
 
         add_library(
                 clp_s_json_constructor
@@ -393,6 +394,7 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 clp_s_json_constructor
                 PUBLIC
                 clp_s::archive_reader
+                ${zstd_TARGET}
                 PRIVATE
                 fmt::fmt
                 ${MONGOCXX_TARGET}

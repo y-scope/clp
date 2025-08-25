@@ -157,6 +157,7 @@ if(CLP_BUILD_EXECUTABLES)
                 fmt::fmt
                 log_surgeon::log_surgeon
                 MariaDBClient::MariaDBClient
+                msgpack-cxx
                 nlohmann_json::nlohmann_json
                 spdlog::spdlog
                 ${sqlite_LIBRARY_DEPENDENCIES}

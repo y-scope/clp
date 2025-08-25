@@ -566,7 +566,11 @@ if(CLP_BUILD_TESTING)
     target_link_libraries(unitTest
             PRIVATE
             absl::flat_hash_map
-            Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
+            Boost::filesystem
+            Boost::iostreams
+            Boost::program_options
+            Boost::regex
+            Boost::url
             Catch2::Catch2WithMain
             ${CURL_LIBRARIES}
             clp_s::search::ast
@@ -580,6 +584,7 @@ if(CLP_BUILD_TESTING)
             LibLZMA::LibLZMA
             MariaDBClient::MariaDBClient
             ${MONGOCXX_TARGET}
+            msgpack-cxx
             nlohmann_json::nlohmann_json
             simdjson::simdjson
             spdlog::spdlog
