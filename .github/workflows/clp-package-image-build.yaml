@@ -94,7 +94,7 @@ jobs:
           run_command: >-
             CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task package
 
-      - uses: "./.github/actions/clp-image-build"
+      - uses: "./.github/actions/clp-build-runtime-image"
         with:
           image_type: "package"
           image_registry: "ghcr.io"

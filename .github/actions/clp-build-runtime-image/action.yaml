@@ -1,4 +1,4 @@
-name: "clp-image-build"
+name: "clp-build-runtime-image"
 description: "Builds a container image to be used for running CLP."
 
 inputs:
