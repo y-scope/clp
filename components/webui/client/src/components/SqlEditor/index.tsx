@@ -72,7 +72,7 @@ const SqlEditor = (props: SqlEditorProps) => {
         });
     }, [
         monacoEditor,
-        token
+        token,
     ]);
 
     return (

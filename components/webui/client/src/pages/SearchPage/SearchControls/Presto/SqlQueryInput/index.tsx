@@ -43,7 +43,7 @@ const SqlQueryInput = () => {
         }
     }, [
         searchUiState,
-        isEditorReady
+        isEditorReady,
     ]);
 
     return (
