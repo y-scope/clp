@@ -135,6 +135,32 @@ jobs:
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
           token: "${{secrets.GITHUB_TOKEN}}"
 
+  manylinux-2-28-aarch64-deps-image:
+    name: "manylinux-2-28-aarch64-deps-image"
+    if: "needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'true'"
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-24.04-arm"
+    steps:
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "manylinux_2_28-aarch64"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+            /Dockerfile"
+          push_deps_image: >-
+            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          token: "${{secrets.GITHUB_TOKEN}}"
+
   manylinux-2-28-deps-image:
     name: "manylinux-2-28-deps-image"
     if: "needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'true'"
