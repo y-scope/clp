@@ -164,7 +164,6 @@ The Presto CLP integration has the following limitations at present:
 * Nested fields containing special characters cannot be queried (see [y-scope/presto#8]). Allowed
   characters are alphanumeric characters and underscores. To get around this limitation, you'll
   need to preprocess your logs to remove any special characters.
-* Only logs stored on the filesystem, rather than S3, can be queried through Presto.
 
 These limitations will be addressed in a future release of the Presto integration.
 

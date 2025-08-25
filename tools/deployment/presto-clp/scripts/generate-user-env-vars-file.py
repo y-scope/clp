@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Any, Dict, Optional
 
 import yaml
 from dotenv import dotenv_values
@@ -28,7 +28,9 @@ def main(argv=None) -> int:
         argv = sys.argv
 
     args_parser = argparse.ArgumentParser(
-        description="Generates an environment variables file for any user-configured properties."
+        description=(
+            "Generates any necessary config files corresponding to user-configured properties."
+        )
     )
     args_parser.add_argument(
         "--clp-package-dir", help="CLP package directory.", required=True, type=Path
@@ -41,8 +43,20 @@ def main(argv=None) -> int:
     clp_package_dir: Path = parsed_args.clp_package_dir.resolve()
     output_file: Path = parsed_args.output_file
 
+    clp_config_file_path = clp_package_dir / "etc" / "clp-config.yml"
+    if not clp_config_file_path.exists():
+        logger.error(
+            "'%s' doesn't exist. Is '%s' the location of the CLP package?",
+            clp_config_file_path,
+            clp_package_dir.resolve(),
+        )
+        return 1
+
+    with open(clp_config_file_path, "r") as clp_config_file:
+        clp_config = yaml.safe_load(clp_config_file)
+
     env_vars: Dict[str, str] = {}
-    if not _add_clp_env_vars(clp_package_dir, env_vars):
+    if not _add_clp_env_vars(clp_config, clp_package_dir, env_vars):
         return 1
 
     script_dir = Path(__file__).parent.resolve()
@@ -56,27 +70,18 @@ def main(argv=None) -> int:
     return 0
 
 
-def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
+def _add_clp_env_vars(
+    clp_config: Dict[str, Any], clp_package_dir: Path, env_vars: Dict[str, str]
+) -> bool:
     """
     Adds environment variables for CLP config values to `env_vars`.
 
+    :param clp_config:
     :param clp_package_dir:
     :param env_vars:
     :return: Whether the environment variables were successfully added.
     """
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_TABLE_PREFIX"] = "clp_"
-
-    clp_config_file_path = clp_package_dir / "etc" / "clp-config.yml"
-    if not clp_config_file_path.exists():
-        logger.error(
-            "'%s' doesn't exist. Is '%s' the location of the CLP package?",
-            clp_config_file_path,
-            clp_package_dir.resolve(),
-        )
-        return False
-
-    with open(clp_config_file_path, "r") as clp_config_file:
-        clp_config = yaml.safe_load(clp_config_file)
 
     database_type = _get_config_value(clp_config, "database.type", "mariadb")
     if "mariadb" != database_type and "mysql" != database_type:
@@ -98,23 +103,60 @@ def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
     clp_archive_output_storage_type = _get_config_value(
         clp_config, "archive_output.storage.type", "fs"
     )
-    if "fs" != clp_archive_output_storage_type:
+    env_vars["CLP_ARCHIVES_DIR"] = _resolve_archives_dir(
+        clp_package_dir,
+        _get_config_value(clp_config, "archive_output.storage.directory"),
+        clp_package_dir
+        / "var"
+        / "data"
+        / ("archives" if clp_archive_output_storage_type == "fs" else "staged-archives"),
+    )
+    if "fs" == clp_archive_output_storage_type:
+        pass
+    elif "s3" == clp_archive_output_storage_type:
+        s3_config_key_prefix = f"archive_output.storage.s3_config"
+        s3_credentials_key_prefix = f"{s3_config_key_prefix}.aws_authentication.credentials"
+
+        s3_access_key_id = _get_config_value(
+            clp_config, f"{s3_credentials_key_prefix}.access_key_id"
+        )
+
+        s3_bucket = _get_config_value(clp_config, f"{s3_config_key_prefix}.bucket")
+        s3_region_code = _get_config_value(clp_config, f"{s3_config_key_prefix}.region_code")
+
+        s3_secret_access_key = _get_config_value(
+            clp_config, f"{s3_credentials_key_prefix}.secret_access_key"
+        )
+
+        # Validate required S3 fields
+        missing = []
+
+        for k, v in {
+            f"{s3_credentials_key_prefix}.access_key_id": s3_access_key_id,
+            f"{s3_credentials_key_prefix}.secret_access_key": s3_secret_access_key,
+            f"{s3_config_key_prefix}.bucket": s3_bucket,
+            f"{s3_config_key_prefix}.region_code": s3_region_code,
+        }.items():
+            if not v:
+                missing.append(k)
+
+        if missing:
+            logger.error("Missing required S3 config key(s): %s", ", ".join(missing))
+            return False
+
+        env_vars["PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE"] = "s3"
+        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER"] = "clp_package"
+        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID"] = s3_access_key_id
+        s3_end_point = f"https://{s3_bucket}.s3.{s3_region_code}.amazonaws.com/"
+        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT"] = s3_end_point
+        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY"] = s3_secret_access_key
+    else:
         logger.error(
-            "Expected CLP's archive_output.storage.type to be fs but found '%s'. Presto"
-            " currently only supports reading archives from the fs storage type.",
+            "Expected CLP's archive_output.storage.type to be fs or s3 but found '%s'. Presto"
+            " currently only supports reading archives from the fs or s3 storage type.",
             clp_archive_output_storage_type,
         )
         return False
-
-    clp_archives_dir = _get_config_value(
-        clp_config,
-        "archive_output.storage.directory",
-        str(clp_package_dir / "var" / "data" / "archives"),
-    )
-    if Path(clp_archives_dir).is_absolute():
-        env_vars["CLP_ARCHIVES_DIR"] = clp_archives_dir
-    else:
-        env_vars["CLP_ARCHIVES_DIR"] = str(clp_package_dir / clp_archives_dir)
 
     credentials_file_path = clp_package_dir / "etc" / "credentials.yml"
     if not credentials_file_path.exists():
@@ -135,6 +177,11 @@ def _add_clp_env_vars(clp_package_dir: Path, env_vars: Dict[str, str]) -> bool:
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_PASSWORD"] = database_password
 
     return True
+
+
+def _resolve_archives_dir(base_dir: Path, configured: Optional[str], default: Path) -> str:
+    effective = configured or str(default)
+    return effective if Path(effective).is_absolute() else str(base_dir / effective)
 
 
 def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: Dict[str, str]) -> bool:
