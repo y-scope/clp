@@ -161,6 +161,32 @@ jobs:
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
           token: "${{secrets.GITHUB_TOKEN}}"
 
+  musllinux-1-2-deps-image:
+    name: "musllinux-1-2-deps-image"
+    if: "needs.filter-relevant-changes.outputs.musllinux_1_2_image_changed == 'true'"
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-24.04"
+    steps:
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "musllinux_1_2"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}-x86_64\
+            /Dockerfile"
+          push_deps_image: >-
+            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          token: "${{secrets.GITHUB_TOKEN}}"
+
   ubuntu-jammy-deps-image:
     name: "ubuntu-jammy-deps-image"
     if: "needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'"
@@ -217,6 +243,84 @@ jobs:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          run_command: >-
+            CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
+            && python3 /mnt/repo/components/core/tools/scripts/utils/build-and-run-unit-tests.py
+            ${{matrix.use_shared_libs == true && '--use-shared-libs' || ''}}
+            --source-dir /mnt/repo/components/core
+            --build-dir /mnt/repo/components/core/build
+            --num-jobs $(getconf _NPROCESSORS_ONLN)
+
+  manylinux-2-28-binaries:
+    # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
+    if: >-
+      success()
+      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
+    needs:
+      - "manylinux-2-28-deps-image"
+      - "filter-relevant-changes"
+    strategy:
+      matrix:
+        use_shared_libs: [true, false]
+    name: "manylinux-2-28-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins"
+    continue-on-error: true
+    runs-on: "ubuntu-24.04"
+    steps:
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/run-on-image"
+        env:
+          OS_NAME: "manylinux_2_28"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.manylinux_2_28_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          run_command: >-
+            CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
+            && python3 /mnt/repo/components/core/tools/scripts/utils/build-and-run-unit-tests.py
+            ${{matrix.use_shared_libs == true && '--use-shared-libs' || ''}}
+            --source-dir /mnt/repo/components/core
+            --build-dir /mnt/repo/components/core/build
+            --num-jobs $(getconf _NPROCESSORS_ONLN)
+
+  musllinux-1-2-binaries:
+    # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
+    if: >-
+      success()
+      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
+    needs:
+      - "musllinux-1-2-deps-image"
+      - "filter-relevant-changes"
+    strategy:
+      matrix:
+        use_shared_libs: [true, false]
+    name: "musllinux-1-2-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins"
+    continue-on-error: true
+    runs-on: "ubuntu-24.04"
+    steps:
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/run-on-image"
+        env:
+          OS_NAME: "musllinux_1_2"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.musllinux_1_2_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
           run_command: >-
             CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
