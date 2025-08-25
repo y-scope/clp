@@ -30,14 +30,14 @@ case "$arch" in
 esac
 
 # Install `task`
-# NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
+# NOTE: We lock `task` to version 3.44.0 to avoid https://github.com/y-scope/clp-ffi-js/issues/110
 task_pkg_path=$(mktemp -t task-pkg.XXXXXXXXXX).tar.gz || exit 1
 curl \
     --fail \
     --location \
     --output "$task_pkg_path" \
     --show-error \
-    "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.tar.gz"
+    "https://github.com/go-task/task/releases/download/v3.44.0/task_linux_${task_pkg_arch}.tar.gz"
 tar -C /usr/local/bin -xzf "$task_pkg_path" task
 chmod +x /usr/local/bin/task
 rm "$task_pkg_path"

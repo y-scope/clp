@@ -29,14 +29,14 @@ case "$rpm_arch" in
 esac
 
 # Install `task`
-# NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
+# NOTE: We lock `task` to version 3.44.0 to avoid https://github.com/y-scope/clp-ffi-js/issues/110
 task_pkg_path=$(mktemp -t --suffix ".rpm" task-pkg.XXXXXXXXXX) || exit 1
 curl \
     --fail \
     --location \
     --output "$task_pkg_path" \
     --show-error \
-    "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.rpm"
+    "https://github.com/go-task/task/releases/download/v3.44.0/task_linux_${task_pkg_arch}.rpm"
 dnf install --assumeyes "$task_pkg_path"
 rm "$task_pkg_path"
 
