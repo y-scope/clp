@@ -61,7 +61,7 @@ jobs:
         shell: "bash"
         run: "chown $(id -u):$(id -g) -R ."
 
-      - uses: "./.github/actions/clp-image-build"
+      - uses: "./.github/actions/clp-build-runtime-image"
         with:
           image_type: "execution"
           image_registry: "ghcr.io"
