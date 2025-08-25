@@ -1,6 +1,6 @@
 services:
   presto-coordinator:
-    image: "ghcr.io/anlowee/presto/coordinator:dev"
+    image: "ghcr.io/y-scope/presto/coordinator:dev"
     entrypoint: ["/bin/bash", "-c", "/scripts/generate-configs.sh && /opt/entrypoint.sh"]
     env_file:
       - ".env"
@@ -24,7 +24,7 @@ services:
       retries: 30
 
   presto-worker:
-    image: "ghcr.io/anlowee/presto/prestissimo-worker:dev"
+    image: "ghcr.io/y-scope/presto/prestissimo-worker:dev"
     depends_on:
       presto-coordinator:
         condition: "service_healthy"
