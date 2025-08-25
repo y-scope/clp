@@ -91,13 +91,13 @@ jobs:
               - ".github/workflows/clp-core-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-manylinux_2_28-x86_64/**"
+              - "components/core/tools/scripts/lib_install/manylinux_2_28/**"
             musllinux_1_2_aarch64_image:
               - ".github/actions/**"
               - ".github/workflows/clp-core-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-musllinux_1_2-aarch64/**"
               - "components/core/tools/scripts/lib_install/musllinux_1_2/**"
-              - "components/core/tools/scripts/lib_install/manylinux_2_28/**"
             musllinux_1_2_x86_64_image:
               - ".github/actions/**"
               - ".github/workflows/clp-core-build.yaml"
