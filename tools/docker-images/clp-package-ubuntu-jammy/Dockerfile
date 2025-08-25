@@ -5,8 +5,8 @@ COPY ./build/clp-package /opt/clp
 WORKDIR /root
 
 COPY ./tools/docker-images/clp-package-ubuntu-jammy/setup-scripts ./setup-scripts
-RUN ./setup-scripts/install-prebuilt-packages.sh && \
-    rm -rf ./setup-scripts/
+RUN ./setup-scripts/install-prebuilt-packages.sh \
+    && rm -rf ./setup-scripts/
 
 # Remove cached files
 RUN apt-get clean \
