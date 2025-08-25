@@ -74,7 +74,7 @@ task clean
 To build a Docker image containing the CLP package, run:
 
 ```shell
-task docker-image-package
+task docker-images:package
 ```
 
 This will create a Docker image named `clp-package:dev`.
