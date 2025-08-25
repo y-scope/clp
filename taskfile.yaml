@@ -5,6 +5,7 @@ shopt: ["globstar"]
 
 includes:
   deps: "taskfiles/deps/main.yaml"
+  docker-images: "taskfiles/docker-images.yaml"
   docs: "taskfiles/docs.yaml"
   lint: "taskfiles/lint.yaml"
   utils: "tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
@@ -161,17 +162,6 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-
-  docker-image-package:
-    vars:
-      SRC_DIR: "{{.ROOT_DIR}}/tools/docker-images/clp-package"
-    dir: "{{.SRC_DIR}}"
-    deps:
-      - "package"
-    sources:
-      - "{{.SRC_DIR}}/**/*"
-    cmds:
-      - "./build.sh"
 
   clp-s-generate-parsers:
     vars:
