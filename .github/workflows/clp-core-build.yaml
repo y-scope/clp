@@ -3,8 +3,8 @@ name: "clp-core-build"
 on:
   pull_request:
     paths-ignore: &ignored_paths
-      - ".github/ISSUE_TEMPLATE/**"
       - ".github/*"
+      - ".github/ISSUE_TEMPLATE/**"
       - "components/core/tools/scripts/lib_install/macos/**"
       - "docs/**"
   push:
