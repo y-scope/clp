@@ -62,12 +62,12 @@ runs:
         platform="${{inputs.platform_id}}-${{inputs.platform_version_id}}"
 
         if [[ "${{inputs.image_type}}" == "execution" ]]; then
-          path="$base_path/clp-execution-base-$platform/Dockerfile"
+          dockerfile_path="$base_path/clp-execution-base-$platform/Dockerfile"
         else
-          path="$base_path/clp-package-$platform/Dockerfile"
+          dockerfile_path="$base_path/clp-package-$platform/Dockerfile"
         fi
 
-        echo "DOCKERFILE=$path" >> "$GITHUB_OUTPUT"
+        echo "DOCKERFILE=$dockerfile_path" >> "$GITHUB_OUTPUT"
 
     - name: "Build and Push"
       if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
