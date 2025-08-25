@@ -1,5 +1,5 @@
 name: "clp-image-build"
-description: "Builds a CLP container image."
+description: "Builds a container image to be used for running CLP."
 
 inputs:
   image_type:
