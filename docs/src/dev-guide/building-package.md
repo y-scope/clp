@@ -13,7 +13,7 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
 * Python 3.9 or newer
 * python3-dev
 * python3-venv (for the version of Python installed)
-* [Task] >= 3.40.0
+* [Task] 3.44.0
 
 ## Setup
 
