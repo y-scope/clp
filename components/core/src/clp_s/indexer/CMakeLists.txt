@@ -15,7 +15,7 @@ set(
         ../../clp/database_utils.hpp
         ../../clp/Defs.h
         ../../clp/EncodedVariableInterpreter.cpp
-        ../../clp/EncodedVariableInterpreter.hpp 
+        ../../clp/EncodedVariableInterpreter.hpp
         ../../clp/ErrorCode.hpp
         ../../clp/ffi/encoding_methods.cpp
         ../../clp/ffi/encoding_methods.hpp
@@ -118,6 +118,7 @@ if(CLP_BUILD_EXECUTABLES)
                 clp::string_utils
                 date::date
                 MariaDBClient::MariaDBClient
+                msgpack-cxx
                 nlohmann_json::nlohmann_json
                 OpenSSL::Crypto
                 simdjson::simdjson
