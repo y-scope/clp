@@ -76,6 +76,10 @@ This workflow builds CLP-core on macOS and runs its unit tests.
 This workflow builds a container image that contains the dependencies necessary to run the CLP
 package.
 
+## clp-package-image-build
+
+This workflow builds a container image that contains the CLP package.
+
 ## clp-lint
 
 This workflow runs linting checks on the codebase.
