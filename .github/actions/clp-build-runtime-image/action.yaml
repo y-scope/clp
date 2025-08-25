@@ -19,11 +19,11 @@ inputs:
     required: false
   platform_id:
     description: "Platform ID of the container (e.g. ubuntu)"
-    required: true
+    required: false
   platform_version_id:
     description: "Platform VERSION_ID / VERSION_CODENAME of the container
       (e.g. jammy, focal, etc.)"
-    required: true
+    required: false
 
 runs:
   using: "composite"

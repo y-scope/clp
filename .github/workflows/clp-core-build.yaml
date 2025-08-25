@@ -399,5 +399,3 @@ jobs:
           image_registry: "ghcr.io"
           image_registry_username: "${{github.actor}}"
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"
-          platform_id: "ubuntu"
-          platform_version_id: "jammy"
