@@ -77,8 +77,7 @@ To build a Docker image containing the CLP package, run:
 task docker-image-package
 ```
 
-This will create a Docker image named `clp-package-<arch>-ubuntu-jammy:dev` where `<arch>` is `x86`
-or `arm64`.
+This will create a Docker image named `clp-package:dev`.
 
 [clp-issue-872]: https://github.com/y-scope/clp/issues/872
 [Task]: https://taskfile.dev/

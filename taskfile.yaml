@@ -164,7 +164,7 @@ tasks:
 
   docker-image-package:
     vars:
-      SRC_DIR: "{{.ROOT_DIR}}/tools/docker-images/clp-package-ubuntu-jammy"
+      SRC_DIR: "{{.ROOT_DIR}}/tools/docker-images/clp-package"
     dir: "{{.SRC_DIR}}"
     deps:
       - "package"

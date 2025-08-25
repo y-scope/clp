@@ -42,7 +42,7 @@ jobs:
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-ubuntu-jammy/**"
               - "components/core/tools/scripts/lib_install/ubuntu-jammy/**"
-              - "tools/docker-images/clp-package-ubuntu-jammy/**"
+              - "tools/docker-images/clp-package/**"
 
   ubuntu-jammy-deps-image:
     name: "ubuntu-jammy-deps-image"

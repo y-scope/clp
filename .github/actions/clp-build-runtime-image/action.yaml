@@ -59,12 +59,12 @@ runs:
       shell: "bash"
       run: |
         base_path="./tools/docker-images"
-        platform="${{inputs.platform_id}}-${{inputs.platform_version_id}}"
 
         if [[ "${{inputs.image_type}}" == "execution" ]]; then
+          platform="${{inputs.platform_id}}-${{inputs.platform_version_id}}"
           dockerfile_path="$base_path/clp-execution-base-$platform/Dockerfile"
         else
-          dockerfile_path="$base_path/clp-package-$platform/Dockerfile"
+          dockerfile_path="$base_path/clp-package/Dockerfile"
         fi
 
         echo "DOCKERFILE=$dockerfile_path" >> "$GITHUB_OUTPUT"
