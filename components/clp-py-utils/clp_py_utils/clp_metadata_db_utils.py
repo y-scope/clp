@@ -133,7 +133,7 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
     """
 
     # For a description of the table, see
-    # `../../../docs/src/dev-guide/design-metadata-db.md`
+    # `../../../docs/src/dev-docs/design-metadata-db.md`
     db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{get_datasets_table_name(table_prefix)}` (
