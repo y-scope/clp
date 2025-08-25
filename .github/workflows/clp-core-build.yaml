@@ -146,7 +146,8 @@ jobs:
       needs.filter-relevant-changes.outputs.manylinux_2_28_x86_64_image_changed == 'true')
       }}
     needs: "filter-relevant-changes"
-    runs-on: "${{ matrix.arch == 'x86_64' && ubuntu-24.04 || ubuntu-24.04-arm }}"
+    runs-on: >-
+      ${{ matrix.arch == 'x86_64' && 'ubuntu-24.04' || 'ubuntu-24.04-arm' }}
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -160,10 +161,10 @@ jobs:
         with:
           image_name: >-
             ${{matrix.arch == 'x86_64' && env.DEPS_IMAGE_NAME_PREFIX_X86 ||
-            env.DEPS_IMAGE_NAME_PREFIX_ARM}}${{env.OS_NAME}}
+            env.DEPS_IMAGE_NAME_PREFIX_ARM}}${{matrix.os_name}}
           docker_context: "components/core"
-          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
-            /Dockerfile"
+          docker_file: >-
+            components/core/tools/docker-images/clp-env-base-${{matrix.os_name}}/Dockerfile
           push_deps_image: >-
             ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
           token: "${{secrets.GITHUB_TOKEN}}"
@@ -252,7 +253,7 @@ jobs:
       success()
       || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
     needs:
-      - "centos-stream-9-deps-image"
+      - "deps-image"
       - "filter-relevant-changes"
     strategy:
       matrix:
@@ -291,7 +292,7 @@ jobs:
       success()
       || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
     needs:
-      - "manylinux_2_28-aarch64-deps-image"
+      - "deps-image"
       - "filter-relevant-changes"
     strategy:
       matrix:
@@ -332,7 +333,7 @@ jobs:
       success()
       || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
     needs:
-      - "manylinux_2_28-x86_64-deps-image"
+      - "deps-image"
       - "filter-relevant-changes"
     strategy:
       matrix:
