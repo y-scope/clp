@@ -27,6 +27,7 @@ const getPrestoSearchResultsTableColumns = (
             ],
             key: key,
             title: key,
+            width: 100,
         }));
 };
 
