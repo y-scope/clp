@@ -5,10 +5,6 @@ inputs:
   image_type:
     description: "Type of image to build"
     required: true
-    type: "choice"
-    options:
-      - "execution"
-      - "package"
   image_registry:
     default: "ghcr.io"
     description: "Container image registry"
