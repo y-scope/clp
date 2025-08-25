@@ -7,9 +7,6 @@ import {
 import settings from "../../../settings.json" with {type: "json"};
 
 
-// Use process.env.USER if defined, otherwise fallback to "clp-webui"
-const CLP_PRESTO_USER_FALLBACK = "clp-webui";
-
 /**
  * Class to manage Presto client connections.
  */
@@ -37,9 +34,11 @@ export default fp(
         }
 
         const clientOptions: ClientOptions = {
+            catalog: fastify.config.PRESTO_CATALOG,
             host: settings.PrestoHost,
             port: settings.PrestoPort,
-            user: process.env.USER || CLP_PRESTO_USER_FALLBACK,
+            schema: fastify.config.PRESTO_SCHEMA,
+            user: fastify.config.USER,
         };
 
         fastify.log.info(
