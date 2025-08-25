@@ -1,6 +1,6 @@
-# Developer guide
+# Developer docs
 
-This guide contains docs useful for developing CLP. Use the left sidebar (if it's hidden, click the
+These docs are useful for developing CLP. Use the left sidebar (if it's hidden, click the
 <i class="fa fa-bars"></i> icon) to navigate to specific docs.
 
 The sections are as follows:

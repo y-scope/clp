@@ -71,21 +71,21 @@ features:
 
 # Getting started
 
-Check out the relevant guide below, based on whether you'd like to use or develop CLP.
+Check out the relevant docs below, based on whether you'd like to use or develop CLP.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
 
 :::{grid-item-card}
 :link: user-docs/index
-User guide
+User docs
 ^^^
 Docs for those interested in using and operating CLP.
 :::
 
 :::{grid-item-card}
 :link: dev-docs/index
-Developer guide
+Developer docs
 ^^^
 Docs for those interested in developing CLP.
 :::
