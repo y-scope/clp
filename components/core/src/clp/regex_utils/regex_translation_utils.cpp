@@ -5,6 +5,7 @@
 #include <string>
 #include <string_view>
 
+#include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -13,6 +14,8 @@
 #include "RegexToWildcardTranslatorConfig.hpp"
 
 namespace clp::regex_utils {
+using clp::string_utils::cSingleCharWildcard;
+using clp::string_utils::cZeroOrMoreCharsWildcard;
 using clp::string_utils::is_alphabet;
 using std::optional;
 using std::string;
