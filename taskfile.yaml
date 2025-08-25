@@ -5,6 +5,7 @@ shopt: ["globstar"]
 
 includes:
   deps: "taskfiles/deps/main.yaml"
+  docker-images: "taskfiles/docker-images.yaml"
   docs: "taskfiles/docs.yaml"
   lint: "taskfiles/lint.yaml"
   utils: "tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"

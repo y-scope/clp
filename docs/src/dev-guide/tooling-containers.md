@@ -133,6 +133,16 @@ environment.
   tools/docker-images/clp-execution-base-ubuntu-jammy
   ```
 
+## clp-package
+
+An image containing the CLP package.
+
+* Path:
+
+  ```text
+  tools/docker-images/clp-package
+  ```
+
 [core-deps-centos-stream-9]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos-stream-9
 [core-deps-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-jammy
 [core-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-jammy

@@ -3,12 +3,12 @@ name: "clp-execution-image-build"
 on:
   pull_request:
     paths:
-      - ".github/actions/clp-execution-image-build/action.yaml"
+      - ".github/actions/clp-build-runtime-image/action.yaml"
       - ".github/workflows/clp-execution-image-build.yaml"
       - "tools/docker-images/**/*"
   push:
     paths:
-      - ".github/actions/clp-execution-image-build/action.yaml"
+      - ".github/actions/clp-build-runtime-image/action.yaml"
       - ".github/workflows/clp-execution-image-build.yaml"
       - "tools/docker-images/**/*"
   schedule:
@@ -61,8 +61,9 @@ jobs:
         shell: "bash"
         run: "chown $(id -u):$(id -g) -R ."
 
-      - uses: "./.github/actions/clp-execution-image-build"
+      - uses: "./.github/actions/clp-build-runtime-image"
         with:
+          image_type: "execution"
           image_registry: "ghcr.io"
           image_registry_username: "${{github.actor}}"
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"
