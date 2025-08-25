@@ -40,7 +40,9 @@ curl \
 dnf install --assumeyes "$task_pkg_path"
 rm "$task_pkg_path"
 
-# Downgrade to CMake v3 to work around https://github.com/y-scope/clp/issues/795
-if ! command -v cmake ; then
-    pipx install cmake~=3.31
+# Install CMake v3.31.x as ANTLR and yaml-cpp do not yet support CMake v4+.
+# See also: https://github.com/y-scope/clp/issues/795
+if command -v cmake ; then
+    pipx uninstall cmake
 fi
+pipx install "cmake~=3.31"
