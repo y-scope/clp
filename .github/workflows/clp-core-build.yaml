@@ -30,8 +30,8 @@ on:
 
 env:
   BINARIES_ARTIFACT_NAME_PREFIX: "clp-core-binaries-"
-  DEPS_IMAGE_NAME_PREFIX_X86: "clp-core-dependencies-x86-"
   DEPS_IMAGE_NAME_PREFIX_ARM: "clp-core-dependencies-arm-"
+  DEPS_IMAGE_NAME_PREFIX_X86: "clp-core-dependencies-x86-"
 
 concurrency:
   group: "${{github.workflow}}-${{github.ref}}"
