@@ -7,6 +7,7 @@ includes:
   deps: "taskfiles/deps/main.yaml"
   docs: "taskfiles/docs.yaml"
   lint: "taskfiles/lint.yaml"
+  tests: "taskfiles/tests/main.yaml"
   utils: "tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 vars:
@@ -14,6 +15,7 @@ vars:
   G_COMPONENTS_DIR: "{{.ROOT_DIR}}/components"
   G_CORE_COMPONENT_DIR: "{{.G_COMPONENTS_DIR}}/core"
   G_CORE_COMPONENT_SUBMODULES_DIR: "{{.G_CORE_COMPONENT_DIR}}/submodules"
+  G_INTEGRATION_TESTS_DIR: "{{.ROOT_DIR}}/integration-tests"
   G_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/webui"
 
   # Build paths
