@@ -63,6 +63,9 @@ def main(argv=None) -> int:
     if not _add_worker_env_vars(script_dir.parent / "coordinator-common.env", env_vars):
         return 1
 
+    if not _generate_worker_clp_properties(script_dir.parent / "worker" / "config-template", env_vars):
+        return 1
+
     with open(output_file, "w") as output_file_handle:
         for key, value in env_vars.items():
             output_file_handle.write(f"{key}={value}\n")
@@ -208,6 +211,24 @@ def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: Dict[
         return False
 
     return True
+
+
+def _generate_worker_clp_properties(worker_config_template_path: Path, env_vars: Dict[str, str]) -> bool:
+    """
+    Generates a clp.properties for worker config.
+
+    :param worker_config_template_path:
+    """
+    clp_properties_path = worker_config_template_path / "clp.properties"
+    config_options = ["connector.name=clp"]
+    if "s3" == env_vars["PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE"]:
+        config_options.append("clp.storage-type=s3")
+        config_options.append(f'clp.s3-auth-provider={env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER"]}')
+        config_options.append(f'clp.s3-access-key-id={env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID"]}')
+        config_options.append(f'clp.s3-end-point={env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT"]}')
+        config_options.append(f'clp.s3-secret-access-key={env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY"]}')
+    with clp_properties_path.open("w", encoding="utf-8") as f:
+        f.write("\n".join(config_options) + "\n")
 
 
 def _get_config_value(config: dict, key: str, default_value: Optional[str] = None) -> str:

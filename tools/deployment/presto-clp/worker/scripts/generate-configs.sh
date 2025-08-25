@@ -80,31 +80,6 @@ done
 rm -f "${PRESTO_CONFIG_DIR}/catalog/"*
 mv "${PRESTO_CONFIG_DIR}/clp.properties" "${PRESTO_CONFIG_DIR}/catalog"
 
-# Update clp.properties
-readonly CLP_PROPERTIES_FILE="/opt/presto-server/etc/catalog/clp.properties"
-if [ "${PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE:-}" = "s3" ]; then
-    log "INFO" "Enable S3 support"
-    missing=()
-    for var in PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER \
-           PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID \
-           PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY \
-           PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT; do
-        if [ -z "${!var:-}" ]; then
-            missing+=("$var")
-        fi
-    done
-    if [ ${#missing[@]} -gt 0 ]; then
-        log "ERROR" "Missing required env var(s): ${missing[*]}"
-        exit 1
-    fi
-
-    update_config_file "$CLP_PROPERTIES_FILE" "clp.storage-type" "${PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE}"
-    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-auth-provider" "${PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER}"
-    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-access-key-id" "${PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID}" true
-    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-end-point" "${PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT}"
-    update_config_file "$CLP_PROPERTIES_FILE" "clp.s3-secret-access-key" "${PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY}" true
-fi
-
 # Update config.properties
 readonly CONFIG_PROPERTIES_FILE="/opt/presto-server/etc/config.properties"
 version=$(get_coordinator_version "$CONFIG_PROPERTIES_FILE")
