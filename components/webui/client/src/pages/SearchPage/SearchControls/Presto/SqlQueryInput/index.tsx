@@ -49,7 +49,7 @@ const SqlQueryInput = () => {
     return (
         <div className={styles["input"] || ""}>
             <SqlEditor
-                height={"150px"}
+                height={"120px"}
                 ref={editorRef}
                 disabled={
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||

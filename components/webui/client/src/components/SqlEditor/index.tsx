@@ -12,7 +12,6 @@ import {
 } from "@monaco-editor/react";
 import {theme} from "antd";
 import color from "color";
-import {language as sqlLanguage} from "monaco-editor/esm/vs/basic-languages/sql/sql.js";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 
 import "./monaco-loader";
@@ -30,7 +29,7 @@ type SqlEditorProps = Omit<EditorProps, "language"> & React.RefAttributes<SqlEdi
 };
 
 /**
- * Monaco editor with highlighting and autocomplete for SQL syntax.
+ * Monaco editor with highlighting for SQL syntax.
  *
  * @param props
  * @return
@@ -76,61 +75,6 @@ const SqlEditor = (props: SqlEditorProps) => {
         token
     ]);
 
-    useEffect(() => {
-        if (null === monacoEditor) {
-            return () => {
-            };
-        }
-
-        // Adds autocomplete suggestions for SQL keywords on editor load
-        const provider = monacoEditor.languages.registerCompletionItemProvider("sql", {
-            provideCompletionItems: (model, position) => {
-                const word = model.getWordUntilPosition(position);
-                const range = {
-                    startLineNumber: position.lineNumber,
-                    endLineNumber: position.lineNumber,
-                    startColumn: word.startColumn,
-                    endColumn: word.endColumn,
-                };
-                const suggestions = sqlLanguage.keywords.map((keyword: string) => ({
-                    detail: "Presto SQL (CLP)",
-                    insertText: `${keyword} `,
-                    kind: monacoEditor.languages.CompletionItemKind.Keyword,
-                    label: keyword,
-                    range: range,
-                }));
-
-                // When SQL keyword suggestions appear (e.g., after "SELECT a"), hitting Enter
-                // accepts the first suggestion. To prevent accidental auto-completion
-                // in multi-line queries and to allow users to dismiss suggestions more easily,
-                // we make the current input the first suggestion. Users can then use arrow keys
-                // to select a keyword if needed.
-                const typedWord = model.getValueInRange(range);
-                if (0 < typedWord.length) {
-                    suggestions.push({
-                        detail: "Current",
-                        insertText: `${typedWord}\n`,
-                        kind: monaco.languages.CompletionItemKind.Text,
-                        label: typedWord,
-                        range: range,
-                    });
-                }
-
-                return {
-                    suggestions: suggestions,
-                    incomplete: true,
-                };
-            },
-            triggerCharacters: [
-                " ",
-            ],
-        });
-
-        return () => {
-            provider.dispose();
-        };
-    }, [monacoEditor]);
-
     return (
         <div
             style={
@@ -151,8 +95,8 @@ const SqlEditor = (props: SqlEditorProps) => {
                 }
                 options={{
                     automaticLayout: true,
-                    fontSize: 20,
-                    lineHeight: 30,
+                    folding: false,
+                    fontSize: 16,
                     lineNumbers: "off",
                     minimap: {enabled: false},
                     overviewRulerBorder: false,
