@@ -777,7 +777,6 @@ class GarbageCollector(BaseModel):
         return field
 
 
-
 class Presto(BaseModel):
     host: str = "localhost"
     port: int = 8889
@@ -792,7 +791,7 @@ class Presto(BaseModel):
         _validate_port(cls, field)
         return field
 
-      
+
 def _get_env_var(name: str) -> str:
     value = os.getenv(name)
     if value is None:
