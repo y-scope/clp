@@ -27,7 +27,6 @@ if ! command -v uv ; then
 fi
 
 brew install \
-  boost \
   coreutils \
   gcc \
   java11 \
@@ -35,7 +34,6 @@ brew install \
   llvm@16 \
   lz4 \
   mariadb-connector-c \
-  msgpack-cxx \
   xz \
   zstd
 
