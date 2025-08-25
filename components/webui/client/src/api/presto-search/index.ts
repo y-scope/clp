@@ -28,9 +28,41 @@ const submitQuery = async (
     return axios.post<PrestoQueryJobSchema>("/api/presto-search/query", payload);
 };
 
+
+/**
+ * Sends post request to server to cancel presto query.
+ *
+ * @param payload
+ * @return
+ */
+const cancelQuery = async (
+    payload: PrestoQueryJobSchema
+): Promise<AxiosResponse<null>> => {
+    console.log("Cancelling query:", JSON.stringify(payload));
+
+    return axios.post("/api/presto-search/cancel", payload);
+};
+
+
+/**
+ * Sends delete request to server to clear presto query results.
+ *
+ * @param payload
+ * @return
+ */
+const clearQueryResults = (payload: PrestoQueryJobSchema): Promise<AxiosResponse<null>> => {
+    console.log("Clearing query:", JSON.stringify(payload));
+
+    return axios.delete("/api/presto-search/results", {data: payload});
+};
+
 export type {
     PrestoQueryJobCreationSchema,
     PrestoQueryJobSchema,
 };
 
-export {submitQuery};
+export {
+    cancelQuery,
+    clearQueryResults,
+    submitQuery,
+};

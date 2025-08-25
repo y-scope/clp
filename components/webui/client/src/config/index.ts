@@ -1,3 +1,4 @@
+import {CLP_QUERY_ENGINES} from "../../../common/index.js";
 import {settings} from "../settings";
 
 
@@ -7,14 +8,6 @@ import {settings} from "../settings";
 enum CLP_STORAGE_ENGINES {
     CLP = "clp",
     CLP_S = "clp-s",
-}
-
-/**
- * Query engine options.
- */
-enum CLP_QUERY_ENGINES {
-    NATIVE = "native",
-    PRESTO = "presto",
 }
 
 const SETTINGS_STORAGE_ENGINE = settings.ClpStorageEngine as CLP_STORAGE_ENGINES;
