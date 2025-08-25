@@ -16,9 +16,9 @@ RUN apt-get clean \
 FROM scratch
 COPY --from=base / /
 
-ENV PATH="/opt/clp/sbin:${PATH}"
-ENV PATH="/opt/clp/bin:${PATH}"
-ENV PYTHONPATH="/opt/clp/lib/python3/site-packages"
 ENV CLP_HOME="/opt/clp"
+ENV PATH="${CLP_HOME}/sbin:${PATH}"
+ENV PATH="${CLP_HOME}/bin:${PATH}"
+ENV PYTHONPATH="${CLP_HOME}/lib/python3/site-packages"
 
 USER 1000:1000
