@@ -26,3 +26,8 @@ echo "Generating environment variables file for user-configured properties..."
 python3 "${script_dir}/generate-user-env-vars-file.py" \
     --clp-package-dir "${clp_package_dir}" \
     --output-file "${script_dir}/../.env"
+
+echo "Generating metadata filter file for user-configured datasets..."
+python3 "${script_dir}/generate-metadata-filter-file.py" \
+    --clp-package-dir "${clp_package_dir}" \
+    --output-file "${script_dir}/../coordinator/config-template/metadata-filter.json"
