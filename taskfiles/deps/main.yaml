@@ -64,7 +64,7 @@ tasks:
   core-all-parallel:
     internal: true
     run: "once"
-    cmds:
+    deps:
       - task: "absl"
       - task: "antlr-jar"
       - task: "antlr-runtime"
@@ -318,7 +318,7 @@ tasks:
             - "-Dlog_surgeon_BUILD_TESTING=OFF"
           LIB_NAME: "log_surgeon"
           TARBALL_SHA256: "6053f7e26ff21aef0c4cf409502d3abb0cfcf76d8f76786c3bb1bcc03e8f5df2"
-          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/a82ad13.tar.gz"
+          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/831a9f9.tar.gz"
 
   lz4:
     internal: true
