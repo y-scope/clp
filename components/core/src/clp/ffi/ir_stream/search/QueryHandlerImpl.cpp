@@ -1,5 +1,6 @@
 #include "QueryHandlerImpl.hpp"
 
+#include <cstddef>
 #include <exception>
 #include <memory>
 #include <optional>
