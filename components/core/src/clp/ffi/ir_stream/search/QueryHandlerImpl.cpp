@@ -194,7 +194,7 @@ auto create_projected_columns_and_projection_map(
     std::vector<std::shared_ptr<ColumnDescriptor>> projected_columns;
     QueryHandlerImpl::ProjectionMap projected_column_to_original_key_and_index;
 
-    for (size_t index = 0; index < projections.size(); ++index) {
+    for (size_t index{0}; index < projections.size(); ++index) {
         auto const& [key, types] = projections[index];
         if (false == allow_duplicate_projected_columns) {
             if (unique_projected_columns.contains(key)) {
@@ -248,7 +248,7 @@ auto create_initial_partial_resolutions(
                 QueryHandlerImpl::PartialResolutionMap>> {
     QueryHandlerImpl::PartialResolutionMap auto_gen_namespace_partial_resolutions;
     QueryHandlerImpl::PartialResolutionMap user_gen_namespace_partial_resolutions;
-    for (auto const& [col, key_and_index] : projected_column_to_original_key_and_index) {
+    for (auto const& [col, _] : projected_column_to_original_key_and_index) {
         auto const optional_is_auto_gen{is_auto_generated(col->get_namespace())};
         if (false == optional_is_auto_gen.has_value()) {
             // Ignore unrecognized namespace
