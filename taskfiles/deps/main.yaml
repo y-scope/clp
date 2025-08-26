@@ -64,7 +64,7 @@ tasks:
   core-all-parallel:
     internal: true
     run: "once"
-    deps:
+    cmds:
       - task: "absl"
       - task: "antlr-jar"
       - task: "antlr-runtime"
