@@ -32,6 +32,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
+    QueryEngine,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     get_archives_table_name,
@@ -72,6 +73,7 @@ from clp_package_utils.general import (
     validate_results_cache_config,
     validate_retention_config,
     validate_webui_config,
+    validate_presto_config,
 )
 
 logger = logging.getLogger(__file__)
@@ -887,8 +889,6 @@ def start_webui(
         "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
         "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
         "ClpQueryEngine": clp_config.package.query_engine,
-        "PrestoHost": clp_config.presto.host,
-        "PrestoPort": clp_config.presto.port,
     }
 
     container_cmd_extra_opts = []
@@ -913,6 +913,14 @@ def start_webui(
         server_settings_json_updates["StreamFilesS3Region"] = None
         server_settings_json_updates["StreamFilesS3PathPrefix"] = None
         server_settings_json_updates["StreamFilesS3Profile"] = None
+
+    query_engine = clp_config.package.query_engine
+    if QueryEngine.PRESTO == query_engine:
+        server_settings_json_updates["PrestoHost"] = clp_config.presto.host
+        server_settings_json_updates["PrestoPort"] = clp_config.presto.port
+    else:
+        server_settings_json_updates["PrestoHost"] = None
+        server_settings_json_updates["PrestoPort"] = None
 
     server_settings_json = read_and_update_settings_json(
         server_settings_json_path, server_settings_json_updates
@@ -1223,6 +1231,11 @@ def main(argv):
             GARBAGE_COLLECTOR_COMPONENT_NAME,
         ):
             validate_retention_config(clp_config)
+        if target in (
+            ALL_TARGET_NAME,
+            CONTROLLER_TARGET_NAME,
+        ):
+            validate_presto_config(clp_config)
 
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()
