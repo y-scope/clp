@@ -1234,6 +1234,7 @@ def main(argv):
         if target in (
             ALL_TARGET_NAME,
             CONTROLLER_TARGET_NAME,
+            WEBUI_COMPONENT_NAME,
         ):
             validate_presto_config(clp_config)
 

@@ -116,9 +116,7 @@
 #    search_result: 30
 #
 ## Presto client config
-#presto:
-#  host: "localhost"
-#  port: 8889
+#presto: null
 #
 ## Location where other data (besides archives) are stored. It will be created if
 ## it doesn't exist.
