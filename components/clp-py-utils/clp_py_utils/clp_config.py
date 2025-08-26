@@ -778,6 +778,9 @@ class GarbageCollector(BaseModel):
 
 
 class Presto(BaseModel):
+    host: str
+    port: int
+
     @validator("host")
     def validate_host(cls, field):
         _validate_host(cls, field)
