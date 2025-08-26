@@ -1,9 +1,9 @@
 import {useEffect} from "react";
 
 import {
-     SEARCH_SIGNAL,
-     PRESTO_SEARCH_SIGNAL}
-from "@webui/common";
+    PRESTO_SEARCH_SIGNAL,
+    SEARCH_SIGNAL,
+} from "@webui/common";
 import {notification} from "antd";
 
 import useSearchStore from "./index";

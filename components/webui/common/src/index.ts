@@ -164,14 +164,14 @@ export {
     TestTypeBoxSchema,
 };
 export type {
-    PrestoRowObject,
-    PrestoSearchResult,
-    SearchResultsMetadataDocument,
     ClientToServerEvents,
     Err,
     InterServerEvents,
+    PrestoRowObject,
+    PrestoSearchResult,
     QueryId,
     Response,
+    SearchResultsMetadataDocument,
     ServerToClientEvents,
     SocketData,
 };

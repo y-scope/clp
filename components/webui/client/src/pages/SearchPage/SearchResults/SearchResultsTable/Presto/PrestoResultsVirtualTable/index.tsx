@@ -4,6 +4,7 @@ import {
 } from "react";
 
 import type {PrestoSearchResult} from "@webui/common";
+
 import VirtualTable from "../../../../../../components/VirtualTable";
 import useSearchStore from "../../../../SearchState/index";
 import {usePrestoSearchResults} from "./usePrestoSearchResults";
