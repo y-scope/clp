@@ -8,7 +8,7 @@ import SearchControls from "./SearchControls";
 import SearchQueryStatus from "./SearchQueryStatus";
 import SearchResultsTable from "./SearchResults/SearchResultsTable";
 import SearchResultsTimeline from "./SearchResults/SearchResultsTimeline";
-import {useUiUpdateOnDoneSignal} from "./SearchState/useUpdateStateWithMetadata";
+import {useUpdateStateWithMetadata} from "./SearchState/useUpdateStateWithMetadata";
 
 
 /**
@@ -17,7 +17,7 @@ import {useUiUpdateOnDoneSignal} from "./SearchState/useUpdateStateWithMetadata"
  * @return
  */
 const SearchPage = () => {
-    useUiUpdateOnDoneSignal();
+    useUpdateStateWithMetadata();
 
     return (
         <>
@@ -27,7 +27,7 @@ const SearchPage = () => {
                     <SearchControls/>
                     <SearchQueryStatus/>
                 </div>
-                <SearchResultsTimeline/>
+                {SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO && <SearchResultsTimeline/>}
                 <SearchResultsTable/>
             </div>
         </>
