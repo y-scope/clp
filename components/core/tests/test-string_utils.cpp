@@ -2,11 +2,17 @@
 
 #include <boost/foreach.hpp>
 #include <boost/range/combine.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
+#include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 
 using clp::string_utils::clean_up_wildcard_search_string;
 using clp::string_utils::convert_string_to_int;
+using clp::string_utils::cSingleCharWildcard;
+using clp::string_utils::cWildcardEscapeChar;
+using clp::string_utils::cZeroOrMoreCharsWildcard;
+using clp::string_utils::replace_unescaped_char;
 using clp::string_utils::wildcard_match_unsafe;
 using clp::string_utils::wildcard_match_unsafe_case_sensitive;
 using std::chrono::duration;
@@ -20,6 +26,57 @@ TEST_CASE("to_lower", "[to_lower]") {
     string str = "test123TEST";
     clp::string_utils::to_lower(str);
     REQUIRE(str == "test123test");
+}
+
+TEST_CASE("replace_unescaped_char", "[replace_unescaped_char]") {
+    auto check = [](char escape_char,
+                    char from_char,
+                    char to_char,
+                    std::string in,
+                    std::string const& expected) {
+        replace_unescaped_char(escape_char, from_char, to_char, in);
+        REQUIRE((in == expected));
+    };
+
+    SECTION("Conventional escape and wildcard characters") {
+        auto [str, expected] = GENERATE(
+                as<std::pair<string, string>>{},
+
+                // Replacements with no escape chars present
+                std::pair{R"(a?b)", R"(a*b)"},
+                std::pair{R"(?leading)", R"(*leading)"},
+                std::pair{R"(trailing?)", R"(trailing*)"},
+                std::pair{R"(multiple??q)", R"(multiple**q)"},
+
+                // Replacements with escape chars present
+                std::pair{R"(a\\?b)", R"(a\\*b)"},
+                std::pair{R"(\\?abc)", R"(\\*abc)"},
+                std::pair{R"(abc\\?)", R"(abc\\*)"},
+
+                // No replacements with escape chars present
+                std::pair{R"(a\?b)", R"(a\?b)"},
+                std::pair{R"(\?abc)", R"(\?abc)"},
+                std::pair{R"(abc\?)", R"(abc\?)"},
+
+                // Mixed
+                std::pair{R"(a\\?b a\?b a?b)", R"(a\\*b a\?b a*b)"},
+                std::pair{R"(\\?abc \?abc a?b)", R"(\\*abc \?abc a*b)"},
+                std::pair{R"(abc\\? abc\? a?b)", R"(abc\\* abc\? a*b)"},
+
+                // Additional edge cases
+                std::pair{R"(no change)", R"(no change)"},
+                std::pair{R"()", R"()"},
+                std::pair{R"(\)", R"(\)"},
+                std::pair{R"(\\)", R"(\\)"},
+                std::pair{R"(?\)", R"(*\)"}
+        );
+
+        check(cWildcardEscapeChar, cSingleCharWildcard, cZeroOrMoreCharsWildcard, str, expected);
+    }
+
+    SECTION("Unconventional escape and wildcard characters") {
+        check('q', 'w', 'e', R"(aqqwb aqwb awb)", R"(aqqeb aqwb aeb)");
+    }
 }
 
 TEST_CASE("clean_up_wildcard_search_string", "[clean_up_wildcard_search_string]") {

@@ -123,7 +123,8 @@ if(PROJECT_IS_TOP_LEVEL)
     # Include dependency settings if the project isn't being included as a subproject.
     # NOTE: We mark the file optional since it's not required if the user happens to have the
     # dependencies installed already.
-    include("${CMAKE_SOURCE_DIR}/../../build/deps/core/cmake-settings/all.cmake"
+    set(CLP_CORE_DEPS_DIR "${CMAKE_SOURCE_DIR}/../../build/deps/core")
+    include("${CLP_CORE_DEPS_DIR}/cmake-settings/all.cmake"
             OPTIONAL
             RESULT_VARIABLE CLP_DEPS_SETTINGS_FILE_PATH
     )
@@ -156,19 +157,23 @@ if(CLP_NEED_BOOST)
     if(CLP_USE_STATIC_LIBS)
         set(Boost_USE_STATIC_LIBS ON)
     endif()
-    find_package(Boost 1.81 REQUIRED iostreams program_options filesystem system regex url)
-    if(Boost_FOUND)
-        message(STATUS "Found Boost ${Boost_VERSION}")
-    else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
-    endif()
+    find_package(
+        Boost
+        1.81...1.88
+        REQUIRED
+            filesystem
+            iostreams
+            program_options
+            regex
+            system
+            url
+    )
+    message(STATUS "Found Boost ${Boost_VERSION}")
 endif()
 
 if(CLP_NEED_CATCH2)
-    find_package(Catch2 REQUIRED)
-    if (Catch2_FOUND)
-        message(STATUS "Found Catch2 ${Catch2_VERSION}")
-    endif()
+    find_package(Catch2 3.8.0 REQUIRED)
+    message(STATUS "Found Catch2 ${Catch2_VERSION}")
 endif()
 
 if(CLP_NEED_DATE)
@@ -272,14 +277,10 @@ if(CLP_NEED_MONGOCXX)
     endif()
 endif()
 
-# Find and setup msgpack
+# Find and setup msgpack-cxx
 if(CLP_NEED_MSGPACKCXX)
     find_package(msgpack-cxx 7.0.0 REQUIRED)
-    if(msgpack-cxx_FOUND)
-        message(STATUS "Found msgpack-cxx ${msgpack-cxx_VERSION}")
-    else()
-        message(FATAL_ERROR "Could not find msgpack-cxx")
-    endif()
+    message(STATUS "Found msgpack-cxx ${msgpack-cxx_VERSION}")
 endif()
 
 find_package(Threads REQUIRED)
@@ -308,31 +309,16 @@ if(CLP_NEED_ZSTD)
     endif()
 endif()
 
-# Find and setup LZMA Library
-# TODO: Add a script in ./cmake/Modules to properly import LZMA in find_package()'s module mode
-if(CLP_NEED_LZMA)
+if(CLP_NEED_LIBLZMA)
     if(CLP_USE_STATIC_LIBS)
-        set(LIBLZMA_USE_STATIC_LIBS ON)
-    endif()
-    find_package(LibLZMA REQUIRED)
-    if(LIBLZMA_FOUND)
-        message(STATUS "Found Lzma ${LIBLZMA_VERSION_STRING}")
-        message(STATUS "Lzma library location: ${LIBLZMA_LIBRARIES}")
-        message(STATUS "Lzma Include Dir: ${LIBLZMA_INCLUDE_DIRS}")
-
-        # Version 5.8.1 and above address CVE-2024-3094 and CVE-2025-31115.
-        set(REQUIRED_LIBLZMA_VERSION "5.8.1")
-        if(LIBLZMA_VERSION_STRING VERSION_LESS ${REQUIRED_LIBLZMA_VERSION})
-            message(
-                FATAL_ERROR
-                "Detected LibLZMA version ${LIBLZMA_VERSION_STRING} is older than required"
-                " ${REQUIRED_LIBLZMA_VERSION}"
-            )
-        endif()
+        set(LibLZMA_ROOT ${LibLZMA-static_ROOT})
+        set(LibLZMA_USE_STATIC_LIBS ON)
     else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Lzma")
+        set(LibLZMA_ROOT ${LibLZMA-shared_ROOT})
     endif()
-    include_directories(${LIBLZMA_INCLUDE_DIRS})
+    # Version 5.8.1 and above address CVE-2024-3094 and CVE-2025-31115.
+    find_package(LibLZMA 5.8.1 REQUIRED)
+    message(STATUS "Found LibLZMA ${LibLZMA_VERSION}")
 endif()
 
 # sqlite dependencies
@@ -717,7 +703,6 @@ set(SOURCE_FILES_unitTest
         tests/test-ir_parsing.cpp
         tests/test-ir_serializer.cpp
         tests/test-kql.cpp
-        tests/test-main.cpp
         tests/test-math_utils.cpp
         tests/test-MemoryMappedFile.cpp
         tests/test-NetworkReader.cpp
@@ -748,8 +733,12 @@ if(CLP_BUILD_TESTING)
     target_link_libraries(unitTest
             PRIVATE
             absl::flat_hash_map
-            Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
-            Catch2::Catch2
+            Boost::filesystem
+            Boost::iostreams
+            Boost::program_options
+            Boost::regex
+            Boost::url
+            Catch2::Catch2WithMain
             ${CURL_LIBRARIES}
             clp_s::search::ast
             clp_s::search::kql
@@ -759,8 +748,10 @@ if(CLP_BUILD_TESTING)
             fmt::fmt
             log_surgeon::log_surgeon
             LibArchive::LibArchive
+            LibLZMA::LibLZMA
             MariaDBClient::MariaDBClient
             ${MONGOCXX_TARGET}
+            msgpack-cxx
             nlohmann_json::nlohmann_json
             simdjson::simdjson
             spdlog::spdlog
@@ -771,7 +762,6 @@ if(CLP_BUILD_TESTING)
             clp::string_utils
             ystdlib::containers
             ystdlib::error_handling
-            ${LIBLZMA_LIBRARIES}
             ${zstd_TARGET}
             )
     target_compile_features(unitTest
