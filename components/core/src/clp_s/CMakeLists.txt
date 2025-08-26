@@ -17,6 +17,7 @@ set(
         ../clp/cli_utils.cpp
         ../clp/cli_utils.hpp
         ../clp/Defs.h
+        ../clp/DictionaryConcepts.hpp
         ../clp/EncodedVariableInterpreter.cpp
         ../clp/EncodedVariableInterpreter.hpp
         ../clp/ErrorCode.hpp

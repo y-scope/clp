@@ -14,6 +14,7 @@ set(
         ../../clp/database_utils.cpp
         ../../clp/database_utils.hpp
         ../../clp/Defs.h
+        ../../clp/DictionaryConcepts.hpp
         ../../clp/EncodedVariableInterpreter.cpp
         ../../clp/EncodedVariableInterpreter.hpp
         ../../clp/ErrorCode.hpp
