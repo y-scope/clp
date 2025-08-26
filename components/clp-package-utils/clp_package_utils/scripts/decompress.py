@@ -70,7 +70,7 @@ def handle_extract_file_cmd(
     :param parsed_args:
     :param clp_home:
     :param default_config_file_path:
-    :return: 0 on success, -1 otherwise.
+    :return: exit code of extraction command, or -1 if an error is encountered.
     """
     paths_to_extract_file_path = None
     if parsed_args.files_from:
@@ -174,7 +174,7 @@ def handle_extract_stream_cmd(
     :param parsed_args:
     :param clp_home:
     :param default_config_file_path:
-    :return: 0 on success, -1 otherwise.
+    :return: exit code of extraction command, or -1 if an error is encountered.
     """
     # Validate and load config file
     clp_config = validate_and_load_config(
