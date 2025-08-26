@@ -3,7 +3,7 @@ import type {
     InsertManyResult,
 } from "mongodb";
 
-import type {PrestoRowObject} from "../../../../../common/index.js";
+import type {PrestoRowObject} from "@webui/common";
 
 
 /**
