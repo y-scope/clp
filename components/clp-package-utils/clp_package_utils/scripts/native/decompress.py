@@ -1,6 +1,7 @@
 import argparse
 import asyncio
 import logging
+import os
 import pathlib
 import subprocess
 import sys
@@ -8,8 +9,9 @@ import uuid
 from contextlib import closing
 from typing import Optional
 
-import yaml
 from clp_py_utils.clp_config import (
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
     CLPConfig,
     Database,
 )
@@ -189,6 +191,7 @@ def validate_and_load_config_file(
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_archive_output_config()
         clp_config.validate_logs_dir()
+        clp_config.database.load_credentials_from_env()
         return clp_config
     except Exception:
         logger.exception("Failed to load config.")
@@ -229,18 +232,24 @@ def handle_extract_file_cmd(
     logs_dir = clp_config.logs_directory
     archives_dir = clp_config.archive_output.get_directory()
 
-    # Generate database config file for clp
-    db_config_file_path = logs_dir / f".decompress-db-config-{uuid.uuid4()}.yml"
-    with open(db_config_file_path, "w") as f:
-        yaml.safe_dump(clp_config.database.get_clp_connection_params_and_type(True), f)
-
+    # Configure CLP metadata DB connection params.
+    clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
     # fmt: off
     extract_cmd = [
         str(clp_home / "bin" / "clp"),
         "x", str(archives_dir), str(extraction_dir),
-        "--db-config-file", str(db_config_file_path),
+        "--db-type", clp_db_connection_params["type"],
+        "--db-host", clp_db_connection_params["host"],
+        "--db-port", str(clp_db_connection_params["port"]),
+        "--db-name", clp_db_connection_params["name"],
+        "--db-table-prefix", clp_db_connection_params["table_prefix"],
     ]
     # fmt: on
+    extract_env = {
+        **os.environ,
+        CLP_DB_USER_ENV_VAR_NAME: clp_db_connection_params["username"],
+        CLP_DB_PASS_ENV_VAR_NAME: clp_db_connection_params["password"],
+    }
 
     files_to_extract_list_path = None
     if list_path is not None:
@@ -256,7 +265,7 @@ def handle_extract_file_cmd(
         extract_cmd.append("-f")
         extract_cmd.append(str(files_to_extract_list_path))
 
-    proc = subprocess.Popen(extract_cmd)
+    proc = subprocess.Popen(extract_cmd, env=extract_env)
     return_code = proc.wait()
     if 0 != return_code:
         logger.error(f"File extraction failed, return_code={return_code}")
@@ -265,7 +274,6 @@ def handle_extract_file_cmd(
     # Remove generated files
     if files_to_extract_list_path is not None:
         files_to_extract_list_path.unlink()
-    db_config_file_path.unlink()
 
     return 0
 

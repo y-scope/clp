@@ -2,7 +2,8 @@
 #define CLP_DICTIONARYWRITER_HPP
 
 #include <string>
-#include <unordered_map>
+
+#include <absl/container/flat_hash_map.h>
 
 #include "ArrayBackedPosIntSet.hpp"
 #include "Defs.h"
@@ -33,6 +34,9 @@ public:
         // Methods
         char const* what() const noexcept override { return "DictionaryWriter operation failed"; }
     };
+
+    using dictionary_id_t = DictionaryIdType;
+    using entry_t = EntryType;
 
     // Constructors
     DictionaryWriter() : m_is_open(false) {}
@@ -83,7 +87,7 @@ public:
 
 protected:
     // Types
-    using value_to_id_t = std::unordered_map<std::string, DictionaryIdType>;
+    using value_to_id_t = absl::flat_hash_map<std::string, DictionaryIdType>;
 
     // Variables
     bool m_is_open;

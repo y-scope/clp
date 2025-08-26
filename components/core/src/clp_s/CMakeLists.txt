@@ -17,14 +17,22 @@ set(
         ../clp/cli_utils.cpp
         ../clp/cli_utils.hpp
         ../clp/Defs.h
+        ../clp/EncodedVariableInterpreter.cpp
+        ../clp/EncodedVariableInterpreter.hpp
         ../clp/ErrorCode.hpp
+        ../clp/ffi/encoding_methods.cpp
+        ../clp/ffi/encoding_methods.hpp
+        ../clp/ffi/encoding_methods.inc
+        ../clp/ffi/ir_stream/byteswap.hpp
         ../clp/ffi/ir_stream/decoding_methods.cpp
         ../clp/ffi/ir_stream/decoding_methods.hpp
+        ../clp/ffi/ir_stream/decoding_methods.inc
         ../clp/ffi/ir_stream/Deserializer.hpp
         ../clp/ffi/ir_stream/encoding_methods.cpp
         ../clp/ffi/ir_stream/encoding_methods.hpp
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         ../clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
+        ../clp/ffi/ir_stream/protocol_constants.hpp
         ../clp/ffi/ir_stream/Serializer.cpp
         ../clp/ffi/ir_stream/Serializer.hpp
         ../clp/ffi/ir_stream/search/AstEvaluationResult.hpp
@@ -48,17 +56,28 @@ set(
         ../clp/FileDescriptor.hpp
         ../clp/FileReader.cpp
         ../clp/FileReader.hpp
+        ../clp/GrepCore.cpp
+        ../clp/GrepCore.hpp
         ../clp/hash_utils.cpp
         ../clp/hash_utils.hpp
         ../clp/ir/constants.hpp
         ../clp/ir/EncodedTextAst.cpp
         ../clp/ir/EncodedTextAst.hpp
+        ../clp/ir/LogEvent.hpp
         ../clp/ir/parsing.cpp
         ../clp/ir/parsing.hpp
+        ../clp/ir/parsing.inc
+        ../clp/ir/types.hpp
+        ../clp/LogSurgeonReader.cpp
+        ../clp/LogSurgeonReader.hpp
         ../clp/NetworkReader.cpp
         ../clp/NetworkReader.hpp
         ../clp/networking/socket_utils.cpp
         ../clp/networking/socket_utils.hpp
+        ../clp/Query.cpp
+        ../clp/Query.hpp
+        ../clp/QueryToken.cpp
+        ../clp/QueryToken.hpp
         ../clp/ReaderInterface.cpp
         ../clp/ReaderInterface.hpp
         ../clp/ReadOnlyMemoryMappedFile.cpp
@@ -69,10 +88,12 @@ set(
         ../clp/streaming_archive/Constants.hpp
         ../clp/streaming_compression/zstd/Decompressor.cpp
         ../clp/streaming_compression/zstd/Decompressor.hpp
+        ../clp/StringReader.cpp
+        ../clp/StringReader.hpp
         ../clp/Thread.cpp
         ../clp/Thread.hpp
-        ../clp/TraceableException.hpp
         ../clp/time_types.hpp
+        ../clp/TraceableException.hpp
         ../clp/type_utils.hpp
         ../clp/utf8_utils.cpp
         ../clp/utf8_utils.hpp
@@ -92,7 +113,9 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 clp_s_clp_dependencies
                 PUBLIC
                 clp::string_utils
+                log_surgeon::log_surgeon
                 ystdlib::containers
+                ${zstd_TARGET}
                 PRIVATE
                 Boost::regex
                 ${CURL_LIBRARIES}
@@ -102,7 +125,6 @@ if(CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
                 OpenSSL::Crypto
                 spdlog::spdlog
                 ystdlib::error_handling
-                ZStd::ZStd
         )
 endif()
 
@@ -182,7 +204,7 @@ if(CLP_BUILD_CLP_S_IO)
                 clp_s::clp_dependencies
                 fmt::fmt
                 spdlog::spdlog
-                ZStd::ZStd
+                ${zstd_TARGET}
         )
 endif()
 
@@ -223,8 +245,6 @@ set(
         TraceableException.hpp
         Utils.cpp
         Utils.hpp
-        VariableEncoder.cpp
-        VariableEncoder.hpp
 )
 
 if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
@@ -286,8 +306,6 @@ set(
         TraceableException.hpp
         Utils.cpp
         Utils.hpp
-        VariableDecoder.cpp
-        VariableDecoder.hpp
 )
 
 if(CLP_BUILD_CLP_S_ARCHIVEREADER)
@@ -336,6 +354,7 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
                 clp_s_json_constructor
                 PUBLIC
                 clp_s::archive_reader
+                ${zstd_TARGET}
                 PRIVATE
                 fmt::fmt
                 ${MONGOCXX_TARGET}

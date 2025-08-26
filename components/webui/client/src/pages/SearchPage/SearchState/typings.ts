@@ -21,6 +21,11 @@ enum SEARCH_UI_STATE {
      * When the query is complete or cancelled.
      */
     DONE,
+
+    /**
+     * When the query failed due to an error.
+     */
+    FAILED,
 }
 
 export {SEARCH_UI_STATE};

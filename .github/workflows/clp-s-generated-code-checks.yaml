@@ -15,20 +15,32 @@ jobs:
     name: "antlr-code-committed"
     strategy:
       matrix:
-        os: ["macos-latest", "ubuntu-latest"]
+        os:
+          - "macos-15"
+          - "ubuntu-24.04"
     runs-on: "${{matrix.os}}"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
           submodules: "recursive"
 
+      - name: "Set up Java"
+        uses: "actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00"
+        with:
+          distribution: "temurin"
+          java-version: "11"
+
       - name: "Install task"
         shell: "bash"
         run: "npm install -g @go-task/cli"
 
-      - if: "matrix.os == 'macos-latest'"
+      - if: "matrix.os == 'macos-15'"
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
+
+      - name: "Generate parsers"
+        shell: "bash"
+        run: "task clp-s-generate-parsers"
 
       - name: "Check if the generated parsers are the latest"
         shell: "bash"

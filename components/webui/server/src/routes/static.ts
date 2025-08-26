@@ -18,14 +18,22 @@ const routes: FastifyPluginAsync = async (fastify) => {
     const rootDirname = path.resolve(dirname, "../../..");
 
     let streamFilesDir = settings.StreamFilesDir;
-    if (false === path.isAbsolute(streamFilesDir)) {
-        streamFilesDir = path.resolve(rootDirname, streamFilesDir);
+
+    // Register /streams only if `streamFilesDir` is set (i.e., FS support is enabled in the
+    // package)
+    // Disable no-unnecessary-condition since linter doesn't understand that settings
+    // values are not hardcoded.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (null !== streamFilesDir) {
+        if (false === path.isAbsolute(streamFilesDir)) {
+            streamFilesDir = path.resolve(rootDirname, streamFilesDir);
+        }
+        await fastify.register(fastifyStatic, {
+            prefix: "/streams",
+            root: streamFilesDir,
+            decorateReply: false,
+        });
     }
-    await fastify.register(fastifyStatic, {
-        prefix: "/streams",
-        root: streamFilesDir,
-        decorateReply: false,
-    });
 
     let logViewerDir = settings.LogViewerDir;
     if (false === path.isAbsolute(logViewerDir)) {

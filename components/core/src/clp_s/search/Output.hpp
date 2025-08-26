@@ -14,12 +14,9 @@
 #include "../Utils.hpp"
 #include "ast/Expression.hpp"
 #include "ast/StringLiteral.hpp"
-#include "clp_search/Query.hpp"
 #include "OutputHandler.hpp"
 #include "QueryRunner.hpp"
 #include "SchemaMatch.hpp"
-
-using namespace clp_s::search::clp_search;
 
 namespace clp_s::search {
 /**

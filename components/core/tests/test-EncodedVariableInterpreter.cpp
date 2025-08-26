@@ -1,10 +1,13 @@
 #include <unistd.h>
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include "../src/clp/EncodedVariableInterpreter.hpp"
 #include "../src/clp/ir/types.hpp"
+#include "../src/clp/LogTypeDictionaryEntry.hpp"
 #include "../src/clp/streaming_archive/Constants.hpp"
+#include "../src/clp/VariableDictionaryReader.hpp"
+#include "../src/clp/VariableDictionaryWriter.hpp"
 
 using clp::cVariableDictionaryIdMax;
 using clp::encoded_variable_t;
@@ -409,10 +412,9 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
         var_dict_reader.open(std::string{cVarDictPath}, std::string{cVarSegmentIndexPath});
         var_dict_reader.read_new_entries();
 
-        REQUIRE(var_dict_reader.get_entry_matching_value(std::string{var_strs.at(0)}, true).size()
+        REQUIRE(var_dict_reader.get_entry_matching_value(var_strs.at(0), true).size()
                 == var_strs.size());
-        REQUIRE(var_dict_reader.get_entry_matching_value(std::string{var_strs.at(0)}, false).size()
-                == 1);
+        REQUIRE(var_dict_reader.get_entry_matching_value(var_strs.at(0), false).size() == 1);
 
         var_dict_reader.close();
 

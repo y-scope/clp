@@ -42,7 +42,7 @@ concurrency:
 jobs:
   filter-relevant-changes:
     name: "filter-relevant-changes"
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     outputs:
       centos_stream_9_image_changed: "${{steps.filter.outputs.centos_stream_9_image}}"
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
@@ -99,7 +99,7 @@ jobs:
     name: "centos-stream-9-deps-image"
     if: "needs.filter-relevant-changes.outputs.centos_stream_9_image_changed == 'true'"
     needs: "filter-relevant-changes"
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -125,7 +125,7 @@ jobs:
     name: "ubuntu-jammy-deps-image"
     if: "needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'true'"
     needs: "filter-relevant-changes"
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -160,7 +160,7 @@ jobs:
         use_shared_libs: [true, false]
     name: "centos-stream-9-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -205,7 +205,7 @@ jobs:
       OS_NAME: "ubuntu-jammy"
     name: "ubuntu-jammy-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins"
     continue-on-error: true
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -252,7 +252,7 @@ jobs:
     # Run if the ancestor jobs were successful/skipped and building clp was successful.
     if: "!cancelled() && !failure() && needs.ubuntu-jammy-binaries.result == 'success'"
     needs: "ubuntu-jammy-binaries"
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     env:
       OS_NAME: "ubuntu-jammy"
       TMP_OUTPUT_DIR: "/tmp"
@@ -319,7 +319,7 @@ jobs:
     needs:
       - "filter-relevant-changes"
       - "ubuntu-jammy-deps-image"
-    runs-on: "ubuntu-latest"
+    runs-on: "ubuntu-24.04"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -355,11 +355,11 @@ jobs:
           use_published_image: >-
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
-          # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
-          # run_command: >-
-          #   task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
+          # TODO: We set HOME due to permission issues inside the container used in run-on-image.
+          # See: https://github.com/y-scope/clp/issues/1145
           run_command: >-
             CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
+            HOME=/tmp
             task lint:check-cpp-full
 
       # Cache the source file checksums and the generated files (logs) for the

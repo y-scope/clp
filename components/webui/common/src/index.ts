@@ -93,6 +93,32 @@ enum SEARCH_SIGNAL {
 }
 
 /**
+ * Presto search-related signals.
+ */
+enum PRESTO_SEARCH_SIGNAL {
+    WAITING_FOR_PREREQUISITES = "WAITING_FOR_PREREQUISITES",
+    QUEUED = "QUEUED",
+    WAITING_FOR_RESOURCES = "WAITING_FOR_RESOURCES",
+    DISPATCHING = "DISPATCHING",
+    PLANNING = "PLANNING",
+    STARTING = "STARTING",
+    RUNNING = "RUNNING",
+    FINISHING = "FINISHING",
+    FINISHED = "FINISHED",
+    CANCELED = "CANCELED",
+    FAILED = "FAILED",
+}
+
+/**
+ * CLP query engines.
+ */
+enum CLP_QUERY_ENGINES {
+    CLP = "clp",
+    CLP_S = "clp-s",
+    PRESTO = "presto",
+}
+
+/**
  * MongoDB document for search results metadata. `numTotalResults` is optional
  * since it is only set when the search job is completed.
  */
@@ -102,8 +128,24 @@ interface SearchResultsMetadataDocument {
     // eslint-disable-next-line no-warning-comments
     // TODO: Replace with Nullable<string> when the `@common` directory refactoring is completed.
     errorMsg: string | null;
-    lastSignal: SEARCH_SIGNAL;
+    errorName: string | null;
+    lastSignal: SEARCH_SIGNAL | PRESTO_SEARCH_SIGNAL;
     numTotalResults?: number;
+    queryEngine: CLP_QUERY_ENGINES;
+}
+
+/**
+ * Presto row wrapped in a `row` property to prevent conflicts with MongoDB's `_id` field.
+ */
+interface PrestoRowObject {
+    row: Record<string, unknown>;
+}
+
+/**
+ * Presto search result in MongoDB.
+ */
+interface PrestoSearchResult extends PrestoRowObject {
+    _id: string;
 }
 
 /**
@@ -116,16 +158,20 @@ const TestTypeBoxSchema = Type.Object({
 });
 
 export {
+    CLP_QUERY_ENGINES,
+    PRESTO_SEARCH_SIGNAL,
     SEARCH_SIGNAL,
     TestTypeBoxSchema,
 };
 export type {
+    PrestoRowObject,
+    PrestoSearchResult,
+    SearchResultsMetadataDocument,
     ClientToServerEvents,
     Err,
     InterServerEvents,
     QueryId,
     Response,
-    SearchResultsMetadataDocument,
     ServerToClientEvents,
     SocketData,
 };

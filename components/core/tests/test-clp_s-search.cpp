@@ -9,7 +9,8 @@
 #include <utility>
 #include <vector>
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <fmt/format.h>
 #include <nlohmann/json.hpp>
 
@@ -220,7 +221,9 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(idx: 0 AND NOT $*._filename.*: "clp string")aa", {0}},
             {R"aa(($_filename: file OR $_file_split_number: 1 OR $_archive_creator_id > 0) AND )aa"
              R"aa(idx: 0 OR idx: 1)aa",
-             {1}}
+             {1}},
+            {R"aa(ambiguous_varstring: "a*e")aa", {10, 11, 12}},
+            {R"aa(ambiguous_varstring: "a\*e")aa", {12}}
     };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);

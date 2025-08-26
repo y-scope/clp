@@ -1,4 +1,6 @@
+.clang-format
+.clang-tidy
 .lint-venv/
 .task/
 build/
-**/dist/
+dist/

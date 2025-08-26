@@ -7,6 +7,13 @@ export default defineConfig({
     base: "./",
     build: {
         target: "esnext",
+        rollupOptions: {
+            output: {
+                manualChunks: {
+                    "monaco-editor": ["monaco-editor"],
+                },
+            },
+        },
     },
     plugins: [
         react(),

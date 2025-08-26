@@ -16,5 +16,9 @@
     "StreamTargetUncompressedSize": 134217728,
     "StreamFilesS3Region": null,
     "StreamFilesS3PathPrefix": null,
-    "StreamFilesS3Profile": null
+    "StreamFilesS3Profile": null,
+
+    "ClpQueryEngine": "clp",
+    "PrestoHost": "localhost",
+    "PrestoPort": 8889
 }
