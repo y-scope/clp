@@ -44,6 +44,7 @@ if(CLP_BUILD_EXECUTABLES)
         target_link_libraries(reducer-server
                 PRIVATE
                 Boost::program_options
+                Boost::system
                 clp::string_utils
                 fmt::fmt
                 ${MONGOCXX_TARGET}
