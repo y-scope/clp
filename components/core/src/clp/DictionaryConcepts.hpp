@@ -152,7 +152,7 @@ concept VariableDictionaryEntryReq = requires(VariableDictionaryEntryType entry)
  */
 template <
         typename LogTypeDictionaryReaderType,
-        typename LogTypeDictionaryEntryType = LogTypeDictionaryReaderType::entry_t>
+        typename LogTypeDictionaryEntryType = typename LogTypeDictionaryReaderType::entry_t>
 concept LogTypeDictionaryReaderReq = requires(
         LogTypeDictionaryReaderType reader,
         std::string_view logtype,
@@ -179,9 +179,11 @@ concept LogTypeDictionaryReaderReq = requires(
         reader.get_entries_matching_wildcard_string(logtype, ignore_case, entries)
     } -> std::same_as<void>;
 
-    std::same_as<typename LogTypeDictionaryReaderType::dictionary_id_t, logtype_dictionary_id_t>;
+    requires std::
+            same_as<typename LogTypeDictionaryReaderType::dictionary_id_t, logtype_dictionary_id_t>;
 
-    std::same_as<typename LogTypeDictionaryReaderType::entry_t, LogTypeDictionaryEntryType>;
+    requires std::
+            same_as<typename LogTypeDictionaryReaderType::entry_t, LogTypeDictionaryEntryType>;
 };
 
 /**
@@ -192,15 +194,16 @@ template <typename VariableDictionaryWriterType>
 concept VariableDictionaryWriterReq = requires(
         VariableDictionaryWriterType writer,
         std::string_view value,
-        variable_dictionary_id_t id
+        variable_dictionary_id_t& id_ref
 ) {
     /**
      * Adds the given variable to the dictionary if it doesn't exist.
      * @param value
-     * @param id The Id of the variable matching the given entry.
+     * @param id_ref The Id of the variable matching the given entry.
+     * @return Whether this call resulted in inserting a new entry or not.
      */
     {
-        writer.add_entry(value, id)
+        writer.add_entry(value, id_ref)
     } -> std::same_as<bool>;
 };
 
@@ -211,7 +214,7 @@ concept VariableDictionaryWriterReq = requires(
  */
 template <
         typename VariableDictionaryReaderType,
-        typename VariableDictionaryEntryType = VariableDictionaryReaderType::entry_t>
+        typename VariableDictionaryEntryType = typename VariableDictionaryReaderType::entry_t>
 concept VariableDictionaryReaderReq = requires(
         VariableDictionaryReaderType reader,
         variable_dictionary_id_t id,
@@ -247,9 +250,12 @@ concept VariableDictionaryReaderReq = requires(
         reader.get_entries_matching_wildcard_string(variable, ignore_case, entries)
     } -> std::same_as<void>;
 
-    std::same_as<typename VariableDictionaryReaderType::dictionary_id_t, variable_dictionary_id_t>;
+    requires std::same_as<
+            typename VariableDictionaryReaderType::dictionary_id_t,
+            variable_dictionary_id_t>;
 
-    std::same_as<typename VariableDictionaryReaderType::entry_t, VariableDictionaryEntryType>;
+    requires std::
+            same_as<typename VariableDictionaryReaderType::entry_t, VariableDictionaryEntryType>;
 };
 }  // namespace clp
 
