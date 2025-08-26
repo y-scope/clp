@@ -647,9 +647,7 @@ def is_retention_period_configured(clp_config: CLPConfig) -> bool:
 
 def validate_presto_config(clp_config: CLPConfig) -> None:
     if clp_config.package.query_engine == QueryEngine.PRESTO and clp_config.presto is None:
-        raise ValueError(
-            f"Presto config must be set when query_engine is `{clp_query_engine}`"
-        )
+        raise ValueError(f"Presto config must be set when query_engine is `{clp_query_engine}`")
 
 
 def get_common_env_vars_list(
