@@ -504,8 +504,7 @@ auto QueryHandlerImpl::handle_column_resolution_on_new_schema_tree_node(
         YSTDLIB_ERROR_HANDLING_TRYV(new_projected_schema_tree_node_callback(
                 is_auto_generated,
                 node_id,
-                original_key,
-                projected_index
+                std::make_pair(original_key, projected_index)
         ));
         return ystdlib::error_handling::success();
     }

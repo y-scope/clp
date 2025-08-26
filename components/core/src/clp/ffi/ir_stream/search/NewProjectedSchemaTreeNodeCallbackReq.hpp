@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <string_view>
 #include <type_traits>
+#include <utility>
 
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -19,8 +20,7 @@ namespace clp::ffi::ir_stream::search {
  * @tparam NewProjectedSchemaTreeNodeCallbackType
  * @param arg_0 Whether the schema-tree node is for an auto-generated kv-pair.
  * @param arg_1 The ID of the schema-tree node.
- * @param arg_2 The projected key path.
- * @param arg_3 The index of the projected key in the list of projections.
+ * @param arg_2 The projected key path and its original index in the list of projections.
  * @return A void result on success or a user-defined error code indicating the failure.
  */
 template <typename NewProjectedSchemaTreeNodeCallbackType>
@@ -29,8 +29,7 @@ concept NewProjectedSchemaTreeNodeCallbackReq = std::is_invocable_r_v<
         NewProjectedSchemaTreeNodeCallbackType,
         bool,
         SchemaTree::Node::id_t,
-        std::string_view,
-        size_t>;
+        std::pair<std::string_view, size_t>>;
 }  // namespace clp::ffi::ir_stream::search
 
 #endif  // CLP_FFI_IR_STREAM_SEARCH_NEWPROJECTEDSCHEMATREENODECALLBACKREQ_HPP

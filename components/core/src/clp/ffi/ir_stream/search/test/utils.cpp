@@ -67,8 +67,7 @@ auto ColumnQueryPossibleMatches::serialize() const -> std::string {
 auto trivial_new_projected_schema_tree_node_callback(
         [[maybe_unused]] bool is_auto_generated,
         [[maybe_unused]] SchemaTree::Node::id_t node_id,
-        [[maybe_unused]] std::string_view projected_key_path,
-        [[maybe_unused]] size_t projected_key_index
+        [[maybe_unused]] std::pair<std::string_view, size_t> projected_key_path_and_index
 ) -> ystdlib::error_handling::Result<void> {
     return ystdlib::error_handling::success();
 }
