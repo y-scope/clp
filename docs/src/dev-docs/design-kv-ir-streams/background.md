@@ -11,7 +11,7 @@ We discuss each below.
 
 ## clp-s compression
 
-At a high-level, [clp-s](../../user-guide/core-clp-s.md) compresses log events into what we call
+At a high-level, [clp-s](../../user-docs/core-clp-s.md) compresses log events into what we call
 archives. Depending on the configured size-threshold for each archive, a set of log events may be
 compressed into one or more archives. The archive format is designed so that each archive is
 self-contained and independent, allowing archives to be searched concurrently.
@@ -318,7 +318,7 @@ the archive is complete.
 
 ## Parsing & encoding unstructured text
 
-clp-s uses [clp](../../user-guide/core-unstructured/clp.md)'s algorithm to parse and encode
+clp-s uses [clp](../../user-docs/core-unstructured/clp.md)'s algorithm to parse and encode
 unstructured text. Unstructured text is a string that contains zero or more variable values
 interspersed with non-variable (static) text. For example, in [Figure 1](#figure-1), log event
 &#35;1's `message` value is unstructured text containing the variable values `task_1` and `2`. At a
