@@ -25,6 +25,7 @@ from clp_py_utils.clp_config import (
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
+    QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
@@ -32,7 +33,6 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
-    QueryEngine,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     get_archives_table_name,
@@ -67,13 +67,13 @@ from clp_package_utils.general import (
     validate_log_directory,
     validate_logs_input_config,
     validate_output_storage_config,
+    validate_presto_config,
     validate_queue_config,
     validate_redis_config,
     validate_reducer_config,
     validate_results_cache_config,
     validate_retention_config,
     validate_webui_config,
-    validate_presto_config,
 )
 
 logger = logging.getLogger(__file__)
