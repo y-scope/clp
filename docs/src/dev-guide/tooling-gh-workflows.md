@@ -27,7 +27,7 @@ shown below.
     }
   }
 }%%
-flowchart TD
+flowchart LR
     filter-relevant-changes --> centos-stream-9-deps-image
     filter-relevant-changes --> manylinux_2_28-x86_64-deps-image
     filter-relevant-changes --> musllinux_1_2-x86_64-deps-image
@@ -50,16 +50,16 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
 * `centos-stream-9-deps-image`: Builds a container image containing the dependencies necessary to
   build CLP-core in a CentOS Stream 9 x86 environment.
 * `manylinux_2_28-x86_64-deps-image`: Builds a container image containing the dependencies necessary
-  to build CLP-core in a Manylinux 2.28 x86 environment.
+  to build CLP-core in a manylinux_2_28 x86 environment.
 * `musllinux_1_2-x86_64-deps-image`: Builds a container image containing the dependencies necessary
-  to build CLP-core in a Musllinux 1.2 x86 environment.
+  to build CLP-core in a musllinux_1_2 x86 environment.
 * `ubuntu-jammy-deps-image`: Builds a container image containing the dependencies necessary to build
   CLP-core in an Ubuntu Jammy x86 environment.
 * `centos-stream-9-binaries`: Builds the CLP-core binaries in the built CentOS Stream 9 container
   and runs core's unit tests.
-* `manylinux_2_28-x86_64-binaries`: Builds the CLP-core binaries in the built Manylinux 2.28
+* `manylinux_2_28-x86_64-binaries`: Builds the CLP-core binaries in the built manylinux_2_28
   container and runs core's unit tests.
-* `musllinux_1_2-x86_64-binaries`: Builds the CLP-core binaries in the built Musllinux 1.2 container
+* `musllinux_1_2-x86_64-binaries`: Builds the CLP-core binaries in the built musllinux_1_2 container
   and runs core's unit tests.
 * `ubuntu-jammy-binaries`: Builds the CLP-core binaries in the built Ubuntu Jammy container and runs
   core's unit tests.

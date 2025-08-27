@@ -264,8 +264,7 @@ jobs:
       matrix:
         use_shared_libs: [true, false]
     name: >-
-      manylinux_2_28-x86_64-${{matrix.use_shared_libs == true && 'dynamic' ||
-      'static'}}-linked-bins
+      manylinux_2_28-x86_64-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins
     continue-on-error: true
     runs-on: "ubuntu-24.04"
     steps:
@@ -305,8 +304,7 @@ jobs:
       matrix:
         use_shared_libs: [true, false]
     name: >-
-      musllinux_1_2-x86_64-${{matrix.use_shared_libs == true && 'dynamic' ||
-      'static'}}-linked-bins
+      musllinux_1_2-x86_64-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins
     continue-on-error: true
     runs-on: "ubuntu-24.04"
     steps:
