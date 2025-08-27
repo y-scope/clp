@@ -977,7 +977,7 @@ class CLPConfig(BaseModel):
         presto = values.get("presto")
         query_engine = None
         if isinstance(package, dict):
-            query_engine = package.get("query_engine")
+            query_engine = package.get("query_engine", None)
         if query_engine == QueryEngine.PRESTO and presto is None:
             raise ValueError(f"Presto config must be set when query_engine is `{query_engine}`")
         return values
