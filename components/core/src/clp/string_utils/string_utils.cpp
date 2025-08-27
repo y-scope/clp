@@ -188,6 +188,22 @@ string clean_up_wildcard_search_string(string_view str) {
     return cleaned_str;
 }
 
+std::string unescape_string(std::string_view str) {
+    std::string unescaped_str;
+    bool escaped{false};
+    for (auto const c : str) {
+        if (escaped) {
+            unescaped_str.push_back(c);
+            escaped = false;
+        } else if ('\\' == c) {
+            escaped = true;
+        } else {
+            unescaped_str.push_back(c);
+        }
+    }
+    return unescaped_str;
+}
+
 bool wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensitive_match) {
     if (case_sensitive_match) {
         return wildcard_match_unsafe_case_sensitive(tame, wild);

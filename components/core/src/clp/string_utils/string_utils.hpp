@@ -88,6 +88,17 @@ void to_lower(std::string& str);
 std::string clean_up_wildcard_search_string(std::string_view str);
 
 /**
+ * Unescapes a string according to the following rules:
+ * <ul>
+ *   <li>Escape sequences `\<char>` are replaced by `<char>`</li>
+ *   <li>Lone dangling `\` is removed from the end of the string</li>
+ * <\ul>
+ * @param str
+ * @return An unescaped version of `str`.
+ */
+std::string unescape_string(std::string_view str);
+
+/**
  * Checks if character is a wildcard
  * @param c
  * @return true if c is a wildcard, false otherwise
