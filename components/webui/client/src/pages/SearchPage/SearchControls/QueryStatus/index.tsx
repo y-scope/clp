@@ -2,7 +2,6 @@ import {Typography} from "antd";
 
 import useSearchStore from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
-import styles from "./index.module.css";
 import Results from "./Results";
 
 

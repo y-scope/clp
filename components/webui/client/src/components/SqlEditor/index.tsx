@@ -3,7 +3,6 @@ import {
     useEffect,
     useImperativeHandle,
     useRef,
-    useState,
 } from "react";
 
 import {
@@ -59,6 +58,7 @@ const SqlEditor = (props: SqlEditorProps) => {
         if (null === monacoEditor) {
             return;
         }
+
         // Default theme to match AntD input
         monacoEditor.editor.defineTheme("default-theme", {
             base: "vs",
@@ -67,9 +67,10 @@ const SqlEditor = (props: SqlEditorProps) => {
             colors: {
                 "editor.background": color(token.colorBgContainer).hexa(),
                 "editor.foreground": color(token.colorText).hexa(),
-                "focusBorder": "#0000", // transparent
+                "focusBorder": "#0000",
             },
         });
+
         // Disabled theme uses vs as base
         monacoEditor.editor.defineTheme("disabled-theme", {
             base: "vs",
@@ -78,7 +79,7 @@ const SqlEditor = (props: SqlEditorProps) => {
             colors: {
                 "editor.background": color(token.colorBgContainerDisabled).hexa(),
                 "editor.foreground": color(token.colorTextDisabled).hexa(),
-                "focusBorder": "#0000", // transparent
+                "focusBorder": "#0000",
             },
         });
     }, [
@@ -91,19 +92,20 @@ const SqlEditor = (props: SqlEditorProps) => {
             style={{
                 border: `1px solid ${token.colorBorder}`,
                 borderRadius: token.borderRadius,
-                pointerEvents: disabled ? "none" : "auto",
-            }
-            }
+                pointerEvents: disabled ?
+                    "none" :
+                    "auto",
+            }}
         >
             <Editor
                 language={"sql"}
                 loading={
                     <div
-                    style={{
-                        backgroundColor: token.colorBgContainer,
-                        height: "100%",
-                        width: "100%",
-                    }}/>
+                        style={{
+                            backgroundColor: token.colorBgContainer,
+                            height: "100%",
+                            width: "100%",
+                        }}/>
                 }
                 options={{
                     automaticLayout: true,
@@ -111,21 +113,20 @@ const SqlEditor = (props: SqlEditorProps) => {
                     lineNumbers: "off",
                     minimap: {enabled: false},
                     overviewRulerBorder: false,
+                    padding: {
+                        top: token.paddingXS,
+                        bottom: token.paddingXS,
+                    },
                     placeholder: "Enter your SQL query",
                     renderLineHighlight: "none",
                     scrollBeyondLastLine: false,
                     wordWrap: "on",
-                    padding: {
-                    top: token.paddingXS,
-                    bottom: token.paddingXS,
-                    },
                 }}
                 theme={disabled ?
                     "disabled-theme" :
                     "default-theme"}
                 onMount={handleEditorDidMount}
-                {...editorProps}
-            />
+                {...editorProps}/>
         </div>
     );
 };
