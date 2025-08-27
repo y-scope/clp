@@ -11,8 +11,16 @@
 
 .buttonAndStatusRow {
     display: flex;
-    align-items: flex-start; /* Align items to the top */
-    justify-content: space-between; /* Put space between status and button */
+    align-items: flex-start;
+    justify-content: space-between;
     gap: 10px;
 }
 
+.status {
+    margin-left: 2px;
+    padding-top: 4px;
+}
+
+.statusPresto {
+    margin-left: 2px;
+}

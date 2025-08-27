@@ -20,7 +20,7 @@ const QueryStatus = () => {
     } = useSearchStore();
 
     return (
-        <div className={styles["status"]}>
+        <div>
             {(searchUiState === SEARCH_UI_STATE.QUERYING ||
                 searchUiState === SEARCH_UI_STATE.DONE) && (
                 <Text type={"secondary"}>

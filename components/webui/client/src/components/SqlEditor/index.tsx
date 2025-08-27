@@ -3,6 +3,7 @@ import {
     useEffect,
     useImperativeHandle,
     useRef,
+    useState,
 } from "react";
 
 import {
@@ -53,11 +54,23 @@ const SqlEditor = (props: SqlEditorProps) => {
         onEditorReady?.();
     }, [onEditorReady]);
 
-    // Define disabled theme for monaco editor
+    // Define default and disabled themes for monaco editor
     useEffect(() => {
         if (null === monacoEditor) {
             return;
         }
+        // Default theme to match AntD input
+        monacoEditor.editor.defineTheme("default-theme", {
+            base: "vs",
+            inherit: true,
+            rules: [],
+            colors: {
+                "editor.background": color(token.colorBgContainer).hexa(),
+                "editor.foreground": color(token.colorText).hexa(),
+                "focusBorder": "#0000", // transparent
+            },
+        });
+        // Disabled theme uses vs as base
         monacoEditor.editor.defineTheme("disabled-theme", {
             base: "vs",
             inherit: true,
@@ -65,9 +78,7 @@ const SqlEditor = (props: SqlEditorProps) => {
             colors: {
                 "editor.background": color(token.colorBgContainerDisabled).hexa(),
                 "editor.foreground": color(token.colorTextDisabled).hexa(),
-
-                // transparent
-                "focusBorder": "#00000000",
+                "focusBorder": "#0000", // transparent
             },
         });
     }, [
@@ -77,39 +88,44 @@ const SqlEditor = (props: SqlEditorProps) => {
 
     return (
         <div
-            style={
-                disabled ?
-                    {pointerEvents: "none"} :
-                    {}
+            style={{
+                border: `1px solid ${token.colorBorder}`,
+                borderRadius: token.borderRadius,
+                pointerEvents: disabled ? "none" : "auto",
+            }
             }
         >
             <Editor
                 language={"sql"}
                 loading={
                     <div
-                        style={{
-                            backgroundColor: "white",
-                            height: "100%",
-                            width: "100%",
-                        }}/>
+                    style={{
+                        backgroundColor: token.colorBgContainer,
+                        height: "100%",
+                        width: "100%",
+                    }}/>
                 }
                 options={{
                     automaticLayout: true,
                     folding: false,
-                    fontSize: 16,
                     lineNumbers: "off",
                     minimap: {enabled: false},
                     overviewRulerBorder: false,
                     placeholder: "Enter your SQL query",
-                    renderLineHighlightOnlyWhenFocus: true,
+                    renderLineHighlight: "none",
                     scrollBeyondLastLine: false,
                     wordWrap: "on",
+                    padding: {
+                    top: token.paddingXS,
+                    bottom: token.paddingXS,
+                    },
                 }}
                 theme={disabled ?
                     "disabled-theme" :
-                    "light"}
+                    "default-theme"}
                 onMount={handleEditorDidMount}
-                {...editorProps}/>
+                {...editorProps}
+            />
         </div>
     );
 };

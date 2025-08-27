@@ -40,21 +40,19 @@ const SearchControls = () => {
                             <TimeRangeInput/>
                             <SearchButton/>
                         </div>
-                        <QueryStatus/>
+                        <div className={styles["status"]}>
+                            <QueryStatus/>
+                        </div>
                     </div>
                 ) :
                 (
-
                     <div className={styles["prestoSearchControlsContainer"]}>
                         <SqlQueryInput/>
                         <div className={styles["buttonAndStatusRow"]}>
-                            <div style={{ alignSelf: "flex-start" }}>
+                            <div className={styles["statusPresto"]}>
                                 <QueryStatus/>
                             </div>
-                            <div style={{ flex: 1 }} />
-                            <div style={{ alignSelf: "flex-end" }}>
-                                <SqlSearchButton/>
-                            </div>
+                            <SqlSearchButton/>
                         </div>
                     </div>
                 )}
