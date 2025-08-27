@@ -4,7 +4,7 @@
 #include <queue>
 #include <system_error>
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
 #include <mongocxx/exception/exception.hpp>
