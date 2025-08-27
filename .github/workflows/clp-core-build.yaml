@@ -46,6 +46,7 @@ jobs:
     outputs:
       centos_stream_9_image_changed: "${{steps.filter.outputs.centos_stream_9_image}}"
       ubuntu_jammy_image_changed: "${{steps.filter.outputs.ubuntu_jammy_image}}"
+      ubuntu_noble_image_changed: "${{steps.filter.outputs.ubuntu_noble_image}}"
       clp_changed: "${{steps.filter.outputs.clp}}"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
@@ -82,6 +83,12 @@ jobs:
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-ubuntu-jammy/**"
               - "components/core/tools/scripts/lib_install/ubuntu-jammy/**"
+            ubuntu_noble_image:
+              - ".github/actions/**"
+              - ".github/workflows/clp-core-build.yaml"
+              - "components/core/tools/scripts/lib_install/*.sh"
+              - "components/core/tools/docker-images/clp-env-base-ubuntu-noble/**"
+              - "components/core/tools/scripts/lib_install/ubuntu-noble/**"
             clp:
               - ".github/actions/**"
               - ".github/workflows/clp-core-build.yaml"
@@ -138,6 +145,32 @@ jobs:
       - uses: "./.github/actions/clp-core-build-containers"
         env:
           OS_NAME: "ubuntu-jammy"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          docker_context: "components/core"
+          docker_file: "components/core/tools/docker-images/clp-env-base-${{env.OS_NAME}}\
+            /Dockerfile"
+          push_deps_image: >-
+            ${{github.event_name != 'pull_request' && github.ref == 'refs/heads/main'}}
+          token: "${{secrets.GITHUB_TOKEN}}"
+
+  ubuntu-noble-deps-image:
+    name: "ubuntu-noble-deps-image"
+    if: "needs.filter-relevant-changes.outputs.ubuntu_noble_image_changed == 'true'"
+    needs: "filter-relevant-changes"
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/clp-core-build-containers"
+        env:
+          OS_NAME: "ubuntu-noble"
         with:
           image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
           docker_context: "components/core"
@@ -246,6 +279,45 @@ jobs:
           name: "${{env.BINARIES_ARTIFACT_NAME_PREFIX}}${{env.OS_NAME}}"
           path: "${{steps.copy_binaries.outputs.output_dir}}"
           retention-days: 1
+
+  ubuntu-noble-binaries:
+    # Run if the ancestor jobs succeeded OR they were skipped and clp was changed.
+    if: >-
+      success()
+      || (!cancelled() && !failure() && needs.filter-relevant-changes.outputs.clp_changed == 'true')
+    needs:
+      - "ubuntu-noble-deps-image"
+      - "filter-relevant-changes"
+    strategy:
+      matrix:
+        use_shared_libs: [true, false]
+    name: "ubuntu-noble-${{matrix.use_shared_libs == true && 'dynamic' || 'static'}}-linked-bins"
+    continue-on-error: true
+    runs-on: "ubuntu-latest"
+    steps:
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+        with:
+          submodules: "recursive"
+
+      - name: "Work around actions/runner-images/issues/6775"
+        run: "chown $(id -u):$(id -g) -R ."
+        shell: "bash"
+
+      - uses: "./.github/actions/run-on-image"
+        env:
+          OS_NAME: "ubuntu-noble"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.ubuntu_noble_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          run_command: >-
+            CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core
+            && python3 /mnt/repo/components/core/tools/scripts/utils/build-and-run-unit-tests.py
+            ${{matrix.use_shared_libs == true && '--use-shared-libs' || ''}}
+            --source-dir /mnt/repo/components/core
+            --build-dir /mnt/repo/components/core/build
+            --num-jobs $(getconf _NPROCESSORS_ONLN)
 
   ubuntu-jammy-binaries-image:
     name: "ubuntu-jammy-binaries-image"
