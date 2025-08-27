@@ -811,6 +811,12 @@ class CLPConfig(BaseModel):
 
     _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
 
+    @validator("aws_config_directory")
+    def validate_aws_config_directory(cls, value: Optional[pathlib.Path]):
+        if value is not None:
+            value = value.expanduser()
+        return value
+
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         if StorageType.FS == self.logs_input.type:
             self.logs_input.make_config_paths_absolute(clp_home)
