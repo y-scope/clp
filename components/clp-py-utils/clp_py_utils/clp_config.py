@@ -977,7 +977,7 @@ class CLPConfig(BaseModel):
         presto = values.get("presto")
         query_engine: Optional[QueryEngine] = None
         # Root validator with `pre=True` is called before other validators, so package has not
-        # been validated yet as dict yet. Pydantic will throw error later if package is not a dict.
+        # been validated as dict yet. Pydantic will throw error later if package is not a dict.
         if isinstance(package, dict):
             query_engine = package.get("query_engine", None)
         if query_engine == QueryEngine.PRESTO and presto is None:
