@@ -813,9 +813,9 @@ class CLPConfig(BaseModel):
 
     @validator("aws_config_directory")
     def validate_aws_config_directory(cls, value: Optional[pathlib.Path]):
-        if value is None:
-            return None
-        return value.expanduser()
+        if value is not None:
+            value = value.expanduser()
+        return value
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         if StorageType.FS == self.logs_input.type:
