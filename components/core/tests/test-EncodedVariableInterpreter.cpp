@@ -1,7 +1,8 @@
+#include <unistd.h>
+
 #include <string>
 #include <string_view>
 #include <vector>
-#include <unistd.h>
 
 #include <catch2/catch_test_macros.hpp>
 #include <fmt/format.h>
@@ -538,12 +539,10 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
                 search_logtype,
                 sub_query
         ));
-        auto escape_handler = [&](
-                [[maybe_unused]] string_view constant,
-                [[maybe_unused]] size_t char_to_escape_pos,
-                string& logtype
-        ) -> void {
-                logtype += enum_to_underlying_type(VariablePlaceholder::Escape);
+        auto escape_handler = [&]([[maybe_unused]] string_view constant,
+                                  [[maybe_unused]] size_t char_to_escape_pos,
+                                  string& logtype) -> void {
+            logtype += enum_to_underlying_type(VariablePlaceholder::Escape);
         };
         std::string escaped_var;
         append_constant_to_logtype(var_strs[5], escape_handler, escaped_var);
