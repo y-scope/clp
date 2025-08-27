@@ -975,7 +975,7 @@ class CLPConfig(BaseModel):
     def validate_presto_config(cls, values):
         package = values.get("package")
         presto = values.get("presto")
-        query_engine = None
+        query_engine: Optional[QueryEngine] = None
         if isinstance(package, dict):
             query_engine = package.get("query_engine", None)
         if query_engine == QueryEngine.PRESTO and presto is None:
