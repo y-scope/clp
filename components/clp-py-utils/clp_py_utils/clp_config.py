@@ -718,7 +718,7 @@ class StreamOutput(BaseModel):
     def set_directory(self, directory: pathlib.Path):
         _set_directory_for_storage_config(self.storage, directory)
 
-    def get_directory() -> pathlib.Path:
+    def get_directory(self) -> pathlib.Path:
         return _get_directory_from_storage_config(self.storage)
 
     def dump_to_primitive_dict(self):
@@ -808,7 +808,7 @@ class CLPConfig(BaseModel):
     database: Database = Database()
     queue: Queue = Queue()
     redis: Redis = Redis()
-    reducer: Reducer = Reducer()
+    reducer: Reducer() = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
     query_scheduler: QueryScheduler = QueryScheduler()
