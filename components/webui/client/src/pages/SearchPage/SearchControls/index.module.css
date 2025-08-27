@@ -1,11 +1,11 @@
 .searchControlsContainer {
     display: flex;
-    gap: 10px;
+    flex-direction: column;
+    gap: 5px;
 }
 
-.prestoSearchControlsContainer {
+.inputsAndButtonRow {
     display: flex;
-    flex-direction: column;
     gap: 10px;
 }
 
@@ -17,10 +17,5 @@
 }
 
 .status {
-    margin-left: 2px;
-    padding-top: 4px;
-}
-
-.statusPresto {
     margin-left: 2px;
 }

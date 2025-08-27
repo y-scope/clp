@@ -33,8 +33,8 @@ const SearchControls = () => {
         <form onSubmit={handleSubmit}>
             {SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO ?
                 (
-                    <div>
-                        <div className={styles["searchControlsContainer"]}>
+                    <div className={styles["searchControlsContainer"]}>
+                        <div className={styles["inputsAndButtonRow"]}>
                             {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && <Dataset/>}
                             <QueryInput/>
                             <TimeRangeInput/>
@@ -46,10 +46,10 @@ const SearchControls = () => {
                     </div>
                 ) :
                 (
-                    <div className={styles["prestoSearchControlsContainer"]}>
+                    <div className={styles["searchControlsContainer"]}>
                         <SqlQueryInput/>
                         <div className={styles["buttonAndStatusRow"]}>
-                            <div className={styles["statusPresto"]}>
+                            <div className={styles["status"]}>
                                 <QueryStatus/>
                             </div>
                             <SqlSearchButton/>

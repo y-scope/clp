@@ -59,7 +59,6 @@ const SqlEditor = (props: SqlEditorProps) => {
             return;
         }
 
-        // Default theme to match AntD input
         monacoEditor.editor.defineTheme("default-theme", {
             base: "vs",
             inherit: true,
@@ -71,7 +70,6 @@ const SqlEditor = (props: SqlEditorProps) => {
             },
         });
 
-        // Disabled theme uses vs as base
         monacoEditor.editor.defineTheme("disabled-theme", {
             base: "vs",
             inherit: true,
