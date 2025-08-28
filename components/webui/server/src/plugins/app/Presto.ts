@@ -1,10 +1,10 @@
+import {CLP_QUERY_ENGINES} from "@webui/common";
 import fp from "fastify-plugin";
 import {
     Client,
     ClientOptions,
 } from "presto-client";
 
-import {CLP_QUERY_ENGINES} from "../../../../common/index.js";
 import settings from "../../../settings.json" with {type: "json"};
 
 

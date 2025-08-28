@@ -1,3 +1,4 @@
+import {type SearchResultsMetadataDocument} from "@webui/common";
 import {
     FastifyBaseLogger,
     FastifyInstance,
@@ -6,8 +7,6 @@ import type {
     Collection,
     Db,
 } from "mongodb";
-
-import {type SearchResultsMetadataDocument} from "../../../../../common/index.js";
 
 
 /**

@@ -1,9 +1,8 @@
+import type {PrestoRowObject} from "@webui/common";
 import type {
     Db,
     InsertManyResult,
 } from "mongodb";
-
-import type {PrestoRowObject} from "../../../../../common/index.js";
 
 
 /**
