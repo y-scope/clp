@@ -12,7 +12,6 @@
 #include "../clp/ir/parsing.hpp"
 #include "../clp/ir/types.hpp"
 #include "../clp/type_utils.hpp"
-#include "Utils.hpp"
 
 using clp::EncodedVariableInterpreter;
 using clp::enum_to_underlying_type;

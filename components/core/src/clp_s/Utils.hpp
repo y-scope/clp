@@ -66,54 +66,6 @@ public:
 class StringUtils {
 public:
     /**
-     * Checks if character is a hexadecimal (base-16) digit
-     * @param c
-     * @return true if c is a hexadecimal digit, false otherwise
-     */
-    static inline bool is_delim(char c) {
-        return !(
-                '+' == c || ('-' <= c && c <= '9') || ('A' <= c && c <= 'Z') || '\\' == c
-                || '_' == c || ('a' <= c && c <= 'z')
-        );
-    }
-
-    /**
-     * Checks if the string could be a hexadecimal value
-     * @param str
-     * @param begin_pos
-     * @param end_pos
-     * @return true if str could be a hexadecimal value, false otherwise
-     */
-    static inline bool
-    could_be_multi_digit_hex_value(std::string const& str, size_t begin_pos, size_t end_pos) {
-        if (end_pos - begin_pos < 2) {
-            return false;
-        }
-
-        for (size_t i = begin_pos; i < end_pos; ++i) {
-            auto c = str[i];
-            if (false
-                == (('a' <= c && c <= 'f') || ('A' <= c && c <= 'F') || ('0' <= c && c <= '9')))
-            {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
-     * Returns bounds of next variable in given string
-     * A variable is a token (word between two delimiters) that contains numbers or is directly
-     * preceded by an equals sign
-     * @param msg
-     * @param begin_pos Begin position of last variable, changes to begin position of next variable
-     * @param end_pos End position of last variable, changes to end position of next variable
-     * @return true if a variable was found, false otherwise
-     */
-    static bool get_bounds_of_next_var(std::string const& msg, size_t& begin_pos, size_t& end_pos);
-
-    /**
      * Escapes a string according to JSON string escaping rules and appends the escaped string to
      * a buffer. The input string can be either ascii or UTF-8.
      *
