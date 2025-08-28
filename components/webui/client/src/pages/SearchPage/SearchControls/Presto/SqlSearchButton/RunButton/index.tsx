@@ -36,7 +36,7 @@ const RunButton = () => {
                 className={styles["runButton"] || ""}
                 color={"green"}
                 icon={<CaretRightOutlined/>}
-                size={"large"}
+                size={"middle"}
                 variant={"solid"}
                 disabled={isQueryStringEmpty ||
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
