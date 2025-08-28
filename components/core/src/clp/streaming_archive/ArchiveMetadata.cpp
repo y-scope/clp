@@ -2,7 +2,6 @@
 
 #include <sys/stat.h>
 
-#include <fmt/core.h>
 #include <ystdlib/containers/Array.hpp>
 
 #include "../FileReader.hpp"
