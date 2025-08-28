@@ -11,7 +11,7 @@
     "init": "npm clean-install --workspaces && npm --workspace common run build",
     "lint:check": "npm run lint:check --workspaces",
     "lint:fix": "npm run lint:fix --workspaces",
-    "dev": "concurrently --raw \"npm run dev:*\"",
+    "dev": "concurrently \"npm run dev:*\"",
     "dev:client": "npm --workspace client run start",
     "dev:common": "npm --workspace common run build:watch",
     "dev:server": "npm --workspace server run dev"
