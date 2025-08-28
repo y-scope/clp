@@ -250,8 +250,8 @@ tasks:
             - "-DFMT_DOC=OFF"
             - "-DFMT_TEST=OFF"
           LIB_NAME: "{{.G_FMT_LIB_NAME}}"
-          TARBALL_SHA256: "78b8c0a72b1c35e4443a7e308df52498252d1cefc2b08c9a97bc9ee6cfe61f8b"
-          TARBALL_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/10.1.1.tar.gz"
+          TARBALL_SHA256: "bc23066d87ab3168f27cef3e97d545fa63314f5c79df5ea444d41d56f962c6af"
+          TARBALL_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/11.2.0.tar.gz"
 
   liblzma:
     internal: true
@@ -317,8 +317,8 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-Dlog_surgeon_BUILD_TESTING=OFF"
           LIB_NAME: "log_surgeon"
-          TARBALL_SHA256: "4f9b9efa97bfba0a2e2568ad26276cfa358bf7ab431be66a930b4acf76e20252"
-          TARBALL_URL: "https://github.com/Bill-hbrhbr/log-surgeon/archive/f92f501.tar.gz"
+          TARBALL_SHA256: "bace11814b6d12aa7b86bcd0a4c389420f9af20d191724f397060bdbb08e29bd"
+          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/831a9f9.tar.gz"
 
   lz4:
     internal: true
@@ -441,11 +441,11 @@ tasks:
             - "-DSPDLOG_BUILD_EXAMPLE_HO=OFF"
             - "-DSPDLOG_FMT_EXTERNAL=ON"
           LIB_NAME: "spdlog"
-          TARBALL_SHA256: "4dccf2d10f410c1e2feaff89966bfc49a1abb29ef6f08246335b110e001e09a9"
+          TARBALL_SHA256: "15a04e69c222eb6c01094b5c7ff8a249b36bb22788d72519646fb85feb267e67"
 
           # NOTE: Since spdlog depends on fmt, we need to choose a version of spdlog that's
           # compatible with the version of fmt we use.
-          TARBALL_URL: "https://github.com/gabime/spdlog/archive/refs/tags/v1.12.0.tar.gz"
+          TARBALL_URL: "https://github.com/gabime/spdlog/archive/refs/tags/v1.15.3.tar.gz"
 
   sqlite3:
     internal: true
