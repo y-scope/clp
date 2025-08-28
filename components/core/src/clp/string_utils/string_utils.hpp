@@ -92,7 +92,7 @@ std::string clean_up_wildcard_search_string(std::string_view str);
  * <ul>
  *   <li>Escape sequences `\<char>` are replaced by `<char>`</li>
  *   <li>Lone dangling `\` is removed from the end of the string</li>
- * <\ul>
+ * </ul>
  * @param str
  * @return An unescaped version of `str`.
  */
