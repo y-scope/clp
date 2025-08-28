@@ -35,6 +35,7 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 pipx ensurepath
 
+# Install `cmake`
 # ystdlib requires CMake v3.23; ANTLR and yaml-cpp do not yet support CMake v4+.
 # See also: https://github.com/y-scope/clp/issues/795
 if ! command -v cmake ; then
@@ -43,13 +44,11 @@ fi
 
 # Install `task`
 # NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
-task_pkg_arch=$(dpkg --print-architecture)
-task_pkg_path="$(mktemp -t --suffix ".deb" task-pkg.XXXXXXXXXX)"
-curl \
-    --fail \
-    --location \
-    --output "$task_pkg_path" \
-    --show-error \
-    "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.deb"
-dpkg --install "$task_pkg_path"
-rm "$task_pkg_path"
+if ! command -v task ; then
+    pipx install "go-task-bin>=3.40,<3.43"
+fi
+
+# Install `uv`
+if ! command -v uv ; then
+    pix install "uv>=0.8"
+fi
