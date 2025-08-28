@@ -5,10 +5,8 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
-#include <fmt/format.h>
 
 #include "../src/clp/EncodedVariableInterpreter.hpp"
-#include "../src/clp/ir/parsing.hpp"
 #include "../src/clp/ir/types.hpp"
 #include "../src/clp/LogTypeDictionaryEntry.hpp"
 #include "../src/clp/streaming_archive/Constants.hpp"
@@ -19,7 +17,6 @@ using clp::cVariableDictionaryIdMax;
 using clp::encoded_variable_t;
 using clp::EncodedVariableInterpreter;
 using clp::enum_to_underlying_type;
-using clp::ir::append_constant_to_logtype;
 using clp::ir::VariablePlaceholder;
 using std::string;
 using std::string_view;
@@ -454,7 +451,7 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
               + " and a double " + var_strs[2]
               + " and a weird double " + var_strs[3]
               + " and a str with numbers " + var_strs[4]
-              + " and a str with a backlash and numbers " + var_strs[5]
+              + " and a str with a backslash and numbers " + var_strs[5]
               + " and an escape "
               + enum_to_underlying_type(VariablePlaceholder::Escape)
               + " and an int placeholder "
@@ -539,16 +536,24 @@ TEST_CASE("EncodedVariableInterpreter", "[EncodedVariableInterpreter]") {
                 search_logtype,
                 sub_query
         ));
-        auto escape_handler = [&]([[maybe_unused]] string_view constant,
-                                  [[maybe_unused]] size_t char_to_escape_pos,
-                                  string& logtype) -> void {
-            logtype += enum_to_underlying_type(VariablePlaceholder::Escape);
+        auto escape_handler = [](std::string_view str) -> std::string {
+            std::string escaped_string;
+            for (auto const c : str) {
+                if ('*' == c || '?' == c
+                    || enum_to_underlying_type(VariablePlaceholder::Escape) == c
+                    || enum_to_underlying_type(VariablePlaceholder::Integer) == c
+                    || enum_to_underlying_type(VariablePlaceholder::Float) == c
+                    || enum_to_underlying_type(VariablePlaceholder::Dictionary) == c)
+                {
+                    escaped_string.push_back(enum_to_underlying_type(VariablePlaceholder::Escape));
+                }
+                escaped_string.push_back(c);
+            }
+            return escaped_string;
         };
-        std::string escaped_var;
-        append_constant_to_logtype(var_strs[5], escape_handler, escaped_var);
-        search_logtype += " and a str with a backlash and numbers ";
+        search_logtype += " and a str with a backslash and numbers ";
         REQUIRE(EncodedVariableInterpreter::encode_and_search_dictionary(
-                escaped_var,
+                escape_handler(var_strs[5]),
                 var_dict_reader,
                 false,
                 search_logtype,
