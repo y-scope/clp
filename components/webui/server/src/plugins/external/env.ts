@@ -9,8 +9,7 @@ declare module "fastify" {
             HOST: string;
             CLP_DB_USER: string;
             CLP_DB_PASS: string;
-
-            RATE_LIMIT_MAX: number;
+            RATE_LIMIT: number;
         };
     }
 }
@@ -25,6 +24,7 @@ const schema = {
         "CLP_DB_PASS",
     ],
     properties: {
+        // Network
         PORT: {
             type: "number",
             default: 3000,
@@ -48,9 +48,10 @@ const schema = {
         },
 
         // Security
-        RATE_LIMIT_MAX: {
+        RATE_LIMIT: {
             type: "number",
-            default: 100,
+            default: 1_000,
+            minimum: 1,
         },
     },
 };

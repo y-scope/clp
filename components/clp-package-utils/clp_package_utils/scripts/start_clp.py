@@ -937,6 +937,7 @@ def start_webui(
         f"HOST={clp_config.webui.host}",
         f"PORT={clp_config.webui.port}",
         f"NODE_ENV=production",
+        f"RATE_LIMIT={clp_config.webui.rate_limit}",
     ]
     necessary_mounts = [
         mounts.clp_home,
