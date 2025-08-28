@@ -6,6 +6,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <string_utils/string_utils.hpp>
+
 #include "ffi/ir_stream/decoding_methods.hpp"
 #include "ir/LogEvent.hpp"
 #include "ir/types.hpp"
@@ -455,7 +457,8 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary(
         add_float_var(logtype);
         sub_query.add_non_dict_var(encoded_var);
     } else {
-        auto const entries = var_dict.get_entry_matching_value(var_str, ignore_case);
+        auto const unescaped_var_string{string_utils::unescape_string(var_str)};
+        auto const entries = var_dict.get_entry_matching_value(unescaped_var_string, ignore_case);
         if (entries.empty()) {
             // Not in dictionary
             return false;
