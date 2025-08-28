@@ -8,9 +8,9 @@
     "server"
   ],
   "scripts": {
-    "init": "npm clean-install --workspaces",
-    "lint:check": "npm --workspace common run build && npm run lint:check --workspaces",
-    "lint:fix": "npm --workspace common run build && npm run lint:fix --workspaces",
+    "init": "npm clean-install --workspaces && npm --workspace common run build",
+    "lint:check": "npm run lint:check --workspaces",
+    "lint:fix": "npm run lint:fix --workspaces",
     "start": "concurrently \"npm run client:start\" \"npm run server:start\""
   },
   "author": "YScope Inc. <dev@yscope.com>",
