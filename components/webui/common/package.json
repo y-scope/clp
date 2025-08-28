@@ -9,6 +9,7 @@
   },
   "scripts": {
     "build": "tsc",
+    "build:watch": "npm run build -- -w --preserveWatchOutput",
     "lint:check": "eslint . --max-warnings 0",
     "lint:fix": "npm run lint:check -- --fix"
   },

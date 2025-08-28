@@ -5,7 +5,7 @@
   "main": "src/main.ts",
   "scripts": {
     "build": "tsc",
-    "build:watch": "npm run build -- -w",
+    "build:watch": "npm run build -- -w --preserveWatchOutput",
     "dev:start": "fastify start --ignore-watch=.ts$ -w -l info -P dist/src/app.js",
     "dev": "npm run build && concurrently -k -p \"[{name}]\" -n \"TypeScript,App\" -c \"yellow.bold,cyan.bold\" \"npm:build:watch\" \"npm:dev:start\"",
     "start": "npm run build && fastify start -l info dist/src/app.js",
