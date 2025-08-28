@@ -1,3 +1,4 @@
+#include <climits>
 #include <iostream>
 
 #include <boost/foreach.hpp>
@@ -13,6 +14,7 @@ using clp::string_utils::cSingleCharWildcard;
 using clp::string_utils::cWildcardEscapeChar;
 using clp::string_utils::cZeroOrMoreCharsWildcard;
 using clp::string_utils::replace_unescaped_char;
+using clp::string_utils::unescape_string;
 using clp::string_utils::wildcard_match_unsafe;
 using clp::string_utils::wildcard_match_unsafe_case_sensitive;
 using std::chrono::duration;
@@ -109,6 +111,29 @@ TEST_CASE("clean_up_wildcard_search_string", "[clean_up_wildcard_search_string]"
 
     str = "a\\bc\\";
     REQUIRE(clean_up_wildcard_search_string(str) == "abc");
+}
+
+TEST_CASE("unescape_string", "[string_utils][unescape_string]") {
+    SECTION("Simple string unescaping") {
+        REQUIRE("*?\\" == unescape_string("\\*\\?\\\\"));
+        REQUIRE("abcd" == unescape_string("abcd\\"));
+    }
+
+    SECTION("Exhaustive string unescaping") {
+        std::string unescaped_string;
+        std::string escaped_string;
+        char c{std::numeric_limits<char>::min()};
+        while (true) {
+            escaped_string.push_back('\\');
+            escaped_string.push_back(c);
+            unescaped_string.push_back(c);
+            if (c == std::numeric_limits<char>::max()) {
+                break;
+            }
+            ++c;
+        }
+        REQUIRE(unescaped_string == unescape_string(escaped_string));
+    }
 }
 
 SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]") {
