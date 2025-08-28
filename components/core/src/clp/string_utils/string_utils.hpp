@@ -4,6 +4,7 @@
 #include <charconv>
 #include <concepts>
 #include <string>
+#include <string_view>
 
 namespace clp::string_utils {
 /**
@@ -96,7 +97,7 @@ std::string clean_up_wildcard_search_string(std::string_view str);
  * @param str
  * @return An unescaped version of `str`.
  */
-std::string unescape_string(std::string_view str);
+auto unescape_string(std::string_view str) -> std::string;
 
 /**
  * Checks if character is a wildcard

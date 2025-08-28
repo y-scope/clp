@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <charconv>
 #include <cstring>
+#include <string>
+#include <string_view>
 
 using std::string;
 using std::string_view;
@@ -188,7 +190,7 @@ string clean_up_wildcard_search_string(string_view str) {
     return cleaned_str;
 }
 
-std::string unescape_string(std::string_view str) {
+auto unescape_string(std::string_view str) -> std::string {
     std::string unescaped_str;
     bool escaped{false};
     for (auto const c : str) {
