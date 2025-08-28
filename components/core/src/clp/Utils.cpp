@@ -8,6 +8,7 @@
 #include <iostream>
 #include <memory>
 #include <set>
+#include <string>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/lexical_cast.hpp>
@@ -187,6 +188,16 @@ load_lexer_from_file(std::string const& schema_file_path, log_surgeon::lexers::B
     }
     for (std::unique_ptr<log_surgeon::ParserAST> const& parser_ast : schema_ast->m_schema_vars) {
         auto* rule = dynamic_cast<log_surgeon::SchemaVarAST*>(parser_ast.get());
+
+        // Currently, we only support at most a single capture group in each variable. If a capture
+        // group is present its match will be treated as the variable rather than the full match.
+        if (1 < rule->m_regex_ptr->get_subtree_positive_captures().size()) {
+            throw std::runtime_error(
+                    schema_file_path + ":" + std::to_string(rule->m_line_num + 1)
+                    + ": error: the schema rule '" + rule->m_name
+                    + "' has a regex pattern containing > 1 capture group.\n"
+            );
+        }
 
         if ("timestamp" == rule->m_name) {
             continue;
