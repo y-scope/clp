@@ -290,6 +290,12 @@ def main(argv):
         default=str(default_config_file_path),
         help="CLP configuration file.",
     )
+    args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
     command_args_parser = args_parser.add_subparsers(dest="command", required=True)
 
     # File extraction command parser
@@ -329,6 +335,10 @@ def main(argv):
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:
