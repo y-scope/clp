@@ -7,7 +7,6 @@ set -e
 set -u
 
 dnf install -y \
-    cmake \
     diffutils \
     gcc-c++ \
     git \
@@ -22,6 +21,23 @@ dnf install -y \
     openssl-devel \
     python3-pip \
     unzip
+
+if ! command -v pipx; then
+    python3 -m pip install pipx
+fi
+
+if [ "$(id -u)" -eq 0 ]; then
+    # Running as root: install pipx softwares into system directories
+    export PIPX_HOME=/opt/_internal/pipx
+    export PIPX_BIN_DIR=/usr/local/bin
+fi
+pipx ensurepath
+
+# ystdlib requires CMake v3.23; ANTLR and yaml-cpp do not yet support CMake v4+.
+# See also: https://github.com/y-scope/clp/issues/795
+if ! command -v cmake ; then
+    pipx install "cmake~=3.23"
+fi
 
 # Determine architecture for `task` release to install
 rpm_arch=$(rpm --eval "%{_arch}")

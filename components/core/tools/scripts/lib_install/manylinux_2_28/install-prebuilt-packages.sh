@@ -13,6 +13,13 @@ dnf install -y \
     zlib-devel \
     zlib-static
 
+# ystdlib requires CMake v3.23; ANTLR and yaml-cpp do not yet support CMake v4+.
+# See also: https://github.com/y-scope/clp/issues/795
+pipx uninstall cmake
+if ! command -v cmake ; then
+    pipx install "cmake~=3.23"
+fi
+
 # Determine architecture for `task` release to install
 rpm_arch=$(rpm --eval "%{_arch}")
 case "$rpm_arch" in
@@ -39,7 +46,3 @@ curl \
     "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.rpm"
 dnf install --assumeyes "$task_pkg_path"
 rm "$task_pkg_path"
-
-# Downgrade to CMake v3 to work around https://github.com/y-scope/clp/issues/795
-pipx uninstall cmake
-pipx install cmake~=3.31

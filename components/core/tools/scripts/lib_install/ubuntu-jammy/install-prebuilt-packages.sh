@@ -10,7 +10,6 @@ apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   ca-certificates \
   checkinstall \
-  cmake \
   curl \
   build-essential \
   git \
@@ -21,12 +20,26 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   libmariadb-dev \
   libssl-dev \
   openjdk-11-jdk \
+  pipx \
   pkg-config \
   python3 \
   python3-pip \
   python3-venv \
   software-properties-common \
   unzip
+
+if [ "$(id -u)" -eq 0 ]; then
+    # Running as root: install pipx softwares into system directories
+    export PIPX_HOME=/opt/_internal/pipx
+    export PIPX_BIN_DIR=/usr/local/bin
+fi
+pipx ensurepath
+
+# ystdlib requires CMake v3.23; ANTLR and yaml-cpp do not yet support CMake v4+.
+# See also: https://github.com/y-scope/clp/issues/795
+if ! command -v cmake ; then
+    pipx install "cmake~=3.23"
+fi
 
 # Install `task`
 # NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872

@@ -14,6 +14,13 @@ apk update && apk add --no-cache \
     zlib-dev \
     zlib-static
 
+# ystdlib requires CMake v3.23; ANTLR and yaml-cpp do not yet support CMake v4+.
+# See also: https://github.com/y-scope/clp/issues/795
+pipx uninstall cmake
+if ! command -v cmake ; then
+    pipx install "cmake~=3.23"
+fi
+
 # Determine architecture for `task` release to install
 arch=$(uname -m)
 case "$arch" in
@@ -41,7 +48,3 @@ curl \
 tar -C /usr/local/bin -xzf "$task_pkg_path" task
 chmod +x /usr/local/bin/task
 rm "$task_pkg_path"
-
-# Downgrade to CMake v3 to work around https://github.com/y-scope/clp/issues/795
-pipx uninstall cmake
-pipx install cmake~=3.31
