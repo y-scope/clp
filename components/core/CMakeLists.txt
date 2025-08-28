@@ -473,6 +473,7 @@ set(SOURCE_FILES_unitTest
         src/clp/Defs.h
         src/clp/dictionary_utils.cpp
         src/clp/dictionary_utils.hpp
+        src/clp/DictionaryConcepts.hpp
         src/clp/DictionaryEntry.hpp
         src/clp/DictionaryReader.hpp
         src/clp/DictionaryWriter.hpp
