@@ -39,12 +39,12 @@
     "fastify-plugin": "^5.0.1",
     "http-status-codes": "^2.3.0",
     "pino-pretty": "^13.0.0",
-    "socket.io": "^4.8.1",
-    "presto-client": "^1.1.0"
+    "presto-client": "^1.1.0",
+    "socket.io": "^4.8.1"
   },
   "devDependencies": {
     "@types/presto-client": "^1.0.2",
-    "concurrently": "^9.1.2",
+    "concurrently": "^9.2.1",
     "eslint-config-yscope": "1.1.1",
     "fastify-cli": "^7.4.0",
     "tap": "^21.1.0",

@@ -19,6 +19,6 @@
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "concurrently": "^9.2.1"
   }
 }
