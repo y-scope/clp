@@ -1,5 +1,6 @@
 import argparse
 import logging
+import shlex
 import subprocess
 import sys
 from pathlib import Path
@@ -238,11 +239,11 @@ def main(argv: List[str]) -> int:
         "--config", str(generated_config_path_on_container),
     ]
     # fmt : on
+    if parsed_args.verbose:
+        archive_manager_cmd.append("--verbose")
     if dataset is not None:
         archive_manager_cmd.append("--dataset")
         archive_manager_cmd.append(dataset)
-    if parsed_args.verbose:
-        archive_manager_cmd.append("--verbose")
 
     archive_manager_cmd.append(subcommand)
 
@@ -277,7 +278,7 @@ def main(argv: List[str]) -> int:
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Archive manager failed.")
-        logger.debug(f"Docker command failed: {' '.join(cmd)}")
+        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
     generated_config_path_on_host.unlink()
