@@ -1,5 +1,5 @@
-#include <climits>
 #include <iostream>
+#include <limits>
 
 #include <boost/foreach.hpp>
 #include <boost/range/combine.hpp>
