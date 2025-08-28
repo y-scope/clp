@@ -777,6 +777,21 @@ class GarbageCollector(BaseModel):
         return field
 
 
+class Presto(BaseModel):
+    host: str
+    port: int
+
+    @validator("host")
+    def validate_host(cls, field):
+        _validate_host(cls, field)
+        return field
+
+    @validator("port")
+    def validate_port(cls, field):
+        _validate_port(cls, field)
+        return field
+
+
 def _get_env_var(name: str) -> str:
     value = os.getenv(name)
     if value is None:
@@ -803,6 +818,7 @@ class CLPConfig(BaseModel):
     garbage_collector: GarbageCollector = GarbageCollector()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
+    presto: Optional[Presto] = None
     archive_output: ArchiveOutput = ArchiveOutput()
     stream_output: StreamOutput = StreamOutput()
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
@@ -954,6 +970,20 @@ class CLPConfig(BaseModel):
             d["aws_config_directory"] = None
 
         return d
+
+    @root_validator(pre=True)
+    def validate_presto_config(cls, values):
+        package = values.get("package")
+        presto = values.get("presto")
+        query_engine: Optional[QueryEngine] = None
+        # Root validator with `pre=True` is called before other validators, so package has not
+        # been validated yet. Pydantic will throw error later if package is not a valid Package object.
+        if not isinstance(package, Package):
+            return values
+        query_engine = package.get("query_engine")
+        if query_engine == QueryEngine.PRESTO and presto is None:
+            raise ValueError(f"Presto config must be set when query_engine is `{query_engine}`")
+        return values
 
 
 class WorkerConfig(BaseModel):
