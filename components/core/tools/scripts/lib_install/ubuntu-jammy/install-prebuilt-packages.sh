@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 
-# Exit on any error
-set -e
-
-# Error on undefined variable
-set -u
+# Exit on any error, use of undefined variables, or failure within a pipeline
+set -euo pipefail
 
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
@@ -50,5 +47,5 @@ fi
 
 # Install `uv`
 if ! command -v uv ; then
-    pix install "uv>=0.8"
+    pipx install "uv>=0.8"
 fi

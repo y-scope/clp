@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-set -eu
-set -o pipefail
+# Exit on any error, use of undefined variables, or failure within a pipeline
+set -euo pipefail
 
 apk update && apk add --no-cache \
     bzip2-dev \
@@ -32,5 +32,5 @@ fi
 # Install `uv`
 pipx uninstall uv
 if ! command -v uv ; then
-    pix install "uv>=0.8"
+    pipx install "uv>=0.8"
 fi
