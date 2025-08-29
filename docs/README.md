@@ -14,7 +14,8 @@ this project:
 * [Node.js] >= 16 to be able to [view the output](#viewing-the-output)
 * Python 3.10 or later
 * [Task] >= 3.40.0 and < 3.43.0
-  * We constrain the version due to unresolved [issues][clp-issue-872].
+  * Minimum version 3.40.0 is required for [yscope-dev-utils].
+  * We constrain the version to < 3.43.0 due to unresolved [issues][clp-issue-872].
 
 ## Build Commands
 
@@ -46,3 +47,4 @@ the address it binds to (usually http://localhost:8080).
 [http-server]: https://www.npmjs.com/package/http-server
 [Node.js]: https://nodejs.org/en/download/current
 [Task]: https://taskfile.dev/
+[yscope-dev-utils]: https://github.com/y-scope/yscope-dev-utils
