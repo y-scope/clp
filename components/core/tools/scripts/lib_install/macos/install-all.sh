@@ -44,4 +44,4 @@ if ! command -v pkg-config ; then
     brew install pkg-config
 fi
 
-"${script_dir}/../../lib_version_checks/check-build-tool-versions.sh"
+"${script_dir}/../lib_version_checks/check-build-tool-versions.sh"
