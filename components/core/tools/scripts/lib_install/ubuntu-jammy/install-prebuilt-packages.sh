@@ -25,11 +25,6 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   software-properties-common \
   unzip
 
-if [ "$(id -u)" -eq 0 ]; then
-    # Running as root: install pipx softwares into system directories
-    export PIPX_HOME=/opt/_internal/pipx
-    export PIPX_BIN_DIR=/usr/local/bin
-fi
 pipx ensurepath
 
 # Install `cmake`

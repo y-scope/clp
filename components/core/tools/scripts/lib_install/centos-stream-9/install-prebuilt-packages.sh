@@ -22,12 +22,6 @@ dnf install -y \
 if ! command -v pipx; then
     python3 -m pip install pipx
 fi
-
-if [ "$(id -u)" -eq 0 ]; then
-    # Running as root: install pipx softwares into system directories
-    export PIPX_HOME=/opt/_internal/pipx
-    export PIPX_BIN_DIR=/usr/local/bin
-fi
 pipx ensurepath
 
 # Install `cmake`
