@@ -223,7 +223,7 @@ std::string FormattedFloatColumnReader::scientific_to_decimal(
     }
 
     // Adjust position of decimal point based on exponent
-    int const decimal_pos = static_cast<int>(dot_pos) + exponent;
+    int const decimal_pos = std::string::npos == dot_pos ? exponent + 1 : static_cast<int>(dot_pos) + exponent;
 
     std::string result{""};
     if (isNegative) {
