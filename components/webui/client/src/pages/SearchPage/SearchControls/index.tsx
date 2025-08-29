@@ -6,6 +6,7 @@ import {
 } from "../../../config";
 import Dataset from "./Dataset";
 import styles from "./index.module.css";
+import SqlInterfaceButton from "./Presto/SqlInterfaceButton";
 import SqlQueryInput from "./Presto/SqlQueryInput";
 import SqlSearchButton from "./Presto/SqlSearchButton";
 import QueryInput from "./QueryInput";
@@ -29,6 +30,8 @@ const handleSubmit = (ev: React.FormEvent<HTMLFormElement>) => {
  * @return
  */
 const SearchControls = () => {
+    const isGuidedEnabled = "true" === import.meta.env.VITE_GUIDED_DEV;
+
     return (
         <form onSubmit={handleSubmit}>
             {SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO ?
@@ -48,17 +51,19 @@ const SearchControls = () => {
                 (
                     <div className={styles["searchControlsContainer"]}>
                         <SqlQueryInput/>
-                        <div className={styles["buttonAndStatusRow"]}>
+                        <div className={styles["buttonsAndStatusRow"]}>
                             <div className={styles["status"]}>
                                 <QueryStatus/>
                             </div>
-                            <SqlSearchButton/>
+                            <div className={styles["buttons"]}>
+                                {isGuidedEnabled && <SqlInterfaceButton/>}
+                                <SqlSearchButton/>
+                            </div>
                         </div>
                     </div>
                 )}
         </form>
     );
 };
-
 
 export default SearchControls;
