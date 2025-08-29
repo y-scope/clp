@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-set -eu
-set -o pipefail
+# Exit on any error, use of undefined variables, or failure within a pipeline
+set -euo pipefail
 
 dnf install -y \
     gcc-c++ \
@@ -13,33 +13,23 @@ dnf install -y \
     zlib-devel \
     zlib-static
 
-# Determine architecture for `task` release to install
-rpm_arch=$(rpm --eval "%{_arch}")
-case "$rpm_arch" in
-    "x86_64")
-        task_pkg_arch="amd64"
-        ;;
-    "aarch64")
-        task_pkg_arch="arm64"
-        ;;
-    *)
-        echo "Error: Unsupported architecture - $rpm_arch"
-        exit 1
-        ;;
-esac
+# Install `cmake`
+# ystdlib requires CMake v3.23; ANTLR and yaml-cpp do not yet support CMake v4+.
+# See also: https://github.com/y-scope/clp/issues/795
+pipx uninstall cmake || true
+if ! command -v cmake ; then
+    pipx install "cmake~=3.23"
+fi
 
 # Install `task`
 # NOTE: We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
-task_pkg_path=$(mktemp -t --suffix ".rpm" task-pkg.XXXXXXXXXX) || exit 1
-curl \
-    --fail \
-    --location \
-    --output "$task_pkg_path" \
-    --show-error \
-    "https://github.com/go-task/task/releases/download/v3.42.1/task_linux_${task_pkg_arch}.rpm"
-dnf install --assumeyes "$task_pkg_path"
-rm "$task_pkg_path"
+pipx uninstall go-task-bin || true
+if ! command -v task ; then
+    pipx install "go-task-bin>=3.40,<3.43"
+fi
 
-# Downgrade to CMake v3 to work around https://github.com/y-scope/clp/issues/795
-pipx uninstall cmake
-pipx install cmake~=3.31
+# Install `uv`
+pipx uninstall uv || true
+if ! command -v uv ; then
+    pipx install "uv>=0.8"
+fi
