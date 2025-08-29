@@ -16,8 +16,8 @@ const SqlInterfaceButton = () => {
     return (
         <div className={styles["sqlInterfaceButton"]}>
             {sqlInterface === PRESTO_SQL_INTERFACE.GUIDED ?
-                <FreeformButton/> :
-                <GuidedButton/>}
+                <GuidedButton/> :
+                <FreeformButton/>}
         </div>
     );
 };

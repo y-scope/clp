@@ -9,7 +9,11 @@
     gap: 10px;
 }
 
-.buttonsAndStatusRow {
+.status {
+    margin-left: 2px;
+}
+
+.statusAndButtonsRow {
     display: flex;
     flex-direction: row;
     align-items: flex-start;
@@ -21,8 +25,4 @@
     display: flex;
     flex-direction: row;
     gap: 5px;
-}
-
-.status {
-    margin-left: 2px;
 }

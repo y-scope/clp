@@ -11,7 +11,7 @@ const PRESTO_SEARCH_STATE_DEFAULT = Object.freeze({
 
 interface PrestoSearchState {
     /**
-     * SQL interface for presto search controls.
+     * Presto SQL interface.
      */
     sqlInterface: PRESTO_SQL_INTERFACE;
 

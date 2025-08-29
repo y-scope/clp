@@ -6,7 +6,7 @@ import {PRESTO_SQL_INTERFACE} from "../../../../SearchState/Presto/typings";
 
 
 /**
- * Renders a button to switch to Guided SQL interface (query builder).
+ * Renders a button to switch to Guided SQL interface.
  *
  * @return
  */

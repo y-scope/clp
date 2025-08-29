@@ -1,5 +1,5 @@
 /**
- *Presto SQL interface types.
+ * Presto SQL interface types.
  */
 export enum PRESTO_SQL_INTERFACE {
     /**

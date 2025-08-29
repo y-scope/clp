@@ -30,6 +30,8 @@ const handleSubmit = (ev: React.FormEvent<HTMLFormElement>) => {
  * @return
  */
 const SearchControls = () => {
+    /* eslint-disable-next-line no-warning-comments */
+    // TODO: Remove flag and related logic when the new guide UI is fully implemented.
     const isGuidedEnabled = "true" === import.meta.env.VITE_GUIDED_DEV;
 
     return (
@@ -51,7 +53,7 @@ const SearchControls = () => {
                 (
                     <div className={styles["searchControlsContainer"]}>
                         <SqlQueryInput/>
-                        <div className={styles["buttonsAndStatusRow"]}>
+                        <div className={styles["statusAndButtonsRow"]}>
                             <div className={styles["status"]}>
                                 <QueryStatus/>
                             </div>
