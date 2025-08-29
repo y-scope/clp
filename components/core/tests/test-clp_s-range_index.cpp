@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -224,6 +225,7 @@ TEST_CASE("clp-s-range-index", "[clp-s][range-index]") {
             archive_stats = compress_archive(
                     input_file,
                     std::string{cTestRangeIndexArchiveDirectory},
+                    std::nullopt,
                     single_file_archive,
                     false,
                     input_file_type

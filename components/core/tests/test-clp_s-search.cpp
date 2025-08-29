@@ -2,6 +2,7 @@
 #include <exception>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <string>
@@ -223,7 +224,8 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
              R"aa(idx: 0 OR idx: 1)aa",
              {1}},
             {R"aa(ambiguous_varstring: "a*e")aa", {10, 11, 12}},
-            {R"aa(ambiguous_varstring: "a\*e")aa", {12}}
+            {R"aa(ambiguous_varstring: "a\*e")aa", {12}},
+            {R"aa(idx: * AND NOT idx: null AND idx: 0)aa", {0}}
     };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
@@ -234,6 +236,7 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             std::ignore = compress_archive(
                     get_test_input_local_path(),
                     std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
                     single_file_archive,
                     structurize_arrays,
                     clp_s::FileType::Json
