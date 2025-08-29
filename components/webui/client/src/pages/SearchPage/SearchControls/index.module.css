@@ -9,13 +9,19 @@
     gap: 10px;
 }
 
-.buttonAndStatusRow {
+.status {
+    margin-left: 2px;
+}
+
+.statusAndButtonsRow {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: 10px;
 }
 
-.status {
-    margin-left: 2px;
+.buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
 }

@@ -7,7 +7,8 @@
     "build": "tsc -b && vite build",
     "lint:check": "eslint",
     "lint:fix": "eslint --fix",
-    "start": "vite"
+    "start": "vite",
+    "guided": "VITE_GUIDED_DEV=true npm run start"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
