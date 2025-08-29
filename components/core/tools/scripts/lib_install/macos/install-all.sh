@@ -3,6 +3,8 @@
 # Exit on any error, use of undefined variables, or failure within a pipeline
 set -euo pipefail
 
+script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
 brew update
 
 # Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
@@ -42,6 +44,4 @@ if ! command -v pkg-config ; then
     brew install pkg-config
 fi
 
-# TODO: https://github.com/y-scope/clp/issues/795
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-"${script_dir}/../check-cmake-version.sh"
+"${script_dir}/../../lib_version_checks/check-build-tool-versions.sh"
