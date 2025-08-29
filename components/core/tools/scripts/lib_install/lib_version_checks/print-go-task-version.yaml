@@ -3,4 +3,4 @@ version: "3"
 tasks:
   version:
     cmd: >-
-      echo {{.TASK_VERSION}} | sed "s/^v//"
+      echo {{ .TASK_VERSION | trimPrefix "v" }}

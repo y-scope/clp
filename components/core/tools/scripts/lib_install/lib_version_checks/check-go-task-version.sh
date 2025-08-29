@@ -6,8 +6,8 @@ set -euo pipefail
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 # Get the installed go-task version string
-task_version=$(task --silent --taskfile ${script_dir}/print-go-task-version.yaml version)
-IFS=. read task_major_version task_minor_version _ <<< "${task_version}"
+task_version=$(task --silent --taskfile "${script_dir}/print-go-task-version.yaml" version)
+IFS=. read -r task_major_version task_minor_version _ <<< "${task_version}"
 
 # Check version constraints
 if [ "${task_major_version}" -ne "3" ] || \
