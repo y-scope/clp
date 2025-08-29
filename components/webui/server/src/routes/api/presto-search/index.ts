@@ -60,6 +60,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         // eslint-disable-next-line max-lines-per-function
         async (request, reply) => {
             const {queryString} = request.body;
+            request.log.info({queryString}, "/api/presto-search/query args");
 
             let searchJobId: string;
             let totalResultsCount = 0;
@@ -213,6 +214,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         },
         async (request, reply) => {
             const {searchJobId} = request.body;
+
+            request.log.info({searchJobId}, "api/presto-search/cancel args");
+
             await new Promise<void>((resolve, reject) => {
                 Presto.client.kill(searchJobId, (error) => {
                     if (null !== error) {
