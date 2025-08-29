@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
-# Exit on any error
-set -e
+# Exit on any error, use of undefined variables, or failure within a pipeline
+set -euo pipefail
 
-# Error on undefined variable
-set -u
+script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 
 brew update
 
@@ -45,5 +44,4 @@ if ! command -v pkg-config ; then
     brew install pkg-config
 fi
 
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-"${script_dir}/../check-build-tool-versions.sh"
+"${script_dir}/../lib_version_checks/check-build-tool-versions.sh"

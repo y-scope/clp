@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 
-# Exit on any error, use of undefined variables, or failure within a pipeline
-set -euo pipefail
+# Exit on any error
+set -e
+
+# Error on undefined variable
+set -u
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 lib_install_scripts_dir=$script_dir/..
