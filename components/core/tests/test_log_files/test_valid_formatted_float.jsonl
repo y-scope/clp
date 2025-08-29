@@ -1,3 +1,7 @@
+{ "singleDigitStandard": 0.007 }
+{ "negativeSingleDigitStandard": -0.007 }
+{ "singleDigitIntegerStandard": 7 }
+{ "negativeSingleDigitIntegerStandard": -7 }
 { "normalStandard": 123456789.1234567 }
 { "standardIntegerWithTrailingZeros": 123456789.000 }
 { "standardFloatWithLeadingZerosAndTrailingZeros": 0.00000000000000000000000000001234567891234500 }
