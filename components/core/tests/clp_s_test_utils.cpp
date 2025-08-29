@@ -42,7 +42,7 @@ auto compress_archive(
     parser_option.single_file_archive = single_file_archive;
     parser_option.input_file_type = file_type;
     if (timestamp_key.has_value()) {
-        parser_option.timestamp_key = timestamp_key.value();
+        parser_option.timestamp_key = std::move(timestamp_key.value());
     }
 
     clp_s::JsonParser parser{parser_option};

@@ -120,15 +120,9 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
             }
             Integral64 integral = integral_literal->get();
             if (std::holds_alternative<int64_t>(integral)) {
-                ret = range_it->second->evaluate_filter(
-                        filter->get_operation(),
-                        std::get<int64_t>(integral)
-                );
+                ret = range_it->second->evaluate_filter(filter_op, std::get<int64_t>(integral));
             } else {
-                ret = range_it->second->evaluate_filter(
-                        filter->get_operation(),
-                        std::get<double>(integral)
-                );
+                ret = range_it->second->evaluate_filter(filter_op, std::get<double>(integral));
             }
 
             if (ret == EvaluatedValue::True) {
