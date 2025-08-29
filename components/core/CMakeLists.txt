@@ -151,12 +151,18 @@ if(CLP_NEED_BOOST)
     if(CLP_USE_STATIC_LIBS)
         set(Boost_USE_STATIC_LIBS ON)
     endif()
-    find_package(Boost 1.89 REQUIRED iostreams program_options filesystem regex url)
-    if(Boost_FOUND)
-        message(STATUS "Found Boost ${Boost_VERSION}")
-    else()
-        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
-    endif()
+    find_package(
+        Boost
+        1.81...1.88
+        REQUIRED
+            filesystem
+            iostreams
+            program_options
+            regex
+            system
+            url
+    )
+    message(STATUS "Found Boost ${Boost_VERSION}")
 endif()
 
 if(CLP_NEED_CATCH2)
@@ -265,14 +271,10 @@ if(CLP_NEED_MONGOCXX)
     endif()
 endif()
 
-# Find and setup msgpack
+# Find and setup msgpack-cxx
 if(CLP_NEED_MSGPACKCXX)
     find_package(msgpack-cxx 7.0.0 REQUIRED)
-    if(msgpack-cxx_FOUND)
-        message(STATUS "Found msgpack-cxx ${msgpack-cxx_VERSION}")
-    else()
-        message(FATAL_ERROR "Could not find msgpack-cxx")
-    endif()
+    message(STATUS "Found msgpack-cxx ${msgpack-cxx_VERSION}")
 endif()
 
 find_package(Threads REQUIRED)
@@ -725,7 +727,11 @@ if(CLP_BUILD_TESTING)
     target_link_libraries(unitTest
             PRIVATE
             absl::flat_hash_map
-            Boost::filesystem Boost::iostreams Boost::program_options Boost::regex Boost::url
+            Boost::filesystem
+            Boost::iostreams
+            Boost::program_options
+            Boost::regex
+            Boost::url
             Catch2::Catch2WithMain
             ${CURL_LIBRARIES}
             clp_s::search::ast
@@ -739,6 +745,7 @@ if(CLP_BUILD_TESTING)
             LibLZMA::LibLZMA
             MariaDBClient::MariaDBClient
             ${MONGOCXX_TARGET}
+            msgpack-cxx
             nlohmann_json::nlohmann_json
             simdjson::simdjson
             spdlog::spdlog

@@ -18,6 +18,7 @@ vars:
   G_DEPS_CORE_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_DIR}}/cmake-settings"
 
   # Library names
+  G_BOOST_LIB_NAME: "Boost"
   G_FMT_LIB_NAME: "fmt"
   G_GSL_LIB_NAME: "Microsoft.GSL"
 
@@ -25,6 +26,10 @@ vars:
   G_ANTLR_VERSION: "4.13.2"
   G_ANTLR_JAR_FILE: "{{.G_DEPS_CORE_DIR}}/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
 
+# NOTE: For dependencies built using CMake, we set CMP0074 to NEW whenever:
+# - a component's minimum required CMake version is less than 3.27 (where CMP0074 defaults to OLD);
+#   and
+# - the component depends on another via `<lib_name>_ROOT`.
 tasks:
   default:
     deps:
@@ -63,6 +68,7 @@ tasks:
       - task: "absl"
       - task: "antlr-jar"
       - task: "antlr-runtime"
+      - task: "boost"
       - task: "catch2"
       - task: "date"
       - task: "fmt"
@@ -71,6 +77,7 @@ tasks:
       - task: "lz4"
       - task: "microsoft.gsl"
       - task: "mongocxx"
+      - task: "msgpack-cxx"
       - task: "nlohmann_json"
       - task: "simdjson"
       - task: "spdlog"
@@ -180,6 +187,27 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
+
+  boost:
+    internal: true
+    vars:
+      VERSION: "1.87.0"
+    run: "once"
+    cmds:
+      - task: "yscope-dev-utils:boost:download-and-install"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
+          FILE_SHA256: "d6c69e4459eb5d6ec208250291221e7ff4a2affde9af6e49c9303b89c687461f"
+          TARGETS:
+            - "filesystem"
+            - "iostreams"
+            - "program_options"
+            - "regex"
+            - "system"
+            - "url"
+          URL: "https://github.com/boostorg/boost/releases/download/boost-{{.VERSION}}/\
+          boost-{{.VERSION}}-b2-nodocs.tar.gz"
+          WORK_DIR: "{{.G_DEPS_CORE_DIR}}"
 
   catch2:
     internal: true
@@ -343,6 +371,28 @@ tasks:
           TARBALL_URL: "https://github.com/mongodb/mongo-cxx-driver/releases/download/{{.VERSION}}\
           /mongo-cxx-driver-{{.VERSION}}.tar.gz"
 
+  msgpack-cxx:
+    internal: true
+    vars:
+      VERSION: "7.0.0"
+    run: "once"
+    deps:
+      - task: "boost"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
+            - "-DMSGPACK_BUILD_DOCS=OFF"
+            - "-DMSGPACK_CXX20=ON"
+          LIB_NAME: "msgpack-cxx"
+          TARBALL_SHA256: "7504b7af7e7b9002ce529d4f941e1b7fb1fb435768780ce7da4abaac79bb156f"
+          TARBALL_URL: "https://github.com/msgpack/msgpack-c/releases/download/cpp-{{.VERSION}}\
+          /msgpack-cxx-{{.VERSION}}.tar.gz"
+
   nlohmann_json:
     internal: true
     run: "once"
@@ -386,11 +436,7 @@ tasks:
             - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-
-            # Set CMP0074 since our minimum required CMake version is less than 3.27, and we
-            # depend on fmt's settings file, which uses `fmt_ROOT`.
             - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
-
             - "-DSPDLOG_BUILD_EXAMPLE=OFF"
             - "-DSPDLOG_BUILD_EXAMPLE_HO=OFF"
             - "-DSPDLOG_FMT_EXTERNAL=ON"

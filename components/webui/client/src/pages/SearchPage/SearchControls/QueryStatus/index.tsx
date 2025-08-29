@@ -1,8 +1,7 @@
 import {Typography} from "antd";
 
-import useSearchStore from "../SearchState/index";
-import {SEARCH_UI_STATE} from "../SearchState/typings";
-import styles from "./index.module.css";
+import useSearchStore from "../../SearchState/index";
+import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import Results from "./Results";
 
 
@@ -13,18 +12,19 @@ const {Text} = Typography;
  *
  * @return
  */
-const SearchQueryStatus = () => {
+const QueryStatus = () => {
     const {
         searchJobId,
         searchUiState,
     } = useSearchStore();
 
     return (
-        <div className={styles["status"]}>
+        <div>
             {(searchUiState === SEARCH_UI_STATE.QUERYING ||
                 searchUiState === SEARCH_UI_STATE.DONE) && (
                 <Text type={"secondary"}>
-                    Search job #
+                    Search job
+                    {" "}
                     {searchJobId}
                     {" "}
                     found
@@ -38,4 +38,4 @@ const SearchQueryStatus = () => {
 };
 
 
-export default SearchQueryStatus;
+export default QueryStatus;
