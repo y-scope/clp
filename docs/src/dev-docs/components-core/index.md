@@ -9,6 +9,9 @@ CLP core is the low-level component that performs compression, decompression, an
 * A recent compiler that fully supports C++20 features such as
   * std::span
   * std::source_location
+* [CMake] >= 3.23.0 and < 4.0.0
+  * Minimum version 3.23.0 is required for [yscope-dev-utils].
+  * We constrain the version to < 4.0.0 due to unresolved [issues][clp-issue-795].
 * [Task] >= 3.40.0 and < 3.43.0
   * Minimum version 3.40.0 is required for [yscope-dev-utils].
   * We constrain the version to < 3.43.0 due to unresolved [issues][clp-issue-872].
@@ -120,6 +123,8 @@ ubuntu-jammy-deps-install
 regex-utils
 :::
 
+[CMake]: https://cmake.org/
+[clp-issue-795]: https://github.com/y-scope/clp/issues/795
 [clp-issue-872]: https://github.com/y-scope/clp/issues/872
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [Task]: https://taskfile.dev/
