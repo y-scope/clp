@@ -19,12 +19,12 @@ const GuidedButton = () => {
 
     return (
         <Button
+            block={true}
+            color={"default"}
             icon={<AppstoreOutlined/>}
             size={"middle"}
-            variant="filled"
-            color="default"
+            variant={"filled"}
             onClick={handleClick}
-            block
         >
             Guided
         </Button>

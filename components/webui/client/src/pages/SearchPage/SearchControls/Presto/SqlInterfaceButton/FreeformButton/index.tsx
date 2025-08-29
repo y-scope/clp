@@ -19,12 +19,12 @@ const FreeformButton = () => {
 
     return (
         <Button
+            block={true}
+            color={"default"}
             icon={<EditOutlined/>}
             size={"middle"}
-            variant="filled"
-            color="default"
+            variant={"filled"}
             onClick={handleClick}
-            block
         >
             Freeform
         </Button>
