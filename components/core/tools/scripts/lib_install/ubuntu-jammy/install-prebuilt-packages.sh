@@ -31,7 +31,7 @@ pipx ensurepath
 # ystdlib requires CMake v3.23; ANTLR and yaml-cpp do not yet support CMake v4+.
 # See also: https://github.com/y-scope/clp/issues/795
 if ! command -v cmake ; then
-    pipx install "cmake~=3.23"
+    pipx install "cmake>=3.23,<3.24"
 fi
 
 # Install `task`

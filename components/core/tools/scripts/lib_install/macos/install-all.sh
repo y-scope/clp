@@ -12,7 +12,7 @@ brew update
 if command -v cmake ; then
     brew uninstall --force cmake
 fi
-pipx install "cmake~=3.31"
+pipx install "cmake>=3.23,<3.24"
 
 # Install a version of `task` < 3.43 to avoid https://github.com/y-scope/clp/issues/872
 if command -v task ; then

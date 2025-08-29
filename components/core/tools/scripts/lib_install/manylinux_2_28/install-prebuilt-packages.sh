@@ -18,7 +18,7 @@ dnf install -y \
 # See also: https://github.com/y-scope/clp/issues/795
 pipx uninstall cmake || true
 if ! command -v cmake ; then
-    pipx install "cmake~=3.23"
+    pipx install "cmake>=3.23,<3.24"
 fi
 
 # Install `task`
