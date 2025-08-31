@@ -26,7 +26,8 @@ if ! command -v pkg-config >/dev/null 2>&1; then
     brew install pkg-config
 fi
 
-# Install CMake v3.31.6 as ANTLR and yaml-cpp do not yet support CMake v4+.
+# Install `cmake`
+# ystdlib requires CMake v3.23; ANTLR and yaml-cpp do not yet support CMake v4+.
 # See also: https://github.com/y-scope/clp/issues/795
 if command -v cmake >/dev/null 2>&1; then
     brew uninstall --force cmake
