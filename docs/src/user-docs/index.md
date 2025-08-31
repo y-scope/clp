@@ -1,6 +1,6 @@
-# User guide
+# User docs
 
-This guide documents how to use and operate CLP. Use the left sidebar (if it's hidden, click the
+These docs explain how to use and operate CLP. Use the left sidebar (if it's hidden, click the
 <i class="fa fa-bars"></i> icon) to navigate to specific docs.
 
 The sections are as follows:
