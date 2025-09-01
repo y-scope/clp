@@ -31,8 +31,6 @@
 #include "Utils.hpp"
 #include "ZstdCompressor.hpp"
 
-using namespace simdjson;
-
 namespace clp_s {
 struct JsonParserOption {
     std::vector<Path> input_paths;

@@ -32,8 +32,6 @@
 #include "ast/Literal.hpp"
 #include "SchemaMatch.hpp"
 
-using namespace simdjson;
-
 namespace clp_s::search {
 /**
  * This class is a core component of the log search system responsible for executing parsed queries
