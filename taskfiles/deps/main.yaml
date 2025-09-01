@@ -512,6 +512,7 @@ tasks:
           TARBALL_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.tar.gz"
 
   ystdlib:
+    internal: true
     vars:
       LIB_NAME: "ystdlib"
       YSTDLIB_OUTPUT_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
