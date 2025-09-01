@@ -49,7 +49,7 @@ The task will download, build, and install (within the build directory) the foll
 | [log-surgeon](https://github.com/y-scope/log-surgeon)                 | a82ad13        |
 | [lz4](https://github.com/lz4/lz4)                                     | v1.10.0        |
 | [microsoft.gsl](https://github.com/microsoft/GSL)                     | v4.0.0         |
-| [mongo-cxx-driver](https://github.com/mongodb/mongo-cxx-driver)       | r3.10.2        |
+| [mongo-cxx-driver](https://github.com/mongodb/mongo-cxx-driver)       | r4.1.1         |
 | [msgpack-cxx](https://github.com/msgpack/msgpack-c/tree/cpp_master)   | v7.0.0         |
 | [nlohmann_json](https://github.com/nlohmann/json)                     | v3.11.3        |
 | [simdjson](https://github.com/simdjson/simdjson)                      | v3.13.0        |
