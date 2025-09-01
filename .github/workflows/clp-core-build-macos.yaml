@@ -67,8 +67,9 @@ jobs:
 
       - name: "Remove preinstalled brew programs which will conflict with pipx's installs"
         run: |
-          brew uninstall --force cmake
-
+          if brew list --formula cmake >/dev/null 2>&1; then
+            brew uninstall --force cmake
+          fi
       - name: "Install dependencies"
         run: "./components/core/tools/scripts/lib_install/macos/install-all.sh"
 
