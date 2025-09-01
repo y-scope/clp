@@ -32,8 +32,6 @@
 #include "ast/Literal.hpp"
 #include "SchemaMatch.hpp"
 
-using namespace simdjson;
-
 namespace clp_s::search {
 /**
  * This class is a core component of the log search system responsible for executing parsed queries
@@ -298,7 +296,7 @@ private:
      * @return true if the expression evaluates to true, false otherwise
      */
     inline auto evaluate_array_filter_value(
-            ondemand::value& item,
+            simdjson::ondemand::value& item,
             ast::FilterOperation op,
             ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
@@ -315,7 +313,7 @@ private:
      * @return true if the expression evaluates to true, false otherwise
      */
     auto evaluate_array_filter_array(
-            ondemand::array& array,
+            simdjson::ondemand::array& array,
             ast::FilterOperation op,
             ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
@@ -332,7 +330,7 @@ private:
      * @return true if the expression evaluates to true, false otherwise
      */
     auto evaluate_array_filter_object(
-            ondemand::object& object,
+            simdjson::ondemand::object& object,
             ast::FilterOperation op,
             ast::DescriptorList const& unresolved_tokens,
             size_t cur_idx,
@@ -360,7 +358,7 @@ private:
      * @return true if the expression evaluates to true, false otherwise
      */
     auto evaluate_wildcard_array_filter(
-            ondemand::array& array,
+            simdjson::ondemand::array& array,
             ast::FilterOperation op,
             std::shared_ptr<ast::Literal> const& operand
     ) const -> bool;
@@ -373,7 +371,7 @@ private:
      * @return true if the expression evaluates to true, false otherwise
      */
     auto evaluate_wildcard_array_filter(
-            ondemand::object& object,
+            simdjson::ondemand::object& object,
             ast::FilterOperation op,
             std::shared_ptr<ast::Literal> const& operand
     ) const -> bool;
