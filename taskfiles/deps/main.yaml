@@ -352,6 +352,7 @@ tasks:
           TARBALL_URL: "https://github.com/microsoft/GSL/archive/refs/tags/v4.0.0.tar.gz"
 
   mongocxx:
+    internal: true
     vars:
       VERSION: "r4.1.1"
     run: "once"
