@@ -64,6 +64,7 @@ jobs:
           rm -f /usr/local/bin/go*
           rm -f /usr/local/bin/idle3*
           rm -f /usr/local/bin/pydoc3*
+          rm -f /usr/local/bin/python3*
 
       - name: "Remove preinstalled brew programs which will conflict with pipx's installs"
         run: |
