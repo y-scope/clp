@@ -3,6 +3,8 @@
 # Exit on any error, use of undefined variables, or failure within a pipeline
 set -euo pipefail
 
+script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+
 dnf install -y \
     diffutils \
     gcc-c++ \
