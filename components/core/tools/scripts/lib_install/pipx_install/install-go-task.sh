@@ -15,6 +15,7 @@ if command -v task >/dev/null 2>&1; then
     if ! script_output=$("${version_check_script}" 2>&1); then
         echo "${script_output}"
         echo "Please manually uninstall the current go-task and then re-run the install script."
+        exit 1
     fi
 else
     # We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872

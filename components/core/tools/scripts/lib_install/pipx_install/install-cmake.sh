@@ -15,6 +15,7 @@ if command -v cmake >/dev/null 2>&1; then
     if ! script_output=$("${version_check_script}" 2>&1); then
         echo "${script_output}"
         echo "Please manually uninstall the current cmake and then re-run the install script."
+        exit 1
     fi
 else
     # ystdlib requires CMake v3.23; ANTLR and yaml-cpp do not yet support CMake v4+.

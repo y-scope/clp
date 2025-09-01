@@ -15,6 +15,7 @@ if command -v uv >/dev/null 2>&1; then
     if ! script_output=$("${version_check_script}" 2>&1); then
         echo "${script_output}"
         echo "Please manually uninstall the current uv and then re-run the install script."
+        exit 1
     fi
 else
     pipx install --force "uv>=0.8"
