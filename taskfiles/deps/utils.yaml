@@ -46,11 +46,15 @@ tasks:
   # @param {string} TARBALL_URL
   # @param {string[]} [CMAKE_GEN_ARGS] Any additional arguments to pass to the CMake generate
   # command.
+  # @param {string} [CMAKE_SOURCE_DIR=.] The path, within the tarball extraction directory,
+  # containing the project's top level CMakeLists.txt.
   install-remote-cmake-lib:
     internal: true
     vars:
       CMAKE_GEN_ARGS:
         ref: "default (list) .CMAKE_GEN_ARGS"
+      CMAKE_SOURCE_DIR: >-
+        {{default "." .CMAKE_SOURCE_DIR}}
       INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install"
       INSTALL_DIR_CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
     deps:
@@ -68,6 +72,7 @@ tasks:
           CMAKE_JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
           CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
+          CMAKE_SOURCE_DIR: "{{.CMAKE_SOURCE_DIR}}"
           TAR_SHA256: "{{.TARBALL_SHA256}}"
           TAR_URL: "{{.TARBALL_URL}}"
           WORK_DIR: "{{.G_DEPS_CORE_DIR}}"

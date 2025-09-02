@@ -91,7 +91,8 @@ auto is_unreserved_characters(char c) -> bool {
 
 auto get_formatted_timestamp_string(std::chrono::system_clock::time_point const& timestamp)
         -> string {
-    return fmt::format("{:%Y%m%dT%H%M%SZ}", timestamp);
+    auto const timestamp_secs = std::chrono::time_point_cast<std::chrono::seconds>(timestamp);
+    return fmt::format("{:%Y%m%dT%H%M%SZ}", timestamp_secs);
 }
 
 auto get_formatted_date_string(std::chrono::system_clock::time_point const& timestamp) -> string {

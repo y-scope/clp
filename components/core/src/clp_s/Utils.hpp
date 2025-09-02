@@ -212,15 +212,15 @@ public:
 
     UnalignedMemSpan(char* begin, size_t size) : m_begin(begin), m_size(size) {}
 
-    size_t size() { return m_size; }
+    size_t size() const { return m_size; }
 
-    T operator[](size_t i) {
+    T operator[](size_t i) const {
         T tmp;
         memcpy(&tmp, m_begin + i * sizeof(T), sizeof(T));
         return tmp;
     }
 
-    UnalignedMemSpan<T> sub_span(size_t start, size_t size) {
+    UnalignedMemSpan<T> sub_span(size_t start, size_t size) const {
         return {m_begin + start * sizeof(T), size};
     }
 

@@ -3,8 +3,12 @@
 #include <memory>
 #include <vector>
 
+#include <log_surgeon/Lexer.hpp>
 #include <string_utils/string_utils.hpp>
 
+#include "../../clp/Defs.h"
+#include "../../clp/GrepCore.hpp"
+#include "../../clp/Query.hpp"
 #include "../../clp/type_utils.hpp"
 #include "../SchemaTree.hpp"
 #include "ast/AndExpr.hpp"
@@ -15,8 +19,6 @@
 #include "ast/Literal.hpp"
 #include "ast/OrExpr.hpp"
 #include "ast/SearchUtils.hpp"
-#include "clp_search/EncodedVariableInterpreter.hpp"
-#include "clp_search/Grep.hpp"
 #include "EvaluateTimestampIndex.hpp"
 
 using clp_s::search::ast::AndExpr;
@@ -201,7 +203,7 @@ bool QueryRunner::evaluate_wildcard_filter(FilterExpr* expr, int32_t schema) {
             subtree_type.has_value() && constants::cMetadataSubtreeType == subtree_type.value()
     };
     if (column->matches_type(LiteralType::ClpStringT)) {
-        Query* q = m_expr_clp_query.at(expr);
+        auto* q = m_expr_clp_query.at(expr);
         for (auto const& entry : m_clp_string_readers) {
             if (false == matches_metadata && m_metadata_columns.contains(entry.first)) {
                 continue;
@@ -274,7 +276,7 @@ bool QueryRunner::evaluate_filter(FilterExpr* expr, int32_t schema) {
     auto* column = expr->get_column().get();
     int32_t column_id = column->get_column_id();
     auto literal = expr->get_operand();
-    Query* q = nullptr;
+    clp::Query* q = nullptr;
     std::unordered_set<int64_t>* matching_vars = nullptr;
     switch (column->get_literal_type()) {
         case LiteralType::IntegerT:
@@ -404,7 +406,7 @@ bool QueryRunner::evaluate_float_filter_core(FilterOperation op, double value, d
 
 bool QueryRunner::evaluate_clp_string_filter(
         FilterOperation op,
-        Query* q,
+        clp::Query* q,
         std::vector<ClpStringColumnReader*> const& readers
 ) const {
     if (FilterOperation::EXISTS == op || FilterOperation::NEXISTS == op) {
@@ -491,7 +493,7 @@ bool QueryRunner::evaluate_array_filter(
         value.reserve(value.size() + simdjson::SIMDJSON_PADDING);
     }
     auto obj = m_array_parser.iterate(value);
-    ondemand::array array = obj.get_array();
+    simdjson::ondemand::array array = obj.get_array();
 
     // pre-evaluate whether we can match strings or numbers to eliminate
     // duplicate effort on every item
@@ -507,7 +509,7 @@ bool QueryRunner::evaluate_array_filter(
 }
 
 bool QueryRunner::evaluate_array_filter_value(
-        ondemand::value& item,
+        simdjson::ondemand::value& item,
         FilterOperation op,
         DescriptorList const& unresolved_tokens,
         size_t cur_idx,
@@ -515,8 +517,8 @@ bool QueryRunner::evaluate_array_filter_value(
 ) const {
     bool match = false;
     switch (item.type()) {
-        case ondemand::json_type::object: {
-            ondemand::object nested_object = item.get_object();
+        case simdjson::ondemand::json_type::object: {
+            simdjson::ondemand::object nested_object = item.get_object();
             if (evaluate_array_filter_object(
                         nested_object,
                         op,
@@ -528,14 +530,14 @@ bool QueryRunner::evaluate_array_filter_value(
                 match = true;
             }
         } break;
-        case ondemand::json_type::array: {
-            ondemand::array nested_array = item.get_array();
+        case simdjson::ondemand::json_type::array: {
+            simdjson::ondemand::array nested_array = item.get_array();
             if (evaluate_array_filter_array(nested_array, op, unresolved_tokens, cur_idx, operand))
             {
                 match = true;
             }
         } break;
-        case ondemand::json_type::string: {
+        case simdjson::ondemand::json_type::string: {
             if (true == m_maybe_string && unresolved_tokens.size() == cur_idx
                 && clp::string_utils::wildcard_match_unsafe(
                         item.get_string().value(),
@@ -546,11 +548,11 @@ bool QueryRunner::evaluate_array_filter_value(
                 match = op == FilterOperation::EQ;
             }
         } break;
-        case ondemand::json_type::number: {
+        case simdjson::ondemand::json_type::number: {
             if (false == m_maybe_number || unresolved_tokens.size() != cur_idx) {
                 break;
             }
-            ondemand::number number = item.get_number();
+            simdjson::ondemand::number number = item.get_number();
             if (number.is_double()) {
                 double tmp_double;
                 operand->as_float(tmp_double, op);
@@ -568,7 +570,7 @@ bool QueryRunner::evaluate_array_filter_value(
                 match = eval(op, number.get_int64(), tmp_uint);
             }
         } break;
-        case ondemand::json_type::boolean: {
+        case simdjson::ondemand::json_type::boolean: {
             if (unresolved_tokens.size() != cur_idx || op == FilterOperation::EXISTS
                 || op == FilterOperation::NEXISTS)
             {
@@ -579,7 +581,7 @@ bool QueryRunner::evaluate_array_filter_value(
                 match = true;
             }
         } break;
-        case ondemand::json_type::null: {
+        case simdjson::ondemand::json_type::null: {
             if (op != FilterOperation::EXISTS && op != FilterOperation::NEXISTS
                 && operand->as_null(op))
             {
@@ -591,13 +593,13 @@ bool QueryRunner::evaluate_array_filter_value(
 }
 
 bool QueryRunner::evaluate_array_filter_array(
-        ondemand::array& array,
+        simdjson::ondemand::array& array,
         FilterOperation op,
         DescriptorList const& unresolved_tokens,
         size_t cur_idx,
         std::shared_ptr<Literal> const& operand
 ) const {
-    for (ondemand::value item : array) {
+    for (simdjson::ondemand::value item : array) {
         if (evaluate_array_filter_value(item, op, unresolved_tokens, cur_idx, operand)) {
             return true;
         }
@@ -606,7 +608,7 @@ bool QueryRunner::evaluate_array_filter_array(
 }
 
 bool QueryRunner::evaluate_array_filter_object(
-        ondemand::object& object,
+        simdjson::ondemand::object& object,
         FilterOperation op,
         DescriptorList const& unresolved_tokens,
         size_t cur_idx,
@@ -628,7 +630,7 @@ bool QueryRunner::evaluate_array_filter_object(
             return op == FilterOperation::EXISTS;
         }
 
-        ondemand::value item = field.value();
+        simdjson::ondemand::value item = field.value();
         return evaluate_array_filter_value(item, op, unresolved_tokens, cur_idx, operand);
     }
     return false;
@@ -643,7 +645,7 @@ bool QueryRunner::evaluate_wildcard_array_filter(
         value.reserve(value.size() + simdjson::SIMDJSON_PADDING);
     }
     auto obj = m_array_parser.iterate(value);
-    ondemand::array array = obj.get_array();
+    simdjson::ondemand::array array = obj.get_array();
 
     // pre-evaluate whether we can match strings or numbers to eliminate
     // duplicate effort on every item
@@ -654,26 +656,26 @@ bool QueryRunner::evaluate_wildcard_array_filter(
 }
 
 bool QueryRunner::evaluate_wildcard_array_filter(
-        ondemand::array& array,
+        simdjson::ondemand::array& array,
         FilterOperation op,
         std::shared_ptr<Literal> const& operand
 ) const {
     bool match = false;
     for (auto item : array) {
         switch (item.type()) {
-            case ondemand::json_type::object: {
-                ondemand::object nested_object = item.get_object();
+            case simdjson::ondemand::json_type::object: {
+                simdjson::ondemand::object nested_object = item.get_object();
                 if (evaluate_wildcard_array_filter(nested_object, op, operand)) {
                     match = true;
                 }
             } break;
-            case ondemand::json_type::array: {
-                ondemand::array nested_array = item.get_array();
+            case simdjson::ondemand::json_type::array: {
+                simdjson::ondemand::array nested_array = item.get_array();
                 if (evaluate_wildcard_array_filter(nested_array, op, operand)) {
                     match = true;
                 }
             } break;
-            case ondemand::json_type::string: {
+            case simdjson::ondemand::json_type::string: {
                 if (false == m_maybe_string) {
                     break;
                 }
@@ -687,11 +689,11 @@ bool QueryRunner::evaluate_wildcard_array_filter(
                 }
                 break;
             } break;
-            case ondemand::json_type::number: {
+            case simdjson::ondemand::json_type::number: {
                 if (false == m_maybe_number) {
                     break;
                 }
-                ondemand::number number = item.get_number();
+                simdjson::ondemand::number number = item.get_number();
                 if (number.is_double()) {
                     double tmp_double;
                     operand->as_float(tmp_double, op);
@@ -706,13 +708,13 @@ bool QueryRunner::evaluate_wildcard_array_filter(
                     match |= eval(op, number.get_int64(), tmp_int);
                 }
             } break;
-            case ondemand::json_type::boolean: {
+            case simdjson::ondemand::json_type::boolean: {
                 bool tmp;
                 if (operand->as_bool(tmp, op) && eval(op, item.get_bool(), tmp)) {
                     match = true;
                 }
             } break;
-            case ondemand::json_type::null:
+            case simdjson::ondemand::json_type::null:
                 if (operand->as_null(op)) {
                     match |= op == FilterOperation::EQ;
                 }
@@ -727,27 +729,27 @@ bool QueryRunner::evaluate_wildcard_array_filter(
 }
 
 bool QueryRunner::evaluate_wildcard_array_filter(
-        ondemand::object& object,
+        simdjson::ondemand::object& object,
         FilterOperation op,
         std::shared_ptr<Literal> const& operand
 ) const {
     bool match = false;
     for (auto field : object) {
-        ondemand::value item = field.value();
+        simdjson::ondemand::value item = field.value();
         switch (item.type()) {
-            case ondemand::json_type::object: {
-                ondemand::object nested_object = item.get_object();
+            case simdjson::ondemand::json_type::object: {
+                simdjson::ondemand::object nested_object = item.get_object();
                 if (evaluate_wildcard_array_filter(nested_object, op, operand)) {
                     match = true;
                 }
             } break;
-            case ondemand::json_type::array: {
-                ondemand::array nested_array = item.get_array();
+            case simdjson::ondemand::json_type::array: {
+                simdjson::ondemand::array nested_array = item.get_array();
                 if (evaluate_wildcard_array_filter(nested_array, op, operand)) {
                     match = true;
                 }
             } break;
-            case ondemand::json_type::string: {
+            case simdjson::ondemand::json_type::string: {
                 if (false == m_maybe_string) {
                     break;
                 }
@@ -761,11 +763,11 @@ bool QueryRunner::evaluate_wildcard_array_filter(
                 }
                 break;
             } break;
-            case ondemand::json_type::number: {
+            case simdjson::ondemand::json_type::number: {
                 if (false == m_maybe_number) {
                     break;
                 }
-                ondemand::number number = item.get_number();
+                simdjson::ondemand::number number = item.get_number();
                 if (number.is_double()) {
                     double tmp_double;
                     operand->as_float(tmp_double, op);
@@ -780,13 +782,13 @@ bool QueryRunner::evaluate_wildcard_array_filter(
                     match |= eval(op, number.get_int64(), tmp_int);
                 }
             } break;
-            case ondemand::json_type::boolean: {
+            case simdjson::ondemand::json_type::boolean: {
                 bool tmp;
                 if (operand->as_bool(tmp, op) && eval(op, item.get_bool(), tmp)) {
                     match = true;
                 }
             } break;
-            case ondemand::json_type::null:
+            case simdjson::ondemand::json_type::null:
                 if (operand->as_null(op)) {
                     match |= op == FilterOperation::EQ;
                 }
@@ -857,18 +859,23 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
             }
 
             // search on log type dictionary
+            clp::epochtime_t placeholder_timestamp{};
+            log_surgeon::lexers::ByteLexer placeholder_lexer;
             m_string_query_map.emplace(
                     query_string,
-                    Grep::process_raw_query(
-                            m_log_dict,
-                            m_var_dict,
+                    clp::GrepCore::process_raw_query(
+                            *m_log_dict,
+                            *m_var_dict,
                             query_string,
+                            placeholder_timestamp,
+                            placeholder_timestamp,
                             m_ignore_case,
-                            false
+                            placeholder_lexer,
+                            true
                     )
             );
         }
-        SubQuery sub_query;
+
         if (filter->get_column()->matches_type(LiteralType::VarStringT)) {
             std::string query_string;
             filter->get_operand()->as_var_string(query_string, filter->get_operation());
@@ -899,25 +906,15 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
                 for (auto const& entry : entries) {
                     matching_vars.insert(entry->get_id());
                 }
-            } else if (EncodedVariableInterpreter::
-                               wildcard_search_dictionary_and_get_encoded_matches(
-                                       query_string,
-                                       *m_var_dict,
-                                       m_ignore_case,
-                                       sub_query
-                               ))
-            {
-                for (auto const& var : sub_query.get_vars()) {
-                    if (var.is_precise_var()) {
-                        auto const* entry = var.get_var_dict_entry();
-                        if (entry != nullptr) {
-                            matching_vars.insert(entry->get_id());
-                        }
-                    } else {
-                        for (auto const* entry : var.get_possible_var_dict_entries()) {
-                            matching_vars.insert(entry->get_id());
-                        }
-                    }
+            } else {
+                std::unordered_set<VariableDictionaryEntry const*> matching_entries;
+                m_var_dict->get_entries_matching_wildcard_string(
+                        query_string,
+                        m_ignore_case,
+                        matching_entries
+                );
+                for (auto const& entry : matching_entries) {
+                    matching_vars.emplace(entry->get_id());
                 }
             }
         }

@@ -54,7 +54,7 @@ FROM
             COALESCE(
                 SUM(${CLP_FILES_TABLE_COLUMN_NAMES.NUM_MESSAGES}),
                 0
-            ) AS INTEGER
+            ) AS UNSIGNED
         ) AS num_messages
     FROM ${settings.SqlDbClpFilesTableName}
 ) b;
@@ -79,7 +79,7 @@ const buildMultiDatasetDetailsSql = (datasetNames: string[]): string => {
     SELECT
       COUNT(DISTINCT ${CLP_FILES_TABLE_COLUMN_NAMES.ORIG_FILE_ID}) AS num_files,
       CAST(
-        COALESCE(SUM(${CLP_FILES_TABLE_COLUMN_NAMES.NUM_MESSAGES}), 0) AS INTEGER
+        COALESCE(SUM(${CLP_FILES_TABLE_COLUMN_NAMES.NUM_MESSAGES}), 0) AS UNSIGNED
       ) AS num_messages
     FROM ${settings.SqlDbClpTablePrefix}${name}_${SqlTableSuffix.FILES}
   `);

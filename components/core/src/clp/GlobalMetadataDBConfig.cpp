@@ -1,110 +1,185 @@
 #include "GlobalMetadataDBConfig.hpp"
 
-#include <fmt/core.h>
-#include <yaml-cpp/yaml.h>
+#include <cstdlib>
+#include <istream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
 
-using std::exception;
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/value_semantic.hpp>
+#include <fmt/core.h>
+
+#include "GlobalMySQLMetadataDB.hpp"
+#include "type_utils.hpp"
+
 using std::invalid_argument;
 using std::string;
 
-static exception get_yaml_missing_key_exception(string const& key_name) {
-    throw invalid_argument(fmt::format("Missing key '{}'", key_name));
-}
-
-static exception
-get_yaml_unconvertable_value_exception(string const& key_name, string const& destination_type) {
-    throw invalid_argument(
-            fmt::format("'{}' could not be converted to type '{}'", key_name, destination_type)
-    );
-}
+namespace {
+// Constants
+constexpr clp::GlobalMetadataDBConfig::MetadataDBType cDefaultMetadataDbType{
+        clp::GlobalMetadataDBConfig::MetadataDBType::SQLite
+};
+constexpr std::string_view cDefaultMetadataDbHost{"127.0.0.1"};
+constexpr int cDefaultMetadataDbPort{3306};
+constexpr std::string_view cDefaultMetadataDbName{"clp-db"};
+constexpr std::string_view cDefaultMetadataTablePrefix{"clp_"};
+constexpr int cMinPort{1};
+constexpr int cMaxPort{65'535};
+}  // namespace
 
 namespace clp {
-void GlobalMetadataDBConfig::parse_config_file(string const& config_file_path) {
-    YAML::Node config = YAML::LoadFile(config_file_path);
+auto operator>>(std::istream& in, GlobalMetadataDBConfig::MetadataDBType& metadata_db_type)
+        -> std::istream& {
+    string db_type_string;
+    in >> db_type_string;
 
-    if (!config["type"]) {
-        throw get_yaml_missing_key_exception("type");
+    for (size_t i = 0; i < GlobalMetadataDBConfig::cMetadataDBTypeNames.size(); ++i) {
+        if (GlobalMetadataDBConfig::cMetadataDBTypeNames.at(i) == db_type_string) {
+            metadata_db_type = static_cast<GlobalMetadataDBConfig::MetadataDBType>(i);
+            return in;
+        }
     }
 
-    auto db_type_string = config["type"].as<string>();
-    if ("sqlite" == db_type_string) {
-        m_metadata_db_type = MetadataDBType::SQLite;
-    } else if ("mysql" == db_type_string) {
-        m_metadata_db_type = MetadataDBType::MySQL;
+    throw invalid_argument(fmt::format("Unknown database type: {}", db_type_string));
+}
 
-        if (!config["host"]) {
-            throw get_yaml_missing_key_exception("host");
-        }
-        try {
-            m_metadata_db_host = config["host"].as<string>();
-        } catch (YAML::BadConversion& e) {
-            throw get_yaml_unconvertable_value_exception("host", "string");
-        }
-        if (m_metadata_db_host.empty()) {
-            throw invalid_argument("Database 'host' not specified or empty.");
-        }
+GlobalMetadataDBConfig::GlobalMetadataDBConfig(
+        boost::program_options::options_description& options_description
+) {
+    std::string_view const cMetadataDbTypeMysqlOptDescPrefix{fmt::format(
+            "(--db-type={} only)",
+            cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::MySQL)]
+    )};
 
-        if (!config["port"]) {
-            throw get_yaml_missing_key_exception("port");
-        }
-        try {
-            m_metadata_db_port = config["port"].as<int>();
-        } catch (YAML::BadConversion& e) {
-            throw get_yaml_unconvertable_value_exception("port", "int");
-        }
-        if (m_metadata_db_port < 0) {
-            throw invalid_argument("Database 'port' cannot be negative.");
-        }
+    // clang-format off
+    options_description.add_options()
+        (
+            "db-type",
+            boost::program_options::value<MetadataDBType>(&m_metadata_db_type)
+                ->default_value(
+                    cDefaultMetadataDbType,
+                    string(
+                        cMetadataDBTypeNames[
+                            enum_to_underlying_type(cDefaultMetadataDbType)
+                        ]
+                    )
+                ),
+            fmt::format(
+                "Database type [{} | {}]",
+                cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::SQLite)],
+                cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::MySQL)]
+            ).c_str()
+        )
+        (
+            "db-host",
+            boost::program_options::value<string>(&m_metadata_db_host)
+                ->default_value(string(cDefaultMetadataDbHost)),
+            fmt::format(
+                "{} Database host",
+                cMetadataDbTypeMysqlOptDescPrefix
+            ).c_str()
+        )
+        (
+            "db-port",
+            boost::program_options::value<int>(&m_metadata_db_port)
+                ->default_value(cDefaultMetadataDbPort),
+            fmt::format(
+                "{} Database port",
+                cMetadataDbTypeMysqlOptDescPrefix
+            ).c_str()
+        )
+        (
+            "db-name",
+            boost::program_options::value<string>(&m_metadata_db_name)
+                ->default_value(string(cDefaultMetadataDbName)),
+            fmt::format(
+                "{} Database name",
+                cMetadataDbTypeMysqlOptDescPrefix
+            ).c_str()
+        )
+        (
+            "db-table-prefix",
+            boost::program_options::value<string>(&m_metadata_table_prefix)
+                ->default_value(string(cDefaultMetadataTablePrefix)),
+            fmt::format(
+                "{} Database table prefix",
+                cMetadataDbTypeMysqlOptDescPrefix
+            ).c_str()
+        );
+    // clang-format on
+}
 
-        if (!config["name"]) {
-            throw get_yaml_missing_key_exception("name");
-        }
-        try {
-            m_metadata_db_name = config["name"].as<string>();
-        } catch (YAML::BadConversion& e) {
-            throw get_yaml_unconvertable_value_exception("name", "string");
-        }
-        if (m_metadata_db_name.empty()) {
-            throw invalid_argument("Database 'name' not specified or empty.");
-        }
+auto GlobalMetadataDBConfig::read_credentials_from_env_if_needed() -> void {
+    if (MetadataDBType::SQLite == m_metadata_db_type) {
+        // SQLite doesn't require extra parameters.
+        return;
+    }
 
-        if (!config["username"]) {
-            throw get_yaml_missing_key_exception("username");
-        }
-        try {
-            m_metadata_db_username = config["username"].as<string>();
-        } catch (YAML::BadConversion& e) {
-            throw get_yaml_unconvertable_value_exception("username", "string");
-        }
-        if (m_metadata_db_username.empty()) {
-            throw invalid_argument("Database 'username' not specified or empty.");
-        }
+    // Silence the check since this class won't be used in a multithreaded context.
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    if (auto const* db_username{std::getenv("CLP_DB_USER")}; nullptr != db_username) {
+        m_metadata_db_username.emplace(db_username);
+    }
 
-        if (!config["password"]) {
-            throw get_yaml_missing_key_exception("password");
-        }
-        try {
-            m_metadata_db_password = config["password"].as<string>();
-        } catch (YAML::BadConversion& e) {
-            throw get_yaml_unconvertable_value_exception("password", "string");
-        }
-        if (m_metadata_db_password.empty()) {
-            throw invalid_argument("Database 'password' not specified or empty.");
-        }
+    // Silence the check since this class won't be used in a multithreaded context.
+    // NOLINTNEXTLINE(concurrency-mt-unsafe)
+    if (auto const* db_password{std::getenv("CLP_DB_PASS")}; nullptr != db_password) {
+        m_metadata_db_password.emplace(db_password);
+    }
+}
 
-        if (!config["table_prefix"]) {
-            throw get_yaml_missing_key_exception("table_prefix");
+auto GlobalMetadataDBConfig::validate() const -> void {
+    if (m_metadata_db_type == MetadataDBType::SQLite) {
+        // SQLite doesn't require extra parameters.
+        if (cDefaultMetadataDbHost != m_metadata_db_host
+            || cDefaultMetadataDbPort != m_metadata_db_port
+            || cDefaultMetadataDbName != m_metadata_db_name
+            || cDefaultMetadataTablePrefix != m_metadata_table_prefix
+            || m_metadata_db_username.has_value() || m_metadata_db_password.has_value())
+        {
+            throw invalid_argument(
+                    fmt::format(
+                            "MySQL-specific parameters cannot be used with --db-type={}."
+                            " Please remove them or set '--db-type={}'.",
+                            cMetadataDBTypeNames[enum_to_underlying_type(m_metadata_db_type)],
+                            cMetadataDBTypeNames[enum_to_underlying_type(MetadataDBType::MySQL)]
+                    )
+            );
         }
-        try {
-            m_metadata_table_prefix = config["table_prefix"].as<string>();
-        } catch (YAML::BadConversion& e) {
-            throw get_yaml_unconvertable_value_exception("table_prefix", "string");
-        }
-        if (m_metadata_table_prefix.empty()) {
-            throw invalid_argument("Database 'table_prefix' not specified or empty.");
-        }
-    } else {
-        throw invalid_argument("Unknown type");
+        return;
+    }
+
+    if (m_metadata_db_host.empty()) {
+        throw invalid_argument("Database '--db-host' is empty.");
+    }
+
+    if (cMinPort > m_metadata_db_port || cMaxPort < m_metadata_db_port) {
+        throw invalid_argument(
+                fmt::format(
+                        "Database '--db-port' is out of range [{}, {}]: {}",
+                        cMinPort,
+                        cMaxPort,
+                        m_metadata_db_port
+                )
+        );
+    }
+
+    if (m_metadata_db_name.empty()) {
+        throw invalid_argument("Database '--db-name' is empty.");
+    }
+
+    if (m_metadata_table_prefix.empty()) {
+        throw invalid_argument("Database '--db-table_prefix' is empty.");
+    }
+
+    if (false == m_metadata_db_username.has_value()) {
+        throw invalid_argument("Environment variable 'CLP_DB_USER' not set.");
+    }
+
+    if (false == m_metadata_db_password.has_value()) {
+        throw invalid_argument("Environment variable 'CLP_DB_PASS' not set.");
     }
 }
 }  // namespace clp

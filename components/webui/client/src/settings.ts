@@ -3,6 +3,7 @@ import axios from "axios";
 
 type Settings = {
     ClpStorageEngine: string;
+    ClpQueryEngine: string;
     MongoDbSearchResultsMetadataCollectionName: string;
     SqlDbClpArchivesTableName: string;
     SqlDbClpDatasetsTableName: string;
