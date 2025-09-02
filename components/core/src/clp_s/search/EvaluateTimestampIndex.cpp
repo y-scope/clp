@@ -87,32 +87,13 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
                 continue;
             }
 
-            // Leave handling EXISTS/NEXISTS to schema matching.
-            auto const filter_op{filter->get_operation()};
-            if (FilterOperation::EXISTS == filter_op || FilterOperation::NEXISTS == filter_op) {
-                return EvaluatedValue::Unknown;
-            }
-
             auto const literal{filter->get_operand()};
-            // Defend against future FilterOperation types that don't take a literal.
             if (nullptr == literal) {
                 return EvaluatedValue::Unknown;
             }
 
-            // Handle the case where the literal is a pure wildcard.
-            if (literal->as_any(filter_op)) {
-                switch (filter_op) {
-                    case FilterOperation::EQ:
-                        return filter->is_inverted() ? EvaluatedValue::False : EvaluatedValue::True;
-                    case FilterOperation::NEQ:
-                        return filter->is_inverted() ? EvaluatedValue::True : EvaluatedValue::False;
-                    default:
-                        // Not reachable.
-                        return EvaluatedValue::Unknown;
-                }
-            }
-
             EvaluatedValue ret{EvaluatedValue::Unknown};
+            auto const filter_op{filter->get_operation()};
             int64_t int_literal{};
             double float_literal{};
             if (literal->as_int(int_literal, filter_op)) {
