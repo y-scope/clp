@@ -260,7 +260,7 @@ def _generate_worker_clp_properties(
 
 
 def _get_path_clp_config_value(
-    clp_config: Dict[str, str], key: str, default_value: Path, clp_package_dir: Path
+    clp_config: Dict[str, Any], key: str, default_value: Path, clp_package_dir: Path
 ) -> Path:
     """
     Gets the value corresponding to `key` from `clp_config` as a `Path`.
@@ -279,7 +279,7 @@ def _get_path_clp_config_value(
         return clp_package_dir / value_as_path
 
 
-def _get_required_config_value(config: Dict[str, str], key: str) -> str:
+def _get_required_config_value(config: Dict[str, Any], key: str) -> str:
     """
     Gets the value corresponding to `key` from `config`. Logs an error on failure.
 
