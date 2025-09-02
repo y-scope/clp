@@ -26,6 +26,7 @@
     "chart.js": "^4.4.9",
     "chartjs-adapter-dayjs-4": "^1.0.4",
     "chartjs-plugin-zoom": "^2.2.0",
+    "color": "^5.0.0",
     "dayjs": "^1.11.13",
     "monaco-editor": "^0.52.2",
     "react": "^19.0.0",
@@ -44,6 +45,6 @@
     "@vitejs/plugin-react": "^4.3.4",
     "eslint-config-yscope": "latest",
     "typescript": "~5.6.2",
-    "vite": "^6.2.6"
+    "vite": "^6.3.5"
   }
 }

@@ -12,6 +12,8 @@ services:
       - "coordinator-config:/opt/presto-server/etc"
     networks:
       - "presto"
+    ports:
+      - "8889:8080"
     healthcheck:
       test:
         - "CMD"

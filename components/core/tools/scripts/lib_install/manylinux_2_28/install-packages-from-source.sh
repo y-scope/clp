@@ -6,9 +6,6 @@ set -o pipefail
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 lib_install_scripts_dir="${script_dir}/.."
 
-# NOTE: The remaining installation scripts depend on boost, so we install it beforehand.
-"${lib_install_scripts_dir}/install-boost.sh" 1.87.0
-
 # manylinux_2_28 enables portable builds but lacks support for system OpenSSL 3.x and static
 # libraries. By manually installing both OpenSSL 1.x and 3.x to non-system directories, we gain
 # the ability to switch versions during build configuration prior to compilation.
@@ -27,5 +24,3 @@ OPENSSL_3X_VERSION="${OPENSSL_3X_VERSION:-3.5.2}"
 "${lib_install_scripts_dir}/lz4.sh" 1.10.0
 "${lib_install_scripts_dir}/zstandard.sh" 1.5.7
 "${lib_install_scripts_dir}/libarchive.sh" 3.8.0
-
-"${lib_install_scripts_dir}/msgpack.sh" 7.0.0

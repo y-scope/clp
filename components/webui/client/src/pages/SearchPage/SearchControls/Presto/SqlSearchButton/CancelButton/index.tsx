@@ -34,7 +34,7 @@ const CancelButton = () => {
                 className={styles["cancelButton"] || ""}
                 color={"red"}
                 icon={<CloseOutlined/>}
-                size={"large"}
+                size={"middle"}
                 variant={"solid"}
                 onClick={handleClick}
             >
