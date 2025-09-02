@@ -108,17 +108,25 @@ def _add_clp_env_vars(
     clp_archive_output_storage_type = _get_config_value(
         clp_config, "archive_output.storage.type", "fs"
     )
-    env_vars["CLP_ARCHIVES_DIR"] = _resolve_archives_dir(
-        clp_package_dir,
-        _get_config_value(clp_config, "archive_output.storage.directory"),
-        clp_package_dir
-        / "var"
-        / "data"
-        / ("archives" if clp_archive_output_storage_type == "fs" else "staged-archives"),
-    )
+    archive_output_storage_key = "archive_output.storage"
     if "fs" == clp_archive_output_storage_type:
-        pass
+        env_vars["CLP_ARCHIVES_DIR"] = str(
+            _get_path_clp_config_value(
+                clp_config,
+                f"{archive_output_storage_key}.directory",
+                Path("var") / "data" / "archives",
+                clp_package_dir
+            )
+        )
     elif "s3" == clp_archive_output_storage_type:
+        env_vars["CLP_ARCHIVES_DIR"] = str(
+            _get_path_clp_config_value(
+                clp_config,
+                f"{archive_output_storage_key}.staging_directory",
+                Path("var") / "data" / "staged-archives",
+                clp_package_dir
+            )
+        )
 
         try:
             s3_config_key = f"archive_output.storage.s3_config"
@@ -130,7 +138,7 @@ def _add_clp_env_vars(
             aws_auth_type = _get_required_config_value(clp_config, aws_auth_type_key)
             credentials_auth_type_str = "credentials"
             if credentials_auth_type_str != aws_auth_type:
-                logger.error("%s for %s is unsupported.", aws_auth_type, aws_auth_type_key)
+                logger.error("'%s' for %s is unsupported.", aws_auth_type, aws_auth_type_key)
                 return False
 
             s3_credentials_key = f"{aws_auth_key}.{credentials_auth_type_str}"
@@ -151,9 +159,9 @@ def _add_clp_env_vars(
         env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY"] = s3_secret_access_key
     else:
         logger.error(
-            "Expected CLP's archive_output.storage.type to be fs or s3 but found '%s'. Presto"
-            " currently only supports reading archives from the fs or s3 storage type.",
+            "'%s' for %s is unsupported.",
             clp_archive_output_storage_type,
+            archive_output_storage_key
         )
         return False
 
@@ -240,6 +248,24 @@ def _generate_worker_clp_properties(
         f.write("\n".join(properties) + "\n")
 
     return True
+
+
+def _get_path_clp_config_value(clp_config: Dict[str, str], key: str, default_value: Path, clp_package_dir: Path) -> Path:
+    """
+    Gets the value corresponding to `key` from `clp_config` as a `Path`.
+
+    :param clp_config:
+    :param key: The key to look for in the config, in dot notation (e.g., "database.host").
+    :param default_value: The value to return if `key` doesn't exist in `config`.
+    :return: The value corresponding to `key` as a `Path`. Relative paths are returned as
+    `clp_package_dir` / <path>.
+    """
+    value = _get_config_value(clp_config, key, str(default_value))
+    value_as_path = Path(value)
+    if value_as_path.is_absolute():
+        return value_as_path
+    else:
+        return clp_package_dir / value_as_path
 
 
 def _get_required_config_value(config: Dict[str, str], key: str) -> str:
