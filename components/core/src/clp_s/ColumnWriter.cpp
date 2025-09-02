@@ -50,24 +50,9 @@ void FloatColumnWriter::store(ZstdCompressor& compressor) {
 }
 
 size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
-    auto float_str = std::get<std::string>(value);
-
-    // Filter to allowed numeric/exponent characters (digits, '.', '+', '-', 'E', 'e')
-    float_str.erase(
-            std::remove_if(
-                    float_str.begin(),
-                    float_str.end(),
-                    [](char c) {
-                        return !std::isdigit(static_cast<unsigned char>(c)) && '.' != c && '+' != c
-                               && '-' != c && 'E' != c && 'e' != c;
-                    }
-            ),
-            float_str.end()
-    );
-
+    auto const& float_str{std::get<std::string>(value)};
     m_values.push_back(std::stod(float_str));
-
-    auto const dot_pos = float_str.find('.');
+    auto const dot_pos{float_str.find('.')};
     uint16_t format{0};
 
     // Check whether it is scientific; if so, whether the exponent is E or e

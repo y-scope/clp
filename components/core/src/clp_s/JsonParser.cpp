@@ -1,11 +1,14 @@
 #include "JsonParser.hpp"
 
+#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <stack>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -41,6 +44,15 @@ using clp::ffi::KeyValuePairLogEvent;
 using clp::UtcOffset;
 
 namespace clp_s {
+namespace {
+/**
+ * Trims trailing whitespace off of a `string_view`. The returned `string_view` points to a subset
+ * of the input `string_view`.
+ * @param str
+ * @return The input string without trailing whitespace.
+ */
+auto trim_trailing_whitespace(std::string_view str) -> std::string_view;
+
 /**
  * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for Key-Value IR compression.
  */
@@ -86,6 +98,19 @@ private:
     std::optional<KeyValuePairLogEvent> m_deserialized_log_event;
     bool m_is_complete{false};
 };
+
+auto trim_trailing_whitespace(std::string_view str) -> std::string_view {
+    size_t substr_size{str.size()};
+    for (auto it{str.rbegin()}; str.rend() != it; ++it) {
+        if (std::isspace(static_cast<int>(*it))) {
+            --substr_size;
+        } else {
+            break;
+        }
+    }
+    return str.substr(0ULL, substr_size);
+}
+}  // namespace
 
 JsonParser::JsonParser(JsonParserOption const& option)
         : m_num_messages(0),
@@ -163,9 +188,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
             object_stack.pop();
             node_id_stack.pop();
             object_it_stack.pop();
-            if (false == object_it_stack.empty()) {
-                ++object_it_stack.top();
-            }
+            if (false == object_it_stack.empty()) { ++object_it_stack.top(); }
         }
 
         if (object_stack.empty()) {
@@ -206,7 +229,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
                 ondemand::number number_value = cur_value.get_number();
                 if (true == number_value.is_double()) {
                     if (m_retain_float_format) {
-                        auto const double_value_str = cur_value.raw_json_token();
+                        auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
                         m_current_parsed_message.add_unordered_value(double_value_str);
                         node_id = m_archive_writer->add_node(
                                 node_id_stack.top(),
@@ -294,7 +317,7 @@ void JsonParser::parse_array(ondemand::array array, int32_t parent_node_id) {
                 ondemand::number number_value = cur_value.get_number();
                 if (true == number_value.is_double()) {
                     if (m_retain_float_format) {
-                        auto double_value_str = cur_value.raw_json_token();
+                        auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
                         m_current_parsed_message.add_unordered_value(double_value_str);
                         node_id = m_archive_writer
                                           ->add_node(parent_node_id, NodeType::FormattedFloat, "");
@@ -430,7 +453,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 } else {
                     double double_value = line.get_double();
                     if (NodeType::FormattedFloat == type) {
-                        auto const double_value_str = line.raw_json_token();
+                        auto double_value_str{trim_trailing_whitespace(line.raw_json_token())};
                         m_current_parsed_message.add_value(node_id, double_value_str);
                     } else {
                         m_current_parsed_message.add_value(node_id, double_value);
@@ -490,9 +513,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
             }
         }
 
-        if (object_stack.empty()) {
-            break;
-        }
+        if (object_stack.empty()) { break; }
 
         bool hit_end;
         do {
@@ -537,9 +558,7 @@ bool JsonParser::parse() {
         size_t file_split_number{0ULL};
         int32_t log_event_idx_node_id{};
         auto initialize_fields_for_archive = [&]() -> bool {
-            if (false == m_record_log_order) {
-                return true;
-            }
+            if (false == m_record_log_order) { return true; }
             log_event_idx_node_id
                     = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
             if (auto const rc = m_archive_writer->add_field_to_current_range(
@@ -712,9 +731,7 @@ auto JsonParser::get_archive_node_type(
     clp::ffi::SchemaTree::Node::Type const ir_node_type = tree_node.get_type();
     bool const node_has_value = kv_pair.second.has_value();
     clp::ffi::Value node_value{};
-    if (node_has_value) {
-        node_value = kv_pair.second.value();
-    }
+    if (node_has_value) { node_value = kv_pair.second.value(); }
     switch (ir_node_type) {
         case clp::ffi::SchemaTree::Node::Type::Int:
             return NodeType::Integer;
@@ -725,14 +742,10 @@ auto JsonParser::get_archive_node_type(
         case clp::ffi::SchemaTree::Node::Type::UnstructuredArray:
             return NodeType::UnstructuredArray;
         case clp::ffi::SchemaTree::Node::Type::Str:
-            if (node_value.is<std::string>()) {
-                return NodeType::VarString;
-            }
+            if (node_value.is<std::string>()) { return NodeType::VarString; }
             return NodeType::ClpString;
         case clp::ffi::SchemaTree::Node::Type::Obj:
-            if (node_has_value && node_value.is_null()) {
-                return NodeType::NullValue;
-            }
+            if (node_has_value && node_value.is_null()) { return NodeType::NullValue; }
             return NodeType::Object;
         default:
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
@@ -741,9 +754,7 @@ auto JsonParser::get_archive_node_type(
 
 auto JsonParser::adjust_archive_node_type_for_timestamp(NodeType node_type, bool matches_timestamp)
         -> NodeType {
-    if (false == matches_timestamp) {
-        return node_type;
-    }
+    if (false == matches_timestamp) { return node_type; }
 
     switch (node_type) {
         case NodeType::ClpString:
@@ -1009,9 +1020,7 @@ auto JsonParser::parse_from_ir() -> bool {
         size_t file_split_number{0ULL};
         int32_t log_event_idx_node_id{};
         auto initialize_fields_for_archive = [&]() -> bool {
-            if (false == m_record_log_order) {
-                return true;
-            }
+            if (false == m_record_log_order) { return true; }
             log_event_idx_node_id
                     = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
             if (auto const rc = m_archive_writer->add_field_to_current_range(
