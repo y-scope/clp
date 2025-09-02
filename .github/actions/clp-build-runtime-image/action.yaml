@@ -65,7 +65,7 @@ runs:
         echo "DOCKERFILE=$dockerfile_path" >> "$GITHUB_OUTPUT"
         echo "IMAGE_NAME=$image_name" >> "$GITHUB_OUTPUT"
 
-    - name: "Update Metadata"
+    - name: "Extract GitHub Metadata"
       id: "update-meta"
       uses: "docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804"
       with:
