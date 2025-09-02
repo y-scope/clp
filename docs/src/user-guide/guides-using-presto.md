@@ -55,7 +55,14 @@ Using Presto with CLP requires:
     deployment infrastructure.
     :::
 
-3. Continue following the [quick-start](./quick-start/index.md#using-clp) guide to start CLP and
+3. If you'd like to store your compressed logs on S3, follow the
+   [using object storage](guides-using-object-storage/index.md) guide.
+
+   :::{note}
+   Currently, the Presto integration only supports the
+   [credentials](guides-using-object-storage/clp-config.md#credentials) authentication type.
+
+4. Continue following the [quick-start](./quick-start/index.md#using-clp) guide to start CLP and
    compress your logs. A sample dataset that works well with Presto is [postgresql].
 
 ### Setting up Presto
@@ -145,12 +152,30 @@ Each dataset in CLP shows up as a table in Presto. To show all available dataset
 SHOW TABLES;
 ```
 
+:::{note}
 If you didn't specify a dataset when compressing your logs in CLP, your logs will have been stored
-in the `default` dataset. To query the logs in this dataset:
+in the `default` dataset.
+:::
+
+To show all available columns in the `default` dataset:
 
 ```sql
-SELECT * FROM default LIMIT 1;
+DESCRIBE default;
 ```
+
+If you wish to show the columns of a different dataset, replace `default` above.
+
+To query the logs in this dataset:
+
+```sql
+SELECT user FROM default LIMIT 1;
+```
+
+:::{warning}
+`SELECT *` currently causes a crash due to a [known issue][y-scope/velox#27]. This will be resolved
+soon. See the [limitations](#limitations) section for all current limitations.
+:::
+
 
 All kv-pairs in each log event can be queried directly using dot-notation. For example, if your logs
 contain the field `foo.bar`, you can query it using:
@@ -163,6 +188,7 @@ SELECT foo.bar FROM default LIMIT 1;
 
 The Presto CLP integration has the following limitations at present:
 
+* `SELECT *` currently causes a crash due to a [known issue][y-scope/velox#27].
 * Nested fields containing special characters cannot be queried (see [y-scope/presto#8]). Allowed
   characters are alphanumeric characters and underscores. To get around this limitation, you'll
   need to preprocess your logs to remove any special characters.
@@ -176,4 +202,5 @@ These limitations will be addressed in a future release of the Presto integratio
 [postgresql]: https://zenodo.org/records/10516401
 [Presto]: https://prestodb.io/
 [y-scope/presto#8]: https://github.com/y-scope/presto/issues/8
+[y-scope/velox#27]: https://github.com/y-scope/velox/issues/27
 [yscope-presto]: https://github.com/y-scope/presto
