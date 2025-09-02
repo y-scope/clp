@@ -48,19 +48,13 @@ update_config_file() {
     local file_path=$1
     local key=$2
     local value=$3
-    local sensitive=${4:-false}
 
     if grep --quiet "^${key}=.*$" "$file_path"; then
         sed --in-place "s|^${key}=.*|${key}=${value}|" "$file_path"
     else
         echo "${key}=${value}" >>"$file_path"
     fi
-    if [[ "$sensitive" == "true" ]]; then
-        local masked="****"
-        log "INFO" "Set ${key}=${masked} in ${file_path}"
-    else
-        log "INFO" "Set ${key}=${value} in ${file_path}"
-    fi
+    log "INFO" "Set ${key}=${value} in ${file_path}"
 }
 
 apt-get update && apt-get install --assume-yes --no-install-recommends jq wget
