@@ -128,35 +128,8 @@ def _add_clp_env_vars(
             )
         )
 
-        try:
-            s3_config_key = f"archive_output.storage.s3_config"
-            s3_bucket = _get_required_config_value(clp_config, f"{s3_config_key}.bucket")
-            s3_region_code = _get_required_config_value(clp_config, f"{s3_config_key}.region_code")
-
-            aws_auth_key = f"{s3_config_key}.aws_authentication"
-            aws_auth_type_key = f"{aws_auth_key}.type"
-            aws_auth_type = _get_required_config_value(clp_config, aws_auth_type_key)
-            credentials_auth_type_str = "credentials"
-            if credentials_auth_type_str != aws_auth_type:
-                logger.error("'%s' for %s is unsupported.", aws_auth_type, aws_auth_type_key)
-                return False
-
-            s3_credentials_key = f"{aws_auth_key}.{credentials_auth_type_str}"
-            s3_access_key_id = _get_required_config_value(
-                clp_config, f"{s3_credentials_key}.access_key_id"
-            )
-            s3_secret_access_key = _get_config_value(
-                clp_config, f"{s3_credentials_key}.secret_access_key"
-            )
-        except KeyError:
+        if not _add_clp_s3_env_vars(clp_config, env_vars):
             return False
-
-        env_vars["PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE"] = "s3"
-        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER"] = "clp_package"
-        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID"] = s3_access_key_id
-        s3_end_point = f"https://{s3_bucket}.s3.{s3_region_code}.amazonaws.com/"
-        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT"] = s3_end_point
-        env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY"] = s3_secret_access_key
     else:
         logger.error(
             "'%s' for %s is unsupported.",
@@ -182,6 +155,47 @@ def _add_clp_env_vars(
         return False
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_USER"] = database_user
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_PASSWORD"] = database_password
+
+    return True
+
+
+def _add_clp_s3_env_vars(clp_config: Dict[str, Any], env_vars: Dict[str, str]) -> bool:
+    """
+    Adds environment variables for CLP S3 config values to `env_vars`.
+
+    :param clp_config:
+    :param env_vars:
+    :return: Whether the environment variables were successfully added.
+    """
+    try:
+        s3_config_key = f"archive_output.storage.s3_config"
+        s3_bucket = _get_required_config_value(clp_config, f"{s3_config_key}.bucket")
+        s3_region_code = _get_required_config_value(clp_config, f"{s3_config_key}.region_code")
+
+        aws_auth_key = f"{s3_config_key}.aws_authentication"
+        aws_auth_type_key = f"{aws_auth_key}.type"
+        aws_auth_type = _get_required_config_value(clp_config, aws_auth_type_key)
+        credentials_auth_type_str = "credentials"
+        if credentials_auth_type_str != aws_auth_type:
+            logger.error("'%s' for %s is unsupported.", aws_auth_type, aws_auth_type_key)
+            return False
+
+        s3_credentials_key = f"{aws_auth_key}.{credentials_auth_type_str}"
+        s3_access_key_id = _get_required_config_value(
+            clp_config, f"{s3_credentials_key}.access_key_id"
+        )
+        s3_secret_access_key = _get_config_value(
+            clp_config, f"{s3_credentials_key}.secret_access_key"
+        )
+    except KeyError:
+        return False
+
+    env_vars["PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE"] = "s3"
+    env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER"] = "clp_package"
+    env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID"] = s3_access_key_id
+    s3_end_point = f"https://{s3_bucket}.s3.{s3_region_code}.amazonaws.com/"
+    env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT"] = s3_end_point
+    env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY"] = s3_secret_access_key
 
     return True
 
