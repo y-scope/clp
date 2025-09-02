@@ -172,10 +172,11 @@ TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParse
 
 TEST_CASE("Test lexer", "[Search]") {
     ByteLexer lexer;
-    std::string schema_file_name = "../tests/test_schema_files/search_schema.txt";
+    std::string schema_file_name
+            = (get_test_dir() / "test_schema_files/search_schema.txt").string();
     std::string schema_file_path = boost::filesystem::weakly_canonical(schema_file_name).string();
     load_lexer_from_file(schema_file_path, lexer);
-    FileReader file_reader{"../tests/test_search_queries/easy.txt"};
+    FileReader file_reader{(get_test_dir() / "test_search_queries/easy.txt").string()};
     LogSurgeonReader reader_wrapper(file_reader);
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);

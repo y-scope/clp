@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <string>
 
 #include <catch2/catch_test_macros.hpp>
@@ -17,9 +18,18 @@ using log_surgeon::SchemaParser;
 using log_surgeon::SchemaVarAST;
 using std::string;
 
+namespace {
+[[nodiscard]] auto get_test_dir() -> std::filesystem::path;
+
+auto get_test_dir() -> std::filesystem::path {
+    std::filesystem::path const current_file_path{__FILE__};
+    return current_file_path.parent_path();
+}
+}  // namespace
+
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
     ByteLexer lexer;
-    load_lexer_from_file("../tests/test_schema_files/search_schema.txt", lexer);
+    load_lexer_from_file((get_test_dir() / "test_schema_files/search_schema.txt").string(), lexer);
 
     string str;
     size_t begin_pos;
