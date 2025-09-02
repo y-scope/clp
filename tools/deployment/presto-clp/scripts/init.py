@@ -200,11 +200,6 @@ def _add_clp_s3_env_vars(clp_config: Dict[str, Any], env_vars: Dict[str, str]) -
     return True
 
 
-def _resolve_archives_dir(base_dir: Path, configured: Optional[str], default: Path) -> str:
-    effective = configured or str(default)
-    return effective if Path(effective).is_absolute() else str(base_dir / effective)
-
-
 def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: Dict[str, str]) -> bool:
     """
     Adds environment variables for worker config values to `env_vars`.
