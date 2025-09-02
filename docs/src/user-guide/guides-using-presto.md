@@ -176,7 +176,6 @@ SELECT user FROM default LIMIT 1;
 soon. See the [limitations](#limitations) section for all current limitations.
 :::
 
-
 All kv-pairs in each log event can be queried directly using dot-notation. For example, if your logs
 contain the field `foo.bar`, you can query it using:
 
