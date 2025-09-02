@@ -67,15 +67,13 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
         {
             std::vector<std::string> const& tokens = range_it->first;
             auto const& descriptors = column->get_descriptor_list();
-            // TODO: handle wildcard matching; the initial check on timestamp index happens
-            // before schema matching, so
             if (tokens.size() != descriptors.size()) {
                 continue;
             }
 
             bool matched = true;
             for (size_t i = 0; i < descriptors.size(); ++i) {
-                if (tokens[i] != descriptors[i].get_token()) {
+                if (tokens[i] != descriptors[i].get_token() || descriptors[i].wildcard()) {
                     matched = false;
                     break;
                 }
@@ -110,19 +108,14 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
             }
 
             EvaluatedValue ret{EvaluatedValue::Unknown};
-            // This should be safe after type narrowing and checking that the literal exists and is
-            // not a pure wildcard because all DateType literals are either Integral or a derived
-            // class of Integral. Still, we check whether the literal is an Integral in case this
-            // assumption breaks for future versions of the AST.
-            auto integral_literal{std::dynamic_pointer_cast<Integral>(literal)};
-            if (nullptr == integral_literal) {
-                return EvaluatedValue::Unknown;
-            }
-            Integral64 integral = integral_literal->get();
-            if (std::holds_alternative<int64_t>(integral)) {
-                ret = range_it->second->evaluate_filter(filter_op, std::get<int64_t>(integral));
+            int64_t int_literal{};
+            double float_literal{};
+            if (literal->as_int(int_literal, filter_op)) {
+                ret = range_it->second->evaluate_filter(filter_op, int_literal);
+            } else if (literal->as_float(float_literal, filter_op)) {
+                ret = range_it->second->evaluate_filter(filter_op, float_literal);
             } else {
-                ret = range_it->second->evaluate_filter(filter_op, std::get<double>(integral));
+                return EvaluatedValue::Unknown;
             }
 
             if (ret == EvaluatedValue::True) {
