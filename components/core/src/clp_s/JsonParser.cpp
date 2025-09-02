@@ -163,15 +163,15 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_writer->open(m_archive_options);
 }
 
-void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_id) {
-    ondemand::object_iterator it = line.begin();
+void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t parent_node_id) {
+    simdjson::ondemand::object_iterator it = line.begin();
     if (it == line.end()) {
         m_current_schema.insert_unordered(parent_node_id);
         return;
     }
 
-    std::stack<ondemand::object> object_stack;
-    std::stack<ondemand::object_iterator> object_it_stack;
+    std::stack<simdjson::ondemand::object> object_stack;
+    std::stack<simdjson::ondemand::object_iterator> object_it_stack;
 
     std::stack<int32_t> node_id_stack;
     node_id_stack.push(parent_node_id);
@@ -179,8 +179,8 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
     object_it_stack.push(std::move(it));
 
     size_t object_start = m_current_schema.start_unordered_object(NodeType::Object);
-    ondemand::field cur_field;
-    ondemand::value cur_value;
+    simdjson::ondemand::field cur_field;
+    simdjson::ondemand::value cur_value;
     std::string_view cur_key;
     int32_t node_id;
     while (true) {
@@ -201,7 +201,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
         cur_value = cur_field.value();
 
         switch (cur_value.type()) {
-            case ondemand::json_type::object: {
+            case simdjson::ondemand::json_type::object: {
                 node_id = m_archive_writer
                                   ->add_node(node_id_stack.top(), NodeType::Object, cur_key);
                 object_stack.push(std::move(cur_value.get_object()));
@@ -216,7 +216,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
                 }
                 break;
             }
-            case ondemand::json_type::array: {
+            case simdjson::ondemand::json_type::array: {
                 node_id = m_archive_writer->add_node(
                         node_id_stack.top(),
                         NodeType::StructuredArray,
@@ -225,8 +225,8 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
                 parse_array(cur_value.get_array(), node_id);
                 break;
             }
-            case ondemand::json_type::number: {
-                ondemand::number number_value = cur_value.get_number();
+            case simdjson::ondemand::json_type::number: {
+                simdjson::ondemand::number number_value = cur_value.get_number();
                 if (true == number_value.is_double()) {
                     if (m_retain_float_format) {
                         auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
@@ -256,7 +256,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
                 m_current_schema.insert_unordered(node_id);
                 break;
             }
-            case ondemand::json_type::string: {
+            case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
                     node_id = m_archive_writer
@@ -269,7 +269,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
                 m_current_schema.insert_unordered(node_id);
                 break;
             }
-            case ondemand::json_type::boolean: {
+            case simdjson::ondemand::json_type::boolean: {
                 bool value = cur_value.get_bool();
                 m_current_parsed_message.add_unordered_value(value);
                 node_id = m_archive_writer
@@ -277,7 +277,7 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
                 m_current_schema.insert_unordered(node_id);
                 break;
             }
-            case ondemand::json_type::null: {
+            case simdjson::ondemand::json_type::null: {
                 node_id = m_archive_writer
                                   ->add_node(node_id_stack.top(), NodeType::NullValue, cur_key);
                 m_current_schema.insert_unordered(node_id);
@@ -289,32 +289,32 @@ void JsonParser::parse_obj_in_array(ondemand::object line, int32_t parent_node_i
     }
 }
 
-void JsonParser::parse_array(ondemand::array array, int32_t parent_node_id) {
-    ondemand::array_iterator it = array.begin();
+void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_node_id) {
+    simdjson::ondemand::array_iterator it = array.begin();
     if (it == array.end()) {
         m_current_schema.insert_unordered(parent_node_id);
         return;
     }
 
     size_t array_start = m_current_schema.start_unordered_object(NodeType::StructuredArray);
-    ondemand::value cur_value;
+    simdjson::ondemand::value cur_value;
     int32_t node_id;
     for (; it != array.end(); ++it) {
         cur_value = *it;
 
         switch (cur_value.type()) {
-            case ondemand::json_type::object: {
+            case simdjson::ondemand::json_type::object: {
                 node_id = m_archive_writer->add_node(parent_node_id, NodeType::Object, "");
                 parse_obj_in_array(std::move(cur_value.get_object()), node_id);
                 break;
             }
-            case ondemand::json_type::array: {
+            case simdjson::ondemand::json_type::array: {
                 node_id = m_archive_writer->add_node(parent_node_id, NodeType::StructuredArray, "");
                 parse_array(std::move(cur_value.get_array()), node_id);
                 break;
             }
-            case ondemand::json_type::number: {
-                ondemand::number number_value = cur_value.get_number();
+            case simdjson::ondemand::json_type::number: {
+                simdjson::ondemand::number number_value = cur_value.get_number();
                 if (true == number_value.is_double()) {
                     if (m_retain_float_format) {
                         auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
@@ -339,7 +339,7 @@ void JsonParser::parse_array(ondemand::array array, int32_t parent_node_id) {
                 m_current_schema.insert_unordered(node_id);
                 break;
             }
-            case ondemand::json_type::string: {
+            case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
                     node_id = m_archive_writer->add_node(parent_node_id, NodeType::ClpString, "");
@@ -350,14 +350,14 @@ void JsonParser::parse_array(ondemand::array array, int32_t parent_node_id) {
                 m_current_schema.insert_unordered(node_id);
                 break;
             }
-            case ondemand::json_type::boolean: {
+            case simdjson::ondemand::json_type::boolean: {
                 bool value = cur_value.get_bool();
                 m_current_parsed_message.add_unordered_value(value);
                 node_id = m_archive_writer->add_node(parent_node_id, NodeType::Boolean, "");
                 m_current_schema.insert_unordered(node_id);
                 break;
             }
-            case ondemand::json_type::null: {
+            case simdjson::ondemand::json_type::null: {
                 node_id = m_archive_writer->add_node(parent_node_id, NodeType::NullValue, "");
                 m_current_schema.insert_unordered(node_id);
                 break;
@@ -367,13 +367,17 @@ void JsonParser::parse_array(ondemand::array array, int32_t parent_node_id) {
     m_current_schema.end_unordered_object(array_start);
 }
 
-void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::string const& key) {
+void JsonParser::parse_line(
+        simdjson::ondemand::value line,
+        int32_t parent_node_id,
+        std::string const& key
+) {
     int32_t node_id;
-    std::stack<ondemand::object> object_stack;
+    std::stack<simdjson::ondemand::object> object_stack;
     std::stack<int32_t> node_id_stack;
-    std::stack<ondemand::object_iterator> object_it_stack;
+    std::stack<simdjson::ondemand::object_iterator> object_it_stack;
 
-    ondemand::field cur_field;
+    simdjson::ondemand::field cur_field;
 
     std::string_view cur_key = key;
     node_id_stack.push(parent_node_id);
@@ -386,12 +390,12 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
         }
 
         switch (line.type()) {
-            case ondemand::json_type::object: {
+            case simdjson::ondemand::json_type::object: {
                 node_id = m_archive_writer
                                   ->add_node(node_id_stack.top(), NodeType::Object, cur_key);
                 object_stack.push(std::move(line.get_object()));
                 auto objref = object_stack.top();
-                auto it = ondemand::object_iterator(objref.begin());
+                auto it = simdjson::ondemand::object_iterator(objref.begin());
                 if (it == objref.end()) {
                     m_current_schema.insert_ordered(node_id);
                     object_stack.pop();
@@ -402,7 +406,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                     continue;
                 }
             }
-            case ondemand::json_type::array: {
+            case simdjson::ondemand::json_type::array: {
                 if (m_structurize_arrays) {
                     node_id = m_archive_writer->add_node(
                             node_id_stack.top(),
@@ -423,9 +427,9 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 }
                 break;
             }
-            case ondemand::json_type::number: {
+            case simdjson::ondemand::json_type::number: {
                 NodeType type;
-                ondemand::number number_value = line.get_number();
+                simdjson::ondemand::number number_value = line.get_number();
                 auto const matches_timestamp
                         = m_archive_writer->matches_timestamp(node_id_stack.top(), cur_key);
                 if (false == number_value.is_double()) {
@@ -466,7 +470,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 m_current_schema.insert_ordered(node_id);
                 break;
             }
-            case ondemand::json_type::string: {
+            case simdjson::ondemand::json_type::string: {
                 std::string_view value = line.get_string(true);
                 auto const matches_timestamp
                         = m_archive_writer->matches_timestamp(node_id_stack.top(), cur_key);
@@ -497,7 +501,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 m_current_schema.insert_ordered(node_id);
                 break;
             }
-            case ondemand::json_type::boolean: {
+            case simdjson::ondemand::json_type::boolean: {
                 bool value = line.get_bool();
                 node_id = m_archive_writer
                                   ->add_node(node_id_stack.top(), NodeType::Boolean, cur_key);
@@ -505,7 +509,7 @@ void JsonParser::parse_line(ondemand::value line, int32_t parent_node_id, std::s
                 m_current_schema.insert_ordered(node_id);
                 break;
             }
-            case ondemand::json_type::null: {
+            case simdjson::ondemand::json_type::null: {
                 node_id = m_archive_writer
                                   ->add_node(node_id_stack.top(), NodeType::NullValue, cur_key);
                 m_current_schema.insert_ordered(node_id);
