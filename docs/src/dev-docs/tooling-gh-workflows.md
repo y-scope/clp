@@ -27,12 +27,18 @@ shown below.
     }
   }
 }%%
-flowchart TD
+flowchart LR
     filter-relevant-changes --> centos-stream-9-deps-image
+    filter-relevant-changes --> manylinux_2_28-x86_64-deps-image
+    filter-relevant-changes --> musllinux_1_2-x86_64-deps-image
     filter-relevant-changes --> ubuntu-jammy-deps-image
     filter-relevant-changes --> centos-stream-9-binaries
+    filter-relevant-changes --> manylinux_2_28-x86_64-binaries
+    filter-relevant-changes --> musllinux_1_2-x86_64-binaries
     filter-relevant-changes --> ubuntu-jammy-binaries
     centos-stream-9-deps-image --> centos-stream-9-binaries
+    manylinux_2_28-x86_64-deps-image --> manylinux_2_28-x86_64-binaries
+    musllinux_1_2-x86_64-deps-image --> musllinux_1_2-x86_64-binaries
     ubuntu-jammy-deps-image --> ubuntu-jammy-binaries
     ubuntu-jammy-binaries --> ubuntu-jammy-binaries-image
 :::
@@ -43,9 +49,17 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
   the following jobs should run.
 * `centos-stream-9-deps-image`: Builds a container image containing the dependencies necessary to
   build CLP-core in a CentOS Stream 9 x86 environment.
+* `manylinux_2_28-x86_64-deps-image`: Builds a container image containing the dependencies necessary
+  to build CLP-core in a manylinux_2_28 x86 environment.
+* `musllinux_1_2-x86_64-deps-image`: Builds a container image containing the dependencies necessary
+  to build CLP-core in a musllinux_1_2 x86 environment.
 * `ubuntu-jammy-deps-image`: Builds a container image containing the dependencies necessary to build
   CLP-core in an Ubuntu Jammy x86 environment.
 * `centos-stream-9-binaries`: Builds the CLP-core binaries in the built CentOS Stream 9 container
+  and runs core's unit tests.
+* `manylinux_2_28-x86_64-binaries`: Builds the CLP-core binaries in the built manylinux_2_28
+  container and runs core's unit tests.
+* `musllinux_1_2-x86_64-binaries`: Builds the CLP-core binaries in the built musllinux_1_2 container
   and runs core's unit tests.
 * `ubuntu-jammy-binaries`: Builds the CLP-core binaries in the built Ubuntu Jammy container and runs
   core's unit tests.

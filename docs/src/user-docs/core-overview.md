@@ -3,7 +3,7 @@
 CLP's core component contains the core code to compress, decompress, and search compressed logs. You
 can use it to try CLP on your logs before deploying a cluster.
 
-There are currently two flavours of CLP, depending on the format of your logs. The guides below
+There are currently two flavours of CLP, depending on the format of your logs. The docs below
 explain how to use each flavour.
 
 ::::{grid} 1 1 2 2
