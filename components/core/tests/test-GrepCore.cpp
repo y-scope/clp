@@ -25,11 +25,15 @@ auto get_test_dir() -> std::filesystem::path {
     std::filesystem::path const current_file_path{__FILE__};
     return current_file_path.parent_path();
 }
+
+auto const test_dir = get_test_dir();
+auto const test_schema_dir = test_dir / "test_schema_files";
 }  // namespace
 
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
     ByteLexer lexer;
-    load_lexer_from_file((get_test_dir() / "test_schema_files/search_schema.txt").string(), lexer);
+    auto const search_schema_path = test_schema_dir / "search_schema.txt";
+    load_lexer_from_file(search_schema_path.string(), lexer);
 
     string str;
     size_t begin_pos;
