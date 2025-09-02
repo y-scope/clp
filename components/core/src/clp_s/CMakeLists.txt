@@ -221,6 +221,8 @@ set(
         DictionaryWriter.cpp
         DictionaryWriter.hpp
         ErrorCode.hpp
+        FloatFormatEncoding.cpp
+        FloatFormatEncoding.hpp
         JsonFileIterator.cpp
         JsonFileIterator.hpp
         JsonParser.cpp

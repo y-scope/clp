@@ -2,6 +2,9 @@
 #define CLP_S_FLOATFORMATENCODING_HPP
 
 #include <cstdint>
+#include <string_view>
+
+#include <ystdlib/error_handling/Result.hpp>
 
 namespace clp_s::float_format_encoding {
 // Bit positions for the 16-bit format descriptor.
@@ -23,6 +26,15 @@ static_assert(cExponentNotationPos <= 15, "Bit position out of range");
 static_assert(cExponentSignPos <= 15, "Bit position out of range");
 static_assert(cNumExponentDigitsPos <= 15, "Bit position out of range");
 static_assert(cNumSignificantDigitsPos <= 15, "Bit position out of range");
+
+/**
+ * Tries to derive the floating point encoding of `float_str` according to what we describe in
+ * `docs/src/dev-guide/design-retain-float-format.md`.
+ * @param float_str A string representing a valid floating point number.
+ * @return The encoded format of `float_str`, or `std::errc::protocol_not_supported` if `float_str`
+ * is not representable in our encoding scheme.
+ */
+auto get_float_encoding(std::string_view float_str) -> ystdlib::error_handling::Result<uint16_t>;
 }  // namespace clp_s::float_format_encoding
 
 #endif  // CLP_S_FLOATFORMATENCODING_HPP
