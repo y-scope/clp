@@ -15,7 +15,6 @@ vars:
   G_COMPONENTS_DIR: "{{.ROOT_DIR}}/components"
   G_CORE_COMPONENT_DIR: "{{.G_COMPONENTS_DIR}}/core"
   G_CORE_COMPONENT_SUBMODULES_DIR: "{{.G_CORE_COMPONENT_DIR}}/submodules"
-  G_INTEGRATION_TESTS_DIR: "{{.ROOT_DIR}}/integration-tests"
   G_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/webui"
 
   # Build paths
