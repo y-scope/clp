@@ -8,6 +8,7 @@ import SearchControls from "./SearchControls";
 import SearchResultsTable from "./SearchResults/SearchResultsTable";
 import SearchResultsTimeline from "./SearchResults/SearchResultsTimeline";
 import {useUpdateStateWithMetadata} from "./SearchState/useUpdateStateWithMetadata";
+import SqlInput from "../../components/SqlInput";
 
 
 /**
@@ -22,10 +23,21 @@ const SearchPage = () => {
         <>
             {SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO && <ProgressBar/>}
             <div className={styles["searchPageContainer"]}>
+                <SqlInput placeholder="Test SQL input" disabled={false}/>
+                 <SqlInput placeholder="Test SQL input" disabled={false}/>
+                  <SqlInput placeholder="Test SQL input" disabled={false}/>
+                   <SqlInput placeholder="Test SQL input" disabled={false}/>
+                    <SqlInput placeholder="Test SQL input" disabled={false}/>
+                     <SqlInput placeholder="Test SQL input" disabled={false}/>
+
+                      <SqlInput placeholder="Test SQL input" disabled={false}/>
+                       <SqlInput placeholder="Test SQL input" disabled={false}/>
+                        <SqlInput placeholder="Test SQL input" disabled={false}/>
                 <SearchControls/>
                 {SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO && <SearchResultsTimeline/>}
                 <SearchResultsTable/>
             </div>
+
         </>
     );
 };

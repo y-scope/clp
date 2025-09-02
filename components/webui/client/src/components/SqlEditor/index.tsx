@@ -25,7 +25,7 @@ type SqlEditorProps = Omit<EditorProps, "language"> & React.RefAttributes<SqlEdi
     disabled: boolean;
 
     /** Callback when the editor is mounted and ref is ready to use. */
-    onEditorReady?: () => void;
+    onEditorReady?: (editor: monaco.editor.IStandaloneCodeEditor) => void;
 };
 
 /**
@@ -50,7 +50,7 @@ const SqlEditor = (props: SqlEditorProps) => {
         editor: monaco.editor.IStandaloneCodeEditor,
     ) => {
         editorRef.current = editor;
-        onEditorReady?.();
+        onEditorReady?.(editor);
     }, [onEditorReady]);
 
     // Define default and disabled themes for monaco editor
