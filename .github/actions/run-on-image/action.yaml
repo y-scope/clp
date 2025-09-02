@@ -42,7 +42,7 @@ runs:
     - run: "./tools/scripts/deps-download/init.sh"
       shell: "bash"
 
-    # `--env npm_config_cache`: Override to prevent permission issues with `/.npm`.
+    # `--env npm_config_cache` overrides the default `/.npm` to avoid permission issues.
     - run: >-
         docker run
         --user $(id -u):$(id -g)
