@@ -22,7 +22,7 @@ source "${script_dir}/.venv/bin/activate"
 echo "Installing required Python packages..."
 pip3 install -r "${script_dir}/requirements.txt"
 
-echo "Generating environment variables file for user-configured properties..."
+echo "Generating config files corresponding to user-configured properties..."
 python3 "${script_dir}/init.py" \
     --clp-package-dir "${clp_package_dir}" \
     --output-file "${script_dir}/../.env"
