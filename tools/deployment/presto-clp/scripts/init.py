@@ -237,7 +237,7 @@ def _generate_worker_clp_properties(
     :return: Whether the clp.properties file was successfully generated.
     """
     properties = ["connector.name=clp"]
-    if "s3" == env_vars["PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE"]:
+    if "s3" == env_vars.get("PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE"):
         property_name_to_env_var_name = {
             "clp.storage-type": "PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE",
             "clp.s3-auth-provider": "PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER",
