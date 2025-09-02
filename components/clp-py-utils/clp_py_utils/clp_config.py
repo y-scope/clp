@@ -819,6 +819,7 @@ class CLPConfig(BaseModel):
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     presto: Optional[Presto] = None
+
     archive_output: ArchiveOutput = ArchiveOutput()
     stream_output: StreamOutput = StreamOutput()
     data_directory: pathlib.Path = pathlib.Path("var") / "data"
