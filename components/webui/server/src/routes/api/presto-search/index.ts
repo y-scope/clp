@@ -170,18 +170,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                 });
                                 isResolved = true;
                                 resolve(queryId);
-                            } else {
-                                // Update metadata on subsequent calls
-                                searchResultsMetadataCollection.updateOne(
-                                    {_id: queryId},
-                                    {$set: {lastSignal: newState}}
-                                ).catch((err: unknown) => {
-                                    request.log.error(err, "Failed to update Presto metadata");
-                                });
                             }
                         },
                         success: () => {
-                            request.log.info("Presto search succeeded");
                             if (false === isResolved) {
                                 request.log.error(
                                     "Presto query finished received before searchJobId was resolved; "
@@ -195,7 +186,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                     request.log.error(err, "Failed to update Presto metadata");
                                 });
                             }
-
+                            request.log.info("Presto search succeeded");
                         },
                         timeout: null,
                     });
