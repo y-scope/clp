@@ -61,11 +61,10 @@ building-package
 :caption: Testing
 :hidden:
 
-testing/index
-testing/unit-tests
-testing/integration-tests
+../dev-guide/testing/index
+../dev-guide/testing/unit-tests
+../dev-guide/testing/integration-tests
 :::
-
 :::{toctree}
 :caption: Contributing
 :hidden:
