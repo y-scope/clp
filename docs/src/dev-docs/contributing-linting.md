@@ -15,9 +15,7 @@ To run the linting tools, besides commonly installed tools like `tar`, you'll ne
 * `md5sum`
 * Python 3.9 or newer
 * python3-venv (for the version of Python installed)
-* [Task] >= 3.40.0 and < 3.43.0
-  * Minimum version 3.40.0 is required for [yscope-dev-utils].
-  * We constrain the version to < 3.43.0 due to unresolved [issues][clp-issue-872].
+* [Task] 3.44.0
 * [uv] >= 0.8
 
 ## Running the linters
