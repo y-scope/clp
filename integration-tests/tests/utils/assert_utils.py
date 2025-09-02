@@ -1,6 +1,5 @@
 """
-Provide utility functions used across `integration-tests` that involve pytest assertions and
-failures.
+Utilities that raise pytest assertions on failure.
 """
 
 import subprocess

@@ -36,10 +36,9 @@ uv run python -m pytest --markers
 
 To run tests related to a specific marker (e.g., `clp_s`):
 
-
 ### Specifying custom CLP binary paths
 
 You can override the default binary paths by setting the following environment variables:
 
-* **`CLP_PACKAGE_DIR`**: Directory of the CLP package to test.
 * **`CLP_CORE_BINS_DIR`**: Directory containing the CLP core binaries to test.
+* **`CLP_PACKAGE_DIR`**: Directory of the CLP package to test.
