@@ -5,7 +5,6 @@ import {
 import styles from "./index.module.css";
 import {ProgressBar} from "./Presto/ProgressBar";
 import SearchControls from "./SearchControls";
-import SearchQueryStatus from "./SearchQueryStatus";
 import SearchResultsTable from "./SearchResults/SearchResultsTable";
 import SearchResultsTimeline from "./SearchResults/SearchResultsTimeline";
 import {useUpdateStateWithMetadata} from "./SearchState/useUpdateStateWithMetadata";
@@ -23,11 +22,8 @@ const SearchPage = () => {
         <>
             {SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO && <ProgressBar/>}
             <div className={styles["searchPageContainer"]}>
-                <div>
-                    <SearchControls/>
-                    <SearchQueryStatus/>
-                </div>
-                <SearchResultsTimeline/>
+                <SearchControls/>
+                {SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO && <SearchResultsTimeline/>}
                 <SearchResultsTable/>
             </div>
         </>
