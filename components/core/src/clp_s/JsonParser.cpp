@@ -188,7 +188,9 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
             object_stack.pop();
             node_id_stack.pop();
             object_it_stack.pop();
-            if (false == object_it_stack.empty()) { ++object_it_stack.top(); }
+            if (false == object_it_stack.empty()) {
+                ++object_it_stack.top();
+            }
         }
 
         if (object_stack.empty()) {
@@ -517,7 +519,9 @@ void JsonParser::parse_line(
             }
         }
 
-        if (object_stack.empty()) { break; }
+        if (object_stack.empty()) {
+            break;
+        }
 
         bool hit_end;
         do {
@@ -562,7 +566,9 @@ bool JsonParser::parse() {
         size_t file_split_number{0ULL};
         int32_t log_event_idx_node_id{};
         auto initialize_fields_for_archive = [&]() -> bool {
-            if (false == m_record_log_order) { return true; }
+            if (false == m_record_log_order) {
+                return true;
+            }
             log_event_idx_node_id
                     = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
             if (auto const rc = m_archive_writer->add_field_to_current_range(
@@ -735,7 +741,9 @@ auto JsonParser::get_archive_node_type(
     clp::ffi::SchemaTree::Node::Type const ir_node_type = tree_node.get_type();
     bool const node_has_value = kv_pair.second.has_value();
     clp::ffi::Value node_value{};
-    if (node_has_value) { node_value = kv_pair.second.value(); }
+    if (node_has_value) {
+        node_value = kv_pair.second.value();
+    }
     switch (ir_node_type) {
         case clp::ffi::SchemaTree::Node::Type::Int:
             return NodeType::Integer;
@@ -746,10 +754,14 @@ auto JsonParser::get_archive_node_type(
         case clp::ffi::SchemaTree::Node::Type::UnstructuredArray:
             return NodeType::UnstructuredArray;
         case clp::ffi::SchemaTree::Node::Type::Str:
-            if (node_value.is<std::string>()) { return NodeType::VarString; }
+            if (node_value.is<std::string>()) {
+                return NodeType::VarString;
+            }
             return NodeType::ClpString;
         case clp::ffi::SchemaTree::Node::Type::Obj:
-            if (node_has_value && node_value.is_null()) { return NodeType::NullValue; }
+            if (node_has_value && node_value.is_null()) {
+                return NodeType::NullValue;
+            }
             return NodeType::Object;
         default:
             throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
@@ -758,7 +770,9 @@ auto JsonParser::get_archive_node_type(
 
 auto JsonParser::adjust_archive_node_type_for_timestamp(NodeType node_type, bool matches_timestamp)
         -> NodeType {
-    if (false == matches_timestamp) { return node_type; }
+    if (false == matches_timestamp) {
+        return node_type;
+    }
 
     switch (node_type) {
         case NodeType::ClpString:
@@ -1024,7 +1038,9 @@ auto JsonParser::parse_from_ir() -> bool {
         size_t file_split_number{0ULL};
         int32_t log_event_idx_node_id{};
         auto initialize_fields_for_archive = [&]() -> bool {
-            if (false == m_record_log_order) { return true; }
+            if (false == m_record_log_order) {
+                return true;
+            }
             log_event_idx_node_id
                     = add_metadata_field(constants::cLogEventIdxName, NodeType::DeltaInteger);
             if (auto const rc = m_archive_writer->add_field_to_current_range(
