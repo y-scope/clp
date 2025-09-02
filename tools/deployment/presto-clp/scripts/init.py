@@ -184,7 +184,7 @@ def _add_clp_s3_env_vars(clp_config: Dict[str, Any], env_vars: Dict[str, str]) -
         s3_access_key_id = _get_required_config_value(
             clp_config, f"{s3_credentials_key}.access_key_id"
         )
-        s3_secret_access_key = _get_config_value(
+        s3_secret_access_key = _get_required_config_value(
             clp_config, f"{s3_credentials_key}.secret_access_key"
         )
     except KeyError:
