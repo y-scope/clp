@@ -363,10 +363,11 @@ jobs:
 
   package-image:
     name: "package-image"
-    if: "!cancelled() && !failure() && (
+    if: >-
+      !cancelled() && !failure() && (
         needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false' ||
         needs.ubuntu-jammy-deps-image.result == 'success'
-    )"
+      )
     needs:
       - "filter-relevant-changes"
       - "ubuntu-jammy-deps-image"
