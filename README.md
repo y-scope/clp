@@ -118,4 +118,4 @@ If you would like a feature or want to report a bug, please file an issue and we
 [re2]: https://github.com/google/re2
 [uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
 [yscope-community-discord]: https://discord.gg/7kZA2m5G87
-[yscope-community-zulip]: https://yscope-clp.zulipchat.com
+[yscope-community-zulip]: https://yscope-clp.zulipchat.com 
