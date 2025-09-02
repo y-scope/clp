@@ -115,7 +115,7 @@ def _add_clp_env_vars(
                 clp_config,
                 f"{archive_output_storage_key}.directory",
                 Path("var") / "data" / "archives",
-                clp_package_dir
+                clp_package_dir,
             )
         )
     elif "s3" == clp_archive_output_storage_type:
@@ -124,7 +124,7 @@ def _add_clp_env_vars(
                 clp_config,
                 f"{archive_output_storage_key}.staging_directory",
                 Path("var") / "data" / "staged-archives",
-                clp_package_dir
+                clp_package_dir,
             )
         )
 
@@ -134,7 +134,7 @@ def _add_clp_env_vars(
         logger.error(
             "'%s' for %s is unsupported.",
             clp_archive_output_storage_type,
-            archive_output_storage_key
+            archive_output_storage_key,
         )
         return False
 
@@ -259,7 +259,9 @@ def _generate_worker_clp_properties(
     return True
 
 
-def _get_path_clp_config_value(clp_config: Dict[str, str], key: str, default_value: Path, clp_package_dir: Path) -> Path:
+def _get_path_clp_config_value(
+    clp_config: Dict[str, str], key: str, default_value: Path, clp_package_dir: Path
+) -> Path:
     """
     Gets the value corresponding to `key` from `clp_config` as a `Path`.
 
