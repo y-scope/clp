@@ -267,9 +267,9 @@ def _get_path_clp_config_value(
 
     :param clp_config:
     :param key: The key to look for in the config, in dot notation (e.g., "database.host").
-    :param default_value: The value to return if `key` doesn't exist in `config`.
-    :return: The value corresponding to `key` as a `Path`. Relative paths are returned as
-    `clp_package_dir` / <path>.
+    :param default_value: Value to use if the key is missing.
+    :param clp_package_dir: Base for resolving relative paths from the config.
+    :return: The value as a Path; relative values resolve to clp_package_dir / <path>.
     """
     value = _get_config_value(clp_config, key, str(default_value))
     value_as_path = Path(value)
@@ -295,7 +295,7 @@ def _get_required_config_value(config: Dict[str, Any], key: str) -> str:
     return value
 
 
-def _get_config_value(config: dict, key: str, default_value: Optional[str] = None) -> str:
+def _get_config_value(config: dict, key: str, default_value: Optional[str] = None) -> Optional[str]:
     """
     Gets the value corresponding to `key` from `config` if it exists.
 
