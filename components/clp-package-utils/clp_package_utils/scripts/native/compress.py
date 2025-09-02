@@ -91,6 +91,10 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
             # One or more tasks in the job has failed
             logger.error(f"Compression failed. {job_row['status_msg']}")
             break  # Done
+        if CompressionJobStatus.KILLED == job_status:
+            # The job is killed
+            logger.error(f"Compression killed. {job_row['status_msg']}")
+            break  # Done
 
         if CompressionJobStatus.RUNNING == job_status:
             if not no_progress_reporting:
@@ -196,6 +200,12 @@ def main(argv):
         help="CLP package configuration file.",
     )
     args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
+    args_parser.add_argument(
         "--dataset",
         type=str,
         default=None,
@@ -219,6 +229,10 @@ def main(argv):
         "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
     )
     parsed_args = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     # Validate and load config file
     try:
@@ -226,6 +240,7 @@ def main(argv):
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_logs_input_config()
         clp_config.validate_logs_dir()
+        clp_config.database.load_credentials_from_env()
     except:
         logger.exception("Failed to load config.")
         return -1

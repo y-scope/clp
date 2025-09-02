@@ -1,6 +1,7 @@
 #ifndef CLP_CLP_COMMANDLINEARGUMENTS_HPP
 #define CLP_CLP_COMMANDLINEARGUMENTS_HPP
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -73,7 +74,9 @@ public:
 
     size_t get_ir_target_size() const { return m_ir_target_size; }
 
-    GlobalMetadataDBConfig const& get_metadata_db_config() const { return m_metadata_db_config; }
+    std::optional<GlobalMetadataDBConfig> const& get_metadata_db_config() const {
+        return m_metadata_db_config;
+    }
 
 private:
     // Methods
@@ -100,7 +103,7 @@ private:
     Command m_command;
     std::string m_archives_dir;
     std::vector<std::string> m_input_paths;
-    GlobalMetadataDBConfig m_metadata_db_config;
+    std::optional<GlobalMetadataDBConfig> m_metadata_db_config;
 };
 }  // namespace clp::clp
 
