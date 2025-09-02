@@ -1,7 +1,5 @@
 FROM ubuntu:jammy AS base
 
-COPY ./build/clp-package /opt/clp
-
 WORKDIR /root
 
 COPY ./tools/docker-images/clp-package/setup-scripts ./setup-scripts
@@ -11,6 +9,8 @@ RUN ./setup-scripts/install-prebuilt-packages.sh \
 # Remove cached files
 RUN apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+COPY ./build/clp-package /opt/clp
 
 # Flatten the image
 FROM scratch
