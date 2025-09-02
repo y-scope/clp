@@ -219,41 +219,32 @@ def _generate_worker_clp_properties(
     worker_config_template_path: Path, env_vars: Dict[str, str]
 ) -> bool:
     """
-    Generates a clp.properties for worker config.
+    Generates a clp.properties file for the worker.
 
     :param worker_config_template_path:
     :param env_vars:
-    :return: Whether the worker clp.properties file was successfully generated.
+    :return: Whether the clp.properties file was successfully generated.
     """
-    clp_properties_path = worker_config_template_path / "clp.properties"
-    config_options = ["connector.name=clp"]
+    properties = ["connector.name=clp"]
     if "s3" == env_vars["PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE"]:
-        required_keys = [
-            "PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER",
-            "PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID",
-            "PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT",
-            "PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY",
-        ]
+        property_name_to_env_var_name = {
+            "clp.storage-type": "PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE",
+            "clp.s3-auth-provider": "PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER",
+            "clp.s3-access-key-id": "PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID",
+            "clp.s3-end-point": "PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT",
+            "clp.s3-secret-access-key": "PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY",
+        }
 
-        for key in required_keys:
-            if not env_vars.get(key):
+        for property_name, env_var_name in property_name_to_env_var_name.items():
+            env_var_value = env_vars.get(env_var_name)
+            if not env_var_value:
+                logger.error("Internal error: Missing required env var '%s'", env_var_name)
                 return False
+            properties.append(f"{property_name}={env_var_value}")
 
-        config_options.append("clp.storage-type=s3")
-        config_options.append(
-            f'clp.s3-auth-provider={env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER"]}'
-        )
-        config_options.append(
-            f'clp.s3-access-key-id={env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID"]}'
-        )
-        config_options.append(
-            f'clp.s3-end-point={env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT"]}'
-        )
-        config_options.append(
-            f'clp.s3-secret-access-key={env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY"]}'
-        )
-    with clp_properties_path.open("w", encoding="utf-8") as f:
-        f.write("\n".join(config_options) + "\n")
+    with open(worker_config_template_path / "clp.properties", "w", encoding="utf-8") as f:
+        f.write("\n".join(properties) + "\n")
+
     return True
 
 
