@@ -977,15 +977,16 @@ class CLPConfig(BaseModel):
     @root_validator(pre=True)
     def validate_presto_config(cls, values):
         package = values.get("package")
-        presto = values.get("presto")
-        query_engine: Optional[QueryEngine] = None
-        # Root validator with `pre=True` is called before other validators, so package has not
-        # been validated yet. Pydantic will throw error later if package is not a valid Package object.
         if not isinstance(package, Package):
+            # Skip validation since `package` is not a valid `Package` (Pydantic will validate it
+            # later and throw an error).
             return values
+
         query_engine = package.get("query_engine")
+        presto = values.get("presto")
         if query_engine == QueryEngine.PRESTO and presto is None:
-            raise ValueError(f"Presto config must be set when query_engine is `{query_engine}`")
+            raise ValueError(f"`presto` config must be non-null when query_engine is"
+                             f" `{query_engine}`")
         return values
 
 
