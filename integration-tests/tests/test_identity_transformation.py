@@ -5,7 +5,7 @@ compression and decompression.
 
 import pytest
 
-from tests.utils.assert_utils import run_and_assert
+from tests.utils.asserting_utils import run_and_assert
 from tests.utils.config import (
     CompressionTestConfig,
     IntegrationTestConfig,
