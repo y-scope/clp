@@ -65,6 +65,11 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
              range_it != m_timestamp_dict->tokenized_column_to_range_end();
              range_it++)
         {
+            // Don't attempt to evaluate the timestamp index against columns with wildcard tokens.
+            if (column->has_unresolved_tokens()) {
+                continue;
+            }
+
             std::vector<std::string> const& tokens = range_it->first;
             auto const& descriptors = column->get_descriptor_list();
             if (tokens.size() != descriptors.size()) {
@@ -72,8 +77,8 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
             }
 
             bool matched = true;
-            for (size_t i = 0; i < descriptors.size(); ++i) {
-                if (tokens[i] != descriptors[i].get_token() || descriptors[i].wildcard()) {
+            for (size_t i{0ULL}; i < descriptors.size(); ++i) {
+                if (tokens[i] != descriptors[i].get_token()) {
                     matched = false;
                     break;
                 }
