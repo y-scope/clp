@@ -66,7 +66,7 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
              range_it++)
         {
             // Don't attempt to evaluate the timestamp index against columns with wildcard tokens.
-            if (column->has_unresolved_tokens()) {
+            if (column->is_unresolved_descriptor()) {
                 continue;
             }
 
