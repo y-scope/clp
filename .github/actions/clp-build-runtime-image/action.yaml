@@ -66,7 +66,7 @@ runs:
         echo "IMAGE_NAME=$image_name" >> "$GITHUB_OUTPUT"
 
     - name: "Extract GitHub Metadata"
-      id: "update-meta"
+      id: "extract-gh-meta"
       uses: "docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804"
       with:
         images: "${{inputs.image_registry}}/${{steps.sanitization.outputs.REPOSITORY}}\
@@ -79,5 +79,5 @@ runs:
         context: "./"
         file: "${{steps.compute-meta.outputs.DOCKERFILE}}"
         push: true
-        tags: "${{steps.update-meta.outputs.tags}}"
-        labels: "${{steps.update-meta.outputs.labels}}"
+        tags: "${{steps.extract-gh-meta.outputs.tags}}"
+        labels: "${{steps.extract-gh-meta.outputs.labels}}"
