@@ -1,6 +1,4 @@
-"""
-Utilities that raise pytest assertions on failure.
-"""
+"""Utilities that raise pytest assertions on failure."""
 
 import subprocess
 from typing import Any
