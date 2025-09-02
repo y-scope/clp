@@ -12,13 +12,13 @@ RUN apt-get clean \
 
 COPY ./build/clp-package /opt/clp
 
-# Flatten the image
-FROM scratch
-COPY --from=base / /
-
 ENV CLP_HOME="/opt/clp"
 ENV PATH="${CLP_HOME}/bin:${PATH}"
 ENV PATH="${CLP_HOME}/sbin:${PATH}"
 ENV PYTHONPATH="${CLP_HOME}/lib/python3/site-packages"
 
 USER 1000:1000
+
+# Flatten the image
+FROM scratch
+COPY --from=base / /
