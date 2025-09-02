@@ -20,7 +20,7 @@ class CoreConfig:
 
     def __post_init__(self) -> None:
         """
-        Validate that the CLP core binaries directory exists and contains all required
+        Validates that the CLP core binaries directory exists and contains all required
         executables.
         """
         clp_core_bins_dir = self.clp_core_bins_dir
@@ -55,7 +55,7 @@ class PackageConfig:
     clp_package_dir: Path
 
     def __post_init__(self) -> None:
-        """Validate that the CLP package directory exists and contains all required directories."""
+        """Validates that the CLP package directory exists and contains all required directories."""
         clp_package_dir = self.clp_package_dir
         validate_dir_exists(clp_package_dir)
 
