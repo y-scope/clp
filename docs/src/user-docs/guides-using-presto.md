@@ -172,7 +172,7 @@ SELECT user FROM default LIMIT 1;
 ```
 
 :::{warning}
-`SELECT *` currently causes a crash due to a [known issue][y-scope/velox#27]. This will be resolved
+`SELECT *` currently causes a crash due to a [known issue][y-scope/velox#28]. This will be resolved
 soon. See the [limitations](#limitations) section for all current limitations.
 :::
 
@@ -201,5 +201,5 @@ These limitations will be addressed in a future release of the Presto integratio
 [postgresql]: https://zenodo.org/records/10516401
 [Presto]: https://prestodb.io/
 [y-scope/presto#8]: https://github.com/y-scope/presto/issues/8
-[y-scope/velox#27]: https://github.com/y-scope/velox/issues/27
+[y-scope/velox#28]: https://github.com/y-scope/velox/issues/28
 [yscope-presto]: https://github.com/y-scope/presto
