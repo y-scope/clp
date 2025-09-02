@@ -119,34 +119,28 @@ def _add_clp_env_vars(
     if "fs" == clp_archive_output_storage_type:
         pass
     elif "s3" == clp_archive_output_storage_type:
-        s3_config_key_prefix = f"archive_output.storage.s3_config"
-        s3_credentials_key_prefix = f"{s3_config_key_prefix}.aws_authentication.credentials"
 
-        s3_access_key_id = _get_config_value(
-            clp_config, f"{s3_credentials_key_prefix}.access_key_id"
-        )
+        try:
+            s3_config_key = f"archive_output.storage.s3_config"
+            s3_bucket = _get_required_config_value(clp_config, f"{s3_config_key}.bucket")
+            s3_region_code = _get_required_config_value(clp_config, f"{s3_config_key}.region_code")
 
-        s3_bucket = _get_config_value(clp_config, f"{s3_config_key_prefix}.bucket")
-        s3_region_code = _get_config_value(clp_config, f"{s3_config_key_prefix}.region_code")
+            aws_auth_key = f"{s3_config_key}.aws_authentication"
+            aws_auth_type_key = f"{aws_auth_key}.type"
+            aws_auth_type = _get_required_config_value(clp_config, aws_auth_type_key)
+            credentials_auth_type_str = "credentials"
+            if credentials_auth_type_str != aws_auth_type:
+                logger.error("%s for %s is unsupported.", aws_auth_type, aws_auth_type_key)
+                return False
 
-        s3_secret_access_key = _get_config_value(
-            clp_config, f"{s3_credentials_key_prefix}.secret_access_key"
-        )
-
-        # Validate required S3 fields
-        missing = []
-
-        for k, v in {
-            f"{s3_credentials_key_prefix}.access_key_id": s3_access_key_id,
-            f"{s3_credentials_key_prefix}.secret_access_key": s3_secret_access_key,
-            f"{s3_config_key_prefix}.bucket": s3_bucket,
-            f"{s3_config_key_prefix}.region_code": s3_region_code,
-        }.items():
-            if not v:
-                missing.append(k)
-
-        if missing:
-            logger.error("Missing required S3 config key(s): %s", ", ".join(missing))
+            s3_credentials_key = f"{aws_auth_key}.{credentials_auth_type_str}"
+            s3_access_key_id = _get_required_config_value(
+                clp_config, f"{s3_credentials_key}.access_key_id"
+            )
+            s3_secret_access_key = _get_config_value(
+                clp_config, f"{s3_credentials_key}.secret_access_key"
+            )
+        except KeyError:
             return False
 
         env_vars["PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE"] = "s3"
@@ -246,6 +240,22 @@ def _generate_worker_clp_properties(
         f.write("\n".join(properties) + "\n")
 
     return True
+
+
+def _get_required_config_value(config: Dict[str, str], key: str) -> str:
+    """
+    Gets the value corresponding to `key` from `config`. Logs an error on failure.
+
+    :param config: The config.
+    :param key: The key to look for in the config, in dot notation (e.g., "database.host").
+    :return: The value corresponding to `key`.
+    :raises KeyError: If `key` doesn't exist in `config` or its value is `None`.
+    """
+    value = _get_config_value(config, key)
+    if value is None:
+        logger.error("Required config '%s' is missing or null.", key)
+        raise KeyError(key)
+    return value
 
 
 def _get_config_value(config: dict, key: str, default_value: Optional[str] = None) -> str:
