@@ -38,6 +38,7 @@ vars:
     {{default "" (env "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK")}}
 
   # Checksum files
+  G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
   G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-client-node-modules.md5"
   G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE:
     "{{.G_BUILD_DIR}}/webui-log-viewer-node-modules.md5"
@@ -93,7 +94,7 @@ tasks:
     env:
       NODE_ENV: "production"
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_PACKAGE_CHECKSUM_FILE}}"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
     sources:
       - "{{.G_BUILD_DIR}}/package-venv.md5"
