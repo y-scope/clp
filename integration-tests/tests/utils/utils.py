@@ -80,11 +80,8 @@ def validate_dir_exists(dir_path: Path) -> None:
     :param dir_path:
     :raise: ValueError if the path does not exist or is not a directory.
     """
-    if not dir_path.exists():
-        err_msg = f"Directory does not exist: {dir_path}"
-        raise ValueError(err_msg)
     if not dir_path.is_dir():
-        err_msg = f"Path is not a directory: {dir_path}"
+        err_msg = f"Path does not exist or is not a directory: {dir_path}"
         raise ValueError(err_msg)
 
 
