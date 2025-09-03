@@ -58,7 +58,7 @@ def main(argv=None) -> int:
         return 1
 
     try:
-        timestamp_keys_by_dataset: Dict[str, str] = _prompt_timestamp_keys(datasets)
+        timestamp_keys_by_dataset = _prompt_timestamp_keys(datasets)
     except KeyboardInterrupt:
         logger.error("Interrupted while collecting timestamp keys.")
         return 1
@@ -139,8 +139,10 @@ def _construct_metadata_filters(
     datasets: List[str],
     *,
     timestamp_keys: Dict[str, str],
-    lower_bound_key: str = "begin_timestamp",
-    upper_bound_key: str = "end_timestamp",
+    rangeMap: RangeMapping = {
+        "lowerBound": "begin_timestamp",
+        "upperBound": "end_timestamp",
+    },
     required: bool = False,
 ) -> bool:
     """
@@ -155,12 +157,12 @@ def _construct_metadata_filters(
     :return: True on success, False on error.
     """
 
-    if not datasets:
+    if 0 == len(datasets):
         logger.error("No datasets provided to _construct_metadata_filters.")
         return False
 
     missing = [d for d in datasets if d not in timestamp_keys]
-    if missing:
+    if 0 < len(missing):
         logger.error("Missing timestamp key(s) for dataset(s): %s", ", ".join(missing))
         return False
 
@@ -168,10 +170,7 @@ def _construct_metadata_filters(
 
     try:
         for dataset in datasets:
-            range_mapping: RangeMapping = {
-                "lowerBound": lower_bound_key,
-                "upperBound": upper_bound_key,
-            }
+            range_mapping = rangeMap
             rule: FilterRule = {
                 "columnName": timestamp_keys[dataset],
                 "rangeMapping": range_mapping,
