@@ -13,8 +13,8 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
 * Python 3.9 or newer
 * python3-dev
 * python3-venv (for the version of Python installed)
-* [Task] >= 3.40.0 and < 3.43.0
-  * We constrain the version due to unresolved [issues][clp-issue-872].
+* [Task] 3.44.0
+  * We pin the version to 3.44.0 due to unresolved [issues][clp-ffi-js-issue-110].
 
 ## Setup
 
@@ -69,5 +69,5 @@ To clean up all build artifacts, run:
 task clean
 ```
 
-[clp-issue-872]: https://github.com/y-scope/clp/issues/872
+[clp-ffi-js-issue-110]: https://github.com/y-scope/clp-ffi-js/issues/110
 [Task]: https://taskfile.dev/

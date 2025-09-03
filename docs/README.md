@@ -13,9 +13,8 @@ this project:
     the size of repo as we add and update images.
 * [Node.js] >= 16 to be able to [view the output](#viewing-the-output)
 * Python 3.10 or later
-* [Task] >= 3.40.0 and < 3.43.0
-  * Minimum version 3.40.0 is required for [yscope-dev-utils].
-  * We constrain the version to < 3.43.0 due to unresolved [issues][clp-issue-872].
+* [Task] 3.44.0
+  * We pin the version to 3.44.0 due to unresolved [issues][clp-ffi-js-issue-110].
 
 ## Build Commands
 
@@ -42,9 +41,8 @@ task docs:serve
 The command above will install [http-server] and serve the built docs site; `http-server` will print
 the address it binds to (usually http://localhost:8080).
 
-[clp-issue-872]: https://github.com/y-scope/clp/issues/872
+[clp-ffi-js-issue-110]: https://github.com/y-scope/clp-ffi-js/issues/110
 [git-lfs]: https://git-lfs.com
 [http-server]: https://www.npmjs.com/package/http-server
 [Node.js]: https://nodejs.org/en/download/current
 [Task]: https://taskfile.dev/
-[yscope-dev-utils]: https://github.com/y-scope/yscope-dev-utils

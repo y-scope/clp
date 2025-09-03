@@ -18,7 +18,7 @@ if command -v task >/dev/null 2>&1; then
         exit 1
     fi
 else
-    # We lock `task` to a version < 3.43 to avoid https://github.com/y-scope/clp/issues/872
-    pipx install --force "go-task-bin>=3.40,<3.43"
+    # We lock `task` to version 3.44.0 to avoid https://github.com/y-scope/clp-ffi-js/issues/110
+    pipx install --force "go-task-bin==3.44.0"
     pipx ensurepath
 fi
