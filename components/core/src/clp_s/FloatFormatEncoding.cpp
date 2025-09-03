@@ -73,18 +73,24 @@ auto get_float_encoding(std::string_view float_str) -> ystdlib::error_handling::
         }
     }
 
-    int significant_digits = exp_pos - first_non_zero_frac_digit_pos;
-    assert(first_non_zero_frac_digit_pos < exp_pos);
+    if (first_non_zero_frac_digit_pos >= exp_pos) {
+        return std::errc::protocol_not_supported;
+    }
+
+    auto significant_digits{exp_pos - first_non_zero_frac_digit_pos};
     if (std::string_view::npos != dot_pos && first_non_zero_frac_digit_pos < dot_pos) {
         significant_digits--;
     }
 
     // Number of significant digits must be greater than zero (e.g., E0 or . is illegal)
-    assert(significant_digits > 0);
-    uint16_t const compressed_significant_digits
-            = static_cast<uint16_t>(std::min(significant_digits - 1, 15)) & 0x0F;
+    if (significant_digits <= 0) {
+        return std::errc::protocol_not_supported;
+    }
+    uint16_t const compressed_significant_digits{
+            static_cast<uint16_t>(std::min(significant_digits - 1ULL, 15ULL))
+    };
 
-    format |= static_cast<uint16_t>(compressed_significant_digits) << cNumSignificantDigitsPos;
+    format |= compressed_significant_digits << cNumSignificantDigitsPos;
     return format;
 }
 }  // namespace clp_s::float_format_encoding
