@@ -1,6 +1,5 @@
+import type {PrestoSearchResult} from "@webui/common";
 import {TableProps} from "antd";
-
-import type {PrestoSearchResult} from "../../../../../../../../common/index.js";
 
 
 /**
