@@ -159,7 +159,8 @@ public:
     [[nodiscard]] auto get_metadata() const -> nlohmann::json const& { return m_metadata; }
 
     /**
-     * @return The number of deserialized log events so far.
+     * @return The number of log events (log event IR units) that have been deserialized from the
+     * current stream.
      */
     [[nodiscard]] auto get_num_log_events_deserialized() const -> size_t {
         return m_next_log_event_idx;
