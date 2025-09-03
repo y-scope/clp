@@ -232,7 +232,7 @@ def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: Dict[
         )
     except KeyError as e:
         logger.error(
-            "Missing required key '%s' in '%s'",
+            "Missing required key %s in '%s'",
             e,
             coordinator_common_env_file_path,
         )
