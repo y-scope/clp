@@ -115,7 +115,7 @@ endmacro()
 function(clp_find_ystdlib)
     # We can not call `add_subdirectory` for the same directory multiple times.
     get_clp_checked_find(ystdlib)
-    if (CLP_CHECKED_FIND)
+    if(CLP_CHECKED_FIND)
         return()
     endif()
 
