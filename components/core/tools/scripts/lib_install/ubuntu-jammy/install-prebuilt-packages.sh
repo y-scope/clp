@@ -23,8 +23,10 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   pipx \
   pkg-config \
   python3 \
+  python3-dev \
   python3-pip \
   python3-venv \
+  rsync \
   software-properties-common \
   unzip
 
