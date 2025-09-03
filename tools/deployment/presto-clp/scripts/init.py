@@ -109,6 +109,7 @@ def _add_clp_env_vars(
         clp_config, "archive_output.storage.type", "fs"
     )
     archive_output_storage_key = "archive_output.storage"
+    env_vars["PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE"] = clp_archive_output_storage_type
     if "fs" == clp_archive_output_storage_type:
         env_vars["CLP_ARCHIVES_DIR"] = str(
             _get_path_clp_config_value(
@@ -190,7 +191,6 @@ def _add_clp_s3_env_vars(clp_config: Dict[str, Any], env_vars: Dict[str, str]) -
     except KeyError:
         return False
 
-    env_vars["PRESTO_WORKER_CLPPROPERTIES_STORAGE_TYPE"] = "s3"
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_AUTH_PROVIDER"] = "clp_package"
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_ACCESS_KEY_ID"] = s3_access_key_id
     s3_end_point = f"https://{s3_bucket}.s3.{s3_region_code}.amazonaws.com/"
