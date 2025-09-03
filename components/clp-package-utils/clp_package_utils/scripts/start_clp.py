@@ -364,7 +364,7 @@ def start_webui(
         get_clp_home() / "var" / "www" / "webui" / "client" / "settings.json"
     )
     server_settings_json_path = (
-        get_clp_home() / "var" / "www" / "webui" / "server" / "dist" / "server" / "settings.json"
+        get_clp_home() / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
     )
 
     validate_webui_config(clp_config, client_settings_json_path, server_settings_json_path)
