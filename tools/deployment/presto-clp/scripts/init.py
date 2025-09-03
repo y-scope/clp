@@ -98,7 +98,7 @@ def _add_clp_env_vars(
         return False
 
     database_host = _get_config_value(clp_config, "database.host", "localhost")
-    database_port = _get_config_value(clp_config, "database.port", str(3306))
+    database_port = _get_config_value(clp_config, "database.port", 3306)
     database_name = _get_config_value(clp_config, "database.name", "clp-db")
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_URL"] = (
         f"jdbc:mysql://{database_host}:{database_port}"
@@ -295,7 +295,9 @@ def _get_required_config_value(config: Dict[str, Any], key: str) -> str:
     return value
 
 
-def _get_config_value(config: dict, key: str, default_value: Optional[str] = None) -> Optional[str]:
+def _get_config_value(
+    config: Dict[str, Any], key: str, default_value: Optional[Any] = None
+) -> Optional[Any]:
     """
     Gets the value corresponding to `key` from `config` if it exists.
 
