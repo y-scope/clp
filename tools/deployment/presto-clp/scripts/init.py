@@ -56,7 +56,7 @@ def main(argv=None) -> int:
         clp_config = yaml.safe_load(clp_config_file)
 
     env_vars: Dict[str, str] = {}
-    if not _add_clp_env_vars(clp_config, clp_package_dir, env_vars):
+    if not _add_clp_env_vars(clp_config, clp_config_file_path, clp_package_dir, env_vars):
         return 1
 
     script_dir = Path(__file__).parent.resolve()
@@ -76,12 +76,16 @@ def main(argv=None) -> int:
 
 
 def _add_clp_env_vars(
-    clp_config: Dict[str, Any], clp_package_dir: Path, env_vars: Dict[str, str]
+    clp_config: Dict[str, Any],
+    clp_config_file_path: Path,
+    clp_package_dir: Path,
+    env_vars: Dict[str, str],
 ) -> bool:
     """
     Adds environment variables for CLP config values to `env_vars`.
 
     :param clp_config:
+    :param clp_config_file_path: Path to the file containing `clp_config`, for logging.
     :param clp_package_dir:
     :param env_vars:
     :return: Whether the environment variables were successfully added.
@@ -129,7 +133,7 @@ def _add_clp_env_vars(
             )
         )
 
-        if not _add_clp_s3_env_vars(clp_config, env_vars):
+        if not _add_clp_s3_env_vars(clp_config, clp_config_file_path, env_vars):
             return False
     else:
         logger.error(
@@ -147,12 +151,14 @@ def _add_clp_env_vars(
     with open(credentials_file_path, "r") as credentials_file:
         credentials = yaml.safe_load(credentials_file)
 
-    database_user = _get_config_value(credentials, "database.user")
-    database_password = _get_config_value(credentials, "database.password")
-    if not database_user or not database_password:
-        logger.error(
-            "database.user and database.password must be specified in '%s'.", credentials_file_path
+    try:
+        database_user = _get_required_config_value(
+            credentials, "database.user", credentials_file_path
         )
+        database_password = _get_required_config_value(
+            credentials, "database.password", credentials_file_path
+        )
+    except KeyError:
         return False
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_USER"] = database_user
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_PASSWORD"] = database_password
@@ -160,22 +166,31 @@ def _add_clp_env_vars(
     return True
 
 
-def _add_clp_s3_env_vars(clp_config: Dict[str, Any], env_vars: Dict[str, str]) -> bool:
+def _add_clp_s3_env_vars(
+    clp_config: Dict[str, Any], clp_config_file_path: Path, env_vars: Dict[str, str]
+) -> bool:
     """
     Adds environment variables for CLP S3 config values to `env_vars`.
 
     :param clp_config:
+    :param clp_config_file_path: Path to the file containing `clp_config`, for logging.
     :param env_vars:
     :return: Whether the environment variables were successfully added.
     """
     try:
         s3_config_key = f"archive_output.storage.s3_config"
-        s3_bucket = _get_required_config_value(clp_config, f"{s3_config_key}.bucket")
-        s3_region_code = _get_required_config_value(clp_config, f"{s3_config_key}.region_code")
+        s3_bucket = _get_required_config_value(
+            clp_config, f"{s3_config_key}.bucket", clp_config_file_path
+        )
+        s3_region_code = _get_required_config_value(
+            clp_config, f"{s3_config_key}.region_code", clp_config_file_path
+        )
 
         aws_auth_key = f"{s3_config_key}.aws_authentication"
         aws_auth_type_key = f"{aws_auth_key}.type"
-        aws_auth_type = _get_required_config_value(clp_config, aws_auth_type_key)
+        aws_auth_type = _get_required_config_value(
+            clp_config, aws_auth_type_key, clp_config_file_path
+        )
         credentials_auth_type_str = "credentials"
         if credentials_auth_type_str != aws_auth_type:
             logger.error("'%s' for %s is unsupported.", aws_auth_type, aws_auth_type_key)
@@ -183,10 +198,10 @@ def _add_clp_s3_env_vars(clp_config: Dict[str, Any], env_vars: Dict[str, str]) -
 
         s3_credentials_key = f"{aws_auth_key}.{credentials_auth_type_str}"
         s3_access_key_id = _get_required_config_value(
-            clp_config, f"{s3_credentials_key}.access_key_id"
+            clp_config, f"{s3_credentials_key}.access_key_id", clp_config_file_path
         )
         s3_secret_access_key = _get_required_config_value(
-            clp_config, f"{s3_credentials_key}.secret_access_key"
+            clp_config, f"{s3_credentials_key}.secret_access_key", clp_config_file_path
         )
     except KeyError:
         return False
@@ -279,18 +294,19 @@ def _get_path_clp_config_value(
         return clp_package_dir / value_as_path
 
 
-def _get_required_config_value(config: Dict[str, Any], key: str) -> str:
+def _get_required_config_value(config: Dict[str, Any], key: str, config_file_path: Path) -> str:
     """
     Gets the value corresponding to `key` from `config`. Logs an error on failure.
 
     :param config: The config.
     :param key: The key to look for in the config, in dot notation (e.g., "database.host").
+    :param config_file_path: The path to the config file, for logging.
     :return: The value corresponding to `key`.
     :raises KeyError: If `key` doesn't exist in `config` or its value is `None`.
     """
     value = _get_config_value(config, key)
     if value is None:
-        logger.error("Required config '%s' is missing or null.", key)
+        logger.error("Required config '%s' is missing or null in '%s'.", key, config_file_path)
         raise KeyError(key)
     return value
 
