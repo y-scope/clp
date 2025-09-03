@@ -7,6 +7,7 @@ set(
         ../Defs.h
         ../dictionary_utils.cpp
         ../dictionary_utils.hpp
+        ../DictionaryConcepts.hpp
         ../DictionaryEntry.hpp
         ../DictionaryReader.hpp
         ../EncodedVariableInterpreter.cpp
