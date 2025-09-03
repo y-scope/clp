@@ -1,0 +1,14 @@
+version: "3"
+
+tasks:
+  package:
+    vars:
+      SRC_DIR: "{{.ROOT_DIR}}/tools/docker-images/clp-package"
+    dir: "{{.SRC_DIR}}"
+    sources:
+      - "{{.G_PACKAGE_CHECKSUM_FILE}}"
+      - "{{.SRC_DIR}}/**/*"
+    deps:
+      - ":package"
+    cmds:
+      - "./build.sh"

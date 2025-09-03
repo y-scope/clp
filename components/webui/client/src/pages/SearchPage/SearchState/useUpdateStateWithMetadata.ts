@@ -3,7 +3,7 @@ import {useEffect} from "react";
 import {
     PRESTO_SEARCH_SIGNAL,
     SEARCH_SIGNAL,
-} from "@common/index.js";
+} from "@webui/common";
 import {notification} from "antd";
 
 import useSearchStore from "./index";
@@ -17,16 +17,23 @@ import {useResultsMetadata} from "./useResultsMetadata";
 const PRESTO_CANCEL_ERROR_NAME = "USER_CANCELED";
 
 /**
- * Custom hook to update the UI state to `DONE` when the results metadata signal indicates
- * that the query is complete, or `FAILED` if the query fails. If there is an error, it will
- * also display a notification with the error message.
+ * Custom hook to update the client state based on results metadata from the server.
+ * - Sets the UI state to `DONE` when the results metadata signal indicates that the query is
+ * complete, or `FAILED` if the query fails. If there is an error, it will display a notification
+ * with the error message.
+ * - Updates the number of search results from the metadata.
  */
-const useUiUpdateOnDoneSignal = () => {
-    const {updateSearchUiState} = useSearchStore();
+const useUpdateStateWithMetadata = () => {
+    const {updateSearchUiState, updateNumSearchResultsMetadata} = useSearchStore();
     const resultsMetadata = useResultsMetadata();
+
     useEffect(() => {
         if (null === resultsMetadata) {
             return;
+        }
+
+        if ("undefined" !== typeof resultsMetadata.numTotalResults) {
+            updateNumSearchResultsMetadata(resultsMetadata.numTotalResults);
         }
 
         switch (resultsMetadata.lastSignal) {
@@ -59,7 +66,8 @@ const useUiUpdateOnDoneSignal = () => {
     }, [
         resultsMetadata,
         updateSearchUiState,
+        updateNumSearchResultsMetadata,
     ]);
 };
 
-export {useUiUpdateOnDoneSignal};
+export {useUpdateStateWithMetadata};

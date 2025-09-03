@@ -2,7 +2,7 @@
 
 Before submitting a PR, ensure you've run our linting tools and either fixed any violations or
 suppressed the warning. If you can't run the linting workflows locally, you can enable and run the
-[clp-lint] and [clp-core-build] workflows in your fork.
+[clp-lint] and [clp-artifact-build] workflows in your fork.
 
 ## Requirements
 
@@ -15,9 +15,7 @@ To run the linting tools, besides commonly installed tools like `tar`, you'll ne
 * `md5sum`
 * Python 3.9 or newer
 * python3-venv (for the version of Python installed)
-* [Task] >= 3.40.0 and < 3.43.0
-  * Minimum version 3.40.0 is required for [yscope-dev-utils].
-  * We constrain the version to < 3.43.0 due to unresolved [issues][clp-issue-872].
+* [Task] 3.44.0
 * [uv] >= 0.8
 
 ## Running the linters
@@ -34,7 +32,7 @@ To also apply any automatic fixes:
 task lint:fix
 ```
 
-[clp-core-build]: https://github.com/y-scope/clp/blob/main/.github/workflows/clp-core-build.yaml
+[clp-artifact-build]: https://github.com/y-scope/clp/blob/main/.github/workflows/clp-artifact-build.yaml
 [clp-lint]: https://github.com/y-scope/clp/blob/main/.github/workflows/clp-lint.yaml
 [clp-issue-872]: https://github.com/y-scope/clp/issues/872
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&projects=&template=feature-request.yml
