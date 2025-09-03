@@ -194,6 +194,9 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         case NodeType::Float:
             column_reader = new FloatColumnReader(column_id);
             break;
+        case NodeType::FormattedFloat:
+            column_reader = new FormattedFloatColumnReader(column_id);
+            break;
         case NodeType::ClpString:
             column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
             break;
@@ -246,6 +249,9 @@ void ArchiveReader::append_unordered_reader_columns(
                 break;
             case NodeType::Float:
                 column_reader = new FloatColumnReader(column_id);
+                break;
+            case NodeType::FormattedFloat:
+                column_reader = new FormattedFloatColumnReader(column_id);
                 break;
             case NodeType::ClpString:
                 column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);

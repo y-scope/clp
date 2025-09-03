@@ -1,5 +1,8 @@
 #include "ColumnWriter.hpp"
 
+#include <algorithm>
+#include <cassert>
+#include <cctype>
 #include <cstdint>
 #include <variant>
 
@@ -44,6 +47,21 @@ size_t FloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
 void FloatColumnWriter::store(ZstdCompressor& compressor) {
     size_t size = m_values.size() * sizeof(double);
     compressor.write(reinterpret_cast<char const*>(m_values.data()), size);
+}
+
+size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
+    auto const& float_str{std::get<std::string>(value)};
+    m_values.push_back(std::stod(float_str));
+    m_formats.push_back(float_format_encoding::get_float_encoding(float_str).value());
+    return sizeof(double) + sizeof(uint16_t);
+}
+
+void FormattedFloatColumnWriter::store(ZstdCompressor& compressor) {
+    assert(m_formats.size() == m_values.size());
+    auto const values_size = m_values.size() * sizeof(double);
+    auto const format_size = m_formats.size() * sizeof(uint16_t);
+    compressor.write(reinterpret_cast<char const*>(m_values.data()), values_size);
+    compressor.write(reinterpret_cast<char const*>(m_formats.data()), format_size);
 }
 
 size_t BooleanColumnWriter::add_value(ParsedMessage::variable_t& value) {

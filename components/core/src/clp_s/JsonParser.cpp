@@ -1,11 +1,14 @@
 #include "JsonParser.hpp"
 
+#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <stack>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -41,6 +44,15 @@ using clp::ffi::KeyValuePairLogEvent;
 using clp::UtcOffset;
 
 namespace clp_s {
+namespace {
+/**
+ * Trims trailing whitespace off of a `string_view`. The returned `string_view` points to a subset
+ * of the input `string_view`.
+ * @param str
+ * @return The input string without trailing whitespace.
+ */
+auto trim_trailing_whitespace(std::string_view str) -> std::string_view;
+
 /**
  * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for Key-Value IR compression.
  */
@@ -87,6 +99,19 @@ private:
     bool m_is_complete{false};
 };
 
+auto trim_trailing_whitespace(std::string_view str) -> std::string_view {
+    size_t substr_size{str.size()};
+    for (auto it{str.rbegin()}; str.rend() != it; ++it) {
+        if (std::isspace(static_cast<int>(*it))) {
+            --substr_size;
+        } else {
+            break;
+        }
+    }
+    return str.substr(0ULL, substr_size);
+}
+}  // namespace
+
 JsonParser::JsonParser(JsonParserOption const& option)
         : m_num_messages(0),
           m_target_encoded_size(option.target_encoded_size),
@@ -94,6 +119,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_timestamp_key(option.timestamp_key),
           m_structurize_arrays(option.structurize_arrays),
           m_record_log_order(option.record_log_order),
+          m_retain_float_format(option.retain_float_format),
           m_input_paths(option.input_paths),
           m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
@@ -204,10 +230,20 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
             case simdjson::ondemand::json_type::number: {
                 simdjson::ondemand::number number_value = cur_value.get_number();
                 if (true == number_value.is_double()) {
-                    double double_value = number_value.get_double();
-                    m_current_parsed_message.add_unordered_value(double_value);
-                    node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::Float, cur_key);
+                    if (m_retain_float_format) {
+                        auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
+                        m_current_parsed_message.add_unordered_value(double_value_str);
+                        node_id = m_archive_writer->add_node(
+                                node_id_stack.top(),
+                                NodeType::FormattedFloat,
+                                cur_key
+                        );
+                    } else {
+                        double double_value = number_value.get_double();
+                        m_current_parsed_message.add_unordered_value(double_value);
+                        node_id = m_archive_writer
+                                          ->add_node(node_id_stack.top(), NodeType::Float, cur_key);
+                    }
                 } else {
                     int64_t i64_value;
                     if (number_value.is_uint64()) {
@@ -282,9 +318,16 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
             case simdjson::ondemand::json_type::number: {
                 simdjson::ondemand::number number_value = cur_value.get_number();
                 if (true == number_value.is_double()) {
-                    double double_value = number_value.get_double();
-                    m_current_parsed_message.add_unordered_value(double_value);
-                    node_id = m_archive_writer->add_node(parent_node_id, NodeType::Float, "");
+                    if (m_retain_float_format) {
+                        auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
+                        m_current_parsed_message.add_unordered_value(double_value_str);
+                        node_id = m_archive_writer
+                                          ->add_node(parent_node_id, NodeType::FormattedFloat, "");
+                    } else {
+                        double double_value = number_value.get_double();
+                        m_current_parsed_message.add_unordered_value(double_value);
+                        node_id = m_archive_writer->add_node(parent_node_id, NodeType::Float, "");
+                    }
                 } else {
                     int64_t i64_value;
                     if (number_value.is_uint64()) {
@@ -396,7 +439,7 @@ void JsonParser::parse_line(
                     // integer types to handle values greater than max int64
                     type = NodeType::Integer;
                 } else {
-                    type = NodeType::Float;
+                    type = m_retain_float_format ? NodeType::FormattedFloat : NodeType::Float;
                 }
                 node_id = m_archive_writer->add_node(node_id_stack.top(), type, cur_key);
 
@@ -415,7 +458,12 @@ void JsonParser::parse_line(
                     }
                 } else {
                     double double_value = line.get_double();
-                    m_current_parsed_message.add_value(node_id, double_value);
+                    if (NodeType::FormattedFloat == type) {
+                        auto double_value_str{trim_trailing_whitespace(line.raw_json_token())};
+                        m_current_parsed_message.add_value(node_id, double_value_str);
+                    } else {
+                        m_current_parsed_message.add_value(node_id, double_value);
+                    }
                     if (matches_timestamp) {
                         m_archive_writer
                                 ->ingest_timestamp_entry(m_timestamp_key, node_id, double_value);
