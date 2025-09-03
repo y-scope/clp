@@ -3,9 +3,13 @@
 #ifndef CLP_S_DICTIONARYENTRY_HPP
 #define CLP_S_DICTIONARYENTRY_HPP
 
+#include <cstddef>
 #include <string>
+#include <string_view>
 #include <utility>
 
+#include "../clp/Defs.h"
+#include "../clp/ir/types.hpp"
 #include "TraceableException.hpp"
 #include "ZstdCompressor.hpp"
 #include "ZstdDecompressor.hpp"
@@ -37,7 +41,7 @@ protected:
 /**
  * Class representing a logtype dictionary entry
  */
-class LogTypeDictionaryEntry : public DictionaryEntry<uint64_t> {
+class LogTypeDictionaryEntry : public DictionaryEntry<clp::logtype_dictionary_id_t> {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -46,17 +50,6 @@ public:
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
     };
-
-    // Constants
-    enum class VarDelim {
-        // NOTE: These values are used within logtypes to denote variables, so care must be taken
-        // when changing them
-        NonDouble = 17,
-        Double = 18,
-        Length = 2,
-    };
-
-    static constexpr char cEscapeChar = '\\';
 
     // Constructors
     LogTypeDictionaryEntry() : m_init(false) {}
@@ -69,50 +62,25 @@ public:
 
     // Methods
     /**
-     * Adds a non-double variable delimiter to the given logtype
-     * @param logtype
+     * @return The number of variables placeholders (including escaped ones) in the logtype.
      */
-    static void add_non_double_var(std::string& logtype) { logtype += (char)VarDelim::NonDouble; }
+    size_t get_num_placeholders() const { return m_placeholder_positions.size(); }
 
     /**
-     * Adds a double variable delimiter to the given logtype
-     * @param logtype
+     * @return The number of variable placeholders (excluding escaped ones) in the logtype.
      */
-    static void add_double_var(std::string& logtype) { logtype += (char)VarDelim::Double; }
+    size_t get_num_variables() const {
+        return m_placeholder_positions.size() - m_num_escaped_placeholders;
+    }
 
     /**
-     * @return The number of variables in the logtype
+     * Gets all info about a variable placeholder in the logtype
+     * @param placeholder_ix The index of the placeholder to get the info for
+     * @param placeholder
+     * @return The placeholder's position in the logtype, or SIZE_MAX if var_ix is out of bounds
      */
-    size_t get_num_vars() const { return m_var_positions.size(); }
-
-    /**
-     * Gets all info about a variable in the logtype
-     * @param var_ix The index of the variable to get the info for
-     * @param var_delim
-     * @return The variable's position in the logtype, or SIZE_MAX if var_ix is out of bounds
-     */
-    size_t get_var_info(size_t var_ix, VarDelim& var_delim) const;
-
-    /**
-     * Gets the variable delimiter at the given index
-     * @param var_ix The index of the variable delimiter to get
-     * @return The variable delimiter, or LogTypeDictionaryEntry::VarDelim::Length if var_ix is out
-     * of bounds
-     */
-    VarDelim get_var_delim(size_t var_ix) const;
-
-    /**
-     * Gets the length of the specified variable's representation in the logtype
-     * @param var_ix The index of the variable
-     * @return The length
-     */
-    size_t get_var_length_in_logtype(size_t var_ix) const;
-
-    /**
-     * Gets the size (in-memory) of the data contained in this entry
-     * @return Size of the data contained in this entry
-     */
-    size_t get_data_size() const;
+    size_t
+    get_placeholder_info(size_t placeholder_ix, clp::ir::VariablePlaceholder& placeholder) const;
 
     /**
      * Adds a constant to the logtype
@@ -120,18 +88,30 @@ public:
      * @param begin_pos Start of the constant in value_containing_constant
      * @param length
      */
-    void
-    add_constant(std::string const& value_containing_constant, size_t begin_pos, size_t length);
+    void add_constant(std::string_view value_containing_constant, size_t begin_pos, size_t length);
 
     /**
-     * Adds a non-double variable delimiter
+     * Adds an int variable placeholder
      */
-    void add_non_double_var();
+    void add_int_var();
+    /**
+     * Adds a float variable placeholder
+     */
+    void add_float_var();
+    /**
+     * Adds a dictionary variable placeholder
+     */
+    void add_dictionary_var();
+    /**
+     * Adds an escape character
+     */
+    void add_escape();
 
     /**
-     * Adds a double variable delimiter
+     * Gets the size (in-memory) of the data contained in this entry
+     * @return Size of the data contained in this entry
      */
-    void add_double_var();
+    size_t get_data_size() const;
 
     /**
      * Parses next variable from a message, constructing the constant part of the message's logtype
@@ -145,10 +125,10 @@ public:
      * @return true if another variable was found, false otherwise
      */
     bool parse_next_var(
-            std::string const& msg,
+            std::string_view msg,
             size_t& var_begin_pos,
             size_t& var_end_pos,
-            std::string& var
+            std::string_view& var
     );
 
     /**
@@ -157,7 +137,7 @@ public:
      */
     void reserve_constant_length(size_t length) { m_value.reserve(length); }
 
-    void set_id(uint64_t id) { m_id = id; }
+    void set_id(clp::logtype_dictionary_id_t id) { m_id = id; }
 
     /**
      * Clears the entry
@@ -176,20 +156,15 @@ public:
      * @return Same as streaming_compression::Decompressor::try_read_numeric_value
      * @return Same as streaming_compression::Decompressor::try_read_string
      */
-    ErrorCode try_read_from_file(ZstdDecompressor& decompressor, uint64_t id, bool lazy);
+    ErrorCode
+    try_read_from_file(ZstdDecompressor& decompressor, clp::logtype_dictionary_id_t id, bool lazy);
 
     /**
      * Reads an entry from the given decompressor
      * @param decompressor
      * @param lazy apply lazy decoding
      */
-    void read_from_file(ZstdDecompressor& decompressor, uint64_t id, bool lazy);
-
-    /**
-     * Decodes the log type
-     * @param escaped_value
-     */
-    void decode_log_type(std::string& escaped_value);
+    void read_from_file(ZstdDecompressor& decompressor, clp::logtype_dictionary_id_t id, bool lazy);
 
     /**
      * Decodes the log type
@@ -205,32 +180,18 @@ public:
 private:
     // Methods
     /**
-     * Escapes any variable delimiters that don't correspond to the positions of variables in the
-     * logtype entry's value
-     * @param escaped_logtype_value
-     */
-    void get_value_with_unfounded_variables_escaped(std::string& escaped_logtype_value) const;
-
-    /**
-     * Escapes any variable delimiters in the identified portion of the given value
-     * @param value
-     * @param begin_ix
-     * @param end_ix
+     * Decodes the log type
      * @param escaped_value
      */
-    static void escape_variable_delimiters(
-            std::string const& value,
-            size_t begin_ix,
-            size_t end_ix,
-            std::string& escaped_value
-    );
+    void decode_log_type(std::string& escaped_value);
 
     // Variables
-    std::vector<size_t> m_var_positions;
-    bool m_init;
+    std::vector<size_t> m_placeholder_positions;
+    size_t m_num_escaped_placeholders{};
+    bool m_init{false};
 };
 
-class VariableDictionaryEntry : public DictionaryEntry<uint64_t> {
+class VariableDictionaryEntry : public DictionaryEntry<clp::variable_dictionary_id_t> {
 public:
     // Types
     class OperationFailed : public TraceableException {
@@ -243,8 +204,8 @@ public:
     // Constructors
     VariableDictionaryEntry() = default;
 
-    VariableDictionaryEntry(std::string value, uint64_t id)
-            : DictionaryEntry<uint64_t>(std::move(value), id) {}
+    VariableDictionaryEntry(std::string value, clp::variable_dictionary_id_t id)
+            : DictionaryEntry<clp::variable_dictionary_id_t>(std::move(value), id) {}
 
     // Use default copy constructor
     VariableDictionaryEntry(VariableDictionaryEntry const&) = default;
@@ -274,16 +235,20 @@ public:
     /**
      * Tries to read an entry from the given decompressor
      * @param decompressor
+     * @param id
      * @return Same as streaming_compression::Decompressor::try_read_numeric_value
      * @return Same as streaming_compression::Decompressor::try_read_string
      */
-    ErrorCode try_read_from_file(ZstdDecompressor& decompressor, uint64_t id);
+    ErrorCode try_read_from_file(ZstdDecompressor& decompressor, clp::variable_dictionary_id_t id);
 
     /**
      * Reads an entry from the given decompressor
      * @param decompressor
+     * @param id
+     * @param lazy
      */
-    void read_from_file(ZstdDecompressor& decompressor, uint64_t id, bool lazy);
+    void
+    read_from_file(ZstdDecompressor& decompressor, clp::variable_dictionary_id_t id, bool lazy);
 };
 }  // namespace clp_s
 

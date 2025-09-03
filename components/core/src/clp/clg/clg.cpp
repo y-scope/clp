@@ -9,8 +9,7 @@
 #include <string_utils/string_utils.hpp>
 
 #include "../Defs.h"
-#include "../GlobalMySQLMetadataDB.hpp"
-#include "../GlobalSQLiteMetadataDB.hpp"
+#include "../global_metadata_db_utils.hpp"
 #include "../Grep.hpp"
 #include "../GrepCore.hpp"
 #include "../Profiler.hpp"
@@ -535,27 +534,10 @@ int main(int argc, char const* argv[]) {
         return -1;
     }
 
-    auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
-    std::unique_ptr<GlobalMetadataDB> global_metadata_db;
-    switch (global_metadata_db_config.get_metadata_db_type()) {
-        case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
-            auto global_metadata_db_path
-                    = archives_dir / clp::streaming_archive::cMetadataDBFileName;
-            global_metadata_db = std::make_unique<clp::GlobalSQLiteMetadataDB>(
-                    global_metadata_db_path.string()
-            );
-            break;
-        }
-        case GlobalMetadataDBConfig::MetadataDBType::MySQL:
-            global_metadata_db = std::make_unique<clp::GlobalMySQLMetadataDB>(
-                    global_metadata_db_config.get_metadata_db_host(),
-                    global_metadata_db_config.get_metadata_db_port(),
-                    global_metadata_db_config.get_metadata_db_username(),
-                    global_metadata_db_config.get_metadata_db_password(),
-                    global_metadata_db_config.get_metadata_db_name(),
-                    global_metadata_db_config.get_metadata_table_prefix()
-            );
-            break;
+    auto global_metadata_db
+            = create_global_metadata_db(command_line_args.get_metadata_db_config(), archives_dir);
+    if (nullptr == global_metadata_db) {
+        return -1;
     }
     global_metadata_db->open();
 

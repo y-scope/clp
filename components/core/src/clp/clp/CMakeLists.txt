@@ -33,6 +33,8 @@ set(
         ../FileReader.hpp
         ../FileWriter.cpp
         ../FileWriter.hpp
+        ../global_metadata_db_utils.cpp
+        ../global_metadata_db_utils.hpp
         ../GlobalMetadataDB.hpp
         ../GlobalMetadataDBConfig.cpp
         ../GlobalMetadataDBConfig.hpp
@@ -183,13 +185,13 @@ if(CLP_BUILD_EXECUTABLES)
                 ${sqlite_LIBRARY_DEPENDENCIES}
                 LibArchive::LibArchive
                 MariaDBClient::MariaDBClient
+                msgpack-cxx
                 nlohmann_json::nlohmann_json
                 ${STD_FS_LIBS}
                 clp::string_utils
-                yaml-cpp
                 ystdlib::containers
                 ystdlib::error_handling
-                ZStd::ZStd
+                ${zstd_TARGET}
         )
         # Put the built executable at the root of the build directory
         set_target_properties(

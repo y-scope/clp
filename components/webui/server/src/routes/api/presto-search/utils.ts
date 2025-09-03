@@ -1,3 +1,4 @@
+import type {PrestoRowObject} from "@webui/common";
 import type {
     Db,
     InsertManyResult,
@@ -15,13 +16,14 @@ import type {
 const prestoRowToObject = (
     row: unknown[],
     columns: {name: string}[]
-): Record<string, unknown> => {
+): PrestoRowObject => {
     const obj: Record<string, unknown> = {};
     columns.forEach((col, idx) => {
         obj[col.name] = row[idx];
     });
 
-    return obj;
+    // Object is wrapped in a `row` property to prevent conflicts with MongoDB's `_id` field.
+    return {row: obj};
 };
 
 /**
@@ -38,7 +40,7 @@ const insertPrestoRowsToMongo = (
     columns: {name: string}[],
     searchJobId: string,
     mongoDb: Db
-): Promise<InsertManyResult<Document>> => {
+): Promise<InsertManyResult> => {
     const collection = mongoDb.collection(searchJobId);
     const resultDocs = data.map((row) => prestoRowToObject(row, columns));
     return collection.insertMany(resultDocs);
