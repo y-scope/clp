@@ -1,6 +1,7 @@
 #ifndef CLP_S_TEST_UTILS_HPP
 #define CLP_S_TEST_UTILS_HPP
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -24,6 +25,7 @@
         std::string const& file_path,
         std::string const& archive_directory,
         bool retain_float_format,
+        std::optional<std::string> timestamp_key,
         bool single_file_archive,
         bool structurize_arrays,
         clp_s::FileType file_type

@@ -31,8 +31,6 @@
 #include "Utils.hpp"
 #include "ZstdCompressor.hpp"
 
-using namespace simdjson;
-
 namespace clp_s {
 struct JsonParserOption {
     std::vector<Path> input_paths;
@@ -92,7 +90,7 @@ private:
      * @param key the key of the node
      * @throw simdjson::simdjson_error when encountering invalid fields while parsing line
      */
-    void parse_line(ondemand::value line, int32_t parent_node_id, std::string const& key);
+    void parse_line(simdjson::ondemand::value line, int32_t parent_node_id, std::string const& key);
 
     /**
      * Determines the archive node type based on the IR node type and value.
@@ -175,14 +173,14 @@ private:
      * @param line the JSON array
      * @param parent_node_id the parent node id
      */
-    void parse_array(ondemand::array line, int32_t parent_node_id);
+    void parse_array(simdjson::ondemand::array line, int32_t parent_node_id);
 
     /**
      * Parses an object within an array in a JSON line
      * @param line the JSON object
      * @param parent_node_id the parent node id
      */
-    void parse_obj_in_array(ondemand::object line, int32_t parent_node_id);
+    void parse_obj_in_array(simdjson::ondemand::object line, int32_t parent_node_id);
 
     /**
      * Splits the archive if the size of the archive exceeds the maximum size

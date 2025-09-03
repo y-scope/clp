@@ -1,3 +1,4 @@
+#include <cstddef>
 #include <map>
 #include <memory>
 #include <set>
@@ -410,7 +411,7 @@ TEST_CASE(
     auto query_stream{std::istringstream{kql_query_str}};
     auto query{clp_s::search::kql::parse_kql_expression(query_stream)};
 
-    auto query_handler_impl_result{QueryHandlerImpl::create(query, {}, true)};
+    auto query_handler_impl_result{QueryHandlerImpl::create(query, {}, true, false)};
     REQUIRE_FALSE(query_handler_impl_result.has_error());
     auto& query_handler_impl{query_handler_impl_result.value()};
 
@@ -521,19 +522,21 @@ TEST_CASE("query_handler_handle_projection", "[ffi][ir_stream][search][QueryHand
             unresolvable_projections_from_unrecognized_namespaces.cend()
     );
 
-    auto query_handler_impl_result{QueryHandlerImpl::create(null_query, projections, true)};
+    auto query_handler_impl_result{QueryHandlerImpl::create(null_query, projections, true, false)};
     REQUIRE_FALSE(query_handler_impl_result.has_error());
     auto& query_handler_impl{query_handler_impl_result.value()};
 
     SchemaTree::Node::id_t node_id{1};
     std::map<std::string, std::set<SchemaTree::Node::id_t>> actual_resolved_projections;
     auto new_projected_schema_tree_node_callback
-            = [&](bool is_auto_gen,
-                  SchemaTree::Node::id_t node_id,
-                  std::string_view key) -> ystdlib::error_handling::Result<void> {
+            = [&](
+                      bool is_auto_gen,
+                      SchemaTree::Node::id_t node_id,
+                      std::pair<std::string_view, size_t> key_and_index
+              ) -> ystdlib::error_handling::Result<void> {
         REQUIRE((is_auto_generated == is_auto_gen));
         auto [column_it, column_inserted] = actual_resolved_projections.try_emplace(
-                std::string{key},
+                std::string{key_and_index.first},
                 std::set<SchemaTree::Node::id_t>{}
         );
         auto [node_id_it, node_id_inserted] = column_it->second.emplace(node_id);
@@ -615,7 +618,7 @@ TEST_CASE("query_handler_evaluation_kv_pair_log_event", "[ffi][ir_stream][search
         auto query{clp_s::search::kql::parse_kql_expression(query_stream)};
         REQUIRE((nullptr != query));
 
-        auto query_handler_impl_result{QueryHandlerImpl::create(query, {}, true)};
+        auto query_handler_impl_result{QueryHandlerImpl::create(query, {}, true, false)};
         REQUIRE_FALSE(query_handler_impl_result.has_error());
         auto& query_handler_impl{query_handler_impl_result.value()};
 

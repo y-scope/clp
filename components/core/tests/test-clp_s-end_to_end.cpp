@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -78,6 +79,7 @@ auto extract() -> std::filesystem::path {
     std::filesystem::path extracted_json_path{cTestEndToEndOutputDirectory};
     extracted_json_path /= "original";
     REQUIRE(std::filesystem::exists(extracted_json_path));
+
     return extracted_json_path;
 }
 
@@ -160,6 +162,7 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
                     get_test_input_local_path(cTestEndToEndInputFile),
                     std::string{cTestEndToEndArchiveDirectory},
                     false,
+                    std::nullopt,
                     single_file_archive,
                     structurize_arrays,
                     clp_s::FileType::Json
@@ -190,6 +193,7 @@ TEST_CASE("clp-s-compress-extract-valid-formatted-floats", "[clp-s][end-to-end]"
                     get_test_input_local_path(cTestEndToEndValidFormattedFloatInputFile),
                     std::string{cTestEndToEndArchiveDirectory},
                     true,
+                    std::nullopt,
                     single_file_archive,
                     structurize_arrays,
                     clp_s::FileType::Json
@@ -222,6 +226,7 @@ TEST_CASE("clp-s-compress-extract-rounded-valid-formatted-floats", "[clp-s][end-
                     get_test_input_local_path(cTestEndToEndRoundedFormattedFloatInputFile),
                     std::string{cTestEndToEndArchiveDirectory},
                     true,
+                    std::nullopt,
                     single_file_archive,
                     structurize_arrays,
                     clp_s::FileType::Json
