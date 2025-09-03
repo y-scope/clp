@@ -3,7 +3,8 @@
 #include <tuple>
 #include <utility>
 
-#include <fmt/core.h>
+#include <fmt/base.h>
+#include <fmt/format.h>
 
 #include "database_utils.hpp"
 #include "spdlog_with_specializations.hpp"
