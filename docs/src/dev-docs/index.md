@@ -16,12 +16,10 @@ Docs about building CLP.
 :::
 
 :::{grid-item-card}
-:link: testing
+:link: ../dev-guide/testing/index
 Testing
-^^^
 Docs about testing CLP.
 :::
-
 :::{grid-item-card}
 :link: contributing-getting-started
 Contributing
