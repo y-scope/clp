@@ -551,7 +551,6 @@ if(CLP_BUILD_TESTING)
     find_package(simdjson REQUIRED)
     find_package(spdlog REQUIRED)
     clp_find_sqlite()
-    find_package(yaml-cpp REQUIRED)
     clp_find_ystdlib()
     clp_find_zstd()
 

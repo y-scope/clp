@@ -140,7 +140,6 @@ if(CLP_BUILD_EXECUTABLES)
         find_package(nlohmann_json REQUIRED)
         find_package(spdlog REQUIRED)
         clp_find_sqlite()
-        find_package(yaml-cpp REQUIRED)
         clp_find_ystdlib()
         clp_find_zstd()
 

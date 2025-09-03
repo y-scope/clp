@@ -118,7 +118,6 @@ if(CLP_BUILD_EXECUTABLES)
         find_package(OpenSSL REQUIRED)
         find_package(simdjson REQUIRED)
         find_package(spdlog REQUIRED)
-        find_package(yaml-cpp REQUIRED)
         clp_find_ystdlib()
         clp_find_zstd()
 
