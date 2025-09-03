@@ -3,7 +3,7 @@
 The CLP repo includes several GitHub workflows for automating container image builds, artifact
 builds, testing, and linting. We briefly describe each workflow below.
 
-## clp-core-build
+## clp-artifact-build
 
 This workflow is responsible for:
 
@@ -89,10 +89,6 @@ This workflow builds CLP-core on macOS and runs its unit tests.
 
 This workflow builds a container image that contains the dependencies necessary to run the CLP
 package.
-
-## clp-package-image-build
-
-This workflow builds a container image that contains the CLP package.
 
 ## clp-lint
 

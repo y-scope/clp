@@ -1,4 +1,4 @@
-name: "clp-core-build"
+name: "clp-artifact-build"
 
 on:
   pull_request:
@@ -60,31 +60,31 @@ jobs:
           filters: |
             centos_stream_9_image:
               - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yaml"
+              - ".github/workflows/clp-artifact-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-centos-stream-9/**"
               - "components/core/tools/scripts/lib_install/centos-stream-9/**"
             manylinux_2_28_x86_64_image:
               - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yaml"
+              - ".github/workflows/clp-artifact-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-manylinux_2_28-x86_64/**"
               - "components/core/tools/scripts/lib_install/manylinux_2_28/**"
             musllinux_1_2_x86_64_image:
               - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yaml"
+              - ".github/workflows/clp-artifact-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-musllinux_1_2-x86_64/**"
               - "components/core/tools/scripts/lib_install/musllinux_1_2/**"
             ubuntu_jammy_image:
               - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yaml"
+              - ".github/workflows/clp-artifact-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-ubuntu-jammy/**"
               - "components/core/tools/scripts/lib_install/ubuntu-jammy/**"
             clp:
               - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yaml"
+              - ".github/workflows/clp-artifact-build.yaml"
               - ".gitmodules"
               - "components/core/cmake/**"
               - "components/core/CMakeLists.txt"
