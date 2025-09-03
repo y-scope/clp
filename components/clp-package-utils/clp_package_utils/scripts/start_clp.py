@@ -4,6 +4,7 @@ import logging
 import multiprocessing
 import os
 import pathlib
+import shlex
 import socket
 import subprocess
 import sys
@@ -152,7 +153,7 @@ def wait_for_container_cmd(container_name: str, cmd_to_run: [str], timeout: int)
                 break
             time.sleep(1)
 
-    cmd_str = " ".join(cmd_to_run)
+    cmd_str = shlex.join(cmd_to_run)
     logger.error(f"Timeout while waiting for command {cmd_str} to run after {timeout} seconds")
     return False
 
@@ -273,7 +274,7 @@ def create_db_tables(
     # fmt: on
 
     cmd = container_start_cmd + create_tables_cmd
-    logger.debug(" ".join(cmd))
+    logger.debug(shlex.join(cmd))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Created {component_name} tables.")
@@ -318,7 +319,7 @@ def create_results_cache_indices(
     # fmt: on
 
     cmd = container_start_cmd + init_cmd
-    logger.debug(" ".join(cmd))
+    logger.debug(shlex.join(cmd))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Created {component_name} indices.")
@@ -946,6 +947,7 @@ def start_webui(
         f"HOST={clp_config.webui.host}",
         f"PORT={clp_config.webui.port}",
         f"NODE_ENV=production",
+        f"RATE_LIMIT={clp_config.webui.rate_limit}",
     ]
     necessary_mounts = [
         mounts.clp_home,
@@ -1136,6 +1138,12 @@ def main(argv):
         default=str(default_config_file_path),
         help="CLP package configuration file.",
     )
+    args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
 
     component_args_parser = args_parser.add_subparsers(dest="target")
     component_args_parser.add_parser(CONTROLLER_TARGET_NAME)
@@ -1155,6 +1163,10 @@ def main(argv):
     component_args_parser.add_parser(GARBAGE_COLLECTOR_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     if parsed_args.target:
         target = parsed_args.target

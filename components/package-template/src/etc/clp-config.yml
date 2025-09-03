@@ -66,6 +66,7 @@
 #  host: "localhost"
 #  port: 4000
 #  results_metadata_collection_name: "results-metadata"
+#  rate_limit: 1000
 #
 ## Where archives should be output to
 #archive_output:
