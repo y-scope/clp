@@ -94,12 +94,17 @@ option(
 # @param {string} TARGET_CLP_BUILD_OPTION
 # @param {string[]} ARGN The required `CLP_BUILD_` options
 function(validate_clp_dependencies_for_target TARGET_CLP_BUILD_OPTION)
-    if (NOT DEFINED TARGET_CLP_BUILD_OPTION OR TARGET_CLP_BUILD_OPTION STREQUAL "")
+    if(NOT DEFINED TARGET_CLP_BUILD_OPTION OR TARGET_CLP_BUILD_OPTION STREQUAL "")
         message(FATAL_ERROR "TARGET_CLP_BUILD_OPTION can't be unset or empty.")
     endif()
 
+    # Only validate dependencies for this option if the option is enabled.
+    if(NOT "${${TARGET_CLP_BUILD_OPTION}}")
+        return()
+    endif()
+
     foreach(DEPENDENCY IN LISTS ARGN)
-        if (NOT "${${DEPENDENCY}}")
+        if(NOT "${${DEPENDENCY}}")
             message(FATAL_ERROR "${TARGET_CLP_BUILD_OPTION} requires ${DEPENDENCY}=ON")
         endif()
     endforeach()
@@ -219,61 +224,20 @@ endfunction()
 # Validates that for each target whose `CLP_BUILD_` option is `ON`, the `CLP_BUILD_` options for
 # the target's dependencies are also `ON`.
 function(validate_all_clp_dependency_flags)
-    if (CLP_BUILD_EXECUTABLES)
-        validate_clp_binaries_dependencies()
-    endif()
-
-    if (CLP_BUILD_TESTING)
-        validate_clp_tests_dependencies()
-    endif()
-
-    if (CLP_BUILD_CLP_REGEX_UTILS)
-        validate_clp_regex_utils_dependencies()
-    endif()
-
+    validate_clp_binaries_dependencies()
+    validate_clp_tests_dependencies()
+    validate_clp_regex_utils_dependencies()
     # clp::string_utils has no dependencies
 
-    if (CLP_BUILD_CLP_S_ARCHIVEREADER)
-        validate_clp_s_archivereader_dependencies()
-    endif()
-
-    if (CLP_BUILD_CLP_S_ARCHIVEWRITER)
-        validate_clp_s_archivewriter_dependencies()
-    endif()
-
-    if (CLP_BUILD_CLP_S_CLP_DEPENDENCIES)
-        validate_clp_s_clp_dependencies_dependencies()
-    endif()
-
-    if (CLP_BUILD_CLP_S_IO)
-        validate_clp_s_io_dependencies()
-    endif()
-
-    if (CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
-        validate_clp_s_json_constructor_dependencies()
-    endif()
-
-    if (CLP_BUILD_CLP_S_REDUCER_DEPENDENCIES)
-        validate_clp_s_reducer_dependencies_dependencies()
-    endif()
-
-    if (CLP_BUILD_CLP_S_SEARCH)
-        validate_clp_s_search_dependencies()
-    endif()
-
-    if (CLP_BUILD_CLP_S_SEARCH_AST)
-        validate_clp_s_search_ast_dependencies()
-    endif()
-
-    if (CLP_BUILD_CLP_S_SEARCH_KQL)
-        validate_clp_s_search_kql_dependencies()
-    endif()
-
-    if (CLP_BUILD_CLP_S_SEARCH_SQL)
-        validate_clp_s_search_sql_dependencies()
-    endif()
-
-    if (CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
-        validate_clp_s_timestamppattern_dependencies()
-    endif()
+    validate_clp_s_archivereader_dependencies()
+    validate_clp_s_archivewriter_dependencies()
+    validate_clp_s_clp_dependencies_dependencies()
+    validate_clp_s_io_dependencies()
+    validate_clp_s_json_constructor_dependencies()
+    validate_clp_s_reducer_dependencies_dependencies()
+    validate_clp_s_search_dependencies()
+    validate_clp_s_search_ast_dependencies()
+    validate_clp_s_search_kql_dependencies()
+    validate_clp_s_search_sql_dependencies()
+    validate_clp_s_timestamppattern_dependencies()
 endfunction()
