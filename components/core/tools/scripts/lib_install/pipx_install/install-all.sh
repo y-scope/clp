@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# Exit on any error, use of undefined variables, or failure within a pipeline
-set -euo pipefail
+set -o errexit
+set -o nounset
+set -o pipefail
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 

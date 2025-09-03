@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# Exit on any error, use of undefined variables, or failure within a pipeline
-set -euo pipefail
+set -o errexit
+set -o nounset
+set -o pipefail
 
 # Get the installed uv version string
 uv_version=$(uv self version --output-format json | jq --raw-output ".version")
