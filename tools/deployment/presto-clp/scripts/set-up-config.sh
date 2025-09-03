@@ -27,7 +27,7 @@ python3 "${script_dir}/init.py" \
     --clp-package-dir "${clp_package_dir}" \
     --output-file "${script_dir}/../.env"
 
-echo "Generating metadata filter file for user-configured datasets..."
-python3 "${script_dir}/generate-metadata-filter-file.py" \
+echo "Generating split filter file for user-configured datasets..."
+python3 "${script_dir}/generate-split-filter-file.py" \
     --clp-package-dir "${clp_package_dir}" \
-    --output-file "${script_dir}/../coordinator/config-template/metadata-filter.json"
+    --output-file "${script_dir}/../coordinator/config-template/split-filter.json"
