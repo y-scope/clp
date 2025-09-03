@@ -16,7 +16,7 @@ been merged into the main Presto repository so that you can use official Presto 
 
 ## Requirements
 
-* [CLP][clp-releases] (clp-json) v0.4.0 or higher
+* [CLP][clp-releases] (clp-json) v0.5.0 or higher
 * [Docker] v28 or higher
 * [Docker Compose][docker-compose] v2.20.2 or higher
 * Python
@@ -61,6 +61,7 @@ Using Presto with CLP requires:
    :::{note}
    Currently, the Presto integration only supports the
    [credentials](guides-using-object-storage/clp-config.md#credentials) authentication type.
+   :::
 
 4. Continue following the [quick-start](./quick-start/index.md#using-clp) guide to start CLP and
    compress your logs. A sample dataset that works well with Presto is [postgresql].
@@ -117,7 +118,7 @@ Using Presto with CLP requires:
     docker compose up
     ```
 
-    * To use more than Presto worker, you can use the `--scale` option as follows:
+    * To use more than one Presto worker, you can use the `--scale` option as follows:
 
       ```bash
       docker compose up --scale presto-worker=<num-workers>
@@ -168,13 +169,8 @@ If you wish to show the columns of a different dataset, replace `default` above.
 To query the logs in this dataset:
 
 ```sql
-SELECT user FROM default LIMIT 1;
+SELECT * FROM default LIMIT 1;
 ```
-
-:::{warning}
-`SELECT *` currently causes a crash due to a [known issue][y-scope/velox#28]. This will be resolved
-soon. See the [limitations](#limitations) section for all current limitations.
-:::
 
 All kv-pairs in each log event can be queried directly using dot-notation. For example, if your logs
 contain the field `foo.bar`, you can query it using:
@@ -187,7 +183,6 @@ SELECT foo.bar FROM default LIMIT 1;
 
 The Presto CLP integration has the following limitations at present:
 
-* `SELECT *` currently causes a crash due to a [known issue][y-scope/velox#27].
 * Nested fields containing special characters cannot be queried (see [y-scope/presto#8]). Allowed
   characters are alphanumeric characters and underscores. To get around this limitation, you'll
   need to preprocess your logs to remove any special characters.
@@ -201,5 +196,4 @@ These limitations will be addressed in a future release of the Presto integratio
 [postgresql]: https://zenodo.org/records/10516401
 [Presto]: https://prestodb.io/
 [y-scope/presto#8]: https://github.com/y-scope/presto/issues/8
-[y-scope/velox#28]: https://github.com/y-scope/velox/issues/28
 [yscope-presto]: https://github.com/y-scope/presto
