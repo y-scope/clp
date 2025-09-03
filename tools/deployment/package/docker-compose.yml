@@ -330,6 +330,7 @@ services:
       NODE_ENV: "production"
       NODE_PATH: "/opt/clp/var/www/webui/server/node_modules"
       PORT: "4000"
+      RATE_LIMIT: "${CLP_WEBUI_RATE_LIMIT:-1000}"
     ports:
       - "${CLP_WEBUI_HOST:-127.0.0.1}:${CLP_WEBUI_PORT:-4000}:4000"
     volumes:

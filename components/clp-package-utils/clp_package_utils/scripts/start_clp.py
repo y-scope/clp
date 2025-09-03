@@ -439,6 +439,7 @@ def start_webui(
 
     env_dict["CLP_WEBUI_HOST"] = get_ip_from_hostname(clp_config.webui.host)
     env_dict["CLP_WEBUI_PORT"] = clp_config.webui.port
+    env_dict["CLP_WEBUI_RATE_LIMIT"] = clp_config.webui.rate_limit
 
 
 def start_garbage_collector(
