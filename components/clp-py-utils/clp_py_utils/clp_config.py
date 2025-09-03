@@ -993,7 +993,7 @@ class CLPConfig(BaseModel):
         presto = values.get("presto")
         if query_engine == QueryEngine.PRESTO and presto is None:
             raise ValueError(
-                f"`presto` config must be non-null when query_engine is" f" `{query_engine}`"
+                f"`presto` config must be non-null when query_engine is `{query_engine}`"
             )
         return values
 
