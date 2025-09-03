@@ -189,7 +189,7 @@ The Presto CLP integration has the following limitations at present:
 
 These limitations will be addressed in a future release of the Presto integration.
 
-[clp-connector-docs]: https://docs.yscope.com/presto/connector/clp.html#metadata-filter-config-file
+[clp-connector-docs]: https://docs.yscope.com/presto/connector/clp.html#split-filter-config-file
 [clp-releases]: https://github.com/y-scope/clp/releases
 [docker-compose]: https://docs.docker.com/compose/install/
 [Docker]: https://docs.docker.com/engine/install/
