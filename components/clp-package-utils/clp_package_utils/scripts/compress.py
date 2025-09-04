@@ -186,13 +186,6 @@ def main(argv):
         except Exception as e:
             logger.error(e)
             return -1
-
-        t_key = parsed_args.timestamp_key
-        if t_key is None:
-            logger.warning(
-                f"If your logs have a timestamp column, you should use the --timestamp-key flag."
-            )
-
     elif dataset is not None:
         logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
         return -1
