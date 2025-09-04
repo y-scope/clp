@@ -757,16 +757,6 @@ def _get_env_var(name: str) -> str:
     return value
 
 
-def get_ip_from_hostname(hostname: str) -> str:
-    """
-    Resolves a hostname to an IP address.
-
-    :param hostname: The hostname to resolve.
-    :return: The resolved IP address.
-    """
-    return socket.gethostbyname(hostname)
-
-
 class CLPConfig(BaseModel):
     execution_container: Optional[str] = None
 

@@ -49,7 +49,7 @@ LOGS_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
 logger = logging.getLogger(__name__)
 
 
-def get_ip_from_hostname(hostname: str) -> str:
+def _get_ip_from_hostname(hostname: str) -> str:
     """
     Resolves a hostname to an IP address.
 
@@ -80,7 +80,7 @@ class BaseController(ABC):
             "CLP_DB_CONF_FILE_HOST": str(conf_file),
             "CLP_DB_DATA_DIR_HOST": str(data_dir),
             "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
-            "CLP_DB_HOST": get_ip_from_hostname(self.clp_config.database.host),
+            "CLP_DB_HOST": _get_ip_from_hostname(self.clp_config.database.host),
             "CLP_DB_PORT": str(self.clp_config.database.port),
             "CLP_DB_NAME": self.clp_config.database.name,
             "CLP_DB_USER": self.clp_config.database.username,
@@ -100,7 +100,7 @@ class BaseController(ABC):
 
         return {
             "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
-            "CLP_QUEUE_HOST": get_ip_from_hostname(self.clp_config.queue.host),
+            "CLP_QUEUE_HOST": _get_ip_from_hostname(self.clp_config.queue.host),
             "CLP_QUEUE_PORT": str(self.clp_config.queue.port),
             "CLP_QUEUE_USER": self.clp_config.queue.username,
             "CLP_QUEUE_PASS": self.clp_config.queue.password,
@@ -121,7 +121,7 @@ class BaseController(ABC):
             "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
             "CLP_REDIS_DATA_DIR_HOST": str(data_dir),
             "CLP_REDIS_LOGS_DIR_HOST": str(logs_dir),
-            "CLP_REDIS_HOST": get_ip_from_hostname(self.clp_config.redis.host),
+            "CLP_REDIS_HOST": _get_ip_from_hostname(self.clp_config.redis.host),
             "CLP_REDIS_PORT": str(self.clp_config.redis.port),
             "CLP_REDIS_PASS": self.clp_config.redis.password,
             "CLP_REDIS_QUERY_BACKEND_DB": str(self.clp_config.redis.query_backend_database),
@@ -145,7 +145,7 @@ class BaseController(ABC):
             "CLP_RESULTS_CACHE_CONF_DIR_HOST": str(conf_file),
             "CLP_RESULTS_CACHE_DATA_DIR_HOST": str(data_dir),
             "CLP_RESULTS_CACHE_LOGS_DIR_HOST": str(logs_dir),
-            "CLP_RESULTS_CACHE_HOST": get_ip_from_hostname(self.clp_config.results_cache.host),
+            "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self.clp_config.results_cache.host),
             "CLP_RESULTS_CACHE_PORT": str(self.clp_config.results_cache.port),
             "CLP_RESULTS_CACHE_DB_NAME": self.clp_config.results_cache.db_name,
             "CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME": self.clp_config.results_cache.stream_collection_name,
@@ -338,7 +338,7 @@ class BaseController(ABC):
             settings_json_file.write(json.dumps(server_settings_json))
 
         return {
-            "CLP_WEBUI_HOST": get_ip_from_hostname(self.clp_config.webui.host),
+            "CLP_WEBUI_HOST": _get_ip_from_hostname(self.clp_config.webui.host),
             "CLP_WEBUI_PORT": str(self.clp_config.webui.port),
             "CLP_WEBUI_RATE_LIMIT": str(self.clp_config.webui.rate_limit),
         }
