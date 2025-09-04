@@ -116,6 +116,9 @@
 #    archive: 60
 #    search_result: 30
 #
+## Presto client config
+#presto: null
+#
 ## Location where other data (besides archives) are stored. It will be created if
 ## it doesn't exist.
 ## NOTE: This directory must not overlap with any path used in CLP's execution container. An error
