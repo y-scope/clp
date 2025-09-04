@@ -436,7 +436,7 @@ class DockerComposeController(BaseController):
             "CLP_USER_ID": str(os.getuid()),
             "CLP_GROUP_ID": str(os.getgid()),
             # Package container
-            "CLP_PACKAGE_CONTAINER": "clp-package:dev",
+            "CLP_PACKAGE_CONTAINER": self.clp_config.execution_container,
             # Global paths
             "CLP_DATA_DIR_HOST": str(self.clp_config.data_directory),
             "CLP_LOGS_DIR_HOST": str(self.clp_config.logs_directory),

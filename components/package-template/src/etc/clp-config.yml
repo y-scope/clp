@@ -1,3 +1,6 @@
+## Docker image to use for CLP package execution.
+#execution_container: "clp-package:dev"
+#
 ## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
 ## workers.
 #logs_input:

@@ -917,20 +917,10 @@ class CLPConfig(BaseModel):
 
     def load_execution_container_name(self):
         if self.execution_container is not None:
-            # Accept configured value for debug purposes
+            # Accept configured value for releases
             return
 
-        os_release = dotenv_values(self._os_release_file_path)
-        if "ubuntu" == os_release["ID"]:
-            self.execution_container = (
-                f"clp-execution-x86-{os_release['ID']}-{os_release['VERSION_CODENAME']}:main"
-            )
-        else:
-            raise NotImplementedError(
-                f"Unsupported OS {os_release['ID']} in {OS_RELEASE_FILE_PATH}"
-            )
-
-        self.execution_container = "ghcr.io/y-scope/clp/" + self.execution_container
+        self.execution_container = "clp-package:dev"
 
     def get_shared_config_file_path(self) -> pathlib.Path:
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
