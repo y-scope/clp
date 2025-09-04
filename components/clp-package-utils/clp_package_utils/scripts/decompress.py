@@ -12,11 +12,10 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     StorageEngine,
-    StorageType,
+    StorageType, CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
 )
 
 from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     DockerMount,
     DockerMountType,
     dump_container_config,

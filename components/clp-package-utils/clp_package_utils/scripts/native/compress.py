@@ -11,7 +11,7 @@ import brotli
 import msgpack
 from clp_py_utils.clp_config import (
     CLPConfig,
-    COMPRESSION_JOBS_TABLE_NAME,
+    COMPRESSION_JOBS_TABLE_NAME, CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
 )
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.s3_utils import parse_s3_url
@@ -29,7 +29,6 @@ from job_orchestration.scheduler.job_config import (
 )
 
 from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     get_clp_home,
     load_config_file,
