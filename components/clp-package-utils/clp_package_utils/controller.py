@@ -360,6 +360,13 @@ class BaseController(ABC):
         pass
 
     @abstractmethod
+    def stop(self):
+        """
+        Stops the deployed components with orchestrator-specific logic.
+        """
+        pass
+
+    @abstractmethod
     def _provision(self) -> Dict[str, str]:
         """
         Provisions all components with orchestrator-specific logic.
@@ -380,12 +387,11 @@ class DockerComposeController(BaseController):
 
     def __init__(self, clp_config: CLPConfig):
         super().__init__(clp_config)
-        check_docker_dependencies(should_compose_run=False)
 
     def deploy(self):
+        check_docker_dependencies(should_compose_run=False)
         self._provision()
 
-        # Start Docker Compose
         logger.info(f"Starting CLP using Docker Compose...")
         try:
             subprocess.run(
@@ -396,6 +402,22 @@ class DockerComposeController(BaseController):
             )
         except subprocess.CalledProcessError:
             logger.exception("Failed to start CLP.")
+            raise
+
+    def stop(self):
+        check_docker_dependencies(should_compose_run=True)
+
+        logger.info("Stopping all CLP containers using Docker Compose...")
+        try:
+            subprocess.run(
+                ["docker", "compose", "down"],
+                cwd=self.clp_home,
+                stderr=subprocess.STDOUT,
+                check=True,
+            )
+            logger.info("All CLP containers stopped.")
+        except subprocess.CalledProcessError:
+            logger.exception("Failed to stop CLP containers using Docker Compose.")
             raise
 
     def _provision(self):

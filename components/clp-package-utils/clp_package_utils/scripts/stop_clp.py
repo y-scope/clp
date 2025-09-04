@@ -1,29 +1,33 @@
 import logging
-import subprocess
 import sys
 
-from clp_package_utils.general import check_docker_dependencies
+from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+
+from clp_package_utils.controller import DockerComposeController
+from clp_package_utils.general import (
+    get_clp_home,
+    load_config_file,
+)
 
 logger = logging.getLogger(__file__)
 
 
 def main():
+    clp_home = get_clp_home()
+    default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+
+    # Load config file
     try:
-        check_docker_dependencies(should_compose_run=True)
+        clp_config = load_config_file(default_config_file_path, default_config_file_path, clp_home)
     except:
-        logger.exception("Dependency checking failed.")
+        logger.exception("Failed to load config.")
         return -1
 
-    logger.info("Stopping all CLP containers using Docker Compose...")
     try:
-        subprocess.run(
-            ["docker", "compose", "down"],
-            stderr=subprocess.STDOUT,
-            check=True,
-        )
-        logger.info("All CLP containers stopped.")
-    except subprocess.CalledProcessError:
-        logger.exception("Failed to stop CLP containers using Docker Compose.")
+        controller = DockerComposeController(clp_config)
+        controller.stop()
+    except:
+        logger.exception("Failed to stop CLP.")
         return -1
 
     return 0
