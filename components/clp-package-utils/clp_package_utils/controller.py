@@ -41,7 +41,7 @@ from clp_package_utils.general import (
     validate_queue_config,
     validate_redis_config,
     validate_results_cache_config,
-    validate_webui_config,
+    validate_webui_config, dump_shared_container_config,
 )
 
 LOGS_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
@@ -423,6 +423,7 @@ class DockerComposeController(BaseController):
     def _provision(self):
         container_clp_config = generate_docker_compose_container_config(self.clp_config)
         num_workers = self._get_num_workers()
+        dump_shared_container_config(container_clp_config, self.clp_config)
 
         env_dict = {
             "CLP_PACKAGE_STORAGE_ENGINE": self.clp_config.package.storage_engine,
