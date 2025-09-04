@@ -462,11 +462,6 @@ def load_config_file(
     validate_path_for_container_mount(clp_config.data_directory)
     validate_path_for_container_mount(clp_config.logs_directory)
 
-    # # Make data and logs directories node-specific
-    # hostname = socket.gethostname()
-    # clp_config.data_directory /= hostname
-    # clp_config.logs_directory /= hostname
-
     return clp_config
 
 
