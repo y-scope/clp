@@ -168,7 +168,7 @@ def check_docker_dependencies(should_compose_run: bool = False):
         raise EnvironmentError("docker-compose is already running.")
 
 
-def validate_log_directory(logs_dir: pathlib.Path, component_name: str) -> None:
+def _validate_log_directory(logs_dir: pathlib.Path, component_name: str) -> None:
     try:
         validate_path_could_be_dir(logs_dir)
     except ValueError as ex:
@@ -522,13 +522,13 @@ def validate_db_config(
             f"{DB_COMPONENT_NAME} base configuration at {str(base_config)} is missing."
         )
     _validate_data_directory(data_dir, DB_COMPONENT_NAME)
-    validate_log_directory(logs_dir, DB_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, DB_COMPONENT_NAME)
 
     validate_port(f"{DB_COMPONENT_NAME}.port", clp_config.database.host, clp_config.database.port)
 
 
 def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
-    validate_log_directory(logs_dir, QUEUE_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, QUEUE_COMPONENT_NAME)
 
     validate_port(f"{QUEUE_COMPONENT_NAME}.port", clp_config.queue.host, clp_config.queue.port)
 
@@ -541,13 +541,13 @@ def validate_redis_config(
             f"{REDIS_COMPONENT_NAME} base configuration at {str(base_config)} is missing."
         )
     _validate_data_directory(data_dir, REDIS_COMPONENT_NAME)
-    validate_log_directory(logs_dir, REDIS_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, REDIS_COMPONENT_NAME)
 
     validate_port(f"{REDIS_COMPONENT_NAME}.port", clp_config.redis.host, clp_config.redis.port)
 
 
 def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_workers: int):
-    validate_log_directory(logs_dir, REDUCER_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, REDUCER_COMPONENT_NAME)
 
     for i in range(0, num_workers):
         validate_port(
@@ -565,7 +565,7 @@ def validate_results_cache_config(
             f"{RESULTS_CACHE_COMPONENT_NAME} base configuration at {str(base_config)} is missing."
         )
     _validate_data_directory(data_dir, RESULTS_CACHE_COMPONENT_NAME)
-    validate_log_directory(logs_dir, RESULTS_CACHE_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, RESULTS_CACHE_COMPONENT_NAME)
 
     validate_port(
         f"{RESULTS_CACHE_COMPONENT_NAME}.port",
