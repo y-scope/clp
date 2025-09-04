@@ -165,7 +165,8 @@ services:
         redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_COMPRESSION_BACKEND_DB:-1}
     volumes:
       - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
-      - "${CLP_COMPRESSION_SCHEDULER_LOGS_FILE_HOST:-./var/log/compression_scheduler.log}:/var/log/compression_scheduler.log"
+      - "${CLP_COMPRESSION_SCHEDULER_LOGS_FILE_HOST:-./var/log/compression_scheduler.log}\
+:/var/log/compression_scheduler.log"
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "/:/mnt/logs:ro"
     depends_on:
@@ -197,7 +198,8 @@ services:
         redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
     volumes:
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "${CLP_QUERY_SCHEDULER_LOGS_FILE_HOST:-./var/log/query_scheduler.log}:/var/log/query_scheduler.log"
+      - "${CLP_QUERY_SCHEDULER_LOGS_FILE_HOST:-./var/log/query_scheduler.log}:\
+/var/log/query_scheduler.log"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -240,7 +242,8 @@ services:
     volumes:
       - "${CLP_ARCHIVE_STAGING_DIR_HOST:-./var/data/staged-archives}:/var/data/staged-archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
-      - "${CLP_COMPRESSION_WORKER_LOGS_DIR_HOST:-./var/log/compression_worker}:/var/log/compression_worker"
+      - "${CLP_COMPRESSION_WORKER_LOGS_DIR_HOST:-./var/log/compression_worker}:\
+/var/log/compression_worker"
       - "${CLP_DATA_DIR_HOST:-./var/data}:/var/data"
       - "${CLP_DATA_DIR_HOST:-./var/data}/archives:/var/data/archives"
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
