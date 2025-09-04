@@ -421,12 +421,6 @@ class DockerComposeController(BaseController):
             raise
 
     def _provision(self):
-        # Create necessary directories
-        self.clp_config.data_directory.mkdir(parents=True, exist_ok=True)
-        self.clp_config.logs_directory.mkdir(parents=True, exist_ok=True)
-        self.clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
-        self.clp_config.stream_output.get_directory().mkdir(parents=True, exist_ok=True)
-
         container_clp_config = generate_docker_compose_container_config(self.clp_config)
         num_workers = self._get_num_workers()
 

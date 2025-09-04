@@ -51,12 +51,15 @@ def main(argv):
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()
         clp_config.validate_aws_config_dir()
+
+        # Create necessary directories
+        clp_config.data_directory.mkdir(parents=True, exist_ok=True)
+        clp_config.logs_directory.mkdir(parents=True, exist_ok=True)
+        clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
+        clp_config.stream_output.get_directory().mkdir(parents=True, exist_ok=True)
     except:
         logger.exception("Failed to load config.")
         return -1
-
-    container_clp_config = generate_docker_compose_container_config(clp_config)
-    dump_shared_container_config(container_clp_config, clp_config)
 
     try:
         controller = DockerComposeController(clp_config)
