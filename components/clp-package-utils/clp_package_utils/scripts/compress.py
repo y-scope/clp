@@ -202,7 +202,7 @@ def main(argv):
         except Exception as e:
             logger.error(e)
             return -1
-        
+
         t_key = parsed_args.timestamp_key
         if t_key is None:
             logger.warning(
