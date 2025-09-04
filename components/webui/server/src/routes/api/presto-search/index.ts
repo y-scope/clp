@@ -177,6 +177,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                 request.log.error(
                                     "Presto query finished before searchJobId was resolved; "
                                 );
+
                                 return;
                             }
                             searchResultsMetadataCollection.updateOne(
