@@ -240,12 +240,12 @@ services:
       RESULT_BACKEND: >-
         redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_COMPRESSION_BACKEND_DB:-1}
     volumes:
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}:/var/data/archives"
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/staged-archives}:/var/data/staged-archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
       - "${CLP_COMPRESSION_WORKER_LOGS_DIR_HOST:-./var/log/compression_worker}:\
 /var/log/compression_worker"
       - "${CLP_DATA_DIR_HOST:-./var/data}:/var/data"
-      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}:/var/data/archives"
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "/:/mnt/logs:ro"
     command: [
@@ -278,12 +278,12 @@ services:
       RESULT_BACKEND: >-
         redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
     volumes:
-      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}:/var/data/archives"
+      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "${CLP_QUERY_WORKER_LOGS_DIR:-./var/log/query_worker}:/var/log/query_worker"
-      - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}:/var/data/streams"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/staged-streams}:/var/data/staged-streams"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}:/var/data/streams"
     command: [
       "python3",
       "-u",
