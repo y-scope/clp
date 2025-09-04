@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import multiprocessing
+import os
 import pathlib
 import shlex
 import socket
@@ -61,6 +62,16 @@ from clp_package_utils.general import (
 LOGS_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
 
 logger = logging.getLogger(__file__)
+
+
+def get_ip_from_hostname(hostname: str) -> str:
+    """
+    Resolves a hostname to an IP address.
+
+    :param hostname: The hostname to resolve.
+    :return: The resolved IP address.
+    """
+    return socket.gethostbyname(hostname)
 
 
 def append_docker_options(
@@ -144,10 +155,16 @@ def start_db(clp_config: CLPConfig, conf_dir: pathlib.Path):
     logs_dir.mkdir(exist_ok=True, parents=True)
 
     return {
-        **clp_config.database.dump_to_env_vars_dict(),
         "CLP_DB_CONF_FILE_HOST": str(conf_file),
         "CLP_DB_DATA_DIR_HOST": str(data_dir),
         "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
+
+        "CLP_DB_HOST": get_ip_from_hostname(clp_config.database.host),
+        "CLP_DB_PORT": str(clp_config.database.port),
+        "CLP_DB_NAME": clp_config.database.name,
+        "CLP_DB_USER": clp_config.database.username,
+        "CLP_DB_PASS": clp_config.database.password,
+        "CLP_DB_IMAGE": "mysql:8.0.23" if "mysql" == clp_config.database.type else "mariadb:10-jammy",
     }
 
 
@@ -160,8 +177,12 @@ def start_queue(clp_config: CLPConfig):
     logs_dir.mkdir(exist_ok=True, parents=True)
 
     return {
-        **clp_config.queue.dump_to_env_vars_dict(),
         "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
+
+        "CLP_QUEUE_HOST": get_ip_from_hostname(clp_config.queue.host),
+        "CLP_QUEUE_PORT": str(clp_config.queue.port),
+        "CLP_QUEUE_USER": clp_config.queue.username,
+        "CLP_QUEUE_PASS": clp_config.queue.password,
     }
 
 
@@ -177,10 +198,15 @@ def start_redis(clp_config: CLPConfig, conf_dir: pathlib.Path):
     logs_dir.mkdir(exist_ok=True, parents=True)
 
     return {
-        **clp_config.redis.dump_to_env_vars_dict(),
         "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
         "CLP_REDIS_DATA_DIR_HOST": str(data_dir),
         "CLP_REDIS_LOGS_DIR_HOST": str(logs_dir),
+
+        "CLP_REDIS_HOST": get_ip_from_hostname(clp_config.redis.host),
+        "CLP_REDIS_PORT": str(clp_config.redis.port),
+        "CLP_REDIS_PASS": clp_config.redis.password,
+        "CLP_REDIS_QUERY_BACKEND_DB": str(clp_config.redis.query_backend_database),
+        "CLP_REDIS_COMPRESSION_BACKEND_DB": str(clp_config.redis.compression_backend_database),
     }
 
 
@@ -196,10 +222,14 @@ def start_results_cache(clp_config: CLPConfig, conf_file: pathlib.Path):
     logs_dir.mkdir(exist_ok=True, parents=True)
 
     return {
-        **clp_config.results_cache.dump_to_env_vars_dict(),
         "CLP_RESULTS_CACHE_CONF_DIR_HOST": str(conf_file),
         "CLP_RESULTS_CACHE_DATA_DIR_HOST": str(data_dir),
         "CLP_RESULTS_CACHE_LOGS_DIR_HOST": str(logs_dir),
+
+        "CLP_RESULTS_CACHE_HOST": get_ip_from_hostname(clp_config.results_cache.host),
+        "CLP_RESULTS_CACHE_PORT": str(clp_config.results_cache.port),
+        "CLP_RESULTS_CACHE_DB_NAME": clp_config.results_cache.db_name,
+        "CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME": clp_config.results_cache.stream_collection_name,
     }
 
 
@@ -391,7 +421,11 @@ def start_webui(clp_config: CLPConfig, container_clp_config: CLPConfig):
     with open(server_settings_json_path, "w") as settings_json_file:
         settings_json_file.write(json.dumps(server_settings_json))
 
-    return clp_config.webui.dump_to_env_vars_dict()
+    return {
+        "CLP_WEBUI_HOST": get_ip_from_hostname(clp_config.webui.host),
+        "CLP_WEBUI_PORT": str(clp_config.webui.port),
+        "CLP_WEBUI_RATE_LIMIT": str(clp_config.webui.rate_limit),
+    }
 
 
 def start_garbage_collector(clp_config: CLPConfig):
@@ -401,8 +435,9 @@ def start_garbage_collector(clp_config: CLPConfig):
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
 
-    return clp_config.garbage_collector.dump_to_env_vars_dict()
-
+    return {
+        "CLP_GC_LOGGING_LEVEL": clp_config.garbage_collector.logging_level
+    }
 
 def add_num_workers_argument(parser):
     parser.add_argument(
@@ -469,7 +504,21 @@ def main(argv):
         conf_dir = clp_home / "etc"
 
         env_dict = {
-            **clp_config.dump_to_env_vars_dict(),
+            "CLP_PACKAGE_STORAGE_ENGINE": clp_config.package.storage_engine,
+            # User and group IDs
+            "CLP_USER_ID": str(os.getuid()),
+            "CLP_GROUP_ID": str(os.getgid()),
+            # Package container
+            "CLP_PACKAGE_CONTAINER": "clp-package:dev",
+            # Global paths
+            "CLP_DATA_DIR_HOST": str(clp_config.data_directory),
+            "CLP_LOGS_DIR_HOST": str(clp_config.logs_directory),
+            "CLP_ARCHIVE_OUTPUT_DIR_HOST": str(clp_config.archive_output.get_directory()),
+            "CLP_STREAM_OUTPUT_DIR_HOST": str(clp_config.stream_output.get_directory()),
+            # AWS credentials
+            "CLP_AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID", ""),
+            "CLP_AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY", ""),
+
             **start_db(clp_config, conf_dir),
             **start_queue(clp_config),
             **start_redis(clp_config, conf_dir),
@@ -481,10 +530,20 @@ def main(argv):
             **start_reducer(clp_config, num_workers),
             **start_webui(clp_config, container_clp_config),
             **start_garbage_collector(clp_config),
-            **start_reducer(clp_config, num_workers),
-            **start_webui(clp_config, container_clp_config),
-            **start_garbage_collector(clp_config),
         }
+        # AWS config directory
+        if clp_config.aws_config_directory is not None:
+            env_dict["CLP_AWS_CONFIG_DIR_HOST"] = str(clp_config.aws_config_directory)
+
+        # Staging directories for S3 storage
+        if StorageType.S3 == clp_config.archive_output.storage.type:
+            env_dict["CLP_ARCHIVE_STAGING_DIR_HOST"] = str(
+                clp_config.archive_output.storage.staging_directory
+            )
+        if StorageType.S3 == clp_config.stream_output.storage.type:
+            env_dict["CLP_STREAM_STAGING_DIR_HOST"] = str(
+                clp_config.stream_output.storage.staging_directory
+            )
         with open(f"{clp_home}/.env", "w") as env_file:
             for key, value in env_dict.items():
                 env_file.write(f"{key}={value}\n")
