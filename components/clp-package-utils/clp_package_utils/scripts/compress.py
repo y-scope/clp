@@ -203,8 +203,7 @@ def main(argv):
             logger.error(e)
             return -1
 
-        t_key = parsed_args.timestamp_key
-        if t_key is None:
+        if parsed_args.timestamp_key is None:
             logger.warning(
                 "If your logs have a timestamp field, you should use the --timestamp-key flag."
             )
