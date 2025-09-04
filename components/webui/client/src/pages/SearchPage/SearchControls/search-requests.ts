@@ -90,6 +90,7 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
 
     store.updateNumSearchResultsTable(SEARCH_STATE_DEFAULT.numSearchResultsTable);
     store.updateNumSearchResultsTimeline(SEARCH_STATE_DEFAULT.numSearchResultsTimeline);
+    store.updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
     store.updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 
     submitQuery(payload)
