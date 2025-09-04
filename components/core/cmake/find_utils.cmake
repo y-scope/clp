@@ -32,12 +32,20 @@ endmacro()
 # Finds and sets up the the Boost library.
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_boost)
+    get_clp_checked_find(boost)
+    if(CLP_CHECKED_FIND)
+        # Silence output from `find_package(Boost)` on repeated invocations.
+        set(CLP_QUIET_FIND_BOOST QUIET)
+    endif()
+
     if(CLP_USE_STATIC_LIBS)
         set(Boost_USE_STATIC_LIBS ON)
     endif()
+
     find_package(
         Boost
         1.81
+        ${CLP_QUIET_FIND_BOOST}
         REQUIRED
             filesystem
             iostreams
@@ -52,6 +60,7 @@ macro(clp_find_boost)
             "Boost version ${Boost_VERSION} is newer than the maximum allowed version (1.88.0)."
         )
     endif()
+    set_clp_checked_find(boost)
 endmacro()
 
 # Finds and sets up Catch2.
