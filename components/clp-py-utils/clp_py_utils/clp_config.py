@@ -215,8 +215,6 @@ class Database(BaseModel):
     def dump_to_primitive_dict(self):
         return self.dict(exclude={"username", "password"})
 
-    
-
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
         if config is None:
@@ -329,8 +327,6 @@ class Redis(BaseModel):
     def dump_to_primitive_dict(self):
         return self.dict(exclude={"password"})
 
-    
-
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
         if config is None:
@@ -412,8 +408,6 @@ class ResultsCache(BaseModel):
             raise ValueError("retention_period must be greater than 0")
         return field
 
-    
-
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
@@ -427,7 +421,6 @@ class Queue(BaseModel):
 
     def dump_to_primitive_dict(self):
         return self.dict(exclude={"username", "password"})
-
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)

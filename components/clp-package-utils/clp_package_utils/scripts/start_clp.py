@@ -158,13 +158,14 @@ def start_db(clp_config: CLPConfig, conf_dir: pathlib.Path):
         "CLP_DB_CONF_FILE_HOST": str(conf_file),
         "CLP_DB_DATA_DIR_HOST": str(data_dir),
         "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
-
         "CLP_DB_HOST": get_ip_from_hostname(clp_config.database.host),
         "CLP_DB_PORT": str(clp_config.database.port),
         "CLP_DB_NAME": clp_config.database.name,
         "CLP_DB_USER": clp_config.database.username,
         "CLP_DB_PASS": clp_config.database.password,
-        "CLP_DB_IMAGE": "mysql:8.0.23" if "mysql" == clp_config.database.type else "mariadb:10-jammy",
+        "CLP_DB_IMAGE": (
+            "mysql:8.0.23" if "mysql" == clp_config.database.type else "mariadb:10-jammy"
+        ),
     }
 
 
@@ -178,7 +179,6 @@ def start_queue(clp_config: CLPConfig):
 
     return {
         "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
-
         "CLP_QUEUE_HOST": get_ip_from_hostname(clp_config.queue.host),
         "CLP_QUEUE_PORT": str(clp_config.queue.port),
         "CLP_QUEUE_USER": clp_config.queue.username,
@@ -201,7 +201,6 @@ def start_redis(clp_config: CLPConfig, conf_dir: pathlib.Path):
         "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
         "CLP_REDIS_DATA_DIR_HOST": str(data_dir),
         "CLP_REDIS_LOGS_DIR_HOST": str(logs_dir),
-
         "CLP_REDIS_HOST": get_ip_from_hostname(clp_config.redis.host),
         "CLP_REDIS_PORT": str(clp_config.redis.port),
         "CLP_REDIS_PASS": clp_config.redis.password,
@@ -225,7 +224,6 @@ def start_results_cache(clp_config: CLPConfig, conf_file: pathlib.Path):
         "CLP_RESULTS_CACHE_CONF_DIR_HOST": str(conf_file),
         "CLP_RESULTS_CACHE_DATA_DIR_HOST": str(data_dir),
         "CLP_RESULTS_CACHE_LOGS_DIR_HOST": str(logs_dir),
-
         "CLP_RESULTS_CACHE_HOST": get_ip_from_hostname(clp_config.results_cache.host),
         "CLP_RESULTS_CACHE_PORT": str(clp_config.results_cache.port),
         "CLP_RESULTS_CACHE_DB_NAME": clp_config.results_cache.db_name,
@@ -435,9 +433,8 @@ def start_garbage_collector(clp_config: CLPConfig):
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
 
-    return {
-        "CLP_GC_LOGGING_LEVEL": clp_config.garbage_collector.logging_level
-    }
+    return {"CLP_GC_LOGGING_LEVEL": clp_config.garbage_collector.logging_level}
+
 
 def add_num_workers_argument(parser):
     parser.add_argument(
@@ -518,7 +515,6 @@ def main(argv):
             # AWS credentials
             "CLP_AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID", ""),
             "CLP_AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY", ""),
-
             **start_db(clp_config, conf_dir),
             **start_queue(clp_config),
             **start_redis(clp_config, conf_dir),
