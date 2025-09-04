@@ -27,7 +27,7 @@ The orchestration implementation uses a controller pattern:
 
 ## Docker Compose File
 
-The `docker-compose.yml` file defines all services with:
+The `docker-compose.yaml` file defines all services with:
 
 * Proper service dependencies using `depends_on`
 * Health checks for critical services

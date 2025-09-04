@@ -78,7 +78,7 @@ task docker-images:package
 
 This will create a Docker image named `clp-package:dev`.
 
-The package includes a `docker-compose.yml` file that can be used to deploy CLP using Docker Compose.
+The package includes a `docker-compose.yaml` file that can be used to deploy CLP using Docker Compose.
 If you want to manually deploy with Docker Compose instead of using the package scripts, see the 
 [Docker Compose design][docker-compose-design] for more information.
 
