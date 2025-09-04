@@ -27,7 +27,7 @@ const SqlQueryInput = () => {
     }, []);
 
     const handleEditorReady = useCallback((editor: SqlEditorType) => {
-        editorRef.current = editor
+        editorRef.current = editor;
         setIsEditorReady(true);
     }, []);
 

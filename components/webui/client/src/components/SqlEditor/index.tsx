@@ -1,7 +1,6 @@
 import {
     useCallback,
     useEffect,
-    useRef,
 } from "react";
 
 import {
@@ -15,13 +14,14 @@ import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 
 import "./monaco-loader";
 
+
 type SqlEditorType = monaco.editor.IStandaloneCodeEditor;
 
 type SqlEditorProps = Omit<EditorProps, "language"> & {
     disabled: boolean;
 
     /** Callback when the editor is mounted and ref is ready to use. */
-    onEditorReady?: (editor: monaco.editor.IStandaloneCodeEditor) => void;
+    onEditorReady?: (editor: SqlEditorType) => void;
 };
 
 /**
@@ -32,14 +32,12 @@ type SqlEditorProps = Omit<EditorProps, "language"> & {
  */
 const SqlEditor = (props: SqlEditorProps) => {
     const {disabled, onEditorReady, ...editorProps} = props;
-    const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>(null);
     const monacoEditor = useMonaco();
     const {token} = theme.useToken();
 
     const handleEditorDidMount = useCallback((
-        editor: monaco.editor.IStandaloneCodeEditor,
+        editor: SqlEditorType,
     ) => {
-        editorRef.current = editor;
         onEditorReady?.(editor);
     }, [onEditorReady]);
 
@@ -106,5 +104,6 @@ const SqlEditor = (props: SqlEditorProps) => {
 
 export default SqlEditor;
 export type {
+    SqlEditorProps,
     SqlEditorType,
 };

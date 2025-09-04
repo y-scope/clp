@@ -1,21 +1,24 @@
-// Reference: https://github.com/vikyd/vue-monaco-singleline/tree/master
+// Reference: https://github.com/vikyd/vue-monaco-singleline
 import {useCallback} from "react";
-import SqlEditor, {SqlEditorType} from "../SqlEditor";
 
-type SqlInputProps = {
-    disabled: boolean;
-    onChange?: (value: string | undefined) => void;
-};
+import SqlEditor, {
+    SqlEditorProps,
+    SqlEditorType,
+} from "../SqlEditor";
+
 
 /**
  * Single-line SQL input.
+ *
+ * @param props
+ * @return
  */
-const SqlInput = (props: SqlInputProps) => {
-
+const SqlInput = (props: SqlEditorProps) => {
     const handleEditorReady = useCallback((editor: SqlEditorType) => {
-        // Prevent multi-line input by repositioning cursor and replacing newlines with empty string.
+        // Prevent multi-line input by repositioning cursor and replacing newlines with empty
+        // string.
         editor.onDidChangeCursorPosition((e) => {
-            if (e.position.lineNumber > 1) {
+            if (1 < e.position.lineNumber) {
                 editor.setValue(editor.getValue().replace(/\r?\n/g, ""));
                 editor.setPosition({
                     lineNumber: 1,
@@ -29,38 +32,37 @@ const SqlInput = (props: SqlInputProps) => {
         <SqlEditor
             height={30}
             options={{
-                renderLineHighlight: "none",
-                folding: false,
-                minimap: {enabled: false},
-                wordWrap: "off",
-                lineNumbers: "off",
-                glyphMargin: false,
-                overviewRulerBorder: false,
-                hideCursorInOverviewRuler: true,
-                scrollbar: {
-                    horizontal: "hidden",
-                    vertical: "hidden",
-                    alwaysConsumeMouseWheel: false,
-                },
-                padding: {
-                    top: 4,
-                    bottom: 4,
-                },
-                scrollBeyondLastLine: false,
-                roundedSelection: false,
                 find: {
                     addExtraSpaceOnTop: false,
                     autoFindInSelection: "never",
                     seedSearchStringFromSelection: "never",
                 },
                 fixedOverflowWidgets: true,
-                scrollBeyondLastColumn: 0,
+                folding: false,
+                glyphMargin: false,
+                hideCursorInOverviewRuler: true,
+                lineNumbers: "off",
                 lineNumbersMinChars: 0,
+                minimap: {enabled: false},
+                overviewRulerBorder: false,
                 overviewRulerLanes: 0,
+                padding: {
+                    top: 4,
+                    bottom: 4,
+                },
+                renderLineHighlight: "none",
+                roundedSelection: false,
+                scrollBeyondLastColumn: 0,
+                scrollBeyondLastLine: false,
+                scrollbar: {
+                    horizontal: "hidden",
+                    vertical: "hidden",
+                    alwaysConsumeMouseWheel: false,
+                },
+                wordWrap: "off",
             }}
             onEditorReady={handleEditorReady}
-            {...props}
-        />
+            {...props}/>
     );
 };
 
