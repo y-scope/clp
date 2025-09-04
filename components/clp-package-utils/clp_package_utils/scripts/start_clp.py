@@ -844,7 +844,7 @@ def start_webui(
         get_clp_home() / "var" / "www" / "webui" / "client" / "settings.json"
     )
     server_settings_json_path = (
-        get_clp_home() / "var" / "www" / "webui" / "server" / "dist" / "server" / "settings.json"
+        get_clp_home() / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
     )
 
     validate_webui_config(clp_config, client_settings_json_path, server_settings_json_path)
@@ -974,7 +974,7 @@ def start_webui(
 
     node_cmd = [
         str(CONTAINER_CLP_HOME / "bin" / "node-22"),
-        str(container_webui_dir / "server" / "dist" / "server" / "src" / "main.js"),
+        str(container_webui_dir / "server" / "dist" / "src" / "main.js"),
     ]
     cmd = container_cmd + node_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
