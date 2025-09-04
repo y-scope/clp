@@ -4,8 +4,6 @@
 #include <sstream>
 #include <string_view>
 
-#include "Utils.hpp"
-
 namespace clp_s {
 void TimestampDictionaryWriter::write_timestamp_entries(
         std::map<std::string, TimestampEntry> const& ranges,
