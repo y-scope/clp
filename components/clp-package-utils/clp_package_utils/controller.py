@@ -67,7 +67,7 @@ class BaseController(ABC):
 
     def provision_database(self):
         component_name = DB_COMPONENT_NAME
-        logger.info(f"Initializing {component_name}...")
+        logger.info(f"Provisioning {component_name}...")
 
         conf_file = self._conf_dir / "mysql" / "conf.d" / "logging.cnf"
         data_dir = self.clp_config.data_directory / component_name
@@ -92,7 +92,7 @@ class BaseController(ABC):
 
     def provision_queue(self):
         component_name = QUEUE_COMPONENT_NAME
-        logger.info(f"Initializing {component_name}...")
+        logger.info(f"Provisioning {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
         validate_queue_config(self.clp_config, logs_dir)
@@ -108,7 +108,7 @@ class BaseController(ABC):
 
     def provision_redis(self):
         component_name = REDIS_COMPONENT_NAME
-        logger.info(f"Initializing {component_name}...")
+        logger.info(f"Provisioning {component_name}...")
 
         conf_file = self._conf_dir / "redis" / "redis.conf"
         logs_dir = self.clp_config.logs_directory / component_name
@@ -132,7 +132,7 @@ class BaseController(ABC):
 
     def provision_results_cache(self):
         component_name = RESULTS_CACHE_COMPONENT_NAME
-        logger.info(f"Initializing {component_name}...")
+        logger.info(f"Provisioning {component_name}...")
 
         conf_file = self._conf_dir / "mongo" / "mongod.conf"
         data_dir = self.clp_config.data_directory / component_name
@@ -153,7 +153,7 @@ class BaseController(ABC):
 
     def provision_compression_scheduler(self):
         component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
-        logger.info(f"Initializing {component_name}...")
+        logger.info(f"Provisioning {component_name}...")
 
         logs_file = self.clp_config.logs_directory / f"{component_name}.log"
         logs_file.touch(mode=LOGS_FILE_MODE, exist_ok=True)
@@ -165,7 +165,7 @@ class BaseController(ABC):
 
     def provision_query_scheduler(self):
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
-        logger.info(f"Initializing {component_name}...")
+        logger.info(f"Provisioning {component_name}...")
 
         logs_file = self.clp_config.logs_directory / f"{component_name}.log"
         logs_file.touch(mode=LOGS_FILE_MODE, exist_ok=True)
@@ -177,7 +177,7 @@ class BaseController(ABC):
 
     def provision_compression_worker(self, num_workers: int):
         component_name = COMPRESSION_WORKER_COMPONENT_NAME
-        logger.info(f"Initializing {component_name}...")
+        logger.info(f"Provisioning {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
         logs_dir.mkdir(parents=True, exist_ok=True)
@@ -190,7 +190,7 @@ class BaseController(ABC):
 
     def provision_query_worker(self, num_workers: int):
         component_name = QUERY_WORKER_COMPONENT_NAME
-        logger.info(f"Initializing {component_name}...")
+        logger.info(f"Provisioning {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
         logs_dir.mkdir(parents=True, exist_ok=True)
@@ -203,7 +203,7 @@ class BaseController(ABC):
 
     def provision_reducer(self, num_workers: int):
         component_name = REDUCER_COMPONENT_NAME
-        logger.info(f"Initializing {component_name}...")
+        logger.info(f"Provisioning {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
         logs_dir.mkdir(parents=True, exist_ok=True)
@@ -257,7 +257,7 @@ class BaseController(ABC):
 
     def provision_webui(self, container_clp_config: CLPConfig):
         component_name = WEBUI_COMPONENT_NAME
-        logger.info(f"Initializing {component_name}...")
+        logger.info(f"Provisioning {component_name}...")
 
         container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
         client_settings_json_path = (
@@ -345,7 +345,7 @@ class BaseController(ABC):
 
     def provision_garbage_collector(self):
         component_name = GARBAGE_COLLECTOR_COMPONENT_NAME
-        logger.info(f"Initializing {component_name}...")
+        logger.info(f"Provisioning {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
         logs_dir.mkdir(parents=True, exist_ok=True)
