@@ -89,7 +89,7 @@ def append_docker_options(
 
 
 def append_docker_port_settings_for_host_ips(
-    hostname: str, host_port: int, container_port: int, cmd: [str]
+    hostname: str, host_port: int, container_port: int, cmd: List[str]
 ):
     # Note: We use a set because gethostbyname_ex can return the same IP twice for one hostname
     for ip in set(socket.gethostbyname_ex(hostname)[2]):
