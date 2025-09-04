@@ -519,7 +519,13 @@ def validate_and_load_redis_credentials_file(
     clp_config.redis.load_credentials_from_file(clp_config.credentials_file_path)
 
 
-def validate_db_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):
+def validate_db_config(
+    clp_config: CLPConfig, base_config: pathlib.Path, data_dir: pathlib.Path, logs_dir: pathlib.Path
+):
+    if not base_config.exists():
+        raise ValueError(
+            f"{DB_COMPONENT_NAME} base configuration at {str(base_config)} is missing."
+        )
     _validate_data_directory(data_dir, DB_COMPONENT_NAME)
     validate_log_directory(logs_dir, DB_COMPONENT_NAME)
 
@@ -533,15 +539,14 @@ def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
 
 
 def validate_redis_config(
-    clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path, base_config: pathlib.Path
+    clp_config: CLPConfig, base_config: pathlib.Path, data_dir: pathlib.Path, logs_dir: pathlib.Path
 ):
-    _validate_data_directory(data_dir, REDIS_COMPONENT_NAME)
-    validate_log_directory(logs_dir, REDIS_COMPONENT_NAME)
-
     if not base_config.exists():
         raise ValueError(
             f"{REDIS_COMPONENT_NAME} base configuration at {str(base_config)} is missing."
         )
+    _validate_data_directory(data_dir, REDIS_COMPONENT_NAME)
+    validate_log_directory(logs_dir, REDIS_COMPONENT_NAME)
 
     validate_port(f"{REDIS_COMPONENT_NAME}.port", clp_config.redis.host, clp_config.redis.port)
 
@@ -558,8 +563,12 @@ def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_w
 
 
 def validate_results_cache_config(
-    clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path
+    clp_config: CLPConfig, base_config: pathlib.Path, data_dir: pathlib.Path, logs_dir: pathlib.Path
 ):
+    if not base_config.exists():
+        raise ValueError(
+            f"{RESULTS_CACHE_COMPONENT_NAME} base configuration at {str(base_config)} is missing."
+        )
     _validate_data_directory(data_dir, RESULTS_CACHE_COMPONENT_NAME)
     validate_log_directory(logs_dir, RESULTS_CACHE_COMPONENT_NAME)
 

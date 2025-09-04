@@ -1,7 +1,8 @@
 import os
 import pathlib
+import socket
 from enum import auto
-from typing import Literal, Optional, Union
+from typing import Dict, Literal, Optional, Union
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, root_validator, validator
@@ -129,6 +130,11 @@ class Package(BaseModel):
 
         return values
 
+    def dump_to_env_vars(self):
+        return {
+            "CLP_PACKAGE_STORAGE_ENGINE": self.storage_engine,
+        }
+
 
 class Database(BaseModel):
     type: str = "mariadb"
@@ -214,6 +220,19 @@ class Database(BaseModel):
     def dump_to_primitive_dict(self):
         return self.dict(exclude={"username", "password"})
 
+    def dump_to_env_vars_dict(self) -> Dict[str, str]:
+        """
+        :return: Dictionary of environment variables.
+        """
+        return {
+            "CLP_DB_HOST": get_ip_from_hostname(self.host),
+            "CLP_DB_PORT": str(self.port),
+            "CLP_DB_NAME": self.name,
+            "CLP_DB_USER": self.username,
+            "CLP_DB_PASS": self.password,
+            "CLP_DB_IMAGE": "mysql:8.0.23" if "mysql" == self.type else "mariadb:10-jammy",
+        }
+
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
         if config is None:
@@ -267,8 +286,8 @@ class CompressionScheduler(BaseModel):
 
 
 class QueryScheduler(BaseModel):
-    host = "localhost"
-    port = 7000
+    host: str = "localhost"
+    port: int = 7000
     jobs_poll_delay: float = 0.1  # seconds
     num_archives_to_search_per_sub_job: int = 16
     logging_level: str = "INFO"
@@ -325,6 +344,18 @@ class Redis(BaseModel):
 
     def dump_to_primitive_dict(self):
         return self.dict(exclude={"password"})
+
+    def dump_to_env_vars_dict(self) -> Dict[str, str]:
+        """
+        :return: Dictionary of environment variables.
+        """
+        return {
+            "CLP_REDIS_HOST": get_ip_from_hostname(self.host),
+            "CLP_REDIS_PORT": str(self.port),
+            "CLP_REDIS_PASS": self.password,
+            "CLP_REDIS_QUERY_BACKEND_DB": str(self.query_backend_database),
+            "CLP_REDIS_COMPRESSION_BACKEND_DB": str(self.compression_backend_database),
+        }
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
@@ -407,6 +438,17 @@ class ResultsCache(BaseModel):
             raise ValueError("retention_period must be greater than 0")
         return field
 
+    def dump_to_env_vars_dict(self) -> Dict[str, str]:
+        """
+        :return: Dictionary of environment variables.
+        """
+        return {
+            "CLP_RESULTS_CACHE_HOST": get_ip_from_hostname(self.host),
+            "CLP_RESULTS_CACHE_PORT": str(self.port),
+            "CLP_RESULTS_CACHE_DB_NAME": self.db_name,
+            "CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME": self.stream_collection_name,
+        }
+
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
@@ -420,6 +462,17 @@ class Queue(BaseModel):
 
     def dump_to_primitive_dict(self):
         return self.dict(exclude={"username", "password"})
+
+    def dump_to_env_vars_dict(self) -> Dict[str, str]:
+        """
+        :return: Dictionary of environment variables.
+        """
+        return {
+            "CLP_QUEUE_HOST": get_ip_from_hostname(self.host),
+            "CLP_QUEUE_PORT": str(self.port),
+            "CLP_QUEUE_USER": self.username,
+            "CLP_QUEUE_PASS": self.password,
+        }
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
@@ -722,6 +775,16 @@ class WebUi(BaseModel):
             raise ValueError(f"rate_limit must be greater than 0")
         return field
 
+    def dump_to_env_vars_dict(self) -> Dict[str, str]:
+        """
+        :return: Dictionary of environment variables.
+        """
+        return {
+            "CLP_WEBUI_HOST": get_ip_from_hostname(self.host),
+            "CLP_WEBUI_PORT": str(self.port),
+            "CLP_WEBUI_RATE_LIMIT": str(self.rate_limit),
+        }
+
 
 class SweepInterval(BaseModel):
     archive: int = 60
@@ -748,12 +811,28 @@ class GarbageCollector(BaseModel):
         _validate_logging_level(cls, field)
         return field
 
+    def dump_to_env_vars_dict(self) -> Dict[str, str]:
+        """
+        :return: Dictionary of environment variables.
+        """
+        return {"CLP_GC_LOGGING_LEVEL": self.logging_level}
+
 
 def _get_env_var(name: str) -> str:
     value = os.getenv(name)
     if value is None:
         raise ValueError(f"Missing environment variable: {name}")
     return value
+
+
+def get_ip_from_hostname(hostname: str) -> str:
+    """
+    Resolves a hostname to an IP address.
+
+    :param hostname: The hostname to resolve.
+    :return: The resolved IP address.
+    """
+    return socket.gethostbyname(hostname)
 
 
 class CLPConfig(BaseModel):
@@ -920,6 +999,43 @@ class CLPConfig(BaseModel):
             d["aws_config_directory"] = None
 
         return d
+
+    def dump_to_env_vars_dict(self) -> Dict[str, str]:
+        """
+        :return: Dictionary of environment variables.
+        """
+        env_vars = {
+            **self.package.dump_to_env_vars(),
+            # User and group IDs
+            "CLP_USER_ID": str(os.getuid()),
+            "CLP_GROUP_ID": str(os.getgid()),
+            # Package container
+            "CLP_PACKAGE_CONTAINER": "clp-package:dev",
+            # Global paths
+            "CLP_DATA_DIR_HOST": str(self.data_directory),
+            "CLP_LOGS_DIR_HOST": str(self.logs_directory),
+            "CLP_ARCHIVE_OUTPUT_DIR_HOST": str(self.archive_output.get_directory()),
+            "CLP_STREAM_OUTPUT_DIR_HOST": str(self.stream_output.get_directory()),
+            # AWS credentials
+            "CLP_AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID", ""),
+            "CLP_AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY", ""),
+        }
+
+        # AWS config directory
+        if self.aws_config_directory is not None:
+            env_vars["CLP_AWS_CONFIG_DIR_HOST"] = str(self.aws_config_directory)
+
+        # Staging directories for S3 storage
+        if StorageType.S3 == self.archive_output.storage.type:
+            env_vars["CLP_ARCHIVE_STAGING_DIR_HOST"] = str(
+                self.archive_output.storage.staging_directory
+            )
+        if StorageType.S3 == self.stream_output.storage.type:
+            env_vars["CLP_STREAM_STAGING_DIR_HOST"] = str(
+                self.stream_output.storage.staging_directory
+            )
+
+        return env_vars
 
 
 class WorkerConfig(BaseModel):

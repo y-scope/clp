@@ -2,9 +2,10 @@ import argparse
 import json
 import logging
 import multiprocessing
-import os
 import pathlib
+import shlex
 import socket
+import stat
 import subprocess
 import sys
 import time
@@ -57,12 +58,9 @@ from clp_package_utils.general import (
     validate_webui_config,
 )
 
+LOGS_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+
 logger = logging.getLogger(__file__)
-env_dict = {}
-
-
-def get_ip_from_hostname(hostname: str) -> str:
-    return socket.gethostbyname(hostname)
 
 
 def append_docker_options(
@@ -114,7 +112,7 @@ def chown_recursively(
     subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
 
 
-def wait_for_container_cmd(container_name: str, cmd_to_run: [str], timeout: int):
+def wait_for_container_cmd(container_name: str, cmd_to_run: List[str], timeout: int):
     container_exec_cmd = ["docker", "exec", container_name]
     cmd = container_exec_cmd + cmd_to_run
 
@@ -129,7 +127,7 @@ def wait_for_container_cmd(container_name: str, cmd_to_run: [str], timeout: int)
                 break
             time.sleep(1)
 
-    cmd_str = " ".join(cmd_to_run)
+    cmd_str = shlex.join(cmd_to_run)
     logger.error(f"Timeout while waiting for command {cmd_str} to run after {timeout} seconds")
     return False
 
@@ -138,181 +136,140 @@ def start_db(clp_config: CLPConfig, conf_dir: pathlib.Path):
     component_name = DB_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
 
-    db_data_dir = clp_config.data_directory / component_name
-    db_logs_dir = clp_config.logs_directory / component_name
+    conf_file = conf_dir / "mysql" / "conf.d" / "logging.cnf"
+    data_dir = clp_config.data_directory / component_name
+    logs_dir = clp_config.logs_directory / component_name
+    validate_db_config(clp_config, conf_file, data_dir, logs_dir)
+    data_dir.mkdir(exist_ok=True, parents=True)
+    logs_dir.mkdir(exist_ok=True, parents=True)
 
-    validate_db_config(clp_config, db_data_dir, db_logs_dir)
-
-    # Create directories
-    db_data_dir.mkdir(exist_ok=True, parents=True)
-    db_logs_dir.mkdir(exist_ok=True, parents=True)
-
-    # Start container
-    env_dict["CLP_HOST_DB_CONF_DIR"] = str(conf_dir / "mysql" / "conf.d")
-    env_dict["CLP_HOST_DB_DATA_DIR"] = str(db_data_dir)
-    env_dict["CLP_HOST_DB_LOGS_DIR"] = str(db_logs_dir)
-
-    # TODO: Consider a Docker Compose overwrite / extend approach for pick the right image.
-    if "mysql" == clp_config.database.type:
-        env_dict["CLP_DB_IMAGE"] = "mysql:8.0.23"
-    elif "mariadb" == clp_config.database.type:
-        env_dict["CLP_DB_IMAGE"] = "mariadb:10-jammy"
-
-    env_dict["CLP_DB_HOST"] = get_ip_from_hostname(clp_config.database.host)
-    env_dict["CLP_DB_PORT"] = str(clp_config.database.port)
-    env_dict["CLP_DB_NAME"] = clp_config.database.name
-    env_dict["CLP_DB_USER"] = clp_config.database.username
-    env_dict["CLP_DB_PASS"] = clp_config.database.password
+    return {
+        **clp_config.database.dump_to_env_vars_dict(),
+        "CLP_DB_CONF_FILE_HOST": str(conf_file),
+        "CLP_DB_DATA_DIR_HOST": str(data_dir),
+        "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
+    }
 
 
 def start_queue(clp_config: CLPConfig):
     component_name = QUEUE_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
 
-    queue_logs_dir = clp_config.logs_directory / component_name
-    validate_queue_config(clp_config, queue_logs_dir)
+    logs_dir = clp_config.logs_directory / component_name
+    validate_queue_config(clp_config, logs_dir)
+    logs_dir.mkdir(exist_ok=True, parents=True)
 
-    env_dict["CLP_QUEUE_HOST"] = get_ip_from_hostname(clp_config.queue.host)
-    env_dict["CLP_QUEUE_PORT"] = str(clp_config.queue.port)
-    env_dict["CLP_QUEUE_USER"] = clp_config.queue.username
-    env_dict["CLP_QUEUE_PASS"] = clp_config.queue.password
-
-    # Create directories
-    queue_logs_dir.mkdir(exist_ok=True, parents=True)
-
-    env_dict["CLP_HOST_QUEUE_LOGS_DIR"] = str(queue_logs_dir)
+    return {
+        **clp_config.queue.dump_to_env_vars_dict(),
+        "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
+    }
 
 
 def start_redis(clp_config: CLPConfig, conf_dir: pathlib.Path):
     component_name = REDIS_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
 
-    redis_logs_dir = clp_config.logs_directory / component_name
-    redis_data_dir = clp_config.data_directory / component_name
-
-    config_file_path = conf_dir / "redis" / "redis.conf"
-    validate_redis_config(clp_config, redis_data_dir, redis_logs_dir, config_file_path)
-
-    env_dict["CLP_HOST_REDIS_CONF_PATH"] = str(config_file_path)
-    env_dict["CLP_HOST_REDIS_DATA_DIR"] = str(redis_data_dir)
-    env_dict["CLP_HOST_REDIS_LOGS_DIR"] = str(redis_logs_dir)
-
-    redis_data_dir.mkdir(exist_ok=True, parents=True)
-    redis_logs_dir.mkdir(exist_ok=True, parents=True)
-
-    env_dict["CLP_REDIS_HOST"] = get_ip_from_hostname(clp_config.redis.host)
-    env_dict["CLP_REDIS_PORT"] = str(clp_config.redis.port)
-    env_dict["CLP_REDIS_PASS"] = clp_config.redis.password
-    env_dict["CLP_REDIS_QUERY_BACKEND_DB"] = str(clp_config.redis.query_backend_database)
-    env_dict["CLP_REDIS_COMPRESSION_BACKEND_DB"] = str(
-        clp_config.redis.compression_backend_database
-    )
-
-
-def start_results_cache(clp_config: CLPConfig, conf_dir: pathlib.Path):
-    component_name = RESULTS_CACHE_COMPONENT_NAME
-    logger.info(f"Initializing {component_name}...")
-
-    data_dir = clp_config.data_directory / component_name
+    conf_file = conf_dir / "redis" / "redis.conf"
     logs_dir = clp_config.logs_directory / component_name
-
-    validate_results_cache_config(clp_config, data_dir, logs_dir)
-
+    data_dir = clp_config.data_directory / component_name
+    validate_redis_config(clp_config, conf_file, data_dir, logs_dir)
     data_dir.mkdir(exist_ok=True, parents=True)
     logs_dir.mkdir(exist_ok=True, parents=True)
 
-    env_dict["CLP_HOST_RESULTS_CACHE_CONF_DIR"] = str(conf_dir / "mongo")
-    env_dict["CLP_HOST_RESULTS_CACHE_DATA_DIR"] = str(data_dir)
-    env_dict["CLP_HOST_RESULTS_CACHE_LOGS_DIR"] = str(logs_dir)
-
-    env_dict["CLP_RESULTS_CACHE_HOST"] = get_ip_from_hostname(clp_config.results_cache.host)
-    env_dict["CLP_RESULTS_CACHE_PORT"] = str(clp_config.results_cache.port)
-    env_dict["CLP_RESULTS_CACHE_DB_NAME"] = clp_config.results_cache.db_name
-    env_dict["CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME"] = (
-        clp_config.results_cache.stream_collection_name
-    )
+    return {
+        **clp_config.redis.dump_to_env_vars_dict(),
+        "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
+        "CLP_REDIS_DATA_DIR_HOST": str(data_dir),
+        "CLP_REDIS_LOGS_DIR_HOST": str(logs_dir),
+    }
 
 
-def start_compression_scheduler(
-    clp_config: CLPConfig,
-):
+def start_results_cache(clp_config: CLPConfig, conf_file: pathlib.Path):
+    component_name = RESULTS_CACHE_COMPONENT_NAME
+    logger.info(f"Initializing {component_name}...")
+
+    conf_file = conf_file / "mongo" / "mongod.conf"
+    data_dir = clp_config.data_directory / component_name
+    logs_dir = clp_config.logs_directory / component_name
+    validate_results_cache_config(clp_config, conf_file, data_dir, logs_dir)
+    data_dir.mkdir(exist_ok=True, parents=True)
+    logs_dir.mkdir(exist_ok=True, parents=True)
+
+    return {
+        **clp_config.results_cache.dump_to_env_vars_dict(),
+        "CLP_RESULTS_CACHE_CONF_DIR_HOST": str(conf_file),
+        "CLP_RESULTS_CACHE_DATA_DIR_HOST": str(data_dir),
+        "CLP_RESULTS_CACHE_LOGS_DIR_HOST": str(logs_dir),
+    }
+
+
+def start_compression_scheduler(clp_config: CLPConfig):
     component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
 
-    logs_dir = clp_config.logs_directory / component_name
-    logs_dir.mkdir(parents=True, exist_ok=True)
+    logs_file = clp_config.logs_directory / f"{component_name}.log"
+    logs_file.touch(mode=LOGS_FILE_MODE, exist_ok=True)
 
-    env_dict["CLP_HOST_COMPRESSION_SCHEDULER_LOGS_DIR"] = str(logs_dir)
-    env_dict["CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL"] = (
-        clp_config.compression_scheduler.logging_level
-    )
+    return {
+        "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL": clp_config.compression_scheduler.logging_level,
+        "CLP_COMPRESSION_SCHEDULER_LOGS_FILE_HOST": str(logs_file),
+    }
 
 
-def start_query_scheduler(
-    clp_config: CLPConfig,
-):
+def start_query_scheduler(clp_config: CLPConfig):
     component_name = QUERY_SCHEDULER_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
 
-    logs_dir = clp_config.logs_directory / component_name
-    logs_dir.mkdir(parents=True, exist_ok=True)
+    logs_file = clp_config.logs_directory / f"{component_name}.log"
+    logs_file.touch(mode=LOGS_FILE_MODE, exist_ok=True)
 
-    env_dict["CLP_HOST_QUERY_SCHEDULER_LOGS_DIR"] = str(logs_dir)
-    env_dict["CLP_QUERY_SCHEDULER_LOGGING_LEVEL"] = clp_config.query_scheduler.logging_level
+    return {
+        "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": clp_config.query_scheduler.logging_level,
+        "CLP_QUERY_SCHEDULER_LOGS_FILE_HOST": str(logs_file),
+    }
 
 
-def start_compression_worker(
-    clp_config: CLPConfig,
-    num_cpus: int,
-):
+def start_compression_worker(clp_config: CLPConfig, num_cpus: int):
     component_name = COMPRESSION_WORKER_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
 
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
 
-    env_dict["CLP_COMPRESSION_WORKER_LOGS_DIR"] = str(logs_dir)
-    env_dict["CLP_COMPRESSION_WORKER_LOGGING_LEVEL"] = clp_config.compression_worker.logging_level
-    env_dict["CLP_COMPRESSION_WORKER_CONCURRENCY"] = str(num_cpus)
-
-    # Create necessary directories
-    clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
-    clp_config.stream_output.get_directory().mkdir(parents=True, exist_ok=True)
+    return {
+        "CLP_COMPRESSION_WORKER_CONCURRENCY": str(num_cpus),
+        "CLP_COMPRESSION_WORKER_LOGGING_LEVEL": clp_config.compression_worker.logging_level,
+        "CLP_COMPRESSION_WORKER_LOGS_DIR_HOST": str(logs_dir),
+    }
 
 
-def start_query_worker(
-    clp_config: CLPConfig,
-    num_cpus: int,
-):
+def start_query_worker(clp_config: CLPConfig, num_cpus: int):
     component_name = QUERY_WORKER_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
 
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
 
-    env_dict["CLP_QUERY_WORKER_LOGS_DIR"] = str(logs_dir)
-    env_dict["CLP_QUERY_WORKER_LOGGING_LEVEL"] = clp_config.query_worker.logging_level
-    env_dict["CLP_QUERY_WORKER_CONCURRENCY"] = str(num_cpus)
-
-    # Create necessary directories
-    clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
-    clp_config.stream_output.get_directory().mkdir(parents=True, exist_ok=True)
+    return {
+        "CLP_QUERY_WORKER_LOGGING_LEVEL": clp_config.query_worker.logging_level,
+        "CLP_QUERY_WORKER_LOGS_DIR": str(logs_dir),
+        "CLP_QUERY_WORKER_CONCURRENCY": str(num_cpus),
+    }
 
 
-def start_reducer(
-    clp_config: CLPConfig,
-    num_workers: int,
-):
+def start_reducer(clp_config: CLPConfig, num_workers: int):
     component_name = REDUCER_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
 
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
 
-    env_dict["CLP_REDUCER_LOGS_DIR"] = str(logs_dir)
-    env_dict["CLP_REDUCER_LOGGING_LEVEL"] = clp_config.reducer.logging_level
-    env_dict["CLP_REDUCER_CONCURRENCY"] = str(num_workers)
-    env_dict["CLP_REDUCER_UPSERT_INTERVAL"] = str(clp_config.reducer.upsert_interval)
+    return {
+        "CLP_REDUCER_LOGGING_LEVEL": clp_config.reducer.logging_level,
+        "CLP_REDUCER_LOGS_DIR": str(logs_dir),
+        "CLP_REDUCER_CONCURRENCY": str(num_workers),
+        "CLP_REDUCER_UPSERT_INTERVAL": str(clp_config.reducer.upsert_interval),
+    }
 
 
 def update_settings_object(
@@ -352,10 +309,7 @@ def read_and_update_settings_json(settings_file_path: pathlib.Path, updates: Dic
     return settings_object
 
 
-def start_webui(
-    clp_config: CLPConfig,
-    container_clp_config: CLPConfig,
-):
+def start_webui(clp_config: CLPConfig, container_clp_config: CLPConfig):
     component_name = WEBUI_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
 
@@ -437,21 +391,17 @@ def start_webui(
     with open(server_settings_json_path, "w") as settings_json_file:
         settings_json_file.write(json.dumps(server_settings_json))
 
-    env_dict["CLP_WEBUI_HOST"] = get_ip_from_hostname(clp_config.webui.host)
-    env_dict["CLP_WEBUI_PORT"] = clp_config.webui.port
-    env_dict["CLP_WEBUI_RATE_LIMIT"] = clp_config.webui.rate_limit
+    return clp_config.webui.dump_to_env_vars_dict()
 
 
-def start_garbage_collector(
-    clp_config: CLPConfig,
-):
+def start_garbage_collector(clp_config: CLPConfig):
     component_name = GARBAGE_COLLECTOR_COMPONENT_NAME
     logger.info(f"Initializing {component_name}...")
 
     logs_dir = clp_config.logs_directory / component_name
     logs_dir.mkdir(parents=True, exist_ok=True)
 
-    env_dict["CLP_GC_LOGGING_LEVEL"] = clp_config.garbage_collector.logging_level
+    return clp_config.garbage_collector.dump_to_env_vars_dict()
 
 
 def add_num_workers_argument(parser):
@@ -510,53 +460,31 @@ def main(argv):
     # Create necessary directories
     clp_config.data_directory.mkdir(parents=True, exist_ok=True)
     clp_config.logs_directory.mkdir(parents=True, exist_ok=True)
+    clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
+    clp_config.stream_output.get_directory().mkdir(parents=True, exist_ok=True)
 
     dump_shared_container_config(container_clp_config, clp_config)
-
-    env_dict["CLP_PACKAGE_CONTAINER"] = "clp-package:dev"
-
-    env_dict["CLP_USER_ID"] = os.getuid()
-    env_dict["CLP_GROUP_ID"] = os.getgid()
-    env_dict["CLP_STORAGE_ENGINE"] = clp_config.package.storage_engine
-
-    env_dict["CLP_HOST_DATA_DIR"] = str(clp_config.data_directory)
-    env_dict["CLP_HOST_LOGS_DIR"] = str(clp_config.logs_directory)
-    env_dict["CLP_HOST_ARCHIVE_OUTPUT_DIR"] = str(clp_config.archive_output.get_directory())
-    env_dict["CLP_HOST_STREAM_OUTPUT_DIR"] = str(clp_config.stream_output.get_directory())
-
-    # TODO: validate if those are required
-    env_dict["CLP_AWS_ACCESS_KEY_ID"] = os.getenv("AWS_ACCESS_KEY_ID", "")
-    env_dict["CLP_AWS_SECRET_ACCESS_KEY"] = os.getenv("AWS_SECRET_ACCESS_KEY", "")
-
-    if clp_config.aws_config_directory is not None:
-        env_dict["CLP_HOST_AWS_CONFIG_DIR"] = str(clp_config.aws_config_directory)
-    if StorageType.S3 == clp_config.archive_output.storage.type:
-        clp_config.archive_output.storage.staging_directory.mkdir(parents=True, exist_ok=True)
-        env_dict["CLP_HOST_ARCHIVE_STAGING_DIR"] = str(
-            clp_config.archive_output.storage.staging_directory
-        )
-    if StorageType.S3 == clp_config.stream_output.storage.type:
-        clp_config.stream_output.storage.staging_directory.mkdir(parents=True, exist_ok=True)
-        env_dict["CLP_HOST_STREAM_STAGING_DIR"] = str(
-            clp_config.stream_output.storage.staging_directory
-        )
 
     try:
         conf_dir = clp_home / "etc"
 
-        # Start components
-        start_db(clp_config, conf_dir)
-        start_queue(clp_config)
-        start_redis(clp_config, conf_dir)
-        start_results_cache(clp_config, conf_dir)
-        start_compression_scheduler(clp_config)
-        start_query_scheduler(clp_config)
-        start_compression_worker(clp_config, num_workers)
-        start_query_worker(clp_config, num_workers)
-        start_reducer(clp_config, num_workers)
-        start_webui(clp_config, container_clp_config)
-        start_garbage_collector(clp_config)
-
+        env_dict = {
+            **clp_config.dump_to_env_vars_dict(),
+            **start_db(clp_config, conf_dir),
+            **start_queue(clp_config),
+            **start_redis(clp_config, conf_dir),
+            **start_results_cache(clp_config, conf_dir),
+            **start_compression_scheduler(clp_config),
+            **start_query_scheduler(clp_config),
+            **start_compression_worker(clp_config, num_workers),
+            **start_query_worker(clp_config, num_workers),
+            **start_reducer(clp_config, num_workers),
+            **start_webui(clp_config, container_clp_config),
+            **start_garbage_collector(clp_config),
+            **start_reducer(clp_config, num_workers),
+            **start_webui(clp_config, container_clp_config),
+            **start_garbage_collector(clp_config),
+        }
         with open(f"{clp_home}/.env", "w") as env_file:
             for key, value in env_dict.items():
                 env_file.write(f"{key}={value}\n")
