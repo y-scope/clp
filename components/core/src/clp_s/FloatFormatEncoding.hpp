@@ -2,6 +2,7 @@
 #define CLP_S_FLOATFORMATENCODING_HPP
 
 #include <cstdint>
+#include <string>
 #include <string_view>
 
 #include <ystdlib/error_handling/Result.hpp>
@@ -35,6 +36,8 @@ static_assert(cNumSignificantDigitsPos <= 15, "Bit position out of range");
  * is not representable in our encoding scheme.
  */
 auto get_float_encoding(std::string_view float_str) -> ystdlib::error_handling::Result<uint16_t>;
+
+auto restore_encoded_float(double value, uint16_t format) -> std::string;
 }  // namespace clp_s::float_format_encoding
 
 #endif  // CLP_S_FLOATFORMATENCODING_HPP
