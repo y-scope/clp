@@ -107,9 +107,10 @@ enum PRESTO_SEARCH_SIGNAL {
     FINISHED = "FINISHED",
     CANCELED = "CANCELED",
     FAILED = "FAILED",
+
     // Used internally by the UI to mark when all data has been received, since Presto may report
     // `FINISHED` before the result stream is fully delivered. `DONE` state is never set by Presto.
-    DONE = "DONE"
+    DONE = "DONE",
 }
 
 /**
