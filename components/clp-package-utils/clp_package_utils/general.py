@@ -140,7 +140,7 @@ def generate_container_name(job_type: str) -> str:
     return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
 
 
-def is_compose_running():
+def is_docker_compose_running():
     cmd = ["docker", "compose", "ls", "--quiet"]
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
@@ -149,7 +149,7 @@ def is_compose_running():
         raise EnvironmentError("docker-compose is not installed or not functioning properly.")
 
 
-def check_dependencies(should_compose_run: bool = False):
+def check_docker_dependencies(should_compose_run: bool = False):
     try:
         subprocess.run(
             "command -v docker",
@@ -161,7 +161,7 @@ def check_dependencies(should_compose_run: bool = False):
     except subprocess.CalledProcessError:
         raise EnvironmentError("docker is not installed or available on the path")
 
-    is_running = is_compose_running()
+    is_running = is_docker_compose_running()
     if should_compose_run and not is_running:
         raise EnvironmentError("docker-compose is not running.")
     if not should_compose_run and is_running:

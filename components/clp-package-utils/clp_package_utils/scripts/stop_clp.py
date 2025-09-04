@@ -2,14 +2,14 @@ import logging
 import subprocess
 import sys
 
-from clp_package_utils.general import check_dependencies
+from clp_package_utils.general import check_docker_dependencies
 
 logger = logging.getLogger(__file__)
 
 
 def main():
     try:
-        check_dependencies(should_compose_run=True)
+        check_docker_dependencies(should_compose_run=True)
     except:
         logger.exception("Dependency checking failed.")
         return -1
