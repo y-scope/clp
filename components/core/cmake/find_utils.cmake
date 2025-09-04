@@ -37,7 +37,7 @@ macro(clp_find_boost)
     endif()
     find_package(
         Boost
-        1.81...1.88
+        1.81
         REQUIRED
             filesystem
             iostreams
@@ -46,6 +46,12 @@ macro(clp_find_boost)
             system
             url
     )
+    if(Boost_VERSION VERSION_GREATER 1.88)
+        message(
+            FATAL_ERROR
+            "Boost version ${Boost_VERSION} is newer than the maximum allowed version (1.88.0)."
+        )
+    endif()
 endmacro()
 
 # Finds and sets up Catch2.
