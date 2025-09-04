@@ -17,7 +17,19 @@ function(set_clp_checked_find LIBRARY)
     set_property(DIRECTORY "${PROJECT_SOURCE_DIR}" PROPERTY "clp_checked_find_${LIBRARY}" TRUE)
 endfunction()
 
-# Find and setup Boost library.
+# Finds and sets up the the absl library.
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_absl)
+    find_package(absl REQUIRED)
+endmacro()
+
+# Finds and sets up the the antlr4-runtime library.
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_antlr4_runtime)
+    find_package(antlr4-runtime REQUIRED)
+endmacro()
+
+# Finds and sets up the the Boost library.
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_boost)
     if(CLP_USE_STATIC_LIBS)
@@ -36,20 +48,32 @@ macro(clp_find_boost)
     )
 endmacro()
 
-# Find and setup Catch2.
+# Finds and sets up Catch2.
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_catch2)
     find_package(Catch2 3.8.0 REQUIRED)
 endmacro()
 
-# Find and setup libcurl.
+# Finds and sets up libcurl.
 # By default, CURL does not provide static libraries.
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_curl)
     find_package(CURL 7.61.1 REQUIRED)
 endmacro()
 
-# Find and setup libarchive.
+# Finds and sets up the date library.
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_date)
+    find_package(date REQUIRED)
+endmacro()
+
+# Finds and sets up the fmt library.
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_fmt)
+    find_package(fmt REQUIRED)
+endmacro()
+
+# Finds and sets up libarchive.
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_libarchive)
     if(CLP_USE_STATIC_LIBS)
@@ -58,7 +82,13 @@ macro(clp_find_libarchive)
     find_package(LibArchive REQUIRED)
 endmacro()
 
-# Find and setup LZMA library.
+# Finds and sets up the log_surgeon library.
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_log_surgeon)
+    find_package(log_surgeon REQUIRED)
+endmacro()
+
+# Finds and sets up the LZMA library.
 # TODO: Add a script in ./cmake/Modules to properly import LZMA in find_package()'s module mode.
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_lzma)
@@ -72,7 +102,7 @@ macro(clp_find_lzma)
     find_package(LibLZMA 5.8.1 REQUIRED)
 endmacro()
 
-# Find and setup MariaDBClient library.
+# Finds and sets up the MariaDBClient library.
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_mariadb_client)
     # Only log static linking warning one time
@@ -85,7 +115,7 @@ macro(clp_find_mariadb_client)
     set_clp_checked_find(mariadb_client)
 endmacro()
 
-# Find and setup mongocxx library.
+# Finds and sets up the mongocxx library.
 # @return The name of the mongocxx target in the `MONGOCXX_TARGET` variable, and
 # forwards any variables from the `find_package` call.
 macro(clp_find_mongocxx)
@@ -97,13 +127,37 @@ macro(clp_find_mongocxx)
     endif()
 endmacro()
 
-# Find and setup msgpack library.
+# Finds and sets up the msgpack library.
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_msgpack)
     find_package(msgpack-cxx 7.0.0 REQUIRED)
 endmacro()
 
-# Find and setup sqlite library.
+# Finds and sets up the nlohmann json library.
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_nlohmann_json)
+    find_package(nlohmann_json REQUIRED)
+endmacro()
+
+# Finds and sets up OpenSSL.
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_open_ssl)
+    find_package(OpenSSL REQUIRED)
+endmacro()
+
+# Finds and sets up the simdjson library.
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_simdjson)
+    find_package(simdjson REQUIRED)
+endmacro()
+
+# Finds and sets up the spdlog library.
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_spdlog)
+    find_package(spdlog REQUIRED)
+endmacro()
+
+# Finds and sets up the sqlite library.
 # @return Forwards any variables from the `FindDynamicLibraryDependencies` call.
 macro(clp_find_sqlite)
     set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
@@ -111,7 +165,14 @@ macro(clp_find_sqlite)
     FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
 endmacro()
 
-# Find and setup ystdlib.
+# Finds and sets up the yaml-cpp library.
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_yaml_cpp)
+    find_package(yaml-cpp REQUIRED)
+endmacro()
+
+
+# Finds and sets up ystdlib.
 function(clp_find_ystdlib)
     # We can not call `add_subdirectory` for the same directory multiple times.
     get_clp_checked_find(ystdlib)
@@ -124,7 +185,7 @@ function(clp_find_ystdlib)
     set_clp_checked_find(ystdlib)
 endfunction()
 
-# Find and setup ZStd library.
+# Finds and sets up the ZStd library.
 # @return Forwards any variables from the `find_package` call.
 macro(clp_find_zstd)
     # v1.4.8 is the lowest version available in the package managers of the OSes we support.

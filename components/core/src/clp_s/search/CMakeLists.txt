@@ -27,10 +27,10 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_SEARCH)
-        find_package(absl REQUIRED)
-        find_package(log_surgeon REQUIRED)
-        find_package(simdjson REQUIRED)
-        find_package(spdlog REQUIRED)
+        clp_find_absl()
+        clp_find_log_surgeon()
+        clp_find_simdjson()
+        clp_find_spdlog()
 
         add_library(
                 clp_s_search

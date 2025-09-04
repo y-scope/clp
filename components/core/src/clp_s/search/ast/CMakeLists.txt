@@ -50,7 +50,7 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_SEARCH_AST)
-    find_package(simdjson REQUIRED)
+    clp_find_simdjson()
 
     add_library(
         clp_s_search_ast
