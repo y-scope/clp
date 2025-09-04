@@ -1,100 +1,42 @@
-import {forwardRef, useCallback} from "react";
-import SqlEditor, {SqlEditorRef} from "../SqlEditor";
-import * as monaco from "monaco-editor/esm/vs/editor/editor.api";
+// Reference: https://github.com/vikyd/vue-monaco-singleline/tree/master
+import {useCallback} from "react";
+import SqlEditor, {SqlEditorType} from "../SqlEditor";
 
-type SqlInputProps = Omit<React.ComponentProps<typeof SqlEditor>, "height" | "options" | "language" | "onKeyDown" | "onPaste" | "onEditorReady"> & {
-    /** Placeholder text for the input. */
-    placeholder?: string;
+type SqlInputProps = {
+    disabled: boolean;
+    onChange?: (value: string | undefined) => void;
 };
 
 /**
- * SqlInput: Monaco-based single-line SQL input.
- * Follows: https://farzadyz.me/blog/single-line-monaco-editor
+ * Single-line SQL input.
  */
-const SqlInput = forwardRef<SqlEditorRef, SqlInputProps>((props, ref) => {
-    const {placeholder, ...rest} = props;
+const SqlInput = (props: SqlInputProps) => {
 
-    // Prevent newlines in the editor
-    const handleKeyDown = useCallback((e: any) => {
-        if (e.key === "Enter" || e.key === "Return") {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-    }, []);
-
-    // Prevent pasting newlines
-    const handlePaste = useCallback((e: any) => {
-        if (e.clipboardData) {
-            const text = e.clipboardData.getData("text/plain");
-            if (text.includes("\n")) {
-                e.preventDefault();
-                // Only paste the first line
-                const firstLine = text.split("\n")[0];
-                document.execCommand("insertText", false, firstLine);
-            }
-        }
-    }, []);
-
-    // Enforce single line and add custom Enter action
-    const handleEditorReady = useCallback((editor: monaco.editor.IStandaloneCodeEditor) => {
-        // Prevent multi-line input by repositioning cursor and trimming value
+    const handleEditorReady = useCallback((editor: SqlEditorType) => {
+        // Prevent multi-line input by repositioning cursor and replacing newlines with empty string.
         editor.onDidChangeCursorPosition((e) => {
             if (e.position.lineNumber > 1) {
-                // Trim editor value
-                editor.setValue(editor.getValue().replace(/\r?\n/g, " "));
-                // Bring back the cursor to the end of the first line
+                editor.setValue(editor.getValue().replace(/\r?\n/g, ""));
                 editor.setPosition({
                     lineNumber: 1,
                     column: Infinity,
                 });
             }
         });
-
-        // Add custom action for Enter key (form submission, currently a no-op)
-        editor.addAction({
-            id: "submitInSingleMode",
-            label: "Submit in single mode",
-            keybindings: [monaco.KeyCode.Enter],
-            run: () => {
-                // You can trigger form submit here if needed
-            },
-        });
     }, []);
 
     return (
         <SqlEditor
-            ref={ref}
-            height={32}
+            height={30}
             options={{
                 renderLineHighlight: "none",
-                quickSuggestions: false,
-                glyphMargin: false,
-                lineDecorationsWidth: 0,
                 folding: false,
-                fixedOverflowWidgets: true,
-                acceptSuggestionOnEnter: "on",
-                hover: {delay: 100},
-                roundedSelection: false,
-                contextmenu: false,
-                cursorStyle: "line-thin",
-                occurrencesHighlight: false,
-                links: false,
                 minimap: {enabled: false},
-                wordBasedSuggestions: false,
-                find: {
-                    addExtraSpaceOnTop: false,
-                    autoFindInSelection: "never",
-                    seedSearchStringFromSelection: "never",
-                },
-                fontSize: 14,
-                fontWeight: "normal",
                 wordWrap: "off",
                 lineNumbers: "off",
-                lineNumbersMinChars: 0,
-                overviewRulerLanes: 0,
+                glyphMargin: false,
                 overviewRulerBorder: false,
                 hideCursorInOverviewRuler: true,
-                scrollBeyondLastColumn: 0,
                 scrollbar: {
                     horizontal: "hidden",
                     vertical: "hidden",
@@ -104,16 +46,22 @@ const SqlInput = forwardRef<SqlEditorRef, SqlInputProps>((props, ref) => {
                     top: 4,
                     bottom: 4,
                 },
-                placeholder: placeholder ?? "Enter SQL",
                 scrollBeyondLastLine: false,
-                lineHeight: 24,
+                roundedSelection: false,
+                find: {
+                    addExtraSpaceOnTop: false,
+                    autoFindInSelection: "never",
+                    seedSearchStringFromSelection: "never",
+                },
+                fixedOverflowWidgets: true,
+                scrollBeyondLastColumn: 0,
+                lineNumbersMinChars: 0,
+                overviewRulerLanes: 0,
             }}
-            onKeyDown={handleKeyDown}
-            onPaste={handlePaste}
             onEditorReady={handleEditorReady}
-            {...rest}
+            {...props}
         />
     );
-});
+};
 
 export default SqlInput;
