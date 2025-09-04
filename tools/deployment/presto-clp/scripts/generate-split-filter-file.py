@@ -48,8 +48,8 @@ DEFAULT_CUSTOM_OPTIONS: Final[CustomOptions] = {"rangeMapping": DEFAULT_RANGE_MA
 DEFAULT_REQUIRED: Final[bool] = False
 
 
-BOLD = "\033[1m"
-RESET = "\033[0m"
+BOLD: Final[str] = "\033[1m"
+RESET: Final[str] = "\033[0m"
 
 
 def main(argv=None) -> int:
