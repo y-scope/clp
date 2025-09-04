@@ -172,6 +172,18 @@ set(
 )
 
 if(CLP_BUILD_EXECUTABLES)
+        clp_find_boost()
+        clp_find_date()
+        clp_find_fmt()
+        clp_find_spdlog()
+        clp_find_sqlite()
+        clp_find_libarchive()
+        clp_find_mariadb_client()
+        clp_find_nlohmann_json()
+        clp_find_yaml_cpp()
+        clp_find_ystdlib()
+        clp_find_zstd()
+
         add_executable(glt ${GLT_SOURCES})
         target_compile_features(glt PRIVATE cxx_std_20)
         target_include_directories(glt
