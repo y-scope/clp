@@ -16,7 +16,6 @@ def main():
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
-    # Load config file
     try:
         clp_config = load_config_file(default_config_file_path, default_config_file_path, clp_home)
     except:
