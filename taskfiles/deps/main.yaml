@@ -81,6 +81,7 @@ tasks:
       - task: "nlohmann_json"
       - task: "simdjson"
       - task: "spdlog"
+      - task: "spider"
       - task: "sqlite3"
       - task: "utfcpp"
       - task: "yaml-cpp"
@@ -445,6 +446,29 @@ tasks:
           # NOTE: Since spdlog depends on fmt, we need to choose a version of spdlog that's
           # compatible with the version of fmt we use.
           TARBALL_URL: "https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz"
+
+  spider:
+    internal: true
+    run: "once"
+    deps:
+      - task: "absl"
+      - task: "antlr-jar"
+      - task: "antlr-runtime"
+      - task: "boost"
+      - task: "fmt"
+      - task: "msgpack-cxx"
+      - task: "spdlog"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DSPIDER_BUILD_TESTING=OFF"
+          LIB_NAME: "spider"
+          # TODO: Update the url and checksum when we have a proper Spider release
+          TARBALL_SHA256: "98cf1add63f1bb7e27ba2e83fc12406c4de0c732bb896dc70e36a6b8a036cf69"
+          TARBALL_URL: "https://github.com/y-scope/spider/archive/64519e9.tar.gz"
 
   sqlite3:
     internal: true
