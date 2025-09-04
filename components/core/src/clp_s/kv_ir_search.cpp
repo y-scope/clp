@@ -74,7 +74,9 @@ public:
     ~IrUnitHandler() = default;
 
     // Methods implementing `IrUnitHandlerInterface`
-    [[nodiscard]] auto handle_log_event(KeyValuePairLogEvent log_event) -> IRErrorCode;
+    [[nodiscard]] auto
+    handle_log_event(KeyValuePairLogEvent log_event, [[maybe_unused]] size_t log_event_idx)
+            -> IRErrorCode;
 
     [[nodiscard]] static auto handle_utc_offset_change(
             [[maybe_unused]] UtcOffset utc_offset_old,
@@ -151,7 +153,10 @@ auto IrUnitHandler::create(
  *   necessary validations are performed.
  */
 // NOLINTNEXTLINE(readability-convert-member-functions-to-static)
-auto IrUnitHandler::handle_log_event(clp::ffi::KeyValuePairLogEvent log_event) -> IRErrorCode {
+auto IrUnitHandler::handle_log_event(
+        clp::ffi::KeyValuePairLogEvent log_event,
+        [[maybe_unused]] size_t log_event_idx
+) -> IRErrorCode {
     auto const serialize_result{log_event.serialize_to_json()};
     if (serialize_result.has_error()) {
         SPDLOG_ERROR(
@@ -195,7 +200,7 @@ auto deserialize_and_search_kv_ir_stream(
     auto trivial_new_projected_schema_tree_node_callback
             = []([[maybe_unused]] bool is_auto_generated,
                  [[maybe_unused]] SchemaTree::Node::id_t node_id,
-                 [[maybe_unused]] std::string_view projected_key_path)
+                 [[maybe_unused]] std::pair<std::string_view, size_t> projected_key_and_index)
             -> ystdlib::error_handling::Result<void> { return ystdlib::error_handling::success(); };
     using QueryHandlerType = clp::ffi::ir_stream::search::QueryHandler<
             decltype(trivial_new_projected_schema_tree_node_callback)>;

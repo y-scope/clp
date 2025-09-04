@@ -10,6 +10,8 @@ from contextlib import closing
 from typing import Optional
 
 from clp_py_utils.clp_config import (
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
     CLPConfig,
     Database,
 )
@@ -189,6 +191,7 @@ def validate_and_load_config_file(
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_archive_output_config()
         clp_config.validate_logs_dir()
+        clp_config.database.load_credentials_from_env()
         return clp_config
     except Exception:
         logger.exception("Failed to load config.")
@@ -244,8 +247,8 @@ def handle_extract_file_cmd(
     # fmt: on
     extract_env = {
         **os.environ,
-        "CLP_DB_USER": clp_db_connection_params["username"],
-        "CLP_DB_PASS": clp_db_connection_params["password"],
+        CLP_DB_USER_ENV_VAR_NAME: clp_db_connection_params["username"],
+        CLP_DB_PASS_ENV_VAR_NAME: clp_db_connection_params["password"],
     }
 
     files_to_extract_list_path = None
@@ -287,6 +290,12 @@ def main(argv):
         default=str(default_config_file_path),
         help="CLP configuration file.",
     )
+    args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
     command_args_parser = args_parser.add_subparsers(dest="command", required=True)
 
     # File extraction command parser
@@ -326,6 +335,10 @@ def main(argv):
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:

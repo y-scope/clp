@@ -1,5 +1,5 @@
 {
-  "name": "webui-client",
+  "name": "@webui/client",
   "version": "0.1.0",
   "description": "",
   "main": "src/main.tsx",
@@ -18,14 +18,16 @@
     "@emotion/styled": "^11.14.0",
     "@monaco-editor/react": "^4.7.0",
     "@mui/joy": "^5.0.0-beta.51",
-    "@sinclair/typebox": "^0.34.25",
+    "@sinclair/typebox": "^0.34.38",
     "@tanstack/react-query": "^5.81.5",
     "@tanstack/react-query-devtools": "^5.81.5",
+    "@webui/common": "*",
     "antd": "^5.24.5",
     "axios": "^1.7.9",
     "chart.js": "^4.4.9",
     "chartjs-adapter-dayjs-4": "^1.0.4",
     "chartjs-plugin-zoom": "^2.2.0",
+    "color": "^5.0.0",
     "dayjs": "^1.11.13",
     "monaco-editor": "^0.52.2",
     "react": "^19.0.0",
@@ -42,8 +44,8 @@
     "@types/react-dom": "^19.0.4",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@vitejs/plugin-react": "^4.3.4",
-    "eslint-config-yscope": "latest",
-    "typescript": "~5.6.2",
-    "vite": "^6.2.6"
+    "eslint-config-yscope": "1.1.1",
+    "typescript": "~5.7.3",
+    "vite": "^6.3.5"
   }
 }

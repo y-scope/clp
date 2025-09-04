@@ -5,6 +5,7 @@ shopt: ["globstar"]
 
 includes:
   deps: "taskfiles/deps/main.yaml"
+  docker-images: "taskfiles/docker-images.yaml"
   docs: "taskfiles/docs.yaml"
   lint: "taskfiles/lint.yaml"
   utils: "tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
@@ -29,7 +30,7 @@ vars:
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
   # Versions
-  G_PACKAGE_VERSION: "0.4.0-dev"
+  G_PACKAGE_VERSION: "0.5.1-dev"
 
   # Build parameters
   # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
@@ -37,7 +38,9 @@ vars:
     {{default "" (env "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK")}}
 
   # Checksum files
+  G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
   G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-client-node-modules.md5"
+  G_WEBUI_COMMON_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-common-node-modules.md5"
   G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE:
     "{{.G_BUILD_DIR}}/webui-log-viewer-node-modules.md5"
   G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-package-node-modules.md5"
@@ -84,6 +87,7 @@ tasks:
   clean-webui:
     cmds:
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/client/node_modules'"
+      - "rm -rf '{{.G_WEBUI_SRC_DIR}}/common/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules'"
@@ -92,7 +96,7 @@ tasks:
     env:
       NODE_ENV: "production"
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_PACKAGE_CHECKSUM_FILE}}"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
     sources:
       - "{{.G_BUILD_DIR}}/package-venv.md5"
@@ -154,8 +158,8 @@ tasks:
         "{{.G_WEBUI_BUILD_DIR}}/"
         "{{.OUTPUT_DIR}}/var/www/webui"
       - |-
-        cd "{{.OUTPUT_DIR}}/var/www/webui/server"
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm clean-install
+        cd "{{.OUTPUT_DIR}}/var/www/webui"
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm ci --omit=dev
       # This command must be last
       - task: "utils:checksum:compute"
         vars:
@@ -264,6 +268,7 @@ tasks:
       OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
     sources:
       - "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_COMMON_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
@@ -283,6 +288,10 @@ tasks:
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "mkdir -p '{{.OUTPUT_DIR}}'"
+      - |-
+        cd common
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run build
+        rsync -a package.json dist "{{.OUTPUT_DIR}}/common/"
       - for: ["client", "yscope-log-viewer"]
         cmd: |-
           cd "{{.G_WEBUI_SRC_DIR}}/{{.ITEM}}"
@@ -291,9 +300,9 @@ tasks:
       - |-
         cd server
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npx tsc --outDir '{{.OUTPUT_DIR}}/server/dist'
-        rsync -a \
-        package.json package-lock.json \
-        "{{.OUTPUT_DIR}}/server/"
+        rsync -a package.json "{{.OUTPUT_DIR}}/server/"
+      - |-
+        rsync -a package.json package-lock.json "{{.OUTPUT_DIR}}/"
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
@@ -345,9 +354,10 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
-  # NOTE: The webui has four different node_modules directories, and we generate a checksum file for
+  # NOTE: The webui has five different node_modules directories, and we generate a checksum file for
   # each one. The directories are:
   # * client
+  # * common
   # * server
   # * log-viewer submodule
   # * the top-level one we call "package"
@@ -356,6 +366,7 @@ tasks:
     vars:
       SRC_DIR: "{{.TASKFILE_DIR}}/components/webui"
       CLIENT_OUTPUT_DIR: "{{.SRC_DIR}}/client/node_modules"
+      COMMON_OUTPUT_DIR: "{{.SRC_DIR}}/common/node_modules"
       LOG_VIEWER_OUTPUT_DIR: "{{.SRC_DIR}}/yscope-log-viewer/node_modules"
       PACKAGE_OUTPUT_DIR: "{{.SRC_DIR}}/node_modules"
       SERVER_OUTPUT_DIR: "{{.SRC_DIR}}/server/node_modules"
@@ -363,17 +374,12 @@ tasks:
       - "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
       - "{{.G_BUILD_DIR}}/nodejs-22.md5"
       - "{{.TASKFILE}}"
-      - "client/package.json"
-      - "client/package-lock.json"
-      - "package.json"
-      - "package-lock.json"
-      - "server/package.json"
-      - "server/package-lock.json"
-      - "yscope-log-viewer/package.json"
-      - "yscope-log-viewer/package-lock.json"
+      - "**/{,client,common,server,yscope-log-viewer}/package.json"
+      - "**/{,client,common,server,yscope-log-viewer}/package-lock.json"
     dir: "{{.SRC_DIR}}"
     generates:
       - "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
+      - "{{.G_WEBUI_COMMON_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_PACKAGE_NODE_MODULES_CHECKSUM_FILE}}"
       - "{{.G_WEBUI_SERVER_NODE_MODULES_CHECKSUM_FILE}}"
@@ -387,6 +393,10 @@ tasks:
           EXCLUDE_PATTERNS: &webui_node_modules_checksum_exclude_patterns
             - ".tmp"
             - ".vite-temp"
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.G_WEBUI_COMMON_NODE_MODULES_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.COMMON_OUTPUT_DIR}}"]
       - task: "utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
@@ -411,6 +421,10 @@ tasks:
           CHECKSUM_FILE: "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.CLIENT_OUTPUT_DIR}}"]
           EXCLUDE_PATTERNS: *webui_node_modules_checksum_exclude_patterns
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.G_WEBUI_COMMON_NODE_MODULES_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.COMMON_OUTPUT_DIR}}"]
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE}}"
@@ -534,18 +548,16 @@ tasks:
     internal: true
     label: "{{.COMPONENT}}"
     vars:
-      PACKAGE:
-        sh: "echo {{.COMPONENT}} | tr - _"
       VENV_DIR: "{{.G_BUILD_DIR}}/{{.COMPONENT}}/venv"
     requires:
       vars: ["COMPONENT"]
     sources:
-      - "{{.G_BUILD_DIR}}/{{.COMPONENT}}_venv.md5"
-      - "{{.PACKAGE}}/**/*"
+      - "{{.G_BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
       - "{{.ROOT_DIR}}/requirements.txt"
       - "{{.TASKFILE}}"
       - "/etc/os-release"
-      - "pyproject.toml"
+      - "**/*"
+      - exclude: "dist/**/*"
     dir: "components/{{.COMPONENT}}"
     generates:
       - "dist/*.whl"
