@@ -3,7 +3,7 @@ import logging
 import pathlib
 import sys
 
-from clp_package_utils.controllers import DockerComposeController
+from clp_package_utils.controller import DockerComposeController
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     dump_shared_container_config,
