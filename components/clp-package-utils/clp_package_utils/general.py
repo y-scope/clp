@@ -16,6 +16,9 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLP_SHARED_CONFIG_FILENAME,
     CLPConfig,
+    CONTAINER_AWS_CONFIG_DIRECTORY,
+    CONTAINER_CLP_HOME,
+    CONTAINER_INPUT_LOGS_ROOT_DIR,
     DB_COMPONENT_NAME,
     QueryEngine,
     QUEUE_COMPONENT_NAME,
@@ -24,7 +27,7 @@ from clp_py_utils.clp_config import (
     RESULTS_CACHE_COMPONENT_NAME,
     StorageType,
     WEBUI_COMPONENT_NAME,
-    WorkerConfig, CONTAINER_CLP_HOME, CONTAINER_INPUT_LOGS_ROOT_DIR, CONTAINER_AWS_CONFIG_DIRECTORY,
+    WorkerConfig,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     MYSQL_TABLE_NAME_MAX_LEN,

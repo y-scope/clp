@@ -239,6 +239,9 @@ class Database(BaseModel):
         self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
 
+    def transform_for_container_config(self):
+        self.host = DB_COMPONENT_NAME
+
 
 def _validate_logging_level(cls, field):
     if not is_valid_logging_level(field):
@@ -296,6 +299,9 @@ class QueryScheduler(BaseModel):
             raise ValueError(f"{field} is not greater than zero")
         return field
 
+    def transform_for_container_config(self):
+        self.host = QUERY_SCHEDULER_COMPONENT_NAME
+
 
 class CompressionWorker(BaseModel):
     logging_level: str = "INFO"
@@ -349,6 +355,9 @@ class Redis(BaseModel):
         """
         self.password = _get_env_var(CLP_REDIS_PASS_ENV_VAR_NAME)
 
+    def transform_for_container_config(self):
+        self.host = REDIS_COMPONENT_NAME
+
 
 class Reducer(BaseModel):
     host: str = "localhost"
@@ -378,6 +387,9 @@ class Reducer(BaseModel):
         if not field > 0:
             raise ValueError(f"{field} is not greater than zero")
         return field
+
+    def transform_for_container_config(self):
+        self.host = REDUCER_COMPONENT_NAME
 
 
 class ResultsCache(BaseModel):
@@ -416,6 +428,9 @@ class ResultsCache(BaseModel):
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
+    def transform_for_container_config(self):
+        self.host = RESULTS_CACHE_COMPONENT_NAME
+
 
 class Queue(BaseModel):
     host: str = "localhost"
@@ -445,6 +460,9 @@ class Queue(BaseModel):
         """
         self.username = _get_env_var(CLP_QUEUE_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_QUEUE_PASS_ENV_VAR_NAME)
+
+    def transform_for_container_config(self):
+        self.host = QUEUE_COMPONENT_NAME
 
 
 class S3Credentials(BaseModel):
@@ -584,26 +602,30 @@ class FsIngestionConfig(FsStorage):
     def transform_for_container_config(self):
         self.directory = CONTAINER_INPUT_LOGS_ROOT_DIR
 
+
 class ArchiveFsStorage(FsStorage):
     directory: pathlib.Path = CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
 
     def transform_for_container_config(self):
-        self.directory =   pathlib.Path("/") /CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
+        self.directory = pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
+
 
 class StreamFsStorage(FsStorage):
     directory: pathlib.Path = CLP_DEFAULT_STREAM_DIRECTORY_PATH
 
     def transform_for_container_config(self):
-        self.directory =   pathlib.Path("/") /CLP_DEFAULT_STREAM_DIRECTORY_PATH
+        self.directory = pathlib.Path("/") / CLP_DEFAULT_STREAM_DIRECTORY_PATH
+
 
 class ArchiveS3Storage(S3Storage):
-    staging_directory: pathlib.Path =  pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
+    staging_directory: pathlib.Path = pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
 
     def transform_for_container_config(self):
-        self.staging_directory =  pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
+        self.staging_directory = pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
+
 
 class StreamS3Storage(S3Storage):
-    staging_directory: pathlib.Path =  pathlib.Path("/") / CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
+    staging_directory: pathlib.Path = pathlib.Path("/") / CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
 
 
 def _get_directory_from_storage_config(
@@ -941,19 +963,18 @@ class CLPConfig(BaseModel):
     def transform_for_container_config(self):
         self.data_directory = pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH
         self.logs_directory = pathlib.Path("/") / CLP_DEFAULT_LOG_DIRECTORY_PATH
+        if self.aws_config_directory is not None:
+            self.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
         self.logs_input.transform_for_container_config()
         self.archive_output.storage.transform_for_container_config()
         self.stream_output.storage.transform_for_container_config()
-        if self.aws_config_directory is not None:
-            self.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
 
-        # Set container services' hosts
-        self.database.host = DB_COMPONENT_NAME
-        self.queue.host = QUEUE_COMPONENT_NAME
-        self.redis.host = REDIS_COMPONENT_NAME
-        self.results_cache.host = RESULTS_CACHE_COMPONENT_NAME
-        self.query_scheduler.host = QUERY_SCHEDULER_COMPONENT_NAME
-        self.reducer.host = REDUCER_COMPONENT_NAME
+        self.database.transform_for_container_config()
+        self.queue.transform_for_container_config()
+        self.redis.transform_for_container_config()
+        self.results_cache.transform_for_container_config()
+        self.query_scheduler.transform_for_container_config()
+        self.reducer.transform_for_container_config()
 
 
 class WorkerConfig(BaseModel):
