@@ -8,6 +8,7 @@ from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, root_validator, validator
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
+from clp_package_utils.general import CONTAINER_AWS_CONFIG_DIRECTORY, CONTAINER_INPUT_LOGS_ROOT_DIR
 from .clp_logging import get_valid_logging_level, is_valid_logging_level
 from .core import (
     get_config_value,
@@ -921,6 +922,41 @@ class CLPConfig(BaseModel):
             d["aws_config_directory"] = None
 
         return d
+
+    def transform_for_container_config(self):
+        self.data_directory = pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH
+        self.logs_directory = pathlib.Path("/") / CLP_DEFAULT_LOG_DIRECTORY_PATH
+        if StorageType.FS == self.logs_input.type:
+            self.logs_input.directory = CONTAINER_INPUT_LOGS_ROOT_DIR
+
+        if StorageType.FS == self.archive_output.storage.type:
+            self.archive_output.storage.directory = (
+                    pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
+            )
+        elif StorageType.S3 == self.archive_output.storage.type:
+            self.archive_output.storage.staging_directory = (
+                    pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
+            )
+
+        if StorageType.FS == self.stream_output.storage.type:
+            self.stream_output.storage.directory = (
+                    pathlib.Path("/") / CLP_DEFAULT_STREAM_DIRECTORY_PATH
+            )
+        elif StorageType.S3 == self.stream_output.storage.type:
+            self.stream_output.storage.staging_directory = (
+                    pathlib.Path("/") / CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
+            )
+
+        if self.aws_config_directory is not None:
+            self.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
+
+        # Set container services' hosts
+        self.database.host = DB_COMPONENT_NAME
+        self.queue.host = QUEUE_COMPONENT_NAME
+        self.redis.host = REDIS_COMPONENT_NAME
+        self.results_cache.host = RESULTS_CACHE_COMPONENT_NAME
+        self.query_scheduler.host = QUERY_SCHEDULER_COMPONENT_NAME
+        self.reducer.host = REDUCER_COMPONENT_NAME
 
 
 class WorkerConfig(BaseModel):

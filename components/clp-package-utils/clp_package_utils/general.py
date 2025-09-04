@@ -295,47 +295,13 @@ def generate_container_config(
 
 def generate_docker_compose_container_config(clp_config: CLPConfig) -> CLPConfig:
     """
-    Copies the given config and corrects mount paths and hosts for Docker Compose.
+    Copies the given config and transforms mount paths and hosts for Docker Compose.
 
     :param clp_config:
     :return: The container config and the mounts.
     """
     container_clp_config = clp_config.copy(deep=True)
-
-    # Set container paths
-    container_clp_config.data_directory = pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH
-    container_clp_config.logs_directory = pathlib.Path("/") / CLP_DEFAULT_LOG_DIRECTORY_PATH
-    if StorageType.FS == clp_config.logs_input.type:
-        container_clp_config.logs_input.directory = CONTAINER_INPUT_LOGS_ROOT_DIR
-
-    if StorageType.FS == clp_config.archive_output.storage.type:
-        container_clp_config.archive_output.storage.directory = (
-            pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
-        )
-    elif StorageType.S3 == clp_config.archive_output.storage.type:
-        container_clp_config.archive_output.storage.staging_directory = (
-            pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
-        )
-
-    if StorageType.FS == clp_config.stream_output.storage.type:
-        container_clp_config.stream_output.storage.directory = (
-            pathlib.Path("/") / CLP_DEFAULT_STREAM_DIRECTORY_PATH
-        )
-    elif StorageType.S3 == clp_config.stream_output.storage.type:
-        container_clp_config.stream_output.storage.staging_directory = (
-            pathlib.Path("/") / CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
-        )
-
-    if clp_config.aws_config_directory is not None:
-        container_clp_config.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
-
-    # Set container services' hosts
-    container_clp_config.database.host = DB_COMPONENT_NAME
-    container_clp_config.queue.host = QUEUE_COMPONENT_NAME
-    container_clp_config.redis.host = REDIS_COMPONENT_NAME
-    container_clp_config.results_cache.host = RESULTS_CACHE_COMPONENT_NAME
-    container_clp_config.query_scheduler.host = QUERY_SCHEDULER_COMPONENT_NAME
-    container_clp_config.reducer.host = REDUCER_COMPONENT_NAME
+    container_clp_config.transform_for_container_config()
 
     return container_clp_config
 
