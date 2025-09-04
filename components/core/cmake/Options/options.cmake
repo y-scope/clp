@@ -142,10 +142,6 @@ function(validate_clp_regex_utils_dependencies)
     )
 endfunction()
 
-function(set_clp_regex_utils_dependencies)
-    set_property(DIRECTORY PROPERTY CLP_NEED_YSTDLIB TRUE)
-endfunction()
-
 function(validate_clp_s_archivereader_dependencies)
     validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_ARCHIVEREADER
         CLP_BUILD_CLP_STRING_UTILS
