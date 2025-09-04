@@ -5,13 +5,14 @@ import pathlib
 import sys
 import time
 from contextlib import closing
-from typing import List, Optional, Union
+from typing import List, Union
 
 import brotli
 import msgpack
 from clp_py_utils.clp_config import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLPConfig,
-    COMPRESSION_JOBS_TABLE_NAME, CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    COMPRESSION_JOBS_TABLE_NAME,
 )
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.s3_utils import parse_s3_url

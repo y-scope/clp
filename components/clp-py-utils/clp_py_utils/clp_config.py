@@ -1,8 +1,7 @@
 import os
 import pathlib
-import socket
 from enum import auto
-from typing import Dict, Literal, Optional, Union
+from typing import Literal, Optional, Union
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, root_validator, validator

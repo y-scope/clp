@@ -11,8 +11,9 @@ import sys
 import msgpack
 import pymongo
 from clp_py_utils.clp_config import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     Database,
-    ResultsCache, CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    ResultsCache,
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType

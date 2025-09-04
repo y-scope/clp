@@ -6,8 +6,13 @@ from contextlib import closing
 from pathlib import Path
 from typing import Dict, List
 
-from clp_py_utils.clp_config import ArchiveOutput, Database, S3Config, StorageType, \
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+from clp_py_utils.clp_config import (
+    ArchiveOutput,
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    Database,
+    S3Config,
+    StorageType,
+)
 from clp_py_utils.clp_metadata_db_utils import (
     delete_dataset_from_metadata_db,
     get_datasets_table_name,

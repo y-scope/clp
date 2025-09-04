@@ -8,9 +8,10 @@ import sys
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
     StorageEngine,
-    StorageType, CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    StorageType,
 )
 
 from clp_package_utils.general import (
