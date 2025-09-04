@@ -240,12 +240,12 @@ services:
       RESULT_BACKEND: >-
         redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_COMPRESSION_BACKEND_DB:-1}
     volumes:
-      - "${CLP_ARCHIVE_STAGING_DIR_HOST:-./var/data/staged-archives}:/var/data/staged-archives"
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/staged-archives}:/var/data/staged-archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
       - "${CLP_COMPRESSION_WORKER_LOGS_DIR_HOST:-./var/log/compression_worker}:\
 /var/log/compression_worker"
       - "${CLP_DATA_DIR_HOST:-./var/data}:/var/data"
-      - "${CLP_DATA_DIR_HOST:-./var/data}/archives:/var/data/archives"
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}:/var/data/archives"
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "/:/mnt/logs:ro"
     command: [
@@ -279,11 +279,11 @@ services:
         redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
     volumes:
       - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
-      - "${CLP_DATA_DIR_HOST:-./var/data}/archives:/var/data/archives"
-      - "${CLP_DATA_DIR_HOST:-./var/data}/streams:/var/data/streams"
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}:/var/data/archives"
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "${CLP_QUERY_WORKER_LOGS_DIR:-./var/log/query_worker}:/var/log/query_worker"
-      - "${CLP_STREAM_STAGING_DIR_HOST:-./var/data/staged-streams}:/var/data/staged-streams"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}:/var/data/streams"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/staged-streams}:/var/data/staged-streams"
     command: [
       "python3",
       "-u",
@@ -338,7 +338,7 @@ services:
       - "${CLP_WEBUI_HOST:-127.0.0.1}:${CLP_WEBUI_PORT:-4000}:4000"
     volumes:
       - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
-      - "${CLP_DATA_DIR_HOST:-./var/data}/streams:/var/data/streams"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}:/var/data/streams"
       - "./var/www/webui/client/settings.json:/opt/clp/var/www/webui/client/settings.json:ro"
       - "./var/www/webui/server/dist/settings.json\
 :/opt/clp/var/www/webui/server/dist/settings.json:ro"

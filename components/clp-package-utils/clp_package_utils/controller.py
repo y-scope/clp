@@ -440,16 +440,6 @@ class DockerComposeController(BaseController):
         if self.clp_config.aws_config_directory is not None:
             env_dict["CLP_AWS_CONFIG_DIR_HOST"] = str(self.clp_config.aws_config_directory)
 
-        # Staging directories for S3 storage
-        if StorageType.S3 == self.clp_config.archive_output.storage.type:
-            env_dict["CLP_ARCHIVE_STAGING_DIR_HOST"] = str(
-                self.clp_config.archive_output.storage.staging_directory
-            )
-        if StorageType.S3 == self.clp_config.stream_output.storage.type:
-            env_dict["CLP_STREAM_STAGING_DIR_HOST"] = str(
-                self.clp_config.stream_output.storage.staging_directory
-            )
-
         with open(f"{self.clp_home}/.env", "w") as env_file:
             for key, value in env_dict.items():
                 env_file.write(f"{key}={value}\n")
