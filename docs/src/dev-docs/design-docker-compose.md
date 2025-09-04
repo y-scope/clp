@@ -45,7 +45,7 @@ The `start-clp.py` script performs the following steps:
 3. **Environment File Generation**: A `.env` file is created with all necessary variables.
 4. **Docker Compose Execution**: `docker compose up -d` is executed to start all services.
 
-## Service Architecture
+## Service architecture
 
 The Docker Compose setup includes the following services:
 
