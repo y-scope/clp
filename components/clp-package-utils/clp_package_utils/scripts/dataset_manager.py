@@ -10,13 +10,13 @@ from clp_py_utils.clp_config import (
     ARCHIVE_MANAGER_ACTION_NAME,
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     StorageEngine,
     StorageType,
 )
 from clp_py_utils.s3_utils import generate_container_auth_options
 
 from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     dump_container_config,
     generate_container_config,
     generate_container_name,
