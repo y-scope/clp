@@ -16,10 +16,12 @@ Docs about building CLP.
 :::
 
 :::{grid-item-card}
-:link: ../dev-guide/testing/index
+:link: testing/index
 Testing
+^^^
 Docs about testing CLP.
 :::
+
 :::{grid-item-card}
 :link: contributing-getting-started
 Contributing
@@ -59,10 +61,11 @@ building-package
 :caption: Testing
 :hidden:
 
-../dev-guide/testing/index
-../dev-guide/testing/unit-tests
-../dev-guide/testing/integration-tests
+testing/index
+testing/unit-tests
+testing/integration-tests
 :::
+
 :::{toctree}
 :caption: Contributing
 :hidden:
