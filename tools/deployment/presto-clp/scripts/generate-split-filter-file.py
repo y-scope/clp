@@ -131,7 +131,7 @@ def _prompt_timestamp_keys(datasets: List[str]) -> Dict[str, str]:
         user_input = input(
             f">>> {BOLD}{dataset}{RESET} [default key: {BOLD}{DEFAULT_TIMESTAMP_KEY}{RESET}]: "
         )
-        key = DEFAULT_TIMESTAMP_KEY if user_input == "" else user_input
+        key = DEFAULT_TIMESTAMP_KEY if 0 == len(user_input) else user_input
         data_time_pairs[dataset] = key
 
     return data_time_pairs
