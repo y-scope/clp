@@ -206,7 +206,7 @@ def main(argv):
         t_key = parsed_args.timestamp_key
         if t_key is None:
             logger.warning(
-                "If your logs have a timestamp key, you should use the --timestamp-key flag."
+                "If your logs have a timestamp field, you should use the --timestamp-key flag."
             )
     elif dataset is not None:
         logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
