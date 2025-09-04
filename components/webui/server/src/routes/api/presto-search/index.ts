@@ -175,17 +175,17 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                         success: () => {
                             if (false === isResolved) {
                                 request.log.error(
-                                    "Presto query finished received before searchJobId was resolved; "
+                                    "Presto query finished before searchJobId was resolved; "
                                 );
                                 return;
-                            } else {
-                                searchResultsMetadataCollection.updateOne(
-                                    {_id: searchJobId},
-                                    {$set: {lastSignal: PRESTO_SEARCH_SIGNAL.DONE}}
-                                ).catch((err: unknown) => {
-                                    request.log.error(err, "Failed to update Presto metadata");
-                                });
                             }
+                            searchResultsMetadataCollection.updateOne(
+                                {_id: searchJobId},
+                                {$set: {lastSignal: PRESTO_SEARCH_SIGNAL.DONE}}
+                            ).catch((err: unknown) => {
+                                request.log.error(err, "Failed to update Presto metadata");
+                            });
+
                             request.log.info("Presto search succeeded");
                         },
                         timeout: null,
