@@ -63,9 +63,9 @@ def main(argv):
         controller.deploy()
     except Exception as ex:
         if type(ex) == ValueError:
-            logger.error(f"Failed to initialize CLP: {ex}")
+            logger.error(f"Failed to start CLP: {ex}")
         else:
-            logger.exception("Failed to initialize CLP.")
+            logger.exception("Failed to start CLP.")
         return -1
 
     return 0
