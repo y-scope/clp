@@ -8,7 +8,6 @@ from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, root_validator, validator
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
-from clp_package_utils.general import CONTAINER_AWS_CONFIG_DIRECTORY, CONTAINER_INPUT_LOGS_ROOT_DIR
 from .clp_logging import get_valid_logging_level, is_valid_logging_level
 from .core import (
     get_config_value,
@@ -41,6 +40,11 @@ COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 
 OS_RELEASE_FILE_PATH = pathlib.Path("etc") / "os-release"
 
+# Paths
+CONTAINER_AWS_CONFIG_DIRECTORY = pathlib.Path("/") / ".aws"
+CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
+CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
+CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yml"
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
 CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
 CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
@@ -519,6 +523,9 @@ class S3IngestionConfig(BaseModel):
     def dump_to_primitive_dict(self):
         return self.dict()
 
+    def transform_for_container_config(self):
+        pass
+
 
 class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
@@ -574,21 +581,29 @@ class S3Storage(BaseModel):
 class FsIngestionConfig(FsStorage):
     directory: pathlib.Path = pathlib.Path("/")
 
+    def transform_for_container_config(self):
+        self.directory = CONTAINER_INPUT_LOGS_ROOT_DIR
 
 class ArchiveFsStorage(FsStorage):
     directory: pathlib.Path = CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
 
+    def transform_for_container_config(self):
+        self.directory =   pathlib.Path("/") /CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
 
 class StreamFsStorage(FsStorage):
     directory: pathlib.Path = CLP_DEFAULT_STREAM_DIRECTORY_PATH
 
+    def transform_for_container_config(self):
+        self.directory =   pathlib.Path("/") /CLP_DEFAULT_STREAM_DIRECTORY_PATH
 
 class ArchiveS3Storage(S3Storage):
-    staging_directory: pathlib.Path = CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
+    staging_directory: pathlib.Path =  pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
 
+    def transform_for_container_config(self):
+        self.staging_directory =  pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
 
 class StreamS3Storage(S3Storage):
-    staging_directory: pathlib.Path = CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
+    staging_directory: pathlib.Path =  pathlib.Path("/") / CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
 
 
 def _get_directory_from_storage_config(
@@ -926,27 +941,9 @@ class CLPConfig(BaseModel):
     def transform_for_container_config(self):
         self.data_directory = pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH
         self.logs_directory = pathlib.Path("/") / CLP_DEFAULT_LOG_DIRECTORY_PATH
-        if StorageType.FS == self.logs_input.type:
-            self.logs_input.directory = CONTAINER_INPUT_LOGS_ROOT_DIR
-
-        if StorageType.FS == self.archive_output.storage.type:
-            self.archive_output.storage.directory = (
-                    pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
-            )
-        elif StorageType.S3 == self.archive_output.storage.type:
-            self.archive_output.storage.staging_directory = (
-                    pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
-            )
-
-        if StorageType.FS == self.stream_output.storage.type:
-            self.stream_output.storage.directory = (
-                    pathlib.Path("/") / CLP_DEFAULT_STREAM_DIRECTORY_PATH
-            )
-        elif StorageType.S3 == self.stream_output.storage.type:
-            self.stream_output.storage.staging_directory = (
-                    pathlib.Path("/") / CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
-            )
-
+        self.logs_input.transform_for_container_config()
+        self.archive_output.storage.transform_for_container_config()
+        self.stream_output.storage.transform_for_container_config()
         if self.aws_config_directory is not None:
             self.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
 

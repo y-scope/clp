@@ -5,7 +5,6 @@ import sys
 
 from clp_package_utils.controller import DockerComposeController
 from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     dump_shared_container_config,
     generate_docker_compose_container_config,
     get_clp_home,
@@ -17,6 +16,7 @@ from clp_package_utils.general import (
     validate_output_storage_config,
     validate_retention_config,
 )
+from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
 logger = logging.getLogger(__file__)
 

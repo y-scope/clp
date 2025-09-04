@@ -13,17 +13,10 @@ from typing import Dict, List, Optional, Tuple
 
 import yaml
 from clp_py_utils.clp_config import (
-    CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH,
-    CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH,
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
-    CLP_DEFAULT_DATA_DIRECTORY_PATH,
-    CLP_DEFAULT_LOG_DIRECTORY_PATH,
-    CLP_DEFAULT_STREAM_DIRECTORY_PATH,
-    CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH,
     CLP_SHARED_CONFIG_FILENAME,
     CLPConfig,
     DB_COMPONENT_NAME,
-    QUERY_SCHEDULER_COMPONENT_NAME,
     QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
@@ -31,7 +24,7 @@ from clp_py_utils.clp_config import (
     RESULTS_CACHE_COMPONENT_NAME,
     StorageType,
     WEBUI_COMPONENT_NAME,
-    WorkerConfig,
+    WorkerConfig, CONTAINER_CLP_HOME, CONTAINER_INPUT_LOGS_ROOT_DIR, CONTAINER_AWS_CONFIG_DIRECTORY,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     MYSQL_TABLE_NAME_MAX_LEN,
@@ -49,12 +42,6 @@ from strenum import KebabCaseStrEnum
 EXTRACT_FILE_CMD = "x"
 EXTRACT_IR_CMD = "i"
 EXTRACT_JSON_CMD = "j"
-
-# Paths
-CONTAINER_AWS_CONFIG_DIRECTORY = pathlib.Path("/") / ".aws"
-CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
-CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
-CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yml"
 
 DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
 
