@@ -63,13 +63,13 @@ class BaseController(ABC):
     def __init__(self, clp_config: CLPConfig):
         self.clp_config = clp_config
         self.clp_home = get_clp_home()
-        self.conf_dir = self.clp_home / "etc"
+        self._conf_dir = self.clp_home / "etc"
 
     def provision_database(self):
         component_name = DB_COMPONENT_NAME
         logger.info(f"Initializing {component_name}...")
 
-        conf_file = self.conf_dir / "mysql" / "conf.d" / "logging.cnf"
+        conf_file = self._conf_dir / "mysql" / "conf.d" / "logging.cnf"
         data_dir = self.clp_config.data_directory / component_name
         logs_dir = self.clp_config.logs_directory / component_name
         validate_db_config(self.clp_config, conf_file, data_dir, logs_dir)
@@ -110,7 +110,7 @@ class BaseController(ABC):
         component_name = REDIS_COMPONENT_NAME
         logger.info(f"Initializing {component_name}...")
 
-        conf_file = self.conf_dir / "redis" / "redis.conf"
+        conf_file = self._conf_dir / "redis" / "redis.conf"
         logs_dir = self.clp_config.logs_directory / component_name
         data_dir = self.clp_config.data_directory / component_name
         validate_redis_config(self.clp_config, conf_file, data_dir, logs_dir)
@@ -134,7 +134,7 @@ class BaseController(ABC):
         component_name = RESULTS_CACHE_COMPONENT_NAME
         logger.info(f"Initializing {component_name}...")
 
-        conf_file = self.conf_dir / "mongo" / "mongod.conf"
+        conf_file = self._conf_dir / "mongo" / "mongod.conf"
         data_dir = self.clp_config.data_directory / component_name
         logs_dir = self.clp_config.logs_directory / component_name
         validate_results_cache_config(self.clp_config, conf_file, data_dir, logs_dir)
