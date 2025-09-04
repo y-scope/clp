@@ -63,12 +63,13 @@ class BaseController(ABC):
     def __init__(self, clp_config: CLPConfig):
         self.clp_config = clp_config
         self.clp_home = get_clp_home()
+        self.conf_dir = self.clp_home / "etc"
 
-    def provision_database(self, conf_dir: pathlib.Path):
+    def provision_database(self):
         component_name = DB_COMPONENT_NAME
         logger.info(f"Initializing {component_name}...")
 
-        conf_file = conf_dir / "mysql" / "conf.d" / "logging.cnf"
+        conf_file = self.conf_dir / "mysql" / "conf.d" / "logging.cnf"
         data_dir = self.clp_config.data_directory / component_name
         logs_dir = self.clp_config.logs_directory / component_name
         validate_db_config(self.clp_config, conf_file, data_dir, logs_dir)
@@ -105,11 +106,11 @@ class BaseController(ABC):
             "CLP_QUEUE_PASS": self.clp_config.queue.password,
         }
 
-    def provision_redis(self, conf_dir: pathlib.Path):
+    def provision_redis(self):
         component_name = REDIS_COMPONENT_NAME
         logger.info(f"Initializing {component_name}...")
 
-        conf_file = conf_dir / "redis" / "redis.conf"
+        conf_file = self.conf_dir / "redis" / "redis.conf"
         logs_dir = self.clp_config.logs_directory / component_name
         data_dir = self.clp_config.data_directory / component_name
         validate_redis_config(self.clp_config, conf_file, data_dir, logs_dir)
@@ -129,11 +130,11 @@ class BaseController(ABC):
             ),
         }
 
-    def provision_results_cache(self, conf_dir: pathlib.Path):
+    def provision_results_cache(self):
         component_name = RESULTS_CACHE_COMPONENT_NAME
         logger.info(f"Initializing {component_name}...")
 
-        conf_file = conf_dir / "mongo" / "mongod.conf"
+        conf_file = self.conf_dir / "mongo" / "mongod.conf"
         data_dir = self.clp_config.data_directory / component_name
         logs_dir = self.clp_config.logs_directory / component_name
         validate_results_cache_config(self.clp_config, conf_file, data_dir, logs_dir)
@@ -405,7 +406,6 @@ class DockerComposeController(BaseController):
         self.clp_config.stream_output.get_directory().mkdir(parents=True, exist_ok=True)
 
         container_clp_config = generate_docker_compose_container_config(self.clp_config)
-        conf_dir = self.clp_home / "etc"
         num_workers = self._get_num_workers()
 
         env_dict = {
@@ -423,10 +423,10 @@ class DockerComposeController(BaseController):
             # AWS credentials
             "CLP_AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID", ""),
             "CLP_AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY", ""),
-            **self.provision_database(conf_dir),
+            **self.provision_database(),
             **self.provision_queue(),
-            **self.provision_redis(conf_dir),
-            **self.provision_results_cache(conf_dir),
+            **self.provision_redis(),
+            **self.provision_results_cache(),
             **self.provision_compression_scheduler(),
             **self.provision_query_scheduler(),
             **self.provision_compression_worker(num_workers),
