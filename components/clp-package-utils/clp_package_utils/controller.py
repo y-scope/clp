@@ -436,7 +436,6 @@ class DockerComposeController(BaseController):
             **self.provision_garbage_collector(),
         }
 
-        # AWS config directory
         if self.clp_config.aws_config_directory is not None:
             env_dict["CLP_AWS_CONFIG_DIR_HOST"] = str(self.clp_config.aws_config_directory)
 
