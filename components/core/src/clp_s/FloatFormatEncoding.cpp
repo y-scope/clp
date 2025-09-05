@@ -49,11 +49,11 @@ auto has_exponent_sign(uint16_t format, uint16_t sign) -> bool {
 }
 
 auto has_scientific_notation(uint16_t format) -> bool {
-    return format & 1 << float_format_encoding::cExponentNotationPos;
+    return 0U != (format & cScientificNotationEnabledBit);
 }
 
 auto is_uppercase_exponent(uint16_t format) -> bool {
-    return format << (float_format_encoding::cExponentNotationPos + 1);
+    return cScientificNotationUpperCaseEFlag == (format & cScientificNotationFlagMask);
 }
 
 auto get_exponent_digits(uint16_t format) -> uint16_t {
@@ -139,9 +139,8 @@ auto get_float_encoding(std::string_view float_str) -> ystdlib::error_handling::
             return std::errc::protocol_not_supported;
         }
 
-        format |= static_cast<uint16_t>(1u) << cExponentNotationPos;
-        format |= static_cast<uint16_t>('E' == float_str[exp_pos] ? 1u : 0u)
-                  << (cExponentNotationPos + 1);
+        format |= 'E' == float_str[exp_pos] ? cScientificNotationUpperCaseEFlag
+                                            : cScientificNotationLowerCaseEFlag;
 
         // Check whether there is a sign for the exponent
         if ('+' == float_str[exp_pos + 1]) {
