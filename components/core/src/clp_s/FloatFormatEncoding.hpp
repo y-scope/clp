@@ -46,7 +46,8 @@ static_assert(cNumSignificantDigitsPos <= 15U, "Bit position out of range");
  */
 auto get_float_encoding(std::string_view float_str) -> ystdlib::error_handling::Result<uint16_t>;
 
-auto restore_encoded_float(double value, uint16_t format) -> std::string;
+auto restore_encoded_float(double value, uint16_t format)
+        -> ystdlib::error_handling::Result<std::string>;
 }  // namespace clp_s::float_format_encoding
 
 #endif  // CLP_S_FLOATFORMATENCODING_HPP
