@@ -223,7 +223,7 @@ auto get_float_encoding(std::string_view float_str) -> ystdlib::error_handling::
     // TODO: switch to returning protocol_not_supported for floats with too many significant digits
     // once we implement dictionary encoding support.
     uint16_t const compressed_num_significant_digits{
-            static_cast<uint16_t>(std::min(num_significant_digits - 1ULL, 15ULL))
+            static_cast<uint16_t>(std::min(num_significant_digits, cMaxNumSignificantDigits) - 1ULL)
     };
 
     format |= compressed_num_significant_digits << cNumSignificantDigitsPos;
