@@ -465,7 +465,7 @@ auto QueryHandlerImpl::update_partially_resolved_columns(
         }
     }
 
-    for (auto const [node_id, token_it] : new_partial_resolutions) {
+    for (auto const& [node_id, token_it] : new_partial_resolutions) {
         auto [it, inserted] = partial_resolutions_to_update.try_emplace(
                 node_id,
                 std::vector<ColumnDescriptorTokenIterator>{}
