@@ -11,9 +11,9 @@ CLP core is the low-level component that performs compression, decompression, an
   * std::source_location
 * [CMake] >= 3.23.0 and < 4.0.0
   * Minimum version 3.23.0 is required for [yscope-dev-utils].
-  * We constrain the version to < 4.0.0 due to unresolved [issues][clp-issue-795].
+  * We constrain the version to < 4.0.0 due to [y-scope/clp#795].
 * [Task] 3.44.0
-  * We pin the version to 3.44.0 due to unresolved [issues][clp-ffi-js-issue-110].
+  * We pin the version to 3.44.0 due to [y-scope/clp-ffi-js#110].
 
 To build, we require some source dependencies, packages from package managers, and libraries built
 from source.
@@ -123,8 +123,8 @@ regex-utils
 :::
 
 [CMake]: https://cmake.org/
-[clp-ffi-js-issue-110]: https://github.com/y-scope/clp-ffi-js/issues/110
-[clp-issue-795]: https://github.com/y-scope/clp/issues/795
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [Task]: https://taskfile.dev/
+[y-scope/clp-ffi-js#110]: https://github.com/y-scope/clp-ffi-js/issues/110
+[y-scope/clp#795]: https://github.com/y-scope/clp/issues/795
 [yscope-dev-utils]: https://github.com/y-scope/yscope-dev-utils
