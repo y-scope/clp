@@ -1,18 +1,12 @@
 import {
     CLP_QUERY_ENGINES,
-    CLP_STORAGE_ENGINES,
     SETTINGS_QUERY_ENGINE,
-    SETTINGS_STORAGE_ENGINE,
 } from "../../../config";
-import Dataset from "./Dataset";
-import styles from "./index.module.css";
-import SqlInterfaceButton from "./Presto/SqlInterfaceButton";
-import SqlQueryInput from "./Presto/SqlQueryInput";
-import SqlSearchButton from "./Presto/SqlSearchButton";
-import QueryInput from "./QueryInput";
-import QueryStatus from "./QueryStatus";
-import SearchButton from "./SearchButton";
-import TimeRangeInput from "./TimeRangeInput";
+import usePrestoSearchState from "../SearchState/Presto";
+import {PRESTO_SQL_INTERFACE} from "../SearchState/Presto/typings";
+import NativeControls from "./NativeControls";
+import FreeformControls from "./Presto/FreeformControls";
+import GuidedControls from "./Presto/GuidedControls";
 
 
 /**
@@ -30,43 +24,23 @@ const handleSubmit = (ev: React.FormEvent<HTMLFormElement>) => {
  * @return
  */
 const SearchControls = () => {
-    /* eslint-disable-next-line no-warning-comments */
-    // TODO: Remove flag and related logic when the new guide UI is fully implemented.
-    const isGuidedEnabled = "true" === import.meta.env[`VITE_GUIDED_DEV`];
+    const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
+    const isPrestoGuided = sqlInterface === PRESTO_SQL_INTERFACE.GUIDED;
+
+    let controls;
+    if (SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO) {
+        controls = <NativeControls/>;
+    } else if (isPrestoGuided) {
+        controls = <GuidedControls/>;
+    } else {
+        controls = <FreeformControls/>;
+    }
 
     return (
         <form onSubmit={handleSubmit}>
-            {SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO ?
-                (
-                    <div className={styles["searchControlsContainer"]}>
-                        <div className={styles["inputsAndButtonRow"]}>
-                            {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && <Dataset/>}
-                            <QueryInput/>
-                            <TimeRangeInput/>
-                            <SearchButton/>
-                        </div>
-                        <div className={styles["status"]}>
-                            <QueryStatus/>
-                        </div>
-                    </div>
-                ) :
-                (
-                    <div className={styles["searchControlsContainer"]}>
-                        <SqlQueryInput/>
-                        <div className={styles["statusAndButtonsRow"]}>
-                            <div className={styles["status"]}>
-                                <QueryStatus/>
-                            </div>
-                            <div className={styles["buttons"]}>
-                                {isGuidedEnabled && <SqlInterfaceButton/>}
-                                <SqlSearchButton/>
-                            </div>
-                        </div>
-                    </div>
-                )}
+            {controls}
         </form>
     );
 };
-
 
 export default SearchControls;
