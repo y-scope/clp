@@ -24,6 +24,7 @@ constexpr uint16_t cPlusExponentSign = 0b01;
 constexpr uint16_t cMinusExponentSign = 0b10;
 // Number of exponent digits (2 bits)
 constexpr uint16_t cNumExponentDigitsPos = 10;
+constexpr uint16_t cNumExponentDigitsMask = 0b11U << cNumExponentDigitsPos;
 // Number of significant digits (4 bits)
 constexpr uint16_t cNumSignificantDigitsPos = 6;
 
