@@ -14,12 +14,12 @@
 
 namespace clp_s::float_format_encoding {
 namespace {
-auto has_exponent_sign(uint16_t format, uint16_t sign) -> bool;
+auto has_matching_exponent_sign_flag(uint16_t format, uint16_t sign_flag) -> bool;
 auto has_scientific_notation(uint16_t format) -> bool;
 auto is_uppercase_exponent(uint16_t format) -> bool;
 
 auto get_num_exponent_digits(uint16_t format) -> size_t;
-auto get_significant_digits(uint16_t format) -> uint16_t;
+auto get_num_significant_digits(uint16_t format) -> size_t;
 
 /**
  * Trims the leading zeros until the number of exponent digits match the value stored in the
@@ -45,8 +45,8 @@ auto trim_leading_zeros(std::string_view scientific_notation, size_t start, size
  */
 auto scientific_to_decimal(std::string_view scientific_notation) -> std::string;
 
-auto has_exponent_sign(uint16_t format, uint16_t sign) -> bool {
-    return sign << cExponentSignPos == (format & 0b11 << cExponentSignPos);
+auto has_matching_exponent_sign_flag(uint16_t format, uint16_t sign_flag) -> bool {
+    return sign_flag == (format & cExponentSignFlagMask);
 }
 
 auto has_scientific_notation(uint16_t format) -> bool {
@@ -61,8 +61,9 @@ auto get_num_exponent_digits(uint16_t format) -> size_t {
     return static_cast<size_t>((format & cNumExponentDigitsMask) >> cNumExponentDigitsPos) + 1ULL;
 }
 
-auto get_significant_digits(uint16_t format) -> uint16_t {
-    return (format >> float_format_encoding::cNumSignificantDigitsPos & 0x0F) + 1;
+auto get_num_significant_digits(uint16_t format) -> size_t {
+    return static_cast<size_t>((format & cNumSignificantDigitsMask) >> cNumSignificantDigitsPos)
+           + 1ULL;
 }
 
 auto trim_leading_zeros(std::string_view scientific_notation, size_t start, size_t num_exp_digits)
@@ -129,7 +130,7 @@ auto scientific_to_decimal(std::string_view scientific_notation) -> std::string 
 
 auto get_float_encoding(std::string_view float_str) -> ystdlib::error_handling::Result<uint16_t> {
     auto const dot_pos{float_str.find('.')};
-    uint16_t format{0};
+    uint16_t format{};
 
     // Check whether it is scientific; if so, whether the exponent is E or e
     size_t exp_pos{float_str.find_first_of("Ee")};
@@ -149,9 +150,9 @@ auto get_float_encoding(std::string_view float_str) -> ystdlib::error_handling::
 
         // Check whether there is a sign for the exponent
         if ('+' == float_str[exp_pos + 1]) {
-            format |= static_cast<uint16_t>(1u) << cExponentSignPos;
+            format |= cPlusExponentSignFlag;
         } else if ('-' == float_str[exp_pos + 1]) {
-            format |= static_cast<uint16_t>(1u) << (cExponentSignPos + 1);
+            format |= cMinusExponentSignFlag;
         }
 
         // Set the number of exponent digits
@@ -210,30 +211,30 @@ auto get_float_encoding(std::string_view float_str) -> ystdlib::error_handling::
         return std::errc::protocol_not_supported;
     }
 
-    auto significant_digits{exp_pos - first_non_zero_frac_digit_pos};
+    auto num_significant_digits{exp_pos - first_non_zero_frac_digit_pos};
     if (std::string_view::npos != dot_pos && first_non_zero_frac_digit_pos < dot_pos) {
-        significant_digits--;
+        num_significant_digits--;
     }
 
     // Number of significant digits must be greater than zero (e.g., E0 or . is illegal)
-    if (significant_digits <= 0) {
+    if (num_significant_digits <= 0) {
         return std::errc::protocol_not_supported;
     }
     // TODO: switch to returning protocol_not_supported for floats with too many significant digits
     // once we implement dictionary encoding support.
-    uint16_t const compressed_significant_digits{
-            static_cast<uint16_t>(std::min(significant_digits - 1ULL, 15ULL))
+    uint16_t const compressed_num_significant_digits{
+            static_cast<uint16_t>(std::min(num_significant_digits - 1ULL, 15ULL))
     };
 
-    format |= compressed_significant_digits << cNumSignificantDigitsPos;
+    format |= compressed_num_significant_digits << cNumSignificantDigitsPos;
     return format;
 }
 
 auto restore_encoded_float(double value, uint16_t format) -> std::string {
     std::ostringstream oss;
     oss.imbue(std::locale::classic());
-    uint16_t const significant_digits = get_significant_digits(format);
-    oss << std::scientific << std::setprecision(significant_digits - 1);
+    auto const num_significant_digits{get_num_significant_digits(format)};
+    oss << std::scientific << std::setprecision(num_significant_digits - 1);
     if (has_scientific_notation(format)) {
         if (is_uppercase_exponent(format)) {
             oss << std::uppercase;
@@ -245,7 +246,7 @@ auto restore_encoded_float(double value, uint16_t format) -> std::string {
         unsigned char const maybe_sign
                 = static_cast<unsigned char>(formatted_double_str[exp_pos + 1]);
         auto const num_exp_digits{get_num_exponent_digits(format)};
-        if (has_exponent_sign(format, float_format_encoding::cEmptyExponentSign)) {
+        if (has_matching_exponent_sign_flag(format, cEmptyExponentSignFlag)) {
             if ('+' == maybe_sign || '-' == maybe_sign) {
                 formatted_double_str.erase(exp_pos + 1, 1);
             }
@@ -270,13 +271,13 @@ auto restore_encoded_float(double value, uint16_t format) -> std::string {
                         '0'
                 );
             }
-            if (has_exponent_sign(format, float_format_encoding::cPlusExponentSign)) {
+            if (has_matching_exponent_sign_flag(format, cPlusExponentSignFlag)) {
                 if (std::isdigit(maybe_sign)) {
                     formatted_double_str.insert(exp_pos + 1, "+");
                 } else {
                     formatted_double_str[exp_pos + 1] = '+';
                 }
-            } else if (has_exponent_sign(format, float_format_encoding::cMinusExponentSign)) {
+            } else if (has_matching_exponent_sign_flag(format, cMinusExponentSignFlag)) {
                 if (std::isdigit(maybe_sign)) {
                     formatted_double_str.insert(exp_pos + 1, "-");
                 } else {

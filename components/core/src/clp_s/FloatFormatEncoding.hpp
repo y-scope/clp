@@ -18,18 +18,20 @@ constexpr uint16_t cScientificNotationEnabledBit = 0b01U << cScientificNotationF
 constexpr uint16_t cScientificNotationLowerCaseEFlag = 0b01U << cScientificNotationFlagPos;
 constexpr uint16_t cScientificNotationUpperCaseEFlag = 0b11U << cScientificNotationFlagPos;
 // Exponent sign presence (2 bits)
-constexpr uint16_t cExponentSignPos = 12;
-constexpr uint16_t cEmptyExponentSign = 0b00;
-constexpr uint16_t cPlusExponentSign = 0b01;
-constexpr uint16_t cMinusExponentSign = 0b10;
+constexpr uint16_t cExponentSignFlagPos = 12;
+constexpr uint16_t cExponentSignFlagMask = 0b11U << cExponentSignFlagPos;
+constexpr uint16_t cEmptyExponentSignFlag = 0b00U << cExponentSignFlagPos;
+constexpr uint16_t cPlusExponentSignFlag = 0b01U << cExponentSignFlagPos;
+constexpr uint16_t cMinusExponentSignFlag = 0b10U << cExponentSignFlagPos;
 // Number of exponent digits (2 bits)
 constexpr uint16_t cNumExponentDigitsPos = 10;
 constexpr uint16_t cNumExponentDigitsMask = 0b11U << cNumExponentDigitsPos;
 // Number of significant digits (4 bits)
 constexpr uint16_t cNumSignificantDigitsPos = 6;
+constexpr uint16_t cNumSignificantDigitsMask = 0b1111U << cNumSignificantDigitsPos;
 
 static_assert(cScientificNotationFlagPos <= 15, "Bit position out of range");
-static_assert(cExponentSignPos <= 15, "Bit position out of range");
+static_assert(cExponentSignFlagPos <= 15, "Bit position out of range");
 static_assert(cNumExponentDigitsPos <= 15, "Bit position out of range");
 static_assert(cNumSignificantDigitsPos <= 15, "Bit position out of range");
 
