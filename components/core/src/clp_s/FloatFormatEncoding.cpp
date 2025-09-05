@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <iomanip>
 #include <ios>
+#include <locale>
 #include <sstream>
 #include <string>
 #include <string_view>
@@ -210,6 +211,7 @@ auto get_float_encoding(std::string_view float_str) -> ystdlib::error_handling::
 
 auto restore_encoded_float(double value, uint16_t format) -> std::string {
     std::ostringstream oss;
+    oss.imbue(std::locale::classic());
     uint16_t const significant_digits = get_significant_digits(format);
     oss << std::scientific << std::setprecision(significant_digits - 1);
     if (has_scientific_notation(format)) {
