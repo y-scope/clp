@@ -1,5 +1,6 @@
+import {QUERY_JOB_TYPE} from "@webui/common/query";
 import {RowDataPacket} from "mysql2/promise";
-import {QUERY_JOB_TYPE} from "@webui/common/query"
+
 
 /**
  * Matching the `QueryJobStatus` class in

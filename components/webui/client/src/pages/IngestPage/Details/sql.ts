@@ -1,4 +1,4 @@
-import {Nullable} from "@webui/common/utility-types"
+import {Nullable} from "@webui/common/utility-types";
 
 import {querySql} from "../../../api/sql";
 import {SqlTableSuffix} from "../../../config/sql-table-suffix";

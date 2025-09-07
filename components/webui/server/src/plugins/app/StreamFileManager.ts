@@ -1,3 +1,5 @@
+import {QUERY_JOB_TYPE} from "@webui/common/query";
+import {Nullable} from "@webui/common/utility-types";
 import {
     FastifyBaseLogger,
     FastifyInstance,
@@ -5,8 +7,6 @@ import {
 import fp from "fastify-plugin";
 
 import settings from "../../../settings.json" with {type: "json"};
-import {Nullable} from "@webui/common/utility-types"
-import {QUERY_JOB_TYPE} from "@webui/common/query";
 import {
     StreamFileMetadata,
     StreamFilesCollection,

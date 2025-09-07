@@ -2,6 +2,7 @@ import {setTimeout} from "node:timers/promises";
 
 import type {MySQLPromisePool} from "@fastify/mysql";
 import {encode} from "@msgpack/msgpack";
+import {QUERY_JOB_TYPE} from "@webui/common/query";
 import {FastifyInstance} from "fastify";
 import fp from "fastify-plugin";
 import {ResultSetHeader} from "mysql2";
@@ -13,9 +14,6 @@ import {
     QUERY_JOBS_TABLE_COLUMN_NAMES,
     QueryJob,
 } from "../../../typings/query.js";
-import {
-    QUERY_JOB_TYPE,
-} from "@webui/common/query";
 import {JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS} from "./typings.js";
 
 

@@ -1,10 +1,12 @@
+import {
+    QueryJob,
+    QueryJobCreation,
+} from "@webui/common/schemas/search";
 import {message} from "antd";
 
 import {
     cancelQuery,
     clearQueryResults,
-    QueryJobCreationSchema,
-    QueryJobSchema,
     submitQuery,
 } from "../../../api/search";
 import {
@@ -51,7 +53,7 @@ const handleClearResults = () => {
  *
  * @param payload
  */
-const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
+const handleQuerySubmit = (payload: QueryJobCreation) => {
     const store = useSearchStore.getState();
 
     // User should NOT be able to submit a new query while an existing query is in progress.
@@ -116,7 +118,7 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
  *
  * @param payload
  */
-const handleQueryCancel = (payload: QueryJobSchema) => {
+const handleQueryCancel = (payload: QueryJob) => {
     const store = useSearchStore.getState();
 
     if (store.searchUiState !== SEARCH_UI_STATE.QUERYING) {

@@ -1,12 +1,9 @@
-import axios, {AxiosResponse} from "axios";
-import { Static } from '@sinclair/typebox'
 import {
-    PrestoQueryJobCreationSchema,
-    PrestoQueryJobSchema,
-} from "@webui/common/schemas/presto-search"
+    type PrestoQueryJob,
+    type PrestoQueryJobCreation,
+} from "@webui/common/schemas/presto-search";
+import axios, {AxiosResponse} from "axios";
 
-type PrestoQueryJobCreation = Static<typeof PrestoQueryJobCreationSchema>;
-type PrestoQueryJob = Static<typeof PrestoQueryJobSchema>;
 
 /**
  * Sends post request to server to submit presto query.

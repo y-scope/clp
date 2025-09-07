@@ -1,13 +1,8 @@
-import axios, {AxiosResponse} from "axios";
-
-import { Static } from '@sinclair/typebox'
 import {
-    QueryJobCreationSchema,
-    QueryJobSchema,
-} from "@webui/common/schemas/search"
-
-type QueryJobCreation = Static<typeof QueryJobCreationSchema>;
-type QueryJob = Static<typeof QueryJobSchema>;
+    type QueryJob,
+    type QueryJobCreation,
+} from "@webui/common/schemas/search";
+import axios, {AxiosResponse} from "axios";
 
 
 /**
@@ -16,7 +11,7 @@ type QueryJob = Static<typeof QueryJobSchema>;
  * @param payload
  * @return
  */
-const submitQuery = (payload: QueryJobCreation): Promise<AxiosResponse<QueryJobSchema>> => {
+const submitQuery = (payload: QueryJobCreation): Promise<AxiosResponse<QueryJob>> => {
     console.log("Submitting query:", JSON.stringify(payload));
 
     return axios.post<QueryJob>("/api/search/query", payload);

@@ -14,6 +14,5 @@ interface PrestoSearchResult extends PrestoRowObject {
 
 export type {
     PrestoRowObject,
-    PrestoSearchResult
+    PrestoSearchResult,
 };
-

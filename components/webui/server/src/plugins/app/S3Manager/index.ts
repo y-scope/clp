@@ -3,10 +3,10 @@ import {
     S3Client,
 } from "@aws-sdk/client-s3";
 import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
+import {Nullable} from "@webui/common/utility-types";
 import fp from "fastify-plugin";
 
 import settings from "../../../../settings.json" with {type: "json"};
-import {Nullable} from "@webui/common/utility-types"
 import {PRE_SIGNED_URL_EXPIRY_TIME_SECONDS} from "./typings.js";
 
 

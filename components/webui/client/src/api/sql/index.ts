@@ -1,10 +1,5 @@
+import {Sql} from "@webui/common/schemas/archive-metadata";
 import axios from "axios";
-import { Static } from '@sinclair/typebox'
-import {
-    SqlSchema,
-} from "@webui/common/schemas/archive-metadata"
-
-type Sql = Static<typeof SqlSchema>;
 
 
 /**

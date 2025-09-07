@@ -1,5 +1,6 @@
 import {Type} from "@sinclair/typebox";
-import {QUERY_JOB_TYPE} from "@webui/common/query"
+import {QUERY_JOB_TYPE} from "@webui/common/query";
+
 
 /**
  * Enum for the different UI states of a query's loading process.

@@ -19,4 +19,3 @@ export {
     EXTRACT_JOB_TYPES,
     QUERY_JOB_TYPE,
 };
-

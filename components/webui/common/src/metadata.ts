@@ -1,4 +1,5 @@
-import { CLP_QUERY_ENGINES } from "./config";
+import {CLP_QUERY_ENGINES} from "./config";
+
 
 /**
  * Enum of search-related signals.
@@ -35,7 +36,6 @@ enum PRESTO_SEARCH_SIGNAL {
 }
 
 
-
 /**
  * MongoDB document for search results metadata. `numTotalResults` is optional
  * since it is only set when the search job is completed.
@@ -56,6 +56,4 @@ export {
     PRESTO_SEARCH_SIGNAL,
     SEARCH_SIGNAL,
 };
-export type {
-    SearchResultsMetadataDocument
-};
+export type {SearchResultsMetadataDocument};

@@ -5,7 +5,7 @@ import {
     useState,
 } from "react";
 
-import {Nullable} from "@webui/common/utility-types"
+import {Nullable} from "@webui/common/utility-types";
 
 
 /**

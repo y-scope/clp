@@ -1,4 +1,7 @@
-import {Type} from "@sinclair/typebox";
+import {
+    Static,
+    Type,
+} from "@sinclair/typebox";
 
 import {StringSchema} from "./common.js";
 
@@ -10,4 +13,7 @@ const SqlSchema = Type.Object({
     queryString: StringSchema,
 });
 
+type Sql = Static<typeof SqlSchema>;
+
 export {SqlSchema};
+export type {Sql};

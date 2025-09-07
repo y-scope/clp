@@ -2,9 +2,8 @@ import {
     FastifyPluginAsyncTypebox,
     Type,
 } from "@fastify/type-provider-typebox";
+import {SqlSchema} from "@webui/common/schemas/archive-metadata";
 import {StatusCodes} from "http-status-codes";
-
-import {SqlSchema} from "@webui/common/schemas/archive-metadata"
 
 
 /**

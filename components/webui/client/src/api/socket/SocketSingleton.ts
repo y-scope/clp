@@ -2,12 +2,11 @@ import {
     ClientToServerEvents,
     ServerToClientEvents,
 } from "@webui/common/socket";
+import {Nullable} from "@webui/common/utility-types";
 import {
     io,
     Socket,
 } from "socket.io-client";
-
-import {Nullable} from "@webui/common/utility-types"
 
 
 let sharedSocket: Nullable<Socket<ServerToClientEvents, ClientToServerEvents>> = null;

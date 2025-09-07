@@ -1,4 +1,4 @@
-import {Nullable} from "@webui/common/utility-types"
+import {Nullable} from "@webui/common/utility-types";
 
 import {settings} from "../../../settings";
 import {COMPRESSION_JOBS_TABLE_COLUMN_NAMES} from "../sqlConfig";

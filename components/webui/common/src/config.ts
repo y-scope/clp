@@ -7,6 +7,4 @@ enum CLP_QUERY_ENGINES {
     PRESTO = "presto",
 }
 
-export {
-    CLP_QUERY_ENGINES
-};
+export {CLP_QUERY_ENGINES};
