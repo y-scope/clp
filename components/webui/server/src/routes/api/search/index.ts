@@ -3,19 +3,21 @@ import {
     Type,
 } from "@fastify/type-provider-typebox";
 import {
-    CLP_QUERY_ENGINES,
     SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
-} from "@webui/common";
+} from "@webui/common/metadata";
+import {
+    CLP_QUERY_ENGINES,
+} from "@webui/common/config";
 import {StatusCodes} from "http-status-codes";
 
 import settings from "../../../../settings.json" with {type: "json"};
-import {ErrorSchema} from "../../../schemas/error.js";
+import {ErrorSchema} from "@webui/common/schemas/error";
 import {
     QueryJobCreationSchema,
     QueryJobSchema,
-} from "../../../schemas/search.js";
-import {QUERY_JOB_TYPE} from "../../../typings/query.js";
+} from "@webui/common/schemas/search";
+import {QUERY_JOB_TYPE} from "@webui/common";
 import {SEARCH_MAX_NUM_RESULTS} from "./typings.js";
 import {
     createMongoIndexes,

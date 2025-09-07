@@ -5,8 +5,8 @@ import {
 import fp from "fastify-plugin";
 
 import settings from "../../../settings.json" with {type: "json"};
-import {Nullable} from "../../typings/common.js";
-import {QUERY_JOB_TYPE} from "../../typings/query.js";
+import {Nullable} from "@webui/common/utility-types"
+import {QUERY_JOB_TYPE} from "@webui/common/query";
 import {
     StreamFileMetadata,
     StreamFilesCollection,

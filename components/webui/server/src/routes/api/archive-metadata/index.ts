@@ -4,7 +4,7 @@ import {
 } from "@fastify/type-provider-typebox";
 import {StatusCodes} from "http-status-codes";
 
-import {SqlSchema} from "../../../schemas/archive-metadata.js";
+import {SqlSchema} from "@webui/common/schemas/archive-metadata"
 
 
 /**

@@ -6,7 +6,7 @@ import {getSignedUrl} from "@aws-sdk/s3-request-presigner";
 import fp from "fastify-plugin";
 
 import settings from "../../../../settings.json" with {type: "json"};
-import {Nullable} from "../../../typings/common.js";
+import {Nullable} from "@webui/common/utility-types"
 import {PRE_SIGNED_URL_EXPIRY_TIME_SECONDS} from "./typings.js";
 
 

@@ -2,13 +2,13 @@ import axios, {
     AxiosProgressEvent,
     AxiosResponse,
 } from "axios";
-import {Nullable} from "src/typings/common";
+import {Nullable} from "@webui/common/utility-types"
 
 import {
     ExtractStreamResp,
-    QUERY_JOB_TYPE,
 } from "../../typings/query";
 
+import {QUERY_JOB_TYPE} from "@webui/common/query"
 
 interface SubmitExtractStreamJobProps {
     dataset: Nullable<string>;

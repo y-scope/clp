@@ -1,18 +1,12 @@
 import axios, {AxiosResponse} from "axios";
+import { Static } from '@sinclair/typebox'
+import {
+    PrestoQueryJobCreationSchema,
+    PrestoQueryJobSchema,
+} from "@webui/common/schemas/presto-search"
 
-
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with shared type from the `@common` directory once refactoring is completed.
-// Currently, server schema types require typebox dependency so they cannot be moved to the
-// `@common` directory with current implementation.
-type PrestoQueryJobCreationSchema = {
-    queryString: string;
-};
-
-type PrestoQueryJobSchema = {
-    searchJobId: string;
-};
-
+type PrestoQueryJobCreation = Static<typeof PrestoQueryJobCreationSchema>;
+type PrestoQueryJob = Static<typeof PrestoQueryJobSchema>;
 
 /**
  * Sends post request to server to submit presto query.
@@ -21,11 +15,11 @@ type PrestoQueryJobSchema = {
  * @return
  */
 const submitQuery = async (
-    payload: PrestoQueryJobCreationSchema
-): Promise<AxiosResponse<PrestoQueryJobSchema>> => {
+    payload: PrestoQueryJobCreation
+): Promise<AxiosResponse<PrestoQueryJob>> => {
     console.log("Submitting query:", JSON.stringify(payload));
 
-    return axios.post<PrestoQueryJobSchema>("/api/presto-search/query", payload);
+    return axios.post<PrestoQueryJob>("/api/presto-search/query", payload);
 };
 
 
@@ -36,7 +30,7 @@ const submitQuery = async (
  * @return
  */
 const cancelQuery = async (
-    payload: PrestoQueryJobSchema
+    payload: PrestoQueryJob
 ): Promise<AxiosResponse<null>> => {
     console.log("Cancelling query:", JSON.stringify(payload));
 
@@ -50,16 +44,12 @@ const cancelQuery = async (
  * @param payload
  * @return
  */
-const clearQueryResults = (payload: PrestoQueryJobSchema): Promise<AxiosResponse<null>> => {
+const clearQueryResults = (payload: PrestoQueryJob): Promise<AxiosResponse<null>> => {
     console.log("Clearing query:", JSON.stringify(payload));
 
     return axios.delete("/api/presto-search/results", {data: payload});
 };
 
-export type {
-    PrestoQueryJobCreationSchema,
-    PrestoQueryJobSchema,
-};
 
 export {
     cancelQuery,

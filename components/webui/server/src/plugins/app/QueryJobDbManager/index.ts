@@ -10,10 +10,12 @@ import settings from "../../../../settings.json" with {type: "json"};
 import {
     QUERY_JOB_STATUS,
     QUERY_JOB_STATUS_WAITING_STATES,
-    QUERY_JOB_TYPE,
     QUERY_JOBS_TABLE_COLUMN_NAMES,
     QueryJob,
 } from "../../../typings/query.js";
+import {
+    QUERY_JOB_TYPE,
+} from "@webui/common/query";
 import {JOB_COMPLETION_STATUS_POLL_INTERVAL_MILLIS} from "./typings.js";
 
 

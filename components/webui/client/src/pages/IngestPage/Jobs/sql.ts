@@ -1,4 +1,4 @@
-import {Nullable} from "src/typings/common";
+import {Nullable} from "@webui/common/utility-types"
 
 import {settings} from "../../../settings";
 import {COMPRESSION_JOBS_TABLE_COLUMN_NAMES} from "../sqlConfig";
@@ -22,7 +22,7 @@ SELECT
     ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UNCOMPRESSED_SIZE},
     ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.COMPRESSED_SIZE}
 FROM ${settings.SqlDbCompressionJobsTableName}
-WHERE ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UPDATE_TIME} >= 
+WHERE ${COMPRESSION_JOBS_TABLE_COLUMN_NAMES.UPDATE_TIME} >=
     FROM_UNIXTIME(${lastUpdateTimestampSeconds}) - 1
 ORDER BY _id DESC;`;
 
