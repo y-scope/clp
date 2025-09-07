@@ -1,6 +1,6 @@
 import {
-    QueryJob,
-    QueryJobCreation,
+    type QueryJob,
+    type QueryJobCreation,
 } from "@webui/common/schemas/search";
 import {message} from "antd";
 

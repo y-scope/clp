@@ -1,7 +1,6 @@
 {
   "name": "@webui/common",
   "version": "0.1.0",
-  "files": ["dist"],
   "exports": {
     "./*": {
       "types": "./dist/*.d.ts",
