@@ -5,8 +5,10 @@ WORKDIR /root
 RUN mkdir -p ./tools/scripts/lib_install
 ADD ./tools/scripts/lib_install ./tools/scripts/lib_install
 
+# Set pipx environment vars so that the pipx scripts install into the global locations without
+# passing the `--global` flag.
 ENV PIPX_BIN_DIR=/usr/local/bin
-ENV PIPX_HOME=/opt/_internal/pipx
+ENV PIPX_HOME=/opt/pipx
 
 RUN ./tools/scripts/lib_install/centos-stream-9/install-all.sh
 
