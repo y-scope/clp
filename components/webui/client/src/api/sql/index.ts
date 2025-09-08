@@ -1,15 +1,14 @@
-import {Sql} from "@webui/common/schemas/archive-metadata";
 import axios from "axios";
 
 
 /**
  * Query the SQL server with the queryString.
  *
- * @param payload
+ * @param queryString
  * @return
  */
-const querySql = async <T>(payload: Sql) => {
-    return axios.post<T>("/api/archive-metadata/sql", payload);
+const querySql = async <T>(queryString: string) => {
+    return axios.post<T>("/api/archive-metadata/sql", {queryString});
 };
 
 export {querySql};

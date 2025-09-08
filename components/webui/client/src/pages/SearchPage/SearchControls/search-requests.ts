@@ -42,7 +42,10 @@ const handleClearResults = () => {
     }
 
     clearQueryResults(
-        {searchJobId, aggregationJobId}
+        {
+            searchJobId: Number(searchJobId),
+            aggregationJobId: Number(aggregationJobId),
+        }
     ).catch((err: unknown) => {
         console.error("Failed to clear query results:", err);
     });
@@ -97,8 +100,8 @@ const handleQuerySubmit = (payload: QueryJobCreation) => {
     submitQuery(payload)
         .then((result) => {
             const {searchJobId, aggregationJobId} = result.data;
-            store.updateSearchJobId(searchJobId);
-            store.updateAggregationJobId(aggregationJobId);
+            store.updateSearchJobId(searchJobId.toString());
+            store.updateAggregationJobId(aggregationJobId.toString());
             store.updateSearchUiState(SEARCH_UI_STATE.QUERYING);
             console.debug(
                 "Search job created - ",

@@ -1,4 +1,5 @@
 import {CLP_QUERY_ENGINES} from "./config";
+import {Nullable} from "./utility-types";
 
 
 /**
@@ -42,11 +43,8 @@ enum PRESTO_SEARCH_SIGNAL {
  */
 interface SearchResultsMetadataDocument {
     _id: string;
-
-    // eslint-disable-next-line no-warning-comments
-    // TODO: Replace with Nullable<string> when the `@common` directory refactoring is completed.
-    errorMsg: string | null;
-    errorName: string | null;
+    errorMsg: Nullable<string>;
+    errorName: Nullable<string>;
     lastSignal: SEARCH_SIGNAL | PRESTO_SEARCH_SIGNAL;
     numTotalResults?: number;
     queryEngine: CLP_QUERY_ENGINES;
