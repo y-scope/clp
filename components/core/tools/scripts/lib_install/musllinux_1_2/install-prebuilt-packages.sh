@@ -18,4 +18,4 @@ apk update && apk add --no-cache \
     zlib-static
 
 # Install remaining packages through pipx
-"${script_dir}/../pipx_install/install-all.sh"
+"${script_dir}/../pipx-packages/install-all.sh"
