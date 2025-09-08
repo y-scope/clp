@@ -4,7 +4,7 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 if ! command -v pipx >/dev/null 2>&1; then
     echo "Error: pipx not found."
