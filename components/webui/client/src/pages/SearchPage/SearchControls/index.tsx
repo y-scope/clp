@@ -6,6 +6,7 @@ import {
 } from "../../../config";
 import Dataset from "./Dataset";
 import styles from "./index.module.css";
+import SqlInterfaceButton from "./Presto/SqlInterfaceButton";
 import SqlQueryInput from "./Presto/SqlQueryInput";
 import SqlSearchButton from "./Presto/SqlSearchButton";
 import QueryInput from "./QueryInput";
@@ -29,6 +30,10 @@ const handleSubmit = (ev: React.FormEvent<HTMLFormElement>) => {
  * @return
  */
 const SearchControls = () => {
+    /* eslint-disable-next-line no-warning-comments */
+    // TODO: Remove flag and related logic when the new guide UI is fully implemented.
+    const isGuidedEnabled = "true" === import.meta.env[`VITE_GUIDED_DEV`];
+
     return (
         <form onSubmit={handleSubmit}>
             {SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO ?
@@ -48,11 +53,14 @@ const SearchControls = () => {
                 (
                     <div className={styles["searchControlsContainer"]}>
                         <SqlQueryInput/>
-                        <div className={styles["buttonAndStatusRow"]}>
+                        <div className={styles["statusAndButtonsRow"]}>
                             <div className={styles["status"]}>
                                 <QueryStatus/>
                             </div>
-                            <SqlSearchButton/>
+                            <div className={styles["buttons"]}>
+                                {isGuidedEnabled && <SqlInterfaceButton/>}
+                                <SqlSearchButton/>
+                            </div>
                         </div>
                     </div>
                 )}
