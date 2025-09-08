@@ -52,6 +52,7 @@ Reference docs like format specifications, etc.
 quick-start/index
 quick-start/clp-json
 quick-start/clp-text
+quick-start/text-v-json
 :::
 
 :::{toctree}
