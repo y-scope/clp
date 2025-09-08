@@ -17,5 +17,5 @@ apk update && apk add --no-cache \
     zlib-dev \
     zlib-static
 
-# Install `cmake`, `go-task` and `uv`
+# Install remaining packages through pipx
 "${script_dir}/../pipx_install/install-all.sh"

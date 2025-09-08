@@ -16,5 +16,5 @@ dnf install -y \
     zlib-devel \
     zlib-static
 
-# Install `cmake`, `go-task` and `uv`
+# Install remaining packages through pipx
 "${script_dir}/../pipx_install/install-all.sh"

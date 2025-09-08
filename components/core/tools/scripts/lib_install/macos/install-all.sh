@@ -27,5 +27,5 @@ if ! command -v pkg-config >/dev/null 2>&1; then
     brew install pkg-config
 fi
 
-# Install `cmake`, `go-task` and `uv`
+# Install remaining packages through pipx
 "${script_dir}/../pipx_install/install-all.sh"

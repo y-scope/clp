@@ -26,5 +26,5 @@ if ! command -v pipx >/dev/null 2>&1; then
     python3 -m pip install pipx
 fi
 
-# Install `cmake`, `go-task` and `uv`
+# Install remaining packages through pipx
 "${script_dir}/../pipx_install/install-all.sh"

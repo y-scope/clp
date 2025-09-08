@@ -30,5 +30,5 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
   software-properties-common \
   unzip
 
-# Install `cmake`, `go-task` and `uv`
+# Install remaining packages through pipx
 "${script_dir}/../pipx_install/install-all.sh"
