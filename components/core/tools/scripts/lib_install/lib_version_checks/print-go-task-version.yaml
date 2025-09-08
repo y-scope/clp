@@ -1,6 +1,6 @@
 version: "3"
 
 tasks:
-  version:
+  default:
     cmd: >-
       echo {{ .TASK_VERSION | trimPrefix "v" }}
