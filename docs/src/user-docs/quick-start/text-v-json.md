@@ -15,38 +15,39 @@ Both flavors contain the same binaries but are configured with different values 
 (table-1)=
 :::{card}
 
-| Capability                            | `clp-text`                            | `clp-json`                            |
-| ------------------------------------- | :-----------------------------------: | :-----------------------------------: |
-| Compression of unstructured text logs | <span style="color: green"><strong>✓</strong></span> | <span style="color: red"><strong>✗</strong></span> |
-| Compression of JSON logs              | <span style="color: orange"><strong>〇</strong><sup>1</sup></span> | <span style="color: green"><strong>✓</strong></span> |
-| Compression of CLP IR files           | <span style="color: green"><strong>✓</strong></span> | <span style="color: red"><strong>✗</strong></span> |
-| Compression of CLP KV-IR files        | <span style="color: red"><strong>✗</strong></span> | <span style="color: red"><strong>✗</strong></span> |
-| Command line search                   | <span style="color: green"><strong>✓</strong></span> | <span style="color: green"><strong>✓</strong></span> |
-| WebUI search                          | <span style="color: green"><strong>✓</strong></span> | <span style="color: green"><strong>✓</strong></span> |
-| Decompression                         | <span style="color: green"><strong>✓</strong></span> | <span style="color: red"><strong>✗</strong></span> |
-| Automatic timestamp parsing           | <span style="color: orange"><strong>〇</strong><sup>2</sup></span> | <span style="color: orange"><strong>〇</strong><sup>2,3</sup></span> |
-| Preservation of time zone information | <span style="color: red"><strong>✗</strong><sup>4</sup></span> | <span style="color: red"><strong>✗</strong><sup>4</sup></span> |
-| Retention control                     | <span style="color: green"><strong>✓</strong></span> | <span style="color: green"><strong>✓</strong></span> |
-| Archive management                    | <span style="color: green"><strong>✓</strong></span> | <span style="color: green"><strong>✓</strong></span> |
-| Dataset management                    | <span style="color: red"><strong>✗</strong></span> | <span style="color: green"><strong>✓</strong></span> |
-| S3 support                            | <span style="color: red"><strong>✗</strong></span> | <span style="color: green"><strong>✓</strong></span> |
-| Multi-node deployment                 | <span style="color: green"><strong>✓</strong></span> | <span style="color: green"><strong>✓</strong></span> |
-| CLP + Presto integration              | <span style="color: red"><strong>✗</strong></span> | <span style="color: green"><strong>✓</strong></span> |
-| Parallel compression                  | <span style="color: green"><strong>✓</strong></span> | <span style="color: green"><strong>✓</strong></span> |
+| Capability                            | `clp-text` | `clp-json` |
+| ------------------------------------- | :--------: | :--------: |
+| Compression of unstructured text logs | ✓ | ✗ |
+| Compression of JSON logs              | 〇[^1] | ✓ |
+| Compression of CLP IR files           | ✓ | ✗ |
+| Compression of CLP KV-IR files        | ✗ | ✗ |
+| Command line search                   | ✓ | ✓ |
+| WebUI search                          | ✓ | ✓ |
+| Decompression                         | ✓ | ✗ |
+| Automatic timestamp parsing           | 〇[^2] | 〇[^2][^3] |
+| Preservation of time zone information | ✗[^4] | ✗[^4] |
+| Retention control                     | ✓ | ✓ |
+| Archive management                    | ✓ | ✓ |
+| Dataset management                    | ✗ | ✓ |
+| S3 support                            | ✗ | ✓ |
+| Multi-node deployment                 | ✓ | ✓ |
+| CLP + Presto integration              | ✗ | ✓ |
+| Parallel compression                  | ✓ | ✓ |
 
 +++
-**Table 1**: The high-level schema of CLP's datasets table.
-1) `clp-text` is able to compress and search JSON logs as if they were unstructured text, but
-   `clp-text` cannot query individual fields.  
-2) Timestamp parsing is limited to specific supported formats: see
-   [clp-text timestamp formats](http://github.com/y-scope/clp/blob/bfd4f60ffe9c5d69618cc8416ec6729c76ee9862/components/core/src/clp/TimestampPattern.cpp#L120)
-   and
-   [clp-json timestamp formats](https://github.com/y-scope/clp/blob/bfd4f60ffe9c5d69618cc8416ec6729c76ee9862/components/core/src/clp_s/TimestampPattern.cpp#L210)
-   for more details.  
-3) Timestamps are parsed automatically as long as the timestamp key for the logs is provided at
-   compression time using the `--timestamp-key` flag.  
-4) We hope to introduce support for the preservation of time zone information in a future update
-   (issue is up [here](https://github.com/y-scope/clp/issues/1290))
+**Table 1**: High-level comparison of CLP's two flavors.
+
+[^1]: `clp-text` is able to compress and search JSON logs as if they were unstructured text, but
+      `clp-text` cannot query individual fields.  
+[^2]: Timestamp parsing is limited to specific supported formats: see
+      [clp-text timestamp formats](http://github.com/y-scope/clp/blob/bfd4f60ffe9c5d69618cc8416ec6729c76ee9862/components/core/src/clp/TimestampPattern.cpp#L120)
+      and
+      [clp-json timestamp formats](https://github.com/y-scope/clp/blob/bfd4f60ffe9c5d69618cc8416ec6729c76ee9862/components/core/src/clp_s/TimestampPattern.cpp#L210)
+      for more details.  
+[^3]: Timestamps are parsed automatically as long as the timestamp key for the logs is provided at
+      compression time using the `--timestamp-key` flag.  
+[^4]: We hope to introduce support for the preservation of time zone information in a future update
+      (issue is up [here](https://github.com/y-scope/clp/issues/1290))
 :::
 
 ## clp-json
