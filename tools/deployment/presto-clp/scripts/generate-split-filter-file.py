@@ -135,7 +135,7 @@ def _prompt_timestamp_keys(datasets: List[str]) -> Dict[str, str]:
     """
     print(
         "\nPlease enter the timestamp key that corresponds to each of your archived datasets."
-        "Press <Enter> to accept the default key.\n"
+        "\nPress <Enter> to accept the default key.\n"
     )
 
     data_time_pairs: Dict[str, str] = {}
