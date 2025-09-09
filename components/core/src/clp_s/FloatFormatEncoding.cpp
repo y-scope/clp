@@ -14,12 +14,12 @@
 
 namespace clp_s::float_format_encoding {
 namespace {
-auto has_matching_exponent_sign_flag(uint16_t format, uint16_t sign_flag) -> bool;
-auto has_scientific_notation(uint16_t format) -> bool;
-auto is_uppercase_exponent(uint16_t format) -> bool;
+auto has_matching_exponent_sign_flag(float_format_t format, float_format_t sign_flag) -> bool;
+auto has_scientific_notation(float_format_t format) -> bool;
+auto is_uppercase_exponent(float_format_t format) -> bool;
 
-auto get_num_exponent_digits(uint16_t format) -> size_t;
-auto get_num_significant_digits(uint16_t format) -> size_t;
+auto get_num_exponent_digits(float_format_t format) -> size_t;
+auto get_num_significant_digits(float_format_t format) -> size_t;
 
 /**
  * Trims the leading zeros until the number of exponent digits match the value stored in the
@@ -47,23 +47,23 @@ auto trim_leading_zeros(std::string_view scientific_notation, size_t start, size
 auto scientific_to_decimal(std::string_view scientific_notation)
         -> ystdlib::error_handling::Result<std::string>;
 
-auto has_matching_exponent_sign_flag(uint16_t format, uint16_t sign_flag) -> bool {
+auto has_matching_exponent_sign_flag(float_format_t format, float_format_t sign_flag) -> bool {
     return sign_flag == (format & cExponentSignFlagMask);
 }
 
-auto has_scientific_notation(uint16_t format) -> bool {
+auto has_scientific_notation(float_format_t format) -> bool {
     return 0U != (format & cScientificNotationEnabledBit);
 }
 
-auto is_uppercase_exponent(uint16_t format) -> bool {
+auto is_uppercase_exponent(float_format_t format) -> bool {
     return cScientificNotationUpperCaseEFlag == (format & cScientificNotationFlagMask);
 }
 
-auto get_num_exponent_digits(uint16_t format) -> size_t {
+auto get_num_exponent_digits(float_format_t format) -> size_t {
     return static_cast<size_t>((format & cNumExponentDigitsMask) >> cNumExponentDigitsPos) + 1ULL;
 }
 
-auto get_num_significant_digits(uint16_t format) -> size_t {
+auto get_num_significant_digits(float_format_t format) -> size_t {
     return static_cast<size_t>((format & cNumSignificantDigitsMask) >> cNumSignificantDigitsPos)
            + 1ULL;
 }
@@ -133,9 +133,10 @@ auto scientific_to_decimal(std::string_view scientific_notation)
 }
 }  // namespace
 
-auto get_float_encoding(std::string_view float_str) -> ystdlib::error_handling::Result<uint16_t> {
+auto get_float_encoding(std::string_view float_str)
+        -> ystdlib::error_handling::Result<float_format_t> {
     auto const dot_pos{float_str.find('.')};
-    uint16_t format{};
+    float_format_t format{};
 
     // Check whether it is scientific; if so, whether the exponent is E or e
     size_t exp_pos{float_str.find_first_of("Ee")};
@@ -175,11 +176,11 @@ auto get_float_encoding(std::string_view float_str) -> ystdlib::error_handling::
         if (num_exp_digits <= 0 || num_exp_digits > 4) {
             return std::errc::protocol_not_supported;
         }
-        format |= static_cast<uint16_t>(num_exp_digits - 1) << cNumExponentDigitsPos;
+        format |= static_cast<float_format_t>(num_exp_digits - 1) << cNumExponentDigitsPos;
         */
 
-        format |= (static_cast<uint16_t>(std::min(num_exp_digits - 1ULL, 3ULL))
-                   & static_cast<uint16_t>(0x03))
+        format |= (static_cast<float_format_t>(std::min(num_exp_digits - 1ULL, 3ULL))
+                   & static_cast<float_format_t>(0x03))
                   << cNumExponentDigitsPos;
     } else {
         exp_pos = float_str.length();
@@ -227,15 +228,15 @@ auto get_float_encoding(std::string_view float_str) -> ystdlib::error_handling::
     }
     // TODO: switch to returning protocol_not_supported for floats with too many significant digits
     // once we implement dictionary encoding support.
-    uint16_t const compressed_num_significant_digits{
-            static_cast<uint16_t>(std::min(num_significant_digits, cMaxNumSignificantDigits) - 1ULL)
-    };
+    float_format_t const compressed_num_significant_digits{static_cast<float_format_t>(
+            std::min(num_significant_digits, cMaxNumSignificantDigits) - 1ULL
+    )};
 
     format |= compressed_num_significant_digits << cNumSignificantDigitsPos;
     return format;
 }
 
-auto restore_encoded_float(double value, uint16_t format)
+auto restore_encoded_float(double value, float_format_t format)
         -> ystdlib::error_handling::Result<std::string> {
     std::ostringstream oss;
     oss.imbue(std::locale::classic());

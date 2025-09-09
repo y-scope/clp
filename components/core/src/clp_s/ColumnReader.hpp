@@ -6,6 +6,7 @@
 
 #include "BufferViewReader.hpp"
 #include "DictionaryReader.hpp"
+#include "FloatFormatEncoding.hpp"
 #include "SchemaTree.hpp"
 #include "TimestampDictionaryReader.hpp"
 #include "Utils.hpp"
@@ -177,7 +178,7 @@ public:
 
 private:
     UnalignedMemSpan<double> m_values;
-    UnalignedMemSpan<uint16_t> m_formats;
+    UnalignedMemSpan<float_format_encoding::float_format_t> m_formats;
 };
 
 class BooleanColumnReader : public BaseColumnReader {
