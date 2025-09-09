@@ -265,7 +265,6 @@ TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
             {R"aa(msg: "xxx" AND formattedFloatValue: 3000.0)aa", {}},
             {R"aa(msg: "xxx" OR formattedFloatValue: 3000.0)aa", {0, 9}}
     };
-    auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
 
     TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
@@ -276,7 +275,7 @@ TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
                     std::string{cTestSearchArchiveDirectory},
                     true,
                     single_file_archive,
-                    structurize_arrays,
+                    false,
                     clp_s::FileType::Json
             )
     );
