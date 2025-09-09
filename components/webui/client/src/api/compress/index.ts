@@ -1,13 +1,13 @@
-import axios, {AxiosResponse} from "axios";
+import axios from "axios";
 
 
-type CompressionJobCreationSchema = {
+type CompressionJobSchema = {
     paths: string[];
     dataset?: string;
     timestampKey?: string;
 };
 
-type CompressionJobSchema = {
+type CompressionJobCreationSchema = {
     jobId: number;
 };
 
@@ -17,10 +17,10 @@ type CompressionJobSchema = {
  * @param payload
  * @return
  */
-const submitCompressionJob = async (payload: CompressionJobCreationSchema): Promise<number> => {
+const submitCompressionJob = async (payload: CompressionJobSchema): Promise<number> => {
     console.log("Submitting compression job:", JSON.stringify(payload));
 
-    const response = await axios.post<CompressionJobSchema>("/api/compress", payload);
+    const response = await axios.post<CompressionJobCreationSchema>("/api/compress", payload);
     return response.data.jobId;
 };
 

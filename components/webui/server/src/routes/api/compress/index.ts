@@ -10,7 +10,15 @@ import {
 import {ErrorSchema} from "../../../schemas/error.js";
 
 
-const DEFAULT_PATH_PREFIX = "/mnt/logs";
+/**
+ * Matching the `CONTAINER_INPUT_LOGS_ROOT_DIR` in `clp_package_utils.general`.
+ */
+const CONTAINER_INPUT_LOGS_ROOT_DIR = "/mnt/logs";
+
+/**
+ * Matching the `CLP_DEFAULT_DATASET_NAME` in `clp_py_utils.clp_config`.
+ */
+const CLP_DEFAULT_DATASET_NAME = "default";
 
 /**
  * Default compression job configuration.
@@ -18,7 +26,7 @@ const DEFAULT_PATH_PREFIX = "/mnt/logs";
 const DEFAULT_COMPRESSION_JOB_CONFIG: CompressionJobConfig = Object.freeze({
     input: {
         paths_to_compress: [],
-        path_prefix_to_remove: DEFAULT_PATH_PREFIX,
+        path_prefix_to_remove: CONTAINER_INPUT_LOGS_ROOT_DIR,
     },
     output: {
         compression_level: 3,
@@ -44,9 +52,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         "/",
         {
             schema: {
-                body: CompressionJobCreationSchema,
+                body: CompressionJobSchema,
                 response: {
-                    [StatusCodes.CREATED]: CompressionJobSchema,
+                    [StatusCodes.CREATED]: CompressionJobCreationSchema,
                     [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Compression"],
@@ -60,10 +68,14 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             } = request.body;
 
             const jobConfig: CompressionJobConfig = structuredClone(DEFAULT_COMPRESSION_JOB_CONFIG);
-            jobConfig.input.paths_to_compress = paths.map((path) => DEFAULT_PATH_PREFIX + path);
+            jobConfig.input.paths_to_compress = paths.map(
+                (path) => CONTAINER_INPUT_LOGS_ROOT_DIR + path
+            );
 
             if ("clp-s" === settings.ClpStorageEngine) {
-                if ("undefined" !== typeof dataset) {
+                if ("string" !== typeof dataset || 0 === dataset.length) {
+                    jobConfig.input.dataset = CLP_DEFAULT_DATASET_NAME;
+                } else {
                     jobConfig.input.dataset = dataset;
                 }
                 if ("undefined" !== typeof timestampKey) {

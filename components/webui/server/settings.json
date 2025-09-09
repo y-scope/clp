@@ -22,7 +22,5 @@
     "ClpQueryEngine": "clp",
     "ClpStorageEngine": "clp",
     "PrestoHost": "localhost",
-    "PrestoPort": 8889,
-
-    "LsRoot": "/"
+    "PrestoPort": 8889
 }

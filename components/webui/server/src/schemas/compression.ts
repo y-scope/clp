@@ -4,7 +4,7 @@ import {Type} from "@fastify/type-provider-typebox";
 /**
  * Schema for request to create a new compression job.
  */
-const CompressionJobCreationSchema = Type.Object({
+const CompressionJobSchema = Type.Object({
     paths: Type.Array(Type.String()),
     dataset: Type.Optional(Type.String()),
     timestampKey: Type.Optional(Type.String()),
@@ -13,7 +13,7 @@ const CompressionJobCreationSchema = Type.Object({
 /**
  * Schema for compression job response.
  */
-const CompressionJobSchema = Type.Object({
+const CompressionJobCreationSchema = Type.Object({
     jobId: Type.Number(),
 });
 
