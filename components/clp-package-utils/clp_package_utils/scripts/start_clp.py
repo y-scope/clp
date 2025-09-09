@@ -940,7 +940,9 @@ def start_webui(
         f"NODE_ENV=production",
         f"RATE_LIMIT={clp_config.webui.rate_limit}",
     ]
-    necessary_mounts = [mounts.clp_home]
+    necessary_mounts = [
+        mounts.clp_home,
+    ]
     if StorageType.S3 == stream_storage.type:
         auth = stream_storage.s3_config.aws_authentication
         if AwsAuthType.credentials == auth.type:
