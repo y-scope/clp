@@ -5,12 +5,11 @@ import {
 
 import {
     Button,
-    Col,
+    Empty,
     Form,
     GetProp,
     Input,
     message,
-    Row,
     TreeSelect,
     TreeSelectProps,
     Typography,
@@ -39,6 +38,9 @@ const mapFileToTreeNode = ({
     name: string;
     parentPath: string;
 }) => {
+    if (0 === parentPath.length) {
+        parentPath = "/";
+    }
     const pathPrefix = parentPath.endsWith("/") ?
         parentPath :
         `${parentPath}/`;
@@ -60,6 +62,15 @@ type FormValues = {
     dataset?: string;
     timestampKey?: string;
 };
+
+/**
+ *
+ */
+const PathNotFoundEmpty = () => (
+    <Empty
+        description={"Path not found"}
+        image={Empty.PRESENTED_IMAGE_SIMPLE}/>
+);
 
 /**
  *
@@ -115,7 +126,6 @@ const Compress = () => {
         setIsSubmitting(true);
         setSubmitResult(null);
         try {
-            console.log(values);
             const jobId = await submitCompressionJob({
                 paths: values.paths,
                 dataset: values.dataset,
@@ -155,6 +165,7 @@ const Compress = () => {
                         listHeight={512}
                         loadData={handleLoadData}
                         multiple={true}
+                        notFoundContent={<PathNotFoundEmpty/>}
                         placeholder={"Please select paths to compress"}
                         showCheckedStrategy={TreeSelect.SHOW_PARENT}
                         showSearch={true}
