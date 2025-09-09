@@ -4,12 +4,17 @@ import {
 } from "react";
 
 import {
+    MinusOutlined,
+    PlusOutlined,
+} from "@ant-design/icons";
+import {
     Button,
     Empty,
     Form,
     GetProp,
     Input,
     message,
+    Spin,
     TreeSelect,
     TreeSelectProps,
     Typography,
@@ -28,6 +33,7 @@ import {settings} from "../../../settings";
  * @param props.isExpandable
  * @param props.name
  * @param props.parentPath
+ * @return the mapped Antd TreeSelect flat tree node.
  */
 const mapFileToTreeNode = ({
     isExpandable,
@@ -57,6 +63,7 @@ const mapFileToTreeNode = ({
 
 type TreeNode = Omit<GetProp<TreeSelectProps, "treeData">[number], "label">;
 
+
 type FormValues = {
     paths: string[];
     dataset?: string;
@@ -64,7 +71,9 @@ type FormValues = {
 };
 
 /**
+ * Renders an empty state display when a path is not found.
  *
+ * @return
  */
 const PathNotFoundEmpty = () => (
     <Empty
@@ -73,7 +82,22 @@ const PathNotFoundEmpty = () => (
 );
 
 /**
+ * Renders an empty state with a loading spinner.
  *
+ * @return
+ */
+const PathLoadingEmpty = () => (
+    <Empty
+        image={Empty.PRESENTED_IMAGE_SIMPLE}
+        description={<Spin
+            size={"default"}
+            spinning={true}/>}/>
+);
+
+/**
+ * Renders a compression job submission form.
+ *
+ * @return
  */
 const Compress = () => {
     const [form] = Form.useForm<FormValues>();
@@ -81,8 +105,9 @@ const Compress = () => {
     const [submitResult, setSubmitResult] = useState<{success: boolean; message: string} | null>(null);
     const [treeData, setTreeData] = useState<TreeNode[]>([{id: "/", value: "/", title: "/", isLeaf: false}]);
     const [expandedKeys, setExpandedKeys] = useState<string[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const fetchAndAppendTreeNodes = useCallback(async (path: string) => {
+    const fetchAndAppendTreeNodes = useCallback(async (path: string): Promise<boolean> => {
         try {
             const {data} = await listFiles(path);
             const newNodes = data.map(mapFileToTreeNode);
@@ -103,23 +128,30 @@ const Compress = () => {
             // automatically expand the parent node
             setExpandedKeys((prev) => Array.from(new Set([...prev,
                 path])));
+
+            return true;
         } catch (e) {
             message.error(e instanceof Error ?
                 e.message :
                 "Unknown error while loading paths");
+
+            return false;
         }
     }, []);
 
     /*
      * Load missing parent nodes for a given path.
      */
-    const loadMissingParents = useCallback(async (path: string) => {
+    const loadMissingParents = useCallback(async (path: string): Promise<boolean> => {
         const pathSegments = path.split("/").filter((segment) => 0 < segment.length);
         let currentPath = "/";
 
         // Load root if not present
         if (!treeData.some((node) => "/" === node.id)) {
-            await fetchAndAppendTreeNodes("/");
+            const success = await fetchAndAppendTreeNodes("/");
+            if (!success) {
+                return false;
+            }
         }
 
         // Load each parent level
@@ -132,9 +164,14 @@ const Compress = () => {
 
             // Check if node already exists
             if (!treeData.some((node) => node.id === currentPath)) {
-                await fetchAndAppendTreeNodes(parentPath);
+                const success = await fetchAndAppendTreeNodes(parentPath);
+                if (!success) {
+                    return false;
+                }
             }
         }
+
+        return true;
     }, [treeData,
         fetchAndAppendTreeNodes]);
 
@@ -143,21 +180,58 @@ const Compress = () => {
         if ("string" !== typeof path) {
             return;
         }
-        await fetchAndAppendTreeNodes(path);
+        setIsLoading(true);
+        try {
+            await fetchAndAppendTreeNodes(path);
+        } finally {
+            setIsLoading(false);
+        }
     }, [fetchAndAppendTreeNodes]);
 
     const handleSearch = useCallback<NonNullable<TreeSelectProps["onSearch"]>>(async (value) => {
-        if (!value.endsWith("/")) {
+        if (!value.trim()) {
             return;
         }
-        const path = "/" === value ?
-            "/" :
-            value.slice(0, -1);
 
-        await loadMissingParents(path);
-        await fetchAndAppendTreeNodes(path);
+        setIsLoading(true);
+        try {
+            // Extract the base directory from the search string
+            let basePath: string;
+            if (value.endsWith("/")) {
+                // If it ends with "/", treat it as a directory
+                basePath = "/" === value ?
+                    "/" :
+                    value.slice(0, -1);
+            } else {
+                // If it's a file path, extract the directory part
+                const lastSlashIndex = value.lastIndexOf("/");
+                if (-1 === lastSlashIndex) {
+                    // No slash found, assume root directory
+                    basePath = "/";
+                } else if (0 === lastSlashIndex) {
+                    // Path starts with "/" but has no other slashes, use root
+                    basePath = "/";
+                } else {
+                    // Extract directory path
+                    basePath = value.substring(0, lastSlashIndex);
+                }
+            }
+
+            // Check if the base directory is already expanded to avoid unnecessary API calls
+            if (expandedKeys.includes(basePath)) {
+                return;
+            }
+
+            const parentsLoaded = await loadMissingParents(basePath);
+            if (parentsLoaded) {
+                await fetchAndAppendTreeNodes(basePath);
+            }
+        } finally {
+            setIsLoading(false);
+        }
     }, [fetchAndAppendTreeNodes,
-        loadMissingParents]);
+        loadMissingParents,
+        expandedKeys]);
 
     const handleTreeExpand = useCallback<NonNullable<TreeSelectProps["onTreeExpand"]>>((keys) => {
         setExpandedKeys(keys);
@@ -206,7 +280,6 @@ const Compress = () => {
                         listHeight={512}
                         loadData={handleLoadData}
                         multiple={true}
-                        notFoundContent={<PathNotFoundEmpty/>}
                         placeholder={"Please select paths to compress"}
                         showCheckedStrategy={TreeSelect.SHOW_PARENT}
                         showSearch={true}
@@ -215,11 +288,17 @@ const Compress = () => {
                         treeDataSimpleMode={true}
                         treeExpandAction={"click"}
                         treeExpandedKeys={expandedKeys}
+                        treeLine={true}
                         treeNodeLabelProp={"value"}
+                        notFoundContent={isLoading ?
+                            <PathLoadingEmpty/> :
+                            <PathNotFoundEmpty/>}
+                        switcherIcon={(props) => (props.expanded ?
+                            <MinusOutlined style={{color: "grey"}}/> :
+                            <PlusOutlined style={{color: "grey"}}/>)}
                         onSearch={handleSearch}
                         onTreeExpand={handleTreeExpand}/>
                 </Form.Item>
-
                 {isClpS && (
                     <>
                         <Form.Item
