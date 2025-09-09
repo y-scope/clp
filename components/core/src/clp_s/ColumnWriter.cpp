@@ -64,6 +64,18 @@ void FormattedFloatColumnWriter::store(ZstdCompressor& compressor) {
     compressor.write(reinterpret_cast<char const*>(m_formats.data()), format_size);
 }
 
+size_t DictionaryFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
+    clp::variable_dictionary_id_t id{};
+    m_var_dict->add_entry(std::get<std::string>(value), id);
+    m_var_dict_ids.push_back(id);
+    return sizeof(variable_dictionary_id_t);
+}
+
+void DictionaryFloatColumnWriter::store(ZstdCompressor& compressor) {
+    auto size{m_var_dict_ids.size() * sizeof(clp::variable_dictionary_id_t)};
+    compressor.write(reinterpret_cast<char const*>(m_var_dict_ids.data()), size);
+}
+
 size_t BooleanColumnWriter::add_value(ParsedMessage::variable_t& value) {
     m_values.push_back(std::get<bool>(value) ? 1 : 0);
     return sizeof(uint8_t);

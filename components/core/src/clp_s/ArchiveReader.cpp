@@ -197,6 +197,9 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         case NodeType::FormattedFloat:
             column_reader = new FormattedFloatColumnReader(column_id);
             break;
+        case NodeType::DictionaryFloat:
+            column_reader = new DictionaryFloatColumnReader(column_id, m_var_dict);
+            break;
         case NodeType::ClpString:
             column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
             break;

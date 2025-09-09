@@ -1,6 +1,8 @@
 #ifndef CLP_S_COLUMNREADER_HPP
 #define CLP_S_COLUMNREADER_HPP
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
 #include <variant>
 
@@ -165,20 +167,47 @@ public:
             uint64_t cur_message
     ) override;
 
-    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
-
     /**
-     * Decodes the format information and generates the string of the stored double value with the
-     * decoded format.
-     *
+     * Appends the floating point value to the buffer in its original format by decoding the stored
+     * format information.
      * @param cur_message
-     * @return The double value string formatted by the format information.
+     * @param buffer
+     *
      */
-    std::string restore_format(uint64_t cur_message) const;
+    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
 private:
     UnalignedMemSpan<double> m_values;
     UnalignedMemSpan<float_format_t> m_formats;
+};
+
+class DictionaryFloatColumnReader : public BaseColumnReader {
+public:
+    // Constructor
+    explicit DictionaryFloatColumnReader(
+            int32_t id,
+            std::shared_ptr<VariableDictionaryReader> var_dict
+    )
+            : BaseColumnReader(id),
+              m_var_dict{std::move(var_dict)} {}
+
+    // Destructor
+    ~DictionaryFloatColumnReader() override = default;
+
+    // Methods inherited from BaseColumnReader
+    void load(BufferViewReader& reader, uint64_t num_messages) override;
+
+    NodeType get_type() override { return NodeType::DictionaryFloat; }
+
+    std::variant<int64_t, double, std::string, uint8_t> extract_value(
+            uint64_t cur_message
+    ) override;
+
+    void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
+
+private:
+    std::shared_ptr<VariableDictionaryReader> m_var_dict;
+    UnalignedMemSpan<variable_dictionary_id_t> m_var_dict_ids;
 };
 
 class BooleanColumnReader : public BaseColumnReader {

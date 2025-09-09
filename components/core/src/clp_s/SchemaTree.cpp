@@ -15,6 +15,7 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
             return clp_s::search::ast::LiteralType::IntegerT;
         case NodeType::Float:
         case NodeType::FormattedFloat:
+        case NodeType::DictionaryFloat:
             return clp_s::search::ast::LiteralType::FloatT;
         case NodeType::ClpString:
             return clp_s::search::ast::LiteralType::ClpStringT;

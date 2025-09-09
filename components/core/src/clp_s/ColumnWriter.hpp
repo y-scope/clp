@@ -117,6 +117,26 @@ private:
     std::vector<float_format_t> m_formats;
 };
 
+class DictionaryFloatColumnWriter : public BaseColumnWriter {
+public:
+    // Constructor
+    DictionaryFloatColumnWriter(int32_t id, std::shared_ptr<VariableDictionaryWriter> var_dict)
+            : BaseColumnWriter(id),
+              m_var_dict(std::move(var_dict)) {}
+
+    // Destructor
+    ~DictionaryFloatColumnWriter() override = default;
+
+    // Methods inherited from BaseColumnWriter
+    size_t add_value(ParsedMessage::variable_t& value) override;
+
+    void store(ZstdCompressor& compressor) override;
+
+private:
+    std::shared_ptr<VariableDictionaryWriter> m_var_dict;
+    std::vector<clp::variable_dictionary_id_t> m_var_dict_ids;
+};
+
 class BooleanColumnWriter : public BaseColumnWriter {
 public:
     // Constructor

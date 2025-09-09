@@ -234,15 +234,24 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
                     if (m_retain_float_format) {
                         auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
                         auto const float_format_result{get_float_encoding(double_value_str)};
-                        m_current_parsed_message.add_unordered_value(
-                                number_value.get_double(),
-                                float_format_result.value()
-                        );
-                        node_id = m_archive_writer->add_node(
-                                node_id_stack.top(),
-                                NodeType::FormattedFloat,
-                                cur_key
-                        );
+                        if (false == float_format_result.has_error()) {
+                            m_current_parsed_message.add_unordered_value(
+                                    number_value.get_double(),
+                                    float_format_result.value()
+                            );
+                            node_id = m_archive_writer->add_node(
+                                    node_id_stack.top(),
+                                    NodeType::FormattedFloat,
+                                    cur_key
+                            );
+                        } else {
+                            m_current_parsed_message.add_unordered_value(double_value_str);
+                            node_id = m_archive_writer->add_node(
+                                    node_id_stack.top(),
+                                    NodeType::DictionaryFloat,
+                                    cur_key
+                            );
+                        }
                     } else {
                         double double_value = number_value.get_double();
                         m_current_parsed_message.add_unordered_value(double_value);
@@ -326,12 +335,24 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
                     if (m_retain_float_format) {
                         auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
                         auto const float_format_result{get_float_encoding(double_value_str)};
-                        m_current_parsed_message.add_unordered_value(
-                                number_value.get_double(),
-                                float_format_result.value()
-                        );
-                        node_id = m_archive_writer
-                                          ->add_node(parent_node_id, NodeType::FormattedFloat, "");
+                        if (false == float_format_result.has_error()) {
+                            m_current_parsed_message.add_unordered_value(
+                                    number_value.get_double(),
+                                    float_format_result.value()
+                            );
+                            node_id = m_archive_writer->add_node(
+                                    parent_node_id,
+                                    NodeType::FormattedFloat,
+                                    ""
+                            );
+                        } else {
+                            m_current_parsed_message.add_unordered_value(double_value_str);
+                            node_id = m_archive_writer->add_node(
+                                    parent_node_id,
+                                    NodeType::DictionaryFloat,
+                                    ""
+                            );
+                        }
                     } else {
                         double double_value = number_value.get_double();
                         m_current_parsed_message.add_unordered_value(double_value);
@@ -439,40 +460,49 @@ void JsonParser::parse_line(
                 break;
             }
             case simdjson::ondemand::json_type::number: {
-                NodeType type;
                 simdjson::ondemand::number number_value = line.get_number();
                 auto const matches_timestamp
                         = m_archive_writer->matches_timestamp(node_id_stack.top(), cur_key);
-                if (false == number_value.is_double()) {
-                    // FIXME: should have separate integer and unsigned
-                    // integer types to handle values greater than max int64
-                    type = NodeType::Integer;
-                } else {
-                    type = m_retain_float_format ? NodeType::FormattedFloat : NodeType::Float;
-                }
-                node_id = m_archive_writer->add_node(node_id_stack.top(), type, cur_key);
 
-                if (type == NodeType::Integer) {
+                if (false == number_value.is_double()) {
                     int64_t i64_value;
                     if (number_value.is_uint64()) {
                         i64_value = static_cast<int64_t>(number_value.get_uint64());
                     } else {
-                        i64_value = line.get_int64();
+                        i64_value = number_value.get_int64();
                     }
 
+                    node_id = m_archive_writer
+                                      ->add_node(node_id_stack.top(), NodeType::Integer, cur_key);
                     m_current_parsed_message.add_value(node_id, i64_value);
                     if (matches_timestamp) {
                         m_archive_writer
                                 ->ingest_timestamp_entry(m_timestamp_key, node_id, i64_value);
                     }
                 } else {
-                    double double_value = line.get_double();
-                    if (NodeType::FormattedFloat == type) {
+                    auto const double_value{number_value.get_double()};
+                    if (m_retain_float_format) {
                         auto double_value_str{trim_trailing_whitespace(line.raw_json_token())};
                         auto const float_format_result{get_float_encoding(double_value_str)};
-                        m_current_parsed_message
-                                .add_value(node_id, double_value, float_format_result.value());
+                        if (false == float_format_result.has_error()) {
+                            node_id = m_archive_writer->add_node(
+                                    node_id_stack.top(),
+                                    NodeType::FormattedFloat,
+                                    cur_key
+                            );
+                            m_current_parsed_message
+                                    .add_value(node_id, double_value, float_format_result.value());
+                        } else {
+                            node_id = m_archive_writer->add_node(
+                                    node_id_stack.top(),
+                                    NodeType::DictionaryFloat,
+                                    cur_key
+                            );
+                            m_current_parsed_message.add_value(node_id, double_value_str);
+                        }
                     } else {
+                        node_id = m_archive_writer
+                                          ->add_node(node_id_stack.top(), NodeType::Float, cur_key);
                         m_current_parsed_message.add_value(node_id, double_value);
                     }
                     if (matches_timestamp) {

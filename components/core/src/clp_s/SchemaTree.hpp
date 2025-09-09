@@ -43,6 +43,7 @@ enum class NodeType : uint8_t {
     Metadata,
     DeltaInteger,
     FormattedFloat,
+    DictionaryFloat,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 

@@ -170,18 +170,10 @@ auto get_float_encoding(std::string_view float_str)
             num_exp_digits--;
         }
 
-        /**
-         * TODO: Udpate tests to expect exact match and return not supported here once we switch to
-         * dictionary-encoded backup.
         if (num_exp_digits <= 0 || num_exp_digits > 4) {
             return std::errc::protocol_not_supported;
         }
         format |= static_cast<float_format_t>(num_exp_digits - 1) << cNumExponentDigitsPos;
-        */
-
-        format |= (static_cast<float_format_t>(std::min(num_exp_digits - 1ULL, 3ULL))
-                   & static_cast<float_format_t>(0x03))
-                  << cNumExponentDigitsPos;
     } else {
         exp_pos = float_str.length();
     }
@@ -222,16 +214,15 @@ auto get_float_encoding(std::string_view float_str)
         num_significant_digits--;
     }
 
-    // Number of significant digits must be greater than zero (e.g., E0 or . is illegal)
-    if (num_significant_digits <= 0) {
+    // Number of significant digits must be greater than zero (e.g., E0 or . is illegal) and less
+    // than the maximum supported number of digits (17).
+    if (num_significant_digits <= 0 || num_significant_digits > cMaxNumSignificantDigits) {
         return std::errc::protocol_not_supported;
     }
-    // TODO: switch to returning protocol_not_supported for floats with too many significant digits
-    // once we implement dictionary encoding support.
-    float_format_t const compressed_num_significant_digits{static_cast<float_format_t>(
-            std::min(num_significant_digits, cMaxNumSignificantDigits) - 1ULL
-    )};
 
+    float_format_t const compressed_num_significant_digits{
+            static_cast<float_format_t>(num_significant_digits - 1ULL)
+    };
     format |= compressed_num_significant_digits << cNumSignificantDigitsPos;
     return format;
 }
