@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -159,6 +160,7 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
             std::ignore = compress_archive(
                     get_test_input_local_path(cTestEndToEndInputFile),
                     std::string{cTestEndToEndArchiveDirectory},
+                    std::nullopt,
                     false,
                     single_file_archive,
                     structurize_arrays,
@@ -189,6 +191,7 @@ TEST_CASE("clp-s-compress-extract-valid-formatted-floats", "[clp-s][end-to-end]"
             std::ignore = compress_archive(
                     get_test_input_local_path(cTestEndToEndValidFormattedFloatInputFile),
                     std::string{cTestEndToEndArchiveDirectory},
+                    std::nullopt,
                     true,
                     single_file_archive,
                     structurize_arrays,
@@ -221,6 +224,7 @@ TEST_CASE("clp-s-compress-extract-rounded-valid-formatted-floats", "[clp-s][end-
             std::ignore = compress_archive(
                     get_test_input_local_path(cTestEndToEndRoundedFormattedFloatInputFile),
                     std::string{cTestEndToEndArchiveDirectory},
+                    std::nullopt,
                     true,
                     single_file_archive,
                     structurize_arrays,

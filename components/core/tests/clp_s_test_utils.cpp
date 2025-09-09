@@ -1,6 +1,7 @@
 #include "clp_s_test_utils.hpp"
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -13,6 +14,7 @@
 auto compress_archive(
         std::string const& file_path,
         std::string const& archive_directory,
+        std::optional<std::string> timestamp_key,
         bool retain_float_format,
         bool single_file_archive,
         bool structurize_arrays,
@@ -41,6 +43,9 @@ auto compress_archive(
     parser_option.structurize_arrays = structurize_arrays;
     parser_option.single_file_archive = single_file_archive;
     parser_option.input_file_type = file_type;
+    if (timestamp_key.has_value()) {
+        parser_option.timestamp_key = std::move(timestamp_key.value());
+    }
 
     clp_s::JsonParser parser{parser_option};
     std::vector<clp_s::ArchiveStats> archive_stats;

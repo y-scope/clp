@@ -28,7 +28,6 @@
 #include "SchemaTree.hpp"
 #include "SchemaWriter.hpp"
 #include "TimestampDictionaryWriter.hpp"
-#include "Utils.hpp"
 #include "ZstdCompressor.hpp"
 
 namespace clp_s {
