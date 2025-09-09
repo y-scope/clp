@@ -51,7 +51,7 @@ class QueryJobDbManager {
     async submitJob (jobConfig: object, jobType: QUERY_JOB_TYPE): Promise<number> {
         const [result] = await this.#sqlPool.query<ResultSetHeader>(
             `
-            INSERT INTO ${settings.SqlDbQueryJobsTableName} (
+            INSERT INTO ${this.#tableName} (
                ${QUERY_JOBS_TABLE_COLUMN_NAMES.JOB_CONFIG},
                ${QUERY_JOBS_TABLE_COLUMN_NAMES.TYPE}
             )
