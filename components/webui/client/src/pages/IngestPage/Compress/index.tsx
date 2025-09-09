@@ -28,7 +28,7 @@ type FormValues = {
  */
 const Compress = () => {
     const [form] = Form.useForm<FormValues>();
-    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [submitResult, setSubmitResult] = useState<{
         success: boolean;
         message: string;
@@ -78,7 +78,7 @@ const Compress = () => {
         }
     };
 
-    const isClpS = "clp-s" === settings.ClpStorageEngine;
+    const isStorageEngineClpS = "clp-s" === settings.ClpStorageEngine;
 
     return (
         <DashboardCard title={"Start Ingestion"}>
@@ -100,7 +100,7 @@ const Compress = () => {
                         autoSize={{minRows: 4, maxRows: 10}}
                         placeholder={"Enter paths to compress, one per line"}/>
                 </Form.Item>
-                {isClpS && (
+                {isStorageEngineClpS && (
                     <>
                         <Form.Item
                             label={"Dataset"}
