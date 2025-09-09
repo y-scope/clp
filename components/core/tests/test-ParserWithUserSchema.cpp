@@ -7,7 +7,6 @@
 #include <string>
 #include <utility>
 
-#include <boost/filesystem.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
 #include <log_surgeon/LogParser.hpp>
@@ -94,9 +93,10 @@ void decompress(std::string archive_dir, std::string output_dir) {
 
 TEST_CASE("Test error for missing schema file", "[LALR1Parser][SchemaParser]") {
     auto const file_path = test_schema_dir / "missing_schema.txt";
+    auto const file_path_string = file_path.string();
     REQUIRE_THROWS_WITH(
-            generate_schema_ast(file_path.string()),
-            "Failed to read '" + file_path.string() + "', error_code="
+            generate_schema_ast(file_path_string),
+            "Failed to read '" + file_path_string + "', error_code="
                     + std::to_string(static_cast<int>(log_surgeon::ErrorCode::FileNotFound))
     );
 }
@@ -132,16 +132,19 @@ TEST_CASE("Test error for multi-character tokens in schema file", "[LALR1Parser]
 }
 
 TEST_CASE("Test creating schema parser", "[LALR1Parser][SchemaParser]") {
-    generate_schema_ast((test_schema_dir / "easy_schema.txt").string());
+    auto const schema_file_path{test_schema_dir / "easy_schema.txt"};
+    generate_schema_ast(schema_file_path.string());
 }
 
 TEST_CASE("Test creating log parser with delimiters", "[LALR1Parser][LogParser]") {
-    generate_log_parser((test_schema_dir / "schema_with_delimiters.txt").string());
+    auto const schema_file_path{test_schema_dir / "schema_with_delimiters.txt"};
+    generate_log_parser(schema_file_path.string());
 }
 
 TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParser]") {
+    auto const schema_file_path{test_schema_dir / "schema_without_delimiters.txt"};
     REQUIRE_THROWS_WITH(
-            generate_log_parser((test_schema_dir / "schema_without_delimiters.txt").string()),
+            generate_log_parser(schema_file_path.string()),
             "When using --schema-path, \"delimiters:\" line must be used."
     );
 }
@@ -172,9 +175,10 @@ TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParse
 TEST_CASE("Test lexer", "[Search]") {
     ByteLexer lexer;
     auto const schema_file_name = (test_schema_dir / "search_schema.txt").string();
-    auto const schema_file_path = boost::filesystem::weakly_canonical(schema_file_name).string();
+    auto const schema_file_path = std::filesystem::weakly_canonical(schema_file_name).string();
     load_lexer_from_file(schema_file_path, lexer);
-    FileReader file_reader{(test_query_dir / "easy.txt").string()};
+    auto const query_file_path{test_query_dir / "easy.txt"};
+    FileReader file_reader{query_file_path.string()};
     LogSurgeonReader reader_wrapper(file_reader);
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);
