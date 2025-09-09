@@ -35,6 +35,8 @@ class SyntaxErrorListener<TSymbol> extends ErrorListener<TSymbol> {
 const validate = (sqlString: string) => {
     const syntaxErrorListener = new SyntaxErrorListener();
     const lexer = new SqlBaseLexer(new CharStream(sqlString.toUpperCase()));
+    lexer.removeErrorListeners();
+    lexer.addErrorListener(syntaxErrorListener);
     const parser = new SqlBaseParser(new CommonTokenStream(lexer));
     parser.removeErrorListeners();
     parser.addErrorListener(syntaxErrorListener);

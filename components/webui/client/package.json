@@ -8,8 +8,7 @@
     "lint:check": "eslint",
     "lint:fix": "eslint --fix",
     "start": "vite",
-    "guided": "VITE_GUIDED_DEV=true npm run start",
-    "generate-parser": "cd src/SqlParser && antlr4 -Dlanguage=TypeScript -o generated -no-listener -Xexact-output-dir SqlBase.g4 && find generated -type f -and -not -name '*.ts' -exec rm {} \\; && sed -i '1s/^/\\/\\/ @ts-nocheck\\n/' generated/*.ts"
+    "guided": "VITE_GUIDED_DEV=true npm run start"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",

@@ -3,14 +3,9 @@ import {useCallback} from "react";
 import {CaretRightOutlined} from "@ant-design/icons";
 import {
     Button,
-    notification,
     Tooltip,
 } from "antd";
 
-import {
-    SyntaxError,
-    validate,
-} from "../../../../../../SqlParser";
 import useSearchStore from "../../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
 import {handlePrestoQuerySubmit} from "../../presto-search-requests";
@@ -32,28 +27,6 @@ const RunButton = () => {
         "";
 
     const handleClick = useCallback(() => {
-        try {
-            validate(queryString);
-        } catch (err: unknown) {
-            const description = err instanceof Error ?
-                err.message :
-                String(err);
-            const message = err instanceof SyntaxError ?
-                "Syntax Error" :
-                "Parsing Error";
-
-            notification.error({
-                description: description,
-                duration: 15,
-                key: "syntax-error",
-                message: message,
-                pauseOnHover: true,
-                placement: "bottomRight",
-                showProgress: true,
-            });
-
-            return;
-        }
         handlePrestoQuerySubmit({queryString});
     }, [queryString]);
 
