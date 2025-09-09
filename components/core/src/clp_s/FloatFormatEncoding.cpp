@@ -135,12 +135,30 @@ auto scientific_to_decimal(std::string_view scientific_notation)
 
 auto get_float_encoding(std::string_view float_str)
         -> ystdlib::error_handling::Result<float_format_t> {
+    if (float_str.empty()) {
+        return std::errc::protocol_not_supported;
+    }
+
     auto const dot_pos{float_str.find('.')};
     float_format_t format{};
+
+    // Find first non-zero digit position
+    size_t first_non_zero_frac_digit_pos{0ULL};
+    if ('-' == float_str[0]) {
+        first_non_zero_frac_digit_pos = 1ULL;
+    } else if ('+' == float_str[0]) {
+        return std::errc::protocol_not_supported;
+    }
 
     // Check whether it is scientific; if so, whether the exponent is E or e
     size_t exp_pos{float_str.find_first_of("Ee")};
     if (std::string_view::npos != exp_pos) {
+        // For scientific numbers we only accept one digit before the decimal
+        if (std::string_view::npos != dot_pos && (first_non_zero_frac_digit_pos + 1ULL) != dot_pos)
+        {
+            return std::errc::protocol_not_supported;
+        }
+
         // Exponent must be followed by an integer (e.g., "1E" or "1e+" are illegal)
         if (false
             == ((exp_pos + 1 < float_str.length() && std::isdigit(float_str[exp_pos + 1]))
@@ -176,12 +194,6 @@ auto get_float_encoding(std::string_view float_str)
         format |= static_cast<float_format_t>(num_exp_digits - 1) << cNumExponentDigitsPos;
     } else {
         exp_pos = float_str.length();
-    }
-
-    // Find first non-zero digit position
-    size_t first_non_zero_frac_digit_pos{0ULL};
-    if (false == std::isdigit(static_cast<unsigned char>(float_str[0]))) {
-        first_non_zero_frac_digit_pos = 1;  // Skip sign
     }
 
     if ('0' == float_str[first_non_zero_frac_digit_pos]) {

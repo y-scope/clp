@@ -230,7 +230,7 @@ TEST_CASE("clp-s-compress-extract-rounded-valid-formatted-floats", "[clp-s][end-
 
     auto extracted_json_path = extract();
     literallyCompare(
-            get_test_input_local_path(cTestEndToEndRoundedFormattedFloatExpectedOutputFile),
+            get_test_input_local_path(cTestEndToEndRoundedFormattedFloatInputFile),
             extracted_json_path
     );
 }
