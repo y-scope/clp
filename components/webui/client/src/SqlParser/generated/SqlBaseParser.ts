@@ -12,8 +12,6 @@ import {
 	Token, TokenStream,
 	Interval, IntervalSet
 } from 'antlr4';
-import SqlBaseVisitor from "./SqlBaseVisitor.js";
-
 // for running tests with parameters, TODO: discuss strategy for typed parameters in CI
 // eslint-disable-next-line no-unused-vars
 type int = number;
@@ -10953,14 +10951,6 @@ export class SingleStatementContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_singleStatement;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSingleStatement) {
-			return visitor.visitSingleStatement(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -10978,14 +10968,6 @@ export class StandaloneExpressionContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_standaloneExpression;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitStandaloneExpression) {
-			return visitor.visitStandaloneExpression(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -11002,14 +10984,6 @@ export class StandaloneRoutineBodyContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_standaloneRoutineBody;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitStandaloneRoutineBody) {
-			return visitor.visitStandaloneRoutineBody(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -11049,14 +11023,6 @@ export class ExplainContext extends StatementContext {
 	public explainOption(i: number): ExplainOptionContext {
 		return this.getTypedRuleContext(ExplainOptionContext, i) as ExplainOptionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitExplain) {
-			return visitor.visitExplain(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class PrepareContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -11074,14 +11040,6 @@ export class PrepareContext extends StatementContext {
 	}
 	public statement(): StatementContext {
 		return this.getTypedRuleContext(StatementContext, 0) as StatementContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitPrepare) {
-			return visitor.visitPrepare(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class DropMaterializedViewContext extends StatementContext {
@@ -11107,14 +11065,6 @@ export class DropMaterializedViewContext extends StatementContext {
 	public EXISTS(): TerminalNode {
 		return this.getToken(SqlBaseParser.EXISTS, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDropMaterializedView) {
-			return visitor.visitDropMaterializedView(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class UseContext extends StatementContext {
 	public _schema!: IdentifierContext;
@@ -11131,14 +11081,6 @@ export class UseContext extends StatementContext {
 	}
 	public identifier(i: number): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, i) as IdentifierContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitUse) {
-			return visitor.visitUse(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class AddConstraintContext extends StatementContext {
@@ -11168,14 +11110,6 @@ export class AddConstraintContext extends StatementContext {
 	public EXISTS(): TerminalNode {
 		return this.getToken(SqlBaseParser.EXISTS, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitAddConstraint) {
-			return visitor.visitAddConstraint(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class DeallocateContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -11190,14 +11124,6 @@ export class DeallocateContext extends StatementContext {
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDeallocate) {
-			return visitor.visitDeallocate(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class RenameTableContext extends StatementContext {
@@ -11231,14 +11157,6 @@ export class RenameTableContext extends StatementContext {
 	public EXISTS(): TerminalNode {
 		return this.getToken(SqlBaseParser.EXISTS, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRenameTable) {
-			return visitor.visitRenameTable(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class CommitContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -11250,14 +11168,6 @@ export class CommitContext extends StatementContext {
 	}
 	public WORK(): TerminalNode {
 		return this.getToken(SqlBaseParser.WORK, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCommit) {
-			return visitor.visitCommit(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class CreateRoleContext extends StatementContext {
@@ -11284,14 +11194,6 @@ export class CreateRoleContext extends StatementContext {
 	public grantor(): GrantorContext {
 		return this.getTypedRuleContext(GrantorContext, 0) as GrantorContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCreateRole) {
-			return visitor.visitCreateRole(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ShowCreateFunctionContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -11312,14 +11214,6 @@ export class ShowCreateFunctionContext extends StatementContext {
 	}
 	public types(): TypesContext {
 		return this.getTypedRuleContext(TypesContext, 0) as TypesContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowCreateFunction) {
-			return visitor.visitShowCreateFunction(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class DropColumnContext extends StatementContext {
@@ -11359,14 +11253,6 @@ export class DropColumnContext extends StatementContext {
 	public EXISTS(i: number): TerminalNode {
 		return this.getToken(SqlBaseParser.EXISTS, i);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDropColumn) {
-			return visitor.visitDropColumn(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class DropViewContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -11387,14 +11273,6 @@ export class DropViewContext extends StatementContext {
 	}
 	public EXISTS(): TerminalNode {
 		return this.getToken(SqlBaseParser.EXISTS, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDropView) {
-			return visitor.visitDropView(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class ShowTablesContext extends StatementContext {
@@ -11431,14 +11309,6 @@ export class ShowTablesContext extends StatementContext {
 	public ESCAPE(): TerminalNode {
 		return this.getToken(SqlBaseParser.ESCAPE, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowTables) {
-			return visitor.visitShowTables(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ShowCatalogsContext extends StatementContext {
 	public _pattern!: StringContext;
@@ -11465,14 +11335,6 @@ export class ShowCatalogsContext extends StatementContext {
 	public ESCAPE(): TerminalNode {
 		return this.getToken(SqlBaseParser.ESCAPE, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowCatalogs) {
-			return visitor.visitShowCatalogs(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ShowRolesContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -11496,14 +11358,6 @@ export class ShowRolesContext extends StatementContext {
 	}
 	public IN(): TerminalNode {
 		return this.getToken(SqlBaseParser.IN, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowRoles) {
-			return visitor.visitShowRoles(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class RenameColumnContext extends StatementContext {
@@ -11550,14 +11404,6 @@ export class RenameColumnContext extends StatementContext {
 	public EXISTS(i: number): TerminalNode {
 		return this.getToken(SqlBaseParser.EXISTS, i);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRenameColumn) {
-			return visitor.visitRenameColumn(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class RevokeRolesContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -11597,14 +11443,6 @@ export class RevokeRolesContext extends StatementContext {
 	public grantor(): GrantorContext {
 		return this.getTypedRuleContext(GrantorContext, 0) as GrantorContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRevokeRoles) {
-			return visitor.visitRevokeRoles(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ShowCreateTableContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -11622,14 +11460,6 @@ export class ShowCreateTableContext extends StatementContext {
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowCreateTable) {
-			return visitor.visitShowCreateTable(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class ShowColumnsContext extends StatementContext {
@@ -11658,14 +11488,6 @@ export class ShowColumnsContext extends StatementContext {
 	public DESC(): TerminalNode {
 		return this.getToken(SqlBaseParser.DESC, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowColumns) {
-			return visitor.visitShowColumns(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ShowRoleGrantsContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -11689,14 +11511,6 @@ export class ShowRoleGrantsContext extends StatementContext {
 	}
 	public IN(): TerminalNode {
 		return this.getToken(SqlBaseParser.IN, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowRoleGrants) {
-			return visitor.visitShowRoleGrants(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class AddColumnContext extends StatementContext {
@@ -11739,14 +11553,6 @@ export class AddColumnContext extends StatementContext {
 	public NOT(): TerminalNode {
 		return this.getToken(SqlBaseParser.NOT, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitAddColumn) {
-			return visitor.visitAddColumn(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ResetSessionContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -11761,14 +11567,6 @@ export class ResetSessionContext extends StatementContext {
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitResetSession) {
-			return visitor.visitResetSession(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class DropConstraintContext extends StatementContext {
@@ -11808,14 +11606,6 @@ export class DropConstraintContext extends StatementContext {
 	public EXISTS(i: number): TerminalNode {
 		return this.getToken(SqlBaseParser.EXISTS, i);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDropConstraint) {
-			return visitor.visitDropConstraint(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class InsertIntoContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -11836,14 +11626,6 @@ export class InsertIntoContext extends StatementContext {
 	}
 	public columnAliases(): ColumnAliasesContext {
 		return this.getTypedRuleContext(ColumnAliasesContext, 0) as ColumnAliasesContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitInsertInto) {
-			return visitor.visitInsertInto(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class ShowSessionContext extends StatementContext {
@@ -11870,14 +11652,6 @@ export class ShowSessionContext extends StatementContext {
 	}
 	public ESCAPE(): TerminalNode {
 		return this.getToken(SqlBaseParser.ESCAPE, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowSession) {
-			return visitor.visitShowSession(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class CreateSchemaContext extends StatementContext {
@@ -11909,14 +11683,6 @@ export class CreateSchemaContext extends StatementContext {
 	public properties(): PropertiesContext {
 		return this.getTypedRuleContext(PropertiesContext, 0) as PropertiesContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCreateSchema) {
-			return visitor.visitCreateSchema(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ExecuteContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -11937,14 +11703,6 @@ export class ExecuteContext extends StatementContext {
 	}
 	public expression(i: number): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, i) as ExpressionContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitExecute) {
-			return visitor.visitExecute(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class RenameSchemaContext extends StatementContext {
@@ -11970,14 +11728,6 @@ export class RenameSchemaContext extends StatementContext {
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRenameSchema) {
-			return visitor.visitRenameSchema(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class DropRoleContext extends StatementContext {
 	public _name!: IdentifierContext;
@@ -11993,14 +11743,6 @@ export class DropRoleContext extends StatementContext {
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDropRole) {
-			return visitor.visitDropRole(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class AnalyzeContext extends StatementContext {
@@ -12019,14 +11761,6 @@ export class AnalyzeContext extends StatementContext {
 	}
 	public properties(): PropertiesContext {
 		return this.getTypedRuleContext(PropertiesContext, 0) as PropertiesContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitAnalyze) {
-			return visitor.visitAnalyze(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class SetRoleContext extends StatementContext {
@@ -12049,14 +11783,6 @@ export class SetRoleContext extends StatementContext {
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSetRole) {
-			return visitor.visitSetRole(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class CreateFunctionContext extends StatementContext {
@@ -12108,14 +11834,6 @@ export class CreateFunctionContext extends StatementContext {
 	public string_(): StringContext {
 		return this.getTypedRuleContext(StringContext, 0) as StringContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCreateFunction) {
-			return visitor.visitCreateFunction(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ShowGrantsContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -12136,14 +11854,6 @@ export class ShowGrantsContext extends StatementContext {
 	}
 	public TABLE(): TerminalNode {
 		return this.getToken(SqlBaseParser.TABLE, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowGrants) {
-			return visitor.visitShowGrants(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class DropSchemaContext extends StatementContext {
@@ -12172,14 +11882,6 @@ export class DropSchemaContext extends StatementContext {
 	public RESTRICT(): TerminalNode {
 		return this.getToken(SqlBaseParser.RESTRICT, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDropSchema) {
-			return visitor.visitDropSchema(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ShowCreateViewContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -12197,14 +11899,6 @@ export class ShowCreateViewContext extends StatementContext {
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowCreateView) {
-			return visitor.visitShowCreateView(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class CreateTableContext extends StatementContext {
@@ -12248,14 +11942,6 @@ export class CreateTableContext extends StatementContext {
 	public properties(): PropertiesContext {
 		return this.getTypedRuleContext(PropertiesContext, 0) as PropertiesContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCreateTable) {
-			return visitor.visitCreateTable(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class StartTransactionContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -12273,14 +11959,6 @@ export class StartTransactionContext extends StatementContext {
 	}
 	public transactionMode(i: number): TransactionModeContext {
 		return this.getTypedRuleContext(TransactionModeContext, i) as TransactionModeContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitStartTransaction) {
-			return visitor.visitStartTransaction(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class CreateTableAsSelectContext extends StatementContext {
@@ -12336,14 +12014,6 @@ export class CreateTableAsSelectContext extends StatementContext {
 	public NO(): TerminalNode {
 		return this.getToken(SqlBaseParser.NO, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCreateTableAsSelect) {
-			return visitor.visitCreateTableAsSelect(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ShowStatsContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -12362,14 +12032,6 @@ export class ShowStatsContext extends StatementContext {
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowStats) {
-			return visitor.visitShowStats(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ShowCreateSchemaContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -12387,14 +12049,6 @@ export class ShowCreateSchemaContext extends StatementContext {
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowCreateSchema) {
-			return visitor.visitShowCreateSchema(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class DropFunctionContext extends StatementContext {
@@ -12422,14 +12076,6 @@ export class DropFunctionContext extends StatementContext {
 	}
 	public types(): TypesContext {
 		return this.getTypedRuleContext(TypesContext, 0) as TypesContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDropFunction) {
-			return visitor.visitDropFunction(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class RevokeContext extends StatementContext {
@@ -12477,14 +12123,6 @@ export class RevokeContext extends StatementContext {
 	public TABLE(): TerminalNode {
 		return this.getToken(SqlBaseParser.TABLE, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRevoke) {
-			return visitor.visitRevoke(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class UpdateContext extends StatementContext {
 	public _where!: BooleanExpressionContext;
@@ -12513,14 +12151,6 @@ export class UpdateContext extends StatementContext {
 	public booleanExpression(): BooleanExpressionContext {
 		return this.getTypedRuleContext(BooleanExpressionContext, 0) as BooleanExpressionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitUpdate) {
-			return visitor.visitUpdate(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class CreateTypeContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -12548,14 +12178,6 @@ export class CreateTypeContext extends StatementContext {
 	public type_(): TypeContext {
 		return this.getTypedRuleContext(TypeContext, 0) as TypeContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCreateType) {
-			return visitor.visitCreateType(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class DeleteContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -12577,14 +12199,6 @@ export class DeleteContext extends StatementContext {
 	public booleanExpression(): BooleanExpressionContext {
 		return this.getTypedRuleContext(BooleanExpressionContext, 0) as BooleanExpressionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDelete) {
-			return visitor.visitDelete(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class DescribeInputContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -12599,14 +12213,6 @@ export class DescribeInputContext extends StatementContext {
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDescribeInput) {
-			return visitor.visitDescribeInput(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class ShowStatsForQueryContext extends StatementContext {
@@ -12626,14 +12232,6 @@ export class ShowStatsForQueryContext extends StatementContext {
 	public querySpecification(): QuerySpecificationContext {
 		return this.getTypedRuleContext(QuerySpecificationContext, 0) as QuerySpecificationContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowStatsForQuery) {
-			return visitor.visitShowStatsForQuery(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class StatementDefaultContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -12642,14 +12240,6 @@ export class StatementDefaultContext extends StatementContext {
 	}
 	public query(): QueryContext {
 		return this.getTypedRuleContext(QueryContext, 0) as QueryContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitStatementDefault) {
-			return visitor.visitStatementDefault(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class TruncateTableContext extends StatementContext {
@@ -12665,14 +12255,6 @@ export class TruncateTableContext extends StatementContext {
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitTruncateTable) {
-			return visitor.visitTruncateTable(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class AlterColumnSetNotNullContext extends StatementContext {
@@ -12714,14 +12296,6 @@ export class AlterColumnSetNotNullContext extends StatementContext {
 	}
 	public COLUMN(): TerminalNode {
 		return this.getToken(SqlBaseParser.COLUMN, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitAlterColumnSetNotNull) {
-			return visitor.visitAlterColumnSetNotNull(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class CreateMaterializedViewContext extends StatementContext {
@@ -12768,14 +12342,6 @@ export class CreateMaterializedViewContext extends StatementContext {
 	public properties(): PropertiesContext {
 		return this.getTypedRuleContext(PropertiesContext, 0) as PropertiesContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCreateMaterializedView) {
-			return visitor.visitCreateMaterializedView(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class AlterFunctionContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -12797,14 +12363,6 @@ export class AlterFunctionContext extends StatementContext {
 	public types(): TypesContext {
 		return this.getTypedRuleContext(TypesContext, 0) as TypesContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitAlterFunction) {
-			return visitor.visitAlterFunction(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class SetSessionContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -12825,14 +12383,6 @@ export class SetSessionContext extends StatementContext {
 	}
 	public expression(): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSetSession) {
-			return visitor.visitSetSession(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class CreateViewContext extends StatementContext {
@@ -12870,14 +12420,6 @@ export class CreateViewContext extends StatementContext {
 	public INVOKER(): TerminalNode {
 		return this.getToken(SqlBaseParser.INVOKER, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCreateView) {
-			return visitor.visitCreateView(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ShowSchemasContext extends StatementContext {
 	public _pattern!: StringContext;
@@ -12913,14 +12455,6 @@ export class ShowSchemasContext extends StatementContext {
 	public ESCAPE(): TerminalNode {
 		return this.getToken(SqlBaseParser.ESCAPE, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowSchemas) {
-			return visitor.visitShowSchemas(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class DropTableContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -12942,14 +12476,6 @@ export class DropTableContext extends StatementContext {
 	public EXISTS(): TerminalNode {
 		return this.getToken(SqlBaseParser.EXISTS, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDropTable) {
-			return visitor.visitDropTable(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class RollbackContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -12961,14 +12487,6 @@ export class RollbackContext extends StatementContext {
 	}
 	public WORK(): TerminalNode {
 		return this.getToken(SqlBaseParser.WORK, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRollback) {
-			return visitor.visitRollback(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class RenameViewContext extends StatementContext {
@@ -13001,14 +12519,6 @@ export class RenameViewContext extends StatementContext {
 	}
 	public EXISTS(): TerminalNode {
 		return this.getToken(SqlBaseParser.EXISTS, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRenameView) {
-			return visitor.visitRenameView(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class AlterColumnDropNotNullContext extends StatementContext {
@@ -13051,14 +12561,6 @@ export class AlterColumnDropNotNullContext extends StatementContext {
 	public COLUMN(): TerminalNode {
 		return this.getToken(SqlBaseParser.COLUMN, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitAlterColumnDropNotNull) {
-			return visitor.visitAlterColumnDropNotNull(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class GrantRolesContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -13098,14 +12600,6 @@ export class GrantRolesContext extends StatementContext {
 	public grantor(): GrantorContext {
 		return this.getTypedRuleContext(GrantorContext, 0) as GrantorContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitGrantRoles) {
-			return visitor.visitGrantRoles(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class CallContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -13123,14 +12617,6 @@ export class CallContext extends StatementContext {
 	}
 	public callArgument(i: number): CallArgumentContext {
 		return this.getTypedRuleContext(CallArgumentContext, i) as CallArgumentContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCall) {
-			return visitor.visitCall(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class RefreshMaterializedViewContext extends StatementContext {
@@ -13156,14 +12642,6 @@ export class RefreshMaterializedViewContext extends StatementContext {
 	public booleanExpression(): BooleanExpressionContext {
 		return this.getTypedRuleContext(BooleanExpressionContext, 0) as BooleanExpressionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRefreshMaterializedView) {
-			return visitor.visitRefreshMaterializedView(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ShowCreateMaterializedViewContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -13184,14 +12662,6 @@ export class ShowCreateMaterializedViewContext extends StatementContext {
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowCreateMaterializedView) {
-			return visitor.visitShowCreateMaterializedView(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class ShowFunctionsContext extends StatementContext {
@@ -13219,14 +12689,6 @@ export class ShowFunctionsContext extends StatementContext {
 	public ESCAPE(): TerminalNode {
 		return this.getToken(SqlBaseParser.ESCAPE, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitShowFunctions) {
-			return visitor.visitShowFunctions(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class DescribeOutputContext extends StatementContext {
 	constructor(parser: SqlBaseParser, ctx: StatementContext) {
@@ -13241,14 +12703,6 @@ export class DescribeOutputContext extends StatementContext {
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDescribeOutput) {
-			return visitor.visitDescribeOutput(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class GrantContext extends StatementContext {
@@ -13296,14 +12750,6 @@ export class GrantContext extends StatementContext {
 	public OPTION(): TerminalNode {
 		return this.getToken(SqlBaseParser.OPTION, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitGrant) {
-			return visitor.visitGrant(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class SetTablePropertiesContext extends StatementContext {
 	public _tableName!: QualifiedNameContext;
@@ -13335,14 +12781,6 @@ export class SetTablePropertiesContext extends StatementContext {
 	public EXISTS(): TerminalNode {
 		return this.getToken(SqlBaseParser.EXISTS, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSetTableProperties) {
-			return visitor.visitSetTableProperties(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -13359,14 +12797,6 @@ export class QueryContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_query;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitQuery) {
-			return visitor.visitQuery(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -13391,14 +12821,6 @@ export class WithContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_with;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitWith) {
-			return visitor.visitWith(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -13418,14 +12840,6 @@ export class TableElementContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_tableElement;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitTableElement) {
-			return visitor.visitTableElement(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -13462,14 +12876,6 @@ export class ColumnDefinitionContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_columnDefinition;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitColumnDefinition) {
-			return visitor.visitColumnDefinition(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -13497,14 +12903,6 @@ export class LikeClauseContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_likeClause;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitLikeClause) {
-			return visitor.visitLikeClause(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -13521,14 +12919,6 @@ export class PropertiesContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_properties;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitProperties) {
-			return visitor.visitProperties(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -13550,14 +12940,6 @@ export class PropertyContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_property;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitProperty) {
-			return visitor.visitProperty(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -13575,14 +12957,6 @@ export class SqlParameterDeclarationContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_sqlParameterDeclaration;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSqlParameterDeclaration) {
-			return visitor.visitSqlParameterDeclaration(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -13599,14 +12973,6 @@ export class RoutineCharacteristicsContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_routineCharacteristics;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRoutineCharacteristics) {
-			return visitor.visitRoutineCharacteristics(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -13631,14 +12997,6 @@ export class RoutineCharacteristicContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_routineCharacteristic;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRoutineCharacteristic) {
-			return visitor.visitRoutineCharacteristic(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -13656,14 +13014,6 @@ export class AlterRoutineCharacteristicsContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_alterRoutineCharacteristics;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitAlterRoutineCharacteristics) {
-			return visitor.visitAlterRoutineCharacteristics(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -13677,14 +13027,6 @@ export class AlterRoutineCharacteristicContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_alterRoutineCharacteristic;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitAlterRoutineCharacteristic) {
-			return visitor.visitAlterRoutineCharacteristic(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -13703,14 +13045,6 @@ export class RoutineBodyContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_routineBody;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRoutineBody) {
-			return visitor.visitRoutineBody(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -13727,14 +13061,6 @@ export class ReturnStatementContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_returnStatement;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitReturnStatement) {
-			return visitor.visitReturnStatement(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -13756,14 +13082,6 @@ export class ExternalBodyReferenceContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_externalBodyReference;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitExternalBodyReference) {
-			return visitor.visitExternalBodyReference(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -13781,14 +13099,6 @@ export class LanguageContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_language;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitLanguage) {
-			return visitor.visitLanguage(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -13805,14 +13115,6 @@ export class DeterminismContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_determinism;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDeterminism) {
-			return visitor.visitDeterminism(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -13843,14 +13145,6 @@ export class NullCallClauseContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_nullCallClause;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitNullCallClause) {
-			return visitor.visitNullCallClause(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -13864,14 +13158,6 @@ export class ExternalRoutineNameContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_externalRoutineName;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitExternalRoutineName) {
-			return visitor.visitExternalRoutineName(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -13935,14 +13221,6 @@ export class QueryNoWithContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_queryNoWith;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitQueryNoWith) {
-			return visitor.visitQueryNoWith(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -13965,14 +13243,6 @@ export class QueryTermDefaultContext extends QueryTermContext {
 	}
 	public queryPrimary(): QueryPrimaryContext {
 		return this.getTypedRuleContext(QueryPrimaryContext, 0) as QueryPrimaryContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitQueryTermDefault) {
-			return visitor.visitQueryTermDefault(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class SetOperationContext extends QueryTermContext {
@@ -14001,14 +13271,6 @@ export class SetOperationContext extends QueryTermContext {
 	public EXCEPT(): TerminalNode {
 		return this.getToken(SqlBaseParser.EXCEPT, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSetOperation) {
-			return visitor.visitSetOperation(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -14032,14 +13294,6 @@ export class SubqueryContext extends QueryPrimaryContext {
 	public queryNoWith(): QueryNoWithContext {
 		return this.getTypedRuleContext(QueryNoWithContext, 0) as QueryNoWithContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSubquery) {
-			return visitor.visitSubquery(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class QueryPrimaryDefaultContext extends QueryPrimaryContext {
 	constructor(parser: SqlBaseParser, ctx: QueryPrimaryContext) {
@@ -14048,14 +13302,6 @@ export class QueryPrimaryDefaultContext extends QueryPrimaryContext {
 	}
 	public querySpecification(): QuerySpecificationContext {
 		return this.getTypedRuleContext(QuerySpecificationContext, 0) as QuerySpecificationContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitQueryPrimaryDefault) {
-			return visitor.visitQueryPrimaryDefault(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class TableContext extends QueryPrimaryContext {
@@ -14068,14 +13314,6 @@ export class TableContext extends QueryPrimaryContext {
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitTable) {
-			return visitor.visitTable(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class InlineTableContext extends QueryPrimaryContext {
@@ -14091,14 +13329,6 @@ export class InlineTableContext extends QueryPrimaryContext {
 	}
 	public expression(i: number): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, i) as ExpressionContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitInlineTable) {
-			return visitor.visitInlineTable(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -14130,14 +13360,6 @@ export class SortItemContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_sortItem;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSortItem) {
-			return visitor.visitSortItem(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -14194,14 +13416,6 @@ export class QuerySpecificationContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_querySpecification;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitQuerySpecification) {
-			return visitor.visitQuerySpecification(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -14221,14 +13435,6 @@ export class GroupByContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_groupBy;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitGroupBy) {
-			return visitor.visitGroupBy(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -14262,14 +13468,6 @@ export class MultipleGroupingSetsContext extends GroupingElementContext {
 	public groupingSet(i: number): GroupingSetContext {
 		return this.getTypedRuleContext(GroupingSetContext, i) as GroupingSetContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitMultipleGroupingSets) {
-			return visitor.visitMultipleGroupingSets(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class SingleGroupingSetContext extends GroupingElementContext {
 	constructor(parser: SqlBaseParser, ctx: GroupingElementContext) {
@@ -14278,14 +13476,6 @@ export class SingleGroupingSetContext extends GroupingElementContext {
 	}
 	public groupingSet(): GroupingSetContext {
 		return this.getTypedRuleContext(GroupingSetContext, 0) as GroupingSetContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSingleGroupingSet) {
-			return visitor.visitSingleGroupingSet(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class CubeContext extends GroupingElementContext {
@@ -14302,14 +13492,6 @@ export class CubeContext extends GroupingElementContext {
 	public expression(i: number): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, i) as ExpressionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCube) {
-			return visitor.visitCube(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class RollupContext extends GroupingElementContext {
 	constructor(parser: SqlBaseParser, ctx: GroupingElementContext) {
@@ -14324,14 +13506,6 @@ export class RollupContext extends GroupingElementContext {
 	}
 	public expression(i: number): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, i) as ExpressionContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRollup) {
-			return visitor.visitRollup(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -14349,14 +13523,6 @@ export class GroupingSetContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_groupingSet;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitGroupingSet) {
-			return visitor.visitGroupingSet(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -14382,14 +13548,6 @@ export class NamedQueryContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_namedQuery;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitNamedQuery) {
-			return visitor.visitNamedQuery(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -14406,14 +13564,6 @@ export class SetQuantifierContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_setQuantifier;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSetQuantifier) {
-			return visitor.visitSetQuantifier(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -14441,14 +13591,6 @@ export class SelectAllContext extends SelectItemContext {
 	public ASTERISK(): TerminalNode {
 		return this.getToken(SqlBaseParser.ASTERISK, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSelectAll) {
-			return visitor.visitSelectAll(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class SelectSingleContext extends SelectItemContext {
 	constructor(parser: SqlBaseParser, ctx: SelectItemContext) {
@@ -14463,14 +13605,6 @@ export class SelectSingleContext extends SelectItemContext {
 	}
 	public AS(): TerminalNode {
 		return this.getToken(SqlBaseParser.AS, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSelectSingle) {
-			return visitor.visitSelectSingle(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -14494,14 +13628,6 @@ export class RelationDefaultContext extends RelationContext {
 	}
 	public sampledRelation(): SampledRelationContext {
 		return this.getTypedRuleContext(SampledRelationContext, 0) as SampledRelationContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRelationDefault) {
-			return visitor.visitRelationDefault(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class JoinRelationContext extends RelationContext {
@@ -14536,14 +13662,6 @@ export class JoinRelationContext extends RelationContext {
 	public sampledRelation(): SampledRelationContext {
 		return this.getTypedRuleContext(SampledRelationContext, 0) as SampledRelationContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitJoinRelation) {
-			return visitor.visitJoinRelation(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -14569,14 +13687,6 @@ export class JoinTypeContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_joinType;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitJoinType) {
-			return visitor.visitJoinType(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -14604,14 +13714,6 @@ export class JoinCriteriaContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_joinCriteria;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitJoinCriteria) {
-			return visitor.visitJoinCriteria(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -14636,14 +13738,6 @@ export class SampledRelationContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_sampledRelation;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSampledRelation) {
-			return visitor.visitSampledRelation(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -14660,14 +13754,6 @@ export class SampleTypeContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_sampleType;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSampleType) {
-			return visitor.visitSampleType(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -14692,14 +13778,6 @@ export class AliasedRelationContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_aliasedRelation;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitAliasedRelation) {
-			return visitor.visitAliasedRelation(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -14716,14 +13794,6 @@ export class ColumnAliasesContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_columnAliases;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitColumnAliases) {
-			return visitor.visitColumnAliases(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -14748,14 +13818,6 @@ export class SubqueryRelationContext extends RelationPrimaryContext {
 	public query(): QueryContext {
 		return this.getTypedRuleContext(QueryContext, 0) as QueryContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSubqueryRelation) {
-			return visitor.visitSubqueryRelation(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ParenthesizedRelationContext extends RelationPrimaryContext {
 	constructor(parser: SqlBaseParser, ctx: RelationPrimaryContext) {
@@ -14764,14 +13826,6 @@ export class ParenthesizedRelationContext extends RelationPrimaryContext {
 	}
 	public relation(): RelationContext {
 		return this.getTypedRuleContext(RelationContext, 0) as RelationContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitParenthesizedRelation) {
-			return visitor.visitParenthesizedRelation(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class UnnestContext extends RelationPrimaryContext {
@@ -14794,14 +13848,6 @@ export class UnnestContext extends RelationPrimaryContext {
 	public ORDINALITY(): TerminalNode {
 		return this.getToken(SqlBaseParser.ORDINALITY, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitUnnest) {
-			return visitor.visitUnnest(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class LateralContext extends RelationPrimaryContext {
 	constructor(parser: SqlBaseParser, ctx: RelationPrimaryContext) {
@@ -14814,14 +13860,6 @@ export class LateralContext extends RelationPrimaryContext {
 	public query(): QueryContext {
 		return this.getTypedRuleContext(QueryContext, 0) as QueryContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitLateral) {
-			return visitor.visitLateral(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class TableNameContext extends RelationPrimaryContext {
 	constructor(parser: SqlBaseParser, ctx: RelationPrimaryContext) {
@@ -14833,14 +13871,6 @@ export class TableNameContext extends RelationPrimaryContext {
 	}
 	public tableVersionExpression(): TableVersionExpressionContext {
 		return this.getTypedRuleContext(TableVersionExpressionContext, 0) as TableVersionExpressionContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitTableName) {
-			return visitor.visitTableName(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -14855,14 +13885,6 @@ export class ExpressionContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_expression;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitExpression) {
-			return visitor.visitExpression(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -14890,14 +13912,6 @@ export class LogicalNotContext extends BooleanExpressionContext {
 	public booleanExpression(): BooleanExpressionContext {
 		return this.getTypedRuleContext(BooleanExpressionContext, 0) as BooleanExpressionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitLogicalNot) {
-			return visitor.visitLogicalNot(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class PredicatedContext extends BooleanExpressionContext {
 	public _valueExpression!: ValueExpressionContext;
@@ -14910,14 +13924,6 @@ export class PredicatedContext extends BooleanExpressionContext {
 	}
 	public predicate(): PredicateContext {
 		return this.getTypedRuleContext(PredicateContext, 0) as PredicateContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitPredicated) {
-			return visitor.visitPredicated(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class LogicalBinaryContext extends BooleanExpressionContext {
@@ -14939,14 +13945,6 @@ export class LogicalBinaryContext extends BooleanExpressionContext {
 	}
 	public OR(): TerminalNode {
 		return this.getToken(SqlBaseParser.OR, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitLogicalBinary) {
-			return visitor.visitLogicalBinary(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -14978,14 +13976,6 @@ export class ComparisonContext extends PredicateContext {
 	public valueExpression(): ValueExpressionContext {
 		return this.getTypedRuleContext(ValueExpressionContext, 0) as ValueExpressionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitComparison) {
-			return visitor.visitComparison(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class LikeContext extends PredicateContext {
 	public _pattern!: ValueExpressionContext;
@@ -15009,14 +13999,6 @@ export class LikeContext extends PredicateContext {
 	public ESCAPE(): TerminalNode {
 		return this.getToken(SqlBaseParser.ESCAPE, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitLike) {
-			return visitor.visitLike(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class InSubqueryContext extends PredicateContext {
 	constructor(parser: SqlBaseParser, ctx: PredicateContext) {
@@ -15031,14 +14013,6 @@ export class InSubqueryContext extends PredicateContext {
 	}
 	public NOT(): TerminalNode {
 		return this.getToken(SqlBaseParser.NOT, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitInSubquery) {
-			return visitor.visitInSubquery(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class DistinctFromContext extends PredicateContext {
@@ -15062,14 +14036,6 @@ export class DistinctFromContext extends PredicateContext {
 	public NOT(): TerminalNode {
 		return this.getToken(SqlBaseParser.NOT, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDistinctFrom) {
-			return visitor.visitDistinctFrom(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class InListContext extends PredicateContext {
 	constructor(parser: SqlBaseParser, ctx: PredicateContext) {
@@ -15088,14 +14054,6 @@ export class InListContext extends PredicateContext {
 	public NOT(): TerminalNode {
 		return this.getToken(SqlBaseParser.NOT, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitInList) {
-			return visitor.visitInList(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class NullPredicateContext extends PredicateContext {
 	constructor(parser: SqlBaseParser, ctx: PredicateContext) {
@@ -15110,14 +14068,6 @@ export class NullPredicateContext extends PredicateContext {
 	}
 	public NOT(): TerminalNode {
 		return this.getToken(SqlBaseParser.NOT, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitNullPredicate) {
-			return visitor.visitNullPredicate(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class BetweenContext extends PredicateContext {
@@ -15142,14 +14092,6 @@ export class BetweenContext extends PredicateContext {
 	public NOT(): TerminalNode {
 		return this.getToken(SqlBaseParser.NOT, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitBetween) {
-			return visitor.visitBetween(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class QuantifiedComparisonContext extends PredicateContext {
 	constructor(parser: SqlBaseParser, ctx: PredicateContext) {
@@ -15164,14 +14106,6 @@ export class QuantifiedComparisonContext extends PredicateContext {
 	}
 	public query(): QueryContext {
 		return this.getTypedRuleContext(QueryContext, 0) as QueryContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitQuantifiedComparison) {
-			return visitor.visitQuantifiedComparison(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -15196,14 +14130,6 @@ export class ValueExpressionDefaultContext extends ValueExpressionContext {
 	public primaryExpression(): PrimaryExpressionContext {
 		return this.getTypedRuleContext(PrimaryExpressionContext, 0) as PrimaryExpressionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitValueExpressionDefault) {
-			return visitor.visitValueExpressionDefault(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ConcatenationContext extends ValueExpressionContext {
 	public _left!: ValueExpressionContext;
@@ -15220,14 +14146,6 @@ export class ConcatenationContext extends ValueExpressionContext {
 	}
 	public valueExpression(i: number): ValueExpressionContext {
 		return this.getTypedRuleContext(ValueExpressionContext, i) as ValueExpressionContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitConcatenation) {
-			return visitor.visitConcatenation(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class ArithmeticBinaryContext extends ValueExpressionContext {
@@ -15259,14 +14177,6 @@ export class ArithmeticBinaryContext extends ValueExpressionContext {
 	public MINUS(): TerminalNode {
 		return this.getToken(SqlBaseParser.MINUS, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitArithmeticBinary) {
-			return visitor.visitArithmeticBinary(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ArithmeticUnaryContext extends ValueExpressionContext {
 	public _operator!: Token;
@@ -15283,14 +14193,6 @@ export class ArithmeticUnaryContext extends ValueExpressionContext {
 	public PLUS(): TerminalNode {
 		return this.getToken(SqlBaseParser.PLUS, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitArithmeticUnary) {
-			return visitor.visitArithmeticUnary(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class AtTimeZoneContext extends ValueExpressionContext {
 	constructor(parser: SqlBaseParser, ctx: ValueExpressionContext) {
@@ -15305,14 +14207,6 @@ export class AtTimeZoneContext extends ValueExpressionContext {
 	}
 	public timeZoneSpecifier(): TimeZoneSpecifierContext {
 		return this.getTypedRuleContext(TimeZoneSpecifierContext, 0) as TimeZoneSpecifierContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitAtTimeZone) {
-			return visitor.visitAtTimeZone(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -15342,14 +14236,6 @@ export class DereferenceContext extends PrimaryExpressionContext {
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDereference) {
-			return visitor.visitDereference(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class TypeConstructorContext extends PrimaryExpressionContext {
 	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
@@ -15364,14 +14250,6 @@ export class TypeConstructorContext extends PrimaryExpressionContext {
 	}
 	public DOUBLE_PRECISION(): TerminalNode {
 		return this.getToken(SqlBaseParser.DOUBLE_PRECISION, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitTypeConstructor) {
-			return visitor.visitTypeConstructor(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class SpecialDateTimeFunctionContext extends PrimaryExpressionContext {
@@ -15399,14 +14277,6 @@ export class SpecialDateTimeFunctionContext extends PrimaryExpressionContext {
 	public LOCALTIMESTAMP(): TerminalNode {
 		return this.getToken(SqlBaseParser.LOCALTIMESTAMP, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSpecialDateTimeFunction) {
-			return visitor.visitSpecialDateTimeFunction(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class SubstringContext extends PrimaryExpressionContext {
 	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
@@ -15427,14 +14297,6 @@ export class SubstringContext extends PrimaryExpressionContext {
 	}
 	public FOR(): TerminalNode {
 		return this.getToken(SqlBaseParser.FOR, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSubstring) {
-			return visitor.visitSubstring(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class CastContext extends PrimaryExpressionContext {
@@ -15457,14 +14319,6 @@ export class CastContext extends PrimaryExpressionContext {
 	public TRY_CAST(): TerminalNode {
 		return this.getToken(SqlBaseParser.TRY_CAST, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCast) {
-			return visitor.visitCast(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class LambdaContext extends PrimaryExpressionContext {
 	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
@@ -15480,14 +14334,6 @@ export class LambdaContext extends PrimaryExpressionContext {
 	public expression(): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitLambda) {
-			return visitor.visitLambda(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ParenthesizedExpressionContext extends PrimaryExpressionContext {
 	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
@@ -15497,27 +14343,11 @@ export class ParenthesizedExpressionContext extends PrimaryExpressionContext {
 	public expression(): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitParenthesizedExpression) {
-			return visitor.visitParenthesizedExpression(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ParameterContext extends PrimaryExpressionContext {
 	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitParameter) {
-			return visitor.visitParameter(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class NormalizeContext extends PrimaryExpressionContext {
@@ -15534,14 +14364,6 @@ export class NormalizeContext extends PrimaryExpressionContext {
 	public normalForm(): NormalFormContext {
 		return this.getTypedRuleContext(NormalFormContext, 0) as NormalFormContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitNormalize) {
-			return visitor.visitNormalize(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class IntervalLiteralContext extends PrimaryExpressionContext {
 	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
@@ -15550,14 +14372,6 @@ export class IntervalLiteralContext extends PrimaryExpressionContext {
 	}
 	public interval(): IntervalContext {
 		return this.getTypedRuleContext(IntervalContext, 0) as IntervalContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitIntervalLiteral) {
-			return visitor.visitIntervalLiteral(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class NumericLiteralContext extends PrimaryExpressionContext {
@@ -15568,14 +14382,6 @@ export class NumericLiteralContext extends PrimaryExpressionContext {
 	public number_(): NumberContext {
 		return this.getTypedRuleContext(NumberContext, 0) as NumberContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitNumericLiteral) {
-			return visitor.visitNumericLiteral(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class BooleanLiteralContext extends PrimaryExpressionContext {
 	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
@@ -15584,14 +14390,6 @@ export class BooleanLiteralContext extends PrimaryExpressionContext {
 	}
 	public booleanValue(): BooleanValueContext {
 		return this.getTypedRuleContext(BooleanValueContext, 0) as BooleanValueContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitBooleanLiteral) {
-			return visitor.visitBooleanLiteral(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class SimpleCaseContext extends PrimaryExpressionContext {
@@ -15621,14 +14419,6 @@ export class SimpleCaseContext extends PrimaryExpressionContext {
 	public expression(): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSimpleCase) {
-			return visitor.visitSimpleCase(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ColumnReferenceContext extends PrimaryExpressionContext {
 	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
@@ -15638,14 +14428,6 @@ export class ColumnReferenceContext extends PrimaryExpressionContext {
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitColumnReference) {
-			return visitor.visitColumnReference(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class NullLiteralContext extends PrimaryExpressionContext {
 	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
@@ -15654,14 +14436,6 @@ export class NullLiteralContext extends PrimaryExpressionContext {
 	}
 	public NULL(): TerminalNode {
 		return this.getToken(SqlBaseParser.NULL, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitNullLiteral) {
-			return visitor.visitNullLiteral(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class RowConstructorContext extends PrimaryExpressionContext {
@@ -15678,14 +14452,6 @@ export class RowConstructorContext extends PrimaryExpressionContext {
 	public ROW(): TerminalNode {
 		return this.getToken(SqlBaseParser.ROW, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRowConstructor) {
-			return visitor.visitRowConstructor(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class SubscriptContext extends PrimaryExpressionContext {
 	public _value!: PrimaryExpressionContext;
@@ -15700,14 +14466,6 @@ export class SubscriptContext extends PrimaryExpressionContext {
 	public valueExpression(): ValueExpressionContext {
 		return this.getTypedRuleContext(ValueExpressionContext, 0) as ValueExpressionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSubscript) {
-			return visitor.visitSubscript(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class SubqueryExpressionContext extends PrimaryExpressionContext {
 	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
@@ -15716,14 +14474,6 @@ export class SubqueryExpressionContext extends PrimaryExpressionContext {
 	}
 	public query(): QueryContext {
 		return this.getTypedRuleContext(QueryContext, 0) as QueryContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSubqueryExpression) {
-			return visitor.visitSubqueryExpression(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class BinaryLiteralContext extends PrimaryExpressionContext {
@@ -15734,14 +14484,6 @@ export class BinaryLiteralContext extends PrimaryExpressionContext {
 	public BINARY_LITERAL(): TerminalNode {
 		return this.getToken(SqlBaseParser.BINARY_LITERAL, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitBinaryLiteral) {
-			return visitor.visitBinaryLiteral(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class CurrentUserContext extends PrimaryExpressionContext {
 	public _name!: Token;
@@ -15751,14 +14493,6 @@ export class CurrentUserContext extends PrimaryExpressionContext {
 	}
 	public CURRENT_USER(): TerminalNode {
 		return this.getToken(SqlBaseParser.CURRENT_USER, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCurrentUser) {
-			return visitor.visitCurrentUser(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class ExtractContext extends PrimaryExpressionContext {
@@ -15778,14 +14512,6 @@ export class ExtractContext extends PrimaryExpressionContext {
 	public valueExpression(): ValueExpressionContext {
 		return this.getTypedRuleContext(ValueExpressionContext, 0) as ValueExpressionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitExtract) {
-			return visitor.visitExtract(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class StringLiteralContext extends PrimaryExpressionContext {
 	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
@@ -15794,14 +14520,6 @@ export class StringLiteralContext extends PrimaryExpressionContext {
 	}
 	public string_(): StringContext {
 		return this.getTypedRuleContext(StringContext, 0) as StringContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitStringLiteral) {
-			return visitor.visitStringLiteral(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class ArrayConstructorContext extends PrimaryExpressionContext {
@@ -15817,14 +14535,6 @@ export class ArrayConstructorContext extends PrimaryExpressionContext {
 	}
 	public expression(i: number): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, i) as ExpressionContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitArrayConstructor) {
-			return visitor.visitArrayConstructor(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class FunctionCallContext extends PrimaryExpressionContext {
@@ -15868,14 +14578,6 @@ export class FunctionCallContext extends PrimaryExpressionContext {
 	public nullTreatment(): NullTreatmentContext {
 		return this.getTypedRuleContext(NullTreatmentContext, 0) as NullTreatmentContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitFunctionCall) {
-			return visitor.visitFunctionCall(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ExistsContext extends PrimaryExpressionContext {
 	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
@@ -15887,14 +14589,6 @@ export class ExistsContext extends PrimaryExpressionContext {
 	}
 	public query(): QueryContext {
 		return this.getTypedRuleContext(QueryContext, 0) as QueryContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitExists) {
-			return visitor.visitExists(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class PositionContext extends PrimaryExpressionContext {
@@ -15913,14 +14607,6 @@ export class PositionContext extends PrimaryExpressionContext {
 	}
 	public IN(): TerminalNode {
 		return this.getToken(SqlBaseParser.IN, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitPosition) {
-			return visitor.visitPosition(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class SearchedCaseContext extends PrimaryExpressionContext {
@@ -15947,14 +14633,6 @@ export class SearchedCaseContext extends PrimaryExpressionContext {
 	public expression(): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSearchedCase) {
-			return visitor.visitSearchedCase(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class GroupingOperationContext extends PrimaryExpressionContext {
 	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
@@ -15969,14 +14647,6 @@ export class GroupingOperationContext extends PrimaryExpressionContext {
 	}
 	public qualifiedName(i: number): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, i) as QualifiedNameContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitGroupingOperation) {
-			return visitor.visitGroupingOperation(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -16007,14 +14677,6 @@ export class UnicodeStringLiteralContext extends StringContext {
 	public STRING(): TerminalNode {
 		return this.getToken(SqlBaseParser.STRING, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitUnicodeStringLiteral) {
-			return visitor.visitUnicodeStringLiteral(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class BasicStringLiteralContext extends StringContext {
 	constructor(parser: SqlBaseParser, ctx: StringContext) {
@@ -16023,14 +14685,6 @@ export class BasicStringLiteralContext extends StringContext {
 	}
 	public STRING(): TerminalNode {
 		return this.getToken(SqlBaseParser.STRING, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitBasicStringLiteral) {
-			return visitor.visitBasicStringLiteral(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -16051,14 +14705,6 @@ export class NullTreatmentContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_nullTreatment;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitNullTreatment) {
-			return visitor.visitNullTreatment(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -16089,14 +14735,6 @@ export class TimeZoneIntervalContext extends TimeZoneSpecifierContext {
 	public interval(): IntervalContext {
 		return this.getTypedRuleContext(IntervalContext, 0) as IntervalContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitTimeZoneInterval) {
-			return visitor.visitTimeZoneInterval(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class TimeZoneStringContext extends TimeZoneSpecifierContext {
 	constructor(parser: SqlBaseParser, ctx: TimeZoneSpecifierContext) {
@@ -16111,14 +14749,6 @@ export class TimeZoneStringContext extends TimeZoneSpecifierContext {
 	}
 	public string_(): StringContext {
 		return this.getTypedRuleContext(StringContext, 0) as StringContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitTimeZoneString) {
-			return visitor.visitTimeZoneString(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -16149,14 +14779,6 @@ export class ComparisonOperatorContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_comparisonOperator;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitComparisonOperator) {
-			return visitor.visitComparisonOperator(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -16177,14 +14799,6 @@ export class ComparisonQuantifierContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_comparisonQuantifier;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitComparisonQuantifier) {
-			return visitor.visitComparisonQuantifier(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -16201,14 +14815,6 @@ export class BooleanValueContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_booleanValue;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitBooleanValue) {
-			return visitor.visitBooleanValue(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -16245,14 +14851,6 @@ export class IntervalContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_interval;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitInterval) {
-			return visitor.visitInterval(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -16282,14 +14880,6 @@ export class IntervalFieldContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_intervalField;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitIntervalField) {
-			return visitor.visitIntervalField(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -16313,14 +14903,6 @@ export class NormalFormContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_normalForm;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitNormalForm) {
-			return visitor.visitNormalForm(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -16337,14 +14919,6 @@ export class TypesContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_types;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitTypes) {
-			return visitor.visitTypes(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -16407,14 +14981,6 @@ export class TypeContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_type;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitType) {
-			return visitor.visitType(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -16431,14 +14997,6 @@ export class TypeParameterContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_typeParameter;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitTypeParameter) {
-			return visitor.visitTypeParameter(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -16462,14 +15020,6 @@ export class BaseTypeContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_baseType;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitBaseType) {
-			return visitor.visitBaseType(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -16496,14 +15046,6 @@ export class WhenClauseContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_whenClause;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitWhenClause) {
-			return visitor.visitWhenClause(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -16523,14 +15065,6 @@ export class FilterContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_filter;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitFilter) {
-			return visitor.visitFilter(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -16575,14 +15109,6 @@ export class OverContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_over;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitOver) {
-			return visitor.visitOver(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -16618,14 +15144,6 @@ export class WindowFrameContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_windowFrame;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitWindowFrame) {
-			return visitor.visitWindowFrame(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -16656,14 +15174,6 @@ export class BoundedFrameContext extends FrameBoundContext {
 	public FOLLOWING(): TerminalNode {
 		return this.getToken(SqlBaseParser.FOLLOWING, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitBoundedFrame) {
-			return visitor.visitBoundedFrame(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class UnboundedFrameContext extends FrameBoundContext {
 	public _boundType!: Token;
@@ -16680,14 +15190,6 @@ export class UnboundedFrameContext extends FrameBoundContext {
 	public FOLLOWING(): TerminalNode {
 		return this.getToken(SqlBaseParser.FOLLOWING, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitUnboundedFrame) {
-			return visitor.visitUnboundedFrame(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class CurrentRowBoundContext extends FrameBoundContext {
 	constructor(parser: SqlBaseParser, ctx: FrameBoundContext) {
@@ -16699,14 +15201,6 @@ export class CurrentRowBoundContext extends FrameBoundContext {
 	}
 	public ROW(): TerminalNode {
 		return this.getToken(SqlBaseParser.ROW, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCurrentRowBound) {
-			return visitor.visitCurrentRowBound(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -16727,14 +15221,6 @@ export class UpdateAssignmentContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_updateAssignment;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitUpdateAssignment) {
-			return visitor.visitUpdateAssignment(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -16769,14 +15255,6 @@ export class ExplainFormatContext extends ExplainOptionContext {
 	public JSON(): TerminalNode {
 		return this.getToken(SqlBaseParser.JSON, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitExplainFormat) {
-			return visitor.visitExplainFormat(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class ExplainTypeContext extends ExplainOptionContext {
 	public _value!: Token;
@@ -16798,14 +15276,6 @@ export class ExplainTypeContext extends ExplainOptionContext {
 	}
 	public IO(): TerminalNode {
 		return this.getToken(SqlBaseParser.IO, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitExplainType) {
-			return visitor.visitExplainType(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -16837,14 +15307,6 @@ export class TransactionAccessModeContext extends TransactionModeContext {
 	public WRITE(): TerminalNode {
 		return this.getToken(SqlBaseParser.WRITE, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitTransactionAccessMode) {
-			return visitor.visitTransactionAccessMode(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class IsolationLevelContext extends TransactionModeContext {
 	constructor(parser: SqlBaseParser, ctx: TransactionModeContext) {
@@ -16859,14 +15321,6 @@ export class IsolationLevelContext extends TransactionModeContext {
 	}
 	public levelOfIsolation(): LevelOfIsolationContext {
 		return this.getTypedRuleContext(LevelOfIsolationContext, 0) as LevelOfIsolationContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitIsolationLevel) {
-			return visitor.visitIsolationLevel(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -16894,14 +15348,6 @@ export class ReadUncommittedContext extends LevelOfIsolationContext {
 	public UNCOMMITTED(): TerminalNode {
 		return this.getToken(SqlBaseParser.UNCOMMITTED, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitReadUncommitted) {
-			return visitor.visitReadUncommitted(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class SerializableContext extends LevelOfIsolationContext {
 	constructor(parser: SqlBaseParser, ctx: LevelOfIsolationContext) {
@@ -16910,14 +15356,6 @@ export class SerializableContext extends LevelOfIsolationContext {
 	}
 	public SERIALIZABLE(): TerminalNode {
 		return this.getToken(SqlBaseParser.SERIALIZABLE, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSerializable) {
-			return visitor.visitSerializable(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class ReadCommittedContext extends LevelOfIsolationContext {
@@ -16931,14 +15369,6 @@ export class ReadCommittedContext extends LevelOfIsolationContext {
 	public COMMITTED(): TerminalNode {
 		return this.getToken(SqlBaseParser.COMMITTED, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitReadCommitted) {
-			return visitor.visitReadCommitted(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class RepeatableReadContext extends LevelOfIsolationContext {
 	constructor(parser: SqlBaseParser, ctx: LevelOfIsolationContext) {
@@ -16950,14 +15380,6 @@ export class RepeatableReadContext extends LevelOfIsolationContext {
 	}
 	public READ(): TerminalNode {
 		return this.getToken(SqlBaseParser.READ, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRepeatableRead) {
-			return visitor.visitRepeatableRead(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -16982,14 +15404,6 @@ export class PositionalArgumentContext extends CallArgumentContext {
 	public expression(): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitPositionalArgument) {
-			return visitor.visitPositionalArgument(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class NamedArgumentContext extends CallArgumentContext {
 	constructor(parser: SqlBaseParser, ctx: CallArgumentContext) {
@@ -17001,14 +15415,6 @@ export class NamedArgumentContext extends CallArgumentContext {
 	}
 	public expression(): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitNamedArgument) {
-			return visitor.visitNamedArgument(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -17033,14 +15439,6 @@ export class PrivilegeContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_privilege;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitPrivilege) {
-			return visitor.visitPrivilege(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -17057,14 +15455,6 @@ export class QualifiedNameContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_qualifiedName;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitQualifiedName) {
-			return visitor.visitQualifiedName(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -17108,14 +15498,6 @@ export class TableVersionContext extends TableVersionExpressionContext {
 	public VERSION(): TerminalNode {
 		return this.getToken(SqlBaseParser.VERSION, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitTableVersion) {
-			return visitor.visitTableVersion(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -17139,14 +15521,6 @@ export class TableversionbeforeContext extends TableVersionStateContext {
 	public BEFORE(): TerminalNode {
 		return this.getToken(SqlBaseParser.BEFORE, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitTableversionbefore) {
-			return visitor.visitTableversionbefore(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class TableversionasofContext extends TableVersionStateContext {
 	constructor(parser: SqlBaseParser, ctx: TableVersionStateContext) {
@@ -17158,14 +15532,6 @@ export class TableversionasofContext extends TableVersionStateContext {
 	}
 	public OF(): TerminalNode {
 		return this.getToken(SqlBaseParser.OF, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitTableversionasof) {
-			return visitor.visitTableversionasof(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -17190,14 +15556,6 @@ export class CurrentUserGrantorContext extends GrantorContext {
 	public CURRENT_USER(): TerminalNode {
 		return this.getToken(SqlBaseParser.CURRENT_USER, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCurrentUserGrantor) {
-			return visitor.visitCurrentUserGrantor(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class SpecifiedPrincipalContext extends GrantorContext {
 	constructor(parser: SqlBaseParser, ctx: GrantorContext) {
@@ -17207,14 +15565,6 @@ export class SpecifiedPrincipalContext extends GrantorContext {
 	public principal(): PrincipalContext {
 		return this.getTypedRuleContext(PrincipalContext, 0) as PrincipalContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitSpecifiedPrincipal) {
-			return visitor.visitSpecifiedPrincipal(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class CurrentRoleGrantorContext extends GrantorContext {
 	constructor(parser: SqlBaseParser, ctx: GrantorContext) {
@@ -17223,14 +15573,6 @@ export class CurrentRoleGrantorContext extends GrantorContext {
 	}
 	public CURRENT_ROLE(): TerminalNode {
 		return this.getToken(SqlBaseParser.CURRENT_ROLE, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitCurrentRoleGrantor) {
-			return visitor.visitCurrentRoleGrantor(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -17255,14 +15597,6 @@ export class UnspecifiedPrincipalContext extends PrincipalContext {
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitUnspecifiedPrincipal) {
-			return visitor.visitUnspecifiedPrincipal(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class UserPrincipalContext extends PrincipalContext {
 	constructor(parser: SqlBaseParser, ctx: PrincipalContext) {
@@ -17275,14 +15609,6 @@ export class UserPrincipalContext extends PrincipalContext {
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitUserPrincipal) {
-			return visitor.visitUserPrincipal(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class RolePrincipalContext extends PrincipalContext {
 	constructor(parser: SqlBaseParser, ctx: PrincipalContext) {
@@ -17294,14 +15620,6 @@ export class RolePrincipalContext extends PrincipalContext {
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRolePrincipal) {
-			return visitor.visitRolePrincipal(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -17319,14 +15637,6 @@ export class RolesContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_roles;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitRoles) {
-			return visitor.visitRoles(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -17351,14 +15661,6 @@ export class BackQuotedIdentifierContext extends IdentifierContext {
 	public BACKQUOTED_IDENTIFIER(): TerminalNode {
 		return this.getToken(SqlBaseParser.BACKQUOTED_IDENTIFIER, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitBackQuotedIdentifier) {
-			return visitor.visitBackQuotedIdentifier(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class QuotedIdentifierContext extends IdentifierContext {
 	constructor(parser: SqlBaseParser, ctx: IdentifierContext) {
@@ -17368,14 +15670,6 @@ export class QuotedIdentifierContext extends IdentifierContext {
 	public QUOTED_IDENTIFIER(): TerminalNode {
 		return this.getToken(SqlBaseParser.QUOTED_IDENTIFIER, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitQuotedIdentifier) {
-			return visitor.visitQuotedIdentifier(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class DigitIdentifierContext extends IdentifierContext {
 	constructor(parser: SqlBaseParser, ctx: IdentifierContext) {
@@ -17384,14 +15678,6 @@ export class DigitIdentifierContext extends IdentifierContext {
 	}
 	public DIGIT_IDENTIFIER(): TerminalNode {
 		return this.getToken(SqlBaseParser.DIGIT_IDENTIFIER, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDigitIdentifier) {
-			return visitor.visitDigitIdentifier(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 export class UnquotedIdentifierContext extends IdentifierContext {
@@ -17404,14 +15690,6 @@ export class UnquotedIdentifierContext extends IdentifierContext {
 	}
 	public nonReserved(): NonReservedContext {
 		return this.getTypedRuleContext(NonReservedContext, 0) as NonReservedContext;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitUnquotedIdentifier) {
-			return visitor.visitUnquotedIdentifier(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -17436,14 +15714,6 @@ export class DecimalLiteralContext extends NumberContext {
 	public DECIMAL_VALUE(): TerminalNode {
 		return this.getToken(SqlBaseParser.DECIMAL_VALUE, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDecimalLiteral) {
-			return visitor.visitDecimalLiteral(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class DoubleLiteralContext extends NumberContext {
 	constructor(parser: SqlBaseParser, ctx: NumberContext) {
@@ -17453,14 +15723,6 @@ export class DoubleLiteralContext extends NumberContext {
 	public DOUBLE_VALUE(): TerminalNode {
 		return this.getToken(SqlBaseParser.DOUBLE_VALUE, 0);
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitDoubleLiteral) {
-			return visitor.visitDoubleLiteral(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 export class IntegerLiteralContext extends NumberContext {
 	constructor(parser: SqlBaseParser, ctx: NumberContext) {
@@ -17469,14 +15731,6 @@ export class IntegerLiteralContext extends NumberContext {
 	}
 	public INTEGER_VALUE(): TerminalNode {
 		return this.getToken(SqlBaseParser.INTEGER_VALUE, 0);
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitIntegerLiteral) {
-			return visitor.visitIntegerLiteral(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -17494,14 +15748,6 @@ export class ConstraintSpecificationContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_constraintSpecification;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitConstraintSpecification) {
-			return visitor.visitConstraintSpecification(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -17524,14 +15770,6 @@ export class NamedConstraintSpecificationContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_namedConstraintSpecification;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitNamedConstraintSpecification) {
-			return visitor.visitNamedConstraintSpecification(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -17551,14 +15789,6 @@ export class UnnamedConstraintSpecificationContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_unnamedConstraintSpecification;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitUnnamedConstraintSpecification) {
-			return visitor.visitUnnamedConstraintSpecification(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -17580,14 +15810,6 @@ export class ConstraintTypeContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_constraintType;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitConstraintType) {
-			return visitor.visitConstraintType(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -17604,14 +15826,6 @@ export class ConstraintQualifiersContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_constraintQualifiers;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitConstraintQualifiers) {
-			return visitor.visitConstraintQualifiers(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -17633,14 +15847,6 @@ export class ConstraintQualifierContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_constraintQualifier;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitConstraintQualifier) {
-			return visitor.visitConstraintQualifier(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -17657,14 +15863,6 @@ export class ConstraintRelyContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_constraintRely;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitConstraintRely) {
-			return visitor.visitConstraintRely(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -17683,14 +15881,6 @@ export class ConstraintEnabledContext extends ParserRuleContext {
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_constraintEnabled;
 	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitConstraintEnabled) {
-			return visitor.visitConstraintEnabled(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
-	}
 }
 
 
@@ -17707,14 +15897,6 @@ export class ConstraintEnforcedContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_constraintEnforced;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitConstraintEnforced) {
-			return visitor.visitConstraintEnforced(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
 
@@ -18176,13 +16358,5 @@ export class NonReservedContext extends ParserRuleContext {
 	}
     public get ruleIndex(): number {
     	return SqlBaseParser.RULE_nonReserved;
-	}
-	// @Override
-	public accept<Result>(visitor: SqlBaseVisitor<Result>): Result {
-		if (visitor.visitNonReserved) {
-			return visitor.visitNonReserved(this);
-		} else {
-			return visitor.visitChildren(this);
-		}
 	}
 }
