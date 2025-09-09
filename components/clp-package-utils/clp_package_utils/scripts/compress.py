@@ -205,7 +205,8 @@ def main(argv):
 
         if parsed_args.timestamp_key is None:
             logger.warning(
-                "If your logs have a timestamp field, you should use the --timestamp-key flag."
+                "`--timestamp-key` not specified. Events will not have assigned timestamps and can "
+                "only be searched from the command line without a timestamp filter."
             )
     elif dataset is not None:
         logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
