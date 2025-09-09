@@ -5,6 +5,12 @@ import sys
 from pathlib import Path
 from typing import Dict, Final, List, Optional, TypedDict
 
+# CONSTANTS
+ANSI_BOLD: Final[str] = "\033[1m"
+ANSI_RESET: Final[str] = "\033[0m"
+DEFAULT_TIMESTAMP_KEY: Final[str] = "timestamp"
+DEFAULT_REQUIRED: Final[bool] = False
+
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter(
@@ -37,19 +43,11 @@ class SplitFilterRule(TypedDict):
 
 
 SplitFilterDict = Dict[str, List[SplitFilterRule]]
-
-
-DEFAULT_TIMESTAMP_KEY: Final[str] = "timestamp"
 DEFAULT_RANGE_MAPPING: Final[RangeMapping] = {
     "lowerBound": "begin_timestamp",
     "upperBound": "end_timestamp",
 }
 DEFAULT_CUSTOM_OPTIONS: Final[CustomOptions] = {"rangeMapping": DEFAULT_RANGE_MAPPING}
-DEFAULT_REQUIRED: Final[bool] = False
-
-
-BOLD: Final[str] = "\033[1m"
-RESET: Final[str] = "\033[0m"
 
 
 def main(argv=None) -> int:
@@ -69,14 +67,23 @@ def main(argv=None) -> int:
     parsed_args = args_parser.parse_args(argv[1:])
     clp_package_dir: Path = parsed_args.clp_package_dir.resolve()
     archives_dir = clp_package_dir / "var" / "data" / "archives"
-    json_output_file: Path = parsed_args.output_file
+    json_output_file: Path = parsed_args.output_file.resolve()
+    out_dir = json_output_file.parent
 
     if not archives_dir.exists():
         logger.error("Archives directory does not exist: %s", archives_dir)
         return 1
-
     if not archives_dir.is_dir():
         logger.error("Archives path is not a directory: %s", archives_dir)
+        return 1
+    if not out_dir.exists():
+        logger.error("Output directory does not exist: %s", out_dir)
+        return 1
+    if not out_dir.is_dir():
+        logger.error("Output parent is not a directory: %s", out_dir)
+        return 1
+    if json_output_file.exists() and json_output_file.is_dir():
+        logger.error("Output path is a directory: %s", json_output_file)
         return 1
 
     datasets = _get_dataset_names(archives_dir)
@@ -90,14 +97,17 @@ def main(argv=None) -> int:
         logger.error("Interrupted while collecting timestamp keys.")
         return 1
 
-    try:
-        split_filters = _construct_split_filters(datasets, timestamp_keys_by_dataset)
-    except Exception:
+    split_filters = _construct_split_filters(datasets, timestamp_keys_by_dataset)
+    if split_filters is None:
         logger.error("Missing timestamp key(s) for dataset(s).")
         return 1
 
-    with open(json_output_file, "w") as json_file:
-        json.dump(split_filters, json_file, indent=2)
+    try:
+        with open(json_output_file, "w") as json_file:
+            json.dump(split_filters, json_file, indent=2)
+    except OSError as e:
+        logger.error("Failed to write output file %s: %s", json_output_file, e)
+        return 1
 
     return 0
 
@@ -111,25 +121,27 @@ def _get_dataset_names(archives_dir: Path) -> Optional[List[str]]:
     :return: List of dataset names. None if there are no datasets compressed.
     """
 
-    return sorted([p.name for p in archives_dir.iterdir() if p.is_dir()])
+    datasets = sorted([p.name for p in archives_dir.iterdir() if p.is_dir()])
+    return datasets if datasets else None
 
 
 def _prompt_timestamp_keys(datasets: List[str]) -> Dict[str, str]:
     """
     Prompt the user to provide the timestamp key for each dataset. If the user presses Enter, falls
-    back to `default_key`.
+    back to `DEFAULT_TIMESTAMP_KEY`.
 
     :param datasets:
-    :param default_key:
     :return: Dictionary mapping dataset names to their timestamp keys.
     """
-    print("\nPlease enter the timestamp key that corresponds to each of your archived datasets.")
-    print("Press <Enter> to accept the default key.\n")
+    print(
+        "\nPlease enter the timestamp key that corresponds to each of your archived datasets."
+        "Press <Enter> to accept the default key.\n"
+    )
 
     data_time_pairs: Dict[str, str] = {}
     for dataset in datasets:
         user_input = input(
-            f">>> {BOLD}{dataset}{RESET} [default key: {BOLD}{DEFAULT_TIMESTAMP_KEY}{RESET}]: "
+            f">>> {ANSI_BOLD}{dataset}{ANSI_RESET} [default key: {ANSI_BOLD}{DEFAULT_TIMESTAMP_KEY}{ANSI_RESET}]: "
         )
         key = DEFAULT_TIMESTAMP_KEY if 0 == len(user_input) else user_input
         data_time_pairs[dataset] = key
@@ -146,12 +158,13 @@ def _construct_split_filters(
 
     :param datasets:
     :param timestamp_keys: Mapping from dataset name -> timestamp key.
-    :return: A SplitFilterDict containing all the SplitFilterRule objects for the JSON file
+    :return: A SplitFilterDict containing all the SplitFilterRule objects for the JSON file.
+    :return: None if there are any datasets that don't have an associated timestamp key.
     """
 
     missing = [d for d in datasets if d not in timestamp_keys]
     if 0 < len(missing):
-        raise ValueError()
+        return None
 
     split_filters: SplitFilterDict = {}
     for dataset in datasets:
