@@ -888,7 +888,6 @@ def start_webui(
         "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
         "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
         "ClpStorageEngine": clp_config.package.storage_engine,
-        "LsRoot": str(container_clp_config.logs_input.directory)
     }
 
     container_cmd_extra_opts = []
