@@ -97,11 +97,7 @@ void FormattedFloatColumnReader::extract_string_value_into_buffer(
 }
 
 std::string FormattedFloatColumnReader::restore_format(uint64_t cur_message) const {
-    return float_format_encoding::restore_encoded_float(
-                   m_values[cur_message],
-                   m_formats[cur_message]
-    )
-            .value();
+    return restore_encoded_float(m_values[cur_message], m_formats[cur_message]).value();
 }
 
 std::variant<int64_t, double, std::string, uint8_t> BooleanColumnReader::extract_value(

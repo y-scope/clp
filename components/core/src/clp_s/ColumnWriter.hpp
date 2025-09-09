@@ -114,7 +114,7 @@ public:
 
 private:
     std::vector<double> m_values;
-    std::vector<float_format_encoding::float_format_t> m_formats;
+    std::vector<float_format_t> m_formats;
 };
 
 class BooleanColumnWriter : public BaseColumnWriter {

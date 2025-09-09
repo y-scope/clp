@@ -178,7 +178,7 @@ public:
 
 private:
     UnalignedMemSpan<double> m_values;
-    UnalignedMemSpan<float_format_encoding::float_format_t> m_formats;
+    UnalignedMemSpan<float_format_t> m_formats;
 };
 
 class BooleanColumnReader : public BaseColumnReader {

@@ -8,7 +8,7 @@
 
 #include <ystdlib/error_handling/Result.hpp>
 
-namespace clp_s::float_format_encoding {
+namespace clp_s {
 // Types
 using float_format_t = uint16_t;
 
@@ -52,6 +52,6 @@ auto get_float_encoding(std::string_view float_str)
 
 auto restore_encoded_float(double value, float_format_t format)
         -> ystdlib::error_handling::Result<std::string>;
-}  // namespace clp_s::float_format_encoding
+}  // namespace clp_s
 
 #endif  // CLP_S_FLOATFORMATENCODING_HPP

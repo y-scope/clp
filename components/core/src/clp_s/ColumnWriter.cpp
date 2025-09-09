@@ -52,14 +52,14 @@ void FloatColumnWriter::store(ZstdCompressor& compressor) {
 size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
     auto const& float_str{std::get<std::string>(value)};
     m_values.push_back(std::stod(float_str));
-    m_formats.push_back(float_format_encoding::get_float_encoding(float_str).value());
-    return sizeof(double) + sizeof(float_format_encoding::float_format_t);
+    m_formats.push_back(get_float_encoding(float_str).value());
+    return sizeof(double) + sizeof(float_format_t);
 }
 
 void FormattedFloatColumnWriter::store(ZstdCompressor& compressor) {
     assert(m_formats.size() == m_values.size());
     auto const values_size = m_values.size() * sizeof(double);
-    auto const format_size = m_formats.size() * sizeof(float_format_encoding::float_format_t);
+    auto const format_size = m_formats.size() * sizeof(float_format_t);
     compressor.write(reinterpret_cast<char const*>(m_values.data()), values_size);
     compressor.write(reinterpret_cast<char const*>(m_formats.data()), format_size);
 }

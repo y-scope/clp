@@ -12,7 +12,7 @@
 
 #include <ystdlib/error_handling/Result.hpp>
 
-namespace clp_s::float_format_encoding {
+namespace clp_s {
 namespace {
 auto has_matching_exponent_sign_flag(float_format_t format, float_format_t sign_flag) -> bool;
 auto has_scientific_notation(float_format_t format) -> bool;
@@ -302,4 +302,4 @@ auto restore_encoded_float(double value, float_format_t format)
     oss << value;
     return scientific_to_decimal(oss.str());
 }
-}  // namespace clp_s::float_format_encoding
+}  // namespace clp_s

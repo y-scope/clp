@@ -9,8 +9,8 @@
 
 #include "../src/clp_s/FloatFormatEncoding.hpp"
 
-using clp_s::float_format_encoding::get_float_encoding;
-using clp_s::float_format_encoding::restore_encoded_float;
+using clp_s::get_float_encoding;
+using clp_s::restore_encoded_float;
 
 namespace {
 constexpr size_t cNumTests = 10'000;
