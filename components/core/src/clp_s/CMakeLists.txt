@@ -265,6 +265,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
                 simdjson::simdjson
+                ystdlib::error_handling
                 PRIVATE
                 Boost::url
                 clp_s::clp_dependencies
@@ -290,6 +291,8 @@ set(
         DictionaryEntry.hpp
         DictionaryReader.hpp
         ErrorCode.hpp
+        FloatFormatEncoding.cpp
+        FloatFormatEncoding.hpp
         JsonSerializer.hpp
         PackedStreamReader.cpp
         PackedStreamReader.hpp
@@ -326,6 +329,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 clp_s::io
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
+                ystdlib::error_handling
                 PRIVATE
                 Boost::url
                 clp_s::clp_dependencies
