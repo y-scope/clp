@@ -26,7 +26,6 @@ const SearchPage = () => {
                 {SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO && <SearchResultsTimeline/>}
                 <SearchResultsTable/>
             </div>
-
         </>
     );
 };
