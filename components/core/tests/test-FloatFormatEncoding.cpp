@@ -103,4 +103,25 @@ TEST_CASE("clp-s-float-format-encoding-fuzzing", "[clp-s][FloatFormatEncoding]")
             test_representations(representations);
         }
     }
+
+    SECTION("Test round trips for zeroes.") {
+        double const zero{0.0};
+        double const neg_zero{-zero};
+        for (size_t significant_digits{1ULL}; significant_digits < 17; ++significant_digits) {
+            std::vector<std::string> formats{
+                    fmt::format("{{:.{}e}}", significant_digits),
+                    fmt::format("{{:.{}E}}", significant_digits),
+                    fmt::format("{{:.{}f}}", significant_digits)
+            };
+
+            std::vector<std::pair<std::string, double>> representations;
+            for (auto const& format : formats) {
+                auto pos_representation{fmt::vformat(format, fmt::make_format_args(zero))};
+                auto neg_representation{fmt::vformat(format, fmt::make_format_args(neg_zero))};
+                representations.emplace_back(pos_representation, zero);
+                representations.emplace_back(neg_representation, neg_zero);
+            }
+            test_representations(representations);
+        }
+    }
 }

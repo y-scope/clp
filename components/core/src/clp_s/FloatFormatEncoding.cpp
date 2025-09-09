@@ -158,9 +158,16 @@ auto get_float_encoding(std::string_view float_str)
             return std::errc::protocol_not_supported;
         }
 
-        // For scientific numbers we only accept non-zero first digits.
+        // For scientific numbers we only accept non-zero first digits, unless all digits are 0.
         if ('0' == float_str[first_digit_pos]) {
-            return std::errc::protocol_not_supported;
+            if (std::string_view::npos == dot_pos) {
+                return std::errc::protocol_not_supported;
+            }
+            for (size_t i{dot_pos + 1}; i < exp_pos; ++i) {
+                if ('0' != float_str[i]) {
+                    return std::errc::protocol_not_supported;
+                }
+            }
         }
 
         // Exponent must be followed by an integer (e.g., "1E" or "1e+" are illegal)
