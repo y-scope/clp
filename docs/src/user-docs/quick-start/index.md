@@ -61,7 +61,7 @@ Download and extract your chosen flavor from the [Releases][clp-releases] page, 
 the [appropriate quick-start guide](#using-clp).
 
 If you're having trouble selecting which flavor will work best for you, or you'd like to compare the
-capabilities of the two flavors, check out the [`clp-text` vs. `clp-json`](./text-v-json.md) page.
+capabilities of the two flavors, check out the [clp-text vs. clp-json](./text-v-json.md) page.
 
 ---
 

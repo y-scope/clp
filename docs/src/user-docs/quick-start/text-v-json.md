@@ -1,4 +1,4 @@
-# `clp-text` vs. `clp-json`
+# clp-text vs. clp-json
 
 CLP comes in two flavors:
 
@@ -13,41 +13,45 @@ Both flavors contain the same binaries but are configured with different values 
 [Table 1](#table-1) compares the different capabilities and limitations of each of the two flavors.
 
 (table-1)=
+<style>
+.g,.r,.o{font-weight:700;font-style:normal}
+.g::after{content:"✓";color:green}
+.r::after{content:"✗";color:red}
+.o::after{content:"〇";color:orange}
+</style>
+
 :::{card}
 
-| Capability                            | `clp-text` | `clp-json` |
-| ------------------------------------- | :--------: | :--------: |
-| Compression of unstructured text logs | ✓ | ✗ |
-| Compression of JSON logs              | 〇[^1] | ✓ |
-| Compression of CLP IR files           | ✓ | ✗ |
-| Compression of CLP KV-IR files        | ✗ | ✗ |
-| Command line search                   | ✓ | ✓ |
-| WebUI search                          | ✓ | ✓ |
-| Decompression                         | ✓ | ✗ |
-| Automatic timestamp parsing           | 〇[^2] | 〇[^2][^3] |
-| Preservation of time zone information | ✗[^4] | ✗[^4] |
-| Retention control                     | ✓ | ✓ |
-| Archive management                    | ✓ | ✓ |
-| Dataset management                    | ✗ | ✓ |
-| S3 support                            | ✗ | ✓ |
-| Multi-node deployment                 | ✓ | ✓ |
-| CLP + Presto integration              | ✗ | ✓ |
-| Parallel compression                  | ✓ | ✓ |
+|Capability|`clp-text`|`clp-json`|
+|---|:---:|:---:|
+|Compression of unstructured text logs|<b class="g"></b>|<b class="r"></b>|
+|Compression of JSON logs|<b class="o"></b><sup>1</sup>|<b class="g"></b>|
+|Compression of CLP IR files|<b class="g"></b>|<b class="r"></b>|
+|Compression of CLP KV-IR files|<b class="r"></b>|<b class="r"></b>|
+|Command line search|<b class="g"></b>|<b class="g"></b>|
+|WebUI search|<b class="g"></b>|<b class="g"></b>|
+|Decompression|<b class="g"></b>|<b class="r"></b>|
+|Automatic timestamp parsing|<b class="o"></b><sup>2</sup>|<b class="o"></b><sup>2, 3</sup>|
+|Preservation of time zone information|<b class="r"></b><sup>4</sup>|<b class="r"></b><sup>4</sup>|
+|Retention control|<b class="g"></b>|<b class="g"></b>|
+|Archive management|<b class="g"></b>|<b class="g"></b>|
+|Dataset management|<b class="r"></b>|<b class="g"></b>|
+|S3 support|<b class="r"></b>|<b class="g"></b>|
+|Multi-node deployment|<b class="g"></b>|<b class="g"></b>|
+|CLP + Presto integration|<b class="r"></b>|<b class="g"></b>|
+|Parallel compression|<b class="g"></b>|<b class="g"></b>|
 
 +++
-**Table 1**: High-level comparison of CLP's two flavors.
+**Table 1**: The capabilities and limitations of CLP's two flavors.
 
-[^1]: `clp-text` is able to compress and search JSON logs as if they were unstructured text, but
-      `clp-text` cannot query individual fields.  
-[^2]: Timestamp parsing is limited to specific supported formats: see
-      [clp-text timestamp formats](http://github.com/y-scope/clp/blob/bfd4f60ffe9c5d69618cc8416ec6729c76ee9862/components/core/src/clp/TimestampPattern.cpp#L120)
-      and
-      [clp-json timestamp formats](https://github.com/y-scope/clp/blob/bfd4f60ffe9c5d69618cc8416ec6729c76ee9862/components/core/src/clp_s/TimestampPattern.cpp#L210)
-      for more details.  
-[^3]: Timestamps are parsed automatically as long as the timestamp key for the logs is provided at
-      compression time using the `--timestamp-key` flag.  
-[^4]: We hope to introduce support for the preservation of time zone information in a future update
-      (issue is up [here](https://github.com/y-scope/clp/issues/1290))
+1) `clp-text` is able to compress and search JSON logs as if they were unstructured text, but
+   `clp-text` cannot query individual fields.
+2) Timestamp parsing is limited to specific supported formats: see
+   [clp-text timestamp formats][ts-text] and [clp-json timestamp formats][ts-json] for more details.
+3) Timestamps are parsed automatically as long as the timestamp key for the logs is provided at
+   compression time using the `--timestamp-key` flag.
+4) We hope to introduce support for the preservation of time zone information in a future update
+   (issue is up [here](https://github.com/y-scope/clp/issues/1290))
 :::
 
 ## clp-json
@@ -106,3 +110,7 @@ If you're using unstructured text logs, download and extract the `clp-text` rele
 [Releases][clp-releases] page, then proceed to the [clp-text quick-start](./clp-text.md) guide.
 
 [clp-releases]: https://github.com/y-scope/clp/releases
+<!-- markdownlint-disable-next-line MD013 -->
+[ts-text]: https://github.com/y-scope/clp/blob/main/components/core/src/clp/TimestampPattern.cpp#L120
+<!-- markdownlint-disable-next-line MD013 -->
+[ts-json]: https://github.com/y-scope/clp/blob/main/components/core/src/clp_s/TimestampPattern.cpp#L210
