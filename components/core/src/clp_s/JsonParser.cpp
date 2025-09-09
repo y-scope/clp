@@ -32,6 +32,7 @@
 #include "../clp/time_types.hpp"
 #include "archive_constants.hpp"
 #include "ErrorCode.hpp"
+#include "FloatFormatEncoding.hpp"
 #include "InputConfig.hpp"
 #include "JsonFileIterator.hpp"
 #include "JsonParser.hpp"
@@ -232,7 +233,11 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
                 if (true == number_value.is_double()) {
                     if (m_retain_float_format) {
                         auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
-                        m_current_parsed_message.add_unordered_value(double_value_str);
+                        auto const float_format_result{get_float_encoding(double_value_str)};
+                        m_current_parsed_message.add_unordered_value(
+                                number_value.get_double(),
+                                float_format_result.value()
+                        );
                         node_id = m_archive_writer->add_node(
                                 node_id_stack.top(),
                                 NodeType::FormattedFloat,
@@ -320,7 +325,11 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
                 if (true == number_value.is_double()) {
                     if (m_retain_float_format) {
                         auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
-                        m_current_parsed_message.add_unordered_value(double_value_str);
+                        auto const float_format_result{get_float_encoding(double_value_str)};
+                        m_current_parsed_message.add_unordered_value(
+                                number_value.get_double(),
+                                float_format_result.value()
+                        );
                         node_id = m_archive_writer
                                           ->add_node(parent_node_id, NodeType::FormattedFloat, "");
                     } else {
@@ -460,7 +469,9 @@ void JsonParser::parse_line(
                     double double_value = line.get_double();
                     if (NodeType::FormattedFloat == type) {
                         auto double_value_str{trim_trailing_whitespace(line.raw_json_token())};
-                        m_current_parsed_message.add_value(node_id, double_value_str);
+                        auto const float_format_result{get_float_encoding(double_value_str)};
+                        m_current_parsed_message
+                                .add_value(node_id, double_value, float_format_result.value());
                     } else {
                         m_current_parsed_message.add_value(node_id, double_value);
                     }
