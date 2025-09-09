@@ -887,6 +887,8 @@ def start_webui(
         "ClientDir": str(container_webui_dir / "client"),
         "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
         "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
+        "ClpStorageEngine": clp_config.package.storage_engine,
+        "LsRoot": str(container_clp_config.logs_input.directory)
     }
 
     container_cmd_extra_opts = []
@@ -941,6 +943,7 @@ def start_webui(
     ]
     necessary_mounts = [
         mounts.clp_home,
+        mounts.input_logs_dir
     ]
     if StorageType.S3 == stream_storage.type:
         auth = stream_storage.s3_config.aws_authentication

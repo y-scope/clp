@@ -2,7 +2,7 @@ import {RowDataPacket} from "mysql2/promise";
 
 
 /**
- * Matching the `QueryJobType` class in `job_orchestration.query_scheduler.constants`.
+ * Matching the `QueryJobType` class in `job_orchestration.scheduler.constants`.
  */
 enum QUERY_JOB_TYPE {
     SEARCH_OR_AGGREGATION = 0,
@@ -20,7 +20,7 @@ const EXTRACT_JOB_TYPES = new Set([
 
 /**
  * Matching the `QueryJobStatus` class in
- * `job_orchestration.query_scheduler.constants`.
+ * `job_orchestration.scheduler.constants`.
  *
  * @enum {number}
  */

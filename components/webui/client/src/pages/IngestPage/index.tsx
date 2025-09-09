@@ -1,3 +1,4 @@
+import Compress from "./Compress";
 import Details from "./Details";
 import styles from "./index.module.css";
 import Jobs from "./Jobs";
@@ -14,6 +15,9 @@ const IngestPage = () => {
         <div className={styles["ingestPageGrid"]}>
             <SpaceSavings/>
             <Details/>
+            <div className={styles["jobsGrid"] || ""}>
+                <Compress/>
+            </div>
             <div className={styles["jobsGrid"] || ""}>
                 <Jobs/>
             </div>

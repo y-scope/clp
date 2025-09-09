@@ -32,7 +32,7 @@ const handleSubmit = (ev: React.FormEvent<HTMLFormElement>) => {
 const SearchControls = () => {
     /* eslint-disable-next-line no-warning-comments */
     // TODO: Remove flag and related logic when the new guide UI is fully implemented.
-    const isGuidedEnabled = "true" === import.meta.env[`VITE_GUIDED_DEV`];
+    const isGuidedEnabled = "true" === import.meta.env["VITE_GUIDED_DEV"];
 
     return (
         <form onSubmit={handleSubmit}>

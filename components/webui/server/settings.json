@@ -3,6 +3,7 @@
     "SqlDbPort": 3306,
     "SqlDbName": "clp-db",
     "SqlDbQueryJobsTableName": "query_jobs",
+    "SqlDbCompressionJobsTableName": "compression_jobs",
 
     "MongoDbHost": "localhost",
     "MongoDbPort": 27017,
@@ -19,6 +20,9 @@
     "StreamFilesS3Profile": null,
 
     "ClpQueryEngine": "clp",
+    "ClpStorageEngine": "clp",
     "PrestoHost": "localhost",
-    "PrestoPort": 8889
+    "PrestoPort": 8889,
+
+    "LsRoot": "/"
 }
