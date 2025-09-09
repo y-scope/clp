@@ -13,14 +13,13 @@ Both flavors contain the same binaries but are configured with different values 
 [Table 1](#table-1) compares the different capabilities and limitations of each of the two flavors.
 
 (table-1)=
+:::{card}
 <style>
 .g,.r,.o{font-weight:700;font-style:normal}
 .g::after{content:"✓";color:green}
 .r::after{content:"✗";color:red}
 .o::after{content:"〇";color:orange}
 </style>
-
-:::{card}
 
 |Capability|`clp-text`|`clp-json`|
 |---|:---:|:---:|
