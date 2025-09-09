@@ -81,6 +81,8 @@ const SqlEditor = (props: SqlEditorProps) => {
                 pointerEvents: disabled ?
                     "none" :
                     "auto",
+                width: "100%",
+                height: "100%",
             }}
         >
             <Editor
