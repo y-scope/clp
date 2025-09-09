@@ -142,11 +142,11 @@ auto get_float_encoding(std::string_view float_str)
     auto const dot_pos{float_str.find('.')};
     float_format_t format{};
 
-    // Find first non-zero digit position
-    size_t first_non_zero_frac_digit_pos{0ULL};
-    if ('-' == float_str[0]) {
-        first_non_zero_frac_digit_pos = 1ULL;
-    } else if ('+' == float_str[0]) {
+    size_t const first_digit_pos{'-' == float_str[0] ? 1ULL : 0ULL};
+    if ('+' == float_str[0]) {
+        return std::errc::protocol_not_supported;
+    }
+    if (float_str.size() <= first_digit_pos) {
         return std::errc::protocol_not_supported;
     }
 
@@ -154,14 +154,19 @@ auto get_float_encoding(std::string_view float_str)
     size_t exp_pos{float_str.find_first_of("Ee")};
     if (std::string_view::npos != exp_pos) {
         // For scientific numbers we only accept one digit before the decimal
-        if (std::string_view::npos != dot_pos && (first_non_zero_frac_digit_pos + 1ULL) != dot_pos)
-        {
+        if (std::string_view::npos != dot_pos && (first_digit_pos + 1ULL) != dot_pos) {
+            return std::errc::protocol_not_supported;
+        }
+
+        // For scientific numbers we only accept non-zero first digits.
+        if ('0' == float_str[first_digit_pos]) {
             return std::errc::protocol_not_supported;
         }
 
         // Exponent must be followed by an integer (e.g., "1E" or "1e+" are illegal)
         if (false
-            == ((exp_pos + 1 < float_str.length() && std::isdigit(float_str[exp_pos + 1]))
+            == ((exp_pos + 1 < float_str.length()
+                 && std::isdigit(static_cast<unsigned char>(float_str[exp_pos + 1])))
                 || (exp_pos + 2 < float_str.length()
                     && ('+' == float_str[exp_pos + 1] || '-' == float_str[exp_pos + 1])
                     && std::isdigit(static_cast<unsigned char>(float_str[exp_pos + 2])))))
@@ -196,6 +201,8 @@ auto get_float_encoding(std::string_view float_str)
         exp_pos = float_str.length();
     }
 
+    // Find first non-zero digit position
+    size_t first_non_zero_frac_digit_pos{first_digit_pos};
     if ('0' == float_str[first_non_zero_frac_digit_pos]) {
         // We don't support prefix zeroes of the form 0N.Y
         if (first_non_zero_frac_digit_pos + 1 < float_str.length()
