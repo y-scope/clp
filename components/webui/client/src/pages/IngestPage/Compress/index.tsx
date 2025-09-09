@@ -87,7 +87,18 @@ const Compress = () => {
             const {data} = await listFiles(path);
             const newNodes = data.map(mapFileToTreeNode);
 
-            setTreeData((prev) => prev.concat(newNodes));
+            setTreeData((prev) => {
+                // Create a map of existing node IDs for quick lookup
+                const existingNodeIds = new Set(prev.map((node) => node.id));
+
+                // Filter out nodes that already exist
+                const uniqueNewNodes = newNodes.filter((node) => !existingNodeIds.has(node.id));
+
+                return [
+                    ...prev,
+                    ...uniqueNewNodes,
+                ];
+            });
 
             // automatically expand the parent node
             setExpandedKeys((prev) => Array.from(new Set([...prev,
@@ -98,6 +109,34 @@ const Compress = () => {
                 "Unknown error while loading paths");
         }
     }, []);
+
+    /*
+     * Load missing parent nodes for a given path.
+     */
+    const loadMissingParents = useCallback(async (path: string) => {
+        const pathSegments = path.split("/").filter((segment) => 0 < segment.length);
+        let currentPath = "/";
+
+        // Load root if not present
+        if (!treeData.some((node) => "/" === node.id)) {
+            await fetchAndAppendTreeNodes("/");
+        }
+
+        // Load each parent level
+        for (let i = 0; i < pathSegments.length; i++) {
+            const segment = pathSegments[i];
+            const parentPath = currentPath;
+            currentPath = "/" === currentPath ?
+                `/${segment}` :
+                `${currentPath}/${segment}`;
+
+            // Check if node already exists
+            if (!treeData.some((node) => node.id === currentPath)) {
+                await fetchAndAppendTreeNodes(parentPath);
+            }
+        }
+    }, [treeData,
+        fetchAndAppendTreeNodes]);
 
     const handleLoadData = useCallback<NonNullable<TreeSelectProps["loadData"]>>(async (node) => {
         const path = node.value;
@@ -115,8 +154,10 @@ const Compress = () => {
             "/" :
             value.slice(0, -1);
 
+        await loadMissingParents(path);
         await fetchAndAppendTreeNodes(path);
-    }, [fetchAndAppendTreeNodes]);
+    }, [fetchAndAppendTreeNodes,
+        loadMissingParents]);
 
     const handleTreeExpand = useCallback<NonNullable<TreeSelectProps["onTreeExpand"]>>((keys) => {
         setExpandedKeys(keys);

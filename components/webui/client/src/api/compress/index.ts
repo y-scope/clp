@@ -28,6 +28,4 @@ export type {
     CompressionJobCreationSchema,
     CompressionJobSchema,
 };
-export {
-    submitCompressionJob,
-};
+export {submitCompressionJob};
