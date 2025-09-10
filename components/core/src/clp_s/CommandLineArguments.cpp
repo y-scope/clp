@@ -250,7 +250,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             )(
                     "retain-float-format",
                     po::bool_switch(&m_retain_float_format),
-                    "Store the format of float numbers for lossless decompression."
+                    "Store extra information to losslessly decompress floats."
             )(
                     "single-file-archive",
                     po::bool_switch(&m_single_file_archive),
