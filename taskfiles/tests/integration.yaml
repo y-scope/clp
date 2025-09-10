@@ -4,7 +4,7 @@ vars:
   CLP_BUILD_DIR: "{{.G_BUILD_DIR}}"
   CLP_CORE_BINS_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
   CLP_PACKAGE_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
-  INTEGRATION_TESTS_DIR: "{{.ROOT_DIR}}/integration-tests"
+  G_INTEGRATION_TESTS_DIR: "{{.ROOT_DIR}}/integration-tests"
 
 tasks:
   default:
@@ -12,7 +12,7 @@ tasks:
       - task: "core"
 
   cache-clear:
-    dir: "{{.INTEGRATION_TESTS_DIR}}"
+    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
     cmds:
       - >-
         uv run python -m pytest --cache-clear --collect-only --override-ini addopts="" --quiet
@@ -22,7 +22,7 @@ tasks:
     deps:
       # TODO: https://github.com/y-scope/clp/issues/1281
       - task: "::package"
-    dir: "{{.INTEGRATION_TESTS_DIR}}"
+    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
     env:
       CLP_BUILD_DIR: "{{.CLP_BUILD_DIR}}"
       CLP_CORE_BINS_DIR: "{{.CLP_CORE_BINS_DIR}}"
