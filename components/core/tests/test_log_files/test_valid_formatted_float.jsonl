@@ -10,7 +10,6 @@
 { "negativeStandardIntegerWithTrailingZeros": -123456789.000 }
 { "negativeStandardFloatWithLeadingZerosAndTrailingZeros": -0.00000000000000000000000000001234567891234500 }
 { "negativeStandardZeroWithTrailingZeros": -0.00 }
-
 { "normalScientific": 1.234567891234567E9 }
 { "normalNegativeExponent": 1.234567891234567E-9 }
 { "scientificFloatWithTrailingZeros": 1.234567891234500E9 }
@@ -39,6 +38,5 @@
 { "e0cornerCase10": 1.000E+0 }
 { "e0cornerCase11": 1.000E-0 }
 { "e0cornerCase12": 1.000E-00 }
-
 { "unstructuredArray": [123456789.1234567, 1.234567891234567E9] }
 { "structuredArray": [{ "floatOfDifferentFormat": 123456789.1234567 }, { "floatOfDifferentFormat": 1.234567891234567E9 }] }
