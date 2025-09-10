@@ -1,10 +1,4 @@
-# Retain Float Format
-
-:::{warning}
-🚧 This section is still under construction.
-:::
-
-## Float Format Encoding
+# Retaining Floating-Point Format Information
 
 To losslessly retain the string representation of floating point numbers we use two encoding
 strategies:
@@ -25,7 +19,7 @@ converted from a binary64 floating point number. As a result, at parsing time, w
 floating point number is representable as a `FormattedFloat`, and if it isn't, we encode it as a
 `DictionaryFloat`.
 
-### High-Level `FormattedFloat` Specification  
+## High-Level `FormattedFloat` Specification  
 
 Each `FormattedFloat` node contains:
 
