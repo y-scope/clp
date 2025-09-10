@@ -1,22 +1,23 @@
 #!/usr/bin/env bash
 
-# Exit on any error, use of undefined variables, or failure within a pipeline
-set -euo pipefail
+set -o errexit
+set -o nounset
+set -o pipefail
 
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 brew update
 brew install \
-  coreutils \
-  gcc \
-  java11 \
-  libarchive \
-  llvm@16 \
-  lz4 \
-  mariadb-connector-c \
-  pipx \
-  xz \
-  zstd
+    coreutils \
+    gcc \
+    java11 \
+    libarchive \
+    llvm@16 \
+    lz4 \
+    mariadb-connector-c \
+    pipx \
+    xz \
+    zstd
 
 # Install pkg-config if it isn't already installed
 # NOTE: We might expect that pkg-config is installed through brew, so trying to install it again
@@ -26,5 +27,5 @@ if ! command -v pkg-config >/dev/null 2>&1; then
     brew install pkg-config
 fi
 
-# Install `cmake`, `go-task` and `uv`
-"${script_dir}/../pipx_install/install-all.sh"
+# Install remaining packages through pipx
+"${script_dir}/../pipx-packages/install-all.sh"

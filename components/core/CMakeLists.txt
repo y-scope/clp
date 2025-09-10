@@ -1,4 +1,5 @@
-cmake_minimum_required(VERSION 3.21)
+# ystdlib requires CMake v3.23 or higher
+cmake_minimum_required(VERSION 3.23)
 
 project(CLP LANGUAGES CXX C)
 

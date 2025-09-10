@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
-# Exit on any error, use of undefined variables, or failure within a pipeline
-set -euo pipefail
+set -o errexit
+set -o nounset
+set -o pipefail
 
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 
 dnf install -y \
     gcc-c++ \
@@ -15,5 +16,5 @@ dnf install -y \
     zlib-devel \
     zlib-static
 
-# Install `cmake`, `go-task` and `uv`
-"${script_dir}/../pipx_install/install-all.sh"
+# Install remaining packages through pipx
+"${script_dir}/../pipx-packages/install-all.sh"
