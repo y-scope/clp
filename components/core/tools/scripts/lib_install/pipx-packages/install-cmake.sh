@@ -32,9 +32,10 @@ if (("${cmake_major_version}" < 3)) \
     if ((0 == "${package_preinstalled}")); then
         echo "Please uninstall CMake and then re-run the install script."
     else
-        echo "Pipx failed to install the required version of CMake."
+        echo "pipx failed to install the required version of CMake."
         echo "To uninstall, run:"
         echo "  pipx uninstall cmake"
     fi
+
     exit 1
 fi

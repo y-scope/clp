@@ -25,9 +25,10 @@ if (("${uv_major_version}" == 0 && "${uv_minor_version}" < 8)); then
     if ((0 == "${package_preinstalled}")); then
         echo "Please uninstall uv and then re-run the install script."
     else
-        echo "Pipx failed to install the required version of uv."
+        echo "pipx failed to install the required version of uv."
         echo "To uninstall, run:"
         echo "  pipx uninstall uv"
     fi
+
     exit 1
 fi
