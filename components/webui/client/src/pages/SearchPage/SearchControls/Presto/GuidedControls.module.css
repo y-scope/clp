@@ -1,49 +1,56 @@
 .gridContainer {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-rows: repeat(auto-fit, 30px);
     max-width: 1250px;
     gap: 5px;
 }
 
 .select {
+    grid-column: span 2;
+    display: flex;
+    min-width: 200px;
+}   
+
+.from {
     grid-column: span 1;
     display: flex;
-    width: 100%;
-    flex-grow: 1;
+    min-width: 200px;
 }
 
 .where {
+    grid-column: span 2;
+    display: flex;
+}
+
+.order {
     grid-column: span 1;
     display: flex;
-    width: 100%;
 }
 
-.dataset {
-    grid-column: 1 / span 2;
-    grid-row: 2;
-    display: flex;
-    align-items: center;
-    gap: 0;
-}
 .limit {
-    grid-column: 1 / span 2;
-    grid-row: 3;
+    grid-column: span 1;
     display: flex;
-    align-items: center;
-    gap: 0;
 }
+
+.limit {
+    grid-column: span 1;
+    display: flex;
+}
+
 
 .status {
-    grid-column: 1;
-    grid-row: 5;
+    grid-column: span 1;
     display: flex;
-    align-items: center;
 }
-.buttons {
-    grid-column: 2;
-    grid-row: 5;
+
+
+.interface {
+    grid-column: span 1;
     display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 8px;
+}
+
+.searchButton {
+    grid-column: span 1;
+    display: flex;
 }

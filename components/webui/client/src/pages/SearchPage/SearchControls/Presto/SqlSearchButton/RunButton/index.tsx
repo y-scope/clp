@@ -35,6 +35,7 @@ const RunButton = () => {
             <Button
                 className={styles["runButton"] || ""}
                 color={"green"}
+                block={true}
                 icon={<CaretRightOutlined/>}
                 size={"middle"}
                 variant={"solid"}

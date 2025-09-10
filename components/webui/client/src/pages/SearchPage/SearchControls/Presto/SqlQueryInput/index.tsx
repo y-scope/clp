@@ -49,7 +49,7 @@ const SqlQueryInput = () => {
         <div className={styles["input"] || ""}>
             <SqlEditor
                 height={"120px"}
-                disabled={
+                disabled={  
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                     searchUiState === SEARCH_UI_STATE.QUERYING
                 }

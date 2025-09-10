@@ -6,6 +6,7 @@ import { Select } from "antd";
 import InputLabel from "../../../../components/InputLabel";
 import guidedGridStyles from "./GuidedControls.module.css";
 import Label from "./Label";
+import styles from "../index.module.css";
 
 
 const limitOptions = [
@@ -22,44 +23,43 @@ const limitOptions = [
  * @return
  */
 const GuidedControls = () => (
-    <div className={guidedGridStyles["gridContainer"]}>
+    <div className={styles["searchControlsContainer"]}>
+        <div className={guidedGridStyles["gridContainer"]}>
 
-        <div className={guidedGridStyles["select"]}>
-             <InputLabel> SELECT </InputLabel>
-              <SqlInput disabled={false} />
-        </div>
-        <div className={guidedGridStyles["dataset"]}>
-            <InputLabel> FROM </InputLabel>
-            <SqlInput disabled={false} />
-        </div>
-        <div className={guidedGridStyles["where"]}>
-            <InputLabel> WHERE </InputLabel>
-            <SqlInput disabled={false} />
-        </div>
-        <div className={guidedGridStyles["order"]}>
-            <Label>ORDER BY</Label>
-            <div style={{ flex: 1 }}>
+            <div className={guidedGridStyles["select"]}>
+                <InputLabel> SELECT </InputLabel>
                 <SqlInput disabled={false} />
             </div>
-        </div>
-
-        <div className={guidedGridStyles["limit"]}>
-            <Label>LIMIT</Label>
-            <div style={{ flex: 1 }}>
-                <Select
-                    options={limitOptions}
-                    defaultValue={limitOptions[0].value}
-                    style={{ width: "100%" }}
-                />
+            <div className={guidedGridStyles["from"]}>
+                <InputLabel> FROM </InputLabel>
+                <SqlInput disabled={false} />
+            </div>
+            <div className={guidedGridStyles["where"]}>
+                <InputLabel> WHERE </InputLabel>
+                <SqlInput disabled={false} />
+            </div>
+            <div className={guidedGridStyles["order"]}>
+                <InputLabel> ORDER BY </InputLabel>
+                <SqlInput disabled={false} />
+            </div>
+            <div className={guidedGridStyles["limit"]}>
+                <InputLabel> LIMIT </InputLabel>
+                    <Select
+                        options={limitOptions}
+                        defaultValue={limitOptions[0].value}
+                        style={{ width: "100%" }}
+                    >
+                    </Select>
             </div>
         </div>
-
-        <div className={guidedGridStyles["status"]}>
-            <QueryStatus />
-        </div>
-        <div className={guidedGridStyles["buttons"]}>
-            <SqlInterfaceButton />
-            <SqlSearchButton />
+        <div className={styles["statusAndButtonsRow"]}>
+            <div className={styles["status"]}>
+                <QueryStatus/>
+            </div>
+            <div className={styles["buttons"]}>
+                <SqlInterfaceButton/>
+                <SqlSearchButton/>
+            </div>
         </div>
     </div>
 );
