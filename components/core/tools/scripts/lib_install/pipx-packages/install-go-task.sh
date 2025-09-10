@@ -11,9 +11,9 @@ if ! command -v pipx >/dev/null 2>&1; then
     exit 1
 fi
 
-package_exists=1
+package_preinstalled=0
 if ! command -v task >/dev/null 2>&1; then
-    package_exists=0
+    package_preinstalled=1
     # We lock to version 3.44.0 to avoid https://github.com/y-scope/clp-ffi-js/issues/110
     pipx install --force "go-task-bin==3.44.0"
     pipx ensurepath
@@ -25,7 +25,7 @@ task_version=$(task --silent --taskfile "${script_dir}/print-go-task-version.yam
 if [[ "${task_version}" != "3.44.0" ]]; then
     echo "Error: Task version ${task_version} is currently unsupported (must be 3.44.0)."
 
-    if package_exists; then
+    if ((0 == "${package_preinstalled}")); then
         echo "Please uninstall Task and then re-run the install script."
     else
         echo "Pipx failed to install the required version of Task."

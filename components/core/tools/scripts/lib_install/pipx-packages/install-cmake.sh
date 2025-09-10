@@ -9,9 +9,9 @@ if ! command -v pipx >/dev/null 2>&1; then
     exit 1
 fi
 
-package_exists=1
+package_preinstalled=0
 if ! command -v cmake >/dev/null 2>&1; then
-    package_exists=0
+    package_preinstalled=1
     # ystdlib requires CMake v3.23; ANTLR and yaml-cpp do not yet support CMake v4+
     # (see https://github.com/y-scope/clp/issues/795).
     pipx install --force "cmake>=3.23,<4"
@@ -29,7 +29,7 @@ if (("${cmake_major_version}" < 3)) \
     || (("${cmake_major_version}" >= 4)); then
     echo "Error: CMake version ${cmake_version} is unsupported (require 3.23 ≤ version < 4.0)."
 
-    if package_exists; then
+    if ((0 == "${package_preinstalled}")); then
         echo "Please uninstall CMake and then re-run the install script."
     else
         echo "Pipx failed to install the required version of CMake."
