@@ -64,8 +64,11 @@ void check_all_leaf_nodes_match_types(std::set<clp_s::NodeType> const& types) {
     clp_s::ArchiveReader archive_reader;
     for (auto const& entry : std::filesystem::directory_iterator(cTestEndToEndArchiveDirectory)) {
         REQUIRE_NOTHROW(archive_reader.open(
-                clp_s::Path{.source{clp_s::InputSource::Filesystem}, .path{entry.path().string()}},
-                clp_s::NetworkAuthOption()
+                clp_s::Path{
+                        .source = clp_s::InputSource::Filesystem,
+                        .path = entry.path().string()
+                },
+                clp_s::NetworkAuthOption{}
         ));
         auto const schema_tree{archive_reader.get_schema_tree()};
         REQUIRE(nullptr != schema_tree);
