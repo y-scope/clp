@@ -58,20 +58,24 @@ tasks:
       - "{{.SRC_DIR}}/SqlBase.g4"
     dir: "{{.SRC_DIR}}"
     cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
       - |-
-        rm -rf "{{.OUTPUT_DIR}}" \
-        && java -jar {{.G_ANTLR_JAR_FILE}} \
+        java -jar {{.G_ANTLR_JAR_FILE}} \
           -Dlanguage=TypeScript \
           -no-listener \
           -Xexact-output-dir SqlBase.g4 \
-          -o generated \
-          && find generated \
-            -type f -and -not -name "*.ts" \
-            -exec rm {} \; \
-          && sed -i \
-            "1s/^/\\/\\/ @ts-nocheck\\n/" \
-            generated/*.ts
-
+          -o generated
+      - |-
+        find generated \
+          -type f -and -not -name "*.ts" \
+          -exec rm {} \;
+      - for: ["generated/SqlBaseLexer.ts", "generated/SqlBaseParser.ts"]
+        cmd: |-
+        task: ":utils:misc:replace-text"
+        vars:
+          FILE_PATH: "{{.SRC_DIR}}/{{.ITEM}}"
+          SED_EXP: >-
+            1s/^/\\/\\/ @ts-nocheck\\n/
       # This command must be last
       - task: ":utils:checksum:compute"
         vars:
