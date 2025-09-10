@@ -79,15 +79,15 @@ tasks:
         vars:
           BLACK_FLAGS: "--check --diff"
           RUFF_CHECK_FLAGS: ""
-          RUFF_FORMAT_FLAGS: "--check --diff"
+          RUFF_FORMAT_FLAGS: "--diff"
 
   fix-py:
     cmds:
       - task: "py"
         vars:
           BLACK_FLAGS: ""
-          RUFF_CHECK_FLAGS: "--exit-non-zero-on-fix --fix"
-          RUFF_FORMAT_FLAGS: "--exit-non-zero-on-fix"
+          RUFF_CHECK_FLAGS: "--fix"
+          RUFF_FORMAT_FLAGS: ""
 
   yaml:
     aliases:
