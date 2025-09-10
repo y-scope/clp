@@ -26,9 +26,9 @@ Usage:
     where `size` is the total size of the dictionaries and encoded messages in an archive.
     * This option acts as a soft limit on memory usage for compression, decompression, and search.
     * This option significantly affects compression ratio.
-  * `--retain-float-format` specifies that float numbers should be stored with format information
-    to allow retaining original float numbers' formats after decompression. This feature is
-    currently not supported when ingesting KV-IR.
+  * `--retain-float-format` specifies that floating-point numbers should be stored with extra
+    metadata to preserve their textual representation after decompression. This feature is currently
+    not supported when ingesting KV-IR.
   * `--structurize-arrays` specifies that arrays should be fully parsed and array entries should be
     encoded into dedicated columns.
   * `--auth <s3|none>` specifies the authentication method that should be used for network requests

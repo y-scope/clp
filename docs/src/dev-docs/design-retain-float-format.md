@@ -14,7 +14,7 @@ to first parse the string representation of a floating point number.
 * We avoid bloating the variable dictionary with non-repetitive floating point strings.
 
 Unfortunately, even though `FormattedFloat` is designed to represent most common encodings of
-IEEE-754 binary64 floats, we can not guarantee that our input follows a common format or was
+IEEE-754 binary64 floats, we cannot guarantee that our input follows a common format or was
 converted from a binary64 floating point number. As a result, at parsing time, we check if a given
 floating point number is representable as a `FormattedFloat`, and if it isn't, we encode it as a
 `DictionaryFloat`.
@@ -24,16 +24,17 @@ floating point number is representable as a `FormattedFloat`, and if it isn't, w
 Each `FormattedFloat` node contains:
 
 - The double value in IEEE-754 binary64 format.
-- A 2-byte *format* field encoding the necessary output formatting information so that, upon
-  decompression, the value can be reproduced to match the original text as closely as possible.
-  Note that the remaining bits of the 2‑byte field are currently reserved.
+- A 2-byte little-endian *format* field encoding the necessary output formatting information so
+  that, upon decompression, the value can be decompressed exactly to the original text.
+  Note that the unused lowest 5 bits of the 2‑byte field are currently reserved.
   Encoders must write them as 0, and decoders must ignore them (treat as “don’t care”) for forward
   compatibility.
 
 ```text
-+-------------------------------------+------------------------+--------------------------+------------------------------------------------------+
-| Scientific Notation Marker (2 bits) | Exponent Sign (2 bits) | Exponent Digits (2 bits) | Digits from First Non-Zero to End of Number (5 bits) |
-+-------------------------------------+------------------------+--------------------------+------------------------------------------------------+
++-------------------------------------+------------------------+--------------------------+------------------------------------------------------+-------------------+
+| Scientific Notation Marker (2 bits) | Exponent Sign (2 bits) | Exponent Digits (2 bits) | Digits from First Non-Zero to End of Number (5 bits) | Reserved (5 bits) |
++-------------------------------------+------------------------+--------------------------+------------------------------------------------------+-------------------+
+MSB                                                                                                                                                                LSB
 ```
 
 To clarify the floating point formats that `FormattedFloat` can represent, we describe them in text
@@ -81,8 +82,9 @@ format correctly.
 
 ### Exponent Digits
 
-Since the maximum and minimal decimal exponents for a double, `308` and `-324 respectively`, are
-both three digits, two bits are enough to represent the digit count.
+Since the maximum and minimum decimal exponents for a double, `308` and `-324` respectively, are
+both three digits, two bits are enough to represent the digit count. We allow up to 4 digits to
+support exponents left-padded with `0`.
 
 The stored value is **actual digits − 1**, since there is always at least one digit
 (e.g., `00` → 1 digit). The two-bit mapping is:
@@ -102,14 +104,15 @@ fractional part (excluding the exponent). Examples:
 - `0.000000123000` → **6** (from first `1` to last `0`)
 - `0.00` → **3** (counts all zeros for zero value)
 
-Per the [JSON grammar][json_grammar], the integer part of a floating point number can not be empty,
+Per the [JSON grammar][json_grammar], the integer part of a floating point number cannot be empty,
 so the minimum number of digits is **1**. To take advantage of this fact, we store this field as
-**actual number of non-zero digits to end of number - 1**.
+**actual number of non-zero digits to end of number - 1**; for the numeric value zero we store
+**actual number of digits - 1**.
 
 As well, according to IEEE-754, only 17 decimal significant digits are needed to represent all
-binary64 floating point numbers without precision loss. As a result, we currently choose to allow
-a maximum value of **17 digits** in this field. Unfortunately, even with our encoding scheme, this
-requires 5 bits to store the maximum encoded value of 16.
+binary64 floating point numbers without precision loss. As a result, we currently allow a maximum of
+**17 digits**. Because the stored value is **digits - 1** the maximum encoded value is 16, which
+requires 5 bits.
 
 We could support representing binary64 numbers with up to 32 significant digits, and we may choose
 to do so in the future, but this is explicitly not supported in the current version of the format.
