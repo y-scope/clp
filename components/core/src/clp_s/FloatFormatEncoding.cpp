@@ -159,7 +159,7 @@ auto get_float_encoding(std::string_view float_str)
         }
 
         // For scientific numbers we only accept non-zero first digits, unless all digits are 0.
-        if ('0' == float_str[first_digit_pos]) {
+        if ('0' == float_str[first_digit_pos] && exp_pos != (1 + first_digit_pos)) {
             if (std::string_view::npos == dot_pos) {
                 return std::errc::protocol_not_supported;
             }
