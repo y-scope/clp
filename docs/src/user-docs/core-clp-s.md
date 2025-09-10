@@ -27,9 +27,8 @@ Usage:
     * This option acts as a soft limit on memory usage for compression, decompression, and search.
     * This option significantly affects compression ratio.
   * `--retain-float-format` specifies that float numbers should be stored with format information
-    to allow retaining original float numbers' formats after decompression (see “Current
-    limitations” below and the design notes in the dev guide). Note: This currently applies to
-    JSON files; KV‑IR support for preserving original printed float formats is under evaluation.
+    to allow retaining original float numbers' formats after decompression. This feature is
+    currently not supported when ingesting KV-IR.
   * `--structurize-arrays` specifies that arrays should be fully parsed and array entries should be
     encoded into dedicated columns.
   * `--auth <s3|none>` specifies the authentication method that should be used for network requests
@@ -81,10 +80,9 @@ AWS_ACCESS_KEY_ID='...' AWS_SECRET_ACCESS_KEY='...' \
 ```
 
 :::{tip}
-Use the `--retain-float-format` flag during compression. When present in an archive, decompression
-automatically uses the stored format metadata so outputs match the original text (subject to the
-limitations below). For example, values like `1.000e+00` or `0.000000012300` will be printed
-unchanged.
+Use the `--retain-float-format` flag during compression. Internally, switch to using a different
+encoding approach for floating point numbers that always retains their original formats. For
+example, values like `1.000e+00` or `0.000000012300` will be decompressed unchanged.
 :::
 
 **Enable retaining float numbers' formats:**
@@ -175,18 +173,7 @@ compressed data:**
 * The input directory structure is not preserved and during decompression all files are written to
   the same file.
 * When using the `--retain-float-format` flag:
-  * For both standard decimal and scientific notation, the maximum number of significant digits is
-    **16** (e.g., `123456789.12345678` will be rounded to `123456789.1234567`). Values exceeding
-    this limit will be rounded.
-  * In scientific notation, the exponent’s printed width can have at most **4 digits**; any extra
-    leading zeros will be removed (e.g., `1.0e00000` becomes `1.0e0000`).
-  * In scientific notation, the mantissa (significand) must be between **1** and **9** (or **0**
-    only if the number equals 0). If it falls outside this range, the output mantissa will differ
-    from the input, as only values within 0 to 9 are supported (e.g., `123456789.12345678E3`
-    becomes `1.234567891234568E8`, which is also rounded because it has more than 16 significant
-    digits).
-  * KV-IR inputs currently don't support preserving original printed float formats, only JSON
-    file is suppoerted.
+  * KV-IR inputs currently don't support preserving the original printed float formats.
 * In addition, there are a few limitations, related to querying arrays, described in the search
   syntax [reference](reference-json-search-syntax).
 
