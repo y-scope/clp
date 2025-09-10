@@ -26,6 +26,7 @@ from clp_py_utils.clp_config import (
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
+    QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
@@ -887,6 +888,7 @@ def start_webui(
         "ClientDir": str(container_webui_dir / "client"),
         "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
         "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
+        "ClpQueryEngine": clp_config.package.query_engine,
     }
 
     container_cmd_extra_opts = []
@@ -911,6 +913,14 @@ def start_webui(
         server_settings_json_updates["StreamFilesS3Region"] = None
         server_settings_json_updates["StreamFilesS3PathPrefix"] = None
         server_settings_json_updates["StreamFilesS3Profile"] = None
+
+    query_engine = clp_config.package.query_engine
+    if QueryEngine.PRESTO == query_engine:
+        server_settings_json_updates["PrestoHost"] = clp_config.presto.host
+        server_settings_json_updates["PrestoPort"] = clp_config.presto.port
+    else:
+        server_settings_json_updates["PrestoHost"] = None
+        server_settings_json_updates["PrestoPort"] = None
 
     server_settings_json = read_and_update_settings_json(
         server_settings_json_path, server_settings_json_updates
