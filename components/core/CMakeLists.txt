@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.23)
 
 # Toolchain setup must come before the first project() call in the entire CMake buildsystem.
 # If CLP is not the top-level project, the following setup has no effect.
