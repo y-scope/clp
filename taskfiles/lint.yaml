@@ -765,6 +765,7 @@ tasks:
           - "components/clp-py-utils/clp_py_utils"
           - "components/core/tools/scripts/utils"
           - "components/job-orchestration/job_orchestration"
+          - "components/spider-orchestration/spider_orchestration"
           - "tools/deployment"
           - "tools/scripts"
           - "docs/conf"
