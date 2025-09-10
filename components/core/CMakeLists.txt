@@ -1,3 +1,4 @@
+# ystdlib requires CMake v3.23 or higher
 cmake_minimum_required(VERSION 3.23)
 
 # Toolchain setup must come before the first project() call in the entire CMake buildsystem.
