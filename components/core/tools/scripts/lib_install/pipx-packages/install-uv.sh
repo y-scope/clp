@@ -9,18 +9,24 @@ if ! command -v pipx >/dev/null 2>&1; then
     exit 1
 fi
 
+readonly required_version_major_min=0
+readonly required_version_minor_min=8
+readonly required_version_min="${required_version_major_min}.${required_version_minor_min}"
+
 package_preinstalled=0
 if ! command -v uv >/dev/null 2>&1; then
     package_preinstalled=1
-    pipx install --force "uv>=0.8"
+    pipx install --force "uv>=${required_version_min}"
     pipx ensurepath
 fi
 
-uv_version=$(uv self version --output-format json | jq --raw-output ".version")
-IFS=. read -r uv_major_version uv_minor_version _ <<<"${uv_version}"
+installed_version=$(uv self version --output-format json | jq --raw-output ".version")
+IFS=. read -r installd_version_major installed_version_minor _ <<<"${installed_version}"
 
-if (("${uv_major_version}" == 0 && "${uv_minor_version}" < 8)); then
-    echo "Error: uv version ${uv_version} is unsupported (require version ≥ 0.8)."
+if (("${installd_version_major}" == "${required_version_major_min}" && \
+    "${installed_version_minor}" < "${required_version_minor_min}")); then
+    echo "Error: uv version ${installed_version} is unsupported (require version" \
+        "≥ ${required_version_min})."
 
     if ((0 == "${package_preinstalled}")); then
         echo "Please uninstall uv and then re-run the install script."
