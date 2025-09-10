@@ -1,5 +1,6 @@
 import enum
 import errno
+import json
 import os
 import pathlib
 import re
@@ -130,11 +131,16 @@ def generate_container_name(job_type: str) -> str:
     return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
 
 
-def is_docker_compose_running():
-    cmd = ["docker", "compose", "ls", "--quiet"]
+def is_docker_compose_running(project_name: str) -> bool:
+    cmd = [
+        "docker", "compose", "ls",
+        "--format", "json",
+        "--filter", f"name={project_name}"
+    ]
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        return bool(output.strip())
+        running_instances = json.loads(output)
+        return len(running_instances) >= 1
     except subprocess.CalledProcessError:
         raise EnvironmentError("docker-compose is not installed or not functioning properly.")
 
@@ -151,7 +157,7 @@ def check_docker_dependencies(should_compose_run: bool = False):
     except subprocess.CalledProcessError:
         raise EnvironmentError("docker is not installed or available on the path")
 
-    is_running = is_docker_compose_running()
+    is_running = is_docker_compose_running("clp-package")
     if should_compose_run and not is_running:
         raise EnvironmentError("docker-compose is not running.")
     if not should_compose_run and is_running:
