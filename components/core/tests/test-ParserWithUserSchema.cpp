@@ -33,7 +33,7 @@ namespace {
 
 auto get_test_dir() -> std::filesystem::path {
     std::filesystem::path const current_file_path{__FILE__};
-    return current_file_path.parent_path();
+    return std::filesystem::canonical(current_file_path.parent_path());
 }
 
 auto const test_dir = get_test_dir();
@@ -174,9 +174,8 @@ TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParse
 
 TEST_CASE("Test lexer", "[Search]") {
     ByteLexer lexer;
-    auto const schema_file_name = (test_schema_dir / "search_schema.txt").string();
-    auto const schema_file_path = std::filesystem::weakly_canonical(schema_file_name).string();
-    load_lexer_from_file(schema_file_path, lexer);
+    auto const schema_file_path{test_schema_dir / "search_schema.txt"};
+    load_lexer_from_file(schema_file_path.string(), lexer);
     auto const query_file_path{test_query_dir / "easy.txt"};
     FileReader file_reader{query_file_path.string()};
     LogSurgeonReader reader_wrapper(file_reader);
