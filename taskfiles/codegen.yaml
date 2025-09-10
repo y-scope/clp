@@ -70,7 +70,6 @@ tasks:
           -type f -and -not -name "*.ts" \
           -exec rm {} \;
       - for: ["generated/SqlBaseLexer.ts", "generated/SqlBaseParser.ts"]
-        cmd: |-
         task: ":utils:misc:replace-text"
         vars:
           FILE_PATH: "{{.SRC_DIR}}/{{.ITEM}}"
