@@ -132,11 +132,7 @@ def generate_container_name(job_type: str) -> str:
 
 
 def is_docker_compose_running(project_name: str) -> bool:
-    cmd = [
-        "docker", "compose", "ls",
-        "--format", "json",
-        "--filter", f"name={project_name}"
-    ]
+    cmd = ["docker", "compose", "ls", "--format", "json", "--filter", f"name={project_name}"]
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         running_instances = json.loads(output)

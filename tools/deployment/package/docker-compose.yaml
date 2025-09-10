@@ -14,7 +14,7 @@ networks:
   clp-network:
     driver: "bridge"
 
-name: clp-package
+name: "clp-package"
 
 secrets:
   CLP_DB_PASS_FILE:
