@@ -450,6 +450,8 @@ tasks:
   spider:
     internal: true
     run: "once"
+    # Disable spider build on non-Linux platforms, specifically macOS
+    platforms: ["linux"]
     deps:
       - task: "absl"
       - task: "antlr-jar"
@@ -460,8 +462,6 @@ tasks:
       - task: "spdlog"
     cmds:
       - task: "utils:install-remote-cmake-lib"
-        # Disable spider build on non-Linux platforms, specifically macOS
-        platforms: ["linux"]
         vars:
           CMAKE_GEN_ARGS:
             - "-DCMAKE_BUILD_TYPE=Release"
