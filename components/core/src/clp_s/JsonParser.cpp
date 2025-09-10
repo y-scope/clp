@@ -55,6 +55,24 @@ namespace {
 auto trim_trailing_whitespace(std::string_view str) -> std::string_view;
 
 /**
+ * Checks whether marshalling a double value to a string using a specific format matches the
+ * original floating point string.
+ *
+ * This should happen only when either:
+ *   1. `float_str` was marshalled from an ieee-754 binary64 float in a non-standard compliant way
+ *   or
+ *   2. `float_str` was not marshalled from an ieee-754 binary64 float (e.g. human-written,
+ *      marshalled from a binary128 or decimalX float, etc.)
+ *
+ * @param float_str
+ * @param value
+ * @param format
+ * @return Whether marshalling `value` using `format` is identical to `float_str` or not.
+ */
+auto round_trip_is_identical(std::string_view float_str, double value, float_format_t format)
+        -> bool;
+
+/**
  * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for Key-Value IR compression.
  */
 class IrUnitHandler {
@@ -110,6 +128,12 @@ auto trim_trailing_whitespace(std::string_view str) -> std::string_view {
         }
     }
     return str.substr(0ULL, substr_size);
+}
+
+auto round_trip_is_identical(std::string_view float_str, double value, float_format_t format)
+        -> bool {
+    auto const restore_result{restore_encoded_float(value, format)};
+    return false == restore_result.has_error() && float_str == restore_result.value();
 }
 }  // namespace
 
@@ -234,7 +258,13 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
                     if (m_retain_float_format) {
                         auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
                         auto const float_format_result{get_float_encoding(double_value_str)};
-                        if (false == float_format_result.has_error()) {
+                        if (false == float_format_result.has_error()
+                            && round_trip_is_identical(
+                                    double_value_str,
+                                    number_value.get_double(),
+                                    float_format_result.value()
+                            ))
+                        {
                             m_current_parsed_message.add_unordered_value(
                                     number_value.get_double(),
                                     float_format_result.value()
@@ -335,7 +365,13 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
                     if (m_retain_float_format) {
                         auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
                         auto const float_format_result{get_float_encoding(double_value_str)};
-                        if (false == float_format_result.has_error()) {
+                        if (false == float_format_result.has_error()
+                            && round_trip_is_identical(
+                                    double_value_str,
+                                    number_value.get_double(),
+                                    float_format_result.value()
+                            ))
+                        {
                             m_current_parsed_message.add_unordered_value(
                                     number_value.get_double(),
                                     float_format_result.value()
@@ -484,7 +520,13 @@ void JsonParser::parse_line(
                     if (m_retain_float_format) {
                         auto double_value_str{trim_trailing_whitespace(line.raw_json_token())};
                         auto const float_format_result{get_float_encoding(double_value_str)};
-                        if (false == float_format_result.has_error()) {
+                        if (false == float_format_result.has_error()
+                            && round_trip_is_identical(
+                                    double_value_str,
+                                    double_value,
+                                    float_format_result.value()
+                            ))
+                        {
                             node_id = m_archive_writer->add_node(
                                     node_id_stack.top(),
                                     NodeType::FormattedFloat,
