@@ -36,9 +36,6 @@ constexpr std::string_view cTestEndToEndValidFormattedFloatInputFile{
 constexpr std::string_view cTestEndToEndRoundedFormattedFloatInputFile{
         "test_rounded_formatted_float.jsonl"
 };
-constexpr std::string_view cTestEndToEndRoundedFormattedFloatExpectedOutputFile{
-        "test_rounded_formatted_float_rounded.jsonl"
-};
 
 namespace {
 auto get_test_input_path_relative_to_tests_dir(std::string_view const test_input_path)
