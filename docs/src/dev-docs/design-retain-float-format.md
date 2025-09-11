@@ -48,7 +48,7 @@ here:
     decimal, followed by an exponent
   * Where zero can not be the digit before the decimal, unless the number is a zero
   * And where the exponent is specified by `e` or `E` optionally followed by `+` or `-`
-  * With at most **4** exponent digits, which must be left-padded with `0`
+  * With at most **4** exponent digits, which can be left-padded with `0`
 
 With the added restrictions that:
 * The floating point number follows the JSON grammar for floating point numbers.
