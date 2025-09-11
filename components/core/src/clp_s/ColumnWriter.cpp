@@ -68,7 +68,7 @@ size_t DictionaryFloatColumnWriter::add_value(ParsedMessage::variable_t& value) 
     clp::variable_dictionary_id_t id{};
     m_var_dict->add_entry(std::get<std::string>(value), id);
     m_var_dict_ids.push_back(id);
-    return sizeof(variable_dictionary_id_t);
+    return sizeof(clp::variable_dictionary_id_t);
 }
 
 void DictionaryFloatColumnWriter::store(ZstdCompressor& compressor) {
