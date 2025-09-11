@@ -257,7 +257,7 @@ void ArchiveReader::append_unordered_reader_columns(
                 column_reader = new FormattedFloatColumnReader(column_id);
                 break;
             case NodeType::DictionaryFloat:
-                column_reader = new DictionaryFloatColumnReader(column_id);
+                column_reader = new DictionaryFloatColumnReader(column_id, m_var_dict);
                 break;
             case NodeType::ClpString:
                 column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
