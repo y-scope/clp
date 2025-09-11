@@ -325,7 +325,7 @@ def main(argv):
         "--dataset",
         type=str,
         default=None,
-        help="The dataset that will be decompressed.",
+        help="Dataset to decompress (required for clp-json; invalid for clp-text).",
     )
 
     # IR extraction command parser

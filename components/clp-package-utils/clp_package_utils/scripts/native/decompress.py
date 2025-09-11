@@ -299,7 +299,6 @@ def handle_clp_s_extract_file_cmd(
     storage_engine = clp_config.package.storage_engine
 
     # Validate extraction directory
-    # TODO: make it so that extraction dir gets created?
     extraction_dir = pathlib.Path(parsed_args.extraction_dir)
     if not extraction_dir.is_dir():
         logger.error(f"extraction-dir ({extraction_dir}) is not a valid directory.")
@@ -311,7 +310,7 @@ def handle_clp_s_extract_file_cmd(
         return -1
     archives_dir = clp_config.archive_output.get_directory()
     dataset_dir = archives_dir / target_dataset
-    if not dataset_dir.is_dir():
+    if not dataset_dir.exists():
         logger.error(
             f"Dataset '{target_dataset}' not found in {archives_dir}. Are you sure it was "
             "compressed?"
@@ -377,7 +376,7 @@ def main(argv):
         "--dataset",
         type=str,
         default=None,
-        help="The dataset that will be decompressed.",
+        help="Dataset to decompress (required for clp-json; invalid for clp-text).",
     )
 
     # IR extraction command parser
