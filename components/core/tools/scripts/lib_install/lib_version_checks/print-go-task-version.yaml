@@ -1,6 +1,0 @@
-version: "3"
-
-tasks:
-  version:
-    cmd: >-
-      echo {{ .TASK_VERSION | trimPrefix "v" }}
