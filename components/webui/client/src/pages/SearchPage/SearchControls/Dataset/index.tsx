@@ -8,7 +8,8 @@ import {
 
 import useSearchStore from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
-import DatasetLabel from "./DatasetLabel";
+import InputLabel from "../../../../components/InputLabel";
+import { theme } from "antd";
 import styles from "./index.module.css";
 import {fetchDatasetNames} from "./sql";
 
@@ -22,6 +23,7 @@ const Dataset = () => {
     const dataset = useSearchStore((state) => state.selectDataset);
     const updateDataset = useSearchStore((state) => state.updateSelectDataset);
     const searchUiState = useSearchStore((state) => state.searchUiState);
+    const { token } = theme.useToken();
 
     const [messageApi, contextHolder] = message.useMessage();
 
@@ -79,7 +81,7 @@ const Dataset = () => {
     return (
         <div className={styles["datasetContainer"]}>
             {contextHolder}
-            <DatasetLabel/>
+            <InputLabel fontSize={token.fontSizeLG}>Dataset</InputLabel>
             <Select
                 className={styles["select"] || ""}
                 loading={isPending}

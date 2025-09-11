@@ -11,10 +11,12 @@ const {Text} = Typography;
  * Renders a label for an input field.
  *
  * @param children The label text to display.
+ * @param [fontSize] Font size for the label.
  * @return
  */
-const InputLabel = ({ children }: { children: React.ReactNode }) => {
+const InputLabel = ({ children, fontSize }: { children: React.ReactNode, fontSize?: number | string }) => {
     const {token} = theme.useToken();
+    const resolvedFontSize = fontSize || token.fontSize;
 
     return (
         <Text
@@ -24,7 +26,7 @@ const InputLabel = ({ children }: { children: React.ReactNode }) => {
                 borderBottomLeftRadius: `${token.borderRadius}px`,
                 borderColor: token.colorBorder,
                 borderTopLeftRadius: `${token.borderRadius}px`,
-                fontSize: token.fontSize,
+                fontSize: resolvedFontSize,
             }}
         >
             {children}
