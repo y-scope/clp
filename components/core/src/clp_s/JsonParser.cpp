@@ -49,6 +49,7 @@ namespace {
 /**
  * Trims trailing whitespace off of a `string_view`. The returned `string_view` points to a subset
  * of the input `string_view`.
+ *
  * @param str
  * @return The input string without trailing whitespace.
  */

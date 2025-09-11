@@ -21,16 +21,19 @@ constexpr float_format_t cScientificNotationFlagMask = 0b11U << cScientificNotat
 constexpr float_format_t cScientificNotationEnabledBit = 0b01U << cScientificNotationFlagPos;
 constexpr float_format_t cScientificNotationLowerCaseEFlag = 0b01U << cScientificNotationFlagPos;
 constexpr float_format_t cScientificNotationUpperCaseEFlag = 0b11U << cScientificNotationFlagPos;
+
 // Exponent sign presence (2 bits)
 constexpr float_format_t cExponentSignFlagPos = 12U;
 constexpr float_format_t cExponentSignFlagMask = 0b11U << cExponentSignFlagPos;
 constexpr float_format_t cEmptyExponentSignFlag = 0b00U << cExponentSignFlagPos;
 constexpr float_format_t cPlusExponentSignFlag = 0b01U << cExponentSignFlagPos;
 constexpr float_format_t cMinusExponentSignFlag = 0b10U << cExponentSignFlagPos;
+
 // Number of exponent digits (2 bits)
 constexpr float_format_t cNumExponentDigitsPos = 10U;
 constexpr float_format_t cNumExponentDigitsMask = 0b11U << cNumExponentDigitsPos;
-// Number of significant digits (4 bits)
+
+// Number of significant digits (5 bits)
 constexpr float_format_t cNumSignificantDigitsPos = 5U;
 constexpr float_format_t cNumSignificantDigitsMask = 0b1'1111U << cNumSignificantDigitsPos;
 constexpr size_t cMaxNumSignificantDigits = 17U;

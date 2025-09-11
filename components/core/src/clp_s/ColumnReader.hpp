@@ -170,9 +170,9 @@ public:
     /**
      * Appends the floating point value to the buffer in its original format by decoding the stored
      * format information.
+     *
      * @param cur_message
      * @param buffer
-     *
      */
     void extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) override;
 
