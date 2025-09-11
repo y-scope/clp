@@ -50,17 +50,21 @@ ignore = [
     "FIX002",  # Allow todo statements
     "PERF401",  # Allow for loops when creating lists
     "PERF403",  # Allow for loops when creating dicts
-    "S101",  # Allow usage of pytest `assert`
     "S311",  # Allow usage of `random` package
     "S603",  # Automatically trust inputs of subprocess execution
     "SIM102",  # Allow collapsible if statements for readability
     "SIM300",  # Skip Yoda-condition format fixes
-    "TC003",  # Ignore performance overhead of imports only used for type checking
     "TD002",  # Author unnecessary for todo statement
     "TD003",  # Issue link unnecessary for todo statement
     "UP015",  # Explicit open modes are helpful
 ]
 isort.order-by-type = false
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",  # Allow usage of pytest `assert`
+    "TC003",  # Ignore performance overhead of imports only used for type checking
+]
 
 [tool.ruff.format]
 docstring-code-format = true
