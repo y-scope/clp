@@ -32,7 +32,6 @@ const CancelButton = () => {
         <Tooltip title={"Cancel query"}>
             <Button
                 className={styles["cancelButton"] || ""}
-                block={true}
                 color={"red"}
                 icon={<CloseOutlined/>}
                 size={"middle"}

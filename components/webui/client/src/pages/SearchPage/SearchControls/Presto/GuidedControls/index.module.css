@@ -32,25 +32,3 @@
     grid-column: span 1;
     display: flex;
 }
-
-.timestamp {
-    grid-column: span 1;
-    display: flex;
-}
-
-
-.status {
-    grid-column: span 1;
-    display: flex;
-}
-
-
-.interface {
-    grid-column: span 1;
-    display: flex;
-}
-
-.searchButton {
-    grid-column: span 1;
-    display: flex;
-}

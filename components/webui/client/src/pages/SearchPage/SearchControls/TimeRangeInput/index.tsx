@@ -13,19 +13,16 @@ import {
     TIME_RANGE_OPTION_DAYJS_MAP,
     TIME_RANGE_OPTION_NAMES,
 } from "./utils";
-import type { SelectProps } from 'antd';
 
-type TimeRangeInputSize = SelectProps['size'];
 
 /**
  * Renders controls for selecting a time range for queries. By default, the component is
  * a select dropdown with a list of preset time ranges. If the user selects "Custom",
  * a date range picker is also displayed.
  *
- * @param size The size of the input controls.
  * @return
  */
-const TimeRangeInput = ({ size = "large" }: { size?: TimeRangeInputSize }) => {
+const TimeRangeInput = () => {
     const {
         timeRange,
         updateTimeRange,
@@ -64,7 +61,7 @@ const TimeRangeInput = ({ size = "large" }: { size?: TimeRangeInputSize }) => {
                 listHeight={400}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
-                size={size}
+                size={"large"}
                 value={timeRangeOption}
                 variant={"filled"}
                 className={timeRangeOption === TIME_RANGE_OPTION.CUSTOM ?
@@ -78,7 +75,7 @@ const TimeRangeInput = ({ size = "large" }: { size?: TimeRangeInputSize }) => {
                     allowClear={true}
                     className={styles["rangePicker"] || ""}
                     showTime={true}
-                    size={size}
+                    size={"large"}
                     value={timeRange}
                     disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                                 searchUiState === SEARCH_UI_STATE.QUERYING}
