@@ -21,8 +21,8 @@ type QueryJobCreationSchema = {
     ignoreCase: boolean;
     queryString: string;
     timeRangeBucketSizeMillis: number;
-    timestampBegin: number;
-    timestampEnd: number;
+    timestampBegin: Nullable<number>;
+    timestampEnd: Nullable<number>;
 };
 
 /**
