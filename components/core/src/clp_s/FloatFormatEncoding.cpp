@@ -159,7 +159,8 @@ auto get_float_encoding(std::string_view float_str)
         }
 
         // For scientific numbers we only accept non-zero first digits, unless all digits are 0.
-        if ('0' == float_str[first_digit_pos] && exp_pos != (1 + first_digit_pos)) {
+        auto const is_zero{'0' == first_digit_pos};
+        if (is_zero && exp_pos != (1 + first_digit_pos)) {
             if (std::string_view::npos == dot_pos) {
                 return std::errc::protocol_not_supported;
             }
@@ -203,6 +204,16 @@ auto get_float_encoding(std::string_view float_str)
         if (num_exp_digits <= 0 || num_exp_digits > 4) {
             return std::errc::protocol_not_supported;
         }
+
+        // If the number is a zero all of the exponent digits must be zero.
+        if (is_zero) {
+            for (size_t i{float_str.length() - num_exp_digits}; i < float_str.length(); ++i) {
+                if ('0' != float_str[i]) {
+                    return std::errc::protocol_not_supported;
+                }
+            }
+        }
+
         format |= static_cast<float_format_t>(num_exp_digits - 1) << cNumExponentDigitsPos;
     } else {
         exp_pos = float_str.length();
