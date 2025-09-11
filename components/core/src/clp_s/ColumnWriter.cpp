@@ -50,7 +50,7 @@ void FloatColumnWriter::store(ZstdCompressor& compressor) {
 }
 
 size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
-    auto const [float_value, format]{std::get<std::pair<double, float_format_t>>(value)};
+    auto const& [float_value, format]{std::get<std::pair<double, float_format_t>>(value)};
     m_values.push_back(float_value);
     m_formats.push_back(format);
     return sizeof(double) + sizeof(float_format_t);

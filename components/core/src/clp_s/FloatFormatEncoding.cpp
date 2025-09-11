@@ -231,10 +231,6 @@ auto get_float_encoding(std::string_view float_str)
         }
     }
 
-    if (first_non_zero_frac_digit_pos >= exp_pos) {
-        return std::errc::protocol_not_supported;
-    }
-
     auto num_significant_digits{exp_pos - first_non_zero_frac_digit_pos};
     if (std::string_view::npos != dot_pos && first_non_zero_frac_digit_pos < dot_pos) {
         num_significant_digits--;

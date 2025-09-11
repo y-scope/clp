@@ -58,7 +58,7 @@ void FloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
 
 void FormattedFloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
     m_values = reader.read_unaligned_span<double>(num_messages);
-    m_formats = reader.read_unaligned_span<uint16_t>(num_messages);
+    m_formats = reader.read_unaligned_span<float_format_t>(num_messages);
 }
 
 void
