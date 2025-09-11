@@ -202,6 +202,12 @@ def main(argv):
         except Exception as e:
             logger.error(e)
             return -1
+
+        if parsed_args.timestamp_key is None:
+            logger.warning(
+                "`--timestamp-key` not specified. Events will not have assigned timestamps and can "
+                "only be searched from the command line without a timestamp filter."
+            )
     elif dataset is not None:
         logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
         return -1
