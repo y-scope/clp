@@ -40,3 +40,5 @@
 { "structuredArray": [{ "floatOfDifferentFormat": 123456789.1234567 }, { "floatOfDifferentFormat": 1.234567891234567E9 }] }
 { "binary64Max": 1.7976931348623157E308}
 { "binary64MinSubnormal": 4.9406564584124654E-324}
+{ "mantissa0CornerCase1": 0.0000000000000000E0000 }
+{ "mantissa0CornerCase2": -0.0000000000000000E0000 }
