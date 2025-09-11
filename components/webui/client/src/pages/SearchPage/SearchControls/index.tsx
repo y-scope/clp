@@ -24,10 +24,6 @@ const handleSubmit = (ev: React.FormEvent<HTMLFormElement>) => {
  * @return
  */
 const SearchControls = () => {
-    /* eslint-disable-next-line no-warning-comments */
-    // TODO: Remove flag and related logic when the new guide UI is fully implemented.
-    const isGuidedEnabled = "true" === import.meta.env["VITE_GUIDED_DEV"];
-
     const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
     const isPrestoGuided = sqlInterface === PRESTO_SQL_INTERFACE.GUIDED;
 
