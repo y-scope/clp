@@ -15,7 +15,6 @@
 #include "SchemaReader.hpp"
 #include "search/Projection.hpp"
 #include "TimestampDictionaryReader.hpp"
-#include "Utils.hpp"
 
 namespace clp_s {
 class ArchiveReader {

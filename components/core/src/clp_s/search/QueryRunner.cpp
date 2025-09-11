@@ -11,6 +11,7 @@
 #include "../../clp/Query.hpp"
 #include "../../clp/type_utils.hpp"
 #include "../SchemaTree.hpp"
+#include "../Utils.hpp"
 #include "ast/AndExpr.hpp"
 #include "ast/ColumnDescriptor.hpp"
 #include "ast/Expression.hpp"
