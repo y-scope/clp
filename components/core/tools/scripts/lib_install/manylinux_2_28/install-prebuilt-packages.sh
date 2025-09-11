@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-set -eu
+set -o errexit
+set -o nounset
 set -o pipefail
 
 dnf install -y \
@@ -13,33 +14,6 @@ dnf install -y \
     zlib-devel \
     zlib-static
 
-# Determine architecture for `task` release to install
-rpm_arch=$(rpm --eval "%{_arch}")
-case "$rpm_arch" in
-    "x86_64")
-        task_pkg_arch="amd64"
-        ;;
-    "aarch64")
-        task_pkg_arch="arm64"
-        ;;
-    *)
-        echo "Error: Unsupported architecture - $rpm_arch"
-        exit 1
-        ;;
-esac
-
-# Install `task`
-# NOTE: We lock `task` to version 3.44.0 to avoid https://github.com/y-scope/clp-ffi-js/issues/110
-task_pkg_path=$(mktemp -t --suffix ".rpm" task-pkg.XXXXXXXXXX) || exit 1
-curl \
-    --fail \
-    --location \
-    --output "$task_pkg_path" \
-    --show-error \
-    "https://github.com/go-task/task/releases/download/v3.44.0/task_linux_${task_pkg_arch}.rpm"
-dnf install --assumeyes "$task_pkg_path"
-rm "$task_pkg_path"
-
-# Downgrade to CMake v3 to work around https://github.com/y-scope/clp/issues/795
-pipx uninstall cmake
-pipx install cmake~=3.31
+# Install remaining packages through pipx
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+"${script_dir}/../pipx-packages/install-all.sh"
