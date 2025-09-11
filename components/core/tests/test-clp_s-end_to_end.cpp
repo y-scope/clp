@@ -33,8 +33,8 @@ constexpr std::string_view cTestEndToEndExpectedOutputSortedFile{
 constexpr std::string_view cTestEndToEndValidFormattedFloatInputFile{
         "test_valid_formatted_float.jsonl"
 };
-constexpr std::string_view cTestEndToEndRoundedFormattedFloatInputFile{
-        "test_rounded_formatted_float.jsonl"
+constexpr std::string_view cTestEndToEndInvalidFormattedFloatInputFile{
+        "test_invalid_formatted_float.jsonl"
 };
 
 namespace {
@@ -258,7 +258,7 @@ TEST_CASE("clp-s-compress-extract-valid-formatted-floats", "[clp-s][end-to-end]"
  * but do not exactly represent the nearest decimal value for any ieee-754 binary64 at the given
  * precision, can be retained accurately.
  */
-TEST_CASE("clp-s-compress-extract-rounded-valid-formatted-floats", "[clp-s][end-to-end]") {
+TEST_CASE("clp-s-compress-extract-invalid-formatted-floats", "[clp-s][end-to-end]") {
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
 
@@ -271,7 +271,7 @@ TEST_CASE("clp-s-compress-extract-rounded-valid-formatted-floats", "[clp-s][end-
 
     REQUIRE_NOTHROW(
             std::ignore = compress_archive(
-                    get_test_input_local_path(cTestEndToEndRoundedFormattedFloatInputFile),
+                    get_test_input_local_path(cTestEndToEndInvalidFormattedFloatInputFile),
                     std::string{cTestEndToEndArchiveDirectory},
                     std::nullopt,
                     true,
@@ -292,7 +292,7 @@ TEST_CASE("clp-s-compress-extract-rounded-valid-formatted-floats", "[clp-s][end-
 
     auto extracted_json_path = extract();
     literallyCompare(
-            get_test_input_local_path(cTestEndToEndRoundedFormattedFloatInputFile),
+            get_test_input_local_path(cTestEndToEndInvalidFormattedFloatInputFile),
             extracted_json_path
     );
 }
