@@ -4,8 +4,6 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     ca-certificates \
@@ -31,4 +29,5 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     unzip
 
 # Install remaining packages through pipx
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 "${script_dir}/../pipx-packages/install-all.sh"

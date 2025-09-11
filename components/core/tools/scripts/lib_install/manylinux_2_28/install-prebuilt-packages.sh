@@ -4,8 +4,6 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-
 dnf install -y \
     gcc-c++ \
     java-11-openjdk \
@@ -17,4 +15,5 @@ dnf install -y \
     zlib-static
 
 # Install remaining packages through pipx
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 "${script_dir}/../pipx-packages/install-all.sh"

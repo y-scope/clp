@@ -4,8 +4,6 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-
 brew update
 brew install \
     coreutils \
@@ -28,4 +26,5 @@ if ! command -v pkg-config >/dev/null 2>&1; then
 fi
 
 # Install remaining packages through pipx
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 "${script_dir}/../pipx-packages/install-all.sh"

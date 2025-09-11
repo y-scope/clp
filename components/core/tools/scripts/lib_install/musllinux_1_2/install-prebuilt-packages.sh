@@ -4,8 +4,6 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-
 apk update && apk add --no-cache \
     bzip2-dev \
     bzip2-static \
@@ -18,4 +16,5 @@ apk update && apk add --no-cache \
     zlib-static
 
 # Install remaining packages through pipx
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 "${script_dir}/../pipx-packages/install-all.sh"
