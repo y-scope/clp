@@ -11,7 +11,7 @@ import guidedGrid from "./index.module.css";
 const Select = () => (
     <div className={guidedGrid["select"]}>
         <InputLabel> SELECT </InputLabel>
-        <SqlInput disabled={false} />
+        <SqlInput disabled={false}/>
     </div>
 );
 

@@ -5,18 +5,18 @@ import {
 
 import styles from "./index.module.css";
 
+
 const {Text} = Typography;
 
 /**
  * Renders a label for an input field.
  *
- * @param children The label text to display.
- * @param [fontSize] Font size for the label.
+ * @param props
+ * @param props.children The label text to display.
  * @return
  */
-const InputLabel = ({ children, fontSize }: { children: React.ReactNode, fontSize?: number | string }) => {
+const InputLabel = ({children}: {children: React.ReactNode}) => {
     const {token} = theme.useToken();
-    const resolvedFontSize = fontSize || token.fontSize;
 
     return (
         <Text
@@ -26,7 +26,7 @@ const InputLabel = ({ children, fontSize }: { children: React.ReactNode, fontSiz
                 borderBottomLeftRadius: `${token.borderRadius}px`,
                 borderColor: token.colorBorder,
                 borderTopLeftRadius: `${token.borderRadius}px`,
-                fontSize: resolvedFontSize,
+                fontSize: token.fontSize,
             }}
         >
             {children}

@@ -6,10 +6,10 @@ import {
 } from "react";
 
 import SqlEditor, {SqlEditorType} from "../../../../../components/SqlEditor";
+import {Nullable} from "../../../../../typings/common";
 import useSearchStore from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import styles from "./index.module.css";
-import {Nullable} from "../../../../../typings/common";
 
 
 /**

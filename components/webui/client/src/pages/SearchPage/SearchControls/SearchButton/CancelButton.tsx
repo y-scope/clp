@@ -42,7 +42,7 @@ const CancelButton = () => {
             danger={true}
             htmlType={"button"}
             icon={<CloseOutlined/>}
-            size={"large"}
+            size={"middle"}
             type={"primary"}
             onClick={handleCancelButtonClick}
         >

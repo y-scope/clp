@@ -78,13 +78,13 @@ const SqlEditor = (props: SqlEditorProps) => {
             style={{
                 border: `1px solid ${token.colorBorder}`,
                 borderRadius: token.borderRadius,
+                height: "100%",
+                minHeight: 0,
+                minWidth: 0,
                 pointerEvents: disabled ?
                     "none" :
                     "auto",
                 width: "100%",
-                height: "100%",
-                minWidth: 0,
-                minHeight: 0,
             }}
         >
             <Editor

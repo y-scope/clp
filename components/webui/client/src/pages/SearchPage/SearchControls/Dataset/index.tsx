@@ -4,12 +4,12 @@ import {useQuery} from "@tanstack/react-query";
 import {
     message,
     Select,
+    theme,
 } from "antd";
 
+import InputLabel from "../../../../components/InputLabel";
 import useSearchStore from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
-import InputLabel from "../../../../components/InputLabel";
-import { theme } from "antd";
 import styles from "./index.module.css";
 import {fetchDatasetNames} from "./sql";
 
@@ -23,7 +23,7 @@ const Dataset = () => {
     const dataset = useSearchStore((state) => state.selectDataset);
     const updateDataset = useSearchStore((state) => state.updateSelectDataset);
     const searchUiState = useSearchStore((state) => state.searchUiState);
-    const { token } = theme.useToken();
+    const {token} = theme.useToken();
 
     const [messageApi, contextHolder] = message.useMessage();
 
