@@ -7,6 +7,7 @@ import InputLabel from "../../../../components/InputLabel";
 import guidedGridStyles from "./GuidedControls.module.css";
 import Label from "./Label";
 import styles from "../index.module.css";
+import TimeRangeInput from "../TimeRangeInput";
 
 
 const limitOptions = [
@@ -51,6 +52,8 @@ const GuidedControls = () => (
                     >
                     </Select>
             </div>
+
+
         </div>
         <div className={styles["statusAndButtonsRow"]}>
             <div className={styles["status"]}>
@@ -58,6 +61,11 @@ const GuidedControls = () => (
             </div>
             <div className={styles["buttons"]}>
                 <SqlInterfaceButton/>
+                <div className={guidedGridStyles["timestamp"]}>
+                    <InputLabel> timestamp key </InputLabel>
+                    <SqlInput disabled={false} />
+                </div>
+                <TimeRangeInput/>
                 <SqlSearchButton/>
             </div>
         </div>

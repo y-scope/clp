@@ -7,10 +7,10 @@
 }
 
 .select {
-    grid-column: span 2;
+    grid-column: span 3;
     display: flex;
     min-width: 200px;
-}   
+}
 
 .from {
     grid-column: span 1;
@@ -33,7 +33,7 @@
     display: flex;
 }
 
-.limit {
+.timestamp {
     grid-column: span 1;
     display: flex;
 }

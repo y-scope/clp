@@ -10,7 +10,7 @@ const {Text} = Typography;
 /**
  * Renders a label for an input field.
  *
- * @param children - The label text to display.
+ * @param children The label text to display.
  * @return
  */
 const InputLabel = ({ children }: { children: React.ReactNode }) => {
@@ -24,7 +24,7 @@ const InputLabel = ({ children }: { children: React.ReactNode }) => {
                 borderBottomLeftRadius: `${token.borderRadius}px`,
                 borderColor: token.colorBorder,
                 borderTopLeftRadius: `${token.borderRadius}px`,
-                fontSize: token.fontSizeLG,
+                fontSize: token.fontSize,
             }}
         >
             {children}
