@@ -91,15 +91,6 @@ def handle_extract_file_cmd(
     if clp_config is None:
         return -1
 
-    storage_type = clp_config.archive_output.storage.type
-    storage_engine = clp_config.package.storage_engine
-    if StorageType.FS != storage_type or StorageEngine.CLP != storage_engine:
-        logger.error(
-            f"File extraction is not supported for archive storage type `{storage_type}` with"
-            f" storage engine `{storage_engine}`."
-        )
-        return -1
-
     container_name = generate_container_name(str(JobType.FILE_EXTRACTION))
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
@@ -144,13 +135,42 @@ def handle_extract_file_cmd(
         "-d", str(container_extraction_dir),
     ]
     # fmt: on
+
+    storage_engine = clp_config.package.storage_engine
+
     if parsed_args.verbose:
         extract_cmd.append("--verbose")
-    for path in parsed_args.paths:
-        extract_cmd.append(path)
-    if container_paths_to_extract_file_path:
-        extract_cmd.append("--input-list")
-        extract_cmd.append(container_paths_to_extract_file_path)
+
+    if StorageEngine.CLP == storage_engine:
+        # Use either file list or explicit paths; prohibit --dataset flag
+        if parsed_args.dataset is not None:
+            logger.error(
+                f"You cannot use the --dataset flag when using the {storage_engine} storage engine."
+            )
+            return -1
+        for path in parsed_args.paths:
+            extract_cmd.append(path)
+        if container_paths_to_extract_file_path:
+            extract_cmd.append("--files-from")
+            extract_cmd.append(container_paths_to_extract_file_path)
+    elif StorageEngine.CLP_S == storage_engine:
+        # Require --dataset flag; prohibit both file list and explicit paths
+        if parsed_args.files_from or parsed_args.paths:
+            logger.error(
+                f"You can't specify individual file paths or use the -f flag when decompressing "
+                f"with the {storage_engine} storage engine."
+            )
+            return -1
+        if parsed_args.dataset is None:
+            logger.error(
+                f"You must specify a dataset to decompress using the --dataset flag when using the "
+                f"{storage_engine} storage engine."
+            )
+            return -1
+        extract_cmd.extend(["--dataset", parsed_args.dataset])
+    else:
+        logger.error(f"Unsupported storage engine: {storage_engine}")
+        return -1
 
     cmd = container_start_cmd + extract_cmd
 
@@ -300,6 +320,12 @@ def main(argv):
     )
     file_extraction_parser.add_argument(
         "-d", "--extraction-dir", metavar="DIR", default=".", help="Extract files into DIR."
+    )
+    file_extraction_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that will be decompressed.",
     )
 
     # IR extraction command parser

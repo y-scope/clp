@@ -14,6 +14,7 @@ from clp_py_utils.clp_config import (
     CLP_DB_USER_ENV_VAR_NAME,
     CLPConfig,
     Database,
+    StorageEngine,
 )
 from clp_py_utils.clp_metadata_db_utils import get_files_table_name
 from clp_py_utils.sql_adapter import SQL_Adapter
@@ -198,7 +199,7 @@ def validate_and_load_config_file(
         return None
 
 
-def handle_extract_file_cmd(
+def handle_clp_extract_file_cmd(
     parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
     """
@@ -278,6 +279,69 @@ def handle_extract_file_cmd(
     return 0
 
 
+def handle_clp_s_extract_file_cmd(
+    parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
+) -> int:
+    """
+    Handles the file extraction command.
+    :param parsed_args:
+    :param clp_home:
+    :param default_config_file_path:
+    :return: 0 on success, -1 otherwise.
+    """
+    # Validate and load config file
+    clp_config = validate_and_load_config_file(
+        clp_home, pathlib.Path(parsed_args.config), default_config_file_path
+    )
+    if clp_config is None:
+        return -1
+
+    storage_engine = clp_config.package.storage_engine
+
+    # Validate extraction directory
+    # TODO: make it so that extraction dir gets created?
+    extraction_dir = pathlib.Path(parsed_args.extraction_dir)
+    if not extraction_dir.is_dir():
+        logger.error(f"extraction-dir ({extraction_dir}) is not a valid directory.")
+        return -1
+
+    target_dataset: str = parsed_args.dataset
+    if target_dataset is None:
+        logger.error(f"You must specify --dataset when using the {storage_engine} storage engine.")
+        return -1
+    archives_dir = clp_config.archive_output.get_directory()
+    dataset_dir = archives_dir / target_dataset
+    if not dataset_dir.is_dir():
+        logger.error(
+            f"Dataset '{target_dataset}' not found in {archives_dir}. Are you sure it was "
+            "compressed?"
+        )
+        return -1
+
+    # fmt: off
+    extract_cmd = [
+        str(clp_home / "bin" / "clp-s"),
+        "x", str(dataset_dir), str(extraction_dir),
+    ]
+    # fmt: on
+
+    # Configure CLP metadata DB connection params.
+    clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+    extract_env = {
+        **os.environ,
+        CLP_DB_USER_ENV_VAR_NAME: clp_db_connection_params["username"],
+        CLP_DB_PASS_ENV_VAR_NAME: clp_db_connection_params["password"],
+    }
+
+    proc = subprocess.Popen(extract_cmd, env=extract_env)
+    return_code = proc.wait()
+    if 0 != return_code:
+        logger.error(f"File extraction failed, return_code={return_code}")
+        return return_code
+
+    return 0
+
+
 def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
@@ -308,6 +372,12 @@ def main(argv):
     )
     file_extraction_parser.add_argument(
         "-d", "--extraction-dir", metavar="DIR", default=".", help="Extract files into DIR."
+    )
+    file_extraction_parser.add_argument(
+        "--dataset",
+        type=str,
+        default=None,
+        help="The dataset that will be decompressed.",
     )
 
     # IR extraction command parser
@@ -342,7 +412,21 @@ def main(argv):
 
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:
-        return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
+        # Validate and load config file
+        clp_config = validate_and_load_config_file(
+            clp_home, pathlib.Path(parsed_args.config), default_config_file_path
+        )
+        if clp_config is None:
+            return -1
+
+        storage_engine = clp_config.package.storage_engine
+        if StorageEngine.CLP == storage_engine:
+            return handle_clp_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
+        elif StorageEngine.CLP_S == storage_engine:
+            return handle_clp_s_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
+        else:
+            logger.error(f"Unsupported storage engine: {storage_engine}")
+            return -1
     elif command in (EXTRACT_IR_CMD, EXTRACT_JSON_CMD):
         return handle_extract_stream_cmd(parsed_args, clp_home, default_config_file_path)
     else:
