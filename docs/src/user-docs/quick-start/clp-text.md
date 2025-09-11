@@ -160,6 +160,25 @@ searches are case-**sensitive** on the command line.
 
 ---
 
+## Decompressing unstructured text logs
+
+To decompress some unstructured text logs, run:
+
+```bash
+sbin/decompress.sh x [-f FILES_FROM] [-d DIR] [PATH ...]
+```
+
+- `FILES_FROM` is a file that holds a list of paths to files or directories you'd like to
+  decompress. This argument is optional.
+- `DIR` is the path to the directory where you'd like the decompressed files to be stored. This
+  argument is optional; the default path is `.`.
+- `[PATH ...]` is the list of paths to files or directories you'd like to decompress.
+
+The decompression script will return you to the command line when your decompression job is
+finished.
+
+---
+
 ## Stopping CLP
 
 If you need to stop CLP, run:

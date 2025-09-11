@@ -180,6 +180,23 @@ searches are case-**sensitive** on the command line.
 
 ---
 
+## Decompressing JSON logs
+
+To decompress one of your compressed JSON datasets, run:
+
+```bash
+sbin/decompress.sh x [-d DIR] --dataset 'dataset-name'
+```
+
+- `DIR` is the path to the directory where you'd like the decompressed files to be stored. This
+  argument is optional; the default path is `.`.
+- `'dataset-name'` is the name of the dataset you'd like to decompress. This argument is mandatory.
+
+The decompression script will return you to the command line when your decompression job is
+finished.
+
+---
+
 ## Stopping CLP
 
 If you need to stop CLP, run:
