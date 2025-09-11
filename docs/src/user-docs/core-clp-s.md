@@ -174,6 +174,8 @@ compressed data:**
   the same file.
 * When using the `--retain-float-format` flag:
   * KV-IR inputs currently don't support preserving the original printed float formats.
+  * Comparisons against floating point numbers at query time treat each stored number as if it were
+    the nearest representable double-precision value, which can potentially lose precision.
 * In addition, there are a few limitations, related to querying arrays, described in the search
   syntax [reference](reference-json-search-syntax).
 

@@ -26,9 +26,9 @@ Each `FormattedFloat` node contains:
 - The double value in IEEE-754 binary64 format.
 - A 2-byte little-endian *format* field encoding the necessary output formatting information so
   that, upon decompression, the value can be decompressed exactly to the original text.
-  Note that the unused lowest 5 bits of the 2‑byte field are currently reserved.
-  Encoders must write them as 0, and decoders must ignore them (treat as “don’t care”) for forward
-  compatibility.
+
+Note that the unused lowest 5 bits of the 2‑byte field are currently reserved, encoders must write
+them as 0, and decoders must ignore them (treat as “don’t care”) for forward compatibility.
 
 ```text
 +-------------------------------------+------------------------+--------------------------+------------------------------------------------------+-------------------+
@@ -46,7 +46,7 @@ here:
   * Single digit numbers with no decimal, followed by an exponent
   * Or numbers with **1** digit preceding the decimal and up to 16 digits following the
     decimal, followed by an exponent
-  * Where zero can not be the digit before the decimal, unless the number is a zero
+  * Where zero can not be the digit before the decimal, unless every digit in the number is zero
   * And where the exponent is specified by `e` or `E` optionally followed by `+` or `-`
   * With at most **4** exponent digits, which can be left-padded with `0`
 
