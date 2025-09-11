@@ -9,6 +9,7 @@ import SqlEditor, {SqlEditorType} from "../../../../../components/SqlEditor";
 import useSearchStore from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import styles from "./index.module.css";
+import {Nullable} from "../../../../../typings/common";
 
 
 /**
@@ -18,7 +19,7 @@ import styles from "./index.module.css";
  */
 const SqlQueryInput = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
-    const editorRef = useRef<SqlEditorType>(null);
+    const editorRef = useRef<Nullable<SqlEditorType>>(null);
     const [isEditorReady, setIsEditorReady] = useState(false);
 
     const handleChange = useCallback((value: string | undefined) => {
@@ -49,7 +50,7 @@ const SqlQueryInput = () => {
         <div className={styles["input"] || ""}>
             <SqlEditor
                 height={"120px"}
-                disabled={  
+                disabled={
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                     searchUiState === SEARCH_UI_STATE.QUERYING
                 }

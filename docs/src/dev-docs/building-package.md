@@ -14,6 +14,7 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
 * python3-dev
 * python3-venv (for the version of Python installed)
 * [Task] 3.44.0
+  * We pin the version to 3.44.0 due to [y-scope/clp-ffi-js#110].
 
 ## Setup
 
@@ -78,5 +79,5 @@ task docker-images:package
 
 This will create a Docker image named `clp-package:dev`.
 
-[clp-issue-872]: https://github.com/y-scope/clp/issues/872
 [Task]: https://taskfile.dev/
+[y-scope/clp-ffi-js#110]: https://github.com/y-scope/clp-ffi-js/issues/110
