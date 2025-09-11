@@ -1,9 +1,14 @@
 import InputLabel from "../../../../../components/InputLabel";
 import SqlInput from "../../../../../components/SqlInput";
-import guidedGridStyles from "./index.module.css";
+import guidedGrid from "./index.module.css";
 
+/**
+ * Renders the WHERE SQL input field.
+ *
+ * @return
+ */
 const Where = () => (
-    <div className={guidedGridStyles["where"]}>
+    <div className={guidedGrid["where"]}>
         <InputLabel> WHERE </InputLabel>
         <SqlInput disabled={false} />
     </div>

@@ -1,9 +1,15 @@
 import InputLabel from "../../../../../components/InputLabel";
 import SqlInput from "../../../../../components/SqlInput";
-import guidedGridStyles from "./index.module.css";
+import guidedGrid from "./index.module.css";
 
+
+/**
+ * Renders the FROM SQL input field.
+ *
+ * @return
+ */
 const From = () => (
-    <div className={guidedGridStyles["from"]}>
+    <div className={guidedGrid["from"]}>
         <InputLabel> FROM </InputLabel>
         <SqlInput disabled={false} />
     </div>

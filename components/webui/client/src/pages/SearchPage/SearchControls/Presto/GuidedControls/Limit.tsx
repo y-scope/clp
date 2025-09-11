@@ -1,8 +1,8 @@
 import InputLabel from "../../../../../components/InputLabel";
 import { Select as AntdSelect } from "antd";
-import guidedGridStyles from "./index.module.css";
+import guidedGrid from "./index.module.css";
 
-const limitOptions = [
+const LIMIT_OPTIONS = [
     { value: 10, label: "10" },
     { value: 50, label: "50" },
     { value: 100, label: "100" },
@@ -10,12 +10,17 @@ const limitOptions = [
     { value: 1000, label: "1000" },
 ];
 
+/**
+ * Renders the LIMIT SQL input field.
+ *
+ * @return
+ */
 const Limit = () => (
-    <div className={guidedGridStyles["limit"]}>
+    <div className={guidedGrid["limit"]}>
         <InputLabel> LIMIT </InputLabel>
         <AntdSelect
-            options={limitOptions}
-            defaultValue={limitOptions[0].value}
+            options={LIMIT_OPTIONS}
+            defaultValue={LIMIT_OPTIONS[0]?.value}
             style={{ width: "100%" }}
         />
     </div>
