@@ -65,7 +65,7 @@ const GuidedControls = () => (
                     <InputLabel> timestamp key </InputLabel>
                     <SqlInput disabled={false} />
                 </div>
-                <TimeRangeInput/>
+                <TimeRangeInput size="middle"/>
                 <SqlSearchButton/>
             </div>
         </div>
