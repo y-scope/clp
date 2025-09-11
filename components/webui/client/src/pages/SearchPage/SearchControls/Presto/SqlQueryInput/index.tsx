@@ -5,12 +5,11 @@ import {
     useState,
 } from "react";
 
-import {Nullable} from "src/typings/common";
-
-import SqlEditor, {SqlEditorRef} from "../../../../../components/SqlEditor";
+import SqlEditor, {SqlEditorType} from "../../../../../components/SqlEditor";
 import useSearchStore from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import styles from "./index.module.css";
+import {Nullable} from "../../../../../typings/common";
 
 
 /**
@@ -20,7 +19,7 @@ import styles from "./index.module.css";
  */
 const SqlQueryInput = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
-    const editorRef = useRef<Nullable<SqlEditorRef>>(null);
+    const editorRef = useRef<Nullable<SqlEditorType>>(null);
     const [isEditorReady, setIsEditorReady] = useState(false);
 
     const handleChange = useCallback((value: string | undefined) => {
@@ -28,7 +27,8 @@ const SqlQueryInput = () => {
         updateQueryString(value || "");
     }, []);
 
-    const handleEditorReady = useCallback(() => {
+    const handleEditorReady = useCallback((editor: SqlEditorType) => {
+        editorRef.current = editor;
         setIsEditorReady(true);
     }, []);
 
@@ -50,11 +50,25 @@ const SqlQueryInput = () => {
         <div className={styles["input"] || ""}>
             <SqlEditor
                 height={"120px"}
-                ref={editorRef}
                 disabled={
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                     searchUiState === SEARCH_UI_STATE.QUERYING
                 }
+                options={{
+                    automaticLayout: true,
+                    folding: false,
+                    lineNumbers: "off",
+                    minimap: {enabled: false},
+                    overviewRulerBorder: false,
+                    padding: {
+                        top: 8,
+                        bottom: 8,
+                    },
+                    placeholder: "Enter your SQL query",
+                    renderLineHighlight: "none",
+                    scrollBeyondLastLine: false,
+                    wordWrap: "on",
+                }}
                 onChange={handleChange}
                 onEditorReady={handleEditorReady}/>
         </div>
