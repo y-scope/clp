@@ -168,6 +168,7 @@ To decompress some unstructured text logs, run:
 sbin/decompress.sh x [-f FILES_FROM] [-d DIR] [PATH ...]
 ```
 
+- `x` selects the “extract” action. This argument is mandatory.
 - `FILES_FROM` is a file that holds a list of paths to files or directories you'd like to
   decompress. This argument is optional.
 - `DIR` is the path to the directory where you'd like the decompressed files to be stored. This
