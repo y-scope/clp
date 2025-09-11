@@ -3,10 +3,14 @@ cmake_minimum_required(VERSION 3.23)
 
 project(CLP LANGUAGES CXX C)
 
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Options/options.cmake")
+# Toolchain validation
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Toolchains/utils.cmake")
 
 validate_compiler_versions()
+
+# Include options for CLP build
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Options/options.cmake")
+
 validate_and_setup_all_clp_dependency_flags()
 convert_clp_dependency_properties_to_variables()
 

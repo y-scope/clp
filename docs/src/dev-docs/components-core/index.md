@@ -8,7 +8,6 @@ CLP core is the low-level component that performs compression, decompression, an
   * If you have trouble building for another OS, file an issue, and we may be able to help.
 * A recent compiler that fully supports C++20 features such as
   * std::span
-  * std::source_location
 * [CMake] >= 3.23.0 and < 4.0.0
   * Minimum version 3.23.0 is required for [yscope-dev-utils].
   * We constrain the version to < 4.0.0 due to [y-scope/clp#795].
