@@ -4,7 +4,6 @@ import {useQuery} from "@tanstack/react-query";
 import {
     message,
     Select,
-    theme,
 } from "antd";
 
 import InputLabel from "../../../../components/InputLabel";
