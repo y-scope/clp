@@ -50,7 +50,7 @@ DEFAULT_RANGE_MAPPING: Final[RangeMapping] = {
 DEFAULT_CUSTOM_OPTIONS: Final[CustomOptions] = {"rangeMapping": DEFAULT_RANGE_MAPPING}
 
 
-def validate_dir(path: Path, label: str, logger) -> bool:
+def validate_dir(path: Path, label: str) -> bool:
     """
     Determines whether or not the path exists and whether or not it is a directory. If either of
     those are false, logs error message with path and returns False.
@@ -89,9 +89,9 @@ def main(argv=None) -> int:
     json_output_file: Path = parsed_args.output_file.resolve()
     out_dir = json_output_file.parent
 
-    if not validate_dir(archives_dir, "Archives", logger):
+    if not validate_dir(archives_dir, "Archives"):
         return 1
-    if not validate_dir(out_dir, "Output", logger):
+    if not validate_dir(out_dir, "Output"):
         return 1
 
     if json_output_file.exists() and json_output_file.is_dir():
