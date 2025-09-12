@@ -185,13 +185,13 @@ searches are case-**sensitive** on the command line.
 To decompress one of your compressed JSON datasets, run:
 
 ```bash
-sbin/decompress.sh x [-d DIR] --dataset 'dataset-name'
+sbin/decompress.sh x [-d DIR] --dataset '<dataset-name>'
 ```
 
-- `x` selects the “extract” action. This argument is mandatory.
-- `DIR` is the path to the directory where you'd like the decompressed files to be stored. This
+* `x` selects the “extract” action. This argument is mandatory.
+* `DIR` is the path to the directory where you'd like the decompressed files to be stored. This
   argument is optional; the default path is `.`.
-- `'dataset-name'` is the name of the dataset you'd like to decompress. This argument is mandatory.
+* `'dataset-name'` is the name of the dataset you'd like to decompress. This argument is mandatory.
 
 The decompression script will return you to the command line when your decompression job is
 finished.
