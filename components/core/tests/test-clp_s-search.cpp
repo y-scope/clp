@@ -205,12 +205,10 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(msg: "Msg 1: \"Abc123\"")aa", {1}},
             {R"aa(msg: "Msg 2: 'Abc123'")aa", {2}},
             {R"aa(msg: "Msg 3: \nAbc123")aa", {3}},
-            // CLP incorrectly generates no subqueries in Grep::process_raw_query for the following
-            // query, so we skip it for now.
-            //{R"aa(msg: "Msg 4: \\Abc123")aa", {4}}
+            {R"aa(msg: "Msg 4: \\Abc123")aa", {4}},
             {R"aa(msg: "Msg 5: \rAbc123")aa", {5}},
             {R"aa(msg: "Msg 6: \tAbc123")aa", {6}},
-            {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 5, 6}},
+            {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 4, 5, 6}},
             {R"aa(arr.b > 1000)aa", {7, 8}},
             {R"aa(var_string: *)aa", {9}},
             {R"aa(clp_string: *)aa", {9}},

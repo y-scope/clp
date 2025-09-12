@@ -886,19 +886,7 @@ void QueryRunner::populate_string_queries(std::shared_ptr<Expression> const& exp
 
             std::unordered_set<int64_t>& matching_vars = m_string_var_match_map[query_string];
             if (false == ast::has_unescaped_wildcards(query_string)) {
-                std::string unescaped_query_string;
-                bool escape = false;
-                for (char const c : query_string) {
-                    if (escape) {
-                        unescaped_query_string.push_back(c);
-                        escape = false;
-                    } else if (c == '\\') {
-                        escape = true;
-                    } else {
-                        unescaped_query_string.push_back(c);
-                    }
-                }
-
+                auto const unescaped_query_string{clp::string_utils::unescape_string(query_string)};
                 auto const entries = m_var_dict->get_entry_matching_value(
                         unescaped_query_string,
                         m_ignore_case
