@@ -147,6 +147,8 @@ def handle_extract_file_cmd(
             logger.error(
                 f"You cannot use the --dataset flag when using the {storage_engine} storage engine."
             )
+            # Remove generated files
+            generated_config_path_on_host.unlink()
             return -1
         for path in parsed_args.paths:
             extract_cmd.append(path)
@@ -160,16 +162,22 @@ def handle_extract_file_cmd(
                 f"You can't specify individual file paths or use the -f flag when decompressing "
                 f"with the {storage_engine} storage engine."
             )
+            # Remove generated files
+            generated_config_path_on_host.unlink()
             return -1
         if parsed_args.dataset is None:
             logger.error(
                 f"You must specify a dataset to decompress using the --dataset flag when using the "
                 f"{storage_engine} storage engine."
             )
+            # Remove generated files
+            generated_config_path_on_host.unlink()
             return -1
         extract_cmd.extend(["--dataset", parsed_args.dataset])
     else:
         logger.error(f"Unsupported storage engine: {storage_engine}")
+        # Remove generated files
+        generated_config_path_on_host.unlink()
         return -1
 
     cmd = container_start_cmd + extract_cmd
@@ -177,8 +185,12 @@ def handle_extract_file_cmd(
     proc = subprocess.run(cmd)
     ret_code = proc.returncode
     if 0 != ret_code:
-        logger.error("file extraction failed.")
+        logger.error("File extraction failed.")
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+    else:
+        logger.info(
+            f"File extraction successful. Decompressed file written to {str(extraction_dir)}"
+        )
 
     # Remove generated files
     generated_config_path_on_host.unlink()
@@ -282,7 +294,7 @@ def handle_extract_stream_cmd(
     proc = subprocess.run(cmd)
     ret_code = proc.returncode
     if 0 != ret_code:
-        logger.error("stream extraction failed.")
+        logger.error("Stream extraction failed.")
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files

@@ -193,9 +193,6 @@ sbin/decompress.sh x [-d DIR] --dataset '<dataset-name>'
   argument is optional; the default path is `.`.
 * `'dataset-name'` is the name of the dataset you'd like to decompress. This argument is mandatory.
 
-The decompression script will return you to the command line when your decompression job is
-finished.
-
 ---
 
 ## Stopping CLP

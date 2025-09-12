@@ -32,6 +32,7 @@ from clp_package_utils.general import (
     EXTRACT_JSON_CMD,
     get_clp_home,
     load_config_file,
+    validate_dataset_name,
 )
 from clp_package_utils.scripts.native.utils import (
     run_function_in_process,
@@ -308,6 +309,15 @@ def handle_clp_s_extract_file_cmd(
     if target_dataset is None:
         logger.error(f"You must specify --dataset when using the {storage_engine} storage engine.")
         return -1
+    # Validate dataset name
+    clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
+    try:
+        validate_dataset_name(clp_db_connection_params["table_prefix"], target_dataset)
+    except Exception as e:
+        logger.error(e)
+        return -1
+
+    # Construct dataset_dir path and validate
     archives_dir = clp_config.archive_output.get_directory()
     dataset_dir = archives_dir / target_dataset
     if not dataset_dir.exists():
@@ -325,7 +335,6 @@ def handle_clp_s_extract_file_cmd(
     # fmt: on
 
     # Configure CLP metadata DB connection params.
-    clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
     extract_env = {
         **os.environ,
         CLP_DB_USER_ENV_VAR_NAME: clp_db_connection_params["username"],
@@ -337,6 +346,8 @@ def handle_clp_s_extract_file_cmd(
     if 0 != return_code:
         logger.error(f"File extraction failed, return_code={return_code}")
         return return_code
+
+    # logger.info(f"File extraction successful. Decompressed file written to {str(extraction_dir)}")
 
     return 0
 

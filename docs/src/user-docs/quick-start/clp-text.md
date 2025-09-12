@@ -175,9 +175,6 @@ sbin/decompress.sh x [-f FILES_FROM] [-d DIR] [PATH ...]
   argument is optional; the default path is `.`.
 * `[PATH ...]` is the list of paths to files or directories you'd like to decompress.
 
-The decompression script will return you to the command line when your decompression job is
-finished.
-
 ---
 
 ## Stopping CLP
