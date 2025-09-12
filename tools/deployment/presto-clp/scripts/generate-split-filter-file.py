@@ -50,6 +50,25 @@ DEFAULT_RANGE_MAPPING: Final[RangeMapping] = {
 DEFAULT_CUSTOM_OPTIONS: Final[CustomOptions] = {"rangeMapping": DEFAULT_RANGE_MAPPING}
 
 
+def validate_dir(path: Path, label: str, logger) -> bool:
+    """
+    Determines whether or not the path exists and whether or not it is a directory. If either of
+    those are false, logs error message with path and returns False.
+
+    :param path:
+    :param label:
+    :param logger:
+    :return: True if path exists and is a directory; False if either of those are not true.
+    """
+    if not path.exists():
+        logger.error("%s directory does not exist: %s", label, path)
+        return False
+    if not path.is_dir():
+        logger.error("%s path is not a directory: %s", label, path)
+        return False
+    return True
+
+
 def main(argv=None) -> int:
     if argv is None:
         argv = sys.argv
@@ -70,24 +89,17 @@ def main(argv=None) -> int:
     json_output_file: Path = parsed_args.output_file.resolve()
     out_dir = json_output_file.parent
 
-    if not archives_dir.exists():
-        logger.error("Archives directory does not exist: %s", archives_dir)
+    if not validate_dir(archives_dir, "Archives", logger):
         return 1
-    if not archives_dir.is_dir():
-        logger.error("Archives path is not a directory: %s", archives_dir)
+    if not validate_dir(out_dir, "Output", logger):
         return 1
-    if not out_dir.exists():
-        logger.error("Output directory does not exist: %s", out_dir)
-        return 1
-    if not out_dir.is_dir():
-        logger.error("Output parent is not a directory: %s", out_dir)
-        return 1
+
     if json_output_file.exists() and json_output_file.is_dir():
         logger.error("Output path is a directory: %s", json_output_file)
         return 1
 
     datasets = _get_dataset_names(archives_dir)
-    if None == datasets:
+    if datasets == None:
         logger.error("No datasets found in %s. Did you compress any logs yet?", archives_dir)
         return 1
 
@@ -118,20 +130,21 @@ def _get_dataset_names(archives_dir: Path) -> Optional[List[str]]:
     subdirectory name is treated as a dataset name.
 
     :param archives_dir:
-    :return: List of dataset names. None if there are no datasets compressed.
+    :return: List of dataset names. None if there are no directories within
+    <clp-package-dir>/var/data/archives.
     """
 
     datasets = sorted([p.name for p in archives_dir.iterdir() if p.is_dir()])
-    return datasets if datasets else None
+    return datasets if len(datasets) >= 1 else None
 
 
 def _prompt_timestamp_keys(datasets: List[str]) -> Dict[str, str]:
     """
-    Prompt the user to provide the timestamp key for each dataset. If the user presses Enter, falls
-    back to `DEFAULT_TIMESTAMP_KEY`.
+    Prompt the user to provide the timestamp key for each dataset. If the user doesn't provide one,
+    falls back to `DEFAULT_TIMESTAMP_KEY`.
 
     :param datasets:
-    :return: Dictionary mapping dataset names to their timestamp keys.
+    :return: mapping of `dataset` -> `timestamp_keys`.
     """
     print(
         "\nPlease enter the timestamp key that corresponds to each of your archived datasets."
@@ -159,11 +172,13 @@ def _construct_split_filters(
     :param datasets:
     :param timestamp_keys: Mapping from dataset name -> timestamp key.
     :return: A SplitFilterDict containing all the SplitFilterRule objects for the JSON file.
-    :return: None if there are any datasets that don't have an associated timestamp key.
+    :return: A `SplitFilterDict` containing all the `SplitFilterRule` objects for the JSON file, or
+    None if there are any datasets that don't have an associated timestamp key.
     """
 
     missing = [d for d in datasets if d not in timestamp_keys]
-    if 0 < len(missing):
+    if len(missing) != 0:
+        logger.error("Missing timestamp key(s) for dataset(s): %s", ", ".join(missing))
         return None
 
     split_filters: SplitFilterDict = {}
