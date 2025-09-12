@@ -4,6 +4,7 @@
 #include <charconv>
 #include <concepts>
 #include <string>
+#include <string_view>
 
 namespace clp::string_utils {
 /**
@@ -86,6 +87,17 @@ void to_lower(std::string& str);
  * @return Cleaned wildcard search string
  */
 std::string clean_up_wildcard_search_string(std::string_view str);
+
+/**
+ * Unescapes a string according to the following rules:
+ * <ul>
+ *   <li>Escape sequences `\<char>` are replaced by `<char>`</li>
+ *   <li>Lone dangling `\` is removed from the end of the string</li>
+ * </ul>
+ * @param str
+ * @return An unescaped version of `str`.
+ */
+[[nodiscard]] auto unescape_string(std::string_view str) -> std::string;
 
 /**
  * Checks if character is a wildcard
