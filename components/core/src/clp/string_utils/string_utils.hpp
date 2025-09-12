@@ -97,7 +97,7 @@ std::string clean_up_wildcard_search_string(std::string_view str);
  * @param str
  * @return An unescaped version of `str`.
  */
-auto unescape_string(std::string_view str) -> std::string;
+[[nodiscard]] auto unescape_string(std::string_view str) -> std::string;
 
 /**
  * Checks if character is a wildcard
