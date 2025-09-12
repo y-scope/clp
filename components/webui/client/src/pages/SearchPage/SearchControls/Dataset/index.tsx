@@ -81,7 +81,7 @@ const Dataset = () => {
     return (
         <div className={styles["datasetContainer"]}>
             {contextHolder}
-            <InputLabel fontSize={token.fontSizeLG}>Dataset</InputLabel>
+            <InputLabel>Dataset</InputLabel>
             <Select
                 className={styles["select"] || ""}
                 loading={isPending}
