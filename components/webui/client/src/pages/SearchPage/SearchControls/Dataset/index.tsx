@@ -23,7 +23,6 @@ const Dataset = () => {
     const dataset = useSearchStore((state) => state.selectDataset);
     const updateDataset = useSearchStore((state) => state.updateSelectDataset);
     const searchUiState = useSearchStore((state) => state.searchUiState);
-    const {token} = theme.useToken();
 
     const [messageApi, contextHolder] = message.useMessage();
 
