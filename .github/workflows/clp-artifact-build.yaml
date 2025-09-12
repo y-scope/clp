@@ -1,28 +1,14 @@
-name: "clp-core-build"
+name: "clp-artifact-build"
 
 on:
   pull_request:
-    paths:
-      - ".github/actions/clp-core-build-containers/action.yaml"
-      - ".github/actions/run-on-image/action.yaml"
-      - ".github/workflows/clp-core-build.yaml"
-      - ".gitmodules"
-      - "components/core/**"
-      - "taskfile.yaml"
-      - "taskfiles/**"
-      - "tools/scripts/deps-download/**"
-      - "!components/core/tools/scripts/lib_install/macos/**"
+    paths-ignore: &ignored_paths
+      - ".github/*"
+      - ".github/ISSUE_TEMPLATE/**"
+      - "components/core/tools/scripts/lib_install/macos/**"
+      - "docs/**"
   push:
-    paths:
-      - ".github/actions/clp-core-build-containers/action.yaml"
-      - ".github/actions/run-on-image/action.yaml"
-      - ".github/workflows/clp-core-build.yaml"
-      - ".gitmodules"
-      - "components/core/**"
-      - "taskfile.yaml"
-      - "taskfiles/**"
-      - "tools/scripts/deps-download/**"
-      - "!components/core/tools/scripts/lib_install/macos/**"
+    paths-ignore: *ignored_paths
   schedule:
     # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
     - cron: "15 0 * * *"
@@ -74,31 +60,31 @@ jobs:
           filters: |
             centos_stream_9_image:
               - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yaml"
+              - ".github/workflows/clp-artifact-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-centos-stream-9/**"
               - "components/core/tools/scripts/lib_install/centos-stream-9/**"
             manylinux_2_28_x86_64_image:
               - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yaml"
+              - ".github/workflows/clp-artifact-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-manylinux_2_28-x86_64/**"
               - "components/core/tools/scripts/lib_install/manylinux_2_28/**"
             musllinux_1_2_x86_64_image:
               - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yaml"
+              - ".github/workflows/clp-artifact-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-musllinux_1_2-x86_64/**"
               - "components/core/tools/scripts/lib_install/musllinux_1_2/**"
             ubuntu_jammy_image:
               - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yaml"
+              - ".github/workflows/clp-artifact-build.yaml"
               - "components/core/tools/scripts/lib_install/*.sh"
               - "components/core/tools/docker-images/clp-env-base-ubuntu-jammy/**"
               - "components/core/tools/scripts/lib_install/ubuntu-jammy/**"
             clp:
               - ".github/actions/**"
-              - ".github/workflows/clp-core-build.yaml"
+              - ".github/workflows/clp-artifact-build.yaml"
               - ".gitmodules"
               - "components/core/cmake/**"
               - "components/core/CMakeLists.txt"
@@ -520,3 +506,42 @@ jobs:
             .task/checksum/utils-cpp-lint-clang-tidy-*
             build/lint-clang-tidy
           key: "${{steps.cache-restore-lint-check-cpp-static-full.outputs.cache-primary-key}}"
+
+  package-image:
+    name: "package-image"
+    if: >-
+      !cancelled() && !failure() && (
+        needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false' ||
+        needs.ubuntu-jammy-deps-image.result == 'success'
+      )
+    needs:
+      - "filter-relevant-changes"
+      - "ubuntu-jammy-deps-image"
+    runs-on: "ubuntu-24.04"
+    steps:
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+        with:
+          submodules: "recursive"
+
+      - name: "Workaround actions/runner-images/issues/6775"
+        shell: "bash"
+        run: "chown $(id -u):$(id -g) -R ."
+
+      - name: "Build the package"
+        uses: "./.github/actions/run-on-image"
+        env:
+          OS_NAME: "ubuntu-jammy"
+        with:
+          image_name: "${{env.DEPS_IMAGE_NAME_PREFIX}}${{env.OS_NAME}}"
+          use_published_image: >-
+            ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
+            || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
+          run_command: >-
+            CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task package
+
+      - uses: "./.github/actions/clp-build-runtime-image"
+        with:
+          image_type: "package"
+          image_registry: "ghcr.io"
+          image_registry_username: "${{github.actor}}"
+          image_registry_password: "${{secrets.GITHUB_TOKEN}}"

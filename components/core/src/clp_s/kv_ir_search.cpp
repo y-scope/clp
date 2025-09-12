@@ -200,7 +200,7 @@ auto deserialize_and_search_kv_ir_stream(
     auto trivial_new_projected_schema_tree_node_callback
             = []([[maybe_unused]] bool is_auto_generated,
                  [[maybe_unused]] SchemaTree::Node::id_t node_id,
-                 [[maybe_unused]] std::string_view projected_key_path)
+                 [[maybe_unused]] std::pair<std::string_view, size_t> projected_key_and_index)
             -> ystdlib::error_handling::Result<void> { return ystdlib::error_handling::success(); };
     using QueryHandlerType = clp::ffi::ir_stream::search::QueryHandler<
             decltype(trivial_new_projected_schema_tree_node_callback)>;

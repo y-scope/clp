@@ -3,7 +3,7 @@ import {
     QueryId,
     Response,
     ServerToClientEvents,
-} from "@common/index.js";
+} from "@webui/common";
 import {Socket} from "socket.io-client";
 
 import {Nullable} from "../../typings/common";
