@@ -1,6 +1,6 @@
 #include "database_utils.hpp"
 
-#include <fmt/core.h>
+#include <fmt/base.h>
 #include <fmt/format.h>
 
 using std::pair;
