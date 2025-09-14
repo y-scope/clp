@@ -64,6 +64,7 @@ tasks:
         vars:
           COMPONENT: "job-orchestration"
       - task: "clean-webui"
+      - task: "tests:integration:cache-clear"
 
   clean-core:
     cmds:
@@ -606,6 +607,7 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
   clean-python-component:
     internal: true
     label: "clean-{{.COMPONENT}}"
