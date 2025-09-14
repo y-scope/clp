@@ -69,7 +69,9 @@ tasks:
         find generated
         -type f -and -not -name "*.ts"
         -exec rm {} \;
-      - for: ["generated/SqlBaseLexer.ts", "generated/SqlBaseParser.ts"]
+      - for:
+          - "generated/SqlBaseLexer.ts"
+          - "generated/SqlBaseParser.ts"
         task: ":utils:misc:replace-text"
         vars:
           FILE_PATH: "{{.SRC_DIR}}/{{.ITEM}}"
