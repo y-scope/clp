@@ -34,7 +34,6 @@ tasks:
             && find "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/generated" \
               -type f -and -not \( -name "*.cpp" -o -name "*.h" \) \
               -exec rm {} \;
-
       # This command must be last
       - task: ":utils:checksum:compute"
         vars:
