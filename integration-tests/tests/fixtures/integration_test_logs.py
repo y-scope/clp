@@ -75,10 +75,16 @@ def _download_and_extract_dataset(
         shutil.unpack_archive(
             integration_test_logs.tarball_path, integration_test_logs.extraction_dir
         )
-        subprocess.run(["chmod", "-R", "gu+w", integration_test_logs.extraction_dir], check=True)
     except Exception as e:
         err_msg = f"Failed to download and extract dataset `{name}`."
         raise RuntimeError(err_msg) from e
+
+    # Allow the extracted content to be deletable or overwritable
+    chmod_bin = shutil.which("chmod")
+    if chmod_bin is None:
+        err_msg = "chmod executable not found"
+        raise RuntimeError(err_msg)
+    subprocess.run([chmod_bin, "-R", "gu+w", integration_test_logs.extraction_dir], check=True)
 
     logger.info("Downloaded and extracted uncompressed logs for dataset `%s`.", name)
     request.config.cache.set(name, True)
