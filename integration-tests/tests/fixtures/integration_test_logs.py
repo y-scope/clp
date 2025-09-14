@@ -75,7 +75,7 @@ def _download_and_extract_dataset(
         shutil.unpack_archive(
             integration_test_logs.tarball_path, integration_test_logs.extraction_dir
         )
-        subprocess.run(["chmod","-R", "gu+w", integration_test_logs.extraction_dir], check=True)
+        subprocess.run(["chmod", "-R", "gu+w", integration_test_logs.extraction_dir], check=True)
     except Exception as e:
         err_msg = f"Failed to download and extract dataset `{name}`."
         raise RuntimeError(err_msg) from e
