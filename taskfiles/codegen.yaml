@@ -65,10 +65,10 @@ tasks:
         -no-listener
         -o generated
         -Xexact-output-dir SqlBase.g4
-      - |-
-        find generated \
-          -type f -and -not -name "*.ts" \
-          -exec rm {} \;
+      - >-
+        find generated
+        -type f -and -not -name "*.ts"
+        -exec rm {} \;
       - for: ["generated/SqlBaseLexer.ts", "generated/SqlBaseParser.ts"]
         task: ":utils:misc:replace-text"
         vars:
