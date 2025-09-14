@@ -59,12 +59,12 @@ tasks:
     dir: "{{.SRC_DIR}}"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
-      - |-
-        java -jar {{.G_ANTLR_JAR_FILE}} \
-          -Dlanguage=TypeScript \
-          -no-listener \
-          -Xexact-output-dir SqlBase.g4 \
-          -o generated
+      - >-
+        java -jar {{.G_ANTLR_JAR_FILE}}
+        -Dlanguage=TypeScript
+        -no-listener
+        -o generated
+        -Xexact-output-dir SqlBase.g4
       - |-
         find generated \
           -type f -and -not -name "*.ts" \
