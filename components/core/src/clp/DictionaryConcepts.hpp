@@ -149,17 +149,16 @@ concept VariableDictionaryEntryReq = requires(VariableDictionaryEntryType entry)
 /**
  * Requirement for the logtype dictionary reader interface.
  * @tparam LogTypeDictionaryReaderType The type of the logtype dictionary reader.
- * @tparam LogTypeDictionaryEntryType The type of the entries in the logtype dictionary reader.
  */
-template <
-        typename LogTypeDictionaryReaderType,
-        typename LogTypeDictionaryEntryType = typename LogTypeDictionaryReaderType::entry_t>
+template <typename LogTypeDictionaryReaderType>
 concept LogTypeDictionaryReaderReq = requires(
         LogTypeDictionaryReaderType reader,
         std::string_view logtype,
         bool ignore_case,
-        std::unordered_set<LogTypeDictionaryEntryType const*>& entries
+        std::unordered_set<typename LogTypeDictionaryReaderType::entry_t const*>& entries
 ) {
+    requires LogTypeDictionaryEntryReq<typename LogTypeDictionaryReaderType::entry_t>;
+
     /**
      * Gets entries matching a given logtype.
      * @param logtype
@@ -168,7 +167,7 @@ concept LogTypeDictionaryReaderReq = requires(
      */
     {
         reader.get_entry_matching_value(logtype, ignore_case)
-    } -> std::same_as<std::vector<LogTypeDictionaryEntryType const*>>;
+    } -> std::same_as<std::vector<typename LogTypeDictionaryReaderType::entry_t const*>>;
 
     /**
      * Gets entries matching a wildcard string.
@@ -182,9 +181,6 @@ concept LogTypeDictionaryReaderReq = requires(
 
     requires std::
             same_as<typename LogTypeDictionaryReaderType::dictionary_id_t, logtype_dictionary_id_t>;
-
-    requires std::
-            same_as<typename LogTypeDictionaryReaderType::entry_t, LogTypeDictionaryEntryType>;
 };
 
 /**
@@ -213,16 +209,16 @@ concept VariableDictionaryWriterReq = requires(
  * @tparam VariableDictionaryReaderType The type of the variable dictionary reader.
  * @tparam VariableDictionaryEntryType The type of the entries in the variable dictionary reader.
  */
-template <
-        typename VariableDictionaryReaderType,
-        typename VariableDictionaryEntryType = typename VariableDictionaryReaderType::entry_t>
+template <typename VariableDictionaryReaderType>
 concept VariableDictionaryReaderReq = requires(
         VariableDictionaryReaderType reader,
         variable_dictionary_id_t id,
         std::string_view variable,
         bool ignore_case,
-        std::unordered_set<VariableDictionaryEntryType const*>& entries
+        std::unordered_set<typename VariableDictionaryReaderType::entry_t const*>& entries
 ) {
+    requires VariableDictionaryEntryReq<typename VariableDictionaryReaderType::entry_t>;
+
     /**
      * @param id
      * @return The value of the dictionary entry with the given Id.
@@ -239,7 +235,7 @@ concept VariableDictionaryReaderReq = requires(
      */
     {
         reader.get_entry_matching_value(variable, ignore_case)
-    } -> std::same_as<std::vector<VariableDictionaryEntryType const*>>;
+    } -> std::same_as<std::vector<typename VariableDictionaryReaderType::entry_t const*>>;
 
     /**
      * Gets entries matching a given wildcard string.
@@ -254,9 +250,6 @@ concept VariableDictionaryReaderReq = requires(
     requires std::same_as<
             typename VariableDictionaryReaderType::dictionary_id_t,
             variable_dictionary_id_t>;
-
-    requires std::
-            same_as<typename VariableDictionaryReaderType::entry_t, VariableDictionaryEntryType>;
 };
 }  // namespace clp
 
