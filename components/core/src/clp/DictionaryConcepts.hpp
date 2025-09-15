@@ -26,8 +26,7 @@ concept LogTypeDictionaryEntryReq = requires(
         std::string_view& parsed_var_ref,
         size_t begin_pos,
         size_t placeholder_ix,
-        ir::VariablePlaceholder& placeholder_ref,
-        std::string& logtype
+        ir::VariablePlaceholder& placeholder_ref
 ) {
     /**
      * Clears all internal state.
