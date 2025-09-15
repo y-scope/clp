@@ -25,7 +25,7 @@ concept LogTypeDictionaryEntryReq = requires(
         size_t& end_pos_ref,
         std::string_view& parsed_var_ref,
         size_t begin_pos,
-        size_t placeholder_ix,
+        size_t placeholder_idx,
         ir::VariablePlaceholder& placeholder_ref
 ) {
     /**
@@ -114,13 +114,13 @@ concept LogTypeDictionaryEntryReq = requires(
 
     /**
      * Gets the position and type of a variable placeholder in the logtype.
-     * @param placeholder_ix The index of the placeholder to get the info for.
-     * @param placeholder_ref Returns the type of the placeholder at `placeholder_ix`.
-     * @return The placeholder's position in the logtype, or `SIZE_MAX` if `placeholder_ix` is out
+     * @param placeholder_idx The index of the placeholder to get the info for.
+     * @param placeholder_ref Returns the type of the placeholder at `placeholder_idx`.
+     * @return The placeholder's position in the logtype, or `SIZE_MAX` if `placeholder_idx` is out
      * of bounds.
      */
     {
-        entry.get_placeholder_info(placeholder_ix, placeholder_ref)
+        entry.get_placeholder_info(placeholder_idx, placeholder_ref)
     } -> std::same_as<size_t>;
 
     /**
