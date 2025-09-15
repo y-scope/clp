@@ -18,9 +18,15 @@ vars:
   G_DEPS_CORE_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_DIR}}/cmake-settings"
 
   # Library names
+  G_ABSL_LIB_NAME: "absl"
+  G_ANTLR_RUNTIME_LIB_NAME: "antlr4-runtime"
   G_BOOST_LIB_NAME: "Boost"
   G_FMT_LIB_NAME: "fmt"
   G_GSL_LIB_NAME: "Microsoft.GSL"
+  G_MARIADB_CONNECTOR_CPP_LIB_NAME: "mariadb-connector-cpp"
+  G_MSGPACK_CXX_LIB_NAME: "msgpack-cxx"
+  G_SPDLOG_LIB_NAME: "spdlog"
+  G_YSTDLIB_LIB_NAME: "ystdlib"
 
   # Antlr
   G_ANTLR_VERSION: "4.13.2"
@@ -75,6 +81,7 @@ tasks:
       - task: "liblzma"
       - task: "log-surgeon"
       - task: "lz4"
+      - task: "mariadb-connector-cpp"
       - task: "microsoft.gsl"
       - task: "mongocxx"
       - task: "msgpack-cxx"
@@ -99,7 +106,7 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_CXX_STANDARD=20"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-          LIB_NAME: "absl"
+          LIB_NAME: "{{.G_ABSL_LIB_NAME}}"
           TARBALL_SHA256: "7262daa7c1711406248c10f41026d685e88223bc92817d16fb93c19adb57f669"
           TARBALL_URL: "https://github.com/abseil/abseil-cpp/releases/download/20250512.0/\
                         abseil-cpp-20250512.0.tar.gz"
@@ -135,7 +142,7 @@ tasks:
     internal: true
     run: "once"
     vars:
-      LIB_NAME: "antlr4-runtime"
+      LIB_NAME: "{{.G_ANTLR_RUNTIME_LIB_NAME}}"
 
       # Paths
       BUILD_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-build"
@@ -338,6 +345,21 @@ tasks:
           TARBALL_SHA256: "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b"
           TARBALL_URL: "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz"
 
+  mariadb-connector-cpp:
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+            - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
+            - "-DINSTALL_LAYOUT=RPM"
+          LIB_NAME: "{{.G_MARIADB_CONNECTOR_CPP_LIB_NAME}}"
+          TARBALL_URL: "https://github.com/mariadb-corporation/mariadb-connector-cpp/archive/refs/\
+            tags/1.1.5.tar.gz"
+          TARBALL_SHA256: "0e3dfe9f2bc3f7bb6f7c159009556290064a7c23402ea08019fa8aebfc3ff2c9"
+
   microsoft.gsl:
     internal: true
     run: "once"
@@ -388,7 +410,7 @@ tasks:
             - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
             - "-DMSGPACK_BUILD_DOCS=OFF"
             - "-DMSGPACK_CXX20=ON"
-          LIB_NAME: "msgpack-cxx"
+          LIB_NAME: "{{.G_MSGPACK_CXX_LIB_NAME}}"
           TARBALL_SHA256: "7504b7af7e7b9002ce529d4f941e1b7fb1fb435768780ce7da4abaac79bb156f"
           TARBALL_URL: "https://github.com/msgpack/msgpack-c/releases/download/cpp-{{.VERSION}}\
           /msgpack-cxx-{{.VERSION}}.tar.gz"
@@ -440,7 +462,7 @@ tasks:
             - "-DSPDLOG_BUILD_EXAMPLE=OFF"
             - "-DSPDLOG_BUILD_EXAMPLE_HO=OFF"
             - "-DSPDLOG_FMT_EXTERNAL=ON"
-          LIB_NAME: "spdlog"
+          LIB_NAME: "{{.G_SPDLOG_LIB_NAME}}"
           TARBALL_SHA256: "1586508029a7d0670dfcb2d97575dcdc242d3868a259742b69f100801ab4e16b"
 
           # NOTE: Since spdlog depends on fmt, we need to choose a version of spdlog that's
@@ -458,19 +480,29 @@ tasks:
       - task: "antlr-runtime"
       - task: "boost"
       - task: "fmt"
+      - task: "mariadb-connector-cpp"
       - task: "msgpack-cxx"
       - task: "spdlog"
+      - task: "ystdlib"
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_ABSL_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_ANTLR_RUNTIME_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_MARIADB_CONNECTOR_CPP_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_MSGPACK_CXX_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_SPDLOG_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_YSTDLIB_LIB_NAME}}.cmake"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DSPIDER_BUILD_TESTING=OFF"
           LIB_NAME: "spider"
           # TODO: Update the url and checksum when we have a proper Spider release
-          TARBALL_SHA256: "98cf1add63f1bb7e27ba2e83fc12406c4de0c732bb896dc70e36a6b8a036cf69"
-          TARBALL_URL: "https://github.com/y-scope/spider/archive/64519e9.tar.gz"
+          TARBALL_SHA256: "23aa213e14512861c8a1c03bf2afb78dcceb673d29be6d22f3e4d93bcbfac164"
+          TARBALL_URL: "https://github.com/y-scope/spider/archive/03de061.tar.gz"
 
   sqlite3:
     internal: true
@@ -537,24 +569,27 @@ tasks:
           TARBALL_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.tar.gz"
 
   ystdlib:
-    internal: true
     vars:
-      LIB_NAME: "ystdlib"
-      YSTDLIB_OUTPUT_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+      LIB_NAME: "{{.G_YSTDLIB_LIB_NAME}}"
     run: "once"
     deps:
-      - task: "utils:init"
+      - task: "boost"
+      - task: "catch2"
     cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+      - task: "utils:install-remote-cmake-lib"
         vars:
-          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "36fa0e9d96b7307ca92482343d6ba1091c5576370676e6d423cce32c20e34a3d"
-          OUTPUT_DIR: "{{.YSTDLIB_OUTPUT_DIR}}"
-          URL: "https://github.com/y-scope/ystdlib-cpp/archive/d80cf86.tar.gz"
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/Catch2.cmake"
+            - "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+            - "-Dystdlib_BUILD_TESTING=OFF"
+          LIB_NAME: "{{.LIB_NAME}}"
+          TARBALL_SHA256: "65990dc2bcc4a355c2181bfe31a7800f492309d1bcd340f52a34e85047e61bc8"
+          TARBALL_URL: "https://github.com/y-scope/ystdlib-cpp/archive/9ed78cd.tar.gz"
       - >-
         echo "set(
-        CLP_YSTDLIB_SOURCE_DIRECTORY \"{{.YSTDLIB_OUTPUT_DIR}}\"
-        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        CLP_YSTDLIB_SOURCE_DIRECTORY \"{{.G_DEPS_CORE_DIR}}-extracted\"
+        )" >> "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   zlib:
     internal: true
