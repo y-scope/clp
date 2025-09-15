@@ -589,7 +589,7 @@ tasks:
           TARBALL_URL: "https://github.com/y-scope/ystdlib-cpp/archive/9ed78cd.tar.gz"
       - >-
         echo "set(
-        CLP_YSTDLIB_SOURCE_DIRECTORY \"{{.G_DEPS_CORE_DIR}}-extracted\"
+        CLP_YSTDLIB_SOURCE_DIRECTORY \"{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-extracted\"
         )" >> "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   zlib:
