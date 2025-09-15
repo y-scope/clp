@@ -29,7 +29,7 @@ public:
     };
 
     using dictionary_id_t = DictionaryIdType;
-    using entry_t = EntryType;
+    using EntryT = EntryType;
 
     // Constructors
     DictionaryReader(ArchiveReaderAdaptor& adaptor) : m_is_open(false), m_adaptor(adaptor) {}
