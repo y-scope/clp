@@ -209,6 +209,7 @@ tasks:
           TARGETS:
             - "filesystem"
             - "iostreams"
+            - "process"
             - "program_options"
             - "regex"
             - "system"
