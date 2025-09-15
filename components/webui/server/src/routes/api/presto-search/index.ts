@@ -2,19 +2,19 @@ import {
     FastifyPluginAsyncTypebox,
     Type,
 } from "@fastify/type-provider-typebox";
+import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {
-    CLP_QUERY_ENGINES,
     PRESTO_SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
-} from "@webui/common";
-import {StatusCodes} from "http-status-codes";
-
-import settings from "../../../../settings.json" with {type: "json"};
-import {ErrorSchema} from "../../../schemas/error.js";
+} from "@webui/common/metadata";
+import {ErrorSchema} from "@webui/common/schemas/error";
 import {
     PrestoQueryJobCreationSchema,
     PrestoQueryJobSchema,
-} from "../../../schemas/presto-search.js";
+} from "@webui/common/schemas/presto-search";
+import {StatusCodes} from "http-status-codes";
+
+import settings from "../../../../settings.json" with {type: "json"};
 import {MAX_PRESTO_SEARCH_RESULTS} from "./typings.js";
 import {insertPrestoRowsToMongo} from "./utils.js";
 

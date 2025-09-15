@@ -3,7 +3,7 @@ import {useEffect} from "react";
 import {
     PRESTO_SEARCH_SIGNAL,
     SEARCH_SIGNAL,
-} from "@webui/common";
+} from "@webui/common/metadata";
 import {notification} from "antd";
 
 import useSearchStore from "./index";
