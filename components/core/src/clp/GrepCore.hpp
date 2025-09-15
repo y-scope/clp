@@ -123,7 +123,6 @@ private:
      * Generates logtypes and variables for subquery.
      * @tparam LogTypeDictionaryReaderType
      * @tparam VariableDictionaryReaderType
-     * @tparam LogTypeDictionaryEntryType
      * @param logtype_dict
      * @param var_dict
      * @param processed_search_string
@@ -136,9 +135,7 @@ private:
      */
     template <
             LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
-            VariableDictionaryReaderReq VariableDictionaryReaderType,
-            LogTypeDictionaryEntryReq LogTypeDictionaryEntryType
-            = typename LogTypeDictionaryReaderType::entry_t>
+            VariableDictionaryReaderReq VariableDictionaryReaderType>
     static SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
             LogTypeDictionaryReaderType const& logtype_dict,
             VariableDictionaryReaderType const& var_dict,
@@ -335,8 +332,7 @@ bool GrepCore::process_var_token(
 
 template <
         LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
-        VariableDictionaryReaderReq VariableDictionaryReaderType,
-        LogTypeDictionaryEntryReq LogTypeDictionaryEntryType>
+        VariableDictionaryReaderReq VariableDictionaryReaderType>
 GrepCore::SubQueryMatchabilityResult GrepCore::generate_logtypes_and_vars_for_subquery(
         LogTypeDictionaryReaderType const& logtype_dict,
         VariableDictionaryReaderType const& var_dict,
@@ -413,7 +409,8 @@ GrepCore::SubQueryMatchabilityResult GrepCore::generate_logtypes_and_vars_for_su
     }
 
     // Find matching logtypes
-    std::unordered_set<LogTypeDictionaryEntryType const*> possible_logtype_entries;
+    std::unordered_set<typename LogTypeDictionaryReaderType::entry_t const*>
+            possible_logtype_entries;
     logtype_dict
             .get_entries_matching_wildcard_string(logtype, ignore_case, possible_logtype_entries);
     if (possible_logtype_entries.empty()) {

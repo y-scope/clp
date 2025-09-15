@@ -210,17 +210,13 @@ public:
      * Search for the given string-form variable in the variable dictionary, encode any matches, and
      * add them to the given sub-query.
      * @tparam VariableDictionaryReaderType
-     * @tparam VariableDictionaryEntryType
      * @param var_wildcard_str
      * @param var_dict
      * @param ignore_case
      * @param sub_query
      * @return true if any match found, false otherwise
      */
-    template <
-            VariableDictionaryReaderReq VariableDictionaryReaderType,
-            VariableDictionaryEntryReq VariableDictionaryEntryType
-            = typename VariableDictionaryReaderType::entry_t>
+    template <VariableDictionaryReaderReq VariableDictionaryReaderType>
     static bool wildcard_search_dictionary_and_get_encoded_matches(
             std::string_view var_wildcard_str,
             VariableDictionaryReaderType const& var_dict,
@@ -495,9 +491,7 @@ bool EncodedVariableInterpreter::encode_and_search_dictionary(
     return true;
 }
 
-template <
-        VariableDictionaryReaderReq VariableDictionaryReaderType,
-        VariableDictionaryEntryReq VariableDictionaryEntryType>
+template <VariableDictionaryReaderReq VariableDictionaryReaderType>
 bool EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matches(
         std::string_view var_wildcard_str,
         VariableDictionaryReaderType const& var_dict,
@@ -505,7 +499,7 @@ bool EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matc
         SubQuery& sub_query
 ) {
     // Find matches
-    std::unordered_set<VariableDictionaryEntryType const*> var_dict_entries;
+    std::unordered_set<typename VariableDictionaryReaderType::entry_t const*> var_dict_entries;
     var_dict.get_entries_matching_wildcard_string(var_wildcard_str, ignore_case, var_dict_entries);
     if (var_dict_entries.empty()) {
         // Not in dictionary
