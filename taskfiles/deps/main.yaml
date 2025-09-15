@@ -516,13 +516,13 @@ tasks:
     run: "once"
     deps:
       - task: "boost"
-      - task: "catch2"
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
             - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_CATCH2_LIB_NAME}}.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-Dystdlib_BUILD_TESTING=OFF"
           LIB_NAME: "ystdlib"
           TARBALL_SHA256: "65990dc2bcc4a355c2181bfe31a7800f492309d1bcd340f52a34e85047e61bc8"
