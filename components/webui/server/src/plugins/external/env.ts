@@ -7,10 +7,12 @@ declare module "fastify" {
         config: {
             PORT: number;
             HOST: string;
+            USER: string;
             CLP_DB_USER: string;
             CLP_DB_PASS: string;
-
-            RATE_LIMIT_MAX: number;
+            PRESTO_CATALOG: string;
+            PRESTO_SCHEMA: string;
+            RATE_LIMIT: number;
         };
     }
 }
@@ -25,6 +27,7 @@ const schema = {
         "CLP_DB_PASS",
     ],
     properties: {
+        // Network
         PORT: {
             type: "number",
             default: 3000,
@@ -37,6 +40,12 @@ const schema = {
             default: "localhost",
         },
 
+        // System
+        USER: {
+            type: "string",
+            default: "clp-webui",
+        },
+
         // Databases
         CLP_DB_USER: {
             type: "string",
@@ -47,10 +56,21 @@ const schema = {
             type: "string",
         },
 
+        // Presto
+        PRESTO_CATALOG: {
+            type: "string",
+            default: "clp",
+        },
+        PRESTO_SCHEMA: {
+            type: "string",
+            default: "default",
+        },
+
         // Security
-        RATE_LIMIT_MAX: {
+        RATE_LIMIT: {
             type: "number",
-            default: 100,
+            default: 1_000,
+            minimum: 1,
         },
     },
 };

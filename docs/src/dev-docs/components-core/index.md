@@ -9,8 +9,12 @@ CLP core is the low-level component that performs compression, decompression, an
 * A recent compiler that fully supports C++20 features such as
   * std::span
   * std::source_location
-* [Task] >= 3.40.0 and < 3.43.0
-  * We constrain the version due to unresolved [issues][clp-issue-872].
+* [CMake] >= 3.23.0 and < 4.0.0
+  * Minimum version 3.23.0 is required for [yscope-dev-utils].
+  * We constrain the version to < 4.0.0 due to [y-scope/clp#795].
+* [Task] 3.44.0
+  * We pin the version to 3.44.0 due to [y-scope/clp-ffi-js#110].
+* [uv] >= 0.8
 
 To build, we require some source dependencies, packages from package managers, and libraries built
 from source.
@@ -110,6 +114,12 @@ the relevant paths on your machine.
   make -j
   ```
 
+## Test
+
+```shell
+task tests:integration:core
+```
+
 :::{toctree}
 :hidden:
 
@@ -119,6 +129,10 @@ ubuntu-jammy-deps-install
 regex-utils
 :::
 
-[clp-issue-872]: https://github.com/y-scope/clp/issues/872
+[CMake]: https://cmake.org/
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [Task]: https://taskfile.dev/
+[uv]: https://docs.astral.sh/uv/
+[y-scope/clp-ffi-js#110]: https://github.com/y-scope/clp-ffi-js/issues/110
+[y-scope/clp#795]: https://github.com/y-scope/clp/issues/795
+[yscope-dev-utils]: https://github.com/y-scope/yscope-dev-utils

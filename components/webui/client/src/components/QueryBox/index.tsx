@@ -1,8 +1,8 @@
+import {Nullable} from "@webui/common/utility-types";
 import {
     Progress,
     theme,
 } from "antd";
-import {Nullable} from "src/typings/common";
 
 import styles from "./index.module.css";
 import InputWithCaseSensitive, {InputWithCaseSensitiveProps} from "./InputWithCaseSensitive";
