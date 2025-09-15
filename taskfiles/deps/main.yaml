@@ -19,6 +19,7 @@ vars:
 
   # Library names
   G_BOOST_LIB_NAME: "Boost"
+  G_CATCH2_LIB_NAME: "Catch2"
   G_FMT_LIB_NAME: "fmt"
   G_GSL_LIB_NAME: "Microsoft.GSL"
 
@@ -221,7 +222,7 @@ tasks:
             - "-DCMAKE_CXX_STANDARD=20"
             - "-DCMAKE_CXX_STANDARD_REQUIRED=ON"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-          LIB_NAME: "Catch2"
+          LIB_NAME: "{{.G_CATCH2_LIB_NAME}}"
           TARBALL_SHA256: "1ab2de20460d4641553addfdfe6acd4109d871d5531f8f519a52ea4926303087"
           TARBALL_URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v3.8.0.tar.gz"
 
@@ -512,23 +513,20 @@ tasks:
 
   ystdlib:
     internal: true
-    vars:
-      LIB_NAME: "ystdlib"
-      YSTDLIB_OUTPUT_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
     run: "once"
     deps:
-      - task: "utils:init"
+      - task: "boost"
+      - task: "catch2"
     cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+      - task: "utils:install-remote-cmake-lib"
         vars:
-          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "65990dc2bcc4a355c2181bfe31a7800f492309d1bcd340f52a34e85047e61bc8"
-          OUTPUT_DIR: "{{.YSTDLIB_OUTPUT_DIR}}"
-          URL: "https://github.com/y-scope/ystdlib-cpp/archive/9ed78cd.tar.gz"
-      - >-
-        echo "set(
-        CLP_YSTDLIB_SOURCE_DIRECTORY \"{{.YSTDLIB_OUTPUT_DIR}}\"
-        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_CATCH2_LIB_NAME}}.cmake"
+            - "-Dystdlib_BUILD_TESTING=OFF"
+          LIB_NAME: "ystdlib"
+          TARBALL_SHA256: "65990dc2bcc4a355c2181bfe31a7800f492309d1bcd340f52a34e85047e61bc8"
+          TARBALL_URL: "https://github.com/y-scope/ystdlib-cpp/archive/9ed78cd.tar.gz"
 
   zlib:
     internal: true

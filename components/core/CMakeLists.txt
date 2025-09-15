@@ -293,8 +293,8 @@ endif()
 
 # Add ystdlib
 if(CLP_NEED_YSTDLIB)
-    set(YSTDLIB_CPP_BUILD_TESTING OFF)
-    add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
+    find_package(ystdlib REQUIRED)
+    message(STATUS "Found ystdlib-cpp ${ystdlib_VERSION}")
 endif()
 
 if(CLP_NEED_ZSTD)
