@@ -18,6 +18,8 @@ tasks:
     sources:
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/Kql.g4"
       - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/Sql.g4"
+      - "{{.TASKFILE}}"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
     dir: "{{.G_CORE_COMPONENT_DIR}}/src/"
     cmds:
       - for: ["kql", "sql"]
@@ -55,6 +57,8 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     sources:
       - "{{.SRC_DIR}}/SqlBase.g4"
+      - "{{.TASKFILE}}"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
     dir: "{{.SRC_DIR}}"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
