@@ -4,7 +4,8 @@ import {
     useState,
 } from "react";
 
-import {Nullable} from "../../typings/common";
+import {Nullable} from "@webui/common/utility-types";
+
 import {MongoSocketCursor} from "./MongoSocketCursor.js";
 
 

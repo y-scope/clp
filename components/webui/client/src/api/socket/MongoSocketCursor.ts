@@ -3,10 +3,9 @@ import {
     QueryId,
     Response,
     ServerToClientEvents,
-} from "@common/index.js";
+} from "@webui/common/socket";
+import {Nullable} from "@webui/common/utility-types";
 import {Socket} from "socket.io-client";
-
-import {Nullable} from "../../typings/common";
 
 
 /**

@@ -15,7 +15,6 @@
 #include "../clp/Defs.h"
 #include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryEntry.hpp"
-#include "Utils.hpp"
 
 namespace clp_s {
 template <typename DictionaryIdType, typename EntryType>

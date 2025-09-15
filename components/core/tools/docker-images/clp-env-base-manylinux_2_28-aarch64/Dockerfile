@@ -5,6 +5,9 @@ WORKDIR /root
 RUN mkdir -p ./tools/scripts/lib_install
 COPY ./tools/scripts/lib_install ./tools/scripts/lib_install
 
+RUN pipx uninstall cmake
+RUN pipx uninstall uv
+
 RUN ./tools/scripts/lib_install/manylinux_2_28/install-all.sh
 
 # Remove cached files

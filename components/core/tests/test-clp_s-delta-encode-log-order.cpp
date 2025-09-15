@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -68,6 +69,7 @@ TEST_CASE("clp-s-delta-encode-log-order", "[clp-s][delta-encode-log-order]") {
     REQUIRE_NOTHROW(compress_archive(
             get_test_input_local_path(),
             std::string{cTestDeltaEncodeOrderArchiveDirectory},
+            std::nullopt,
             true,
             false,
             clp_s::FileType::Json

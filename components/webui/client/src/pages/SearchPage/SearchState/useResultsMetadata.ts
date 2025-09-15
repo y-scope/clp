@@ -1,4 +1,4 @@
-import {SearchResultsMetadataDocument} from "@common/index.js";
+import {SearchResultsMetadataDocument} from "@webui/common/metadata";
 
 import MongoSocketCollection from "../../../api/socket/MongoSocketCollection";
 import {useCursor} from "../../../api/socket/useCursor";

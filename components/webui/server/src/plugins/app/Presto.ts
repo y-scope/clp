@@ -1,10 +1,10 @@
+import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import fp from "fastify-plugin";
 import {
     Client,
     ClientOptions,
 } from "presto-client";
 
-import {CLP_QUERY_ENGINES} from "../../../../common/index.js";
 import settings from "../../../settings.json" with {type: "json"};
 
 
@@ -35,8 +35,11 @@ export default fp(
         }
 
         const clientOptions: ClientOptions = {
+            catalog: fastify.config.PRESTO_CATALOG,
             host: settings.PrestoHost,
             port: settings.PrestoPort,
+            schema: fastify.config.PRESTO_SCHEMA,
+            user: fastify.config.USER,
         };
 
         fastify.log.info(

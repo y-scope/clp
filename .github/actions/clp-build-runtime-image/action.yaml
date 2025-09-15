@@ -1,8 +1,10 @@
-name: "clp-execution-image-build"
-description: "Builds a container image that contains the dependencies necessary
-to run the CLP package."
+name: "clp-build-runtime-image"
+description: "Builds a container image to be used for running CLP."
 
 inputs:
+  image_type:
+    description: "Type of image to build"
+    required: true
   image_registry:
     default: "ghcr.io"
     description: "Container image registry"
@@ -17,11 +19,11 @@ inputs:
     required: false
   platform_id:
     description: "Platform ID of the container (e.g. ubuntu)"
-    required: true
+    required: false
   platform_version_id:
     description: "Platform VERSION_ID / VERSION_CODENAME of the container
       (e.g. jammy, focal, etc.)"
-    required: true
+    required: false
 
 runs:
   using: "composite"
@@ -45,20 +47,37 @@ runs:
         echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
           >> "$GITHUB_OUTPUT"
 
-    - name: "Update Metadata"
-      id: "meta"
+    - name: "Compute metadata"
+      id: "compute-meta"
+      shell: "bash"
+      run: |
+        base_path="./tools/docker-images"
+
+        if [[ "${{inputs.image_type}}" == "execution" ]]; then
+          platform="${{inputs.platform_id}}-${{inputs.platform_version_id}}"
+          dockerfile_path="$base_path/clp-execution-base-$platform/Dockerfile"
+          image_name="clp-${{inputs.image_type}}-$platform"
+        else
+          dockerfile_path="$base_path/clp-package/Dockerfile"
+          image_name="clp-${{inputs.image_type}}"
+        fi
+
+        echo "DOCKERFILE=$dockerfile_path" >> "$GITHUB_OUTPUT"
+        echo "IMAGE_NAME=$image_name" >> "$GITHUB_OUTPUT"
+
+    - name: "Extract GitHub Metadata"
+      id: "extract-gh-meta"
       uses: "docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804"
       with:
         images: "${{inputs.image_registry}}/${{steps.sanitization.outputs.REPOSITORY}}\
-          /clp-execution-x86-${{inputs.platform_id}}-${{inputs.platform_version_id}}"
+          /${{steps.compute-meta.outputs.IMAGE_NAME}}"
 
     - name: "Build and Push"
       if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
       uses: "docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4"
       with:
         context: "./"
-        file: "./tools/docker-images/\
-          clp-execution-base-${{inputs.platform_id}}-${{inputs.platform_version_id}}/Dockerfile"
+        file: "${{steps.compute-meta.outputs.DOCKERFILE}}"
         push: true
-        tags: "${{steps.meta.outputs.tags}}"
-        labels: "${{steps.meta.outputs.labels}}"
+        tags: "${{steps.extract-gh-meta.outputs.tags}}"
+        labels: "${{steps.extract-gh-meta.outputs.labels}}"
