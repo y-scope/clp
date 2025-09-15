@@ -19,7 +19,6 @@ vars:
 
   # Library names
   G_BOOST_LIB_NAME: "Boost"
-  G_CATCH2_LIB_NAME: "Catch2"
   G_FMT_LIB_NAME: "fmt"
   G_GSL_LIB_NAME: "Microsoft.GSL"
 
@@ -222,7 +221,7 @@ tasks:
             - "-DCMAKE_CXX_STANDARD=20"
             - "-DCMAKE_CXX_STANDARD_REQUIRED=ON"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-          LIB_NAME: "{{.G_CATCH2_LIB_NAME}}"
+          LIB_NAME: "Catch2"
           TARBALL_SHA256: "1ab2de20460d4641553addfdfe6acd4109d871d5531f8f519a52ea4926303087"
           TARBALL_URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v3.8.0.tar.gz"
 
