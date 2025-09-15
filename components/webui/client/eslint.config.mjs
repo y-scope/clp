@@ -32,16 +32,12 @@ const EslintConfig = [
             "new-cap": [
                 "error",
                 {
+                    // TypeBox imports
                     capIsNewExceptions: [
-                        // TypeBox imports
                         "Decode",
                         "Encode",
-                        "Type.Literal",
-                        "Type.Optional",
-                        "Type.Transform",
-                        "Type.Union",
-                        "Value.Parse",
                     ],
+                    capIsNewExceptionPattern: "^(Type|Value)\\.",
                 },
             ],
         },

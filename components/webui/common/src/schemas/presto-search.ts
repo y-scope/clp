@@ -1,4 +1,7 @@
-import {Type} from "@sinclair/typebox";
+import {
+    Static,
+    Type,
+} from "@sinclair/typebox";
 
 import {StringSchema} from "./common.js";
 
@@ -17,7 +20,16 @@ const PrestoQueryJobSchema = Type.Object({
     searchJobId: StringSchema,
 });
 
+type PrestoQueryJobCreation = Static<typeof PrestoQueryJobCreationSchema>;
+
+type PrestoQueryJob = Static<typeof PrestoQueryJobSchema>;
+
+
 export {
     PrestoQueryJobCreationSchema,
     PrestoQueryJobSchema,
+};
+export type {
+    PrestoQueryJob,
+    PrestoQueryJobCreation,
 };

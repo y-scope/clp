@@ -1,4 +1,7 @@
-import {Type} from "@sinclair/typebox";
+import {
+    Static,
+    Type,
+} from "@sinclair/typebox";
 
 import {
     IdSchema,
@@ -29,7 +32,15 @@ const QueryJobSchema = Type.Object({
     aggregationJobId: IdSchema,
 });
 
+type QueryJobCreation = Static<typeof QueryJobCreationSchema>;
+
+type QueryJob = Static<typeof QueryJobSchema>;
+
 export {
     QueryJobCreationSchema,
     QueryJobSchema,
+};
+export type {
+    QueryJob,
+    QueryJobCreation,
 };
