@@ -58,10 +58,15 @@ def _download_and_extract_dataset(
         logger.info("Test logs `%s` are up-to-date. Skipping download.", name)
         return integration_test_logs
 
+    curl_bin = shutil.which("curl")
+    if curl_bin is None:
+        err_msg = "curl executable not found"
+        raise RuntimeError(err_msg)
+
     try:
         # fmt: off
         curl_cmds = [
-            "curl",
+            curl_bin,
             "--fail",
             "--location",
             "--output", str(integration_test_logs.tarball_path),
