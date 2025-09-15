@@ -13,6 +13,17 @@ const EslintConfig = [
     CommonConfig,
     ...TsConfigArray,
     ...StylisticConfigArray,
+    {
+        rules: {
+            "new-cap": [
+                "error",
+                {
+                    // TypeBox imports
+                    capIsNewExceptionPattern: "^(Type|Value)\\.",
+                },
+            ],
+        },
+    },
 ];
 
 
