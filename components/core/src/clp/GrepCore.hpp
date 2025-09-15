@@ -409,8 +409,7 @@ GrepCore::SubQueryMatchabilityResult GrepCore::generate_logtypes_and_vars_for_su
     }
 
     // Find matching logtypes
-    std::unordered_set<typename LogTypeDictionaryReaderType::EntryT const*>
-            possible_logtype_entries;
+    std::unordered_set<typename LogTypeDictionaryReaderType::Entry const*> possible_logtype_entries;
     logtype_dict
             .get_entries_matching_wildcard_string(logtype, ignore_case, possible_logtype_entries);
     if (possible_logtype_entries.empty()) {

@@ -499,7 +499,7 @@ bool EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matc
         SubQuery& sub_query
 ) {
     // Find matches
-    std::unordered_set<typename VariableDictionaryReaderType::EntryT const*> var_dict_entries;
+    std::unordered_set<typename VariableDictionaryReaderType::Entry const*> var_dict_entries;
     var_dict.get_entries_matching_wildcard_string(var_wildcard_str, ignore_case, var_dict_entries);
     if (var_dict_entries.empty()) {
         // Not in dictionary

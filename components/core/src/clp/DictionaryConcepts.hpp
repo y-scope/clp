@@ -154,9 +154,9 @@ concept LogTypeDictionaryReaderReq = requires(
         LogTypeDictionaryReaderType reader,
         std::string_view logtype,
         bool ignore_case,
-        std::unordered_set<typename LogTypeDictionaryReaderType::EntryT const*>& entries
+        std::unordered_set<typename LogTypeDictionaryReaderType::Entry const*>& entries
 ) {
-    requires LogTypeDictionaryEntryReq<typename LogTypeDictionaryReaderType::EntryT>;
+    requires LogTypeDictionaryEntryReq<typename LogTypeDictionaryReaderType::Entry>;
 
     /**
      * Gets entries matching a given logtype.
@@ -166,7 +166,7 @@ concept LogTypeDictionaryReaderReq = requires(
      */
     {
         reader.get_entry_matching_value(logtype, ignore_case)
-    } -> std::same_as<std::vector<typename LogTypeDictionaryReaderType::EntryT const*>>;
+    } -> std::same_as<std::vector<typename LogTypeDictionaryReaderType::Entry const*>>;
 
     /**
      * Gets entries matching a wildcard string.
@@ -214,9 +214,9 @@ concept VariableDictionaryReaderReq = requires(
         variable_dictionary_id_t id,
         std::string_view variable,
         bool ignore_case,
-        std::unordered_set<typename VariableDictionaryReaderType::EntryT const*>& entries
+        std::unordered_set<typename VariableDictionaryReaderType::Entry const*>& entries
 ) {
-    requires VariableDictionaryEntryReq<typename VariableDictionaryReaderType::EntryT>;
+    requires VariableDictionaryEntryReq<typename VariableDictionaryReaderType::Entry>;
 
     /**
      * @param id
@@ -234,7 +234,7 @@ concept VariableDictionaryReaderReq = requires(
      */
     {
         reader.get_entry_matching_value(variable, ignore_case)
-    } -> std::same_as<std::vector<typename VariableDictionaryReaderType::EntryT const*>>;
+    } -> std::same_as<std::vector<typename VariableDictionaryReaderType::Entry const*>>;
 
     /**
      * Gets entries matching a given wildcard string.

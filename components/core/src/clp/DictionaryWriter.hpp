@@ -36,7 +36,7 @@ public:
     };
 
     using dictionary_id_t = DictionaryIdType;
-    using EntryT = EntryType;
+    using Entry = EntryType;
 
     // Constructors
     DictionaryWriter() : m_is_open(false) {}
