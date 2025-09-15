@@ -1,5 +1,5 @@
+import {Nullable} from "@webui/common/utility-types";
 import dayjs from "dayjs";
-import {Nullable} from "src/typings/common";
 import {create} from "zustand";
 
 import {TimelineConfig} from "../../../components/ResultsTimeline/typings";
