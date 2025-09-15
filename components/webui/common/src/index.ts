@@ -96,21 +96,9 @@ enum SEARCH_SIGNAL {
  * Presto search-related signals.
  */
 enum PRESTO_SEARCH_SIGNAL {
-    WAITING_FOR_PREREQUISITES = "WAITING_FOR_PREREQUISITES",
-    QUEUED = "QUEUED",
-    WAITING_FOR_RESOURCES = "WAITING_FOR_RESOURCES",
-    DISPATCHING = "DISPATCHING",
-    PLANNING = "PLANNING",
-    STARTING = "STARTING",
-    RUNNING = "RUNNING",
-    FINISHING = "FINISHING",
-    FINISHED = "FINISHED",
-    CANCELED = "CANCELED",
+    QUERYING = "QUERYING",
     FAILED = "FAILED",
-
-    // Used internally by the UI to mark when all data has been received, since Presto may report
-    // `FINISHED` before the result stream is fully delivered. `DONE` state is never set by Presto.
-    DONE = "DONE",
+    DONE = "DONE"
 }
 
 /**

@@ -150,8 +150,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                         },
                         query: queryString,
                         state: (_, queryId, stats) => {
-                            // Type cast `presto-client` string literal type to our enum type.
-                            const newState = stats.state as PRESTO_SEARCH_SIGNAL;
                             request.log.info({
                                 searchJobId: queryId,
                                 state: stats.state,
@@ -163,7 +161,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                     _id: queryId,
                                     errorMsg: null,
                                     errorName: null,
-                                    lastSignal: newState,
+                                    lastSignal: PRESTO_SEARCH_SIGNAL.QUERYING,
                                     queryEngine: CLP_QUERY_ENGINES.PRESTO,
                                 }).catch((err: unknown) => {
                                     request.log.error(err, "Failed to insert Presto metadata");
