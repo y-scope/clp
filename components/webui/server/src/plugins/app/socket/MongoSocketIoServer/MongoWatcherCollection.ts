@@ -1,4 +1,4 @@
-import {QueryId} from "@webui/common";
+import {QueryId} from "@webui/common/socket";
 import {FastifyBaseLogger} from "fastify";
 import type {
     Collection,
