@@ -49,11 +49,12 @@ concept LogTypeDictionaryEntryReq = requires(
      * constructing the constant part of the message's logtype in the processed range at the same
      * time.
      * @param msg The original log message.
-     * @param begin_pos_ref The beginning position of the last variable. This parameter is updated
-     * to the beginning position of the next variable.
-     * @param end_pos_ref The ending position of the last variable (exclusive). This parameter is
-     * updated to the ending position of the next variable (exclusive).
-     * @return Whether another variable was found or not.
+     * @param begin_pos_ref The beginning position of the last variable. Returns the beginning
+     * position of the next variable.
+     * @param end_pos_ref The ending position of the last variable (exclusive). Returns the ending
+     * position of the next variable (exclusive).
+     * @param parsed_var_ref Returns a view to the parsed variable, if one was found.
+     * @return Whether a new variable was parsed.
      */
     {
         entry.parse_next_var(msg, begin_pos_ref, end_pos_ref, parsed_var_ref)
@@ -115,7 +116,7 @@ concept LogTypeDictionaryEntryReq = requires(
     /**
      * Gets the position and type of a variable placeholder in the logtype.
      * @param placeholder_ix The index of the placeholder to get the info for.
-     * @param placeholder_ref The type of the placeholder at `placeholder_ix`.
+     * @param placeholder_ref Returns the type of the placeholder at `placeholder_ix`.
      * @return The placeholder's position in the logtype, or `SIZE_MAX` if `placeholder_ix` is out
      * of bounds.
      */
@@ -124,7 +125,7 @@ concept LogTypeDictionaryEntryReq = requires(
     } -> std::same_as<size_t>;
 
     /**
-     * @return The dictionary Id for this logtype.
+     * @return The dictionary ID for this logtype.
      */
     {
         entry.get_id()
@@ -138,7 +139,7 @@ concept LogTypeDictionaryEntryReq = requires(
 template <typename VariableDictionaryEntryType>
 concept VariableDictionaryEntryReq = requires(VariableDictionaryEntryType entry) {
     /**
-     * @return The dictionary Id for this variable.
+     * @return The dictionary ID for this variable.
      */
     {
         entry.get_id()
@@ -162,7 +163,7 @@ concept LogTypeDictionaryReaderReq = requires(
     /**
      * Gets entries matching a given logtype.
      * @param logtype
-     * @param ignore_case Whether the lookup should be case insensitive.
+     * @param ignore_case Whether the search should be case insensitive.
      * @return A vector of entries matching the given logtype.
      */
     {
@@ -173,7 +174,7 @@ concept LogTypeDictionaryReaderReq = requires(
      * Gets entries matching a wildcard string.
      * @param logtype A wildcard search string.
      * @param ignore_case Whether the search should be case insensitive.
-     * @param entries A hash set in which to store the found entries.
+     * @param entries Returns all the matching entries.
      */
     {
         reader.get_entries_matching_wildcard_string(logtype, ignore_case, entries)
@@ -199,8 +200,8 @@ concept VariableDictionaryWriterReq = requires(
     /**
      * Adds the given variable to the dictionary if it doesn't exist.
      * @param value
-     * @param id_ref The Id of the variable matching the given entry.
-     * @return Whether this call resulted in inserting a new entry or not.
+     * @param id_ref Returns the entry ID of the given variable.
+     * @return Whether this call resulted in inserting a new entry.
      */
     {
         writer.add_entry(value, id_ref)
@@ -233,7 +234,7 @@ concept VariableDictionaryReaderReq = requires(
     /**
      * Gets entries matching a given variable value.
      * @param variable The variable value to look up.
-     * @param ignore_case Whether the lookup should be case insensitive.
+     * @param ignore_case Whether the search should be case insensitive.
      * @return A vector of entries matching the given variable value.
      */
     {
@@ -244,7 +245,7 @@ concept VariableDictionaryReaderReq = requires(
      * Gets entries matching a given wildcard string.
      * @param variable A wildcard search string.
      * @param ignore_case Whether the search should be case insensitive.
-     * @param entries A hash set in which to store the found entries.
+     * @param entries Returns all the matching entries.
      */
     {
         reader.get_entries_matching_wildcard_string(variable, ignore_case, entries)
