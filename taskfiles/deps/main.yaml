@@ -352,7 +352,7 @@ tasks:
     platforms: ["linux"]
     status:
       - >-
-        grep -qi ubuntu /etc/os-release
+        test -f /etc/os-release && grep -qi ubuntu /etc/os-release || true
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
@@ -481,7 +481,7 @@ tasks:
     platforms: ["linux"]
     status:
       - >-
-        grep -qi ubuntu /etc/os-release
+        test -f /etc/os-release && grep -qi ubuntu /etc/os-release || true
     deps:
       - task: "absl"
       - task: "antlr-jar"
