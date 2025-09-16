@@ -91,6 +91,15 @@ def handle_extract_file_cmd(
     if clp_config is None:
         return -1
 
+    storage_type = clp_config.archive_output.storage.type
+    storage_engine = clp_config.package.storage_engine
+    if StorageType.FS != storage_type:
+        logger.error(
+            f"File extraction is not supported for archive storage type `{storage_type}` with"
+            f" storage engine `{storage_engine}`."
+        )
+        return -1
+
     container_name = generate_container_name(str(JobType.FILE_EXTRACTION))
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
@@ -135,8 +144,6 @@ def handle_extract_file_cmd(
         "-d", str(container_extraction_dir),
     ]
     # fmt: on
-
-    storage_engine = clp_config.package.storage_engine
 
     if parsed_args.verbose:
         extract_cmd.append("--verbose")
