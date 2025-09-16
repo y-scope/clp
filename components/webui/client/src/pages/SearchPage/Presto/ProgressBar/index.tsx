@@ -35,16 +35,18 @@ const ProgressBar = () => {
         stop]);
 
     return (
-        <Progress
-            className={styles["prestoProgress"] || ""}
-            percent={progress ?? 0}
-            showInfo={false}
-            size={"small"}
-            status={"active"}
-            strokeLinecap={"butt"}
-            style={{display: null === progress ?
-                "none" :
-                "block"}}/>
+        <div className={styles["prestoProgressContainer"] || ""}>
+            <Progress
+                className={styles["prestoProgress"] || ""}
+                percent={progress ?? 0}
+                showInfo={false}
+                size={"small"}
+                status={"active"}
+                strokeLinecap={"butt"}
+                style={{display: null === progress ?
+                    "none" :
+                    "block"}}/>
+        </div>
     );
 };
 
