@@ -76,11 +76,11 @@ public:
      * must be a multiple of BufferedFileReader::cMinBufferSize.
      */
     explicit BufferedFileReader(
-            std::unique_ptr<ReaderInterface> reader_interface,
+            std::shared_ptr<ReaderInterface> reader_interface,
             size_t base_buffer_size
     );
 
-    explicit BufferedFileReader(std::unique_ptr<ReaderInterface> reader_interface)
+    explicit BufferedFileReader(std::shared_ptr<ReaderInterface> reader_interface)
             : BufferedFileReader{std::move(reader_interface), cDefaultBufferSize} {}
 
     // Destructor
@@ -212,7 +212,7 @@ private:
 
     // Variables
     size_t m_pos{0};
-    std::unique_ptr<ReaderInterface> m_reader;
+    std::shared_ptr<ReaderInterface> m_reader;
 
     // Buffer specific data
     std::vector<char> m_buffer;

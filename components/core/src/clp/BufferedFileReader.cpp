@@ -15,11 +15,10 @@
 
 using std::span;
 using std::string;
-using std::unique_ptr;
 
 namespace clp {
 BufferedFileReader::BufferedFileReader(
-        std::unique_ptr<ReaderInterface> reader_interface,
+        std::shared_ptr<ReaderInterface> reader_interface,
         size_t base_buffer_size
 )
         : m_reader(std::move(reader_interface)) {
