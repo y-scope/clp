@@ -350,7 +350,7 @@ tasks:
     internal: true
     run: "once"
     platforms: ["linux"]
-    preconditions:
+    status:
       - >-
         grep -qi ubuntu /etc/os-release
     cmds:
@@ -479,7 +479,7 @@ tasks:
     run: "once"
     # Disable spider build on non-Linux platforms, specifically macOS
     platforms: ["linux"]
-    preconditions:
+    status:
       - >-
         grep -qi ubuntu /etc/os-release
     deps:
