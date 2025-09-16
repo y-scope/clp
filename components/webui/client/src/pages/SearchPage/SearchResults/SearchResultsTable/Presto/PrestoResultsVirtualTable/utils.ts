@@ -1,4 +1,4 @@
-import type {PrestoSearchResult} from "@webui/common";
+import type {PrestoSearchResult} from "@webui/common/presto";
 import {TableProps} from "antd";
 
 

@@ -1,4 +1,4 @@
-import {SEARCH_SIGNAL} from "@webui/common";
+import {SEARCH_SIGNAL} from "@webui/common/metadata";
 import type {Db} from "mongodb";
 
 import {

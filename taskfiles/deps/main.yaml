@@ -570,27 +570,20 @@ tasks:
           TARBALL_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.tar.gz"
 
   ystdlib:
-    vars:
-      LIB_NAME: "{{.G_YSTDLIB_LIB_NAME}}"
+    internal: true
     run: "once"
     deps:
       - task: "boost"
-      - task: "catch2"
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
             - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/Catch2.cmake"
             - "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
             - "-Dystdlib_BUILD_TESTING=OFF"
-          LIB_NAME: "{{.LIB_NAME}}"
+          LIB_NAME: "{{.G_YSTDLIB_LIB_NAME}}"
           TARBALL_SHA256: "65990dc2bcc4a355c2181bfe31a7800f492309d1bcd340f52a34e85047e61bc8"
           TARBALL_URL: "https://github.com/y-scope/ystdlib-cpp/archive/9ed78cd.tar.gz"
-      - >-
-        echo "set(
-        CLP_YSTDLIB_SOURCE_DIRECTORY \"{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-extracted\"
-        )" >> "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   zlib:
     internal: true
