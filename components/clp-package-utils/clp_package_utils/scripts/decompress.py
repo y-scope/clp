@@ -145,7 +145,7 @@ def handle_extract_file_cmd(
         # Use either file list or explicit paths; prohibit --dataset flag
         if parsed_args.dataset is not None:
             logger.error(
-                f"You cannot use the --dataset flag when using the {storage_engine} storage engine."
+                f"The --dataset flag cannot be used with the {storage_engine} storage engine."
             )
             # Remove generated files
             generated_config_path_on_host.unlink()
@@ -159,16 +159,16 @@ def handle_extract_file_cmd(
         # Require --dataset flag; prohibit both file list and explicit paths
         if parsed_args.files_from or parsed_args.paths:
             logger.error(
-                f"You can't specify individual file paths or use the -f flag when decompressing "
-                f"with the {storage_engine} storage engine."
+                "File paths cannot be specified when decompressing with the"
+                f" {storage_engine} storage engine."
             )
             # Remove generated files
             generated_config_path_on_host.unlink()
             return -1
         if parsed_args.dataset is None:
             logger.error(
-                f"You must specify a dataset to decompress using the --dataset flag when using the "
-                f"{storage_engine} storage engine."
+                f"A dataset must be specified for decompression (using the --dataset flag) when "
+                f"using the {storage_engine} storage engine."
             )
             # Remove generated files
             generated_config_path_on_host.unlink()

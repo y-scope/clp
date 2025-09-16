@@ -307,7 +307,9 @@ def handle_clp_s_extract_file_cmd(
 
     target_dataset: str = parsed_args.dataset
     if target_dataset is None:
-        logger.error(f"You must specify --dataset when using the {storage_engine} storage engine.")
+        logger.error(
+            f"The --dataset flag must be specified when using the {storage_engine} storage engine."
+        )
         return -1
     # Validate dataset name
     clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
@@ -321,10 +323,7 @@ def handle_clp_s_extract_file_cmd(
     archives_dir = clp_config.archive_output.get_directory()
     dataset_dir = archives_dir / target_dataset
     if not dataset_dir.exists():
-        logger.error(
-            f"Dataset '{target_dataset}' not found in {archives_dir}. Are you sure it was "
-            "compressed?"
-        )
+        logger.error(f"Dataset '{target_dataset}' not found in {archives_dir}.")
         return -1
 
     # fmt: off
@@ -335,19 +334,17 @@ def handle_clp_s_extract_file_cmd(
     # fmt: on
 
     # Configure CLP metadata DB connection params.
-    extract_env = {
-        **os.environ,
-        CLP_DB_USER_ENV_VAR_NAME: clp_db_connection_params["username"],
-        CLP_DB_PASS_ENV_VAR_NAME: clp_db_connection_params["password"],
-    }
+    # extract_env = {
+    #     **os.environ,
+    #     CLP_DB_USER_ENV_VAR_NAME: clp_db_connection_params["username"],
+    #     CLP_DB_PASS_ENV_VAR_NAME: clp_db_connection_params["password"],
+    # }
 
-    proc = subprocess.Popen(extract_cmd, env=extract_env)
+    proc = subprocess.Popen(extract_cmd)
     return_code = proc.wait()
     if 0 != return_code:
         logger.error(f"File extraction failed, return_code={return_code}")
         return return_code
-
-    # logger.info(f"File extraction successful. Decompressed file written to {str(extraction_dir)}")
 
     return 0
 
