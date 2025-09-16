@@ -329,16 +329,9 @@ def handle_clp_s_extract_file_cmd(
     # fmt: off
     extract_cmd = [
         str(clp_home / "bin" / "clp-s"),
-        "x", str(dataset_dir), str(extraction_dir),
+        "x", "--ordered", str(dataset_dir), str(extraction_dir),
     ]
     # fmt: on
-
-    # Configure CLP metadata DB connection params.
-    # extract_env = {
-    #     **os.environ,
-    #     CLP_DB_USER_ENV_VAR_NAME: clp_db_connection_params["username"],
-    #     CLP_DB_PASS_ENV_VAR_NAME: clp_db_connection_params["password"],
-    # }
 
     proc = subprocess.Popen(extract_cmd)
     return_code = proc.wait()
