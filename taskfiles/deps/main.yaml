@@ -349,6 +349,10 @@ tasks:
   mariadb-connector-cpp:
     internal: true
     run: "once"
+    platforms: ["linux"]
+    preconditions:
+      - >-
+        grep -qi ubuntu /etc/os-release
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
@@ -475,6 +479,9 @@ tasks:
     run: "once"
     # Disable spider build on non-Linux platforms, specifically macOS
     platforms: ["linux"]
+    preconditions:
+      - >-
+        grep -qi ubuntu /etc/os-release
     deps:
       - task: "absl"
       - task: "antlr-jar"
