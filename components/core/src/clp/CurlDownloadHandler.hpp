@@ -5,7 +5,10 @@
 #include <chrono>
 #include <cstddef>
 #include <memory>
+#include <optional>
+#include <string>
 #include <string_view>
+#include <unordered_map>
 
 #include <curl/curl.h>
 
@@ -53,6 +56,9 @@ public:
      * Doc: https://curl.se/libcurl/c/CURLOPT_CONNECTTIMEOUT.html
      * @param overall_timeout Maximum time that the transfer may take. Note that this includes
      * `connection_timeout`. Doc: https://curl.se/libcurl/c/CURLOPT_TIMEOUT.html
+     * @param http_header_kv_pairs Key-value pairs representing HTTP headers to pass to the server
+     * in the download request. Doc: https://curl.se/libcurl/c/CURLOPT_HTTPHEADER.html
+     * @throw CurlOperationFailed if an error occurs.
      */
     explicit CurlDownloadHandler(
             std::shared_ptr<ErrorMsgBuf> error_msg_buf,
@@ -63,7 +69,9 @@ public:
             size_t offset = 0,
             bool disable_caching = false,
             std::chrono::seconds connection_timeout = cDefaultConnectionTimeout,
-            std::chrono::seconds overall_timeout = cDefaultOverallTimeout
+            std::chrono::seconds overall_timeout = cDefaultOverallTimeout,
+            std::optional<std::unordered_map<std::string, std::string>> const& http_header_kv_pairs
+            = std::nullopt
     );
 
     // Disable copy/move constructors/assignment operators

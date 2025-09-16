@@ -1,5 +1,12 @@
 #include "ArchiveMetadata.hpp"
 
+#include <sys/stat.h>
+
+#include <fmt/core.h>
+#include <ystdlib/containers/Array.hpp>
+
+#include "../FileReader.hpp"
+
 namespace clp::streaming_archive {
 ArchiveMetadata::ArchiveMetadata(
         archive_format_version_t archive_format_version,
@@ -8,29 +15,29 @@ ArchiveMetadata::ArchiveMetadata(
 )
         : m_archive_format_version(archive_format_version),
           m_creator_id(std::move(creator_id)),
-          m_creation_idx(creation_idx) {
-    if (m_creator_id.length() > UINT16_MAX) {
-        throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
+          m_creation_idx(creation_idx) {}
+
+auto ArchiveMetadata::create_from_file(std::string_view file_path) -> ArchiveMetadata {
+    FileReader file_reader{std::string(file_path)};
+    struct stat file_stat{};
+    if (auto const clp_rc = file_reader.try_fstat(file_stat);
+        clp::ErrorCode::ErrorCode_Success != clp_rc)
+    {
+        throw OperationFailed(clp_rc, __FILENAME__, __LINE__);
     }
-    m_creator_id_len = m_creator_id.length();
 
-    // NOTE: We set this to the size of this metadata on disk; when adding new members that will be
-    // written to disk, you must update this
-    m_compressed_size += sizeof(m_archive_format_version) + sizeof(m_creator_id_len)
-                         + m_creator_id.length() + sizeof(m_creation_idx)
-                         + sizeof(m_uncompressed_size) + sizeof(m_begin_timestamp)
-                         + sizeof(m_end_timestamp) + sizeof(m_compressed_size);
-}
+    ystdlib::containers::Array<char> buf(static_cast<size_t>(file_stat.st_size));
+    if (auto const clp_rc = file_reader.try_read_exact_length(buf.data(), buf.size());
+        clp::ErrorCode::ErrorCode_Success != clp_rc)
+    {
+        throw OperationFailed(clp_rc, __FILENAME__, __LINE__);
+    }
 
-ArchiveMetadata::ArchiveMetadata(FileReader& file_reader) {
-    file_reader.read_numeric_value(m_archive_format_version, false);
-    file_reader.read_numeric_value(m_creator_id_len, false);
-    file_reader.read_string(m_creator_id_len, m_creator_id, false);
-    file_reader.read_numeric_value(m_creation_idx, false);
-    file_reader.read_numeric_value(m_uncompressed_size, false);
-    file_reader.read_numeric_value(m_compressed_size, false);
-    file_reader.read_numeric_value(m_begin_timestamp, false);
-    file_reader.read_numeric_value(m_end_timestamp, false);
+    ArchiveMetadata metadata;
+    msgpack::object_handle const obj_handle = msgpack::unpack(buf.data(), buf.size());
+    msgpack::object const obj = obj_handle.get();
+    obj.convert(metadata);
+    return metadata;
 }
 
 void ArchiveMetadata::expand_time_range(epochtime_t begin_timestamp, epochtime_t end_timestamp) {
@@ -43,13 +50,9 @@ void ArchiveMetadata::expand_time_range(epochtime_t begin_timestamp, epochtime_t
 }
 
 void ArchiveMetadata::write_to_file(FileWriter& file_writer) const {
-    file_writer.write_numeric_value(m_archive_format_version);
-    file_writer.write_numeric_value(m_creator_id_len);
-    file_writer.write_string(m_creator_id);
-    file_writer.write_numeric_value(m_creation_idx);
-    file_writer.write_numeric_value(m_uncompressed_size + m_dynamic_uncompressed_size);
-    file_writer.write_numeric_value(m_compressed_size + m_dynamic_uncompressed_size);
-    file_writer.write_numeric_value(m_begin_timestamp);
-    file_writer.write_numeric_value(m_end_timestamp);
+    std::ostringstream buf;
+    msgpack::pack(buf, *this);
+    auto const& string_buf = buf.str();
+    file_writer.write(string_buf.data(), string_buf.size());
 }
 }  // namespace clp::streaming_archive

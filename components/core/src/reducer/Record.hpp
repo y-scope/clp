@@ -18,7 +18,8 @@ class Record {
 public:
     virtual ~Record() = default;
 
-    [[nodiscard]] virtual std::string_view get_string_view([[maybe_unused]] std::string_view key
+    [[nodiscard]] virtual std::string_view get_string_view(
+            [[maybe_unused]] std::string_view key
     ) const {
         return {};
     }

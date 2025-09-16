@@ -7,8 +7,6 @@
 #include <cassert>
 #include <cerrno>
 
-#include <boost/filesystem.hpp>
-
 using std::string;
 
 namespace clp {
@@ -41,6 +39,10 @@ ErrorCode StringReader::try_read(char* buf, size_t num_bytes_to_read, size_t& nu
 }
 
 ErrorCode StringReader::try_seek_from_begin(size_t pos) {
+    if (pos > input_string.size()) {
+        this->pos = input_string.size();
+        return ErrorCode_EndOfFile;
+    }
     this->pos = pos;
     return ErrorCode_Success;
 }

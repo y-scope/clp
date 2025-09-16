@@ -1,15 +1,16 @@
 [project]
-requires-python = ">= 3.8"
+requires-python = ">= 3.9"
 
 [tool.poetry]
 name = "clp-py-utils"
-version = "0.2.0-dev"
+version = "0.5.1-dev"
 description = "Utilities for other Python packages in CLP."
 authors = ["YScope Inc. <dev@yscope.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = "^3.8 || ^3.10"
+python = ">= 3.9"
+boto3 = "^1.35.81"
 # mariadb version must be compatible with libmariadev installed in runtime env.
 # See https://mariadb.com/docs/server/connect/programming-languages/python/install/#Dependencies
 mariadb = "~1.0.11"
@@ -19,6 +20,7 @@ python-dotenv = "^1.0.1"
 python-Levenshtein = "~0.22"
 sqlalchemy = "~2.0"
 PyYAML = "^6.0.1"
+result = "^0.17.0"
 StrEnum = "^0.4.15"
 
 [build-system]

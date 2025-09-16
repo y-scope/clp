@@ -65,6 +65,10 @@ auto BufferReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_byt
 
     auto remaining_data_size = get_remaining_data_size();
     if (0 == remaining_data_size) {
+        if (0 == num_bytes_to_read) {
+            num_bytes_read = 0;
+            return ErrorCode_Success;
+        }
         return ErrorCode_EndOfFile;
     }
 
@@ -89,12 +93,9 @@ auto BufferReader::try_get_pos(size_t& pos) -> ErrorCode {
     return ErrorCode_Success;
 }
 
-auto BufferReader::try_read_to_delimiter(
-        char delim,
-        bool keep_delimiter,
-        bool append,
-        std::string& str
-) -> ErrorCode {
+auto
+BufferReader::try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)
+        -> ErrorCode {
     if (false == append) {
         str.clear();
     }

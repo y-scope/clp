@@ -4,16 +4,12 @@
 #include <utility>
 #include <variant>
 
-#include <simdjson.h>
-
+#include "../clp/Defs.h"
 #include "DictionaryWriter.hpp"
 #include "FileWriter.hpp"
 #include "ParsedMessage.hpp"
 #include "TimestampDictionaryWriter.hpp"
-#include "VariableEncoder.hpp"
 #include "ZstdCompressor.hpp"
-
-using namespace simdjson;
 
 namespace clp_s {
 class BaseColumnWriter {
@@ -27,16 +23,24 @@ public:
     /**
      * Adds a value to the column
      * @param value
-     * @param size
+     * @return the size of the encoded data appended to this column in bytes
      */
-    virtual void add_value(ParsedMessage::variable_t& value, size_t& size) = 0;
+    virtual size_t add_value(ParsedMessage::variable_t& value) = 0;
 
     /**
      * Stores the column to a compressed file.
      * @param compressor
-     * @return the in-memory uncompressed size of the data written to the compressor
      */
-    virtual size_t store(ZstdCompressor& compressor) = 0;
+    virtual void store(ZstdCompressor& compressor) = 0;
+
+    /**
+     * Returns the total size of the header data that will be written to the compressor. This header
+     * size plus the sum of sizes returned by add_value is equal to the total size of data that will
+     * be written to the compressor in bytes.
+     *
+     * @return the total size of header data that will be written to the compressor in bytes
+     */
+    virtual size_t get_total_header_size() const { return 0; }
 
 protected:
     int32_t m_id;
@@ -51,12 +55,30 @@ public:
     ~Int64ColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
+    size_t add_value(ParsedMessage::variable_t& value) override;
 
-    size_t store(ZstdCompressor& compressor) override;
+    void store(ZstdCompressor& compressor) override;
 
 private:
     std::vector<int64_t> m_values;
+};
+
+class DeltaEncodedInt64ColumnWriter : public BaseColumnWriter {
+public:
+    // Constructor
+    explicit DeltaEncodedInt64ColumnWriter(int32_t id) : BaseColumnWriter(id) {}
+
+    // Destructor
+    ~DeltaEncodedInt64ColumnWriter() override = default;
+
+    // Methods inherited from BaseColumnWriter
+    size_t add_value(ParsedMessage::variable_t& value) override;
+
+    void store(ZstdCompressor& compressor) override;
+
+private:
+    std::vector<int64_t> m_values;
+    int64_t m_cur{};
 };
 
 class FloatColumnWriter : public BaseColumnWriter {
@@ -68,9 +90,9 @@ public:
     ~FloatColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
+    size_t add_value(ParsedMessage::variable_t& value) override;
 
-    size_t store(ZstdCompressor& compressor) override;
+    void store(ZstdCompressor& compressor) override;
 
 private:
     std::vector<double> m_values;
@@ -85,9 +107,9 @@ public:
     ~BooleanColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
+    size_t add_value(ParsedMessage::variable_t& value) override;
 
-    size_t store(ZstdCompressor& compressor) override;
+    void store(ZstdCompressor& compressor) override;
 
 private:
     std::vector<uint8_t> m_values;
@@ -95,6 +117,9 @@ private:
 
 class ClpStringColumnWriter : public BaseColumnWriter {
 public:
+    // Types
+    using encoded_log_dict_id_t = uint64_t;
+
     // Constructor
     ClpStringColumnWriter(
             int32_t id,
@@ -109,24 +134,26 @@ public:
     ~ClpStringColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
+    size_t add_value(ParsedMessage::variable_t& value) override;
 
-    size_t store(ZstdCompressor& compressor) override;
+    void store(ZstdCompressor& compressor) override;
+
+    size_t get_total_header_size() const override { return sizeof(size_t); }
 
     /**
      * @param encoded_id
      * @return the encoded log dict id
      */
-    static int64_t get_encoded_log_dict_id(uint64_t encoded_id) {
-        return (int64_t)encoded_id & cLogDictIdMask;
+    static clp::logtype_dictionary_id_t get_encoded_log_dict_id(encoded_log_dict_id_t encoded_id) {
+        return static_cast<clp::logtype_dictionary_id_t>(encoded_id & cLogDictIdMask);
     }
 
     /**
      * @param encoded_id
      * @return The encoded offset
      */
-    static int64_t get_encoded_offset(uint64_t encoded_id) {
-        return ((int64_t)encoded_id & cOffsetMask) >> cOffsetBitPosition;
+    static uint64_t get_encoded_offset(encoded_log_dict_id_t encoded_id) {
+        return (encoded_id & cOffsetMask) >> cOffsetBitPosition;
     }
 
 private:
@@ -136,20 +163,21 @@ private:
      * @param offset
      * @return The encoded log dict id
      */
-    static int64_t encode_log_dict_id(uint64_t id, uint64_t offset) {
-        return ((int64_t)id) | ((int64_t)offset) << cOffsetBitPosition;
+    static encoded_log_dict_id_t
+    encode_log_dict_id(clp::logtype_dictionary_id_t id, uint64_t offset) {
+        return static_cast<encoded_log_dict_id_t>(id) | (offset << cOffsetBitPosition);
     }
 
     static constexpr int cOffsetBitPosition = 24;
-    static constexpr int64_t cLogDictIdMask = ~(-1ULL << cOffsetBitPosition);
-    static constexpr int64_t cOffsetMask = ~cLogDictIdMask;
+    static constexpr uint64_t cLogDictIdMask = (1ULL << cOffsetBitPosition) - 1;
+    static constexpr uint64_t cOffsetMask = ~cLogDictIdMask;
 
     std::shared_ptr<VariableDictionaryWriter> m_var_dict;
     std::shared_ptr<LogTypeDictionaryWriter> m_log_dict;
     LogTypeDictionaryEntry m_logtype_entry;
 
-    std::vector<int64_t> m_logtypes;
-    std::vector<int64_t> m_encoded_vars;
+    std::vector<encoded_log_dict_id_t> m_logtypes;
+    std::vector<clp::encoded_variable_t> m_encoded_vars;
 };
 
 class VariableStringColumnWriter : public BaseColumnWriter {
@@ -163,13 +191,13 @@ public:
     ~VariableStringColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
+    size_t add_value(ParsedMessage::variable_t& value) override;
 
-    size_t store(ZstdCompressor& compressor) override;
+    void store(ZstdCompressor& compressor) override;
 
 private:
     std::shared_ptr<VariableDictionaryWriter> m_var_dict;
-    std::vector<int64_t> m_variables;
+    std::vector<clp::variable_dictionary_id_t> m_var_dict_ids;
 };
 
 class DateStringColumnWriter : public BaseColumnWriter {
@@ -181,9 +209,9 @@ public:
     ~DateStringColumnWriter() override = default;
 
     // Methods inherited from BaseColumnWriter
-    void add_value(ParsedMessage::variable_t& value, size_t& size) override;
+    size_t add_value(ParsedMessage::variable_t& value) override;
 
-    size_t store(ZstdCompressor& compressor) override;
+    void store(ZstdCompressor& compressor) override;
 
 private:
     std::vector<int64_t> m_timestamps;

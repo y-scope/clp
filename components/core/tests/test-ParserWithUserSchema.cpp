@@ -7,8 +7,10 @@
 #include <utility>
 
 #include <boost/filesystem.hpp>
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
 #include <log_surgeon/LogParser.hpp>
+#include <log_surgeon/SchemaParser.hpp>
 
 #include "../src/clp/clp/run.hpp"
 #include "../src/clp/GlobalMySQLMetadataDB.hpp"
@@ -19,18 +21,15 @@ using clp::FileReader;
 using clp::load_lexer_from_file;
 using clp::LogSurgeonReader;
 using log_surgeon::DelimiterStringAST;
-using log_surgeon::LALR1Parser;
 using log_surgeon::lexers::ByteLexer;
 using log_surgeon::LogParser;
 using log_surgeon::ParserAST;
 using log_surgeon::SchemaAST;
-using log_surgeon::SchemaParser;
 using log_surgeon::SchemaVarAST;
 using log_surgeon::Token;
 
 std::unique_ptr<SchemaAST> generate_schema_ast(std::string const& schema_file) {
-    SchemaParser schema_parser;
-    std::unique_ptr<SchemaAST> schema_ast = SchemaParser::try_schema_file(schema_file);
+    std::unique_ptr<SchemaAST> schema_ast = log_surgeon::SchemaParser::try_schema_file(schema_file);
     REQUIRE(schema_ast.get() != nullptr);
     return schema_ast;
 }
@@ -103,7 +102,7 @@ TEST_CASE("Test error for colon missing schema file", "[LALR1Parser][SchemaParse
     std::string file_path = "../tests/test_schema_files/colon_missing_schema.txt";
     REQUIRE_THROWS_WITH(
             generate_schema_ast(file_path),
-            "Schema:3:4: error: expected ':','AlphaNumeric' before ' ' token\n"
+            "Schema:3:4: error: expected '>',':','AlphaNumeric' before ' ' token\n"
             "          int [0-9]+\n"
             "             ^\n"
     );
@@ -157,50 +156,26 @@ TEST_CASE("Test creating log parser without delimiters", "[LALR1Parser][LogParse
 //                   "Specified schema file does not exist.");
 //}
 
-TEST_CASE("Test forward lexer", "[Search]") {
-    ByteLexer forward_lexer;
+TEST_CASE("Test lexer", "[Search]") {
+    ByteLexer lexer;
     std::string schema_file_name = "../tests/test_schema_files/search_schema.txt";
     std::string schema_file_path = boost::filesystem::weakly_canonical(schema_file_name).string();
-    load_lexer_from_file(schema_file_path, false, forward_lexer);
+    load_lexer_from_file(schema_file_path, lexer);
     FileReader file_reader{"../tests/test_search_queries/easy.txt"};
     LogSurgeonReader reader_wrapper(file_reader);
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);
-    forward_lexer.reset();
-    Token token;
-    auto error_code = forward_lexer.scan(parser_input_buffer, token);
+    lexer.reset();
+    auto [error_code, opt_token] = lexer.scan(parser_input_buffer);
     REQUIRE(error_code == log_surgeon::ErrorCode::Success);
-    while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolID::TokenEndID)) {
+    Token token{opt_token.value()};
+    while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolId::TokenEnd)) {
         SPDLOG_INFO("token:" + token.to_string() + "\n");
         SPDLOG_INFO(
-                "token.m_type_ids->back():"
-                + forward_lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n"
+                "token.m_type_ids->back():" + lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n"
         );
-        error_code = forward_lexer.scan(parser_input_buffer, token);
+        auto [error_code, opt_token] = lexer.scan(parser_input_buffer);
         REQUIRE(error_code == log_surgeon::ErrorCode::Success);
-    }
-}
-
-TEST_CASE("Test reverse lexer", "[Search]") {
-    ByteLexer reverse_lexer;
-    std::string schema_file_name = "../tests/test_schema_files/search_schema.txt";
-    std::string schema_file_path = boost::filesystem::weakly_canonical(schema_file_name).string();
-    load_lexer_from_file(schema_file_path, false, reverse_lexer);
-    FileReader file_reader{"../tests/test_search_queries/easy.txt"};
-    LogSurgeonReader reader_wrapper(file_reader);
-    log_surgeon::ParserInputBuffer parser_input_buffer;
-    parser_input_buffer.read_if_safe(reader_wrapper);
-    reverse_lexer.reset();
-    Token token;
-    auto error_code = reverse_lexer.scan(parser_input_buffer, token);
-    REQUIRE(error_code == log_surgeon::ErrorCode::Success);
-    while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolID::TokenEndID)) {
-        SPDLOG_INFO("token:" + token.to_string() + "\n");
-        SPDLOG_INFO(
-                "token.m_type_ids->back():"
-                + reverse_lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n"
-        );
-        error_code = reverse_lexer.scan(parser_input_buffer, token);
-        REQUIRE(error_code == log_surgeon::ErrorCode::Success);
+        token = opt_token.value();
     }
 }

@@ -1,7 +1,9 @@
 #include "SchemaReader.hpp"
 
 #include <stack>
+#include <string>
 
+#include "archive_constants.hpp"
 #include "BufferViewReader.hpp"
 #include "Schema.hpp"
 
@@ -27,6 +29,11 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
             return std::get<int64_t>(static_cast<Int64ColumnReader*>(m_timestamp_column)
                                              ->extract_value(m_cur_message));
         };
+    } else if (m_timestamp_column->get_type() == NodeType::DeltaInteger) {
+        m_get_timestamp = [this]() {
+            return std::get<int64_t>(static_cast<DeltaEncodedInt64ColumnReader*>(m_timestamp_column)
+                                             ->extract_value(m_cur_message));
+        };
     } else if (m_timestamp_column->get_type() == NodeType::Float) {
         m_get_timestamp = [this]() {
             return static_cast<epochtime_t>(
@@ -37,17 +44,17 @@ void SchemaReader::mark_column_as_timestamp(BaseColumnReader* column_reader) {
     }
 }
 
-void SchemaReader::load(ZstdDecompressor& decompressor, size_t uncompressed_size) {
-    if (uncompressed_size > m_table_buffer_size) {
-        m_table_buffer = std::make_unique<char[]>(uncompressed_size);
-        m_table_buffer_size = uncompressed_size;
+int64_t SchemaReader::get_next_log_event_idx() const {
+    if (nullptr != m_log_event_idx_column) {
+        return std::get<int64_t>(m_log_event_idx_column->extract_value(m_cur_message));
     }
-    auto error = decompressor.try_read_exact_length(m_table_buffer.get(), uncompressed_size);
-    if (ErrorCodeSuccess != error) {
-        throw OperationFailed(error, __FILENAME__, __LINE__);
-    }
+    return 0;
+}
 
-    BufferViewReader buffer_reader{m_table_buffer.get(), uncompressed_size};
+void
+SchemaReader::load(std::shared_ptr<char[]> stream_buffer, size_t offset, size_t uncompressed_size) {
+    m_stream_buffer = stream_buffer;
+    BufferViewReader buffer_reader{m_stream_buffer.get() + offset, uncompressed_size};
     for (auto& reader : m_columns) {
         reader->load(buffer_reader, m_num_messages);
     }
@@ -90,7 +97,7 @@ void SchemaReader::generate_json_string() {
             }
             case JsonSerializer::Op::AddIntField: {
                 column = m_reordered_columns[column_id_index++];
-                auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
+                auto name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
                 m_json_serializer.append_key(name);
                 m_json_serializer.append_value(
                         std::to_string(std::get<int64_t>(column->extract_value(m_cur_message)))
@@ -106,7 +113,7 @@ void SchemaReader::generate_json_string() {
             }
             case JsonSerializer::Op::AddFloatField: {
                 column = m_reordered_columns[column_id_index++];
-                auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
+                auto name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
                 m_json_serializer.append_key(name);
                 m_json_serializer.append_value(
                         std::to_string(std::get<double>(column->extract_value(m_cur_message)))
@@ -122,7 +129,7 @@ void SchemaReader::generate_json_string() {
             }
             case JsonSerializer::Op::AddBoolField: {
                 column = m_reordered_columns[column_id_index++];
-                auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
+                auto name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
                 m_json_serializer.append_key(name);
                 m_json_serializer.append_value(
                         std::get<uint8_t>(column->extract_value(m_cur_message)) != 0 ? "true"
@@ -140,7 +147,7 @@ void SchemaReader::generate_json_string() {
             }
             case JsonSerializer::Op::AddStringField: {
                 column = m_reordered_columns[column_id_index++];
-                auto const& name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
+                auto name = m_global_schema_tree->get_node(column->get_id()).get_key_name();
                 m_json_serializer.append_key(name);
                 m_json_serializer.append_value_from_column_with_quotes(column, m_cur_message);
                 break;
@@ -219,9 +226,10 @@ bool SchemaReader::get_next_message(std::string& message, FilterClass* filter) {
     return false;
 }
 
-bool SchemaReader::get_next_message_with_timestamp(
+bool SchemaReader::get_next_message_with_metadata(
         std::string& message,
         epochtime_t& timestamp,
+        int64_t& log_event_idx,
         FilterClass* filter
 ) {
     // TODO: If we already get max_num_results messages, we can skip messages
@@ -245,6 +253,7 @@ bool SchemaReader::get_next_message_with_timestamp(
         }
 
         timestamp = m_get_timestamp();
+        log_event_idx = get_next_log_event_idx();
 
         m_cur_message++;
         return true;
@@ -254,7 +263,11 @@ bool SchemaReader::get_next_message_with_timestamp(
 }
 
 void SchemaReader::initialize_filter(FilterClass* filter) {
-    filter->init(this, m_schema_id, m_columns);
+    filter->init(this, m_columns);
+}
+
+void SchemaReader::initialize_filter_with_column_map(FilterClass* filter) {
+    filter->init(this, m_column_map);
 }
 
 void SchemaReader::generate_local_tree(int32_t global_id) {
@@ -420,6 +433,7 @@ size_t SchemaReader::generate_structured_array_template(
                     m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                     break;
                 }
+                case NodeType::DeltaInteger:
                 case NodeType::Integer: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddIntValue);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
@@ -447,6 +461,7 @@ size_t SchemaReader::generate_structured_array_template(
                 }
                 case NodeType::DateString:
                 case NodeType::UnstructuredArray:
+                case NodeType::Metadata:
                 case NodeType::Unknown:
                     break;
             }
@@ -503,6 +518,7 @@ size_t SchemaReader::generate_structured_object_template(
                     m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                     break;
                 }
+                case NodeType::DeltaInteger:
                 case NodeType::Integer: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
@@ -531,6 +547,7 @@ size_t SchemaReader::generate_structured_object_template(
                 }
                 case NodeType::DateString:
                 case NodeType::UnstructuredArray:
+                case NodeType::Metadata:
                 case NodeType::Unknown:
                     break;
             }
@@ -563,9 +580,13 @@ void SchemaReader::initialize_serializer() {
     }
 
     // TODO: this code will have to change once we allow mixing log lines parsed by different
-    // parsers.
-    if (false == m_local_schema_tree.get_nodes().empty()) {
-        generate_json_template(m_local_schema_tree.get_root_node_id());
+    // parsers and if we add support for serializing auto-generated keys in regular JSON.
+    if (auto subtree_root = m_local_schema_tree.get_object_subtree_node_id_for_namespace(
+                constants::cDefaultNamespace
+        );
+        -1 != subtree_root)
+    {
+        generate_json_template(subtree_root);
     }
 }
 
@@ -576,7 +597,7 @@ void SchemaReader::generate_json_template(int32_t id) {
     for (int32_t child_id : children_ids) {
         int32_t child_global_id = m_local_id_to_global_id[child_id];
         auto const& child_node = m_local_schema_tree.get_node(child_id);
-        std::string const& key = child_node.get_key_name();
+        auto key = child_node.get_key_name();
         switch (child_node.get_type()) {
             case NodeType::Object: {
                 m_json_serializer.add_op(JsonSerializer::Op::BeginObject);
@@ -606,6 +627,7 @@ void SchemaReader::generate_json_template(int32_t id) {
                 m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                 break;
             }
+            case NodeType::DeltaInteger:
             case NodeType::Integer: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
@@ -633,6 +655,7 @@ void SchemaReader::generate_json_template(int32_t id) {
                 m_json_serializer.add_special_key(key);
                 break;
             }
+            case NodeType::Metadata:
             case NodeType::Unknown:
                 break;
         }

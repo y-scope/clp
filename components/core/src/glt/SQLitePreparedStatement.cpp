@@ -47,7 +47,8 @@ SQLitePreparedStatement::SQLitePreparedStatement(SQLitePreparedStatement&& rhs) 
     *this = std::move(rhs);
 }
 
-SQLitePreparedStatement& SQLitePreparedStatement::operator=(SQLitePreparedStatement&& rhs
+SQLitePreparedStatement& SQLitePreparedStatement::operator=(
+        SQLitePreparedStatement&& rhs
 ) noexcept {
     if (this != &rhs) {
         if (nullptr != m_statement_handle) {

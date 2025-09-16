@@ -13,8 +13,8 @@ namespace clp::ffi {
  * @return The escaped string on success.
  * @return std::nullopt if the string contains any non-UTF-8-encoded byte sequences.
  */
-[[nodiscard]] auto validate_and_escape_utf8_string(std::string_view raw
-) -> std::optional<std::string>;
+[[nodiscard]] auto validate_and_escape_utf8_string(std::string_view raw)
+        -> std::optional<std::string>;
 
 /**
  * Validates whether `src` is UTF-8 encoded, and appends `src` to `dst` while escaping any
@@ -24,8 +24,8 @@ namespace clp::ffi {
  * @return Whether `src` is a valid UTF-8-encoded string. NOTE: Even if `src` is not UTF-8 encoded,
  * `dst` may be modified.
  */
-[[nodiscard]] auto
-validate_and_append_escaped_utf8_string(std::string_view src, std::string& dst) -> bool;
+[[nodiscard]] auto validate_and_append_escaped_utf8_string(std::string_view src, std::string& dst)
+        -> bool;
 }  // namespace clp::ffi
 
 #endif  // CLP_FFI_UTILS_HPP

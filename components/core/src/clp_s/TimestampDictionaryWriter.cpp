@@ -1,63 +1,34 @@
 #include "TimestampDictionaryWriter.hpp"
 
-#include "Utils.hpp"
+#include <cstdint>
+#include <sstream>
+#include <string_view>
 
 namespace clp_s {
 void TimestampDictionaryWriter::write_timestamp_entries(
         std::map<std::string, TimestampEntry> const& ranges,
-        ZstdCompressor& compressor
+        std::stringstream& stream
 ) {
-    compressor.write_numeric_value<uint64_t>(ranges.size());
+    write_numeric_value<uint64_t>(stream, ranges.size());
 
     for (auto const& range : ranges) {
-        range.second.write_to_file(compressor);
+        range.second.write_to_stream(stream);
     }
 }
 
-void TimestampDictionaryWriter::write_and_flush_to_disk() {
-    write_timestamp_entries(m_column_key_to_range, m_dictionary_compressor);
+void TimestampDictionaryWriter::write(std::stringstream& stream) {
+    merge_range();
+    write_timestamp_entries(m_column_key_to_range, stream);
 
-    m_dictionary_compressor.write_numeric_value<uint64_t>(m_pattern_to_id.size());
+    write_numeric_value<uint64_t>(stream, m_pattern_to_id.size());
     for (auto& it : m_pattern_to_id) {
         // write pattern ID
-        m_dictionary_compressor.write_numeric_value<uint64_t>(it.second);
+        write_numeric_value<uint64_t>(stream, it.second);
 
         std::string const& pattern = it.first->get_format();
-        m_dictionary_compressor.write_numeric_value<uint64_t>(pattern.length());
-        m_dictionary_compressor.write_string(pattern);
+        write_numeric_value<uint64_t>(stream, pattern.length());
+        stream.write(pattern.data(), pattern.size());
     }
-
-    m_dictionary_compressor.flush();
-    m_dictionary_file_writer.flush();
-}
-
-void TimestampDictionaryWriter::open(std::string const& dictionary_path, int compression_level) {
-    if (m_is_open) {
-        throw OperationFailed(ErrorCodeNotReady, __FILENAME__, __LINE__);
-    }
-
-    m_dictionary_file_writer.open(dictionary_path, FileWriter::OpenMode::CreateForWriting);
-    m_dictionary_compressor.open(m_dictionary_file_writer, compression_level);
-
-    m_next_id = 0;
-    m_is_open = true;
-}
-
-size_t TimestampDictionaryWriter::close() {
-    if (false == m_is_open) {
-        throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
-    }
-
-    // merge before writing overall archive because this
-    // happens before the last sub-archive is written
-    merge_range();
-    write_and_flush_to_disk();
-    m_dictionary_compressor.close();
-    size_t compressed_size = m_dictionary_file_writer.get_pos();
-    m_dictionary_file_writer.close();
-
-    m_is_open = false;
-    return compressed_size;
 }
 
 uint64_t TimestampDictionaryWriter::get_pattern_id(TimestampPattern const* pattern) {
@@ -71,9 +42,9 @@ uint64_t TimestampDictionaryWriter::get_pattern_id(TimestampPattern const* patte
 }
 
 epochtime_t TimestampDictionaryWriter::ingest_entry(
-        std::string const& key,
+        std::string_view key,
         int32_t node_id,
-        std::string const& timestamp,
+        std::string_view timestamp,
         uint64_t& pattern_id
 ) {
     epochtime_t ret;
@@ -116,11 +87,8 @@ epochtime_t TimestampDictionaryWriter::ingest_entry(
     return ret;
 }
 
-void TimestampDictionaryWriter::ingest_entry(
-        std::string const& key,
-        int32_t node_id,
-        double timestamp
-) {
+void
+TimestampDictionaryWriter::ingest_entry(std::string_view key, int32_t node_id, double timestamp) {
     auto entry = m_column_id_to_range.find(node_id);
     if (entry == m_column_id_to_range.end()) {
         TimestampEntry new_entry(key);
@@ -131,11 +99,8 @@ void TimestampDictionaryWriter::ingest_entry(
     }
 }
 
-void TimestampDictionaryWriter::ingest_entry(
-        std::string const& key,
-        int32_t node_id,
-        int64_t timestamp
-) {
+void
+TimestampDictionaryWriter::ingest_entry(std::string_view key, int32_t node_id, int64_t timestamp) {
     auto entry = m_column_id_to_range.find(node_id);
     if (entry == m_column_id_to_range.end()) {
         TimestampEntry new_entry(key);
@@ -179,5 +144,12 @@ epochtime_t TimestampDictionaryWriter::get_end_timestamp() const {
     }
 
     return it->second.get_end_timestamp();
+}
+
+void TimestampDictionaryWriter::clear() {
+    m_next_id = 0;
+    m_pattern_to_id.clear();
+    m_column_key_to_range.clear();
+    m_column_id_to_range.clear();
 }
 }  // namespace clp_s

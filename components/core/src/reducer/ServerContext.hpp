@@ -5,9 +5,9 @@
 #include <set>
 
 #include <boost/asio.hpp>
-#include <json/single_include/nlohmann/json.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/collection.hpp>
+#include <nlohmann/json.hpp>
 
 #include "../clp/TraceableException.hpp"
 #include "CommandLineArguments.hpp"
@@ -179,7 +179,6 @@ private:
     mongocxx::database m_mongodb_results_database;
     mongocxx::collection m_mongodb_results_collection;
 };
-
 }  // namespace reducer
 
 #endif  // REDUCER_SERVERCONTEXT_HPP

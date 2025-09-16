@@ -1,0 +1,54 @@
+name: "run-on-image"
+description: "Runs a command inside a downloaded/published container image with the repo mounted"
+
+inputs:
+  image_name:
+    description: "Name of the container image (without registry or repository) to use"
+    required: true
+  use_published_image:
+    description: "Whether to use the published container image"
+    required: true
+  run_command:
+    description: "Command to execute"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - if: "inputs.use_published_image == 'false'"
+      uses: "actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e"
+      with:
+        name: "${{inputs.image_name}}"
+        path: "/tmp"
+
+    - if: "inputs.use_published_image == 'false'"
+      name: "Load image"
+      run: "docker load --input '/tmp/${{inputs.image_name}}.tar'"
+      shell: "bash"
+
+    - id: "get_image_props"
+      run: |
+        if [[ "${{inputs.use_published_image}}" == "true" ]] ; then
+          # Docker doesn't support repository names with uppercase characters, so we convert to
+          # lowercase here.
+          repository=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')
+          echo "qualified_image_name=ghcr.io/${repository}/${{inputs.image_name}}:main" \
+            >> "$GITHUB_OUTPUT"
+        else
+          echo "qualified_image_name=${{inputs.image_name}}:latest" >> "$GITHUB_OUTPUT"
+        fi
+      shell: "bash"
+
+    - run: "./tools/scripts/deps-download/init.sh"
+      shell: "bash"
+
+    # `--env npm_config_cache` overrides the default `/.npm` to avoid permission issues.
+    - run: >-
+        docker run
+        --user $(id -u):$(id -g)
+        --env npm_config_cache=/tmp/.npm
+        --volume "$GITHUB_WORKSPACE":/mnt/repo
+        --workdir /mnt/repo
+        ${{steps.get_image_props.outputs.qualified_image_name}}
+        bash -c "${{inputs.run_command}}"
+      shell: "bash"

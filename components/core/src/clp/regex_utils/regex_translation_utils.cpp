@@ -4,18 +4,19 @@
 #include <optional>
 #include <string>
 #include <string_view>
-#include <system_error>
 
-#include <outcome/single-header/outcome.hpp>
+#include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
-#include "regex_utils/constants.hpp"
-#include "regex_utils/ErrorCode.hpp"
-#include "regex_utils/RegexToWildcardTranslatorConfig.hpp"
+#include "constants.hpp"
+#include "ErrorCode.hpp"
+#include "RegexToWildcardTranslatorConfig.hpp"
 
 namespace clp::regex_utils {
+using clp::string_utils::cSingleCharWildcard;
+using clp::string_utils::cZeroOrMoreCharsWildcard;
 using clp::string_utils::is_alphabet;
-using std::error_code;
 using std::optional;
 using std::string;
 using std::string_view;
@@ -91,7 +92,7 @@ using StateTransitionFuncSig
         = auto(TranslatorState& state,
                string_view::const_iterator& it,
                string& wildcard_str,
-               RegexToWildcardTranslatorConfig const& config) -> error_code;
+               RegexToWildcardTranslatorConfig const& config) -> ErrorCode;
 
 /**
  * Treats each character literally and directly append it to the wildcard string, unless it is a
@@ -173,7 +174,7 @@ auto normal_state_transition(
         string_view::const_iterator& it,
         string& wildcard_str,
         [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
-) -> error_code {
+) -> ErrorCode {
     auto const ch{*it};
     switch (ch) {
         case '.':
@@ -190,22 +191,22 @@ auto normal_state_transition(
             state.set_next_state(TranslatorState::RegexPatternState::End);
             break;
         case cRegexZeroOrMore:
-            return ErrorCode::UntranslatableStar;
+            return ErrorCodeEnum::UntranslatableStar;
         case cRegexOneOrMore:
-            return ErrorCode::UntranslatablePlus;
+            return ErrorCodeEnum::UntranslatablePlus;
         case cRegexZeroOrOne:
-            return ErrorCode::UnsupportedQuestionMark;
+            return ErrorCodeEnum::UnsupportedQuestionMark;
         case '|':
-            return ErrorCode::UnsupportedPipe;
+            return ErrorCodeEnum::UnsupportedPipe;
         case cRegexStartAnchor:
-            return ErrorCode::IllegalCaret;
+            return ErrorCodeEnum::IllegalCaret;
         case ')':
-            return ErrorCode::UnmatchedParenthesis;
+            return ErrorCodeEnum::UnmatchedParenthesis;
         default:
             wildcard_str += ch;
             break;
     }
-    return ErrorCode::Success;
+    return ErrorCodeEnum::Success;
 }
 
 auto dot_state_transition(
@@ -213,7 +214,7 @@ auto dot_state_transition(
         string_view::const_iterator& it,
         string& wildcard_str,
         [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
-) -> error_code {
+) -> ErrorCode {
     switch (*it) {
         case cZeroOrMoreCharsWildcard:
             wildcard_str += cZeroOrMoreCharsWildcard;
@@ -228,7 +229,7 @@ auto dot_state_transition(
             break;
     }
     state.set_next_state(TranslatorState::RegexPatternState::Normal);
-    return ErrorCode::Success;
+    return ErrorCodeEnum::Success;
 }
 
 auto escaped_state_transition(
@@ -236,14 +237,14 @@ auto escaped_state_transition(
         string_view::const_iterator& it,
         string& wildcard_str,
         [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
-) -> error_code {
+) -> ErrorCode {
     auto const ch{*it};
     if (false == cRegexEscapeSeqMetaCharsLut.at(ch)) {
-        return ErrorCode::IllegalEscapeSequence;
+        return ErrorCodeEnum::IllegalEscapeSequence;
     }
     append_char_to_wildcard(ch, wildcard_str);
     state.set_next_state(TranslatorState::RegexPatternState::Normal);
-    return ErrorCode::Success;
+    return ErrorCodeEnum::Success;
 }
 
 auto charset_state_transition(
@@ -251,25 +252,25 @@ auto charset_state_transition(
         string_view::const_iterator& it,
         string& wildcard_str,
         RegexToWildcardTranslatorConfig const& config
-) -> error_code {
+) -> ErrorCode {
     auto const charset_begin_it_opt{state.get_charset_begin_it()};
     if (false == charset_begin_it_opt.has_value()) {
-        return ErrorCode::IllegalState;
+        return ErrorCodeEnum::IllegalState;
     }
     string_view::const_iterator const charset_begin_it = charset_begin_it_opt.value();
 
     auto const ch{*it};
     if (cEscapeChar == ch) {
         state.set_next_state(TranslatorState::RegexPatternState::CharsetEscaped);
-        return ErrorCode::Success;
+        return ErrorCodeEnum::Success;
     }
     if (']' != ch) {
-        return ErrorCode::Success;
+        return ErrorCodeEnum::Success;
     }
 
     auto const charset_len{it - charset_begin_it};
     if (0 == charset_len || charset_len > 2) {
-        return ErrorCode::UnsupportedCharsetPattern;
+        return ErrorCodeEnum::UnsupportedCharsetPattern;
     }
 
     auto const ch0{*charset_begin_it};
@@ -278,7 +279,7 @@ auto charset_state_transition(
 
     if (1 == charset_len) {
         if (cCharsetNegate == ch0 || cEscapeChar == ch0) {
-            return ErrorCode::UnsupportedCharsetPattern;
+            return ErrorCodeEnum::UnsupportedCharsetPattern;
         }
         parsed_char = ch0;
     } else {  // 2 == charset_len
@@ -287,14 +288,14 @@ auto charset_state_transition(
         } else if (config.case_insensitive_wildcard() && is_same_char_opposite_case(ch0, ch1)) {
             parsed_char = ch0 > ch1 ? ch0 : ch1;  // choose the lower case character
         } else {
-            return ErrorCode::UnsupportedCharsetPattern;
+            return ErrorCodeEnum::UnsupportedCharsetPattern;
         }
     }
 
     append_char_to_wildcard(parsed_char, wildcard_str);
     state.invalidate_charset_begin_it();
     state.set_next_state(TranslatorState::RegexPatternState::Normal);
-    return ErrorCode::Success;
+    return ErrorCodeEnum::Success;
 }
 
 auto charset_escaped_state_transition(
@@ -302,9 +303,9 @@ auto charset_escaped_state_transition(
         [[maybe_unused]] string_view::const_iterator& it,
         [[maybe_unused]] string& wildcard_str,
         [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
-) -> error_code {
+) -> ErrorCode {
     state.set_next_state(TranslatorState::RegexPatternState::Charset);
-    return ErrorCode::Success;
+    return ErrorCodeEnum::Success;
 }
 
 auto end_state_transition(
@@ -312,11 +313,11 @@ auto end_state_transition(
         string_view::const_iterator& it,
         [[maybe_unused]] string& wildcard_str,
         [[maybe_unused]] RegexToWildcardTranslatorConfig const& config
-) -> error_code {
+) -> ErrorCode {
     if (cRegexEndAnchor != *it) {
-        return ErrorCode::IllegalDollarSign;
+        return ErrorCodeEnum::IllegalDollarSign;
     }
-    return ErrorCode::Success;
+    return ErrorCodeEnum::Success;
 }
 
 auto final_state_cleanup(
@@ -324,7 +325,7 @@ auto final_state_cleanup(
         [[maybe_unused]] string_view::const_iterator& it,
         string& wildcard_str,
         RegexToWildcardTranslatorConfig const& config
-) -> error_code {
+) -> ErrorCode {
     switch (state.get_state()) {
         case TranslatorState::RegexPatternState::Dot:
             // The last character is a single `.`, without the possibility of becoming a
@@ -333,7 +334,7 @@ auto final_state_cleanup(
             break;
         case TranslatorState::RegexPatternState::Charset:
         case TranslatorState::RegexPatternState::CharsetEscaped:
-            return ErrorCode::IncompleteCharsetStructure;
+            return ErrorCodeEnum::IncompleteCharsetStructure;
         default:
             break;
     }
@@ -343,7 +344,7 @@ auto final_state_cleanup(
     {
         wildcard_str += cZeroOrMoreCharsWildcard;
     }
-    return ErrorCode::Success;
+    return ErrorCodeEnum::Success;
 }
 
 auto append_char_to_wildcard(char ch, string& wildcard_str) -> void {
@@ -361,7 +362,7 @@ auto is_same_char_opposite_case(char ch0, char ch1) -> bool {
 }
 }  // namespace
 
-auto regex_to_wildcard(string_view regex_str) -> OUTCOME_V2_NAMESPACE::std_result<string> {
+auto regex_to_wildcard(string_view regex_str) -> ystdlib::error_handling::Result<string> {
     return regex_to_wildcard(
             regex_str,
             {/*case_insensitive_wildcard=*/false, /*add_prefix_suffix_wildcards=*/false}
@@ -369,7 +370,7 @@ auto regex_to_wildcard(string_view regex_str) -> OUTCOME_V2_NAMESPACE::std_resul
 }
 
 auto regex_to_wildcard(string_view regex_str, RegexToWildcardTranslatorConfig const& config)
-        -> OUTCOME_V2_NAMESPACE::std_result<string> {
+        -> ystdlib::error_handling::Result<string> {
     if (regex_str.empty()) {
         return string{};
     }
@@ -385,7 +386,7 @@ auto regex_to_wildcard(string_view regex_str, RegexToWildcardTranslatorConfig co
         wildcard_str += cZeroOrMoreCharsWildcard;
     }
 
-    error_code ec{};
+    ErrorCode ec{ErrorCodeEnum::Success};
     while (it != regex_str.cend()) {
         switch (state.get_state()) {
             case TranslatorState::RegexPatternState::Normal:
@@ -407,17 +408,17 @@ auto regex_to_wildcard(string_view regex_str, RegexToWildcardTranslatorConfig co
                 ec = end_state_transition(state, it, wildcard_str, config);
                 break;
             default:
-                ec = ErrorCode::IllegalState;
+                ec = ErrorCodeEnum::IllegalState;
                 break;
         }
-        if (ec) {
+        if (ec.get_error() != ErrorCodeEnum::Success) {
             return ec;
         }
         ++it;
     }
 
     ec = final_state_cleanup(state, it, wildcard_str, config);
-    if (ec) {
+    if (ec.get_error() != ErrorCodeEnum::Success) {
         return ec;
     }
     return wildcard_str;

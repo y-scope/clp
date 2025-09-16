@@ -7,8 +7,9 @@
 #include <string_view>
 #include <vector>
 
-#include <Catch2/single_include/catch2/catch.hpp>
-#include <json/single_include/nlohmann/json.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
+#include <nlohmann/json.hpp>
 
 #include "../src/clp/ffi/utils.hpp"
 #include "../src/clp/utf8_utils.hpp"
@@ -31,8 +32,8 @@ namespace {
  * @param num_continuation_bytes
  * @return The encoded UTF-8 byte sequence.
  */
-[[nodiscard]] auto
-generate_utf8_byte_sequence(uint32_t code_point, size_t num_continuation_bytes) -> std::string;
+[[nodiscard]] auto generate_utf8_byte_sequence(uint32_t code_point, size_t num_continuation_bytes)
+        -> std::string;
 
 auto get_expected_escaped_string(std::string_view raw) -> std::string {
     nlohmann::json const json_str = raw;  // Don't use '{}' initializer
@@ -47,10 +48,12 @@ auto generate_utf8_byte_sequence(uint32_t code_point, size_t num_continuation_by
     std::vector<char> encoded_bytes;
     while (encoded_bytes.size() < num_continuation_bytes) {
         auto const least_significant_byte{static_cast<uint8_t>(code_point)};
-        encoded_bytes.push_back(static_cast<char>(
-                (least_significant_byte & ~clp::cUtf8ContinuationByteMask)
-                | clp::cUtf8ContinuationByteHeader
-        ));
+        encoded_bytes.push_back(
+                static_cast<char>(
+                        (least_significant_byte & ~clp::cUtf8ContinuationByteMask)
+                        | clp::cUtf8ContinuationByteHeader
+                )
+        );
         code_point >>= clp::cUtf8NumContinuationByteCodePointBits;
     }
 
@@ -66,9 +69,12 @@ auto generate_utf8_byte_sequence(uint32_t code_point, size_t num_continuation_by
         lead_byte_code_point_mask = static_cast<uint8_t>(~clp::cFourByteUtf8CharHeaderMask);
         lead_byte_header = clp::cFourByteUtf8CharHeader;
     }
-    encoded_bytes.push_back(static_cast<char>(
-            (static_cast<uint8_t>(code_point) & lead_byte_code_point_mask) | lead_byte_header
-    ));
+    encoded_bytes.push_back(
+            static_cast<char>(
+                    (static_cast<uint8_t>(code_point) & lead_byte_code_point_mask)
+                    | lead_byte_header
+            )
+    );
 
     return {encoded_bytes.rbegin(), encoded_bytes.rend()};
 }

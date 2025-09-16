@@ -37,8 +37,7 @@ void Archive::open(string const& path) {
     string metadata_file_path = path + '/' + cMetadataFileName;
     archive_format_version_t format_version{};
     try {
-        FileReader file_reader{metadata_file_path};
-        ArchiveMetadata const metadata{file_reader};
+        auto const metadata = ArchiveMetadata::create_from_file(metadata_file_path);
         format_version = metadata.get_archive_format_version();
     } catch (TraceableException& traceable_exception) {
         auto error_code = traceable_exception.get_error_code();
@@ -65,7 +64,7 @@ void Archive::open(string const& path) {
     }
 
     // Check archive matches format version
-    if (cArchiveFormatVersion != format_version) {
+    if (cArchiveFormatVersion::Version != format_version) {
         SPDLOG_ERROR("streaming_archive::reader::Archive: Archive uses an unsupported format.");
         throw OperationFailed(ErrorCode_BadParam, __FILENAME__, __LINE__);
     }
@@ -161,11 +160,8 @@ bool Archive::get_next_message(File& file, Message& msg) {
     return file.get_next_message(msg);
 }
 
-bool Archive::decompress_message(
-        File& file,
-        Message const& compressed_msg,
-        string& decompressed_msg
-) {
+bool
+Archive::decompress_message(File& file, Message const& compressed_msg, string& decompressed_msg) {
     if (false == decompress_message_without_ts(compressed_msg, decompressed_msg)) {
         return false;
     }
@@ -198,10 +194,8 @@ bool Archive::decompress_message(
     return true;
 }
 
-bool Archive::decompress_message_without_ts(
-        Message const& compressed_msg,
-        string& decompressed_msg
-) {
+bool
+Archive::decompress_message_without_ts(Message const& compressed_msg, string& decompressed_msg) {
     decompressed_msg.clear();
 
     // Build original message content

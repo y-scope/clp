@@ -2,15 +2,14 @@
 #define CLP_REGEX_UTILS_ERRORCODE_HPP
 
 #include <cstdint>
-#include <system_error>
-#include <type_traits>
+
+#include <ystdlib/error_handling/ErrorCode.hpp>
 
 namespace clp::regex_utils {
 /**
  * Enum class for propagating and handling various regex utility errors.
- * More detailed descriptions can be found in ErrorCode.cpp.
  */
-enum class ErrorCode : uint8_t {
+enum class ErrorCodeEnum : uint8_t {
     Success = 0,
     IllegalState,
     UntranslatableStar,
@@ -25,18 +24,9 @@ enum class ErrorCode : uint8_t {
     UnsupportedCharsetPattern,
 };
 
-/**
- * Wrapper function to turn a regular enum class into an std::error_code.
- *
- * @param An error code enum.
- * @return The corresponding std::error_code type variable.
- */
-[[nodiscard]] auto make_error_code(ErrorCode ec) -> std::error_code;
+using ErrorCode = ystdlib::error_handling::ErrorCode<ErrorCodeEnum>;
 }  // namespace clp::regex_utils
 
-namespace std {
-template <>
-struct is_error_code_enum<clp::regex_utils::ErrorCode> : true_type {};
-}  // namespace std
+YSTDLIB_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(clp::regex_utils::ErrorCodeEnum);
 
 #endif  // CLP_REGEX_UTILS_ERRORCODE_HPP

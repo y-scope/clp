@@ -1,4 +1,3 @@
-docs/
+# Dependencies
 node_modules/
-
-linter/package-lock.json
+yscope-log-viewer/

@@ -1,0 +1,54 @@
+name: "clp-s-generated-code-checks"
+
+on:
+  pull_request:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
+jobs:
+  antlr-code-committed:
+    name: "antlr-code-committed"
+    strategy:
+      matrix:
+        os:
+          - "macos-15"
+          - "ubuntu-24.04"
+    runs-on: "${{matrix.os}}"
+    steps:
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
+        with:
+          submodules: "recursive"
+
+      - name: "Set up Java"
+        uses: "actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00"
+        with:
+          distribution: "temurin"
+          java-version: "11"
+
+      - name: "Install task"
+        shell: "bash"
+        run: "npm install -g @go-task/cli"
+
+      - if: "matrix.os == 'macos-15'"
+        name: "Install coreutils (for md5sum)"
+        run: "brew install coreutils"
+
+      - name: "Generate parsers"
+        shell: "bash"
+        run: "task codegen:clp-s-generate-parsers"
+
+      - name: "Check if the generated parsers are the latest"
+        shell: "bash"
+        run:
+          |
+          git status --porcelain \
+            components/core/src/clp_s/search/kql/generated \
+            components/core/src/clp_s/search/sql/generated \
+            | grep . > /dev/null \
+              && exit 1 \
+              || exit 0

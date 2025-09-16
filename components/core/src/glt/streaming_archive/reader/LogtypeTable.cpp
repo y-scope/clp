@@ -4,7 +4,6 @@
 #include <boost/filesystem.hpp>
 
 namespace glt::streaming_archive::reader {
-
 void LogtypeTable::open_and_load_all(char const* buffer, LogtypeMetadata const& metadata) {
     open(buffer, metadata);
     load_all();

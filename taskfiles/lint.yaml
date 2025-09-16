@@ -1,0 +1,816 @@
+version: "3"
+
+vars:
+  # Ignore https://github.com/msgpack/msgpack-c/issues/1098
+  G_CLANG_TIDY_LINE_FILTER_IGNORE_MSGPACK_1098: >-
+    {\"name\":\"cpp11_zone.hpp\",\"lines\":[[197,197]]}
+  G_LINT_CLANG_TIDY_DIR: "{{.G_BUILD_DIR}}/lint-clang-tidy"
+  G_LINT_VENV_DIR: "{{.G_BUILD_DIR}}/lint-venv"
+
+tasks:
+  check:
+    cmds:
+      - task: "check-cpp-full"
+      - task: "check-js"
+      - task: "check-py"
+      - task: "check-yaml"
+
+  check-cpp-diff:
+    cmds:
+      - task: "check-cpp-format"
+      - task: "check-cpp-static-diff"
+
+  check-cpp-full:
+    cmds:
+      - task: "check-cpp-format"
+      - task: "check-cpp-static-full"
+
+  check-no-cpp:
+    cmds:
+      - task: "check-js"
+      - task: "check-py"
+      - task: "check-yaml"
+
+  fix:
+    cmds:
+      - task: "fix-cpp-full"
+      - task: "fix-js"
+      - task: "fix-py"
+      - task: "fix-yaml"
+
+  fix-cpp-diff:
+    cmds:
+      - task: "fix-cpp-format"
+      - task: "fix-cpp-static-diff"
+
+  fix-cpp-full:
+    cmds:
+      - task: "fix-cpp-format"
+      - task: "fix-cpp-static-full"
+
+  fix-no-cpp:
+    cmds:
+      - task: "fix-js"
+      - task: "fix-py"
+      - task: "fix-yaml"
+
+  check-js:
+    sources: &js_source_files
+      - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
+      - "{{.G_WEBUI_SRC_DIR}}/**/*"
+      - exclude: "{{.G_WEBUI_SRC_DIR}}/**/dist/*"
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.TASKFILE}}"
+    cmds:
+      - task: "js"
+        vars:
+          LINT_CMD: "check"
+
+  fix-js:
+    sources: *js_source_files
+    cmds:
+      - task: "js"
+        vars:
+          LINT_CMD: "fix"
+
+  check-py:
+    cmds:
+      - task: "py"
+        vars:
+          BLACK_FLAGS: "--check --diff"
+          RUFF_CHECK_FLAGS: ""
+          RUFF_FORMAT_FLAGS: "--diff"
+
+  fix-py:
+    cmds:
+      - task: "py"
+        vars:
+          BLACK_FLAGS: ""
+          RUFF_CHECK_FLAGS: "--fix"
+          RUFF_FORMAT_FLAGS: ""
+
+  yaml:
+    aliases:
+      - "check-yaml"
+      - "fix-yaml"
+    deps: ["venv"]
+    cmds:
+      - |-
+        . "{{.G_LINT_VENV_DIR}}/bin/activate"
+        yamllint --strict \
+          .github \
+          .yamllint.yml \
+          components/core/.clang-format \
+          components/core/config \
+          components/core/tools/ \
+          components/package-template/src/etc \
+          docs \
+          taskfile.yaml \
+          taskfiles \
+          tools/deployment
+
+  check-cpp-format:
+    sources: &cpp_source_files
+      - "{{.ROOT_DIR}}/.clang-format"
+      - "{{.ROOT_DIR}}/.clang-tidy"
+      - "{{.TASKFILE}}"
+      - "{{.G_CORE_COMPONENT_DIR}}/.clang-format"
+      - "{{.G_CORE_COMPONENT_DIR}}/src/**/*"
+      - "{{.G_CORE_COMPONENT_DIR}}/tests/**/*"
+    deps: ["cpp-lint-configs", "venv"]
+    cmds:
+      - task: ":utils:cpp-lint:clang-format"
+        vars:
+          EXCLUDE_PATTERNS: &cpp_exclude_patterns
+            - "clp_s/search/kql/generated/*"
+            - "clp_s/search/sql/generated/*"
+          FLAGS: ["--dry-run"]
+          INCLUDE_FILENAME_PATTERNS: &cpp_include_filename_patterns
+            - "*.cpp"
+            - "*.h"
+            - "*.hpp"
+            - "*.inc"
+          ROOT_PATHS: &cpp_root_paths
+            - "{{.G_CORE_COMPONENT_DIR}}/src"
+            - "{{.G_CORE_COMPONENT_DIR}}/tests"
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
+
+  fix-cpp-format:
+    sources: *cpp_source_files
+    deps: ["cpp-lint-configs", "venv"]
+    cmds:
+      - task: ":utils:cpp-lint:clang-format"
+        vars:
+          EXCLUDE_PATTERNS: *cpp_exclude_patterns
+          FLAGS: ["-i"]
+          INCLUDE_FILENAME_PATTERNS: *cpp_include_filename_patterns
+          ROOT_PATHS: *cpp_root_paths
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
+
+  cpp-lint-configs:
+    internal: true
+    cmd: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/symlink-cpp-lint-configs.sh"
+
+  check-cpp-static-diff:
+    # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
+    aliases: ["fix-cpp-static-diff"]
+    sources: *cpp_source_files
+    deps:
+      - ":core-generate"
+      - "cpp-lint-configs"
+      - "venv"
+    cmds:
+      - task: ":utils:cpp-lint:clang-tidy-diff"
+        vars:
+          FLAGS:
+            - "--config-file '{{.ROOT_DIR}}/.clang-tidy'"
+            - >-
+              --line-filter "[{{.G_CLANG_TIDY_LINE_FILTER_IGNORE_MSGPACK_1098}}]"
+            - "-p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
+          OUTPUT_DIR: "{{.G_LINT_CLANG_TIDY_DIR}}"
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
+
+  check-cpp-static-full:
+    # NOTE: We alias the fix task until we determine which clang-tidy fixes can be applied safely.
+    aliases: ["fix-cpp-static-full"]
+    sources: *cpp_source_files
+    deps:
+      - ":core-generate"
+      - "cpp-lint-configs"
+      - "venv"
+    cmds:
+      - task: ":utils:cpp-lint:clang-tidy-find"
+        vars:
+          # NOTE:
+          #
+          # - We don't lint `.inc` files because they result in false positives due to circular
+          #   includes, and we plan to remove them going forward.
+          # - The only error in the following files is a circular include due to including
+          #   decoding_methods.hpp (decoding_methods.hpp and decoding_methods.inc include each
+          #   other); the files should be removed from the exclude list once decoding_methods.inc
+          #   is removed:
+          #   - src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
+          #   - src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
+          #   - src/clp/ir/EncodedTextAst.cpp
+          # yamllint disable rule:line-length
+          EXCLUDE_PATTERNS:
+            # Sources
+            - "clp/ArrayBackedPosIntSet.hpp"
+            - "clp/aws/AwsAuthenticationSigner.cpp"
+            - "clp/BufferedFileReader.cpp"
+            - "clp/BufferedFileReader.hpp"
+            - "clp/BufferReader.cpp"
+            - "clp/BufferReader.hpp"
+            - "clp/clg/clg.cpp"
+            - "clp/clg/CommandLineArguments.cpp"
+            - "clp/clg/CommandLineArguments.hpp"
+            - "clp/cli_utils.cpp"
+            - "clp/clo/clo.cpp"
+            - "clp/clo/CommandLineArguments.cpp"
+            - "clp/clo/CommandLineArguments.hpp"
+            - "clp/clo/constants.hpp"
+            - "clp/clo/OutputHandler.cpp"
+            - "clp/clo/OutputHandler.hpp"
+            - "clp/clp/clp.cpp"
+            - "clp/clp/CommandLineArguments.cpp"
+            - "clp/clp/CommandLineArguments.hpp"
+            - "clp/clp/compression.cpp"
+            - "clp/clp/compression.hpp"
+            - "clp/clp/decompression.cpp"
+            - "clp/clp/decompression.hpp"
+            - "clp/clp/FileCompressor.cpp"
+            - "clp/clp/FileCompressor.hpp"
+            - "clp/clp/FileDecompressor.cpp"
+            - "clp/clp/FileDecompressor.hpp"
+            - "clp/clp/FileToCompress.hpp"
+            - "clp/clp/run.cpp"
+            - "clp/clp/run.hpp"
+            - "clp/clp/utils.cpp"
+            - "clp/clp/utils.hpp"
+            - "clp/CommandLineArgumentsBase.hpp"
+            - "clp/CurlDownloadHandler.cpp"
+            - "clp/CurlDownloadHandler.hpp"
+            - "clp/CurlEasyHandle.hpp"
+            - "clp/CurlStringList.hpp"
+            - "clp/database_utils.cpp"
+            - "clp/database_utils.hpp"
+            - "clp/Defs.h"
+            - "clp/dictionary_utils.cpp"
+            - "clp/dictionary_utils.hpp"
+            - "clp/DictionaryEntry.hpp"
+            - "clp/DictionaryReader.hpp"
+            - "clp/DictionaryWriter.hpp"
+            - "clp/EncodedVariableInterpreter.cpp"
+            - "clp/EncodedVariableInterpreter.hpp"
+            - "clp/ErrorCode.hpp"
+            - "clp/ffi/encoding_methods.cpp"
+            - "clp/ffi/encoding_methods.hpp"
+            - "clp/ffi/ir_stream/decoding_methods.cpp"
+            - "clp/ffi/ir_stream/decoding_methods.hpp"
+            - "clp/ffi/ir_stream/decoding_methods.inc"
+            - "clp/ffi/ir_stream/encoding_methods.cpp"
+            - "clp/ffi/ir_stream/encoding_methods.hpp"
+            - "clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp"
+            - "clp/ffi/ir_stream/protocol_constants.hpp"
+            - "clp/ffi/ir_stream/Serializer.cpp"
+            - "clp/ffi/ir_stream/Serializer.hpp"
+            - "clp/ffi/ir_stream/utils.hpp"
+            - "clp/ffi/search/CompositeWildcardToken.cpp"
+            - "clp/ffi/search/CompositeWildcardToken.hpp"
+            - "clp/ffi/search/ExactVariableToken.cpp"
+            - "clp/ffi/search/ExactVariableToken.hpp"
+            - "clp/ffi/search/query_methods.cpp"
+            - "clp/ffi/search/query_methods.hpp"
+            - "clp/ffi/search/QueryMethodFailed.hpp"
+            - "clp/ffi/search/QueryToken.hpp"
+            - "clp/ffi/search/QueryWildcard.cpp"
+            - "clp/ffi/search/QueryWildcard.hpp"
+            - "clp/ffi/search/Subquery.cpp"
+            - "clp/ffi/search/Subquery.hpp"
+            - "clp/ffi/search/WildcardToken.cpp"
+            - "clp/ffi/search/WildcardToken.hpp"
+            - "clp/FileDescriptor.cpp"
+            - "clp/FileDescriptor.hpp"
+            - "clp/FileDescriptorReader.cpp"
+            - "clp/FileReader.cpp"
+            - "clp/FileReader.hpp"
+            - "clp/FileWriter.cpp"
+            - "clp/FileWriter.hpp"
+            - "clp/GlobalMetadataDB.hpp"
+            - "clp/GlobalMySQLMetadataDB.cpp"
+            - "clp/GlobalMySQLMetadataDB.hpp"
+            - "clp/GlobalSQLiteMetadataDB.cpp"
+            - "clp/GlobalSQLiteMetadataDB.hpp"
+            - "clp/Grep.cpp"
+            - "clp/Grep.hpp"
+            - "clp/GrepCore.cpp"
+            - "clp/GrepCore.hpp"
+            - "clp/hash_utils.cpp"
+            - "clp/ir/EncodedTextAst.cpp"
+            - "clp/ir/LogEvent.hpp"
+            - "clp/ir/LogEventDeserializer.cpp"
+            - "clp/ir/LogEventDeserializer.hpp"
+            - "clp/ir/LogEventSerializer.cpp"
+            - "clp/ir/parsing.cpp"
+            - "clp/ir/parsing.hpp"
+            - "clp/ir/utils.cpp"
+            - "clp/LibarchiveFileReader.cpp"
+            - "clp/LibarchiveFileReader.hpp"
+            - "clp/LibarchiveReader.cpp"
+            - "clp/LibarchiveReader.hpp"
+            - "clp/LogSurgeonReader.cpp"
+            - "clp/LogSurgeonReader.hpp"
+            - "clp/LogTypeDictionaryEntry.cpp"
+            - "clp/LogTypeDictionaryEntry.hpp"
+            - "clp/LogTypeDictionaryWriter.cpp"
+            - "clp/LogTypeDictionaryWriter.hpp"
+            - "clp/make_dictionaries_readable/CommandLineArguments.cpp"
+            - "clp/make_dictionaries_readable/CommandLineArguments.hpp"
+            - "clp/make_dictionaries_readable/make-dictionaries-readable.cpp"
+            - "clp/MessageParser.cpp"
+            - "clp/MessageParser.hpp"
+            - "clp/MySQLDB.cpp"
+            - "clp/MySQLDB.hpp"
+            - "clp/MySQLParamBindings.cpp"
+            - "clp/MySQLParamBindings.hpp"
+            - "clp/MySQLPreparedStatement.cpp"
+            - "clp/MySQLPreparedStatement.hpp"
+            - "clp/networking/socket_utils.cpp"
+            - "clp/networking/socket_utils.hpp"
+            - "clp/networking/SocketOperationFailed.hpp"
+            - "clp/NetworkReader.cpp"
+            - "clp/PageAllocatedVector.hpp"
+            - "clp/ParsedMessage.cpp"
+            - "clp/ParsedMessage.hpp"
+            - "clp/Platform.hpp"
+            - "clp/Profiler.cpp"
+            - "clp/Profiler.hpp"
+            - "clp/Query.cpp"
+            - "clp/Query.hpp"
+            - "clp/QueryToken.cpp"
+            - "clp/QueryToken.hpp"
+            - "clp/ReaderInterface.cpp"
+            - "clp/ReaderInterface.hpp"
+            - "clp/spdlog_with_specializations.hpp"
+            - "clp/SQLiteDB.cpp"
+            - "clp/SQLiteDB.hpp"
+            - "clp/SQLitePreparedStatement.cpp"
+            - "clp/SQLitePreparedStatement.hpp"
+            - "clp/Stopwatch.cpp"
+            - "clp/Stopwatch.hpp"
+            - "clp/streaming_archive/ArchiveMetadata.cpp"
+            - "clp/streaming_archive/ArchiveMetadata.hpp"
+            - "clp/streaming_archive/Constants.hpp"
+            - "clp/streaming_archive/MetadataDB.cpp"
+            - "clp/streaming_archive/MetadataDB.hpp"
+            - "clp/streaming_archive/reader/Archive.cpp"
+            - "clp/streaming_archive/reader/Archive.hpp"
+            - "clp/streaming_archive/reader/File.cpp"
+            - "clp/streaming_archive/reader/File.hpp"
+            - "clp/streaming_archive/reader/Message.cpp"
+            - "clp/streaming_archive/reader/Message.hpp"
+            - "clp/streaming_archive/reader/Segment.cpp"
+            - "clp/streaming_archive/reader/Segment.hpp"
+            - "clp/streaming_archive/reader/SegmentManager.cpp"
+            - "clp/streaming_archive/reader/SegmentManager.hpp"
+            - "clp/streaming_archive/writer/Archive.cpp"
+            - "clp/streaming_archive/writer/Archive.hpp"
+            - "clp/streaming_archive/writer/File.cpp"
+            - "clp/streaming_archive/writer/File.hpp"
+            - "clp/streaming_archive/writer/Segment.cpp"
+            - "clp/streaming_archive/writer/Segment.hpp"
+            - "clp/streaming_compression/Compressor.hpp"
+            - "clp/streaming_compression/Constants.hpp"
+            - "clp/streaming_compression/Decompressor.hpp"
+            - "clp/streaming_compression/passthrough/Decompressor.cpp"
+            - "clp/streaming_compression/passthrough/Decompressor.hpp"
+            - "clp/streaming_compression/zstd/Decompressor.cpp"
+            - "clp/streaming_compression/zstd/Decompressor.hpp"
+            - "clp/string_utils/string_utils.cpp"
+            - "clp/string_utils/string_utils.hpp"
+            - "clp/StringReader.cpp"
+            - "clp/StringReader.hpp"
+            - "clp/Thread.cpp"
+            - "clp/Thread.hpp"
+            - "clp/TimestampPattern.cpp"
+            - "clp/TimestampPattern.hpp"
+            - "clp/TraceableException.hpp"
+            - "clp/type_utils.hpp"
+            - "clp/Utils.cpp"
+            - "clp/Utils.hpp"
+            - "clp/VariableDictionaryEntry.cpp"
+            - "clp/VariableDictionaryEntry.hpp"
+            - "clp/VariableDictionaryWriter.cpp"
+            - "clp/VariableDictionaryWriter.hpp"
+            - "clp/version.hpp"
+            - "clp/WriterInterface.cpp"
+            - "clp/WriterInterface.hpp"
+            - "clp_s/archive_constants.hpp"
+            - "clp_s/ArchiveReader.cpp"
+            - "clp_s/ArchiveReader.hpp"
+            - "clp_s/ArchiveReaderAdaptor.cpp"
+            - "clp_s/ArchiveReaderAdaptor.hpp"
+            - "clp_s/ArchiveWriter.cpp"
+            - "clp_s/ArchiveWriter.hpp"
+            - "clp_s/BufferViewReader.hpp"
+            - "clp_s/clp-s.cpp"
+            - "clp_s/ColumnReader.cpp"
+            - "clp_s/ColumnReader.hpp"
+            - "clp_s/ColumnWriter.cpp"
+            - "clp_s/ColumnWriter.hpp"
+            - "clp_s/CommandLineArguments.cpp"
+            - "clp_s/CommandLineArguments.hpp"
+            - "clp_s/Compressor.hpp"
+            - "clp_s/Decompressor.hpp"
+            - "clp_s/DictionaryEntry.cpp"
+            - "clp_s/DictionaryEntry.hpp"
+            - "clp_s/DictionaryReader.hpp"
+            - "clp_s/DictionaryWriter.cpp"
+            - "clp_s/DictionaryWriter.hpp"
+            - "clp_s/ErrorCode.hpp"
+            - "clp_s/FileReader.cpp"
+            - "clp_s/FileReader.hpp"
+            - "clp_s/FileWriter.cpp"
+            - "clp_s/FileWriter.hpp"
+            - "clp_s/indexer/CommandLineArguments.cpp"
+            - "clp_s/indexer/CommandLineArguments.hpp"
+            - "clp_s/indexer/indexer.cpp"
+            - "clp_s/indexer/IndexManager.cpp"
+            - "clp_s/indexer/IndexManager.hpp"
+            - "clp_s/indexer/MySQLIndexStorage.cpp"
+            - "clp_s/indexer/MySQLIndexStorage.hpp"
+            - "clp_s/InputConfig.cpp"
+            - "clp_s/InputConfig.hpp"
+            - "clp_s/JsonConstructor.cpp"
+            - "clp_s/JsonConstructor.hpp"
+            - "clp_s/JsonFileIterator.cpp"
+            - "clp_s/JsonFileIterator.hpp"
+            - "clp_s/JsonParser.cpp"
+            - "clp_s/JsonParser.hpp"
+            - "clp_s/JsonSerializer.hpp"
+            - "clp_s/OutputHandlerImpl.cpp"
+            - "clp_s/OutputHandlerImpl.hpp"
+            - "clp_s/PackedStreamReader.cpp"
+            - "clp_s/PackedStreamReader.hpp"
+            - "clp_s/ParsedMessage.hpp"
+            - "clp_s/ReaderUtils.cpp"
+            - "clp_s/ReaderUtils.hpp"
+            - "clp_s/Schema.cpp"
+            - "clp_s/Schema.hpp"
+            - "clp_s/SchemaMap.cpp"
+            - "clp_s/SchemaMap.hpp"
+            - "clp_s/SchemaReader.cpp"
+            - "clp_s/SchemaReader.hpp"
+            - "clp_s/SchemaTree.cpp"
+            - "clp_s/SchemaTree.hpp"
+            - "clp_s/SchemaWriter.cpp"
+            - "clp_s/SchemaWriter.hpp"
+            - "clp_s/search/AddTimestampConditions.cpp"
+            - "clp_s/search/AddTimestampConditions.hpp"
+            - "clp_s/search/ast/AndExpr.cpp"
+            - "clp_s/search/ast/AndExpr.hpp"
+            - "clp_s/search/ast/BooleanLiteral.cpp"
+            - "clp_s/search/ast/BooleanLiteral.hpp"
+            - "clp_s/search/ast/ColumnDescriptor.cpp"
+            - "clp_s/search/ast/ColumnDescriptor.hpp"
+            - "clp_s/search/ast/ConstantProp.cpp"
+            - "clp_s/search/ast/ConstantProp.hpp"
+            - "clp_s/search/ast/ConvertToExists.cpp"
+            - "clp_s/search/ast/ConvertToExists.hpp"
+            - "clp_s/search/ast/DateLiteral.cpp"
+            - "clp_s/search/ast/DateLiteral.hpp"
+            - "clp_s/search/ast/EmptyExpr.cpp"
+            - "clp_s/search/ast/EmptyExpr.hpp"
+            - "clp_s/search/ast/Expression.cpp"
+            - "clp_s/search/ast/Expression.hpp"
+            - "clp_s/search/ast/FilterOperation.hpp"
+            - "clp_s/search/ast/Integral.cpp"
+            - "clp_s/search/ast/Integral.hpp"
+            - "clp_s/search/ast/Literal.hpp"
+            - "clp_s/search/ast/NarrowTypes.cpp"
+            - "clp_s/search/ast/NarrowTypes.hpp"
+            - "clp_s/search/ast/NullLiteral.cpp"
+            - "clp_s/search/ast/NullLiteral.hpp"
+            - "clp_s/search/ast/OrExpr.cpp"
+            - "clp_s/search/ast/OrExpr.hpp"
+            - "clp_s/search/ast/OrOfAndForm.cpp"
+            - "clp_s/search/ast/OrOfAndForm.hpp"
+            - "clp_s/search/ast/SearchUtils.cpp"
+            - "clp_s/search/ast/SearchUtils.hpp"
+            - "clp_s/search/ast/StringLiteral.cpp"
+            - "clp_s/search/ast/StringLiteral.hpp"
+            - "clp_s/search/ast/Transformation.hpp"
+            - "clp_s/search/antlr_common/ErrorListener.hpp"
+            - "clp_s/search/EvaluateTimestampIndex.cpp"
+            - "clp_s/search/EvaluateTimestampIndex.hpp"
+            - "clp_s/search/kql/generated/*"
+            - "clp_s/search/kql/kql.cpp"
+            - "clp_s/search/kql/kql.hpp"
+            - "clp_s/search/Output.cpp"
+            - "clp_s/search/Output.hpp"
+            - "clp_s/search/Projection.cpp"
+            - "clp_s/search/Projection.hpp"
+            - "clp_s/search/QueryRunner.cpp"
+            - "clp_s/search/QueryRunner.hpp"
+            - "clp_s/search/SchemaMatch.cpp"
+            - "clp_s/search/SchemaMatch.hpp"
+            - "clp_s/search/sql/generated/*"
+            - "clp_s/search/sql/sql.cpp"
+            - "clp_s/SingleFileArchiveDefs.hpp"
+            - "clp_s/TimestampDictionaryReader.cpp"
+            - "clp_s/TimestampDictionaryReader.hpp"
+            - "clp_s/TimestampDictionaryWriter.cpp"
+            - "clp_s/TimestampDictionaryWriter.hpp"
+            - "clp_s/TimestampEntry.cpp"
+            - "clp_s/TimestampEntry.hpp"
+            - "clp_s/TimestampPattern.cpp"
+            - "clp_s/TimestampPattern.hpp"
+            - "clp_s/Utils.cpp"
+            - "clp_s/Utils.hpp"
+            - "clp_s/ZstdCompressor.cpp"
+            - "clp_s/ZstdCompressor.hpp"
+            - "clp_s/ZstdDecompressor.cpp"
+            - "clp_s/ZstdDecompressor.hpp"
+            - "glt/ArrayBackedPosIntSet.hpp"
+            - "glt/BufferedFileReader.cpp"
+            - "glt/BufferedFileReader.hpp"
+            - "glt/BufferReader.cpp"
+            - "glt/BufferReader.hpp"
+            - "glt/CommandLineArgumentsBase.hpp"
+            - "glt/database_utils.cpp"
+            - "glt/database_utils.hpp"
+            - "glt/Defs.h"
+            - "glt/dictionary_utils.cpp"
+            - "glt/dictionary_utils.hpp"
+            - "glt/DictionaryEntry.hpp"
+            - "glt/DictionaryReader.hpp"
+            - "glt/DictionaryWriter.hpp"
+            - "glt/EncodedVariableInterpreter.cpp"
+            - "glt/EncodedVariableInterpreter.hpp"
+            - "glt/ErrorCode.hpp"
+            - "glt/ffi/encoding_methods.cpp"
+            - "glt/ffi/encoding_methods.hpp"
+            - "glt/ffi/ir_stream/byteswap.hpp"
+            - "glt/ffi/ir_stream/decoding_methods.cpp"
+            - "glt/ffi/ir_stream/decoding_methods.hpp"
+            - "glt/ffi/ir_stream/decoding_methods.inc"
+            - "glt/ffi/ir_stream/encoding_methods.cpp"
+            - "glt/ffi/ir_stream/encoding_methods.hpp"
+            - "glt/ffi/ir_stream/protocol_constants.hpp"
+            - "glt/ffi/search/CompositeWildcardToken.cpp"
+            - "glt/ffi/search/CompositeWildcardToken.hpp"
+            - "glt/ffi/search/ExactVariableToken.cpp"
+            - "glt/ffi/search/ExactVariableToken.hpp"
+            - "glt/ffi/search/query_methods.cpp"
+            - "glt/ffi/search/query_methods.hpp"
+            - "glt/ffi/search/QueryMethodFailed.hpp"
+            - "glt/ffi/search/QueryToken.hpp"
+            - "glt/ffi/search/QueryWildcard.cpp"
+            - "glt/ffi/search/QueryWildcard.hpp"
+            - "glt/ffi/search/Subquery.cpp"
+            - "glt/ffi/search/Subquery.hpp"
+            - "glt/ffi/search/WildcardToken.cpp"
+            - "glt/ffi/search/WildcardToken.hpp"
+            - "glt/FileReader.cpp"
+            - "glt/FileReader.hpp"
+            - "glt/FileWriter.cpp"
+            - "glt/FileWriter.hpp"
+            - "glt/GlobalMetadataDB.hpp"
+            - "glt/GlobalMetadataDBConfig.cpp"
+            - "glt/GlobalMySQLMetadataDB.cpp"
+            - "glt/GlobalMySQLMetadataDB.hpp"
+            - "glt/GlobalSQLiteMetadataDB.cpp"
+            - "glt/GlobalSQLiteMetadataDB.hpp"
+            - "glt/glt/CommandLineArguments.cpp"
+            - "glt/glt/CommandLineArguments.hpp"
+            - "glt/glt/compression.cpp"
+            - "glt/glt/compression.hpp"
+            - "glt/glt/decompression.cpp"
+            - "glt/glt/decompression.hpp"
+            - "glt/glt/FileCompressor.cpp"
+            - "glt/glt/FileCompressor.hpp"
+            - "glt/glt/FileDecompressor.cpp"
+            - "glt/glt/FileDecompressor.hpp"
+            - "glt/glt/FileToCompress.hpp"
+            - "glt/glt/glt.cpp"
+            - "glt/glt/run.cpp"
+            - "glt/glt/run.hpp"
+            - "glt/glt/search.cpp"
+            - "glt/glt/search.hpp"
+            - "glt/glt/utils.cpp"
+            - "glt/glt/utils.hpp"
+            - "glt/Grep.cpp"
+            - "glt/Grep.hpp"
+            - "glt/ir/LogEvent.hpp"
+            - "glt/ir/LogEventDeserializer.cpp"
+            - "glt/ir/LogEventDeserializer.hpp"
+            - "glt/ir/parsing.cpp"
+            - "glt/ir/parsing.hpp"
+            - "glt/ir/utils.cpp"
+            - "glt/LibarchiveFileReader.cpp"
+            - "glt/LibarchiveFileReader.hpp"
+            - "glt/LibarchiveReader.cpp"
+            - "glt/LibarchiveReader.hpp"
+            - "glt/LogTypeDictionaryEntry.cpp"
+            - "glt/LogTypeDictionaryEntry.hpp"
+            - "glt/LogTypeDictionaryWriter.cpp"
+            - "glt/LogTypeDictionaryWriter.hpp"
+            - "glt/MessageParser.cpp"
+            - "glt/MessageParser.hpp"
+            - "glt/MySQLDB.cpp"
+            - "glt/MySQLDB.hpp"
+            - "glt/MySQLParamBindings.cpp"
+            - "glt/MySQLParamBindings.hpp"
+            - "glt/MySQLPreparedStatement.cpp"
+            - "glt/MySQLPreparedStatement.hpp"
+            - "glt/PageAllocatedVector.hpp"
+            - "glt/ParsedMessage.cpp"
+            - "glt/ParsedMessage.hpp"
+            - "glt/Platform.hpp"
+            - "glt/Profiler.cpp"
+            - "glt/Profiler.hpp"
+            - "glt/Query.cpp"
+            - "glt/Query.hpp"
+            - "glt/ReaderInterface.cpp"
+            - "glt/ReaderInterface.hpp"
+            - "glt/spdlog_with_specializations.hpp"
+            - "glt/SQLiteDB.cpp"
+            - "glt/SQLiteDB.hpp"
+            - "glt/SQLitePreparedStatement.cpp"
+            - "glt/SQLitePreparedStatement.hpp"
+            - "glt/Stopwatch.cpp"
+            - "glt/Stopwatch.hpp"
+            - "glt/streaming_archive/ArchiveMetadata.cpp"
+            - "glt/streaming_archive/ArchiveMetadata.hpp"
+            - "glt/streaming_archive/Constants.hpp"
+            - "glt/streaming_archive/LogtypeSizeTracker.hpp"
+            - "glt/streaming_archive/MetadataDB.cpp"
+            - "glt/streaming_archive/MetadataDB.hpp"
+            - "glt/streaming_archive/reader/Archive.cpp"
+            - "glt/streaming_archive/reader/Archive.hpp"
+            - "glt/streaming_archive/reader/CombinedLogtypeTable.cpp"
+            - "glt/streaming_archive/reader/CombinedLogtypeTable.hpp"
+            - "glt/streaming_archive/reader/File.cpp"
+            - "glt/streaming_archive/reader/File.hpp"
+            - "glt/streaming_archive/reader/GLTSegment.cpp"
+            - "glt/streaming_archive/reader/GLTSegment.hpp"
+            - "glt/streaming_archive/reader/LogtypeMetadata.hpp"
+            - "glt/streaming_archive/reader/LogtypeTable.cpp"
+            - "glt/streaming_archive/reader/LogtypeTable.hpp"
+            - "glt/streaming_archive/reader/LogtypeTableManager.cpp"
+            - "glt/streaming_archive/reader/LogtypeTableManager.hpp"
+            - "glt/streaming_archive/reader/Message.cpp"
+            - "glt/streaming_archive/reader/Message.hpp"
+            - "glt/streaming_archive/reader/MultiLogtypeTablesManager.cpp"
+            - "glt/streaming_archive/reader/MultiLogtypeTablesManager.hpp"
+            - "glt/streaming_archive/reader/Segment.cpp"
+            - "glt/streaming_archive/reader/Segment.hpp"
+            - "glt/streaming_archive/reader/SegmentManager.cpp"
+            - "glt/streaming_archive/reader/SegmentManager.hpp"
+            - "glt/streaming_archive/reader/SingleLogtypeTableManager.cpp"
+            - "glt/streaming_archive/reader/SingleLogtypeTableManager.hpp"
+            - "glt/streaming_archive/writer/Archive.cpp"
+            - "glt/streaming_archive/writer/Archive.hpp"
+            - "glt/streaming_archive/writer/File.cpp"
+            - "glt/streaming_archive/writer/File.hpp"
+            - "glt/streaming_archive/writer/GLTSegment.cpp"
+            - "glt/streaming_archive/writer/GLTSegment.hpp"
+            - "glt/streaming_archive/writer/LogtypeTable.cpp"
+            - "glt/streaming_archive/writer/LogtypeTable.hpp"
+            - "glt/streaming_archive/writer/Segment.cpp"
+            - "glt/streaming_archive/writer/Segment.hpp"
+            - "glt/streaming_compression/Compressor.hpp"
+            - "glt/streaming_compression/Constants.hpp"
+            - "glt/streaming_compression/Decompressor.hpp"
+            - "glt/streaming_compression/passthrough/Compressor.cpp"
+            - "glt/streaming_compression/passthrough/Compressor.hpp"
+            - "glt/streaming_compression/passthrough/Decompressor.cpp"
+            - "glt/streaming_compression/passthrough/Decompressor.hpp"
+            - "glt/streaming_compression/zstd/Compressor.cpp"
+            - "glt/streaming_compression/zstd/Compressor.hpp"
+            - "glt/streaming_compression/zstd/Constants.hpp"
+            - "glt/streaming_compression/zstd/Decompressor.cpp"
+            - "glt/streaming_compression/zstd/Decompressor.hpp"
+            - "glt/StringReader.cpp"
+            - "glt/StringReader.hpp"
+            - "glt/TimestampPattern.cpp"
+            - "glt/TimestampPattern.hpp"
+            - "glt/TraceableException.hpp"
+            - "glt/type_utils.hpp"
+            - "glt/Utils.cpp"
+            - "glt/Utils.hpp"
+            - "glt/VariableDictionaryEntry.cpp"
+            - "glt/VariableDictionaryEntry.hpp"
+            - "glt/VariableDictionaryWriter.cpp"
+            - "glt/VariableDictionaryWriter.hpp"
+            - "glt/version.hpp"
+            - "glt/WriterInterface.cpp"
+            - "glt/WriterInterface.hpp"
+            - "reducer/BufferedSocketWriter.cpp"
+            - "reducer/BufferedSocketWriter.hpp"
+            - "reducer/CommandLineArguments.cpp"
+            - "reducer/CommandLineArguments.hpp"
+            - "reducer/ConstRecordIterator.hpp"
+            - "reducer/CountOperator.cpp"
+            - "reducer/CountOperator.hpp"
+            - "reducer/DeserializedRecordGroup.cpp"
+            - "reducer/DeserializedRecordGroup.hpp"
+            - "reducer/JsonArrayRecordIterator.hpp"
+            - "reducer/JsonRecord.hpp"
+            - "reducer/network_utils.cpp"
+            - "reducer/network_utils.hpp"
+            - "reducer/Operator.hpp"
+            - "reducer/Pipeline.cpp"
+            - "reducer/Pipeline.hpp"
+            - "reducer/Record.hpp"
+            - "reducer/RecordGroup.hpp"
+            - "reducer/RecordGroupIterator.hpp"
+            - "reducer/RecordReceiverContext.cpp"
+            - "reducer/RecordReceiverContext.hpp"
+            - "reducer/RecordTypedKeyIterator.hpp"
+            - "reducer/reducer_server.cpp"
+            - "reducer/ServerContext.cpp"
+            - "reducer/ServerContext.hpp"
+            # Tests
+            - "LogSuppressor.hpp"
+            - "test-Array.cpp"
+            - "test-BoundedReader.cpp"
+            - "test-BufferedFileReader.cpp"
+            - "test-clp_s-end_to_end.cpp"
+            - "test-clp_s-search.cpp"
+            - "test-EncodedVariableInterpreter.cpp"
+            - "test-encoding_methods.cpp"
+            - "test-GrepCore.cpp"
+            - "test-hash_utils.cpp"
+            - "test-ir_encoding_methods.cpp"
+            - "test-ir_parsing.cpp"
+            - "test-ir_serializer.cpp"
+            - "test-kql.cpp"
+            - "test-math_utils.cpp"
+            - "test-NetworkReader.cpp"
+            - "test-ParserWithUserSchema.cpp"
+            - "test-query_methods.cpp"
+            - "test-Segment.cpp"
+            - "test-SQLiteDB.cpp"
+            - "test-Stopwatch.cpp"
+            - "test-string_utils.cpp"
+            - "test-TimestampPattern.cpp"
+            - "test-utf8_utils.cpp"
+            - "test-Utils.cpp"
+          # yamllint enable rule:line-length
+          FLAGS:
+            - "--config-file '{{.ROOT_DIR}}/.clang-tidy'"
+            - >-
+              --line-filter "[{{.G_CLANG_TIDY_LINE_FILTER_IGNORE_MSGPACK_1098}}]"
+            - "-p '{{.G_CORE_COMPONENT_BUILD_DIR}}'"
+          OUTPUT_DIR: "{{.G_LINT_CLANG_TIDY_DIR}}"
+          ROOT_PATHS: *cpp_root_paths
+          VENV_DIR: "{{.G_LINT_VENV_DIR}}"
+
+  js:
+    internal: true
+    requires:
+      vars: ["LINT_CMD"]
+    deps: [":webui-node-modules"]
+    cmds:
+      - |-
+        cd "{{.G_WEBUI_SRC_DIR}}"
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm run "lint:{{.LINT_CMD}}"
+
+  py:
+    internal: true
+    vars:
+      UV_PYTHON_PROJECTS:
+        - "{{.G_INTEGRATION_TESTS_DIR}}"
+    requires:
+      vars: ["BLACK_FLAGS", "RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
+    deps: ["venv"]
+    cmds:
+      - for:
+          - "components/clp-package-utils/clp_package_utils"
+          - "components/clp-py-utils/clp_py_utils"
+          - "components/core/tools/scripts/utils"
+          - "components/job-orchestration/job_orchestration"
+          - "tools/deployment"
+          - "tools/scripts"
+          - "docs/conf"
+        cmd: |-
+          . "{{.G_LINT_VENV_DIR}}/bin/activate"
+          cd "{{.ITEM}}"
+          black --color --line-length 100 {{.BLACK_FLAGS}} .
+          ruff check {{.RUFF_CHECK_FLAGS}} .
+      - for:
+          var: "UV_PYTHON_PROJECTS"
+        cmd: |-
+          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
+          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} .
+          uv run --directory "{{.ITEM}}" mypy .
+
+  venv:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK | replace \":\" \"#\"}}.md5"
+      OUTPUT_DIR: "{{.G_LINT_VENV_DIR}}"
+    sources:
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.TASKFILE}}"
+      - "lint-requirements.txt"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    run: "once"
+    deps:
+      - ":init"
+      - task: ":utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    cmds:
+      - task: ":utils:misc:create-venv"
+        vars:
+          LABEL: "lint"
+          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
+          REQUIREMENTS_FILE: "{{.ROOT_DIR}}/lint-requirements.txt"
+      # This command must be last
+      - task: ":utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]

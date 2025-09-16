@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import logging
+import pathlib
 import sys
 from contextlib import closing
 
@@ -10,12 +11,13 @@ from job_orchestration.scheduler.constants import (
     QueryJobStatus,
     QueryTaskStatus,
 )
+from pydantic import ValidationError
 from sql_adapter import SQL_Adapter
 
 from clp_py_utils.clp_config import (
+    CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
-    Database,
     QUERY_JOBS_TABLE_NAME,
     QUERY_TASKS_TABLE_NAME,
 )
@@ -36,14 +38,23 @@ def main(argv):
     args_parser = argparse.ArgumentParser(
         description="Sets up metadata tables for job orchestration."
     )
-    args_parser.add_argument("--config", required=True, help="Database config file.")
+    args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     parsed_args = args_parser.parse_args(argv[1:])
 
+    # Load configuration
+    config_path = pathlib.Path(parsed_args.config)
     try:
-        database_config = Database.parse_obj(read_yaml_config_file(parsed_args.config))
-        if database_config is None:
-            raise ValueError(f"Database configuration file '{parsed_args.config}' is empty.")
-        sql_adapter = SQL_Adapter(database_config)
+        clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
+        clp_config.database.load_credentials_from_env()
+    except (ValidationError, ValueError) as err:
+        logger.error(err)
+        return -1
+    except Exception:
+        logger.exception("Failed to load CLP configuration.")
+        return -1
+
+    try:
+        sql_adapter = SQL_Adapter(clp_config.database)
         with closing(sql_adapter.create_connection(True)) as scheduling_db, closing(
             scheduling_db.cursor(dictionary=True)
         ) as scheduling_db_cursor:
@@ -52,9 +63,10 @@ def main(argv):
                 CREATE TABLE IF NOT EXISTS `{COMPRESSION_JOBS_TABLE_NAME}` (
                     `id` INT NOT NULL AUTO_INCREMENT,
                     `status` INT NOT NULL DEFAULT '{CompressionJobStatus.PENDING}',
-                    `status_msg` VARCHAR(255) NOT NULL DEFAULT '',
+                    `status_msg` VARCHAR(512) NOT NULL DEFAULT '',
                     `creation_time` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
                     `start_time` DATETIME(3) NULL DEFAULT NULL,
+                    `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP(),
                     `duration` FLOAT NULL DEFAULT NULL,
                     `original_size` BIGINT NOT NULL DEFAULT '0',
                     `uncompressed_size` BIGINT NOT NULL DEFAULT '0',
@@ -64,7 +76,8 @@ def main(argv):
                     `clp_binary_version` INT NULL DEFAULT NULL,
                     `clp_config` VARBINARY(60000) NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
-                    INDEX `JOB_STATUS` (`status`) USING BTREE
+                    INDEX `JOB_STATUS` (`status`) USING BTREE,
+                    INDEX `JOB_UPDATE_TIME` (`update_time`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 """
             )
@@ -106,6 +119,7 @@ def main(argv):
                     `duration` FLOAT NULL DEFAULT NULL,
                     `job_config` VARBINARY(60000) NOT NULL,
                     PRIMARY KEY (`id`) USING BTREE,
+                    INDEX `CREATION_TIME` (`creation_time`) USING BTREE,
                     INDEX `JOB_STATUS` (`status`) USING BTREE
                 ) ROW_FORMAT=DYNAMIC
                 """

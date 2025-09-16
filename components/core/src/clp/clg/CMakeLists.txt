@@ -24,6 +24,8 @@ set(
         ../FileReader.hpp
         ../FileWriter.cpp
         ../FileWriter.hpp
+        ../global_metadata_db_utils.cpp
+        ../global_metadata_db_utils.hpp
         ../GlobalMetadataDB.hpp
         ../GlobalMetadataDBConfig.cpp
         ../GlobalMetadataDBConfig.hpp
@@ -33,6 +35,8 @@ set(
         ../GlobalSQLiteMetadataDB.hpp
         ../Grep.cpp
         ../Grep.hpp
+        ../GrepCore.cpp
+        ../GrepCore.hpp
         ../ir/EncodedTextAst.cpp
         ../ir/EncodedTextAst.hpp
         ../ir/LogEvent.hpp
@@ -59,6 +63,8 @@ set(
         ../Profiler.hpp
         ../Query.cpp
         ../Query.hpp
+        ../QueryToken.cpp
+        ../QueryToken.hpp
         ../ReaderInterface.cpp
         ../ReaderInterface.hpp
         ../ReadOnlyMemoryMappedFile.cpp
@@ -117,33 +123,41 @@ set(
         ../version.hpp
         ../WriterInterface.cpp
         ../WriterInterface.hpp
-        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
-        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.h"
-        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3ext.h"
+        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.c"
         clg.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
 )
 
-add_executable(clg ${CLG_SOURCES})
-target_compile_features(clg PRIVATE cxx_std_20)
-target_include_directories(clg PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
-target_link_libraries(clg
-        PRIVATE
-        Boost::filesystem Boost::iostreams Boost::program_options
-        fmt::fmt
-        log_surgeon::log_surgeon
-        MariaDBClient::MariaDBClient
-        spdlog::spdlog
-        ${sqlite_LIBRARY_DEPENDENCIES}
-        ${STD_FS_LIBS}
-        clp::string_utils
-        yaml-cpp::yaml-cpp
-        ZStd::ZStd
-)
-# Put the built executable at the root of the build directory
-set_target_properties(
-        clg
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
-)
+if(CLP_BUILD_EXECUTABLES)
+        add_executable(clg ${CLG_SOURCES})
+        target_compile_features(clg PRIVATE cxx_std_20)
+        target_include_directories(clg
+                PRIVATE
+                "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
+        )
+        target_link_libraries(clg
+                PRIVATE
+                absl::flat_hash_map
+                Boost::filesystem Boost::program_options
+                date::date
+                fmt::fmt
+                log_surgeon::log_surgeon
+                MariaDBClient::MariaDBClient
+                msgpack-cxx
+                nlohmann_json::nlohmann_json
+                spdlog::spdlog
+                ${sqlite_LIBRARY_DEPENDENCIES}
+                ${STD_FS_LIBS}
+                clp::string_utils
+                ystdlib::containers
+                ystdlib::error_handling
+                ${zstd_TARGET}
+        )
+        # Put the built executable at the root of the build directory
+        set_target_properties(
+                clg
+                PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+        )
+endif()

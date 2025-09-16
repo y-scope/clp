@@ -7,8 +7,7 @@
 #include <boost/filesystem/operations.hpp>
 #include <boost/uuid/random_generator.hpp>
 
-#include "../GlobalMySQLMetadataDB.hpp"
-#include "../GlobalSQLiteMetadataDB.hpp"
+#include "../global_metadata_db_utils.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/writer/Archive.hpp"
 #include "../streaming_archive/writer/utils.hpp"
@@ -63,7 +62,7 @@ bool compress(
         std::unique_ptr<log_surgeon::ReaderParser> reader_parser,
         bool use_heuristic
 ) {
-    auto output_dir = boost::filesystem::path(command_line_args.get_output_dir());
+    auto output_dir = std::filesystem::path(command_line_args.get_output_dir());
 
     // Create output directory in case it doesn't exist
     auto error_code = create_directory(output_dir.parent_path().string(), 0700, true);
@@ -72,25 +71,10 @@ bool compress(
         return false;
     }
 
-    auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
-    std::unique_ptr<GlobalMetadataDB> global_metadata_db;
-    switch (global_metadata_db_config.get_metadata_db_type()) {
-        case GlobalMetadataDBConfig::MetadataDBType::SQLite: {
-            auto global_metadata_db_path = output_dir / streaming_archive::cMetadataDBFileName;
-            global_metadata_db
-                    = std::make_unique<GlobalSQLiteMetadataDB>(global_metadata_db_path.string());
-            break;
-        }
-        case GlobalMetadataDBConfig::MetadataDBType::MySQL:
-            global_metadata_db = std::make_unique<GlobalMySQLMetadataDB>(
-                    global_metadata_db_config.get_metadata_db_host(),
-                    global_metadata_db_config.get_metadata_db_port(),
-                    global_metadata_db_config.get_metadata_db_username(),
-                    global_metadata_db_config.get_metadata_db_password(),
-                    global_metadata_db_config.get_metadata_db_name(),
-                    global_metadata_db_config.get_metadata_table_prefix()
-            );
-            break;
+    auto global_metadata_db
+            = create_global_metadata_db(command_line_args.get_metadata_db_config(), output_dir);
+    if (nullptr == global_metadata_db) {
+        return false;
     }
 
     auto uuid_generator = boost::uuids::random_generator();
@@ -131,8 +115,9 @@ bool compress(
         num_files_to_compress = files_to_compress.size() + grouped_files_to_compress.size();
     }
     if (command_line_args.sort_input_files()) {
-        sort(files_to_compress.begin(), files_to_compress.end(), file_gt_last_write_time_comparator
-        );
+        sort(files_to_compress.begin(),
+             files_to_compress.end(),
+             file_gt_last_write_time_comparator);
     }
     for (auto it = files_to_compress.cbegin(); it != files_to_compress.cend(); ++it) {
         if (archive_writer.get_data_size_of_dictionaries() >= target_data_size_of_dictionaries) {

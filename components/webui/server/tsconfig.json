@@ -1,0 +1,39 @@
+/**
+ * Reference:
+ * https://github.com/tsconfig/bases/blob/2604892973bcb1822c204e2aa2add10a8b0d1c8c/bases/node22.json
+ */
+{
+  "compilerOptions": {
+    "esModuleInterop": true,
+    "lib": [
+      "es2023"
+    ],
+    "module": "nodenext",
+    "moduleResolution": "node16",
+    "outDir": "dist",
+    "removeComments": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "target": "ES2022",
+    "baseUrl": ".",
+    "alwaysStrict": true,
+    "exactOptionalPropertyTypes": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUncheckedIndexedAccess": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "strictBindCallApply": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "useUnknownInCatchVariables": true,
+    "strict": true
+  },
+  "include": [
+    "src/**/*",
+  ]
+}

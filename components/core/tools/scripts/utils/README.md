@@ -6,6 +6,6 @@ This directory contains uncategorized utility scripts.
 * `run-in-container.sh` can be used to run a command (e.g., `make`), in a 
   container containing the core component's dependencies.
   * All commands are run from the root of the core component.
-  * This is useful if, for instance, you're developing on Ubuntu 18.04 but the
-    package uses Ubuntu 20.04; you can build in the Ubuntu 20.04 container to
-    avoid compatibility issues.
+  * This is useful if, for instance, you're developing on Ubuntu X, but the
+    package uses Ubuntu Y; you can build in the Ubuntu Y container to avoid
+    compatibility issues.

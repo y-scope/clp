@@ -1,8 +1,16 @@
 from __future__ import annotations
 
 import typing
+from enum import auto
 
+from clp_py_utils.clp_config import S3Config
 from pydantic import BaseModel, validator
+from strenum import LowercaseStrEnum
+
+
+class InputType(LowercaseStrEnum):
+    FS = auto()
+    S3 = auto()
 
 
 class PathsToCompress(BaseModel):
@@ -12,9 +20,17 @@ class PathsToCompress(BaseModel):
     empty_directories: typing.List[str] = None
 
 
-class InputConfig(BaseModel):
+class FsInputConfig(BaseModel):
+    type: typing.Literal[InputType.FS.value] = InputType.FS.value
+    dataset: typing.Optional[str] = None
     paths_to_compress: typing.List[str]
     path_prefix_to_remove: str = None
+    timestamp_key: typing.Optional[str] = None
+
+
+class S3InputConfig(S3Config):
+    type: typing.Literal[InputType.S3.value] = InputType.S3.value
+    dataset: typing.Optional[str] = None
     timestamp_key: typing.Optional[str] = None
 
 
@@ -24,10 +40,11 @@ class OutputConfig(BaseModel):
     target_dictionaries_size: int
     target_segment_size: int
     target_encoded_file_size: int
+    compression_level: int
 
 
 class ClpIoConfig(BaseModel):
-    input: InputConfig
+    input: typing.Union[FsInputConfig, S3InputConfig]
     output: OutputConfig
 
 
@@ -39,7 +56,8 @@ class AggregationConfig(BaseModel):
     count_by_time_bucket_size: typing.Optional[int] = None  # Milliseconds
 
 
-class QueryJobConfig(BaseModel): ...
+class QueryJobConfig(BaseModel):
+    dataset: typing.Optional[str] = None
 
 
 class ExtractIrJobConfig(QueryJobConfig):
@@ -47,6 +65,11 @@ class ExtractIrJobConfig(QueryJobConfig):
     msg_ix: int
     file_split_id: typing.Optional[str] = None
     target_uncompressed_size: typing.Optional[int] = None
+
+
+class ExtractJsonJobConfig(QueryJobConfig):
+    archive_id: str
+    target_chunk_size: typing.Optional[int] = None
 
 
 class SearchJobConfig(QueryJobConfig):

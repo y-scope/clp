@@ -7,11 +7,11 @@
 
 #include <boost/filesystem/path.hpp>
 
+#include "../ErrorCode.hpp"
 #include "../GlobalMetadataDB.hpp"
 #include "../GlobalMetadataDBConfig.hpp"
-#include "ErrorCode.hpp"
+#include "../TraceableException.hpp"
 #include "FileToCompress.hpp"
-#include "TraceableException.hpp"
 
 namespace clp::clp {
 // Types
@@ -71,17 +71,6 @@ bool remove_prefix_and_clean_up_path(
  * @return true if they all exist, false otherwise
  */
 bool validate_paths_exist(std::vector<std::string> const& paths);
-
-/**
- * Chooses and initializes the relevant global metadata DB class based on the given config.
- * @param global_metadata_db_config
- * @param archives_dir
- * @return The relevant global metadata DB class.
- */
-std::unique_ptr<GlobalMetadataDB> get_global_metadata_db(
-        GlobalMetadataDBConfig const& global_metadata_db_config,
-        std::filesystem::path const& archives_dir
-);
 }  // namespace clp::clp
 
 #endif  // CLP_CLP_UTILS_HPP

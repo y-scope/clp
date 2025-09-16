@@ -33,6 +33,8 @@ set(
         ../FileReader.hpp
         ../FileWriter.cpp
         ../FileWriter.hpp
+        ../global_metadata_db_utils.cpp
+        ../global_metadata_db_utils.hpp
         ../GlobalMetadataDB.hpp
         ../GlobalMetadataDBConfig.cpp
         ../GlobalMetadataDBConfig.hpp
@@ -147,8 +149,7 @@ set(
         ../version.hpp
         ../WriterInterface.cpp
         ../WriterInterface.hpp
-        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.c"
-        "${PROJECT_SOURCE_DIR}/submodules/sqlite3/sqlite3.h"
+        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.c"
         clp.cpp
         CommandLineArguments.cpp
         CommandLineArguments.hpp
@@ -166,26 +167,36 @@ set(
         utils.hpp
 )
 
-add_executable(clp ${CLP_SOURCES})
-target_compile_features(clp PRIVATE cxx_std_20)
-target_include_directories(clp PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
-target_link_libraries(clp
-        PRIVATE
-        Boost::filesystem Boost::iostreams Boost::program_options
-        fmt::fmt
-        log_surgeon::log_surgeon
-        spdlog::spdlog
-        ${sqlite_LIBRARY_DEPENDENCIES}
-        LibArchive::LibArchive
-        MariaDBClient::MariaDBClient
-        ${STD_FS_LIBS}
-        clp::string_utils
-        yaml-cpp::yaml-cpp
-        ZStd::ZStd
-)
-# Put the built executable at the root of the build directory
-set_target_properties(
-        clp
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
-)
+if(CLP_BUILD_EXECUTABLES)
+        add_executable(clp ${CLP_SOURCES})
+        target_compile_features(clp PRIVATE cxx_std_20)
+        target_include_directories(clp
+                PRIVATE
+                "${CLP_SQLITE3_INCLUDE_DIRECTORY}"
+        )
+        target_link_libraries(clp
+                PRIVATE
+                absl::flat_hash_map
+                Boost::filesystem Boost::program_options
+                date::date
+                fmt::fmt
+                log_surgeon::log_surgeon
+                spdlog::spdlog
+                ${sqlite_LIBRARY_DEPENDENCIES}
+                LibArchive::LibArchive
+                MariaDBClient::MariaDBClient
+                msgpack-cxx
+                nlohmann_json::nlohmann_json
+                ${STD_FS_LIBS}
+                clp::string_utils
+                ystdlib::containers
+                ystdlib::error_handling
+                ${zstd_TARGET}
+        )
+        # Put the built executable at the root of the build directory
+        set_target_properties(
+                clp
+                PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+        )
+endif()

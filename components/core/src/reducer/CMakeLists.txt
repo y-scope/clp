@@ -38,26 +38,24 @@ set(
         types.hpp
 )
 
-add_executable(reducer-server ${REDUCER_SOURCES})
-target_compile_features(reducer-server PRIVATE cxx_std_20)
-target_include_directories(reducer-server PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
-target_link_libraries(reducer-server
-        PRIVATE
-        Boost::program_options
-        Boost::system
-        clp::string_utils
-        fmt::fmt
-        ${MONGOCXX_TARGET}
-        msgpack-cxx
-        spdlog::spdlog
-        # Threads::Threads is necessary because on Ubuntu Focal (20.04), libssl (a dependency of
-        # libmongocxx) depends on libpthread, but its cmake script doesn't seem to provide the flags
-        # to link against libpthread.
-        Threads::Threads
-)
-# Put the built executable at the root of the build directory
-set_target_properties(
-        reducer-server
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
-)
+if(CLP_BUILD_EXECUTABLES)
+        add_executable(reducer-server ${REDUCER_SOURCES})
+        target_compile_features(reducer-server PRIVATE cxx_std_20)
+        target_link_libraries(reducer-server
+                PRIVATE
+                Boost::program_options
+                Boost::system
+                clp::string_utils
+                fmt::fmt
+                ${MONGOCXX_TARGET}
+                msgpack-cxx
+                nlohmann_json::nlohmann_json
+                spdlog::spdlog
+        )
+        # Put the built executable at the root of the build directory
+        set_target_properties(
+                reducer-server
+                PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+        )
+endif()

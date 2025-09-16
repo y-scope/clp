@@ -2,9 +2,9 @@
 
 #include <vector>
 
-#include <json/single_include/nlohmann/json.hpp>
-#include <outcome/single-header/outcome.hpp>
+#include <nlohmann/json.hpp>
 #include <string_utils/string_utils.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../ffi/ir_stream/decoding_methods.hpp"
 #include "../ffi/ir_stream/protocol_constants.hpp"
@@ -13,8 +13,8 @@
 
 namespace clp::ir {
 template <typename encoded_variable_t>
-auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<encoded_variable_t>> {
+auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<LogEventDeserializer<encoded_variable_t>> {
     ffi::ir_stream::encoded_tag_t metadata_type{0};
     std::vector<int8_t> metadata;
     auto ir_error_code = ffi::ir_stream::deserialize_preamble(reader, metadata_type, metadata);
@@ -42,7 +42,7 @@ auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader
         return std::errc::protocol_error;
     }
     auto metadata_version = version_iter->get_ref<nlohmann::json::string_t&>();
-    if (ffi::ir_stream::IRProtocolErrorCode_Supported
+    if (ffi::ir_stream::IRProtocolErrorCode::BackwardCompatible
         != ffi::ir_stream::validate_protocol_version(metadata_version))
     {
         return std::errc::protocol_not_supported;
@@ -69,8 +69,8 @@ auto LogEventDeserializer<encoded_variable_t>::create(ReaderInterface& reader
 }
 
 template <typename encoded_variable_t>
-auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event(
-) -> OUTCOME_V2_NAMESPACE::std_result<LogEvent<encoded_variable_t>> {
+auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event()
+        -> ystdlib::error_handling::Result<LogEvent<encoded_variable_t>> {
     // Process any packets before the log event
     ffi::ir_stream::encoded_tag_t tag{};
     while (true) {
@@ -80,7 +80,7 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event(
         }
 
         if (ffi::ir_stream::cProtocol::Eof == tag) {
-            return std::errc::no_message_available;
+            return std::errc::no_message;
         }
 
         if (ffi::ir_stream::cProtocol::Payload::UtcOffsetChange == tag) {
@@ -134,12 +134,12 @@ auto LogEventDeserializer<encoded_variable_t>::deserialize_log_event(
 
 // Explicitly declare template specializations so that we can define the template methods in this
 // file
-template auto LogEventDeserializer<eight_byte_encoded_variable_t>::create(ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<eight_byte_encoded_variable_t>>;
-template auto LogEventDeserializer<four_byte_encoded_variable_t>::create(ReaderInterface& reader
-) -> OUTCOME_V2_NAMESPACE::std_result<LogEventDeserializer<four_byte_encoded_variable_t>>;
-template auto LogEventDeserializer<eight_byte_encoded_variable_t>::deserialize_log_event(
-) -> OUTCOME_V2_NAMESPACE::std_result<LogEvent<eight_byte_encoded_variable_t>>;
-template auto LogEventDeserializer<four_byte_encoded_variable_t>::deserialize_log_event(
-) -> OUTCOME_V2_NAMESPACE::std_result<LogEvent<four_byte_encoded_variable_t>>;
+template auto LogEventDeserializer<eight_byte_encoded_variable_t>::create(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<LogEventDeserializer<eight_byte_encoded_variable_t>>;
+template auto LogEventDeserializer<four_byte_encoded_variable_t>::create(ReaderInterface& reader)
+        -> ystdlib::error_handling::Result<LogEventDeserializer<four_byte_encoded_variable_t>>;
+template auto LogEventDeserializer<eight_byte_encoded_variable_t>::deserialize_log_event()
+        -> ystdlib::error_handling::Result<LogEvent<eight_byte_encoded_variable_t>>;
+template auto LogEventDeserializer<four_byte_encoded_variable_t>::deserialize_log_event()
+        -> ystdlib::error_handling::Result<LogEvent<four_byte_encoded_variable_t>>;
 }  // namespace clp::ir

@@ -223,13 +223,13 @@ void GlobalSQLiteMetadataDB::open() {
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::Id)].second
             = "TEXT PRIMARY KEY";
 
-    archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::BeginTimestamp
-                                  )]
-            .first
+    archive_field_names_and_types
+            [enum_to_underlying_type(ArchivesTableFieldIndexes::BeginTimestamp)]
+                    .first
             = streaming_archive::cMetadataDB::Archive::BeginTimestamp;
-    archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::BeginTimestamp
-                                  )]
-            .second
+    archive_field_names_and_types
+            [enum_to_underlying_type(ArchivesTableFieldIndexes::BeginTimestamp)]
+                    .second
             = "INTEGER";
 
     archive_field_names_and_types[enum_to_underlying_type(ArchivesTableFieldIndexes::EndTimestamp)]
@@ -297,13 +297,13 @@ void GlobalSQLiteMetadataDB::open() {
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::EndTimestamp)].second
             = "INTEGER";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes
-                               )]
-            .first
+    file_field_names_and_types
+            [enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
+                    .first
             = streaming_archive::cMetadataDB::File::NumUncompressedBytes;
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes
-                               )]
-            .second
+    file_field_names_and_types
+            [enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
+                    .second
             = "INTEGER";
 
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)].first
@@ -382,9 +382,9 @@ void GlobalSQLiteMetadataDB::open() {
             m_db.prepare_statement(statement_buffer.data(), statement_buffer.size())
     );
 
-    m_upsert_files_transaction_begin_statement
-            = std::make_unique<SQLitePreparedStatement>(m_db.prepare_statement("BEGIN TRANSACTION")
-            );
+    m_upsert_files_transaction_begin_statement = std::make_unique<SQLitePreparedStatement>(
+            m_db.prepare_statement("BEGIN TRANSACTION")
+    );
     m_upsert_files_transaction_end_statement
             = std::make_unique<SQLitePreparedStatement>(m_db.prepare_statement("END TRANSACTION"));
 

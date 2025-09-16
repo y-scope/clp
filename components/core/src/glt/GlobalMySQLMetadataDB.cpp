@@ -10,6 +10,8 @@ using std::pair;
 using std::string;
 using std::vector;
 
+namespace glt {
+namespace {
 // Types
 enum class ArchivesTableFieldIndexes : uint16_t {
     Id = 0,
@@ -21,6 +23,7 @@ enum class ArchivesTableFieldIndexes : uint16_t {
     CreationIx,
     Length,
 };
+
 enum class UpdateArchiveSizeStmtFieldIndexes : uint16_t {
     BeginTimestamp = 0,
     EndTimestamp,
@@ -28,6 +31,7 @@ enum class UpdateArchiveSizeStmtFieldIndexes : uint16_t {
     Size,
     Length,
 };
+
 enum class FilesTableFieldIndexes : uint16_t {
     Id = 0,  // NOTE: This needs to be the first item in the list
     OrigFileId,
@@ -39,8 +43,8 @@ enum class FilesTableFieldIndexes : uint16_t {
     ArchiveId,
     Length,
 };
+}  // namespace
 
-namespace glt {
 void GlobalMySQLMetadataDB::ArchiveIterator::get_id(string& id) const {
     m_db_iterator->get_field_as_string(enum_to_underlying_type(ArchivesTableFieldIndexes::Id), id);
 }

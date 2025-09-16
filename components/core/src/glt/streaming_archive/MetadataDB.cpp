@@ -9,6 +9,13 @@
 #include "../type_utils.hpp"
 #include "Constants.hpp"
 
+using std::make_unique;
+using std::string;
+using std::to_string;
+using std::vector;
+
+namespace glt::streaming_archive {
+namespace {
 // Types
 enum class FilesTableFieldIndexes : uint16_t {
     Id = 0,  // NOTE: This needs to be the first item in the list
@@ -27,13 +34,8 @@ enum class FilesTableFieldIndexes : uint16_t {
     SegmentOffsetPosition,
     Length,
 };
+}  // namespace
 
-using std::make_unique;
-using std::string;
-using std::to_string;
-using std::vector;
-
-namespace glt::streaming_archive {
 static void
 create_tables(vector<std::pair<string, string>> const& file_field_names_and_types, SQLiteDB& db) {
     fmt::memory_buffer statement_buffer;
@@ -323,7 +325,8 @@ void MetadataDB::FileIterator::get_path(string& path) const {
 }
 
 epochtime_t MetadataDB::FileIterator::get_begin_ts() const {
-    return m_statement.column_int64(enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp)
+    return m_statement.column_int64(
+            enum_to_underlying_type(FilesTableFieldIndexes::BeginTimestamp)
     );
 }
 
@@ -420,13 +423,13 @@ void MetadataDB::open(string const& path) {
             .second
             = "TEXT";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes
-                               )]
-            .first
+    file_field_names_and_types
+            [enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
+                    .first
             = streaming_archive::cMetadataDB::File::NumUncompressedBytes;
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes
-                               )]
-            .second
+    file_field_names_and_types
+            [enum_to_underlying_type(FilesTableFieldIndexes::NumUncompressedBytes)]
+                    .second
             = "INTEGER";
 
     file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::NumMessages)].first
@@ -463,13 +466,13 @@ void MetadataDB::open(string const& path) {
                     .second
             = "INTEGER";
 
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition
-                               )]
-            .first
+    file_field_names_and_types
+            [enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition)]
+                    .first
             = streaming_archive::cMetadataDB::File::SegmentOffsetPosition;
-    file_field_names_and_types[enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition
-                               )]
-            .second
+    file_field_names_and_types
+            [enum_to_underlying_type(FilesTableFieldIndexes::SegmentOffsetPosition)]
+                    .second
             = "INTEGER";
 
     create_tables(file_field_names_and_types, m_db);

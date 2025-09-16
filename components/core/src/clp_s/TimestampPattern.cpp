@@ -4,14 +4,17 @@
 
 #include <chrono>
 #include <cstring>
+#include <string>
+#include <string_view>
 #include <vector>
 
-#include <date/include/date/date.h>
+#include <date/date.h>
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
 
 using clp::string_utils::convert_string_to_int;
 using std::string;
+using std::string_view;
 using std::to_string;
 using std::vector;
 
@@ -71,7 +74,7 @@ append_padded_value_notz(int value, char padding_character, size_t max_length, s
  * @return true if conversion succeeds, false otherwise
  */
 static bool convert_string_to_number(
-        string const& str,
+        string_view str,
         size_t begin_ix,
         size_t end_ix,
         char padding_character,
@@ -89,7 +92,7 @@ static bool convert_string_to_number(
  * @return true if conversion succeeds, false otherwise
  */
 static bool convert_string_to_number_notz(
-        string const& str,
+        string_view str,
         size_t max_digits,
         size_t begin_ix,
         size_t& end_ix,
@@ -107,16 +110,16 @@ append_padded_value_notz(int value, char padding_character, size_t max_length, s
     string value_str = to_string(value);
     if ("0" != value_str) {
         str.append(max_length - value_str.length(), padding_character);
-        size_t last_zero = string::npos;
-        for (size_t last = value_str.size() - 1; last >= 0; --last) {
-            if (value_str[last] == '0') {
-                last_zero = last;
+        size_t last_zero = value_str.size();
+        for (auto it = value_str.crbegin(); it != value_str.crend(); ++it) {
+            if ('0' == *it) {
+                --last_zero;
             } else {
                 break;
             }
         }
 
-        if (last_zero != string::npos) {
+        if (last_zero < value_str.size()) {
             value_str.erase(last_zero, string::npos);
         }
     }
@@ -125,7 +128,7 @@ append_padded_value_notz(int value, char padding_character, size_t max_length, s
 }
 
 static bool convert_string_to_number(
-        string const& str,
+        string_view str,
         size_t begin_ix,
         size_t end_ix,
         char padding_character,
@@ -154,7 +157,7 @@ static bool convert_string_to_number(
 }
 
 static bool convert_string_to_number_notz(
-        string const& str,
+        string_view str,
         size_t max_digits,
         size_t begin_ix,
         size_t& end_ix,
@@ -205,6 +208,10 @@ static bool convert_string_to_number_notz(
  * only done once when the program starts.
  */
 void TimestampPattern::init() {
+    // Terminate if already initialized.
+    if (nullptr != m_known_ts_patterns) {
+        return;
+    }
     // First create vector of observed patterns so that it's easy to maintain
     vector<TimestampPattern> patterns;
     // E.g. 1706980946603
@@ -306,7 +313,7 @@ void TimestampPattern::init() {
 }
 
 TimestampPattern const* TimestampPattern::search_known_ts_patterns(
-        string const& line,
+        string_view line,
         epochtime_t& timestamp,
         size_t& timestamp_begin_pos,
         size_t& timestamp_end_pos
@@ -342,7 +349,7 @@ void TimestampPattern::clear() {
 }
 
 bool TimestampPattern::parse_timestamp(
-        string const& line,
+        string_view line,
         epochtime_t& timestamp,
         size_t& timestamp_begin_pos,
         size_t& timestamp_end_pos
@@ -827,23 +834,20 @@ bool TimestampPattern::parse_timestamp(
                     }
                     auto dot_position = line.find('.');
                     auto nanosecond_start = dot_position + 1;
-                    if (std::string::npos == dot_position || 0 == dot_position
+                    if (string::npos == dot_position || 0 == dot_position
                         || cNanosecondDigits != (line.length() - nanosecond_start))
                     {
                         return false;
                     }
 
-                    auto timestamp_view = std::string_view(line);
-                    if (false
-                        == convert_string_to_int(timestamp_view.substr(0, dot_position), timestamp))
-                    {
+                    if (false == convert_string_to_int(line.substr(0, dot_position), timestamp)) {
                         return false;
                     }
 
                     epochtime_t timestamp_nanoseconds;
                     if (false
                         == convert_string_to_int(
-                                timestamp_view.substr(nanosecond_start, cNanosecondDigits),
+                                line.substr(nanosecond_start, cNanosecondDigits),
                                 timestamp_nanoseconds
                         ))
                     {
@@ -1070,14 +1074,14 @@ void TimestampPattern::insert_formatted_timestamp(epochtime_t timestamp, string&
                 case 'E':  // UNIX epoch milliseconds
                     // Note: this timestamp format is required to make up the entire timestamp, so
                     // this is safe
-                    new_msg = std::to_string(timestamp);
+                    new_msg = to_string(timestamp);
                     break;
 
                 case 'F': {  // Nanosecond precision floating point UNIX epoch timestamp
                     constexpr auto cNanosecondDigits = 9;
                     // Note: this timestamp format is required to make up the entire timestamp, so
                     // this is safe
-                    new_msg = std::to_string(timestamp);
+                    new_msg = to_string(timestamp);
                     new_msg.insert(new_msg.end() - cNanosecondDigits, '.');
                     break;
                 }
@@ -1097,8 +1101,8 @@ void TimestampPattern::insert_formatted_timestamp(epochtime_t timestamp, string&
 }
 
 bool operator==(TimestampPattern const& lhs, TimestampPattern const& rhs) {
-    return (lhs.m_num_spaces_before_ts == rhs.m_num_spaces_before_ts && lhs.m_format == rhs.m_format
-    );
+    return (lhs.m_num_spaces_before_ts == rhs.m_num_spaces_before_ts
+            && lhs.m_format == rhs.m_format);
 }
 
 bool operator!=(TimestampPattern const& lhs, TimestampPattern const& rhs) {

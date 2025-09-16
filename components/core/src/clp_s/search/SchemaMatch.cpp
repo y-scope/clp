@@ -2,17 +2,55 @@
 
 #include <algorithm>
 #include <queue>
+#include <string_view>
 #include <tuple>
 #include <utility>
 
-#include "AndExpr.hpp"
-#include "ConstantProp.hpp"
-#include "EmptyExpr.hpp"
-#include "OrExpr.hpp"
-#include "OrOfAndForm.hpp"
-#include "SearchUtils.hpp"
+#include "../archive_constants.hpp"
+#include "../SchemaTree.hpp"
+#include "ast/AndExpr.hpp"
+#include "ast/ColumnDescriptor.hpp"
+#include "ast/ConstantProp.hpp"
+#include "ast/EmptyExpr.hpp"
+#include "ast/Expression.hpp"
+#include "ast/FilterExpr.hpp"
+#include "ast/FilterOperation.hpp"
+#include "ast/Literal.hpp"
+#include "ast/OrExpr.hpp"
+#include "ast/OrOfAndForm.hpp"
+
+using clp_s::search::ast::AndExpr;
+using clp_s::search::ast::ColumnDescriptor;
+using clp_s::search::ast::ConstantProp;
+using clp_s::search::ast::DescriptorList;
+using clp_s::search::ast::DescriptorToken;
+using clp_s::search::ast::EmptyExpr;
+using clp_s::search::ast::Expression;
+using clp_s::search::ast::FilterExpr;
+using clp_s::search::ast::FilterOperation;
+using clp_s::search::ast::literal_type_bitmask_t;
+using clp_s::search::ast::LiteralType;
+using clp_s::search::ast::OrExpr;
+using clp_s::search::ast::OrOfAndForm;
 
 namespace clp_s::search {
+namespace {
+/**
+ * Gets the `NodeType` corresponding to a given subtree type.
+ * @param subtree_type
+ * @return the corresponding `NodeType` or `NodeType::Unknown` if the subtree type is unknown.
+ */
+auto get_subtree_node_type(std::string_view subtree_type) -> NodeType {
+    if (constants::cMetadataSubtreeType == subtree_type) {
+        return NodeType::Metadata;
+    }
+    if (constants::cObjectSubtreeType == subtree_type) {
+        return NodeType::Object;
+    }
+    return NodeType::Unknown;
+}
+}  // namespace
+
 // TODO: write proper iterators on the AST to make this code less awful.
 // In particular schema intersection needs AST iterators and a proper refactor
 SchemaMatch::SchemaMatch(
@@ -76,13 +114,37 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
                     auto const* node = &m_tree->get_node(node_id);
                     auto literal_type = node_to_literal_type(node->get_type());
                     DescriptorList descriptors;
-                    while (node->get_id() != m_tree->get_root_node_id()) {
-                        // may have to explicitly mark non-regex
-                        descriptors.emplace_back(node->get_key_name());
+                    // FIXME: this needs to be adjusted to handle more than JUST object subtrees
+                    // TODO: consider whether fully resolving descriptors in this way is actually
+                    // necessary. In principal the set of matching nodes is all that is really
+                    // required (and has already been determined) so the main utility of the
+                    // following code is for debugging and simply adds overhead in non-debugging
+                    // execution. It should be possible to both get rid of this code (only using it
+                    // for debugging) and change how this pass works to only run column resolution a
+                    // single time. Specifically there doesn't seem to be anything stopping us from
+                    // just doing `resolved_column->set_column_id(node_id)` and skipping populating
+                    // the descriptors/re-resolving the columns after normalization. Actually in
+                    // some contrived circumstances involving objects in arrays while the array
+                    // structurization feature is enabled it seems like the current flow where we
+                    // re-run column resolution after this can make these columns again match
+                    // multiple nodes.
+                    while (node->get_id()
+                           != m_tree->get_object_subtree_node_id_for_namespace(
+                                   column->get_namespace()
+                           ))
+                    {
+                        descriptors.emplace_back(
+                                DescriptorToken::create_descriptor_from_literal_token(
+                                        node->get_key_name()
+                                )
+                        );
                         node = &m_tree->get_node(node->get_parent_id());
                     }
                     std::reverse(descriptors.begin(), descriptors.end());
-                    auto resolved_column = ColumnDescriptor::create(descriptors);
+                    auto resolved_column = ColumnDescriptor::create_from_descriptors(
+                            descriptors,
+                            column->get_namespace()
+                    );
                     resolved_column->set_matching_type(literal_type);
                     *it = resolved_column;
                     cur->copy_append(possibilities.get());
@@ -96,6 +158,9 @@ std::shared_ptr<Expression> SchemaMatch::populate_column_mapping(std::shared_ptr
 
 bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
     bool matched = false;
+    // TODO: consider making this loop (and dynamic wildcard expansion in general) respect
+    // namespaces.
+    // TODO: consider removing this imprecise loop when we resolve issue #907.
     if (column->is_pure_wildcard()) {
         for (auto const& node : m_tree->get_nodes()) {
             if (column->matches_type(node_to_literal_type(node.get_type()))) {
@@ -111,13 +176,34 @@ bool SchemaMatch::populate_column_mapping(ColumnDescriptor* column) {
         return matched;
     }
 
-    // TODO: once we start supporting multi-rooted MPTs this (and anything that uses
-    // get_root_node_id, or assumes root node id is 0) will have to change
-    auto const& root = m_tree->get_node(m_tree->get_root_node_id());
-    for (int32_t child_node_id : root.get_children_ids()) {
-        matched |= populate_column_mapping(column, child_node_id);
-    }
+    auto resolve_against_subtree = [&](SchemaNode const& root_node) -> void {
+        for (int32_t child_node_id : root_node.get_children_ids()) {
+            matched |= populate_column_mapping(column, child_node_id);
+        }
+    };
 
+    if (auto const& subtree_type{column->get_subtree_type()}; subtree_type.has_value()) {
+        // Resolve against the subtree with matching namespace and type if it exists.
+        auto const node_type{get_subtree_node_type(subtree_type.value())};
+        if (auto const subtree_root_node_id
+            = m_tree->get_subtree_node_id(column->get_namespace(), node_type);
+            -1 != subtree_root_node_id)
+        {
+            auto const& root_node = m_tree->get_node(subtree_root_node_id);
+            resolve_against_subtree(root_node);
+        }
+    } else {
+        // Resolve against every subtree that has matching namespaces except for the
+        // `NodeType::Metadata` subtree.
+        for (auto const& [namespace_type_pair, subtree_root_node_id] : m_tree->get_subtrees()) {
+            if (NodeType::Metadata != namespace_type_pair.second
+                && namespace_type_pair.first == column->get_namespace())
+            {
+                auto const& root_node = m_tree->get_node(subtree_root_node_id);
+                resolve_against_subtree(root_node);
+            }
+        }
+    }
     return matched;
 }
 
@@ -278,7 +364,7 @@ std::shared_ptr<Expression> SchemaMatch::intersect_schemas(std::shared_ptr<Expre
                 continue;
             }
 
-            LiteralTypeBitmask types = 0;
+            literal_type_bitmask_t types = 0;
             for (int32_t schema : common_schema) {
                 if (m_descriptor_to_schema[column].count(schema)) {
                     types |= node_to_literal_type(

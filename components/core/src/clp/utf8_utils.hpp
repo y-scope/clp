@@ -89,8 +89,8 @@ namespace utf8_utils_internal {
  * @param continuation_byte
  * @return The updated code point.
  */
-[[nodiscard]] auto
-parse_continuation_byte(uint32_t code_point, uint8_t continuation_byte) -> uint32_t;
+[[nodiscard]] auto parse_continuation_byte(uint32_t code_point, uint8_t continuation_byte)
+        -> uint32_t;
 }  // namespace utf8_utils_internal
 
 template <typename EscapeHandler>

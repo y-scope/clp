@@ -1,0 +1,26 @@
+{
+  "name": "@webui/common",
+  "version": "0.1.0",
+  "exports": {
+    "./*": {
+      "types": "./dist/*.d.ts",
+      "import": "./dist/*.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "npm run build -- -w --preserveWatchOutput",
+    "lint:check": "eslint . --max-warnings 0",
+    "lint:fix": "npm run lint:check -- --fix"
+  },
+  "author": "YScope Inc. <dev@yscope.com>",
+  "license": "Apache-2.0",
+  "type": "module",
+  "dependencies": {
+    "@sinclair/typebox": "^0.34.38"
+  },
+  "devDependencies": {
+    "eslint-config-yscope": "1.1.1",
+    "typescript": "^5.7.3"
+  }
+}

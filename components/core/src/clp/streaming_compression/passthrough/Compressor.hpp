@@ -1,8 +1,11 @@
 #ifndef CLP_STREAMING_COMPRESSION_PASSTHROUGH_COMPRESSOR_HPP
 #define CLP_STREAMING_COMPRESSION_PASSTHROUGH_COMPRESSOR_HPP
 
-#include "../../FileWriter.hpp"
+#include <cstddef>
+
+#include "../../ErrorCode.hpp"
 #include "../../TraceableException.hpp"
+#include "../../WriterInterface.hpp"
 #include "../Compressor.hpp"
 
 namespace clp::streaming_compression::passthrough {
@@ -16,22 +19,27 @@ public:
     public:
         // Constructors
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
-                : TraceableException(error_code, filename, line_number) {}
+                : TraceableException{error_code, filename, line_number} {}
 
         // Methods
-        char const* what() const noexcept override {
+        [[nodiscard]] auto what() const noexcept -> char const* override {
             return "streaming_compression::passthrough::Compressor operation failed";
         }
     };
 
-    // Constructors
-    Compressor()
-            : ::clp::streaming_compression::Compressor(CompressorType::Passthrough),
-              m_compressed_stream_file_writer(nullptr) {}
+    // Constructor
+    Compressor() = default;
 
-    // Explicitly disable copy and move constructor/assignment
+    // Destructor
+    ~Compressor() override = default;
+
+    // Delete copy constructor and assignment operator
     Compressor(Compressor const&) = delete;
-    Compressor& operator=(Compressor const&) = delete;
+    auto operator=(Compressor const&) -> Compressor& = delete;
+
+    // Default move constructor and assignment operator
+    Compressor(Compressor&&) noexcept = default;
+    auto operator=(Compressor&&) noexcept -> Compressor& = default;
 
     // Methods implementing the WriterInterface
     /**
@@ -39,35 +47,36 @@ public:
      * @param data
      * @param data_length
      */
-    void write(char const* data, size_t data_length) override;
+    auto write(char const* data, size_t data_length) -> void override;
+
     /**
      * Flushes any buffered data
      */
-    void flush() override;
+    auto flush() -> void override;
+
     /**
      * Tries to get the current position of the write head
      * @param pos Position of the write head
      * @return ErrorCode_NotInit if the compressor is not open
      * @return Same as FileWriter::try_get_pos
      */
-    ErrorCode try_get_pos(size_t& pos) const override;
+    [[nodiscard]] auto try_get_pos(size_t& pos) const -> ErrorCode override;
 
     // Methods implementing the Compressor interface
     /**
      * Closes the compressor
      */
-    void close() override;
+    auto close() -> void override;
 
-    // Methods
     /**
-     * Initializes the compressor
-     * @param file_writer
+     * Initializes the compression stream
+     * @param writer
      */
-    void open(FileWriter& file_writer);
+    auto open(WriterInterface& writer) -> void override;
 
 private:
     // Variables
-    FileWriter* m_compressed_stream_file_writer;
+    WriterInterface* m_compressed_stream_writer{nullptr};
 };
 }  // namespace clp::streaming_compression::passthrough
 

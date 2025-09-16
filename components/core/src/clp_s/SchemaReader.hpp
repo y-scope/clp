@@ -1,6 +1,7 @@
 #ifndef CLP_S_SCHEMAREADER_HPP
 #define CLP_S_SCHEMAREADER_HPP
 
+#include <memory>
 #include <span>
 #include <string>
 #include <type_traits>
@@ -22,14 +23,19 @@ public:
     /**
      * Initializes the filter
      * @param reader
-     * @param schema_id
      * @param column_readers
      */
-    virtual void init(
-            SchemaReader* reader,
-            int32_t schema_id,
-            std::vector<BaseColumnReader*> const& column_readers
-    ) = 0;
+    virtual void init(SchemaReader* reader, std::vector<BaseColumnReader*> const& column_readers)
+            = 0;
+
+    /**
+     * Initializes the filter with a column map.
+     * Note: the column map only contains the ordered columns in a schema.
+     * @param reader
+     * @param column_map
+     */
+    virtual void
+    init(SchemaReader* reader, std::unordered_map<int32_t, BaseColumnReader*> const& column_map) {}
 
     /**
      * Filters the message
@@ -48,14 +54,15 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    struct TableMetadata {
+    struct SchemaMetadata {
+        uint64_t stream_id;
+        uint64_t stream_offset;
         uint64_t num_messages;
-        size_t offset;
-        size_t uncompressed_size;
+        uint64_t uncompressed_size;
     };
 
     // Constructor
-    SchemaReader() {}
+    SchemaReader() = default;
 
     // Destructor
     ~SchemaReader() { delete_columns(); }
@@ -97,6 +104,7 @@ public:
         m_reordered_columns.clear();
         m_timestamp_column = nullptr;
         m_get_timestamp = []() -> epochtime_t { return 0; };
+        m_log_event_idx_column = nullptr;
         m_local_id_to_global_id.clear();
         m_global_id_to_local_id.clear();
         m_global_id_to_unordered_object.clear();
@@ -134,11 +142,17 @@ public:
     );
 
     /**
-     * Loads the encoded messages
-     * @param decompressor
+     * Loads the encoded messages from a shared buffer starting at a given offset
+     * @param stream_buffer
+     * @param offset
      * @param uncompressed_size
      */
-    void load(ZstdDecompressor& decompressor, size_t uncompressed_size);
+    void load(std::shared_ptr<char[]> stream_buffer, size_t offset, size_t uncompressed_size);
+
+    /**
+     * @return the number of messages in the schema
+     */
+    uint64_t get_num_messages() const { return m_num_messages; }
 
     /**
      * Gets next message
@@ -156,15 +170,17 @@ public:
     bool get_next_message(std::string& message, FilterClass* filter);
 
     /**
-     * Gets the next message matching a filter, and its timestamp
+     * Gets the next message matching a filter as well as its timestamp and log event index.
      * @param message
      * @param timestamp
+     * @param log_event_idx
      * @param filter
      * @return true if there is a next message
      */
-    bool get_next_message_with_timestamp(
+    bool get_next_message_with_metadata(
             std::string& message,
             epochtime_t& timestamp,
+            int64_t& log_event_idx,
             FilterClass* filter
     );
 
@@ -175,10 +191,24 @@ public:
     void initialize_filter(FilterClass* filter);
 
     /**
+     * Initializes the filter with a column map.
+     * Note: the column map only contains the ordered columns in a schema.
+     * @param filter
+     */
+    void initialize_filter_with_column_map(FilterClass* filter);
+
+    /**
      * Marks a column as timestamp
      * @param column_reader
      */
     void mark_column_as_timestamp(BaseColumnReader* column_reader);
+
+    /**
+     * Marks a column as the log_event_idx column.
+     */
+    void mark_column_as_log_event_idx(BaseColumnReader* column_reader) {
+        m_log_event_idx_column = column_reader;
+    }
 
     int32_t get_schema_id() const { return m_schema_id; }
 
@@ -193,6 +223,12 @@ public:
      * @return the timestamp found in the row pointed to by m_cur_message
      */
     epochtime_t get_next_timestamp() const { return m_get_timestamp(); }
+
+    /**
+     * @return the log_event_idx in the row pointed to by m_cur_message or 0 if there is no
+     * log_event_idx in this table.
+     */
+    int64_t get_next_log_event_idx() const;
 
     /**
      * @return true if all records in this table have been iterated over, false otherwise
@@ -281,11 +317,11 @@ private:
     std::unordered_map<int32_t, BaseColumnReader*> m_column_map;
     std::vector<BaseColumnReader*> m_columns;
     std::vector<BaseColumnReader*> m_reordered_columns;
-    std::unique_ptr<char[]> m_table_buffer;
-    size_t m_table_buffer_size{0};
+    std::shared_ptr<char[]> m_stream_buffer;
 
     BaseColumnReader* m_timestamp_column;
     std::function<epochtime_t()> m_get_timestamp;
+    BaseColumnReader* m_log_event_idx_column{nullptr};
 
     std::shared_ptr<SchemaTree> m_global_schema_tree;
     SchemaTree m_local_schema_tree;

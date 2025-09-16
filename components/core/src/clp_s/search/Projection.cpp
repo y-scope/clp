@@ -2,22 +2,24 @@
 
 #include <algorithm>
 
-#include "SearchUtils.hpp"
+#include "../SchemaTree.hpp"
+#include "ast/ColumnDescriptor.hpp"
 
 namespace clp_s::search {
-void Projection::add_column(std::shared_ptr<ColumnDescriptor> column) {
+void Projection::add_column(std::shared_ptr<ast::ColumnDescriptor> column) {
     if (column->is_unresolved_descriptor()) {
         throw OperationFailed(ErrorCodeBadParam, __FILE__, __LINE__);
     }
     if (ProjectionMode::ReturnAllColumns == m_projection_mode) {
         throw OperationFailed(ErrorCodeUnsupported, __FILE__, __LINE__);
     }
-    if (m_selected_columns.end()
-        != std::find_if(
-                m_selected_columns.begin(),
-                m_selected_columns.end(),
-                [column](auto const& rhs) -> bool { return *column == *rhs; }
-        ))
+    if (false == m_allow_duplicate_columns
+        && m_selected_columns.end()
+                   != std::find_if(
+                           m_selected_columns.begin(),
+                           m_selected_columns.end(),
+                           [&column](auto const& rhs) -> bool { return *column == *rhs; }
+                   ))
     {
         // no duplicate columns in projection
         throw OperationFailed(ErrorCodeBadParam, __FILE__, __LINE__);
@@ -33,7 +35,7 @@ void Projection::resolve_columns(std::shared_ptr<SchemaTree> tree) {
 
 void Projection::resolve_column(
         std::shared_ptr<SchemaTree> tree,
-        std::shared_ptr<ColumnDescriptor> column
+        std::shared_ptr<ast::ColumnDescriptor> column
 ) {
     /**
      * Ideally we would reuse the code from SchemaMatch for resolving columns, but unfortunately we
@@ -52,7 +54,12 @@ void Projection::resolve_column(
      * what we need.
      */
 
-    auto cur_node_id = tree->get_root_node_id();
+    auto cur_node_id = tree->get_object_subtree_node_id_for_namespace(column->get_namespace());
+    if (-1 == cur_node_id) {
+        m_ordered_matching_nodes.emplace_back(std::vector<int32_t>{});
+        return;
+    }
+    std::vector<int32_t> matching_nodes_for_column;
     auto it = column->descriptor_begin();
     while (it != column->descriptor_end()) {
         bool matched_any{false};
@@ -74,6 +81,7 @@ void Projection::resolve_column(
             matched_any = true;
             if (last_token && column->matches_type(node_to_literal_type(child_node.get_type()))) {
                 m_matching_nodes.insert(child_node_id);
+                matching_nodes_for_column.emplace_back(child_node_id);
             } else if (false == last_token) {
                 cur_node_id = child_node_id;
                 break;
@@ -84,5 +92,6 @@ void Projection::resolve_column(
             break;
         }
     }
+    m_ordered_matching_nodes.emplace_back(std::move(matching_nodes_for_column));
 }
 }  // namespace clp_s::search

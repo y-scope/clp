@@ -1,15 +1,15 @@
 import os
 
-from job_orchestration.scheduler.constants import QueueName
+from job_orchestration.scheduler.constants import SchedulerType
 
 imports = (
     "job_orchestration.executor.query.fs_search_task",
-    "job_orchestration.executor.query.extract_ir_task",
+    "job_orchestration.executor.query.extract_stream_task",
 )
 
 task_routes = {
-    "job_orchestration.executor.query.fs_search_task.search": QueueName.QUERY,
-    "job_orchestration.executor.query.extract_ir_task.extract_ir": QueueName.QUERY,
+    "job_orchestration.executor.query.fs_search_task.search": SchedulerType.QUERY,
+    "job_orchestration.executor.query.extract_stream_task.extract_stream": SchedulerType.QUERY,
 }
 task_create_missing_queues = True
 

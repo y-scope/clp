@@ -43,8 +43,8 @@ namespace {
  * @param timestamp
  * @return The formatted date string.
  */
-[[nodiscard]] auto get_formatted_date_string(std::chrono::system_clock::time_point const& timestamp
-) -> string;
+[[nodiscard]] auto get_formatted_date_string(std::chrono::system_clock::time_point const& timestamp)
+        -> string;
 
 /**
  * Gets the string to sign required by AWS Signature Version 4 protocol.
@@ -89,9 +89,10 @@ auto is_unreserved_characters(char c) -> bool {
     return is_alphabet(c) || is_decimal_digit(c) || c == '-' || c == '_' || c == '.' || c == '~';
 }
 
-auto get_formatted_timestamp_string(std::chrono::system_clock::time_point const& timestamp
-) -> string {
-    return fmt::format("{:%Y%m%dT%H%M%SZ}", timestamp);
+auto get_formatted_timestamp_string(std::chrono::system_clock::time_point const& timestamp)
+        -> string {
+    auto const timestamp_secs = std::chrono::time_point_cast<std::chrono::seconds>(timestamp);
+    return fmt::format("{:%Y%m%dT%H%M%SZ}", timestamp_secs);
 }
 
 auto get_formatted_date_string(std::chrono::system_clock::time_point const& timestamp) -> string {
@@ -131,7 +132,7 @@ auto encode_uri(string_view uri, bool is_object_key) -> string {
     string encoded_uri;
 
     for (auto const c : uri) {
-        if (is_unreserved_characters(c) || ('/' == c) && is_object_key) {
+        if (is_unreserved_characters(c) || ('/' == c && is_object_key)) {
             encoded_uri += c;
         } else {
             encoded_uri += fmt::format("%{:02X}", c);
@@ -203,10 +204,9 @@ S3Url::S3Url(string const& url) {
     m_host = fmt::format("{}.s3.{}.{}", m_bucket, m_region, m_end_point);
 }
 
-auto AwsAuthenticationSigner::generate_presigned_url(
-        S3Url const& s3_url,
-        string& presigned_url
-) const -> ErrorCode {
+auto
+AwsAuthenticationSigner::generate_presigned_url(S3Url const& s3_url, string& presigned_url) const
+        -> ErrorCode {
     auto const s3_region = s3_url.get_region();
 
     auto const now = std::chrono::system_clock::now();
@@ -245,13 +245,12 @@ auto AwsAuthenticationSigner::generate_presigned_url(
     return ErrorCode_Success;
 }
 
-auto AwsAuthenticationSigner::get_canonical_query_string(
-        string_view scope,
-        string_view timestamp
-) const -> string {
+auto
+AwsAuthenticationSigner::get_canonical_query_string(string_view scope, string_view timestamp) const
+        -> string {
     auto const uri = fmt::format("{}/{}", m_access_key_id, scope);
-    return fmt::format(
-            "{}={}&{}={}&{}={}&{}={}&{}={}",
+    auto canonical_query_string = fmt::format(
+            "{}={}&{}={}&{}={}&{}={}",
             cXAmzAlgorithm,
             cAws4HmacSha256,
             cXAmzCredential,
@@ -259,10 +258,19 @@ auto AwsAuthenticationSigner::get_canonical_query_string(
             cXAmzDate,
             timestamp,
             cXAmzExpires,
-            cDefaultExpireTime.count(),
-            cXAmzSignedHeaders,
-            cDefaultSignedHeaders
+            cDefaultExpireTime.count()
     );
+    if (m_session_token.has_value()) {
+        canonical_query_string.append(
+                fmt::format(
+                        "&{}={}",
+                        cXAmzSecurityToken,
+                        encode_uri(m_session_token.value(), false)
+                )
+        );
+    }
+    canonical_query_string.append(fmt::format("&{}={}", cXAmzSignedHeaders, cDefaultSignedHeaders));
+    return canonical_query_string;
 }
 
 auto AwsAuthenticationSigner::get_signing_key(

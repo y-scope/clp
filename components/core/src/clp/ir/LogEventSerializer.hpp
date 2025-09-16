@@ -87,8 +87,8 @@ public:
      * Serializes the given log event.
      * @return Whether the log event was successfully serialized.
      */
-    [[nodiscard]] auto
-    serialize_log_event(epoch_time_ms_t timestamp, std::string_view message) -> bool;
+    [[nodiscard]] auto serialize_log_event(epoch_time_ms_t timestamp, std::string_view message)
+            -> bool;
 
 private:
     // Constants

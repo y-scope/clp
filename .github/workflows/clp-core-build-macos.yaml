@@ -4,29 +4,34 @@ on:
   pull_request:
     paths:
       - ".github/workflows/clp-core-build-macos.yaml"
+      - ".gitmodules"
       - "components/core/cmake/**"
       - "components/core/CMakeLists.txt"
       - "components/core/src/**"
       - "components/core/tests/**"
-      - "components/core/tools/scripts/lib_install/macos-12/**"
+      - "components/core/tools/scripts/lib_install/macos/**"
       - "components/core/tools/scripts/deps-download/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
-      - "deps-tasks.yml"
-      - "Taskfile.yml"
+      - "taskfile.yaml"
+      - "taskfiles/**"
       - "tools/scripts/deps-download/**"
   push:
     paths:
       - ".github/workflows/clp-core-build-macos.yaml"
+      - ".gitmodules"
       - "components/core/cmake/**"
       - "components/core/CMakeLists.txt"
       - "components/core/src/**"
       - "components/core/tests/**"
-      - "components/core/tools/scripts/lib_install/macos-12/**"
+      - "components/core/tools/scripts/lib_install/macos/**"
       - "components/core/tools/scripts/deps-download/**"
       - "components/core/tools/scripts/utils/build-and-run-unit-tests.py"
-      - "deps-tasks.yml"
-      - "Taskfile.yml"
+      - "taskfile.yaml"
+      - "taskfiles/**"
       - "tools/scripts/deps-download/**"
+  schedule:
+    # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
+    - cron: "15 0 * * *"
   workflow_dispatch:
 
 concurrency:
@@ -36,13 +41,20 @@ concurrency:
 
 jobs:
   build-macos:
+    name: "build-macos"
     strategy:
       matrix:
-        use_shared_libs: [true, false]
-    runs-on: "macos-12"
+        os:
+          - "macos-15"
+        use_shared_libs:
+          - true
+          - false
+    runs-on: "${{matrix.os}}"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
+          # Fetch history so that the `clang-tidy-diff` task can compare against the main branch.
+          fetch-depth: 0
           submodules: "recursive"
 
       # See https://github.com/actions/setup-python/issues/577
@@ -54,13 +66,19 @@ jobs:
           rm -f /usr/local/bin/pydoc3*
           rm -f /usr/local/bin/python3*
 
+      - name: "Remove preinstalled programs which will conflict with the pipx-installed packages"
+        run: |
+          if brew list --formula cmake >/dev/null 2>&1; then
+            brew uninstall --force cmake
+          fi
+
       - name: "Install dependencies"
-        run: "./components/core/tools/scripts/lib_install/macos-12/install-all.sh"
+        run: "./components/core/tools/scripts/lib_install/macos/install-all.sh"
 
       - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
 
-      - run: "task deps:core"
+      - run: "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core"
         shell: "bash"
 
       - name: "Build CLP-core and run unit tests"
@@ -69,8 +87,45 @@ jobs:
         # NOTE: We omit the Stopwatch tests since GH's macOS runner is too slow
         run: >-
           python3 ./tools/scripts/utils/build-and-run-unit-tests.py
-          ${{matrix.use_shared_libs == 'true' && '--use-shared-libs' || ''}}
+          ${{matrix.use_shared_libs == true && '--use-shared-libs' || ''}}
           --source-dir .
           --build-dir build
           --num-jobs $(getconf _NPROCESSORS_ONLN)
           --test-spec "~[Stopwatch]"
+
+      # NOTE: We don't use the cache for scheduled runs so that they run lint:check-cpp-static-full
+      # on all files.
+      - if: "'schedule' != github.event_name"
+        name: "Restore lint:check-cpp-static-full cache"
+        id: "cache-restore-lint-check-cpp-static-full"
+        uses: "actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684"
+        with:
+          path: |
+            .task/checksum/lint-check-cpp-static-full
+            .task/checksum/utils-cpp-lint-clang-tidy-*
+            build/lint-clang-tidy
+
+          # NOTE: We use a per-OS cache since different OSes may trigger different clang-tidy
+          # violations.
+          key: "main-branch-${{matrix.os}}-lint:check-cpp-static-full"
+
+      # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
+      # - run: >-
+      #     task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
+      - run: >-
+          CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
+          task lint:check-cpp-full
+        shell: "bash"
+
+      # Cache the source file checksums and the generated files (logs) for the
+      # lint:check-cpp-static-full task, but only if it runs successfully on the main branch.
+      # NOTE: If we don't cache the generated files, the task will re-run to generate them.
+      - if: "'pull_request' != github.event_name && 'refs/heads/main' == github.ref"
+        name: "Update lint:check-cpp-static-full cache"
+        uses: "actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684"
+        with:
+          path: |
+            .task/checksum/lint-check-cpp-static-full
+            .task/checksum/utils-cpp-lint-clang-tidy-*
+            build/lint-clang-tidy
+          key: "${{steps.cache-restore-lint-check-cpp-static-full.outputs.cache-primary-key}}"

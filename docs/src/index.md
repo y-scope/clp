@@ -1,4 +1,4 @@
-:::{image} https://yscope.com/img/clp-logo.png
+:::{image} clp-logo.png
 :class: bg-transparent
 :width: 300
 :::
@@ -47,13 +47,14 @@ features:
   (intermediate representation) produced by CLP's logging libraries.
 
 - **Real-time Compression with CLP Logging Libraries**: CLP provides logging libraries for
-  [Python][clp-loglib-py] and Java ([Log4j][log4j1-appenders] and [Logback][logback-appenders]). The
-  logging libraries compress logs in real-time, so only compressed logs are written to disk or
-  transmitted over the network. The compressed logs use CLP's intermediate representation (IR)
-  format which achieves a higher compression ratio than general purpose compressors like Zstandard.
-  Compressing IR into archives can further double the compression ratio and enable global search,
-  but this requires more memory usage as it needs to buffer enough logs. More details on IR versus
-  archives can be found in this [Uber Engineering Blog][uber-blog].
+  [Python][clp-loglib-py] and Java ([Log4j1][log4j1-appenders], [Log4j2][log4j2-appenders], and 
+  [Logback][logback-appenders]). The logging libraries compress logs in real-time, so only 
+  compressed logs are written to disk or transmitted over the network. The compressed logs use CLP's
+  intermediate representation (IR) format which achieves a higher compression ratio than general
+  purpose compressors like Zstandard. Compressing IR into archives can further double the
+  compression ratio and enable global search, but this requires more memory usage as it needs to
+  buffer enough logs. More details on IR versus archives can be found in this
+  [Uber Engineering Blog][uber-blog].
 
 - **[Log Viewer][log-viewer]**: the compressed IR can be viewed in a web-based log viewer. Compared
   to viewing the logs in an editor, CLP's log viewer supports advanced features like filtering logs
@@ -70,21 +71,21 @@ features:
 
 # Getting started
 
-Check out the relevant guide below, based on whether you'd like to use or develop CLP.
+Check out the relevant docs below, based on whether you'd like to use or develop CLP.
 
 ::::{grid} 1 1 2 2
 :gutter: 2
 
 :::{grid-item-card}
-:link: user-guide/index
-User guide
+:link: user-docs/index
+User docs
 ^^^
 Docs for those interested in using and operating CLP.
 :::
 
 :::{grid-item-card}
-:link: dev-guide/index
-Developer guide
+:link: dev-docs/index
+Developer docs
 ^^^
 Docs for those interested in developing CLP.
 :::
@@ -92,29 +93,40 @@ Docs for those interested in developing CLP.
 
 # Getting in touch
 
+## GitHub
+
 You can use GitHub issues to [report a bug][bug-report] or [request a feature][feature-req].
 
-Join us on [Zulip][zulip] to chat with developers and other community members.
+## Community
+
+Need help? Join us on one of our community servers:
+
+* [![Discord][badge-discord]][yscope-community-discord]
+* [![CLP on Zulip][badge-zulip]][yscope-community-zulip]
 
 :::{toctree}
 :hidden:
 
-user-guide/index
-dev-guide/index
+user-docs/index
+dev-docs/index
 :::
 
+[badge-discord]: https://img.shields.io/discord/1377353873068392580?style=flat&logo=discord&logoColor=white&label=Discord&labelColor=%235561f5
+[badge-zulip]: https://img.shields.io/badge/Zulip-yscope--clp-1888FA?logo=zulip
 [bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml
 [clp-ffi-go]: https://github.com/y-scope/clp-ffi-go
 [clp-ffi-py]: https://github.com/y-scope/clp-ffi-py
 [clp-loglib-py]: https://github.com/y-scope/clp-loglib-py
 [clp-paper]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
-[datasets]: user-guide/resources-datasets
+[datasets]: user-docs/resources-datasets
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [log-surgeon]: https://github.com/y-scope/log-surgeon
 [log-viewer]: https://github.com/y-scope/yscope-log-viewer
 [log4j1-appenders]: https://github.com/y-scope/log4j1-appenders
+[log4j2-appenders]: https://github.com/y-scope/log4j2-appenders
 [logback-appenders]: https://github.com/y-scope/logback-appenders
 [re2]: https://github.com/google/re2
 [uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
 [webui]: https://github.com/y-scope/clp/blob/main/components/webui
-[zulip]: https://yscope-clp.zulipchat.com/
+[yscope-community-discord]: https://discord.gg/7kZA2m5G87
+[yscope-community-zulip]: https://yscope-clp.zulipchat.com

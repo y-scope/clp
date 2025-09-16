@@ -4,7 +4,7 @@ on:
   pull_request:
   push:
   schedule:
-    # Run at midnight UTC every day with 15 minutes delay added to avoid high load periods
+    # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
     - cron: "15 0 * * *"
   workflow_dispatch:
 
@@ -15,16 +15,19 @@ concurrency:
 
 jobs:
   lint-check:
+    name: "lint-check"
     strategy:
       matrix:
-        os: ["macos-latest", "ubuntu-latest"]
+        os:
+          - "macos-15"
+          - "ubuntu-24.04"
     runs-on: "${{matrix.os}}"
     steps:
-      - uses: "actions/checkout@v4"
+      - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
           submodules: "recursive"
 
-      - uses: "actions/setup-python@v5"
+      - uses: "actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38"
         with:
           python-version: "3.11"
 
@@ -32,10 +35,14 @@ jobs:
         shell: "bash"
         run: "npm install -g @go-task/cli"
 
-      - if: "matrix.os == 'macos-latest'"
+      - name: "Install uv"
+        shell: "bash"
+        run: "curl --fail --location --silent --show-error https://astral.sh/uv/install.sh | sh"
+
+      - if: "matrix.os == 'macos-15'"
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
 
       - name: "Run lint task"
         shell: "bash"
-        run: "task lint:check"
+        run: "task lint:check-no-cpp"

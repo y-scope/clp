@@ -5,7 +5,8 @@
 #include <string>
 #include <vector>
 
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include "../src/clp/ffi/ir_stream/decoding_methods.hpp"
 #include "../src/clp/ir/constants.hpp"

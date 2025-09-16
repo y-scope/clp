@@ -5,7 +5,6 @@
 #include "../../Defs.h"
 
 namespace glt::streaming_archive::reader {
-
 // logtype belonging to single logtype table
 class LogtypeMetadata {
 public:

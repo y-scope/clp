@@ -4,6 +4,24 @@ import yaml
 from yaml.parser import ParserError
 
 
+class FileMetadata:
+    __slots__ = ("path", "size", "estimated_uncompressed_size")
+
+    def __init__(self, path: pathlib.Path, size: int):
+        self.path = path
+        self.size = size
+        self.estimated_uncompressed_size = size
+
+        filename = path.name
+        if any(filename.endswith(extension) for extension in [".gz", ".gzip", ".tgz", ".tar.gz"]):
+            self.estimated_uncompressed_size *= 13
+        elif any(
+            filename.endswith(extension)
+            for extension in [".zstd", ".zstandard", ".tar.zstd", ".tar.zstandard"]
+        ):
+            self.estimated_uncompressed_size *= 8
+
+
 def get_config_value(config, key):
     """
     Gets a value from the given dictionary using a dot-separated configuration

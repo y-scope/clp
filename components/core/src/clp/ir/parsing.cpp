@@ -23,12 +23,6 @@ bool is_delim(signed char c) {
                || ('A' <= c && c <= 'Z') || '\\' == c || '_' == c || ('a' <= c && c <= 'z'));
 }
 
-bool is_variable_placeholder(char c) {
-    return (enum_to_underlying_type(VariablePlaceholder::Integer) == c)
-           || (enum_to_underlying_type(VariablePlaceholder::Dictionary) == c)
-           || (enum_to_underlying_type(VariablePlaceholder::Float) == c);
-}
-
 bool is_var(std::string_view value) {
     size_t begin_pos = 0;
     size_t end_pos = 0;

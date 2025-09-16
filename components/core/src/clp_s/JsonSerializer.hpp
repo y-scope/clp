@@ -2,10 +2,13 @@
 #define CLP_S_JSONSERIALIZER_HPP
 
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include "ColumnReader.hpp"
+#include "Utils.hpp"
 
+namespace clp_s {
 class JsonSerializer {
 public:
     enum Op : uint8_t {
@@ -66,7 +69,11 @@ public:
         return false;
     }
 
-    void add_special_key(std::string const& key) { m_special_keys.push_back(key); }
+    void add_special_key(std::string_view const key) {
+        std::string tmp;
+        StringUtils::escape_json_string(tmp, key);
+        m_special_keys.emplace_back(tmp);
+    }
 
     void begin_object() {
         append_key();
@@ -108,15 +115,15 @@ public:
         m_json_string += "],";
     }
 
-    void append_key() { append_key(m_special_keys[m_special_keys_index++]); }
+    void append_key() { append_escaped_key(m_special_keys[m_special_keys_index++]); }
 
-    void append_key(std::string const& key) {
+    void append_key(std::string_view const key) {
         m_json_string += "\"";
-        m_json_string += key;
+        StringUtils::escape_json_string(m_json_string, key);
         m_json_string += "\":";
     }
 
-    void append_value(std::string const& value) {
+    void append_value(std::string_view const value) {
         m_json_string += value;
         m_json_string += ",";
     }
@@ -129,11 +136,17 @@ public:
     void
     append_value_from_column_with_quotes(clp_s::BaseColumnReader* column, uint64_t cur_message) {
         m_json_string += "\"";
-        column->extract_string_value_into_buffer(cur_message, m_json_string);
+        column->extract_escaped_string_value_into_buffer(cur_message, m_json_string);
         m_json_string += "\",";
     }
 
 private:
+    void append_escaped_key(std::string_view const key) {
+        m_json_string.push_back('"');
+        m_json_string.append(key);
+        m_json_string.append("\":");
+    }
+
     std::string m_json_string;
     std::vector<Op> m_op_list;
     std::vector<std::string> m_special_keys;
@@ -141,5 +154,6 @@ private:
     size_t m_op_list_index{0};
     size_t m_special_keys_index{0};
 };
+}  // namespace clp_s
 
 #endif  // CLP_S_JSONSERIALIZER_HPP

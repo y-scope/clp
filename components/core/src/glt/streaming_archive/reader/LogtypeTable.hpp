@@ -16,7 +16,6 @@
 #include "Message.hpp"
 
 namespace glt::streaming_archive::reader {
-
 /* this class is supposed to handle reading from a variable segment
  */
 
@@ -54,8 +53,11 @@ public:
      */
     bool get_next_message(Message& msg);
 
-    void get_next_row(std::vector<encoded_variable_t>& vars, size_t var_ix_begin, size_t var_ix_end)
-            const;
+    void get_next_row(
+            std::vector<encoded_variable_t>& vars,
+            size_t var_ix_begin,
+            size_t var_ix_end
+    ) const;
     /**
      *
      */

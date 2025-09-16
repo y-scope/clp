@@ -37,10 +37,11 @@ if [ $installed -eq 0 ] ; then
 fi
 
 echo "Checking for elevated privileges..."
-privileged_command_prefix=""
+install_cmd_args=()
 if [ ${EUID:-$(id -u)} -ne 0 ] ; then
   sudo echo "Script can elevate privileges."
-  privileged_command_prefix="${privileged_command_prefix} sudo"
+  privileged_command_prefix="sudo"
+  install_cmd_args+=(${privileged_command_prefix})
 fi
 
 # Get OS version
@@ -77,11 +78,24 @@ set -e
 install_dir=/usr/local
 ${privileged_command_prefix} mkdir -p ${install_dir}
 
-install_command_prefix="${privileged_command_prefix}"
 if [ $checkinstall_installed -eq 0 ] ; then
-  install_command_prefix="${install_command_prefix} checkinstall --pkgname '${package_name}' --pkgversion '${version}' --provides '${package_name}' --nodoc -y --pakdir \"${deb_output_dir}\""
+  install_cmd_args+=(
+    checkinstall
+    --default
+    --fstrans=no
+    --nodoc
+    --pkgname "${package_name}"
+    --pkgversion "${version}"
+    --provides "${package_name}"
+    --pakdir "${deb_output_dir}"
+  )
 fi
-${install_command_prefix} rsync -a . ${install_dir}/
+install_cmd_args+=(
+  rsync
+  -a .
+  "${install_dir}/"
+)
+"${install_cmd_args[@]}"
 
 # Update ld cache
 ${privileged_command_prefix} ldconfig ${install_dir}/lib/mariadb

@@ -206,8 +206,8 @@ void DictionaryReader<DictionaryIdType, EntryType>::read_new_entries() {
 }
 
 template <typename DictionaryIdType, typename EntryType>
-EntryType const& DictionaryReader<DictionaryIdType, EntryType>::get_entry(DictionaryIdType id
-) const {
+EntryType const&
+DictionaryReader<DictionaryIdType, EntryType>::get_entry(DictionaryIdType id) const {
     if (false == m_is_open) {
         throw OperationFailed(ErrorCode_NotInit, __FILENAME__, __LINE__);
     }
@@ -219,8 +219,8 @@ EntryType const& DictionaryReader<DictionaryIdType, EntryType>::get_entry(Dictio
 }
 
 template <typename DictionaryIdType, typename EntryType>
-std::string const& DictionaryReader<DictionaryIdType, EntryType>::get_value(DictionaryIdType id
-) const {
+std::string const&
+DictionaryReader<DictionaryIdType, EntryType>::get_value(DictionaryIdType id) const {
     if (id >= m_entries.size()) {
         throw OperationFailed(ErrorCode_Corrupt, __FILENAME__, __LINE__);
     }

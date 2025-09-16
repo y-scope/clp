@@ -7,7 +7,7 @@
 
 #include "../SchemaTree.hpp"
 #include "../TraceableException.hpp"
-#include "ColumnDescriptor.hpp"
+#include "ast/ColumnDescriptor.hpp"
 
 namespace clp_s::search {
 enum ProjectionMode : uint8_t {
@@ -30,7 +30,16 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
     };
 
-    explicit Projection(ProjectionMode mode) : m_projection_mode{mode} {}
+    /**
+     * Constructs a Projection object with the specified mode and column handling behavior.
+     *
+     * @param mode Projection mode that determines how expressions are projected.
+     * @param allow_duplicate_columns Whether duplicate column descriptors are permitted in the
+     * projection.
+     */
+    explicit Projection(ProjectionMode mode, bool allow_duplicate_columns = false)
+            : m_projection_mode{mode},
+              m_allow_duplicate_columns{allow_duplicate_columns} {}
 
     /**
      * Adds a column to the set of columns that should be included in the projected results
@@ -39,7 +48,7 @@ public:
      * @throws OperationFailed if this instance of Projection is in mode ReturnAllColumns
      * @throws OperationFailed if `column` is identical to a previously added column
      */
-    void add_column(std::shared_ptr<ColumnDescriptor> column);
+    void add_column(std::shared_ptr<ast::ColumnDescriptor> column);
 
     /**
      * Resolves all columns for the purpose of projection. This key resolution implementation is
@@ -65,17 +74,28 @@ public:
                || m_matching_nodes.contains(node_id);
     }
 
+    /**
+     * Gets the matching nodes for each column. The matching nodes for each column are provided in
+     * the same order as `add_column` was invoked.
+     */
+    auto get_ordered_matching_nodes() const -> std::vector<std::vector<int32_t>> const& {
+        return m_ordered_matching_nodes;
+    }
+
 private:
     /**
      * Resolves an individual column as described by the `resolve_columns` method.
      * @param tree
      * @param column
      */
-    void resolve_column(std::shared_ptr<SchemaTree> tree, std::shared_ptr<ColumnDescriptor> column);
+    void
+    resolve_column(std::shared_ptr<SchemaTree> tree, std::shared_ptr<ast::ColumnDescriptor> column);
 
-    std::vector<std::shared_ptr<ColumnDescriptor>> m_selected_columns;
+    std::vector<std::shared_ptr<ast::ColumnDescriptor>> m_selected_columns;
     absl::flat_hash_set<int32_t> m_matching_nodes;
+    std::vector<std::vector<int32_t>> m_ordered_matching_nodes;
     ProjectionMode m_projection_mode{ProjectionMode::ReturnAllColumns};
+    bool m_allow_duplicate_columns{false};
 };
 }  // namespace clp_s::search
 

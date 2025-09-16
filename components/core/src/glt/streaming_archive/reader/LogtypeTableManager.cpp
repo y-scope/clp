@@ -46,8 +46,9 @@ void LogtypeTableManager::load_variables_segment() {
     memory_map_params.path = column_file;
     memory_map_params.flags = boost::iostreams::mapped_file::readonly;
     memory_map_params.length = column_file_size;
-    memory_map_params.hint = m_memory_mapped_segment_file.data(
-    );  // try to map it to the same memory location as previous memory mapped file
+    memory_map_params.hint
+            = m_memory_mapped_segment_file.data();  // try to map it to the same memory location as
+                                                    // previous memory mapped file
     m_memory_mapped_segment_file.open(memory_map_params);
     if (!m_memory_mapped_segment_file.is_open()) {
         SPDLOG_ERROR(
@@ -85,8 +86,9 @@ void LogtypeTableManager::load_metadata() {
     memory_map_params.path = metadata_path;
     memory_map_params.flags = boost::iostreams::mapped_file::readonly;
     memory_map_params.length = metadata_file_size;
-    memory_map_params.hint = memory_mapped_segment_file.data(
-    );  // try to map it to the same memory location as previous memory mapped file
+    memory_map_params.hint
+            = memory_mapped_segment_file.data();  // try to map it to the same memory location as
+                                                  // previous memory mapped file
     memory_mapped_segment_file.open(memory_map_params);
     if (!memory_mapped_segment_file.is_open()) {
         SPDLOG_ERROR(

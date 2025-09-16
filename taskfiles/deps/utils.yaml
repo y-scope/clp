@@ -1,0 +1,85 @@
+version: "3"
+
+includes:
+  yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
+tasks:
+  # Cleans up the core checksum files any time the taskfiles change. This is to ensure that if any
+  # of core's dependencies are removed from the taskfiles, then the checksum files for the removed
+  # dependencies will also be removed. Since we can't easily remove just the checksum files for the
+  # removed dependencies, we remove all of them.
+  clean-outdated-core-checksum-files:
+    internal: true
+    run: "once"
+    sources:
+      - "{{.ROOT_DIR}}/Taskfile.yaml"
+      - "{{.ROOT_DIR}}/taskfiles/**/*.yaml"
+      - "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/**/*.yaml"
+    cmd: "rm -f '{{.G_DEPS_CORE_CHECKSUMS_DIR}}'/*"
+
+  # Combines all of core's checksum files into `G_DEPS_CORE_CHECKSUM_FILE`.
+  combine-core-checksum-files:
+    internal: true
+    cmds:
+      - "rm -f '{{.G_DEPS_CORE_CHECKSUM_FILE}}'"
+      - |-
+        for file in "{{.G_DEPS_CORE_CHECKSUMS_DIR}}"/*.md5; do
+          if [[ "$file" != "{{.G_DEPS_CORE_CHECKSUM_FILE}}" ]]; then
+            cat "$file" >> "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
+          fi
+        done
+
+  init:
+    internal: true
+    run: "once"
+    cmds:
+      - "mkdir -p '{{.G_DEPS_DIR}}'"
+      - "mkdir -p '{{.G_DEPS_CORE_DIR}}'"
+      - "mkdir -p '{{.G_DEPS_CORE_CHECKSUMS_DIR}}'"
+      - "mkdir -p '{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}'"
+
+  # Installs a CMake-based library from a remote tarball, generates a corresponding settings file,
+  # and computes a checksum for the installation directory.
+  #
+  # @param {string} LIB_NAME
+  # @param {string} TARBALL_SHA256
+  # @param {string} TARBALL_URL
+  # @param {string[]} [CMAKE_GEN_ARGS] Any additional arguments to pass to the CMake generate
+  # command.
+  # @param {string} [CMAKE_SOURCE_DIR=.] The path, within the tarball extraction directory,
+  # containing the project's top level CMakeLists.txt.
+  install-remote-cmake-lib:
+    internal: true
+    vars:
+      CMAKE_GEN_ARGS:
+        ref: "default (list) .CMAKE_GEN_ARGS"
+      CMAKE_SOURCE_DIR: >-
+        {{default "." .CMAKE_SOURCE_DIR}}
+      INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install"
+      INSTALL_DIR_CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+    deps:
+      - task: "init"
+      - task: "yscope-dev-utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.INSTALL_DIR_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS:
+            - "{{.INSTALL_PREFIX}}"
+    cmds:
+      - task: "yscope-dev-utils:cmake:install-remote-tar"
+        vars:
+          CMAKE_GEN_ARGS:
+            ref: ".CMAKE_GEN_ARGS"
+          CMAKE_JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
+          CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
+          CMAKE_SOURCE_DIR: "{{.CMAKE_SOURCE_DIR}}"
+          TAR_SHA256: "{{.TARBALL_SHA256}}"
+          TAR_URL: "{{.TARBALL_URL}}"
+          WORK_DIR: "{{.G_DEPS_CORE_DIR}}"
+
+      # This command must be last
+      - task: "yscope-dev-utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.INSTALL_DIR_CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS:
+            - "{{.INSTALL_PREFIX}}"

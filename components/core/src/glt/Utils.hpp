@@ -63,7 +63,6 @@ std::string get_unambiguous_path(std::string const& path);
  * @return Otherwise, same as FileReader::try_open and FileReader::try_read_to_delimiter
  */
 ErrorCode read_list_of_paths(std::string const& list_path, std::vector<std::string>& paths);
-
 }  // namespace glt
 
 #endif  // GLT_UTILS_HPP

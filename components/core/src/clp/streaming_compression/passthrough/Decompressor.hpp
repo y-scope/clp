@@ -1,7 +1,7 @@
 #ifndef CLP_STREAMING_COMPRESSION_PASSTHROUGH_DECOMPRESSOR_HPP
 #define CLP_STREAMING_COMPRESSION_PASSTHROUGH_DECOMPRESSOR_HPP
 
-#include "../../FileReader.hpp"
+#include "../../ReaderInterface.hpp"
 #include "../../TraceableException.hpp"
 #include "../Decompressor.hpp"
 
@@ -19,7 +19,7 @@ public:
                 : TraceableException(error_code, filename, line_number) {}
 
         // Methods
-        char const* what() const noexcept override {
+        [[nodiscard]] auto what() const noexcept -> char const* override {
             return "streaming_compression::passthrough::Decompressor operation failed";
         }
     };
@@ -33,11 +33,15 @@ public:
               m_decompressed_stream_pos(0) {}
 
     // Destructor
-    ~Decompressor() = default;
+    ~Decompressor() override = default;
 
-    // Explicitly disable copy and move constructor/assignment
+    // Delete copy constructor and assignment operator
     Decompressor(Decompressor const&) = delete;
-    Decompressor& operator=(Decompressor const&) = delete;
+    auto operator=(Decompressor const&) -> Decompressor& = delete;
+
+    // Default move constructor and assignment operator
+    Decompressor(Decompressor&&) noexcept = default;
+    auto operator=(Decompressor&&) noexcept -> Decompressor& = default;
 
     // Methods implementing the ReaderInterface
     /**
@@ -50,7 +54,8 @@ public:
      * @return ErrorCode_EndOfFile on EOF
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read) override;
+    [[nodiscard]] auto try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
+            -> ErrorCode override;
     /**
      * Tries to seek from the beginning to the given position
      * @param pos
@@ -58,19 +63,19 @@ public:
      * @return ErrorCode_Truncated if the position is past the last byte in the file
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_seek_from_begin(size_t pos) override;
+    [[nodiscard]] auto try_seek_from_begin(size_t pos) -> ErrorCode override;
     /**
      * Tries to get the current position of the read head
      * @param pos Position of the read head in the file
      * @return ErrorCode_NotInit if the decompressor is not open
      * @return ErrorCode_Success on success
      */
-    ErrorCode try_get_pos(size_t& pos) override;
+    [[nodiscard]] auto try_get_pos(size_t& pos) -> ErrorCode override;
 
     // Methods implementing the Decompressor interface
-    void open(char const* compressed_data_buf, size_t compressed_data_buf_size) override;
-    void open(FileReader& file_reader, size_t file_read_buffer_capacity) override;
-    void close() override;
+    auto open(char const* compressed_data_buf, size_t compressed_data_buf_size) -> void override;
+    auto open(ReaderInterface& reader, size_t read_buffer_capacity) -> void override;
+    auto close() -> void override;
     /**
      * Decompresses and copies the range of uncompressed data described by
      * decompressed_stream_pos and extraction_len into extraction_buf
@@ -80,23 +85,23 @@ public:
      * @return Same as streaming_compression::passthrough::Decompressor::try_seek_from_begin
      * @return Same as ReaderInterface::try_read_exact_length
      */
-    ErrorCode get_decompressed_stream_region(
+    [[nodiscard]] auto get_decompressed_stream_region(
             size_t decompressed_stream_pos,
             char* extraction_buf,
             size_t extraction_len
-    ) override;
+    ) -> ErrorCode override;
 
 private:
     enum class InputType {
         NotInitialized,
         CompressedDataBuf,
-        File
+        ReaderInterface
     };
 
     // Variables
     InputType m_input_type;
 
-    FileReader* m_file_reader;
+    ReaderInterface* m_reader;
     char const* m_compressed_data_buf;
     size_t m_compressed_data_buf_len;
 

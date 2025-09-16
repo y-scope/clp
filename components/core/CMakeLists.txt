@@ -1,5 +1,20 @@
-cmake_minimum_required(VERSION 3.16.3)
+# ystdlib requires CMake v3.23 or higher
+cmake_minimum_required(VERSION 3.23)
+
+# Toolchain setup must come before the first project() call in the entire CMake buildsystem.
+# If CLP is not the top-level project, the following setup has no effect.
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Toolchains/utils.cmake")
+setup_toolchains()
+
 project(CLP LANGUAGES CXX C)
+
+validate_compiler_versions()
+
+# Include options for CLP build
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Options/options.cmake")
+
+validate_and_setup_all_clp_dependency_flags()
+convert_clp_dependency_properties_to_variables()
 
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(default_build_type "Release")
@@ -7,12 +22,24 @@ if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE "${default_build_type}" CACHE STRING "Choose the type of build." FORCE)
 endif()
 
+if (CMAKE_BUILD_TYPE MATCHES "Release")
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT IPO_SUPPORTED OUTPUT)
+    if(IPO_SUPPORTED)
+        message(STATUS "Link-time optimization enabled.")
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
+endif()
+
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # Set general compressor
 set(GENERAL_COMPRESSOR "zstd" CACHE STRING "The general-purpose compressor used as the 2nd-stage compressor")
-set_property(CACHE GENERAL_COMPRESSOR PROPERTY STRINGS passthrough zstd)
-if ("${GENERAL_COMPRESSOR}" STREQUAL "passthrough")
+set_property(CACHE GENERAL_COMPRESSOR PROPERTY STRINGS lzma passthrough zstd)
+if ("${GENERAL_COMPRESSOR}" STREQUAL "lzma")
+    add_definitions(-DUSE_LZMA_COMPRESSION=1)
+    message(STATUS "Using Lempel–Ziv–Markov chain Algorithm compression")
+elseif ("${GENERAL_COMPRESSOR}" STREQUAL "passthrough")
     add_definitions(-DUSE_PASSTHROUGH_COMPRESSION=1)
     message(STATUS "Using passthrough compression")
 elseif ("${GENERAL_COMPRESSOR}" STREQUAL "zstd")
@@ -55,7 +82,15 @@ if (CLP_USE_STATIC_LIBS)
     if (APPLE)
         set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "macOS")
     elseif (EXISTS "/etc/centos-release")
-        set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
+        # NOTE:
+        # 1. We don't support static linking on any CentOS-based distro except manylinux_2_28 (which
+        #    shows up as "AlmaLinux").
+        # 2. A release called "AlmaLinux" doesn't guarantee we're running on a manylinux distro, but
+        #    we can improve this check when someone reports an issue.
+        file(READ "/etc/centos-release" CENTOS_RELEASE_CONTENT)
+        if(NOT "${CENTOS_RELEASE_CONTENT}" MATCHES "AlmaLinux")
+            set(CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM "CentOS")
+        endif()
     endif()
 
     if (DEFINED CLP_STATIC_LIBS_UNSUPPORTED_PLATFORM)
@@ -85,149 +120,214 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
     endif ()
 endif ()
 
+if(PROJECT_IS_TOP_LEVEL)
+    # Include dependency settings if the project isn't being included as a subproject.
+    # NOTE: We mark the file optional since it's not required if the user happens to have the
+    # dependencies installed already.
+    set(CLP_CORE_DEPS_DIR "${CMAKE_SOURCE_DIR}/../../build/deps/core")
+    include("${CLP_CORE_DEPS_DIR}/cmake-settings/all.cmake"
+            OPTIONAL
+            RESULT_VARIABLE CLP_DEPS_SETTINGS_FILE_PATH
+    )
+
+    if(NOT CLP_DEPS_SETTINGS_FILE_PATH STREQUAL "NOTFOUND")
+        # Set CMP0144 since our minimum required CMake version is less than 3.27.
+        if(POLICY "CMP0144")
+            cmake_policy(SET "CMP0144" "NEW")
+        endif()
+    endif()
+endif()
+
+if(CLP_NEED_ABSL)
+    find_package(absl REQUIRED)
+    if (absl_FOUND)
+        message(STATUS "Found absl ${absl_VERSION}")
+    endif()
+endif()
+
 # Find and setup ANTLR Library
-# We build and link to the static library
-find_package(ANTLR REQUIRED)
-if (ANTLR_FOUND)
-    message(STATUS "Found ANTLR ${ANTLR_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find libraries for ANTLR ${ANTLR4_TAG}")
+if(CLP_NEED_ANTLR)
+    find_package(antlr4-runtime REQUIRED)
+    if (antlr4-runtime_FOUND)
+        message(STATUS "Found antlr4-runtime ${antlr4-runtime_VERSION}")
+    endif()
 endif()
 
 # Find and setup Boost Library
-if(CLP_USE_STATIC_LIBS)
-    set(Boost_USE_STATIC_LIBS ON)
-endif()
-find_package(Boost 1.74 REQUIRED iostreams program_options filesystem system regex)
-if(Boost_FOUND)
+if(CLP_NEED_BOOST)
+    if(CLP_USE_STATIC_LIBS)
+        set(Boost_USE_STATIC_LIBS ON)
+    endif()
+    find_package(
+        Boost
+        1.81...1.88
+        REQUIRED
+            filesystem
+            iostreams
+            program_options
+            regex
+            system
+            url
+    )
     message(STATUS "Found Boost ${Boost_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for Boost")
 endif()
 
-# Find and setup fmt
-# NOTE:
-# - We only try to link to the static library
-# - spdlog uses fmt, so their versions need to be kept in-sync
-find_package(fmt 8.0.1 REQUIRED)
-if(fmt_FOUND)
-    message(STATUS "Found fmt ${fmt_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find static libraries for fmt")
+if(CLP_NEED_CATCH2)
+    find_package(Catch2 3.8.0 REQUIRED)
+    message(STATUS "Found Catch2 ${Catch2_VERSION}")
 endif()
 
-# Find and setup spdlog
-if(CLP_USE_STATIC_LIBS)
-    # NOTE: On some Linux distributions (e.g. Ubuntu), the spdlog package only contains a dynamic
-    # library. If the `find_package(spdlog)` call below fails, re-run
-    # `tools/scripts/lib_install/<dist_name>/install-packages-from-source.sh` to build spdlog from
-    # source.
-    set(spdlog_USE_STATIC_LIBS ON)
+if(CLP_NEED_DATE)
+    find_package(date REQUIRED)
+    if (date_FOUND)
+        message(STATUS "Found date ${date_VERSION}")
+    endif()
 endif()
-find_package(spdlog 1.9.2 REQUIRED)
-if(spdlog_FOUND)
-    message(STATUS "Found spdlog ${spdlog_VERSION}")
-else()
-    if (CLP_USE_STATIC_LIBS)
-        message(FATAL_ERROR "Could not find static libraries for spdlog. You may want to re-run
-            `components/core/tools/scripts/lib_install/<dist>/install-packages-from-source.sh`")
-    else()
-        message(FATAL_ERROR "Could not find libraries for spdlog.")
+
+if(CLP_NEED_FMT)
+    find_package(fmt REQUIRED)
+    if(fmt_FOUND)
+        message(STATUS "Found fmt ${fmt_VERSION}")
+    endif()
+endif()
+
+if(CLP_NEED_LOG_SURGEON)
+    find_package(log_surgeon REQUIRED)
+    if(log_surgeon_FOUND)
+        message(STATUS "Found log_surgeon ${log_surgeon_VERSION}")
+    endif()
+endif()
+
+if(CLP_NEED_NLOHMANN_JSON)
+    find_package(nlohmann_json REQUIRED)
+    if(nlohmann_json_FOUND)
+        message(STATUS "Found nlohmann_json ${nlohmann_json_VERSION}")
+    endif()
+endif()
+
+if(CLP_NEED_SIMDJSON)
+    find_package(simdjson REQUIRED)
+    if(simdjson_FOUND)
+        message(STATUS "Found simdjson ${simdjson_VERSION}")
+    endif()
+endif()
+
+if(CLP_NEED_SPDLOG)
+    find_package(spdlog REQUIRED)
+    if(spdlog_FOUND)
+        message(STATUS "Found spdlog ${spdlog_VERSION}")
     endif()
 endif()
 
 # Find and setup libarchive
-if(CLP_USE_STATIC_LIBS)
-    set(LibArchive_USE_STATIC_LIBS ON)
-endif()
-find_package(LibArchive REQUIRED)
-if(LibArchive_FOUND)
-    message(STATUS "Found LibArchive ${LibArchive_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
+if(CLP_NEED_LIBARCHIVE)
+    if(CLP_USE_STATIC_LIBS)
+        set(LibArchive_USE_STATIC_LIBS ON)
+    endif()
+    find_package(LibArchive REQUIRED)
+    if(LibArchive_FOUND)
+        message(STATUS "Found LibArchive ${LibArchive_VERSION}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
+    endif()
 endif()
 
 # Find and setup libcurl
 # By default, CURL does not provide static libraries
-find_package(CURL 7.68.0 REQUIRED)
-if(CURL_FOUND)
-    message(STATUS "Found CURL ${CURL_VERSION_STRING}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
+if(CLP_NEED_CURL)
+    find_package(CURL 7.61.1 REQUIRED)
+    if(CURL_FOUND)
+        message(STATUS "Found CURL ${CURL_VERSION_STRING}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for CURL")
+    endif()
 endif()
 
 # Find OpenSSL
-find_package(OpenSSL REQUIRED)
-if (OPENSSL_FOUND)
-    message(STATUS "Found OpenSSL (${OPENSSL_VERSION})")
-else ()
-    message(FATAL_ERROR "OpenSSL not found")
-endif ()
-
-# Add log surgeon
-add_subdirectory(submodules/log-surgeon EXCLUDE_FROM_ALL)
+if(CLP_NEED_OPENSSL)
+    find_package(OpenSSL REQUIRED)
+    if(OPENSSL_FOUND)
+        message(STATUS "Found OpenSSL (${OPENSSL_VERSION})")
+    else()
+        message(FATAL_ERROR "OpenSSL not found")
+    endif()
+endif()
 
 # Find and setup MariaDBClient library
-if(CLP_USE_STATIC_LIBS)
-    # NOTE: We can't statically link to MariaDBClient since it's GPL
-    message(AUTHOR_WARNING "MariaDBClient cannot be statically linked due to its license.")
-endif()
-find_package(MariaDBClient 3.1.0 REQUIRED)
-if(MariaDBClient_FOUND)
-    message(STATUS "Found MariaDBClient ${MariaDBClient_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for MariaDBClient")
+if(CLP_NEED_MARIADB)
+    if(CLP_USE_STATIC_LIBS)
+        # NOTE: We can't statically link to MariaDBClient since it's GPL
+        message(AUTHOR_WARNING "MariaDBClient cannot be statically linked due to its license.")
+    endif()
+    find_package(MariaDBClient 3.1.0 REQUIRED)
+    if(MariaDBClient_FOUND)
+        message(STATUS "Found MariaDBClient ${MariaDBClient_VERSION}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for MariaDBClient")
+    endif()
 endif()
 
 # Find and setup mongocxx
-if(CLP_USE_STATIC_LIBS)
-    set(MONGOCXX_TARGET mongo::mongocxx_static)
-else()
-    set(MONGOCXX_TARGET mongo::mongocxx_shared)
-endif()
-
-find_package(mongocxx REQUIRED)
-if(mongocxx_FOUND)
+if(CLP_NEED_MONGOCXX)
+    find_package(mongocxx REQUIRED)
     message(STATUS "Found mongocxx ${mongocxx_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for mongocxx")
+    if(CLP_USE_STATIC_LIBS)
+        set(MONGOCXX_TARGET mongo::mongocxx_static)
+    else()
+        set(MONGOCXX_TARGET mongo::mongocxx_shared)
+    endif()
 endif()
 
-# Find and setup msgpack
-find_package(msgpack-cxx 6.0.0 REQUIRED)
-if(msgpack-cxx_FOUND)
+# Find and setup msgpack-cxx
+if(CLP_NEED_MSGPACKCXX)
+    find_package(msgpack-cxx 7.0.0 REQUIRED)
     message(STATUS "Found msgpack-cxx ${msgpack-cxx_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find msgpack-cxx")
 endif()
-
-# Add abseil-cpp
-set(ABSL_PROPAGATE_CXX_STD ON)
-add_subdirectory(submodules/abseil-cpp EXCLUDE_FROM_ALL)
-
-# Add simdjson
-add_subdirectory(submodules/simdjson EXCLUDE_FROM_ALL)
 
 find_package(Threads REQUIRED)
 
-# Add yaml-cpp
-add_subdirectory(submodules/yaml-cpp EXCLUDE_FROM_ALL)
-
-# Find and setup ZStd Library
-if(CLP_USE_STATIC_LIBS)
-    set(ZStd_USE_STATIC_LIBS ON)
+if(CLP_NEED_YAMLCPP)
+    find_package(yaml-cpp REQUIRED)
+    if(yaml-cpp_FOUND)
+        message(STATUS "Found yaml-cpp ${yaml-cpp_VERSION}")
+    endif()
 endif()
-find_package(ZStd 1.4.4 REQUIRED)
-if(ZStd_FOUND)
-    message(STATUS "Found ZStd ${ZStd_VERSION}")
-else()
-    message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for ZStd")
+
+# Add ystdlib
+if(CLP_NEED_YSTDLIB)
+    set(YSTDLIB_CPP_BUILD_TESTING OFF)
+    add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
+endif()
+
+if(CLP_NEED_ZSTD)
+    # v1.4.8 is the lowest version available in the package managers of the OSes we support.
+    find_package(zstd 1.4.8 REQUIRED)
+    message(STATUS "Found zstd ${zstd_VERSION}")
+    if(CLP_USE_STATIC_LIBS)
+        set(zstd_TARGET zstd::libzstd_static)
+    else()
+        set(zstd_TARGET zstd::libzstd_shared)
+    endif()
+endif()
+
+if(CLP_NEED_LIBLZMA)
+    if(CLP_USE_STATIC_LIBS)
+        set(LibLZMA_ROOT ${LibLZMA-static_ROOT})
+        set(LibLZMA_USE_STATIC_LIBS ON)
+    else()
+        set(LibLZMA_ROOT ${LibLZMA-shared_ROOT})
+    endif()
+    # Version 5.8.1 and above address CVE-2024-3094 and CVE-2025-31115.
+    find_package(LibLZMA 5.8.1 REQUIRED)
+    message(STATUS "Found LibLZMA ${LibLZMA_VERSION}")
 endif()
 
 # sqlite dependencies
-set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
-include(cmake/Modules/FindLibraryDependencies.cmake)
-FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
+if(CLP_NEED_SQLITE)
+    set(sqlite_DYNAMIC_LIBS "dl;m;pthread")
+    include(cmake/Modules/FindLibraryDependencies.cmake)
+    FindDynamicLibraryDependencies(sqlite "${sqlite_DYNAMIC_LIBS}")
+endif()
 
 add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
@@ -241,50 +341,108 @@ add_subdirectory(src/clp_s)
 add_subdirectory(src/reducer)
 
 set(SOURCE_FILES_clp_s_unitTest
-    src/clp_s/search/AndExpr.cpp
-    src/clp_s/search/AndExpr.hpp
-    src/clp_s/search/BooleanLiteral.cpp
-    src/clp_s/search/BooleanLiteral.hpp
-    src/clp_s/search/clp_search/Query.cpp
-    src/clp_s/search/clp_search/Query.hpp
-    src/clp_s/search/ColumnDescriptor.cpp
-    src/clp_s/search/ColumnDescriptor.hpp
-    src/clp_s/search/DateLiteral.cpp
-    src/clp_s/search/DateLiteral.hpp
-    src/clp_s/search/EmptyExpr.cpp
-    src/clp_s/search/EmptyExpr.hpp
-    src/clp_s/search/Expression.cpp
-    src/clp_s/search/Expression.hpp
-    src/clp_s/search/FilterExpr.cpp
-    src/clp_s/search/FilterExpr.hpp
-    src/clp_s/search/FilterOperation.hpp
-    src/clp_s/search/Integral.cpp
-    src/clp_s/search/Integral.hpp
-    src/clp_s/search/Literal.hpp
-    src/clp_s/search/NullLiteral.cpp
-    src/clp_s/search/NullLiteral.hpp
-    src/clp_s/search/OrExpr.cpp
-    src/clp_s/search/OrExpr.hpp
-    src/clp_s/search/OrOfAndForm.cpp
-    src/clp_s/search/OrOfAndForm.hpp
-    src/clp_s/search/SearchUtils.cpp
-    src/clp_s/search/SearchUtils.hpp
-    src/clp_s/search/StringLiteral.cpp
-    src/clp_s/search/StringLiteral.hpp
-    src/clp_s/search/Transformation.hpp
-    src/clp_s/search/Value.hpp
+    src/clp_s/ArchiveReader.cpp
+    src/clp_s/ArchiveReader.hpp
+    src/clp_s/ArchiveReaderAdaptor.cpp
+    src/clp_s/ArchiveReaderAdaptor.hpp
+    src/clp_s/ArchiveWriter.cpp
+    src/clp_s/ArchiveWriter.hpp
+    src/clp_s/ColumnReader.cpp
+    src/clp_s/ColumnReader.hpp
+    src/clp_s/ColumnWriter.cpp
+    src/clp_s/ColumnWriter.hpp
+    src/clp_s/DictionaryEntry.cpp
+    src/clp_s/DictionaryEntry.hpp
+    src/clp_s/DictionaryWriter.cpp
+    src/clp_s/DictionaryWriter.hpp
+    src/clp_s/FileReader.cpp
+    src/clp_s/FileReader.hpp
+    src/clp_s/FileWriter.cpp
+    src/clp_s/FileWriter.hpp
+    src/clp_s/InputConfig.cpp
+    src/clp_s/InputConfig.hpp
+    src/clp_s/JsonConstructor.cpp
+    src/clp_s/JsonConstructor.hpp
+    src/clp_s/JsonFileIterator.cpp
+    src/clp_s/JsonFileIterator.hpp
+    src/clp_s/JsonParser.cpp
+    src/clp_s/JsonParser.hpp
+    src/clp_s/OutputHandlerImpl.cpp
+    src/clp_s/OutputHandlerImpl.hpp
+    src/clp_s/PackedStreamReader.cpp
+    src/clp_s/PackedStreamReader.hpp
+    src/clp_s/RangeIndexWriter.cpp
+    src/clp_s/RangeIndexWriter.hpp
+    src/clp_s/ReaderUtils.cpp
+    src/clp_s/ReaderUtils.hpp
+    src/clp_s/Schema.cpp
+    src/clp_s/Schema.hpp
+    src/clp_s/SchemaMap.cpp
+    src/clp_s/SchemaMap.hpp
+    src/clp_s/SchemaReader.cpp
+    src/clp_s/SchemaReader.hpp
+    src/clp_s/SchemaTree.cpp
     src/clp_s/SchemaTree.hpp
-    src/clp_s/TimestampPattern.cpp
-    src/clp_s/TimestampPattern.hpp
+    src/clp_s/SchemaWriter.cpp
+    src/clp_s/SchemaWriter.hpp
+    src/clp_s/search/AddTimestampConditions.cpp
+    src/clp_s/search/AddTimestampConditions.hpp
+    src/clp_s/search/EvaluateRangeIndexFilters.cpp
+    src/clp_s/search/EvaluateRangeIndexFilters.hpp
+    src/clp_s/search/EvaluateTimestampIndex.cpp
+    src/clp_s/search/EvaluateTimestampIndex.hpp
+    src/clp_s/search/Output.cpp
+    src/clp_s/search/Output.hpp
+    src/clp_s/search/OutputHandler.hpp
+    src/clp_s/search/Projection.cpp
+    src/clp_s/search/Projection.hpp
+    src/clp_s/search/QueryRunner.cpp
+    src/clp_s/search/QueryRunner.hpp
+    src/clp_s/search/SchemaMatch.cpp
+    src/clp_s/search/SchemaMatch.hpp
+    src/clp_s/TimestampDictionaryReader.cpp
+    src/clp_s/TimestampDictionaryReader.hpp
+    src/clp_s/TimestampDictionaryWriter.cpp
+    src/clp_s/TimestampDictionaryWriter.hpp
+    src/clp_s/TimestampEntry.cpp
+    src/clp_s/TimestampEntry.hpp
     src/clp_s/Utils.cpp
     src/clp_s/Utils.hpp
-)
+    src/clp_s/ZstdCompressor.cpp
+    src/clp_s/ZstdCompressor.hpp
+    src/clp_s/ZstdDecompressor.cpp
+    src/clp_s/ZstdDecompressor.hpp
+    )
+
+set(SOURCE_FILES_reducer_unitTest
+    src/reducer/BufferedSocketWriter.cpp
+    src/reducer/BufferedSocketWriter.hpp
+    src/reducer/ConstRecordIterator.hpp
+    src/reducer/CountOperator.cpp
+    src/reducer/CountOperator.hpp
+    src/reducer/DeserializedRecordGroup.cpp
+    src/reducer/DeserializedRecordGroup.hpp
+    src/reducer/GroupTags.hpp
+    src/reducer/network_utils.cpp
+    src/reducer/network_utils.hpp
+    src/reducer/Operator.cpp
+    src/reducer/Operator.hpp
+    src/reducer/Pipeline.cpp
+    src/reducer/Pipeline.hpp
+    src/reducer/Record.hpp
+    src/reducer/RecordGroup.hpp
+    src/reducer/RecordGroupIterator.hpp
+    src/reducer/RecordTypedKeyIterator.hpp
+    src/reducer/types.hpp
+    )
 
 set(SOURCE_FILES_unitTest
-        src/clp/Array.hpp
+        "${CLP_SQLITE3_SOURCE_DIRECTORY}/sqlite3.c"
         src/clp/aws/AwsAuthenticationSigner.cpp
         src/clp/aws/AwsAuthenticationSigner.hpp
         src/clp/aws/constants.hpp
+        src/clp/BoundedReader.cpp
+        src/clp/BoundedReader.hpp
         src/clp/BufferedFileReader.cpp
         src/clp/BufferedFileReader.hpp
         src/clp/BufferReader.cpp
@@ -332,13 +490,30 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/ir_stream/decoding_methods.inc
         src/clp/ffi/ir_stream/encoding_methods.cpp
         src/clp/ffi/ir_stream/encoding_methods.hpp
-        src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
+        src/clp/ffi/ir_stream/IrErrorCode.cpp
+        src/clp/ffi/ir_stream/IrErrorCode.hpp
+        src/clp/ffi/ir_stream/IrUnitHandlerReq.hpp
         src/clp/ffi/ir_stream/IrUnitType.hpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.cpp
         src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
         src/clp/ffi/ir_stream/protocol_constants.hpp
         src/clp/ffi/ir_stream/Serializer.cpp
         src/clp/ffi/ir_stream/Serializer.hpp
+        src/clp/ffi/ir_stream/search/AstEvaluationResult.hpp
+        src/clp/ffi/ir_stream/search/ErrorCode.cpp
+        src/clp/ffi/ir_stream/search/ErrorCode.hpp
+        src/clp/ffi/ir_stream/search/NewProjectedSchemaTreeNodeCallbackReq.hpp
+        src/clp/ffi/ir_stream/search/QueryHandler.hpp
+        src/clp/ffi/ir_stream/search/QueryHandlerImpl.cpp
+        src/clp/ffi/ir_stream/search/QueryHandlerImpl.hpp
+        src/clp/ffi/ir_stream/search/QueryHandlerReq.hpp
+        src/clp/ffi/ir_stream/search/test/test_deserializer_integration.cpp
+        src/clp/ffi/ir_stream/search/test/test_QueryHandlerImpl.cpp
+        src/clp/ffi/ir_stream/search/test/test_utils.cpp
+        src/clp/ffi/ir_stream/search/test/utils.cpp
+        src/clp/ffi/ir_stream/search/test/utils.hpp
+        src/clp/ffi/ir_stream/search/utils.cpp
+        src/clp/ffi/ir_stream/search/utils.hpp
         src/clp/ffi/ir_stream/utils.cpp
         src/clp/ffi/ir_stream/utils.hpp
         src/clp/ffi/KeyValuePairLogEvent.cpp
@@ -370,6 +545,8 @@ set(SOURCE_FILES_unitTest
         src/clp/FileReader.hpp
         src/clp/FileWriter.cpp
         src/clp/FileWriter.hpp
+        src/clp/global_metadata_db_utils.hpp
+        src/clp/global_metadata_db_utils.cpp
         src/clp/GlobalMetadataDB.hpp
         src/clp/GlobalMetadataDBConfig.cpp
         src/clp/GlobalMetadataDBConfig.hpp
@@ -379,6 +556,8 @@ set(SOURCE_FILES_unitTest
         src/clp/GlobalSQLiteMetadataDB.hpp
         src/clp/Grep.cpp
         src/clp/Grep.hpp
+        src/clp/GrepCore.cpp
+        src/clp/GrepCore.hpp
         src/clp/hash_utils.cpp
         src/clp/hash_utils.hpp
         src/clp/ir/constants.hpp
@@ -415,6 +594,8 @@ set(SOURCE_FILES_unitTest
         src/clp/MySQLParamBindings.hpp
         src/clp/MySQLPreparedStatement.cpp
         src/clp/MySQLPreparedStatement.hpp
+        src/clp/networking/socket_utils.cpp
+        src/clp/networking/socket_utils.hpp
         src/clp/NetworkReader.cpp
         src/clp/NetworkReader.hpp
         src/clp/PageAllocatedVector.hpp
@@ -425,6 +606,8 @@ set(SOURCE_FILES_unitTest
         src/clp/Profiler.hpp
         src/clp/Query.cpp
         src/clp/Query.hpp
+        src/clp/QueryToken.cpp
+        src/clp/QueryToken.hpp
         src/clp/ReaderInterface.cpp
         src/clp/ReaderInterface.hpp
         src/clp/ReadOnlyMemoryMappedFile.cpp
@@ -462,6 +645,11 @@ set(SOURCE_FILES_unitTest
         src/clp/streaming_compression/Compressor.hpp
         src/clp/streaming_compression/Constants.hpp
         src/clp/streaming_compression/Decompressor.hpp
+        src/clp/streaming_compression/lzma/Compressor.cpp
+        src/clp/streaming_compression/lzma/Compressor.hpp
+        src/clp/streaming_compression/lzma/Decompressor.cpp
+        src/clp/streaming_compression/lzma/Decompressor.hpp
+        src/clp/streaming_compression/lzma/Constants.hpp
         src/clp/streaming_compression/passthrough/Compressor.cpp
         src/clp/streaming_compression/passthrough/Compressor.hpp
         src/clp/streaming_compression/passthrough/Decompressor.cpp
@@ -493,25 +681,29 @@ set(SOURCE_FILES_unitTest
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
-        submodules/sqlite3/sqlite3.c
-        submodules/sqlite3/sqlite3.h
-        submodules/sqlite3/sqlite3ext.h
+        tests/clp_s_test_utils.cpp
+        tests/clp_s_test_utils.hpp
         tests/LogSuppressor.hpp
-        tests/test-Array.cpp
+        tests/TestOutputCleaner.hpp
+        tests/test-BoundedReader.cpp
         tests/test-BufferedFileReader.cpp
+        tests/test-clp_s-delta-encode-log-order.cpp
+        tests/test-clp_s-end_to_end.cpp
+        tests/test-clp_s-range_index.cpp
+        tests/test-clp_s-search.cpp
         tests/test-EncodedVariableInterpreter.cpp
         tests/test-encoding_methods.cpp
-        tests/test-ffi_IrUnitHandlerInterface.cpp
+        tests/test-ffi_IrUnitHandlerReq.cpp
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
-        tests/test-Grep.cpp
+        tests/test-GlobalMetadataDBConfig.cpp
+        tests/test-GrepCore.cpp
         tests/test-hash_utils.cpp
         tests/test-ir_encoding_methods.cpp
         tests/test-ir_parsing.cpp
         tests/test-ir_serializer.cpp
         tests/test-kql.cpp
-        tests/test-main.cpp
         tests/test-math_utils.cpp
         tests/test-MemoryMappedFile.cpp
         tests/test-NetworkReader.cpp
@@ -523,34 +715,57 @@ set(SOURCE_FILES_unitTest
         tests/test-Stopwatch.cpp
         tests/test-StreamingCompression.cpp
         tests/test-string_utils.cpp
+        tests/test-sql.cpp
         tests/test-TimestampPattern.cpp
         tests/test-utf8_utils.cpp
         tests/test-Utils.cpp
         )
-add_executable(unitTest ${SOURCE_FILES_unitTest} ${SOURCE_FILES_clp_s_unitTest})
-target_include_directories(unitTest
-        PRIVATE
-        ${CMAKE_SOURCE_DIR}/submodules
-        )
-target_link_libraries(unitTest
-        PRIVATE
-        absl::flat_hash_map
-        Boost::filesystem Boost::iostreams Boost::program_options Boost::regex
-        ${CURL_LIBRARIES}
-        fmt::fmt
-        kql
-        log_surgeon::log_surgeon
-        LibArchive::LibArchive
-        MariaDBClient::MariaDBClient
-        spdlog::spdlog
-        OpenSSL::Crypto
-        ${sqlite_LIBRARY_DEPENDENCIES}
-        ${STD_FS_LIBS}
-        clp::regex_utils
-        clp::string_utils
-        yaml-cpp::yaml-cpp
-        ZStd::ZStd
-        )
-target_compile_features(unitTest
-        PRIVATE cxx_std_20
-        )
+
+if(CLP_BUILD_TESTING)
+    add_executable(unitTest
+            ${SOURCE_FILES_unitTest}
+            ${SOURCE_FILES_clp_s_unitTest}
+            ${SOURCE_FILES_reducer_unitTest}
+            )
+    target_include_directories(unitTest
+            PRIVATE
+            ${CLP_SQLITE3_INCLUDE_DIRECTORY}
+            )
+    target_link_libraries(unitTest
+            PRIVATE
+            absl::flat_hash_map
+            Boost::filesystem
+            Boost::iostreams
+            Boost::program_options
+            Boost::regex
+            Boost::url
+            Catch2::Catch2WithMain
+            ${CURL_LIBRARIES}
+            clp_s::search::ast
+            clp_s::search::kql
+            clp_s::search::sql
+            clp_s::timestamp_pattern
+            date::date
+            fmt::fmt
+            log_surgeon::log_surgeon
+            LibArchive::LibArchive
+            LibLZMA::LibLZMA
+            MariaDBClient::MariaDBClient
+            ${MONGOCXX_TARGET}
+            msgpack-cxx
+            nlohmann_json::nlohmann_json
+            simdjson::simdjson
+            spdlog::spdlog
+            OpenSSL::Crypto
+            ${sqlite_LIBRARY_DEPENDENCIES}
+            ${STD_FS_LIBS}
+            clp::regex_utils
+            clp::string_utils
+            ystdlib::containers
+            ystdlib::error_handling
+            ${zstd_TARGET}
+            )
+    target_compile_features(unitTest
+            PRIVATE cxx_std_20
+            )
+endif()

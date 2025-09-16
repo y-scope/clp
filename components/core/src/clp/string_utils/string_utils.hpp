@@ -2,7 +2,9 @@
 #define CLP_STRING_UTILS_STRING_UTILS_HPP
 
 #include <charconv>
+#include <concepts>
 #include <string>
+#include <string_view>
 
 namespace clp::string_utils {
 /**
@@ -55,6 +57,20 @@ std::string replace_characters(
 );
 
 /**
+ * Replace unescaped instances of `from_char` with `to_char` in `str`.
+ *
+ * NOTE: `from_char` and `escape_char` must not be the same character. If they are, the function's
+ * behaviour is undefined.
+ *
+ * @param escape_char The character used for escaping
+ * @param from_char
+ * @param to_char
+ * @param str String in which to replace the characters
+ */
+auto replace_unescaped_char(char escape_char, char from_char, char to_char, std::string& str)
+        -> void;
+
+/**
  * Converts a string to lowercase
  * @param str
  */
@@ -71,6 +87,17 @@ void to_lower(std::string& str);
  * @return Cleaned wildcard search string
  */
 std::string clean_up_wildcard_search_string(std::string_view str);
+
+/**
+ * Unescapes a string according to the following rules:
+ * <ul>
+ *   <li>Escape sequences `\<char>` are replaced by `<char>`</li>
+ *   <li>Lone dangling `\` is removed from the end of the string</li>
+ * </ul>
+ * @param str
+ * @return An unescaped version of `str`.
+ */
+[[nodiscard]] auto unescape_string(std::string_view str) -> std::string;
 
 /**
  * Checks if character is a wildcard
@@ -121,24 +148,16 @@ bool wildcard_match_unsafe_case_sensitive(std::string_view tame, std::string_vie
  * @param converted
  * @return true if the conversion was successful, false otherwise
  */
-template <typename integer_t>
+template <std::integral integer_t>
 bool convert_string_to_int(std::string_view raw, integer_t& converted);
 
-template <typename integer_t>
+template <std::integral integer_t>
 bool convert_string_to_int(std::string_view raw, integer_t& converted) {
-#if defined(_MSC_VER)
-    auto* raw_begin = raw.data();
-    auto* raw_end = raw_begin + raw.size();
-#else
-    auto raw_begin = raw.cbegin();
-    auto raw_end = raw.cend();
-#endif
-    auto result = std::from_chars(raw_begin, raw_end, converted);
-    if (raw_end != result.ptr) {
-        return false;
-    } else {
-        return result.ec == std::errc();
-    }
+    auto const* raw_begin{raw.data()};
+    auto const* raw_end{raw_begin + raw.size()};
+    auto const result{std::from_chars(raw_begin, raw_end, converted)};
+
+    return result.ptr == raw_end && std::errc{} == result.ec;
 }
 }  // namespace clp::string_utils
 

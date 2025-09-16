@@ -5,8 +5,10 @@ from contextlib import closing
 
 import msgpack
 from clp_py_utils.clp_config import (
+    Database,
     QUERY_JOBS_TABLE_NAME,
 )
+from clp_py_utils.clp_metadata_db_utils import fetch_existing_datasets
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
 from job_orchestration.scheduler.scheduler_data import QueryJobConfig
@@ -69,6 +71,24 @@ def submit_query_job(
         return db_cursor.lastrowid
 
 
+def validate_dataset_exists(db_config: Database, dataset: str) -> None:
+    """
+    Validates that `dataset` exists in the metadata database.
+
+    :param db_config:
+    :param dataset:
+    :raise: ValueError if the dataset doesn't exist.
+    """
+    sql_adapter = SQL_Adapter(db_config)
+    clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
+    table_prefix = clp_db_connection_params["table_prefix"]
+    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
+        db_conn.cursor(dictionary=True)
+    ) as db_cursor:
+        if dataset not in fetch_existing_datasets(db_cursor, table_prefix):
+            raise ValueError(f"Dataset `{dataset}` doesn't exist.")
+
+
 def wait_for_query_job(sql_adapter: SQL_Adapter, job_id: int) -> QueryJobStatus:
     """
     Waits for the query job with the given ID to complete.
@@ -92,6 +112,7 @@ def wait_for_query_job(sql_adapter: SQL_Adapter, job_id: int) -> QueryJobStatus:
                 QueryJobStatus.SUCCEEDED,
                 QueryJobStatus.FAILED,
                 QueryJobStatus.CANCELLED,
+                QueryJobStatus.KILLED,
             ):
                 return new_status
 

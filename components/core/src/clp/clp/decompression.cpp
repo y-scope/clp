@@ -5,14 +5,15 @@
 
 #include "../ErrorCode.hpp"
 #include "../FileWriter.hpp"
+#include "../global_metadata_db_utils.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
+#include "../ir/constants.hpp"
 #include "../spdlog_with_specializations.hpp"
 #include "../streaming_archive/reader/Archive.hpp"
 #include "../TraceableException.hpp"
 #include "../Utils.hpp"
 #include "FileDecompressor.hpp"
-#include "ir/constants.hpp"
 #include "utils.hpp"
 
 using std::cerr;
@@ -40,8 +41,13 @@ bool decompress(
 
     try {
         auto archives_dir = std::filesystem::path(command_line_args.get_archives_dir());
-        auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
-        auto global_metadata_db = get_global_metadata_db(global_metadata_db_config, archives_dir);
+        auto global_metadata_db = create_global_metadata_db(
+                command_line_args.get_metadata_db_config(),
+                archives_dir
+        );
+        if (nullptr == global_metadata_db) {
+            return false;
+        }
 
         streaming_archive::reader::Archive archive_reader;
 
@@ -245,8 +251,13 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
 
     try {
         std::filesystem::path archives_dir{command_line_args.get_archives_dir()};
-        auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
-        auto global_metadata_db = get_global_metadata_db(global_metadata_db_config, archives_dir);
+        auto global_metadata_db = create_global_metadata_db(
+                command_line_args.get_metadata_db_config(),
+                archives_dir
+        );
+        if (nullptr == global_metadata_db) {
+            return false;
+        }
 
         global_metadata_db->open();
         string archive_id;
@@ -282,7 +293,7 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
                                      string const& orig_file_id,
                                      size_t begin_message_ix,
                                      size_t end_message_ix,
-                                     [[maybe_unused]] bool is_last_ir_chunk) {
+                                     [[maybe_unused]] bool is_last_chunk) {
             auto dest_ir_file_name = orig_file_id;
             dest_ir_file_name += "_" + std::to_string(begin_message_ix);
             dest_ir_file_name += "_" + std::to_string(end_message_ix);
@@ -310,7 +321,7 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
                     archive_reader,
                     *file_metadata_ix_ptr,
                     command_line_args.get_ir_target_size(),
-                    command_line_args.get_ir_temp_output_dir(),
+                    command_line_args.get_output_dir(),
                     ir_output_handler
             ))
         {

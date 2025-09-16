@@ -1,4 +1,6 @@
-#include <Catch2/single_include/catch2/catch.hpp>
+#include <catch2/catch_template_test_macros.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 
 #include "../src/clp/ffi/encoding_methods.hpp"
 #include "../src/clp/ir/types.hpp"
@@ -38,8 +40,8 @@ TEMPLATE_TEST_CASE(
 ) {
     // Code below only supports these two types right now
     static_assert(
-            (std::is_same_v<TestType, eight_byte_encoded_variable_t>
-             || std::is_same_v<TestType, four_byte_encoded_variable_t>)
+            std::is_same_v<TestType, eight_byte_encoded_variable_t>
+            || std::is_same_v<TestType, four_byte_encoded_variable_t>
     );
 
     string value;

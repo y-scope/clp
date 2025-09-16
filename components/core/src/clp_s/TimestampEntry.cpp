@@ -1,6 +1,12 @@
 #include "TimestampEntry.hpp"
 
 #include <cmath>
+#include <sstream>
+
+#include "search/ast/FilterOperation.hpp"
+#include "Utils.hpp"
+
+using clp_s::search::ast::FilterOperation;
 
 namespace clp_s {
 void TimestampEntry::ingest_timestamp(epochtime_t timestamp) {
@@ -54,21 +60,21 @@ void TimestampEntry::merge_range(TimestampEntry const& entry) {
     }
 }
 
-void TimestampEntry::write_to_file(ZstdCompressor& compressor) const {
-    compressor.write_numeric_value<uint64_t>(m_key_name.size());
-    compressor.write_string(m_key_name);
-    compressor.write_numeric_value<uint64_t>(m_column_ids.size());
+void TimestampEntry::write_to_stream(std::stringstream& stream) const {
+    write_numeric_value<uint64_t>(stream, m_key_name.size());
+    stream.write(m_key_name.data(), m_key_name.size());
+    write_numeric_value<uint64_t>(stream, m_column_ids.size());
     for (auto const& id : m_column_ids) {
-        compressor.write_numeric_value<int32_t>(id);
+        write_numeric_value<int32_t>(stream, id);
     }
 
-    compressor.write_numeric_value<TimestampEncoding>(m_encoding);
+    write_numeric_value<TimestampEncoding>(stream, m_encoding);
     if (m_encoding == Epoch) {
-        compressor.write_numeric_value<epochtime_t>(m_epoch_start);
-        compressor.write_numeric_value<epochtime_t>(m_epoch_end);
+        write_numeric_value<epochtime_t>(stream, m_epoch_start);
+        write_numeric_value<epochtime_t>(stream, m_epoch_end);
     } else if (m_encoding == DoubleEpoch) {
-        compressor.write_numeric_value<double>(m_epoch_start_double);
-        compressor.write_numeric_value<double>(m_epoch_end_double);
+        write_numeric_value<double>(stream, m_epoch_start_double);
+        write_numeric_value<double>(stream, m_epoch_end_double);
     }
 }
 

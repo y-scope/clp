@@ -1,0 +1,83 @@
+name: "clp-build-runtime-image"
+description: "Builds a container image to be used for running CLP."
+
+inputs:
+  image_type:
+    description: "Type of image to build"
+    required: true
+  image_registry:
+    default: "ghcr.io"
+    description: "Container image registry"
+    required: false
+  image_registry_username:
+    default: "${{github.actor}}"
+    description: "Container image registry username"
+    required: false
+  image_registry_password:
+    default: ""
+    description: "Container image registry password"
+    required: false
+  platform_id:
+    description: "Platform ID of the container (e.g. ubuntu)"
+    required: false
+  platform_version_id:
+    description: "Platform VERSION_ID / VERSION_CODENAME of the container
+      (e.g. jammy, focal, etc.)"
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: "Set up Docker Buildx"
+      uses: "docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2"
+
+    - name: "Login to Image Registry"
+      uses: "docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772"
+      with:
+        registry: "${{inputs.image_registry}}"
+        username: "${{inputs.image_registry_username}}"
+        password: "${{inputs.image_registry_password}}"
+
+    - name: "Sanitize Repository Name"
+      id: "sanitization"
+      shell: "bash"
+      run: |
+        # Docker doesn't support repository names with uppercase characters, so we convert the
+        # name to lowercase here.
+        echo "REPOSITORY=$(echo '${{github.repository}}' | tr '[:upper:]' '[:lower:]')" \
+          >> "$GITHUB_OUTPUT"
+
+    - name: "Compute metadata"
+      id: "compute-meta"
+      shell: "bash"
+      run: |
+        base_path="./tools/docker-images"
+
+        if [[ "${{inputs.image_type}}" == "execution" ]]; then
+          platform="${{inputs.platform_id}}-${{inputs.platform_version_id}}"
+          dockerfile_path="$base_path/clp-execution-base-$platform/Dockerfile"
+          image_name="clp-${{inputs.image_type}}-$platform"
+        else
+          dockerfile_path="$base_path/clp-package/Dockerfile"
+          image_name="clp-${{inputs.image_type}}"
+        fi
+
+        echo "DOCKERFILE=$dockerfile_path" >> "$GITHUB_OUTPUT"
+        echo "IMAGE_NAME=$image_name" >> "$GITHUB_OUTPUT"
+
+    - name: "Extract GitHub Metadata"
+      id: "extract-gh-meta"
+      uses: "docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804"
+      with:
+        images: "${{inputs.image_registry}}/${{steps.sanitization.outputs.REPOSITORY}}\
+          /${{steps.compute-meta.outputs.IMAGE_NAME}}"
+
+    - name: "Build and Push"
+      if: "github.event_name != 'pull_request' && github.ref == 'refs/heads/main'"
+      uses: "docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4"
+      with:
+        context: "./"
+        file: "${{steps.compute-meta.outputs.DOCKERFILE}}"
+        push: true
+        tags: "${{steps.extract-gh-meta.outputs.tags}}"
+        labels: "${{steps.extract-gh-meta.outputs.labels}}"

@@ -3,6 +3,9 @@
 #ifndef CLP_S_DICTIONARYWRITER_HPP
 #define CLP_S_DICTIONARYWRITER_HPP
 
+#include <absl/container/flat_hash_map.h>
+
+#include "../clp/Defs.h"
 #include "DictionaryEntry.hpp"
 
 namespace clp_s {
@@ -16,6 +19,9 @@ public:
         OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
                 : TraceableException(error_code, filename, line_number) {}
     };
+
+    using dictionary_id_t = DictionaryIdType;
+    using entry_t = EntryType;
 
     // Constructors
     DictionaryWriter() : m_is_open(false) {}
@@ -50,7 +56,7 @@ public:
 
 protected:
     // Types
-    using value_to_id_t = std::unordered_map<std::string, DictionaryIdType>;
+    using value_to_id_t = absl::flat_hash_map<std::string, DictionaryIdType>;
 
     // Variables
     bool m_is_open;
@@ -67,7 +73,8 @@ protected:
     size_t m_data_size{};
 };
 
-class VariableDictionaryWriter : public DictionaryWriter<uint64_t, VariableDictionaryEntry> {
+class VariableDictionaryWriter
+        : public DictionaryWriter<clp::variable_dictionary_id_t, VariableDictionaryEntry> {
 public:
     class OperationFailed : public TraceableException {
     public:
@@ -81,10 +88,11 @@ public:
      * @param value
      * @param id ID of the variable matching the given entry
      */
-    bool add_entry(std::string const& value, uint64_t& id);
+    bool add_entry(std::string_view value, clp::variable_dictionary_id_t& id);
 };
 
-class LogTypeDictionaryWriter : public DictionaryWriter<uint64_t, LogTypeDictionaryEntry> {
+class LogTypeDictionaryWriter
+        : public DictionaryWriter<clp::logtype_dictionary_id_t, LogTypeDictionaryEntry> {
 public:
     class OperationFailed : public TraceableException {
     public:
@@ -98,7 +106,7 @@ public:
      * @param logtype_entry
      * @param logtype_id ID of the logtype matching the given entry
      */
-    bool add_entry(LogTypeDictionaryEntry& logtype_entry, uint64_t& logtype_id);
+    bool add_entry(LogTypeDictionaryEntry& logtype_entry, clp::logtype_dictionary_id_t& logtype_id);
 };
 
 template <typename DictionaryIdType, typename EntryType>

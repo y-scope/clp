@@ -41,7 +41,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
         config_file_path += '/';
     }
     config_file_path += cDefaultConfigFilename;
-    string global_metadata_db_config_file_path;
+    // clang-format off
     options_general.add_options()
             ("help,h", "Print help")
             ("version,V", "Print version")
@@ -51,14 +51,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                             ->value_name("FILE")
                             ->default_value(config_file_path),
                     "Use configuration options from FILE"
-            )
-            (
-                    "db-config-file",
-                    po::value<string>(&global_metadata_db_config_file_path)
-                            ->value_name("FILE")
-                            ->default_value(global_metadata_db_config_file_path),
-                    "Global metadata DB YAML config"
             );
+    // clang-format on
+    m_metadata_db_config.emplace(options_general);
 
     // Define functional options
     po::options_description options_functional("Input Options");
@@ -121,15 +116,9 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
             return ParsingResult::InfoCommand;
         }
 
-        // Parse and validate global metadata DB config
-        if (false == global_metadata_db_config_file_path.empty()) {
-            try {
-                m_metadata_db_config.parse_config_file(global_metadata_db_config_file_path);
-            } catch (std::exception& e) {
-                SPDLOG_ERROR("Failed to validate metadata database config - {}", e.what());
-                return ParsingResult::Failure;
-            }
-        }
+        // Initialize and validate global metadata DB config
+        m_metadata_db_config->read_credentials_from_env_if_needed();
+        m_metadata_db_config->validate();
 
         // Validate command
         if (parsed_command_line_options.count("command") == 0) {
@@ -255,13 +244,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                             ->default_value(m_ir_target_size),
                     "Target size (B) for each IR chunk before a new chunk is created"
             );
-            options_ir.add_options()(
-                    "temp-output-dir",
-                    po::value<string>(&m_ir_temp_output_dir)
-                            ->value_name("DIR")
-                            ->default_value(m_ir_temp_output_dir),
-                    "Temporary output directory for IR chunks while they're being written"
-            );
 
             po::options_description all_ir_options;
             all_ir_options.add(ir_positional_options);
@@ -310,10 +292,6 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
 
             if (m_orig_file_id.empty()) {
                 throw invalid_argument("ORIG_FILE_ID cannot be empty.");
-            }
-
-            if (m_ir_temp_output_dir.empty()) {
-                m_ir_temp_output_dir = m_output_dir;
             }
         } else if (Command::Compress == m_command) {
             // Define compression hidden positional options
@@ -368,7 +346,7 @@ CommandLineArguments::parse_arguments(int argc, char const* argv[]) {
                     po::value<int>(&m_compression_level)
                             ->value_name("LEVEL")
                             ->default_value(m_compression_level),
-                    "1 (fast/low compression) to 9 (slow/high compression)"
+                    "1 (fast/low compression) to 19 (slow/high compression)"
             )(
                     "print-archive-stats-progress",
                     po::bool_switch(&m_print_archive_stats_progress),

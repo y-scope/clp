@@ -86,12 +86,9 @@ auto BufferReader::try_get_pos(size_t& pos) -> ErrorCode {
     return ErrorCode_Success;
 }
 
-auto BufferReader::try_read_to_delimiter(
-        char delim,
-        bool keep_delimiter,
-        bool append,
-        std::string& str
-) -> ErrorCode {
+auto
+BufferReader::try_read_to_delimiter(char delim, bool keep_delimiter, bool append, std::string& str)
+        -> ErrorCode {
     if (false == append) {
         str.clear();
     }

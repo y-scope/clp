@@ -1,9 +1,11 @@
+from datetime import date
+
 # -- Project information -------------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
 project = "CLP"
 # NOTE: We don't include a period after "Inc" since the theme adds one already.
-copyright = "2021-2024 YScope Inc"
+copyright = f"2021-{date.today().year} YScope Inc"
 
 # -- General configuration -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -22,6 +24,7 @@ extensions = [
 myst_enable_extensions = [
     "attrs_block",
     "colon_fence",
+    "dollarmath",
 ]
 
 myst_heading_anchors = 4
@@ -37,13 +40,19 @@ autodoc_typehints = "description"
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_favicon = "https://docs.yscope.com/_static/favicon.ico"
-html_logo = "https://yscope.com/img/clp-logo.png"
+html_logo = "../src/clp-logo.png"
 html_title = "CLP"
 html_show_copyright = True
 
 html_static_path = ["../src/_static"]
 
 html_theme = "pydata_sphinx_theme"
+
+# -- sphinxcontrib-mermaid options ---------------------------------------------
+# https://sphinxcontrib-mermaid-demo.readthedocs.io/en/latest/
+
+mermaid_include_elk = "0.1.7"
+mermaid_version = "11.5.0"
 
 # -- Theme options -------------------------------------------------------------
 # https://pydata-sphinx-theme.readthedocs.io/en/stable/user_guide/layout.html

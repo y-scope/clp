@@ -34,26 +34,27 @@ set(
         ../VariableDictionaryReader.hpp
         ../WriterInterface.cpp
         ../WriterInterface.hpp
-        "${PROJECT_SOURCE_DIR}/submodules/date/include/date/date.h"
         CommandLineArguments.cpp
         CommandLineArguments.hpp
         make-dictionaries-readable.cpp
 )
 
-add_executable(make-dictionaries-readable ${MAKE_DICTIONARIES_READABLE_SOURCES})
-target_compile_features(make-dictionaries-readable PRIVATE cxx_std_20)
-target_include_directories(make-dictionaries-readable PRIVATE "${PROJECT_SOURCE_DIR}/submodules")
-target_link_libraries(make-dictionaries-readable
-        PRIVATE
-        Boost::filesystem Boost::iostreams Boost::program_options
-        log_surgeon::log_surgeon
-        spdlog::spdlog
-        clp::string_utils
-        ZStd::ZStd
-)
-# Put the built executable at the root of the build directory
-set_target_properties(
-        make-dictionaries-readable
-        PROPERTIES
-        RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
-)
+if(CLP_BUILD_EXECUTABLES)
+        add_executable(make-dictionaries-readable ${MAKE_DICTIONARIES_READABLE_SOURCES})
+        target_compile_features(make-dictionaries-readable PRIVATE cxx_std_20)
+        target_link_libraries(make-dictionaries-readable
+                PRIVATE
+                Boost::filesystem Boost::program_options
+                log_surgeon::log_surgeon
+                spdlog::spdlog
+                clp::string_utils
+                ystdlib::containers
+                ${zstd_TARGET}
+        )
+        # Put the built executable at the root of the build directory
+        set_target_properties(
+                make-dictionaries-readable
+                PROPERTIES
+                RUNTIME_OUTPUT_DIRECTORY "${PROJECT_BINARY_DIR}"
+        )
+endif()
