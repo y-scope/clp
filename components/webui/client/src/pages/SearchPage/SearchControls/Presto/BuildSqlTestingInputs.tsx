@@ -11,7 +11,7 @@ import {handlePrestoQuerySubmit} from "./presto-search-requests";
 // TODO: Replace this with actual SQL inputs
 
 /**
- * Returns a temporary testing component.
+ * Returns a input boxes to test `buildSearchQuery`.
  *
  * @return
  */
@@ -22,7 +22,22 @@ const BuildSqlTestingInputs = () => {
                 ev.preventDefault();
                 const formData = new FormData(ev.target as HTMLFormElement);
                 const props = Object.fromEntries(formData) as unknown as BuildSearchQueryProps;
-                const sqlString = buildSearchQuery(props);
+                const sqlString = buildSearchQuery({
+                    /* eslint-disable sort-keys */
+                    selectItemList: props.selectItemList,
+                    relationList: props.relationList,
+                    booleanExpression: "" === props.booleanExpression ?
+                        null :
+                        props.booleanExpression,
+                    sortItemList: "" === props.sortItemList ?
+                        null :
+                        props.sortItemList,
+                    limitValue: "" === props.limitValue ?
+                        null :
+                        props.limitValue,
+                    /* eslint-enable sort-keys */
+                });
+
                 console.log(`SQL: ${sqlString}`);
                 handlePrestoQuerySubmit({queryString: sqlString});
             }}

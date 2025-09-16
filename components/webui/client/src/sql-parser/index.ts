@@ -150,9 +150,9 @@ class QueryFormatter extends SqlBaseVisitor<void> {
 interface BuildSearchQueryProps {
     selectItemList: string;
     relationList: string;
-    booleanExpression: string;
-    sortItemList: string;
-    limitValue: string;
+    booleanExpression: Nullable<string>;
+    sortItemList: Nullable<string>;
+    limitValue: Nullable<string>;
 }
 
 const SEARCH_QUERY_TEMPLATE = "SELECT item FROM relation WHERE TRUE ORDER BY item LIMIT 1";
@@ -187,17 +187,17 @@ const buildSearchQuery = ({
         relationList: buildParser(relationList)
             .standaloneRelationList()
             .relationList(),
-        booleanExpression: "" === booleanExpression ?
+        booleanExpression: null === booleanExpression ?
             null :
             buildParser(booleanExpression)
                 .standaloneBooleanExpression()
                 .booleanExpression(),
-        sortItemList: "" === sortItemList ?
+        sortItemList: null === sortItemList ?
             null :
             buildParser(sortItemList)
                 .standaloneSortItemList()
                 .sortItemList(),
-        limitValue: "" === limitValue ?
+        limitValue: null === limitValue ?
             null :
             buildParser(limitValue).standaloneIntegerValue()
             // eslint-disable-next-line new-cap
