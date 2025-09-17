@@ -1,12 +1,10 @@
 # ystdlib requires CMake v3.23 or higher
 cmake_minimum_required(VERSION 3.23)
 
-# Toolchain setup must come before the first project() call in the entire CMake buildsystem.
-# If CLP is not the top-level project, the following setup has no effect.
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Toolchains/utils.cmake")
-setup_toolchains()
-
 project(CLP LANGUAGES CXX C)
+
+# Toolchain validation
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Toolchains/utils.cmake")
 
 validate_compiler_versions()
 
@@ -295,8 +293,8 @@ endif()
 
 # Add ystdlib
 if(CLP_NEED_YSTDLIB)
-    set(YSTDLIB_CPP_BUILD_TESTING OFF)
-    add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
+    find_package(ystdlib REQUIRED)
+    message(STATUS "Found ystdlib-cpp ${ystdlib_VERSION}")
 endif()
 
 if(CLP_NEED_ZSTD)
