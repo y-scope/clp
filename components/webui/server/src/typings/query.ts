@@ -3,8 +3,7 @@ import {RowDataPacket} from "mysql2/promise";
 
 
 /**
- * Matching the `QueryJobStatus` class in
- * `job_orchestration.scheduler.constants`.
+ * Matching the `QueryJobStatus` class in `job_orchestration.scheduler.constants`.
  *
  * @enum {number}
  */
