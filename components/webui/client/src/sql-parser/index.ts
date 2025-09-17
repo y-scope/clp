@@ -92,7 +92,6 @@ interface BuildSearchQueryProps {
  * @param props.sortItemList
  * @param props.limitValue
  * @return
- * @throws {SyntaxError} if any of the input is not valid.
  * @throws {Error} if the constructed SQL string is not valid.
  */
 const buildSearchQuery = ({
