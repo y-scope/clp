@@ -1,19 +1,20 @@
-import { useState } from "react";
+import {useState} from "react";
 
+import {CompressionJobSchemaStatic} from "@webui/common/schemas/compression";
 import {
     Button,
     Form,
     Input,
-    Typography,
     message,
+    Typography,
 } from "antd";
 
-import {
-    useSubmitCompressionJob,
-} from "../../../api/compress";
+import {useSubmitCompressionJob} from "../../../api/compress";
 import {DashboardCard} from "../../../components/DashboardCard";
-import {CLP_STORAGE_ENGINES, SETTINGS_STORAGE_ENGINE} from "../../../config";
-import {CompressionJobSchemaStatic} from "@webui/common/schemas/compression";
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../../../config";
 
 
 type FormValues = {
@@ -33,11 +34,11 @@ const Compress = () => {
         success: boolean;
         message: string;
     } | null>(null);
-    
+
     const [messageApi, contextHolder] = message.useMessage();
     const {
         mutate: submitCompressionJob,
-        isPending: isSubmitting
+        isPending: isSubmitting,
     } = useSubmitCompressionJob();
 
     const handleSubmit = (values: FormValues) => {
@@ -72,7 +73,10 @@ const Compress = () => {
                 form.resetFields();
             },
             onError: (error: unknown) => {
-                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                const errorMessage = error instanceof Error ?
+                    error.message :
+                    "Unknown error";
+
                 setSubmitResult({
                     success: false,
                     message: `Failed to submit compression job: ${errorMessage}`,
