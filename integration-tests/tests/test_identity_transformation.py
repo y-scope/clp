@@ -3,6 +3,8 @@ Integration tests verifying that CLP core compression binaries perform lossless 
 compression and decompression.
 """
 
+from pathlib import Path
+
 import pytest
 
 from tests.utils.asserting_utils import run_and_assert
@@ -49,25 +51,51 @@ def test_clp_identity_transform(
     :param test_logs_fixture:
     """
     integration_test_logs: IntegrationTestLogs = request.getfixturevalue(test_logs_fixture)
+    logs_source_dir: Path = integration_test_logs.extraction_dir
+
+    #test_paths = CompressionTestConfig(
+    #    test_name=f"clp-{integration_test_logs.name}",
+    #    compression_input=integration_test_logs.extraction_dir,
+    #    integration_test_config=integration_test_config,
+    #)
+    #_run_clp_identity_transform(logs_source_dir, test_paths, integration_test_config)
+
+    #test_paths = CompressionTestConfig(
+    #    test_name=f"clp-{integration_test_logs.name}-tar-gz",
+    #    compression_input=integration_test_logs.tar_gz_path,
+    #    integration_test_config=integration_test_config,
+    #)
+    #_run_clp_identity_transform(logs_source_dir, test_paths, integration_test_config)
+
     test_paths = CompressionTestConfig(
-        test_name=f"clp-{integration_test_logs.name}",
-        logs_source_dir=integration_test_logs.extraction_dir,
+        test_name=f"clp-{integration_test_logs.name}-tar-xz",
+        compression_input=integration_test_logs.tar_xz_path,
         integration_test_config=integration_test_config,
     )
+    _run_clp_identity_transform(logs_source_dir, test_paths, integration_test_config)
+
+
+def _run_clp_identity_transform(
+    logs_source_dir: Path,
+    test_paths: CompressionTestConfig,
+    integration_test_config: IntegrationTestConfig,
+) -> None:
     test_paths.clear_test_outputs()
 
     bin_path = str(integration_test_config.core_config.clp_binary_path)
-    src_path = str(test_paths.logs_source_dir)
+    input_path = str(test_paths.compression_input)
     compression_path = str(test_paths.compression_dir)
     decompression_path = str(test_paths.decompression_dir)
+    path_prefix_to_remove = input_path if test_paths.compression_input.is_dir() else str(test_paths.compression_input.parent)
+
     # fmt: off
     compression_cmd = [
         bin_path,
         "c",
         "--progress",
-        "--remove-path-prefix", src_path,
+        "--remove-path-prefix", path_prefix_to_remove,
         compression_path,
-        src_path,
+        input_path,
     ]
     # fmt: on
     run_and_assert(compression_cmd)
@@ -75,13 +103,11 @@ def test_clp_identity_transform(
     decompression_cmd = [bin_path, "x", compression_path, decompression_path]
     run_and_assert(decompression_cmd)
 
-    input_path = test_paths.logs_source_dir
-    output_path = test_paths.decompression_dir
+    decompressed_logs_path = test_paths.decompression_dir
     assert is_dir_tree_content_equal(
-        input_path,
-        output_path,
-    ), f"Mismatch between clp input {input_path} and output {output_path}."
-
+        logs_source_dir,
+        decompressed_logs_path,
+    ), f"Mismatch between source {logs_source_dir} and `clp` final output {decompressed_logs_path}."
     test_paths.clear_test_outputs()
 
 
@@ -105,7 +131,7 @@ def test_clp_s_identity_transform(
 
     test_paths = CompressionTestConfig(
         test_name=f"clp-s-{test_logs_name}",
-        logs_source_dir=integration_test_logs.extraction_dir,
+        compression_input=integration_test_logs.extraction_dir,
         integration_test_config=integration_test_config,
     )
     _clp_s_compress_and_decompress(integration_test_config, test_paths)
@@ -118,13 +144,13 @@ def test_clp_s_identity_transform(
     # See also: https://docs.yscope.com/clp/main/user-guide/core-clp-s.html#current-limitations
     consolidated_json_test_paths = CompressionTestConfig(
         test_name=f"clp-s-{test_logs_name}-consolidated-json",
-        logs_source_dir=test_paths.decompression_dir,
+        compression_input=test_paths.decompression_dir,
         integration_test_config=integration_test_config,
     )
     _clp_s_compress_and_decompress(integration_test_config, consolidated_json_test_paths)
 
     _consolidated_json_file_name = "original"
-    input_path = consolidated_json_test_paths.logs_source_dir / _consolidated_json_file_name
+    input_path = consolidated_json_test_paths.compression_input / _consolidated_json_file_name
     output_path = consolidated_json_test_paths.decompression_dir / _consolidated_json_file_name
     assert is_json_file_structurally_equal(input_path, output_path), (
         f"Mismatch between clp-s input {input_path} and output {output_path}."
@@ -139,7 +165,7 @@ def _clp_s_compress_and_decompress(
 ) -> None:
     test_paths.clear_test_outputs()
     bin_path = str(integration_test_config.core_config.clp_s_binary_path)
-    src_path = str(test_paths.logs_source_dir)
+    src_path = str(test_paths.compression_input)
     compression_path = str(test_paths.compression_dir)
     decompression_path = str(test_paths.decompression_dir)
     run_and_assert([bin_path, "c", compression_path, src_path])
