@@ -129,7 +129,7 @@ services:
       <<: *healthcheck_defaults
       test: >-
         echo 'db.runCommand("ping").ok' |
-        mongosh 127.0.0.1:${CLP_RESULTS_CACHE_PORT:-27017}/test --quiet
+        mongosh 127.0.0.1:27017/test --quiet
     command: [
       "--config", "/etc/mongo/mongod.conf",
       "--bind_ip", "0.0.0.0",
