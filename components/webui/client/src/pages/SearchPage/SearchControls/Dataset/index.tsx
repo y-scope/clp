@@ -86,7 +86,7 @@ const Dataset = () => {
                 options={(data || []).map((option) => ({label: option, value: option}))}
                 placeholder={"None"}
                 showSearch={true}
-                size={"large"}
+                size={"middle"}
                 value={dataset}
                 disabled={
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||

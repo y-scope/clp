@@ -10,7 +10,7 @@ import guidedGrid from "./index.module.css";
  */
 const Select = () => (
     <div className={guidedGrid["select"]}>
-        <InputLabel> SELECT </InputLabel>
+        <InputLabel>SELECT</InputLabel>
         <SqlInput
             className={guidedGrid["noLeftBorderRadius"] || ""}
             disabled={false}/>

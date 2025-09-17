@@ -19,7 +19,7 @@ const LIMIT_OPTIONS = [
  */
 const Limit = () => (
     <div className={guidedGrid["limit"]}>
-        <InputLabel> LIMIT </InputLabel>
+        <InputLabel>LIMIT</InputLabel>
         <Select
             defaultValue={LIMIT_OPTIONS[0]?.value}
             options={LIMIT_OPTIONS}

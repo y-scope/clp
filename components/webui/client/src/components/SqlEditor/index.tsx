@@ -34,7 +34,7 @@ type SqlEditorProps = Omit<EditorProps, "language"> & {
  * @return
  */
 const SqlEditor = (props: SqlEditorProps) => {
-    const {disabled, onEditorReady, ...editorProps} = props;
+    const {disabled, onEditorReady, className, ...editorProps} = props;
     const monacoEditor = useMonaco();
     const {token} = theme.useToken();
 
@@ -79,7 +79,7 @@ const SqlEditor = (props: SqlEditorProps) => {
     return (
         <div
             className={[styles["editor"],
-                props.className].filter(Boolean).join(" ")}
+                className].filter(Boolean).join(" ")}
             style={{
                 border: `1px solid ${token.colorBorder}`,
                 borderRadius: token.borderRadius,

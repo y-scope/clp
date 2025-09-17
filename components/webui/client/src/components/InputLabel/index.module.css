@@ -5,7 +5,7 @@
     padding-right: 10px;
     align-items: center;
     justify-content: center;
-    border-top-right-radius: 0px;
-    border-bottom-right-radius: 0px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
     white-space: nowrap;
 }
