@@ -10,4 +10,5 @@ const SqlSchema = Type.Object({
     queryString: StringSchema,
 });
 
+
 export {SqlSchema};

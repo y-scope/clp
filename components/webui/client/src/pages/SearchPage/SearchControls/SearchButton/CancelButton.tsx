@@ -32,7 +32,10 @@ const CancelButton = () => {
             return;
         }
         handleQueryCancel(
-            {searchJobId, aggregationJobId}
+            {
+                searchJobId: Number(searchJobId),
+                aggregationJobId: Number(aggregationJobId),
+            }
         );
     }, [searchJobId,
         aggregationJobId]);

@@ -5,6 +5,8 @@ import {
     useState,
 } from "react";
 
+import {Nullable} from "@webui/common/utility-types";
+
 import SqlEditor, {SqlEditorType} from "../../../../../components/SqlEditor";
 import {Nullable} from "@webui/common/utility-types";
 import useSearchStore from "../../../SearchState/index";
