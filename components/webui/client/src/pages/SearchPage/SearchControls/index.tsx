@@ -6,7 +6,7 @@ import usePrestoSearchState from "../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../SearchState/Presto/typings";
 import NativeControls from "./NativeControls";
 import FreeformControls from "./Presto/FreeformControls";
-import GuidedControls from "./Presto/GuidedControls/index";
+import GuidedControls from "./Presto/GuidedControls";
 
 
 /**
