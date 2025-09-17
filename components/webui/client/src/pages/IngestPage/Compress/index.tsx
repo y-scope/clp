@@ -1,18 +1,19 @@
-import {useState} from "react";
+import { useState } from "react";
 
 import {
     Button,
     Form,
     Input,
     Typography,
+    message,
 } from "antd";
 
 import {
-    type CompressionJobSchema,
-    submitCompressionJob,
+    useSubmitCompressionJob,
 } from "../../../api/compress";
 import {DashboardCard} from "../../../components/DashboardCard";
 import {CLP_STORAGE_ENGINES, SETTINGS_STORAGE_ENGINE} from "../../../config";
+import {CompressionJobSchemaStatic} from "@webui/common/schemas/compression";
 
 
 type FormValues = {
@@ -28,65 +29,67 @@ type FormValues = {
  */
 const Compress = () => {
     const [form] = Form.useForm<FormValues>();
-    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
     const [submitResult, setSubmitResult] = useState<{
         success: boolean;
         message: string;
     } | null>(null);
+    
+    const [messageApi, contextHolder] = message.useMessage();
+    const {
+        mutate: submitCompressionJob,
+        isPending: isSubmitting
+    } = useSubmitCompressionJob();
 
-    const handleSubmit = async (values: FormValues) => {
-        setIsSubmitting(true);
+    const handleSubmit = (values: FormValues) => {
         setSubmitResult(null);
 
-        // Convert multiline input to array of paths
+        // eslint-disable-next-line no-warning-comments
+        // TODO: replace the UI with a file selector and remove below string manipulation.
+        // Convert multiline input to array of paths.
         const paths = values.paths
             .split("\n")
             .map((path) => path.trim())
             .filter((path) => 0 < path.length);
 
-        try {
-            const payload: CompressionJobSchema = {
-                paths: paths,
-            };
+        const payload: CompressionJobSchemaStatic = {
+            paths: paths,
+        };
 
-            if ("undefined" !== typeof values.dataset) {
-                payload.dataset = values.dataset;
-            }
-
-            if ("undefined" !== typeof values.timestampKey) {
-                payload.timestampKey = values.timestampKey;
-            }
-
-            const jobId = await submitCompressionJob(payload);
-
-            setSubmitResult({
-                success: true,
-                message: `Compression job submitted successfully with ID: ${jobId}`,
-            });
-            form.resetFields();
-        } catch (error: unknown) {
-            setSubmitResult({
-                success: false,
-                message: `Failed to submit compression job: ${
-                    error instanceof Error ?
-                        error.message :
-                        "Unknown error"
-                }`,
-            });
-        } finally {
-            setIsSubmitting(false);
+        if ("undefined" !== typeof values.dataset) {
+            payload.dataset = values.dataset;
         }
+
+        if ("undefined" !== typeof values.timestampKey) {
+            payload.timestampKey = values.timestampKey;
+        }
+
+        submitCompressionJob(payload, {
+            onSuccess: (jobId) => {
+                setSubmitResult({
+                    success: true,
+                    message: `Compression job submitted successfully with ID: ${jobId}`,
+                });
+                form.resetFields();
+            },
+            onError: (error: unknown) => {
+                const errorMessage = error instanceof Error ? error.message : "Unknown error";
+                setSubmitResult({
+                    success: false,
+                    message: `Failed to submit compression job: ${errorMessage}`,
+                });
+                messageApi.error(`Failed to submit compression job: ${errorMessage}`);
+            },
+        });
     };
 
     return (
         <DashboardCard title={"Start Ingestion"}>
+            {contextHolder}
             <Form
                 form={form}
                 layout={"vertical"}
                 onFinish={(values) => {
-                    handleSubmit(values).catch((error: unknown) => {
-                        console.error("Error in handleSubmit:", error);
-                    });
+                    handleSubmit(values);
                 }}
             >
                 <Form.Item
