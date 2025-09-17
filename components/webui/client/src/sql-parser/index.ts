@@ -1,24 +1,13 @@
 /* eslint-disable max-classes-per-file */
-import {Nullable} from "@webui/common/utility-types";
 import {
     CharStream,
     CommonTokenStream,
     ErrorListener,
-    ParseTree,
     Recognizer,
-    TerminalNode,
 } from "antlr4";
 
 import SqlBaseLexer from "./generated/SqlBaseLexer";
-import SqlBaseParser, {
-    BooleanExpressionContext,
-    QueryNoWithContext,
-    QuerySpecificationContext,
-    RelationListContext,
-    SelectItemListContext,
-    SortItemListContext,
-} from "./generated/SqlBaseParser";
-import SqlBaseVisitor from "./generated/SqlBaseVisitor";
+import SqlBaseParser from "./generated/SqlBaseParser";
 
 
 class SyntaxError extends Error {
@@ -85,77 +74,13 @@ const validate = (sqlString: string) => {
     buildParser(sqlString).singleStatement();
 };
 
-interface ModifierProps {
-    selectItemList: SelectItemListContext;
-    relationList: RelationListContext;
-    booleanExpression: Nullable<BooleanExpressionContext>;
-    sortItemList: Nullable<SortItemListContext>;
-    limitValue: Nullable<TerminalNode>;
-}
-
-class TemplateTransformer extends SqlBaseVisitor<void> {
-    constructor ({
-        selectItemList,
-        relationList,
-        booleanExpression,
-        sortItemList,
-        limitValue,
-    }: ModifierProps) {
-        super();
-        this.visitQuerySpecification = (ctx: QuerySpecificationContext) => {
-            const children: ParseTree[] = [
-                // eslint-disable-next-line new-cap
-                ctx.SELECT(),
-                selectItemList,
-                // eslint-disable-next-line new-cap
-                ctx.FROM(),
-                relationList,
-            ];
-
-            if (null !== booleanExpression) {
-                // eslint-disable-next-line new-cap
-                children.push(ctx.WHERE(), booleanExpression);
-            }
-            ctx.children = children;
-        };
-
-        this.visitQueryNoWith = (ctx: QueryNoWithContext) => {
-            this.visit(ctx.queryTerm());
-
-            const children: ParseTree[] = [
-                ctx.queryTerm(),
-            ];
-
-            if (null !== sortItemList) {
-                // eslint-disable-next-line new-cap
-                children.push(ctx.ORDER(), ctx.BY(), sortItemList);
-            }
-            if (null !== limitValue) {
-                // eslint-disable-next-line new-cap
-                children.push(ctx.LIMIT(), limitValue);
-            }
-            ctx.children = children;
-        };
-    }
-}
-
-class QueryFormatter extends SqlBaseVisitor<void> {
-    tokens: Array<string> = [];
-
-    override visitTerminal (node: TerminalNode) {
-        this.tokens.push(node.getText());
-    }
-}
-
 interface BuildSearchQueryProps {
     selectItemList: string;
     relationList: string;
-    booleanExpression: Nullable<string>;
-    sortItemList: Nullable<string>;
-    limitValue: Nullable<string>;
+    booleanExpression?: string | undefined;
+    sortItemList?: string | undefined;
+    limitValue?: string | undefined;
 }
-
-const SEARCH_QUERY_TEMPLATE = "SELECT item FROM relation WHERE TRUE ORDER BY item LIMIT 1";
 
 /**
  * Constructs a SQL search query string from a set of structured components.
@@ -177,37 +102,17 @@ const buildSearchQuery = ({
     sortItemList,
     limitValue,
 }: BuildSearchQueryProps): string => {
-    const templateTree = buildParser(SEARCH_QUERY_TEMPLATE).queryNoWith();
+    let sqlString = `SELECT ${selectItemList} FROM ${relationList}`;
+    if ("undefined" !== typeof booleanExpression) {
+        sqlString += ` WHERE ${booleanExpression}`;
+    }
+    if ("undefined" !== typeof sortItemList) {
+        sqlString += ` ORDER BY ${sortItemList}`;
+    }
+    if ("undefined" !== typeof limitValue) {
+        sqlString += ` LIMIT ${limitValue}`;
+    }
 
-    new TemplateTransformer({
-        /* eslint-disable sort-keys */
-        selectItemList: buildParser(selectItemList)
-            .standaloneSelectItemList()
-            .selectItemList(),
-        relationList: buildParser(relationList)
-            .standaloneRelationList()
-            .relationList(),
-        booleanExpression: null === booleanExpression ?
-            null :
-            buildParser(booleanExpression)
-                .standaloneBooleanExpression()
-                .booleanExpression(),
-        sortItemList: null === sortItemList ?
-            null :
-            buildParser(sortItemList)
-                .standaloneSortItemList()
-                .sortItemList(),
-        limitValue: null === limitValue ?
-            null :
-            buildParser(limitValue).standaloneIntegerValue()
-            // eslint-disable-next-line new-cap
-                .INTEGER_VALUE(),
-        /* eslint-enable sort-keys */
-    }).visit(templateTree);
-
-    const formatter = new QueryFormatter();
-    formatter.visit(templateTree);
-    const sqlString = formatter.tokens.join(" ");
     try {
         validate(sqlString);
     } catch (err: unknown) {

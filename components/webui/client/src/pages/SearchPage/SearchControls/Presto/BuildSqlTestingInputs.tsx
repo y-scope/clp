@@ -1,14 +1,39 @@
 import {FormEvent} from "react";
 
 import {
-    buildSearchQuery,
-    BuildSearchQueryProps,
-} from "../../../../sql-parser";
+    Static,
+    Type,
+} from "@sinclair/typebox";
+import {Value} from "@sinclair/typebox/value";
+
+import {buildSearchQuery} from "../../../../sql-parser";
 import {handlePrestoQuerySubmit} from "./presto-search-requests";
 
 
 // eslint-disable-next-line no-warning-comments
 // TODO: Replace this with actual SQL inputs
+
+const TransformEmptyStringSchema = Type.Transform(
+    Type.Optional(Type.Union([
+        Type.String(),
+        Type.Undefined(),
+    ]))
+)
+    .Decode((value) => ("" === value ?
+        // eslint-disable-next-line no-undefined
+        undefined :
+        value))
+    .Encode((value) => value);
+
+const BuildSearchQueryPropsSchema = Type.Object({
+    /* eslint-disable sort-keys */
+    selectItemList: Type.String(),
+    relationList: Type.String(),
+    booleanExpression: TransformEmptyStringSchema,
+    sortItemList: TransformEmptyStringSchema,
+    limitValue: TransformEmptyStringSchema,
+    /* eslint-enable sort-keys */
+});
 
 /**
  * Returns a input boxes to test `buildSearchQuery`.
@@ -21,23 +46,12 @@ const BuildSqlTestingInputs = () => {
             onSubmit={(ev: FormEvent<HTMLFormElement>) => {
                 ev.preventDefault();
                 const formData = new FormData(ev.target as HTMLFormElement);
-                const props = Object.fromEntries(formData) as unknown as BuildSearchQueryProps;
-                const sqlString = buildSearchQuery({
-                    /* eslint-disable sort-keys */
-                    selectItemList: props.selectItemList,
-                    relationList: props.relationList,
-                    booleanExpression: "" === props.booleanExpression ?
-                        null :
-                        props.booleanExpression,
-                    sortItemList: "" === props.sortItemList ?
-                        null :
-                        props.sortItemList,
-                    limitValue: "" === props.limitValue ?
-                        null :
-                        props.limitValue,
-                    /* eslint-enable sort-keys */
-                });
+                const props: Static<typeof BuildSearchQueryPropsSchema> = Value.Parse(
+                    BuildSearchQueryPropsSchema,
+                    Object.fromEntries(formData),
+                );
 
+                const sqlString = buildSearchQuery(props);
                 console.log(`SQL: ${sqlString}`);
                 handlePrestoQuerySubmit({queryString: sqlString});
             }}
@@ -52,9 +66,7 @@ const BuildSqlTestingInputs = () => {
             <input name={"sortItemList"}/>
             <label>limit:</label>
             <input name={"limitValue"}/>
-            <button type={"submit"}>
-                Run
-            </button>
+            <button type={"submit"}>Run</button>
         </form>
     );
 };

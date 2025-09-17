@@ -30,26 +30,6 @@ standaloneRoutineBody
     : routineBody EOF
     ;
 
-standaloneSelectItemList
-    : selectItemList EOF
-    ;
-
-standaloneRelationList
-    : relationList EOF
-    ;
-
-standaloneBooleanExpression
-    : booleanExpression EOF
-    ;
-
-standaloneSortItemList
-    : sortItemList EOF
-    ;
-
-standaloneIntegerValue
-    : INTEGER_VALUE EOF
-    ;
-
 statement
     : query                                                            #statementDefault
     | USE schema=identifier                                            #use
@@ -259,13 +239,9 @@ externalRoutineName
 
 queryNoWith:
       queryTerm
-      (ORDER BY sortItemList)?
+      (ORDER BY sortItem (',' sortItem)*)?
       (OFFSET offset=INTEGER_VALUE (ROW | ROWS)?)?
       ((LIMIT limit=(INTEGER_VALUE | ALL) | (FETCH FIRST fetchFirstNRows=INTEGER_VALUE ROWS ONLY)))?
-    ;
-
-sortItemList
-    : sortItem (',' sortItem)*
     ;
 
 queryTerm
@@ -286,19 +262,11 @@ sortItem
     ;
 
 querySpecification
-    : SELECT setQuantifier? selectItemList
-      (FROM relationList)?
+    : SELECT setQuantifier? selectItem (',' selectItem)*
+      (FROM relation (',' relation)*)?
       (WHERE where=booleanExpression)?
       (GROUP BY groupBy)?
       (HAVING having=booleanExpression)?
-    ;
-
-selectItemList
-    : selectItem (',' selectItem)*
-    ;
-
-relationList
-    : relation (',' relation)*
     ;
 
 groupBy
