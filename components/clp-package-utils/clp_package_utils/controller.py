@@ -46,8 +46,38 @@ from clp_package_utils.general import (
 )
 
 LOGS_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+DEFAULT_CONTAINER_USER_ID = 999
+DEFAULT_CONTAINER_GROUP_ID = 999
 
 logger = logging.getLogger(__name__)
+
+
+def _chown_recursively(
+    path: pathlib.Path,
+    user_id: int,
+    group_id: int,
+):
+    """
+    Recursively changes the owner of the given path to the given user ID and group ID.
+    :param path:
+    :param user_id:
+    :param group_id:
+    """
+    chown_cmd = ["chown", "--recursive", f"{user_id}:{group_id}", str(path)]
+    subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
+
+
+def _chown_paths_if_root(*paths: pathlib.Path):
+    """
+    Changes ownership of the given paths to the default container user/group IDs
+    if the current process is running as root.
+
+    :param paths:
+    """
+    if os.getuid() != 0:
+        return
+    for path in paths:
+        _chown_recursively(path, DEFAULT_CONTAINER_USER_ID, DEFAULT_CONTAINER_GROUP_ID)
 
 
 def _get_ip_from_hostname(hostname: str) -> str:
@@ -76,6 +106,7 @@ class BaseController(ABC):
         validate_db_config(self.clp_config, conf_file, data_dir, logs_dir)
         data_dir.mkdir(exist_ok=True, parents=True)
         logs_dir.mkdir(exist_ok=True, parents=True)
+        _chown_paths_if_root(data_dir, logs_dir)
 
         return {
             "CLP_DB_CONF_FILE_HOST": str(conf_file),
@@ -98,6 +129,7 @@ class BaseController(ABC):
         logs_dir = self.clp_config.logs_directory / component_name
         validate_queue_config(self.clp_config, logs_dir)
         logs_dir.mkdir(exist_ok=True, parents=True)
+        _chown_paths_if_root(logs_dir)
 
         return {
             "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
@@ -117,6 +149,7 @@ class BaseController(ABC):
         validate_redis_config(self.clp_config, conf_file, data_dir, logs_dir)
         data_dir.mkdir(exist_ok=True, parents=True)
         logs_dir.mkdir(exist_ok=True, parents=True)
+        _chown_paths_if_root(data_dir, logs_dir)
 
         return {
             "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
@@ -141,6 +174,7 @@ class BaseController(ABC):
         validate_results_cache_config(self.clp_config, conf_file, data_dir, logs_dir)
         data_dir.mkdir(exist_ok=True, parents=True)
         logs_dir.mkdir(exist_ok=True, parents=True)
+        _chown_paths_if_root(data_dir, logs_dir)
 
         return {
             "CLP_RESULTS_CACHE_CONF_DIR_HOST": str(conf_file),
