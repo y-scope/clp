@@ -19,20 +19,19 @@ using log_surgeon::SchemaVarAST;
 using std::string;
 
 namespace {
-[[nodiscard]] auto get_test_dir() -> std::filesystem::path;
+[[nodiscard]] auto get_tests_dir() -> std::filesystem::path;
 
-auto get_test_dir() -> std::filesystem::path {
+auto get_tests_dir() -> std::filesystem::path {
     std::filesystem::path const current_file_path{__FILE__};
-    return current_file_path.parent_path();
+    return std::filesystem::canonical(current_file_path.parent_path());
 }
-
-auto const test_dir = get_test_dir();
-auto const test_schema_dir = test_dir / "test_schema_files";
 }  // namespace
 
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
+    auto const tests_dir = get_tests_dir();
+    auto const test_schema_files_dir = tests_dir / "test_schema_files";
     ByteLexer lexer;
-    auto const search_schema_path = test_schema_dir / "search_schema.txt";
+    auto const search_schema_path = test_schema_files_dir / "search_schema.txt";
     load_lexer_from_file(search_schema_path.string(), lexer);
 
     string str;
