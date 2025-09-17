@@ -6,10 +6,11 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
-#include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/wildcard_query_parser/Query.hpp>
 #include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
 
@@ -70,24 +71,6 @@ public:
             bool& is_var
     );
 
-    /**
-     * Returns bounds of next potential variable (either a definite variable or a token with
-     * wildcards)
-     * @param value String containing token
-     * @param begin_pos Begin position of last token, changes to begin position of next token
-     * @param end_pos End position of last token, changes to end position of next token
-     * @param is_var Whether the token is definitely a variable
-     * @param lexer DFA for determining if input is in the schema
-     * @return true if another potential variable was found, false otherwise
-     */
-    static bool get_bounds_of_next_potential_var(
-            std::string const& value,
-            size_t& begin_pos,
-            size_t& end_pos,
-            bool& is_var,
-            log_surgeon::lexers::ByteLexer& lexer
-    );
-
 private:
     // Types
     enum class SubQueryMatchabilityResult : uint8_t {
@@ -143,6 +126,115 @@ private:
             bool ignore_case,
             SubQuery& sub_query
     );
+
+    /**
+     * Compare all log-surgeon interpretations against the dictionaries to determine the sub queries
+     * to search for within the archive.
+     *
+     * A. For each interpretation we must consider encodable wildcard variables (e.g. <int>(*1)).
+     *    Each such variable introduces a binary choice:
+     *    - 0: treat as a dictionary variable (\d)
+     *    - 1: treat as an encoded variable (\i for integers, \f for floats)
+     *
+     *    If there are k encodable wildcard variables, then 2^k logtype strings are possible. Each bit
+     *    in the mask corresponds to one variable.
+     *
+     *    Example:
+     *      Search query: "a *1 *2 b",
+     *      Interpretation (one of many): "a <int>(*1) <float>(*2) b"
+     *      Possible logtypes (for the above interpretation):
+     *        mask 00 -> "a \d \d b"
+     *        mask 01 ->"a \d \f b"
+     *        mask 10 ->"a \i \d b"
+     *        mask 11 ->"a \i \f b"
+     *
+     * B. Each candidate combination becomes a useful subquery only if:
+     *   1. The logtype exists in the logtype dictionary, and
+     *   2. Each variable is either:
+     *     a) resolvable in the variable dictionary (for dictionary vars), or
+     *     b) encoded (always assumed valid).
+     *
+     *   Note: Encoded variables are always assumed to exist in the segment. This is a performance
+     *   trade-off: checking the archive would be slower than decompressing.
+     *
+     * @tparam LogTypeDictionaryReaderType Logtype dictionary reader type.
+     * @tparam VariableDictionaryReaderType Variable dictionary reader type.
+     * @tparam LogTypeDictionaryEntryType Logtype dictionary entry type.
+     * @param interpretations Log-surgeon's interpretations of the search query.
+     * @param logtype_dict The logtype dictionary.
+     * @param var_dict The variable dictionary.
+     * @param ignore_case Flag indicating if search is case sensitive.
+     * @param sub_queries Returns the subqueries to compare against CLP's archives.
+     * @throw std::runtime_error If there are too many candidate combinations.
+     */
+    template <
+            typename LogTypeDictionaryReaderType,
+            typename VariableDictionaryReaderType,
+            typename LogTypeDictionaryEntryType = typename LogTypeDictionaryReaderType::entry_t>
+    static void generate_schema_sub_queries(
+            std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> const&
+                    interpretations,
+            LogTypeDictionaryReaderType const& logtype_dict,
+            VariableDictionaryReaderType const& var_dict,
+            bool ignore_case,
+            std::vector<SubQuery>& sub_queries
+    );
+
+    /**
+     * Scans the interpretation and returns the indicies of all encodable     * wildcard variables.
+     *
+     * An encodable variable is a variable token than:
+     *   - Contains a wildcard (e.g. *1).
+     *   - Is of an encodable type (integer or float).
+     *
+     * @param interpretation The `QueryInterpretation` to scan.
+     * @return A vector of positions of encodabe wildcard variables.
+     */
+    static auto get_wildcard_encodable_positions(
+            log_surgeon::wildcard_query_parser::QueryInterpretation const& interpretation
+    ) -> std::vector<size_t>;
+
+    /**
+     * Generates a logtype string from an interpretation, applying a mask to determine which
+     * encodable wildcard positions are treated as encoded vs dictionary variables.
+     *   - 0: Treat as dictionary variable.
+     *   - 1: Treat as an encoded variable.
+     *
+     * @param interpretation The interpetation to convert to a logtype string.
+     * @param wildcard_mask_map A map indicating the state of encodable wildcard variables.
+     * @return The logtype string corresponding to this combination of encoded variables.
+     */
+    static auto generate_logtype_string(
+            log_surgeon::wildcard_query_parser::QueryInterpretation const& interpretation,
+            std::unordered_map<size_t, bool> const& wildcard_mask_map
+    ) -> std::string;
+
+    /**
+     * Process a single variable token for schema subquery generation.
+     *
+     * Determines if the variable can be treated as:
+     * - an encoded variable,
+     * - a dictionary variable,
+     * - or requires wildcard dictionary search.
+     *
+     * Updates `sub_query` with the appropriate variable encodings.
+     *
+     * @tparam VariableDictionaryReaderType Variable dictionary reader type.
+     * @param variable_token The variable token to process.
+     * @param var_dict The variable dictionary.
+     * @param ignore_case If the search is case sensitive.
+     * @param is_wildcard_mask_encoded If the token is an encodable wildcard and is to be encoded.
+     * @param sub_query Returns the updated sub query object.
+     * @return True if the variable is encoded or is in the variable dictionary, false otherwise.
+     */
+    template <typename VariableDictionaryReaderType>
+    static auto process_schema_var_token(
+            log_surgeon::wildcard_query_parser::VariableQueryToken const& variable_token,
+            VariableDictionaryReaderType const& var_dict,
+            bool ignore_case,
+            bool is_wildcard_mask_encoded,
+            SubQuery& sub_query
+    ) -> bool;
 };
 
 template <typename LogTypeDictionaryReaderType, typename VariableDictionaryReaderType>
@@ -156,13 +248,15 @@ std::optional<Query> GrepCore::process_raw_query(
         log_surgeon::lexers::ByteLexer& lexer,
         bool use_heuristic
 ) {
-    // Split search_string into tokens with wildcards
-    std::vector<QueryToken> query_tokens;
-    size_t begin_pos = 0;
-    size_t end_pos = 0;
-    bool is_var;
-    std::string search_string_for_sub_queries{search_string};
+    std::vector<SubQuery> sub_queries;
     if (use_heuristic) {
+        // Split search_string into tokens with wildcards
+        std::vector<QueryToken> query_tokens;
+        size_t begin_pos = 0;
+        size_t end_pos = 0;
+        bool is_var;
+        std::string search_string_for_sub_queries{search_string};
+
         // Replace unescaped '?' wildcards with '*' wildcards since we currently have no support for
         // generating sub-queries with '?' wildcards. The final wildcard match on the decompressed
         // message uses the original wildcards, so correctness will be maintained.
@@ -185,72 +279,79 @@ std::optional<Query> GrepCore::process_raw_query(
         {
             query_tokens.emplace_back(search_string_for_sub_queries, begin_pos, end_pos, is_var);
         }
-    } else {
-        while (get_bounds_of_next_potential_var(
-                search_string_for_sub_queries,
-                begin_pos,
-                end_pos,
-                is_var,
-                lexer
-        ))
-        {
-            query_tokens.emplace_back(search_string_for_sub_queries, begin_pos, end_pos, is_var);
-        }
-    }
-
-    // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since we
-    // fall-back to decompression + wildcard matching for those.
-    std::vector<QueryToken*> ambiguous_tokens;
-    for (auto& query_token : query_tokens) {
-        if (!query_token.has_greedy_wildcard_in_middle() && query_token.is_ambiguous_token()) {
-            ambiguous_tokens.push_back(&query_token);
-        }
-    }
-
-    // Generate a sub-query for each combination of ambiguous tokens
-    // E.g., if there are two ambiguous tokens each of which could be a logtype or variable, we need
-    // to create:
-    // - (token1 as logtype) (token2 as logtype)
-    // - (token1 as logtype) (token2 as var)
-    // - (token1 as var) (token2 as logtype)
-    // - (token1 as var) (token2 as var)
-    std::vector<SubQuery> sub_queries;
-    std::string logtype;
-    bool type_of_one_token_changed = true;
-    while (type_of_one_token_changed) {
-        SubQuery sub_query;
-
-        // Compute logtypes and variables for query
-        auto matchability = generate_logtypes_and_vars_for_subquery(
-                logtype_dict,
-                var_dict,
-                search_string_for_sub_queries,
-                query_tokens,
-                ignore_case,
-                sub_query
-        );
-        switch (matchability) {
-            case SubQueryMatchabilityResult::SupercedesAllSubQueries:
-                // Since other sub-queries will be superceded by this one, we can stop processing
-                // now
-                return Query{search_begin_ts, search_end_ts, ignore_case, search_string, {}};
-            case SubQueryMatchabilityResult::MayMatch:
-                sub_queries.push_back(std::move(sub_query));
-                break;
-            case SubQueryMatchabilityResult::WontMatch:
-            default:
-                // Do nothing
-                break;
-        }
-
-        // Update combination of ambiguous tokens
-        type_of_one_token_changed = false;
-        for (auto* ambiguous_token : ambiguous_tokens) {
-            if (ambiguous_token->change_to_next_possible_type()) {
-                type_of_one_token_changed = true;
-                break;
+        // Get pointers to all ambiguous tokens. Exclude tokens with wildcards in the middle since
+        // we fall-back to decompression + wildcard matching for those.
+        std::vector<QueryToken*> ambiguous_tokens;
+        for (auto& query_token : query_tokens) {
+            if (!query_token.has_greedy_wildcard_in_middle() && query_token.is_ambiguous_token()) {
+                ambiguous_tokens.push_back(&query_token);
             }
         }
+
+        // Generate a sub-query for each combination of ambiguous tokens
+        // E.g., if there are two ambiguous tokens each of which could be a logtype or variable, we
+        // need to create:
+        // - (token1 as logtype) (token2 as logtype)
+        // - (token1 as logtype) (token2 as var)
+        // - (token1 as var) (token2 as logtype)
+        // - (token1 as var) (token2 as var)
+        std::string logtype;
+        bool type_of_one_token_changed = true;
+        while (type_of_one_token_changed) {
+            SubQuery sub_query;
+
+            // Compute logtypes and variables for query
+            auto matchability = generate_logtypes_and_vars_for_subquery(
+                    logtype_dict,
+                    var_dict,
+                    search_string_for_sub_queries,
+                    query_tokens,
+                    ignore_case,
+                    sub_query
+            );
+            switch (matchability) {
+                case SubQueryMatchabilityResult::SupercedesAllSubQueries:
+                    // Since other sub-queries will be superceded by this one, we can stop
+                    // processing now
+                    return Query{search_begin_ts, search_end_ts, ignore_case, search_string, {}};
+                case SubQueryMatchabilityResult::MayMatch:
+                    sub_queries.push_back(std::move(sub_query));
+                    break;
+                case SubQueryMatchabilityResult::WontMatch:
+                default:
+                    // Do nothing
+                    break;
+            }
+
+            // Update combination of ambiguous tokens
+            type_of_one_token_changed = false;
+            for (auto* ambiguous_token : ambiguous_tokens) {
+                if (ambiguous_token->change_to_next_possible_type()) {
+                    type_of_one_token_changed = true;
+                    break;
+                }
+            }
+        }
+    } else {
+        static bool interpretations_generated{false};
+        static std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> interpretations;
+
+        // TODO: This needs to be done for every archive until we have per schema logic.
+        constexpr bool cExecuteForEveryArchive{true};
+        if (cExecuteForEveryArchive || false == interpretations_generated) {
+            log_surgeon::wildcard_query_parser::Query const query(search_string);
+            interpretations.clear();
+            interpretations = query.get_all_multi_token_interpretations(lexer);
+            interpretations_generated = true;
+        }
+        // Transfrom log-surgeon interpretations into CLP sub-queries.
+        generate_schema_sub_queries(
+                interpretations,
+                logtype_dict,
+                var_dict,
+                ignore_case,
+                sub_queries
+        );
     }
 
     if (sub_queries.empty()) {
@@ -421,6 +522,144 @@ GrepCore::SubQueryMatchabilityResult GrepCore::generate_logtypes_and_vars_for_su
     sub_query.set_possible_logtypes(possible_logtype_ids);
 
     return SubQueryMatchabilityResult::MayMatch;
+}
+
+template <
+        typename LogTypeDictionaryReaderType,
+        typename VariableDictionaryReaderType,
+        typename LogTypeDictionaryEntryType>
+void GrepCore::generate_schema_sub_queries(
+        std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> const& interpretations,
+        LogTypeDictionaryReaderType const& logtype_dict,
+        VariableDictionaryReaderType const& var_dict,
+        bool const ignore_case,
+        std::vector<SubQuery>& sub_queries
+) {
+    for (auto const& interpretation : interpretations) {
+        auto wildcard_encodable_positions{get_wildcard_encodable_positions(interpretation)};
+        if (wildcard_encodable_positions.size() > 32) {
+            throw std::runtime_error("Too many encodable variables.");
+        }
+        size_t const num_combos{static_cast<size_t>(1) << wildcard_encodable_positions.size()};
+        for (size_t mask{0}; mask < num_combos; ++mask) {
+            std::unordered_map<size_t, bool> wildcard_mask_map;
+            for (size_t i{0}; i < wildcard_encodable_positions.size(); ++i) {
+                wildcard_mask_map[wildcard_encodable_positions[i]] = mask >> i & 1;
+            }
+
+            auto const& logtype_string{generate_logtype_string(interpretation, wildcard_mask_map)};
+
+            std::unordered_set<LogTypeDictionaryEntryType const*> logtype_entries;
+            logtype_dict.get_entries_matching_wildcard_string(
+                    logtype_string,
+                    ignore_case,
+                    logtype_entries
+            );
+            if (logtype_entries.empty()) {
+                continue;
+            }
+
+            SubQuery sub_query;
+            bool has_vars{true};
+            for (size_t i{0}; i < interpretation.get_logtype().size(); ++i) {
+                auto const& token{interpretation.get_logtype()[i]};
+                if (std::holds_alternative<log_surgeon::wildcard_query_parser::VariableQueryToken>(
+                        token))
+                {
+                    bool is_wildcard_mask_encoded{false};
+                    if (wildcard_mask_map.contains(i)) {
+                        is_wildcard_mask_encoded = wildcard_mask_map.at(i);
+                    }
+
+                    has_vars = process_schema_var_token(
+                            std::get<log_surgeon::wildcard_query_parser::VariableQueryToken>(token),
+                            var_dict,
+                            ignore_case,
+                            is_wildcard_mask_encoded,
+                            sub_query
+                    );
+                }
+                if (false == has_vars) {
+                    break;
+                }
+            }
+            if (false == has_vars) {
+                continue;
+            }
+
+            std::unordered_set<logtype_dictionary_id_t> possible_logtype_ids;
+            for (auto const* entry : logtype_entries) {
+                possible_logtype_ids.emplace(entry->get_id());
+            }
+            sub_query.set_possible_logtypes(possible_logtype_ids);
+            sub_queries.push_back(std::move(sub_query));
+        }
+    }
+}
+
+template <typename VariableDictionaryReaderType>
+auto GrepCore::process_schema_var_token(
+        log_surgeon::wildcard_query_parser::VariableQueryToken const& variable_token,
+        VariableDictionaryReaderType const& var_dict,
+        bool const ignore_case,
+        bool const is_wildcard_mask_encoded,
+        SubQuery& sub_query
+) -> bool {
+    auto const& raw_string{variable_token.get_query_substring()};
+    auto const var_has_wildcard{variable_token.get_contains_wildcard()};
+    auto const var_type{variable_token.get_variable_type()};
+
+    bool const is_int{static_cast<uint32_t>(log_surgeon::SymbolId::TokenInt) == var_type};
+    bool const is_float{static_cast<uint32_t>(log_surgeon::SymbolId::TokenFloat) == var_type};
+
+    if (is_wildcard_mask_encoded) {
+        sub_query.mark_wildcard_match_required();
+        return true;
+    }
+
+    if (var_has_wildcard) {
+        return EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matches(
+                raw_string,
+                var_dict,
+                ignore_case,
+                sub_query
+        );
+    }
+
+    encoded_variable_t encoded_var{};
+    if ((is_int
+         && EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                 raw_string,
+                 encoded_var
+         ))
+        || (is_float
+            && EncodedVariableInterpreter::convert_string_to_representable_float_var(
+                    raw_string,
+                    encoded_var
+            )))
+    {
+        sub_query.add_non_dict_var(encoded_var);
+        return true;
+    }
+
+    auto entries = var_dict.get_entry_matching_value(raw_string, ignore_case);
+    if (entries.empty()) {
+        return false;
+    }
+    if (1 == entries.size()) {
+        auto const entry_id{entries[0]->get_id()};
+        sub_query.add_dict_var(EncodedVariableInterpreter::encode_var_dict_id(entry_id), entry_id);
+        return true;
+    }
+    std::unordered_set<encoded_variable_t> encoded_vars;
+    std::unordered_set<variable_dictionary_id_t> var_dict_ids;
+    encoded_vars.reserve(entries.size());
+    for (auto const* entry: entries) {
+        encoded_vars.emplace(EncodedVariableInterpreter::encode_var_dict_id(entry->get_id()));
+        var_dict_ids.emplace(entry->get_id());
+    }
+    sub_query.add_imprecise_dict_var(encoded_vars, var_dict_ids);
+    return true;
 }
 }  // namespace clp
 
