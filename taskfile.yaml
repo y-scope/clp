@@ -4,10 +4,12 @@ set: ["u", "pipefail"]
 shopt: ["globstar"]
 
 includes:
+  codegen: "taskfiles/codegen.yaml"
   deps: "taskfiles/deps/main.yaml"
   docker-images: "taskfiles/docker-images.yaml"
   docs: "taskfiles/docs.yaml"
   lint: "taskfiles/lint.yaml"
+  tests: "taskfiles/tests/main.yaml"
   utils: "tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 vars:
@@ -63,6 +65,7 @@ tasks:
         vars:
           COMPONENT: "job-orchestration"
       - task: "clean-webui"
+      - task: "tests:integration:cache-clear"
 
   clean-core:
     cmds:
@@ -166,47 +169,6 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
-  clp-s-generate-parsers:
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIRS:
-        - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/generated"
-        - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/generated"
-    deps:
-      - "deps:antlr-jar"
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS:
-            ref: ".OUTPUT_DIRS"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    sources:
-      - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/Kql.g4"
-      - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/Sql.g4"
-    dir: "{{.G_CORE_COMPONENT_DIR}}/src/"
-    cmds:
-      - for: ["kql", "sql"]
-        cmd: |-
-          rm -rf "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/generated/"* \
-          && java -jar {{.G_ANTLR_JAR_FILE}} \
-            -Dlanguage=Cpp \
-            -no-listener \
-            -visitor \
-            -package clp_s::search::{{.ITEM}}::generated \
-            -o clp_s/search/{{.ITEM}}/generated \
-            -Xexact-output-dir \
-            clp_s/search/{{.ITEM}}/*.g4 \
-            && find "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/generated" \
-              -type f -and -not \( -name "*.cpp" -o -name "*.h" \) \
-              -exec rm {} \;
-
-      # This command must be last
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS:
-            ref: ".OUTPUT_DIRS"
-
   core:
     cmds:
       - task: "core-generate"
@@ -222,7 +184,7 @@ tasks:
       - "{{.TASKFILE}}"
       - "/etc/os-release"
     deps:
-      - "clp-s-generate-parsers"
+      - "codegen:clp-s-generate-parsers"
       - "deps:core"
     cmds:
       - task: "utils:cmake:generate"
@@ -605,6 +567,7 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
   clean-python-component:
     internal: true
     label: "clean-{{.COMPONENT}}"
