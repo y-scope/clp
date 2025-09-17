@@ -14,12 +14,13 @@
 #include <string_utils/string_utils.hpp>
 
 #include "Defs.h"
-#include "DictionaryConcepts.hpp"
 #include "EncodedVariableInterpreter.hpp"
 #include "ir/parsing.hpp"
 #include "ir/types.hpp"
+#include "LogTypeDictionaryReaderReq.hpp"
 #include "Query.hpp"
 #include "QueryToken.hpp"
+#include "VariableDictionaryReaderReq.hpp"
 
 namespace clp {
 class GrepCore {

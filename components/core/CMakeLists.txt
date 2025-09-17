@@ -474,7 +474,6 @@ set(SOURCE_FILES_unitTest
         src/clp/Defs.h
         src/clp/dictionary_utils.cpp
         src/clp/dictionary_utils.hpp
-        src/clp/DictionaryConcepts.hpp
         src/clp/DictionaryEntry.hpp
         src/clp/DictionaryReader.hpp
         src/clp/DictionaryWriter.hpp
@@ -583,7 +582,9 @@ set(SOURCE_FILES_unitTest
         src/clp/LogSurgeonReader.hpp
         src/clp/LogTypeDictionaryEntry.cpp
         src/clp/LogTypeDictionaryEntry.hpp
+        src/clp/LogTypeDictionaryEntryReq.hpp
         src/clp/LogTypeDictionaryReader.hpp
+        src/clp/LogTypeDictionaryReaderReq.hpp
         src/clp/LogTypeDictionaryWriter.cpp
         src/clp/LogTypeDictionaryWriter.hpp
         src/clp/math_utils.hpp
@@ -676,9 +677,12 @@ set(SOURCE_FILES_unitTest
         src/clp/Utils.hpp
         src/clp/VariableDictionaryEntry.cpp
         src/clp/VariableDictionaryEntry.hpp
+        src/clp/VariableDictionaryEntryReq.hpp
         src/clp/VariableDictionaryReader.hpp
+        src/clp/VariableDictionaryReaderReq.hpp
         src/clp/VariableDictionaryWriter.cpp
         src/clp/VariableDictionaryWriter.hpp
+        src/clp/VariableDictionaryWriterReq.hpp
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp

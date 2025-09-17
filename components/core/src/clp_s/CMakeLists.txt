@@ -17,7 +17,6 @@ set(
         ../clp/cli_utils.cpp
         ../clp/cli_utils.hpp
         ../clp/Defs.h
-        ../clp/DictionaryConcepts.hpp
         ../clp/EncodedVariableInterpreter.cpp
         ../clp/EncodedVariableInterpreter.hpp
         ../clp/ErrorCode.hpp
@@ -71,6 +70,8 @@ set(
         ../clp/ir/types.hpp
         ../clp/LogSurgeonReader.cpp
         ../clp/LogSurgeonReader.hpp
+        ../clp/LogTypeDictionaryEntryReq.hpp
+        ../clp/LogTypeDictionaryReaderReq.hpp
         ../clp/NetworkReader.cpp
         ../clp/NetworkReader.hpp
         ../clp/networking/socket_utils.cpp
@@ -98,6 +99,9 @@ set(
         ../clp/type_utils.hpp
         ../clp/utf8_utils.cpp
         ../clp/utf8_utils.hpp
+        ../clp/VariableDictionaryEntryReq.hpp
+        ../clp/VariableDictionaryReaderReq.hpp
+        ../clp/VariableDictionaryWriterReq.hpp
         ../clp/WriterInterface.cpp
         ../clp/WriterInterface.hpp
 )

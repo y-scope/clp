@@ -8,14 +8,16 @@
 
 #include <string_utils/string_utils.hpp>
 
-#include "DictionaryConcepts.hpp"
 #include "ffi/ir_stream/decoding_methods.hpp"
 #include "ir/LogEvent.hpp"
 #include "ir/types.hpp"
+#include "LogTypeDictionaryEntryReq.hpp"
 #include "Query.hpp"
 #include "spdlog_with_specializations.hpp"
 #include "TraceableException.hpp"
 #include "type_utils.hpp"
+#include "VariableDictionaryReaderReq.hpp"
+#include "VariableDictionaryWriterReq.hpp"
 
 namespace clp {
 /**
