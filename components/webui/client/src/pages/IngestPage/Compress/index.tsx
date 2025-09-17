@@ -63,10 +63,10 @@ const Compress = () => {
         }
 
         submitCompressionJob(payload, {
-            onSuccess: (jobId) => {
+            onSuccess: ({data}) => {
                 setSubmitResult({
                     success: true,
-                    message: `Compression job submitted successfully with ID: ${jobId}`,
+                    message: `Compression job submitted successfully with ID: ${data.jobId}`,
                 });
                 form.resetFields();
             },

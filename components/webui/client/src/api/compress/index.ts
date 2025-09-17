@@ -6,7 +6,7 @@ import type {
     CompressionJobCreationSchema,
     CompressionJobSchema,
 } from "@webui/common/compression";
-import axios from "axios";
+import axios, {AxiosResponse} from "axios";
 
 
 /**
@@ -15,11 +15,11 @@ import axios from "axios";
  * @param payload
  * @return
  */
-const submitCompressionJob = async (payload: CompressionJobSchema): Promise<number> => {
+const submitCompressionJob = async (payload: CompressionJobSchema)
+: Promise<AxiosResponse<CompressionJobCreationSchema>> => {
     console.log("Submitting compression job:", JSON.stringify(payload));
 
-    const response = await axios.post<CompressionJobCreationSchema>("/api/compress", payload);
-    return response.data.jobId;
+    return await axios.post("/api/compress", payload);
 };
 
 /**
