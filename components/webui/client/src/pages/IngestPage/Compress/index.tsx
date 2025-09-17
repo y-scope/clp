@@ -12,7 +12,7 @@ import {
     submitCompressionJob,
 } from "../../../api/compress";
 import {DashboardCard} from "../../../components/DashboardCard";
-import {settings} from "../../../settings";
+import {CLP_STORAGE_ENGINES, SETTINGS_STORAGE_ENGINE} from "../../../config";
 
 
 type FormValues = {
@@ -78,8 +78,6 @@ const Compress = () => {
         }
     };
 
-    const isStorageEngineClpS = "clp-s" === settings.ClpStorageEngine;
-
     return (
         <DashboardCard title={"Start Ingestion"}>
             <Form
@@ -100,7 +98,7 @@ const Compress = () => {
                         autoSize={{minRows: 4, maxRows: 10}}
                         placeholder={"Enter paths to compress, one per line"}/>
                 </Form.Item>
-                {isStorageEngineClpS && (
+                {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && (
                     <>
                         <Form.Item
                             label={"Dataset"}
