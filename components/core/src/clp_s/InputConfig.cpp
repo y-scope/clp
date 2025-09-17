@@ -1,5 +1,7 @@
 #include "InputConfig.hpp"
 
+#include <array>
+#include <cctype>
 #include <cstdlib>
 #include <exception>
 #include <filesystem>
@@ -10,10 +12,13 @@
 #include <spdlog/spdlog.h>
 
 #include "../clp/aws/AwsAuthenticationSigner.hpp"
+#include "../clp/BufferedFileReader.hpp"
+#include "../clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../clp/FileReader.hpp"
 #include "../clp/NetworkReader.hpp"
 #include "../clp/ReaderInterface.hpp"
 #include "../clp/spdlog_with_specializations.hpp"
+#include "../clp/streaming_compression/zstd/Decompressor.hpp"
 #include "Utils.hpp"
 
 namespace clp_s {
@@ -95,6 +100,32 @@ auto get_archive_id_from_path(Path const& archive_path, std::string& archive_id)
 }
 
 namespace {
+/**
+ * Peeks the first few bytes of input from a reader and tries to deduce the type of the underlying
+ * content.
+ * @param reader
+ * @return The deduced type, or `FileType::Unknown` if the type could not be deduced.
+ */
+auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedFileReader>& reader) -> FileType;
+
+/**
+ * Checks if an input contains Zstd data, based on the first few bytes of data from the input.
+ * @return Whether the input could be Zstd.
+ */
+auto could_be_zstd(char const* peek_buf, size_t peek_size) -> bool;
+
+/**
+ * Checks if an input contains KV-IR data, based on the first few bytes of data from the input.
+ * @return Whether the input could be KV-IR.
+ */
+auto could_be_kvir(char const* peek_buf, size_t peek_size) -> bool;
+
+/**
+ * Checks if an input contains JSON data, based on the first few bytes of data from the input.
+ * @return Whether the input could be JSON.
+ */
+auto could_be_json(char const* peek_buf, size_t peek_size) -> bool;
+
 auto try_create_file_reader(std::string_view const file_path)
         -> std::shared_ptr<clp::ReaderInterface> {
     try {
@@ -163,6 +194,74 @@ auto try_create_network_reader(std::string_view const url, NetworkAuthOption con
         return nullptr;
     }
 }
+
+auto could_be_zstd(char const* peek_buf, size_t peek_size) -> bool {
+    constexpr std::array<char, 4> cZstdMagicNumber = {'\x28', '\xB5', '\x2F', '\xFD'};
+    if (peek_size < cZstdMagicNumber.size()) {
+        return false;
+    }
+
+    for (size_t i{0ULL}; i < cZstdMagicNumber.size(); ++i) {
+        if (cZstdMagicNumber.at(i) != peek_buf[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+auto could_be_kvir(char const* peek_buf, size_t peek_size) -> bool {
+    if (peek_size < clp::ffi::ir_stream::cProtocol::MagicNumberLength) {
+        return false;
+    }
+
+    bool could_be_four_byte{true};
+    bool could_be_eight_byte{true};
+    for (size_t i{0ULL}; i < clp::ffi::ir_stream::cProtocol::MagicNumberLength; ++i) {
+        could_be_four_byte
+                &= clp::ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber[i] == peek_buf[i];
+        could_be_eight_byte
+                &= clp::ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber[i] == peek_buf[i];
+    }
+    return could_be_four_byte || could_be_eight_byte;
+}
+
+auto could_be_json(char const* peek_buf, size_t peek_size) -> bool {
+    for (size_t i{0ULL}; i < peek_size; ++i) {
+        if (std::isspace(static_cast<int>(peek_buf[i]))) {
+            continue;
+        }
+
+        if ('{' == peek_buf[i]) {
+            return true;
+        } else {
+            return false;
+        }
+    }
+    return false;
+}
+
+auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedFileReader>& reader) -> FileType {
+    char const* peek_buf{};
+    size_t peek_size{};
+    reader->peek_buffered_data(peek_buf, peek_size);
+    if (nullptr == peek_buf || 0 == peek_size) {
+        return FileType::Unknown;
+    }
+
+    if (could_be_zstd(peek_buf, peek_size)) {
+        return FileType::Zstd;
+    }
+
+    if (could_be_kvir(peek_buf, peek_size)) {
+        return FileType::KeyValueIr;
+    }
+
+    if (could_be_json(peek_buf, peek_size)) {
+        return FileType::Json;
+    }
+
+    return FileType::Unknown;
+}
 }  // namespace
 
 auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
@@ -174,5 +273,54 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
     } else {
         return nullptr;
     }
+}
+
+[[nodiscard]] auto try_deduce_reader_type(std::shared_ptr<clp::ReaderInterface> reader)
+        -> std::pair<std::shared_ptr<clp::ReaderInterface>, FileType> {
+    constexpr size_t cFileReadBufferCapacity = 64 * 1024;  // 64 KB
+    constexpr size_t cMaxNestedFormatDepth = 5;
+    if (nullptr == reader) {
+        return std::make_pair(nullptr, FileType::Unknown);
+    }
+
+    size_t original_pos{};
+    if (clp::ErrorCode::ErrorCode_Success != reader->try_get_pos(original_pos)
+        || 0ULL != original_pos)
+    {
+        return std::make_pair(nullptr, FileType::Unknown);
+    }
+
+    auto prev_reader{reader};
+    for (size_t nesting_depth{0ULL}; nesting_depth < cMaxNestedFormatDepth; ++nesting_depth) {
+        auto buffered_reader{
+                std::make_shared<clp::BufferedFileReader>(prev_reader, cFileReadBufferCapacity)
+        };
+        auto const rc{buffered_reader->try_refill_buffer_if_empty()};
+        if (clp::ErrorCode::ErrorCode_Success != rc && clp::ErrorCode::ErrorCode_EndOfFile != rc) {
+            return std::make_pair(nullptr, FileType::Unknown);
+        }
+
+        auto const type{peek_start_and_deduce_type(buffered_reader)};
+        switch (type) {
+            case FileType::Json:
+            case FileType::KeyValueIr:
+                return std::make_pair(buffered_reader, type);
+            case FileType::Zstd: {
+                prev_reader = std::make_shared<clp::streaming_compression::zstd::Decompressor>();
+                try {
+                    std::static_pointer_cast<clp::streaming_compression::zstd::Decompressor>(
+                            prev_reader
+                    )
+                            ->open(*buffered_reader, cFileReadBufferCapacity);
+                } catch (std::exception const&) {
+                    return std::make_pair(nullptr, FileType::Unknown);
+                }
+            }
+            case FileType::Unknown:
+            default:
+                return std::make_pair(nullptr, FileType::Unknown);
+        }
+    }
+    return std::make_pair(nullptr, FileType::Unknown);
 }
 }  // namespace clp_s

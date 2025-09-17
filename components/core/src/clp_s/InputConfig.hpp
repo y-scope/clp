@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -21,7 +22,9 @@ constexpr char cAwsSessionTokenEnvVar[] = "AWS_SESSION_TOKEN";
  */
 enum class FileType : uint8_t {
     Json = 0,
-    KeyValueIr
+    KeyValueIr,
+    Zstd,
+    Unknown
 };
 
 /**
@@ -121,6 +124,18 @@ get_input_archives_for_raw_path(std::string_view const path, std::vector<Path>& 
  */
 [[nodiscard]] auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
         -> std::shared_ptr<clp::ReaderInterface>;
+
+/**
+ * Tries to deduce the underlying file-type of the file opened by `reader`, and return a
+ * (potentially new) reader for underlying JSON or KV-IR content by unwrapping layers of
+ * compression.
+ * @param path
+ * @param network_auth
+ * @return The opened `clp::ReaderInterface` as well as its type, or `nullptr` and
+ * `FileType::Unknown` on error.
+ */
+[[nodiscard]] auto try_deduce_reader_type(std::shared_ptr<clp::ReaderInterface> reader)
+        -> std::pair<std::shared_ptr<clp::ReaderInterface>, FileType>;
 }  // namespace clp_s
 
 #endif  // CLP_S_INPUTCONFIG_HPP
