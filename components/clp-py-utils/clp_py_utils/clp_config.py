@@ -1,7 +1,7 @@
 import os
 import pathlib
 from enum import auto
-from typing import Literal, Optional, Union
+from typing import ClassVar, Literal, Optional, Union
 
 from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, root_validator, validator
@@ -136,9 +136,11 @@ class Package(BaseModel):
 
 
 class Database(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 3306
+
     type: str = "mariadb"
     host: str = "localhost"
-    port: int = 3306
+    port: int = DEFAULT_PORT
     name: str = "clp-db"
     ssl_cert: Optional[str] = None
     auto_commit: bool = False
@@ -240,6 +242,7 @@ class Database(BaseModel):
 
     def transform_for_container_config(self):
         self.host = DB_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 def _validate_logging_level(cls, field):
@@ -275,6 +278,8 @@ class CompressionScheduler(BaseModel):
 
 
 class QueryScheduler(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 7000
+
     host: str = "localhost"
     port: int = 7000
     jobs_poll_delay: float = 0.1  # seconds
@@ -300,6 +305,7 @@ class QueryScheduler(BaseModel):
 
     def transform_for_container_config(self):
         self.host = QUERY_SCHEDULER_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 class CompressionWorker(BaseModel):
@@ -321,8 +327,10 @@ class QueryWorker(BaseModel):
 
 
 class Redis(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 6379
+
     host: str = "localhost"
-    port: int = 6379
+    port: int = DEFAULT_PORT
     query_backend_database: int = 0
     compression_backend_database: int = 1
     # redis can perform authentication without a username
@@ -356,11 +364,14 @@ class Redis(BaseModel):
 
     def transform_for_container_config(self):
         self.host = REDIS_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 class Reducer(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 14009
+
     host: str = "localhost"
-    base_port: int = 14009
+    base_port: int = DEFAULT_PORT
     logging_level: str = "INFO"
     upsert_interval: int = 100  # milliseconds
 
@@ -389,11 +400,14 @@ class Reducer(BaseModel):
 
     def transform_for_container_config(self):
         self.host = REDUCER_COMPONENT_NAME
+        self.base_port = self.DEFAULT_PORT
 
 
 class ResultsCache(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 27017
+
     host: str = "localhost"
-    port: int = 27017
+    port: int = DEFAULT_PORT
     db_name: str = "clp-query-results"
     stream_collection_name: str = "stream-files"
     retention_period: Optional[int] = 60
@@ -429,11 +443,14 @@ class ResultsCache(BaseModel):
 
     def transform_for_container_config(self):
         self.host = RESULTS_CACHE_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 class Queue(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 5672
+
     host: str = "localhost"
-    port: int = 5672
+    port: int = DEFAULT_PORT
 
     username: Optional[str] = None
     password: Optional[str] = None
@@ -462,6 +479,7 @@ class Queue(BaseModel):
 
     def transform_for_container_config(self):
         self.host = QUEUE_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 class S3Credentials(BaseModel):
