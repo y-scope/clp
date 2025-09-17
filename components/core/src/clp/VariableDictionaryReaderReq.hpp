@@ -14,7 +14,6 @@ namespace clp {
 /**
  * Requirement for the variable dictionary reader interface.
  * @tparam VariableDictionaryReaderType The type of the variable dictionary reader.
- * @tparam VariableDictionaryEntryType The type of the entries in the variable dictionary reader.
  */
 template <typename VariableDictionaryReaderType>
 concept VariableDictionaryReaderReq = requires(
