@@ -1,15 +1,9 @@
+import type {
+    CompressionJobCreationSchema,
+    CompressionJobSchema,
+} from "@webui/common/compression";
 import axios from "axios";
 
-
-type CompressionJobSchema = {
-    paths: string[];
-    dataset?: string;
-    timestampKey?: string;
-};
-
-type CompressionJobCreationSchema = {
-    jobId: number;
-};
 
 /**
  * Submits a compression job.

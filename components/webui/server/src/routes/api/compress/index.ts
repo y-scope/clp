@@ -1,13 +1,13 @@
 import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
+import {
+    CompressionJobCreationSchema,
+    CompressionJobSchema,
+} from "@webui/common/schemas/compression";
+import {ErrorSchema} from "@webui/common/schemas/error";
 import {StatusCodes} from "http-status-codes";
 
 import settings from "../../../../settings.json" with {type: "json"};
 import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager/index.js";
-import {
-    CompressionJobCreationSchema,
-    CompressionJobSchema,
-} from "../../../schemas/compression.js";
-import {ErrorSchema} from "../../../schemas/error.js";
 
 
 /**
