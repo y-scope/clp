@@ -1,4 +1,5 @@
 import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {
     CompressionJobCreationSchema,
     CompressionJobSchema,
@@ -72,7 +73,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 (path) => CONTAINER_INPUT_LOGS_ROOT_DIR + path
             );
 
-            if ("clp-s" === settings.ClpStorageEngine) {
+            if (CLP_STORAGE_ENGINES.CLP_S === settings.ClpStorageEngine as CLP_STORAGE_ENGINES) {
                 if ("string" !== typeof dataset || 0 === dataset.length) {
                     jobConfig.input.dataset = CLP_DEFAULT_DATASET_NAME;
                 } else {

@@ -1,15 +1,10 @@
-import {CLP_QUERY_ENGINES} from "@webui/common/config";
+import {
+    CLP_QUERY_ENGINES,
+    CLP_STORAGE_ENGINES,
+} from "@webui/common/config";
 
 import {settings} from "../settings";
 
-
-/**
- * CLP variants.
- */
-enum CLP_STORAGE_ENGINES {
-    CLP = "clp",
-    CLP_S = "clp-s",
-}
 
 const SETTINGS_STORAGE_ENGINE = settings.ClpStorageEngine as CLP_STORAGE_ENGINES;
 const SETTINGS_QUERY_ENGINE = settings.ClpQueryEngine as CLP_QUERY_ENGINES;
@@ -23,7 +18,6 @@ const STREAM_TYPE = CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE ?
 
 export {
     CLP_QUERY_ENGINES,
-    CLP_STORAGE_ENGINES,
     SETTINGS_QUERY_ENGINE,
     SETTINGS_STORAGE_ENGINE,
     STREAM_TYPE,

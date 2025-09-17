@@ -3,15 +3,13 @@ import {
     useEffect,
 } from "react";
 
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {Card} from "antd";
 import {Dayjs} from "dayjs";
 import {TimelineConfig} from "src/components/ResultsTimeline/typings";
 
 import ResultsTimeline from "../../../../components/ResultsTimeline/index";
-import {
-    CLP_STORAGE_ENGINES,
-    SETTINGS_STORAGE_ENGINE,
-} from "../../../../config";
+import {SETTINGS_STORAGE_ENGINE} from "../../../../config";
 import {handleQuerySubmit} from "../../SearchControls/search-requests";
 import {TIME_RANGE_OPTION} from "../../SearchControls/TimeRangeInput/utils";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";

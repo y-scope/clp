@@ -1,5 +1,6 @@
 import {useState} from "react";
 
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {CompressionJobSchemaStatic} from "@webui/common/schemas/compression";
 import {
     Button,
@@ -11,10 +12,7 @@ import {
 
 import {useSubmitCompressionJob} from "../../../api/compress";
 import {DashboardCard} from "../../../components/DashboardCard";
-import {
-    CLP_STORAGE_ENGINES,
-    SETTINGS_STORAGE_ENGINE,
-} from "../../../config";
+import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 
 
 type FormValues = {

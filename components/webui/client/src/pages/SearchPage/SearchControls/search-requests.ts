@@ -1,3 +1,4 @@
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {
     type QueryJob,
     type QueryJobCreation,
@@ -9,10 +10,7 @@ import {
     clearQueryResults,
     submitQuery,
 } from "../../../api/search";
-import {
-    CLP_STORAGE_ENGINES,
-    SETTINGS_STORAGE_ENGINE,
-} from "../../../config";
+import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../SearchState/";
 import {SEARCH_UI_STATE} from "../SearchState/typings";
 import {unquoteString} from "./utils";
