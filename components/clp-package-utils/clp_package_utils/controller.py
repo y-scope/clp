@@ -46,8 +46,10 @@ from clp_package_utils.general import (
 )
 
 LOGS_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
-DEFAULT_CONTAINER_USER_ID = 999
-DEFAULT_CONTAINER_GROUP_ID = 999
+DEFAULT_UID_GID = f"{os.getuid()}:{os.getgid()}"
+SERVICE_CONTAINER_USER_ID = 999
+SERVICE_CONTAINER_GROUP_ID = 999
+SERVICE_CONTAINER_UID_GID = f"{SERVICE_CONTAINER_USER_ID}:{SERVICE_CONTAINER_GROUP_ID}"
 
 logger = logging.getLogger(__name__)
 
@@ -77,7 +79,7 @@ def _chown_paths_if_root(*paths: pathlib.Path):
     if os.getuid() != 0:
         return
     for path in paths:
-        _chown_recursively(path, DEFAULT_CONTAINER_USER_ID, DEFAULT_CONTAINER_GROUP_ID)
+        _chown_recursively(path, SERVICE_CONTAINER_USER_ID, SERVICE_CONTAINER_GROUP_ID)
 
 
 def _get_ip_from_hostname(hostname: str) -> str:
@@ -463,8 +465,8 @@ class DockerComposeController(BaseController):
         env_dict = {
             "CLP_PACKAGE_STORAGE_ENGINE": self.clp_config.package.storage_engine,
             # User and group IDs
-            "CLP_USER_ID": str(os.getuid()),
-            "CLP_GROUP_ID": str(os.getgid()),
+            "CLP_UID_GID": DEFAULT_UID_GID,
+            "CLP_SERVICE_CONTAINER_UID_GID": SERVICE_CONTAINER_UID_GID if os.geteuid() == 0 else DEFAULT_UID_GID,
             # Package container
             "CLP_PACKAGE_CONTAINER": self.clp_config.execution_container,
             # Global paths
