@@ -876,11 +876,6 @@ def start_webui(
         client_settings_json_file.write(json.dumps(client_settings_json))
 
     server_settings_json_updates = {
-        "ArchiveOutputCompressionLevel": clp_config.archive_output.compression_level,
-        "ArchiveOutputTargetArchiveSize": clp_config.archive_output.target_archive_size,
-        "ArchiveOutputTargetDictionariesSize": clp_config.archive_output.target_dictionaries_size,
-        "ArchiveOutputTargetEncodedFileSize":  clp_config.archive_output.target_encoded_file_size,
-        "ArchiveOutputTargetSegmentSize": clp_config.archive_output.target_segment_size,
         "SqlDbHost": clp_config.database.host,
         "SqlDbPort": clp_config.database.port,
         "SqlDbName": clp_config.database.name,
@@ -893,6 +888,11 @@ def start_webui(
         "ClientDir": str(container_webui_dir / "client"),
         "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
         "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
+        "ArchiveOutputCompressionLevel": clp_config.archive_output.compression_level,
+        "ArchiveOutputTargetArchiveSize": clp_config.archive_output.target_archive_size,
+        "ArchiveOutputTargetDictionariesSize": clp_config.archive_output.target_dictionaries_size,
+        "ArchiveOutputTargetEncodedFileSize": clp_config.archive_output.target_encoded_file_size,
+        "ArchiveOutputTargetSegmentSize": clp_config.archive_output.target_segment_size,
         "ClpQueryEngine": clp_config.package.query_engine,
         "ClpStorageEngine": clp_config.package.storage_engine,
     }
