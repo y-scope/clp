@@ -21,7 +21,7 @@ using clp::FileWriter;
 using std::make_unique;
 using std::string;
 
-static constexpr size_t cNumAlphabets = 'z' - 'a';
+static constexpr size_t cNumAlphabets = 'z' - 'a' + 1;
 
 TEST_CASE("Test reading data", "[BufferedFileReader]") {
     // Initialize data for testing

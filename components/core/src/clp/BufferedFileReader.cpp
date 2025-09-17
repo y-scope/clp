@@ -54,7 +54,7 @@ void BufferedFileReader::peek_buffered_data(char const*& buf, size_t& peek_size)
 }
 
 auto BufferedFileReader::set_checkpoint() -> size_t {
-    if (m_checkpoint_pos.has_value() && m_checkpoint_pos < m_pos
+    if (m_checkpoint_pos.has_value() && m_checkpoint_pos.value() < m_pos
         && m_buffer_reader.get_buffer_size() != m_base_buffer_size)
     {
         drop_content_before_current_pos();
@@ -130,12 +130,12 @@ auto BufferedFileReader::try_read(char* buf, size_t num_bytes_to_read, size_t& n
     if (nullptr == buf) {
         return ErrorCode_BadParam;
     }
+    num_bytes_read = 0;
     if (num_bytes_to_read == 0) {
         return ErrorCode_Success;
     }
 
     span dst_view{buf, num_bytes_to_read};
-    num_bytes_read = 0;
     while (false == dst_view.empty()) {
         size_t bytes_read{0};
         auto error_code = m_buffer_reader.try_read(dst_view.data(), dst_view.size(), bytes_read);

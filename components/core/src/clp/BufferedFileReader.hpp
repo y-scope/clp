@@ -17,7 +17,7 @@ namespace clp {
 /**
  * Class for performing buffered (in memory) reads from another ReaderInterface with control over
  * when and how much data is buffered. This allows us to support use cases where we want to perform
- * unordered reads from input which only support sequential access (e.g. files from block storage
+ * unordered reads from inputs which have expensive random access (e.g. files from object storage
  * like S3).
  *
  * To control how much data is buffered, we allow callers to set a checkpoint such that all reads
@@ -26,7 +26,7 @@ namespace clp {
  * When no checkpoint is set, we maintain a fixed-size buffer.
  *
  * NOTE 1: Unless otherwise noted, the "file position" mentioned in docstrings is the position in
- * the buffered file, not the position in the original input file.
+ * the buffered file, not the position in the underlying input source.
  *
  * NOTE 2: This class restricts the buffer size to a multiple of the page size and we avoid reading
  * anything less than a page to avoid multiple page faults.
@@ -205,6 +205,11 @@ private:
         return m_buffer_begin_pos + m_buffer_reader.get_buffer_size();
     }
 
+    /**
+     * Advances `m_pos` to `pos`; if `pos` >= `m_highest_read_pos`, `m_highest_read_pos` is updated
+     * as well.
+     * @param pos
+     */
     auto update_pos(size_t pos) -> void;
 
     // Constants
@@ -216,7 +221,7 @@ private:
 
     // Buffer specific data
     std::vector<char> m_buffer;
-    size_t m_base_buffer_size;
+    size_t m_base_buffer_size{};
     BufferReader m_buffer_reader;
     size_t m_buffer_begin_pos{0};
 
