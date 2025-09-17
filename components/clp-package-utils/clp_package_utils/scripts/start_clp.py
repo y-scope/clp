@@ -876,6 +876,11 @@ def start_webui(
         client_settings_json_file.write(json.dumps(client_settings_json))
 
     server_settings_json_updates = {
+        "ArchiveOutputCompressionLevel": clp_config.archive_output.compression_level,
+        "ArchiveOutputTargetArchiveSize": clp_config.archive_output.target_archive_size,
+        "ArchiveOutputTargetDictionariesSize": clp_config.archive_output.target_dictionaries_size,
+        "ArchiveOutputTargetEncodedFileSize":  clp_config.archive_output.target_encoded_file_size,
+        "ArchiveOutputTargetSegmentSize": clp_config.archive_output.target_segment_size,
         "SqlDbHost": clp_config.database.host,
         "SqlDbPort": clp_config.database.port,
         "SqlDbName": clp_config.database.name,

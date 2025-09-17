@@ -29,11 +29,11 @@ const DEFAULT_COMPRESSION_JOB_CONFIG: CompressionJobConfig = Object.freeze({
         path_prefix_to_remove: CONTAINER_INPUT_LOGS_ROOT_DIR,
     },
     output: {
-        compression_level: 3,
-        target_archive_size: 268435456,
-        target_dictionaries_size: 33554432,
-        target_encoded_file_size: 268435456,
-        target_segment_size: 268435456,
+        compression_level: settings.ArchiveOutputCompressionLevel,
+        target_archive_size: settings.ArchiveOutputTargetArchiveSize,
+        target_dictionaries_size: settings.ArchiveOutputTargetDictionariesSize,
+        target_encoded_file_size: settings.ArchiveOutputTargetEncodedFileSize,
+        target_segment_size: settings.ArchiveOutputTargetSegmentSize,
     },
 });
 
