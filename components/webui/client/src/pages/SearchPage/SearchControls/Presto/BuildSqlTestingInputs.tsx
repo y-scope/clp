@@ -37,7 +37,7 @@ const BuildSearchQueryPropsSchema = Type.Object({
 });
 
 /**
- * Returns a input boxes to test `buildSearchQuery`.
+ * Returns input boxes to test `buildSearchQuery`.
  *
  * @return
  */
