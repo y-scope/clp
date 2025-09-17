@@ -19,10 +19,11 @@ const TransformEmptyStringSchema = Type.Transform(
         Type.Undefined(),
     ]))
 )
-    .Decode((value) => ("" === value ?
+    .Decode((value) => (
+        ("undefined" === typeof value || "" === value.trim()) ?
         // eslint-disable-next-line no-undefined
-        undefined :
-        value))
+            undefined :
+            value))
     .Encode((value) => value);
 
 const BuildSearchQueryPropsSchema = Type.Object({
