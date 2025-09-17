@@ -298,11 +298,11 @@ class BaseController(ABC):
 
         server_settings_json_updates = {
             "SqlDbHost": container_clp_config.database.host,
-            "SqlDbPort": self.clp_config.database.port,
+            "SqlDbPort": container_clp_config.database.port,
             "SqlDbName": self.clp_config.database.name,
             "SqlDbQueryJobsTableName": "query_jobs",
             "MongoDbHost": container_clp_config.results_cache.host,
-            "MongoDbPort": self.clp_config.results_cache.port,
+            "MongoDbPort": container_clp_config.results_cache.port,
             "MongoDbName": self.clp_config.results_cache.db_name,
             "MongoDbSearchResultsMetadataCollectionName": self.clp_config.webui.results_metadata_collection_name,
             "MongoDbStreamFilesCollectionName": self.clp_config.results_cache.stream_collection_name,
