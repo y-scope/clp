@@ -12,7 +12,7 @@ const Where = () => (
     <div className={guidedGrid["where"]}>
         <InputLabel> WHERE </InputLabel>
         <SqlInput
-            className={guidedGrid[`noLeftBorderRadius`] || ""}
+            className={guidedGrid["noLeftBorderRadius"] || ""}
             disabled={false}/>
     </div>
 );

@@ -12,7 +12,7 @@ const OrderBy = () => (
     <div className={guidedGrid["order"]}>
         <InputLabel> ORDER BY </InputLabel>
         <SqlInput
-            className={guidedGrid[`noLeftBorderRadius`] || ""}
+            className={guidedGrid["noLeftBorderRadius"] || ""}
             disabled={false}/>
     </div>
 );

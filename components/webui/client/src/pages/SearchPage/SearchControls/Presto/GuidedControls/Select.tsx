@@ -12,7 +12,7 @@ const Select = () => (
     <div className={guidedGrid["select"]}>
         <InputLabel> SELECT </InputLabel>
         <SqlInput
-            className={guidedGrid[`noLeftBorderRadius`] || ""}
+            className={guidedGrid["noLeftBorderRadius"] || ""}
             disabled={false}/>
     </div>
 );

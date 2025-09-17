@@ -12,8 +12,9 @@ import {theme} from "antd";
 import color from "color";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 
-import "./monaco-loader";
 import styles from "./index.module.css";
+
+import "./monaco-loader";
 
 
 type SqlEditorType = monaco.editor.IStandaloneCodeEditor;
@@ -77,11 +78,14 @@ const SqlEditor = (props: SqlEditorProps) => {
 
     return (
         <div
-            className={[styles["editor"], props.className].filter(Boolean).join(" ")}
+            className={[styles["editor"],
+                props.className].filter(Boolean).join(" ")}
             style={{
                 border: `1px solid ${token.colorBorder}`,
                 borderRadius: token.borderRadius,
-                pointerEvents: disabled ? "none" : "auto",
+                pointerEvents: disabled ?
+                    "none" :
+                    "auto",
             }}
         >
             <Editor

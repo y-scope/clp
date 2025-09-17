@@ -24,10 +24,9 @@ const Limit = () => (
             defaultValue={LIMIT_OPTIONS[0]?.value}
             options={LIMIT_OPTIONS}
             className={
-                guidedGrid["noLeftBorderRadiusSelect"] + " " +
-                guidedGrid["widthSelect"]
-            }
-        />
+                `${guidedGrid["noLeftBorderRadiusSelect"]} ${
+                    guidedGrid["widthSelect"]}`
+            }/>
     </div>
 );
 
