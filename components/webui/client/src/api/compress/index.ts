@@ -44,5 +44,6 @@ export type {
     CompressionJobSchema,
 };
 export {
-    submitCompressionJob, useSubmitCompressionJob,
+    submitCompressionJob,
+    useSubmitCompressionJob,
 };
