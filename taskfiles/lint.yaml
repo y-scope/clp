@@ -78,14 +78,16 @@ tasks:
       - task: "py"
         vars:
           BLACK_FLAGS: "--check --diff"
-          RUFF_FLAGS: ""
+          RUFF_CHECK_FLAGS: ""
+          RUFF_FORMAT_FLAGS: "--diff"
 
   fix-py:
     cmds:
       - task: "py"
         vars:
           BLACK_FLAGS: ""
-          RUFF_FLAGS: "--fix"
+          RUFF_CHECK_FLAGS: "--fix"
+          RUFF_FORMAT_FLAGS: ""
 
   yaml:
     aliases:
@@ -100,6 +102,7 @@ tasks:
           .yamllint.yml \
           components/core/.clang-format \
           components/core/config \
+          components/core/tools/ \
           components/package-template/src/etc \
           docs \
           taskfile.yaml \
@@ -756,8 +759,11 @@ tasks:
 
   py:
     internal: true
+    vars:
+      UV_PYTHON_PROJECTS:
+        - "{{.G_INTEGRATION_TESTS_DIR}}"
     requires:
-      vars: ["BLACK_FLAGS", "RUFF_FLAGS"]
+      vars: ["BLACK_FLAGS", "RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
     deps: ["venv"]
     cmds:
       - for:
@@ -772,7 +778,13 @@ tasks:
           . "{{.G_LINT_VENV_DIR}}/bin/activate"
           cd "{{.ITEM}}"
           black --color --line-length 100 {{.BLACK_FLAGS}} .
-          ruff check {{.RUFF_FLAGS}} .
+          ruff check {{.RUFF_CHECK_FLAGS}} .
+      - for:
+          var: "UV_PYTHON_PROJECTS"
+        cmd: |-
+          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
+          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} .
+          uv run --directory "{{.ITEM}}" mypy .
 
   venv:
     internal: true

@@ -354,7 +354,7 @@ tasks:
   mongocxx:
     internal: true
     vars:
-      VERSION: "r3.10.2"
+      VERSION: "r4.1.1"
     run: "once"
     cmds:
       - task: "utils:install-remote-cmake-lib"
@@ -364,10 +364,9 @@ tasks:
             - "-DBUILD_SHARED_LIBS_WITH_STATIC_MONGOC=ON"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-            - "-DENABLE_TESTS=OFF"
             - "-DENABLE_UNINSTALL=OFF"
           LIB_NAME: "mongocxx"
-          TARBALL_SHA256: "52b99b2866019b5ea25d15c5a39e2a88c70fe1259c40f1091deff8bfae0194be"
+          TARBALL_SHA256: "19dff3cf834a3e09229260f22a0325820a7e30c78b294db91794dd934776b33a"
           TARBALL_URL: "https://github.com/mongodb/mongo-cxx-driver/releases/download/{{.VERSION}}\
           /mongo-cxx-driver-{{.VERSION}}.tar.gz"
 
@@ -513,23 +512,20 @@ tasks:
 
   ystdlib:
     internal: true
-    vars:
-      LIB_NAME: "ystdlib"
-      YSTDLIB_OUTPUT_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
     run: "once"
     deps:
-      - task: "utils:init"
+      - task: "boost"
     cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+      - task: "utils:install-remote-cmake-lib"
         vars:
-          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "36fa0e9d96b7307ca92482343d6ba1091c5576370676e6d423cce32c20e34a3d"
-          OUTPUT_DIR: "{{.YSTDLIB_OUTPUT_DIR}}"
-          URL: "https://github.com/y-scope/ystdlib-cpp/archive/d80cf86.tar.gz"
-      - >-
-        echo "set(
-        CLP_YSTDLIB_SOURCE_DIRECTORY \"{{.YSTDLIB_OUTPUT_DIR}}\"
-        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-Dystdlib_BUILD_TESTING=OFF"
+          LIB_NAME: "ystdlib"
+          TARBALL_SHA256: "65990dc2bcc4a355c2181bfe31a7800f492309d1bcd340f52a34e85047e61bc8"
+          TARBALL_URL: "https://github.com/y-scope/ystdlib-cpp/archive/9ed78cd.tar.gz"
 
   zlib:
     internal: true

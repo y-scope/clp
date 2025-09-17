@@ -10,8 +10,8 @@ import {
     Typography,
 } from "@mui/joy";
 import {DefaultColorPalette} from "@mui/joy/styles/types";
+import {Nullable} from "@webui/common/utility-types";
 
-import {Nullable} from "../typings/common";
 import {
     QUERY_LOADING_STATE,
     QUERY_LOADING_STATE_DESCRIPTIONS,

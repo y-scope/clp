@@ -2,20 +2,20 @@ import {
     FastifyPluginAsyncTypebox,
     Type,
 } from "@fastify/type-provider-typebox";
-import {StatusCodes} from "http-status-codes";
-
+import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {
-    CLP_QUERY_ENGINES,
     SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
-} from "../../../../../common/index.js";
-import settings from "../../../../settings.json" with {type: "json"};
-import {ErrorSchema} from "../../../schemas/error.js";
+} from "@webui/common/metadata";
+import {QUERY_JOB_TYPE} from "@webui/common/query";
+import {ErrorSchema} from "@webui/common/schemas/error";
 import {
     QueryJobCreationSchema,
     QueryJobSchema,
-} from "../../../schemas/search.js";
-import {QUERY_JOB_TYPE} from "../../../typings/query.js";
+} from "@webui/common/schemas/search";
+import {StatusCodes} from "http-status-codes";
+
+import settings from "../../../../settings.json" with {type: "json"};
 import {SEARCH_MAX_NUM_RESULTS} from "./typings.js";
 import {
     createMongoIndexes,

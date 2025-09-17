@@ -1,8 +1,6 @@
 import {
     useCallback,
     useEffect,
-    useImperativeHandle,
-    useRef,
 } from "react";
 
 import {
@@ -17,15 +15,13 @@ import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 import "./monaco-loader";
 
 
-type SqlEditorRef = {
-    focus: () => void;
-};
+type SqlEditorType = monaco.editor.IStandaloneCodeEditor;
 
-type SqlEditorProps = Omit<EditorProps, "language"> & React.RefAttributes<SqlEditorRef> & {
+type SqlEditorProps = Omit<EditorProps, "language"> & {
     disabled: boolean;
 
     /** Callback when the editor is mounted and ref is ready to use. */
-    onEditorReady?: () => void;
+    onEditorReady?: (editor: SqlEditorType) => void;
 };
 
 /**
@@ -35,22 +31,14 @@ type SqlEditorProps = Omit<EditorProps, "language"> & React.RefAttributes<SqlEdi
  * @return
  */
 const SqlEditor = (props: SqlEditorProps) => {
-    const {ref, disabled, onEditorReady, ...editorProps} = props;
-    const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>(null);
+    const {disabled, onEditorReady, ...editorProps} = props;
     const monacoEditor = useMonaco();
     const {token} = theme.useToken();
 
-    useImperativeHandle(ref, () => ({
-        focus: () => {
-            editorRef.current?.focus();
-        },
-    }), []);
-
     const handleEditorDidMount = useCallback((
-        editor: monaco.editor.IStandaloneCodeEditor,
+        editor: SqlEditorType,
     ) => {
-        editorRef.current = editor;
-        onEditorReady?.();
+        onEditorReady?.(editor);
     }, [onEditorReady]);
 
     // Define default and disabled themes for monaco editor
@@ -105,21 +93,6 @@ const SqlEditor = (props: SqlEditorProps) => {
                             width: "100%",
                         }}/>
                 }
-                options={{
-                    automaticLayout: true,
-                    folding: false,
-                    lineNumbers: "off",
-                    minimap: {enabled: false},
-                    overviewRulerBorder: false,
-                    padding: {
-                        top: token.paddingXS,
-                        bottom: token.paddingXS,
-                    },
-                    placeholder: "Enter your SQL query",
-                    renderLineHighlight: "none",
-                    scrollBeyondLastLine: false,
-                    wordWrap: "on",
-                }}
                 theme={disabled ?
                     "disabled-theme" :
                     "default-theme"}
@@ -130,4 +103,7 @@ const SqlEditor = (props: SqlEditorProps) => {
 };
 
 export default SqlEditor;
-export type {SqlEditorRef};
+export type {
+    SqlEditorProps,
+    SqlEditorType,
+};

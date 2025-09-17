@@ -1,4 +1,4 @@
-import {Nullable} from "src/typings/common";
+import {Nullable} from "@webui/common/utility-types";
 
 import {DashboardCard} from "../../../components/DashboardCard";
 import Stat from "../../../components/Stat";

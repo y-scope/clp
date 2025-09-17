@@ -1,4 +1,5 @@
-import type {PrestoSearchResult} from "../../../../../../../../common/index.js";
+import type {PrestoSearchResult} from "@webui/common/presto";
+
 import MongoSocketCollection from "../../../../../../api/socket/MongoSocketCollection";
 import {useCursor} from "../../../../../../api/socket/useCursor";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../../SearchState/index";
