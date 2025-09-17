@@ -13,12 +13,14 @@ import color from "color";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 
 import "./monaco-loader";
+import styles from "./index.module.css";
 
 
 type SqlEditorType = monaco.editor.IStandaloneCodeEditor;
 
 type SqlEditorProps = Omit<EditorProps, "language"> & {
     disabled: boolean;
+    className?: string;
 
     /** Callback when the editor is mounted and ref is ready to use. */
     onEditorReady?: (editor: SqlEditorType) => void;
@@ -75,16 +77,11 @@ const SqlEditor = (props: SqlEditorProps) => {
 
     return (
         <div
+            className={[styles["editor"], props.className].filter(Boolean).join(" ")}
             style={{
                 border: `1px solid ${token.colorBorder}`,
                 borderRadius: token.borderRadius,
-                height: "100%",
-                minHeight: 0,
-                minWidth: 0,
-                pointerEvents: disabled ?
-                    "none" :
-                    "auto",
-                width: "100%",
+                pointerEvents: disabled ? "none" : "auto",
             }}
         >
             <Editor

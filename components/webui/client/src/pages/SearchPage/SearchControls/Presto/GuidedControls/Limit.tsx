@@ -1,4 +1,4 @@
-import {Select as AntdSelect} from "antd";
+import {Select} from "antd";
 
 import InputLabel from "../../../../../components/InputLabel";
 import guidedGrid from "./index.module.css";
@@ -20,10 +20,14 @@ const LIMIT_OPTIONS = [
 const Limit = () => (
     <div className={guidedGrid["limit"]}>
         <InputLabel> LIMIT </InputLabel>
-        <AntdSelect
+        <Select
             defaultValue={LIMIT_OPTIONS[0]?.value}
             options={LIMIT_OPTIONS}
-            style={{width: "100%"}}/>
+            className={
+                guidedGrid["noLeftBorderRadiusSelect"] + " " +
+                guidedGrid["widthSelect"]
+            }
+        />
     </div>
 );
 

@@ -11,7 +11,9 @@ import guidedGrid from "./index.module.css";
 const OrderBy = () => (
     <div className={guidedGrid["order"]}>
         <InputLabel> ORDER BY </InputLabel>
-        <SqlInput disabled={false}/>
+        <SqlInput
+            className={guidedGrid[`noLeftBorderRadius`] || ""}
+            disabled={false}/>
     </div>
 );
 

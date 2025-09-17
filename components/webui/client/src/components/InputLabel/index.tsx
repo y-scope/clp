@@ -22,9 +22,8 @@ const InputLabel = ({children}: {children: React.ReactNode}) => {
         <Text
             className={styles["label"] || ""}
             style={{
-                backgroundColor: token.colorFillTertiary,
+                backgroundColor: token.colorBorder,
                 borderBottomLeftRadius: `${token.borderRadius}px`,
-                borderColor: token.colorBorder,
                 borderTopLeftRadius: `${token.borderRadius}px`,
                 fontSize: token.fontSize,
             }}

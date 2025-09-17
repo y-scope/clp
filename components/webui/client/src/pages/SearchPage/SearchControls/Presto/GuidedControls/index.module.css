@@ -1,21 +1,18 @@
 .gridContainer {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    grid-template-rows: repeat(auto-fit, 30px);
-    max-width: 1250px;
+    grid-template-rows: 32px;
     gap: 5px;
 }
 
 .select {
     grid-column: span 3;
     display: flex;
-    min-width: 200px;
 }
 
 .from {
     grid-column: span 1;
     display: flex;
-    min-width: 200px;
 }
 
 .where {
@@ -31,4 +28,18 @@
 .limit {
     grid-column: span 1;
     display: flex;
+}
+
+.widthSelect {
+    width: 100%;
+}
+
+.noLeftBorderRadiusSelect :global(.ant-select-selector) {
+    border-top-left-radius: 0!important;
+    border-bottom-left-radius: 0!important;
+}
+
+.noLeftBorderRadius {
+    border-top-left-radius: 0!important;
+    border-bottom-left-radius: 0!important;
 }

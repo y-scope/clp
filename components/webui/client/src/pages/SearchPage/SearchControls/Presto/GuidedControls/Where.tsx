@@ -11,7 +11,9 @@ import guidedGrid from "./index.module.css";
 const Where = () => (
     <div className={guidedGrid["where"]}>
         <InputLabel> WHERE </InputLabel>
-        <SqlInput disabled={false}/>
+        <SqlInput
+            className={guidedGrid[`noLeftBorderRadius`] || ""}
+            disabled={false}/>
     </div>
 );
 
