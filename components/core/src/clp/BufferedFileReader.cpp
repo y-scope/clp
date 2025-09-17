@@ -43,7 +43,7 @@ BufferedFileReader::BufferedFileReader(
 }
 
 auto BufferedFileReader::try_refill_buffer_if_empty() -> ErrorCode {
-    if (m_buffer_reader.get_buffer_size() > 0) {
+    if (m_buffer_reader.get_buffer_size() != m_buffer_reader.get_pos()) {
         return ErrorCode_Success;
     }
     return refill_reader_buffer(m_base_buffer_size);
