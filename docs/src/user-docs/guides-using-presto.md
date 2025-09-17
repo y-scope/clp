@@ -31,7 +31,8 @@ Using Presto with CLP requires:
 
 ### Setting up CLP
 
-1. Follow the [quick-start](quick-start/index.md) guide to download and extract the CLP package, but don't start the package just yet.
+1. Follow the [quick-start](quick-start/index.md) guide to download and extract the CLP package,
+   but don't start the package just yet.
 2. Before starting the package, update the config (`etc/clp-config.yml`) as follows:
 
     * Set the `package.query_engine` key to `"presto"`.
