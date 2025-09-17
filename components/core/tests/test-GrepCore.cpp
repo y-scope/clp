@@ -28,10 +28,9 @@ auto get_tests_dir() -> std::filesystem::path {
 }  // namespace
 
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {
-    auto const tests_dir = get_tests_dir();
-    auto const test_schema_files_dir = tests_dir / "test_schema_files";
-    ByteLexer lexer;
+    auto const test_schema_files_dir = get_tests_dir() / "test_schema_files";
     auto const search_schema_path = test_schema_files_dir / "search_schema.txt";
+    ByteLexer lexer;
     load_lexer_from_file(search_schema_path.string(), lexer);
 
     string str;
