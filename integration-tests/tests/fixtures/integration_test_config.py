@@ -20,7 +20,10 @@ def integration_test_config() -> IntegrationTestConfig:
         clp_core_bins_dir=Path(get_env_var("CLP_CORE_BINS_DIR")).expanduser().resolve()
     )
     deps_config = DepsConfig(
-        clp_deps_core_dir=Path(get_env_var("CLP_DEPS_CORE_DIR")).expanduser().resolve()
+        clp_deps_core_dir=Path(get_env_var("CLP_DEPS_CORE_DIR")).expanduser().resolve(),
+        clp_liblzma_root=Path(get_env_var("CLP_LIBLZMA_ROOT")).expanduser().resolve(),
+        clp_lz4_root=Path(get_env_var("CLP_LZ4_ROOT")).expanduser().resolve(),
+        clp_zstd_root=Path(get_env_var("CLP_ZSTD_ROOT")).expanduser().resolve(),
     )
     package_config = PackageConfig(
         clp_package_dir=Path(get_env_var("CLP_PACKAGE_DIR")).expanduser().resolve()

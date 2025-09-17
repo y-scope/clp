@@ -24,5 +24,8 @@ tasks:
       CLP_BUILD_DIR: "{{.G_BUILD_DIR}}"
       CLP_CORE_BINS_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
       CLP_DEPS_CORE_DIR: "{{.G_DEPS_CORE_DIR}}"
+      CLP_LIBLZMA_ROOT: "{{.G_LIBLZMA_STATIC_INSTALL_PREFIX}}"
+      CLP_LZ4_ROOT: "{{.G_LZ4_INSTALL_PREFIX}}"
       CLP_PACKAGE_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
+      CLP_ZSTD_ROOT: "{{.G_ZSTD_INSTALL_PREFIX}}"
     cmd: "uv run python -m pytest -m core"

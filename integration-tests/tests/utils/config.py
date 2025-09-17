@@ -49,29 +49,38 @@ class CoreConfig:
 
 @dataclass(frozen=True)
 class DepsConfig:
-    """The configuration for dependencies used by clp."""
+    """The configuration for dependencies used by CLP package and binaries."""
 
-    #:
+    #: Install directory for all core CLP dependencies.
     clp_deps_core_dir: Path
+    #: Install prefix of LibLZMA used by CLP.
+    clp_liblzma_root: Path
+    #: Install prefix of lz4 used by CLP.
+    clp_lz4_root: Path
+    #: Install prefix of zstd used by CLP.
+    clp_zstd_root: Path
 
     def __post_init__(self) -> None:
-        """Validates that the core dependency directory exists."""
+        """Validates that dependency directories exist."""
         validate_dir_exists_and_is_absolute(self.clp_deps_core_dir)
+        validate_dir_exists_and_is_absolute(self.clp_liblzma_root)
+        validate_dir_exists_and_is_absolute(self.clp_lz4_root)
+        validate_dir_exists_and_is_absolute(self.clp_zstd_root)
 
     @property
     def lz4_binary_path(self) -> Path:
         """:return: The absolute path to the lz4 compression tool."""
-        return self.clp_deps_core_dir / "lz4-install" / "bin" / "lz4"
-
-    @property
-    def zstd_binary_path(self) -> Path:
-        """:return: The absolute path to the zstd compression tool."""
-        return self.clp_deps_core_dir / "zstd-install" / "bin" / "zstd"
+        return self.clp_lz4_root / "bin" / "lz4"
 
     @property
     def xz_binary_path(self) -> Path:
         """:return: The absolute path to the LibLZMA xz compression tool."""
-        return self.clp_deps_core_dir / "LibLZMA-static-install" / "bin" / "xz"
+        return self.clp_liblzma_root / "bin" / "xz"
+
+    @property
+    def zstd_binary_path(self) -> Path:
+        """:return: The absolute path to the zstd compression tool."""
+        return self.clp_zstd_root / "bin" / "zstd"
 
 
 @dataclass(frozen=True)
