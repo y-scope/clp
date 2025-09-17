@@ -13,7 +13,7 @@ import type {
     Response,
     ServerToClientEvents,
     SocketData,
-} from "@webui/common";
+} from "@webui/common/socket";
 import {
     FastifyBaseLogger,
     FastifyInstance,

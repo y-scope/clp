@@ -19,21 +19,7 @@ const EslintConfig = [
                 "error",
                 {
                     // TypeBox imports
-                    capIsNewExceptions: [
-                        "Type.Any",
-                        "Type.Enum",
-                        "Type.Integer",
-                        "Type.Literal",
-                        "Type.Null",
-                        "Type.Number",
-                        "Type.Object",
-                        "Type.Optional",
-                        "Type.Required",
-                        "Type.String",
-                        "Type.Union",
-                        "Value.Errors",
-                        "Value.Parse",
-                    ],
+                    capIsNewExceptionPattern: "^(Type|Value)\\.",
                 },
             ],
         },

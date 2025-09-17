@@ -8,10 +8,10 @@ import {
     AssertError,
     Value,
 } from "@sinclair/typebox/value";
+import {Nullable} from "@webui/common/utility-types";
 import {isAxiosError} from "axios";
 
 import {submitExtractStreamJob} from "../api/stream-files";
-import {Nullable} from "../typings/common";
 import {
     EXTRACT_JOB_TYPE,
     ExtractJobSearchParams,

@@ -38,7 +38,6 @@
 #include "search/Projection.hpp"
 #include "search/SchemaMatch.hpp"
 #include "TimestampPattern.hpp"
-#include "Utils.hpp"
 
 using namespace clp_s::search;
 using clp_s::cArchiveFormatDevelopmentVersionFlag;
@@ -47,7 +46,6 @@ using clp_s::cEpochTimeMin;
 using clp_s::CommandLineArguments;
 using clp_s::KvIrSearchError;
 using clp_s::KvIrSearchErrorEnum;
-using clp_s::StringUtils;
 
 namespace {
 /**

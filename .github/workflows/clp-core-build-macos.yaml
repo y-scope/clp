@@ -45,6 +45,7 @@ jobs:
     strategy:
       matrix:
         os:
+          - "macos-14"
           - "macos-15"
         use_shared_libs:
           - true
@@ -65,6 +66,12 @@ jobs:
           rm -f /usr/local/bin/idle3*
           rm -f /usr/local/bin/pydoc3*
           rm -f /usr/local/bin/python3*
+
+      - name: "Remove preinstalled programs which will conflict with the pipx-installed packages"
+        run: |
+          if brew list --formula cmake >/dev/null 2>&1; then
+            brew uninstall --force cmake
+          fi
 
       - name: "Install dependencies"
         run: "./components/core/tools/scripts/lib_install/macos/install-all.sh"
