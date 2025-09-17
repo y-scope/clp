@@ -43,6 +43,7 @@ set(
         ../../clp/ir/parsing.hpp
         ../../clp/ir/parsing.inc
         ../../clp/ir/types.hpp
+        ../../clp/LogTypeDictionaryEntryReq.hpp
         ../../clp/MySQLDB.cpp
         ../../clp/MySQLDB.hpp
         ../../clp/MySQLParamBindings.cpp
@@ -60,6 +61,9 @@ set(
         ../../clp/time_types.hpp
         ../../clp/TraceableException.hpp
         ../../clp/type_utils.hpp
+        ../../clp/VariableDictionaryEntryReq.hpp
+        ../../clp/VariableDictionaryReaderReq.hpp
+        ../../clp/VariableDictionaryWriterReq.hpp
         ../archive_constants.hpp
         ../ArchiveReader.cpp
         ../ArchiveReader.hpp
