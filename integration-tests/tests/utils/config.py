@@ -74,7 +74,6 @@ class DepsConfig:
         return self.clp_deps_core_dir / "LibLZMA-static-install" / "bin" / "xz"
 
 
-
 @dataclass(frozen=True)
 class PackageConfig:
     """The configuration for the clp package subject to testing."""
@@ -143,6 +142,7 @@ class IntegrationTestLogs:
         if 0 == len(name):
             err_msg = "`name` cannot be empty."
             raise ValueError(err_msg)
+
         logs_download_dir = integration_test_config.logs_download_dir
         validate_dir_exists_and_is_absolute(logs_download_dir)
 
@@ -150,25 +150,29 @@ class IntegrationTestLogs:
         object.__setattr__(self, "extraction_dir", logs_download_dir / name)
 
     @property
-    def base_tar_path(self) -> None:
+    def base_tar_path(self) -> Path:
+        """:return: The absolute path to the tar archive."""
         return self.extraction_dir.with_suffix(".tar")
 
     @property
-    def tar_gz_path(self) -> None:
+    def tar_gz_path(self) -> Path:
+        """:return: The absolute path to the tar gzip archive."""
         return self.extraction_dir.with_suffix(".tar.gz")
 
     @property
-    def tar_lz4_path(self) -> None:
+    def tar_lz4_path(self) -> Path:
+        """:return: The absolute path to the tar lz4 archive."""
         return self.extraction_dir.with_suffix(".tar.lz4")
 
     @property
-    def tar_xz_path(self) -> None:
+    def tar_xz_path(self) -> Path:
+        """:return: The absolute path to the tar xz archive."""
         return self.extraction_dir.with_suffix(".tar.xz")
 
     @property
-    def tar_zstd_path(self) -> None:
+    def tar_zstd_path(self) -> Path:
+        """:return: The absolute path to the tar zstd archive."""
         return self.extraction_dir.with_suffix(".tar.zstd")
-
 
 
 @dataclass(frozen=True)

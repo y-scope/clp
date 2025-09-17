@@ -53,40 +53,38 @@ def test_clp_identity_transform(
     integration_test_logs: IntegrationTestLogs = request.getfixturevalue(test_logs_fixture)
     logs_source_dir: Path = integration_test_logs.extraction_dir
 
-    #test_paths = CompressionTestConfig(
-    #    test_name=f"clp-{integration_test_logs.name}",
-    #    compression_input=integration_test_logs.extraction_dir,
-    #    integration_test_config=integration_test_config,
-    #)
-    #_run_clp_identity_transform(logs_source_dir, test_paths, integration_test_config)
-
-    #test_paths = CompressionTestConfig(
-    #    test_name=f"clp-{integration_test_logs.name}-tar-gz",
-    #    compression_input=integration_test_logs.tar_gz_path,
-    #    integration_test_config=integration_test_config,
-    #)
-    #_run_clp_identity_transform(logs_source_dir, test_paths, integration_test_config)
-
-    test_paths = CompressionTestConfig(
-        test_name=f"clp-{integration_test_logs.name}-tar-xz",
-        compression_input=integration_test_logs.tar_xz_path,
-        integration_test_config=integration_test_config,
-    )
-    _run_clp_identity_transform(logs_source_dir, test_paths, integration_test_config)
+    archives_to_test = [
+        integration_test_logs.extraction_dir,
+        integration_test_logs.tar_gz_path,
+        integration_test_logs.tar_lz4_path,
+        integration_test_logs.tar_xz_path,
+        integration_test_logs.tar_zstd_path,
+    ]
+    for archive_path in archives_to_test:
+        _run_clp_identity_transform(archive_path, integration_test_config, logs_source_dir)
 
 
 def _run_clp_identity_transform(
-    logs_source_dir: Path,
-    test_paths: CompressionTestConfig,
+    compression_input: Path,
     integration_test_config: IntegrationTestConfig,
+    logs_source_dir: Path,
 ) -> None:
+    test_paths = CompressionTestConfig(
+        test_name=f"clp-{compression_input.name}",
+        compression_input=compression_input,
+        integration_test_config=integration_test_config,
+    )
     test_paths.clear_test_outputs()
 
     bin_path = str(integration_test_config.core_config.clp_binary_path)
     input_path = str(test_paths.compression_input)
     compression_path = str(test_paths.compression_dir)
     decompression_path = str(test_paths.decompression_dir)
-    path_prefix_to_remove = input_path if test_paths.compression_input.is_dir() else str(test_paths.compression_input.parent)
+    path_prefix_to_remove = (
+        input_path
+        if test_paths.compression_input.is_dir()
+        else str(test_paths.compression_input.parent)
+    )
 
     # fmt: off
     compression_cmd = [
