@@ -131,11 +131,12 @@ get_input_archives_for_raw_path(std::string_view const path, std::vector<Path>& 
  * compression.
  * @param path
  * @param network_auth
- * @return The opened `clp::ReaderInterface` as well as its type, or `nullptr` and
- * `FileType::Unknown` on error.
+ * @return A vector of all created `clp::ReaderInterface`s, where the last entry in the vector is
+ * open for reading content of the type described by the element in the pair. When the content type
+ * cannot be deduced, we return an empty vector and `FileType::Unknown`.
  */
 [[nodiscard]] auto try_deduce_reader_type(std::shared_ptr<clp::ReaderInterface> reader)
-        -> std::pair<std::shared_ptr<clp::ReaderInterface>, FileType>;
+        -> std::pair<std::vector<std::shared_ptr<clp::ReaderInterface>>, FileType>;
 }  // namespace clp_s
 
 #endif  // CLP_S_INPUTCONFIG_HPP

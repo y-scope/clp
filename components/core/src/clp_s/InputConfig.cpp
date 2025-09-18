@@ -276,51 +276,54 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
 }
 
 [[nodiscard]] auto try_deduce_reader_type(std::shared_ptr<clp::ReaderInterface> reader)
-        -> std::pair<std::shared_ptr<clp::ReaderInterface>, FileType> {
+        -> std::pair<std::vector<std::shared_ptr<clp::ReaderInterface>>, FileType> {
     constexpr size_t cFileReadBufferCapacity = 64 * 1024;  // 64 KB
     constexpr size_t cMaxNestedFormatDepth = 5;
     if (nullptr == reader) {
-        return std::make_pair(nullptr, FileType::Unknown);
+        return {{}, FileType::Unknown};
     }
 
     size_t original_pos{};
     if (clp::ErrorCode::ErrorCode_Success != reader->try_get_pos(original_pos)
         || 0ULL != original_pos)
     {
-        return std::make_pair(nullptr, FileType::Unknown);
+        return {{}, FileType::Unknown};
     }
 
-    auto prev_reader{reader};
+    std::vector<std::shared_ptr<clp::ReaderInterface>> readers{reader};
     for (size_t nesting_depth{0ULL}; nesting_depth < cMaxNestedFormatDepth; ++nesting_depth) {
         auto buffered_reader{
-                std::make_shared<clp::BufferedFileReader>(prev_reader, cFileReadBufferCapacity)
+                std::make_shared<clp::BufferedFileReader>(readers.back(), cFileReadBufferCapacity)
         };
         auto const rc{buffered_reader->try_refill_buffer_if_empty()};
         if (clp::ErrorCode::ErrorCode_Success != rc && clp::ErrorCode::ErrorCode_EndOfFile != rc) {
-            return std::make_pair(nullptr, FileType::Unknown);
+            return {{}, FileType::Unknown};
         }
 
         auto const type{peek_start_and_deduce_type(buffered_reader)};
+        readers.emplace_back(std::move(buffered_reader));
         switch (type) {
             case FileType::Json:
             case FileType::KeyValueIr:
-                return std::make_pair(buffered_reader, type);
+                return {std::move(readers), type};
             case FileType::Zstd: {
-                prev_reader = std::make_shared<clp::streaming_compression::zstd::Decompressor>();
+                readers.emplace_back(
+                        std::make_shared<clp::streaming_compression::zstd::Decompressor>()
+                );
                 try {
                     std::static_pointer_cast<clp::streaming_compression::zstd::Decompressor>(
-                            prev_reader
+                            readers.back()
                     )
                             ->open(*buffered_reader, cFileReadBufferCapacity);
                 } catch (std::exception const&) {
-                    return std::make_pair(nullptr, FileType::Unknown);
+                    return {{}, FileType::Unknown};
                 }
             }
             case FileType::Unknown:
             default:
-                return std::make_pair(nullptr, FileType::Unknown);
+                return {{}, FileType::Unknown};
         }
     }
-    return std::make_pair(nullptr, FileType::Unknown);
+    return {{}, FileType::Unknown};
 }
 }  // namespace clp_s
