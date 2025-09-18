@@ -38,7 +38,7 @@ public:
     };
 
     using dictionary_id_t = DictionaryIdType;
-    using entry_t = EntryType;
+    using Entry = EntryType;
 
     // Constructors
     DictionaryReader() : m_is_open(false), m_num_segments_read_from_index(0) {
