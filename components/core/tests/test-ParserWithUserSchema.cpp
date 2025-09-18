@@ -188,7 +188,7 @@ TEST_CASE("Test schema with single capture group", "[load_lexer]") {
     auto const rule_id{lexer.m_symbol_id.at("capture")};
     auto const capture_ids{lexer.get_capture_ids_from_rule_id(rule_id)};
     REQUIRE(capture_ids.has_value());
-    REQUIRE(1 == capture_ids.value().size());
+    REQUIRE(1 == capture_ids->size());
     REQUIRE("group" == lexer.m_id_symbol.at(capture_ids->at(0)));
 }
 
@@ -198,7 +198,7 @@ TEST_CASE("Test error for schema rule with multiple capture groups", "[load_lexe
     REQUIRE_THROWS_WITH(
             load_lexer_from_file(schema_path, lexer),
             schema_path
-                    + ":1: error: the schema rule 'multicapture' has a regex pattern containing > "
-                      "1 capture group.\n"
+                    + ":3: error: the schema rule 'multicapture' has a regex pattern containing > "
+                      "1 capture groups (found 2).\n"
     );
 }
