@@ -206,9 +206,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             po::options_description compression_options("Compression options");
             std::string input_path_list_file_path;
-            constexpr std::string_view cJsonFileType{"json"};
-            constexpr std::string_view cKeyValueIrFileType{"kv-ir"};
-            std::string file_type{cJsonFileType};
             std::string auth{cNoAuth};
             // clang-format off
             compression_options.add_options()(
@@ -260,10 +257,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::bool_switch(&m_disable_log_order),
                     "Do not record log order at ingestion time; Do not record the archive range"
                     " index."
-            )(
-                    "file-type",
-                    po::value<std::string>(&file_type)->value_name("FILE_TYPE")->default_value(file_type),
-                    "The type of file being compressed (json or kv-ir)"
             )(
                     "auth",
                     po::value<std::string>(&auth)
@@ -329,22 +322,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             if (m_input_paths.empty()) {
                 throw std::invalid_argument("No input paths specified.");
-            }
-
-            if (cJsonFileType == file_type) {
-                m_file_type = FileType::Json;
-            } else if (cKeyValueIrFileType == file_type) {
-                m_file_type = FileType::KeyValueIr;
-                if (m_structurize_arrays) {
-                    SPDLOG_ERROR(
-                            "Invalid combination of arguments; --file-type {} and "
-                            "--structurize-arrays can't be used together",
-                            cKeyValueIrFileType
-                    );
-                    return ParsingResult::Failure;
-                }
-            } else {
-                throw std::invalid_argument("Unknown FILE_TYPE: " + file_type);
             }
 
             validate_network_auth(auth, m_network_auth);

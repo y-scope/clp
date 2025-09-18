@@ -301,7 +301,7 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
         }
 
         auto const type{peek_start_and_deduce_type(buffered_reader)};
-        readers.emplace_back(std::move(buffered_reader));
+        readers.emplace_back(buffered_reader);
         switch (type) {
             case FileType::Json:
             case FileType::KeyValueIr:
@@ -318,7 +318,7 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
                 } catch (std::exception const&) {
                     return {{}, FileType::Unknown};
                 }
-            }
+            } break;
             case FileType::Unknown:
             default:
                 return {{}, FileType::Unknown};
