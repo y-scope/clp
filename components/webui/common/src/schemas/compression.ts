@@ -13,7 +13,7 @@ const CompressionJobSchema = Type.Object({
     timestampKey: Type.Optional(Type.String()),
 });
 
-type CompressionJobSchemaStatic = Static<typeof CompressionJobSchema>;
+type CompressionJob = Static<typeof CompressionJobSchema>;
 
 /**
  * Schema for compression job response.
@@ -22,13 +22,13 @@ const CompressionJobCreationSchema = Type.Object({
     jobId: Type.Number(),
 });
 
-type CompressionJobCreationSchemaStatic = Static<typeof CompressionJobCreationSchema>;
+type CompressionJobCreation = Static<typeof CompressionJobCreationSchema>;
 
 export {
     CompressionJobCreationSchema,
     CompressionJobSchema,
 };
 export type {
-    CompressionJobCreationSchemaStatic,
-    CompressionJobSchemaStatic,
+    CompressionJob,
+    CompressionJobCreation,
 };

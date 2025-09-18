@@ -1,7 +1,7 @@
 import {useState} from "react";
 
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
-import {CompressionJobSchemaStatic} from "@webui/common/schemas/compression";
+import {CompressionJob} from "@webui/common/schemas/compression";
 import {
     Button,
     Form,
@@ -50,7 +50,7 @@ const Compress = () => {
             .map((path) => path.trim())
             .filter((path) => 0 < path.length);
 
-        const payload: CompressionJobSchemaStatic = {
+        const payload: CompressionJob = {
             paths: paths,
         };
 
