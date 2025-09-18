@@ -1,8 +1,11 @@
 import {
+    type PrestoQueryJob,
+    type PrestoQueryJobCreation,
+} from "@webui/common/schemas/presto-search";
+
+import {
     cancelQuery,
     clearQueryResults,
-    type PrestoQueryJobCreationSchema,
-    type PrestoQueryJobSchema,
     submitQuery,
 } from "../../../../api/presto-search";
 import useSearchStore from "../../SearchState";
@@ -39,7 +42,7 @@ const handlePrestoClearResults = () => {
  *
  * @param payload
  */
-const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreationSchema) => {
+const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreation) => {
     const {updateSearchJobId, updateSearchUiState, searchUiState} = useSearchStore.getState();
 
     // User should NOT be able to submit a new query while an existing query is in progress.
@@ -78,7 +81,7 @@ const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreationSchema) => {
  *
  * @param payload
  */
-const handlePrestoQueryCancel = (payload: PrestoQueryJobSchema) => {
+const handlePrestoQueryCancel = (payload: PrestoQueryJob) => {
     const {searchUiState, updateSearchUiState} = useSearchStore.getState();
     if (searchUiState !== SEARCH_UI_STATE.QUERYING) {
         console.error("Cannot cancel query if there is no ongoing query.");
