@@ -2,21 +2,23 @@
   "name": "webui",
   "version": "0.1.0",
   "description": "",
+  "workspaces": [
+    "common",
+    "client",
+    "server"
+  ],
   "scripts": {
-    "client:lint:check": "cd client && npm run lint:check",
-    "client:lint:fix": "cd client && npm run lint:fix",
-    "client:start": "cd client && npm start",
-    "init": "npm clean-install && (cd client && npm clean-install) && (cd server && npm clean-install)",
-    "lint:check": "npm run client:lint:check && npm run server:lint:check",
-    "lint:fix": "npm run client:lint:fix && npm run server:lint:fix",
-    "server:lint:check": "cd server && npm run lint:check",
-    "server:lint:fix": "cd server && npm run lint:fix",
-    "server:start": "cd server && npm start",
-    "start": "concurrently \"npm run client:start\" \"npm run server:start\""
+    "init": "npm clean-install --workspaces && npm --workspace common run build",
+    "lint:check": "npm run lint:check --workspaces",
+    "lint:fix": "npm run lint:fix --workspaces",
+    "dev": "concurrently \"npm run dev:*\"",
+    "dev:client": "npm --workspace client run start",
+    "dev:common": "npm --workspace common run build:watch",
+    "dev:server": "npm --workspace server run dev"
   },
   "author": "YScope Inc. <dev@yscope.com>",
   "license": "Apache-2.0",
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "concurrently": "^9.2.1"
   }
 }

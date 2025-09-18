@@ -1,6 +1,7 @@
 #ifndef CLP_FFI_IR_STREAM_DESERIALIZER_HPP
 #define CLP_FFI_IR_STREAM_DESERIALIZER_HPP
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -157,6 +158,14 @@ public:
      */
     [[nodiscard]] auto get_metadata() const -> nlohmann::json const& { return m_metadata; }
 
+    /**
+     * @return The number of log events (log event IR units) that have been deserialized from the
+     * current stream.
+     */
+    [[nodiscard]] auto get_num_log_events_deserialized() const -> size_t {
+        return m_next_log_event_idx;
+    }
+
 private:
     // Factory function
     /**
@@ -184,8 +193,8 @@ private:
             nlohmann::json metadata,
             QueryHandlerType query_handler
     )
-            : m_ir_unit_handler{std::move(ir_unit_handler)},
-              m_metadata(std::move(metadata)),
+            : m_metadata(std::move(metadata)),
+              m_ir_unit_handler{std::move(ir_unit_handler)},
               m_query_handler{std::move(query_handler)} {}
 
     // Variables
@@ -196,6 +205,7 @@ private:
     IrUnitHandlerType m_ir_unit_handler;
     bool m_is_complete{false};
     [[no_unique_address]] QueryHandlerType m_query_handler;
+    size_t m_next_log_event_idx{0};
 };
 
 /**
@@ -304,6 +314,9 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
                     m_utc_offset
             ))};
 
+            auto const log_event_idx{m_next_log_event_idx};
+            m_next_log_event_idx += 1;
+
             if constexpr (search::IsNonEmptyQueryHandler<QueryHandlerType>::value) {
                 if (search::AstEvaluationResult::True
                     != YSTDLIB_ERROR_HANDLING_TRYX(
@@ -314,7 +327,9 @@ auto Deserializer<IrUnitHandler, QueryHandlerType>::deserialize_next_ir_unit(
                 }
             }
 
-            if (auto const err{m_ir_unit_handler.handle_log_event(std::move(log_event))};
+            if (auto const err{
+                        m_ir_unit_handler.handle_log_event(std::move(log_event), log_event_idx)
+                };
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return ir_error_code_to_errc(err);

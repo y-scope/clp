@@ -1,4 +1,5 @@
 import {Type} from "@sinclair/typebox";
+import {QUERY_JOB_TYPE} from "@webui/common/query";
 
 
 /**
@@ -21,16 +22,6 @@ enum QUERY_LOADING_STATE {
 const QUERY_LOADING_STATE_VALUES = Object.freeze(
     Object.values(QUERY_LOADING_STATE).filter((value) => "number" === typeof value)
 );
-
-/**
- * Enum of job type, matching the `QueryJobType` class in
- * `job_orchestration.query_scheduler.constants`.
- */
-enum QUERY_JOB_TYPE {
-    SEARCH_OR_AGGREGATION = 0,
-    EXTRACT_IR,
-    EXTRACT_JSON,
-}
 
 /**
  * Mapping between extract job type enums and stream type.
@@ -91,7 +82,6 @@ export type {ExtractStreamResp};
 export {
     EXTRACT_JOB_TYPE,
     ExtractJobSearchParams,
-    QUERY_JOB_TYPE,
     QUERY_LOADING_STATE,
     QUERY_LOADING_STATE_DESCRIPTIONS,
     QUERY_LOADING_STATE_VALUES,

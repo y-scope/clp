@@ -2,18 +2,20 @@ import {
     FastifyPluginAsyncTypebox,
     Type,
 } from "@fastify/type-provider-typebox";
-import {StatusCodes} from "http-status-codes";
-
+import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {
-    CLP_QUERY_ENGINES,
+    PRESTO_SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
-} from "../../../../../common/index.js";
-import settings from "../../../../settings.json" with {type: "json"};
-import {ErrorSchema} from "../../../schemas/error.js";
+} from "@webui/common/metadata";
+import {ErrorSchema} from "@webui/common/schemas/error";
 import {
     PrestoQueryJobCreationSchema,
     PrestoQueryJobSchema,
-} from "../../../schemas/presto-search.js";
+} from "@webui/common/schemas/presto-search";
+import {StatusCodes} from "http-status-codes";
+
+import settings from "../../../../settings.json" with {type: "json"};
+import {MAX_PRESTO_SEARCH_RESULTS} from "./typings.js";
 import {insertPrestoRowsToMongo} from "./utils.js";
 
 
@@ -60,18 +62,20 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             const {queryString} = request.body;
 
             let searchJobId: string;
+            let totalResultsCount = 0;
+            let storedResultsCount = 0;
 
             try {
                 // eslint-disable-next-line max-lines-per-function
                 searchJobId = await new Promise<string>((resolve, reject) => {
                     let isResolved = false;
                     Presto.client.execute({
-                        // eslint-disable-next-line no-warning-comments
-                        // TODO: Error, and success handlers are dummy implementations
-                        // and will be replaced with proper implementations.
                         data: (_, data, columns) => {
+                            totalResultsCount += data.length;
+
                             request.log.info(
-                                `Received ${data.length} rows from Presto query`
+                                `Received ${data.length} rows from Presto query ` +
+                                `(total: ${totalResultsCount})`
                             );
 
                             if (false === isResolved) {
@@ -87,15 +91,35 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                 return;
                             }
 
-                            insertPrestoRowsToMongo(
-                                data,
-                                columns,
-                                searchJobId,
-                                mongoDb
+                            if (storedResultsCount < MAX_PRESTO_SEARCH_RESULTS) {
+                                const remainingSlots =
+                                    MAX_PRESTO_SEARCH_RESULTS - storedResultsCount;
+                                const dataToInsert = data.slice(0, remainingSlots);
+
+                                if (0 < dataToInsert.length) {
+                                    storedResultsCount += dataToInsert.length;
+                                    insertPrestoRowsToMongo(
+                                        dataToInsert,
+                                        columns,
+                                        searchJobId,
+                                        mongoDb
+                                    ).catch((err: unknown) => {
+                                        request.log.error(
+                                            err,
+                                            "Failed to insert Presto results into MongoDB"
+                                        );
+                                    });
+                                }
+                            }
+
+                            // Always update metadata with total count
+                            searchResultsMetadataCollection.updateOne(
+                                {_id: searchJobId},
+                                {$set: {numTotalResults: totalResultsCount}}
                             ).catch((err: unknown) => {
                                 request.log.error(
                                     err,
-                                    "Failed to insert Presto results into MongoDB"
+                                    "Failed to update total results count in metadata"
                                 );
                             });
                         },
@@ -104,10 +128,30 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                             if (false === isResolved) {
                                 isResolved = true;
                                 reject(new Error("Presto search failed"));
+                            } else {
+                                searchResultsMetadataCollection.updateOne(
+                                    {_id: searchJobId},
+                                    {
+                                        $set: {
+                                            errorMsg: error.message,
+                                            errorName: ("errorName" in error) ?
+                                                error.errorName :
+                                                null,
+                                            lastSignal: PRESTO_SEARCH_SIGNAL.FAILED,
+                                        },
+                                    }
+                                ).catch((err: unknown) => {
+                                    request.log.error(
+                                        err,
+                                        "Failed to update Presto error metadata"
+                                    );
+                                });
                             }
                         },
                         query: queryString,
                         state: (_, queryId, stats) => {
+                            // Type cast `presto-client` string literal type to our enum type.
+                            const newState = stats.state as PRESTO_SEARCH_SIGNAL;
                             request.log.info({
                                 searchJobId: queryId,
                                 state: stats.state,
@@ -117,8 +161,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                             if (false === isResolved) {
                                 searchResultsMetadataCollection.insertOne({
                                     _id: queryId,
-                                    lastSignal: stats.state,
                                     errorMsg: null,
+                                    errorName: null,
+                                    lastSignal: newState,
                                     queryEngine: CLP_QUERY_ENGINES.PRESTO,
                                 }).catch((err: unknown) => {
                                     request.log.error(err, "Failed to insert Presto metadata");
@@ -129,7 +174,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                 // Update metadata on subsequent calls
                                 searchResultsMetadataCollection.updateOne(
                                     {_id: queryId},
-                                    {$set: {lastSignal: stats.state}}
+                                    {$set: {lastSignal: newState}}
                                 ).catch((err: unknown) => {
                                     request.log.error(err, "Failed to update Presto metadata");
                                 });
@@ -145,6 +190,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 request.log.error(error, "Failed to submit Presto query");
                 throw error;
             }
+
+            await mongoDb.createCollection(searchJobId);
 
             reply.code(StatusCodes.CREATED);
 
@@ -174,7 +221,34 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                     resolve();
                 });
             });
-            request.log.info(searchJobId, "Presto search cancelled");
+            request.log.info({searchJobId}, "Presto search cancelled");
+            reply.code(StatusCodes.NO_CONTENT);
+
+            return null;
+        }
+    );
+
+    fastify.delete(
+        "/results",
+        {
+            schema: {
+                body: PrestoQueryJobSchema,
+                response: {
+                    [StatusCodes.NO_CONTENT]: Type.Null(),
+                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
+                },
+                tags: ["Presto Search"],
+            },
+        },
+        async (request, reply) => {
+            const {searchJobId} = request.body;
+
+            request.log.info({
+                searchJobId,
+            }, "api/presto-search/results args");
+
+            await mongoDb.collection(searchJobId).drop();
+
             reply.code(StatusCodes.NO_CONTENT);
 
             return null;

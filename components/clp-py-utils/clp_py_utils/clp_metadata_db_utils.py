@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Set
+from typing import List, Set
 
 from clp_py_utils.clp_config import (
     ArchiveOutput,
@@ -133,7 +133,7 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
     """
 
     # For a description of the table, see
-    # `../../../docs/src/dev-guide/design-metadata-db.md`
+    # `../../../docs/src/dev-docs/design-metadata-db.md`
     db_cursor.execute(
         f"""
         CREATE TABLE IF NOT EXISTS `{get_datasets_table_name(table_prefix)}` (
@@ -217,6 +217,79 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
         db_cursor, archive_tags_table_name, archives_table_name, tags_table_name
     )
     _create_files_table(db_cursor, table_prefix, dataset)
+
+
+def delete_archives_from_metadata_db(
+    db_cursor, archive_ids: List[str], table_prefix: str, dataset: str | None
+) -> None:
+    """
+    Deletes archives from the metadata database specified by a list of IDs. It also deletes
+    the associated entries from `files` and `archive_tags` tables that reference these archives.
+
+    The order of deletion follows the foreign key constraints, ensuring no violations occur during
+    the process.
+
+    :param db_cursor:
+    :param archive_ids: The list of archive to delete.
+    :param table_prefix:
+    :param dataset:
+    """
+    ids_list_string = ", ".join(["%s"] * len(archive_ids))
+
+    db_cursor.execute(
+        f"""
+        DELETE FROM `{get_files_table_name(table_prefix, dataset)}`
+        WHERE archive_id in ({ids_list_string})
+        """,
+        archive_ids,
+    )
+
+    db_cursor.execute(
+        f"""
+        DELETE FROM `{get_archive_tags_table_name(table_prefix, dataset)}`
+        WHERE archive_id in ({ids_list_string})
+        """,
+        archive_ids,
+    )
+
+    db_cursor.execute(
+        f"""
+        DELETE FROM `{get_archives_table_name(table_prefix, dataset)}`
+        WHERE id in ({ids_list_string})
+        """,
+        archive_ids,
+    )
+
+
+def delete_dataset_from_metadata_db(db_cursor, table_prefix: str, dataset: str) -> None:
+    """
+    Deletes all tables associated with `dataset` from the metadata database.
+
+    :param db_cursor:
+    :param table_prefix:
+    :param dataset:
+    """
+
+    # Drop tables in an order such that no foreign key constraint is violated.
+    tables_in_removal_order = [
+        get_column_metadata_table_name(table_prefix, dataset),
+        get_files_table_name(table_prefix, dataset),
+        get_archive_tags_table_name(table_prefix, dataset),
+        get_tags_table_name(table_prefix, dataset),
+        get_archives_table_name(table_prefix, dataset),
+    ]
+
+    for table in tables_in_removal_order:
+        db_cursor.execute(f"DROP TABLE IF EXISTS `{table}`")
+
+    # Remove the dataset row from the datasets table
+    db_cursor.execute(
+        f"""
+        DELETE FROM `{get_datasets_table_name(table_prefix)}`
+        WHERE name = %s
+        """,
+        (dataset,),
+    )
 
 
 def get_archive_tags_table_name(table_prefix: str, dataset: str | None) -> str:

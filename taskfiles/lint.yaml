@@ -78,14 +78,16 @@ tasks:
       - task: "py"
         vars:
           BLACK_FLAGS: "--check --diff"
-          RUFF_FLAGS: ""
+          RUFF_CHECK_FLAGS: ""
+          RUFF_FORMAT_FLAGS: "--diff"
 
   fix-py:
     cmds:
       - task: "py"
         vars:
           BLACK_FLAGS: ""
-          RUFF_FLAGS: "--fix"
+          RUFF_CHECK_FLAGS: "--fix"
+          RUFF_FORMAT_FLAGS: ""
 
   yaml:
     aliases:
@@ -100,6 +102,7 @@ tasks:
           .yamllint.yml \
           components/core/.clang-format \
           components/core/config \
+          components/core/tools/ \
           components/package-template/src/etc \
           docs \
           taskfile.yaml \
@@ -189,7 +192,6 @@ tasks:
           #   - src/clp/ffi/ir_stream/ir_unit_deserialization_methods.hpp
           #   - src/clp/ffi/ir_stream/IrUnitHandlerInterface.hpp
           #   - src/clp/ir/EncodedTextAst.cpp
-          #   - tests/test-ffi_IrUnitHandlerInterface.cpp
           # yamllint disable rule:line-length
           EXCLUDE_PATTERNS:
             # Sources
@@ -275,7 +277,6 @@ tasks:
             - "clp/FileWriter.cpp"
             - "clp/FileWriter.hpp"
             - "clp/GlobalMetadataDB.hpp"
-            - "clp/GlobalMetadataDBConfig.cpp"
             - "clp/GlobalMySQLMetadataDB.cpp"
             - "clp/GlobalMySQLMetadataDB.hpp"
             - "clp/GlobalSQLiteMetadataDB.cpp"
@@ -480,12 +481,6 @@ tasks:
             - "clp_s/search/ast/StringLiteral.hpp"
             - "clp_s/search/ast/Transformation.hpp"
             - "clp_s/search/antlr_common/ErrorListener.hpp"
-            - "clp_s/search/clp_search/EncodedVariableInterpreter.cpp"
-            - "clp_s/search/clp_search/EncodedVariableInterpreter.hpp"
-            - "clp_s/search/clp_search/Grep.cpp"
-            - "clp_s/search/clp_search/Grep.hpp"
-            - "clp_s/search/clp_search/Query.cpp"
-            - "clp_s/search/clp_search/Query.hpp"
             - "clp_s/search/EvaluateTimestampIndex.cpp"
             - "clp_s/search/EvaluateTimestampIndex.hpp"
             - "clp_s/search/kql/generated/*"
@@ -512,10 +507,6 @@ tasks:
             - "clp_s/TimestampPattern.hpp"
             - "clp_s/Utils.cpp"
             - "clp_s/Utils.hpp"
-            - "clp_s/VariableDecoder.cpp"
-            - "clp_s/VariableDecoder.hpp"
-            - "clp_s/VariableEncoder.cpp"
-            - "clp_s/VariableEncoder.hpp"
             - "clp_s/ZstdCompressor.cpp"
             - "clp_s/ZstdCompressor.hpp"
             - "clp_s/ZstdDecompressor.cpp"
@@ -729,15 +720,12 @@ tasks:
             - "test-clp_s-search.cpp"
             - "test-EncodedVariableInterpreter.cpp"
             - "test-encoding_methods.cpp"
-            - "test-error_handling.cpp"
-            - "test-ffi_IrUnitHandlerInterface.cpp"
             - "test-GrepCore.cpp"
             - "test-hash_utils.cpp"
             - "test-ir_encoding_methods.cpp"
             - "test-ir_parsing.cpp"
             - "test-ir_serializer.cpp"
             - "test-kql.cpp"
-            - "test-main.cpp"
             - "test-math_utils.cpp"
             - "test-NetworkReader.cpp"
             - "test-ParserWithUserSchema.cpp"
@@ -771,8 +759,11 @@ tasks:
 
   py:
     internal: true
+    vars:
+      UV_PYTHON_PROJECTS:
+        - "{{.G_INTEGRATION_TESTS_DIR}}"
     requires:
-      vars: ["BLACK_FLAGS", "RUFF_FLAGS"]
+      vars: ["BLACK_FLAGS", "RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
     deps: ["venv"]
     cmds:
       - for:
@@ -787,7 +778,13 @@ tasks:
           . "{{.G_LINT_VENV_DIR}}/bin/activate"
           cd "{{.ITEM}}"
           black --color --line-length 100 {{.BLACK_FLAGS}} .
-          ruff check {{.RUFF_FLAGS}} .
+          ruff check {{.RUFF_CHECK_FLAGS}} .
+      - for:
+          var: "UV_PYTHON_PROJECTS"
+        cmd: |-
+          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
+          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} .
+          uv run --directory "{{.ITEM}}" mypy .
 
   venv:
     internal: true

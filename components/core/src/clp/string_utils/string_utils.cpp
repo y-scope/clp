@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <charconv>
 #include <cstring>
+#include <string>
+#include <string_view>
 
 using std::string;
 using std::string_view;
@@ -113,6 +115,28 @@ string replace_characters(
     return new_value;
 }
 
+auto replace_unescaped_char(
+        char const escape_char,
+        char const from_char,
+        char const to_char,
+        std::string& str
+) -> void {
+    bool escaped{false};
+
+    auto should_replace_char = [&](char c) -> bool {
+        if (escaped) {
+            escaped = false;
+        } else if (escape_char == c) {
+            escaped = true;
+        } else if (from_char == c) {
+            return true;
+        }
+        return false;
+    };
+
+    std::replace_if(str.begin(), str.end(), should_replace_char, to_char);
+}
+
 void to_lower(string& str) {
     std::transform(str.cbegin(), str.cend(), str.begin(), [](unsigned char c) {
         return std::tolower(c);
@@ -164,6 +188,22 @@ string clean_up_wildcard_search_string(string_view str) {
     }
 
     return cleaned_str;
+}
+
+auto unescape_string(std::string_view str) -> std::string {
+    std::string unescaped_str;
+    bool escaped{false};
+    for (auto const c : str) {
+        if (escaped) {
+            unescaped_str.push_back(c);
+            escaped = false;
+        } else if ('\\' == c) {
+            escaped = true;
+        } else {
+            unescaped_str.push_back(c);
+        }
+    }
+    return unescaped_str;
 }
 
 bool wildcard_match_unsafe(string_view tame, string_view wild, bool case_sensitive_match) {

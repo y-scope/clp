@@ -5,6 +5,7 @@
 
 #include "../ErrorCode.hpp"
 #include "../FileWriter.hpp"
+#include "../global_metadata_db_utils.hpp"
 #include "../GlobalMySQLMetadataDB.hpp"
 #include "../GlobalSQLiteMetadataDB.hpp"
 #include "../ir/constants.hpp"
@@ -40,8 +41,13 @@ bool decompress(
 
     try {
         auto archives_dir = std::filesystem::path(command_line_args.get_archives_dir());
-        auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
-        auto global_metadata_db = get_global_metadata_db(global_metadata_db_config, archives_dir);
+        auto global_metadata_db = create_global_metadata_db(
+                command_line_args.get_metadata_db_config(),
+                archives_dir
+        );
+        if (nullptr == global_metadata_db) {
+            return false;
+        }
 
         streaming_archive::reader::Archive archive_reader;
 
@@ -245,8 +251,13 @@ bool decompress_to_ir(CommandLineArguments& command_line_args) {
 
     try {
         std::filesystem::path archives_dir{command_line_args.get_archives_dir()};
-        auto const& global_metadata_db_config = command_line_args.get_metadata_db_config();
-        auto global_metadata_db = get_global_metadata_db(global_metadata_db_config, archives_dir);
+        auto global_metadata_db = create_global_metadata_db(
+                command_line_args.get_metadata_db_config(),
+                archives_dir
+        );
+        if (nullptr == global_metadata_db) {
+            return false;
+        }
 
         global_metadata_db->open();
         string archive_id;

@@ -1,9 +1,11 @@
 #include <cstdlib>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <fmt/format.h>
 #include <msgpack.hpp>
 #include <nlohmann/json.hpp>
@@ -223,6 +225,7 @@ TEST_CASE("clp-s-range-index", "[clp-s][range-index]") {
             archive_stats = compress_archive(
                     input_file,
                     std::string{cTestRangeIndexArchiveDirectory},
+                    std::nullopt,
                     single_file_archive,
                     false,
                     input_file_type
