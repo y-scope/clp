@@ -1,8 +1,8 @@
 set(
         CLP_SOURCES
         ../ArrayBackedPosIntSet.hpp
-        ../BufferedFileReader.cpp
-        ../BufferedFileReader.hpp
+        ../BufferedReader.cpp
+        ../BufferedReader.hpp
         ../BufferReader.cpp
         ../BufferReader.hpp
         ../database_utils.cpp
@@ -64,6 +64,7 @@ set(
         ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
+        ../LogTypeDictionaryEntryReq.hpp
         ../LogTypeDictionaryReader.hpp
         ../LogTypeDictionaryWriter.cpp
         ../LogTypeDictionaryWriter.hpp
@@ -143,9 +144,12 @@ set(
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
         ../VariableDictionaryEntry.hpp
+        ../VariableDictionaryEntryReq.hpp
         ../VariableDictionaryReader.hpp
+        ../VariableDictionaryReaderReq.hpp
         ../VariableDictionaryWriter.cpp
         ../VariableDictionaryWriter.hpp
+        ../VariableDictionaryWriterReq.hpp
         ../version.hpp
         ../WriterInterface.cpp
         ../WriterInterface.hpp

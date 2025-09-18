@@ -1,12 +1,10 @@
 # ystdlib requires CMake v3.23 or higher
 cmake_minimum_required(VERSION 3.23)
 
-# Toolchain setup must come before the first project() call in the entire CMake buildsystem.
-# If CLP is not the top-level project, the following setup has no effect.
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Toolchains/utils.cmake")
-setup_toolchains()
-
 project(CLP LANGUAGES CXX C)
+
+# Toolchain validation
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/Toolchains/utils.cmake")
 
 validate_compiler_versions()
 
@@ -295,8 +293,8 @@ endif()
 
 # Add ystdlib
 if(CLP_NEED_YSTDLIB)
-    set(YSTDLIB_CPP_BUILD_TESTING OFF)
-    add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
+    find_package(ystdlib REQUIRED)
+    message(STATUS "Found ystdlib-cpp ${ystdlib_VERSION}")
 endif()
 
 if(CLP_NEED_ZSTD)
@@ -445,8 +443,8 @@ set(SOURCE_FILES_unitTest
         src/clp/aws/constants.hpp
         src/clp/BoundedReader.cpp
         src/clp/BoundedReader.hpp
-        src/clp/BufferedFileReader.cpp
-        src/clp/BufferedFileReader.hpp
+        src/clp/BufferedReader.cpp
+        src/clp/BufferedReader.hpp
         src/clp/BufferReader.cpp
         src/clp/BufferReader.hpp
         src/clp/clp/CommandLineArguments.cpp
@@ -584,7 +582,9 @@ set(SOURCE_FILES_unitTest
         src/clp/LogSurgeonReader.hpp
         src/clp/LogTypeDictionaryEntry.cpp
         src/clp/LogTypeDictionaryEntry.hpp
+        src/clp/LogTypeDictionaryEntryReq.hpp
         src/clp/LogTypeDictionaryReader.hpp
+        src/clp/LogTypeDictionaryReaderReq.hpp
         src/clp/LogTypeDictionaryWriter.cpp
         src/clp/LogTypeDictionaryWriter.hpp
         src/clp/math_utils.hpp
@@ -677,9 +677,12 @@ set(SOURCE_FILES_unitTest
         src/clp/Utils.hpp
         src/clp/VariableDictionaryEntry.cpp
         src/clp/VariableDictionaryEntry.hpp
+        src/clp/VariableDictionaryEntryReq.hpp
         src/clp/VariableDictionaryReader.hpp
+        src/clp/VariableDictionaryReaderReq.hpp
         src/clp/VariableDictionaryWriter.cpp
         src/clp/VariableDictionaryWriter.hpp
+        src/clp/VariableDictionaryWriterReq.hpp
         src/clp/version.hpp
         src/clp/WriterInterface.cpp
         src/clp/WriterInterface.hpp
@@ -688,7 +691,7 @@ set(SOURCE_FILES_unitTest
         tests/LogSuppressor.hpp
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
-        tests/test-BufferedFileReader.cpp
+        tests/test-BufferedReader.cpp
         tests/test-clp_s-delta-encode-log-order.cpp
         tests/test-clp_s-end_to_end.cpp
         tests/test-clp_s-range_index.cpp
