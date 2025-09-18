@@ -9,6 +9,8 @@ set(
         ../clp/BoundedReader.hpp
         ../clp/BufferedFileReader.cpp
         ../clp/BufferedFileReader.hpp
+        ../clp/BufferReader.cpp
+        ../clp/BufferReader.hpp
         ../clp/CurlDownloadHandler.cpp
         ../clp/CurlDownloadHandler.hpp
         ../clp/CurlEasyHandle.hpp
