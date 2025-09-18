@@ -1,8 +1,8 @@
 #ifndef CLP_CLG_COMMANDLINEARGUMENTS_HPP
 #define CLP_CLG_COMMANDLINEARGUMENTS_HPP
 
+#include <optional>
 #include <string>
-#include <vector>
 
 #include <boost/asio.hpp>
 
@@ -46,7 +46,9 @@ public:
 
     epochtime_t get_search_end_ts() const { return m_search_end_ts; }
 
-    GlobalMetadataDBConfig const& get_metadata_db_config() const { return m_metadata_db_config; }
+    std::optional<GlobalMetadataDBConfig> const& get_metadata_db_config() const {
+        return m_metadata_db_config;
+    }
 
 private:
     // Methods
@@ -60,7 +62,7 @@ private:
     std::string m_file_path;
     OutputMethod m_output_method;
     epochtime_t m_search_begin_ts, m_search_end_ts;
-    GlobalMetadataDBConfig m_metadata_db_config;
+    std::optional<GlobalMetadataDBConfig> m_metadata_db_config;
 };
 }  // namespace clp::clg
 

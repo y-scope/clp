@@ -1,12 +1,15 @@
 import argparse
 import logging
 import pathlib
+import shlex
 import subprocess
 import sys
 import uuid
 from typing import List, Optional
 
 from clp_py_utils.clp_config import (
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_DATASET_NAME,
     StorageEngine,
 )
@@ -20,6 +23,7 @@ from clp_package_utils.general import (
     generate_container_name,
     generate_container_start_cmd,
     get_clp_home,
+    get_container_config_filename,
     JobType,
     load_config_file,
     validate_and_load_db_credentials_file,
@@ -79,6 +83,8 @@ def _generate_compress_cmd(
         "--config", str(config_path),
     ]
     # fmt: on
+    if parsed_args.verbose:
+        compress_cmd.append("--verbose")
     if dataset is not None:
         compress_cmd.append("--dataset")
         compress_cmd.append(dataset)
@@ -140,6 +146,12 @@ def main(argv):
         help="CLP package configuration file.",
     )
     args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
+    args_parser.add_argument(
         "--dataset",
         type=str,
         default=None,
@@ -163,6 +175,10 @@ def main(argv):
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     # Validate and load config file
     try:
@@ -186,6 +202,12 @@ def main(argv):
         except Exception as e:
             logger.error(e)
             return -1
+
+        if parsed_args.timestamp_key is None:
+            logger.warning(
+                "`--timestamp-key` not specified. Events will not have assigned timestamps and can "
+                "only be searched from the command line without a timestamp filter."
+            )
     elif dataset is not None:
         logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
         return -1
@@ -202,7 +224,7 @@ def main(argv):
 
     container_clp_config, mounts = generate_container_config(clp_config, clp_home)
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
-        container_clp_config, clp_config, container_name
+        container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
     necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
@@ -222,19 +244,29 @@ def main(argv):
 
     _generate_logs_list(clp_config.logs_input.type, container_logs_list_path, parsed_args)
 
+    extra_env_vars = {
+        CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
+        CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
+    }
     container_start_cmd = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container
+        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
     )
     compress_cmd = _generate_compress_cmd(
         parsed_args, dataset, generated_config_path_on_container, logs_list_path_on_container
     )
+
     cmd = container_start_cmd + compress_cmd
-    subprocess.run(cmd, check=True)
+
+    proc = subprocess.run(cmd)
+    ret_code = proc.returncode
+    if 0 != ret_code:
+        logger.error("Compression failed.")
+        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
     generated_config_path_on_host.unlink()
 
-    return 0
+    return ret_code
 
 
 if "__main__" == __name__:

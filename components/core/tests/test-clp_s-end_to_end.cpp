@@ -2,11 +2,13 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
+#include <catch2/generators/catch_generators.hpp>
 #include <fmt/format.h>
 
 #include "../src/clp_s/CommandLineArguments.hpp"
@@ -107,6 +109,7 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
             std::ignore = compress_archive(
                     get_test_input_local_path(),
                     std::string{cTestEndToEndArchiveDirectory},
+                    std::nullopt,
                     single_file_archive,
                     structurize_arrays,
                     clp_s::FileType::Json

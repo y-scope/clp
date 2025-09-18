@@ -1,7 +1,7 @@
 #include <array>
 
 #include <boost/filesystem.hpp>
-#include <catch2/catch.hpp>
+#include <catch2/catch_test_macros.hpp>
 
 #include "../src/clp/BufferedFileReader.hpp"
 #include "../src/clp/FileReader.hpp"

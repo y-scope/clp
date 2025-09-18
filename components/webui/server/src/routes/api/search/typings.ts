@@ -1,3 +1,4 @@
+import {type SearchResultsMetadataDocument} from "@webui/common/metadata";
 import {
     FastifyBaseLogger,
     FastifyInstance,
@@ -7,24 +8,11 @@ import type {
     Db,
 } from "mongodb";
 
-import {
-    SEARCH_SIGNAL,
-    type SearchResultsMetadataDocument,
-} from "../../../../../common/index.js";
-
 
 /**
  * The maximum number of results to retrieve for a search.
  */
 const SEARCH_MAX_NUM_RESULTS = 1000;
-
-type UpdateSearchResultsMetaProps = {
-    fields: Partial<SearchResultsMetadataDocument>;
-    jobId: number;
-    lastSignal: SEARCH_SIGNAL;
-    logger: FastifyBaseLogger;
-    searchResultsMetadataCollection: Collection<SearchResultsMetadataDocument>;
-};
 
 type UpdateSearchSignalWhenJobsFinishProps = {
     aggregationJobId: number;
@@ -46,6 +34,5 @@ export {
     CreateMongoIndexesProps,
     SEARCH_MAX_NUM_RESULTS,
     SearchResultsMetadataDocument,
-    UpdateSearchResultsMetaProps,
     UpdateSearchSignalWhenJobsFinishProps,
 };

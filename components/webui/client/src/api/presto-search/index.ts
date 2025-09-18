@@ -1,17 +1,8 @@
+import {
+    type PrestoQueryJob,
+    type PrestoQueryJobCreation,
+} from "@webui/common/schemas/presto-search";
 import axios, {AxiosResponse} from "axios";
-
-
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with shared type from the `@common` directory once refactoring is completed.
-// Currently, server schema types require typebox dependency so they cannot be moved to the
-// `@common` directory with current implementation.
-type PrestoQueryJobCreationSchema = {
-    queryString: string;
-};
-
-type PrestoQueryJobSchema = {
-    searchJobId: string;
-};
 
 
 /**
@@ -21,16 +12,44 @@ type PrestoQueryJobSchema = {
  * @return
  */
 const submitQuery = async (
-    payload: PrestoQueryJobCreationSchema
-): Promise<AxiosResponse<PrestoQueryJobSchema>> => {
+    payload: PrestoQueryJobCreation
+): Promise<AxiosResponse<PrestoQueryJob>> => {
     console.log("Submitting query:", JSON.stringify(payload));
 
-    return axios.post<PrestoQueryJobSchema>("/api/presto-search/query", payload);
+    return axios.post<PrestoQueryJob>("/api/presto-search/query", payload);
 };
 
-export type {
-    PrestoQueryJobCreationSchema,
-    PrestoQueryJobSchema,
+
+/**
+ * Sends post request to server to cancel presto query.
+ *
+ * @param payload
+ * @return
+ */
+const cancelQuery = async (
+    payload: PrestoQueryJob
+): Promise<AxiosResponse<null>> => {
+    console.log("Cancelling query:", JSON.stringify(payload));
+
+    return axios.post("/api/presto-search/cancel", payload);
 };
 
-export {submitQuery};
+
+/**
+ * Sends delete request to server to clear presto query results.
+ *
+ * @param payload
+ * @return
+ */
+const clearQueryResults = (payload: PrestoQueryJob): Promise<AxiosResponse<null>> => {
+    console.log("Clearing query:", JSON.stringify(payload));
+
+    return axios.delete("/api/presto-search/results", {data: payload});
+};
+
+
+export {
+    cancelQuery,
+    clearQueryResults,
+    submitQuery,
+};

@@ -1,16 +1,12 @@
 import {
     CLP_QUERY_ENGINES,
-    CLP_STORAGE_ENGINES,
     SETTINGS_QUERY_ENGINE,
-    SETTINGS_STORAGE_ENGINE,
 } from "../../../config";
-import Dataset from "./Dataset";
-import styles from "./index.module.css";
-import RunButton from "./Presto/RunButton";
-import SqlQueryInput from "./Presto/SqlQueryInput";
-import QueryInput from "./QueryInput";
-import SearchButton from "./SearchButton";
-import TimeRangeInput from "./TimeRangeInput";
+import usePrestoSearchState from "../SearchState/Presto";
+import {PRESTO_SQL_INTERFACE} from "../SearchState/Presto/typings";
+import NativeControls from "./NativeControls";
+import FreeformControls from "./Presto/FreeformControls";
+import GuidedControls from "./Presto/GuidedControls";
 
 
 /**
@@ -23,33 +19,28 @@ const handleSubmit = (ev: React.FormEvent<HTMLFormElement>) => {
 };
 
 /**
- * Renders controls for submitting queries.
+ * Renders controls for submitting queries and the query status.
  *
  * @return
  */
 const SearchControls = () => {
+    const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
+    const isPrestoGuided = sqlInterface === PRESTO_SQL_INTERFACE.GUIDED;
+
+    let controls;
+    if (SETTINGS_QUERY_ENGINE !== CLP_QUERY_ENGINES.PRESTO) {
+        controls = <NativeControls/>;
+    } else if (isPrestoGuided) {
+        controls = <GuidedControls/>;
+    } else {
+        controls = <FreeformControls/>;
+    }
+
     return (
         <form onSubmit={handleSubmit}>
-            <div className={styles["searchControlsContainer"]}>
-                {SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.NATIVE ?
-                    (
-                        <>
-                            {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && <Dataset/>}
-                            <QueryInput/>
-                            <TimeRangeInput/>
-                            <SearchButton/>
-                        </>
-                    ) :
-                    (
-                        <>
-                            <SqlQueryInput/>
-                            <RunButton/>
-                        </>
-                    )}
-            </div>
+            {controls}
         </form>
     );
 };
-
 
 export default SearchControls;

@@ -24,6 +24,8 @@ set(
         ../FileReader.hpp
         ../FileWriter.cpp
         ../FileWriter.hpp
+        ../global_metadata_db_utils.cpp
+        ../global_metadata_db_utils.hpp
         ../GlobalMetadataDB.hpp
         ../GlobalMetadataDBConfig.cpp
         ../GlobalMetadataDBConfig.hpp
@@ -46,7 +48,9 @@ set(
         ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
+        ../LogTypeDictionaryEntryReq.hpp
         ../LogTypeDictionaryReader.hpp
+        ../LogTypeDictionaryReaderReq.hpp
         ../MySQLDB.cpp
         ../MySQLDB.hpp
         ../MySQLParamBindings.cpp
@@ -115,9 +119,12 @@ set(
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
         ../VariableDictionaryEntry.hpp
+        ../VariableDictionaryEntryReq.hpp
         ../VariableDictionaryReader.hpp
+        ../VariableDictionaryReaderReq.hpp
         ../VariableDictionaryWriter.cpp
         ../VariableDictionaryWriter.hpp
+        ../VariableDictionaryWriterReq.hpp
         ../version.hpp
         ../WriterInterface.cpp
         ../WriterInterface.hpp
@@ -142,15 +149,15 @@ if(CLP_BUILD_EXECUTABLES)
                 fmt::fmt
                 log_surgeon::log_surgeon
                 MariaDBClient::MariaDBClient
+                msgpack-cxx
                 nlohmann_json::nlohmann_json
                 spdlog::spdlog
                 ${sqlite_LIBRARY_DEPENDENCIES}
                 ${STD_FS_LIBS}
                 clp::string_utils
-                yaml-cpp
                 ystdlib::containers
                 ystdlib::error_handling
-                ZStd::ZStd
+                ${zstd_TARGET}
         )
         # Put the built executable at the root of the build directory
         set_target_properties(

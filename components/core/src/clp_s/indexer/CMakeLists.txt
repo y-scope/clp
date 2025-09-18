@@ -13,12 +13,37 @@ set(
         ../../clp/CurlStringList.hpp
         ../../clp/database_utils.cpp
         ../../clp/database_utils.hpp
+        ../../clp/Defs.h
+        ../../clp/EncodedVariableInterpreter.cpp
+        ../../clp/EncodedVariableInterpreter.hpp
+        ../../clp/ErrorCode.hpp
+        ../../clp/ffi/encoding_methods.cpp
+        ../../clp/ffi/encoding_methods.hpp
+        ../../clp/ffi/encoding_methods.inc
+        ../../clp/ffi/ir_stream/byteswap.hpp
+        ../../clp/ffi/ir_stream/decoding_methods.cpp
+        ../../clp/ffi/ir_stream/decoding_methods.hpp
+        ../../clp/ffi/ir_stream/decoding_methods.inc
+        ../../clp/ffi/ir_stream/protocol_constants.hpp
+        ../../clp/ffi/ir_stream/utils.cpp
+        ../../clp/ffi/ir_stream/utils.hpp
+        ../../clp/ffi/SchemaTree.cpp
+        ../../clp/ffi/SchemaTree.hpp
         ../../clp/FileReader.cpp
         ../../clp/FileReader.hpp
         ../../clp/GlobalMetadataDBConfig.cpp
         ../../clp/GlobalMetadataDBConfig.hpp
         ../../clp/hash_utils.cpp
         ../../clp/hash_utils.hpp
+        ../../clp/ir/constants.hpp
+        ../../clp/ir/EncodedTextAst.cpp
+        ../../clp/ir/EncodedTextAst.hpp
+        ../../clp/ir/LogEvent.hpp
+        ../../clp/ir/parsing.cpp
+        ../../clp/ir/parsing.hpp
+        ../../clp/ir/parsing.inc
+        ../../clp/ir/types.hpp
+        ../../clp/LogTypeDictionaryEntryReq.hpp
         ../../clp/MySQLDB.cpp
         ../../clp/MySQLDB.hpp
         ../../clp/MySQLParamBindings.cpp
@@ -27,10 +52,18 @@ set(
         ../../clp/MySQLPreparedStatement.hpp
         ../../clp/NetworkReader.cpp
         ../../clp/NetworkReader.hpp
+        ../../clp/Query.cpp
+        ../../clp/Query.hpp
         ../../clp/ReaderInterface.cpp
         ../../clp/ReaderInterface.hpp
         ../../clp/Thread.cpp
         ../../clp/Thread.hpp
+        ../../clp/time_types.hpp
+        ../../clp/TraceableException.hpp
+        ../../clp/type_utils.hpp
+        ../../clp/VariableDictionaryEntryReq.hpp
+        ../../clp/VariableDictionaryReaderReq.hpp
+        ../../clp/VariableDictionaryWriterReq.hpp
         ../archive_constants.hpp
         ../ArchiveReader.cpp
         ../ArchiveReader.hpp
@@ -65,8 +98,6 @@ set(
         ../TimestampPattern.hpp
         ../Utils.cpp
         ../Utils.hpp
-        ../VariableDecoder.cpp
-        ../VariableDecoder.hpp
         ../ZstdCompressor.cpp
         ../ZstdCompressor.hpp
         ../ZstdDecompressor.cpp
@@ -91,13 +122,13 @@ if(CLP_BUILD_EXECUTABLES)
                 clp::string_utils
                 date::date
                 MariaDBClient::MariaDBClient
+                msgpack-cxx
                 nlohmann_json::nlohmann_json
                 OpenSSL::Crypto
                 simdjson::simdjson
                 spdlog::spdlog
-                yaml-cpp
                 ystdlib::containers
-                ZStd::ZStd
+                ${zstd_TARGET}
         )
         # Put the built executable at the root of the build directory
         set_target_properties(

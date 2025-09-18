@@ -11,6 +11,8 @@ from celery import signals
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
     Database,
@@ -184,18 +186,52 @@ def _upload_archive_to_s3(
     s3_put(s3_config, archive_src_path, dest_path)
 
 
+def _get_db_connection_args_for_clp_cmd(
+    clp_metadata_db_connection_config: Dict[str, Any],
+) -> List[str]:
+    """
+    :param clp_metadata_db_connection_config:
+    :return: List of database connection arguments for the clp command.
+    """
+    return [
+        "--db-type",
+        clp_metadata_db_connection_config["type"],
+        "--db-host",
+        clp_metadata_db_connection_config["host"],
+        "--db-port",
+        str(clp_metadata_db_connection_config["port"]),
+        "--db-name",
+        clp_metadata_db_connection_config["name"],
+        "--db-table-prefix",
+        clp_metadata_db_connection_config["table_prefix"],
+    ]
+
+
+def _get_db_connection_env_vars_for_clp_cmd(
+    clp_metadata_db_connection_config: Dict[str, Any],
+) -> Dict[str, str]:
+    """
+    :param clp_metadata_db_connection_config:
+    :return: Dictionary of database connection environment variables for the clp command.
+    """
+    return {
+        CLP_DB_USER_ENV_VAR_NAME: clp_metadata_db_connection_config["username"],
+        CLP_DB_PASS_ENV_VAR_NAME: clp_metadata_db_connection_config["password"],
+    }
+
+
 def _make_clp_command_and_env(
     clp_home: pathlib.Path,
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
-    db_config_file_path: pathlib.Path,
+    clp_metadata_db_connection_config: Dict[str, Any],
 ) -> Tuple[List[str], Optional[Dict[str, str]]]:
     """
     Generates the command and environment variables for a clp compression job.
     :param clp_home:
     :param archive_output_dir:
     :param clp_config:
-    :param db_config_file_path:
+    :param clp_metadata_db_connection_config:
     :return: Tuple of (compression_command, compression_env_vars)
     """
 
@@ -210,7 +246,6 @@ def _make_clp_command_and_env(
         "--target-segment-size", str(clp_config.output.target_segment_size),
         "--target-encoded-file-size", str(clp_config.output.target_encoded_file_size),
         "--compression-level", str(clp_config.output.compression_level),
-        "--db-config-file", str(db_config_file_path),
     ]
     # fmt: on
     if path_prefix_to_remove:
@@ -223,7 +258,14 @@ def _make_clp_command_and_env(
         compression_cmd.append("--schema-path")
         compression_cmd.append(str(schema_path))
 
-    return compression_cmd, None
+    # Set database connection parameters
+    compression_cmd.extend(_get_db_connection_args_for_clp_cmd(clp_metadata_db_connection_config))
+    compression_env_vars = dict(os.environ)
+    compression_env_vars.update(
+        _get_db_connection_env_vars_for_clp_cmd(clp_metadata_db_connection_config)
+    )
+
+    return compression_cmd, compression_env_vars
 
 
 def _make_clp_s_command_and_env(
@@ -303,12 +345,6 @@ def run_clp(
     data_dir = worker_config.data_directory
     archive_output_dir = worker_config.archive_output.get_directory()
 
-    # Generate database config file for clp
-    db_config_file_path = data_dir / f"{instance_id_str}-db-config.yml"
-    db_config_file = open(db_config_file_path, "w")
-    yaml.safe_dump(clp_metadata_db_connection_config, db_config_file)
-    db_config_file.close()
-
     # Get S3 config
     s3_config: S3Config
     enable_s3_write = False
@@ -322,14 +358,13 @@ def run_clp(
         s3_config = worker_config.archive_output.storage.s3_config
         enable_s3_write = True
 
-    table_prefix = clp_metadata_db_connection_config["table_prefix"]
     dataset = clp_config.input.dataset
     if StorageEngine.CLP == clp_storage_engine:
         compression_cmd, compression_env = _make_clp_command_and_env(
             clp_home=clp_home,
             archive_output_dir=archive_output_dir,
             clp_config=clp_config,
-            db_config_file_path=db_config_file_path,
+            clp_metadata_db_connection_config=clp_metadata_db_connection_config,
         )
     elif StorageEngine.CLP_S == clp_storage_engine:
         archive_output_dir = archive_output_dir / dataset
@@ -412,6 +447,7 @@ def run_clp(
                 with closing(sql_adapter.create_connection(True)) as db_conn, closing(
                     db_conn.cursor(dictionary=True)
                 ) as db_cursor:
+                    table_prefix = clp_metadata_db_connection_config["table_prefix"]
                     if StorageEngine.CLP_S == clp_storage_engine:
                         update_archive_metadata(
                             db_cursor, table_prefix, dataset, last_archive_stats
@@ -429,17 +465,24 @@ def run_clp(
                 if StorageEngine.CLP_S == clp_storage_engine:
                     indexer_cmd = [
                         str(clp_home / "bin" / "indexer"),
-                        "--db-config-file",
-                        str(db_config_file_path),
+                        *_get_db_connection_args_for_clp_cmd(clp_metadata_db_connection_config),
                         dataset,
                         archive_path,
                     ]
+
+                    # Set environment variables for database credentials
+                    indexer_env = dict(os.environ)
+                    indexer_env.update(
+                        _get_db_connection_env_vars_for_clp_cmd(clp_metadata_db_connection_config)
+                    )
+
                     try:
                         subprocess.run(
                             indexer_cmd,
                             stdout=subprocess.DEVNULL,
                             stderr=stderr_log_file,
                             check=True,
+                            env=indexer_env,
                         )
                     except subprocess.CalledProcessError:
                         logger.exception("Failed to index archive.")
@@ -459,7 +502,6 @@ def run_clp(
         # Remove generated temporary files
         if logs_list_path:
             logs_list_path.unlink()
-        db_config_file_path.unlink()
     logger.debug("Compressed.")
 
     # Close stderr log file

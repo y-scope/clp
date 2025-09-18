@@ -4,6 +4,7 @@
 #include <charconv>
 #include <concepts>
 #include <string>
+#include <string_view>
 
 namespace clp::string_utils {
 /**
@@ -56,6 +57,20 @@ std::string replace_characters(
 );
 
 /**
+ * Replace unescaped instances of `from_char` with `to_char` in `str`.
+ *
+ * NOTE: `from_char` and `escape_char` must not be the same character. If they are, the function's
+ * behaviour is undefined.
+ *
+ * @param escape_char The character used for escaping
+ * @param from_char
+ * @param to_char
+ * @param str String in which to replace the characters
+ */
+auto replace_unescaped_char(char escape_char, char from_char, char to_char, std::string& str)
+        -> void;
+
+/**
  * Converts a string to lowercase
  * @param str
  */
@@ -72,6 +87,17 @@ void to_lower(std::string& str);
  * @return Cleaned wildcard search string
  */
 std::string clean_up_wildcard_search_string(std::string_view str);
+
+/**
+ * Unescapes a string according to the following rules:
+ * <ul>
+ *   <li>Escape sequences `\<char>` are replaced by `<char>`</li>
+ *   <li>Lone dangling `\` is removed from the end of the string</li>
+ * </ul>
+ * @param str
+ * @return An unescaped version of `str`.
+ */
+[[nodiscard]] auto unescape_string(std::string_view str) -> std::string;
 
 /**
  * Checks if character is a wildcard

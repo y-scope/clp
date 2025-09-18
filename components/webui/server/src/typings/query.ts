@@ -1,22 +1,6 @@
+import {QUERY_JOB_TYPE} from "@webui/common/query";
 import {RowDataPacket} from "mysql2/promise";
 
-
-/**
- * Matching the `QueryJobType` class in `job_orchestration.query_scheduler.constants`.
- */
-enum QUERY_JOB_TYPE {
-    SEARCH_OR_AGGREGATION = 0,
-    EXTRACT_IR,
-    EXTRACT_JSON,
-}
-
-/**
- * List of valid extract job types.
- */
-const EXTRACT_JOB_TYPES = new Set([
-    QUERY_JOB_TYPE.EXTRACT_IR,
-    QUERY_JOB_TYPE.EXTRACT_JSON,
-]);
 
 /**
  * Matching the `QueryJobStatus` class in
@@ -31,6 +15,7 @@ enum QUERY_JOB_STATUS {
     FAILED,
     CANCELLING,
     CANCELLED,
+    KILLED,
 }
 
 /**
@@ -63,9 +48,7 @@ interface QueryJob extends RowDataPacket {
 
 export type {QueryJob};
 export {
-    EXTRACT_JOB_TYPES,
     QUERY_JOB_STATUS,
     QUERY_JOB_STATUS_WAITING_STATES,
-    QUERY_JOB_TYPE,
     QUERY_JOBS_TABLE_COLUMN_NAMES,
 };
