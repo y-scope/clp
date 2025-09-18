@@ -421,13 +421,13 @@ void Archive::write_msg_using_schema(log_surgeon::LogEventView const& log_view) 
                 break;
             }
             default: {
-                auto const& lexer{log_view.get_log_parser().m_lexer};
-                auto capture_ids{lexer.get_capture_ids_from_rule_id(token_type)};
-
+                // If there are no capture groups the entire variable token is stored as a variable.
                 // If the variable token contains capture groups, we break the token up by storing
                 // each capture as a variable and any substrings surrounding the capture as part of
-                // the logtype. If there are no capture groups the entire variable token is stored
-                // as a variable.
+                // the logtype.
+
+                auto const& lexer{log_view.get_log_parser().m_lexer};
+                auto capture_ids{lexer.get_capture_ids_from_rule_id(token_type)};
                 if (false == capture_ids.has_value()) {
                     variable_dictionary_id_t id{};
                     m_var_dict.add_entry(token.to_string(), id);
@@ -438,7 +438,9 @@ void Archive::write_msg_using_schema(log_surgeon::LogEventView const& log_view) 
                     break;
                 }
 
-                auto const register_ids{lexer.get_reg_ids_from_capture_id(capture_ids.value().at(0))};
+                auto const register_ids{
+                        lexer.get_reg_ids_from_capture_id(capture_ids.value().at(0))
+                };
                 if (false == register_ids.has_value()) {
                     throw(std::runtime_error(
                             "No register IDs found for variable's capture group. Full token: "
@@ -446,14 +448,13 @@ void Archive::write_msg_using_schema(log_surgeon::LogEventView const& log_view) 
                     ));
                 }
                 auto const [start_reg_id, end_reg_id]{register_ids.value()};
-                auto const capture_start{token.get_reversed_reg_positions(start_reg_id).front()};
-                auto const capture_end{token.get_reversed_reg_positions(end_reg_id).back()};
+                auto const capture_start{token.get_reversed_reg_positions(start_reg_id).back()};
+                auto const capture_end{token.get_reversed_reg_positions(end_reg_id).front()};
                 auto const token_view{token.to_string_view()};
                 size_t token_pos{0};
 
                 auto const before_capture{token_view.substr(token_pos, capture_start)};
-                m_logtype_dict_entry
-                        .add_constant(before_capture, 0, before_capture.length());
+                m_logtype_dict_entry.add_constant(before_capture, 0, before_capture.length());
                 token_pos += before_capture.length();
 
                 // If a capture has repetition we store all instances as a single variable.
@@ -468,9 +469,7 @@ void Archive::write_msg_using_schema(log_surgeon::LogEventView const& log_view) 
                 variable_dictionary_id_t id{};
                 m_var_dict.add_entry(capture, id);
                 m_var_ids.push_back(id);
-                m_encoded_vars.push_back(
-                        EncodedVariableInterpreter::encode_var_dict_id(id)
-                );
+                m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
                 m_logtype_dict_entry.add_dictionary_var();
                 token_pos += capture.length();
 
@@ -481,7 +480,7 @@ void Archive::write_msg_using_schema(log_surgeon::LogEventView const& log_view) 
             }
         }
     }
-    if (!m_logtype_dict_entry.get_value().empty()) {
+    if (false == m_logtype_dict_entry.get_value().empty()) {
         logtype_dictionary_id_t logtype_id{};
         m_logtype_dict.add_entry(m_logtype_dict_entry, logtype_id);
         m_file->write_encoded_msg(
