@@ -184,7 +184,7 @@ TEST_CASE("Test lexer", "[Search]") {
     auto const schema_file_path = get_test_schema_files_dir() / "search_schema.txt";
     load_lexer_from_file(schema_file_path.string(), lexer);
     auto const query_file_path = get_test_queries_dir() / "easy.txt";
-    FileReader file_reader = query_file_path.string();
+    FileReader file_reader{query_file_path.string()};
     LogSurgeonReader reader_wrapper(file_reader);
     log_surgeon::ParserInputBuffer parser_input_buffer;
     parser_input_buffer.read_if_safe(reader_wrapper);
