@@ -12,6 +12,7 @@
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/ReaderParser.hpp>
 
+#include "../BufferedReader.hpp"
 #include "../ffi/ir_stream/decoding_methods.hpp"
 #include "../ir/types.hpp"
 #include "../ir/utils.hpp"

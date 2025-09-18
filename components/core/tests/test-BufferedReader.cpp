@@ -5,10 +5,10 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
+#include "../src/clp/BufferedReader.hpp"
 #include "../src/clp/FileDescriptorReader.hpp"
 #include "../src/clp/FileReader.hpp"
 #include "../src/clp/FileWriter.hpp"
-#include "clp/BufferedReader.hpp"
 
 using clp::BufferedReader;
 using clp::ErrorCode;
