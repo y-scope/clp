@@ -50,17 +50,13 @@ logger = get_logger("compression_scheduler")
 
 scheduled_jobs = {}
 
-recieved_signal = False
+received_sigterm = False
 
 
-def signal_handler(sig, frame):
-    global recieved_signal
-    recieved_signal = True
+def sigterm_handler(sig, frame):
+    global received_sigterm
+    received_sigterm = True
     logger.info("Received SIGTERM in compression scheduler")
-
-
-# Register the signal handler
-signal.signal(signal.SIGTERM, signal_handler)
 
 
 def fetch_new_jobs(db_cursor):
@@ -398,6 +394,10 @@ def poll_running_jobs(db_conn, db_cursor):
     for job_id in jobs_to_delete:
         del scheduled_jobs[job_id]
 
+    if received_sigterm and 0 == len(scheduled_jobs):
+        logger.info("Recieved sigterm, No more running jobs. Exiting.")
+        sys.exit(0)
+
 
 def main(argv):
     args_parser = argparse.ArgumentParser()
@@ -412,6 +412,9 @@ def main(argv):
 
     # Update logging level based on config
     set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
+
+    # Register the sigterm handler
+    signal.signal(signal.SIGTERM, sigterm_handler)
 
     # Load configuration
     config_path = Path(args.config)
@@ -443,7 +446,7 @@ def main(argv):
         # Start Job Processing Loop
         while True:
             try:
-                if False == recieved_signal:
+                if not received_sigterm:
                     search_and_schedule_new_tasks(
                         db_conn,
                         db_cursor,
@@ -454,7 +457,7 @@ def main(argv):
                 poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
-                logger.info("Gracefully shutting down")
+                logger.info("Forcefully shutting down")
                 return -1
             except Exception:
                 logger.exception(f"Error in scheduling.")

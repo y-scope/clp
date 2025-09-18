@@ -484,7 +484,7 @@ def run_clp(
 
 @signals.worker_shutdown.connect
 def worker_shutdown_handler(signal=None, sender=None, **kwargs):
-    logger.warning("Worker shutdown signal received.")
+    logger.info("Worker shutdown signal received.")
 
 
 @app.task(bind=True)
