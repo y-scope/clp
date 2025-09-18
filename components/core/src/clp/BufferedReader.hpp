@@ -83,7 +83,7 @@ public:
     // Delete copy & move constructors and assignment operators
     BufferedReader(BufferedReader const&) = delete;
     BufferedReader(BufferedReader&&) = delete;
-    auto operator=(BufferedReader) -> BufferedReader& = delete;
+    auto operator=(BufferedReader const&) -> BufferedReader& = delete;
     auto operator=(BufferedReader&&) -> BufferedReader& = delete;
 
     // Methods
