@@ -5,12 +5,12 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
-#include "../src/clp/BufferedFileReader.hpp"
 #include "../src/clp/FileDescriptorReader.hpp"
 #include "../src/clp/FileReader.hpp"
 #include "../src/clp/FileWriter.hpp"
+#include "clp/BufferedReader.hpp"
 
-using clp::BufferedFileReader;
+using clp::BufferedReader;
 using clp::ErrorCode;
 using clp::ErrorCode_EndOfFile;
 using clp::ErrorCode_Success;
@@ -41,8 +41,8 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
 
     auto read_buf_uniq_ptr = make_unique<std::array<char, test_data_size>>();
     auto& read_buf = *read_buf_uniq_ptr;
-    size_t const base_buffer_size = BufferedFileReader::cMinBufferSize << 4;
-    BufferedFileReader reader{make_unique<FileDescriptorReader>(test_file_path), base_buffer_size};
+    size_t const base_buffer_size = BufferedReader::cMinBufferSize << 4;
+    BufferedReader reader{make_unique<FileDescriptorReader>(test_file_path), base_buffer_size};
 
     size_t num_bytes_read{0};
     size_t buf_pos{0};
@@ -290,7 +290,7 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     // Instantiate BufferedFileReader and the reference FileReader from a non-zero pos
     auto fd_reader = make_unique<FileDescriptorReader>(test_file_path);
     fd_reader->seek_from_begin(reader_begin_offset);
-    BufferedFileReader buffered_file_reader{std::move(fd_reader)};
+    BufferedReader buffered_file_reader{std::move(fd_reader)};
     string test_string;
 
     FileReader ref_file_reader{test_file_path};

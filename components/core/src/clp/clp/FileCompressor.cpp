@@ -126,7 +126,7 @@ bool FileCompressor::compress_file(
     PROFILER_SPDLOG_INFO("Start parsing {}", file_name)
     Profiler::start_continuous_measurement<Profiler::ContinuousMeasurementIndex::ParseLogFile>();
 
-    BufferedFileReader buffered_file_reader{make_unique<FileReader>(file_to_compress.get_path())};
+    BufferedReader buffered_file_reader{make_unique<FileReader>(file_to_compress.get_path())};
 
     // Check that file is UTF-8 encoded
     if (auto error_code = buffered_file_reader.try_refill_buffer_if_empty();
