@@ -75,13 +75,16 @@ def unlink(rm_path: Path, force: bool = True) -> None:
             raise OSError(err_msg) from e
 
 
-def validate_dir_exists(dir_path: Path) -> None:
+def validate_dir_exists_and_is_absolute(dir_path: Path) -> None:
     """
     :param dir_path:
-    :raise: ValueError if the path does not exist or is not a directory.
+    :raise: ValueError if the path does not exist, is not a directory, or is not absolute.
     """
     if not dir_path.is_dir():
         err_msg = f"Path does not exist or is not a directory: {dir_path}"
+        raise ValueError(err_msg)
+    if not dir_path.is_absolute():
+        err_msg = f"Path is not absolute: {dir_path}"
         raise ValueError(err_msg)
 
 
