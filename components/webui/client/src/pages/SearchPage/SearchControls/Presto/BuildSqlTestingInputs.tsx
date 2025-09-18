@@ -11,7 +11,7 @@ import {handlePrestoQuerySubmit} from "./presto-search-requests";
 
 
 // eslint-disable-next-line no-warning-comments
-// TODO: Replace this with actual SQL inputs
+// TODO: Replace this file with actual SQL inputs
 
 const TransformEmptyStringSchema = Type.Transform(
     Type.Optional(Type.Union([
