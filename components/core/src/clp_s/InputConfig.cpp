@@ -3,6 +3,7 @@
 #include <array>
 #include <cctype>
 #include <cstdlib>
+#include <cstring>
 #include <exception>
 #include <filesystem>
 #include <memory>
@@ -201,12 +202,7 @@ auto could_be_zstd(char const* peek_buf, size_t peek_size) -> bool {
         return false;
     }
 
-    for (size_t i{0ULL}; i < cZstdMagicNumber.size(); ++i) {
-        if (cZstdMagicNumber.at(i) != peek_buf[i]) {
-            return false;
-        }
-    }
-    return true;
+    return 0 == std::memcmp(peek_buf, cZstdMagicNumber.data(), cZstdMagicNumber.size());
 }
 
 auto could_be_kvir(char const* peek_buf, size_t peek_size) -> bool {
@@ -214,15 +210,18 @@ auto could_be_kvir(char const* peek_buf, size_t peek_size) -> bool {
         return false;
     }
 
-    bool could_be_four_byte{true};
-    bool could_be_eight_byte{true};
-    for (size_t i{0ULL}; i < clp::ffi::ir_stream::cProtocol::MagicNumberLength; ++i) {
-        could_be_four_byte
-                &= clp::ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber[i] == peek_buf[i];
-        could_be_eight_byte
-                &= clp::ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber[i] == peek_buf[i];
-    }
-    return could_be_four_byte || could_be_eight_byte;
+    return (0
+            == std::memcmp(
+                    peek_buf,
+                    clp::ffi::ir_stream::cProtocol::FourByteEncodingMagicNumber,
+                    clp::ffi::ir_stream::cProtocol::MagicNumberLength
+            ))
+           || (0
+               == std::memcmp(
+                       peek_buf,
+                       clp::ffi::ir_stream::cProtocol::EightByteEncodingMagicNumber,
+                       clp::ffi::ir_stream::cProtocol::MagicNumberLength
+               ));
 }
 
 auto could_be_json(char const* peek_buf, size_t peek_size) -> bool {

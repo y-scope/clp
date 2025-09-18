@@ -129,8 +129,7 @@ get_input_archives_for_raw_path(std::string_view const path, std::vector<Path>& 
  * Tries to deduce the underlying file-type of the file opened by `reader`, and return a
  * (potentially new) reader for underlying JSON or KV-IR content by unwrapping layers of
  * compression.
- * @param path
- * @param network_auth
+ * @param reader
  * @return A vector of all created `clp::ReaderInterface`s, where the last entry in the vector is
  * open for reading content of the type described by the element in the pair. When the content type
  * cannot be deduced, we return an empty vector and `FileType::Unknown`.

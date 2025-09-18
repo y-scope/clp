@@ -28,7 +28,6 @@
 #include "SchemaTree.hpp"
 #include "SchemaWriter.hpp"
 #include "TimestampDictionaryWriter.hpp"
-#include "ZstdCompressor.hpp"
 
 namespace clp_s {
 struct JsonParserOption {
@@ -63,7 +62,7 @@ public:
 
     /**
      * Parses the input and ingests the parsed data into the archive.
-     * @return Whether the input was parsed succesfully.
+     * @return Whether the input was parsed successfully.
      */
     [[nodiscard]] auto parse() -> bool;
 

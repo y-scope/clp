@@ -25,7 +25,6 @@
 #include "../clp/ir/EncodedTextAst.hpp"
 #include "../clp/NetworkReader.hpp"
 #include "../clp/ReaderInterface.hpp"
-#include "../clp/streaming_compression/zstd/Decompressor.hpp"
 #include "../clp/time_types.hpp"
 #include "archive_constants.hpp"
 #include "ErrorCode.hpp"
@@ -509,6 +508,7 @@ bool JsonParser::parse() {
             case FileType::Zstd:
             case FileType::Unknown:
             default: {
+                std::ignore = check_and_log_curl_error(path, reader);
                 SPDLOG_ERROR("Could not deduce content type for input {}", path.path);
                 std::ignore = m_archive_writer->close();
                 return false;
@@ -845,7 +845,7 @@ auto JsonParser::ingest_kvir(
             continue;
         } else {
             SPDLOG_ERROR(
-                    "Encountered unkown IR unit type ({}) during deserialization.",
+                    "Encountered unknown IR unit type ({}) during deserialization.",
                     static_cast<uint8_t>(kv_log_event_result.value())
             );
             return false;
