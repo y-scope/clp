@@ -4,6 +4,10 @@ set(
         ../../clp/aws/AwsAuthenticationSigner.hpp
         ../../clp/BoundedReader.cpp
         ../../clp/BoundedReader.hpp
+        ../../clp/BufferedReader.cpp
+        ../../clp/BufferedReader.hpp
+        ../../clp/BufferReader.cpp
+        ../../clp/BufferReader.hpp
         ../../clp/CurlDownloadHandler.cpp
         ../../clp/CurlDownloadHandler.hpp
         ../../clp/CurlEasyHandle.hpp

@@ -12,7 +12,7 @@
 #include <spdlog/spdlog.h>
 
 #include "../clp/aws/AwsAuthenticationSigner.hpp"
-#include "../clp/BufferedFileReader.hpp"
+#include "../clp/BufferedReader.hpp"
 #include "../clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../clp/FileReader.hpp"
 #include "../clp/NetworkReader.hpp"
@@ -106,7 +106,7 @@ namespace {
  * @param reader
  * @return The deduced type, or `FileType::Unknown` if the type could not be deduced.
  */
-auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedFileReader>& reader) -> FileType;
+auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedReader>& reader) -> FileType;
 
 /**
  * Checks if an input contains Zstd data, based on the first few bytes of data from the input.
@@ -240,7 +240,7 @@ auto could_be_json(char const* peek_buf, size_t peek_size) -> bool {
     return false;
 }
 
-auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedFileReader>& reader) -> FileType {
+auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedReader>& reader) -> FileType {
     char const* peek_buf{};
     size_t peek_size{};
     reader->peek_buffered_data(peek_buf, peek_size);
@@ -293,7 +293,7 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
     std::vector<std::shared_ptr<clp::ReaderInterface>> readers{reader};
     for (size_t nesting_depth{0ULL}; nesting_depth < cMaxNestedFormatDepth; ++nesting_depth) {
         auto buffered_reader{
-                std::make_shared<clp::BufferedFileReader>(readers.back(), cFileReadBufferCapacity)
+                std::make_shared<clp::BufferedReader>(readers.back(), cFileReadBufferCapacity)
         };
         auto const rc{buffered_reader->try_refill_buffer_if_empty()};
         if (clp::ErrorCode::ErrorCode_Success != rc && clp::ErrorCode::ErrorCode_EndOfFile != rc) {
