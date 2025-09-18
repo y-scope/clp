@@ -23,7 +23,7 @@ using std::string;
 
 static constexpr size_t cNumAlphabets = 'z' - 'a' + 1;
 
-TEST_CASE("Test reading data", "[BufferedFileReader]") {
+TEST_CASE("Test reading data", "[BufferedReader]") {
     // Initialize data for testing
     size_t const test_data_size = 4L * 1024 * 1024 + 1;  // 4MB + 1
     auto test_data_uniq_ptr = make_unique<std::array<char, test_data_size>>();
@@ -32,7 +32,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         test_data[i] = static_cast<char>('a' + (i % (cNumAlphabets)));
     }
 
-    string const test_file_path{"BufferedFileReader.test"};
+    string const test_file_path{"BufferedReader.test"};
     // Write to test file
     FileWriter file_writer;
     file_writer.open(test_file_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
@@ -58,7 +58,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
         REQUIRE(reader.get_pos() == buf_pos);
         REQUIRE(0 == memcmp(read_buf.data(), test_data.data(), buf_pos));
 
-        // Read a large chunk of data, so BufferedFileReader will refill the
+        // Read a large chunk of data, so BufferedReader will refill the
         // internal buffer
         num_bytes_to_read = base_buffer_size + 2;
         REQUIRE(ErrorCode_Success
@@ -263,7 +263,7 @@ TEST_CASE("Test reading data", "[BufferedFileReader]") {
     boost::filesystem::remove(test_file_path);
 }
 
-TEST_CASE("Test delimiter", "[BufferedFileReader]") {
+TEST_CASE("Test delimiter", "[BufferedReader]") {
     // Initialize random number generator
     std::random_device rd;
     std::mt19937 gen(rd());
@@ -279,7 +279,7 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     }
 
     // Write to test file
-    string const test_file_path{"BufferedFileReader.delimiter.test"};
+    string const test_file_path{"BufferedReader.delimiter.test"};
     FileWriter file_writer;
     file_writer.open(test_file_path, FileWriter::OpenMode::CREATE_FOR_WRITING);
     file_writer.write(test_data.data(), test_data_size);
@@ -287,7 +287,7 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
 
     size_t const reader_begin_offset = GENERATE(0, 127);
 
-    // Instantiate BufferedFileReader and the reference FileReader from a non-zero pos
+    // Instantiate BufferedReader and the reference FileReader from a non-zero pos
     auto fd_reader = make_unique<FileDescriptorReader>(test_file_path);
     fd_reader->seek_from_begin(reader_begin_offset);
     BufferedReader buffered_file_reader{std::move(fd_reader)};
@@ -301,7 +301,7 @@ TEST_CASE("Test delimiter", "[BufferedFileReader]") {
     buffered_file_reader.clear_checkpoint();
     REQUIRE(reader_begin_offset == buffered_file_reader.get_pos());
 
-    // Validate that a FileReader and a BufferedFileReader return the same strings (split by
+    // Validate that a FileReader and a BufferedReader return the same strings (split by
     // delimiters)
     ErrorCode error_code{ErrorCode_Success};
     auto delimiter = static_cast<char>(uniformly_distributed_alphabet(gen));
