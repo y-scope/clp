@@ -15,10 +15,10 @@
 
 namespace clp {
 /**
- * Class for performing buffered (in memory) reads from another `ReaderInterface` (referred as
- * source reader) with control over when and how much data is buffered. This allows us to support
- * use cases where we want to perform unordered reads from inputs which have expensive random access
- * (e.g. files from object storage like S3).
+ * Class for performing buffered (in memory) reads from another `ReaderInterface` (referred to as
+ * the source reader) with control over when and how much data is buffered. This allows us to
+ * support use cases where we want to perform unordered reads from inputs which have expensive
+ * random access (e.g. files from object storage like S3).
  *
  * To control how much data is buffered, we allow callers to set a checkpoint such that all reads
  * and seeks past the checkpoint will be buffered until the checkpoint is cleared. This allows
