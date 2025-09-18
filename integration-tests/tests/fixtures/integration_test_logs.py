@@ -91,7 +91,7 @@ def _download_and_extract_dataset(
         raise RuntimeError(err_msg)
     subprocess.run([chmod_bin, "-R", "gu+w", str(integration_test_logs.extraction_dir)], check=True)
 
-    # Create tar of the extracted content for different compression formats
+    # Create base tar stream object to be compressed into different formats
     gzip_bin = shutil.which("gzip")
     if gzip_bin is None:
         err_msg = "gzip executable not found"

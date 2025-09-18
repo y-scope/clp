@@ -26,9 +26,10 @@ vars:
   G_ZSTD_LIB_NAME: "zstd"
 
   # Library install prefixes
+  G_LIBLZMA_SHARED_INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.G_LIBLZMA_LIB_NAME}}-shared-install"
+  G_LIBLZMA_STATIC_INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.G_LIBLZMA_LIB_NAME}}-static-install"
   G_LZ4_INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.G_LZ4_LIB_NAME}}-install"
   G_ZSTD_INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.G_ZSTD_LIB_NAME}}-install"
-  G_LIBLZMA_STATIC_INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.G_LIBLZMA_LIB_NAME}}-static-install"
 
   # Antlr
   G_ANTLR_VERSION: "4.13.2"
@@ -262,7 +263,6 @@ tasks:
           TARBALL_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.tar.gz"
 
   liblzma:
-    internal: true
     vars:
       COMMON_CMAKE_GEN_ARGS:
         - "-DBUILD_TESTING=OFF"
@@ -304,6 +304,12 @@ tasks:
             - "-DBUILD_SHARED_LIBS={{ if .BUILD_SHARED_LIBS }}ON{{ else }}OFF{{ end }}"
             - >-
               {{ join " " .COMMON_CMAKE_GEN_ARGS }}
+          INSTALL_PREFIX: >-
+            {{- if .BUILD_SHARED_LIBS -}}
+            {{ .G_LIBLZMA_SHARED_INSTALL_PREFIX }}
+            {{- else -}}
+            {{ .G_LIBLZMA_STATIC_INSTALL_PREFIX }}
+            {{- end -}}
           LIB_NAME: >-
             {{.G_LIBLZMA_LIB_NAME}}-{{ if .BUILD_SHARED_LIBS }}shared{{ else }}static{{ end }}
           TARBALL_SHA256: "{{.TARBALL_SHA256}}"

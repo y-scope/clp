@@ -44,7 +44,7 @@ def test_clp_identity_transform(
 ) -> None:
     """
     Validate that compression and decompression by the core binary `clp` run successfully and are
-    lossless.
+    lossless across various input archive formats.
 
     :param request:
     :param integration_test_config:
@@ -61,14 +61,24 @@ def test_clp_identity_transform(
         integration_test_logs.tar_zstd_path,
     ]
     for archive_path in archives_to_test:
-        _run_clp_identity_transform(archive_path, integration_test_config, logs_source_dir)
+        _test_clp_identity_transform_single_archive(
+            archive_path, integration_test_config, logs_source_dir
+        )
 
 
-def _run_clp_identity_transform(
+def _test_clp_identity_transform_single_archive(
     compression_input: Path,
     integration_test_config: IntegrationTestConfig,
     logs_source_dir: Path,
 ) -> None:
+    """
+    Validate that compression and decompression by the core binary `clp` run successfully and are
+    lossless for a single archive input format.
+
+    :param compression_input: Path to the archive for compression.
+    :param integration_test_config: General config for the integration tests.
+    :param logs_source_dir: Path to the uncompressed logs for comparison.
+    """
     test_paths = CompressionTestConfig(
         test_name=f"clp-{compression_input.name}",
         compression_input=compression_input,
