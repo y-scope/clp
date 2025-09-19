@@ -233,7 +233,7 @@ auto could_be_kvir(char const* peek_buf, size_t peek_size) -> bool {
 
 auto could_be_json(char const* peek_buf, size_t peek_size) -> bool {
     for (size_t i{0ULL}; i < peek_size; ++i) {
-        if (std::isspace(static_cast<int>(peek_buf[i]))) {
+        if (std::isspace(static_cast<unsigned char>(peek_buf[i]))) {
             continue;
         }
 
