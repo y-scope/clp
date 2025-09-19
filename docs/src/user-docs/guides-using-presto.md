@@ -33,27 +33,55 @@ Using Presto with CLP requires:
 
 1. Follow the [quick-start](quick-start/index.md) guide to download and extract the CLP package,
    but don't start the package just yet.
-2. Before starting the package, update the package's config as follows:
+2. Before starting the package, update the package's config file (`etc/clp-config.yml`) as follows:
 
-    * Open `etc/clp-config.yml` located within the package.
-    * Uncomment the `database` section.
-    * Change `database.host` value to a non-localhost hostname/IP.
-    * After the change, the `database` section should look something like this:
+    * Set the `package.query_engine` key to `"presto"`.
 
       ```yaml
-      database:
-        type: "mariadb"  # "mariadb" or "mysql"
-        host: "<new-IP-address>"
-        port: 3306
-        name: "clp-db"
+      package:
+        storage_engine: "clp-s"
+        query_engine: "presto"
       ```
 
-    :::{note}
-    This change is necessary since the Presto containers run on a Docker network, whereas CLP's
-    database runs on the host network. So `localhost` refers to two different entities in those
-    networks. This limitation will be addressed in the future when we unify Presto and CLP's
-    deployment infrastructure.
-    :::
+    * Set the `database.host` key to a non-localhost hostname/IP.
+
+      ```yaml
+        database:
+        #  type: "mariadb"
+          host: <IP-address>
+        #  port: 3306
+        #  name: "clp-db"
+      ```
+
+      :::{note}
+      This change is necessary because the Presto containers run on a Docker network, and CLP's
+      database runs on the host network. `localhost` will refer to a different entity in each of
+      those contexts.
+      :::
+
+    * Set the `results_cache.retention_period` key to `null`. The CLP + Presto integration does not
+      yet provide support for garbage collection.
+
+      ```yaml
+      results_cache:
+        #  host: "localhost"
+        #  port: 27017
+        #  db_name: "clp-query-results"
+        #  stream_collection_name: "stream-files"
+        #
+        #  # Retention for search results, in minutes. Set to null to disable automatic deletion.
+          retention_period: null
+      ```
+
+    * Update the `presto` key with the host and port of the Presto cluster. If you follow the
+      [Setting up Presto](#setting-up-presto) guide, the host is `localhost` and the port is `8889`.
+      The Presto cluster does not need to be running to start the package.
+
+      ```yaml
+      presto:
+        host: <IP-address>
+        port: <port>
+      ```
 
 3. If you'd like to store your compressed logs on S3, follow the
    [using object storage](guides-using-object-storage/index.md) guide.
@@ -138,14 +166,7 @@ docker compose rm
 
 ## Querying your logs through Presto
 
-To query your logs through Presto, you can use the Presto CLI:
-
-```bash
-docker compose exec presto-coordinator \
-  presto-cli \
-    --catalog clp \
-    --schema default
-```
+You can query your compressed logs from CLP’s [UI](#querying-from-the-ui) or the [Presto CLI](#querying-from-the-presto-cli).
 
 Each dataset in CLP shows up as a table in Presto. To show all available datasets:
 
@@ -177,6 +198,23 @@ contain the field `foo.bar`, you can query it using:
 
 ```sql
 SELECT foo.bar FROM default LIMIT 1;
+```
+
+### Querying from the UI
+
+The CLP UI is available at [http://localhost:4000](http://localhost:4000) (if you changed
+`webui.host` or `webui.port` in `etc/clp-config.yml`, use the new values).
+
+### Querying from the Presto CLI
+
+To access the Presto CLI, navigate to the `tools/deployment/presto-clp` directory and enter the
+following command to start the CLI:
+
+```bash
+docker compose exec presto-coordinator \
+  presto-cli \
+    --catalog clp \
+    --schema default
 ```
 
 ## Limitations
