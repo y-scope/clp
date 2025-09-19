@@ -1,3 +1,9 @@
+.prestoProgressContainer {
+    /* A `position: relative` container is needed for the `prestoProgress` element to have the correct
+    width when using `position: absolute`. */
+    position: relative;
+}
+
 .prestoProgress {
     position: absolute;
     line-height: 0;
