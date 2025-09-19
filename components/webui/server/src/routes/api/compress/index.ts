@@ -8,13 +8,9 @@ import {ErrorSchema} from "@webui/common/schemas/error";
 import {StatusCodes} from "http-status-codes";
 
 import settings from "../../../../settings.json" with {type: "json"};
-import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager/index.js";
+import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
+import {CONTAINER_INPUT_LOGS_ROOT_DIR} from "./typings.js";
 
-
-/**
- * Matching the `CONTAINER_INPUT_LOGS_ROOT_DIR` in `clp_package_utils.general`.
- */
-const CONTAINER_INPUT_LOGS_ROOT_DIR = "/mnt/logs";
 
 /**
  * Matching the `CLP_DEFAULT_DATASET_NAME` in `clp_py_utils.clp_config`.
