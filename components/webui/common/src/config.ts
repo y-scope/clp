@@ -15,8 +15,14 @@ enum CLP_STORAGE_ENGINES {
     CLP_S = "clp-s",
 }
 
+/**
+ * Matching the `CLP_DEFAULT_DATASET_NAME` in `clp_py_utils.clp_config`.
+ */
+const CLP_DEFAULT_DATASET_NAME = "default";
+
 
 export {
+    CLP_DEFAULT_DATASET_NAME,
     CLP_QUERY_ENGINES,
     CLP_STORAGE_ENGINES,
 };

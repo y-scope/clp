@@ -1,3 +1,4 @@
+import {CLP_DEFAULT_DATASET_NAME} from "@webui/common/config";
 import {
     Form,
     Input,
@@ -16,6 +17,7 @@ const ClpSFormItems = () => (
             name={"dataset"}
         >
             <Input
+                defaultValue={CLP_DEFAULT_DATASET_NAME}
                 placeholder={"The dataset that the archives belong to (optional)"}/>
         </Form.Item>
         <Form.Item

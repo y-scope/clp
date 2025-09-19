@@ -1,5 +1,8 @@
 import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
-import {CLP_STORAGE_ENGINES} from "@webui/common/config";
+import {
+    CLP_DEFAULT_DATASET_NAME,
+    CLP_STORAGE_ENGINES,
+} from "@webui/common/config";
 import {
     CompressionJobCreationSchema,
     CompressionJobSchema,
@@ -11,11 +14,6 @@ import settings from "../../../../settings.json" with {type: "json"};
 import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
 import {CONTAINER_INPUT_LOGS_ROOT_DIR} from "./typings.js";
 
-
-/**
- * Matching the `CLP_DEFAULT_DATASET_NAME` in `clp_py_utils.clp_config`.
- */
-const CLP_DEFAULT_DATASET_NAME = "default";
 
 /**
  * Default compression job configuration.
