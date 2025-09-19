@@ -451,32 +451,26 @@ void Archive::write_msg_using_schema(log_surgeon::LogEventView const& log_view) 
                 auto const [start_reg_id, end_reg_id]{register_ids.value()};
                 auto const capture_start{token.get_reversed_reg_positions(start_reg_id).back()};
                 auto const capture_end{token.get_reversed_reg_positions(end_reg_id).front()};
+                auto token_view{token};
+                auto const token_end_pos{token_view.m_end_pos};
 
-                auto const get_wrapped_size = [&](size_t start, size_t end) -> size_t {
-                    if (start <= end) {
-                        return end - start;
-                    }
-                    return token.m_buffer_size - start + end;
-                };
+                token_view.m_end_pos = capture_start;
+                auto const text_before_capture{token_view.to_string_view()};
+                m_logtype_dict_entry
+                        .add_constant(text_before_capture, 0, text_before_capture.size());
 
-                auto const token_view{token.to_string_view()};
-                auto const before_capture_size{get_wrapped_size(token.m_start_pos, capture_start)};
-                m_logtype_dict_entry.add_constant(token_view, 0, before_capture_size);
-
-                auto const capture_size{get_wrapped_size(capture_start, capture_end)};
-                auto const capture{token_view.substr(before_capture_size, capture_size)};
+                token_view.m_start_pos = capture_start;
+                token_view.m_end_pos = capture_end;
                 variable_dictionary_id_t id{};
-                m_var_dict.add_entry(capture, id);
+                m_var_dict.add_entry(token_view.to_string_view(), id);
                 m_var_ids.push_back(id);
                 m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
                 m_logtype_dict_entry.add_dictionary_var();
 
-                auto const capture_end_pos{before_capture_size + capture_size};
-                m_logtype_dict_entry.add_constant(
-                        token_view,
-                        capture_end_pos,
-                        token_view.length() - capture_end_pos
-                );
+                token_view.m_start_pos = capture_end;
+                token_view.m_end_pos = token_end_pos;
+                auto const text_after_capture{token_view.to_string_view()};
+                m_logtype_dict_entry.add_constant(text_after_capture, 0, text_after_capture.size());
 
                 break;
             }
