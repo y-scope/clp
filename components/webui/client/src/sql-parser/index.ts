@@ -143,8 +143,7 @@ const buildSearchQuery = ({
     timestampKey,
 }: BuildSearchQueryProps): string => {
     let queryString = `SELECT ${selectItemList} FROM ${relationList}
-WHERE to_unixtime(${timestampKey}) >= ${startTimestamp}
-AND to_unixtime(${timestampKey}) <= ${endTimestamp}`;
+WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp} AND ${endTimestamp}`;
 
     if ("undefined" !== typeof booleanExpression) {
         const booleanExpressionTree = buildParser(booleanExpression).standaloneBooleanExpression()
@@ -201,44 +200,43 @@ const buildTimelineQuery = ({
     bucketCount,
     timestampKey,
 }: BuildTimelineQueryProps) => {
-    const queryString = `WITH buckets AS (
-  SELECT
-    width_bucket(
-      to_unixtime(${timestampKey}),
-      ${startTimestamp},
-      ${endTimestamp},
-      ${bucketCount}
-    ) AS index
-  FROM
-    ${databaseName}
+    // Converting float to decimal can have precision errors.
+    const startTimestampFixed = startTimestamp.toFixed(8);
+    const endTimestampFixed = endTimestamp.toFixed(8);
+    const queryString = `WITH filtered AS (
+    SELECT to_unixtime(${timestampKey}) AS timestamp
+    FROM ${databaseName}
+    WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestampFixed} AND ${endTimestampFixed}
+),
+buckets AS (
+    SELECT width_bucket(
+        timestamp,
+        ${startTimestampFixed},
+        ${endTimestampFixed},
+        ${bucketCount}
+        ) AS index
+    FROM filtered
 ),
 bucket_count AS (
-  SELECT
-    index,
-    COUNT(index) AS count
-  FROM
-    buckets
-  GROUP BY
-    index
-  ORDER BY
-    index
-  LIMIT ${bucketCount}
+    SELECT index, COUNT(index) AS count
+    FROM buckets
+    WHERE index BETWEEN 1 AND ${bucketCount}
+    GROUP BY index
 ),
 bucket_timestamp AS (
-  SELECT
-    index + 1 AS index,
-    ${startTimestamp} + (index*(${endTimestamp}-${startTimestamp})/${bucketCount}) AS timestamp
-  FROM
-    UNNEST(sequence(0, ${bucketCount}, 1)) AS t(index)
+    SELECT
+        index + 1 AS index,
+        ${startTimestampFixed}
+        + (index*(${endTimestampFixed}-${startTimestampFixed})/${bucketCount}) AS timestamp
+    FROM
+        UNNEST(sequence(0, ${bucketCount - 1}, 1)) AS t(index)
 )
 SELECT
-  bucket_count.count, timestamp
-FROM
-  bucket_count, bucket_timestamp
-WHERE
-  bucket_count.index = bucket_timestamp.index
-ORDER BY
-  bucket_count.index
+    COALESCE(bucket_count.count, 0) AS count,
+    CAST(timestamp AS double) AS timestamp
+FROM bucket_timestamp
+LEFT JOIN bucket_count ON bucket_count.index = bucket_timestamp.index
+ORDER BY bucket_count.index
 `;
 
     try {
