@@ -26,6 +26,9 @@ Usage:
     where `size` is the total size of the dictionaries and encoded messages in an archive.
     * This option acts as a soft limit on memory usage for compression, decompression, and search.
     * This option significantly affects compression ratio.
+  * `--retain-float-format` specifies that floating-point numbers should be stored with extra
+    metadata to preserve their textual representation after decompression. This feature is currently
+    not supported when ingesting KV-IR.
   * `--structurize-arrays` specifies that arrays should be fully parsed and array entries should be
     encoded into dedicated columns.
   * `--auth <s3|none>` specifies the authentication method that should be used for network requests
@@ -72,6 +75,21 @@ AWS_ACCESS_KEY_ID='...' AWS_SECRET_ACCESS_KEY='...' \
 ./clp-s c \
     --target-encoded-size 1073741824 \
     --compression-level 6 \
+    /mnt/data/archives1 \
+    /mnt/logs/log1.json
+```
+
+:::{tip}
+Use the `--retain-float-format` flag during compression. Internally, switch to using a different
+encoding approach for floating point numbers that always retains their original formats. For
+example, values like `1.000e+00` or `0.000000012300` will be decompressed unchanged.
+:::
+
+**Enable retaining float numbers' formats:**
+
+```shell
+./clp-s c \
+    --retain-float-format \
     /mnt/data/archives1 \
     /mnt/logs/log1.json
 ```
@@ -154,6 +172,10 @@ compressed data:**
 * The order of log events is not preserved.
 * The input directory structure is not preserved and during decompression all files are written to
   the same file.
+* When using the `--retain-float-format` flag:
+  * KV-IR inputs currently don't support preserving the original printed float formats.
+  * Comparisons against floating point numbers at query time treat each stored number as if it were
+    the nearest representable double-precision value, which can potentially lose precision.
 * In addition, there are a few limitations, related to querying arrays, described in the search
   syntax [reference](reference-json-search-syntax).
 
