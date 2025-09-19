@@ -4,6 +4,10 @@ set(
         ../../clp/aws/AwsAuthenticationSigner.hpp
         ../../clp/BoundedReader.cpp
         ../../clp/BoundedReader.hpp
+        ../../clp/BufferedReader.cpp
+        ../../clp/BufferedReader.hpp
+        ../../clp/BufferReader.cpp
+        ../../clp/BufferReader.hpp
         ../../clp/CurlDownloadHandler.cpp
         ../../clp/CurlDownloadHandler.hpp
         ../../clp/CurlEasyHandle.hpp
@@ -56,6 +60,10 @@ set(
         ../../clp/Query.hpp
         ../../clp/ReaderInterface.cpp
         ../../clp/ReaderInterface.hpp
+        ../../clp/streaming_compression/Constants.hpp
+        ../../clp/streaming_compression/Decompressor.hpp
+        ../../clp/streaming_compression/zstd/Decompressor.cpp
+        ../../clp/streaming_compression/zstd/Decompressor.hpp
         ../../clp/Thread.cpp
         ../../clp/Thread.hpp
         ../../clp/time_types.hpp

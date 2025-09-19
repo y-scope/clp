@@ -116,8 +116,6 @@ public:
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
 
-    [[nodiscard]] auto get_file_type() const -> FileType { return m_file_type; }
-
 private:
     // Methods
     /**
@@ -188,7 +186,6 @@ private:
     bool m_print_ordered_chunk_stats{false};
     size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MB
     bool m_disable_log_order{false};
-    FileType m_file_type{FileType::Json};
 
     // MongoDB configuration variables
     std::string m_mongodb_uri;
