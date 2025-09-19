@@ -201,10 +201,12 @@ SELECT foo.bar FROM default LIMIT 1;
 ```
 
 ### Querying from the UI
+
 The CLP UI is available at [http://localhost:4000](http://localhost:4000) (if you changed
 `webui.host` or `webui.port` in `etc/clp-config.yml`, use the new values).
 
 ### Querying from the Presto CLI
+
 To access the Presto CLI, navigate to the `tools/deployment/presto-clp` directory and enter the
 following command to start the CLI:
 
