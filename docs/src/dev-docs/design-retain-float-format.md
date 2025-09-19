@@ -30,12 +30,12 @@ Each `FormattedFloat` node contains:
 Note that the unused lowest 5 bits of the 2‑byte field are currently reserved, encoders must write
 them as 0, and decoders must ignore them (treat as “don’t care”) for forward compatibility.
 
-```text
-+-------------------------------------+------------------------+--------------------------+------------------------------------------------------+-------------------+
-| Scientific Notation Marker (2 bits) | Exponent Sign (2 bits) | Exponent Digits (2 bits) | Digits from First Non-Zero to End of Number (5 bits) | Reserved (5 bits) |
-+-------------------------------------+------------------------+--------------------------+------------------------------------------------------+-------------------+
-MSB                                                                                                                                                                LSB
-```
+From MSB to LSB, the 2-byte format field contains the following sections:
+- [Scientific Notation Marker](#scientific-notation-marker) (2 bits)
+- [Exponent Sign](#exponent-sign) (2 bits)
+- [Exponent Digits](#exponent-digits) (2 bits)
+- [Digits from First Non-Zero to End of Number](#digits-from-first-non-zero-to-end-of-number) (5 bits)
+- Reserved for future use (5 bits)
 
 To clarify the floating point formats that `FormattedFloat` can represent, we describe them in text
 here:
