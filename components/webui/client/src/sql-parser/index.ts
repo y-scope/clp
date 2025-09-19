@@ -20,7 +20,7 @@ class SyntaxErrorListener<TSymbol> extends ErrorListener<TSymbol> {
         _offendingSymbol: TSymbol,
         line: number,
         column: number,
-        msg: string
+        msg: string,
     ) {
         throw new SyntaxError(`line ${line}:${column}: ${msg}`);
     }
@@ -46,6 +46,23 @@ class UpperCaseCharStream extends CharStream {
     }
 }
 
+/**
+ * Creates a SQL parser for a given input string.
+ *
+ * @param input The SQL query string to be parsed.
+ * @return The configured SQL parser instance ready to parse the input.
+ */
+const buildParser = (input: string): SqlBaseParser => {
+    const syntaxErrorListener = new SyntaxErrorListener();
+    const lexer = new SqlBaseLexer(new UpperCaseCharStream(input));
+    lexer.removeErrorListeners();
+    lexer.addErrorListener(syntaxErrorListener);
+    const parser = new SqlBaseParser(new CommonTokenStream(lexer));
+    parser.removeErrorListeners();
+    parser.addErrorListener(syntaxErrorListener);
+
+    return parser;
+};
 
 /**
  * Validate a SQL string for syntax errors.
@@ -54,16 +71,60 @@ class UpperCaseCharStream extends CharStream {
  * @throws {SyntaxError} with line, column, and message details if a syntax error is found.
  */
 const validate = (sqlString: string) => {
-    const syntaxErrorListener = new SyntaxErrorListener();
-    const lexer = new SqlBaseLexer(new UpperCaseCharStream(sqlString));
-    lexer.removeErrorListeners();
-    lexer.addErrorListener(syntaxErrorListener);
-    const parser = new SqlBaseParser(new CommonTokenStream(lexer));
-    parser.removeErrorListeners();
-    parser.addErrorListener(syntaxErrorListener);
-    parser.singleStatement();
+    buildParser(sqlString).singleStatement();
+};
+
+interface BuildSearchQueryProps {
+    selectItemList: string;
+    relationList: string;
+    booleanExpression?: string | undefined;
+    sortItemList?: string | undefined;
+    limitValue?: string | undefined;
+}
+
+/**
+ * Constructs a SQL search query string from a set of structured components.
+ *
+ * @param props
+ * @param props.selectItemList
+ * @param props.relationList
+ * @param props.booleanExpression
+ * @param props.sortItemList
+ * @param props.limitValue
+ * @return
+ * @throws {Error} if the constructed SQL string is not valid.
+ */
+const buildSearchQuery = ({
+    selectItemList,
+    relationList,
+    booleanExpression,
+    sortItemList,
+    limitValue,
+}: BuildSearchQueryProps): string => {
+    let sqlString = `SELECT ${selectItemList} FROM ${relationList}`;
+    if ("undefined" !== typeof booleanExpression) {
+        sqlString += ` WHERE ${booleanExpression}`;
+    }
+    if ("undefined" !== typeof sortItemList) {
+        sqlString += ` ORDER BY ${sortItemList}`;
+    }
+    if ("undefined" !== typeof limitValue) {
+        sqlString += ` LIMIT ${limitValue}`;
+    }
+
+    try {
+        validate(sqlString);
+    } catch (err: unknown) {
+        throw new Error(`The constructed SQL is not valid: ${sqlString}`, {cause: err});
+    }
+
+    return sqlString;
 };
 
 export {
-    SyntaxError, validate,
+    buildSearchQuery,
+    SyntaxError,
+    validate,
 };
+
+export type {BuildSearchQueryProps};
