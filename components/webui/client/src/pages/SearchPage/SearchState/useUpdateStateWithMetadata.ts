@@ -38,7 +38,7 @@ const useUpdateStateWithMetadata = () => {
 
         switch (resultsMetadata.lastSignal) {
             case SEARCH_SIGNAL.RESP_DONE:
-            case PRESTO_SEARCH_SIGNAL.FINISHED:
+            case PRESTO_SEARCH_SIGNAL.DONE:
                 updateSearchUiState(SEARCH_UI_STATE.DONE);
                 break;
             case PRESTO_SEARCH_SIGNAL.FAILED:
