@@ -30,7 +30,7 @@ zero = '0'
 For our purposes, floating-point numbers are numbers which match this grammar and have either a
 fraction, an exponent, or both.
 
-Note that this restricts what kinds of floating-point numbers are allowed in a few ways:
+Note that this restricts which floating‑point numbers are allowed in a few ways:
 
 - NaN and +/- Infinity are not allowed
 - The exponent must contain at least one digit
