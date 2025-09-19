@@ -230,11 +230,7 @@ auto could_be_json(char const* peek_buf, size_t peek_size) -> bool {
             continue;
         }
 
-        if ('{' == peek_buf[i]) {
-            return true;
-        } else {
-            return false;
-        }
+        return '{' == peek_buf[i];
     }
     return false;
 }

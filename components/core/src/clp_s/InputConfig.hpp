@@ -126,7 +126,7 @@ get_input_archives_for_raw_path(std::string_view const path, std::vector<Path>& 
         -> std::shared_ptr<clp::ReaderInterface>;
 
 /**
- * Tries to deduce the underlying file-type of the file opened by `reader`, and return a
+ * Tries to deduce the underlying file-type of the file opened by `reader`, and returns a
  * (potentially new) reader for underlying JSON or KV-IR content by unwrapping layers of
  * compression.
  * @param reader
