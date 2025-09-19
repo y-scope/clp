@@ -405,7 +405,7 @@ def poll_running_jobs(db_conn, db_cursor):
         del scheduled_jobs[job_id]
 
     if received_sigterm and 0 == len(scheduled_jobs):
-        logger.info("Recieved sigterm, No more running jobs. Exiting.")
+        logger.info("Received sigterm, no more running jobs. Exiting.")
         sys.exit(0)
 
 
