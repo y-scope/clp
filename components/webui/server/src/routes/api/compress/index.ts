@@ -53,9 +53,9 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
         "/",
         {
             schema: {
-                body: CompressionJobSchema,
+                body: CompressionJobCreationSchema,
                 response: {
-                    [StatusCodes.CREATED]: CompressionJobCreationSchema,
+                    [StatusCodes.CREATED]: CompressionJobSchema,
                     [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Compression"],

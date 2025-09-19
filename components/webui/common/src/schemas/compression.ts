@@ -7,22 +7,22 @@ import {
 /**
  * Schema for request to create a new compression job.
  */
-const CompressionJobSchema = Type.Object({
+const CompressionJobCreationSchema = Type.Object({
     paths: Type.Array(Type.String()),
     dataset: Type.Optional(Type.String()),
     timestampKey: Type.Optional(Type.String()),
 });
 
-type CompressionJob = Static<typeof CompressionJobSchema>;
+type CompressionJobCreation = Static<typeof CompressionJobCreationSchema>;
 
 /**
  * Schema for compression job response.
  */
-const CompressionJobCreationSchema = Type.Object({
+const CompressionJobSchema = Type.Object({
     jobId: Type.Number(),
 });
 
-type CompressionJobCreation = Static<typeof CompressionJobCreationSchema>;
+type CompressionJob = Static<typeof CompressionJobSchema>;
 
 export {
     CompressionJobCreationSchema,
