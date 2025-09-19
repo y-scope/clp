@@ -30,7 +30,7 @@ zero = '0'
 For our purposes, floating-point numbers are numbers which match this grammar and have either a
 fraction, an exponent, or both.
 
-Note that this restricts what kinds of floating-point numbers that are allowed in a few ways:
+Note that this restricts what kinds of floating-point numbers are allowed in a few ways:
 
 - NaN and +/- Infinity are not allowed
 - The exponent must contain at least one digit
@@ -40,18 +40,17 @@ Note that this restricts what kinds of floating-point numbers that are allowed i
 - Positive numbers cannot begin with an explicit '+'
 
 What it doesn't do is place any restrictions on how a given floating-point number should be written,
-or whether the floating-point numbers have to correspond to values from a standard such as IEEE-754
+or whether floating-point numbers have to correspond to values from a standard such as IEEE-754
 binary64.
 
-Since the first point is less abstract, we'll explain it first, with an example. Say we're trying to
-represent the number `16` as a floating-point number using **3** digits of precision. We might write
-it as:
+Since the first point is less abstract, we'll explain it first. Say we're trying to represent the
+number `16` as a floating-point number using **3** digits of precision. We might write it as:
 
 - `16.0`; or
 - `16.0e0`; or
 - `1.60e1`
 
-Note that for scientific-notation representations of a number we can shift the decimal and change
+Note that for scientific-notation representations of a number, we can shift the decimal and change
 the exponent arbitrarily to represent the same number in infinite possible ways. For example:
 
 - `0.160e2`; and
@@ -63,7 +62,7 @@ Likewise, we can come up with infinite representations of `16` by choosing to re
 many significant digits.
 
 The point about whether the original values correspond to IEEE-754 is a bit abstract, but is
-important for understanding our approach for losslessly storing floating-point numbers.
+important for understanding our approach to losslessly storing floating-point numbers.
 
 It is probably easiest to show an example. Of the numbers:
 
