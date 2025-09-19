@@ -1,12 +1,8 @@
 import {
-    useMutation,
-    useQueryClient,
-} from "@tanstack/react-query";
-import {
     CompressionJob,
     CompressionJobCreation,
 } from "@webui/common/schemas/compression";
-import axios, {AxiosResponse} from "axios";
+import axios from "axios";
 
 
 /**
@@ -15,32 +11,13 @@ import axios, {AxiosResponse} from "axios";
  * @param payload
  * @return
  */
-const submitCompressionJob = async (payload: CompressionJob)
-: Promise<AxiosResponse<CompressionJobCreation>> => {
+const submitCompressionJob = async (payload: CompressionJobCreation)
+: Promise<CompressionJob> => {
     console.log("Submitting compression job:", JSON.stringify(payload));
+    const {data} = await axios.post<CompressionJob>("/api/compress", payload);
 
-    return await axios.post("/api/compress", payload);
-};
-
-/**
- * Submits compression jobs with react-query mutation.
- *
- * @return a react-query mutation hook.
- */
-const useSubmitCompressionJob = () => {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: submitCompressionJob,
-        onSettled: async () => {
-            // Invalidate queries that are affected by a new compression job.
-            await queryClient.invalidateQueries({queryKey: ["jobs"]});
-        },
-    });
+    return data;
 };
 
 
-export {
-    submitCompressionJob,
-    useSubmitCompressionJob,
-};
+export {submitCompressionJob};

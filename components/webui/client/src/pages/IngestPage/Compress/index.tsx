@@ -1,7 +1,9 @@
-import {useState} from "react";
-
+import {
+    useMutation,
+    useQueryClient,
+} from "@tanstack/react-query";
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
-import {CompressionJob} from "@webui/common/schemas/compression";
+import {CompressionJobCreation} from "@webui/common/schemas/compression";
 import {
     Button,
     Form,
@@ -10,7 +12,7 @@ import {
     Typography,
 } from "antd";
 
-import {useSubmitCompressionJob} from "../../../api/compress";
+import {submitCompressionJob} from "../../../api/compress";
 import {DashboardCard} from "../../../components/DashboardCard";
 import {SETTINGS_STORAGE_ENGINE} from "../../../config";
 
@@ -28,20 +30,35 @@ type FormValues = {
  */
 const Compress = () => {
     const [form] = Form.useForm<FormValues>();
-    const [submitResult, setSubmitResult] = useState<{
-        success: boolean;
-        message: string;
-    } | null>(null);
-
     const [messageApi, contextHolder] = message.useMessage();
+
+    const queryClient = useQueryClient();
     const {
-        mutate: submitCompressionJob,
+        mutate,
         isPending: isSubmitting,
-    } = useSubmitCompressionJob();
+        isSuccess,
+        isError,
+        data,
+        error,
+    } = useMutation({
+        mutationFn: submitCompressionJob,
+        onSettled: async () => {
+            // Invalidate queries that are affected by a new compression job.
+            await queryClient.invalidateQueries({queryKey: ["jobs"]});
+        },
+        onSuccess: () => {
+            form.resetFields();
+        },
+        onError: (err: unknown) => {
+            const errorMessage = err instanceof Error ?
+                err.message :
+                "Unknown error";
+
+            messageApi.error(`Failed to submit compression job: ${errorMessage}`);
+        },
+    });
 
     const handleSubmit = (values: FormValues) => {
-        setSubmitResult(null);
-
         // eslint-disable-next-line no-warning-comments
         // TODO: replace the UI with a file selector and remove below string manipulation.
         // Convert multiline input to array of paths.
@@ -50,38 +67,16 @@ const Compress = () => {
             .map((path) => path.trim())
             .filter((path) => 0 < path.length);
 
-        const payload: CompressionJob = {
-            paths: paths,
-        };
+        const payload: CompressionJobCreation = {paths};
 
         if ("undefined" !== typeof values.dataset) {
             payload.dataset = values.dataset;
         }
-
         if ("undefined" !== typeof values.timestampKey) {
             payload.timestampKey = values.timestampKey;
         }
 
-        submitCompressionJob(payload, {
-            onSuccess: ({data}) => {
-                setSubmitResult({
-                    success: true,
-                    message: `Compression job submitted successfully with ID: ${data.jobId}`,
-                });
-                form.resetFields();
-            },
-            onError: (error: unknown) => {
-                const errorMessage = error instanceof Error ?
-                    error.message :
-                    "Unknown error";
-
-                setSubmitResult({
-                    success: false,
-                    message: `Failed to submit compression job: ${errorMessage}`,
-                });
-                messageApi.error(`Failed to submit compression job: ${errorMessage}`);
-            },
-        });
+        mutate(payload);
     };
 
     return (
@@ -90,9 +85,7 @@ const Compress = () => {
             <Form
                 form={form}
                 layout={"vertical"}
-                onFinish={(values) => {
-                    handleSubmit(values);
-                }}
+                onFinish={handleSubmit}
             >
                 <Form.Item
                     label={"Paths"}
@@ -137,13 +130,20 @@ const Compress = () => {
                     </Button>
                 </Form.Item>
 
-                {submitResult && (
-                    <Typography.Text
-                        type={submitResult.success ?
-                            "success" :
-                            "danger"}
-                    >
-                        {submitResult.message}
+                {isSuccess && (
+                    <Typography.Text type={"success"}>
+                        Compression job submitted successfully with ID:
+                        {" "}
+                        {data.jobId}
+                    </Typography.Text>
+                )}
+                {isError && (
+                    <Typography.Text type={"danger"}>
+                        Failed to submit compression job:
+                        {" "}
+                        {error instanceof Error ?
+                            error.message :
+                            "Unknown error"}
                     </Typography.Text>
                 )}
             </Form>
