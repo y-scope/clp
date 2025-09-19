@@ -198,8 +198,8 @@ load_lexer_from_file(std::string const& schema_file_path, log_surgeon::lexers::B
                     + ": error: the schema rule '" + rule->m_name
                     + "' has a regex pattern containing > 1 capture groups (found "
                     + std::to_string(num_captures) + ").\n"
-             );
-         }
+            );
+        }
 
         if ("timestamp" == rule->m_name) {
             continue;
