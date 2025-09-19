@@ -33,7 +33,7 @@ Using Presto with CLP requires:
 
 1. Follow the [quick-start](quick-start/index.md) guide to download and extract the CLP package,
    but don't start the package just yet.
-2. Before starting the package, update the config (`etc/clp-config.yml`) as follows:
+2. Before starting the package, update the package's config file (`etc/clp-config.yml`) as follows:
 
     * Set the `package.query_engine` key to `"presto"`.
 
@@ -54,11 +54,13 @@ Using Presto with CLP requires:
       ```
 
       :::{note}
-      This change is necessary since the Presto containers run on a Docker network, whereas CLP's database runs on the host network. So localhost refers to two different entities.
+      This change is necessary because the Presto containers run on a Docker network, and CLP's
+      database runs on the host network. `localhost` will refer to a different entity in each of
+      those contexts.
       :::
 
-    * Set the `results_cache.retention_period` key to `null`. The CLP presto integration does not
-    yet provide support for garbage collection.
+    * Set the `results_cache.retention_period` key to `null`. The CLP + Presto integration does not
+      yet provide support for garbage collection.
 
       ```yaml
       results_cache:
@@ -71,8 +73,9 @@ Using Presto with CLP requires:
           retention_period: null
       ```
 
-    * Update `presto` key with host and port of the Presto cluster. If you follow the
-    [Setting up Presto](#setting-up-presto) guide, the host is `localhost` and the port is `8889`. The Presto cluster does not need to be running to start the package.
+    * Update the `presto` key with the host and port of the Presto cluster. If you follow the
+      [Setting up Presto](#setting-up-presto) guide, the host is `localhost` and the port is `8889`.
+      The Presto cluster does not need to be running to start the package.
 
       ```yaml
       presto:
