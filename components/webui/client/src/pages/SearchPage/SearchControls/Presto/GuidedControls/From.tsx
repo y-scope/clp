@@ -1,5 +1,5 @@
 import InputLabel from "../../../../../components/InputLabel";
-import SqlInput from "../../../../../components/SqlInput";
+import DatasetSelect from "../../Dataset/DatasetSelect";
 import guidedGrid from "./index.module.css";
 
 
@@ -11,9 +11,11 @@ import guidedGrid from "./index.module.css";
 const From = () => (
     <div className={guidedGrid["from"]}>
         <InputLabel>FROM</InputLabel>
-        <SqlInput
-            className={guidedGrid["noLeftBorderRadius"] || ""}
-            disabled={false}/>
+        <DatasetSelect
+            className={
+                `${guidedGrid["noLeftBorderRadiusSelect"]} ${
+                    guidedGrid["widthSelect"]}`
+            }/>
     </div>
 );
 
