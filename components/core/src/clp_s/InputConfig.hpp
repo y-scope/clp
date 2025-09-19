@@ -136,6 +136,12 @@ get_input_archives_for_raw_path(std::string_view const path, std::vector<Path>& 
  */
 [[nodiscard]] auto try_deduce_reader_type(std::shared_ptr<clp::ReaderInterface> reader)
         -> std::pair<std::vector<std::shared_ptr<clp::ReaderInterface>>, FileType>;
+
+/**
+ * Closes all readers in a vector of nested readers, starting from the last reader.
+ * @param readers
+ */
+void close_nested_readers(std::vector<std::shared_ptr<clp::ReaderInterface>> const& readers);
 }  // namespace clp_s
 
 #endif  // CLP_S_INPUTCONFIG_HPP

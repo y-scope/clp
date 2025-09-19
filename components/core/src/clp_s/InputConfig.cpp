@@ -19,6 +19,7 @@
 #include "../clp/NetworkReader.hpp"
 #include "../clp/ReaderInterface.hpp"
 #include "../clp/spdlog_with_specializations.hpp"
+#include "../clp/streaming_compression/Decompressor.hpp"
 #include "../clp/streaming_compression/zstd/Decompressor.hpp"
 #include "Utils.hpp"
 
@@ -326,5 +327,16 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
         }
     }
     return {{}, FileType::Unknown};
+}
+
+void close_nested_readers(std::vector<std::shared_ptr<clp::ReaderInterface>> const& readers) {
+    for (auto rit = readers.rbegin(); readers.rend() != rit; ++rit) {
+        if (auto decompressor
+            = std::dynamic_pointer_cast<clp::streaming_compression::Decompressor>(*rit);
+            nullptr != decompressor)
+        {
+            decompressor->close();
+        }
+    }
 }
 }  // namespace clp_s

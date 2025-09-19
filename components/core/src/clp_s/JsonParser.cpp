@@ -515,6 +515,7 @@ bool JsonParser::ingest() {
             }
         }
 
+        close_nested_readers(nested_readers);
         if (false == ingestion_successful || check_and_log_curl_error(path, reader)) {
             std::ignore = m_archive_writer->close();
             return false;
