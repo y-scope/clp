@@ -6,7 +6,6 @@ import subprocess
 from contextlib import closing
 from typing import Any, Dict, List, Optional, Tuple
 
-import yaml
 from celery import signals
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
