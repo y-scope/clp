@@ -14,7 +14,8 @@ Usage:
 * `archives-dir` is the directory that archives should be written to.
 * `input-path` is a filesystem path or URL to either:
   * a new-line-delimited JSON (ndjson) log file;
-  * a KV-IR file; or
+  * a KV-IR file;
+  * either of these file-types compressed by Zstd; or
   * a directory containing such files.
 * `options` allow you to specify how data gets compressed into an archive. For example:
   * `--single-file-archive` specifies that single-file archives should be produced (i.e., each
