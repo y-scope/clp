@@ -12,6 +12,8 @@ import {theme} from "antd";
 import color from "color";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 
+import styles from "./index.module.css";
+
 import "./monaco-loader";
 
 
@@ -19,6 +21,7 @@ type SqlEditorType = monaco.editor.IStandaloneCodeEditor;
 
 type SqlEditorProps = Omit<EditorProps, "language"> & {
     disabled: boolean;
+    className?: string;
 
     /** Callback when the editor is mounted and ref is ready to use. */
     onEditorReady?: (editor: SqlEditorType) => void;
@@ -31,7 +34,7 @@ type SqlEditorProps = Omit<EditorProps, "language"> & {
  * @return
  */
 const SqlEditor = (props: SqlEditorProps) => {
-    const {disabled, onEditorReady, ...editorProps} = props;
+    const {disabled, onEditorReady, className, ...editorProps} = props;
     const monacoEditor = useMonaco();
     const {token} = theme.useToken();
 
@@ -75,6 +78,8 @@ const SqlEditor = (props: SqlEditorProps) => {
 
     return (
         <div
+            className={[styles["editor"],
+                className].filter(Boolean).join(" ")}
             style={{
                 border: `1px solid ${token.colorBorder}`,
                 borderRadius: token.borderRadius,
