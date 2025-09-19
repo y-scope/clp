@@ -136,8 +136,8 @@ private:
      *    - 0: treat as a dictionary variable (\d)
      *    - 1: treat as an encoded variable (\i for integers, \f for floats)
      *
-     *    If there are k encodable wildcard variables, then 2^k logtype strings are possible. Each bit
-     *    in the mask corresponds to one variable.
+     *    If there are k encodable wildcard variables, then 2^k logtype strings are possible. Each
+     *    bit in the mask corresponds to one variable.
      *
      *    Example:
      *      Search query: "a *1 *2 b",
@@ -564,7 +564,8 @@ void GrepCore::generate_schema_sub_queries(
             for (size_t i{0}; i < interpretation.get_logtype().size(); ++i) {
                 auto const& token{interpretation.get_logtype()[i]};
                 if (std::holds_alternative<log_surgeon::wildcard_query_parser::VariableQueryToken>(
-                        token))
+                            token
+                    ))
                 {
                     bool is_wildcard_mask_encoded{false};
                     if (wildcard_mask_map.contains(i)) {
@@ -654,7 +655,7 @@ auto GrepCore::process_schema_var_token(
     std::unordered_set<encoded_variable_t> encoded_vars;
     std::unordered_set<variable_dictionary_id_t> var_dict_ids;
     encoded_vars.reserve(entries.size());
-    for (auto const* entry: entries) {
+    for (auto const* entry : entries) {
         encoded_vars.emplace(EncodedVariableInterpreter::encode_var_dict_id(entry->get_id()));
         var_dict_ids.emplace(entry->get_id());
     }

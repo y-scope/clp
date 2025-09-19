@@ -146,7 +146,7 @@ bool GrepCore::get_bounds_of_next_potential_var(
 }
 
 auto GrepCore::get_wildcard_encodable_positions(QueryInterpretation const& interpretation)
--> vector<size_t> {
+        -> vector<size_t> {
     vector<size_t> wildcard_encodable_positions;
     for (size_t i{0}; i < interpretation.get_logtype().size(); ++i) {
         auto const& token{interpretation.get_logtype()[i]};
