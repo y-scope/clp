@@ -61,10 +61,10 @@ public:
     ~JsonParser() = default;
 
     /**
-     * Parses the input and ingests the parsed data into the archive.
-     * @return Whether the input was parsed successfully.
+     * Ingests the input described by `JsonParserOption`.
+     * @return Whether the input was ingested successfully.
      */
-    [[nodiscard]] auto parse() -> bool;
+    [[nodiscard]] auto ingest() -> bool;
 
     /**
      * Writes the metadata and archive data to disk.

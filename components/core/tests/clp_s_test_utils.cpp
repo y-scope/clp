@@ -45,7 +45,7 @@ auto compress_archive(
 
     clp_s::JsonParser parser{parser_option};
     std::vector<clp_s::ArchiveStats> archive_stats;
-    REQUIRE(parser.parse());
+    REQUIRE(parser.ingest());
     REQUIRE_NOTHROW(archive_stats = parser.store());
 
     REQUIRE((false == std::filesystem::is_empty(archive_directory)));

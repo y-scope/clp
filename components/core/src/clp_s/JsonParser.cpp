@@ -487,7 +487,7 @@ void JsonParser::parse_line(
     } while (false == object_stack.empty());
 }
 
-bool JsonParser::parse() {
+bool JsonParser::ingest() {
     auto archive_creator_id = boost::uuids::to_string(m_generator());
     for (auto const& path : m_input_paths) {
         auto reader{try_create_reader(path, m_network_auth)};
