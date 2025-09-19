@@ -1,4 +1,4 @@
-# Retaining Floating-Point Format Information
+# Retaining floating-point format information
 
 To losslessly retain the string representation of floating point numbers we use two encoding
 strategies:
@@ -19,7 +19,7 @@ converted from a binary64 floating point number. As a result, at parsing time, w
 floating point number is representable as a `FormattedFloat`, and if it isn't, we encode it as a
 `DictionaryFloat`.
 
-## High-Level `FormattedFloat` Specification  
+## High-level `FormattedFloat` specification
 
 Each `FormattedFloat` node contains:
 
@@ -31,10 +31,10 @@ Note that the unused lowest 5 bits of the 2‑byte field are currently reserved,
 them as 0, and decoders must ignore them (treat as “don’t care”) for forward compatibility.
 
 From MSB to LSB, the 2-byte format field contains the following sections:
-- [Scientific Notation Marker](#scientific-notation-marker) (2 bits)
-- [Exponent Sign](#exponent-sign) (2 bits)
-- [Exponent Digits](#exponent-digits) (2 bits)
-- [Digits from First Non-Zero to End of Number](#digits-from-first-non-zero-to-end-of-number) (5 bits)
+- [Scientific notation marker](#scientific-notation-marker) (2 bits)
+- [Exponent sign](#exponent-sign) (2 bits)
+- [Exponent digits](#exponent-digits) (2 bits)
+- [Digits from first non-zero to end of number](#digits-from-first-non-zero-to-end-of-number) (5 bits)
 - Reserved for future use (5 bits)
 
 To clarify the floating point formats that `FormattedFloat` can represent, we describe them in text
@@ -55,7 +55,7 @@ With the added restrictions that:
 * There exists an IEEE-754 binary64 number for which the string is the closest decimal
   representation at the given precision.
 
-### Scientific Notation Marker
+### Scientific notation marker
 
 Indicates whether the number is in scientific notation, and if so, whether the exponent is denoted
 by `E` or `e`.
@@ -67,7 +67,7 @@ by `E` or `e`.
 `10` is unused so that the lowest bit can act as a simple “scientific” flag, making condition
 checks cleaner.
 
-### Exponent Sign
+### Exponent sign
 
 Records whether the exponent has a sign:
 
@@ -80,7 +80,7 @@ Records whether the exponent has a sign:
 For example, exponents of `0` may appear as `0`, `+0`, or `-0`, and these two bits can record the
 format correctly.
 
-### Exponent Digits
+### Exponent digits
 
 Since the maximum and minimum decimal exponents for a double, `308` and `-324` respectively, are
 both three digits, two bits are enough to represent the digit count. We allow up to 4 digits to
@@ -94,7 +94,7 @@ The stored value is **actual digits − 1**, since there is always at least one 
 - `10` → 3 digits
 - `11` → 4 digits
 
-### Digits from First Non-Zero to End of Number
+### Digits from first non-zero to end of number
 
 This counts the digits from the first non-zero digit up to the last digit of the integer or
 fractional part (excluding the exponent). Examples:
