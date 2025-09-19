@@ -66,6 +66,7 @@ tasks:
         java -jar {{.G_ANTLR_JAR_FILE}}
         -Dlanguage=TypeScript
         -no-listener
+        -visitor
         -o generated
         -Xexact-output-dir SqlBase.g4
       - >-
@@ -75,6 +76,7 @@ tasks:
       - for:
           - "generated/SqlBaseLexer.ts"
           - "generated/SqlBaseParser.ts"
+          - "generated/SqlBaseVisitor.ts"
         task: ":utils:misc:replace-text"
         vars:
           FILE_PATH: "{{.SRC_DIR}}/{{.ITEM}}"

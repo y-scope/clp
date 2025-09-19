@@ -6,7 +6,11 @@ import {
 } from "@sinclair/typebox";
 import {Value} from "@sinclair/typebox/value";
 
-import {buildSearchQuery} from "../../../../sql-parser";
+import {submitQuery} from "../../../../api/presto-search";
+import {
+    buildSearchQuery,
+    buildTimelineQuery,
+} from "../../../../sql-parser";
 import {handlePrestoQuerySubmit} from "./presto-search-requests";
 
 
@@ -33,7 +37,17 @@ const BuildSearchQueryPropsSchema = Type.Object({
     booleanExpression: TransformEmptyStringSchema,
     sortItemList: TransformEmptyStringSchema,
     limitValue: TransformEmptyStringSchema,
+    startTimestamp: Type.Number(),
+    endTimestamp: Type.Number(),
+    timestampKey: Type.String(),
     /* eslint-enable sort-keys */
+});
+
+const BuildTimelineQueryPropsSchema = Type.Object({
+    databaseName: Type.String(),
+    startTimestamp: Type.Number(),
+    endTimestamp: Type.Number(),
+    timestampKey: Type.String(),
 });
 
 /**
@@ -47,14 +61,33 @@ const BuildSqlTestingInputs = () => {
             onSubmit={(ev: FormEvent<HTMLFormElement>) => {
                 ev.preventDefault();
                 const formData = new FormData(ev.target as HTMLFormElement);
+                const formDataObject = Object.fromEntries(formData);
                 const props: Static<typeof BuildSearchQueryPropsSchema> = Value.Parse(
                     BuildSearchQueryPropsSchema,
-                    Object.fromEntries(formData),
+                    formDataObject,
                 );
+                const queryString = buildSearchQuery(props);
+                console.log(`SQL: ${queryString}`);
+                handlePrestoQuerySubmit({queryString: queryString});
 
-                const sqlString = buildSearchQuery(props);
-                console.log(`SQL: ${sqlString}`);
-                handlePrestoQuerySubmit({queryString: sqlString});
+                const timelineProps: Static<typeof BuildTimelineQueryPropsSchema> = Value.Parse(
+                    BuildTimelineQueryPropsSchema,
+                    formDataObject
+                );
+                const timelineQueryString = buildTimelineQuery({
+                    bucketCount: 10,
+                    ...timelineProps,
+                });
+
+                console.log(`Timeline SQL: ${timelineQueryString}`);
+                submitQuery({queryString: timelineQueryString})
+                    .then((result) => {
+                        const {searchJobId} = result.data;
+                        console.log(`searchJobId: ${searchJobId}`);
+                    })
+                    .catch((err: unknown) => {
+                        console.error(err);
+                    });
             }}
         >
             <label>select:</label>
@@ -67,6 +100,15 @@ const BuildSqlTestingInputs = () => {
             <input name={"sortItemList"}/>
             <label>limit:</label>
             <input name={"limitValue"}/>
+            <br/>
+            <label>database_name:</label>
+            <input name={"databaseName"}/>
+            <label>start_timestamp:</label>
+            <input name={"startTimestamp"}/>
+            <label>end_timestamp:</label>
+            <input name={"endTimestamp"}/>
+            <label>timestamp_key:</label>
+            <input name={"timestampKey"}/>
             <button type={"submit"}>Run</button>
         </form>
     );
