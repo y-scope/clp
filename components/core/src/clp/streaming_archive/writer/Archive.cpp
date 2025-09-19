@@ -424,7 +424,8 @@ void Archive::write_msg_using_schema(log_surgeon::LogEventView const& log_view) 
                 // If there are no capture groups the entire variable token is stored as a variable.
                 // If the variable token contains capture groups, we break the token up by storing
                 // each capture as a variable and any substrings surrounding the capture as part of
-                // the logtype.
+                // the logtype. If a capture has repetition we store all instances as a single
+                // variable.
 
                 auto const& lexer{log_view.get_log_parser().m_lexer};
                 auto capture_ids{lexer.get_capture_ids_from_rule_id(token_type)};
@@ -450,31 +451,32 @@ void Archive::write_msg_using_schema(log_surgeon::LogEventView const& log_view) 
                 auto const [start_reg_id, end_reg_id]{register_ids.value()};
                 auto const capture_start{token.get_reversed_reg_positions(start_reg_id).back()};
                 auto const capture_end{token.get_reversed_reg_positions(end_reg_id).front()};
-                auto const token_view{token.to_string_view()};
-                size_t token_pos{0};
 
-                auto const before_capture{token_view.substr(token_pos, capture_start)};
-                m_logtype_dict_entry.add_constant(before_capture, 0, before_capture.length());
-                token_pos += before_capture.length();
-
-                // If a capture has repetition we store all instances as a single variable.
-                auto const capture_len = [&]() -> size_t {
-                    if (capture_start <= capture_end) {
-                        return capture_end - capture_start;
+                auto const get_wrapped_size = [&](size_t start, size_t end) -> size_t {
+                    if (start <= end) {
+                        return end - start;
                     }
-                    return token_view.length() - capture_start + capture_end;
-                }();
-                auto const capture{token_view.substr(token_pos, capture_len)};
+                    return token.m_buffer_size - start + end;
+                };
 
+                auto const token_view{token.to_string_view()};
+                auto const before_capture_size{get_wrapped_size(token.m_start_pos, capture_start)};
+                m_logtype_dict_entry.add_constant(token_view, 0, before_capture_size);
+
+                auto const capture_size{get_wrapped_size(capture_start, capture_end)};
+                auto const capture{token_view.substr(before_capture_size, capture_size)};
                 variable_dictionary_id_t id{};
                 m_var_dict.add_entry(capture, id);
                 m_var_ids.push_back(id);
                 m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
                 m_logtype_dict_entry.add_dictionary_var();
-                token_pos += capture.length();
 
-                m_logtype_dict_entry
-                        .add_constant(token_view, token_pos, token_view.length() - token_pos);
+                auto const capture_end_pos{before_capture_size + capture_size};
+                m_logtype_dict_entry.add_constant(
+                        token_view,
+                        capture_end_pos,
+                        token_view.length() - capture_end_pos
+                );
 
                 break;
             }
