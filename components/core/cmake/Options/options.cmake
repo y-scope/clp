@@ -213,6 +213,7 @@ function(set_clp_s_archivereader_dependencies)
         CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
         CLP_NEED_SPDLOG
+        CLP_NEED_YSTDLIB
     )
 endfunction()
 
@@ -234,6 +235,7 @@ function(set_clp_s_archivewriter_dependencies)
         CLP_NEED_NLOHMANN_JSON
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
+        CLP_NEED_YSTDLIB
     )
 endfunction()
 

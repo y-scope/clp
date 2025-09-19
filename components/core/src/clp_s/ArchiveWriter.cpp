@@ -316,6 +316,12 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::Float:
                 writer->append_column(new FloatColumnWriter(id));
                 break;
+            case NodeType::FormattedFloat:
+                writer->append_column(new FormattedFloatColumnWriter(id));
+                break;
+            case NodeType::DictionaryFloat:
+                writer->append_column(new DictionaryFloatColumnWriter(id, m_var_dict));
+                break;
             case NodeType::ClpString:
                 writer->append_column(new ClpStringColumnWriter(id, m_var_dict, m_log_dict));
                 break;

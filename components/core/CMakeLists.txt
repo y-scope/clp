@@ -357,6 +357,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/FileReader.hpp
     src/clp_s/FileWriter.cpp
     src/clp_s/FileWriter.hpp
+    src/clp_s/FloatFormatEncoding.cpp
+    src/clp_s/FloatFormatEncoding.hpp
     src/clp_s/InputConfig.cpp
     src/clp_s/InputConfig.hpp
     src/clp_s/JsonConstructor.cpp
@@ -700,6 +702,7 @@ set(SOURCE_FILES_unitTest
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
+        tests/test-FloatFormatEncoding.cpp
         tests/test-GlobalMetadataDBConfig.cpp
         tests/test-GrepCore.cpp
         tests/test-hash_utils.cpp

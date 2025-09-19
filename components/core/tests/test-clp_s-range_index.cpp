@@ -226,6 +226,7 @@ TEST_CASE("clp-s-range-index", "[clp-s][range-index]") {
                     input_file,
                     std::string{cTestRangeIndexArchiveDirectory},
                     std::nullopt,
+                    false,
                     single_file_archive,
                     false,
                     input_file_type

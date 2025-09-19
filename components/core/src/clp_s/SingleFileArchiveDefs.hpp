@@ -11,7 +11,7 @@ namespace clp_s {
 // define the version
 constexpr uint8_t cArchiveMajorVersion = 0;
 constexpr uint8_t cArchiveMinorVersion = 4;
-constexpr uint16_t cArchivePatchVersion = 0;
+constexpr uint16_t cArchivePatchVersion = 1;
 
 // define the magic number
 constexpr uint8_t cStructuredSFAMagicNumber[] = {0xFD, 0x2F, 0xC5, 0x30};
