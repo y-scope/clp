@@ -92,6 +92,8 @@ set(
         ../clp/streaming_archive/ArchiveMetadata.cpp
         ../clp/streaming_archive/ArchiveMetadata.hpp
         ../clp/streaming_archive/Constants.hpp
+        ../clp/streaming_compression/Constants.hpp
+        ../clp/streaming_compression/Decompressor.hpp
         ../clp/streaming_compression/zstd/Decompressor.cpp
         ../clp/streaming_compression/zstd/Decompressor.hpp
         ../clp/StringReader.cpp

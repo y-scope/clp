@@ -60,6 +60,10 @@ set(
         ../../clp/Query.hpp
         ../../clp/ReaderInterface.cpp
         ../../clp/ReaderInterface.hpp
+        ../../clp/streaming_compression/Constants.hpp
+        ../../clp/streaming_compression/Decompressor.hpp
+        ../../clp/streaming_compression/zstd/Decompressor.cpp
+        ../../clp/streaming_compression/zstd/Decompressor.hpp
         ../../clp/Thread.cpp
         ../../clp/Thread.hpp
         ../../clp/time_types.hpp
