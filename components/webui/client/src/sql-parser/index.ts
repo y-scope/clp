@@ -7,7 +7,8 @@ import {
 } from "antlr4";
 
 import SqlBaseLexer from "./generated/SqlBaseLexer";
-import SqlBaseParser from "./generated/SqlBaseParser";
+import SqlBaseParser, {ColumnReferenceContext} from "./generated/SqlBaseParser";
+import SqlBaseVisitor from "./generated/SqlBaseVisitor";
 
 
 class SyntaxError extends Error {
@@ -46,6 +47,33 @@ class UpperCaseCharStream extends CharStream {
     }
 }
 
+class TimestampKeyChecker extends SqlBaseVisitor<void> {
+    hasTimestamp: boolean;
+
+    constructor (timestampKey: string) {
+        super();
+        this.hasTimestamp = false;
+
+        // Three possible terminal nodes of the `identifer` context
+        const timestampIdentifiers = new Set([
+            // unquotedIdentifier
+            timestampKey,
+
+            // quotedIdentifier
+            `"${timestampKey}"`,
+
+            // backQuotedIdentifier
+            `\`${timestampKey}\``,
+        ]);
+
+        this.visitColumnReference = (ctx: ColumnReferenceContext) => {
+            if (timestampIdentifiers.has(ctx.identifier().getText())) {
+                this.hasTimestamp = true;
+            }
+        };
+    }
+}
+
 /**
  * Creates a SQL parser for a given input string.
  *
@@ -74,12 +102,18 @@ const validate = (sqlString: string) => {
     buildParser(sqlString).singleStatement();
 };
 
+class InvalidBooleanExpressionError extends Error {
+}
+
 interface BuildSearchQueryProps {
     selectItemList: string;
     relationList: string;
     booleanExpression?: string | undefined;
     sortItemList?: string | undefined;
     limitValue?: string | undefined;
+    startTimestamp: number;
+    endTimestamp: number;
+    timestampKey: string;
 }
 
 /**
@@ -91,8 +125,12 @@ interface BuildSearchQueryProps {
  * @param props.booleanExpression
  * @param props.sortItemList
  * @param props.limitValue
+ * @param props.startTimestamp
+ * @param props.endTimestamp
+ * @param props.timestampKey
  * @return
  * @throws {Error} if the constructed SQL string is not valid.
+ * @throws {InvalidBooleanExpressionError} if `booleanExpression` references the timestamp column.
  */
 const buildSearchQuery = ({
     selectItemList,
@@ -100,31 +138,127 @@ const buildSearchQuery = ({
     booleanExpression,
     sortItemList,
     limitValue,
+    startTimestamp,
+    endTimestamp,
+    timestampKey,
 }: BuildSearchQueryProps): string => {
-    let sqlString = `SELECT ${selectItemList} FROM ${relationList}`;
+    let queryString = `SELECT ${selectItemList} FROM ${relationList}
+WHERE to_unixtime(${timestampKey}) >= ${startTimestamp}
+AND to_unixtime(${timestampKey}) <= ${endTimestamp}`;
+
     if ("undefined" !== typeof booleanExpression) {
-        sqlString += ` WHERE ${booleanExpression}`;
+        const booleanExpressionTree = buildParser(booleanExpression).standaloneBooleanExpression()
+            .booleanExpression();
+
+        const checker = new TimestampKeyChecker(timestampKey);
+        checker.visit(booleanExpressionTree);
+        if (checker.hasTimestamp) {
+            throw new InvalidBooleanExpressionError();
+        }
+
+        queryString += ` AND (${booleanExpression})`;
     }
     if ("undefined" !== typeof sortItemList) {
-        sqlString += ` ORDER BY ${sortItemList}`;
+        queryString += ` ORDER BY ${sortItemList}`;
     }
     if ("undefined" !== typeof limitValue) {
-        sqlString += ` LIMIT ${limitValue}`;
+        queryString += ` LIMIT ${limitValue}`;
     }
 
     try {
-        validate(sqlString);
+        validate(queryString);
     } catch (err: unknown) {
-        throw new Error(`The constructed SQL is not valid: ${sqlString}`, {cause: err});
+        throw new Error(`The constructed SQL is not valid: ${queryString}`, {cause: err});
     }
 
-    return sqlString;
+    return queryString;
+};
+
+interface BuildTimelineQueryProps {
+    databaseName: string;
+    startTimestamp: number;
+    endTimestamp: number;
+    bucketCount: number;
+    timestampKey: string;
+}
+
+/**
+ * Constructs a bucketed timeline query.
+ *
+ * @param props
+ * @param props.databaseName
+ * @param props.startTimestamp
+ * @param props.endTimestamp
+ * @param props.bucketCount
+ * @param props.timestampKey
+ * @return
+ * @throws {Error} if the constructed SQL string is not valid.
+ */
+const buildTimelineQuery = ({
+    databaseName,
+    startTimestamp,
+    endTimestamp,
+    bucketCount,
+    timestampKey,
+}: BuildTimelineQueryProps) => {
+    const queryString = `WITH buckets AS (
+  SELECT
+    width_bucket(
+      to_unixtime(${timestampKey}),
+      ${startTimestamp},
+      ${endTimestamp},
+      ${bucketCount}
+    ) AS index
+  FROM
+    ${databaseName}
+),
+bucket_count AS (
+  SELECT
+    index,
+    COUNT(index) AS count
+  FROM
+    buckets
+  GROUP BY
+    index
+  ORDER BY
+    index
+  LIMIT ${bucketCount}
+),
+bucket_timestamp AS (
+  SELECT
+    index + 1 AS index,
+    ${startTimestamp} + (index*(${endTimestamp}-${startTimestamp})/${bucketCount}) AS timestamp
+  FROM
+    UNNEST(sequence(0, ${bucketCount}, 1)) AS t(index)
+)
+SELECT
+  bucket_count.count, timestamp
+FROM
+  bucket_count, bucket_timestamp
+WHERE
+  bucket_count.index = bucket_timestamp.index
+ORDER BY
+  bucket_count.index
+`;
+
+    try {
+        validate(queryString);
+    } catch (err: unknown) {
+        throw new Error(`The constructed SQL is not valid: ${queryString}`, {cause: err});
+    }
+
+    return queryString;
 };
 
 export {
     buildSearchQuery,
+    buildTimelineQuery,
+    InvalidBooleanExpressionError,
     SyntaxError,
     validate,
 };
 
-export type {BuildSearchQueryProps};
+export type {
+    BuildSearchQueryProps,
+    BuildTimelineQueryProps,
+};
