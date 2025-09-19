@@ -111,18 +111,24 @@ auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedReader>& reader) ->
 
 /**
  * Checks if an input contains Zstd data, based on the first few bytes of data from the input.
+ * @param peek_buf A pointer to a buffer containing peeked data from the start of an input stream.
+ * @param peek_size The number of bytes of peeked data in the buffer.
  * @return Whether the input could be Zstd.
  */
 auto could_be_zstd(char const* peek_buf, size_t peek_size) -> bool;
 
 /**
  * Checks if an input contains KV-IR data, based on the first few bytes of data from the input.
+ * @param peek_buf A pointer to a buffer containing peeked data from the start of an input stream.
+ * @param peek_size The number of bytes of peeked data in the buffer.
  * @return Whether the input could be KV-IR.
  */
 auto could_be_kvir(char const* peek_buf, size_t peek_size) -> bool;
 
 /**
  * Checks if an input contains JSON data, based on the first few bytes of data from the input.
+ * @param peek_buf A pointer to a buffer containing peeked data from the start of an input stream.
+ * @param peek_size The number of bytes of peeked data in the buffer.
  * @return Whether the input could be JSON.
  */
 auto could_be_json(char const* peek_buf, size_t peek_size) -> bool;
