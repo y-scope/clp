@@ -5,9 +5,7 @@ import {
 import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {CompressionJobCreation} from "@webui/common/schemas/compression";
 import {
-    Button,
     Form,
-    Input,
     message,
     Typography,
 } from "antd";
@@ -15,6 +13,9 @@ import {
 import {submitCompressionJob} from "../../../api/compress";
 import {DashboardCard} from "../../../components/DashboardCard";
 import {SETTINGS_STORAGE_ENGINE} from "../../../config";
+import ClpSFormItems from "./ClpSFormItems";
+import PathsInputFormItem from "./PathsInputFormItem";
+import SubmitFormItem from "./SubmitFormItem";
 
 
 type FormValues = {
@@ -22,6 +23,7 @@ type FormValues = {
     dataset?: string;
     timestampKey?: string;
 };
+
 
 /**
  * Renders a compression job submission form.
@@ -87,48 +89,9 @@ const Compress = () => {
                 layout={"vertical"}
                 onFinish={handleSubmit}
             >
-                <Form.Item
-                    label={"Paths"}
-                    name={"paths"}
-                    rules={[{required: true, message: "Please enter at least one path"}]}
-                >
-                    <Input.TextArea
-                        autoSize={{minRows: 4, maxRows: 10}}
-                        placeholder={"Enter paths to compress, one per line"}/>
-                </Form.Item>
-                {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && (
-                    <>
-                        <Form.Item
-                            label={"Dataset"}
-                            name={"dataset"}
-                        >
-                            <Input
-                                placeholder={"The dataset that the archives belong to (optional)"}/>
-                        </Form.Item>
-                        <Form.Item
-                            label={"Timestamp Key"}
-                            name={"timestampKey"}
-                        >
-                            <Input
-                                placeholder={
-                                    "The path for the field containing the log event's " +
-                                    "timestamp (optional)"
-                                }/>
-                        </Form.Item>
-                    </>
-                )}
-
-                <Form.Item>
-                    <Button
-                        htmlType={"submit"}
-                        loading={isSubmitting}
-                        type={"primary"}
-                    >
-                        {isSubmitting ?
-                            "Submitting..." :
-                            "Submit"}
-                    </Button>
-                </Form.Item>
+                <PathsInputFormItem/>
+                {CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE && <ClpSFormItems/>}
+                <SubmitFormItem isSubmitting={isSubmitting}/>
 
                 {isSuccess && (
                     <Typography.Text type={"success"}>
@@ -150,5 +113,6 @@ const Compress = () => {
         </DashboardCard>
     );
 };
+
 
 export default Compress;
