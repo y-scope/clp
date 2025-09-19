@@ -86,8 +86,8 @@ Overall the implications here are that:
 
 In practice though, we know that most of the time we should be dealing with very standard
 machine-generated data. This means that most inputs _do_ correspond to IEEE-754 binary64
-floating-point numbers in practice, and that of the infinitely many ways of representing a number
-only a few will be common.
+floating-point numbers, and that of the infinitely many ways of representing a number only a few
+will be common.
 
 Our approach then, is to store most floating-point numbers as an IEEE-754 binary64 floating-point
 number alongside some formatting information, falling back to storing the number as a string when
