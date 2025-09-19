@@ -1,3 +1,91 @@
+# What does it take to losslessly retain JSON floating-point numbers?
+
+Since our goal is to losslessly retain floating-point numbers that come from JSON input, it is worth
+taking a look at what kinds of floating-point numbers can appear in JSON.
+
+The [JSON specification][json_spec] treats fields matching the following grammar as number values:
+```text
+number = [ minus ] int [ frac ] [ exp ]
+
+decimal-point = '.'
+
+digit1-9 = '1'-'9'
+
+e = 'e' | 'E'
+
+exp = e [ minus | plus ] ( digit1-9 | zero )+
+
+frac = decimal-point ( digit1-9 | zero )+
+
+int = zero | ( digit1-9 ( digit1-9 | zero )* )
+
+minus = '-'
+
+plus = '+'
+
+zero = '0'
+```
+
+For our purposes, floating-point numbers are numbers which match this grammar and have either a
+fraction, an exponent, or both.
+
+Note that this restricts what kinds of floating-point numbers that are allowed in a few ways:
+- NaN and +/- Infinity are not allowed
+- The exponent must contain at least one digit
+- The fractional part of a number must contain at least one digit
+- The integer part of a number can only start with '0' if the entire integer part is '0'
+- The integer part of a number must contain at least one digit
+- Positive numbers cannot begin with an explicit '+'
+
+What it doesn't do is place any restrictions on how a given floating-point number should be written,
+or whether the floating-point numbers have to correspond to values from a standard such as IEEE-754
+binary64.
+
+Since the first point is less abstract, we'll explain it first, with an example. Say we're trying to
+represent the number `16` as a floating point number using **3** digits of precision. We might write
+it as:
+- `16.0`; or
+- `16.0e0`; or
+- `1.60e1`
+Note that for scientific-notation representations of a number we can shift the decimal and change
+the exponent arbitrarily to represent the same number in infinite possible ways. For example:
+- `0.160e2`; and
+- `0.00000000160e10`
+are both valid representations of `16` using 3 significant digits.
+
+Likewise, we can come up with infinite representations of `16` by choosing to represent arbitrarily
+many significant digits.
+
+The point about whether the original values correspond to IEEE-754 is a bit abstract, but is
+important for understanding our approach for losslessly storing floating-point numbers.
+
+It is probably easiest to show an example. Of the numbers:
+- `1.2345678901234567`
+- `1.2345678901234568`
+- `1.2345678901234570`
+we know that only the first and third number correspond to IEEE-754 binary64 floating-point numbers.
+The reason we can tell is that the [IEEE-754 specification][ieee754] requires that when converting a
+floating-point number to a decimal string at a given precision, the decimal string must correspond
+to the nearest decimal representation. Likewise, when converting a decimal string to a
+floating-point number, the standard requires that the number be converted to the nearest
+floating-point representation. If you use any standards-compliant implementation to turn
+`1.2345678901234568` into a floating-point number, and back to a decimal string, you will find that
+it has been rounded to `1.2345678901234567`.
+
+Overall the implications here are that:
+- For any given number there are many possible representations (infinitely many in fact); and
+- Not all floating-point numbers that are valid JSON correspond to values from a standard like
+  IEEE-754
+
+In practice though, we know that most of the time we should be dealing with very standard
+machine-generated data. This means that most inputs _do_ correspond to IEEE-754 binary64
+floating-point numbers in practice, and that of the infinitely many ways of representing a number
+only a few will be common.
+
+Our approach then is to store most floating-point numbers as an IEEE-754 binary64 floating-point
+number alongside some formatting information, with the fallback of storing the number as a string
+when that doesn't work.
+
 # Retaining floating-point format information
 
 To losslessly retain the string representation of floating point numbers we use two encoding
@@ -55,6 +143,11 @@ With the added restrictions that:
 * There exists an IEEE-754 binary64 number for which the string is the closest decimal
   representation at the given precision.
 
+These restrictions really correspond to "canonical" representations of floating point numbers with
+up to 17 digits of precision. This means that our formatting scheme can always represent numbers
+produced by format specifiers such as '%f', '%e', and '%g', so long as they don't use too many
+digits of precision, and the underlying number isn't NaN, or +/- Infinity.
+
 ### Scientific notation marker
 
 Indicates whether the number is in scientific notation, and if so, whether the exponent is denoted
@@ -104,9 +197,9 @@ fractional part (excluding the exponent). Examples:
 - `0.000000123000` → **6** (from first `1` to last `0`)
 - `0.00` → **3** (counts all zeros for zero value)
 
-Per the [JSON grammar][json_grammar], the integer part of a floating point number cannot be empty,
-so the minimum number of digits is **1**. To take advantage of this fact, we store this field as
-**actual number of non-zero digits to end of number - 1**; for the numeric value zero we store
+Per the [JSON specification][json_grammar], the integer part of a floating point number cannot be
+empty, so the minimum number of digits is **1**. To take advantage of this fact, we store this field
+as **actual number of non-zero digits to end of number - 1**; for the numeric value zero we store
 **actual number of digits - 1**.
 
 As well, according to IEEE-754, only 17 decimal significant digits are needed to represent all
@@ -119,4 +212,5 @@ to do so in the future, but this is explicitly not supported in the current vers
 The rationale for not doing so now is that as the number of digits increases beyond 17, the
 likelihood that the number corresponds to a valid IEEE-754 binary64 float decreases.
 
-[json_grammar]: https://www.crockford.com/mckeeman.html
+[json_spec]: https://datatracker.ietf.org/doc/html/rfc7159
+[ieee754]: https://ieeexplore.ieee.org/document/4610935/
