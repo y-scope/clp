@@ -166,18 +166,7 @@ docker compose rm
 
 ## Querying your logs through Presto
 
-To query your logs through Presto, you can use either:
-
-* The WebUI available at [http://localhost:4000](http://localhost:4000) (if you changed
-`webui.host` or `webui.port` in `etc/clp-config.yml`, use the new values)
-* The Presto CLI:
-
-```bash
-docker compose exec presto-coordinator \
-  presto-cli \
-    --catalog clp \
-    --schema default
-```
+You can query your compressed logs from CLP’s [UI](#querying-from-the-ui) or the [Presto CLI](#querying-from-the-presto-cli).
 
 Each dataset in CLP shows up as a table in Presto. To show all available datasets:
 
@@ -209,6 +198,21 @@ contain the field `foo.bar`, you can query it using:
 
 ```sql
 SELECT foo.bar FROM default LIMIT 1;
+```
+
+### Querying from the UI
+The CLP UI is available at [http://localhost:4000](http://localhost:4000) (if you changed
+`webui.host` or `webui.port` in `etc/clp-config.yml`, use the new values).
+
+### Querying from the Presto CLI
+To access the Presto CLI, navigate to the `tools/deployment/presto-clp` and enter the
+following command to start the CLI:
+
+```bash
+docker compose exec presto-coordinator \
+  presto-cli \
+    --catalog clp \
+    --schema default
 ```
 
 ## Limitations
