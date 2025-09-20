@@ -76,7 +76,7 @@ def create_and_monitor_job_in_db(
 
     if do_count_aggregation is None and count_by_time_bucket_size is None:
         return
-    with pymongo.MongoClient(results_cache.get_uri()) as client:
+    with pymongo.MongoClient(results_cache.get_uri(), directConnection=True) as client:
         search_results_collection = client[results_cache.db_name][str(job_id)]
         if do_count_aggregation is not None:
             for document in search_results_collection.find():
