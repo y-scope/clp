@@ -8,8 +8,8 @@ import pathlib
 import socket
 import sys
 
-import netifaces
 import msgpack
+import netifaces
 import pymongo
 from clp_py_utils.clp_config import (
     Database,
@@ -54,6 +54,7 @@ def _get_ipv4_address() -> str | None:
 
     logger.warning("Couldn't find a non-local IP address for receiving search results.")
     return local_ip
+
 
 def create_and_monitor_job_in_db(
     db_config: Database,
