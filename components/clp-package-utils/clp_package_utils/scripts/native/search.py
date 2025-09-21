@@ -34,7 +34,7 @@ from clp_package_utils.scripts.native.utils import (
 logger = logging.getLogger(__file__)
 
 
-def get_ipv4_address() -> str | None:
+def _get_ipv4_address() -> str | None:
     """
     Retrieves an IPv4 address of the host for network communication.
 
@@ -150,7 +150,7 @@ async def do_search_without_aggregation(
     path_filter: str | None,
     raw_output: bool,
 ):
-    host = get_ipv4_address()
+    host = _get_ipv4_address()
     if host is None:
         logger.error("Couldn't find a IPv4 address for receiving search results.")
         return
