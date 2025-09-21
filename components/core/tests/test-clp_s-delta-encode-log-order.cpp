@@ -71,8 +71,7 @@ TEST_CASE("clp-s-delta-encode-log-order", "[clp-s][delta-encode-log-order]") {
             std::string{cTestDeltaEncodeOrderArchiveDirectory},
             std::nullopt,
             true,
-            false,
-            clp_s::FileType::Json
+            false
     ));
 
     std::vector<clp_s::Path> archive_paths;

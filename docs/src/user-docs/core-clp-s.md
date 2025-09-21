@@ -13,13 +13,11 @@ Usage:
 
 * `archives-dir` is the directory that archives should be written to.
 * `input-path` is a filesystem path or URL to either:
-  * a new-line-delimited JSON (ndjson) log file;
-  * a KV-IR file; or
-  * a directory containing such files.
+  * a new-line-delimited JSON (ndjson) log file (may be Zstd-compressed);
+  * a KV-IR file (may be Zstd-compressed);
 * `options` allow you to specify how data gets compressed into an archive. For example:
   * `--single-file-archive` specifies that single-file archives should be produced (i.e., each
     archive is a single file in `archives-dir`).
-  * `--file-type <json|kv-ir>` specifies whether the input files are encoded as ndjson or KV-IR.
   * `--timestamp-key <field-path>` specifies which field should be treated as each log event's
     timestamp.
   * `--target-encoded-size <size>` specifies the threshold (in bytes) at which archives are split,
@@ -62,7 +60,7 @@ compression ratio and search performance.
 
 ```shell
 AWS_ACCESS_KEY_ID='...' AWS_SECRET_ACCESS_KEY='...' \
-  ./clp-s c --single-file-archive --file-type kv-ir --auth s3 /mnt/data/archives \
+  ./clp-s c --single-file-archive --auth s3 /mnt/data/archives \
   https://my-bucket.s3.us-east-2.amazonaws.com/kv-ir-log.clp
 ```
 
