@@ -8,6 +8,7 @@ import pathlib
 import socket
 import sys
 
+import netifaces
 import msgpack
 import pymongo
 from clp_py_utils.clp_config import (
@@ -32,6 +33,27 @@ from clp_package_utils.scripts.native.utils import (
 
 logger = logging.getLogger(__file__)
 
+
+def get_ipv4_address() -> str | None:
+    """
+    Retrieves an IPv4 address of the host for network communication.
+
+    :returns: The first non-local IPv4 address it finds.
+    If no non-local address is available, returns the first local IPv4 address.
+    If no IPv4 address is found, returns None.
+    """
+    local_ip = None
+
+    for interface in netifaces.interfaces():
+        for link in netifaces.ifaddresses(interface).get(netifaces.AF_INET, []):
+            ip = link["addr"]
+            if ipaddress.ip_address(ip) not in ipaddress.IPv4Network("127.0.0.0/8"):
+                return ip
+            if local_ip is None:
+                local_ip = ip
+
+    logger.warning("Couldn't find a non-local IP address for receiving search results.")
+    return local_ip
 
 def create_and_monitor_job_in_db(
     db_config: Database,
@@ -128,16 +150,11 @@ async def do_search_without_aggregation(
     path_filter: str | None,
     raw_output: bool,
 ):
-    ip_list = socket.gethostbyname_ex(socket.gethostname())[2]
-    if len(ip_list) == 0:
-        logger.error("Couldn't determine the current host's IP.")
+    host = get_ipv4_address()
+    if host is None:
+        logger.error("Couldn't find a IPv4 address for receiving search results.")
         return
-
-    host = ip_list[0]
-    for ip in ip_list:
-        if ipaddress.ip_address(ip) not in ipaddress.IPv4Network("127.0.0.0/8"):
-            host = ip
-            break
+    logger.debug(f"Listening on {host} for search results.")
 
     server = await asyncio.start_server(
         client_connected_cb=get_worker_connection_handler(raw_output),
