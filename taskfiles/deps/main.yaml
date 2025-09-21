@@ -508,9 +508,8 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DSPIDER_BUILD_TESTING=OFF"
           LIB_NAME: "spider"
-          # TODO: Update the url and checksum when we have a proper Spider release
-          TARBALL_SHA256: "23aa213e14512861c8a1c03bf2afb78dcceb673d29be6d22f3e4d93bcbfac164"
-          TARBALL_URL: "https://github.com/y-scope/spider/archive/03de061.tar.gz"
+          TARBALL_SHA256: "4a02e1d7b74ca4651e242d76c66ff740fbb1a3793bcf720b8edce2ec5a694ac4"
+          TARBALL_URL: "https://github.com/y-scope/spider/archive/c9c007d.tar.gz"
 
   sqlite3:
     internal: true
