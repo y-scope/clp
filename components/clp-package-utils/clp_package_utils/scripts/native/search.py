@@ -153,7 +153,7 @@ async def do_search_without_aggregation(
 ):
     host = _get_ipv4_address()
     if host is None:
-        logger.error("Couldn't find a IPv4 address for receiving search results.")
+        logger.error("Couldn't find an IPv4 address for receiving search results.")
         return
     logger.debug(f"Listening on {host} for search results.")
 
