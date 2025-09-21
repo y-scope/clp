@@ -34,28 +34,6 @@ from clp_package_utils.scripts.native.utils import (
 logger = logging.getLogger(__file__)
 
 
-def _get_ipv4_address() -> str | None:
-    """
-    Retrieves an IPv4 address of the host for network communication.
-
-    :returns: The first non-local IPv4 address it finds.
-    If no non-local address is available, returns the first local IPv4 address.
-    If no IPv4 address is found, returns None.
-    """
-    local_ip = None
-
-    for interface in netifaces.interfaces():
-        for link in netifaces.ifaddresses(interface).get(netifaces.AF_INET, []):
-            ip = link["addr"]
-            if ipaddress.ip_address(ip) not in ipaddress.IPv4Network("127.0.0.0/8"):
-                return ip
-            if local_ip is None:
-                local_ip = ip
-
-    logger.warning("Couldn't find a non-local IP address for receiving search results.")
-    return local_ip
-
-
 def create_and_monitor_job_in_db(
     db_config: Database,
     results_cache: ResultsCache,
@@ -137,6 +115,28 @@ def get_worker_connection_handler(raw_output: bool):
             writer.close()
 
     return worker_connection_handler
+
+
+def _get_ipv4_address() -> str | None:
+    """
+    Retrieves an IPv4 address of the host for network communication.
+
+    :returns: The first non-local IPv4 address it finds.
+    If no non-local address is available, returns the first local IPv4 address.
+    If no IPv4 address is found, returns None.
+    """
+    local_ip = None
+
+    for interface in netifaces.interfaces():
+        for link in netifaces.ifaddresses(interface).get(netifaces.AF_INET, []):
+            ip = link["addr"]
+            if ipaddress.ip_address(ip) not in ipaddress.IPv4Network("127.0.0.0/8"):
+                return ip
+            if local_ip is None:
+                local_ip = ip
+
+    logger.warning("Couldn't find a non-local IP address for receiving search results.")
+    return local_ip
 
 
 async def do_search_without_aggregation(
