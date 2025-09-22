@@ -132,6 +132,13 @@ def generate_container_name(job_type: str) -> str:
 
 
 def is_docker_compose_running(project_name: str) -> bool:
+    """
+    Checks if a Docker Compose project is running.
+
+    :param project_name:
+    :return: True if at least one instance is running, else False.
+    :raises EnvironmentError: If Docker Compose is not installed or fails.
+    """
     cmd = ["docker", "compose", "ls", "--format", "json", "--filter", f"name={project_name}"]
     try:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
