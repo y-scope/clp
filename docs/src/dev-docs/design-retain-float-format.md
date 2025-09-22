@@ -6,25 +6,20 @@ taking a look at what kinds of floating-point numbers can appear in JSON.
 The [JSON specification][json_spec] treats fields that match the following grammar as number values:
 
 ```text
-number = [ minus ] int [ frac ] [ exp ]
+number        = [ minus ] int [ frac ] [ exp ]
 
+int           = zero | ( digit1-9 digit* )
+frac          = decimal-point digit+
+exp           = e [ minus | plus ] digit+
+
+digit         = zero | digit1-9
+digit1-9      = '1'-'9'
+zero          = '0'
+
+e             = 'e' | 'E'
 decimal-point = '.'
-
-digit1-9 = '1'-'9'
-
-e = 'e' | 'E'
-
-exp = e [ minus | plus ] ( digit1-9 | zero )+
-
-frac = decimal-point ( digit1-9 | zero )+
-
-int = zero | ( digit1-9 ( digit1-9 | zero )* )
-
-minus = '-'
-
-plus = '+'
-
-zero = '0'
+minus         = '-'
+plus          = '+'
 ```
 
 For our purposes, floating-point numbers are numbers which match this grammar and have either a
