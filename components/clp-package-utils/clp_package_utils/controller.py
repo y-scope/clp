@@ -9,6 +9,9 @@ import subprocess
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
+# Type alias for environment variables dictionary.
+EnvVarsDict = Dict[str, str]
+
 from clp_py_utils.clp_config import (
     AwsAuthType,
     CLPConfig,
@@ -81,7 +84,7 @@ class BaseController(ABC):
         pass
 
     @abstractmethod
-    def _provision(self) -> Dict[str, str]:
+    def _provision(self) -> EnvVarsDict:
         """
         Prepares all components with orchestrator-specific logic.
 
@@ -89,7 +92,7 @@ class BaseController(ABC):
         """
         pass
 
-    def _set_up_env_for_database(self):
+    def _set_up_env_for_database(self) -> EnvVarsDict:
         """
         Prepares environment variables and directories for the database component.
 
@@ -120,7 +123,7 @@ class BaseController(ABC):
             ),
         }
 
-    def _set_up_env_for_queue(self):
+    def _set_up_env_for_queue(self) -> EnvVarsDict:
         """
         Prepares environment variables and directories for the message queue component.
 
@@ -142,7 +145,7 @@ class BaseController(ABC):
             "CLP_QUEUE_PASS": self.clp_config.queue.password,
         }
 
-    def _set_up_env_for_redis(self):
+    def _set_up_env_for_redis(self) -> EnvVarsDict:
         """
         Prepares environment variables and directories for the Redis component.
 
@@ -172,7 +175,7 @@ class BaseController(ABC):
             ),
         }
 
-    def _set_up_env_for_results_cache(self):
+    def _set_up_env_for_results_cache(self) -> EnvVarsDict:
         """
         Prepares environment variables and directories for the results cache (MongoDB) component.
 
@@ -199,7 +202,7 @@ class BaseController(ABC):
             "CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME": self.clp_config.results_cache.stream_collection_name,
         }
 
-    def _set_up_env_for_compression_scheduler(self):
+    def _set_up_env_for_compression_scheduler(self) -> EnvVarsDict:
         """
         Prepares environment variables and files for the compression scheduler component.
 
@@ -216,7 +219,7 @@ class BaseController(ABC):
             "CLP_COMPRESSION_SCHEDULER_LOGS_FILE_HOST": str(logs_file),
         }
 
-    def _set_up_env_for_query_scheduler(self):
+    def _set_up_env_for_query_scheduler(self) -> EnvVarsDict:
         """
         Prepares environment variables and files for the query scheduler component.
 
@@ -233,7 +236,7 @@ class BaseController(ABC):
             "CLP_QUERY_SCHEDULER_LOGS_FILE_HOST": str(logs_file),
         }
 
-    def _set_up_env_for_compression_worker(self, num_workers: int):
+    def _set_up_env_for_compression_worker(self, num_workers: int) -> EnvVarsDict:
         """
         Prepares environment variables for the compression worker component.
 
@@ -252,7 +255,7 @@ class BaseController(ABC):
             "CLP_COMPRESSION_WORKER_LOGS_DIR_HOST": str(logs_dir),
         }
 
-    def _set_up_env_for_query_worker(self, num_workers: int):
+    def _set_up_env_for_query_worker(self, num_workers: int) -> EnvVarsDict:
         """
         Prepares environment variables for the query worker component.
 
@@ -271,7 +274,7 @@ class BaseController(ABC):
             "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
         }
 
-    def _set_up_env_for_reducer(self, num_workers: int):
+    def _set_up_env_for_reducer(self, num_workers: int) -> EnvVarsDict:
         """
         Prepares environment variables for the reducer component.
 
@@ -291,7 +294,7 @@ class BaseController(ABC):
             "CLP_REDUCER_UPSERT_INTERVAL": str(self.clp_config.reducer.upsert_interval),
         }
 
-    def _set_up_env_for_webui(self, container_clp_config: CLPConfig):
+    def _set_up_env_for_webui(self, container_clp_config: CLPConfig) -> EnvVarsDict:
         """
         Prepares environment variables and settings for the Web UI component.
 
@@ -385,7 +388,7 @@ class BaseController(ABC):
             "CLP_WEBUI_RATE_LIMIT": str(self.clp_config.webui.rate_limit),
         }
 
-    def _set_up_env_for_garbage_collector(self):
+    def _set_up_env_for_garbage_collector(self) -> EnvVarsDict:
         """
         Prepares environment variables for the garbage collector component.
 
@@ -401,7 +404,7 @@ class BaseController(ABC):
 
     def _read_and_update_settings_json(
         self, settings_file_path: pathlib.Path, updates: Dict[str, Any]
-    ):
+    ) -> Dict[str, Any]:
         """
         Reads and updates a settings JSON file.
 
@@ -490,7 +493,7 @@ class DockerComposeController(BaseController):
             raise
 
     @staticmethod
-    def _get_num_workers():
+    def _get_num_workers() -> int:
         """
         Gets the parallelism number for worker components.
         TODO: Revisit after moving from single-container to multi-container workers.
