@@ -6,9 +6,8 @@ import {
     Recognizer,
 } from "antlr4";
 
-import SqlBaseLexer from "./generated/SqlBaseLexer";
-import SqlBaseParser, {ColumnReferenceContext} from "./generated/SqlBaseParser";
-import SqlBaseVisitor from "./generated/SqlBaseVisitor";
+import SqlLexer from "./generated/SqlLexer";
+import SqlParser from "./generated/SqlParser";
 
 
 class SyntaxError extends Error {
@@ -47,45 +46,18 @@ class UpperCaseCharStream extends CharStream {
     }
 }
 
-class TimestampKeyChecker extends SqlBaseVisitor<void> {
-    hasTimestamp: boolean;
-
-    constructor (timestampKey: string) {
-        super();
-        this.hasTimestamp = false;
-
-        // Three possible terminal nodes of the `identifer` context
-        const timestampIdentifiers = new Set([
-            // unquotedIdentifier
-            timestampKey,
-
-            // quotedIdentifier
-            `"${timestampKey}"`,
-
-            // backQuotedIdentifier
-            `\`${timestampKey}\``,
-        ]);
-
-        this.visitColumnReference = (ctx: ColumnReferenceContext) => {
-            if (timestampIdentifiers.has(ctx.identifier().getText())) {
-                this.hasTimestamp = true;
-            }
-        };
-    }
-}
-
 /**
  * Creates a SQL parser for a given input string.
  *
  * @param input The SQL query string to be parsed.
  * @return The configured SQL parser instance ready to parse the input.
  */
-const buildParser = (input: string): SqlBaseParser => {
+const buildParser = (input: string): SqlParser => {
     const syntaxErrorListener = new SyntaxErrorListener();
-    const lexer = new SqlBaseLexer(new UpperCaseCharStream(input));
+    const lexer = new SqlLexer(new UpperCaseCharStream(input));
     lexer.removeErrorListeners();
     lexer.addErrorListener(syntaxErrorListener);
-    const parser = new SqlBaseParser(new CommonTokenStream(lexer));
+    const parser = new SqlParser(new CommonTokenStream(lexer));
     parser.removeErrorListeners();
     parser.addErrorListener(syntaxErrorListener);
 
@@ -101,9 +73,6 @@ const buildParser = (input: string): SqlBaseParser => {
 const validate = (sqlString: string) => {
     buildParser(sqlString).singleStatement();
 };
-
-class InvalidBooleanExpressionError extends Error {
-}
 
 interface BuildSearchQueryProps {
     selectItemList: string;
@@ -130,7 +99,6 @@ interface BuildSearchQueryProps {
  * @param props.timestampKey
  * @return
  * @throws {Error} if the constructed SQL string is not valid.
- * @throws {InvalidBooleanExpressionError} if `booleanExpression` references the timestamp column.
  */
 const buildSearchQuery = ({
     selectItemList,
@@ -146,15 +114,6 @@ const buildSearchQuery = ({
 WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp} AND ${endTimestamp}`;
 
     if ("undefined" !== typeof booleanExpression) {
-        const booleanExpressionTree = buildParser(booleanExpression).standaloneBooleanExpression()
-            .booleanExpression();
-
-        const checker = new TimestampKeyChecker(timestampKey);
-        checker.visit(booleanExpressionTree);
-        if (checker.hasTimestamp) {
-            throw new InvalidBooleanExpressionError();
-        }
-
         queryString += ` AND (${booleanExpression})`;
     }
     if ("undefined" !== typeof sortItemList) {
@@ -200,43 +159,35 @@ const buildTimelineQuery = ({
     bucketCount,
     timestampKey,
 }: BuildTimelineQueryProps) => {
-    // Converting float to decimal can have precision errors.
-    const startTimestampFixed = startTimestamp.toFixed(8);
-    const endTimestampFixed = endTimestamp.toFixed(8);
-    const queryString = `WITH filtered AS (
-    SELECT to_unixtime(${timestampKey}) AS timestamp
-    FROM ${databaseName}
-    WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestampFixed} AND ${endTimestampFixed}
-),
-buckets AS (
-    SELECT width_bucket(
-        timestamp,
-        ${startTimestampFixed},
-        ${endTimestampFixed},
-        ${bucketCount}
-        ) AS index
-    FROM filtered
-),
-bucket_count AS (
-    SELECT index, COUNT(index) AS count
-    FROM buckets
-    WHERE index BETWEEN 1 AND ${bucketCount}
-    GROUP BY index
-),
-bucket_timestamp AS (
+    const step = (endTimestamp - startTimestamp) / bucketCount;
+    const timestamps = Array.from(
+        {length: bucketCount},
+        (_, i) => startTimestamp + (i * step)
+    );
+
+    const queryString = `WITH buckets AS (
     SELECT
-        index + 1 AS index,
-        ${startTimestampFixed}
-        + (index*(${endTimestampFixed}-${startTimestampFixed})/${bucketCount}) AS timestamp
-    FROM
-        UNNEST(sequence(0, ${bucketCount - 1}, 1)) AS t(index)
+        width_bucket(
+            to_unixtime(${timestampKey}),
+            ${startTimestamp},
+            ${endTimestamp},
+            ${bucketCount}) AS idx,
+        COUNT(*) AS cnt
+    FROM ${databaseName}
+    WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp} AND ${endTimestamp}
+    GROUP BY 1
+    ORDER BY 1
+),
+timestamps AS (
+    SELECT *
+    FROM UNNEST(array [${timestamps.join(", ")}]) WITH ORDINALITY AS t(timestamp, idx)
 )
 SELECT
-    COALESCE(bucket_count.count, 0) AS count,
-    CAST(timestamp AS double) AS timestamp
-FROM bucket_timestamp
-LEFT JOIN bucket_count ON bucket_count.index = bucket_timestamp.index
-ORDER BY bucket_count.index
+    COALESCE(cnt, 0) AS count,
+    timestamp
+FROM timestamps
+LEFT JOIN buckets ON buckets.idx = timestamps.idx
+ORDER BY timestamps.idx
 `;
 
     try {
@@ -251,7 +202,6 @@ ORDER BY bucket_count.index
 export {
     buildSearchQuery,
     buildTimelineQuery,
-    InvalidBooleanExpressionError,
     SyntaxError,
     validate,
 };

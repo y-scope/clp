@@ -12,9 +12,6 @@
  * limitations under the License.
  */
 
-// NOTE: This file has been modified from its original version by the
-// contributors of https://github.com/y-scope/clp
-
 grammar SqlBase;
 
 tokens {
@@ -31,10 +28,6 @@ standaloneExpression
 
 standaloneRoutineBody
     : routineBody EOF
-    ;
-
-standaloneBooleanExpression
-    : booleanExpression EOF
     ;
 
 statement

@@ -82,8 +82,8 @@ const BuildSqlTestingInputs = () => {
                 console.log(`Timeline SQL: ${timelineQueryString}`);
                 submitQuery({queryString: timelineQueryString})
                     .then((result) => {
-                        const {searchJobId} = result.data;
-                        console.log(`searchJobId: ${searchJobId}`);
+                        const {searchJobId: aggregationJobId} = result.data;
+                        console.log(`aggregationJobId: ${aggregationJobId}`);
                     })
                     .catch((err: unknown) => {
                         console.error(err);
