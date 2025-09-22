@@ -65,13 +65,13 @@ Using Presto with CLP requires:
 
       ```yaml
       results_cache:
-        #  host: "localhost"
-        #  port: 27017
-        #  db_name: "clp-query-results"
-        #  stream_collection_name: "stream-files"
-        #
-        #  # Retention for search results, in minutes. Set to null to disable automatic deletion.
-          retention_period: null
+      #  host: "localhost"
+      #  port: 27017
+      #  db_name: "clp-query-results"
+      #  stream_collection_name: "stream-files"
+      #
+      #  # Retention period for search results, in minutes. Set to null to disable automatic deletion.
+        retention_period: null
       ```
 
     * Update the `presto` key with the host and port of the Presto cluster. If you follow the
