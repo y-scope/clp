@@ -12,7 +12,7 @@ readme = "README.md"
 python = ">= 3.9"
 Brotli = "^1.1.0"
 msgpack = "^1.0.7"
-netifaces = "^0.11.0"
+psutil = "^7.1.0"
 pymongo = "^4.7.2"
 PyYAML = "^6.0.1"
 

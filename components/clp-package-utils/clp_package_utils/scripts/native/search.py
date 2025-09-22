@@ -9,7 +9,7 @@ import socket
 import sys
 
 import msgpack
-import netifaces
+import psutil
 import pymongo
 from clp_py_utils.clp_config import (
     Database,
@@ -125,18 +125,20 @@ def _get_ipv4_address() -> str | None:
     If no non-loopback address is available, returns the first loopback IPv4 address.
     If no IPv4 address is found, returns None.
     """
-    ip = None
+    fallback_ip = None
 
-    for interface in netifaces.interfaces():
-        for link in netifaces.ifaddresses(interface).get(netifaces.AF_INET, []):
-            ip = link["addr"]
-            if ipaddress.ip_address(ip) not in ipaddress.IPv4Network("127.0.0.0/8"):
-                return ip
-            if ip is None:
-                ip = ip
+    for _, addresses in psutil.net_if_addrs().items():
+        for addr in addresses:
+            if addr.family == socket.AF_INET:
+                ip = addr.address
+                if not ipaddress.ip_address(ip).is_loopback:
+                    return ip
+                if fallback_ip is None:
+                    fallback_ip = ip
 
-    logger.warning("Couldn't find a non-loopback IP address for receiving search results.")
-    return ip
+    if not fallback_ip:
+        logger.warning("Couldn't find a non-loopback IP address for receiving search results.")
+    return fallback_ip
 
 
 async def do_search_without_aggregation(
