@@ -54,44 +54,6 @@ SERVICE_CONTAINER_UID_GID = f"{SERVICE_CONTAINER_USER_ID}:{SERVICE_CONTAINER_GRO
 logger = logging.getLogger(__name__)
 
 
-def _chown_recursively(
-    path: pathlib.Path,
-    user_id: int,
-    group_id: int,
-):
-    """
-    Recursively changes the owner of the given path to the given user ID and group ID.
-    :param path:
-    :param user_id:
-    :param group_id:
-    """
-    chown_cmd = ["chown", "--recursive", f"{user_id}:{group_id}", str(path)]
-    subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
-
-
-def _chown_paths_if_root(*paths: pathlib.Path):
-    """
-    Changes ownership of the given paths to the default container user/group IDs
-    if the current process is running as root.
-
-    :param paths:
-    """
-    if os.getuid() != 0:
-        return
-    for path in paths:
-        _chown_recursively(path, SERVICE_CONTAINER_USER_ID, SERVICE_CONTAINER_GROUP_ID)
-
-
-def _get_ip_from_hostname(hostname: str) -> str:
-    """
-    Resolves a hostname to an IP address.
-
-    :param hostname: The hostname to resolve.
-    :return: The resolved IP address.
-    """
-    return socket.gethostbyname(hostname)
-
-
 class BaseController(ABC):
     def __init__(self, clp_config: CLPConfig):
         self.clp_config = clp_config
@@ -252,46 +214,6 @@ class BaseController(ABC):
             "CLP_REDUCER_UPSERT_INTERVAL": str(self.clp_config.reducer.upsert_interval),
         }
 
-    def _update_settings_object(
-        self,
-        parent_key_prefix: str,
-        settings: Dict[str, Any],
-        updates: Dict[str, Any],
-    ):
-        """
-        Recursively updates the given settings object with the values from `updates`.
-
-        :param parent_key_prefix: The prefix for keys at this level in the settings dictionary.
-        :param settings: The settings to update.
-        :param updates: The updates.
-        :raises ValueError: If a key in `updates` doesn't exist in `settings`.
-        """
-        for key, value in updates.items():
-            if key not in settings:
-                error_msg = (
-                    f"{parent_key_prefix}{key} is not a valid configuration key for the webui."
-                )
-                raise ValueError(error_msg)
-            if isinstance(value, dict):
-                self._update_settings_object(f"{parent_key_prefix}{key}.", settings[key], value)
-            else:
-                settings[key] = updates[key]
-
-    def _read_and_update_settings_json(
-        self, settings_file_path: pathlib.Path, updates: Dict[str, Any]
-    ):
-        """
-        Reads and updates a settings JSON file.
-
-        :param settings_file_path:
-        :param updates:
-        """
-        with open(settings_file_path, "r") as settings_json_file:
-            settings_object = json.loads(settings_json_file.read())
-        self._update_settings_object("", settings_object, updates)
-
-        return settings_object
-
     def set_up_env_for_webui(self, container_clp_config: CLPConfig):
         component_name = WEBUI_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
@@ -403,6 +325,46 @@ class BaseController(ABC):
         """
         pass
 
+    def _update_settings_object(
+        self,
+        parent_key_prefix: str,
+        settings: Dict[str, Any],
+        updates: Dict[str, Any],
+    ):
+        """
+        Recursively updates the given settings object with the values from `updates`.
+
+        :param parent_key_prefix: The prefix for keys at this level in the settings dictionary.
+        :param settings: The settings to update.
+        :param updates: The updates.
+        :raises ValueError: If a key in `updates` doesn't exist in `settings`.
+        """
+        for key, value in updates.items():
+            if key not in settings:
+                error_msg = (
+                    f"{parent_key_prefix}{key} is not a valid configuration key for the webui."
+                )
+                raise ValueError(error_msg)
+            if isinstance(value, dict):
+                self._update_settings_object(f"{parent_key_prefix}{key}.", settings[key], value)
+            else:
+                settings[key] = updates[key]
+
+    def _read_and_update_settings_json(
+        self, settings_file_path: pathlib.Path, updates: Dict[str, Any]
+    ):
+        """
+        Reads and updates a settings JSON file.
+
+        :param settings_file_path:
+        :param updates:
+        """
+        with open(settings_file_path, "r") as settings_json_file:
+            settings_object = json.loads(settings_json_file.read())
+        self._update_settings_object("", settings_object, updates)
+
+        return settings_object
+
     @abstractmethod
     def _provision(self) -> Dict[str, str]:
         """
@@ -414,14 +376,6 @@ class BaseController(ABC):
 
 
 class DockerComposeController(BaseController):
-    @staticmethod
-    def _get_num_workers():
-        """
-        Gets the parallelism number for worker components.
-        TODO: Revisit after moving from single-container to multi-container workers.
-        """
-        return multiprocessing.cpu_count() // 2
-
     def __init__(self, clp_config: CLPConfig):
         super().__init__(clp_config)
 
@@ -456,6 +410,14 @@ class DockerComposeController(BaseController):
         except subprocess.CalledProcessError:
             logger.exception("Failed to stop CLP containers using Docker Compose.")
             raise
+
+    @staticmethod
+    def _get_num_workers():
+        """
+        Gets the parallelism number for worker components.
+        TODO: Revisit after moving from single-container to multi-container workers.
+        """
+        return multiprocessing.cpu_count() // 2
 
     def _provision(self):
         container_clp_config = generate_docker_compose_container_config(self.clp_config)
@@ -496,3 +458,41 @@ class DockerComposeController(BaseController):
         with open(f"{self.clp_home}/.env", "w") as env_file:
             for key, value in env_dict.items():
                 env_file.write(f"{key}={value}\n")
+
+
+def _chown_recursively(
+    path: pathlib.Path,
+    user_id: int,
+    group_id: int,
+):
+    """
+    Recursively changes the owner of the given path to the given user ID and group ID.
+    :param path:
+    :param user_id:
+    :param group_id:
+    """
+    chown_cmd = ["chown", "--recursive", f"{user_id}:{group_id}", str(path)]
+    subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
+
+
+def _chown_paths_if_root(*paths: pathlib.Path):
+    """
+    Changes ownership of the given paths to the default container user/group IDs
+    if the current process is running as root.
+
+    :param paths:
+    """
+    if os.getuid() != 0:
+        return
+    for path in paths:
+        _chown_recursively(path, SERVICE_CONTAINER_USER_ID, SERVICE_CONTAINER_GROUP_ID)
+
+
+def _get_ip_from_hostname(hostname: str) -> str:
+    """
+    Resolves a hostname to an IP address.
+
+    :param hostname: The hostname to resolve.
+    :return: The resolved IP address.
+    """
+    return socket.gethostbyname(hostname)
