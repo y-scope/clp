@@ -1,8 +1,8 @@
 set(
         CLP_SOURCES
         ../ArrayBackedPosIntSet.hpp
-        ../BufferedFileReader.cpp
-        ../BufferedFileReader.hpp
+        ../BufferedReader.cpp
+        ../BufferedReader.hpp
         ../BufferReader.cpp
         ../BufferReader.hpp
         ../database_utils.cpp
