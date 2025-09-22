@@ -3,7 +3,8 @@ import {
     useMemo,
 } from "react";
 
-import type {PrestoSearchResult} from "../../../../../../../../common/index.js";
+import type {PrestoSearchResult} from "@webui/common/presto";
+
 import VirtualTable from "../../../../../../components/VirtualTable";
 import useSearchStore from "../../../../SearchState/index";
 import {usePrestoSearchResults} from "./usePrestoSearchResults";

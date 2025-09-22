@@ -1,8 +1,6 @@
 import {
     useCallback,
     useEffect,
-    useImperativeHandle,
-    useRef,
 } from "react";
 
 import {
@@ -17,15 +15,13 @@ import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 import "./monaco-loader";
 
 
-type SqlEditorRef = {
-    focus: () => void;
-};
+type SqlEditorType = monaco.editor.IStandaloneCodeEditor;
 
-type SqlEditorProps = Omit<EditorProps, "language"> & React.RefAttributes<SqlEditorRef> & {
+type SqlEditorProps = Omit<EditorProps, "language"> & {
     disabled: boolean;
 
     /** Callback when the editor is mounted and ref is ready to use. */
-    onEditorReady?: () => void;
+    onEditorReady?: (editor: SqlEditorType) => void;
 };
 
 /**
@@ -35,29 +31,33 @@ type SqlEditorProps = Omit<EditorProps, "language"> & React.RefAttributes<SqlEdi
  * @return
  */
 const SqlEditor = (props: SqlEditorProps) => {
-    const {ref, disabled, onEditorReady, ...editorProps} = props;
-    const editorRef = useRef<monaco.editor.IStandaloneCodeEditor>(null);
+    const {disabled, onEditorReady, ...editorProps} = props;
     const monacoEditor = useMonaco();
     const {token} = theme.useToken();
 
-    useImperativeHandle(ref, () => ({
-        focus: () => {
-            editorRef.current?.focus();
-        },
-    }), []);
-
     const handleEditorDidMount = useCallback((
-        editor: monaco.editor.IStandaloneCodeEditor,
+        editor: SqlEditorType,
     ) => {
-        editorRef.current = editor;
-        onEditorReady?.();
+        onEditorReady?.(editor);
     }, [onEditorReady]);
 
-    // Define disabled theme for monaco editor
+    // Define default and disabled themes for monaco editor
     useEffect(() => {
         if (null === monacoEditor) {
             return;
         }
+
+        monacoEditor.editor.defineTheme("default-theme", {
+            base: "vs",
+            inherit: true,
+            rules: [],
+            colors: {
+                "editor.background": color(token.colorBgContainer).hexa(),
+                "editor.foreground": color(token.colorText).hexa(),
+                "focusBorder": "#0000",
+            },
+        });
+
         monacoEditor.editor.defineTheme("disabled-theme", {
             base: "vs",
             inherit: true,
@@ -65,9 +65,7 @@ const SqlEditor = (props: SqlEditorProps) => {
             colors: {
                 "editor.background": color(token.colorBgContainerDisabled).hexa(),
                 "editor.foreground": color(token.colorTextDisabled).hexa(),
-
-                // transparent
-                "focusBorder": "#00000000",
+                "focusBorder": "#0000",
             },
         });
     }, [
@@ -77,37 +75,27 @@ const SqlEditor = (props: SqlEditorProps) => {
 
     return (
         <div
-            style={
-                disabled ?
-                    {pointerEvents: "none"} :
-                    {}
-            }
+            style={{
+                border: `1px solid ${token.colorBorder}`,
+                borderRadius: token.borderRadius,
+                pointerEvents: disabled ?
+                    "none" :
+                    "auto",
+            }}
         >
             <Editor
                 language={"sql"}
                 loading={
                     <div
                         style={{
-                            backgroundColor: "white",
+                            backgroundColor: token.colorBgContainer,
                             height: "100%",
                             width: "100%",
                         }}/>
                 }
-                options={{
-                    automaticLayout: true,
-                    folding: false,
-                    fontSize: 16,
-                    lineNumbers: "off",
-                    minimap: {enabled: false},
-                    overviewRulerBorder: false,
-                    placeholder: "Enter your SQL query",
-                    renderLineHighlightOnlyWhenFocus: true,
-                    scrollBeyondLastLine: false,
-                    wordWrap: "on",
-                }}
                 theme={disabled ?
                     "disabled-theme" :
-                    "light"}
+                    "default-theme"}
                 onMount={handleEditorDidMount}
                 {...editorProps}/>
         </div>
@@ -115,4 +103,7 @@ const SqlEditor = (props: SqlEditorProps) => {
 };
 
 export default SqlEditor;
-export type {SqlEditorRef};
+export type {
+    SqlEditorProps,
+    SqlEditorType,
+};

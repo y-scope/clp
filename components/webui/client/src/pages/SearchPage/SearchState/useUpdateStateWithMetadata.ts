@@ -3,7 +3,7 @@ import {useEffect} from "react";
 import {
     PRESTO_SEARCH_SIGNAL,
     SEARCH_SIGNAL,
-} from "@common/index.js";
+} from "@webui/common/metadata";
 import {notification} from "antd";
 
 import useSearchStore from "./index";
@@ -38,7 +38,7 @@ const useUpdateStateWithMetadata = () => {
 
         switch (resultsMetadata.lastSignal) {
             case SEARCH_SIGNAL.RESP_DONE:
-            case PRESTO_SEARCH_SIGNAL.FINISHED:
+            case PRESTO_SEARCH_SIGNAL.DONE:
                 updateSearchUiState(SEARCH_UI_STATE.DONE);
                 break;
             case PRESTO_SEARCH_SIGNAL.FAILED:

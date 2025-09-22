@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 
@@ -213,20 +214,18 @@ TEST_CASE("clp-s-range-index", "[clp-s][range-index]") {
     };
 
     auto input_file{get_test_input_local_path()};
-    auto input_file_type{clp_s::FileType::Json};
     if (from_ir) {
         generate_ir();
         input_file = get_ir_test_input_relative_path();
-        input_file_type = clp_s::FileType::KeyValueIr;
     }
     std::vector<clp_s::ArchiveStats> archive_stats;
     REQUIRE_NOTHROW(
             archive_stats = compress_archive(
                     input_file,
                     std::string{cTestRangeIndexArchiveDirectory},
+                    std::nullopt,
                     single_file_archive,
-                    false,
-                    input_file_type
+                    false
             )
     );
     read_and_check_archive_metadata(from_ir);

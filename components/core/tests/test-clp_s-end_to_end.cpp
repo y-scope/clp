@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -108,9 +109,9 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
             std::ignore = compress_archive(
                     get_test_input_local_path(),
                     std::string{cTestEndToEndArchiveDirectory},
+                    std::nullopt,
                     single_file_archive,
-                    structurize_arrays,
-                    clp_s::FileType::Json
+                    structurize_arrays
             )
     );
 

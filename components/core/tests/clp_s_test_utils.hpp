@@ -1,6 +1,7 @@
 #ifndef CLP_S_TEST_UTILS_HPP
 #define CLP_S_TEST_UTILS_HPP
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -16,14 +17,13 @@
  * @param archive_directory
  * @param single_file_archive
  * @param structurize_arrays
- * @param file_type
  * @return Statistics for every compressed archive.
  */
 [[nodiscard]] auto compress_archive(
         std::string const& file_path,
         std::string const& archive_directory,
+        std::optional<std::string> timestamp_key,
         bool single_file_archive,
-        bool structurize_arrays,
-        clp_s::FileType file_type
+        bool structurize_arrays
 ) -> std::vector<clp_s::ArchiveStats>;
 #endif  // CLP_S_TEST_UTILS_HPP

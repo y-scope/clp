@@ -4,6 +4,7 @@ import logging
 import multiprocessing
 import os
 import pathlib
+import shlex
 import socket
 import subprocess
 import sys
@@ -25,6 +26,7 @@ from clp_py_utils.clp_config import (
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
+    QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
@@ -151,7 +153,7 @@ def wait_for_container_cmd(container_name: str, cmd_to_run: [str], timeout: int)
                 break
             time.sleep(1)
 
-    cmd_str = " ".join(cmd_to_run)
+    cmd_str = shlex.join(cmd_to_run)
     logger.error(f"Timeout while waiting for command {cmd_str} to run after {timeout} seconds")
     return False
 
@@ -272,7 +274,7 @@ def create_db_tables(
     # fmt: on
 
     cmd = container_start_cmd + create_tables_cmd
-    logger.debug(" ".join(cmd))
+    logger.debug(shlex.join(cmd))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Created {component_name} tables.")
@@ -317,7 +319,7 @@ def create_results_cache_indices(
     # fmt: on
 
     cmd = container_start_cmd + init_cmd
-    logger.debug(" ".join(cmd))
+    logger.debug(shlex.join(cmd))
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
     logger.info(f"Created {component_name} indices.")
@@ -842,7 +844,7 @@ def start_webui(
         get_clp_home() / "var" / "www" / "webui" / "client" / "settings.json"
     )
     server_settings_json_path = (
-        get_clp_home() / "var" / "www" / "webui" / "server" / "dist" / "server" / "settings.json"
+        get_clp_home() / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
     )
 
     validate_webui_config(clp_config, client_settings_json_path, server_settings_json_path)
@@ -886,6 +888,7 @@ def start_webui(
         "ClientDir": str(container_webui_dir / "client"),
         "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
         "StreamTargetUncompressedSize": container_clp_config.stream_output.target_uncompressed_size,
+        "ClpQueryEngine": clp_config.package.query_engine,
     }
 
     container_cmd_extra_opts = []
@@ -910,6 +913,14 @@ def start_webui(
         server_settings_json_updates["StreamFilesS3Region"] = None
         server_settings_json_updates["StreamFilesS3PathPrefix"] = None
         server_settings_json_updates["StreamFilesS3Profile"] = None
+
+    query_engine = clp_config.package.query_engine
+    if QueryEngine.PRESTO == query_engine:
+        server_settings_json_updates["PrestoHost"] = clp_config.presto.host
+        server_settings_json_updates["PrestoPort"] = clp_config.presto.port
+    else:
+        server_settings_json_updates["PrestoHost"] = None
+        server_settings_json_updates["PrestoPort"] = None
 
     server_settings_json = read_and_update_settings_json(
         server_settings_json_path, server_settings_json_updates
@@ -936,6 +947,7 @@ def start_webui(
         f"HOST={clp_config.webui.host}",
         f"PORT={clp_config.webui.port}",
         f"NODE_ENV=production",
+        f"RATE_LIMIT={clp_config.webui.rate_limit}",
     ]
     necessary_mounts = [
         mounts.clp_home,
@@ -962,7 +974,7 @@ def start_webui(
 
     node_cmd = [
         str(CONTAINER_CLP_HOME / "bin" / "node-22"),
-        str(container_webui_dir / "server" / "dist" / "server" / "src" / "main.js"),
+        str(container_webui_dir / "server" / "dist" / "src" / "main.js"),
     ]
     cmd = container_cmd + node_cmd
     subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
@@ -1126,6 +1138,12 @@ def main(argv):
         default=str(default_config_file_path),
         help="CLP package configuration file.",
     )
+    args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
 
     component_args_parser = args_parser.add_subparsers(dest="target")
     component_args_parser.add_parser(CONTROLLER_TARGET_NAME)
@@ -1145,6 +1163,10 @@ def main(argv):
     component_args_parser.add_parser(GARBAGE_COLLECTOR_COMPONENT_NAME)
 
     parsed_args = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     if parsed_args.target:
         target = parsed_args.target

@@ -1,4 +1,5 @@
-import {CLP_QUERY_ENGINES} from "../../../common/index.js";
+import {CLP_QUERY_ENGINES} from "@webui/common/config";
+
 import {settings} from "../settings";
 
 

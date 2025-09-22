@@ -1,17 +1,16 @@
 import {
+    ClientToServerEvents,
+    InterServerEvents,
+    ServerToClientEvents,
+    SocketData,
+} from "@webui/common/socket";
+import {
     ChangeStream,
     Document,
     Filter,
     FindOptions,
 } from "mongodb";
 import {Socket} from "socket.io";
-
-import {
-    ClientToServerEvents,
-    InterServerEvents,
-    ServerToClientEvents,
-    SocketData,
-} from "../../../../../../common/index.js";
 
 
 /**

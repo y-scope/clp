@@ -3,12 +3,13 @@
 The CLP repo includes several GitHub workflows for automating container image builds, artifact
 builds, testing, and linting. We briefly describe each workflow below.
 
-## clp-core-build
+## clp-artifact-build
 
 This workflow is responsible for:
 
-1. building (Linux) container images containing CLP-core's dependencies, and
-2. building CLP-core and running its unit tests.
+1. building (Linux) container images containing CLP-core's dependencies,
+2. building CLP-core and running its unit tests, and
+3. building a container image containing CLP's package components.
 
 To minimize build times, the jobs in the workflow are organized in the directed acyclic graph (DAG)
 shown below.
@@ -27,13 +28,20 @@ shown below.
     }
   }
 }%%
-flowchart TD
+flowchart LR
     filter-relevant-changes --> centos-stream-9-deps-image
+    filter-relevant-changes --> manylinux_2_28-x86_64-deps-image
+    filter-relevant-changes --> musllinux_1_2-x86_64-deps-image
     filter-relevant-changes --> ubuntu-jammy-deps-image
     filter-relevant-changes --> centos-stream-9-binaries
+    filter-relevant-changes --> manylinux_2_28-x86_64-binaries
+    filter-relevant-changes --> musllinux_1_2-x86_64-binaries
     filter-relevant-changes --> ubuntu-jammy-binaries
     centos-stream-9-deps-image --> centos-stream-9-binaries
+    manylinux_2_28-x86_64-deps-image --> manylinux_2_28-x86_64-binaries
+    musllinux_1_2-x86_64-deps-image --> musllinux_1_2-x86_64-binaries
     ubuntu-jammy-deps-image --> ubuntu-jammy-binaries
+    ubuntu-jammy-deps-image --> package-image
     ubuntu-jammy-binaries --> ubuntu-jammy-binaries-image
 :::
 
@@ -43,10 +51,19 @@ Arrows between jobs indicate a dependency. The jobs are as follows:
   the following jobs should run.
 * `centos-stream-9-deps-image`: Builds a container image containing the dependencies necessary to
   build CLP-core in a CentOS Stream 9 x86 environment.
+* `manylinux_2_28-x86_64-deps-image`: Builds a container image containing the dependencies necessary
+  to build CLP-core in a manylinux_2_28 x86 environment.
+* `musllinux_1_2-x86_64-deps-image`: Builds a container image containing the dependencies necessary
+  to build CLP-core in a musllinux_1_2 x86 environment.
 * `ubuntu-jammy-deps-image`: Builds a container image containing the dependencies necessary to build
   CLP-core in an Ubuntu Jammy x86 environment.
 * `centos-stream-9-binaries`: Builds the CLP-core binaries in the built CentOS Stream 9 container
   and runs core's unit tests.
+* `manylinux_2_28-x86_64-binaries`: Builds the CLP-core binaries in the built manylinux_2_28
+  container and runs core's unit tests.
+* `musllinux_1_2-x86_64-binaries`: Builds the CLP-core binaries in the built musllinux_1_2 container
+  and runs core's unit tests.
+* `package-image`: Builds a container image containing CLP's package components.
 * `ubuntu-jammy-binaries`: Builds the CLP-core binaries in the built Ubuntu Jammy container and runs
   core's unit tests.
 * `ubuntu-jammy-binaries-image`: Builds an Ubuntu Jammy container image containing CLP-core's
