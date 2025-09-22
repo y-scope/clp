@@ -149,6 +149,13 @@ def is_docker_compose_running(project_name: str) -> bool:
 
 
 def check_docker_dependencies(should_compose_run: bool = False):
+    """
+    Checks if Docker and Docker Compose are installed, and whether Docker Compose is running or not.
+
+    :param should_compose_run:
+    :raises EnvironmentError: If any Docker dependency is not installed or Docker Compose state
+    does not match expectation.
+    """
     try:
         subprocess.run(
             "command -v docker",
