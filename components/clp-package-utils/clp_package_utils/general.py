@@ -314,7 +314,7 @@ def generate_docker_compose_container_config(clp_config: CLPConfig) -> CLPConfig
     :return: The container config and the mounts.
     """
     container_clp_config = clp_config.copy(deep=True)
-    container_clp_config.transform_for_container_config()
+    container_clp_config.transform_for_container()
 
     return container_clp_config
 

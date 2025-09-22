@@ -240,7 +240,7 @@ class Database(BaseModel):
         self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
 
-    def transform_for_container_config(self):
+    def transform_for_container(self):
         self.host = DB_COMPONENT_NAME
         self.port = self.DEFAULT_PORT
 
@@ -303,7 +303,7 @@ class QueryScheduler(BaseModel):
             raise ValueError(f"{field} is not greater than zero")
         return field
 
-    def transform_for_container_config(self):
+    def transform_for_container(self):
         self.host = QUERY_SCHEDULER_COMPONENT_NAME
         self.port = self.DEFAULT_PORT
 
@@ -362,7 +362,7 @@ class Redis(BaseModel):
         """
         self.password = _get_env_var(CLP_REDIS_PASS_ENV_VAR_NAME)
 
-    def transform_for_container_config(self):
+    def transform_for_container(self):
         self.host = REDIS_COMPONENT_NAME
         self.port = self.DEFAULT_PORT
 
@@ -398,7 +398,7 @@ class Reducer(BaseModel):
             raise ValueError(f"{field} is not greater than zero")
         return field
 
-    def transform_for_container_config(self):
+    def transform_for_container(self):
         self.host = REDUCER_COMPONENT_NAME
         self.base_port = self.DEFAULT_PORT
 
@@ -441,7 +441,7 @@ class ResultsCache(BaseModel):
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
-    def transform_for_container_config(self):
+    def transform_for_container(self):
         self.host = RESULTS_CACHE_COMPONENT_NAME
         self.port = self.DEFAULT_PORT
 
@@ -477,7 +477,7 @@ class Queue(BaseModel):
         self.username = _get_env_var(CLP_QUEUE_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_QUEUE_PASS_ENV_VAR_NAME)
 
-    def transform_for_container_config(self):
+    def transform_for_container(self):
         self.host = QUEUE_COMPONENT_NAME
         self.port = self.DEFAULT_PORT
 
@@ -558,7 +558,7 @@ class S3IngestionConfig(BaseModel):
     def dump_to_primitive_dict(self):
         return self.dict()
 
-    def transform_for_container_config(self):
+    def transform_for_container(self):
         pass
 
 
@@ -616,35 +616,35 @@ class S3Storage(BaseModel):
 class FsIngestionConfig(FsStorage):
     directory: pathlib.Path = pathlib.Path("/")
 
-    def transform_for_container_config(self):
+    def transform_for_container(self):
         self.directory = CONTAINER_INPUT_LOGS_ROOT_DIR
 
 
 class ArchiveFsStorage(FsStorage):
     directory: pathlib.Path = CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
 
-    def transform_for_container_config(self):
+    def transform_for_container(self):
         self.directory = pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
 
 
 class StreamFsStorage(FsStorage):
     directory: pathlib.Path = CLP_DEFAULT_STREAM_DIRECTORY_PATH
 
-    def transform_for_container_config(self):
+    def transform_for_container(self):
         self.directory = pathlib.Path("/") / CLP_DEFAULT_STREAM_DIRECTORY_PATH
 
 
 class ArchiveS3Storage(S3Storage):
     staging_directory: pathlib.Path = CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
 
-    def transform_for_container_config(self):
+    def transform_for_container(self):
         self.staging_directory = pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
 
 
 class StreamS3Storage(S3Storage):
     staging_directory: pathlib.Path = CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
 
-    def transform_for_container_config(self):
+    def transform_for_container(self):
         self.staging_directory = pathlib.Path("/") / CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
 
 
@@ -970,21 +970,27 @@ class CLPConfig(BaseModel):
 
         return d
 
-    def transform_for_container_config(self):
+    def transform_for_container(self):
+        """
+        Adjusts paths and service hosts for containerized execution.
+
+        Converts all relevant directories to absolute paths inside the container
+        and updates service hostnames/ports to their container service names.
+        """
         self.data_directory = pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH
         self.logs_directory = pathlib.Path("/") / CLP_DEFAULT_LOG_DIRECTORY_PATH
         if self.aws_config_directory is not None:
             self.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
-        self.logs_input.transform_for_container_config()
-        self.archive_output.storage.transform_for_container_config()
-        self.stream_output.storage.transform_for_container_config()
+        self.logs_input.transform_for_container()
+        self.archive_output.storage.transform_for_container()
+        self.stream_output.storage.transform_for_container()
 
-        self.database.transform_for_container_config()
-        self.queue.transform_for_container_config()
-        self.redis.transform_for_container_config()
-        self.results_cache.transform_for_container_config()
-        self.query_scheduler.transform_for_container_config()
-        self.reducer.transform_for_container_config()
+        self.database.transform_for_container()
+        self.queue.transform_for_container()
+        self.redis.transform_for_container()
+        self.results_cache.transform_for_container()
+        self.query_scheduler.transform_for_container()
+        self.reducer.transform_for_container()
 
 
 class WorkerConfig(BaseModel):
