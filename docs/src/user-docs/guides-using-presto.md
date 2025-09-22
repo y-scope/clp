@@ -206,7 +206,7 @@ SELECT foo.bar FROM default LIMIT 1;
 The CLP webUI is available at [http://localhost:4000](http://localhost:4000) (if you changed
 `webui.host` or `webui.port` in `etc/clp-config.yml`, use the new values).
 
-:::note
+:::{note}
 The WebUI can only run one query at a time, and queries must not include a `;`.
 :::
 
