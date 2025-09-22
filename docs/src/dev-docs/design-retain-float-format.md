@@ -54,8 +54,8 @@ the exponent arbitrarily to represent the same number in infinite possible ways.
 
 are both valid representations of `16` using 3 significant digits.
 
-Likewise, we can come up with infinite representations of `16` by choosing to represent arbitrarily
-many significant digits.
+Likewise, we can come up with infinite representations of `16` (at different precisions) by
+choosing to represent arbitrarily many significant digits.
 
 Point 2. is a bit more abstract, but it is important for understanding our approach to losslessly
 storing floating-point numbers.
