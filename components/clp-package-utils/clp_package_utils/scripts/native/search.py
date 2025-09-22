@@ -129,12 +129,13 @@ def _get_ipv4_address() -> str | None:
 
     for _, addresses in psutil.net_if_addrs().items():
         for addr in addresses:
-            if addr.family == socket.AF_INET:
-                ip = addr.address
-                if not ipaddress.ip_address(ip).is_loopback:
-                    return ip
-                if fallback_ip is None:
-                    fallback_ip = ip
+            if addr.family != socket.AF_INET:
+                continue
+            ip = addr.address
+            if not ipaddress.ip_address(ip).is_loopback:
+                return ip
+            if fallback_ip is None:
+                fallback_ip = ip
 
     if fallback_ip is not None:
         logger.warning("Couldn't find a non-loopback IP address for receiving search results.")
