@@ -136,7 +136,7 @@ def _get_ipv4_address() -> str | None:
                 if fallback_ip is None:
                     fallback_ip = ip
 
-    if not fallback_ip:
+    if fallback_ip is not None:
         logger.warning("Couldn't find a non-loopback IP address for receiving search results.")
     return fallback_ip
 
