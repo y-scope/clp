@@ -3,7 +3,7 @@
 Since our goal is to losslessly retain floating-point numbers that come from JSON input, it is worth
 taking a look at what kinds of floating-point numbers can appear in JSON.
 
-The [JSON specification][json_spec] treats fields matching the following grammar as number values:
+The [JSON specification][json_spec] treats fields that match the following grammar as number values:
 
 ```text
 number = [ minus ] int [ frac ] [ exp ]
@@ -64,7 +64,7 @@ many significant digits.
 The point about whether the original values correspond to IEEE-754 is a bit abstract, but is
 important for understanding our approach to losslessly storing floating-point numbers.
 
-It is probably easiest to show an example. Of the numbers:
+It's most easily demonstrated with an example. Of the numbers:
 
 - `1.2345678901234567`
 - `1.2345678901234568`
@@ -89,11 +89,11 @@ machine-generated data. This means that most inputs _do_ correspond to IEEE-754 
 floating-point numbers, and that of the infinitely many ways of representing a number only a few
 will be common.
 
-Our approach then, is to store most floating-point numbers as an IEEE-754 binary64 floating-point
+Our approach, then, is to store most floating-point numbers as an IEEE-754 binary64 floating-point
 number alongside some formatting information, falling back to storing the number as a string when
 that doesn't work.
 
-# Retaining floating-point format information
+## Retaining floating-point format information
 
 To losslessly retain the string representation of floating-point numbers we use two encoding
 strategies:
@@ -106,9 +106,10 @@ variable dictionary, and encode numbers as their corresponding variable dictiona
 Generally we prefer storing floating-point numbers as `FormattedFloat` over `DictionaryFloat`
 because:
 
-- We can directly compare against the stored IEEE-754 binary64 float at query time instead of having
-to first parse the string representation of a floating-point number.
-- We avoid bloating the variable dictionary with non-repetitive floating-point strings.
+- `FormattedFloat` allows us to directly compare against the stored IEEE-754 binary64 float at query
+  time instead of having to first parse the string representation of a floating-point number.
+- Fewer `DictionaryFloat` encodings means that we can avoid bloating the variable dictionary with
+  non-repetitive floating-point strings.
 
 Unfortunately, even though `FormattedFloat` is designed to represent most common encodings of
 IEEE-754 binary64 floats, we cannot guarantee that our input follows a common format or was
@@ -124,7 +125,7 @@ Each `FormattedFloat` node contains:
 - A 2-byte little-endian _format_ field encoding the necessary output formatting information so
   that, upon decompression, the value can be decompressed exactly to the original text.
 
-Note that the unused lowest 5 bits of the 2‑byte field are currently reserved, encoders must write
+Note that the unused lowest 5 bits of the 2‑byte field are currently reserved. Encoders must write
 them as 0, and decoders must ignore them (treat as “don’t care”) for forward compatibility.
 
 From MSB to LSB, the 2-byte format field contains the following sections:
@@ -135,19 +136,19 @@ From MSB to LSB, the 2-byte format field contains the following sections:
 - [Digits from first non-zero to end of number](#digits-from-first-non-zero-to-end-of-number) (5 bits)
 - Reserved for future use (5 bits)
 
-To clarify the floating-point formats that `FormattedFloat` can represent, we describe them in text
-here:
+The floating-point formats that `FormattedFloat` can represent are described below:
 
-- For non-scientific numbers we accept:
+- Numbers not written in scientific notation are accepted if **either** of the following are true:
   - Any number that has at most 16 digits after the first non-zero digit
   - Or at most 1 zero before the decimal and 16 zeroes after the decimal, if the number is a zero
-- For scientific numbers we accept:
-  - Single digit numbers with no decimal, followed by an exponent
-  - Or numbers with **1** digit preceding the decimal and up to 16 digits following the
-    decimal, followed by an exponent
-  - Where zero can not be the digit before the decimal, unless every digit in the number is zero
-  - And where the exponent is specified by `e` or `E` optionally followed by `+` or `-`
-  - With at most **4** exponent digits, which can be left-padded with `0`
+- Numbers written in scientific notation are accepted if all **four** of the following are true:
+  1. The significand is either
+      * a **single** digit with no decimal point, followed by an exponent
+      * **one** digit before the decimal point, and up to **16** digits after the decimal point,
+        followed by an exponent
+  2. The digit before the decimal point cannot be zero unless every digit of the significand is zero
+  3. The exponent uses `e` or `E`, optionally followed by `+` or `-`
+  4. The exponent has at most **4** digits (left-padding with `0` is allowed)
 
 With the added restrictions that:
 
@@ -157,7 +158,7 @@ With the added restrictions that:
 
 These restrictions really correspond to "canonical" representations of floating-point numbers with
 up to 17 digits of precision. This means that our formatting scheme can always represent numbers
-produced by format specifiers such as '%f', '%e', and '%g', so long as they don't use too many
+produced by format specifiers such as `%f`, `%e`, and `%g`, so long as they don't use too many
 digits of precision, and the underlying number isn't NaN, or +/- Infinity.
 
 ### Scientific notation marker
@@ -187,7 +188,7 @@ format correctly.
 
 ### Exponent digits
 
-Since the maximum and minimum decimal exponents for a double, `308` and `-324` respectively, are
+Since the maximum and minimum decimal exponents for a double (`308` and `-324` respectively) are
 both three digits, two bits are enough to represent the digit count. We allow up to 4 digits to
 support exponents left-padded with `0`.
 
@@ -209,7 +210,7 @@ fractional part (excluding the exponent). Examples:
 - `0.000000123000` → **6** (from first `1` to last `0`)
 - `0.00` → **3** (counts all zeros for zero value)
 
-Per the [JSON specification][json_grammar], the integer part of a floating-point number cannot be
+Per the [JSON specification][json_spec], the integer part of a floating-point number cannot be
 empty, so the minimum number of digits is **1**. To take advantage of this fact, we store this field
 as **actual number of non-zero digits to end of number - 1**; for the numeric value zero we store
 **actual number of digits - 1**.
@@ -221,8 +222,8 @@ requires 5 bits.
 
 We could support representing binary64 numbers with up to 32 significant digits, and we may choose
 to do so in the future, but this is explicitly not supported in the current version of the format.
-The rationale for not doing so now is that as the number of digits increases beyond 17, the
-likelihood that the number corresponds to a valid IEEE-754 binary64 float decreases.
+The rationale for not doing so now is that the likelihood that a number corresponds to a valid
+IEEE-754 binary64 float decreases as the number of digits increases beyond 17.
 
 [json_spec]: https://datatracker.ietf.org/doc/html/rfc8259
 [ieee754]: https://ieeexplore.ieee.org/document/4610935/
