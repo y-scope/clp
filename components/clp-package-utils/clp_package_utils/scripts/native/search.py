@@ -348,7 +348,7 @@ def _get_ipv4_address() -> str | None:
     """
     fallback_ip = None
 
-    for _, addresses in psutil.net_if_addrs().items():
+    for addresses in psutil.net_if_addrs().values():
         for addr in addresses:
             if addr.family != socket.AF_INET:
                 continue
