@@ -784,6 +784,21 @@ class GarbageCollector(BaseModel):
         return field
 
 
+class Presto(BaseModel):
+    host: str
+    port: int
+
+    @validator("host")
+    def validate_host(cls, field):
+        _validate_host(cls, field)
+        return field
+
+    @validator("port")
+    def validate_port(cls, field):
+        _validate_port(cls, field)
+        return field
+
+
 def _get_env_var(name: str) -> str:
     value = os.getenv(name)
     if value is None:
@@ -809,6 +824,8 @@ class CLPConfig(BaseModel):
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
+
+    presto: Optional[Presto] = None
 
     archive_output: ArchiveOutput = ArchiveOutput()
     stream_output: StreamOutput = StreamOutput()
@@ -961,6 +978,24 @@ class CLPConfig(BaseModel):
             d["aws_config_directory"] = None
 
         return d
+
+    # We set `pre=True` so that we print errors about a mismatch between the query engine and presto
+    # config before errors about the presto config itself.
+    @root_validator(pre=True)
+    def validate_presto_config(cls, values):
+        package = values.get("package")
+        if not isinstance(package, Package):
+            # Skip validation since `package` is not a valid `Package` (Pydantic will validate it
+            # later and throw an error).
+            return values
+
+        query_engine = package.get("query_engine")
+        presto = values.get("presto")
+        if query_engine == QueryEngine.PRESTO and presto is None:
+            raise ValueError(
+                f"`presto` config must be non-null when query_engine is `{query_engine}`"
+            )
+        return values
 
 
 class WorkerConfig(BaseModel):

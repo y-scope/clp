@@ -8,7 +8,6 @@
 
 #include "SchemaTree.hpp"
 #include "TraceableException.hpp"
-#include "Utils.hpp"
 
 namespace clp_s {
 /**
