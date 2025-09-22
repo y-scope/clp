@@ -174,7 +174,7 @@ def check_docker_dependencies(should_compose_run: bool = False):
         raise EnvironmentError("docker-compose is already running.")
 
 
-def _validate_log_directory(logs_dir: pathlib.Path, component_name: str) -> None:
+def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
     """
     Validate that a log directory path of a component is valid.
 
