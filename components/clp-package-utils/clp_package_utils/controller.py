@@ -55,12 +55,23 @@ logger = logging.getLogger(__name__)
 
 
 class BaseController(ABC):
+    """
+    Abstract base controller for preparing and deploying CLP components.
+    Provides common logic for preparing environment variables, directories,
+    and configuration files for each service.
+    """
+
     def __init__(self, clp_config: CLPConfig):
         self.clp_config = clp_config
         self.clp_home = get_clp_home()
         self._conf_dir = self.clp_home / "etc"
 
     def set_up_env_for_database(self):
+        """
+        Prepares environment variables and directories for the database component.
+
+        :return: Dictionary of component-related environment variables.
+        """
         component_name = DB_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
@@ -87,6 +98,11 @@ class BaseController(ABC):
         }
 
     def set_up_env_for_queue(self):
+        """
+        Prepares environment variables and directories for the message queue component.
+
+        :return: Dictionary of component-related environment variables.
+        """
         component_name = QUEUE_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
@@ -104,6 +120,11 @@ class BaseController(ABC):
         }
 
     def set_up_env_for_redis(self):
+        """
+        Prepares environment variables and directories for the Redis component.
+
+        :return: Dictionary of component-related environment variables.
+        """
         component_name = REDIS_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
@@ -129,6 +150,11 @@ class BaseController(ABC):
         }
 
     def set_up_env_for_results_cache(self):
+        """
+        Prepares environment variables and directories for the results cache (MongoDB) component.
+
+        :return: Dictionary of component-related environment variables.
+        """
         component_name = RESULTS_CACHE_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
@@ -151,6 +177,11 @@ class BaseController(ABC):
         }
 
     def set_up_env_for_compression_scheduler(self):
+        """
+        Prepares environment variables and files for the compression scheduler component.
+
+        :return: Dictionary of component-related environment variables.
+        """
         component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
@@ -163,6 +194,11 @@ class BaseController(ABC):
         }
 
     def set_up_env_for_query_scheduler(self):
+        """
+        Prepares environment variables and files for the query scheduler component.
+
+        :return: Dictionary of component-related environment variables.
+        """
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
@@ -175,6 +211,12 @@ class BaseController(ABC):
         }
 
     def set_up_env_for_compression_worker(self, num_workers: int):
+        """
+        Prepares environment variables for the compression worker component.
+
+        :param num_workers: Number of worker processes to run.
+        :return: Dictionary of compression worker-related environment variables.
+        """
         component_name = COMPRESSION_WORKER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
@@ -188,6 +230,12 @@ class BaseController(ABC):
         }
 
     def set_up_env_for_query_worker(self, num_workers: int):
+        """
+        Prepares environment variables for the query worker component.
+
+        :param num_workers: Number of worker processes to run.
+        :return: Dictionary of component-related environment variables.
+        """
         component_name = QUERY_WORKER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
@@ -201,6 +249,12 @@ class BaseController(ABC):
         }
 
     def set_up_env_for_reducer(self, num_workers: int):
+        """
+        Prepares environment variables for the reducer component.
+
+        :param num_workers: Number of worker processes to run.
+        :return: Dictionary of component-related environment variables.
+        """
         component_name = REDUCER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
@@ -215,6 +269,12 @@ class BaseController(ABC):
         }
 
     def set_up_env_for_webui(self, container_clp_config: CLPConfig):
+        """
+        Prepares environment variables and settings for the Web UI component.
+
+        :param container_clp_config: CLP configuration inside the containers.
+        :return: Dictionary of component-related environment variables.
+        """
         component_name = WEBUI_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
@@ -303,6 +363,11 @@ class BaseController(ABC):
         }
 
     def set_up_env_for_garbage_collector(self):
+        """
+        Prepares environment variables for the garbage collector component.
+
+        :return: Dictionary of component-related environment variables.
+        """
         component_name = GARBAGE_COLLECTOR_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
@@ -368,18 +433,28 @@ class BaseController(ABC):
     @abstractmethod
     def _provision(self) -> Dict[str, str]:
         """
-        Provisions all components with orchestrator-specific logic.
+        Prepares all components with orchestrator-specific logic.
 
-        :return: Dictionary of environment variables for the orchestrator
+        :return: Dictionary of environment variables to be used by the orchestrator.
         """
         pass
 
 
 class DockerComposeController(BaseController):
+    """
+    Controller for deploying CLP components using Docker Compose.
+    """
+
     def __init__(self, clp_config: CLPConfig):
         super().__init__(clp_config)
 
     def deploy(self):
+        """
+        Deploys CLP components using Docker Compose by:
+        1. Checking Docker dependencies.
+        2. Provisioning environment variables and configuration.
+        3. Running `docker compose up -d`.
+        """
         check_docker_dependencies(should_compose_run=False)
         self._provision()
 
@@ -396,6 +471,9 @@ class DockerComposeController(BaseController):
             raise
 
     def stop(self):
+        """
+        Stops CLP components deployed via Docker Compose.
+        """
         check_docker_dependencies(should_compose_run=True)
 
         logger.info("Stopping all CLP containers using Docker Compose...")
@@ -416,10 +494,19 @@ class DockerComposeController(BaseController):
         """
         Gets the parallelism number for worker components.
         TODO: Revisit after moving from single-container to multi-container workers.
+        :return: Number of worker processes.
         """
         return multiprocessing.cpu_count() // 2
 
     def _provision(self):
+        """
+        Provisions all CLP components for Docker Compose by:
+        - Generating container-specific config.
+        - Preparing environment variables for all components.
+        - Writing environment variables to `.env`.
+
+        :return: Dictionary of all environment variables.
+        """
         container_clp_config = generate_docker_compose_container_config(self.clp_config)
         num_workers = self._get_num_workers()
         dump_shared_container_config(container_clp_config, self.clp_config)
@@ -467,6 +554,7 @@ def _chown_recursively(
 ):
     """
     Recursively changes the owner of the given path to the given user ID and group ID.
+
     :param path:
     :param user_id:
     :param group_id:
@@ -477,8 +565,8 @@ def _chown_recursively(
 
 def _chown_paths_if_root(*paths: pathlib.Path):
     """
-    Changes ownership of the given paths to the default container user/group IDs
-    if the current process is running as root.
+    Changes ownership of the given paths to the default service container user/group IDs if the
+    current process is running as root.
 
     :param paths:
     """
