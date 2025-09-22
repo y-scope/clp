@@ -209,8 +209,8 @@ fractional part (excluding the exponent). Examples:
 
 Per the [JSON specification][json_spec], the integer part of a floating-point number cannot be
 empty, so the minimum number of digits is **1**. To take advantage of this fact, we store this field
-as **actual number of non-zero digits to end of number - 1**; for the numeric value zero we store
-**actual number of digits - 1**.
+as **one less than the actual number of digits from the first non-zero digit to the end of the
+number**; for the numeric value zero we store **one less than the actual number of digits**.
 
 As well, according to IEEE-754, only 17 decimal significant digits are needed to represent all
 binary64 floating-point numbers without precision loss. As a result, we currently allow a maximum of
