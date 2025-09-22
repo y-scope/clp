@@ -61,7 +61,7 @@ Using Presto with CLP requires:
       :::
 
     * Set the `results_cache.retention_period` key to `null` since the CLP + Presto integration
-      doesn't yet support for garbage collection.
+      doesn't yet support garbage collection.
 
       ```yaml
       results_cache:
