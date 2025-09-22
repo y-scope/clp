@@ -175,6 +175,13 @@ def check_docker_dependencies(should_compose_run: bool = False):
 
 
 def _validate_log_directory(logs_dir: pathlib.Path, component_name: str) -> None:
+    """
+    Validate that a log directory path of a component is valid.
+
+    :param logs_dir:
+    :param component_name:
+    :raises ValueError: If the path is invalid or not a directory.
+    """
     try:
         validate_path_could_be_dir(logs_dir)
     except ValueError as ex:
