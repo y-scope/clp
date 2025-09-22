@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <variant>
 #include <vector>
 
@@ -21,7 +22,9 @@ constexpr char cAwsSessionTokenEnvVar[] = "AWS_SESSION_TOKEN";
  */
 enum class FileType : uint8_t {
     Json = 0,
-    KeyValueIr
+    KeyValueIr,
+    Zstd,
+    Unknown
 };
 
 /**
@@ -121,6 +124,24 @@ get_input_archives_for_raw_path(std::string_view const path, std::vector<Path>& 
  */
 [[nodiscard]] auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
         -> std::shared_ptr<clp::ReaderInterface>;
+
+/**
+ * Tries to deduce the underlying file-type of the file opened by `reader`, and returns a
+ * (potentially new) reader for underlying JSON or KV-IR content by unwrapping layers of
+ * compression.
+ * @param reader
+ * @return A vector of all created `clp::ReaderInterface`s, where the last entry in the vector is
+ * open for reading content of the type described by the element in the pair. When the content type
+ * cannot be deduced, we return an empty vector and `FileType::Unknown`.
+ */
+[[nodiscard]] auto try_deduce_reader_type(std::shared_ptr<clp::ReaderInterface> reader)
+        -> std::pair<std::vector<std::shared_ptr<clp::ReaderInterface>>, FileType>;
+
+/**
+ * Closes all readers in a vector of nested readers, starting from the last reader.
+ * @param readers
+ */
+void close_nested_readers(std::vector<std::shared_ptr<clp::ReaderInterface>> const& readers);
 }  // namespace clp_s
 
 #endif  // CLP_S_INPUTCONFIG_HPP

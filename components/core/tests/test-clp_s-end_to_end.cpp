@@ -201,8 +201,7 @@ TEST_CASE("clp-s-compress-extract-no-floats", "[clp-s][end-to-end]") {
                     std::nullopt,
                     false,
                     single_file_archive,
-                    structurize_arrays,
-                    clp_s::FileType::Json
+                    structurize_arrays
             )
     );
 

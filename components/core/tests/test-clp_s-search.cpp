@@ -239,8 +239,7 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
                     std::string{cTestIdxKey},
                     false,
                     single_file_archive,
-                    structurize_arrays,
-                    clp_s::FileType::Json
+                    structurize_arrays
             )
     );
 
