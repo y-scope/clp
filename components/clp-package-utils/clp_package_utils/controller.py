@@ -66,7 +66,30 @@ class BaseController(ABC):
         self.clp_home = get_clp_home()
         self._conf_dir = self.clp_home / "etc"
 
-    def set_up_env_for_database(self):
+    @abstractmethod
+    def deploy(self):
+        """
+        Deploys the provisioned components with orchestrator-specific logic.
+        """
+        pass
+
+    @abstractmethod
+    def stop(self):
+        """
+        Stops the deployed components with orchestrator-specific logic.
+        """
+        pass
+
+    @abstractmethod
+    def _provision(self) -> Dict[str, str]:
+        """
+        Prepares all components with orchestrator-specific logic.
+
+        :return: Dictionary of environment variables to be used by the orchestrator.
+        """
+        pass
+
+    def _set_up_env_for_database(self):
         """
         Prepares environment variables and directories for the database component.
 
@@ -97,7 +120,7 @@ class BaseController(ABC):
             ),
         }
 
-    def set_up_env_for_queue(self):
+    def _set_up_env_for_queue(self):
         """
         Prepares environment variables and directories for the message queue component.
 
@@ -119,7 +142,7 @@ class BaseController(ABC):
             "CLP_QUEUE_PASS": self.clp_config.queue.password,
         }
 
-    def set_up_env_for_redis(self):
+    def _set_up_env_for_redis(self):
         """
         Prepares environment variables and directories for the Redis component.
 
@@ -149,7 +172,7 @@ class BaseController(ABC):
             ),
         }
 
-    def set_up_env_for_results_cache(self):
+    def _set_up_env_for_results_cache(self):
         """
         Prepares environment variables and directories for the results cache (MongoDB) component.
 
@@ -176,7 +199,7 @@ class BaseController(ABC):
             "CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME": self.clp_config.results_cache.stream_collection_name,
         }
 
-    def set_up_env_for_compression_scheduler(self):
+    def _set_up_env_for_compression_scheduler(self):
         """
         Prepares environment variables and files for the compression scheduler component.
 
@@ -193,7 +216,7 @@ class BaseController(ABC):
             "CLP_COMPRESSION_SCHEDULER_LOGS_FILE_HOST": str(logs_file),
         }
 
-    def set_up_env_for_query_scheduler(self):
+    def _set_up_env_for_query_scheduler(self):
         """
         Prepares environment variables and files for the query scheduler component.
 
@@ -210,7 +233,7 @@ class BaseController(ABC):
             "CLP_QUERY_SCHEDULER_LOGS_FILE_HOST": str(logs_file),
         }
 
-    def set_up_env_for_compression_worker(self, num_workers: int):
+    def _set_up_env_for_compression_worker(self, num_workers: int):
         """
         Prepares environment variables for the compression worker component.
 
@@ -229,7 +252,7 @@ class BaseController(ABC):
             "CLP_COMPRESSION_WORKER_LOGS_DIR_HOST": str(logs_dir),
         }
 
-    def set_up_env_for_query_worker(self, num_workers: int):
+    def _set_up_env_for_query_worker(self, num_workers: int):
         """
         Prepares environment variables for the query worker component.
 
@@ -248,7 +271,7 @@ class BaseController(ABC):
             "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
         }
 
-    def set_up_env_for_reducer(self, num_workers: int):
+    def _set_up_env_for_reducer(self, num_workers: int):
         """
         Prepares environment variables for the reducer component.
 
@@ -268,7 +291,7 @@ class BaseController(ABC):
             "CLP_REDUCER_UPSERT_INTERVAL": str(self.clp_config.reducer.upsert_interval),
         }
 
-    def set_up_env_for_webui(self, container_clp_config: CLPConfig):
+    def _set_up_env_for_webui(self, container_clp_config: CLPConfig):
         """
         Prepares environment variables and settings for the Web UI component.
 
@@ -362,7 +385,7 @@ class BaseController(ABC):
             "CLP_WEBUI_RATE_LIMIT": str(self.clp_config.webui.rate_limit),
         }
 
-    def set_up_env_for_garbage_collector(self):
+    def _set_up_env_for_garbage_collector(self):
         """
         Prepares environment variables for the garbage collector component.
 
@@ -376,19 +399,20 @@ class BaseController(ABC):
 
         return {"CLP_GC_LOGGING_LEVEL": self.clp_config.garbage_collector.logging_level}
 
-    @abstractmethod
-    def deploy(self):
+    def _read_and_update_settings_json(
+        self, settings_file_path: pathlib.Path, updates: Dict[str, Any]
+    ):
         """
-        Deploys the provisioned components with orchestrator-specific logic.
-        """
-        pass
+        Reads and updates a settings JSON file.
 
-    @abstractmethod
-    def stop(self):
+        :param settings_file_path:
+        :param updates:
         """
-        Stops the deployed components with orchestrator-specific logic.
-        """
-        pass
+        with open(settings_file_path, "r") as settings_json_file:
+            settings_object = json.loads(settings_json_file.read())
+        self._update_settings_object("", settings_object, updates)
+
+        return settings_object
 
     def _update_settings_object(
         self,
@@ -414,30 +438,6 @@ class BaseController(ABC):
                 self._update_settings_object(f"{parent_key_prefix}{key}.", settings[key], value)
             else:
                 settings[key] = updates[key]
-
-    def _read_and_update_settings_json(
-        self, settings_file_path: pathlib.Path, updates: Dict[str, Any]
-    ):
-        """
-        Reads and updates a settings JSON file.
-
-        :param settings_file_path:
-        :param updates:
-        """
-        with open(settings_file_path, "r") as settings_json_file:
-            settings_object = json.loads(settings_json_file.read())
-        self._update_settings_object("", settings_object, updates)
-
-        return settings_object
-
-    @abstractmethod
-    def _provision(self) -> Dict[str, str]:
-        """
-        Prepares all components with orchestrator-specific logic.
-
-        :return: Dictionary of environment variables to be used by the orchestrator.
-        """
-        pass
 
 
 class DockerComposeController(BaseController):
@@ -515,7 +515,9 @@ class DockerComposeController(BaseController):
             "CLP_PACKAGE_STORAGE_ENGINE": self.clp_config.package.storage_engine,
             # User and group IDs
             "CLP_UID_GID": DEFAULT_UID_GID,
-            "CLP_SERVICE_CONTAINER_UID_GID": SERVICE_CONTAINER_UID_GID if os.geteuid() == 0 else DEFAULT_UID_GID,
+            "CLP_SERVICE_CONTAINER_UID_GID": (
+                SERVICE_CONTAINER_UID_GID if os.geteuid() == 0 else DEFAULT_UID_GID
+            ),
             # Package container
             "CLP_PACKAGE_CONTAINER": self.clp_config.execution_container,
             # Global paths
@@ -526,17 +528,17 @@ class DockerComposeController(BaseController):
             # AWS credentials
             "CLP_AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID", ""),
             "CLP_AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY", ""),
-            **self.set_up_env_for_database(),
-            **self.set_up_env_for_queue(),
-            **self.set_up_env_for_redis(),
-            **self.set_up_env_for_results_cache(),
-            **self.set_up_env_for_compression_scheduler(),
-            **self.set_up_env_for_query_scheduler(),
-            **self.set_up_env_for_compression_worker(num_workers),
-            **self.set_up_env_for_query_worker(num_workers),
-            **self.set_up_env_for_reducer(num_workers),
-            **self.set_up_env_for_webui(container_clp_config),
-            **self.set_up_env_for_garbage_collector(),
+            **self._set_up_env_for_database(),
+            **self._set_up_env_for_queue(),
+            **self._set_up_env_for_redis(),
+            **self._set_up_env_for_results_cache(),
+            **self._set_up_env_for_compression_scheduler(),
+            **self._set_up_env_for_query_scheduler(),
+            **self._set_up_env_for_compression_worker(num_workers),
+            **self._set_up_env_for_query_worker(num_workers),
+            **self._set_up_env_for_reducer(num_workers),
+            **self._set_up_env_for_webui(container_clp_config),
+            **self._set_up_env_for_garbage_collector(),
         }
 
         if self.clp_config.aws_config_directory is not None:
@@ -545,6 +547,19 @@ class DockerComposeController(BaseController):
         with open(f"{self.clp_home}/.env", "w") as env_file:
             for key, value in env_dict.items():
                 env_file.write(f"{key}={value}\n")
+
+
+def _chown_paths_if_root(*paths: pathlib.Path):
+    """
+    Changes ownership of the given paths to the default service container user/group IDs if the
+    current process is running as root.
+
+    :param paths:
+    """
+    if os.getuid() != 0:
+        return
+    for path in paths:
+        _chown_recursively(path, SERVICE_CONTAINER_USER_ID, SERVICE_CONTAINER_GROUP_ID)
 
 
 def _chown_recursively(
@@ -561,19 +576,6 @@ def _chown_recursively(
     """
     chown_cmd = ["chown", "--recursive", f"{user_id}:{group_id}", str(path)]
     subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
-
-
-def _chown_paths_if_root(*paths: pathlib.Path):
-    """
-    Changes ownership of the given paths to the default service container user/group IDs if the
-    current process is running as root.
-
-    :param paths:
-    """
-    if os.getuid() != 0:
-        return
-    for path in paths:
-        _chown_recursively(path, SERVICE_CONTAINER_USER_ID, SERVICE_CONTAINER_GROUP_ID)
 
 
 def _get_ip_from_hostname(hostname: str) -> str:
