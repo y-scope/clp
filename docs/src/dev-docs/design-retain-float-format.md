@@ -39,12 +39,13 @@ Note that this restricts which floating‑point numbers are allowed in a few way
 - The integer part of a number must contain at least one digit
 - Positive numbers cannot begin with an explicit '+'
 
-What it doesn't do is place any restrictions on how a given floating-point number should be written,
-or whether floating-point numbers have to correspond to values from a standard such as IEEE-754
-binary64.
+There are two important points to note about this grammar:
+1. It doesn't place any restrictions on how a given floating-point number _should_ be written
+2. It doesn't dictate whether or not floating-point numbers have to correspond to values from a
+   standard such as IEEE-754 binary64.
 
-Since the first point is less abstract, we'll explain it first. Say we're trying to represent the
-number `16` as a floating-point number using **3** digits of precision. We might write it as:
+Since point 1. is less abstract than point 2., we'll explain it first. Say we're trying to represent
+the number `16` as a floating-point number using **3** digits of precision. We might write it as:
 
 - `16.0`; or
 - `16.0e0`; or
@@ -61,8 +62,8 @@ are both valid representations of `16` using 3 significant digits.
 Likewise, we can come up with infinite representations of `16` by choosing to represent arbitrarily
 many significant digits.
 
-The point about whether the original values correspond to IEEE-754 is a bit abstract, but is
-important for understanding our approach to losslessly storing floating-point numbers.
+Point 2. is a bit more abstract, but it is important for understanding our approach to losslessly
+storing floating-point numbers.
 
 It's most easily demonstrated with an example. Of the numbers:
 
@@ -139,8 +140,9 @@ From MSB to LSB, the 2-byte format field contains the following sections:
 The floating-point formats that `FormattedFloat` can represent are described below:
 
 - Numbers not written in scientific notation are accepted if **either** of the following are true:
-  - Any number that has at most 16 digits after the first non-zero digit
-  - Or at most 1 zero before the decimal and 16 zeroes after the decimal, if the number is a zero
+  1. Any non-zero number with at most **17** digits starting at the first non-zero digit
+  2. A zero written with at most **one** zero before the decimal point and at most **16** zeros
+     after the decimal point
 - Numbers written in scientific notation are accepted if all **four** of the following are true:
   1. The significand is either
       * a **single** digit with no decimal point, followed by an exponent
@@ -192,8 +194,8 @@ Since the maximum and minimum decimal exponents for a double (`308` and `-324` r
 both three digits, two bits are enough to represent the digit count. We allow up to 4 digits to
 support exponents left-padded with `0`.
 
-The stored value is **actual digits − 1**, since there is always at least one digit
-(e.g., `00` → 1 digit). The two-bit mapping is:
+The stored value is **one less than the number of actual digits**, since there is always at least
+one digit (e.g., `00` → 1 digit). The two-bit mapping is:
 
 - `00` → 1 digit
 - `01` → 2 digits
