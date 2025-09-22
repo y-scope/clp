@@ -98,9 +98,9 @@ class BaseController(ABC):
         self.clp_home = get_clp_home()
         self._conf_dir = self.clp_home / "etc"
 
-    def provision_database(self):
+    def set_up_env_for_database(self):
         component_name = DB_COMPONENT_NAME
-        logger.info(f"Provisioning {component_name}...")
+        logger.info(f"Setting up environment for {component_name}...")
 
         conf_file = self._conf_dir / "mysql" / "conf.d" / "logging.cnf"
         data_dir = self.clp_config.data_directory / component_name
@@ -124,9 +124,9 @@ class BaseController(ABC):
             ),
         }
 
-    def provision_queue(self):
+    def set_up_env_for_queue(self):
         component_name = QUEUE_COMPONENT_NAME
-        logger.info(f"Provisioning {component_name}...")
+        logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
         validate_queue_config(self.clp_config, logs_dir)
@@ -141,9 +141,9 @@ class BaseController(ABC):
             "CLP_QUEUE_PASS": self.clp_config.queue.password,
         }
 
-    def provision_redis(self):
+    def set_up_env_for_redis(self):
         component_name = REDIS_COMPONENT_NAME
-        logger.info(f"Provisioning {component_name}...")
+        logger.info(f"Setting up environment for {component_name}...")
 
         conf_file = self._conf_dir / "redis" / "redis.conf"
         logs_dir = self.clp_config.logs_directory / component_name
@@ -166,9 +166,9 @@ class BaseController(ABC):
             ),
         }
 
-    def provision_results_cache(self):
+    def set_up_env_for_results_cache(self):
         component_name = RESULTS_CACHE_COMPONENT_NAME
-        logger.info(f"Provisioning {component_name}...")
+        logger.info(f"Setting up environment for {component_name}...")
 
         conf_file = self._conf_dir / "mongo" / "mongod.conf"
         data_dir = self.clp_config.data_directory / component_name
@@ -188,9 +188,9 @@ class BaseController(ABC):
             "CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME": self.clp_config.results_cache.stream_collection_name,
         }
 
-    def provision_compression_scheduler(self):
+    def set_up_env_for_compression_scheduler(self):
         component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
-        logger.info(f"Provisioning {component_name}...")
+        logger.info(f"Setting up environment for {component_name}...")
 
         logs_file = self.clp_config.logs_directory / f"{component_name}.log"
         logs_file.touch(mode=LOGS_FILE_MODE, exist_ok=True)
@@ -200,9 +200,9 @@ class BaseController(ABC):
             "CLP_COMPRESSION_SCHEDULER_LOGS_FILE_HOST": str(logs_file),
         }
 
-    def provision_query_scheduler(self):
+    def set_up_env_for_query_scheduler(self):
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
-        logger.info(f"Provisioning {component_name}...")
+        logger.info(f"Setting up environment for {component_name}...")
 
         logs_file = self.clp_config.logs_directory / f"{component_name}.log"
         logs_file.touch(mode=LOGS_FILE_MODE, exist_ok=True)
@@ -212,9 +212,9 @@ class BaseController(ABC):
             "CLP_QUERY_SCHEDULER_LOGS_FILE_HOST": str(logs_file),
         }
 
-    def provision_compression_worker(self, num_workers: int):
+    def set_up_env_for_compression_worker(self, num_workers: int):
         component_name = COMPRESSION_WORKER_COMPONENT_NAME
-        logger.info(f"Provisioning {component_name}...")
+        logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
         logs_dir.mkdir(parents=True, exist_ok=True)
@@ -225,9 +225,9 @@ class BaseController(ABC):
             "CLP_COMPRESSION_WORKER_LOGS_DIR_HOST": str(logs_dir),
         }
 
-    def provision_query_worker(self, num_workers: int):
+    def set_up_env_for_query_worker(self, num_workers: int):
         component_name = QUERY_WORKER_COMPONENT_NAME
-        logger.info(f"Provisioning {component_name}...")
+        logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
         logs_dir.mkdir(parents=True, exist_ok=True)
@@ -238,9 +238,9 @@ class BaseController(ABC):
             "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
         }
 
-    def provision_reducer(self, num_workers: int):
+    def set_up_env_for_reducer(self, num_workers: int):
         component_name = REDUCER_COMPONENT_NAME
-        logger.info(f"Provisioning {component_name}...")
+        logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
         logs_dir.mkdir(parents=True, exist_ok=True)
@@ -292,9 +292,9 @@ class BaseController(ABC):
 
         return settings_object
 
-    def provision_webui(self, container_clp_config: CLPConfig):
+    def set_up_env_for_webui(self, container_clp_config: CLPConfig):
         component_name = WEBUI_COMPONENT_NAME
-        logger.info(f"Provisioning {component_name}...")
+        logger.info(f"Setting up environment for {component_name}...")
 
         container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
         client_settings_json_path = (
@@ -380,9 +380,9 @@ class BaseController(ABC):
             "CLP_WEBUI_RATE_LIMIT": str(self.clp_config.webui.rate_limit),
         }
 
-    def provision_garbage_collector(self):
+    def set_up_env_for_garbage_collector(self):
         component_name = GARBAGE_COLLECTOR_COMPONENT_NAME
-        logger.info(f"Provisioning {component_name}...")
+        logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
         logs_dir.mkdir(parents=True, exist_ok=True)
@@ -477,17 +477,17 @@ class DockerComposeController(BaseController):
             # AWS credentials
             "CLP_AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID", ""),
             "CLP_AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY", ""),
-            **self.provision_database(),
-            **self.provision_queue(),
-            **self.provision_redis(),
-            **self.provision_results_cache(),
-            **self.provision_compression_scheduler(),
-            **self.provision_query_scheduler(),
-            **self.provision_compression_worker(num_workers),
-            **self.provision_query_worker(num_workers),
-            **self.provision_reducer(num_workers),
-            **self.provision_webui(container_clp_config),
-            **self.provision_garbage_collector(),
+            **self.set_up_env_for_database(),
+            **self.set_up_env_for_queue(),
+            **self.set_up_env_for_redis(),
+            **self.set_up_env_for_results_cache(),
+            **self.set_up_env_for_compression_scheduler(),
+            **self.set_up_env_for_query_scheduler(),
+            **self.set_up_env_for_compression_worker(num_workers),
+            **self.set_up_env_for_query_worker(num_workers),
+            **self.set_up_env_for_reducer(num_workers),
+            **self.set_up_env_for_webui(container_clp_config),
+            **self.set_up_env_for_garbage_collector(),
         }
 
         if self.clp_config.aws_config_directory is not None:
