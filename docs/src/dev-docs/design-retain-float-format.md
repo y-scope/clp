@@ -1,4 +1,4 @@
-# What does it take to losslessly retain JSON floating-point numbers?
+# Lossless JSON float storage
 
 Since our goal is to losslessly retain floating-point numbers that come from JSON input, it is worth
 taking a look at what kinds of floating-point numbers can appear in JSON.
