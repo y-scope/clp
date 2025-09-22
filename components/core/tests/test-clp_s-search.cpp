@@ -276,8 +276,7 @@ TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
                     std::nullopt,
                     true,
                     single_file_archive,
-                    false,
-                    clp_s::FileType::Json
+                    false
             )
     );
 
