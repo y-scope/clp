@@ -441,8 +441,8 @@ set(SOURCE_FILES_unitTest
         src/clp/aws/constants.hpp
         src/clp/BoundedReader.cpp
         src/clp/BoundedReader.hpp
-        src/clp/BufferedFileReader.cpp
-        src/clp/BufferedFileReader.hpp
+        src/clp/BufferedReader.cpp
+        src/clp/BufferedReader.hpp
         src/clp/BufferReader.cpp
         src/clp/BufferReader.hpp
         src/clp/clp/CommandLineArguments.cpp
@@ -689,7 +689,7 @@ set(SOURCE_FILES_unitTest
         tests/LogSuppressor.hpp
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
-        tests/test-BufferedFileReader.cpp
+        tests/test-BufferedReader.cpp
         tests/test-clp_s-delta-encode-log-order.cpp
         tests/test-clp_s-end_to_end.cpp
         tests/test-clp_s-range_index.cpp
