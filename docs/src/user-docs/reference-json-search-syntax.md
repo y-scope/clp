@@ -36,7 +36,6 @@ To search for a key or value with multiple words, you must quote the key/value w
 :::{note}
 Keys and values in queries will be interpreted as searches for _exact_ matches unless they include
 [wildcards](#wildcards-in-values).
-[wildcards](#wildcards-in-values).
 :::
 
 :::{note}
