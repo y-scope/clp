@@ -221,9 +221,7 @@ The UI can only run one query at a time, and queries must not end with a `;`.
 
 ### Querying from the Presto CLI
 
-To access the Presto CLI, navigate to the `tools/deployment/presto-clp` directory in a new terminal.
-Make sure Presto is still running in whichever terminal you originally started it from. Enter the
-following command to start the CLI:
+To access the Presto CLI, navigate to the `tools/deployment/presto-clp` directory and run:
 
 ```bash
 docker compose exec presto-coordinator \
