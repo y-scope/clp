@@ -148,7 +148,7 @@ Using Presto with CLP requires:
 5. Start a Presto cluster by running:
 
     ```bash
-    docker compose up
+    docker compose up --detach
     ```
 
     * To use more than one Presto worker, you can use the `--scale` option as follows:
@@ -161,12 +161,16 @@ Using Presto with CLP requires:
 
 ### Stopping the Presto cluster
 
-To stop the Presto cluster, use CTRL + C.
+To stop the Presto cluster:
+
+```bash
+docker compose stop
+```
 
 To clean up the Presto cluster entirely:
 
 ```bash
-docker compose rm
+docker compose down
 ```
 
 ## Querying your logs through Presto
