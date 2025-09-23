@@ -1,11 +1,14 @@
 #include "JsonParser.hpp"
 
+#include <cctype>
 #include <cstddef>
 #include <cstdint>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <stack>
+#include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -28,6 +31,7 @@
 #include "../clp/time_types.hpp"
 #include "archive_constants.hpp"
 #include "ErrorCode.hpp"
+#include "FloatFormatEncoding.hpp"
 #include "InputConfig.hpp"
 #include "JsonFileIterator.hpp"
 #include "JsonParser.hpp"
@@ -40,6 +44,34 @@ using clp::ffi::KeyValuePairLogEvent;
 using clp::UtcOffset;
 
 namespace clp_s {
+namespace {
+/**
+ * Trims trailing whitespace off of a `string_view`. The returned `string_view` points to a subset
+ * of the input `string_view`.
+ *
+ * @param str
+ * @return The input string without trailing whitespace.
+ */
+auto trim_trailing_whitespace(std::string_view str) -> std::string_view;
+
+/**
+ * Checks whether marshalling a double value to a string using a specific format matches the
+ * original floating point string.
+ *
+ * This should happen only when either:
+ *   1. `float_str` was marshalled from an ieee-754 binary64 float in a non-standard compliant way
+ *   or
+ *   2. `float_str` was not marshalled from an ieee-754 binary64 float (e.g. human-written,
+ *      marshalled from a binary128 or decimalX float, etc.)
+ *
+ * @param float_str
+ * @param value
+ * @param format
+ * @return Whether marshalling `value` using `format` is identical to `float_str` or not.
+ */
+auto round_trip_is_identical(std::string_view float_str, double value, float_format_t format)
+        -> bool;
+
 /**
  * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for Key-Value IR compression.
  */
@@ -86,12 +118,32 @@ private:
     bool m_is_complete{false};
 };
 
+auto trim_trailing_whitespace(std::string_view str) -> std::string_view {
+    size_t substr_size{str.size()};
+    for (auto it{str.rbegin()}; str.rend() != it; ++it) {
+        if (std::isspace(static_cast<int>(*it))) {
+            --substr_size;
+        } else {
+            break;
+        }
+    }
+    return str.substr(0ULL, substr_size);
+}
+
+auto round_trip_is_identical(std::string_view float_str, double value, float_format_t format)
+        -> bool {
+    auto const restore_result{restore_encoded_float(value, format)};
+    return false == restore_result.has_error() && float_str == restore_result.value();
+}
+}  // namespace
+
 JsonParser::JsonParser(JsonParserOption const& option)
         : m_target_encoded_size(option.target_encoded_size),
           m_max_document_size(option.max_document_size),
           m_timestamp_key(option.timestamp_key),
           m_structurize_arrays(option.structurize_arrays),
           m_record_log_order(option.record_log_order),
+          m_retain_float_format(option.retain_float_format),
           m_input_paths(option.input_paths),
           m_network_auth(option.network_auth) {
     if (false == m_timestamp_key.empty()) {
@@ -202,10 +254,39 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
             case simdjson::ondemand::json_type::number: {
                 simdjson::ondemand::number number_value = cur_value.get_number();
                 if (true == number_value.is_double()) {
-                    double double_value = number_value.get_double();
-                    m_current_parsed_message.add_unordered_value(double_value);
-                    node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::Float, cur_key);
+                    if (m_retain_float_format) {
+                        auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
+                        auto const float_format_result{get_float_encoding(double_value_str)};
+                        if (false == float_format_result.has_error()
+                            && round_trip_is_identical(
+                                    double_value_str,
+                                    number_value.get_double(),
+                                    float_format_result.value()
+                            ))
+                        {
+                            m_current_parsed_message.add_unordered_value(
+                                    number_value.get_double(),
+                                    float_format_result.value()
+                            );
+                            node_id = m_archive_writer->add_node(
+                                    node_id_stack.top(),
+                                    NodeType::FormattedFloat,
+                                    cur_key
+                            );
+                        } else {
+                            m_current_parsed_message.add_unordered_value(double_value_str);
+                            node_id = m_archive_writer->add_node(
+                                    node_id_stack.top(),
+                                    NodeType::DictionaryFloat,
+                                    cur_key
+                            );
+                        }
+                    } else {
+                        double double_value = number_value.get_double();
+                        m_current_parsed_message.add_unordered_value(double_value);
+                        node_id = m_archive_writer
+                                          ->add_node(node_id_stack.top(), NodeType::Float, cur_key);
+                    }
                 } else {
                     int64_t i64_value;
                     if (number_value.is_uint64()) {
@@ -280,9 +361,38 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
             case simdjson::ondemand::json_type::number: {
                 simdjson::ondemand::number number_value = cur_value.get_number();
                 if (true == number_value.is_double()) {
-                    double double_value = number_value.get_double();
-                    m_current_parsed_message.add_unordered_value(double_value);
-                    node_id = m_archive_writer->add_node(parent_node_id, NodeType::Float, "");
+                    if (m_retain_float_format) {
+                        auto double_value_str{trim_trailing_whitespace(cur_value.raw_json_token())};
+                        auto const float_format_result{get_float_encoding(double_value_str)};
+                        if (false == float_format_result.has_error()
+                            && round_trip_is_identical(
+                                    double_value_str,
+                                    number_value.get_double(),
+                                    float_format_result.value()
+                            ))
+                        {
+                            m_current_parsed_message.add_unordered_value(
+                                    number_value.get_double(),
+                                    float_format_result.value()
+                            );
+                            node_id = m_archive_writer->add_node(
+                                    parent_node_id,
+                                    NodeType::FormattedFloat,
+                                    ""
+                            );
+                        } else {
+                            m_current_parsed_message.add_unordered_value(double_value_str);
+                            node_id = m_archive_writer->add_node(
+                                    parent_node_id,
+                                    NodeType::DictionaryFloat,
+                                    ""
+                            );
+                        }
+                    } else {
+                        double double_value = number_value.get_double();
+                        m_current_parsed_message.add_unordered_value(double_value);
+                        node_id = m_archive_writer->add_node(parent_node_id, NodeType::Float, "");
+                    }
                 } else {
                     int64_t i64_value;
                     if (number_value.is_uint64()) {
@@ -385,35 +495,57 @@ void JsonParser::parse_line(
                 break;
             }
             case simdjson::ondemand::json_type::number: {
-                NodeType type;
                 simdjson::ondemand::number number_value = line.get_number();
                 auto const matches_timestamp
                         = m_archive_writer->matches_timestamp(node_id_stack.top(), cur_key);
-                if (false == number_value.is_double()) {
-                    // FIXME: should have separate integer and unsigned
-                    // integer types to handle values greater than max int64
-                    type = NodeType::Integer;
-                } else {
-                    type = NodeType::Float;
-                }
-                node_id = m_archive_writer->add_node(node_id_stack.top(), type, cur_key);
 
-                if (type == NodeType::Integer) {
+                if (false == number_value.is_double()) {
                     int64_t i64_value;
                     if (number_value.is_uint64()) {
                         i64_value = static_cast<int64_t>(number_value.get_uint64());
                     } else {
-                        i64_value = line.get_int64();
+                        i64_value = number_value.get_int64();
                     }
 
+                    node_id = m_archive_writer
+                                      ->add_node(node_id_stack.top(), NodeType::Integer, cur_key);
                     m_current_parsed_message.add_value(node_id, i64_value);
                     if (matches_timestamp) {
                         m_archive_writer
                                 ->ingest_timestamp_entry(m_timestamp_key, node_id, i64_value);
                     }
                 } else {
-                    double double_value = line.get_double();
-                    m_current_parsed_message.add_value(node_id, double_value);
+                    auto const double_value{number_value.get_double()};
+                    if (m_retain_float_format) {
+                        auto double_value_str{trim_trailing_whitespace(line.raw_json_token())};
+                        auto const float_format_result{get_float_encoding(double_value_str)};
+                        if (false == float_format_result.has_error()
+                            && round_trip_is_identical(
+                                    double_value_str,
+                                    double_value,
+                                    float_format_result.value()
+                            ))
+                        {
+                            node_id = m_archive_writer->add_node(
+                                    node_id_stack.top(),
+                                    NodeType::FormattedFloat,
+                                    cur_key
+                            );
+                            m_current_parsed_message
+                                    .add_value(node_id, double_value, float_format_result.value());
+                        } else {
+                            node_id = m_archive_writer->add_node(
+                                    node_id_stack.top(),
+                                    NodeType::DictionaryFloat,
+                                    cur_key
+                            );
+                            m_current_parsed_message.add_value(node_id, double_value_str);
+                        }
+                    } else {
+                        node_id = m_archive_writer
+                                          ->add_node(node_id_stack.top(), NodeType::Float, cur_key);
+                        m_current_parsed_message.add_value(node_id, double_value);
+                    }
                     if (matches_timestamp) {
                         m_archive_writer
                                 ->ingest_timestamp_entry(m_timestamp_key, node_id, double_value);

@@ -15,6 +15,8 @@
  *
  * @param file_path
  * @param archive_directory
+ * @param timestamp_key
+ * @param retain_float_format
  * @param single_file_archive
  * @param structurize_arrays
  * @return Statistics for every compressed archive.
@@ -23,6 +25,7 @@
         std::string const& file_path,
         std::string const& archive_directory,
         std::optional<std::string> timestamp_key,
+        bool retain_float_format,
         bool single_file_archive,
         bool structurize_arrays
 ) -> std::vector<clp_s::ArchiveStats>;
