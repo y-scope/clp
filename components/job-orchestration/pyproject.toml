@@ -1,5 +1,5 @@
 [project]
-requires-python = ">= 3.9 <4.0"
+requires-python = ">= 3.9,<4.0"
 
 [tool.poetry]
 name = "job-orchestration"
@@ -9,7 +9,7 @@ authors = ["YScope Inc. <dev@yscope.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">= 3.9 <4.0"
+python = ">= 3.9,<4.0"
 Brotli = "^1.1.0"
 celery = {extras = ["redis"], version = "^5.5.3"}
 # mariadb version must be compatible with libmariadev installed in runtime env.

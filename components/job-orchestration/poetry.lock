@@ -877,5 +877,5 @@ msgpack-types = ">=0.5.0"
 
 [metadata]
 lock-version = "2.0"
-python-versions = ">= 3.9 <4.0"
-content-hash = "f43a685163e420a7960e563ee5a72af744de3bdad68620212dc709a068d4837f"
+python-versions = ">= 3.9,<4.0"
+content-hash = "09eb90616128fa6f91b94e6037b52bfef4638f02d692200d593ff0fe1a0255f6"
