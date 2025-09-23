@@ -1,8 +1,14 @@
 #include "ColumnReader.hpp"
 
+#include <cstddef>
+#include <cstdint>
+#include <string>
+#include <variant>
+
 #include "../clp/EncodedVariableInterpreter.hpp"
 #include "BufferViewReader.hpp"
 #include "ColumnWriter.hpp"
+#include "FloatFormatEncoding.hpp"
 #include "Utils.hpp"
 
 namespace clp_s {
@@ -50,6 +56,11 @@ void FloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
     m_values = reader.read_unaligned_span<double>(num_messages);
 }
 
+void FormattedFloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_values = reader.read_unaligned_span<double>(num_messages);
+    m_formats = reader.read_unaligned_span<float_format_t>(num_messages);
+}
+
 void
 Int64ColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::string& buffer) {
     buffer.append(std::to_string(m_values[cur_message]));
@@ -68,6 +79,12 @@ std::variant<int64_t, double, std::string, uint8_t> FloatColumnReader::extract_v
     return m_values[cur_message];
 }
 
+std::variant<int64_t, double, std::string, uint8_t> FormattedFloatColumnReader::extract_value(
+        uint64_t cur_message
+) {
+    return m_values[cur_message];
+}
+
 void BooleanColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
     m_values = reader.read_unaligned_span<uint8_t>(num_messages);
 }
@@ -77,10 +94,34 @@ FloatColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std::s
     buffer.append(std::to_string(m_values[cur_message]));
 }
 
+void FormattedFloatColumnReader::extract_string_value_into_buffer(
+        uint64_t cur_message,
+        std::string& buffer
+) {
+    buffer.append(restore_encoded_float(m_values[cur_message], m_formats[cur_message]).value());
+}
+
 std::variant<int64_t, double, std::string, uint8_t> BooleanColumnReader::extract_value(
         uint64_t cur_message
 ) {
     return m_values[cur_message];
+}
+
+void DictionaryFloatColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
+    m_var_dict_ids = reader.read_unaligned_span<variable_dictionary_id_t>(num_messages);
+}
+
+std::variant<int64_t, double, std::string, uint8_t> DictionaryFloatColumnReader::extract_value(
+        uint64_t cur_message
+) {
+    return std::stod(m_var_dict->get_value(m_var_dict_ids[cur_message]));
+}
+
+void DictionaryFloatColumnReader::extract_string_value_into_buffer(
+        uint64_t cur_message,
+        std::string& buffer
+) {
+    buffer.append(m_var_dict->get_value(m_var_dict_ids[cur_message]));
 }
 
 void ClpStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {

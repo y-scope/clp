@@ -15,6 +15,7 @@ auto compress_archive(
         std::string const& file_path,
         std::string const& archive_directory,
         std::optional<std::string> timestamp_key,
+        bool retain_float_format,
         bool single_file_archive,
         bool structurize_arrays
 ) -> std::vector<clp_s::ArchiveStats> {
@@ -37,6 +38,7 @@ auto compress_archive(
     parser_option.min_table_size = cDefaultMinTableSize;
     parser_option.compression_level = cDefaultCompressionLevel;
     parser_option.print_archive_stats = cDefaultPrintArchiveStats;
+    parser_option.retain_float_format = retain_float_format;
     parser_option.structurize_arrays = structurize_arrays;
     parser_option.single_file_archive = single_file_archive;
     if (timestamp_key.has_value()) {
