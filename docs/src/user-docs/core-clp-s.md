@@ -24,8 +24,8 @@ Usage:
     where `size` is the total size of the dictionaries and encoded messages in an archive.
     * This option acts as a soft limit on memory usage for compression, decompression, and search.
     * This option significantly affects compression ratio.
-  * `--no-retain-float-format` specifies that clp-s should not store extra information to
-    losslessly decompress floats.
+  * `--no-retain-float-format` specifies that `clp-s` should not store extra information to
+    preserve the original textual representation of floating-point numbers.
   * `--structurize-arrays` specifies that arrays should be fully parsed and array entries should be
     encoded into dedicated columns.
   * `--auth <s3|none>` specifies the authentication method that should be used for network requests
