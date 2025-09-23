@@ -937,7 +937,7 @@ class CLPConfig(BaseModel):
         os_release = dotenv_values(self._os_release_file_path)
         if "ubuntu" == os_release["ID"]:
             self.execution_container = (
-                f"clp-execution-x86-{os_release['ID']}-{os_release['VERSION_CODENAME']}:main"
+                f"clp-execution-x86-{os_release['ID']}-{os_release['VERSION_CODENAME']}:0.5.1"
             )
         else:
             raise NotImplementedError(
