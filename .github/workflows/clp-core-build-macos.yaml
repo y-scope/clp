@@ -79,7 +79,7 @@ jobs:
       - run: "./tools/scripts/deps-download/init.sh"
         shell: "bash"
 
-      - run: "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:core"
+      - run: "CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:cpp"
         shell: "bash"
 
       - name: "Build CLP-core and run unit tests"
@@ -114,7 +114,7 @@ jobs:
       # - run: >-
       #     task lint:check-cpp-${{(github.event_name == 'schedule') && 'full' || 'diff'}}
       - run: >-
-          CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
+          CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
           task lint:check-cpp-full
         shell: "bash"
 

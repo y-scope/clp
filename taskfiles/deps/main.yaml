@@ -7,15 +7,15 @@ includes:
 vars:
   # Directories
   G_DEPS_DIR: "{{.G_BUILD_DIR}}/deps"
-  G_DEPS_CORE_DIR: "{{.G_DEPS_DIR}}/core"
-  G_DEPS_CORE_CHECKSUMS_DIR: "{{.G_DEPS_CORE_DIR}}/checksums"
+  G_DEPS_CPP_DIR: "{{.G_DEPS_DIR}}/cpp"
+  G_DEPS_CPP_CHECKSUMS_DIR: "{{.G_DEPS_CPP_DIR}}/checksums"
 
   # Checksum file paths
-  G_DEPS_CORE_CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/all.md5"
+  G_DEPS_CORE_CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/all.md5"
   G_DEPS_LOG_VIEWER_CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer.md5"
 
   # NOTE: This must be kept in-sync with its usage in components/core/CMakeLists.txt
-  G_DEPS_CORE_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_DIR}}/cmake-settings"
+  G_DEPS_CPP_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_DIR}}/cmake-settings"
 
   # Library names
   G_ABSL_LIB_NAME: "absl"
@@ -30,7 +30,7 @@ vars:
 
   # Antlr
   G_ANTLR_VERSION: "4.13.2"
-  G_ANTLR_JAR_FILE: "{{.G_DEPS_CORE_DIR}}/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
+  G_ANTLR_JAR_FILE: "{{.G_DEPS_CPP_DIR}}/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
 
 # NOTE: For dependencies built using CMake, we set CMP0074 to NEW whenever:
 # - a component's minimum required CMake version is less than 3.27 (where CMP0074 defaults to OLD);
@@ -42,17 +42,17 @@ tasks:
       - "core"
       - "log-viewer"
 
-  core:
+  cpp:
     deps:
-      - "utils:clean-outdated-core-checksum-files"
+      - "utils:clean-outdated-cpp-checksum-files"
       - "utils:init"
     cmds:
-      - "rm -rf '{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}'"
-      - "mkdir -p '{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}'"
+      - "rm -rf '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
+      - "mkdir -p '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
-          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
-          DEP_TASK: "core-all-parallel"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
+          DEP_TASK: "cpp-all-parallel"
       - task: "utils:combine-core-checksum-files"
 
   log-viewer:
@@ -67,7 +67,7 @@ tasks:
           TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
           URL: "https://github.com/y-scope/yscope-log-viewer/archive/3abe4cc.tar.gz"
 
-  core-all-parallel:
+  cpp-all-parallel:
     internal: true
     run: "once"
     deps:
@@ -88,7 +88,6 @@ tasks:
       - task: "nlohmann_json"
       - task: "simdjson"
       - task: "spdlog"
-      - task: "spider"
       - task: "sqlite3"
       - task: "utfcpp"
       - task: "yaml-cpp"
@@ -114,7 +113,7 @@ tasks:
   antlr-jar:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/antlr-jar.md5"
+      CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/antlr-jar.md5"
       OUTPUT_FILE: "{{.G_ANTLR_JAR_FILE}}"
     run: "once"
     deps:
@@ -145,10 +144,10 @@ tasks:
       LIB_NAME: "{{.G_ANTLR_RUNTIME_LIB_NAME}}"
 
       # Paths
-      BUILD_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-build"
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-      INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install"
-      SOURCE_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+      BUILD_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-build"
+      CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+      INSTALL_PREFIX: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
+      SOURCE_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
     deps:
       - task: "utils:init"
       - task: "yscope-dev-utils:checksum:validate"
@@ -182,12 +181,12 @@ tasks:
       - task: "yscope-dev-utils:cmake:build"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
-          JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
+          JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
       - task: "yscope-dev-utils:cmake:install"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
           CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
-          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
           INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
 
       # This command must be last
@@ -204,7 +203,7 @@ tasks:
     cmds:
       - task: "yscope-dev-utils:boost:download-and-install"
         vars:
-          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
           FILE_SHA256: "d6c69e4459eb5d6ec208250291221e7ff4a2affde9af6e49c9303b89c687461f"
           TARGETS:
             - "filesystem"
@@ -216,7 +215,7 @@ tasks:
             - "url"
           URL: "https://github.com/boostorg/boost/releases/download/boost-{{.VERSION}}/\
           boost-{{.VERSION}}-b2-nodocs.tar.gz"
-          WORK_DIR: "{{.G_DEPS_CORE_DIR}}"
+          WORK_DIR: "{{.G_DEPS_CPP_DIR}}"
 
   catch2:
     internal: true
@@ -320,8 +319,8 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_GSL_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_GSL_LIB_NAME}}.cmake"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-Dlog_surgeon_BUILD_TESTING=OFF"
@@ -409,7 +408,7 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
@@ -460,7 +459,7 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
@@ -496,14 +495,14 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_ABSL_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_ANTLR_RUNTIME_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_MARIADB_CONNECTOR_CPP_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_MSGPACK_CXX_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_SPDLOG_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_YSTDLIB_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_ABSL_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_ANTLR_RUNTIME_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_MARIADB_CONNECTOR_CPP_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_MSGPACK_CXX_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_SPDLOG_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_YSTDLIB_LIB_NAME}}.cmake"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DSPIDER_BUILD_TESTING=OFF"
@@ -517,8 +516,8 @@ tasks:
       LIB_NAME: "sqlite3"
 
       # Paths
-      EXTRACTION_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
-      INSTALL_INCLUDE_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install/include"
+      EXTRACTION_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+      INSTALL_INCLUDE_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install/include"
       INSTALL_SYMLINK: "{{.INSTALL_INCLUDE_DIR}}/{{.LIB_NAME}}"
       ZIP_FILENAME_STEM: "sqlite-amalgamation-3360000"
       SRC_DIR: "{{.EXTRACTION_DIR}}/{{.ZIP_FILENAME_STEM}}"
@@ -528,7 +527,7 @@ tasks:
     cmds:
       - task: "yscope-dev-utils:remote:download-and-extract-zip"
         vars:
-          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
           FILE_SHA256: "999826fe4c871f18919fdb8ed7ec9dd8217180854dd1fe21eea96aed36186729"
           OUTPUT_DIR: "{{.EXTRACTION_DIR}}"
           URL: "https://www.sqlite.org/2021/{{.ZIP_FILENAME_STEM}}.zip"
@@ -537,29 +536,29 @@ tasks:
       - "ln -s '{{.SRC_DIR}}' '{{.INSTALL_SYMLINK}}'"
       - |-
         echo "set(CLP_SQLITE3_SOURCE_DIRECTORY \"{{.SRC_DIR}}\")" \
-        > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
         echo "set(CLP_SQLITE3_INCLUDE_DIRECTORY \"{{.INSTALL_INCLUDE_DIR}}\")" \
-        >> "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        >> "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   utfcpp:
     internal: true
     vars:
       LIB_NAME: "utfcpp"
-      UTFCPP_OUTPUT_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+      UTFCPP_OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
     run: "once"
     deps:
       - task: "utils:init"
     cmds:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
-          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
           FILE_SHA256: "6920a6a5d6a04b9a89b2a89af7132f8acefd46e0c2a7b190350539e9213816c0"
           OUTPUT_DIR: "{{.UTFCPP_OUTPUT_DIR}}"
           URL: "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.0.6.tar.gz"
       - >-
         echo "set(
         CLP_UTFCPP_INCLUDE_DIRECTORY \"{{.UTFCPP_OUTPUT_DIR}}\"
-        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        )" > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   yaml-cpp:
     internal: true
@@ -584,7 +583,7 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
             - "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
             - "-Dystdlib_BUILD_TESTING=OFF"
           LIB_NAME: "{{.G_YSTDLIB_LIB_NAME}}"
@@ -603,7 +602,7 @@ tasks:
             - "-DBUILD_SHARED_LIBS=ON"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-            - "-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install"
+            - "-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
             - "-DZLIB_BUILD_EXAMPLES=OFF"
           LIB_NAME: "{{.LIB_NAME}}"
           TARBALL_SHA256: "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23"

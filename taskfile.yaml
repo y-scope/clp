@@ -36,8 +36,8 @@ vars:
 
   # Build parameters
   # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
-  G_CORE_MAX_PARALLELISM_PER_BUILD_TASK: >-
-    {{default "" (env "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK")}}
+  G_CPP_MAX_PARALLELISM_PER_BUILD_TASK: >-
+    {{default "" (env "CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK")}}
 
   # Checksum files
   G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
@@ -185,7 +185,7 @@ tasks:
       - "/etc/os-release"
     deps:
       - "codegen:clp-s-generate-parsers"
-      - "deps:core"
+      - "deps:cpp"
     cmds:
       - task: "utils:cmake:generate"
         vars:
@@ -206,7 +206,7 @@ tasks:
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
-          JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
+          JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
 
   clp-package-utils:
