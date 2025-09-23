@@ -55,6 +55,7 @@ const DatasetSelect = (selectProps: SelectProps) => {
                 loading={isPending}
                 options={(data || []).map((option) => ({label: option, value: option}))}
                 value={dataset}
+                size="middle"
                 disabled={
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                     searchUiState === SEARCH_UI_STATE.QUERYING
