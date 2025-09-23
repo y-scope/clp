@@ -12,6 +12,7 @@
 #include <boost/algorithm/string/case_conv.hpp>
 #include <string_utils/string_utils.hpp>
 
+#include "../clp/Defs.h"
 #include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryEntry.hpp"
 
@@ -28,7 +29,7 @@ public:
     };
 
     using dictionary_id_t = DictionaryIdType;
-    using entry_t = EntryType;
+    using Entry = EntryType;
 
     // Constructors
     DictionaryReader(ArchiveReaderAdaptor& adaptor) : m_is_open(false), m_adaptor(adaptor) {}
@@ -96,8 +97,10 @@ protected:
     std::vector<EntryType> m_entries;
 };
 
-using VariableDictionaryReader = DictionaryReader<uint64_t, VariableDictionaryEntry>;
-using LogTypeDictionaryReader = DictionaryReader<uint64_t, LogTypeDictionaryEntry>;
+using VariableDictionaryReader
+        = DictionaryReader<clp::variable_dictionary_id_t, VariableDictionaryEntry>;
+using LogTypeDictionaryReader
+        = DictionaryReader<clp::logtype_dictionary_id_t, LogTypeDictionaryEntry>;
 
 template <typename DictionaryIdType, typename EntryType>
 void DictionaryReader<DictionaryIdType, EntryType>::open(std::string const& dictionary_path) {
