@@ -172,7 +172,7 @@ def _process_s3_input(
         paths_to_compress_buffer.add_file(object_metadata)
 
 
-def write_failed_path_log(
+def _write_failed_path_log(
     invalid_path_messages: List[str], logs_directory: Path, job_id: Any
 ) -> Optional[Path]:
     """
@@ -266,7 +266,7 @@ def search_and_schedule_new_tasks(
             if len(invalid_path_messages) > 0:
                 base_msg = "At least one of your input paths could not be processed."
 
-                user_log_path = write_failed_path_log(
+                user_log_path = _write_failed_path_log(
                     invalid_path_messages, clp_config.logs_directory, job_id
                 )
                 if user_log_path is None:
