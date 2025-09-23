@@ -101,13 +101,11 @@ def _process_fs_input_paths(
     fs_input_conf: FsInputConfig, paths_to_compress_buffer: PathsToCompressBuffer
 ) -> List[str]:
     """
-    Iterates through all files in fs_input_conf and validates their paths. Adds the metadata for
-    each valid path to `paths_to_compress_buffer` as long as an invalid path has not yet been
-    encountered. The error messages from all invalid paths are added to the list
-    `invalid_path_messages`. `paths_ok` set to False upon encountering an invalid path.
+    Iterates through all paths in `fs_input_conf`, validates them, and adds metadata for each valid
+    path to `paths_to_compress_buffer` as long as an invalid path hasn't yet been encountered.
     :param fs_input_conf:
     :param paths_to_compress_buffer:
-    :return List of error messages about invalid paths.
+    :return: List of error messages about invalid paths.
     """
 
     paths_ok = True
@@ -178,13 +176,13 @@ def write_failed_path_log(
     invalid_path_messages: List[str], logs_directory: Path, job_id: Any
 ) -> Optional[Path]:
     """
-    Writes the error messages in `invalid_path_messages` to a log file called
-    failed_paths_<job_id>.txt that the user can access. File is located at <logs_directory>/user;
-    this directory is created if it does not already exist.
+    Writes the error messages in `invalid_path_messages` to a log file,
+    `{logs_directory}/user/failed_paths_{job_id}.txt`. The directory will be created if it doesn't
+    already exist.
     :param invalid_path_messages:
     :param logs_directory:
-    :param job_id
-    :return Path to the written log file; None if error is encountered.
+    :param job_id:
+    :return: Path to the written log file or `None` if error is encountered.
     """
 
     user_logs_dir = Path(logs_directory) / "user"
@@ -197,9 +195,9 @@ def write_failed_path_log(
     try:
         with log_path.open("w", encoding="utf-8") as f:
             timestamp = datetime.datetime.now().isoformat(timespec="seconds")
-            f.write(f"Failed input paths log\nGenerated: {timestamp}\n\n")
+            f.write(f"Failed input paths log.\nGenerated at {timestamp}.\n\n")
             for msg in invalid_path_messages:
-                f.write(f"{str(msg).rstrip()}\n")
+                f.write(f"{msg.rstrip()}\n")
     except Exception:
         return None
 
@@ -266,18 +264,18 @@ def search_and_schedule_new_tasks(
         if input_type == InputType.FS.value:
             invalid_path_messages = _process_fs_input_paths(input_config, paths_to_compress_buffer)
             if len(invalid_path_messages) > 0:
-                base_msg = "At least one of your input paths could not be processed. "
+                base_msg = "At least one of your input paths could not be processed."
 
                 user_log_path = write_failed_path_log(
                     invalid_path_messages, clp_config.logs_directory, job_id
                 )
                 if user_log_path is None:
                     error_msg = base_msg + (
-                        "Check the compression scheduler logs in "
-                        f"{clp_config.logs_directory} for more details."
+                        f" Check the compression scheduler logs in {clp_config.logs_directory} for"
+                        " more details."
                     )
                 else:
-                    error_msg = base_msg + (f"Check {user_log_path} for more details.")
+                    error_msg = base_msg + f" Check {user_log_path} for more details."
 
                 update_compression_job_metadata(
                     db_cursor,
@@ -320,19 +318,6 @@ def search_and_schedule_new_tasks(
         paths_to_compress_buffer.flush()
         tasks = paths_to_compress_buffer.get_tasks()
         partition_info = paths_to_compress_buffer.get_partition_info()
-
-        # if len(tasks) == 0:
-        #     logger.warning(f"No tasks were created for job {job_id}")
-        #     update_compression_job_metadata(
-        #         db_cursor,
-        #         job_id,
-        #         {
-        #             "status": CompressionJobStatus.FAILED,
-        #             "status_msg": "All provided paths were invalid.",
-        #         },
-        #     )
-        #     db_conn.commit()
-        #     continue
 
         # Update job metadata
         start_time = datetime.datetime.now()
