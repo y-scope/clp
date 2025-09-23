@@ -4,10 +4,10 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-is_sudo_from_non_root=$(( $EUID == 0 && ${SUDO_UID:-0} != 0 ))
+is_sudo_from_non_root=$(( EUID == 0 && ${SUDO_UID:-0} != 0 ))
 if (( is_sudo_from_non_root )); then
     echo "Installing pipx packages to the user environment (sudo lifted)."
-    exec sudo --set-home --user="$SUDO_USER" "$0" "$@"
+    exec sudo --preserve-env=PATH --set-home --user="$SUDO_USER" /usr/bin/env bash "${BASH_SOURCE[0]}" "$@"
 fi
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
