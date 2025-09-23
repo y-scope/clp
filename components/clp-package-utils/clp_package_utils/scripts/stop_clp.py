@@ -34,10 +34,12 @@ from clp_package_utils.general import (
 logger = logging.getLogger(__file__)
 
 
-def stop_running_container(container_name: str, already_exited_containers: List[str], force: bool):
+def stop_running_container(
+    container_name: str, already_exited_containers: List[str], force: bool, timeout: int = 10
+):
     if is_container_running(container_name):
         logger.info(f"Stopping {container_name}...")
-        cmd = ["docker", "stop", container_name]
+        cmd = ["docker", "stop", "--timeout", str(timeout), container_name]
         subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
         logger.info(f"Removing {container_name}...")
@@ -148,9 +150,6 @@ def main(argv):
         if target in (ALL_TARGET_NAME, QUERY_WORKER_COMPONENT_NAME):
             container_name = f"clp-{QUERY_WORKER_COMPONENT_NAME}-{instance_id}"
             stop_running_container(container_name, already_exited_containers, force)
-        if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
-            container_name = f"clp-{COMPRESSION_WORKER_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, already_exited_containers, force)
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, QUERY_SCHEDULER_COMPONENT_NAME):
             container_name = f"clp-{QUERY_SCHEDULER_COMPONENT_NAME}-{instance_id}"
             stop_running_container(container_name, already_exited_containers, force)
@@ -164,11 +163,14 @@ def main(argv):
             COMPRESSION_SCHEDULER_COMPONENT_NAME,
         ):
             container_name = f"clp-{COMPRESSION_SCHEDULER_COMPONENT_NAME}-{instance_id}"
-            stop_running_container(container_name, already_exited_containers, force)
+            stop_running_container(container_name, already_exited_containers, force, timeout=300)
 
             container_config_file_path = logs_dir / f"{container_name}.yml"
             if container_config_file_path.exists():
                 container_config_file_path.unlink()
+        if target in (ALL_TARGET_NAME, COMPRESSION_WORKER_COMPONENT_NAME):
+            container_name = f"clp-{COMPRESSION_WORKER_COMPONENT_NAME}-{instance_id}"
+            stop_running_container(container_name, already_exited_containers, force, timeout=60)
         if target in (ALL_TARGET_NAME, CONTROLLER_TARGET_NAME, REDIS_COMPONENT_NAME):
             container_name = f"clp-{REDIS_COMPONENT_NAME}-{instance_id}"
             stop_running_container(container_name, already_exited_containers, force)
