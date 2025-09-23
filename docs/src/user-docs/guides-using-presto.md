@@ -212,7 +212,7 @@ CLP's UI should be available at [http://localhost:4000](http://localhost:4000) (
 `webui.host` or `webui.port` in `etc/clp-config.yml`, use the new values).
 
 :::{note}
-The UI can only run one query at a time, and queries must not terminate with a `;`.
+The UI can only run one query at a time, and queries must not end with a `;`.
 :::
 
 ### Querying from the Presto CLI
