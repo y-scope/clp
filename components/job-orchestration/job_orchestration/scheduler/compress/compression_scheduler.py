@@ -59,10 +59,10 @@ scheduled_jobs = {}
 received_sigterm = False
 
 
-def sigterm_handler(sig, frame):
+def sigterm_handler(signal_number, frame):
     global received_sigterm
     received_sigterm = True
-    logger.info("Received SIGTERM in compression scheduler")
+    logger.info("Received SIGTERM.")
 
 
 def fetch_new_jobs(db_cursor):
@@ -405,7 +405,7 @@ def poll_running_jobs(db_conn, db_cursor):
         del scheduled_jobs[job_id]
 
     if received_sigterm and 0 == len(scheduled_jobs):
-        logger.info("Received sigterm, no more running jobs. Exiting.")
+        logger.info("Recieved SIGTERM and there're no more running jobs. Exiting.")
         sys.exit(0)
 
 
@@ -423,7 +423,7 @@ def main(argv):
     # Update logging level based on config
     set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
 
-    # Register the sigterm handler
+    # Register the SIGTERM handler
     signal.signal(signal.SIGTERM, sigterm_handler)
 
     # Load configuration
