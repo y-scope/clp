@@ -70,6 +70,7 @@ TEST_CASE("clp-s-delta-encode-log-order", "[clp-s][delta-encode-log-order]") {
             get_test_input_local_path(),
             std::string{cTestDeltaEncodeOrderArchiveDirectory},
             std::nullopt,
+            false,
             true,
             false
     ));
