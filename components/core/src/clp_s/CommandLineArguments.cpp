@@ -245,6 +245,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     po::bool_switch(&m_print_archive_stats),
                     "Print statistics (json) about the archive after it's compressed."
             )(
+                    "retain-float-format",
+                    po::bool_switch(&m_retain_float_format),
+                    "Store extra information to losslessly decompress floats."
+            )(
                     "single-file-archive",
                     po::bool_switch(&m_single_file_archive),
                     "Create a single archive file instead of multiple files."
