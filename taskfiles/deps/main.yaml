@@ -11,7 +11,7 @@ vars:
   G_DEPS_CPP_CHECKSUMS_DIR: "{{.G_DEPS_CPP_DIR}}/checksums"
 
   # Checksum file paths
-  G_DEPS_CORE_CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/all.md5"
+  G_DEPS_CPP_CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/all.md5"
   G_DEPS_LOG_VIEWER_CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer.md5"
 
   # NOTE: This must be kept in-sync with its usage in components/core/CMakeLists.txt
@@ -39,7 +39,7 @@ vars:
 tasks:
   default:
     deps:
-      - "core"
+      - "cpp"
       - "log-viewer"
 
   cpp:
@@ -53,7 +53,7 @@ tasks:
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
           DEP_TASK: "cpp-all-parallel"
-      - task: "utils:combine-core-checksum-files"
+      - task: "utils:combine-cpp-checksum-files"
 
   log-viewer:
     deps:
@@ -472,43 +472,6 @@ tasks:
           # NOTE: Since spdlog depends on fmt, we need to choose a version of spdlog that's
           # compatible with the version of fmt we use.
           TARBALL_URL: "https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz"
-
-  spider:
-    internal: true
-    run: "once"
-    # Disable spider build on non-Linux platforms, specifically macOS
-    platforms: ["linux"]
-    status:
-      - >-
-        ! grep -q '^ID=ubuntu' /etc/os-release
-    deps:
-      - task: "absl"
-      - task: "antlr-jar"
-      - task: "antlr-runtime"
-      - task: "boost"
-      - task: "fmt"
-      - task: "mariadb-connector-cpp"
-      - task: "msgpack-cxx"
-      - task: "spdlog"
-      - task: "ystdlib"
-    cmds:
-      - task: "utils:install-remote-cmake-lib"
-        vars:
-          CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_ABSL_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_ANTLR_RUNTIME_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_MARIADB_CONNECTOR_CPP_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_MSGPACK_CXX_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_SPDLOG_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_YSTDLIB_LIB_NAME}}.cmake"
-            - "-DCMAKE_BUILD_TYPE=Release"
-            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-            - "-DSPIDER_BUILD_TESTING=OFF"
-          LIB_NAME: "spider"
-          TARBALL_SHA256: "4a02e1d7b74ca4651e242d76c66ff740fbb1a3793bcf720b8edce2ec5a694ac4"
-          TARBALL_URL: "https://github.com/y-scope/spider/archive/c9c007d.tar.gz"
 
   sqlite3:
     internal: true
