@@ -30,8 +30,8 @@ const SqlInput = (props: SqlEditorProps) => {
 
     return (
         <SqlEditor
-            height={30}
             options={{
+                automaticLayout: true,
                 find: {
                     addExtraSpaceOnTop: false,
                     autoFindInSelection: "never",
