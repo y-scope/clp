@@ -94,7 +94,6 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     clp_s::JsonParserOption option{};
     option.input_paths = command_line_arguments.get_input_paths();
     option.network_auth = command_line_arguments.get_network_auth();
-    option.input_file_type = command_line_arguments.get_file_type();
     option.archives_dir = archives_dir.string();
     option.target_encoded_size = command_line_arguments.get_target_encoded_size();
     option.max_document_size = command_line_arguments.get_max_document_size();
@@ -102,21 +101,15 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.compression_level = command_line_arguments.get_compression_level();
     option.timestamp_key = command_line_arguments.get_timestamp_key();
     option.print_archive_stats = command_line_arguments.print_archive_stats();
+    option.retain_float_format = command_line_arguments.get_retain_float_format();
     option.single_file_archive = command_line_arguments.get_single_file_archive();
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
     option.record_log_order = command_line_arguments.get_record_log_order();
 
     clp_s::JsonParser parser(option);
-    if (clp_s::FileType::KeyValueIr == option.input_file_type) {
-        if (false == parser.parse_from_ir()) {
-            SPDLOG_ERROR("Encountered error while parsing input");
-            return false;
-        }
-    } else {
-        if (false == parser.parse()) {
-            SPDLOG_ERROR("Encountered error while parsing input");
-            return false;
-        }
+    if (false == parser.ingest()) {
+        SPDLOG_ERROR("Encountered error while parsing input.");
+        return false;
     }
     std::ignore = parser.store();
     return true;

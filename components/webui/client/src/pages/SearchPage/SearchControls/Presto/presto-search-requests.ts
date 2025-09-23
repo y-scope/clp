@@ -8,7 +8,7 @@ import {
     clearQueryResults,
     submitQuery,
 } from "../../../../api/presto-search";
-import useSearchStore from "../../SearchState";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 
 
@@ -43,7 +43,13 @@ const handlePrestoClearResults = () => {
  * @param payload
  */
 const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreation) => {
-    const {updateSearchJobId, updateSearchUiState, searchUiState} = useSearchStore.getState();
+    const {
+        updateNumSearchResultsTable,
+        updateNumSearchResultsMetadata,
+        updateSearchJobId,
+        updateSearchUiState,
+        searchUiState,
+    } = useSearchStore.getState();
 
     // User should NOT be able to submit a new query while an existing query is in progress.
     if (
@@ -58,6 +64,8 @@ const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreation) => {
 
     handlePrestoClearResults();
 
+    updateNumSearchResultsTable(SEARCH_STATE_DEFAULT.numSearchResultsTable);
+    updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
     updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 
     submitQuery(payload)

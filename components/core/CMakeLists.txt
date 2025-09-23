@@ -357,6 +357,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/FileReader.hpp
     src/clp_s/FileWriter.cpp
     src/clp_s/FileWriter.hpp
+    src/clp_s/FloatFormatEncoding.cpp
+    src/clp_s/FloatFormatEncoding.hpp
     src/clp_s/InputConfig.cpp
     src/clp_s/InputConfig.hpp
     src/clp_s/JsonConstructor.cpp
@@ -441,8 +443,8 @@ set(SOURCE_FILES_unitTest
         src/clp/aws/constants.hpp
         src/clp/BoundedReader.cpp
         src/clp/BoundedReader.hpp
-        src/clp/BufferedFileReader.cpp
-        src/clp/BufferedFileReader.hpp
+        src/clp/BufferedReader.cpp
+        src/clp/BufferedReader.hpp
         src/clp/BufferReader.cpp
         src/clp/BufferReader.hpp
         src/clp/clp/CommandLineArguments.cpp
@@ -689,7 +691,7 @@ set(SOURCE_FILES_unitTest
         tests/LogSuppressor.hpp
         tests/TestOutputCleaner.hpp
         tests/test-BoundedReader.cpp
-        tests/test-BufferedFileReader.cpp
+        tests/test-BufferedReader.cpp
         tests/test-clp_s-delta-encode-log-order.cpp
         tests/test-clp_s-end_to_end.cpp
         tests/test-clp_s-range_index.cpp
@@ -700,6 +702,7 @@ set(SOURCE_FILES_unitTest
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
+        tests/test-FloatFormatEncoding.cpp
         tests/test-GlobalMetadataDBConfig.cpp
         tests/test-GrepCore.cpp
         tests/test-hash_utils.cpp
