@@ -6,9 +6,9 @@ import {
     Select,
 } from "antd";
 
+import InputLabel from "../../../../components/InputLabel";
 import useSearchStore from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
-import DatasetLabel from "./DatasetLabel";
 import styles from "./index.module.css";
 import {fetchDatasetNames} from "./sql";
 
@@ -79,14 +79,14 @@ const Dataset = () => {
     return (
         <div className={styles["datasetContainer"]}>
             {contextHolder}
-            <DatasetLabel/>
+            <InputLabel>Dataset</InputLabel>
             <Select
                 className={styles["select"] || ""}
                 loading={isPending}
                 options={(data || []).map((option) => ({label: option, value: option}))}
                 placeholder={"None"}
                 showSearch={true}
-                size={"large"}
+                size={"middle"}
                 value={dataset}
                 disabled={
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
