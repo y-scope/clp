@@ -41,6 +41,7 @@ struct JsonParserOption {
     bool print_archive_stats{};
     bool structurize_arrays{};
     bool record_log_order{true};
+    bool retain_float_format{false};
     bool single_file_archive{false};
     NetworkAuthOption network_auth{};
 };
@@ -240,6 +241,7 @@ private:
     size_t m_max_document_size;
     bool m_structurize_arrays{false};
     bool m_record_log_order{true};
+    bool m_retain_float_format{false};
 
     absl::flat_hash_map<std::pair<uint32_t, NodeType>, std::pair<int32_t, bool>>
             m_ir_node_to_archive_node_id_mapping;
