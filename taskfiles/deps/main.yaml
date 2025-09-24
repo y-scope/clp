@@ -93,7 +93,7 @@ tasks:
       - "spider-dep"
     platforms: ["linux"]
     preconditions:
-      # We do not support building `spider` on platforms other than Ubuntu.
+      # NOTE: Spider is only supported on Ubuntu at present.
       - >-
         source /etc/os-release && [[ "$ID" == "ubuntu" ]]
     cmds:
@@ -389,6 +389,14 @@ tasks:
           TARBALL_URL: "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz"
 
   mariadb-connector-cpp:
+    platforms: ["linux"]
+    preconditions:
+      # NOTE: The MariaDB connector is only required for building Spider, which is only supported on
+      # Ubuntu. `INSTALL_LAYOUT` is currently hardcoded to "DEB". To support other Linux distros:
+      # - Update the precondition accordingly.
+      # - Make `INSTALL_LAYOUT` configurable.
+      - >-
+        source /etc/os-release && [[ "$ID" == "ubuntu" ]]
     internal: true
     run: "once"
     cmds:
