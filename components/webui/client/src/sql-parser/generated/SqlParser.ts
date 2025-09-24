@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Generated from SqlBase.g4 by ANTLR 4.13.2
+// Generated from Sql.g4 by ANTLR 4.13.2
 // noinspection ES6UnusedImports,JSUnusedGlobalSymbols,JSUnusedLocalSymbols
 
 import {
@@ -16,7 +16,7 @@ import {
 // eslint-disable-next-line no-unused-vars
 type int = number;
 
-export default class SqlBaseParser extends Parser {
+export default class SqlParser extends Parser {
 	public static readonly T__0 = 1;
 	public static readonly T__1 = 2;
 	public static readonly T__2 = 3;
@@ -719,11 +719,11 @@ export default class SqlBaseParser extends Parser {
 		"constraintQualifier", "constraintRely", "constraintEnabled", "constraintEnforced", 
 		"nonReserved",
 	];
-	public get grammarFileName(): string { return "SqlBase.g4"; }
-	public get literalNames(): (string | null)[] { return SqlBaseParser.literalNames; }
-	public get symbolicNames(): (string | null)[] { return SqlBaseParser.symbolicNames; }
-	public get ruleNames(): string[] { return SqlBaseParser.ruleNames; }
-	public get serializedATN(): number[] { return SqlBaseParser._serializedATN; }
+	public get grammarFileName(): string { return "Sql.g4"; }
+	public get literalNames(): (string | null)[] { return SqlParser.literalNames; }
+	public get symbolicNames(): (string | null)[] { return SqlParser.symbolicNames; }
+	public get ruleNames(): string[] { return SqlParser.ruleNames; }
+	public get serializedATN(): number[] { return SqlParser._serializedATN; }
 
 	protected createFailedPredicateException(predicate?: string, message?: string): FailedPredicateException {
 		return new FailedPredicateException(this, predicate, message);
@@ -731,19 +731,19 @@ export default class SqlBaseParser extends Parser {
 
 	constructor(input: TokenStream) {
 		super(input);
-		this._interp = new ParserATNSimulator(this, SqlBaseParser._ATN, SqlBaseParser.DecisionsToDFA, new PredictionContextCache());
+		this._interp = new ParserATNSimulator(this, SqlParser._ATN, SqlParser.DecisionsToDFA, new PredictionContextCache());
 	}
 	// @RuleVersion(0)
 	public singleStatement(): SingleStatementContext {
 		let localctx: SingleStatementContext = new SingleStatementContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 0, SqlBaseParser.RULE_singleStatement);
+		this.enterRule(localctx, 0, SqlParser.RULE_singleStatement);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 178;
 			this.statement();
 			this.state = 179;
-			this.match(SqlBaseParser.EOF);
+			this.match(SqlParser.EOF);
 			}
 		}
 		catch (re) {
@@ -763,14 +763,14 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public standaloneExpression(): StandaloneExpressionContext {
 		let localctx: StandaloneExpressionContext = new StandaloneExpressionContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 2, SqlBaseParser.RULE_standaloneExpression);
+		this.enterRule(localctx, 2, SqlParser.RULE_standaloneExpression);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 181;
 			this.expression();
 			this.state = 182;
-			this.match(SqlBaseParser.EOF);
+			this.match(SqlParser.EOF);
 			}
 		}
 		catch (re) {
@@ -790,14 +790,14 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public standaloneRoutineBody(): StandaloneRoutineBodyContext {
 		let localctx: StandaloneRoutineBodyContext = new StandaloneRoutineBodyContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 4, SqlBaseParser.RULE_standaloneRoutineBody);
+		this.enterRule(localctx, 4, SqlParser.RULE_standaloneRoutineBody);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 184;
 			this.routineBody();
 			this.state = 185;
-			this.match(SqlBaseParser.EOF);
+			this.match(SqlParser.EOF);
 			}
 		}
 		catch (re) {
@@ -817,7 +817,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public statement(): StatementContext {
 		let localctx: StatementContext = new StatementContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 6, SqlBaseParser.RULE_statement);
+		this.enterRule(localctx, 6, SqlParser.RULE_statement);
 		let _la: number;
 		try {
 			this.state = 928;
@@ -836,7 +836,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 188;
-				this.match(SqlBaseParser.USE);
+				this.match(SqlParser.USE);
 				this.state = 189;
 				(localctx as UseContext)._schema = this.identifier();
 				}
@@ -846,11 +846,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 3);
 				{
 				this.state = 190;
-				this.match(SqlBaseParser.USE);
+				this.match(SqlParser.USE);
 				this.state = 191;
 				(localctx as UseContext)._catalog = this.identifier();
 				this.state = 192;
-				this.match(SqlBaseParser.T__0);
+				this.match(SqlParser.T__0);
 				this.state = 193;
 				(localctx as UseContext)._schema = this.identifier();
 				}
@@ -860,20 +860,20 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 4);
 				{
 				this.state = 195;
-				this.match(SqlBaseParser.CREATE);
+				this.match(SqlParser.CREATE);
 				this.state = 196;
-				this.match(SqlBaseParser.SCHEMA);
+				this.match(SqlParser.SCHEMA);
 				this.state = 200;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 0, this._ctx) ) {
 				case 1:
 					{
 					this.state = 197;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 198;
-					this.match(SqlBaseParser.NOT);
+					this.match(SqlParser.NOT);
 					this.state = 199;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
@@ -885,7 +885,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===224) {
 					{
 					this.state = 203;
-					this.match(SqlBaseParser.WITH);
+					this.match(SqlParser.WITH);
 					this.state = 204;
 					this.properties();
 					}
@@ -898,18 +898,18 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 5);
 				{
 				this.state = 207;
-				this.match(SqlBaseParser.DROP);
+				this.match(SqlParser.DROP);
 				this.state = 208;
-				this.match(SqlBaseParser.SCHEMA);
+				this.match(SqlParser.SCHEMA);
 				this.state = 211;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 2, this._ctx) ) {
 				case 1:
 					{
 					this.state = 209;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 210;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
@@ -939,15 +939,15 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 6);
 				{
 				this.state = 217;
-				this.match(SqlBaseParser.ALTER);
+				this.match(SqlParser.ALTER);
 				this.state = 218;
-				this.match(SqlBaseParser.SCHEMA);
+				this.match(SqlParser.SCHEMA);
 				this.state = 219;
 				this.qualifiedName();
 				this.state = 220;
-				this.match(SqlBaseParser.RENAME);
+				this.match(SqlParser.RENAME);
 				this.state = 221;
-				this.match(SqlBaseParser.TO);
+				this.match(SqlParser.TO);
 				this.state = 222;
 				this.identifier();
 				}
@@ -957,20 +957,20 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 7);
 				{
 				this.state = 224;
-				this.match(SqlBaseParser.CREATE);
+				this.match(SqlParser.CREATE);
 				this.state = 225;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 229;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 4, this._ctx) ) {
 				case 1:
 					{
 					this.state = 226;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 227;
-					this.match(SqlBaseParser.NOT);
+					this.match(SqlParser.NOT);
 					this.state = 228;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
@@ -992,7 +992,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===33) {
 					{
 					this.state = 235;
-					this.match(SqlBaseParser.COMMENT);
+					this.match(SqlParser.COMMENT);
 					this.state = 236;
 					this.string_();
 					}
@@ -1004,14 +1004,14 @@ export default class SqlBaseParser extends Parser {
 				if (_la===224) {
 					{
 					this.state = 239;
-					this.match(SqlBaseParser.WITH);
+					this.match(SqlParser.WITH);
 					this.state = 240;
 					this.properties();
 					}
 				}
 
 				this.state = 243;
-				this.match(SqlBaseParser.AS);
+				this.match(SqlParser.AS);
 				this.state = 249;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 8, this._ctx) ) {
@@ -1024,11 +1024,11 @@ export default class SqlBaseParser extends Parser {
 				case 2:
 					{
 					this.state = 245;
-					this.match(SqlBaseParser.T__1);
+					this.match(SqlParser.T__1);
 					this.state = 246;
 					this.query();
 					this.state = 247;
-					this.match(SqlBaseParser.T__2);
+					this.match(SqlParser.T__2);
 					}
 					break;
 				}
@@ -1038,19 +1038,19 @@ export default class SqlBaseParser extends Parser {
 				if (_la===224) {
 					{
 					this.state = 251;
-					this.match(SqlBaseParser.WITH);
+					this.match(SqlParser.WITH);
 					this.state = 253;
 					this._errHandler.sync(this);
 					_la = this._input.LA(1);
 					if (_la===128) {
 						{
 						this.state = 252;
-						this.match(SqlBaseParser.NO);
+						this.match(SqlParser.NO);
 						}
 					}
 
 					this.state = 255;
-					this.match(SqlBaseParser.DATA);
+					this.match(SqlParser.DATA);
 					}
 				}
 
@@ -1061,27 +1061,27 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 8);
 				{
 				this.state = 258;
-				this.match(SqlBaseParser.CREATE);
+				this.match(SqlParser.CREATE);
 				this.state = 259;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 263;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 11, this._ctx) ) {
 				case 1:
 					{
 					this.state = 260;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 261;
-					this.match(SqlBaseParser.NOT);
+					this.match(SqlParser.NOT);
 					this.state = 262;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
 				this.state = 265;
 				this.qualifiedName();
 				this.state = 266;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 267;
 				this.tableElement();
 				this.state = 272;
@@ -1091,7 +1091,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 268;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 269;
 					this.tableElement();
 					}
@@ -1101,14 +1101,14 @@ export default class SqlBaseParser extends Parser {
 					_la = this._input.LA(1);
 				}
 				this.state = 275;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				this.state = 278;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===33) {
 					{
 					this.state = 276;
-					this.match(SqlBaseParser.COMMENT);
+					this.match(SqlParser.COMMENT);
 					this.state = 277;
 					this.string_();
 					}
@@ -1120,7 +1120,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===224) {
 					{
 					this.state = 280;
-					this.match(SqlBaseParser.WITH);
+					this.match(SqlParser.WITH);
 					this.state = 281;
 					this.properties();
 					}
@@ -1133,18 +1133,18 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 9);
 				{
 				this.state = 284;
-				this.match(SqlBaseParser.DROP);
+				this.match(SqlParser.DROP);
 				this.state = 285;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 288;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 15, this._ctx) ) {
 				case 1:
 					{
 					this.state = 286;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 287;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
@@ -1157,9 +1157,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 10);
 				{
 				this.state = 291;
-				this.match(SqlBaseParser.INSERT);
+				this.match(SqlParser.INSERT);
 				this.state = 292;
-				this.match(SqlBaseParser.INTO);
+				this.match(SqlParser.INTO);
 				this.state = 293;
 				this.qualifiedName();
 				this.state = 295;
@@ -1181,9 +1181,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 11);
 				{
 				this.state = 299;
-				this.match(SqlBaseParser.DELETE);
+				this.match(SqlParser.DELETE);
 				this.state = 300;
-				this.match(SqlBaseParser.FROM);
+				this.match(SqlParser.FROM);
 				this.state = 301;
 				this.qualifiedName();
 				this.state = 304;
@@ -1192,7 +1192,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===223) {
 					{
 					this.state = 302;
-					this.match(SqlBaseParser.WHERE);
+					this.match(SqlParser.WHERE);
 					this.state = 303;
 					this.booleanExpression(0);
 					}
@@ -1205,9 +1205,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 12);
 				{
 				this.state = 306;
-				this.match(SqlBaseParser.TRUNCATE);
+				this.match(SqlParser.TRUNCATE);
 				this.state = 307;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 308;
 				this.qualifiedName();
 				}
@@ -1217,27 +1217,27 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 13);
 				{
 				this.state = 309;
-				this.match(SqlBaseParser.ALTER);
+				this.match(SqlParser.ALTER);
 				this.state = 310;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 313;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 18, this._ctx) ) {
 				case 1:
 					{
 					this.state = 311;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 312;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
 				this.state = 315;
 				(localctx as RenameTableContext)._from_ = this.qualifiedName();
 				this.state = 316;
-				this.match(SqlBaseParser.RENAME);
+				this.match(SqlParser.RENAME);
 				this.state = 317;
-				this.match(SqlBaseParser.TO);
+				this.match(SqlParser.TO);
 				this.state = 318;
 				(localctx as RenameTableContext)._to = this.qualifiedName();
 				}
@@ -1247,43 +1247,43 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 14);
 				{
 				this.state = 320;
-				this.match(SqlBaseParser.ALTER);
+				this.match(SqlParser.ALTER);
 				this.state = 321;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 324;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 19, this._ctx) ) {
 				case 1:
 					{
 					this.state = 322;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 323;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
 				this.state = 326;
 				(localctx as RenameColumnContext)._tableName = this.qualifiedName();
 				this.state = 327;
-				this.match(SqlBaseParser.RENAME);
+				this.match(SqlParser.RENAME);
 				this.state = 328;
-				this.match(SqlBaseParser.COLUMN);
+				this.match(SqlParser.COLUMN);
 				this.state = 331;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 20, this._ctx) ) {
 				case 1:
 					{
 					this.state = 329;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 330;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
 				this.state = 333;
 				(localctx as RenameColumnContext)._from_ = this.identifier();
 				this.state = 334;
-				this.match(SqlBaseParser.TO);
+				this.match(SqlParser.TO);
 				this.state = 335;
 				(localctx as RenameColumnContext)._to = this.identifier();
 				}
@@ -1293,36 +1293,36 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 15);
 				{
 				this.state = 337;
-				this.match(SqlBaseParser.ALTER);
+				this.match(SqlParser.ALTER);
 				this.state = 338;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 341;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 21, this._ctx) ) {
 				case 1:
 					{
 					this.state = 339;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 340;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
 				this.state = 343;
 				(localctx as DropColumnContext)._tableName = this.qualifiedName();
 				this.state = 344;
-				this.match(SqlBaseParser.DROP);
+				this.match(SqlParser.DROP);
 				this.state = 345;
-				this.match(SqlBaseParser.COLUMN);
+				this.match(SqlParser.COLUMN);
 				this.state = 348;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 22, this._ctx) ) {
 				case 1:
 					{
 					this.state = 346;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 347;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
@@ -1335,38 +1335,38 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 16);
 				{
 				this.state = 352;
-				this.match(SqlBaseParser.ALTER);
+				this.match(SqlParser.ALTER);
 				this.state = 353;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 356;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 23, this._ctx) ) {
 				case 1:
 					{
 					this.state = 354;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 355;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
 				this.state = 358;
 				(localctx as AddColumnContext)._tableName = this.qualifiedName();
 				this.state = 359;
-				this.match(SqlBaseParser.ADD);
+				this.match(SqlParser.ADD);
 				this.state = 360;
-				this.match(SqlBaseParser.COLUMN);
+				this.match(SqlParser.COLUMN);
 				this.state = 364;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 24, this._ctx) ) {
 				case 1:
 					{
 					this.state = 361;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 362;
-					this.match(SqlBaseParser.NOT);
+					this.match(SqlParser.NOT);
 					this.state = 363;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
@@ -1379,25 +1379,25 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 17);
 				{
 				this.state = 368;
-				this.match(SqlBaseParser.ALTER);
+				this.match(SqlParser.ALTER);
 				this.state = 369;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 372;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 25, this._ctx) ) {
 				case 1:
 					{
 					this.state = 370;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 371;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
 				this.state = 374;
 				(localctx as AddConstraintContext)._tableName = this.qualifiedName();
 				this.state = 375;
-				this.match(SqlBaseParser.ADD);
+				this.match(SqlParser.ADD);
 				this.state = 376;
 				this.constraintSpecification();
 				}
@@ -1407,36 +1407,36 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 18);
 				{
 				this.state = 378;
-				this.match(SqlBaseParser.ALTER);
+				this.match(SqlParser.ALTER);
 				this.state = 379;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 382;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 26, this._ctx) ) {
 				case 1:
 					{
 					this.state = 380;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 381;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
 				this.state = 384;
 				(localctx as DropConstraintContext)._tableName = this.qualifiedName();
 				this.state = 385;
-				this.match(SqlBaseParser.DROP);
+				this.match(SqlParser.DROP);
 				this.state = 386;
-				this.match(SqlBaseParser.CONSTRAINT);
+				this.match(SqlParser.CONSTRAINT);
 				this.state = 389;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 27, this._ctx) ) {
 				case 1:
 					{
 					this.state = 387;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 388;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
@@ -1449,43 +1449,43 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 19);
 				{
 				this.state = 393;
-				this.match(SqlBaseParser.ALTER);
+				this.match(SqlParser.ALTER);
 				this.state = 394;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 397;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 28, this._ctx) ) {
 				case 1:
 					{
 					this.state = 395;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 396;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
 				this.state = 399;
 				(localctx as AlterColumnSetNotNullContext)._tableName = this.qualifiedName();
 				this.state = 400;
-				this.match(SqlBaseParser.ALTER);
+				this.match(SqlParser.ALTER);
 				this.state = 402;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 29, this._ctx) ) {
 				case 1:
 					{
 					this.state = 401;
-					this.match(SqlBaseParser.COLUMN);
+					this.match(SqlParser.COLUMN);
 					}
 					break;
 				}
 				this.state = 404;
 				(localctx as AlterColumnSetNotNullContext)._column = this.identifier();
 				this.state = 405;
-				this.match(SqlBaseParser.SET);
+				this.match(SqlParser.SET);
 				this.state = 406;
-				this.match(SqlBaseParser.NOT);
+				this.match(SqlParser.NOT);
 				this.state = 407;
-				this.match(SqlBaseParser.NULL);
+				this.match(SqlParser.NULL);
 				}
 				break;
 			case 20:
@@ -1493,43 +1493,43 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 20);
 				{
 				this.state = 409;
-				this.match(SqlBaseParser.ALTER);
+				this.match(SqlParser.ALTER);
 				this.state = 410;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 413;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 30, this._ctx) ) {
 				case 1:
 					{
 					this.state = 411;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 412;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
 				this.state = 415;
 				(localctx as AlterColumnDropNotNullContext)._tableName = this.qualifiedName();
 				this.state = 416;
-				this.match(SqlBaseParser.ALTER);
+				this.match(SqlParser.ALTER);
 				this.state = 418;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 31, this._ctx) ) {
 				case 1:
 					{
 					this.state = 417;
-					this.match(SqlBaseParser.COLUMN);
+					this.match(SqlParser.COLUMN);
 					}
 					break;
 				}
 				this.state = 420;
 				(localctx as AlterColumnDropNotNullContext)._column = this.identifier();
 				this.state = 421;
-				this.match(SqlBaseParser.DROP);
+				this.match(SqlParser.DROP);
 				this.state = 422;
-				this.match(SqlBaseParser.NOT);
+				this.match(SqlParser.NOT);
 				this.state = 423;
-				this.match(SqlBaseParser.NULL);
+				this.match(SqlParser.NULL);
 				}
 				break;
 			case 21:
@@ -1537,27 +1537,27 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 21);
 				{
 				this.state = 425;
-				this.match(SqlBaseParser.ALTER);
+				this.match(SqlParser.ALTER);
 				this.state = 426;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 429;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 32, this._ctx) ) {
 				case 1:
 					{
 					this.state = 427;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 428;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
 				this.state = 431;
 				(localctx as SetTablePropertiesContext)._tableName = this.qualifiedName();
 				this.state = 432;
-				this.match(SqlBaseParser.SET);
+				this.match(SqlParser.SET);
 				this.state = 433;
-				this.match(SqlBaseParser.PROPERTIES);
+				this.match(SqlParser.PROPERTIES);
 				this.state = 434;
 				this.properties();
 				}
@@ -1567,7 +1567,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 22);
 				{
 				this.state = 436;
-				this.match(SqlBaseParser.ANALYZE);
+				this.match(SqlParser.ANALYZE);
 				this.state = 437;
 				this.qualifiedName();
 				this.state = 440;
@@ -1576,7 +1576,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===224) {
 					{
 					this.state = 438;
-					this.match(SqlBaseParser.WITH);
+					this.match(SqlParser.WITH);
 					this.state = 439;
 					this.properties();
 					}
@@ -1589,20 +1589,20 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 23);
 				{
 				this.state = 442;
-				this.match(SqlBaseParser.CREATE);
+				this.match(SqlParser.CREATE);
 				this.state = 443;
-				this.match(SqlBaseParser.TYPE);
+				this.match(SqlParser.TYPE);
 				this.state = 444;
 				this.qualifiedName();
 				this.state = 445;
-				this.match(SqlBaseParser.AS);
+				this.match(SqlParser.AS);
 				this.state = 458;
 				this._errHandler.sync(this);
 				switch (this._input.LA(1)) {
 				case 2:
 					{
 					this.state = 446;
-					this.match(SqlBaseParser.T__1);
+					this.match(SqlParser.T__1);
 					this.state = 447;
 					this.sqlParameterDeclaration();
 					this.state = 452;
@@ -1612,7 +1612,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 448;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 449;
 						this.sqlParameterDeclaration();
 						}
@@ -1622,7 +1622,7 @@ export default class SqlBaseParser extends Parser {
 						_la = this._input.LA(1);
 					}
 					this.state = 455;
-					this.match(SqlBaseParser.T__2);
+					this.match(SqlParser.T__2);
 					}
 					break;
 				case 10:
@@ -1797,21 +1797,21 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 24);
 				{
 				this.state = 460;
-				this.match(SqlBaseParser.CREATE);
+				this.match(SqlParser.CREATE);
 				this.state = 463;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===140) {
 					{
 					this.state = 461;
-					this.match(SqlBaseParser.OR);
+					this.match(SqlParser.OR);
 					this.state = 462;
-					this.match(SqlBaseParser.REPLACE);
+					this.match(SqlParser.REPLACE);
 					}
 				}
 
 				this.state = 465;
-				this.match(SqlBaseParser.VIEW);
+				this.match(SqlParser.VIEW);
 				this.state = 466;
 				this.qualifiedName();
 				this.state = 469;
@@ -1820,7 +1820,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===178) {
 					{
 					this.state = 467;
-					this.match(SqlBaseParser.SECURITY);
+					this.match(SqlParser.SECURITY);
 					this.state = 468;
 					_la = this._input.LA(1);
 					if(!(_la===50 || _la===101)) {
@@ -1834,7 +1834,7 @@ export default class SqlBaseParser extends Parser {
 				}
 
 				this.state = 471;
-				this.match(SqlBaseParser.AS);
+				this.match(SqlParser.AS);
 				this.state = 472;
 				this.query();
 				}
@@ -1844,27 +1844,27 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 25);
 				{
 				this.state = 474;
-				this.match(SqlBaseParser.ALTER);
+				this.match(SqlParser.ALTER);
 				this.state = 475;
-				this.match(SqlBaseParser.VIEW);
+				this.match(SqlParser.VIEW);
 				this.state = 478;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 38, this._ctx) ) {
 				case 1:
 					{
 					this.state = 476;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 477;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
 				this.state = 480;
 				(localctx as RenameViewContext)._from_ = this.qualifiedName();
 				this.state = 481;
-				this.match(SqlBaseParser.RENAME);
+				this.match(SqlParser.RENAME);
 				this.state = 482;
-				this.match(SqlBaseParser.TO);
+				this.match(SqlParser.TO);
 				this.state = 483;
 				(localctx as RenameViewContext)._to = this.qualifiedName();
 				}
@@ -1874,18 +1874,18 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 26);
 				{
 				this.state = 485;
-				this.match(SqlBaseParser.DROP);
+				this.match(SqlParser.DROP);
 				this.state = 486;
-				this.match(SqlBaseParser.VIEW);
+				this.match(SqlParser.VIEW);
 				this.state = 489;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 39, this._ctx) ) {
 				case 1:
 					{
 					this.state = 487;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 488;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
@@ -1898,22 +1898,22 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 27);
 				{
 				this.state = 492;
-				this.match(SqlBaseParser.CREATE);
+				this.match(SqlParser.CREATE);
 				this.state = 493;
-				this.match(SqlBaseParser.MATERIALIZED);
+				this.match(SqlParser.MATERIALIZED);
 				this.state = 494;
-				this.match(SqlBaseParser.VIEW);
+				this.match(SqlParser.VIEW);
 				this.state = 498;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 40, this._ctx) ) {
 				case 1:
 					{
 					this.state = 495;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 496;
-					this.match(SqlBaseParser.NOT);
+					this.match(SqlParser.NOT);
 					this.state = 497;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
@@ -1925,7 +1925,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===33) {
 					{
 					this.state = 501;
-					this.match(SqlBaseParser.COMMENT);
+					this.match(SqlParser.COMMENT);
 					this.state = 502;
 					this.string_();
 					}
@@ -1937,14 +1937,14 @@ export default class SqlBaseParser extends Parser {
 				if (_la===224) {
 					{
 					this.state = 505;
-					this.match(SqlBaseParser.WITH);
+					this.match(SqlParser.WITH);
 					this.state = 506;
 					this.properties();
 					}
 				}
 
 				this.state = 509;
-				this.match(SqlBaseParser.AS);
+				this.match(SqlParser.AS);
 				this.state = 515;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 43, this._ctx) ) {
@@ -1957,11 +1957,11 @@ export default class SqlBaseParser extends Parser {
 				case 2:
 					{
 					this.state = 511;
-					this.match(SqlBaseParser.T__1);
+					this.match(SqlParser.T__1);
 					this.state = 512;
 					this.query();
 					this.state = 513;
-					this.match(SqlBaseParser.T__2);
+					this.match(SqlParser.T__2);
 					}
 					break;
 				}
@@ -1972,20 +1972,20 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 28);
 				{
 				this.state = 517;
-				this.match(SqlBaseParser.DROP);
+				this.match(SqlParser.DROP);
 				this.state = 518;
-				this.match(SqlBaseParser.MATERIALIZED);
+				this.match(SqlParser.MATERIALIZED);
 				this.state = 519;
-				this.match(SqlBaseParser.VIEW);
+				this.match(SqlParser.VIEW);
 				this.state = 522;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 44, this._ctx) ) {
 				case 1:
 					{
 					this.state = 520;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 521;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
@@ -1998,15 +1998,15 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 29);
 				{
 				this.state = 525;
-				this.match(SqlBaseParser.REFRESH);
+				this.match(SqlParser.REFRESH);
 				this.state = 526;
-				this.match(SqlBaseParser.MATERIALIZED);
+				this.match(SqlParser.MATERIALIZED);
 				this.state = 527;
-				this.match(SqlBaseParser.VIEW);
+				this.match(SqlParser.VIEW);
 				this.state = 528;
 				this.qualifiedName();
 				this.state = 529;
-				this.match(SqlBaseParser.WHERE);
+				this.match(SqlParser.WHERE);
 				this.state = 530;
 				this.booleanExpression(0);
 				}
@@ -2016,16 +2016,16 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 30);
 				{
 				this.state = 532;
-				this.match(SqlBaseParser.CREATE);
+				this.match(SqlParser.CREATE);
 				this.state = 535;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===140) {
 					{
 					this.state = 533;
-					this.match(SqlBaseParser.OR);
+					this.match(SqlParser.OR);
 					this.state = 534;
-					this.match(SqlBaseParser.REPLACE);
+					this.match(SqlParser.REPLACE);
 					}
 				}
 
@@ -2035,16 +2035,16 @@ export default class SqlBaseParser extends Parser {
 				if (_la===196) {
 					{
 					this.state = 537;
-					this.match(SqlBaseParser.TEMPORARY);
+					this.match(SqlParser.TEMPORARY);
 					}
 				}
 
 				this.state = 540;
-				this.match(SqlBaseParser.FUNCTION);
+				this.match(SqlParser.FUNCTION);
 				this.state = 541;
 				(localctx as CreateFunctionContext)._functionName = this.qualifiedName();
 				this.state = 542;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 551;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -2059,7 +2059,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 544;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 545;
 						this.sqlParameterDeclaration();
 						}
@@ -2072,9 +2072,9 @@ export default class SqlBaseParser extends Parser {
 				}
 
 				this.state = 553;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				this.state = 554;
-				this.match(SqlBaseParser.RETURNS);
+				this.match(SqlParser.RETURNS);
 				this.state = 555;
 				(localctx as CreateFunctionContext)._returnType = this.type_(0);
 				this.state = 558;
@@ -2083,7 +2083,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===33) {
 					{
 					this.state = 556;
-					this.match(SqlBaseParser.COMMENT);
+					this.match(SqlParser.COMMENT);
 					this.state = 557;
 					this.string_();
 					}
@@ -2100,9 +2100,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 31);
 				{
 				this.state = 563;
-				this.match(SqlBaseParser.ALTER);
+				this.match(SqlParser.ALTER);
 				this.state = 564;
-				this.match(SqlBaseParser.FUNCTION);
+				this.match(SqlParser.FUNCTION);
 				this.state = 565;
 				this.qualifiedName();
 				this.state = 567;
@@ -2124,28 +2124,28 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 32);
 				{
 				this.state = 571;
-				this.match(SqlBaseParser.DROP);
+				this.match(SqlParser.DROP);
 				this.state = 573;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===196) {
 					{
 					this.state = 572;
-					this.match(SqlBaseParser.TEMPORARY);
+					this.match(SqlParser.TEMPORARY);
 					}
 				}
 
 				this.state = 575;
-				this.match(SqlBaseParser.FUNCTION);
+				this.match(SqlParser.FUNCTION);
 				this.state = 578;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 52, this._ctx) ) {
 				case 1:
 					{
 					this.state = 576;
-					this.match(SqlBaseParser.IF);
+					this.match(SqlParser.IF);
 					this.state = 577;
-					this.match(SqlBaseParser.EXISTS);
+					this.match(SqlParser.EXISTS);
 					}
 					break;
 				}
@@ -2168,11 +2168,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 33);
 				{
 				this.state = 584;
-				this.match(SqlBaseParser.CALL);
+				this.match(SqlParser.CALL);
 				this.state = 585;
 				this.qualifiedName();
 				this.state = 586;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 595;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -2187,7 +2187,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 588;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 589;
 						this.callArgument();
 						}
@@ -2200,7 +2200,7 @@ export default class SqlBaseParser extends Parser {
 				}
 
 				this.state = 597;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 34:
@@ -2208,9 +2208,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 34);
 				{
 				this.state = 599;
-				this.match(SqlBaseParser.CREATE);
+				this.match(SqlParser.CREATE);
 				this.state = 600;
-				this.match(SqlBaseParser.ROLE);
+				this.match(SqlParser.ROLE);
 				this.state = 601;
 				(localctx as CreateRoleContext)._name = this.identifier();
 				this.state = 605;
@@ -2219,9 +2219,9 @@ export default class SqlBaseParser extends Parser {
 				if (_la===224) {
 					{
 					this.state = 602;
-					this.match(SqlBaseParser.WITH);
+					this.match(SqlParser.WITH);
 					this.state = 603;
-					this.match(SqlBaseParser.ADMIN);
+					this.match(SqlParser.ADMIN);
 					this.state = 604;
 					this.grantor();
 					}
@@ -2234,9 +2234,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 35);
 				{
 				this.state = 607;
-				this.match(SqlBaseParser.DROP);
+				this.match(SqlParser.DROP);
 				this.state = 608;
-				this.match(SqlBaseParser.ROLE);
+				this.match(SqlParser.ROLE);
 				this.state = 609;
 				(localctx as DropRoleContext)._name = this.identifier();
 				}
@@ -2246,11 +2246,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 36);
 				{
 				this.state = 610;
-				this.match(SqlBaseParser.GRANT);
+				this.match(SqlParser.GRANT);
 				this.state = 611;
 				this.roles();
 				this.state = 612;
-				this.match(SqlBaseParser.TO);
+				this.match(SqlParser.TO);
 				this.state = 613;
 				this.principal();
 				this.state = 618;
@@ -2260,7 +2260,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 614;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 615;
 					this.principal();
 					}
@@ -2275,11 +2275,11 @@ export default class SqlBaseParser extends Parser {
 				if (_la===224) {
 					{
 					this.state = 621;
-					this.match(SqlBaseParser.WITH);
+					this.match(SqlParser.WITH);
 					this.state = 622;
-					this.match(SqlBaseParser.ADMIN);
+					this.match(SqlParser.ADMIN);
 					this.state = 623;
-					this.match(SqlBaseParser.OPTION);
+					this.match(SqlParser.OPTION);
 					}
 				}
 
@@ -2289,9 +2289,9 @@ export default class SqlBaseParser extends Parser {
 				if (_la===83) {
 					{
 					this.state = 626;
-					this.match(SqlBaseParser.GRANTED);
+					this.match(SqlParser.GRANTED);
 					this.state = 627;
-					this.match(SqlBaseParser.BY);
+					this.match(SqlParser.BY);
 					this.state = 628;
 					this.grantor();
 					}
@@ -2304,25 +2304,25 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 37);
 				{
 				this.state = 631;
-				this.match(SqlBaseParser.REVOKE);
+				this.match(SqlParser.REVOKE);
 				this.state = 635;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 60, this._ctx) ) {
 				case 1:
 					{
 					this.state = 632;
-					this.match(SqlBaseParser.ADMIN);
+					this.match(SqlParser.ADMIN);
 					this.state = 633;
-					this.match(SqlBaseParser.OPTION);
+					this.match(SqlParser.OPTION);
 					this.state = 634;
-					this.match(SqlBaseParser.FOR);
+					this.match(SqlParser.FOR);
 					}
 					break;
 				}
 				this.state = 637;
 				this.roles();
 				this.state = 638;
-				this.match(SqlBaseParser.FROM);
+				this.match(SqlParser.FROM);
 				this.state = 639;
 				this.principal();
 				this.state = 644;
@@ -2332,7 +2332,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 640;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 641;
 					this.principal();
 					}
@@ -2347,9 +2347,9 @@ export default class SqlBaseParser extends Parser {
 				if (_la===83) {
 					{
 					this.state = 647;
-					this.match(SqlBaseParser.GRANTED);
+					this.match(SqlParser.GRANTED);
 					this.state = 648;
-					this.match(SqlBaseParser.BY);
+					this.match(SqlParser.BY);
 					this.state = 649;
 					this.grantor();
 					}
@@ -2362,22 +2362,22 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 38);
 				{
 				this.state = 652;
-				this.match(SqlBaseParser.SET);
+				this.match(SqlParser.SET);
 				this.state = 653;
-				this.match(SqlBaseParser.ROLE);
+				this.match(SqlParser.ROLE);
 				this.state = 657;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 63, this._ctx) ) {
 				case 1:
 					{
 					this.state = 654;
-					this.match(SqlBaseParser.ALL);
+					this.match(SqlParser.ALL);
 					}
 					break;
 				case 2:
 					{
 					this.state = 655;
-					this.match(SqlBaseParser.NONE);
+					this.match(SqlParser.NONE);
 					}
 					break;
 				case 3:
@@ -2394,7 +2394,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 39);
 				{
 				this.state = 659;
-				this.match(SqlBaseParser.GRANT);
+				this.match(SqlParser.GRANT);
 				this.state = 670;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 65, this._ctx) ) {
@@ -2409,7 +2409,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 661;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 662;
 						this.privilege();
 						}
@@ -2423,28 +2423,28 @@ export default class SqlBaseParser extends Parser {
 				case 2:
 					{
 					this.state = 668;
-					this.match(SqlBaseParser.ALL);
+					this.match(SqlParser.ALL);
 					this.state = 669;
-					this.match(SqlBaseParser.PRIVILEGES);
+					this.match(SqlParser.PRIVILEGES);
 					}
 					break;
 				}
 				this.state = 672;
-				this.match(SqlBaseParser.ON);
+				this.match(SqlParser.ON);
 				this.state = 674;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===193) {
 					{
 					this.state = 673;
-					this.match(SqlBaseParser.TABLE);
+					this.match(SqlParser.TABLE);
 					}
 				}
 
 				this.state = 676;
 				this.qualifiedName();
 				this.state = 677;
-				this.match(SqlBaseParser.TO);
+				this.match(SqlParser.TO);
 				this.state = 678;
 				(localctx as GrantContext)._grantee = this.principal();
 				this.state = 682;
@@ -2453,11 +2453,11 @@ export default class SqlBaseParser extends Parser {
 				if (_la===224) {
 					{
 					this.state = 679;
-					this.match(SqlBaseParser.WITH);
+					this.match(SqlParser.WITH);
 					this.state = 680;
-					this.match(SqlBaseParser.GRANT);
+					this.match(SqlParser.GRANT);
 					this.state = 681;
-					this.match(SqlBaseParser.OPTION);
+					this.match(SqlParser.OPTION);
 					}
 				}
 
@@ -2468,18 +2468,18 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 40);
 				{
 				this.state = 684;
-				this.match(SqlBaseParser.REVOKE);
+				this.match(SqlParser.REVOKE);
 				this.state = 688;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 68, this._ctx) ) {
 				case 1:
 					{
 					this.state = 685;
-					this.match(SqlBaseParser.GRANT);
+					this.match(SqlParser.GRANT);
 					this.state = 686;
-					this.match(SqlBaseParser.OPTION);
+					this.match(SqlParser.OPTION);
 					this.state = 687;
-					this.match(SqlBaseParser.FOR);
+					this.match(SqlParser.FOR);
 					}
 					break;
 				}
@@ -2497,7 +2497,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 691;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 692;
 						this.privilege();
 						}
@@ -2511,28 +2511,28 @@ export default class SqlBaseParser extends Parser {
 				case 2:
 					{
 					this.state = 698;
-					this.match(SqlBaseParser.ALL);
+					this.match(SqlParser.ALL);
 					this.state = 699;
-					this.match(SqlBaseParser.PRIVILEGES);
+					this.match(SqlParser.PRIVILEGES);
 					}
 					break;
 				}
 				this.state = 702;
-				this.match(SqlBaseParser.ON);
+				this.match(SqlParser.ON);
 				this.state = 704;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===193) {
 					{
 					this.state = 703;
-					this.match(SqlBaseParser.TABLE);
+					this.match(SqlParser.TABLE);
 					}
 				}
 
 				this.state = 706;
 				this.qualifiedName();
 				this.state = 707;
-				this.match(SqlBaseParser.FROM);
+				this.match(SqlParser.FROM);
 				this.state = 708;
 				(localctx as RevokeContext)._grantee = this.principal();
 				}
@@ -2542,23 +2542,23 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 41);
 				{
 				this.state = 710;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 711;
-				this.match(SqlBaseParser.GRANTS);
+				this.match(SqlParser.GRANTS);
 				this.state = 717;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===137) {
 					{
 					this.state = 712;
-					this.match(SqlBaseParser.ON);
+					this.match(SqlParser.ON);
 					this.state = 714;
 					this._errHandler.sync(this);
 					_la = this._input.LA(1);
 					if (_la===193) {
 						{
 						this.state = 713;
-						this.match(SqlBaseParser.TABLE);
+						this.match(SqlParser.TABLE);
 						}
 					}
 
@@ -2574,14 +2574,14 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 42);
 				{
 				this.state = 719;
-				this.match(SqlBaseParser.EXPLAIN);
+				this.match(SqlParser.EXPLAIN);
 				this.state = 721;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 74, this._ctx) ) {
 				case 1:
 					{
 					this.state = 720;
-					this.match(SqlBaseParser.ANALYZE);
+					this.match(SqlParser.ANALYZE);
 					}
 					break;
 				}
@@ -2591,7 +2591,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===219) {
 					{
 					this.state = 723;
-					this.match(SqlBaseParser.VERBOSE);
+					this.match(SqlParser.VERBOSE);
 					}
 				}
 
@@ -2601,7 +2601,7 @@ export default class SqlBaseParser extends Parser {
 				case 1:
 					{
 					this.state = 726;
-					this.match(SqlBaseParser.T__1);
+					this.match(SqlParser.T__1);
 					this.state = 727;
 					this.explainOption();
 					this.state = 732;
@@ -2611,7 +2611,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 728;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 729;
 						this.explainOption();
 						}
@@ -2621,7 +2621,7 @@ export default class SqlBaseParser extends Parser {
 						_la = this._input.LA(1);
 					}
 					this.state = 735;
-					this.match(SqlBaseParser.T__2);
+					this.match(SqlParser.T__2);
 					}
 					break;
 				}
@@ -2634,11 +2634,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 43);
 				{
 				this.state = 740;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 741;
-				this.match(SqlBaseParser.CREATE);
+				this.match(SqlParser.CREATE);
 				this.state = 742;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 743;
 				this.qualifiedName();
 				}
@@ -2648,11 +2648,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 44);
 				{
 				this.state = 744;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 745;
-				this.match(SqlBaseParser.CREATE);
+				this.match(SqlParser.CREATE);
 				this.state = 746;
-				this.match(SqlBaseParser.SCHEMA);
+				this.match(SqlParser.SCHEMA);
 				this.state = 747;
 				this.qualifiedName();
 				}
@@ -2662,11 +2662,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 45);
 				{
 				this.state = 748;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 749;
-				this.match(SqlBaseParser.CREATE);
+				this.match(SqlParser.CREATE);
 				this.state = 750;
-				this.match(SqlBaseParser.VIEW);
+				this.match(SqlParser.VIEW);
 				this.state = 751;
 				this.qualifiedName();
 				}
@@ -2676,13 +2676,13 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 46);
 				{
 				this.state = 752;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 753;
-				this.match(SqlBaseParser.CREATE);
+				this.match(SqlParser.CREATE);
 				this.state = 754;
-				this.match(SqlBaseParser.MATERIALIZED);
+				this.match(SqlParser.MATERIALIZED);
 				this.state = 755;
-				this.match(SqlBaseParser.VIEW);
+				this.match(SqlParser.VIEW);
 				this.state = 756;
 				this.qualifiedName();
 				}
@@ -2692,11 +2692,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 47);
 				{
 				this.state = 757;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 758;
-				this.match(SqlBaseParser.CREATE);
+				this.match(SqlParser.CREATE);
 				this.state = 759;
-				this.match(SqlBaseParser.FUNCTION);
+				this.match(SqlParser.FUNCTION);
 				this.state = 760;
 				this.qualifiedName();
 				this.state = 762;
@@ -2716,9 +2716,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 48);
 				{
 				this.state = 764;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 765;
-				this.match(SqlBaseParser.TABLES);
+				this.match(SqlParser.TABLES);
 				this.state = 768;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -2744,7 +2744,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===113) {
 					{
 					this.state = 770;
-					this.match(SqlBaseParser.LIKE);
+					this.match(SqlParser.LIKE);
 					this.state = 771;
 					(localctx as ShowTablesContext)._pattern = this.string_();
 					this.state = 774;
@@ -2753,7 +2753,7 @@ export default class SqlBaseParser extends Parser {
 					if (_la===63) {
 						{
 						this.state = 772;
-						this.match(SqlBaseParser.ESCAPE);
+						this.match(SqlParser.ESCAPE);
 						this.state = 773;
 						(localctx as ShowTablesContext)._escape = this.string_();
 						}
@@ -2769,9 +2769,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 49);
 				{
 				this.state = 778;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 779;
-				this.match(SqlBaseParser.SCHEMAS);
+				this.match(SqlParser.SCHEMAS);
 				this.state = 782;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -2797,7 +2797,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===113) {
 					{
 					this.state = 784;
-					this.match(SqlBaseParser.LIKE);
+					this.match(SqlParser.LIKE);
 					this.state = 785;
 					(localctx as ShowSchemasContext)._pattern = this.string_();
 					this.state = 788;
@@ -2806,7 +2806,7 @@ export default class SqlBaseParser extends Parser {
 					if (_la===63) {
 						{
 						this.state = 786;
-						this.match(SqlBaseParser.ESCAPE);
+						this.match(SqlParser.ESCAPE);
 						this.state = 787;
 						(localctx as ShowSchemasContext)._escape = this.string_();
 						}
@@ -2822,16 +2822,16 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 50);
 				{
 				this.state = 792;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 793;
-				this.match(SqlBaseParser.CATALOGS);
+				this.match(SqlParser.CATALOGS);
 				this.state = 800;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===113) {
 					{
 					this.state = 794;
-					this.match(SqlBaseParser.LIKE);
+					this.match(SqlParser.LIKE);
 					this.state = 795;
 					(localctx as ShowCatalogsContext)._pattern = this.string_();
 					this.state = 798;
@@ -2840,7 +2840,7 @@ export default class SqlBaseParser extends Parser {
 					if (_la===63) {
 						{
 						this.state = 796;
-						this.match(SqlBaseParser.ESCAPE);
+						this.match(SqlParser.ESCAPE);
 						this.state = 797;
 						(localctx as ShowCatalogsContext)._escape = this.string_();
 						}
@@ -2856,9 +2856,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 51);
 				{
 				this.state = 802;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 803;
-				this.match(SqlBaseParser.COLUMNS);
+				this.match(SqlParser.COLUMNS);
 				this.state = 804;
 				_la = this._input.LA(1);
 				if(!(_la===78 || _la===93)) {
@@ -2877,11 +2877,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 52);
 				{
 				this.state = 806;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 807;
-				this.match(SqlBaseParser.STATS);
+				this.match(SqlParser.STATS);
 				this.state = 808;
-				this.match(SqlBaseParser.FOR);
+				this.match(SqlParser.FOR);
 				this.state = 809;
 				this.qualifiedName();
 				}
@@ -2891,17 +2891,17 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 53);
 				{
 				this.state = 810;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 811;
-				this.match(SqlBaseParser.STATS);
+				this.match(SqlParser.STATS);
 				this.state = 812;
-				this.match(SqlBaseParser.FOR);
+				this.match(SqlParser.FOR);
 				this.state = 813;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 814;
 				this.querySpecification();
 				this.state = 815;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 54:
@@ -2909,19 +2909,19 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 54);
 				{
 				this.state = 817;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 819;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===40) {
 					{
 					this.state = 818;
-					this.match(SqlBaseParser.CURRENT);
+					this.match(SqlParser.CURRENT);
 					}
 				}
 
 				this.state = 821;
-				this.match(SqlBaseParser.ROLES);
+				this.match(SqlParser.ROLES);
 				this.state = 824;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -2948,11 +2948,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 55);
 				{
 				this.state = 826;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 827;
-				this.match(SqlBaseParser.ROLE);
+				this.match(SqlParser.ROLE);
 				this.state = 828;
-				this.match(SqlBaseParser.GRANTS);
+				this.match(SqlParser.GRANTS);
 				this.state = 831;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -2979,7 +2979,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 56);
 				{
 				this.state = 833;
-				this.match(SqlBaseParser.DESCRIBE);
+				this.match(SqlParser.DESCRIBE);
 				this.state = 834;
 				this.qualifiedName();
 				}
@@ -2989,7 +2989,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 57);
 				{
 				this.state = 835;
-				this.match(SqlBaseParser.DESC);
+				this.match(SqlParser.DESC);
 				this.state = 836;
 				this.qualifiedName();
 				}
@@ -2999,16 +2999,16 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 58);
 				{
 				this.state = 837;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 838;
-				this.match(SqlBaseParser.FUNCTIONS);
+				this.match(SqlParser.FUNCTIONS);
 				this.state = 845;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===113) {
 					{
 					this.state = 839;
-					this.match(SqlBaseParser.LIKE);
+					this.match(SqlParser.LIKE);
 					this.state = 840;
 					(localctx as ShowFunctionsContext)._pattern = this.string_();
 					this.state = 843;
@@ -3017,7 +3017,7 @@ export default class SqlBaseParser extends Parser {
 					if (_la===63) {
 						{
 						this.state = 841;
-						this.match(SqlBaseParser.ESCAPE);
+						this.match(SqlParser.ESCAPE);
 						this.state = 842;
 						(localctx as ShowFunctionsContext)._escape = this.string_();
 						}
@@ -3033,16 +3033,16 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 59);
 				{
 				this.state = 847;
-				this.match(SqlBaseParser.SHOW);
+				this.match(SqlParser.SHOW);
 				this.state = 848;
-				this.match(SqlBaseParser.SESSION);
+				this.match(SqlParser.SESSION);
 				this.state = 855;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===113) {
 					{
 					this.state = 849;
-					this.match(SqlBaseParser.LIKE);
+					this.match(SqlParser.LIKE);
 					this.state = 850;
 					(localctx as ShowSessionContext)._pattern = this.string_();
 					this.state = 853;
@@ -3051,7 +3051,7 @@ export default class SqlBaseParser extends Parser {
 					if (_la===63) {
 						{
 						this.state = 851;
-						this.match(SqlBaseParser.ESCAPE);
+						this.match(SqlParser.ESCAPE);
 						this.state = 852;
 						(localctx as ShowSessionContext)._escape = this.string_();
 						}
@@ -3067,13 +3067,13 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 60);
 				{
 				this.state = 857;
-				this.match(SqlBaseParser.SET);
+				this.match(SqlParser.SET);
 				this.state = 858;
-				this.match(SqlBaseParser.SESSION);
+				this.match(SqlParser.SESSION);
 				this.state = 859;
 				this.qualifiedName();
 				this.state = 860;
-				this.match(SqlBaseParser.EQ);
+				this.match(SqlParser.EQ);
 				this.state = 861;
 				this.expression();
 				}
@@ -3083,9 +3083,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 61);
 				{
 				this.state = 863;
-				this.match(SqlBaseParser.RESET);
+				this.match(SqlParser.RESET);
 				this.state = 864;
-				this.match(SqlBaseParser.SESSION);
+				this.match(SqlParser.SESSION);
 				this.state = 865;
 				this.qualifiedName();
 				}
@@ -3095,9 +3095,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 62);
 				{
 				this.state = 866;
-				this.match(SqlBaseParser.START);
+				this.match(SqlParser.START);
 				this.state = 867;
-				this.match(SqlBaseParser.TRANSACTION);
+				this.match(SqlParser.TRANSACTION);
 				this.state = 876;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -3112,7 +3112,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 869;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 870;
 						this.transactionMode();
 						}
@@ -3131,14 +3131,14 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 63);
 				{
 				this.state = 878;
-				this.match(SqlBaseParser.COMMIT);
+				this.match(SqlParser.COMMIT);
 				this.state = 880;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===225) {
 					{
 					this.state = 879;
-					this.match(SqlBaseParser.WORK);
+					this.match(SqlParser.WORK);
 					}
 				}
 
@@ -3149,14 +3149,14 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 64);
 				{
 				this.state = 882;
-				this.match(SqlBaseParser.ROLLBACK);
+				this.match(SqlParser.ROLLBACK);
 				this.state = 884;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===225) {
 					{
 					this.state = 883;
-					this.match(SqlBaseParser.WORK);
+					this.match(SqlParser.WORK);
 					}
 				}
 
@@ -3167,11 +3167,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 65);
 				{
 				this.state = 886;
-				this.match(SqlBaseParser.PREPARE);
+				this.match(SqlParser.PREPARE);
 				this.state = 887;
 				this.identifier();
 				this.state = 888;
-				this.match(SqlBaseParser.FROM);
+				this.match(SqlParser.FROM);
 				this.state = 889;
 				this.statement();
 				}
@@ -3181,9 +3181,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 66);
 				{
 				this.state = 891;
-				this.match(SqlBaseParser.DEALLOCATE);
+				this.match(SqlParser.DEALLOCATE);
 				this.state = 892;
-				this.match(SqlBaseParser.PREPARE);
+				this.match(SqlParser.PREPARE);
 				this.state = 893;
 				this.identifier();
 				}
@@ -3193,7 +3193,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 67);
 				{
 				this.state = 894;
-				this.match(SqlBaseParser.EXECUTE);
+				this.match(SqlParser.EXECUTE);
 				this.state = 895;
 				this.identifier();
 				this.state = 905;
@@ -3202,7 +3202,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===216) {
 					{
 					this.state = 896;
-					this.match(SqlBaseParser.USING);
+					this.match(SqlParser.USING);
 					this.state = 897;
 					this.expression();
 					this.state = 902;
@@ -3212,7 +3212,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 898;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 899;
 						this.expression();
 						}
@@ -3231,9 +3231,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 68);
 				{
 				this.state = 907;
-				this.match(SqlBaseParser.DESCRIBE);
+				this.match(SqlParser.DESCRIBE);
 				this.state = 908;
-				this.match(SqlBaseParser.INPUT);
+				this.match(SqlParser.INPUT);
 				this.state = 909;
 				this.identifier();
 				}
@@ -3243,9 +3243,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 69);
 				{
 				this.state = 910;
-				this.match(SqlBaseParser.DESCRIBE);
+				this.match(SqlParser.DESCRIBE);
 				this.state = 911;
-				this.match(SqlBaseParser.OUTPUT);
+				this.match(SqlParser.OUTPUT);
 				this.state = 912;
 				this.identifier();
 				}
@@ -3255,11 +3255,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 70);
 				{
 				this.state = 913;
-				this.match(SqlBaseParser.UPDATE);
+				this.match(SqlParser.UPDATE);
 				this.state = 914;
 				this.qualifiedName();
 				this.state = 915;
-				this.match(SqlBaseParser.SET);
+				this.match(SqlParser.SET);
 				this.state = 916;
 				this.updateAssignment();
 				this.state = 921;
@@ -3269,7 +3269,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 917;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 918;
 					this.updateAssignment();
 					}
@@ -3284,7 +3284,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===223) {
 					{
 					this.state = 924;
-					this.match(SqlBaseParser.WHERE);
+					this.match(SqlParser.WHERE);
 					this.state = 925;
 					(localctx as UpdateContext)._where = this.booleanExpression(0);
 					}
@@ -3311,7 +3311,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public query(): QueryContext {
 		let localctx: QueryContext = new QueryContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 8, SqlBaseParser.RULE_query);
+		this.enterRule(localctx, 8, SqlParser.RULE_query);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -3347,20 +3347,20 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public with_(): WithContext {
 		let localctx: WithContext = new WithContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 10, SqlBaseParser.RULE_with);
+		this.enterRule(localctx, 10, SqlParser.RULE_with);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 935;
-			this.match(SqlBaseParser.WITH);
+			this.match(SqlParser.WITH);
 			this.state = 937;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			if (_la===156) {
 				{
 				this.state = 936;
-				this.match(SqlBaseParser.RECURSIVE);
+				this.match(SqlParser.RECURSIVE);
 				}
 			}
 
@@ -3373,7 +3373,7 @@ export default class SqlBaseParser extends Parser {
 				{
 				{
 				this.state = 940;
-				this.match(SqlBaseParser.T__3);
+				this.match(SqlParser.T__3);
 				this.state = 941;
 				this.namedQuery();
 				}
@@ -3401,7 +3401,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public tableElement(): TableElementContext {
 		let localctx: TableElementContext = new TableElementContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 12, SqlBaseParser.RULE_tableElement);
+		this.enterRule(localctx, 12, SqlParser.RULE_tableElement);
 		try {
 			this.state = 950;
 			this._errHandler.sync(this);
@@ -3446,7 +3446,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public columnDefinition(): ColumnDefinitionContext {
 		let localctx: ColumnDefinitionContext = new ColumnDefinitionContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 14, SqlBaseParser.RULE_columnDefinition);
+		this.enterRule(localctx, 14, SqlParser.RULE_columnDefinition);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -3461,9 +3461,9 @@ export default class SqlBaseParser extends Parser {
 			if (_la===131) {
 				{
 				this.state = 954;
-				this.match(SqlBaseParser.NOT);
+				this.match(SqlParser.NOT);
 				this.state = 955;
-				this.match(SqlBaseParser.NULL);
+				this.match(SqlParser.NULL);
 				}
 			}
 
@@ -3473,7 +3473,7 @@ export default class SqlBaseParser extends Parser {
 			if (_la===33) {
 				{
 				this.state = 958;
-				this.match(SqlBaseParser.COMMENT);
+				this.match(SqlParser.COMMENT);
 				this.state = 959;
 				this.string_();
 				}
@@ -3485,7 +3485,7 @@ export default class SqlBaseParser extends Parser {
 			if (_la===224) {
 				{
 				this.state = 962;
-				this.match(SqlBaseParser.WITH);
+				this.match(SqlParser.WITH);
 				this.state = 963;
 				this.properties();
 				}
@@ -3510,13 +3510,13 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public likeClause(): LikeClauseContext {
 		let localctx: LikeClauseContext = new LikeClauseContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 16, SqlBaseParser.RULE_likeClause);
+		this.enterRule(localctx, 16, SqlParser.RULE_likeClause);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 966;
-			this.match(SqlBaseParser.LIKE);
+			this.match(SqlParser.LIKE);
 			this.state = 967;
 			this.qualifiedName();
 			this.state = 970;
@@ -3535,7 +3535,7 @@ export default class SqlBaseParser extends Parser {
 				    this.consume();
 				}
 				this.state = 969;
-				this.match(SqlBaseParser.PROPERTIES);
+				this.match(SqlParser.PROPERTIES);
 				}
 			}
 
@@ -3558,13 +3558,13 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public properties(): PropertiesContext {
 		let localctx: PropertiesContext = new PropertiesContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 18, SqlBaseParser.RULE_properties);
+		this.enterRule(localctx, 18, SqlParser.RULE_properties);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 972;
-			this.match(SqlBaseParser.T__1);
+			this.match(SqlParser.T__1);
 			this.state = 973;
 			this.property();
 			this.state = 978;
@@ -3574,7 +3574,7 @@ export default class SqlBaseParser extends Parser {
 				{
 				{
 				this.state = 974;
-				this.match(SqlBaseParser.T__3);
+				this.match(SqlParser.T__3);
 				this.state = 975;
 				this.property();
 				}
@@ -3584,7 +3584,7 @@ export default class SqlBaseParser extends Parser {
 				_la = this._input.LA(1);
 			}
 			this.state = 981;
-			this.match(SqlBaseParser.T__2);
+			this.match(SqlParser.T__2);
 			}
 		}
 		catch (re) {
@@ -3604,14 +3604,14 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public property(): PropertyContext {
 		let localctx: PropertyContext = new PropertyContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 20, SqlBaseParser.RULE_property);
+		this.enterRule(localctx, 20, SqlParser.RULE_property);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 983;
 			this.identifier();
 			this.state = 984;
-			this.match(SqlBaseParser.EQ);
+			this.match(SqlParser.EQ);
 			this.state = 985;
 			this.expression();
 			}
@@ -3633,7 +3633,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public sqlParameterDeclaration(): SqlParameterDeclarationContext {
 		let localctx: SqlParameterDeclarationContext = new SqlParameterDeclarationContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 22, SqlBaseParser.RULE_sqlParameterDeclaration);
+		this.enterRule(localctx, 22, SqlParser.RULE_sqlParameterDeclaration);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
@@ -3660,7 +3660,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public routineCharacteristics(): RoutineCharacteristicsContext {
 		let localctx: RoutineCharacteristicsContext = new RoutineCharacteristicsContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 24, SqlBaseParser.RULE_routineCharacteristics);
+		this.enterRule(localctx, 24, SqlParser.RULE_routineCharacteristics);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -3698,7 +3698,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public routineCharacteristic(): RoutineCharacteristicContext {
 		let localctx: RoutineCharacteristicContext = new RoutineCharacteristicContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 26, SqlBaseParser.RULE_routineCharacteristic);
+		this.enterRule(localctx, 26, SqlParser.RULE_routineCharacteristic);
 		try {
 			this.state = 1000;
 			this._errHandler.sync(this);
@@ -3707,7 +3707,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 996;
-				this.match(SqlBaseParser.LANGUAGE);
+				this.match(SqlParser.LANGUAGE);
 				this.state = 997;
 				this.language();
 				}
@@ -3749,7 +3749,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public alterRoutineCharacteristics(): AlterRoutineCharacteristicsContext {
 		let localctx: AlterRoutineCharacteristicsContext = new AlterRoutineCharacteristicsContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 28, SqlBaseParser.RULE_alterRoutineCharacteristics);
+		this.enterRule(localctx, 28, SqlParser.RULE_alterRoutineCharacteristics);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -3787,7 +3787,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public alterRoutineCharacteristic(): AlterRoutineCharacteristicContext {
 		let localctx: AlterRoutineCharacteristicContext = new AlterRoutineCharacteristicContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 30, SqlBaseParser.RULE_alterRoutineCharacteristic);
+		this.enterRule(localctx, 30, SqlParser.RULE_alterRoutineCharacteristic);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
@@ -3812,7 +3812,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public routineBody(): RoutineBodyContext {
 		let localctx: RoutineBodyContext = new RoutineBodyContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 32, SqlBaseParser.RULE_routineBody);
+		this.enterRule(localctx, 32, SqlParser.RULE_routineBody);
 		try {
 			this.state = 1012;
 			this._errHandler.sync(this);
@@ -3852,12 +3852,12 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public returnStatement(): ReturnStatementContext {
 		let localctx: ReturnStatementContext = new ReturnStatementContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 34, SqlBaseParser.RULE_returnStatement);
+		this.enterRule(localctx, 34, SqlParser.RULE_returnStatement);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 1014;
-			this.match(SqlBaseParser.RETURN);
+			this.match(SqlParser.RETURN);
 			this.state = 1015;
 			this.expression();
 			}
@@ -3879,20 +3879,20 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public externalBodyReference(): ExternalBodyReferenceContext {
 		let localctx: ExternalBodyReferenceContext = new ExternalBodyReferenceContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 36, SqlBaseParser.RULE_externalBodyReference);
+		this.enterRule(localctx, 36, SqlParser.RULE_externalBodyReference);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 1017;
-			this.match(SqlBaseParser.EXTERNAL);
+			this.match(SqlParser.EXTERNAL);
 			this.state = 1020;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			if (_la===122) {
 				{
 				this.state = 1018;
-				this.match(SqlBaseParser.NAME);
+				this.match(SqlParser.NAME);
 				this.state = 1019;
 				this.externalRoutineName();
 				}
@@ -3917,7 +3917,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public language(): LanguageContext {
 		let localctx: LanguageContext = new LanguageContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 38, SqlBaseParser.RULE_language);
+		this.enterRule(localctx, 38, SqlParser.RULE_language);
 		try {
 			this.state = 1024;
 			this._errHandler.sync(this);
@@ -3926,7 +3926,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1022;
-				this.match(SqlBaseParser.SQL);
+				this.match(SqlParser.SQL);
 				}
 				break;
 			case 2:
@@ -3955,7 +3955,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public determinism(): DeterminismContext {
 		let localctx: DeterminismContext = new DeterminismContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 40, SqlBaseParser.RULE_determinism);
+		this.enterRule(localctx, 40, SqlParser.RULE_determinism);
 		try {
 			this.state = 1029;
 			this._errHandler.sync(this);
@@ -3964,16 +3964,16 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1026;
-				this.match(SqlBaseParser.DETERMINISTIC);
+				this.match(SqlParser.DETERMINISTIC);
 				}
 				break;
 			case 131:
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1027;
-				this.match(SqlBaseParser.NOT);
+				this.match(SqlParser.NOT);
 				this.state = 1028;
-				this.match(SqlBaseParser.DETERMINISTIC);
+				this.match(SqlParser.DETERMINISTIC);
 				}
 				break;
 			default:
@@ -3997,7 +3997,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public nullCallClause(): NullCallClauseContext {
 		let localctx: NullCallClauseContext = new NullCallClauseContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 42, SqlBaseParser.RULE_nullCallClause);
+		this.enterRule(localctx, 42, SqlParser.RULE_nullCallClause);
 		try {
 			this.state = 1040;
 			this._errHandler.sync(this);
@@ -4006,28 +4006,28 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1031;
-				this.match(SqlBaseParser.RETURNS);
+				this.match(SqlParser.RETURNS);
 				this.state = 1032;
-				this.match(SqlBaseParser.NULL);
+				this.match(SqlParser.NULL);
 				this.state = 1033;
-				this.match(SqlBaseParser.ON);
+				this.match(SqlParser.ON);
 				this.state = 1034;
-				this.match(SqlBaseParser.NULL);
+				this.match(SqlParser.NULL);
 				this.state = 1035;
-				this.match(SqlBaseParser.INPUT);
+				this.match(SqlParser.INPUT);
 				}
 				break;
 			case 26:
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1036;
-				this.match(SqlBaseParser.CALLED);
+				this.match(SqlParser.CALLED);
 				this.state = 1037;
-				this.match(SqlBaseParser.ON);
+				this.match(SqlParser.ON);
 				this.state = 1038;
-				this.match(SqlBaseParser.NULL);
+				this.match(SqlParser.NULL);
 				this.state = 1039;
-				this.match(SqlBaseParser.INPUT);
+				this.match(SqlParser.INPUT);
 				}
 				break;
 			default:
@@ -4051,7 +4051,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public externalRoutineName(): ExternalRoutineNameContext {
 		let localctx: ExternalRoutineNameContext = new ExternalRoutineNameContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 44, SqlBaseParser.RULE_externalRoutineName);
+		this.enterRule(localctx, 44, SqlParser.RULE_externalRoutineName);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
@@ -4076,7 +4076,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public queryNoWith(): QueryNoWithContext {
 		let localctx: QueryNoWithContext = new QueryNoWithContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 46, SqlBaseParser.RULE_queryNoWith);
+		this.enterRule(localctx, 46, SqlParser.RULE_queryNoWith);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -4089,9 +4089,9 @@ export default class SqlBaseParser extends Parser {
 			if (_la===141) {
 				{
 				this.state = 1045;
-				this.match(SqlBaseParser.ORDER);
+				this.match(SqlParser.ORDER);
 				this.state = 1046;
-				this.match(SqlBaseParser.BY);
+				this.match(SqlParser.BY);
 				this.state = 1047;
 				this.sortItem();
 				this.state = 1052;
@@ -4101,7 +4101,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1048;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 1049;
 					this.sortItem();
 					}
@@ -4119,9 +4119,9 @@ export default class SqlBaseParser extends Parser {
 			if (_la===136) {
 				{
 				this.state = 1057;
-				this.match(SqlBaseParser.OFFSET);
+				this.match(SqlParser.OFFSET);
 				this.state = 1058;
-				localctx._offset = this.match(SqlBaseParser.INTEGER_VALUE);
+				localctx._offset = this.match(SqlParser.INTEGER_VALUE);
 				this.state = 1060;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -4153,7 +4153,7 @@ export default class SqlBaseParser extends Parser {
 				case 114:
 					{
 					this.state = 1064;
-					this.match(SqlBaseParser.LIMIT);
+					this.match(SqlParser.LIMIT);
 					this.state = 1065;
 					localctx._limit = this._input.LT(1);
 					_la = this._input.LA(1);
@@ -4170,15 +4170,15 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1066;
-					this.match(SqlBaseParser.FETCH);
+					this.match(SqlParser.FETCH);
 					this.state = 1067;
-					this.match(SqlBaseParser.FIRST);
+					this.match(SqlParser.FIRST);
 					this.state = 1068;
-					localctx._fetchFirstNRows = this.match(SqlBaseParser.INTEGER_VALUE);
+					localctx._fetchFirstNRows = this.match(SqlParser.INTEGER_VALUE);
 					this.state = 1069;
-					this.match(SqlBaseParser.ROWS);
+					this.match(SqlParser.ROWS);
 					this.state = 1070;
-					this.match(SqlBaseParser.ONLY);
+					this.match(SqlParser.ONLY);
 					}
 					}
 					break;
@@ -4218,7 +4218,7 @@ export default class SqlBaseParser extends Parser {
 		let localctx: QueryTermContext = new QueryTermContext(this, this._ctx, _parentState);
 		let _prevctx: QueryTermContext = localctx;
 		let _startState: number = 48;
-		this.enterRecursionRule(localctx, 48, SqlBaseParser.RULE_queryTerm, _p);
+		this.enterRecursionRule(localctx, 48, SqlParser.RULE_queryTerm, _p);
 		let _la: number;
 		try {
 			let _alt: number;
@@ -4250,13 +4250,13 @@ export default class SqlBaseParser extends Parser {
 						{
 						localctx = new SetOperationContext(this, new QueryTermContext(this, _parentctx, _parentState));
 						(localctx as SetOperationContext)._left = _prevctx;
-						this.pushNewRecursionContext(localctx, _startState, SqlBaseParser.RULE_queryTerm);
+						this.pushNewRecursionContext(localctx, _startState, SqlParser.RULE_queryTerm);
 						this.state = 1078;
 						if (!(this.precpred(this._ctx, 2))) {
 							throw this.createFailedPredicateException("this.precpred(this._ctx, 2)");
 						}
 						this.state = 1079;
-						(localctx as SetOperationContext)._operator = this.match(SqlBaseParser.INTERSECT);
+						(localctx as SetOperationContext)._operator = this.match(SqlParser.INTERSECT);
 						this.state = 1081;
 						this._errHandler.sync(this);
 						_la = this._input.LA(1);
@@ -4275,7 +4275,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						localctx = new SetOperationContext(this, new QueryTermContext(this, _parentctx, _parentState));
 						(localctx as SetOperationContext)._left = _prevctx;
-						this.pushNewRecursionContext(localctx, _startState, SqlBaseParser.RULE_queryTerm);
+						this.pushNewRecursionContext(localctx, _startState, SqlParser.RULE_queryTerm);
 						this.state = 1084;
 						if (!(this.precpred(this._ctx, 1))) {
 							throw this.createFailedPredicateException("this.precpred(this._ctx, 1)");
@@ -4330,7 +4330,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public queryPrimary(): QueryPrimaryContext {
 		let localctx: QueryPrimaryContext = new QueryPrimaryContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 50, SqlBaseParser.RULE_queryPrimary);
+		this.enterRule(localctx, 50, SqlParser.RULE_queryPrimary);
 		try {
 			let _alt: number;
 			this.state = 1111;
@@ -4349,7 +4349,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1096;
-				this.match(SqlBaseParser.TABLE);
+				this.match(SqlParser.TABLE);
 				this.state = 1097;
 				this.qualifiedName();
 				}
@@ -4359,7 +4359,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 3);
 				{
 				this.state = 1098;
-				this.match(SqlBaseParser.VALUES);
+				this.match(SqlParser.VALUES);
 				this.state = 1099;
 				this.expression();
 				this.state = 1104;
@@ -4370,7 +4370,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 1100;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 1101;
 						this.expression();
 						}
@@ -4387,11 +4387,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 4);
 				{
 				this.state = 1107;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1108;
 				this.queryNoWith();
 				this.state = 1109;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			default:
@@ -4415,7 +4415,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public sortItem(): SortItemContext {
 		let localctx: SortItemContext = new SortItemContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 52, SqlBaseParser.RULE_sortItem);
+		this.enterRule(localctx, 52, SqlParser.RULE_sortItem);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -4446,7 +4446,7 @@ export default class SqlBaseParser extends Parser {
 			if (_la===134) {
 				{
 				this.state = 1117;
-				this.match(SqlBaseParser.NULLS);
+				this.match(SqlParser.NULLS);
 				this.state = 1118;
 				localctx._nullOrdering = this._input.LT(1);
 				_la = this._input.LA(1);
@@ -4479,13 +4479,13 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public querySpecification(): QuerySpecificationContext {
 		let localctx: QuerySpecificationContext = new QuerySpecificationContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 54, SqlBaseParser.RULE_querySpecification);
+		this.enterRule(localctx, 54, SqlParser.RULE_querySpecification);
 		try {
 			let _alt: number;
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 1121;
-			this.match(SqlBaseParser.SELECT);
+			this.match(SqlParser.SELECT);
 			this.state = 1123;
 			this._errHandler.sync(this);
 			switch ( this._interp.adaptivePredict(this._input, 134, this._ctx) ) {
@@ -4506,7 +4506,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1126;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 1127;
 					this.selectItem();
 					}
@@ -4522,7 +4522,7 @@ export default class SqlBaseParser extends Parser {
 			case 1:
 				{
 				this.state = 1133;
-				this.match(SqlBaseParser.FROM);
+				this.match(SqlParser.FROM);
 				this.state = 1134;
 				this.relation(0);
 				this.state = 1139;
@@ -4533,7 +4533,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 1135;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 1136;
 						this.relation(0);
 						}
@@ -4552,7 +4552,7 @@ export default class SqlBaseParser extends Parser {
 			case 1:
 				{
 				this.state = 1144;
-				this.match(SqlBaseParser.WHERE);
+				this.match(SqlParser.WHERE);
 				this.state = 1145;
 				localctx._where = this.booleanExpression(0);
 				}
@@ -4564,9 +4564,9 @@ export default class SqlBaseParser extends Parser {
 			case 1:
 				{
 				this.state = 1148;
-				this.match(SqlBaseParser.GROUP);
+				this.match(SqlParser.GROUP);
 				this.state = 1149;
-				this.match(SqlBaseParser.BY);
+				this.match(SqlParser.BY);
 				this.state = 1150;
 				this.groupBy();
 				}
@@ -4578,7 +4578,7 @@ export default class SqlBaseParser extends Parser {
 			case 1:
 				{
 				this.state = 1153;
-				this.match(SqlBaseParser.HAVING);
+				this.match(SqlParser.HAVING);
 				this.state = 1154;
 				localctx._having = this.booleanExpression(0);
 				}
@@ -4603,7 +4603,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public groupBy(): GroupByContext {
 		let localctx: GroupByContext = new GroupByContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 56, SqlBaseParser.RULE_groupBy);
+		this.enterRule(localctx, 56, SqlParser.RULE_groupBy);
 		try {
 			let _alt: number;
 			this.enterOuterAlt(localctx, 1);
@@ -4628,7 +4628,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1161;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 1162;
 					this.groupingElement();
 					}
@@ -4657,7 +4657,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public groupingElement(): GroupingElementContext {
 		let localctx: GroupingElementContext = new GroupingElementContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 58, SqlBaseParser.RULE_groupingElement);
+		this.enterRule(localctx, 58, SqlParser.RULE_groupingElement);
 		let _la: number;
 		try {
 			this.state = 1208;
@@ -4676,9 +4676,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1169;
-				this.match(SqlBaseParser.ROLLUP);
+				this.match(SqlParser.ROLLUP);
 				this.state = 1170;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1179;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -4693,7 +4693,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 1172;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 1173;
 						this.expression();
 						}
@@ -4706,7 +4706,7 @@ export default class SqlBaseParser extends Parser {
 				}
 
 				this.state = 1181;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 3:
@@ -4714,9 +4714,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 3);
 				{
 				this.state = 1182;
-				this.match(SqlBaseParser.CUBE);
+				this.match(SqlParser.CUBE);
 				this.state = 1183;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1192;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -4731,7 +4731,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 1185;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 1186;
 						this.expression();
 						}
@@ -4744,7 +4744,7 @@ export default class SqlBaseParser extends Parser {
 				}
 
 				this.state = 1194;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 4:
@@ -4752,11 +4752,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 4);
 				{
 				this.state = 1195;
-				this.match(SqlBaseParser.GROUPING);
+				this.match(SqlParser.GROUPING);
 				this.state = 1196;
-				this.match(SqlBaseParser.SETS);
+				this.match(SqlParser.SETS);
 				this.state = 1197;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1198;
 				this.groupingSet();
 				this.state = 1203;
@@ -4766,7 +4766,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1199;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 1200;
 					this.groupingSet();
 					}
@@ -4776,7 +4776,7 @@ export default class SqlBaseParser extends Parser {
 					_la = this._input.LA(1);
 				}
 				this.state = 1206;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			}
@@ -4798,7 +4798,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public groupingSet(): GroupingSetContext {
 		let localctx: GroupingSetContext = new GroupingSetContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 60, SqlBaseParser.RULE_groupingSet);
+		this.enterRule(localctx, 60, SqlParser.RULE_groupingSet);
 		let _la: number;
 		try {
 			this.state = 1223;
@@ -4808,7 +4808,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1210;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1219;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -4823,7 +4823,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 1212;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 1213;
 						this.expression();
 						}
@@ -4836,7 +4836,7 @@ export default class SqlBaseParser extends Parser {
 				}
 
 				this.state = 1221;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 2:
@@ -4865,7 +4865,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public namedQuery(): NamedQueryContext {
 		let localctx: NamedQueryContext = new NamedQueryContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 62, SqlBaseParser.RULE_namedQuery);
+		this.enterRule(localctx, 62, SqlParser.RULE_namedQuery);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -4883,13 +4883,13 @@ export default class SqlBaseParser extends Parser {
 			}
 
 			this.state = 1229;
-			this.match(SqlBaseParser.AS);
+			this.match(SqlParser.AS);
 			this.state = 1230;
-			this.match(SqlBaseParser.T__1);
+			this.match(SqlParser.T__1);
 			this.state = 1231;
 			this.query();
 			this.state = 1232;
-			this.match(SqlBaseParser.T__2);
+			this.match(SqlParser.T__2);
 			}
 		}
 		catch (re) {
@@ -4909,7 +4909,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public setQuantifier(): SetQuantifierContext {
 		let localctx: SetQuantifierContext = new SetQuantifierContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 64, SqlBaseParser.RULE_setQuantifier);
+		this.enterRule(localctx, 64, SqlParser.RULE_setQuantifier);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -4942,7 +4942,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public selectItem(): SelectItemContext {
 		let localctx: SelectItemContext = new SelectItemContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 66, SqlBaseParser.RULE_selectItem);
+		this.enterRule(localctx, 66, SqlParser.RULE_selectItem);
 		let _la: number;
 		try {
 			this.state = 1248;
@@ -4965,7 +4965,7 @@ export default class SqlBaseParser extends Parser {
 					if (_la===18) {
 						{
 						this.state = 1237;
-						this.match(SqlBaseParser.AS);
+						this.match(SqlParser.AS);
 						}
 					}
 
@@ -4983,9 +4983,9 @@ export default class SqlBaseParser extends Parser {
 				this.state = 1243;
 				this.qualifiedName();
 				this.state = 1244;
-				this.match(SqlBaseParser.T__0);
+				this.match(SqlParser.T__0);
 				this.state = 1245;
-				this.match(SqlBaseParser.ASTERISK);
+				this.match(SqlParser.ASTERISK);
 				}
 				break;
 			case 3:
@@ -4993,7 +4993,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 3);
 				{
 				this.state = 1247;
-				this.match(SqlBaseParser.ASTERISK);
+				this.match(SqlParser.ASTERISK);
 				}
 				break;
 			}
@@ -5026,7 +5026,7 @@ export default class SqlBaseParser extends Parser {
 		let localctx: RelationContext = new RelationContext(this, this._ctx, _parentState);
 		let _prevctx: RelationContext = localctx;
 		let _startState: number = 68;
-		this.enterRecursionRule(localctx, 68, SqlBaseParser.RULE_relation, _p);
+		this.enterRecursionRule(localctx, 68, SqlParser.RULE_relation, _p);
 		try {
 			let _alt: number;
 			this.enterOuterAlt(localctx, 1);
@@ -5053,7 +5053,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					localctx = new JoinRelationContext(this, new RelationContext(this, _parentctx, _parentState));
 					(localctx as JoinRelationContext)._left = _prevctx;
-					this.pushNewRecursionContext(localctx, _startState, SqlBaseParser.RULE_relation);
+					this.pushNewRecursionContext(localctx, _startState, SqlParser.RULE_relation);
 					this.state = 1253;
 					if (!(this.precpred(this._ctx, 2))) {
 						throw this.createFailedPredicateException("this.precpred(this._ctx, 2)");
@@ -5064,9 +5064,9 @@ export default class SqlBaseParser extends Parser {
 					case 38:
 						{
 						this.state = 1254;
-						this.match(SqlBaseParser.CROSS);
+						this.match(SqlParser.CROSS);
 						this.state = 1255;
-						this.match(SqlBaseParser.JOIN);
+						this.match(SqlParser.JOIN);
 						this.state = 1256;
 						(localctx as JoinRelationContext)._right = this.sampledRelation();
 						}
@@ -5080,7 +5080,7 @@ export default class SqlBaseParser extends Parser {
 						this.state = 1257;
 						this.joinType();
 						this.state = 1258;
-						this.match(SqlBaseParser.JOIN);
+						this.match(SqlParser.JOIN);
 						this.state = 1259;
 						(localctx as JoinRelationContext)._rightRelation = this.relation(0);
 						this.state = 1260;
@@ -5090,11 +5090,11 @@ export default class SqlBaseParser extends Parser {
 					case 123:
 						{
 						this.state = 1262;
-						this.match(SqlBaseParser.NATURAL);
+						this.match(SqlParser.NATURAL);
 						this.state = 1263;
 						this.joinType();
 						this.state = 1264;
-						this.match(SqlBaseParser.JOIN);
+						this.match(SqlParser.JOIN);
 						this.state = 1265;
 						(localctx as JoinRelationContext)._right = this.sampledRelation();
 						}
@@ -5128,7 +5128,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public joinType(): JoinTypeContext {
 		let localctx: JoinTypeContext = new JoinTypeContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 70, SqlBaseParser.RULE_joinType);
+		this.enterRule(localctx, 70, SqlParser.RULE_joinType);
 		let _la: number;
 		try {
 			this.state = 1289;
@@ -5144,7 +5144,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===95) {
 					{
 					this.state = 1274;
-					this.match(SqlBaseParser.INNER);
+					this.match(SqlParser.INNER);
 					}
 				}
 
@@ -5154,14 +5154,14 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1277;
-				this.match(SqlBaseParser.LEFT);
+				this.match(SqlParser.LEFT);
 				this.state = 1279;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===143) {
 					{
 					this.state = 1278;
-					this.match(SqlBaseParser.OUTER);
+					this.match(SqlParser.OUTER);
 					}
 				}
 
@@ -5171,14 +5171,14 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 3);
 				{
 				this.state = 1281;
-				this.match(SqlBaseParser.RIGHT);
+				this.match(SqlParser.RIGHT);
 				this.state = 1283;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===143) {
 					{
 					this.state = 1282;
-					this.match(SqlBaseParser.OUTER);
+					this.match(SqlParser.OUTER);
 					}
 				}
 
@@ -5188,14 +5188,14 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 4);
 				{
 				this.state = 1285;
-				this.match(SqlBaseParser.FULL);
+				this.match(SqlParser.FULL);
 				this.state = 1287;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===143) {
 					{
 					this.state = 1286;
-					this.match(SqlBaseParser.OUTER);
+					this.match(SqlParser.OUTER);
 					}
 				}
 
@@ -5222,7 +5222,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public joinCriteria(): JoinCriteriaContext {
 		let localctx: JoinCriteriaContext = new JoinCriteriaContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 72, SqlBaseParser.RULE_joinCriteria);
+		this.enterRule(localctx, 72, SqlParser.RULE_joinCriteria);
 		let _la: number;
 		try {
 			this.state = 1305;
@@ -5232,7 +5232,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1291;
-				this.match(SqlBaseParser.ON);
+				this.match(SqlParser.ON);
 				this.state = 1292;
 				this.booleanExpression(0);
 				}
@@ -5241,9 +5241,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1293;
-				this.match(SqlBaseParser.USING);
+				this.match(SqlParser.USING);
 				this.state = 1294;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1295;
 				this.identifier();
 				this.state = 1300;
@@ -5253,7 +5253,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1296;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 1297;
 					this.identifier();
 					}
@@ -5263,7 +5263,7 @@ export default class SqlBaseParser extends Parser {
 					_la = this._input.LA(1);
 				}
 				this.state = 1303;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			default:
@@ -5287,7 +5287,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public sampledRelation(): SampledRelationContext {
 		let localctx: SampledRelationContext = new SampledRelationContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 74, SqlBaseParser.RULE_sampledRelation);
+		this.enterRule(localctx, 74, SqlParser.RULE_sampledRelation);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
@@ -5299,15 +5299,15 @@ export default class SqlBaseParser extends Parser {
 			case 1:
 				{
 				this.state = 1308;
-				this.match(SqlBaseParser.TABLESAMPLE);
+				this.match(SqlParser.TABLESAMPLE);
 				this.state = 1309;
 				this.sampleType();
 				this.state = 1310;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1311;
 				localctx._percentage = this.expression();
 				this.state = 1312;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			}
@@ -5330,7 +5330,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public sampleType(): SampleTypeContext {
 		let localctx: SampleTypeContext = new SampleTypeContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 76, SqlBaseParser.RULE_sampleType);
+		this.enterRule(localctx, 76, SqlParser.RULE_sampleType);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -5363,7 +5363,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public aliasedRelation(): AliasedRelationContext {
 		let localctx: AliasedRelationContext = new AliasedRelationContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 78, SqlBaseParser.RULE_aliasedRelation);
+		this.enterRule(localctx, 78, SqlParser.RULE_aliasedRelation);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -5381,7 +5381,7 @@ export default class SqlBaseParser extends Parser {
 				if (_la===18) {
 					{
 					this.state = 1319;
-					this.match(SqlBaseParser.AS);
+					this.match(SqlParser.AS);
 					}
 				}
 
@@ -5419,13 +5419,13 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public columnAliases(): ColumnAliasesContext {
 		let localctx: ColumnAliasesContext = new ColumnAliasesContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 80, SqlBaseParser.RULE_columnAliases);
+		this.enterRule(localctx, 80, SqlParser.RULE_columnAliases);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 1328;
-			this.match(SqlBaseParser.T__1);
+			this.match(SqlParser.T__1);
 			this.state = 1329;
 			this.identifier();
 			this.state = 1334;
@@ -5435,7 +5435,7 @@ export default class SqlBaseParser extends Parser {
 				{
 				{
 				this.state = 1330;
-				this.match(SqlBaseParser.T__3);
+				this.match(SqlParser.T__3);
 				this.state = 1331;
 				this.identifier();
 				}
@@ -5445,7 +5445,7 @@ export default class SqlBaseParser extends Parser {
 				_la = this._input.LA(1);
 			}
 			this.state = 1337;
-			this.match(SqlBaseParser.T__2);
+			this.match(SqlParser.T__2);
 			}
 		}
 		catch (re) {
@@ -5465,7 +5465,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public relationPrimary(): RelationPrimaryContext {
 		let localctx: RelationPrimaryContext = new RelationPrimaryContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 82, SqlBaseParser.RULE_relationPrimary);
+		this.enterRule(localctx, 82, SqlParser.RULE_relationPrimary);
 		let _la: number;
 		try {
 			this.state = 1371;
@@ -5494,11 +5494,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1343;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1344;
 				this.query();
 				this.state = 1345;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 3:
@@ -5506,9 +5506,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 3);
 				{
 				this.state = 1347;
-				this.match(SqlBaseParser.UNNEST);
+				this.match(SqlParser.UNNEST);
 				this.state = 1348;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1349;
 				this.expression();
 				this.state = 1354;
@@ -5518,7 +5518,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1350;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 1351;
 					this.expression();
 					}
@@ -5528,16 +5528,16 @@ export default class SqlBaseParser extends Parser {
 					_la = this._input.LA(1);
 				}
 				this.state = 1357;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				this.state = 1360;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 172, this._ctx) ) {
 				case 1:
 					{
 					this.state = 1358;
-					this.match(SqlBaseParser.WITH);
+					this.match(SqlParser.WITH);
 					this.state = 1359;
-					this.match(SqlBaseParser.ORDINALITY);
+					this.match(SqlParser.ORDINALITY);
 					}
 					break;
 				}
@@ -5548,13 +5548,13 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 4);
 				{
 				this.state = 1362;
-				this.match(SqlBaseParser.LATERAL);
+				this.match(SqlParser.LATERAL);
 				this.state = 1363;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1364;
 				this.query();
 				this.state = 1365;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 5:
@@ -5562,11 +5562,11 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 5);
 				{
 				this.state = 1367;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1368;
 				this.relation(0);
 				this.state = 1369;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			}
@@ -5588,7 +5588,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public expression(): ExpressionContext {
 		let localctx: ExpressionContext = new ExpressionContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 84, SqlBaseParser.RULE_expression);
+		this.enterRule(localctx, 84, SqlParser.RULE_expression);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
@@ -5624,7 +5624,7 @@ export default class SqlBaseParser extends Parser {
 		let localctx: BooleanExpressionContext = new BooleanExpressionContext(this, this._ctx, _parentState);
 		let _prevctx: BooleanExpressionContext = localctx;
 		let _startState: number = 86;
-		this.enterRecursionRule(localctx, 86, SqlBaseParser.RULE_booleanExpression, _p);
+		this.enterRecursionRule(localctx, 86, SqlParser.RULE_booleanExpression, _p);
 		try {
 			let _alt: number;
 			this.enterOuterAlt(localctx, 1);
@@ -5837,7 +5837,7 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1380;
-				this.match(SqlBaseParser.NOT);
+				this.match(SqlParser.NOT);
 				this.state = 1381;
 				this.booleanExpression(3);
 				}
@@ -5863,13 +5863,13 @@ export default class SqlBaseParser extends Parser {
 						{
 						localctx = new LogicalBinaryContext(this, new BooleanExpressionContext(this, _parentctx, _parentState));
 						(localctx as LogicalBinaryContext)._left = _prevctx;
-						this.pushNewRecursionContext(localctx, _startState, SqlBaseParser.RULE_booleanExpression);
+						this.pushNewRecursionContext(localctx, _startState, SqlParser.RULE_booleanExpression);
 						this.state = 1384;
 						if (!(this.precpred(this._ctx, 2))) {
 							throw this.createFailedPredicateException("this.precpred(this._ctx, 2)");
 						}
 						this.state = 1385;
-						(localctx as LogicalBinaryContext)._operator = this.match(SqlBaseParser.AND);
+						(localctx as LogicalBinaryContext)._operator = this.match(SqlParser.AND);
 						this.state = 1386;
 						(localctx as LogicalBinaryContext)._right = this.booleanExpression(3);
 						}
@@ -5878,13 +5878,13 @@ export default class SqlBaseParser extends Parser {
 						{
 						localctx = new LogicalBinaryContext(this, new BooleanExpressionContext(this, _parentctx, _parentState));
 						(localctx as LogicalBinaryContext)._left = _prevctx;
-						this.pushNewRecursionContext(localctx, _startState, SqlBaseParser.RULE_booleanExpression);
+						this.pushNewRecursionContext(localctx, _startState, SqlParser.RULE_booleanExpression);
 						this.state = 1387;
 						if (!(this.precpred(this._ctx, 1))) {
 							throw this.createFailedPredicateException("this.precpred(this._ctx, 1)");
 						}
 						this.state = 1388;
-						(localctx as LogicalBinaryContext)._operator = this.match(SqlBaseParser.OR);
+						(localctx as LogicalBinaryContext)._operator = this.match(SqlParser.OR);
 						this.state = 1389;
 						(localctx as LogicalBinaryContext)._right = this.booleanExpression(2);
 						}
@@ -5915,7 +5915,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public predicate(value: ParserRuleContext): PredicateContext {
 		let localctx: PredicateContext = new PredicateContext(this, this._ctx, this.state, value);
-		this.enterRule(localctx, 88, SqlBaseParser.RULE_predicate);
+		this.enterRule(localctx, 88, SqlParser.RULE_predicate);
 		let _la: number;
 		try {
 			this.state = 1456;
@@ -5940,11 +5940,11 @@ export default class SqlBaseParser extends Parser {
 				this.state = 1399;
 				this.comparisonQuantifier();
 				this.state = 1400;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1401;
 				this.query();
 				this.state = 1402;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 3:
@@ -5957,16 +5957,16 @@ export default class SqlBaseParser extends Parser {
 				if (_la===131) {
 					{
 					this.state = 1404;
-					this.match(SqlBaseParser.NOT);
+					this.match(SqlParser.NOT);
 					}
 				}
 
 				this.state = 1407;
-				this.match(SqlBaseParser.BETWEEN);
+				this.match(SqlParser.BETWEEN);
 				this.state = 1408;
 				(localctx as BetweenContext)._lower = this.valueExpression(0);
 				this.state = 1409;
-				this.match(SqlBaseParser.AND);
+				this.match(SqlParser.AND);
 				this.state = 1410;
 				(localctx as BetweenContext)._upper = this.valueExpression(0);
 				}
@@ -5981,14 +5981,14 @@ export default class SqlBaseParser extends Parser {
 				if (_la===131) {
 					{
 					this.state = 1412;
-					this.match(SqlBaseParser.NOT);
+					this.match(SqlParser.NOT);
 					}
 				}
 
 				this.state = 1415;
-				this.match(SqlBaseParser.IN);
+				this.match(SqlParser.IN);
 				this.state = 1416;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1417;
 				this.expression();
 				this.state = 1422;
@@ -5998,7 +5998,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1418;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 1419;
 					this.expression();
 					}
@@ -6008,7 +6008,7 @@ export default class SqlBaseParser extends Parser {
 					_la = this._input.LA(1);
 				}
 				this.state = 1425;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 5:
@@ -6021,18 +6021,18 @@ export default class SqlBaseParser extends Parser {
 				if (_la===131) {
 					{
 					this.state = 1427;
-					this.match(SqlBaseParser.NOT);
+					this.match(SqlParser.NOT);
 					}
 				}
 
 				this.state = 1430;
-				this.match(SqlBaseParser.IN);
+				this.match(SqlParser.IN);
 				this.state = 1431;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1432;
 				this.query();
 				this.state = 1433;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 6:
@@ -6045,12 +6045,12 @@ export default class SqlBaseParser extends Parser {
 				if (_la===131) {
 					{
 					this.state = 1435;
-					this.match(SqlBaseParser.NOT);
+					this.match(SqlParser.NOT);
 					}
 				}
 
 				this.state = 1438;
-				this.match(SqlBaseParser.LIKE);
+				this.match(SqlParser.LIKE);
 				this.state = 1439;
 				(localctx as LikeContext)._pattern = this.valueExpression(0);
 				this.state = 1442;
@@ -6059,7 +6059,7 @@ export default class SqlBaseParser extends Parser {
 				case 1:
 					{
 					this.state = 1440;
-					this.match(SqlBaseParser.ESCAPE);
+					this.match(SqlParser.ESCAPE);
 					this.state = 1441;
 					(localctx as LikeContext)._escape = this.valueExpression(0);
 					}
@@ -6072,19 +6072,19 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 7);
 				{
 				this.state = 1444;
-				this.match(SqlBaseParser.IS);
+				this.match(SqlParser.IS);
 				this.state = 1446;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===131) {
 					{
 					this.state = 1445;
-					this.match(SqlBaseParser.NOT);
+					this.match(SqlParser.NOT);
 					}
 				}
 
 				this.state = 1448;
-				this.match(SqlBaseParser.NULL);
+				this.match(SqlParser.NULL);
 				}
 				break;
 			case 8:
@@ -6092,21 +6092,21 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 8);
 				{
 				this.state = 1449;
-				this.match(SqlBaseParser.IS);
+				this.match(SqlParser.IS);
 				this.state = 1451;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
 				if (_la===131) {
 					{
 					this.state = 1450;
-					this.match(SqlBaseParser.NOT);
+					this.match(SqlParser.NOT);
 					}
 				}
 
 				this.state = 1453;
-				this.match(SqlBaseParser.DISTINCT);
+				this.match(SqlParser.DISTINCT);
 				this.state = 1454;
-				this.match(SqlBaseParser.FROM);
+				this.match(SqlParser.FROM);
 				this.state = 1455;
 				(localctx as DistinctFromContext)._right = this.valueExpression(0);
 				}
@@ -6141,7 +6141,7 @@ export default class SqlBaseParser extends Parser {
 		let localctx: ValueExpressionContext = new ValueExpressionContext(this, this._ctx, _parentState);
 		let _prevctx: ValueExpressionContext = localctx;
 		let _startState: number = 90;
-		this.enterRecursionRule(localctx, 90, SqlBaseParser.RULE_valueExpression, _p);
+		this.enterRecursionRule(localctx, 90, SqlParser.RULE_valueExpression, _p);
 		let _la: number;
 		try {
 			let _alt: number;
@@ -6378,7 +6378,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						localctx = new ArithmeticBinaryContext(this, new ValueExpressionContext(this, _parentctx, _parentState));
 						(localctx as ArithmeticBinaryContext)._left = _prevctx;
-						this.pushNewRecursionContext(localctx, _startState, SqlBaseParser.RULE_valueExpression);
+						this.pushNewRecursionContext(localctx, _startState, SqlParser.RULE_valueExpression);
 						this.state = 1464;
 						if (!(this.precpred(this._ctx, 3))) {
 							throw this.createFailedPredicateException("this.precpred(this._ctx, 3)");
@@ -6401,7 +6401,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						localctx = new ArithmeticBinaryContext(this, new ValueExpressionContext(this, _parentctx, _parentState));
 						(localctx as ArithmeticBinaryContext)._left = _prevctx;
-						this.pushNewRecursionContext(localctx, _startState, SqlBaseParser.RULE_valueExpression);
+						this.pushNewRecursionContext(localctx, _startState, SqlParser.RULE_valueExpression);
 						this.state = 1467;
 						if (!(this.precpred(this._ctx, 2))) {
 							throw this.createFailedPredicateException("this.precpred(this._ctx, 2)");
@@ -6424,13 +6424,13 @@ export default class SqlBaseParser extends Parser {
 						{
 						localctx = new ConcatenationContext(this, new ValueExpressionContext(this, _parentctx, _parentState));
 						(localctx as ConcatenationContext)._left = _prevctx;
-						this.pushNewRecursionContext(localctx, _startState, SqlBaseParser.RULE_valueExpression);
+						this.pushNewRecursionContext(localctx, _startState, SqlParser.RULE_valueExpression);
 						this.state = 1470;
 						if (!(this.precpred(this._ctx, 1))) {
 							throw this.createFailedPredicateException("this.precpred(this._ctx, 1)");
 						}
 						this.state = 1471;
-						this.match(SqlBaseParser.CONCAT);
+						this.match(SqlParser.CONCAT);
 						this.state = 1472;
 						(localctx as ConcatenationContext)._right = this.valueExpression(2);
 						}
@@ -6438,13 +6438,13 @@ export default class SqlBaseParser extends Parser {
 					case 4:
 						{
 						localctx = new AtTimeZoneContext(this, new ValueExpressionContext(this, _parentctx, _parentState));
-						this.pushNewRecursionContext(localctx, _startState, SqlBaseParser.RULE_valueExpression);
+						this.pushNewRecursionContext(localctx, _startState, SqlParser.RULE_valueExpression);
 						this.state = 1473;
 						if (!(this.precpred(this._ctx, 5))) {
 							throw this.createFailedPredicateException("this.precpred(this._ctx, 5)");
 						}
 						this.state = 1474;
-						this.match(SqlBaseParser.AT);
+						this.match(SqlParser.AT);
 						this.state = 1475;
 						this.timeZoneSpecifier();
 						}
@@ -6486,7 +6486,7 @@ export default class SqlBaseParser extends Parser {
 		let localctx: PrimaryExpressionContext = new PrimaryExpressionContext(this, this._ctx, _parentState);
 		let _prevctx: PrimaryExpressionContext = localctx;
 		let _startState: number = 92;
-		this.enterRecursionRule(localctx, 92, SqlBaseParser.RULE_primaryExpression, _p);
+		this.enterRecursionRule(localctx, 92, SqlParser.RULE_primaryExpression, _p);
 		let _la: number;
 		try {
 			let _alt: number;
@@ -6502,7 +6502,7 @@ export default class SqlBaseParser extends Parser {
 				_prevctx = localctx;
 
 				this.state = 1482;
-				this.match(SqlBaseParser.NULL);
+				this.match(SqlParser.NULL);
 				}
 				break;
 			case 2:
@@ -6531,7 +6531,7 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1487;
-				this.match(SqlBaseParser.DOUBLE_PRECISION);
+				this.match(SqlParser.DOUBLE_PRECISION);
 				this.state = 1488;
 				this.string_();
 				}
@@ -6569,7 +6569,7 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1492;
-				this.match(SqlBaseParser.BINARY_LITERAL);
+				this.match(SqlParser.BINARY_LITERAL);
 				}
 				break;
 			case 9:
@@ -6578,7 +6578,7 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1493;
-				this.match(SqlBaseParser.T__4);
+				this.match(SqlParser.T__4);
 				}
 				break;
 			case 10:
@@ -6587,17 +6587,17 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1494;
-				this.match(SqlBaseParser.POSITION);
+				this.match(SqlParser.POSITION);
 				this.state = 1495;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1496;
 				this.valueExpression(0);
 				this.state = 1497;
-				this.match(SqlBaseParser.IN);
+				this.match(SqlParser.IN);
 				this.state = 1498;
 				this.valueExpression(0);
 				this.state = 1499;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 11:
@@ -6606,7 +6606,7 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1501;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1502;
 				this.expression();
 				this.state = 1505;
@@ -6616,7 +6616,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1503;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 1504;
 					this.expression();
 					}
@@ -6626,7 +6626,7 @@ export default class SqlBaseParser extends Parser {
 					_la = this._input.LA(1);
 				} while (_la===4);
 				this.state = 1509;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 12:
@@ -6635,9 +6635,9 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1511;
-				this.match(SqlBaseParser.ROW);
+				this.match(SqlParser.ROW);
 				this.state = 1512;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1513;
 				this.expression();
 				this.state = 1518;
@@ -6647,7 +6647,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1514;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 1515;
 					this.expression();
 					}
@@ -6657,7 +6657,7 @@ export default class SqlBaseParser extends Parser {
 					_la = this._input.LA(1);
 				}
 				this.state = 1521;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 13:
@@ -6668,11 +6668,11 @@ export default class SqlBaseParser extends Parser {
 				this.state = 1523;
 				this.qualifiedName();
 				this.state = 1524;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1525;
-				this.match(SqlBaseParser.ASTERISK);
+				this.match(SqlParser.ASTERISK);
 				this.state = 1526;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				this.state = 1528;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 192, this._ctx) ) {
@@ -6703,7 +6703,7 @@ export default class SqlBaseParser extends Parser {
 				this.state = 1533;
 				this.qualifiedName();
 				this.state = 1534;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1546;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -6728,7 +6728,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 1539;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 1540;
 						this.expression();
 						}
@@ -6746,9 +6746,9 @@ export default class SqlBaseParser extends Parser {
 				if (_la===141) {
 					{
 					this.state = 1548;
-					this.match(SqlBaseParser.ORDER);
+					this.match(SqlParser.ORDER);
 					this.state = 1549;
-					this.match(SqlBaseParser.BY);
+					this.match(SqlParser.BY);
 					this.state = 1550;
 					this.sortItem();
 					this.state = 1555;
@@ -6758,7 +6758,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 1551;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 1552;
 						this.sortItem();
 						}
@@ -6771,7 +6771,7 @@ export default class SqlBaseParser extends Parser {
 				}
 
 				this.state = 1560;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				this.state = 1562;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 199, this._ctx) ) {
@@ -6812,7 +6812,7 @@ export default class SqlBaseParser extends Parser {
 				this.state = 1570;
 				this.identifier();
 				this.state = 1571;
-				this.match(SqlBaseParser.T__5);
+				this.match(SqlParser.T__5);
 				this.state = 1572;
 				this.expression();
 				}
@@ -6823,7 +6823,7 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1574;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1583;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -6838,7 +6838,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 1576;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 1577;
 						this.identifier();
 						}
@@ -6851,9 +6851,9 @@ export default class SqlBaseParser extends Parser {
 				}
 
 				this.state = 1585;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				this.state = 1586;
-				this.match(SqlBaseParser.T__5);
+				this.match(SqlParser.T__5);
 				this.state = 1587;
 				this.expression();
 				}
@@ -6864,11 +6864,11 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1588;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1589;
 				this.query();
 				this.state = 1590;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 18:
@@ -6877,13 +6877,13 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1592;
-				this.match(SqlBaseParser.EXISTS);
+				this.match(SqlParser.EXISTS);
 				this.state = 1593;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1594;
 				this.query();
 				this.state = 1595;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 19:
@@ -6892,7 +6892,7 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1597;
-				this.match(SqlBaseParser.CASE);
+				this.match(SqlParser.CASE);
 				this.state = 1598;
 				this.valueExpression(0);
 				this.state = 1600;
@@ -6915,14 +6915,14 @@ export default class SqlBaseParser extends Parser {
 				if (_la===59) {
 					{
 					this.state = 1604;
-					this.match(SqlBaseParser.ELSE);
+					this.match(SqlParser.ELSE);
 					this.state = 1605;
 					(localctx as SimpleCaseContext)._elseExpression = this.expression();
 					}
 				}
 
 				this.state = 1608;
-				this.match(SqlBaseParser.END);
+				this.match(SqlParser.END);
 				}
 				break;
 			case 20:
@@ -6931,7 +6931,7 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1610;
-				this.match(SqlBaseParser.CASE);
+				this.match(SqlParser.CASE);
 				this.state = 1612;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -6952,14 +6952,14 @@ export default class SqlBaseParser extends Parser {
 				if (_la===59) {
 					{
 					this.state = 1616;
-					this.match(SqlBaseParser.ELSE);
+					this.match(SqlParser.ELSE);
 					this.state = 1617;
 					(localctx as SearchedCaseContext)._elseExpression = this.expression();
 					}
 				}
 
 				this.state = 1620;
-				this.match(SqlBaseParser.END);
+				this.match(SqlParser.END);
 				}
 				break;
 			case 21:
@@ -6968,17 +6968,17 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1622;
-				this.match(SqlBaseParser.CAST);
+				this.match(SqlParser.CAST);
 				this.state = 1623;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1624;
 				this.expression();
 				this.state = 1625;
-				this.match(SqlBaseParser.AS);
+				this.match(SqlParser.AS);
 				this.state = 1626;
 				this.type_(0);
 				this.state = 1627;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 22:
@@ -6987,17 +6987,17 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1629;
-				this.match(SqlBaseParser.TRY_CAST);
+				this.match(SqlParser.TRY_CAST);
 				this.state = 1630;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1631;
 				this.expression();
 				this.state = 1632;
-				this.match(SqlBaseParser.AS);
+				this.match(SqlParser.AS);
 				this.state = 1633;
 				this.type_(0);
 				this.state = 1634;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 23:
@@ -7006,9 +7006,9 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1636;
-				this.match(SqlBaseParser.ARRAY);
+				this.match(SqlParser.ARRAY);
 				this.state = 1637;
-				this.match(SqlBaseParser.T__6);
+				this.match(SqlParser.T__6);
 				this.state = 1646;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -7023,7 +7023,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 1639;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 1640;
 						this.expression();
 						}
@@ -7036,7 +7036,7 @@ export default class SqlBaseParser extends Parser {
 				}
 
 				this.state = 1648;
-				this.match(SqlBaseParser.T__7);
+				this.match(SqlParser.T__7);
 				}
 				break;
 			case 24:
@@ -7054,7 +7054,7 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1650;
-				(localctx as SpecialDateTimeFunctionContext)._name = this.match(SqlBaseParser.CURRENT_DATE);
+				(localctx as SpecialDateTimeFunctionContext)._name = this.match(SqlParser.CURRENT_DATE);
 				}
 				break;
 			case 26:
@@ -7063,18 +7063,18 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1651;
-				(localctx as SpecialDateTimeFunctionContext)._name = this.match(SqlBaseParser.CURRENT_TIME);
+				(localctx as SpecialDateTimeFunctionContext)._name = this.match(SqlParser.CURRENT_TIME);
 				this.state = 1655;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 210, this._ctx) ) {
 				case 1:
 					{
 					this.state = 1652;
-					this.match(SqlBaseParser.T__1);
+					this.match(SqlParser.T__1);
 					this.state = 1653;
-					(localctx as SpecialDateTimeFunctionContext)._precision = this.match(SqlBaseParser.INTEGER_VALUE);
+					(localctx as SpecialDateTimeFunctionContext)._precision = this.match(SqlParser.INTEGER_VALUE);
 					this.state = 1654;
-					this.match(SqlBaseParser.T__2);
+					this.match(SqlParser.T__2);
 					}
 					break;
 				}
@@ -7086,18 +7086,18 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1657;
-				(localctx as SpecialDateTimeFunctionContext)._name = this.match(SqlBaseParser.CURRENT_TIMESTAMP);
+				(localctx as SpecialDateTimeFunctionContext)._name = this.match(SqlParser.CURRENT_TIMESTAMP);
 				this.state = 1661;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 211, this._ctx) ) {
 				case 1:
 					{
 					this.state = 1658;
-					this.match(SqlBaseParser.T__1);
+					this.match(SqlParser.T__1);
 					this.state = 1659;
-					(localctx as SpecialDateTimeFunctionContext)._precision = this.match(SqlBaseParser.INTEGER_VALUE);
+					(localctx as SpecialDateTimeFunctionContext)._precision = this.match(SqlParser.INTEGER_VALUE);
 					this.state = 1660;
-					this.match(SqlBaseParser.T__2);
+					this.match(SqlParser.T__2);
 					}
 					break;
 				}
@@ -7109,18 +7109,18 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1663;
-				(localctx as SpecialDateTimeFunctionContext)._name = this.match(SqlBaseParser.LOCALTIME);
+				(localctx as SpecialDateTimeFunctionContext)._name = this.match(SqlParser.LOCALTIME);
 				this.state = 1667;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 212, this._ctx) ) {
 				case 1:
 					{
 					this.state = 1664;
-					this.match(SqlBaseParser.T__1);
+					this.match(SqlParser.T__1);
 					this.state = 1665;
-					(localctx as SpecialDateTimeFunctionContext)._precision = this.match(SqlBaseParser.INTEGER_VALUE);
+					(localctx as SpecialDateTimeFunctionContext)._precision = this.match(SqlParser.INTEGER_VALUE);
 					this.state = 1666;
-					this.match(SqlBaseParser.T__2);
+					this.match(SqlParser.T__2);
 					}
 					break;
 				}
@@ -7132,18 +7132,18 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1669;
-				(localctx as SpecialDateTimeFunctionContext)._name = this.match(SqlBaseParser.LOCALTIMESTAMP);
+				(localctx as SpecialDateTimeFunctionContext)._name = this.match(SqlParser.LOCALTIMESTAMP);
 				this.state = 1673;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 213, this._ctx) ) {
 				case 1:
 					{
 					this.state = 1670;
-					this.match(SqlBaseParser.T__1);
+					this.match(SqlParser.T__1);
 					this.state = 1671;
-					(localctx as SpecialDateTimeFunctionContext)._precision = this.match(SqlBaseParser.INTEGER_VALUE);
+					(localctx as SpecialDateTimeFunctionContext)._precision = this.match(SqlParser.INTEGER_VALUE);
 					this.state = 1672;
-					this.match(SqlBaseParser.T__2);
+					this.match(SqlParser.T__2);
 					}
 					break;
 				}
@@ -7155,7 +7155,7 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1675;
-				(localctx as CurrentUserContext)._name = this.match(SqlBaseParser.CURRENT_USER);
+				(localctx as CurrentUserContext)._name = this.match(SqlParser.CURRENT_USER);
 				}
 				break;
 			case 31:
@@ -7164,13 +7164,13 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1676;
-				this.match(SqlBaseParser.SUBSTRING);
+				this.match(SqlParser.SUBSTRING);
 				this.state = 1677;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1678;
 				this.valueExpression(0);
 				this.state = 1679;
-				this.match(SqlBaseParser.FROM);
+				this.match(SqlParser.FROM);
 				this.state = 1680;
 				this.valueExpression(0);
 				this.state = 1683;
@@ -7179,14 +7179,14 @@ export default class SqlBaseParser extends Parser {
 				if (_la===76) {
 					{
 					this.state = 1681;
-					this.match(SqlBaseParser.FOR);
+					this.match(SqlParser.FOR);
 					this.state = 1682;
 					this.valueExpression(0);
 					}
 				}
 
 				this.state = 1685;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 32:
@@ -7195,9 +7195,9 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1687;
-				this.match(SqlBaseParser.NORMALIZE);
+				this.match(SqlParser.NORMALIZE);
 				this.state = 1688;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1689;
 				this.valueExpression(0);
 				this.state = 1692;
@@ -7206,14 +7206,14 @@ export default class SqlBaseParser extends Parser {
 				if (_la===4) {
 					{
 					this.state = 1690;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 1691;
 					this.normalForm();
 					}
 				}
 
 				this.state = 1694;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 33:
@@ -7222,17 +7222,17 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1696;
-				this.match(SqlBaseParser.EXTRACT);
+				this.match(SqlParser.EXTRACT);
 				this.state = 1697;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1698;
 				this.identifier();
 				this.state = 1699;
-				this.match(SqlBaseParser.FROM);
+				this.match(SqlParser.FROM);
 				this.state = 1700;
 				this.valueExpression(0);
 				this.state = 1701;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 34:
@@ -7241,11 +7241,11 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1703;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1704;
 				this.expression();
 				this.state = 1705;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 35:
@@ -7254,9 +7254,9 @@ export default class SqlBaseParser extends Parser {
 				this._ctx = localctx;
 				_prevctx = localctx;
 				this.state = 1707;
-				this.match(SqlBaseParser.GROUPING);
+				this.match(SqlParser.GROUPING);
 				this.state = 1708;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1717;
 				this._errHandler.sync(this);
 				_la = this._input.LA(1);
@@ -7271,7 +7271,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 1710;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 1711;
 						this.qualifiedName();
 						}
@@ -7284,7 +7284,7 @@ export default class SqlBaseParser extends Parser {
 				}
 
 				this.state = 1719;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			}
@@ -7306,30 +7306,30 @@ export default class SqlBaseParser extends Parser {
 						{
 						localctx = new SubscriptContext(this, new PrimaryExpressionContext(this, _parentctx, _parentState));
 						(localctx as SubscriptContext)._value = _prevctx;
-						this.pushNewRecursionContext(localctx, _startState, SqlBaseParser.RULE_primaryExpression);
+						this.pushNewRecursionContext(localctx, _startState, SqlParser.RULE_primaryExpression);
 						this.state = 1722;
 						if (!(this.precpred(this._ctx, 14))) {
 							throw this.createFailedPredicateException("this.precpred(this._ctx, 14)");
 						}
 						this.state = 1723;
-						this.match(SqlBaseParser.T__6);
+						this.match(SqlParser.T__6);
 						this.state = 1724;
 						(localctx as SubscriptContext)._index = this.valueExpression(0);
 						this.state = 1725;
-						this.match(SqlBaseParser.T__7);
+						this.match(SqlParser.T__7);
 						}
 						break;
 					case 2:
 						{
 						localctx = new DereferenceContext(this, new PrimaryExpressionContext(this, _parentctx, _parentState));
 						(localctx as DereferenceContext)._base = _prevctx;
-						this.pushNewRecursionContext(localctx, _startState, SqlBaseParser.RULE_primaryExpression);
+						this.pushNewRecursionContext(localctx, _startState, SqlParser.RULE_primaryExpression);
 						this.state = 1727;
 						if (!(this.precpred(this._ctx, 12))) {
 							throw this.createFailedPredicateException("this.precpred(this._ctx, 12)");
 						}
 						this.state = 1728;
-						this.match(SqlBaseParser.T__0);
+						this.match(SqlParser.T__0);
 						this.state = 1729;
 						(localctx as DereferenceContext)._fieldName = this.identifier();
 						}
@@ -7360,7 +7360,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public string_(): StringContext {
 		let localctx: StringContext = new StringContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 94, SqlBaseParser.RULE_string);
+		this.enterRule(localctx, 94, SqlParser.RULE_string);
 		try {
 			this.state = 1741;
 			this._errHandler.sync(this);
@@ -7370,7 +7370,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1735;
-				this.match(SqlBaseParser.STRING);
+				this.match(SqlParser.STRING);
 				}
 				break;
 			case 242:
@@ -7378,16 +7378,16 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1736;
-				this.match(SqlBaseParser.UNICODE_STRING);
+				this.match(SqlParser.UNICODE_STRING);
 				this.state = 1739;
 				this._errHandler.sync(this);
 				switch ( this._interp.adaptivePredict(this._input, 221, this._ctx) ) {
 				case 1:
 					{
 					this.state = 1737;
-					this.match(SqlBaseParser.UESCAPE);
+					this.match(SqlParser.UESCAPE);
 					this.state = 1738;
-					this.match(SqlBaseParser.STRING);
+					this.match(SqlParser.STRING);
 					}
 					break;
 				}
@@ -7414,7 +7414,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public nullTreatment(): NullTreatmentContext {
 		let localctx: NullTreatmentContext = new NullTreatmentContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 96, SqlBaseParser.RULE_nullTreatment);
+		this.enterRule(localctx, 96, SqlParser.RULE_nullTreatment);
 		try {
 			this.state = 1747;
 			this._errHandler.sync(this);
@@ -7423,18 +7423,18 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1743;
-				this.match(SqlBaseParser.IGNORE);
+				this.match(SqlParser.IGNORE);
 				this.state = 1744;
-				this.match(SqlBaseParser.NULLS);
+				this.match(SqlParser.NULLS);
 				}
 				break;
 			case 163:
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1745;
-				this.match(SqlBaseParser.RESPECT);
+				this.match(SqlParser.RESPECT);
 				this.state = 1746;
-				this.match(SqlBaseParser.NULLS);
+				this.match(SqlParser.NULLS);
 				}
 				break;
 			default:
@@ -7458,7 +7458,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public timeZoneSpecifier(): TimeZoneSpecifierContext {
 		let localctx: TimeZoneSpecifierContext = new TimeZoneSpecifierContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 98, SqlBaseParser.RULE_timeZoneSpecifier);
+		this.enterRule(localctx, 98, SqlParser.RULE_timeZoneSpecifier);
 		try {
 			this.state = 1755;
 			this._errHandler.sync(this);
@@ -7468,9 +7468,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1749;
-				this.match(SqlBaseParser.TIME);
+				this.match(SqlParser.TIME);
 				this.state = 1750;
-				this.match(SqlBaseParser.ZONE);
+				this.match(SqlParser.ZONE);
 				this.state = 1751;
 				this.interval();
 				}
@@ -7480,9 +7480,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1752;
-				this.match(SqlBaseParser.TIME);
+				this.match(SqlParser.TIME);
 				this.state = 1753;
-				this.match(SqlBaseParser.ZONE);
+				this.match(SqlParser.ZONE);
 				this.state = 1754;
 				this.string_();
 				}
@@ -7506,7 +7506,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public comparisonOperator(): ComparisonOperatorContext {
 		let localctx: ComparisonOperatorContext = new ComparisonOperatorContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 100, SqlBaseParser.RULE_comparisonOperator);
+		this.enterRule(localctx, 100, SqlParser.RULE_comparisonOperator);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -7539,7 +7539,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public comparisonQuantifier(): ComparisonQuantifierContext {
 		let localctx: ComparisonQuantifierContext = new ComparisonQuantifierContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 102, SqlBaseParser.RULE_comparisonQuantifier);
+		this.enterRule(localctx, 102, SqlParser.RULE_comparisonQuantifier);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -7572,7 +7572,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public booleanValue(): BooleanValueContext {
 		let localctx: BooleanValueContext = new BooleanValueContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 104, SqlBaseParser.RULE_booleanValue);
+		this.enterRule(localctx, 104, SqlParser.RULE_booleanValue);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -7605,13 +7605,13 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public interval(): IntervalContext {
 		let localctx: IntervalContext = new IntervalContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 106, SqlBaseParser.RULE_interval);
+		this.enterRule(localctx, 106, SqlParser.RULE_interval);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 1763;
-			this.match(SqlBaseParser.INTERVAL);
+			this.match(SqlParser.INTERVAL);
 			this.state = 1765;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
@@ -7640,7 +7640,7 @@ export default class SqlBaseParser extends Parser {
 			case 1:
 				{
 				this.state = 1769;
-				this.match(SqlBaseParser.TO);
+				this.match(SqlParser.TO);
 				this.state = 1770;
 				localctx._to = this.intervalField();
 				}
@@ -7665,7 +7665,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public intervalField(): IntervalFieldContext {
 		let localctx: IntervalFieldContext = new IntervalFieldContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 108, SqlBaseParser.RULE_intervalField);
+		this.enterRule(localctx, 108, SqlParser.RULE_intervalField);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -7698,7 +7698,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public normalForm(): NormalFormContext {
 		let localctx: NormalFormContext = new NormalFormContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 110, SqlBaseParser.RULE_normalForm);
+		this.enterRule(localctx, 110, SqlParser.RULE_normalForm);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -7731,13 +7731,13 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public types(): TypesContext {
 		let localctx: TypesContext = new TypesContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 112, SqlBaseParser.RULE_types);
+		this.enterRule(localctx, 112, SqlParser.RULE_types);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 1777;
-			this.match(SqlBaseParser.T__1);
+			this.match(SqlParser.T__1);
 			this.state = 1786;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
@@ -7752,7 +7752,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1779;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 1780;
 					this.type_(0);
 					}
@@ -7765,7 +7765,7 @@ export default class SqlBaseParser extends Parser {
 			}
 
 			this.state = 1788;
-			this.match(SqlBaseParser.T__2);
+			this.match(SqlParser.T__2);
 			}
 		}
 		catch (re) {
@@ -7796,7 +7796,7 @@ export default class SqlBaseParser extends Parser {
 		let localctx: TypeContext = new TypeContext(this, this._ctx, _parentState);
 		let _prevctx: TypeContext = localctx;
 		let _startState: number = 114;
-		this.enterRecursionRule(localctx, 114, SqlBaseParser.RULE_type, _p);
+		this.enterRecursionRule(localctx, 114, SqlParser.RULE_type, _p);
 		let _la: number;
 		try {
 			let _alt: number;
@@ -7808,37 +7808,37 @@ export default class SqlBaseParser extends Parser {
 			case 1:
 				{
 				this.state = 1791;
-				this.match(SqlBaseParser.ARRAY);
+				this.match(SqlParser.ARRAY);
 				this.state = 1792;
-				this.match(SqlBaseParser.LT);
+				this.match(SqlParser.LT);
 				this.state = 1793;
 				this.type_(0);
 				this.state = 1794;
-				this.match(SqlBaseParser.GT);
+				this.match(SqlParser.GT);
 				}
 				break;
 			case 2:
 				{
 				this.state = 1796;
-				this.match(SqlBaseParser.MAP);
+				this.match(SqlParser.MAP);
 				this.state = 1797;
-				this.match(SqlBaseParser.LT);
+				this.match(SqlParser.LT);
 				this.state = 1798;
 				this.type_(0);
 				this.state = 1799;
-				this.match(SqlBaseParser.T__3);
+				this.match(SqlParser.T__3);
 				this.state = 1800;
 				this.type_(0);
 				this.state = 1801;
-				this.match(SqlBaseParser.GT);
+				this.match(SqlParser.GT);
 				}
 				break;
 			case 3:
 				{
 				this.state = 1803;
-				this.match(SqlBaseParser.ROW);
+				this.match(SqlParser.ROW);
 				this.state = 1804;
-				this.match(SqlBaseParser.T__1);
+				this.match(SqlParser.T__1);
 				this.state = 1805;
 				this.identifier();
 				this.state = 1806;
@@ -7850,7 +7850,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1807;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 1808;
 					this.identifier();
 					this.state = 1809;
@@ -7862,7 +7862,7 @@ export default class SqlBaseParser extends Parser {
 					_la = this._input.LA(1);
 				}
 				this.state = 1816;
-				this.match(SqlBaseParser.T__2);
+				this.match(SqlParser.T__2);
 				}
 				break;
 			case 4:
@@ -7875,7 +7875,7 @@ export default class SqlBaseParser extends Parser {
 				case 1:
 					{
 					this.state = 1819;
-					this.match(SqlBaseParser.T__1);
+					this.match(SqlParser.T__1);
 					this.state = 1820;
 					this.typeParameter();
 					this.state = 1825;
@@ -7885,7 +7885,7 @@ export default class SqlBaseParser extends Parser {
 						{
 						{
 						this.state = 1821;
-						this.match(SqlBaseParser.T__3);
+						this.match(SqlParser.T__3);
 						this.state = 1822;
 						this.typeParameter();
 						}
@@ -7895,7 +7895,7 @@ export default class SqlBaseParser extends Parser {
 						_la = this._input.LA(1);
 					}
 					this.state = 1828;
-					this.match(SqlBaseParser.T__2);
+					this.match(SqlParser.T__2);
 					}
 					break;
 				}
@@ -7904,11 +7904,11 @@ export default class SqlBaseParser extends Parser {
 			case 5:
 				{
 				this.state = 1832;
-				this.match(SqlBaseParser.INTERVAL);
+				this.match(SqlParser.INTERVAL);
 				this.state = 1833;
 				localctx._from_ = this.intervalField();
 				this.state = 1834;
-				this.match(SqlBaseParser.TO);
+				this.match(SqlParser.TO);
 				this.state = 1835;
 				localctx._to = this.intervalField();
 				}
@@ -7927,13 +7927,13 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					localctx = new TypeContext(this, _parentctx, _parentState);
-					this.pushNewRecursionContext(localctx, _startState, SqlBaseParser.RULE_type);
+					this.pushNewRecursionContext(localctx, _startState, SqlParser.RULE_type);
 					this.state = 1839;
 					if (!(this.precpred(this._ctx, 6))) {
 						throw this.createFailedPredicateException("this.precpred(this._ctx, 6)");
 					}
 					this.state = 1840;
-					this.match(SqlBaseParser.ARRAY);
+					this.match(SqlParser.ARRAY);
 					}
 					}
 				}
@@ -7960,7 +7960,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public typeParameter(): TypeParameterContext {
 		let localctx: TypeParameterContext = new TypeParameterContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 116, SqlBaseParser.RULE_typeParameter);
+		this.enterRule(localctx, 116, SqlParser.RULE_typeParameter);
 		try {
 			this.state = 1848;
 			this._errHandler.sync(this);
@@ -7969,7 +7969,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1846;
-				this.match(SqlBaseParser.INTEGER_VALUE);
+				this.match(SqlParser.INTEGER_VALUE);
 				}
 				break;
 			case 10:
@@ -8156,7 +8156,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public baseType(): BaseTypeContext {
 		let localctx: BaseTypeContext = new BaseTypeContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 118, SqlBaseParser.RULE_baseType);
+		this.enterRule(localctx, 118, SqlParser.RULE_baseType);
 		try {
 			this.state = 1854;
 			this._errHandler.sync(this);
@@ -8165,21 +8165,21 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1850;
-				this.match(SqlBaseParser.TIME_WITH_TIME_ZONE);
+				this.match(SqlParser.TIME_WITH_TIME_ZONE);
 				}
 				break;
 			case 252:
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1851;
-				this.match(SqlBaseParser.TIMESTAMP_WITH_TIME_ZONE);
+				this.match(SqlParser.TIMESTAMP_WITH_TIME_ZONE);
 				}
 				break;
 			case 253:
 				this.enterOuterAlt(localctx, 3);
 				{
 				this.state = 1852;
-				this.match(SqlBaseParser.DOUBLE_PRECISION);
+				this.match(SqlParser.DOUBLE_PRECISION);
 				}
 				break;
 			case 10:
@@ -8363,16 +8363,16 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public whenClause(): WhenClauseContext {
 		let localctx: WhenClauseContext = new WhenClauseContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 120, SqlBaseParser.RULE_whenClause);
+		this.enterRule(localctx, 120, SqlParser.RULE_whenClause);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 1856;
-			this.match(SqlBaseParser.WHEN);
+			this.match(SqlParser.WHEN);
 			this.state = 1857;
 			localctx._condition = this.expression();
 			this.state = 1858;
-			this.match(SqlBaseParser.THEN);
+			this.match(SqlParser.THEN);
 			this.state = 1859;
 			localctx._result = this.expression();
 			}
@@ -8394,20 +8394,20 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public filter(): FilterContext {
 		let localctx: FilterContext = new FilterContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 122, SqlBaseParser.RULE_filter);
+		this.enterRule(localctx, 122, SqlParser.RULE_filter);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 1861;
-			this.match(SqlBaseParser.FILTER);
+			this.match(SqlParser.FILTER);
 			this.state = 1862;
-			this.match(SqlBaseParser.T__1);
+			this.match(SqlParser.T__1);
 			this.state = 1863;
-			this.match(SqlBaseParser.WHERE);
+			this.match(SqlParser.WHERE);
 			this.state = 1864;
 			this.booleanExpression(0);
 			this.state = 1865;
-			this.match(SqlBaseParser.T__2);
+			this.match(SqlParser.T__2);
 			}
 		}
 		catch (re) {
@@ -8427,24 +8427,24 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public over(): OverContext {
 		let localctx: OverContext = new OverContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 124, SqlBaseParser.RULE_over);
+		this.enterRule(localctx, 124, SqlParser.RULE_over);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 1867;
-			this.match(SqlBaseParser.OVER);
+			this.match(SqlParser.OVER);
 			this.state = 1868;
-			this.match(SqlBaseParser.T__1);
+			this.match(SqlParser.T__1);
 			this.state = 1879;
 			this._errHandler.sync(this);
 			_la = this._input.LA(1);
 			if (_la===146) {
 				{
 				this.state = 1869;
-				this.match(SqlBaseParser.PARTITION);
+				this.match(SqlParser.PARTITION);
 				this.state = 1870;
-				this.match(SqlBaseParser.BY);
+				this.match(SqlParser.BY);
 				this.state = 1871;
 				localctx._expression = this.expression();
 				localctx._partition.push(localctx._expression);
@@ -8455,7 +8455,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1872;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 1873;
 					localctx._expression = this.expression();
 					localctx._partition.push(localctx._expression);
@@ -8474,9 +8474,9 @@ export default class SqlBaseParser extends Parser {
 			if (_la===141) {
 				{
 				this.state = 1881;
-				this.match(SqlBaseParser.ORDER);
+				this.match(SqlParser.ORDER);
 				this.state = 1882;
-				this.match(SqlBaseParser.BY);
+				this.match(SqlParser.BY);
 				this.state = 1883;
 				this.sortItem();
 				this.state = 1888;
@@ -8486,7 +8486,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1884;
-					this.match(SqlBaseParser.T__3);
+					this.match(SqlParser.T__3);
 					this.state = 1885;
 					this.sortItem();
 					}
@@ -8509,7 +8509,7 @@ export default class SqlBaseParser extends Parser {
 			}
 
 			this.state = 1896;
-			this.match(SqlBaseParser.T__2);
+			this.match(SqlParser.T__2);
 			}
 		}
 		catch (re) {
@@ -8529,7 +8529,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public windowFrame(): WindowFrameContext {
 		let localctx: WindowFrameContext = new WindowFrameContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 126, SqlBaseParser.RULE_windowFrame);
+		this.enterRule(localctx, 126, SqlParser.RULE_windowFrame);
 		try {
 			this.state = 1922;
 			this._errHandler.sync(this);
@@ -8538,7 +8538,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1898;
-				localctx._frameType = this.match(SqlBaseParser.RANGE);
+				localctx._frameType = this.match(SqlParser.RANGE);
 				this.state = 1899;
 				localctx._start = this.frameBound();
 				}
@@ -8547,7 +8547,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1900;
-				localctx._frameType = this.match(SqlBaseParser.ROWS);
+				localctx._frameType = this.match(SqlParser.ROWS);
 				this.state = 1901;
 				localctx._start = this.frameBound();
 				}
@@ -8556,7 +8556,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 3);
 				{
 				this.state = 1902;
-				localctx._frameType = this.match(SqlBaseParser.GROUPS);
+				localctx._frameType = this.match(SqlParser.GROUPS);
 				this.state = 1903;
 				localctx._start = this.frameBound();
 				}
@@ -8565,13 +8565,13 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 4);
 				{
 				this.state = 1904;
-				localctx._frameType = this.match(SqlBaseParser.RANGE);
+				localctx._frameType = this.match(SqlParser.RANGE);
 				this.state = 1905;
-				this.match(SqlBaseParser.BETWEEN);
+				this.match(SqlParser.BETWEEN);
 				this.state = 1906;
 				localctx._start = this.frameBound();
 				this.state = 1907;
-				this.match(SqlBaseParser.AND);
+				this.match(SqlParser.AND);
 				this.state = 1908;
 				localctx._end = this.frameBound();
 				}
@@ -8580,13 +8580,13 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 5);
 				{
 				this.state = 1910;
-				localctx._frameType = this.match(SqlBaseParser.ROWS);
+				localctx._frameType = this.match(SqlParser.ROWS);
 				this.state = 1911;
-				this.match(SqlBaseParser.BETWEEN);
+				this.match(SqlParser.BETWEEN);
 				this.state = 1912;
 				localctx._start = this.frameBound();
 				this.state = 1913;
-				this.match(SqlBaseParser.AND);
+				this.match(SqlParser.AND);
 				this.state = 1914;
 				localctx._end = this.frameBound();
 				}
@@ -8595,13 +8595,13 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 6);
 				{
 				this.state = 1916;
-				localctx._frameType = this.match(SqlBaseParser.GROUPS);
+				localctx._frameType = this.match(SqlParser.GROUPS);
 				this.state = 1917;
-				this.match(SqlBaseParser.BETWEEN);
+				this.match(SqlParser.BETWEEN);
 				this.state = 1918;
 				localctx._start = this.frameBound();
 				this.state = 1919;
-				this.match(SqlBaseParser.AND);
+				this.match(SqlParser.AND);
 				this.state = 1920;
 				localctx._end = this.frameBound();
 				}
@@ -8625,7 +8625,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public frameBound(): FrameBoundContext {
 		let localctx: FrameBoundContext = new FrameBoundContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 128, SqlBaseParser.RULE_frameBound);
+		this.enterRule(localctx, 128, SqlParser.RULE_frameBound);
 		let _la: number;
 		try {
 			this.state = 1933;
@@ -8636,9 +8636,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1924;
-				this.match(SqlBaseParser.UNBOUNDED);
+				this.match(SqlParser.UNBOUNDED);
 				this.state = 1925;
-				(localctx as UnboundedFrameContext)._boundType = this.match(SqlBaseParser.PRECEDING);
+				(localctx as UnboundedFrameContext)._boundType = this.match(SqlParser.PRECEDING);
 				}
 				break;
 			case 2:
@@ -8646,9 +8646,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1926;
-				this.match(SqlBaseParser.UNBOUNDED);
+				this.match(SqlParser.UNBOUNDED);
 				this.state = 1927;
-				(localctx as UnboundedFrameContext)._boundType = this.match(SqlBaseParser.FOLLOWING);
+				(localctx as UnboundedFrameContext)._boundType = this.match(SqlParser.FOLLOWING);
 				}
 				break;
 			case 3:
@@ -8656,9 +8656,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 3);
 				{
 				this.state = 1928;
-				this.match(SqlBaseParser.CURRENT);
+				this.match(SqlParser.CURRENT);
 				this.state = 1929;
-				this.match(SqlBaseParser.ROW);
+				this.match(SqlParser.ROW);
 				}
 				break;
 			case 4:
@@ -8698,14 +8698,14 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public updateAssignment(): UpdateAssignmentContext {
 		let localctx: UpdateAssignmentContext = new UpdateAssignmentContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 130, SqlBaseParser.RULE_updateAssignment);
+		this.enterRule(localctx, 130, SqlParser.RULE_updateAssignment);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 1935;
 			this.identifier();
 			this.state = 1936;
-			this.match(SqlBaseParser.EQ);
+			this.match(SqlParser.EQ);
 			this.state = 1937;
 			this.expression();
 			}
@@ -8727,7 +8727,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public explainOption(): ExplainOptionContext {
 		let localctx: ExplainOptionContext = new ExplainOptionContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 132, SqlBaseParser.RULE_explainOption);
+		this.enterRule(localctx, 132, SqlParser.RULE_explainOption);
 		let _la: number;
 		try {
 			this.state = 1943;
@@ -8738,7 +8738,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1939;
-				this.match(SqlBaseParser.FORMAT);
+				this.match(SqlParser.FORMAT);
 				this.state = 1940;
 				(localctx as ExplainFormatContext)._value = this._input.LT(1);
 				_la = this._input.LA(1);
@@ -8756,7 +8756,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1941;
-				this.match(SqlBaseParser.TYPE);
+				this.match(SqlParser.TYPE);
 				this.state = 1942;
 				(localctx as ExplainTypeContext)._value = this._input.LT(1);
 				_la = this._input.LA(1);
@@ -8790,7 +8790,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public transactionMode(): TransactionModeContext {
 		let localctx: TransactionModeContext = new TransactionModeContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 134, SqlBaseParser.RULE_transactionMode);
+		this.enterRule(localctx, 134, SqlParser.RULE_transactionMode);
 		let _la: number;
 		try {
 			this.state = 1950;
@@ -8801,9 +8801,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1945;
-				this.match(SqlBaseParser.ISOLATION);
+				this.match(SqlParser.ISOLATION);
 				this.state = 1946;
-				this.match(SqlBaseParser.LEVEL);
+				this.match(SqlParser.LEVEL);
 				this.state = 1947;
 				this.levelOfIsolation();
 				}
@@ -8813,7 +8813,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1948;
-				this.match(SqlBaseParser.READ);
+				this.match(SqlParser.READ);
 				this.state = 1949;
 				(localctx as TransactionAccessModeContext)._accessMode = this._input.LT(1);
 				_la = this._input.LA(1);
@@ -8847,7 +8847,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public levelOfIsolation(): LevelOfIsolationContext {
 		let localctx: LevelOfIsolationContext = new LevelOfIsolationContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 136, SqlBaseParser.RULE_levelOfIsolation);
+		this.enterRule(localctx, 136, SqlParser.RULE_levelOfIsolation);
 		try {
 			this.state = 1959;
 			this._errHandler.sync(this);
@@ -8857,9 +8857,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1952;
-				this.match(SqlBaseParser.READ);
+				this.match(SqlParser.READ);
 				this.state = 1953;
-				this.match(SqlBaseParser.UNCOMMITTED);
+				this.match(SqlParser.UNCOMMITTED);
 				}
 				break;
 			case 2:
@@ -8867,9 +8867,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1954;
-				this.match(SqlBaseParser.READ);
+				this.match(SqlParser.READ);
 				this.state = 1955;
-				this.match(SqlBaseParser.COMMITTED);
+				this.match(SqlParser.COMMITTED);
 				}
 				break;
 			case 3:
@@ -8877,9 +8877,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 3);
 				{
 				this.state = 1956;
-				this.match(SqlBaseParser.REPEATABLE);
+				this.match(SqlParser.REPEATABLE);
 				this.state = 1957;
-				this.match(SqlBaseParser.READ);
+				this.match(SqlParser.READ);
 				}
 				break;
 			case 4:
@@ -8887,7 +8887,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 4);
 				{
 				this.state = 1958;
-				this.match(SqlBaseParser.SERIALIZABLE);
+				this.match(SqlParser.SERIALIZABLE);
 				}
 				break;
 			}
@@ -8909,7 +8909,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public callArgument(): CallArgumentContext {
 		let localctx: CallArgumentContext = new CallArgumentContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 138, SqlBaseParser.RULE_callArgument);
+		this.enterRule(localctx, 138, SqlParser.RULE_callArgument);
 		try {
 			this.state = 1966;
 			this._errHandler.sync(this);
@@ -8929,7 +8929,7 @@ export default class SqlBaseParser extends Parser {
 				this.state = 1962;
 				this.identifier();
 				this.state = 1963;
-				this.match(SqlBaseParser.T__8);
+				this.match(SqlParser.T__8);
 				this.state = 1964;
 				this.expression();
 				}
@@ -8953,7 +8953,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public privilege(): PrivilegeContext {
 		let localctx: PrivilegeContext = new PrivilegeContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 140, SqlBaseParser.RULE_privilege);
+		this.enterRule(localctx, 140, SqlParser.RULE_privilege);
 		try {
 			this.state = 1972;
 			this._errHandler.sync(this);
@@ -8962,21 +8962,21 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1968;
-				this.match(SqlBaseParser.SELECT);
+				this.match(SqlParser.SELECT);
 				}
 				break;
 			case 51:
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1969;
-				this.match(SqlBaseParser.DELETE);
+				this.match(SqlParser.DELETE);
 				}
 				break;
 			case 97:
 				this.enterOuterAlt(localctx, 3);
 				{
 				this.state = 1970;
-				this.match(SqlBaseParser.INSERT);
+				this.match(SqlParser.INSERT);
 				}
 				break;
 			case 10:
@@ -9160,7 +9160,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public qualifiedName(): QualifiedNameContext {
 		let localctx: QualifiedNameContext = new QualifiedNameContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 142, SqlBaseParser.RULE_qualifiedName);
+		this.enterRule(localctx, 142, SqlParser.RULE_qualifiedName);
 		try {
 			let _alt: number;
 			this.enterOuterAlt(localctx, 1);
@@ -9175,7 +9175,7 @@ export default class SqlBaseParser extends Parser {
 					{
 					{
 					this.state = 1975;
-					this.match(SqlBaseParser.T__0);
+					this.match(SqlParser.T__0);
 					this.state = 1976;
 					this.identifier();
 					}
@@ -9204,14 +9204,14 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public tableVersionExpression(): TableVersionExpressionContext {
 		let localctx: TableVersionExpressionContext = new TableVersionExpressionContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 144, SqlBaseParser.RULE_tableVersionExpression);
+		this.enterRule(localctx, 144, SqlParser.RULE_tableVersionExpression);
 		let _la: number;
 		try {
 			localctx = new TableVersionContext(this, localctx);
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 1982;
-			this.match(SqlBaseParser.FOR);
+			this.match(SqlParser.FOR);
 			this.state = 1983;
 			(localctx as TableVersionContext)._tableVersionType = this._input.LT(1);
 			_la = this._input.LA(1);
@@ -9245,7 +9245,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public tableVersionState(): TableVersionStateContext {
 		let localctx: TableVersionStateContext = new TableVersionStateContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 146, SqlBaseParser.RULE_tableVersionState);
+		this.enterRule(localctx, 146, SqlParser.RULE_tableVersionState);
 		try {
 			this.state = 1990;
 			this._errHandler.sync(this);
@@ -9255,9 +9255,9 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1987;
-				this.match(SqlBaseParser.AS);
+				this.match(SqlParser.AS);
 				this.state = 1988;
-				this.match(SqlBaseParser.OF);
+				this.match(SqlParser.OF);
 				}
 				break;
 			case 21:
@@ -9265,7 +9265,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1989;
-				this.match(SqlBaseParser.BEFORE);
+				this.match(SqlParser.BEFORE);
 				}
 				break;
 			default:
@@ -9289,7 +9289,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public grantor(): GrantorContext {
 		let localctx: GrantorContext = new GrantorContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 148, SqlBaseParser.RULE_grantor);
+		this.enterRule(localctx, 148, SqlParser.RULE_grantor);
 		try {
 			this.state = 1995;
 			this._errHandler.sync(this);
@@ -9299,7 +9299,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1992;
-				this.match(SqlBaseParser.CURRENT_USER);
+				this.match(SqlParser.CURRENT_USER);
 				}
 				break;
 			case 2:
@@ -9307,7 +9307,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1993;
-				this.match(SqlBaseParser.CURRENT_ROLE);
+				this.match(SqlParser.CURRENT_ROLE);
 				}
 				break;
 			case 3:
@@ -9337,7 +9337,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public principal(): PrincipalContext {
 		let localctx: PrincipalContext = new PrincipalContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 150, SqlBaseParser.RULE_principal);
+		this.enterRule(localctx, 150, SqlParser.RULE_principal);
 		try {
 			this.state = 2002;
 			this._errHandler.sync(this);
@@ -9347,7 +9347,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 1997;
-				this.match(SqlBaseParser.USER);
+				this.match(SqlParser.USER);
 				this.state = 1998;
 				this.identifier();
 				}
@@ -9357,7 +9357,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 1999;
-				this.match(SqlBaseParser.ROLE);
+				this.match(SqlParser.ROLE);
 				this.state = 2000;
 				this.identifier();
 				}
@@ -9389,7 +9389,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public roles(): RolesContext {
 		let localctx: RolesContext = new RolesContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 152, SqlBaseParser.RULE_roles);
+		this.enterRule(localctx, 152, SqlParser.RULE_roles);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -9403,7 +9403,7 @@ export default class SqlBaseParser extends Parser {
 				{
 				{
 				this.state = 2005;
-				this.match(SqlBaseParser.T__3);
+				this.match(SqlParser.T__3);
 				this.state = 2006;
 				this.identifier();
 				}
@@ -9431,7 +9431,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public identifier(): IdentifierContext {
 		let localctx: IdentifierContext = new IdentifierContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 154, SqlBaseParser.RULE_identifier);
+		this.enterRule(localctx, 154, SqlParser.RULE_identifier);
 		try {
 			this.state = 2017;
 			this._errHandler.sync(this);
@@ -9441,7 +9441,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 2012;
-				this.match(SqlBaseParser.IDENTIFIER);
+				this.match(SqlParser.IDENTIFIER);
 				}
 				break;
 			case 249:
@@ -9449,7 +9449,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 2013;
-				this.match(SqlBaseParser.QUOTED_IDENTIFIER);
+				this.match(SqlParser.QUOTED_IDENTIFIER);
 				}
 				break;
 			case 10:
@@ -9614,7 +9614,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 4);
 				{
 				this.state = 2015;
-				this.match(SqlBaseParser.BACKQUOTED_IDENTIFIER);
+				this.match(SqlParser.BACKQUOTED_IDENTIFIER);
 				}
 				break;
 			case 248:
@@ -9622,7 +9622,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 5);
 				{
 				this.state = 2016;
-				this.match(SqlBaseParser.DIGIT_IDENTIFIER);
+				this.match(SqlParser.DIGIT_IDENTIFIER);
 				}
 				break;
 			default:
@@ -9646,7 +9646,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public number_(): NumberContext {
 		let localctx: NumberContext = new NumberContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 156, SqlBaseParser.RULE_number);
+		this.enterRule(localctx, 156, SqlParser.RULE_number);
 		try {
 			this.state = 2022;
 			this._errHandler.sync(this);
@@ -9656,7 +9656,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 2019;
-				this.match(SqlBaseParser.DECIMAL_VALUE);
+				this.match(SqlParser.DECIMAL_VALUE);
 				}
 				break;
 			case 246:
@@ -9664,7 +9664,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 2020;
-				this.match(SqlBaseParser.DOUBLE_VALUE);
+				this.match(SqlParser.DOUBLE_VALUE);
 				}
 				break;
 			case 244:
@@ -9672,7 +9672,7 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 3);
 				{
 				this.state = 2021;
-				this.match(SqlBaseParser.INTEGER_VALUE);
+				this.match(SqlParser.INTEGER_VALUE);
 				}
 				break;
 			default:
@@ -9696,7 +9696,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public constraintSpecification(): ConstraintSpecificationContext {
 		let localctx: ConstraintSpecificationContext = new ConstraintSpecificationContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 158, SqlBaseParser.RULE_constraintSpecification);
+		this.enterRule(localctx, 158, SqlParser.RULE_constraintSpecification);
 		try {
 			this.state = 2026;
 			this._errHandler.sync(this);
@@ -9737,12 +9737,12 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public namedConstraintSpecification(): NamedConstraintSpecificationContext {
 		let localctx: NamedConstraintSpecificationContext = new NamedConstraintSpecificationContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 160, SqlBaseParser.RULE_namedConstraintSpecification);
+		this.enterRule(localctx, 160, SqlParser.RULE_namedConstraintSpecification);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
 			this.state = 2028;
-			this.match(SqlBaseParser.CONSTRAINT);
+			this.match(SqlParser.CONSTRAINT);
 			this.state = 2029;
 			localctx._name = this.identifier();
 			this.state = 2030;
@@ -9766,7 +9766,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public unnamedConstraintSpecification(): UnnamedConstraintSpecificationContext {
 		let localctx: UnnamedConstraintSpecificationContext = new UnnamedConstraintSpecificationContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 162, SqlBaseParser.RULE_unnamedConstraintSpecification);
+		this.enterRule(localctx, 162, SqlParser.RULE_unnamedConstraintSpecification);
 		try {
 			this.enterOuterAlt(localctx, 1);
 			{
@@ -9803,7 +9803,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public constraintType(): ConstraintTypeContext {
 		let localctx: ConstraintTypeContext = new ConstraintTypeContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 164, SqlBaseParser.RULE_constraintType);
+		this.enterRule(localctx, 164, SqlParser.RULE_constraintType);
 		try {
 			this.state = 2040;
 			this._errHandler.sync(this);
@@ -9812,16 +9812,16 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 2037;
-				this.match(SqlBaseParser.UNIQUE);
+				this.match(SqlParser.UNIQUE);
 				}
 				break;
 			case 151:
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 2038;
-				this.match(SqlBaseParser.PRIMARY);
+				this.match(SqlParser.PRIMARY);
 				this.state = 2039;
-				this.match(SqlBaseParser.KEY);
+				this.match(SqlParser.KEY);
 				}
 				break;
 			default:
@@ -9845,7 +9845,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public constraintQualifiers(): ConstraintQualifiersContext {
 		let localctx: ConstraintQualifiersContext = new ConstraintQualifiersContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 166, SqlBaseParser.RULE_constraintQualifiers);
+		this.enterRule(localctx, 166, SqlParser.RULE_constraintQualifiers);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -9883,7 +9883,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public constraintQualifier(): ConstraintQualifierContext {
 		let localctx: ConstraintQualifierContext = new ConstraintQualifierContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 168, SqlBaseParser.RULE_constraintQualifier);
+		this.enterRule(localctx, 168, SqlParser.RULE_constraintQualifier);
 		try {
 			this.state = 2051;
 			this._errHandler.sync(this);
@@ -9928,7 +9928,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public constraintRely(): ConstraintRelyContext {
 		let localctx: ConstraintRelyContext = new ConstraintRelyContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 170, SqlBaseParser.RULE_constraintRely);
+		this.enterRule(localctx, 170, SqlParser.RULE_constraintRely);
 		try {
 			this.state = 2056;
 			this._errHandler.sync(this);
@@ -9937,16 +9937,16 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 2053;
-				this.match(SqlBaseParser.RELY);
+				this.match(SqlParser.RELY);
 				}
 				break;
 			case 131:
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 2054;
-				this.match(SqlBaseParser.NOT);
+				this.match(SqlParser.NOT);
 				this.state = 2055;
-				this.match(SqlBaseParser.RELY);
+				this.match(SqlParser.RELY);
 				}
 				break;
 			default:
@@ -9970,7 +9970,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public constraintEnabled(): ConstraintEnabledContext {
 		let localctx: ConstraintEnabledContext = new ConstraintEnabledContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 172, SqlBaseParser.RULE_constraintEnabled);
+		this.enterRule(localctx, 172, SqlParser.RULE_constraintEnabled);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -10003,7 +10003,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public constraintEnforced(): ConstraintEnforcedContext {
 		let localctx: ConstraintEnforcedContext = new ConstraintEnforcedContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 174, SqlBaseParser.RULE_constraintEnforced);
+		this.enterRule(localctx, 174, SqlParser.RULE_constraintEnforced);
 		try {
 			this.state = 2063;
 			this._errHandler.sync(this);
@@ -10012,16 +10012,16 @@ export default class SqlBaseParser extends Parser {
 				this.enterOuterAlt(localctx, 1);
 				{
 				this.state = 2060;
-				this.match(SqlBaseParser.ENFORCED);
+				this.match(SqlParser.ENFORCED);
 				}
 				break;
 			case 131:
 				this.enterOuterAlt(localctx, 2);
 				{
 				this.state = 2061;
-				this.match(SqlBaseParser.NOT);
+				this.match(SqlParser.NOT);
 				this.state = 2062;
-				this.match(SqlBaseParser.ENFORCED);
+				this.match(SqlParser.ENFORCED);
 				}
 				break;
 			default:
@@ -10045,7 +10045,7 @@ export default class SqlBaseParser extends Parser {
 	// @RuleVersion(0)
 	public nonReserved(): NonReservedContext {
 		let localctx: NonReservedContext = new NonReservedContext(this, this._ctx, this.state);
-		this.enterRule(localctx, 176, SqlBaseParser.RULE_nonReserved);
+		this.enterRule(localctx, 176, SqlParser.RULE_nonReserved);
 		let _la: number;
 		try {
 			this.enterOuterAlt(localctx, 1);
@@ -10925,20 +10925,20 @@ export default class SqlBaseParser extends Parser {
 
 	private static __ATN: ATN;
 	public static get _ATN(): ATN {
-		if (!SqlBaseParser.__ATN) {
-			SqlBaseParser.__ATN = new ATNDeserializer().deserialize(SqlBaseParser._serializedATN);
+		if (!SqlParser.__ATN) {
+			SqlParser.__ATN = new ATNDeserializer().deserialize(SqlParser._serializedATN);
 		}
 
-		return SqlBaseParser.__ATN;
+		return SqlParser.__ATN;
 	}
 
 
-	static DecisionsToDFA = SqlBaseParser._ATN.decisionToState.map( (ds: DecisionState, index: number) => new DFA(ds, index) );
+	static DecisionsToDFA = SqlParser._ATN.decisionToState.map( (ds: DecisionState, index: number) => new DFA(ds, index) );
 
 }
 
 export class SingleStatementContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -10946,16 +10946,16 @@ export class SingleStatementContext extends ParserRuleContext {
 		return this.getTypedRuleContext(StatementContext, 0) as StatementContext;
 	}
 	public EOF(): TerminalNode {
-		return this.getToken(SqlBaseParser.EOF, 0);
+		return this.getToken(SqlParser.EOF, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_singleStatement;
+    	return SqlParser.RULE_singleStatement;
 	}
 }
 
 
 export class StandaloneExpressionContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -10963,16 +10963,16 @@ export class StandaloneExpressionContext extends ParserRuleContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
 	public EOF(): TerminalNode {
-		return this.getToken(SqlBaseParser.EOF, 0);
+		return this.getToken(SqlParser.EOF, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_standaloneExpression;
+    	return SqlParser.RULE_standaloneExpression;
 	}
 }
 
 
 export class StandaloneRoutineBodyContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -10980,42 +10980,42 @@ export class StandaloneRoutineBodyContext extends ParserRuleContext {
 		return this.getTypedRuleContext(RoutineBodyContext, 0) as RoutineBodyContext;
 	}
 	public EOF(): TerminalNode {
-		return this.getToken(SqlBaseParser.EOF, 0);
+		return this.getToken(SqlParser.EOF, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_standaloneRoutineBody;
+    	return SqlParser.RULE_standaloneRoutineBody;
 	}
 }
 
 
 export class StatementContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_statement;
+    	return SqlParser.RULE_statement;
 	}
 	public override copyFrom(ctx: StatementContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class ExplainContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public EXPLAIN(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXPLAIN, 0);
+		return this.getToken(SqlParser.EXPLAIN, 0);
 	}
 	public statement(): StatementContext {
 		return this.getTypedRuleContext(StatementContext, 0) as StatementContext;
 	}
 	public ANALYZE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ANALYZE, 0);
+		return this.getToken(SqlParser.ANALYZE, 0);
 	}
 	public VERBOSE(): TerminalNode {
-		return this.getToken(SqlBaseParser.VERBOSE, 0);
+		return this.getToken(SqlParser.VERBOSE, 0);
 	}
 	public explainOption_list(): ExplainOptionContext[] {
 		return this.getTypedRuleContexts(ExplainOptionContext) as ExplainOptionContext[];
@@ -11025,56 +11025,56 @@ export class ExplainContext extends StatementContext {
 	}
 }
 export class PrepareContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public PREPARE(): TerminalNode {
-		return this.getToken(SqlBaseParser.PREPARE, 0);
+		return this.getToken(SqlParser.PREPARE, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 	public FROM(): TerminalNode {
-		return this.getToken(SqlBaseParser.FROM, 0);
+		return this.getToken(SqlParser.FROM, 0);
 	}
 	public statement(): StatementContext {
 		return this.getTypedRuleContext(StatementContext, 0) as StatementContext;
 	}
 }
 export class DropMaterializedViewContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public DROP(): TerminalNode {
-		return this.getToken(SqlBaseParser.DROP, 0);
+		return this.getToken(SqlParser.DROP, 0);
 	}
 	public MATERIALIZED(): TerminalNode {
-		return this.getToken(SqlBaseParser.MATERIALIZED, 0);
+		return this.getToken(SqlParser.MATERIALIZED, 0);
 	}
 	public VIEW(): TerminalNode {
-		return this.getToken(SqlBaseParser.VIEW, 0);
+		return this.getToken(SqlParser.VIEW, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 }
 export class UseContext extends StatementContext {
 	public _schema!: IdentifierContext;
 	public _catalog!: IdentifierContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public USE(): TerminalNode {
-		return this.getToken(SqlBaseParser.USE, 0);
+		return this.getToken(SqlParser.USE, 0);
 	}
 	public identifier_list(): IdentifierContext[] {
 		return this.getTypedRuleContexts(IdentifierContext) as IdentifierContext[];
@@ -11085,18 +11085,18 @@ export class UseContext extends StatementContext {
 }
 export class AddConstraintContext extends StatementContext {
 	public _tableName!: QualifiedNameContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ALTER(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALTER, 0);
+		return this.getToken(SqlParser.ALTER, 0);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public ADD(): TerminalNode {
-		return this.getToken(SqlBaseParser.ADD, 0);
+		return this.getToken(SqlParser.ADD, 0);
 	}
 	public constraintSpecification(): ConstraintSpecificationContext {
 		return this.getTypedRuleContext(ConstraintSpecificationContext, 0) as ConstraintSpecificationContext;
@@ -11105,22 +11105,22 @@ export class AddConstraintContext extends StatementContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 }
 export class DeallocateContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public DEALLOCATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.DEALLOCATE, 0);
+		return this.getToken(SqlParser.DEALLOCATE, 0);
 	}
 	public PREPARE(): TerminalNode {
-		return this.getToken(SqlBaseParser.PREPARE, 0);
+		return this.getToken(SqlParser.PREPARE, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
@@ -11129,21 +11129,21 @@ export class DeallocateContext extends StatementContext {
 export class RenameTableContext extends StatementContext {
 	public _from_!: QualifiedNameContext;
 	public _to!: QualifiedNameContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ALTER(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALTER, 0);
+		return this.getToken(SqlParser.ALTER, 0);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public RENAME(): TerminalNode {
-		return this.getToken(SqlBaseParser.RENAME, 0);
+		return this.getToken(SqlParser.RENAME, 0);
 	}
 	public TO(): TerminalNode {
-		return this.getToken(SqlBaseParser.TO, 0);
+		return this.getToken(SqlParser.TO, 0);
 	}
 	public qualifiedName_list(): QualifiedNameContext[] {
 		return this.getTypedRuleContexts(QualifiedNameContext) as QualifiedNameContext[];
@@ -11152,62 +11152,62 @@ export class RenameTableContext extends StatementContext {
 		return this.getTypedRuleContext(QualifiedNameContext, i) as QualifiedNameContext;
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 }
 export class CommitContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public COMMIT(): TerminalNode {
-		return this.getToken(SqlBaseParser.COMMIT, 0);
+		return this.getToken(SqlParser.COMMIT, 0);
 	}
 	public WORK(): TerminalNode {
-		return this.getToken(SqlBaseParser.WORK, 0);
+		return this.getToken(SqlParser.WORK, 0);
 	}
 }
 export class CreateRoleContext extends StatementContext {
 	public _name!: IdentifierContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CREATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CREATE, 0);
+		return this.getToken(SqlParser.CREATE, 0);
 	}
 	public ROLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROLE, 0);
+		return this.getToken(SqlParser.ROLE, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 	public WITH(): TerminalNode {
-		return this.getToken(SqlBaseParser.WITH, 0);
+		return this.getToken(SqlParser.WITH, 0);
 	}
 	public ADMIN(): TerminalNode {
-		return this.getToken(SqlBaseParser.ADMIN, 0);
+		return this.getToken(SqlParser.ADMIN, 0);
 	}
 	public grantor(): GrantorContext {
 		return this.getTypedRuleContext(GrantorContext, 0) as GrantorContext;
 	}
 }
 export class ShowCreateFunctionContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public CREATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CREATE, 0);
+		return this.getToken(SqlParser.CREATE, 0);
 	}
 	public FUNCTION(): TerminalNode {
-		return this.getToken(SqlBaseParser.FUNCTION, 0);
+		return this.getToken(SqlParser.FUNCTION, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
@@ -11219,21 +11219,21 @@ export class ShowCreateFunctionContext extends StatementContext {
 export class DropColumnContext extends StatementContext {
 	public _tableName!: QualifiedNameContext;
 	public _column!: QualifiedNameContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ALTER(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALTER, 0);
+		return this.getToken(SqlParser.ALTER, 0);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public DROP(): TerminalNode {
-		return this.getToken(SqlBaseParser.DROP, 0);
+		return this.getToken(SqlParser.DROP, 0);
 	}
 	public COLUMN(): TerminalNode {
-		return this.getToken(SqlBaseParser.COLUMN, 0);
+		return this.getToken(SqlParser.COLUMN, 0);
 	}
 	public qualifiedName_list(): QualifiedNameContext[] {
 		return this.getTypedRuleContexts(QualifiedNameContext) as QualifiedNameContext[];
@@ -11242,63 +11242,63 @@ export class DropColumnContext extends StatementContext {
 		return this.getTypedRuleContext(QualifiedNameContext, i) as QualifiedNameContext;
 	}
 	public IF_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.IF);
+	    	return this.getTokens(SqlParser.IF);
 	}
 	public IF(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, i);
+		return this.getToken(SqlParser.IF, i);
 	}
 	public EXISTS_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.EXISTS);
+	    	return this.getTokens(SqlParser.EXISTS);
 	}
 	public EXISTS(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, i);
+		return this.getToken(SqlParser.EXISTS, i);
 	}
 }
 export class DropViewContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public DROP(): TerminalNode {
-		return this.getToken(SqlBaseParser.DROP, 0);
+		return this.getToken(SqlParser.DROP, 0);
 	}
 	public VIEW(): TerminalNode {
-		return this.getToken(SqlBaseParser.VIEW, 0);
+		return this.getToken(SqlParser.VIEW, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 }
 export class ShowTablesContext extends StatementContext {
 	public _pattern!: StringContext;
 	public _escape!: StringContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public TABLES(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLES, 0);
+		return this.getToken(SqlParser.TABLES, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public LIKE(): TerminalNode {
-		return this.getToken(SqlBaseParser.LIKE, 0);
+		return this.getToken(SqlParser.LIKE, 0);
 	}
 	public FROM(): TerminalNode {
-		return this.getToken(SqlBaseParser.FROM, 0);
+		return this.getToken(SqlParser.FROM, 0);
 	}
 	public IN(): TerminalNode {
-		return this.getToken(SqlBaseParser.IN, 0);
+		return this.getToken(SqlParser.IN, 0);
 	}
 	public string__list(): StringContext[] {
 		return this.getTypedRuleContexts(StringContext) as StringContext[];
@@ -11307,24 +11307,24 @@ export class ShowTablesContext extends StatementContext {
 		return this.getTypedRuleContext(StringContext, i) as StringContext;
 	}
 	public ESCAPE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ESCAPE, 0);
+		return this.getToken(SqlParser.ESCAPE, 0);
 	}
 }
 export class ShowCatalogsContext extends StatementContext {
 	public _pattern!: StringContext;
 	public _escape!: StringContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public CATALOGS(): TerminalNode {
-		return this.getToken(SqlBaseParser.CATALOGS, 0);
+		return this.getToken(SqlParser.CATALOGS, 0);
 	}
 	public LIKE(): TerminalNode {
-		return this.getToken(SqlBaseParser.LIKE, 0);
+		return this.getToken(SqlParser.LIKE, 0);
 	}
 	public string__list(): StringContext[] {
 		return this.getTypedRuleContexts(StringContext) as StringContext[];
@@ -11333,55 +11333,55 @@ export class ShowCatalogsContext extends StatementContext {
 		return this.getTypedRuleContext(StringContext, i) as StringContext;
 	}
 	public ESCAPE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ESCAPE, 0);
+		return this.getToken(SqlParser.ESCAPE, 0);
 	}
 }
 export class ShowRolesContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public ROLES(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROLES, 0);
+		return this.getToken(SqlParser.ROLES, 0);
 	}
 	public CURRENT(): TerminalNode {
-		return this.getToken(SqlBaseParser.CURRENT, 0);
+		return this.getToken(SqlParser.CURRENT, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 	public FROM(): TerminalNode {
-		return this.getToken(SqlBaseParser.FROM, 0);
+		return this.getToken(SqlParser.FROM, 0);
 	}
 	public IN(): TerminalNode {
-		return this.getToken(SqlBaseParser.IN, 0);
+		return this.getToken(SqlParser.IN, 0);
 	}
 }
 export class RenameColumnContext extends StatementContext {
 	public _tableName!: QualifiedNameContext;
 	public _from_!: IdentifierContext;
 	public _to!: IdentifierContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ALTER(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALTER, 0);
+		return this.getToken(SqlParser.ALTER, 0);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public RENAME(): TerminalNode {
-		return this.getToken(SqlBaseParser.RENAME, 0);
+		return this.getToken(SqlParser.RENAME, 0);
 	}
 	public COLUMN(): TerminalNode {
-		return this.getToken(SqlBaseParser.COLUMN, 0);
+		return this.getToken(SqlParser.COLUMN, 0);
 	}
 	public TO(): TerminalNode {
-		return this.getToken(SqlBaseParser.TO, 0);
+		return this.getToken(SqlParser.TO, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
@@ -11393,31 +11393,31 @@ export class RenameColumnContext extends StatementContext {
 		return this.getTypedRuleContext(IdentifierContext, i) as IdentifierContext;
 	}
 	public IF_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.IF);
+	    	return this.getTokens(SqlParser.IF);
 	}
 	public IF(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, i);
+		return this.getToken(SqlParser.IF, i);
 	}
 	public EXISTS_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.EXISTS);
+	    	return this.getTokens(SqlParser.EXISTS);
 	}
 	public EXISTS(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, i);
+		return this.getToken(SqlParser.EXISTS, i);
 	}
 }
 export class RevokeRolesContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public REVOKE(): TerminalNode {
-		return this.getToken(SqlBaseParser.REVOKE, 0);
+		return this.getToken(SqlParser.REVOKE, 0);
 	}
 	public roles(): RolesContext {
 		return this.getTypedRuleContext(RolesContext, 0) as RolesContext;
 	}
 	public FROM(): TerminalNode {
-		return this.getToken(SqlBaseParser.FROM, 0);
+		return this.getToken(SqlParser.FROM, 0);
 	}
 	public principal_list(): PrincipalContext[] {
 		return this.getTypedRuleContexts(PrincipalContext) as PrincipalContext[];
@@ -11426,111 +11426,111 @@ export class RevokeRolesContext extends StatementContext {
 		return this.getTypedRuleContext(PrincipalContext, i) as PrincipalContext;
 	}
 	public ADMIN(): TerminalNode {
-		return this.getToken(SqlBaseParser.ADMIN, 0);
+		return this.getToken(SqlParser.ADMIN, 0);
 	}
 	public OPTION(): TerminalNode {
-		return this.getToken(SqlBaseParser.OPTION, 0);
+		return this.getToken(SqlParser.OPTION, 0);
 	}
 	public FOR(): TerminalNode {
-		return this.getToken(SqlBaseParser.FOR, 0);
+		return this.getToken(SqlParser.FOR, 0);
 	}
 	public GRANTED(): TerminalNode {
-		return this.getToken(SqlBaseParser.GRANTED, 0);
+		return this.getToken(SqlParser.GRANTED, 0);
 	}
 	public BY(): TerminalNode {
-		return this.getToken(SqlBaseParser.BY, 0);
+		return this.getToken(SqlParser.BY, 0);
 	}
 	public grantor(): GrantorContext {
 		return this.getTypedRuleContext(GrantorContext, 0) as GrantorContext;
 	}
 }
 export class ShowCreateTableContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public CREATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CREATE, 0);
+		return this.getToken(SqlParser.CREATE, 0);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 }
 export class ShowColumnsContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public COLUMNS(): TerminalNode {
-		return this.getToken(SqlBaseParser.COLUMNS, 0);
+		return this.getToken(SqlParser.COLUMNS, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public FROM(): TerminalNode {
-		return this.getToken(SqlBaseParser.FROM, 0);
+		return this.getToken(SqlParser.FROM, 0);
 	}
 	public IN(): TerminalNode {
-		return this.getToken(SqlBaseParser.IN, 0);
+		return this.getToken(SqlParser.IN, 0);
 	}
 	public DESCRIBE(): TerminalNode {
-		return this.getToken(SqlBaseParser.DESCRIBE, 0);
+		return this.getToken(SqlParser.DESCRIBE, 0);
 	}
 	public DESC(): TerminalNode {
-		return this.getToken(SqlBaseParser.DESC, 0);
+		return this.getToken(SqlParser.DESC, 0);
 	}
 }
 export class ShowRoleGrantsContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public ROLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROLE, 0);
+		return this.getToken(SqlParser.ROLE, 0);
 	}
 	public GRANTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.GRANTS, 0);
+		return this.getToken(SqlParser.GRANTS, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 	public FROM(): TerminalNode {
-		return this.getToken(SqlBaseParser.FROM, 0);
+		return this.getToken(SqlParser.FROM, 0);
 	}
 	public IN(): TerminalNode {
-		return this.getToken(SqlBaseParser.IN, 0);
+		return this.getToken(SqlParser.IN, 0);
 	}
 }
 export class AddColumnContext extends StatementContext {
 	public _tableName!: QualifiedNameContext;
 	public _column!: ColumnDefinitionContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ALTER(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALTER, 0);
+		return this.getToken(SqlParser.ALTER, 0);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public ADD(): TerminalNode {
-		return this.getToken(SqlBaseParser.ADD, 0);
+		return this.getToken(SqlParser.ADD, 0);
 	}
 	public COLUMN(): TerminalNode {
-		return this.getToken(SqlBaseParser.COLUMN, 0);
+		return this.getToken(SqlParser.COLUMN, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
@@ -11539,31 +11539,31 @@ export class AddColumnContext extends StatementContext {
 		return this.getTypedRuleContext(ColumnDefinitionContext, 0) as ColumnDefinitionContext;
 	}
 	public IF_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.IF);
+	    	return this.getTokens(SqlParser.IF);
 	}
 	public IF(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, i);
+		return this.getToken(SqlParser.IF, i);
 	}
 	public EXISTS_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.EXISTS);
+	    	return this.getTokens(SqlParser.EXISTS);
 	}
 	public EXISTS(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, i);
+		return this.getToken(SqlParser.EXISTS, i);
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 }
 export class ResetSessionContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public RESET(): TerminalNode {
-		return this.getToken(SqlBaseParser.RESET, 0);
+		return this.getToken(SqlParser.RESET, 0);
 	}
 	public SESSION(): TerminalNode {
-		return this.getToken(SqlBaseParser.SESSION, 0);
+		return this.getToken(SqlParser.SESSION, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
@@ -11572,21 +11572,21 @@ export class ResetSessionContext extends StatementContext {
 export class DropConstraintContext extends StatementContext {
 	public _tableName!: QualifiedNameContext;
 	public _name!: IdentifierContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ALTER(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALTER, 0);
+		return this.getToken(SqlParser.ALTER, 0);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public DROP(): TerminalNode {
-		return this.getToken(SqlBaseParser.DROP, 0);
+		return this.getToken(SqlParser.DROP, 0);
 	}
 	public CONSTRAINT(): TerminalNode {
-		return this.getToken(SqlBaseParser.CONSTRAINT, 0);
+		return this.getToken(SqlParser.CONSTRAINT, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
@@ -11595,28 +11595,28 @@ export class DropConstraintContext extends StatementContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 	public IF_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.IF);
+	    	return this.getTokens(SqlParser.IF);
 	}
 	public IF(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, i);
+		return this.getToken(SqlParser.IF, i);
 	}
 	public EXISTS_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.EXISTS);
+	    	return this.getTokens(SqlParser.EXISTS);
 	}
 	public EXISTS(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, i);
+		return this.getToken(SqlParser.EXISTS, i);
 	}
 }
 export class InsertIntoContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public INSERT(): TerminalNode {
-		return this.getToken(SqlBaseParser.INSERT, 0);
+		return this.getToken(SqlParser.INSERT, 0);
 	}
 	public INTO(): TerminalNode {
-		return this.getToken(SqlBaseParser.INTO, 0);
+		return this.getToken(SqlParser.INTO, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
@@ -11631,18 +11631,18 @@ export class InsertIntoContext extends StatementContext {
 export class ShowSessionContext extends StatementContext {
 	public _pattern!: StringContext;
 	public _escape!: StringContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public SESSION(): TerminalNode {
-		return this.getToken(SqlBaseParser.SESSION, 0);
+		return this.getToken(SqlParser.SESSION, 0);
 	}
 	public LIKE(): TerminalNode {
-		return this.getToken(SqlBaseParser.LIKE, 0);
+		return this.getToken(SqlParser.LIKE, 0);
 	}
 	public string__list(): StringContext[] {
 		return this.getTypedRuleContexts(StringContext) as StringContext[];
@@ -11651,52 +11651,52 @@ export class ShowSessionContext extends StatementContext {
 		return this.getTypedRuleContext(StringContext, i) as StringContext;
 	}
 	public ESCAPE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ESCAPE, 0);
+		return this.getToken(SqlParser.ESCAPE, 0);
 	}
 }
 export class CreateSchemaContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CREATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CREATE, 0);
+		return this.getToken(SqlParser.CREATE, 0);
 	}
 	public SCHEMA(): TerminalNode {
-		return this.getToken(SqlBaseParser.SCHEMA, 0);
+		return this.getToken(SqlParser.SCHEMA, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 	public WITH(): TerminalNode {
-		return this.getToken(SqlBaseParser.WITH, 0);
+		return this.getToken(SqlParser.WITH, 0);
 	}
 	public properties(): PropertiesContext {
 		return this.getTypedRuleContext(PropertiesContext, 0) as PropertiesContext;
 	}
 }
 export class ExecuteContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public EXECUTE(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXECUTE, 0);
+		return this.getToken(SqlParser.EXECUTE, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 	public USING(): TerminalNode {
-		return this.getToken(SqlBaseParser.USING, 0);
+		return this.getToken(SqlParser.USING, 0);
 	}
 	public expression_list(): ExpressionContext[] {
 		return this.getTypedRuleContexts(ExpressionContext) as ExpressionContext[];
@@ -11706,24 +11706,24 @@ export class ExecuteContext extends StatementContext {
 	}
 }
 export class RenameSchemaContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ALTER(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALTER, 0);
+		return this.getToken(SqlParser.ALTER, 0);
 	}
 	public SCHEMA(): TerminalNode {
-		return this.getToken(SqlBaseParser.SCHEMA, 0);
+		return this.getToken(SqlParser.SCHEMA, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public RENAME(): TerminalNode {
-		return this.getToken(SqlBaseParser.RENAME, 0);
+		return this.getToken(SqlParser.RENAME, 0);
 	}
 	public TO(): TerminalNode {
-		return this.getToken(SqlBaseParser.TO, 0);
+		return this.getToken(SqlParser.TO, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
@@ -11731,33 +11731,33 @@ export class RenameSchemaContext extends StatementContext {
 }
 export class DropRoleContext extends StatementContext {
 	public _name!: IdentifierContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public DROP(): TerminalNode {
-		return this.getToken(SqlBaseParser.DROP, 0);
+		return this.getToken(SqlParser.DROP, 0);
 	}
 	public ROLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROLE, 0);
+		return this.getToken(SqlParser.ROLE, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 }
 export class AnalyzeContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ANALYZE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ANALYZE, 0);
+		return this.getToken(SqlParser.ANALYZE, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public WITH(): TerminalNode {
-		return this.getToken(SqlBaseParser.WITH, 0);
+		return this.getToken(SqlParser.WITH, 0);
 	}
 	public properties(): PropertiesContext {
 		return this.getTypedRuleContext(PropertiesContext, 0) as PropertiesContext;
@@ -11765,21 +11765,21 @@ export class AnalyzeContext extends StatementContext {
 }
 export class SetRoleContext extends StatementContext {
 	public _role!: IdentifierContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SET(): TerminalNode {
-		return this.getToken(SqlBaseParser.SET, 0);
+		return this.getToken(SqlParser.SET, 0);
 	}
 	public ROLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROLE, 0);
+		return this.getToken(SqlParser.ROLE, 0);
 	}
 	public ALL(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALL, 0);
+		return this.getToken(SqlParser.ALL, 0);
 	}
 	public NONE(): TerminalNode {
-		return this.getToken(SqlBaseParser.NONE, 0);
+		return this.getToken(SqlParser.NONE, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
@@ -11788,18 +11788,18 @@ export class SetRoleContext extends StatementContext {
 export class CreateFunctionContext extends StatementContext {
 	public _functionName!: QualifiedNameContext;
 	public _returnType!: TypeContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CREATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CREATE, 0);
+		return this.getToken(SqlParser.CREATE, 0);
 	}
 	public FUNCTION(): TerminalNode {
-		return this.getToken(SqlBaseParser.FUNCTION, 0);
+		return this.getToken(SqlParser.FUNCTION, 0);
 	}
 	public RETURNS(): TerminalNode {
-		return this.getToken(SqlBaseParser.RETURNS, 0);
+		return this.getToken(SqlParser.RETURNS, 0);
 	}
 	public routineCharacteristics(): RoutineCharacteristicsContext {
 		return this.getTypedRuleContext(RoutineCharacteristicsContext, 0) as RoutineCharacteristicsContext;
@@ -11814,13 +11814,13 @@ export class CreateFunctionContext extends StatementContext {
 		return this.getTypedRuleContext(TypeContext, 0) as TypeContext;
 	}
 	public OR(): TerminalNode {
-		return this.getToken(SqlBaseParser.OR, 0);
+		return this.getToken(SqlParser.OR, 0);
 	}
 	public REPLACE(): TerminalNode {
-		return this.getToken(SqlBaseParser.REPLACE, 0);
+		return this.getToken(SqlParser.REPLACE, 0);
 	}
 	public TEMPORARY(): TerminalNode {
-		return this.getToken(SqlBaseParser.TEMPORARY, 0);
+		return this.getToken(SqlParser.TEMPORARY, 0);
 	}
 	public sqlParameterDeclaration_list(): SqlParameterDeclarationContext[] {
 		return this.getTypedRuleContexts(SqlParameterDeclarationContext) as SqlParameterDeclarationContext[];
@@ -11829,88 +11829,88 @@ export class CreateFunctionContext extends StatementContext {
 		return this.getTypedRuleContext(SqlParameterDeclarationContext, i) as SqlParameterDeclarationContext;
 	}
 	public COMMENT(): TerminalNode {
-		return this.getToken(SqlBaseParser.COMMENT, 0);
+		return this.getToken(SqlParser.COMMENT, 0);
 	}
 	public string_(): StringContext {
 		return this.getTypedRuleContext(StringContext, 0) as StringContext;
 	}
 }
 export class ShowGrantsContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public GRANTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.GRANTS, 0);
+		return this.getToken(SqlParser.GRANTS, 0);
 	}
 	public ON(): TerminalNode {
-		return this.getToken(SqlBaseParser.ON, 0);
+		return this.getToken(SqlParser.ON, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 }
 export class DropSchemaContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public DROP(): TerminalNode {
-		return this.getToken(SqlBaseParser.DROP, 0);
+		return this.getToken(SqlParser.DROP, 0);
 	}
 	public SCHEMA(): TerminalNode {
-		return this.getToken(SqlBaseParser.SCHEMA, 0);
+		return this.getToken(SqlParser.SCHEMA, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 	public CASCADE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CASCADE, 0);
+		return this.getToken(SqlParser.CASCADE, 0);
 	}
 	public RESTRICT(): TerminalNode {
-		return this.getToken(SqlBaseParser.RESTRICT, 0);
+		return this.getToken(SqlParser.RESTRICT, 0);
 	}
 }
 export class ShowCreateViewContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public CREATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CREATE, 0);
+		return this.getToken(SqlParser.CREATE, 0);
 	}
 	public VIEW(): TerminalNode {
-		return this.getToken(SqlBaseParser.VIEW, 0);
+		return this.getToken(SqlParser.VIEW, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 }
 export class CreateTableContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CREATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CREATE, 0);
+		return this.getToken(SqlParser.CREATE, 0);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
@@ -11922,37 +11922,37 @@ export class CreateTableContext extends StatementContext {
 		return this.getTypedRuleContext(TableElementContext, i) as TableElementContext;
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 	public COMMENT(): TerminalNode {
-		return this.getToken(SqlBaseParser.COMMENT, 0);
+		return this.getToken(SqlParser.COMMENT, 0);
 	}
 	public string_(): StringContext {
 		return this.getTypedRuleContext(StringContext, 0) as StringContext;
 	}
 	public WITH(): TerminalNode {
-		return this.getToken(SqlBaseParser.WITH, 0);
+		return this.getToken(SqlParser.WITH, 0);
 	}
 	public properties(): PropertiesContext {
 		return this.getTypedRuleContext(PropertiesContext, 0) as PropertiesContext;
 	}
 }
 export class StartTransactionContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public START(): TerminalNode {
-		return this.getToken(SqlBaseParser.START, 0);
+		return this.getToken(SqlParser.START, 0);
 	}
 	public TRANSACTION(): TerminalNode {
-		return this.getToken(SqlBaseParser.TRANSACTION, 0);
+		return this.getToken(SqlParser.TRANSACTION, 0);
 	}
 	public transactionMode_list(): TransactionModeContext[] {
 		return this.getTypedRuleContexts(TransactionModeContext) as TransactionModeContext[];
@@ -11962,117 +11962,117 @@ export class StartTransactionContext extends StatementContext {
 	}
 }
 export class CreateTableAsSelectContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CREATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CREATE, 0);
+		return this.getToken(SqlParser.CREATE, 0);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public AS(): TerminalNode {
-		return this.getToken(SqlBaseParser.AS, 0);
+		return this.getToken(SqlParser.AS, 0);
 	}
 	public query(): QueryContext {
 		return this.getTypedRuleContext(QueryContext, 0) as QueryContext;
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 	public columnAliases(): ColumnAliasesContext {
 		return this.getTypedRuleContext(ColumnAliasesContext, 0) as ColumnAliasesContext;
 	}
 	public COMMENT(): TerminalNode {
-		return this.getToken(SqlBaseParser.COMMENT, 0);
+		return this.getToken(SqlParser.COMMENT, 0);
 	}
 	public string_(): StringContext {
 		return this.getTypedRuleContext(StringContext, 0) as StringContext;
 	}
 	public WITH_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.WITH);
+	    	return this.getTokens(SqlParser.WITH);
 	}
 	public WITH(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.WITH, i);
+		return this.getToken(SqlParser.WITH, i);
 	}
 	public properties(): PropertiesContext {
 		return this.getTypedRuleContext(PropertiesContext, 0) as PropertiesContext;
 	}
 	public DATA(): TerminalNode {
-		return this.getToken(SqlBaseParser.DATA, 0);
+		return this.getToken(SqlParser.DATA, 0);
 	}
 	public NO(): TerminalNode {
-		return this.getToken(SqlBaseParser.NO, 0);
+		return this.getToken(SqlParser.NO, 0);
 	}
 }
 export class ShowStatsContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public STATS(): TerminalNode {
-		return this.getToken(SqlBaseParser.STATS, 0);
+		return this.getToken(SqlParser.STATS, 0);
 	}
 	public FOR(): TerminalNode {
-		return this.getToken(SqlBaseParser.FOR, 0);
+		return this.getToken(SqlParser.FOR, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 }
 export class ShowCreateSchemaContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public CREATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CREATE, 0);
+		return this.getToken(SqlParser.CREATE, 0);
 	}
 	public SCHEMA(): TerminalNode {
-		return this.getToken(SqlBaseParser.SCHEMA, 0);
+		return this.getToken(SqlParser.SCHEMA, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 }
 export class DropFunctionContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public DROP(): TerminalNode {
-		return this.getToken(SqlBaseParser.DROP, 0);
+		return this.getToken(SqlParser.DROP, 0);
 	}
 	public FUNCTION(): TerminalNode {
-		return this.getToken(SqlBaseParser.FUNCTION, 0);
+		return this.getToken(SqlParser.FUNCTION, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public TEMPORARY(): TerminalNode {
-		return this.getToken(SqlBaseParser.TEMPORARY, 0);
+		return this.getToken(SqlParser.TEMPORARY, 0);
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 	public types(): TypesContext {
 		return this.getTypedRuleContext(TypesContext, 0) as TypesContext;
@@ -12080,21 +12080,21 @@ export class DropFunctionContext extends StatementContext {
 }
 export class RevokeContext extends StatementContext {
 	public _grantee!: PrincipalContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public REVOKE(): TerminalNode {
-		return this.getToken(SqlBaseParser.REVOKE, 0);
+		return this.getToken(SqlParser.REVOKE, 0);
 	}
 	public ON(): TerminalNode {
-		return this.getToken(SqlBaseParser.ON, 0);
+		return this.getToken(SqlParser.ON, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public FROM(): TerminalNode {
-		return this.getToken(SqlBaseParser.FROM, 0);
+		return this.getToken(SqlParser.FROM, 0);
 	}
 	public principal(): PrincipalContext {
 		return this.getTypedRuleContext(PrincipalContext, 0) as PrincipalContext;
@@ -12106,38 +12106,38 @@ export class RevokeContext extends StatementContext {
 		return this.getTypedRuleContext(PrivilegeContext, i) as PrivilegeContext;
 	}
 	public ALL(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALL, 0);
+		return this.getToken(SqlParser.ALL, 0);
 	}
 	public PRIVILEGES(): TerminalNode {
-		return this.getToken(SqlBaseParser.PRIVILEGES, 0);
+		return this.getToken(SqlParser.PRIVILEGES, 0);
 	}
 	public GRANT(): TerminalNode {
-		return this.getToken(SqlBaseParser.GRANT, 0);
+		return this.getToken(SqlParser.GRANT, 0);
 	}
 	public OPTION(): TerminalNode {
-		return this.getToken(SqlBaseParser.OPTION, 0);
+		return this.getToken(SqlParser.OPTION, 0);
 	}
 	public FOR(): TerminalNode {
-		return this.getToken(SqlBaseParser.FOR, 0);
+		return this.getToken(SqlParser.FOR, 0);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 }
 export class UpdateContext extends StatementContext {
 	public _where!: BooleanExpressionContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public UPDATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.UPDATE, 0);
+		return this.getToken(SqlParser.UPDATE, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public SET(): TerminalNode {
-		return this.getToken(SqlBaseParser.SET, 0);
+		return this.getToken(SqlParser.SET, 0);
 	}
 	public updateAssignment_list(): UpdateAssignmentContext[] {
 		return this.getTypedRuleContexts(UpdateAssignmentContext) as UpdateAssignmentContext[];
@@ -12146,28 +12146,28 @@ export class UpdateContext extends StatementContext {
 		return this.getTypedRuleContext(UpdateAssignmentContext, i) as UpdateAssignmentContext;
 	}
 	public WHERE(): TerminalNode {
-		return this.getToken(SqlBaseParser.WHERE, 0);
+		return this.getToken(SqlParser.WHERE, 0);
 	}
 	public booleanExpression(): BooleanExpressionContext {
 		return this.getTypedRuleContext(BooleanExpressionContext, 0) as BooleanExpressionContext;
 	}
 }
 export class CreateTypeContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CREATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CREATE, 0);
+		return this.getToken(SqlParser.CREATE, 0);
 	}
 	public TYPE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TYPE, 0);
+		return this.getToken(SqlParser.TYPE, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public AS(): TerminalNode {
-		return this.getToken(SqlBaseParser.AS, 0);
+		return this.getToken(SqlParser.AS, 0);
 	}
 	public sqlParameterDeclaration_list(): SqlParameterDeclarationContext[] {
 		return this.getTypedRuleContexts(SqlParameterDeclarationContext) as SqlParameterDeclarationContext[];
@@ -12180,61 +12180,61 @@ export class CreateTypeContext extends StatementContext {
 	}
 }
 export class DeleteContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public DELETE(): TerminalNode {
-		return this.getToken(SqlBaseParser.DELETE, 0);
+		return this.getToken(SqlParser.DELETE, 0);
 	}
 	public FROM(): TerminalNode {
-		return this.getToken(SqlBaseParser.FROM, 0);
+		return this.getToken(SqlParser.FROM, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public WHERE(): TerminalNode {
-		return this.getToken(SqlBaseParser.WHERE, 0);
+		return this.getToken(SqlParser.WHERE, 0);
 	}
 	public booleanExpression(): BooleanExpressionContext {
 		return this.getTypedRuleContext(BooleanExpressionContext, 0) as BooleanExpressionContext;
 	}
 }
 export class DescribeInputContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public DESCRIBE(): TerminalNode {
-		return this.getToken(SqlBaseParser.DESCRIBE, 0);
+		return this.getToken(SqlParser.DESCRIBE, 0);
 	}
 	public INPUT(): TerminalNode {
-		return this.getToken(SqlBaseParser.INPUT, 0);
+		return this.getToken(SqlParser.INPUT, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 }
 export class ShowStatsForQueryContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public STATS(): TerminalNode {
-		return this.getToken(SqlBaseParser.STATS, 0);
+		return this.getToken(SqlParser.STATS, 0);
 	}
 	public FOR(): TerminalNode {
-		return this.getToken(SqlBaseParser.FOR, 0);
+		return this.getToken(SqlParser.FOR, 0);
 	}
 	public querySpecification(): QuerySpecificationContext {
 		return this.getTypedRuleContext(QuerySpecificationContext, 0) as QuerySpecificationContext;
 	}
 }
 export class StatementDefaultContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -12243,15 +12243,15 @@ export class StatementDefaultContext extends StatementContext {
 	}
 }
 export class TruncateTableContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public TRUNCATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TRUNCATE, 0);
+		return this.getToken(SqlParser.TRUNCATE, 0);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
@@ -12260,27 +12260,27 @@ export class TruncateTableContext extends StatementContext {
 export class AlterColumnSetNotNullContext extends StatementContext {
 	public _tableName!: QualifiedNameContext;
 	public _column!: IdentifierContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ALTER_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.ALTER);
+	    	return this.getTokens(SqlParser.ALTER);
 	}
 	public ALTER(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.ALTER, i);
+		return this.getToken(SqlParser.ALTER, i);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public SET(): TerminalNode {
-		return this.getToken(SqlBaseParser.SET, 0);
+		return this.getToken(SqlParser.SET, 0);
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 	public NULL(): TerminalNode {
-		return this.getToken(SqlBaseParser.NULL, 0);
+		return this.getToken(SqlParser.NULL, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
@@ -12289,70 +12289,70 @@ export class AlterColumnSetNotNullContext extends StatementContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 	public COLUMN(): TerminalNode {
-		return this.getToken(SqlBaseParser.COLUMN, 0);
+		return this.getToken(SqlParser.COLUMN, 0);
 	}
 }
 export class CreateMaterializedViewContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CREATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CREATE, 0);
+		return this.getToken(SqlParser.CREATE, 0);
 	}
 	public MATERIALIZED(): TerminalNode {
-		return this.getToken(SqlBaseParser.MATERIALIZED, 0);
+		return this.getToken(SqlParser.MATERIALIZED, 0);
 	}
 	public VIEW(): TerminalNode {
-		return this.getToken(SqlBaseParser.VIEW, 0);
+		return this.getToken(SqlParser.VIEW, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public AS(): TerminalNode {
-		return this.getToken(SqlBaseParser.AS, 0);
+		return this.getToken(SqlParser.AS, 0);
 	}
 	public query(): QueryContext {
 		return this.getTypedRuleContext(QueryContext, 0) as QueryContext;
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 	public COMMENT(): TerminalNode {
-		return this.getToken(SqlBaseParser.COMMENT, 0);
+		return this.getToken(SqlParser.COMMENT, 0);
 	}
 	public string_(): StringContext {
 		return this.getTypedRuleContext(StringContext, 0) as StringContext;
 	}
 	public WITH(): TerminalNode {
-		return this.getToken(SqlBaseParser.WITH, 0);
+		return this.getToken(SqlParser.WITH, 0);
 	}
 	public properties(): PropertiesContext {
 		return this.getTypedRuleContext(PropertiesContext, 0) as PropertiesContext;
 	}
 }
 export class AlterFunctionContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ALTER(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALTER, 0);
+		return this.getToken(SqlParser.ALTER, 0);
 	}
 	public FUNCTION(): TerminalNode {
-		return this.getToken(SqlBaseParser.FUNCTION, 0);
+		return this.getToken(SqlParser.FUNCTION, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
@@ -12365,86 +12365,86 @@ export class AlterFunctionContext extends StatementContext {
 	}
 }
 export class SetSessionContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SET(): TerminalNode {
-		return this.getToken(SqlBaseParser.SET, 0);
+		return this.getToken(SqlParser.SET, 0);
 	}
 	public SESSION(): TerminalNode {
-		return this.getToken(SqlBaseParser.SESSION, 0);
+		return this.getToken(SqlParser.SESSION, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public EQ(): TerminalNode {
-		return this.getToken(SqlBaseParser.EQ, 0);
+		return this.getToken(SqlParser.EQ, 0);
 	}
 	public expression(): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
 }
 export class CreateViewContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CREATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CREATE, 0);
+		return this.getToken(SqlParser.CREATE, 0);
 	}
 	public VIEW(): TerminalNode {
-		return this.getToken(SqlBaseParser.VIEW, 0);
+		return this.getToken(SqlParser.VIEW, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public AS(): TerminalNode {
-		return this.getToken(SqlBaseParser.AS, 0);
+		return this.getToken(SqlParser.AS, 0);
 	}
 	public query(): QueryContext {
 		return this.getTypedRuleContext(QueryContext, 0) as QueryContext;
 	}
 	public OR(): TerminalNode {
-		return this.getToken(SqlBaseParser.OR, 0);
+		return this.getToken(SqlParser.OR, 0);
 	}
 	public REPLACE(): TerminalNode {
-		return this.getToken(SqlBaseParser.REPLACE, 0);
+		return this.getToken(SqlParser.REPLACE, 0);
 	}
 	public SECURITY(): TerminalNode {
-		return this.getToken(SqlBaseParser.SECURITY, 0);
+		return this.getToken(SqlParser.SECURITY, 0);
 	}
 	public DEFINER(): TerminalNode {
-		return this.getToken(SqlBaseParser.DEFINER, 0);
+		return this.getToken(SqlParser.DEFINER, 0);
 	}
 	public INVOKER(): TerminalNode {
-		return this.getToken(SqlBaseParser.INVOKER, 0);
+		return this.getToken(SqlParser.INVOKER, 0);
 	}
 }
 export class ShowSchemasContext extends StatementContext {
 	public _pattern!: StringContext;
 	public _escape!: StringContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public SCHEMAS(): TerminalNode {
-		return this.getToken(SqlBaseParser.SCHEMAS, 0);
+		return this.getToken(SqlParser.SCHEMAS, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 	public LIKE(): TerminalNode {
-		return this.getToken(SqlBaseParser.LIKE, 0);
+		return this.getToken(SqlParser.LIKE, 0);
 	}
 	public FROM(): TerminalNode {
-		return this.getToken(SqlBaseParser.FROM, 0);
+		return this.getToken(SqlParser.FROM, 0);
 	}
 	public IN(): TerminalNode {
-		return this.getToken(SqlBaseParser.IN, 0);
+		return this.getToken(SqlParser.IN, 0);
 	}
 	public string__list(): StringContext[] {
 		return this.getTypedRuleContexts(StringContext) as StringContext[];
@@ -12453,60 +12453,60 @@ export class ShowSchemasContext extends StatementContext {
 		return this.getTypedRuleContext(StringContext, i) as StringContext;
 	}
 	public ESCAPE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ESCAPE, 0);
+		return this.getToken(SqlParser.ESCAPE, 0);
 	}
 }
 export class DropTableContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public DROP(): TerminalNode {
-		return this.getToken(SqlBaseParser.DROP, 0);
+		return this.getToken(SqlParser.DROP, 0);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 }
 export class RollbackContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ROLLBACK(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROLLBACK, 0);
+		return this.getToken(SqlParser.ROLLBACK, 0);
 	}
 	public WORK(): TerminalNode {
-		return this.getToken(SqlBaseParser.WORK, 0);
+		return this.getToken(SqlParser.WORK, 0);
 	}
 }
 export class RenameViewContext extends StatementContext {
 	public _from_!: QualifiedNameContext;
 	public _to!: QualifiedNameContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ALTER(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALTER, 0);
+		return this.getToken(SqlParser.ALTER, 0);
 	}
 	public VIEW(): TerminalNode {
-		return this.getToken(SqlBaseParser.VIEW, 0);
+		return this.getToken(SqlParser.VIEW, 0);
 	}
 	public RENAME(): TerminalNode {
-		return this.getToken(SqlBaseParser.RENAME, 0);
+		return this.getToken(SqlParser.RENAME, 0);
 	}
 	public TO(): TerminalNode {
-		return this.getToken(SqlBaseParser.TO, 0);
+		return this.getToken(SqlParser.TO, 0);
 	}
 	public qualifiedName_list(): QualifiedNameContext[] {
 		return this.getTypedRuleContexts(QualifiedNameContext) as QualifiedNameContext[];
@@ -12515,36 +12515,36 @@ export class RenameViewContext extends StatementContext {
 		return this.getTypedRuleContext(QualifiedNameContext, i) as QualifiedNameContext;
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 }
 export class AlterColumnDropNotNullContext extends StatementContext {
 	public _tableName!: QualifiedNameContext;
 	public _column!: IdentifierContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ALTER_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.ALTER);
+	    	return this.getTokens(SqlParser.ALTER);
 	}
 	public ALTER(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.ALTER, i);
+		return this.getToken(SqlParser.ALTER, i);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public DROP(): TerminalNode {
-		return this.getToken(SqlBaseParser.DROP, 0);
+		return this.getToken(SqlParser.DROP, 0);
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 	public NULL(): TerminalNode {
-		return this.getToken(SqlBaseParser.NULL, 0);
+		return this.getToken(SqlParser.NULL, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
@@ -12553,28 +12553,28 @@ export class AlterColumnDropNotNullContext extends StatementContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 	public COLUMN(): TerminalNode {
-		return this.getToken(SqlBaseParser.COLUMN, 0);
+		return this.getToken(SqlParser.COLUMN, 0);
 	}
 }
 export class GrantRolesContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public GRANT(): TerminalNode {
-		return this.getToken(SqlBaseParser.GRANT, 0);
+		return this.getToken(SqlParser.GRANT, 0);
 	}
 	public roles(): RolesContext {
 		return this.getTypedRuleContext(RolesContext, 0) as RolesContext;
 	}
 	public TO(): TerminalNode {
-		return this.getToken(SqlBaseParser.TO, 0);
+		return this.getToken(SqlParser.TO, 0);
 	}
 	public principal_list(): PrincipalContext[] {
 		return this.getTypedRuleContexts(PrincipalContext) as PrincipalContext[];
@@ -12583,31 +12583,31 @@ export class GrantRolesContext extends StatementContext {
 		return this.getTypedRuleContext(PrincipalContext, i) as PrincipalContext;
 	}
 	public WITH(): TerminalNode {
-		return this.getToken(SqlBaseParser.WITH, 0);
+		return this.getToken(SqlParser.WITH, 0);
 	}
 	public ADMIN(): TerminalNode {
-		return this.getToken(SqlBaseParser.ADMIN, 0);
+		return this.getToken(SqlParser.ADMIN, 0);
 	}
 	public OPTION(): TerminalNode {
-		return this.getToken(SqlBaseParser.OPTION, 0);
+		return this.getToken(SqlParser.OPTION, 0);
 	}
 	public GRANTED(): TerminalNode {
-		return this.getToken(SqlBaseParser.GRANTED, 0);
+		return this.getToken(SqlParser.GRANTED, 0);
 	}
 	public BY(): TerminalNode {
-		return this.getToken(SqlBaseParser.BY, 0);
+		return this.getToken(SqlParser.BY, 0);
 	}
 	public grantor(): GrantorContext {
 		return this.getTypedRuleContext(GrantorContext, 0) as GrantorContext;
 	}
 }
 export class CallContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CALL(): TerminalNode {
-		return this.getToken(SqlBaseParser.CALL, 0);
+		return this.getToken(SqlParser.CALL, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
@@ -12620,45 +12620,45 @@ export class CallContext extends StatementContext {
 	}
 }
 export class RefreshMaterializedViewContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public REFRESH(): TerminalNode {
-		return this.getToken(SqlBaseParser.REFRESH, 0);
+		return this.getToken(SqlParser.REFRESH, 0);
 	}
 	public MATERIALIZED(): TerminalNode {
-		return this.getToken(SqlBaseParser.MATERIALIZED, 0);
+		return this.getToken(SqlParser.MATERIALIZED, 0);
 	}
 	public VIEW(): TerminalNode {
-		return this.getToken(SqlBaseParser.VIEW, 0);
+		return this.getToken(SqlParser.VIEW, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public WHERE(): TerminalNode {
-		return this.getToken(SqlBaseParser.WHERE, 0);
+		return this.getToken(SqlParser.WHERE, 0);
 	}
 	public booleanExpression(): BooleanExpressionContext {
 		return this.getTypedRuleContext(BooleanExpressionContext, 0) as BooleanExpressionContext;
 	}
 }
 export class ShowCreateMaterializedViewContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public CREATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CREATE, 0);
+		return this.getToken(SqlParser.CREATE, 0);
 	}
 	public MATERIALIZED(): TerminalNode {
-		return this.getToken(SqlBaseParser.MATERIALIZED, 0);
+		return this.getToken(SqlParser.MATERIALIZED, 0);
 	}
 	public VIEW(): TerminalNode {
-		return this.getToken(SqlBaseParser.VIEW, 0);
+		return this.getToken(SqlParser.VIEW, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
@@ -12667,18 +12667,18 @@ export class ShowCreateMaterializedViewContext extends StatementContext {
 export class ShowFunctionsContext extends StatementContext {
 	public _pattern!: StringContext;
 	public _escape!: StringContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public FUNCTIONS(): TerminalNode {
-		return this.getToken(SqlBaseParser.FUNCTIONS, 0);
+		return this.getToken(SqlParser.FUNCTIONS, 0);
 	}
 	public LIKE(): TerminalNode {
-		return this.getToken(SqlBaseParser.LIKE, 0);
+		return this.getToken(SqlParser.LIKE, 0);
 	}
 	public string__list(): StringContext[] {
 		return this.getTypedRuleContexts(StringContext) as StringContext[];
@@ -12687,19 +12687,19 @@ export class ShowFunctionsContext extends StatementContext {
 		return this.getTypedRuleContext(StringContext, i) as StringContext;
 	}
 	public ESCAPE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ESCAPE, 0);
+		return this.getToken(SqlParser.ESCAPE, 0);
 	}
 }
 export class DescribeOutputContext extends StatementContext {
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public DESCRIBE(): TerminalNode {
-		return this.getToken(SqlBaseParser.DESCRIBE, 0);
+		return this.getToken(SqlParser.DESCRIBE, 0);
 	}
 	public OUTPUT(): TerminalNode {
-		return this.getToken(SqlBaseParser.OUTPUT, 0);
+		return this.getToken(SqlParser.OUTPUT, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
@@ -12707,24 +12707,24 @@ export class DescribeOutputContext extends StatementContext {
 }
 export class GrantContext extends StatementContext {
 	public _grantee!: PrincipalContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public GRANT_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.GRANT);
+	    	return this.getTokens(SqlParser.GRANT);
 	}
 	public GRANT(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.GRANT, i);
+		return this.getToken(SqlParser.GRANT, i);
 	}
 	public ON(): TerminalNode {
-		return this.getToken(SqlBaseParser.ON, 0);
+		return this.getToken(SqlParser.ON, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public TO(): TerminalNode {
-		return this.getToken(SqlBaseParser.TO, 0);
+		return this.getToken(SqlParser.TO, 0);
 	}
 	public principal(): PrincipalContext {
 		return this.getTypedRuleContext(PrincipalContext, 0) as PrincipalContext;
@@ -12736,38 +12736,38 @@ export class GrantContext extends StatementContext {
 		return this.getTypedRuleContext(PrivilegeContext, i) as PrivilegeContext;
 	}
 	public ALL(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALL, 0);
+		return this.getToken(SqlParser.ALL, 0);
 	}
 	public PRIVILEGES(): TerminalNode {
-		return this.getToken(SqlBaseParser.PRIVILEGES, 0);
+		return this.getToken(SqlParser.PRIVILEGES, 0);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public WITH(): TerminalNode {
-		return this.getToken(SqlBaseParser.WITH, 0);
+		return this.getToken(SqlParser.WITH, 0);
 	}
 	public OPTION(): TerminalNode {
-		return this.getToken(SqlBaseParser.OPTION, 0);
+		return this.getToken(SqlParser.OPTION, 0);
 	}
 }
 export class SetTablePropertiesContext extends StatementContext {
 	public _tableName!: QualifiedNameContext;
-	constructor(parser: SqlBaseParser, ctx: StatementContext) {
+	constructor(parser: SqlParser, ctx: StatementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ALTER(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALTER, 0);
+		return this.getToken(SqlParser.ALTER, 0);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public SET(): TerminalNode {
-		return this.getToken(SqlBaseParser.SET, 0);
+		return this.getToken(SqlParser.SET, 0);
 	}
 	public PROPERTIES(): TerminalNode {
-		return this.getToken(SqlBaseParser.PROPERTIES, 0);
+		return this.getToken(SqlParser.PROPERTIES, 0);
 	}
 	public properties(): PropertiesContext {
 		return this.getTypedRuleContext(PropertiesContext, 0) as PropertiesContext;
@@ -12776,16 +12776,16 @@ export class SetTablePropertiesContext extends StatementContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 }
 
 
 export class QueryContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -12796,18 +12796,18 @@ export class QueryContext extends ParserRuleContext {
 		return this.getTypedRuleContext(WithContext, 0) as WithContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_query;
+    	return SqlParser.RULE_query;
 	}
 }
 
 
 export class WithContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public WITH(): TerminalNode {
-		return this.getToken(SqlBaseParser.WITH, 0);
+		return this.getToken(SqlParser.WITH, 0);
 	}
 	public namedQuery_list(): NamedQueryContext[] {
 		return this.getTypedRuleContexts(NamedQueryContext) as NamedQueryContext[];
@@ -12816,16 +12816,16 @@ export class WithContext extends ParserRuleContext {
 		return this.getTypedRuleContext(NamedQueryContext, i) as NamedQueryContext;
 	}
 	public RECURSIVE(): TerminalNode {
-		return this.getToken(SqlBaseParser.RECURSIVE, 0);
+		return this.getToken(SqlParser.RECURSIVE, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_with;
+    	return SqlParser.RULE_with;
 	}
 }
 
 
 export class TableElementContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -12839,13 +12839,13 @@ export class TableElementContext extends ParserRuleContext {
 		return this.getTypedRuleContext(LikeClauseContext, 0) as LikeClauseContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_tableElement;
+    	return SqlParser.RULE_tableElement;
 	}
 }
 
 
 export class ColumnDefinitionContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -12856,58 +12856,58 @@ export class ColumnDefinitionContext extends ParserRuleContext {
 		return this.getTypedRuleContext(TypeContext, 0) as TypeContext;
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 	public NULL(): TerminalNode {
-		return this.getToken(SqlBaseParser.NULL, 0);
+		return this.getToken(SqlParser.NULL, 0);
 	}
 	public COMMENT(): TerminalNode {
-		return this.getToken(SqlBaseParser.COMMENT, 0);
+		return this.getToken(SqlParser.COMMENT, 0);
 	}
 	public string_(): StringContext {
 		return this.getTypedRuleContext(StringContext, 0) as StringContext;
 	}
 	public WITH(): TerminalNode {
-		return this.getToken(SqlBaseParser.WITH, 0);
+		return this.getToken(SqlParser.WITH, 0);
 	}
 	public properties(): PropertiesContext {
 		return this.getTypedRuleContext(PropertiesContext, 0) as PropertiesContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_columnDefinition;
+    	return SqlParser.RULE_columnDefinition;
 	}
 }
 
 
 export class LikeClauseContext extends ParserRuleContext {
 	public _optionType!: Token;
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public LIKE(): TerminalNode {
-		return this.getToken(SqlBaseParser.LIKE, 0);
+		return this.getToken(SqlParser.LIKE, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public PROPERTIES(): TerminalNode {
-		return this.getToken(SqlBaseParser.PROPERTIES, 0);
+		return this.getToken(SqlParser.PROPERTIES, 0);
 	}
 	public INCLUDING(): TerminalNode {
-		return this.getToken(SqlBaseParser.INCLUDING, 0);
+		return this.getToken(SqlParser.INCLUDING, 0);
 	}
 	public EXCLUDING(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXCLUDING, 0);
+		return this.getToken(SqlParser.EXCLUDING, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_likeClause;
+    	return SqlParser.RULE_likeClause;
 	}
 }
 
 
 export class PropertiesContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -12918,13 +12918,13 @@ export class PropertiesContext extends ParserRuleContext {
 		return this.getTypedRuleContext(PropertyContext, i) as PropertyContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_properties;
+    	return SqlParser.RULE_properties;
 	}
 }
 
 
 export class PropertyContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -12932,19 +12932,19 @@ export class PropertyContext extends ParserRuleContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 	public EQ(): TerminalNode {
-		return this.getToken(SqlBaseParser.EQ, 0);
+		return this.getToken(SqlParser.EQ, 0);
 	}
 	public expression(): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_property;
+    	return SqlParser.RULE_property;
 	}
 }
 
 
 export class SqlParameterDeclarationContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -12955,13 +12955,13 @@ export class SqlParameterDeclarationContext extends ParserRuleContext {
 		return this.getTypedRuleContext(TypeContext, 0) as TypeContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_sqlParameterDeclaration;
+    	return SqlParser.RULE_sqlParameterDeclaration;
 	}
 }
 
 
 export class RoutineCharacteristicsContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -12972,18 +12972,18 @@ export class RoutineCharacteristicsContext extends ParserRuleContext {
 		return this.getTypedRuleContext(RoutineCharacteristicContext, i) as RoutineCharacteristicContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_routineCharacteristics;
+    	return SqlParser.RULE_routineCharacteristics;
 	}
 }
 
 
 export class RoutineCharacteristicContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public LANGUAGE(): TerminalNode {
-		return this.getToken(SqlBaseParser.LANGUAGE, 0);
+		return this.getToken(SqlParser.LANGUAGE, 0);
 	}
 	public language(): LanguageContext {
 		return this.getTypedRuleContext(LanguageContext, 0) as LanguageContext;
@@ -12995,13 +12995,13 @@ export class RoutineCharacteristicContext extends ParserRuleContext {
 		return this.getTypedRuleContext(NullCallClauseContext, 0) as NullCallClauseContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_routineCharacteristic;
+    	return SqlParser.RULE_routineCharacteristic;
 	}
 }
 
 
 export class AlterRoutineCharacteristicsContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -13012,13 +13012,13 @@ export class AlterRoutineCharacteristicsContext extends ParserRuleContext {
 		return this.getTypedRuleContext(AlterRoutineCharacteristicContext, i) as AlterRoutineCharacteristicContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_alterRoutineCharacteristics;
+    	return SqlParser.RULE_alterRoutineCharacteristics;
 	}
 }
 
 
 export class AlterRoutineCharacteristicContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -13026,13 +13026,13 @@ export class AlterRoutineCharacteristicContext extends ParserRuleContext {
 		return this.getTypedRuleContext(NullCallClauseContext, 0) as NullCallClauseContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_alterRoutineCharacteristic;
+    	return SqlParser.RULE_alterRoutineCharacteristic;
 	}
 }
 
 
 export class RoutineBodyContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -13043,113 +13043,113 @@ export class RoutineBodyContext extends ParserRuleContext {
 		return this.getTypedRuleContext(ExternalBodyReferenceContext, 0) as ExternalBodyReferenceContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_routineBody;
+    	return SqlParser.RULE_routineBody;
 	}
 }
 
 
 export class ReturnStatementContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public RETURN(): TerminalNode {
-		return this.getToken(SqlBaseParser.RETURN, 0);
+		return this.getToken(SqlParser.RETURN, 0);
 	}
 	public expression(): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_returnStatement;
+    	return SqlParser.RULE_returnStatement;
 	}
 }
 
 
 export class ExternalBodyReferenceContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public EXTERNAL(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXTERNAL, 0);
+		return this.getToken(SqlParser.EXTERNAL, 0);
 	}
 	public NAME(): TerminalNode {
-		return this.getToken(SqlBaseParser.NAME, 0);
+		return this.getToken(SqlParser.NAME, 0);
 	}
 	public externalRoutineName(): ExternalRoutineNameContext {
 		return this.getTypedRuleContext(ExternalRoutineNameContext, 0) as ExternalRoutineNameContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_externalBodyReference;
+    	return SqlParser.RULE_externalBodyReference;
 	}
 }
 
 
 export class LanguageContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public SQL(): TerminalNode {
-		return this.getToken(SqlBaseParser.SQL, 0);
+		return this.getToken(SqlParser.SQL, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_language;
+    	return SqlParser.RULE_language;
 	}
 }
 
 
 export class DeterminismContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public DETERMINISTIC(): TerminalNode {
-		return this.getToken(SqlBaseParser.DETERMINISTIC, 0);
+		return this.getToken(SqlParser.DETERMINISTIC, 0);
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_determinism;
+    	return SqlParser.RULE_determinism;
 	}
 }
 
 
 export class NullCallClauseContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public RETURNS(): TerminalNode {
-		return this.getToken(SqlBaseParser.RETURNS, 0);
+		return this.getToken(SqlParser.RETURNS, 0);
 	}
 	public NULL_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.NULL);
+	    	return this.getTokens(SqlParser.NULL);
 	}
 	public NULL(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.NULL, i);
+		return this.getToken(SqlParser.NULL, i);
 	}
 	public ON(): TerminalNode {
-		return this.getToken(SqlBaseParser.ON, 0);
+		return this.getToken(SqlParser.ON, 0);
 	}
 	public INPUT(): TerminalNode {
-		return this.getToken(SqlBaseParser.INPUT, 0);
+		return this.getToken(SqlParser.INPUT, 0);
 	}
 	public CALLED(): TerminalNode {
-		return this.getToken(SqlBaseParser.CALLED, 0);
+		return this.getToken(SqlParser.CALLED, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_nullCallClause;
+    	return SqlParser.RULE_nullCallClause;
 	}
 }
 
 
 export class ExternalRoutineNameContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -13157,7 +13157,7 @@ export class ExternalRoutineNameContext extends ParserRuleContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_externalRoutineName;
+    	return SqlParser.RULE_externalRoutineName;
 	}
 }
 
@@ -13166,7 +13166,7 @@ export class QueryNoWithContext extends ParserRuleContext {
 	public _offset!: Token;
 	public _limit!: Token;
 	public _fetchFirstNRows!: Token;
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -13174,10 +13174,10 @@ export class QueryNoWithContext extends ParserRuleContext {
 		return this.getTypedRuleContext(QueryTermContext, 0) as QueryTermContext;
 	}
 	public ORDER(): TerminalNode {
-		return this.getToken(SqlBaseParser.ORDER, 0);
+		return this.getToken(SqlParser.ORDER, 0);
 	}
 	public BY(): TerminalNode {
-		return this.getToken(SqlBaseParser.BY, 0);
+		return this.getToken(SqlParser.BY, 0);
 	}
 	public sortItem_list(): SortItemContext[] {
 		return this.getTypedRuleContexts(SortItemContext) as SortItemContext[];
@@ -13186,58 +13186,58 @@ export class QueryNoWithContext extends ParserRuleContext {
 		return this.getTypedRuleContext(SortItemContext, i) as SortItemContext;
 	}
 	public OFFSET(): TerminalNode {
-		return this.getToken(SqlBaseParser.OFFSET, 0);
+		return this.getToken(SqlParser.OFFSET, 0);
 	}
 	public INTEGER_VALUE_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.INTEGER_VALUE);
+	    	return this.getTokens(SqlParser.INTEGER_VALUE);
 	}
 	public INTEGER_VALUE(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.INTEGER_VALUE, i);
+		return this.getToken(SqlParser.INTEGER_VALUE, i);
 	}
 	public LIMIT(): TerminalNode {
-		return this.getToken(SqlBaseParser.LIMIT, 0);
+		return this.getToken(SqlParser.LIMIT, 0);
 	}
 	public ROW(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROW, 0);
+		return this.getToken(SqlParser.ROW, 0);
 	}
 	public ROWS_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.ROWS);
+	    	return this.getTokens(SqlParser.ROWS);
 	}
 	public ROWS(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.ROWS, i);
+		return this.getToken(SqlParser.ROWS, i);
 	}
 	public ALL(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALL, 0);
+		return this.getToken(SqlParser.ALL, 0);
 	}
 	public FETCH(): TerminalNode {
-		return this.getToken(SqlBaseParser.FETCH, 0);
+		return this.getToken(SqlParser.FETCH, 0);
 	}
 	public FIRST(): TerminalNode {
-		return this.getToken(SqlBaseParser.FIRST, 0);
+		return this.getToken(SqlParser.FIRST, 0);
 	}
 	public ONLY(): TerminalNode {
-		return this.getToken(SqlBaseParser.ONLY, 0);
+		return this.getToken(SqlParser.ONLY, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_queryNoWith;
+    	return SqlParser.RULE_queryNoWith;
 	}
 }
 
 
 export class QueryTermContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_queryTerm;
+    	return SqlParser.RULE_queryTerm;
 	}
 	public override copyFrom(ctx: QueryTermContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class QueryTermDefaultContext extends QueryTermContext {
-	constructor(parser: SqlBaseParser, ctx: QueryTermContext) {
+	constructor(parser: SqlParser, ctx: QueryTermContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -13249,7 +13249,7 @@ export class SetOperationContext extends QueryTermContext {
 	public _left!: QueryTermContext;
 	public _operator!: Token;
 	public _right!: QueryTermContext;
-	constructor(parser: SqlBaseParser, ctx: QueryTermContext) {
+	constructor(parser: SqlParser, ctx: QueryTermContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -13260,34 +13260,34 @@ export class SetOperationContext extends QueryTermContext {
 		return this.getTypedRuleContext(QueryTermContext, i) as QueryTermContext;
 	}
 	public INTERSECT(): TerminalNode {
-		return this.getToken(SqlBaseParser.INTERSECT, 0);
+		return this.getToken(SqlParser.INTERSECT, 0);
 	}
 	public setQuantifier(): SetQuantifierContext {
 		return this.getTypedRuleContext(SetQuantifierContext, 0) as SetQuantifierContext;
 	}
 	public UNION(): TerminalNode {
-		return this.getToken(SqlBaseParser.UNION, 0);
+		return this.getToken(SqlParser.UNION, 0);
 	}
 	public EXCEPT(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXCEPT, 0);
+		return this.getToken(SqlParser.EXCEPT, 0);
 	}
 }
 
 
 export class QueryPrimaryContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_queryPrimary;
+    	return SqlParser.RULE_queryPrimary;
 	}
 	public override copyFrom(ctx: QueryPrimaryContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class SubqueryContext extends QueryPrimaryContext {
-	constructor(parser: SqlBaseParser, ctx: QueryPrimaryContext) {
+	constructor(parser: SqlParser, ctx: QueryPrimaryContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -13296,7 +13296,7 @@ export class SubqueryContext extends QueryPrimaryContext {
 	}
 }
 export class QueryPrimaryDefaultContext extends QueryPrimaryContext {
-	constructor(parser: SqlBaseParser, ctx: QueryPrimaryContext) {
+	constructor(parser: SqlParser, ctx: QueryPrimaryContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -13305,24 +13305,24 @@ export class QueryPrimaryDefaultContext extends QueryPrimaryContext {
 	}
 }
 export class TableContext extends QueryPrimaryContext {
-	constructor(parser: SqlBaseParser, ctx: QueryPrimaryContext) {
+	constructor(parser: SqlParser, ctx: QueryPrimaryContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public TABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLE, 0);
+		return this.getToken(SqlParser.TABLE, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 }
 export class InlineTableContext extends QueryPrimaryContext {
-	constructor(parser: SqlBaseParser, ctx: QueryPrimaryContext) {
+	constructor(parser: SqlParser, ctx: QueryPrimaryContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public VALUES(): TerminalNode {
-		return this.getToken(SqlBaseParser.VALUES, 0);
+		return this.getToken(SqlParser.VALUES, 0);
 	}
 	public expression_list(): ExpressionContext[] {
 		return this.getTypedRuleContexts(ExpressionContext) as ExpressionContext[];
@@ -13336,7 +13336,7 @@ export class InlineTableContext extends QueryPrimaryContext {
 export class SortItemContext extends ParserRuleContext {
 	public _ordering!: Token;
 	public _nullOrdering!: Token;
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -13344,22 +13344,22 @@ export class SortItemContext extends ParserRuleContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
 	public NULLS(): TerminalNode {
-		return this.getToken(SqlBaseParser.NULLS, 0);
+		return this.getToken(SqlParser.NULLS, 0);
 	}
 	public ASC(): TerminalNode {
-		return this.getToken(SqlBaseParser.ASC, 0);
+		return this.getToken(SqlParser.ASC, 0);
 	}
 	public DESC(): TerminalNode {
-		return this.getToken(SqlBaseParser.DESC, 0);
+		return this.getToken(SqlParser.DESC, 0);
 	}
 	public FIRST(): TerminalNode {
-		return this.getToken(SqlBaseParser.FIRST, 0);
+		return this.getToken(SqlParser.FIRST, 0);
 	}
 	public LAST(): TerminalNode {
-		return this.getToken(SqlBaseParser.LAST, 0);
+		return this.getToken(SqlParser.LAST, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_sortItem;
+    	return SqlParser.RULE_sortItem;
 	}
 }
 
@@ -13367,12 +13367,12 @@ export class SortItemContext extends ParserRuleContext {
 export class QuerySpecificationContext extends ParserRuleContext {
 	public _where!: BooleanExpressionContext;
 	public _having!: BooleanExpressionContext;
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public SELECT(): TerminalNode {
-		return this.getToken(SqlBaseParser.SELECT, 0);
+		return this.getToken(SqlParser.SELECT, 0);
 	}
 	public selectItem_list(): SelectItemContext[] {
 		return this.getTypedRuleContexts(SelectItemContext) as SelectItemContext[];
@@ -13384,7 +13384,7 @@ export class QuerySpecificationContext extends ParserRuleContext {
 		return this.getTypedRuleContext(SetQuantifierContext, 0) as SetQuantifierContext;
 	}
 	public FROM(): TerminalNode {
-		return this.getToken(SqlBaseParser.FROM, 0);
+		return this.getToken(SqlParser.FROM, 0);
 	}
 	public relation_list(): RelationContext[] {
 		return this.getTypedRuleContexts(RelationContext) as RelationContext[];
@@ -13393,19 +13393,19 @@ export class QuerySpecificationContext extends ParserRuleContext {
 		return this.getTypedRuleContext(RelationContext, i) as RelationContext;
 	}
 	public WHERE(): TerminalNode {
-		return this.getToken(SqlBaseParser.WHERE, 0);
+		return this.getToken(SqlParser.WHERE, 0);
 	}
 	public GROUP(): TerminalNode {
-		return this.getToken(SqlBaseParser.GROUP, 0);
+		return this.getToken(SqlParser.GROUP, 0);
 	}
 	public BY(): TerminalNode {
-		return this.getToken(SqlBaseParser.BY, 0);
+		return this.getToken(SqlParser.BY, 0);
 	}
 	public groupBy(): GroupByContext {
 		return this.getTypedRuleContext(GroupByContext, 0) as GroupByContext;
 	}
 	public HAVING(): TerminalNode {
-		return this.getToken(SqlBaseParser.HAVING, 0);
+		return this.getToken(SqlParser.HAVING, 0);
 	}
 	public booleanExpression_list(): BooleanExpressionContext[] {
 		return this.getTypedRuleContexts(BooleanExpressionContext) as BooleanExpressionContext[];
@@ -13414,13 +13414,13 @@ export class QuerySpecificationContext extends ParserRuleContext {
 		return this.getTypedRuleContext(BooleanExpressionContext, i) as BooleanExpressionContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_querySpecification;
+    	return SqlParser.RULE_querySpecification;
 	}
 }
 
 
 export class GroupByContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -13434,33 +13434,33 @@ export class GroupByContext extends ParserRuleContext {
 		return this.getTypedRuleContext(SetQuantifierContext, 0) as SetQuantifierContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_groupBy;
+    	return SqlParser.RULE_groupBy;
 	}
 }
 
 
 export class GroupingElementContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_groupingElement;
+    	return SqlParser.RULE_groupingElement;
 	}
 	public override copyFrom(ctx: GroupingElementContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class MultipleGroupingSetsContext extends GroupingElementContext {
-	constructor(parser: SqlBaseParser, ctx: GroupingElementContext) {
+	constructor(parser: SqlParser, ctx: GroupingElementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public GROUPING(): TerminalNode {
-		return this.getToken(SqlBaseParser.GROUPING, 0);
+		return this.getToken(SqlParser.GROUPING, 0);
 	}
 	public SETS(): TerminalNode {
-		return this.getToken(SqlBaseParser.SETS, 0);
+		return this.getToken(SqlParser.SETS, 0);
 	}
 	public groupingSet_list(): GroupingSetContext[] {
 		return this.getTypedRuleContexts(GroupingSetContext) as GroupingSetContext[];
@@ -13470,7 +13470,7 @@ export class MultipleGroupingSetsContext extends GroupingElementContext {
 	}
 }
 export class SingleGroupingSetContext extends GroupingElementContext {
-	constructor(parser: SqlBaseParser, ctx: GroupingElementContext) {
+	constructor(parser: SqlParser, ctx: GroupingElementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -13479,12 +13479,12 @@ export class SingleGroupingSetContext extends GroupingElementContext {
 	}
 }
 export class CubeContext extends GroupingElementContext {
-	constructor(parser: SqlBaseParser, ctx: GroupingElementContext) {
+	constructor(parser: SqlParser, ctx: GroupingElementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CUBE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CUBE, 0);
+		return this.getToken(SqlParser.CUBE, 0);
 	}
 	public expression_list(): ExpressionContext[] {
 		return this.getTypedRuleContexts(ExpressionContext) as ExpressionContext[];
@@ -13494,12 +13494,12 @@ export class CubeContext extends GroupingElementContext {
 	}
 }
 export class RollupContext extends GroupingElementContext {
-	constructor(parser: SqlBaseParser, ctx: GroupingElementContext) {
+	constructor(parser: SqlParser, ctx: GroupingElementContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ROLLUP(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROLLUP, 0);
+		return this.getToken(SqlParser.ROLLUP, 0);
 	}
 	public expression_list(): ExpressionContext[] {
 		return this.getTypedRuleContexts(ExpressionContext) as ExpressionContext[];
@@ -13511,7 +13511,7 @@ export class RollupContext extends GroupingElementContext {
 
 
 export class GroupingSetContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -13522,19 +13522,19 @@ export class GroupingSetContext extends ParserRuleContext {
 		return this.getTypedRuleContext(ExpressionContext, i) as ExpressionContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_groupingSet;
+    	return SqlParser.RULE_groupingSet;
 	}
 }
 
 
 export class NamedQueryContext extends ParserRuleContext {
 	public _name!: IdentifierContext;
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public AS(): TerminalNode {
-		return this.getToken(SqlBaseParser.AS, 0);
+		return this.getToken(SqlParser.AS, 0);
 	}
 	public query(): QueryContext {
 		return this.getTypedRuleContext(QueryContext, 0) as QueryContext;
@@ -13546,42 +13546,42 @@ export class NamedQueryContext extends ParserRuleContext {
 		return this.getTypedRuleContext(ColumnAliasesContext, 0) as ColumnAliasesContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_namedQuery;
+    	return SqlParser.RULE_namedQuery;
 	}
 }
 
 
 export class SetQuantifierContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public DISTINCT(): TerminalNode {
-		return this.getToken(SqlBaseParser.DISTINCT, 0);
+		return this.getToken(SqlParser.DISTINCT, 0);
 	}
 	public ALL(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALL, 0);
+		return this.getToken(SqlParser.ALL, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_setQuantifier;
+    	return SqlParser.RULE_setQuantifier;
 	}
 }
 
 
 export class SelectItemContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_selectItem;
+    	return SqlParser.RULE_selectItem;
 	}
 	public override copyFrom(ctx: SelectItemContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class SelectAllContext extends SelectItemContext {
-	constructor(parser: SqlBaseParser, ctx: SelectItemContext) {
+	constructor(parser: SqlParser, ctx: SelectItemContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -13589,11 +13589,11 @@ export class SelectAllContext extends SelectItemContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public ASTERISK(): TerminalNode {
-		return this.getToken(SqlBaseParser.ASTERISK, 0);
+		return this.getToken(SqlParser.ASTERISK, 0);
 	}
 }
 export class SelectSingleContext extends SelectItemContext {
-	constructor(parser: SqlBaseParser, ctx: SelectItemContext) {
+	constructor(parser: SqlParser, ctx: SelectItemContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -13604,25 +13604,25 @@ export class SelectSingleContext extends SelectItemContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 	public AS(): TerminalNode {
-		return this.getToken(SqlBaseParser.AS, 0);
+		return this.getToken(SqlParser.AS, 0);
 	}
 }
 
 
 export class RelationContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_relation;
+    	return SqlParser.RULE_relation;
 	}
 	public override copyFrom(ctx: RelationContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class RelationDefaultContext extends RelationContext {
-	constructor(parser: SqlBaseParser, ctx: RelationContext) {
+	constructor(parser: SqlParser, ctx: RelationContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -13634,7 +13634,7 @@ export class JoinRelationContext extends RelationContext {
 	public _left!: RelationContext;
 	public _right!: SampledRelationContext;
 	public _rightRelation!: RelationContext;
-	constructor(parser: SqlBaseParser, ctx: RelationContext) {
+	constructor(parser: SqlParser, ctx: RelationContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -13645,10 +13645,10 @@ export class JoinRelationContext extends RelationContext {
 		return this.getTypedRuleContext(RelationContext, i) as RelationContext;
 	}
 	public CROSS(): TerminalNode {
-		return this.getToken(SqlBaseParser.CROSS, 0);
+		return this.getToken(SqlParser.CROSS, 0);
 	}
 	public JOIN(): TerminalNode {
-		return this.getToken(SqlBaseParser.JOIN, 0);
+		return this.getToken(SqlParser.JOIN, 0);
 	}
 	public joinType(): JoinTypeContext {
 		return this.getTypedRuleContext(JoinTypeContext, 0) as JoinTypeContext;
@@ -13657,7 +13657,7 @@ export class JoinRelationContext extends RelationContext {
 		return this.getTypedRuleContext(JoinCriteriaContext, 0) as JoinCriteriaContext;
 	}
 	public NATURAL(): TerminalNode {
-		return this.getToken(SqlBaseParser.NATURAL, 0);
+		return this.getToken(SqlParser.NATURAL, 0);
 	}
 	public sampledRelation(): SampledRelationContext {
 		return this.getTypedRuleContext(SampledRelationContext, 0) as SampledRelationContext;
@@ -13666,44 +13666,44 @@ export class JoinRelationContext extends RelationContext {
 
 
 export class JoinTypeContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public INNER(): TerminalNode {
-		return this.getToken(SqlBaseParser.INNER, 0);
+		return this.getToken(SqlParser.INNER, 0);
 	}
 	public LEFT(): TerminalNode {
-		return this.getToken(SqlBaseParser.LEFT, 0);
+		return this.getToken(SqlParser.LEFT, 0);
 	}
 	public OUTER(): TerminalNode {
-		return this.getToken(SqlBaseParser.OUTER, 0);
+		return this.getToken(SqlParser.OUTER, 0);
 	}
 	public RIGHT(): TerminalNode {
-		return this.getToken(SqlBaseParser.RIGHT, 0);
+		return this.getToken(SqlParser.RIGHT, 0);
 	}
 	public FULL(): TerminalNode {
-		return this.getToken(SqlBaseParser.FULL, 0);
+		return this.getToken(SqlParser.FULL, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_joinType;
+    	return SqlParser.RULE_joinType;
 	}
 }
 
 
 export class JoinCriteriaContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public ON(): TerminalNode {
-		return this.getToken(SqlBaseParser.ON, 0);
+		return this.getToken(SqlParser.ON, 0);
 	}
 	public booleanExpression(): BooleanExpressionContext {
 		return this.getTypedRuleContext(BooleanExpressionContext, 0) as BooleanExpressionContext;
 	}
 	public USING(): TerminalNode {
-		return this.getToken(SqlBaseParser.USING, 0);
+		return this.getToken(SqlParser.USING, 0);
 	}
 	public identifier_list(): IdentifierContext[] {
 		return this.getTypedRuleContexts(IdentifierContext) as IdentifierContext[];
@@ -13712,14 +13712,14 @@ export class JoinCriteriaContext extends ParserRuleContext {
 		return this.getTypedRuleContext(IdentifierContext, i) as IdentifierContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_joinCriteria;
+    	return SqlParser.RULE_joinCriteria;
 	}
 }
 
 
 export class SampledRelationContext extends ParserRuleContext {
 	public _percentage!: ExpressionContext;
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -13727,7 +13727,7 @@ export class SampledRelationContext extends ParserRuleContext {
 		return this.getTypedRuleContext(AliasedRelationContext, 0) as AliasedRelationContext;
 	}
 	public TABLESAMPLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLESAMPLE, 0);
+		return this.getToken(SqlParser.TABLESAMPLE, 0);
 	}
 	public sampleType(): SampleTypeContext {
 		return this.getTypedRuleContext(SampleTypeContext, 0) as SampleTypeContext;
@@ -13736,30 +13736,30 @@ export class SampledRelationContext extends ParserRuleContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_sampledRelation;
+    	return SqlParser.RULE_sampledRelation;
 	}
 }
 
 
 export class SampleTypeContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public BERNOULLI(): TerminalNode {
-		return this.getToken(SqlBaseParser.BERNOULLI, 0);
+		return this.getToken(SqlParser.BERNOULLI, 0);
 	}
 	public SYSTEM(): TerminalNode {
-		return this.getToken(SqlBaseParser.SYSTEM, 0);
+		return this.getToken(SqlParser.SYSTEM, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_sampleType;
+    	return SqlParser.RULE_sampleType;
 	}
 }
 
 
 export class AliasedRelationContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -13770,19 +13770,19 @@ export class AliasedRelationContext extends ParserRuleContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 	public AS(): TerminalNode {
-		return this.getToken(SqlBaseParser.AS, 0);
+		return this.getToken(SqlParser.AS, 0);
 	}
 	public columnAliases(): ColumnAliasesContext {
 		return this.getTypedRuleContext(ColumnAliasesContext, 0) as ColumnAliasesContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_aliasedRelation;
+    	return SqlParser.RULE_aliasedRelation;
 	}
 }
 
 
 export class ColumnAliasesContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -13793,25 +13793,25 @@ export class ColumnAliasesContext extends ParserRuleContext {
 		return this.getTypedRuleContext(IdentifierContext, i) as IdentifierContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_columnAliases;
+    	return SqlParser.RULE_columnAliases;
 	}
 }
 
 
 export class RelationPrimaryContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_relationPrimary;
+    	return SqlParser.RULE_relationPrimary;
 	}
 	public override copyFrom(ctx: RelationPrimaryContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class SubqueryRelationContext extends RelationPrimaryContext {
-	constructor(parser: SqlBaseParser, ctx: RelationPrimaryContext) {
+	constructor(parser: SqlParser, ctx: RelationPrimaryContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -13820,7 +13820,7 @@ export class SubqueryRelationContext extends RelationPrimaryContext {
 	}
 }
 export class ParenthesizedRelationContext extends RelationPrimaryContext {
-	constructor(parser: SqlBaseParser, ctx: RelationPrimaryContext) {
+	constructor(parser: SqlParser, ctx: RelationPrimaryContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -13829,12 +13829,12 @@ export class ParenthesizedRelationContext extends RelationPrimaryContext {
 	}
 }
 export class UnnestContext extends RelationPrimaryContext {
-	constructor(parser: SqlBaseParser, ctx: RelationPrimaryContext) {
+	constructor(parser: SqlParser, ctx: RelationPrimaryContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public UNNEST(): TerminalNode {
-		return this.getToken(SqlBaseParser.UNNEST, 0);
+		return this.getToken(SqlParser.UNNEST, 0);
 	}
 	public expression_list(): ExpressionContext[] {
 		return this.getTypedRuleContexts(ExpressionContext) as ExpressionContext[];
@@ -13843,26 +13843,26 @@ export class UnnestContext extends RelationPrimaryContext {
 		return this.getTypedRuleContext(ExpressionContext, i) as ExpressionContext;
 	}
 	public WITH(): TerminalNode {
-		return this.getToken(SqlBaseParser.WITH, 0);
+		return this.getToken(SqlParser.WITH, 0);
 	}
 	public ORDINALITY(): TerminalNode {
-		return this.getToken(SqlBaseParser.ORDINALITY, 0);
+		return this.getToken(SqlParser.ORDINALITY, 0);
 	}
 }
 export class LateralContext extends RelationPrimaryContext {
-	constructor(parser: SqlBaseParser, ctx: RelationPrimaryContext) {
+	constructor(parser: SqlParser, ctx: RelationPrimaryContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public LATERAL(): TerminalNode {
-		return this.getToken(SqlBaseParser.LATERAL, 0);
+		return this.getToken(SqlParser.LATERAL, 0);
 	}
 	public query(): QueryContext {
 		return this.getTypedRuleContext(QueryContext, 0) as QueryContext;
 	}
 }
 export class TableNameContext extends RelationPrimaryContext {
-	constructor(parser: SqlBaseParser, ctx: RelationPrimaryContext) {
+	constructor(parser: SqlParser, ctx: RelationPrimaryContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -13876,7 +13876,7 @@ export class TableNameContext extends RelationPrimaryContext {
 
 
 export class ExpressionContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -13884,30 +13884,30 @@ export class ExpressionContext extends ParserRuleContext {
 		return this.getTypedRuleContext(BooleanExpressionContext, 0) as BooleanExpressionContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_expression;
+    	return SqlParser.RULE_expression;
 	}
 }
 
 
 export class BooleanExpressionContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_booleanExpression;
+    	return SqlParser.RULE_booleanExpression;
 	}
 	public override copyFrom(ctx: BooleanExpressionContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class LogicalNotContext extends BooleanExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: BooleanExpressionContext) {
+	constructor(parser: SqlParser, ctx: BooleanExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 	public booleanExpression(): BooleanExpressionContext {
 		return this.getTypedRuleContext(BooleanExpressionContext, 0) as BooleanExpressionContext;
@@ -13915,7 +13915,7 @@ export class LogicalNotContext extends BooleanExpressionContext {
 }
 export class PredicatedContext extends BooleanExpressionContext {
 	public _valueExpression!: ValueExpressionContext;
-	constructor(parser: SqlBaseParser, ctx: BooleanExpressionContext) {
+	constructor(parser: SqlParser, ctx: BooleanExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -13930,7 +13930,7 @@ export class LogicalBinaryContext extends BooleanExpressionContext {
 	public _left!: BooleanExpressionContext;
 	public _operator!: Token;
 	public _right!: BooleanExpressionContext;
-	constructor(parser: SqlBaseParser, ctx: BooleanExpressionContext) {
+	constructor(parser: SqlParser, ctx: BooleanExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -13941,23 +13941,23 @@ export class LogicalBinaryContext extends BooleanExpressionContext {
 		return this.getTypedRuleContext(BooleanExpressionContext, i) as BooleanExpressionContext;
 	}
 	public AND(): TerminalNode {
-		return this.getToken(SqlBaseParser.AND, 0);
+		return this.getToken(SqlParser.AND, 0);
 	}
 	public OR(): TerminalNode {
-		return this.getToken(SqlBaseParser.OR, 0);
+		return this.getToken(SqlParser.OR, 0);
 	}
 }
 
 
 export class PredicateContext extends ParserRuleContext {
 	public value: ParserRuleContext;
-	constructor(parser: SqlBaseParser, parent: ParserRuleContext, invokingState: number, value: ParserRuleContext) {
+	constructor(parser: SqlParser, parent: ParserRuleContext, invokingState: number, value: ParserRuleContext) {
 		super(parent, invokingState);
     	this.parser = parser;
         this.value = value;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_predicate;
+    	return SqlParser.RULE_predicate;
 	}
 	public override copyFrom(ctx: PredicateContext): void {
 		super.copyFrom(ctx);
@@ -13966,7 +13966,7 @@ export class PredicateContext extends ParserRuleContext {
 }
 export class ComparisonContext extends PredicateContext {
 	public _right!: ValueExpressionContext;
-	constructor(parser: SqlBaseParser, ctx: PredicateContext) {
+	constructor(parser: SqlParser, ctx: PredicateContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState, ctx.value);
 		super.copyFrom(ctx);
 	}
@@ -13980,12 +13980,12 @@ export class ComparisonContext extends PredicateContext {
 export class LikeContext extends PredicateContext {
 	public _pattern!: ValueExpressionContext;
 	public _escape!: ValueExpressionContext;
-	constructor(parser: SqlBaseParser, ctx: PredicateContext) {
+	constructor(parser: SqlParser, ctx: PredicateContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState, ctx.value);
 		super.copyFrom(ctx);
 	}
 	public LIKE(): TerminalNode {
-		return this.getToken(SqlBaseParser.LIKE, 0);
+		return this.getToken(SqlParser.LIKE, 0);
 	}
 	public valueExpression_list(): ValueExpressionContext[] {
 		return this.getTypedRuleContexts(ValueExpressionContext) as ValueExpressionContext[];
@@ -13994,56 +13994,56 @@ export class LikeContext extends PredicateContext {
 		return this.getTypedRuleContext(ValueExpressionContext, i) as ValueExpressionContext;
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 	public ESCAPE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ESCAPE, 0);
+		return this.getToken(SqlParser.ESCAPE, 0);
 	}
 }
 export class InSubqueryContext extends PredicateContext {
-	constructor(parser: SqlBaseParser, ctx: PredicateContext) {
+	constructor(parser: SqlParser, ctx: PredicateContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState, ctx.value);
 		super.copyFrom(ctx);
 	}
 	public IN(): TerminalNode {
-		return this.getToken(SqlBaseParser.IN, 0);
+		return this.getToken(SqlParser.IN, 0);
 	}
 	public query(): QueryContext {
 		return this.getTypedRuleContext(QueryContext, 0) as QueryContext;
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 }
 export class DistinctFromContext extends PredicateContext {
 	public _right!: ValueExpressionContext;
-	constructor(parser: SqlBaseParser, ctx: PredicateContext) {
+	constructor(parser: SqlParser, ctx: PredicateContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState, ctx.value);
 		super.copyFrom(ctx);
 	}
 	public IS(): TerminalNode {
-		return this.getToken(SqlBaseParser.IS, 0);
+		return this.getToken(SqlParser.IS, 0);
 	}
 	public DISTINCT(): TerminalNode {
-		return this.getToken(SqlBaseParser.DISTINCT, 0);
+		return this.getToken(SqlParser.DISTINCT, 0);
 	}
 	public FROM(): TerminalNode {
-		return this.getToken(SqlBaseParser.FROM, 0);
+		return this.getToken(SqlParser.FROM, 0);
 	}
 	public valueExpression(): ValueExpressionContext {
 		return this.getTypedRuleContext(ValueExpressionContext, 0) as ValueExpressionContext;
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 }
 export class InListContext extends PredicateContext {
-	constructor(parser: SqlBaseParser, ctx: PredicateContext) {
+	constructor(parser: SqlParser, ctx: PredicateContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState, ctx.value);
 		super.copyFrom(ctx);
 	}
 	public IN(): TerminalNode {
-		return this.getToken(SqlBaseParser.IN, 0);
+		return this.getToken(SqlParser.IN, 0);
 	}
 	public expression_list(): ExpressionContext[] {
 		return this.getTypedRuleContexts(ExpressionContext) as ExpressionContext[];
@@ -14052,36 +14052,36 @@ export class InListContext extends PredicateContext {
 		return this.getTypedRuleContext(ExpressionContext, i) as ExpressionContext;
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 }
 export class NullPredicateContext extends PredicateContext {
-	constructor(parser: SqlBaseParser, ctx: PredicateContext) {
+	constructor(parser: SqlParser, ctx: PredicateContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState, ctx.value);
 		super.copyFrom(ctx);
 	}
 	public IS(): TerminalNode {
-		return this.getToken(SqlBaseParser.IS, 0);
+		return this.getToken(SqlParser.IS, 0);
 	}
 	public NULL(): TerminalNode {
-		return this.getToken(SqlBaseParser.NULL, 0);
+		return this.getToken(SqlParser.NULL, 0);
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 }
 export class BetweenContext extends PredicateContext {
 	public _lower!: ValueExpressionContext;
 	public _upper!: ValueExpressionContext;
-	constructor(parser: SqlBaseParser, ctx: PredicateContext) {
+	constructor(parser: SqlParser, ctx: PredicateContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState, ctx.value);
 		super.copyFrom(ctx);
 	}
 	public BETWEEN(): TerminalNode {
-		return this.getToken(SqlBaseParser.BETWEEN, 0);
+		return this.getToken(SqlParser.BETWEEN, 0);
 	}
 	public AND(): TerminalNode {
-		return this.getToken(SqlBaseParser.AND, 0);
+		return this.getToken(SqlParser.AND, 0);
 	}
 	public valueExpression_list(): ValueExpressionContext[] {
 		return this.getTypedRuleContexts(ValueExpressionContext) as ValueExpressionContext[];
@@ -14090,11 +14090,11 @@ export class BetweenContext extends PredicateContext {
 		return this.getTypedRuleContext(ValueExpressionContext, i) as ValueExpressionContext;
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
 }
 export class QuantifiedComparisonContext extends PredicateContext {
-	constructor(parser: SqlBaseParser, ctx: PredicateContext) {
+	constructor(parser: SqlParser, ctx: PredicateContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState, ctx.value);
 		super.copyFrom(ctx);
 	}
@@ -14111,19 +14111,19 @@ export class QuantifiedComparisonContext extends PredicateContext {
 
 
 export class ValueExpressionContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_valueExpression;
+    	return SqlParser.RULE_valueExpression;
 	}
 	public override copyFrom(ctx: ValueExpressionContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class ValueExpressionDefaultContext extends ValueExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: ValueExpressionContext) {
+	constructor(parser: SqlParser, ctx: ValueExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14134,12 +14134,12 @@ export class ValueExpressionDefaultContext extends ValueExpressionContext {
 export class ConcatenationContext extends ValueExpressionContext {
 	public _left!: ValueExpressionContext;
 	public _right!: ValueExpressionContext;
-	constructor(parser: SqlBaseParser, ctx: ValueExpressionContext) {
+	constructor(parser: SqlParser, ctx: ValueExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CONCAT(): TerminalNode {
-		return this.getToken(SqlBaseParser.CONCAT, 0);
+		return this.getToken(SqlParser.CONCAT, 0);
 	}
 	public valueExpression_list(): ValueExpressionContext[] {
 		return this.getTypedRuleContexts(ValueExpressionContext) as ValueExpressionContext[];
@@ -14152,7 +14152,7 @@ export class ArithmeticBinaryContext extends ValueExpressionContext {
 	public _left!: ValueExpressionContext;
 	public _operator!: Token;
 	public _right!: ValueExpressionContext;
-	constructor(parser: SqlBaseParser, ctx: ValueExpressionContext) {
+	constructor(parser: SqlParser, ctx: ValueExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14163,24 +14163,24 @@ export class ArithmeticBinaryContext extends ValueExpressionContext {
 		return this.getTypedRuleContext(ValueExpressionContext, i) as ValueExpressionContext;
 	}
 	public ASTERISK(): TerminalNode {
-		return this.getToken(SqlBaseParser.ASTERISK, 0);
+		return this.getToken(SqlParser.ASTERISK, 0);
 	}
 	public SLASH(): TerminalNode {
-		return this.getToken(SqlBaseParser.SLASH, 0);
+		return this.getToken(SqlParser.SLASH, 0);
 	}
 	public PERCENT(): TerminalNode {
-		return this.getToken(SqlBaseParser.PERCENT, 0);
+		return this.getToken(SqlParser.PERCENT, 0);
 	}
 	public PLUS(): TerminalNode {
-		return this.getToken(SqlBaseParser.PLUS, 0);
+		return this.getToken(SqlParser.PLUS, 0);
 	}
 	public MINUS(): TerminalNode {
-		return this.getToken(SqlBaseParser.MINUS, 0);
+		return this.getToken(SqlParser.MINUS, 0);
 	}
 }
 export class ArithmeticUnaryContext extends ValueExpressionContext {
 	public _operator!: Token;
-	constructor(parser: SqlBaseParser, ctx: ValueExpressionContext) {
+	constructor(parser: SqlParser, ctx: ValueExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14188,14 +14188,14 @@ export class ArithmeticUnaryContext extends ValueExpressionContext {
 		return this.getTypedRuleContext(ValueExpressionContext, 0) as ValueExpressionContext;
 	}
 	public MINUS(): TerminalNode {
-		return this.getToken(SqlBaseParser.MINUS, 0);
+		return this.getToken(SqlParser.MINUS, 0);
 	}
 	public PLUS(): TerminalNode {
-		return this.getToken(SqlBaseParser.PLUS, 0);
+		return this.getToken(SqlParser.PLUS, 0);
 	}
 }
 export class AtTimeZoneContext extends ValueExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: ValueExpressionContext) {
+	constructor(parser: SqlParser, ctx: ValueExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14203,7 +14203,7 @@ export class AtTimeZoneContext extends ValueExpressionContext {
 		return this.getTypedRuleContext(ValueExpressionContext, 0) as ValueExpressionContext;
 	}
 	public AT(): TerminalNode {
-		return this.getToken(SqlBaseParser.AT, 0);
+		return this.getToken(SqlParser.AT, 0);
 	}
 	public timeZoneSpecifier(): TimeZoneSpecifierContext {
 		return this.getTypedRuleContext(TimeZoneSpecifierContext, 0) as TimeZoneSpecifierContext;
@@ -14212,12 +14212,12 @@ export class AtTimeZoneContext extends ValueExpressionContext {
 
 
 export class PrimaryExpressionContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_primaryExpression;
+    	return SqlParser.RULE_primaryExpression;
 	}
 	public override copyFrom(ctx: PrimaryExpressionContext): void {
 		super.copyFrom(ctx);
@@ -14226,7 +14226,7 @@ export class PrimaryExpressionContext extends ParserRuleContext {
 export class DereferenceContext extends PrimaryExpressionContext {
 	public _base!: PrimaryExpressionContext;
 	public _fieldName!: IdentifierContext;
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14238,7 +14238,7 @@ export class DereferenceContext extends PrimaryExpressionContext {
 	}
 }
 export class TypeConstructorContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14249,42 +14249,42 @@ export class TypeConstructorContext extends PrimaryExpressionContext {
 		return this.getTypedRuleContext(StringContext, 0) as StringContext;
 	}
 	public DOUBLE_PRECISION(): TerminalNode {
-		return this.getToken(SqlBaseParser.DOUBLE_PRECISION, 0);
+		return this.getToken(SqlParser.DOUBLE_PRECISION, 0);
 	}
 }
 export class SpecialDateTimeFunctionContext extends PrimaryExpressionContext {
 	public _name!: Token;
 	public _precision!: Token;
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CURRENT_DATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CURRENT_DATE, 0);
+		return this.getToken(SqlParser.CURRENT_DATE, 0);
 	}
 	public CURRENT_TIME(): TerminalNode {
-		return this.getToken(SqlBaseParser.CURRENT_TIME, 0);
+		return this.getToken(SqlParser.CURRENT_TIME, 0);
 	}
 	public INTEGER_VALUE(): TerminalNode {
-		return this.getToken(SqlBaseParser.INTEGER_VALUE, 0);
+		return this.getToken(SqlParser.INTEGER_VALUE, 0);
 	}
 	public CURRENT_TIMESTAMP(): TerminalNode {
-		return this.getToken(SqlBaseParser.CURRENT_TIMESTAMP, 0);
+		return this.getToken(SqlParser.CURRENT_TIMESTAMP, 0);
 	}
 	public LOCALTIME(): TerminalNode {
-		return this.getToken(SqlBaseParser.LOCALTIME, 0);
+		return this.getToken(SqlParser.LOCALTIME, 0);
 	}
 	public LOCALTIMESTAMP(): TerminalNode {
-		return this.getToken(SqlBaseParser.LOCALTIMESTAMP, 0);
+		return this.getToken(SqlParser.LOCALTIMESTAMP, 0);
 	}
 }
 export class SubstringContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SUBSTRING(): TerminalNode {
-		return this.getToken(SqlBaseParser.SUBSTRING, 0);
+		return this.getToken(SqlParser.SUBSTRING, 0);
 	}
 	public valueExpression_list(): ValueExpressionContext[] {
 		return this.getTypedRuleContexts(ValueExpressionContext) as ValueExpressionContext[];
@@ -14293,35 +14293,35 @@ export class SubstringContext extends PrimaryExpressionContext {
 		return this.getTypedRuleContext(ValueExpressionContext, i) as ValueExpressionContext;
 	}
 	public FROM(): TerminalNode {
-		return this.getToken(SqlBaseParser.FROM, 0);
+		return this.getToken(SqlParser.FROM, 0);
 	}
 	public FOR(): TerminalNode {
-		return this.getToken(SqlBaseParser.FOR, 0);
+		return this.getToken(SqlParser.FOR, 0);
 	}
 }
 export class CastContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CAST(): TerminalNode {
-		return this.getToken(SqlBaseParser.CAST, 0);
+		return this.getToken(SqlParser.CAST, 0);
 	}
 	public expression(): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
 	public AS(): TerminalNode {
-		return this.getToken(SqlBaseParser.AS, 0);
+		return this.getToken(SqlParser.AS, 0);
 	}
 	public type_(): TypeContext {
 		return this.getTypedRuleContext(TypeContext, 0) as TypeContext;
 	}
 	public TRY_CAST(): TerminalNode {
-		return this.getToken(SqlBaseParser.TRY_CAST, 0);
+		return this.getToken(SqlParser.TRY_CAST, 0);
 	}
 }
 export class LambdaContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14336,7 +14336,7 @@ export class LambdaContext extends PrimaryExpressionContext {
 	}
 }
 export class ParenthesizedExpressionContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14345,18 +14345,18 @@ export class ParenthesizedExpressionContext extends PrimaryExpressionContext {
 	}
 }
 export class ParameterContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 }
 export class NormalizeContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public NORMALIZE(): TerminalNode {
-		return this.getToken(SqlBaseParser.NORMALIZE, 0);
+		return this.getToken(SqlParser.NORMALIZE, 0);
 	}
 	public valueExpression(): ValueExpressionContext {
 		return this.getTypedRuleContext(ValueExpressionContext, 0) as ValueExpressionContext;
@@ -14366,7 +14366,7 @@ export class NormalizeContext extends PrimaryExpressionContext {
 	}
 }
 export class IntervalLiteralContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14375,7 +14375,7 @@ export class IntervalLiteralContext extends PrimaryExpressionContext {
 	}
 }
 export class NumericLiteralContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14384,7 +14384,7 @@ export class NumericLiteralContext extends PrimaryExpressionContext {
 	}
 }
 export class BooleanLiteralContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14394,18 +14394,18 @@ export class BooleanLiteralContext extends PrimaryExpressionContext {
 }
 export class SimpleCaseContext extends PrimaryExpressionContext {
 	public _elseExpression!: ExpressionContext;
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CASE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CASE, 0);
+		return this.getToken(SqlParser.CASE, 0);
 	}
 	public valueExpression(): ValueExpressionContext {
 		return this.getTypedRuleContext(ValueExpressionContext, 0) as ValueExpressionContext;
 	}
 	public END(): TerminalNode {
-		return this.getToken(SqlBaseParser.END, 0);
+		return this.getToken(SqlParser.END, 0);
 	}
 	public whenClause_list(): WhenClauseContext[] {
 		return this.getTypedRuleContexts(WhenClauseContext) as WhenClauseContext[];
@@ -14414,14 +14414,14 @@ export class SimpleCaseContext extends PrimaryExpressionContext {
 		return this.getTypedRuleContext(WhenClauseContext, i) as WhenClauseContext;
 	}
 	public ELSE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ELSE, 0);
+		return this.getToken(SqlParser.ELSE, 0);
 	}
 	public expression(): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
 }
 export class ColumnReferenceContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14430,16 +14430,16 @@ export class ColumnReferenceContext extends PrimaryExpressionContext {
 	}
 }
 export class NullLiteralContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public NULL(): TerminalNode {
-		return this.getToken(SqlBaseParser.NULL, 0);
+		return this.getToken(SqlParser.NULL, 0);
 	}
 }
 export class RowConstructorContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14450,13 +14450,13 @@ export class RowConstructorContext extends PrimaryExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, i) as ExpressionContext;
 	}
 	public ROW(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROW, 0);
+		return this.getToken(SqlParser.ROW, 0);
 	}
 }
 export class SubscriptContext extends PrimaryExpressionContext {
 	public _value!: PrimaryExpressionContext;
 	public _index!: ValueExpressionContext;
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14468,7 +14468,7 @@ export class SubscriptContext extends PrimaryExpressionContext {
 	}
 }
 export class SubqueryExpressionContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14477,44 +14477,44 @@ export class SubqueryExpressionContext extends PrimaryExpressionContext {
 	}
 }
 export class BinaryLiteralContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public BINARY_LITERAL(): TerminalNode {
-		return this.getToken(SqlBaseParser.BINARY_LITERAL, 0);
+		return this.getToken(SqlParser.BINARY_LITERAL, 0);
 	}
 }
 export class CurrentUserContext extends PrimaryExpressionContext {
 	public _name!: Token;
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CURRENT_USER(): TerminalNode {
-		return this.getToken(SqlBaseParser.CURRENT_USER, 0);
+		return this.getToken(SqlParser.CURRENT_USER, 0);
 	}
 }
 export class ExtractContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public EXTRACT(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXTRACT, 0);
+		return this.getToken(SqlParser.EXTRACT, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 	public FROM(): TerminalNode {
-		return this.getToken(SqlBaseParser.FROM, 0);
+		return this.getToken(SqlParser.FROM, 0);
 	}
 	public valueExpression(): ValueExpressionContext {
 		return this.getTypedRuleContext(ValueExpressionContext, 0) as ValueExpressionContext;
 	}
 }
 export class StringLiteralContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14523,12 +14523,12 @@ export class StringLiteralContext extends PrimaryExpressionContext {
 	}
 }
 export class ArrayConstructorContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ARRAY(): TerminalNode {
-		return this.getToken(SqlBaseParser.ARRAY, 0);
+		return this.getToken(SqlParser.ARRAY, 0);
 	}
 	public expression_list(): ExpressionContext[] {
 		return this.getTypedRuleContexts(ExpressionContext) as ExpressionContext[];
@@ -14538,7 +14538,7 @@ export class ArrayConstructorContext extends PrimaryExpressionContext {
 	}
 }
 export class FunctionCallContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -14546,7 +14546,7 @@ export class FunctionCallContext extends PrimaryExpressionContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
 	public ASTERISK(): TerminalNode {
-		return this.getToken(SqlBaseParser.ASTERISK, 0);
+		return this.getToken(SqlParser.ASTERISK, 0);
 	}
 	public filter(): FilterContext {
 		return this.getTypedRuleContext(FilterContext, 0) as FilterContext;
@@ -14561,10 +14561,10 @@ export class FunctionCallContext extends PrimaryExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, i) as ExpressionContext;
 	}
 	public ORDER(): TerminalNode {
-		return this.getToken(SqlBaseParser.ORDER, 0);
+		return this.getToken(SqlParser.ORDER, 0);
 	}
 	public BY(): TerminalNode {
-		return this.getToken(SqlBaseParser.BY, 0);
+		return this.getToken(SqlParser.BY, 0);
 	}
 	public sortItem_list(): SortItemContext[] {
 		return this.getTypedRuleContexts(SortItemContext) as SortItemContext[];
@@ -14580,24 +14580,24 @@ export class FunctionCallContext extends PrimaryExpressionContext {
 	}
 }
 export class ExistsContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public EXISTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXISTS, 0);
+		return this.getToken(SqlParser.EXISTS, 0);
 	}
 	public query(): QueryContext {
 		return this.getTypedRuleContext(QueryContext, 0) as QueryContext;
 	}
 }
 export class PositionContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public POSITION(): TerminalNode {
-		return this.getToken(SqlBaseParser.POSITION, 0);
+		return this.getToken(SqlParser.POSITION, 0);
 	}
 	public valueExpression_list(): ValueExpressionContext[] {
 		return this.getTypedRuleContexts(ValueExpressionContext) as ValueExpressionContext[];
@@ -14606,20 +14606,20 @@ export class PositionContext extends PrimaryExpressionContext {
 		return this.getTypedRuleContext(ValueExpressionContext, i) as ValueExpressionContext;
 	}
 	public IN(): TerminalNode {
-		return this.getToken(SqlBaseParser.IN, 0);
+		return this.getToken(SqlParser.IN, 0);
 	}
 }
 export class SearchedCaseContext extends PrimaryExpressionContext {
 	public _elseExpression!: ExpressionContext;
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CASE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CASE, 0);
+		return this.getToken(SqlParser.CASE, 0);
 	}
 	public END(): TerminalNode {
-		return this.getToken(SqlBaseParser.END, 0);
+		return this.getToken(SqlParser.END, 0);
 	}
 	public whenClause_list(): WhenClauseContext[] {
 		return this.getTypedRuleContexts(WhenClauseContext) as WhenClauseContext[];
@@ -14628,19 +14628,19 @@ export class SearchedCaseContext extends PrimaryExpressionContext {
 		return this.getTypedRuleContext(WhenClauseContext, i) as WhenClauseContext;
 	}
 	public ELSE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ELSE, 0);
+		return this.getToken(SqlParser.ELSE, 0);
 	}
 	public expression(): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
 }
 export class GroupingOperationContext extends PrimaryExpressionContext {
-	constructor(parser: SqlBaseParser, ctx: PrimaryExpressionContext) {
+	constructor(parser: SqlParser, ctx: PrimaryExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public GROUPING(): TerminalNode {
-		return this.getToken(SqlBaseParser.GROUPING, 0);
+		return this.getToken(SqlParser.GROUPING, 0);
 	}
 	public qualifiedName_list(): QualifiedNameContext[] {
 		return this.getTypedRuleContexts(QualifiedNameContext) as QualifiedNameContext[];
@@ -14652,100 +14652,100 @@ export class GroupingOperationContext extends PrimaryExpressionContext {
 
 
 export class StringContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_string;
+    	return SqlParser.RULE_string;
 	}
 	public override copyFrom(ctx: StringContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class UnicodeStringLiteralContext extends StringContext {
-	constructor(parser: SqlBaseParser, ctx: StringContext) {
+	constructor(parser: SqlParser, ctx: StringContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public UNICODE_STRING(): TerminalNode {
-		return this.getToken(SqlBaseParser.UNICODE_STRING, 0);
+		return this.getToken(SqlParser.UNICODE_STRING, 0);
 	}
 	public UESCAPE(): TerminalNode {
-		return this.getToken(SqlBaseParser.UESCAPE, 0);
+		return this.getToken(SqlParser.UESCAPE, 0);
 	}
 	public STRING(): TerminalNode {
-		return this.getToken(SqlBaseParser.STRING, 0);
+		return this.getToken(SqlParser.STRING, 0);
 	}
 }
 export class BasicStringLiteralContext extends StringContext {
-	constructor(parser: SqlBaseParser, ctx: StringContext) {
+	constructor(parser: SqlParser, ctx: StringContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public STRING(): TerminalNode {
-		return this.getToken(SqlBaseParser.STRING, 0);
+		return this.getToken(SqlParser.STRING, 0);
 	}
 }
 
 
 export class NullTreatmentContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public IGNORE(): TerminalNode {
-		return this.getToken(SqlBaseParser.IGNORE, 0);
+		return this.getToken(SqlParser.IGNORE, 0);
 	}
 	public NULLS(): TerminalNode {
-		return this.getToken(SqlBaseParser.NULLS, 0);
+		return this.getToken(SqlParser.NULLS, 0);
 	}
 	public RESPECT(): TerminalNode {
-		return this.getToken(SqlBaseParser.RESPECT, 0);
+		return this.getToken(SqlParser.RESPECT, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_nullTreatment;
+    	return SqlParser.RULE_nullTreatment;
 	}
 }
 
 
 export class TimeZoneSpecifierContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_timeZoneSpecifier;
+    	return SqlParser.RULE_timeZoneSpecifier;
 	}
 	public override copyFrom(ctx: TimeZoneSpecifierContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class TimeZoneIntervalContext extends TimeZoneSpecifierContext {
-	constructor(parser: SqlBaseParser, ctx: TimeZoneSpecifierContext) {
+	constructor(parser: SqlParser, ctx: TimeZoneSpecifierContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public TIME(): TerminalNode {
-		return this.getToken(SqlBaseParser.TIME, 0);
+		return this.getToken(SqlParser.TIME, 0);
 	}
 	public ZONE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ZONE, 0);
+		return this.getToken(SqlParser.ZONE, 0);
 	}
 	public interval(): IntervalContext {
 		return this.getTypedRuleContext(IntervalContext, 0) as IntervalContext;
 	}
 }
 export class TimeZoneStringContext extends TimeZoneSpecifierContext {
-	constructor(parser: SqlBaseParser, ctx: TimeZoneSpecifierContext) {
+	constructor(parser: SqlParser, ctx: TimeZoneSpecifierContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public TIME(): TerminalNode {
-		return this.getToken(SqlBaseParser.TIME, 0);
+		return this.getToken(SqlParser.TIME, 0);
 	}
 	public ZONE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ZONE, 0);
+		return this.getToken(SqlParser.ZONE, 0);
 	}
 	public string_(): StringContext {
 		return this.getTypedRuleContext(StringContext, 0) as StringContext;
@@ -14754,67 +14754,67 @@ export class TimeZoneStringContext extends TimeZoneSpecifierContext {
 
 
 export class ComparisonOperatorContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public EQ(): TerminalNode {
-		return this.getToken(SqlBaseParser.EQ, 0);
+		return this.getToken(SqlParser.EQ, 0);
 	}
 	public NEQ(): TerminalNode {
-		return this.getToken(SqlBaseParser.NEQ, 0);
+		return this.getToken(SqlParser.NEQ, 0);
 	}
 	public LT(): TerminalNode {
-		return this.getToken(SqlBaseParser.LT, 0);
+		return this.getToken(SqlParser.LT, 0);
 	}
 	public LTE(): TerminalNode {
-		return this.getToken(SqlBaseParser.LTE, 0);
+		return this.getToken(SqlParser.LTE, 0);
 	}
 	public GT(): TerminalNode {
-		return this.getToken(SqlBaseParser.GT, 0);
+		return this.getToken(SqlParser.GT, 0);
 	}
 	public GTE(): TerminalNode {
-		return this.getToken(SqlBaseParser.GTE, 0);
+		return this.getToken(SqlParser.GTE, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_comparisonOperator;
+    	return SqlParser.RULE_comparisonOperator;
 	}
 }
 
 
 export class ComparisonQuantifierContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public ALL(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALL, 0);
+		return this.getToken(SqlParser.ALL, 0);
 	}
 	public SOME(): TerminalNode {
-		return this.getToken(SqlBaseParser.SOME, 0);
+		return this.getToken(SqlParser.SOME, 0);
 	}
 	public ANY(): TerminalNode {
-		return this.getToken(SqlBaseParser.ANY, 0);
+		return this.getToken(SqlParser.ANY, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_comparisonQuantifier;
+    	return SqlParser.RULE_comparisonQuantifier;
 	}
 }
 
 
 export class BooleanValueContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public TRUE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TRUE, 0);
+		return this.getToken(SqlParser.TRUE, 0);
 	}
 	public FALSE(): TerminalNode {
-		return this.getToken(SqlBaseParser.FALSE, 0);
+		return this.getToken(SqlParser.FALSE, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_booleanValue;
+    	return SqlParser.RULE_booleanValue;
 	}
 }
 
@@ -14823,12 +14823,12 @@ export class IntervalContext extends ParserRuleContext {
 	public _sign!: Token;
 	public _from_!: IntervalFieldContext;
 	public _to!: IntervalFieldContext;
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public INTERVAL(): TerminalNode {
-		return this.getToken(SqlBaseParser.INTERVAL, 0);
+		return this.getToken(SqlParser.INTERVAL, 0);
 	}
 	public string_(): StringContext {
 		return this.getTypedRuleContext(StringContext, 0) as StringContext;
@@ -14840,74 +14840,74 @@ export class IntervalContext extends ParserRuleContext {
 		return this.getTypedRuleContext(IntervalFieldContext, i) as IntervalFieldContext;
 	}
 	public TO(): TerminalNode {
-		return this.getToken(SqlBaseParser.TO, 0);
+		return this.getToken(SqlParser.TO, 0);
 	}
 	public PLUS(): TerminalNode {
-		return this.getToken(SqlBaseParser.PLUS, 0);
+		return this.getToken(SqlParser.PLUS, 0);
 	}
 	public MINUS(): TerminalNode {
-		return this.getToken(SqlBaseParser.MINUS, 0);
+		return this.getToken(SqlParser.MINUS, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_interval;
+    	return SqlParser.RULE_interval;
 	}
 }
 
 
 export class IntervalFieldContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public YEAR(): TerminalNode {
-		return this.getToken(SqlBaseParser.YEAR, 0);
+		return this.getToken(SqlParser.YEAR, 0);
 	}
 	public MONTH(): TerminalNode {
-		return this.getToken(SqlBaseParser.MONTH, 0);
+		return this.getToken(SqlParser.MONTH, 0);
 	}
 	public DAY(): TerminalNode {
-		return this.getToken(SqlBaseParser.DAY, 0);
+		return this.getToken(SqlParser.DAY, 0);
 	}
 	public HOUR(): TerminalNode {
-		return this.getToken(SqlBaseParser.HOUR, 0);
+		return this.getToken(SqlParser.HOUR, 0);
 	}
 	public MINUTE(): TerminalNode {
-		return this.getToken(SqlBaseParser.MINUTE, 0);
+		return this.getToken(SqlParser.MINUTE, 0);
 	}
 	public SECOND(): TerminalNode {
-		return this.getToken(SqlBaseParser.SECOND, 0);
+		return this.getToken(SqlParser.SECOND, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_intervalField;
+    	return SqlParser.RULE_intervalField;
 	}
 }
 
 
 export class NormalFormContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public NFD(): TerminalNode {
-		return this.getToken(SqlBaseParser.NFD, 0);
+		return this.getToken(SqlParser.NFD, 0);
 	}
 	public NFC(): TerminalNode {
-		return this.getToken(SqlBaseParser.NFC, 0);
+		return this.getToken(SqlParser.NFC, 0);
 	}
 	public NFKD(): TerminalNode {
-		return this.getToken(SqlBaseParser.NFKD, 0);
+		return this.getToken(SqlParser.NFKD, 0);
 	}
 	public NFKC(): TerminalNode {
-		return this.getToken(SqlBaseParser.NFKC, 0);
+		return this.getToken(SqlParser.NFKC, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_normalForm;
+    	return SqlParser.RULE_normalForm;
 	}
 }
 
 
 export class TypesContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -14918,7 +14918,7 @@ export class TypesContext extends ParserRuleContext {
 		return this.getTypedRuleContext(TypeContext, i) as TypeContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_types;
+    	return SqlParser.RULE_types;
 	}
 }
 
@@ -14926,15 +14926,15 @@ export class TypesContext extends ParserRuleContext {
 export class TypeContext extends ParserRuleContext {
 	public _from_!: IntervalFieldContext;
 	public _to!: IntervalFieldContext;
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public ARRAY(): TerminalNode {
-		return this.getToken(SqlBaseParser.ARRAY, 0);
+		return this.getToken(SqlParser.ARRAY, 0);
 	}
 	public LT(): TerminalNode {
-		return this.getToken(SqlBaseParser.LT, 0);
+		return this.getToken(SqlParser.LT, 0);
 	}
 	public type__list(): TypeContext[] {
 		return this.getTypedRuleContexts(TypeContext) as TypeContext[];
@@ -14943,13 +14943,13 @@ export class TypeContext extends ParserRuleContext {
 		return this.getTypedRuleContext(TypeContext, i) as TypeContext;
 	}
 	public GT(): TerminalNode {
-		return this.getToken(SqlBaseParser.GT, 0);
+		return this.getToken(SqlParser.GT, 0);
 	}
 	public MAP(): TerminalNode {
-		return this.getToken(SqlBaseParser.MAP, 0);
+		return this.getToken(SqlParser.MAP, 0);
 	}
 	public ROW(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROW, 0);
+		return this.getToken(SqlParser.ROW, 0);
 	}
 	public identifier_list(): IdentifierContext[] {
 		return this.getTypedRuleContexts(IdentifierContext) as IdentifierContext[];
@@ -14967,10 +14967,10 @@ export class TypeContext extends ParserRuleContext {
 		return this.getTypedRuleContext(TypeParameterContext, i) as TypeParameterContext;
 	}
 	public INTERVAL(): TerminalNode {
-		return this.getToken(SqlBaseParser.INTERVAL, 0);
+		return this.getToken(SqlParser.INTERVAL, 0);
 	}
 	public TO(): TerminalNode {
-		return this.getToken(SqlBaseParser.TO, 0);
+		return this.getToken(SqlParser.TO, 0);
 	}
 	public intervalField_list(): IntervalFieldContext[] {
 		return this.getTypedRuleContexts(IntervalFieldContext) as IntervalFieldContext[];
@@ -14979,47 +14979,47 @@ export class TypeContext extends ParserRuleContext {
 		return this.getTypedRuleContext(IntervalFieldContext, i) as IntervalFieldContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_type;
+    	return SqlParser.RULE_type;
 	}
 }
 
 
 export class TypeParameterContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public INTEGER_VALUE(): TerminalNode {
-		return this.getToken(SqlBaseParser.INTEGER_VALUE, 0);
+		return this.getToken(SqlParser.INTEGER_VALUE, 0);
 	}
 	public type_(): TypeContext {
 		return this.getTypedRuleContext(TypeContext, 0) as TypeContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_typeParameter;
+    	return SqlParser.RULE_typeParameter;
 	}
 }
 
 
 export class BaseTypeContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public TIME_WITH_TIME_ZONE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TIME_WITH_TIME_ZONE, 0);
+		return this.getToken(SqlParser.TIME_WITH_TIME_ZONE, 0);
 	}
 	public TIMESTAMP_WITH_TIME_ZONE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TIMESTAMP_WITH_TIME_ZONE, 0);
+		return this.getToken(SqlParser.TIMESTAMP_WITH_TIME_ZONE, 0);
 	}
 	public DOUBLE_PRECISION(): TerminalNode {
-		return this.getToken(SqlBaseParser.DOUBLE_PRECISION, 0);
+		return this.getToken(SqlParser.DOUBLE_PRECISION, 0);
 	}
 	public qualifiedName(): QualifiedNameContext {
 		return this.getTypedRuleContext(QualifiedNameContext, 0) as QualifiedNameContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_baseType;
+    	return SqlParser.RULE_baseType;
 	}
 }
 
@@ -15027,15 +15027,15 @@ export class BaseTypeContext extends ParserRuleContext {
 export class WhenClauseContext extends ParserRuleContext {
 	public _condition!: ExpressionContext;
 	public _result!: ExpressionContext;
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public WHEN(): TerminalNode {
-		return this.getToken(SqlBaseParser.WHEN, 0);
+		return this.getToken(SqlParser.WHEN, 0);
 	}
 	public THEN(): TerminalNode {
-		return this.getToken(SqlBaseParser.THEN, 0);
+		return this.getToken(SqlParser.THEN, 0);
 	}
 	public expression_list(): ExpressionContext[] {
 		return this.getTypedRuleContexts(ExpressionContext) as ExpressionContext[];
@@ -15044,27 +15044,27 @@ export class WhenClauseContext extends ParserRuleContext {
 		return this.getTypedRuleContext(ExpressionContext, i) as ExpressionContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_whenClause;
+    	return SqlParser.RULE_whenClause;
 	}
 }
 
 
 export class FilterContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public FILTER(): TerminalNode {
-		return this.getToken(SqlBaseParser.FILTER, 0);
+		return this.getToken(SqlParser.FILTER, 0);
 	}
 	public WHERE(): TerminalNode {
-		return this.getToken(SqlBaseParser.WHERE, 0);
+		return this.getToken(SqlParser.WHERE, 0);
 	}
 	public booleanExpression(): BooleanExpressionContext {
 		return this.getTypedRuleContext(BooleanExpressionContext, 0) as BooleanExpressionContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_filter;
+    	return SqlParser.RULE_filter;
 	}
 }
 
@@ -15072,24 +15072,24 @@ export class FilterContext extends ParserRuleContext {
 export class OverContext extends ParserRuleContext {
 	public _expression!: ExpressionContext;
 	public _partition: ExpressionContext[] = [];
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public OVER(): TerminalNode {
-		return this.getToken(SqlBaseParser.OVER, 0);
+		return this.getToken(SqlParser.OVER, 0);
 	}
 	public PARTITION(): TerminalNode {
-		return this.getToken(SqlBaseParser.PARTITION, 0);
+		return this.getToken(SqlParser.PARTITION, 0);
 	}
 	public BY_list(): TerminalNode[] {
-	    	return this.getTokens(SqlBaseParser.BY);
+	    	return this.getTokens(SqlParser.BY);
 	}
 	public BY(i: number): TerminalNode {
-		return this.getToken(SqlBaseParser.BY, i);
+		return this.getToken(SqlParser.BY, i);
 	}
 	public ORDER(): TerminalNode {
-		return this.getToken(SqlBaseParser.ORDER, 0);
+		return this.getToken(SqlParser.ORDER, 0);
 	}
 	public sortItem_list(): SortItemContext[] {
 		return this.getTypedRuleContexts(SortItemContext) as SortItemContext[];
@@ -15107,7 +15107,7 @@ export class OverContext extends ParserRuleContext {
 		return this.getTypedRuleContext(ExpressionContext, i) as ExpressionContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_over;
+    	return SqlParser.RULE_over;
 	}
 }
 
@@ -15116,12 +15116,12 @@ export class WindowFrameContext extends ParserRuleContext {
 	public _frameType!: Token;
 	public _start!: FrameBoundContext;
 	public _end!: FrameBoundContext;
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public RANGE(): TerminalNode {
-		return this.getToken(SqlBaseParser.RANGE, 0);
+		return this.getToken(SqlParser.RANGE, 0);
 	}
 	public frameBound_list(): FrameBoundContext[] {
 		return this.getTypedRuleContexts(FrameBoundContext) as FrameBoundContext[];
@@ -15130,30 +15130,30 @@ export class WindowFrameContext extends ParserRuleContext {
 		return this.getTypedRuleContext(FrameBoundContext, i) as FrameBoundContext;
 	}
 	public ROWS(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROWS, 0);
+		return this.getToken(SqlParser.ROWS, 0);
 	}
 	public GROUPS(): TerminalNode {
-		return this.getToken(SqlBaseParser.GROUPS, 0);
+		return this.getToken(SqlParser.GROUPS, 0);
 	}
 	public BETWEEN(): TerminalNode {
-		return this.getToken(SqlBaseParser.BETWEEN, 0);
+		return this.getToken(SqlParser.BETWEEN, 0);
 	}
 	public AND(): TerminalNode {
-		return this.getToken(SqlBaseParser.AND, 0);
+		return this.getToken(SqlParser.AND, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_windowFrame;
+    	return SqlParser.RULE_windowFrame;
 	}
 }
 
 
 export class FrameBoundContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_frameBound;
+    	return SqlParser.RULE_frameBound;
 	}
 	public override copyFrom(ctx: FrameBoundContext): void {
 		super.copyFrom(ctx);
@@ -15161,7 +15161,7 @@ export class FrameBoundContext extends ParserRuleContext {
 }
 export class BoundedFrameContext extends FrameBoundContext {
 	public _boundType!: Token;
-	constructor(parser: SqlBaseParser, ctx: FrameBoundContext) {
+	constructor(parser: SqlParser, ctx: FrameBoundContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -15169,44 +15169,44 @@ export class BoundedFrameContext extends FrameBoundContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
 	public PRECEDING(): TerminalNode {
-		return this.getToken(SqlBaseParser.PRECEDING, 0);
+		return this.getToken(SqlParser.PRECEDING, 0);
 	}
 	public FOLLOWING(): TerminalNode {
-		return this.getToken(SqlBaseParser.FOLLOWING, 0);
+		return this.getToken(SqlParser.FOLLOWING, 0);
 	}
 }
 export class UnboundedFrameContext extends FrameBoundContext {
 	public _boundType!: Token;
-	constructor(parser: SqlBaseParser, ctx: FrameBoundContext) {
+	constructor(parser: SqlParser, ctx: FrameBoundContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public UNBOUNDED(): TerminalNode {
-		return this.getToken(SqlBaseParser.UNBOUNDED, 0);
+		return this.getToken(SqlParser.UNBOUNDED, 0);
 	}
 	public PRECEDING(): TerminalNode {
-		return this.getToken(SqlBaseParser.PRECEDING, 0);
+		return this.getToken(SqlParser.PRECEDING, 0);
 	}
 	public FOLLOWING(): TerminalNode {
-		return this.getToken(SqlBaseParser.FOLLOWING, 0);
+		return this.getToken(SqlParser.FOLLOWING, 0);
 	}
 }
 export class CurrentRowBoundContext extends FrameBoundContext {
-	constructor(parser: SqlBaseParser, ctx: FrameBoundContext) {
+	constructor(parser: SqlParser, ctx: FrameBoundContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CURRENT(): TerminalNode {
-		return this.getToken(SqlBaseParser.CURRENT, 0);
+		return this.getToken(SqlParser.CURRENT, 0);
 	}
 	public ROW(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROW, 0);
+		return this.getToken(SqlParser.ROW, 0);
 	}
 }
 
 
 export class UpdateAssignmentContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -15214,24 +15214,24 @@ export class UpdateAssignmentContext extends ParserRuleContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 	public EQ(): TerminalNode {
-		return this.getToken(SqlBaseParser.EQ, 0);
+		return this.getToken(SqlParser.EQ, 0);
 	}
 	public expression(): ExpressionContext {
 		return this.getTypedRuleContext(ExpressionContext, 0) as ExpressionContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_updateAssignment;
+    	return SqlParser.RULE_updateAssignment;
 	}
 }
 
 
 export class ExplainOptionContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_explainOption;
+    	return SqlParser.RULE_explainOption;
 	}
 	public override copyFrom(ctx: ExplainOptionContext): void {
 		super.copyFrom(ctx);
@@ -15239,54 +15239,54 @@ export class ExplainOptionContext extends ParserRuleContext {
 }
 export class ExplainFormatContext extends ExplainOptionContext {
 	public _value!: Token;
-	constructor(parser: SqlBaseParser, ctx: ExplainOptionContext) {
+	constructor(parser: SqlParser, ctx: ExplainOptionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public FORMAT(): TerminalNode {
-		return this.getToken(SqlBaseParser.FORMAT, 0);
+		return this.getToken(SqlParser.FORMAT, 0);
 	}
 	public TEXT(): TerminalNode {
-		return this.getToken(SqlBaseParser.TEXT, 0);
+		return this.getToken(SqlParser.TEXT, 0);
 	}
 	public GRAPHVIZ(): TerminalNode {
-		return this.getToken(SqlBaseParser.GRAPHVIZ, 0);
+		return this.getToken(SqlParser.GRAPHVIZ, 0);
 	}
 	public JSON(): TerminalNode {
-		return this.getToken(SqlBaseParser.JSON, 0);
+		return this.getToken(SqlParser.JSON, 0);
 	}
 }
 export class ExplainTypeContext extends ExplainOptionContext {
 	public _value!: Token;
-	constructor(parser: SqlBaseParser, ctx: ExplainOptionContext) {
+	constructor(parser: SqlParser, ctx: ExplainOptionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public TYPE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TYPE, 0);
+		return this.getToken(SqlParser.TYPE, 0);
 	}
 	public LOGICAL(): TerminalNode {
-		return this.getToken(SqlBaseParser.LOGICAL, 0);
+		return this.getToken(SqlParser.LOGICAL, 0);
 	}
 	public DISTRIBUTED(): TerminalNode {
-		return this.getToken(SqlBaseParser.DISTRIBUTED, 0);
+		return this.getToken(SqlParser.DISTRIBUTED, 0);
 	}
 	public VALIDATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.VALIDATE, 0);
+		return this.getToken(SqlParser.VALIDATE, 0);
 	}
 	public IO(): TerminalNode {
-		return this.getToken(SqlBaseParser.IO, 0);
+		return this.getToken(SqlParser.IO, 0);
 	}
 }
 
 
 export class TransactionModeContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_transactionMode;
+    	return SqlParser.RULE_transactionMode;
 	}
 	public override copyFrom(ctx: TransactionModeContext): void {
 		super.copyFrom(ctx);
@@ -15294,30 +15294,30 @@ export class TransactionModeContext extends ParserRuleContext {
 }
 export class TransactionAccessModeContext extends TransactionModeContext {
 	public _accessMode!: Token;
-	constructor(parser: SqlBaseParser, ctx: TransactionModeContext) {
+	constructor(parser: SqlParser, ctx: TransactionModeContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public READ(): TerminalNode {
-		return this.getToken(SqlBaseParser.READ, 0);
+		return this.getToken(SqlParser.READ, 0);
 	}
 	public ONLY(): TerminalNode {
-		return this.getToken(SqlBaseParser.ONLY, 0);
+		return this.getToken(SqlParser.ONLY, 0);
 	}
 	public WRITE(): TerminalNode {
-		return this.getToken(SqlBaseParser.WRITE, 0);
+		return this.getToken(SqlParser.WRITE, 0);
 	}
 }
 export class IsolationLevelContext extends TransactionModeContext {
-	constructor(parser: SqlBaseParser, ctx: TransactionModeContext) {
+	constructor(parser: SqlParser, ctx: TransactionModeContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ISOLATION(): TerminalNode {
-		return this.getToken(SqlBaseParser.ISOLATION, 0);
+		return this.getToken(SqlParser.ISOLATION, 0);
 	}
 	public LEVEL(): TerminalNode {
-		return this.getToken(SqlBaseParser.LEVEL, 0);
+		return this.getToken(SqlParser.LEVEL, 0);
 	}
 	public levelOfIsolation(): LevelOfIsolationContext {
 		return this.getTypedRuleContext(LevelOfIsolationContext, 0) as LevelOfIsolationContext;
@@ -15326,78 +15326,78 @@ export class IsolationLevelContext extends TransactionModeContext {
 
 
 export class LevelOfIsolationContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_levelOfIsolation;
+    	return SqlParser.RULE_levelOfIsolation;
 	}
 	public override copyFrom(ctx: LevelOfIsolationContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class ReadUncommittedContext extends LevelOfIsolationContext {
-	constructor(parser: SqlBaseParser, ctx: LevelOfIsolationContext) {
+	constructor(parser: SqlParser, ctx: LevelOfIsolationContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public READ(): TerminalNode {
-		return this.getToken(SqlBaseParser.READ, 0);
+		return this.getToken(SqlParser.READ, 0);
 	}
 	public UNCOMMITTED(): TerminalNode {
-		return this.getToken(SqlBaseParser.UNCOMMITTED, 0);
+		return this.getToken(SqlParser.UNCOMMITTED, 0);
 	}
 }
 export class SerializableContext extends LevelOfIsolationContext {
-	constructor(parser: SqlBaseParser, ctx: LevelOfIsolationContext) {
+	constructor(parser: SqlParser, ctx: LevelOfIsolationContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public SERIALIZABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.SERIALIZABLE, 0);
+		return this.getToken(SqlParser.SERIALIZABLE, 0);
 	}
 }
 export class ReadCommittedContext extends LevelOfIsolationContext {
-	constructor(parser: SqlBaseParser, ctx: LevelOfIsolationContext) {
+	constructor(parser: SqlParser, ctx: LevelOfIsolationContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public READ(): TerminalNode {
-		return this.getToken(SqlBaseParser.READ, 0);
+		return this.getToken(SqlParser.READ, 0);
 	}
 	public COMMITTED(): TerminalNode {
-		return this.getToken(SqlBaseParser.COMMITTED, 0);
+		return this.getToken(SqlParser.COMMITTED, 0);
 	}
 }
 export class RepeatableReadContext extends LevelOfIsolationContext {
-	constructor(parser: SqlBaseParser, ctx: LevelOfIsolationContext) {
+	constructor(parser: SqlParser, ctx: LevelOfIsolationContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public REPEATABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.REPEATABLE, 0);
+		return this.getToken(SqlParser.REPEATABLE, 0);
 	}
 	public READ(): TerminalNode {
-		return this.getToken(SqlBaseParser.READ, 0);
+		return this.getToken(SqlParser.READ, 0);
 	}
 }
 
 
 export class CallArgumentContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_callArgument;
+    	return SqlParser.RULE_callArgument;
 	}
 	public override copyFrom(ctx: CallArgumentContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class PositionalArgumentContext extends CallArgumentContext {
-	constructor(parser: SqlBaseParser, ctx: CallArgumentContext) {
+	constructor(parser: SqlParser, ctx: CallArgumentContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -15406,7 +15406,7 @@ export class PositionalArgumentContext extends CallArgumentContext {
 	}
 }
 export class NamedArgumentContext extends CallArgumentContext {
-	constructor(parser: SqlBaseParser, ctx: CallArgumentContext) {
+	constructor(parser: SqlParser, ctx: CallArgumentContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -15420,30 +15420,30 @@ export class NamedArgumentContext extends CallArgumentContext {
 
 
 export class PrivilegeContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public SELECT(): TerminalNode {
-		return this.getToken(SqlBaseParser.SELECT, 0);
+		return this.getToken(SqlParser.SELECT, 0);
 	}
 	public DELETE(): TerminalNode {
-		return this.getToken(SqlBaseParser.DELETE, 0);
+		return this.getToken(SqlParser.DELETE, 0);
 	}
 	public INSERT(): TerminalNode {
-		return this.getToken(SqlBaseParser.INSERT, 0);
+		return this.getToken(SqlParser.INSERT, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_privilege;
+    	return SqlParser.RULE_privilege;
 	}
 }
 
 
 export class QualifiedNameContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -15454,18 +15454,18 @@ export class QualifiedNameContext extends ParserRuleContext {
 		return this.getTypedRuleContext(IdentifierContext, i) as IdentifierContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_qualifiedName;
+    	return SqlParser.RULE_qualifiedName;
 	}
 }
 
 
 export class TableVersionExpressionContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_tableVersionExpression;
+    	return SqlParser.RULE_tableVersionExpression;
 	}
 	public override copyFrom(ctx: TableVersionExpressionContext): void {
 		super.copyFrom(ctx);
@@ -15473,12 +15473,12 @@ export class TableVersionExpressionContext extends ParserRuleContext {
 }
 export class TableVersionContext extends TableVersionExpressionContext {
 	public _tableVersionType!: Token;
-	constructor(parser: SqlBaseParser, ctx: TableVersionExpressionContext) {
+	constructor(parser: SqlParser, ctx: TableVersionExpressionContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public FOR(): TerminalNode {
-		return this.getToken(SqlBaseParser.FOR, 0);
+		return this.getToken(SqlParser.FOR, 0);
 	}
 	public tableVersionState(): TableVersionStateContext {
 		return this.getTypedRuleContext(TableVersionStateContext, 0) as TableVersionStateContext;
@@ -15487,78 +15487,78 @@ export class TableVersionContext extends TableVersionExpressionContext {
 		return this.getTypedRuleContext(ValueExpressionContext, 0) as ValueExpressionContext;
 	}
 	public SYSTEM_TIME(): TerminalNode {
-		return this.getToken(SqlBaseParser.SYSTEM_TIME, 0);
+		return this.getToken(SqlParser.SYSTEM_TIME, 0);
 	}
 	public SYSTEM_VERSION(): TerminalNode {
-		return this.getToken(SqlBaseParser.SYSTEM_VERSION, 0);
+		return this.getToken(SqlParser.SYSTEM_VERSION, 0);
 	}
 	public TIMESTAMP(): TerminalNode {
-		return this.getToken(SqlBaseParser.TIMESTAMP, 0);
+		return this.getToken(SqlParser.TIMESTAMP, 0);
 	}
 	public VERSION(): TerminalNode {
-		return this.getToken(SqlBaseParser.VERSION, 0);
+		return this.getToken(SqlParser.VERSION, 0);
 	}
 }
 
 
 export class TableVersionStateContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_tableVersionState;
+    	return SqlParser.RULE_tableVersionState;
 	}
 	public override copyFrom(ctx: TableVersionStateContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class TableversionbeforeContext extends TableVersionStateContext {
-	constructor(parser: SqlBaseParser, ctx: TableVersionStateContext) {
+	constructor(parser: SqlParser, ctx: TableVersionStateContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public BEFORE(): TerminalNode {
-		return this.getToken(SqlBaseParser.BEFORE, 0);
+		return this.getToken(SqlParser.BEFORE, 0);
 	}
 }
 export class TableversionasofContext extends TableVersionStateContext {
-	constructor(parser: SqlBaseParser, ctx: TableVersionStateContext) {
+	constructor(parser: SqlParser, ctx: TableVersionStateContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public AS(): TerminalNode {
-		return this.getToken(SqlBaseParser.AS, 0);
+		return this.getToken(SqlParser.AS, 0);
 	}
 	public OF(): TerminalNode {
-		return this.getToken(SqlBaseParser.OF, 0);
+		return this.getToken(SqlParser.OF, 0);
 	}
 }
 
 
 export class GrantorContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_grantor;
+    	return SqlParser.RULE_grantor;
 	}
 	public override copyFrom(ctx: GrantorContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class CurrentUserGrantorContext extends GrantorContext {
-	constructor(parser: SqlBaseParser, ctx: GrantorContext) {
+	constructor(parser: SqlParser, ctx: GrantorContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CURRENT_USER(): TerminalNode {
-		return this.getToken(SqlBaseParser.CURRENT_USER, 0);
+		return this.getToken(SqlParser.CURRENT_USER, 0);
 	}
 }
 export class SpecifiedPrincipalContext extends GrantorContext {
-	constructor(parser: SqlBaseParser, ctx: GrantorContext) {
+	constructor(parser: SqlParser, ctx: GrantorContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -15567,30 +15567,30 @@ export class SpecifiedPrincipalContext extends GrantorContext {
 	}
 }
 export class CurrentRoleGrantorContext extends GrantorContext {
-	constructor(parser: SqlBaseParser, ctx: GrantorContext) {
+	constructor(parser: SqlParser, ctx: GrantorContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public CURRENT_ROLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CURRENT_ROLE, 0);
+		return this.getToken(SqlParser.CURRENT_ROLE, 0);
 	}
 }
 
 
 export class PrincipalContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_principal;
+    	return SqlParser.RULE_principal;
 	}
 	public override copyFrom(ctx: PrincipalContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class UnspecifiedPrincipalContext extends PrincipalContext {
-	constructor(parser: SqlBaseParser, ctx: PrincipalContext) {
+	constructor(parser: SqlParser, ctx: PrincipalContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
@@ -15599,24 +15599,24 @@ export class UnspecifiedPrincipalContext extends PrincipalContext {
 	}
 }
 export class UserPrincipalContext extends PrincipalContext {
-	constructor(parser: SqlBaseParser, ctx: PrincipalContext) {
+	constructor(parser: SqlParser, ctx: PrincipalContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public USER(): TerminalNode {
-		return this.getToken(SqlBaseParser.USER, 0);
+		return this.getToken(SqlParser.USER, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
 }
 export class RolePrincipalContext extends PrincipalContext {
-	constructor(parser: SqlBaseParser, ctx: PrincipalContext) {
+	constructor(parser: SqlParser, ctx: PrincipalContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public ROLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROLE, 0);
+		return this.getToken(SqlParser.ROLE, 0);
 	}
 	public identifier(): IdentifierContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
@@ -15625,7 +15625,7 @@ export class RolePrincipalContext extends PrincipalContext {
 
 
 export class RolesContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -15636,57 +15636,57 @@ export class RolesContext extends ParserRuleContext {
 		return this.getTypedRuleContext(IdentifierContext, i) as IdentifierContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_roles;
+    	return SqlParser.RULE_roles;
 	}
 }
 
 
 export class IdentifierContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_identifier;
+    	return SqlParser.RULE_identifier;
 	}
 	public override copyFrom(ctx: IdentifierContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class BackQuotedIdentifierContext extends IdentifierContext {
-	constructor(parser: SqlBaseParser, ctx: IdentifierContext) {
+	constructor(parser: SqlParser, ctx: IdentifierContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public BACKQUOTED_IDENTIFIER(): TerminalNode {
-		return this.getToken(SqlBaseParser.BACKQUOTED_IDENTIFIER, 0);
+		return this.getToken(SqlParser.BACKQUOTED_IDENTIFIER, 0);
 	}
 }
 export class QuotedIdentifierContext extends IdentifierContext {
-	constructor(parser: SqlBaseParser, ctx: IdentifierContext) {
+	constructor(parser: SqlParser, ctx: IdentifierContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public QUOTED_IDENTIFIER(): TerminalNode {
-		return this.getToken(SqlBaseParser.QUOTED_IDENTIFIER, 0);
+		return this.getToken(SqlParser.QUOTED_IDENTIFIER, 0);
 	}
 }
 export class DigitIdentifierContext extends IdentifierContext {
-	constructor(parser: SqlBaseParser, ctx: IdentifierContext) {
+	constructor(parser: SqlParser, ctx: IdentifierContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public DIGIT_IDENTIFIER(): TerminalNode {
-		return this.getToken(SqlBaseParser.DIGIT_IDENTIFIER, 0);
+		return this.getToken(SqlParser.DIGIT_IDENTIFIER, 0);
 	}
 }
 export class UnquotedIdentifierContext extends IdentifierContext {
-	constructor(parser: SqlBaseParser, ctx: IdentifierContext) {
+	constructor(parser: SqlParser, ctx: IdentifierContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public IDENTIFIER(): TerminalNode {
-		return this.getToken(SqlBaseParser.IDENTIFIER, 0);
+		return this.getToken(SqlParser.IDENTIFIER, 0);
 	}
 	public nonReserved(): NonReservedContext {
 		return this.getTypedRuleContext(NonReservedContext, 0) as NonReservedContext;
@@ -15695,48 +15695,48 @@ export class UnquotedIdentifierContext extends IdentifierContext {
 
 
 export class NumberContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_number;
+    	return SqlParser.RULE_number;
 	}
 	public override copyFrom(ctx: NumberContext): void {
 		super.copyFrom(ctx);
 	}
 }
 export class DecimalLiteralContext extends NumberContext {
-	constructor(parser: SqlBaseParser, ctx: NumberContext) {
+	constructor(parser: SqlParser, ctx: NumberContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public DECIMAL_VALUE(): TerminalNode {
-		return this.getToken(SqlBaseParser.DECIMAL_VALUE, 0);
+		return this.getToken(SqlParser.DECIMAL_VALUE, 0);
 	}
 }
 export class DoubleLiteralContext extends NumberContext {
-	constructor(parser: SqlBaseParser, ctx: NumberContext) {
+	constructor(parser: SqlParser, ctx: NumberContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public DOUBLE_VALUE(): TerminalNode {
-		return this.getToken(SqlBaseParser.DOUBLE_VALUE, 0);
+		return this.getToken(SqlParser.DOUBLE_VALUE, 0);
 	}
 }
 export class IntegerLiteralContext extends NumberContext {
-	constructor(parser: SqlBaseParser, ctx: NumberContext) {
+	constructor(parser: SqlParser, ctx: NumberContext) {
 		super(parser, ctx.parentCtx, ctx.invokingState);
 		super.copyFrom(ctx);
 	}
 	public INTEGER_VALUE(): TerminalNode {
-		return this.getToken(SqlBaseParser.INTEGER_VALUE, 0);
+		return this.getToken(SqlParser.INTEGER_VALUE, 0);
 	}
 }
 
 
 export class ConstraintSpecificationContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -15747,19 +15747,19 @@ export class ConstraintSpecificationContext extends ParserRuleContext {
 		return this.getTypedRuleContext(UnnamedConstraintSpecificationContext, 0) as UnnamedConstraintSpecificationContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_constraintSpecification;
+    	return SqlParser.RULE_constraintSpecification;
 	}
 }
 
 
 export class NamedConstraintSpecificationContext extends ParserRuleContext {
 	public _name!: IdentifierContext;
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public CONSTRAINT(): TerminalNode {
-		return this.getToken(SqlBaseParser.CONSTRAINT, 0);
+		return this.getToken(SqlParser.CONSTRAINT, 0);
 	}
 	public unnamedConstraintSpecification(): UnnamedConstraintSpecificationContext {
 		return this.getTypedRuleContext(UnnamedConstraintSpecificationContext, 0) as UnnamedConstraintSpecificationContext;
@@ -15768,13 +15768,13 @@ export class NamedConstraintSpecificationContext extends ParserRuleContext {
 		return this.getTypedRuleContext(IdentifierContext, 0) as IdentifierContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_namedConstraintSpecification;
+    	return SqlParser.RULE_namedConstraintSpecification;
 	}
 }
 
 
 export class UnnamedConstraintSpecificationContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -15788,33 +15788,33 @@ export class UnnamedConstraintSpecificationContext extends ParserRuleContext {
 		return this.getTypedRuleContext(ConstraintQualifiersContext, 0) as ConstraintQualifiersContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_unnamedConstraintSpecification;
+    	return SqlParser.RULE_unnamedConstraintSpecification;
 	}
 }
 
 
 export class ConstraintTypeContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public UNIQUE(): TerminalNode {
-		return this.getToken(SqlBaseParser.UNIQUE, 0);
+		return this.getToken(SqlParser.UNIQUE, 0);
 	}
 	public PRIMARY(): TerminalNode {
-		return this.getToken(SqlBaseParser.PRIMARY, 0);
+		return this.getToken(SqlParser.PRIMARY, 0);
 	}
 	public KEY(): TerminalNode {
-		return this.getToken(SqlBaseParser.KEY, 0);
+		return this.getToken(SqlParser.KEY, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_constraintType;
+    	return SqlParser.RULE_constraintType;
 	}
 }
 
 
 export class ConstraintQualifiersContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -15825,13 +15825,13 @@ export class ConstraintQualifiersContext extends ParserRuleContext {
 		return this.getTypedRuleContext(ConstraintQualifierContext, i) as ConstraintQualifierContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_constraintQualifiers;
+    	return SqlParser.RULE_constraintQualifiers;
 	}
 }
 
 
 export class ConstraintQualifierContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
@@ -15845,518 +15845,518 @@ export class ConstraintQualifierContext extends ParserRuleContext {
 		return this.getTypedRuleContext(ConstraintEnforcedContext, 0) as ConstraintEnforcedContext;
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_constraintQualifier;
+    	return SqlParser.RULE_constraintQualifier;
 	}
 }
 
 
 export class ConstraintRelyContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public RELY(): TerminalNode {
-		return this.getToken(SqlBaseParser.RELY, 0);
+		return this.getToken(SqlParser.RELY, 0);
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_constraintRely;
+    	return SqlParser.RULE_constraintRely;
 	}
 }
 
 
 export class ConstraintEnabledContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public ENABLED(): TerminalNode {
-		return this.getToken(SqlBaseParser.ENABLED, 0);
+		return this.getToken(SqlParser.ENABLED, 0);
 	}
 	public DISABLED(): TerminalNode {
-		return this.getToken(SqlBaseParser.DISABLED, 0);
+		return this.getToken(SqlParser.DISABLED, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_constraintEnabled;
+    	return SqlParser.RULE_constraintEnabled;
 	}
 }
 
 
 export class ConstraintEnforcedContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public ENFORCED(): TerminalNode {
-		return this.getToken(SqlBaseParser.ENFORCED, 0);
+		return this.getToken(SqlParser.ENFORCED, 0);
 	}
 	public NOT(): TerminalNode {
-		return this.getToken(SqlBaseParser.NOT, 0);
+		return this.getToken(SqlParser.NOT, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_constraintEnforced;
+    	return SqlParser.RULE_constraintEnforced;
 	}
 }
 
 
 export class NonReservedContext extends ParserRuleContext {
-	constructor(parser?: SqlBaseParser, parent?: ParserRuleContext, invokingState?: number) {
+	constructor(parser?: SqlParser, parent?: ParserRuleContext, invokingState?: number) {
 		super(parent, invokingState);
     	this.parser = parser;
 	}
 	public ADD(): TerminalNode {
-		return this.getToken(SqlBaseParser.ADD, 0);
+		return this.getToken(SqlParser.ADD, 0);
 	}
 	public ADMIN(): TerminalNode {
-		return this.getToken(SqlBaseParser.ADMIN, 0);
+		return this.getToken(SqlParser.ADMIN, 0);
 	}
 	public ALL(): TerminalNode {
-		return this.getToken(SqlBaseParser.ALL, 0);
+		return this.getToken(SqlParser.ALL, 0);
 	}
 	public ANALYZE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ANALYZE, 0);
+		return this.getToken(SqlParser.ANALYZE, 0);
 	}
 	public ANY(): TerminalNode {
-		return this.getToken(SqlBaseParser.ANY, 0);
+		return this.getToken(SqlParser.ANY, 0);
 	}
 	public ARRAY(): TerminalNode {
-		return this.getToken(SqlBaseParser.ARRAY, 0);
+		return this.getToken(SqlParser.ARRAY, 0);
 	}
 	public ASC(): TerminalNode {
-		return this.getToken(SqlBaseParser.ASC, 0);
+		return this.getToken(SqlParser.ASC, 0);
 	}
 	public AT(): TerminalNode {
-		return this.getToken(SqlBaseParser.AT, 0);
+		return this.getToken(SqlParser.AT, 0);
 	}
 	public BEFORE(): TerminalNode {
-		return this.getToken(SqlBaseParser.BEFORE, 0);
+		return this.getToken(SqlParser.BEFORE, 0);
 	}
 	public BERNOULLI(): TerminalNode {
-		return this.getToken(SqlBaseParser.BERNOULLI, 0);
+		return this.getToken(SqlParser.BERNOULLI, 0);
 	}
 	public CALL(): TerminalNode {
-		return this.getToken(SqlBaseParser.CALL, 0);
+		return this.getToken(SqlParser.CALL, 0);
 	}
 	public CALLED(): TerminalNode {
-		return this.getToken(SqlBaseParser.CALLED, 0);
+		return this.getToken(SqlParser.CALLED, 0);
 	}
 	public CASCADE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CASCADE, 0);
+		return this.getToken(SqlParser.CASCADE, 0);
 	}
 	public CATALOGS(): TerminalNode {
-		return this.getToken(SqlBaseParser.CATALOGS, 0);
+		return this.getToken(SqlParser.CATALOGS, 0);
 	}
 	public COLUMN(): TerminalNode {
-		return this.getToken(SqlBaseParser.COLUMN, 0);
+		return this.getToken(SqlParser.COLUMN, 0);
 	}
 	public COLUMNS(): TerminalNode {
-		return this.getToken(SqlBaseParser.COLUMNS, 0);
+		return this.getToken(SqlParser.COLUMNS, 0);
 	}
 	public COMMENT(): TerminalNode {
-		return this.getToken(SqlBaseParser.COMMENT, 0);
+		return this.getToken(SqlParser.COMMENT, 0);
 	}
 	public COMMIT(): TerminalNode {
-		return this.getToken(SqlBaseParser.COMMIT, 0);
+		return this.getToken(SqlParser.COMMIT, 0);
 	}
 	public COMMITTED(): TerminalNode {
-		return this.getToken(SqlBaseParser.COMMITTED, 0);
+		return this.getToken(SqlParser.COMMITTED, 0);
 	}
 	public CURRENT(): TerminalNode {
-		return this.getToken(SqlBaseParser.CURRENT, 0);
+		return this.getToken(SqlParser.CURRENT, 0);
 	}
 	public CURRENT_ROLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.CURRENT_ROLE, 0);
+		return this.getToken(SqlParser.CURRENT_ROLE, 0);
 	}
 	public DATA(): TerminalNode {
-		return this.getToken(SqlBaseParser.DATA, 0);
+		return this.getToken(SqlParser.DATA, 0);
 	}
 	public DATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.DATE, 0);
+		return this.getToken(SqlParser.DATE, 0);
 	}
 	public DAY(): TerminalNode {
-		return this.getToken(SqlBaseParser.DAY, 0);
+		return this.getToken(SqlParser.DAY, 0);
 	}
 	public DEFINER(): TerminalNode {
-		return this.getToken(SqlBaseParser.DEFINER, 0);
+		return this.getToken(SqlParser.DEFINER, 0);
 	}
 	public DESC(): TerminalNode {
-		return this.getToken(SqlBaseParser.DESC, 0);
+		return this.getToken(SqlParser.DESC, 0);
 	}
 	public DETERMINISTIC(): TerminalNode {
-		return this.getToken(SqlBaseParser.DETERMINISTIC, 0);
+		return this.getToken(SqlParser.DETERMINISTIC, 0);
 	}
 	public DISABLED(): TerminalNode {
-		return this.getToken(SqlBaseParser.DISABLED, 0);
+		return this.getToken(SqlParser.DISABLED, 0);
 	}
 	public DISTRIBUTED(): TerminalNode {
-		return this.getToken(SqlBaseParser.DISTRIBUTED, 0);
+		return this.getToken(SqlParser.DISTRIBUTED, 0);
 	}
 	public ENABLED(): TerminalNode {
-		return this.getToken(SqlBaseParser.ENABLED, 0);
+		return this.getToken(SqlParser.ENABLED, 0);
 	}
 	public ENFORCED(): TerminalNode {
-		return this.getToken(SqlBaseParser.ENFORCED, 0);
+		return this.getToken(SqlParser.ENFORCED, 0);
 	}
 	public EXCLUDING(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXCLUDING, 0);
+		return this.getToken(SqlParser.EXCLUDING, 0);
 	}
 	public EXPLAIN(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXPLAIN, 0);
+		return this.getToken(SqlParser.EXPLAIN, 0);
 	}
 	public EXTERNAL(): TerminalNode {
-		return this.getToken(SqlBaseParser.EXTERNAL, 0);
+		return this.getToken(SqlParser.EXTERNAL, 0);
 	}
 	public FETCH(): TerminalNode {
-		return this.getToken(SqlBaseParser.FETCH, 0);
+		return this.getToken(SqlParser.FETCH, 0);
 	}
 	public FILTER(): TerminalNode {
-		return this.getToken(SqlBaseParser.FILTER, 0);
+		return this.getToken(SqlParser.FILTER, 0);
 	}
 	public FIRST(): TerminalNode {
-		return this.getToken(SqlBaseParser.FIRST, 0);
+		return this.getToken(SqlParser.FIRST, 0);
 	}
 	public FOLLOWING(): TerminalNode {
-		return this.getToken(SqlBaseParser.FOLLOWING, 0);
+		return this.getToken(SqlParser.FOLLOWING, 0);
 	}
 	public FORMAT(): TerminalNode {
-		return this.getToken(SqlBaseParser.FORMAT, 0);
+		return this.getToken(SqlParser.FORMAT, 0);
 	}
 	public FUNCTION(): TerminalNode {
-		return this.getToken(SqlBaseParser.FUNCTION, 0);
+		return this.getToken(SqlParser.FUNCTION, 0);
 	}
 	public FUNCTIONS(): TerminalNode {
-		return this.getToken(SqlBaseParser.FUNCTIONS, 0);
+		return this.getToken(SqlParser.FUNCTIONS, 0);
 	}
 	public GRANT(): TerminalNode {
-		return this.getToken(SqlBaseParser.GRANT, 0);
+		return this.getToken(SqlParser.GRANT, 0);
 	}
 	public GRANTED(): TerminalNode {
-		return this.getToken(SqlBaseParser.GRANTED, 0);
+		return this.getToken(SqlParser.GRANTED, 0);
 	}
 	public GRANTS(): TerminalNode {
-		return this.getToken(SqlBaseParser.GRANTS, 0);
+		return this.getToken(SqlParser.GRANTS, 0);
 	}
 	public GRAPHVIZ(): TerminalNode {
-		return this.getToken(SqlBaseParser.GRAPHVIZ, 0);
+		return this.getToken(SqlParser.GRAPHVIZ, 0);
 	}
 	public GROUPS(): TerminalNode {
-		return this.getToken(SqlBaseParser.GROUPS, 0);
+		return this.getToken(SqlParser.GROUPS, 0);
 	}
 	public HOUR(): TerminalNode {
-		return this.getToken(SqlBaseParser.HOUR, 0);
+		return this.getToken(SqlParser.HOUR, 0);
 	}
 	public IF(): TerminalNode {
-		return this.getToken(SqlBaseParser.IF, 0);
+		return this.getToken(SqlParser.IF, 0);
 	}
 	public IGNORE(): TerminalNode {
-		return this.getToken(SqlBaseParser.IGNORE, 0);
+		return this.getToken(SqlParser.IGNORE, 0);
 	}
 	public INCLUDING(): TerminalNode {
-		return this.getToken(SqlBaseParser.INCLUDING, 0);
+		return this.getToken(SqlParser.INCLUDING, 0);
 	}
 	public INPUT(): TerminalNode {
-		return this.getToken(SqlBaseParser.INPUT, 0);
+		return this.getToken(SqlParser.INPUT, 0);
 	}
 	public INTERVAL(): TerminalNode {
-		return this.getToken(SqlBaseParser.INTERVAL, 0);
+		return this.getToken(SqlParser.INTERVAL, 0);
 	}
 	public INVOKER(): TerminalNode {
-		return this.getToken(SqlBaseParser.INVOKER, 0);
+		return this.getToken(SqlParser.INVOKER, 0);
 	}
 	public IO(): TerminalNode {
-		return this.getToken(SqlBaseParser.IO, 0);
+		return this.getToken(SqlParser.IO, 0);
 	}
 	public ISOLATION(): TerminalNode {
-		return this.getToken(SqlBaseParser.ISOLATION, 0);
+		return this.getToken(SqlParser.ISOLATION, 0);
 	}
 	public JSON(): TerminalNode {
-		return this.getToken(SqlBaseParser.JSON, 0);
+		return this.getToken(SqlParser.JSON, 0);
 	}
 	public KEY(): TerminalNode {
-		return this.getToken(SqlBaseParser.KEY, 0);
+		return this.getToken(SqlParser.KEY, 0);
 	}
 	public LANGUAGE(): TerminalNode {
-		return this.getToken(SqlBaseParser.LANGUAGE, 0);
+		return this.getToken(SqlParser.LANGUAGE, 0);
 	}
 	public LAST(): TerminalNode {
-		return this.getToken(SqlBaseParser.LAST, 0);
+		return this.getToken(SqlParser.LAST, 0);
 	}
 	public LATERAL(): TerminalNode {
-		return this.getToken(SqlBaseParser.LATERAL, 0);
+		return this.getToken(SqlParser.LATERAL, 0);
 	}
 	public LEVEL(): TerminalNode {
-		return this.getToken(SqlBaseParser.LEVEL, 0);
+		return this.getToken(SqlParser.LEVEL, 0);
 	}
 	public LIMIT(): TerminalNode {
-		return this.getToken(SqlBaseParser.LIMIT, 0);
+		return this.getToken(SqlParser.LIMIT, 0);
 	}
 	public LOGICAL(): TerminalNode {
-		return this.getToken(SqlBaseParser.LOGICAL, 0);
+		return this.getToken(SqlParser.LOGICAL, 0);
 	}
 	public MAP(): TerminalNode {
-		return this.getToken(SqlBaseParser.MAP, 0);
+		return this.getToken(SqlParser.MAP, 0);
 	}
 	public MATERIALIZED(): TerminalNode {
-		return this.getToken(SqlBaseParser.MATERIALIZED, 0);
+		return this.getToken(SqlParser.MATERIALIZED, 0);
 	}
 	public MINUTE(): TerminalNode {
-		return this.getToken(SqlBaseParser.MINUTE, 0);
+		return this.getToken(SqlParser.MINUTE, 0);
 	}
 	public MONTH(): TerminalNode {
-		return this.getToken(SqlBaseParser.MONTH, 0);
+		return this.getToken(SqlParser.MONTH, 0);
 	}
 	public NAME(): TerminalNode {
-		return this.getToken(SqlBaseParser.NAME, 0);
+		return this.getToken(SqlParser.NAME, 0);
 	}
 	public NFC(): TerminalNode {
-		return this.getToken(SqlBaseParser.NFC, 0);
+		return this.getToken(SqlParser.NFC, 0);
 	}
 	public NFD(): TerminalNode {
-		return this.getToken(SqlBaseParser.NFD, 0);
+		return this.getToken(SqlParser.NFD, 0);
 	}
 	public NFKC(): TerminalNode {
-		return this.getToken(SqlBaseParser.NFKC, 0);
+		return this.getToken(SqlParser.NFKC, 0);
 	}
 	public NFKD(): TerminalNode {
-		return this.getToken(SqlBaseParser.NFKD, 0);
+		return this.getToken(SqlParser.NFKD, 0);
 	}
 	public NO(): TerminalNode {
-		return this.getToken(SqlBaseParser.NO, 0);
+		return this.getToken(SqlParser.NO, 0);
 	}
 	public NONE(): TerminalNode {
-		return this.getToken(SqlBaseParser.NONE, 0);
+		return this.getToken(SqlParser.NONE, 0);
 	}
 	public NULLIF(): TerminalNode {
-		return this.getToken(SqlBaseParser.NULLIF, 0);
+		return this.getToken(SqlParser.NULLIF, 0);
 	}
 	public NULLS(): TerminalNode {
-		return this.getToken(SqlBaseParser.NULLS, 0);
+		return this.getToken(SqlParser.NULLS, 0);
 	}
 	public OF(): TerminalNode {
-		return this.getToken(SqlBaseParser.OF, 0);
+		return this.getToken(SqlParser.OF, 0);
 	}
 	public OFFSET(): TerminalNode {
-		return this.getToken(SqlBaseParser.OFFSET, 0);
+		return this.getToken(SqlParser.OFFSET, 0);
 	}
 	public ONLY(): TerminalNode {
-		return this.getToken(SqlBaseParser.ONLY, 0);
+		return this.getToken(SqlParser.ONLY, 0);
 	}
 	public OPTION(): TerminalNode {
-		return this.getToken(SqlBaseParser.OPTION, 0);
+		return this.getToken(SqlParser.OPTION, 0);
 	}
 	public ORDINALITY(): TerminalNode {
-		return this.getToken(SqlBaseParser.ORDINALITY, 0);
+		return this.getToken(SqlParser.ORDINALITY, 0);
 	}
 	public OUTPUT(): TerminalNode {
-		return this.getToken(SqlBaseParser.OUTPUT, 0);
+		return this.getToken(SqlParser.OUTPUT, 0);
 	}
 	public OVER(): TerminalNode {
-		return this.getToken(SqlBaseParser.OVER, 0);
+		return this.getToken(SqlParser.OVER, 0);
 	}
 	public PARTITION(): TerminalNode {
-		return this.getToken(SqlBaseParser.PARTITION, 0);
+		return this.getToken(SqlParser.PARTITION, 0);
 	}
 	public PARTITIONS(): TerminalNode {
-		return this.getToken(SqlBaseParser.PARTITIONS, 0);
+		return this.getToken(SqlParser.PARTITIONS, 0);
 	}
 	public POSITION(): TerminalNode {
-		return this.getToken(SqlBaseParser.POSITION, 0);
+		return this.getToken(SqlParser.POSITION, 0);
 	}
 	public PRECEDING(): TerminalNode {
-		return this.getToken(SqlBaseParser.PRECEDING, 0);
+		return this.getToken(SqlParser.PRECEDING, 0);
 	}
 	public PRIMARY(): TerminalNode {
-		return this.getToken(SqlBaseParser.PRIMARY, 0);
+		return this.getToken(SqlParser.PRIMARY, 0);
 	}
 	public PRIVILEGES(): TerminalNode {
-		return this.getToken(SqlBaseParser.PRIVILEGES, 0);
+		return this.getToken(SqlParser.PRIVILEGES, 0);
 	}
 	public PROPERTIES(): TerminalNode {
-		return this.getToken(SqlBaseParser.PROPERTIES, 0);
+		return this.getToken(SqlParser.PROPERTIES, 0);
 	}
 	public RANGE(): TerminalNode {
-		return this.getToken(SqlBaseParser.RANGE, 0);
+		return this.getToken(SqlParser.RANGE, 0);
 	}
 	public READ(): TerminalNode {
-		return this.getToken(SqlBaseParser.READ, 0);
+		return this.getToken(SqlParser.READ, 0);
 	}
 	public REFRESH(): TerminalNode {
-		return this.getToken(SqlBaseParser.REFRESH, 0);
+		return this.getToken(SqlParser.REFRESH, 0);
 	}
 	public RELY(): TerminalNode {
-		return this.getToken(SqlBaseParser.RELY, 0);
+		return this.getToken(SqlParser.RELY, 0);
 	}
 	public RENAME(): TerminalNode {
-		return this.getToken(SqlBaseParser.RENAME, 0);
+		return this.getToken(SqlParser.RENAME, 0);
 	}
 	public REPEATABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.REPEATABLE, 0);
+		return this.getToken(SqlParser.REPEATABLE, 0);
 	}
 	public REPLACE(): TerminalNode {
-		return this.getToken(SqlBaseParser.REPLACE, 0);
+		return this.getToken(SqlParser.REPLACE, 0);
 	}
 	public RESET(): TerminalNode {
-		return this.getToken(SqlBaseParser.RESET, 0);
+		return this.getToken(SqlParser.RESET, 0);
 	}
 	public RESPECT(): TerminalNode {
-		return this.getToken(SqlBaseParser.RESPECT, 0);
+		return this.getToken(SqlParser.RESPECT, 0);
 	}
 	public RESTRICT(): TerminalNode {
-		return this.getToken(SqlBaseParser.RESTRICT, 0);
+		return this.getToken(SqlParser.RESTRICT, 0);
 	}
 	public RETURN(): TerminalNode {
-		return this.getToken(SqlBaseParser.RETURN, 0);
+		return this.getToken(SqlParser.RETURN, 0);
 	}
 	public RETURNS(): TerminalNode {
-		return this.getToken(SqlBaseParser.RETURNS, 0);
+		return this.getToken(SqlParser.RETURNS, 0);
 	}
 	public REVOKE(): TerminalNode {
-		return this.getToken(SqlBaseParser.REVOKE, 0);
+		return this.getToken(SqlParser.REVOKE, 0);
 	}
 	public ROLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROLE, 0);
+		return this.getToken(SqlParser.ROLE, 0);
 	}
 	public ROLES(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROLES, 0);
+		return this.getToken(SqlParser.ROLES, 0);
 	}
 	public ROLLBACK(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROLLBACK, 0);
+		return this.getToken(SqlParser.ROLLBACK, 0);
 	}
 	public ROW(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROW, 0);
+		return this.getToken(SqlParser.ROW, 0);
 	}
 	public ROWS(): TerminalNode {
-		return this.getToken(SqlBaseParser.ROWS, 0);
+		return this.getToken(SqlParser.ROWS, 0);
 	}
 	public SCHEMA(): TerminalNode {
-		return this.getToken(SqlBaseParser.SCHEMA, 0);
+		return this.getToken(SqlParser.SCHEMA, 0);
 	}
 	public SCHEMAS(): TerminalNode {
-		return this.getToken(SqlBaseParser.SCHEMAS, 0);
+		return this.getToken(SqlParser.SCHEMAS, 0);
 	}
 	public SECOND(): TerminalNode {
-		return this.getToken(SqlBaseParser.SECOND, 0);
+		return this.getToken(SqlParser.SECOND, 0);
 	}
 	public SECURITY(): TerminalNode {
-		return this.getToken(SqlBaseParser.SECURITY, 0);
+		return this.getToken(SqlParser.SECURITY, 0);
 	}
 	public SERIALIZABLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.SERIALIZABLE, 0);
+		return this.getToken(SqlParser.SERIALIZABLE, 0);
 	}
 	public SESSION(): TerminalNode {
-		return this.getToken(SqlBaseParser.SESSION, 0);
+		return this.getToken(SqlParser.SESSION, 0);
 	}
 	public SET(): TerminalNode {
-		return this.getToken(SqlBaseParser.SET, 0);
+		return this.getToken(SqlParser.SET, 0);
 	}
 	public SETS(): TerminalNode {
-		return this.getToken(SqlBaseParser.SETS, 0);
+		return this.getToken(SqlParser.SETS, 0);
 	}
 	public SQL(): TerminalNode {
-		return this.getToken(SqlBaseParser.SQL, 0);
+		return this.getToken(SqlParser.SQL, 0);
 	}
 	public SHOW(): TerminalNode {
-		return this.getToken(SqlBaseParser.SHOW, 0);
+		return this.getToken(SqlParser.SHOW, 0);
 	}
 	public SOME(): TerminalNode {
-		return this.getToken(SqlBaseParser.SOME, 0);
+		return this.getToken(SqlParser.SOME, 0);
 	}
 	public START(): TerminalNode {
-		return this.getToken(SqlBaseParser.START, 0);
+		return this.getToken(SqlParser.START, 0);
 	}
 	public STATS(): TerminalNode {
-		return this.getToken(SqlBaseParser.STATS, 0);
+		return this.getToken(SqlParser.STATS, 0);
 	}
 	public SUBSTRING(): TerminalNode {
-		return this.getToken(SqlBaseParser.SUBSTRING, 0);
+		return this.getToken(SqlParser.SUBSTRING, 0);
 	}
 	public SYSTEM(): TerminalNode {
-		return this.getToken(SqlBaseParser.SYSTEM, 0);
+		return this.getToken(SqlParser.SYSTEM, 0);
 	}
 	public SYSTEM_TIME(): TerminalNode {
-		return this.getToken(SqlBaseParser.SYSTEM_TIME, 0);
+		return this.getToken(SqlParser.SYSTEM_TIME, 0);
 	}
 	public SYSTEM_VERSION(): TerminalNode {
-		return this.getToken(SqlBaseParser.SYSTEM_VERSION, 0);
+		return this.getToken(SqlParser.SYSTEM_VERSION, 0);
 	}
 	public TABLES(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLES, 0);
+		return this.getToken(SqlParser.TABLES, 0);
 	}
 	public TABLESAMPLE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TABLESAMPLE, 0);
+		return this.getToken(SqlParser.TABLESAMPLE, 0);
 	}
 	public TEMPORARY(): TerminalNode {
-		return this.getToken(SqlBaseParser.TEMPORARY, 0);
+		return this.getToken(SqlParser.TEMPORARY, 0);
 	}
 	public TEXT(): TerminalNode {
-		return this.getToken(SqlBaseParser.TEXT, 0);
+		return this.getToken(SqlParser.TEXT, 0);
 	}
 	public TIME(): TerminalNode {
-		return this.getToken(SqlBaseParser.TIME, 0);
+		return this.getToken(SqlParser.TIME, 0);
 	}
 	public TIMESTAMP(): TerminalNode {
-		return this.getToken(SqlBaseParser.TIMESTAMP, 0);
+		return this.getToken(SqlParser.TIMESTAMP, 0);
 	}
 	public TO(): TerminalNode {
-		return this.getToken(SqlBaseParser.TO, 0);
+		return this.getToken(SqlParser.TO, 0);
 	}
 	public TRANSACTION(): TerminalNode {
-		return this.getToken(SqlBaseParser.TRANSACTION, 0);
+		return this.getToken(SqlParser.TRANSACTION, 0);
 	}
 	public TRUNCATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TRUNCATE, 0);
+		return this.getToken(SqlParser.TRUNCATE, 0);
 	}
 	public TRY_CAST(): TerminalNode {
-		return this.getToken(SqlBaseParser.TRY_CAST, 0);
+		return this.getToken(SqlParser.TRY_CAST, 0);
 	}
 	public TYPE(): TerminalNode {
-		return this.getToken(SqlBaseParser.TYPE, 0);
+		return this.getToken(SqlParser.TYPE, 0);
 	}
 	public UNBOUNDED(): TerminalNode {
-		return this.getToken(SqlBaseParser.UNBOUNDED, 0);
+		return this.getToken(SqlParser.UNBOUNDED, 0);
 	}
 	public UNCOMMITTED(): TerminalNode {
-		return this.getToken(SqlBaseParser.UNCOMMITTED, 0);
+		return this.getToken(SqlParser.UNCOMMITTED, 0);
 	}
 	public UNIQUE(): TerminalNode {
-		return this.getToken(SqlBaseParser.UNIQUE, 0);
+		return this.getToken(SqlParser.UNIQUE, 0);
 	}
 	public UPDATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.UPDATE, 0);
+		return this.getToken(SqlParser.UPDATE, 0);
 	}
 	public USE(): TerminalNode {
-		return this.getToken(SqlBaseParser.USE, 0);
+		return this.getToken(SqlParser.USE, 0);
 	}
 	public USER(): TerminalNode {
-		return this.getToken(SqlBaseParser.USER, 0);
+		return this.getToken(SqlParser.USER, 0);
 	}
 	public VALIDATE(): TerminalNode {
-		return this.getToken(SqlBaseParser.VALIDATE, 0);
+		return this.getToken(SqlParser.VALIDATE, 0);
 	}
 	public VERBOSE(): TerminalNode {
-		return this.getToken(SqlBaseParser.VERBOSE, 0);
+		return this.getToken(SqlParser.VERBOSE, 0);
 	}
 	public VERSION(): TerminalNode {
-		return this.getToken(SqlBaseParser.VERSION, 0);
+		return this.getToken(SqlParser.VERSION, 0);
 	}
 	public VIEW(): TerminalNode {
-		return this.getToken(SqlBaseParser.VIEW, 0);
+		return this.getToken(SqlParser.VIEW, 0);
 	}
 	public WORK(): TerminalNode {
-		return this.getToken(SqlBaseParser.WORK, 0);
+		return this.getToken(SqlParser.WORK, 0);
 	}
 	public WRITE(): TerminalNode {
-		return this.getToken(SqlBaseParser.WRITE, 0);
+		return this.getToken(SqlParser.WRITE, 0);
 	}
 	public YEAR(): TerminalNode {
-		return this.getToken(SqlBaseParser.YEAR, 0);
+		return this.getToken(SqlParser.YEAR, 0);
 	}
 	public ZONE(): TerminalNode {
-		return this.getToken(SqlBaseParser.ZONE, 0);
+		return this.getToken(SqlParser.ZONE, 0);
 	}
     public get ruleIndex(): number {
-    	return SqlBaseParser.RULE_nonReserved;
+    	return SqlParser.RULE_nonReserved;
 	}
 }

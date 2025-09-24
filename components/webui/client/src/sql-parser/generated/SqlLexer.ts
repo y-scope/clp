@@ -1,5 +1,5 @@
 // @ts-nocheck
-// Generated from SqlBase.g4 by ANTLR 4.13.2
+// Generated from Sql.g4 by ANTLR 4.13.2
 // noinspection ES6UnusedImports,JSUnusedGlobalSymbols,JSUnusedLocalSymbols
 import {
 	ATN,
@@ -12,7 +12,7 @@ import {
 	PredictionContextCache,
 	Token
 } from "antlr4";
-export default class SqlBaseLexer extends Lexer {
+export default class SqlLexer extends Lexer {
 	public static readonly T__0 = 1;
 	public static readonly T__1 = 2;
 	public static readonly T__2 = 3;
@@ -647,20 +647,20 @@ export default class SqlBaseLexer extends Lexer {
 
 	constructor(input: CharStream) {
 		super(input);
-		this._interp = new LexerATNSimulator(this, SqlBaseLexer._ATN, SqlBaseLexer.DecisionsToDFA, new PredictionContextCache());
+		this._interp = new LexerATNSimulator(this, SqlLexer._ATN, SqlLexer.DecisionsToDFA, new PredictionContextCache());
 	}
 
-	public get grammarFileName(): string { return "SqlBase.g4"; }
+	public get grammarFileName(): string { return "Sql.g4"; }
 
-	public get literalNames(): (string | null)[] { return SqlBaseLexer.literalNames; }
-	public get symbolicNames(): (string | null)[] { return SqlBaseLexer.symbolicNames; }
-	public get ruleNames(): string[] { return SqlBaseLexer.ruleNames; }
+	public get literalNames(): (string | null)[] { return SqlLexer.literalNames; }
+	public get symbolicNames(): (string | null)[] { return SqlLexer.symbolicNames; }
+	public get ruleNames(): string[] { return SqlLexer.ruleNames; }
 
-	public get serializedATN(): number[] { return SqlBaseLexer._serializedATN; }
+	public get serializedATN(): number[] { return SqlLexer._serializedATN; }
 
-	public get channelNames(): string[] { return SqlBaseLexer.channelNames; }
+	public get channelNames(): string[] { return SqlLexer.channelNames; }
 
-	public get modeNames(): string[] { return SqlBaseLexer.modeNames; }
+	public get modeNames(): string[] { return SqlLexer.modeNames; }
 
 	public static readonly _serializedATN: number[] = [4,0,257,2378,6,-1,2,
 	0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,6,2,7,7,7,2,8,7,8,2,
@@ -1470,13 +1470,13 @@ export default class SqlBaseLexer extends Lexer {
 
 	private static __ATN: ATN;
 	public static get _ATN(): ATN {
-		if (!SqlBaseLexer.__ATN) {
-			SqlBaseLexer.__ATN = new ATNDeserializer().deserialize(SqlBaseLexer._serializedATN);
+		if (!SqlLexer.__ATN) {
+			SqlLexer.__ATN = new ATNDeserializer().deserialize(SqlLexer._serializedATN);
 		}
 
-		return SqlBaseLexer.__ATN;
+		return SqlLexer.__ATN;
 	}
 
 
-	static DecisionsToDFA = SqlBaseLexer._ATN.decisionToState.map( (ds: DecisionState, index: number) => new DFA(ds, index) );
+	static DecisionsToDFA = SqlLexer._ATN.decisionToState.map( (ds: DecisionState, index: number) => new DFA(ds, index) );
 }
