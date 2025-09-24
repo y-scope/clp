@@ -33,7 +33,7 @@ const TransformEmptyStringSchema = Type.Transform(
 const BuildSearchQueryPropsSchema = Type.Object({
     /* eslint-disable sort-keys */
     selectItemList: Type.String(),
-    relationList: Type.String(),
+    databaseName: Type.String(),
     booleanExpression: TransformEmptyStringSchema,
     sortItemList: TransformEmptyStringSchema,
     limitValue: TransformEmptyStringSchema,
@@ -44,10 +44,13 @@ const BuildSearchQueryPropsSchema = Type.Object({
 });
 
 const BuildTimelineQueryPropsSchema = Type.Object({
+    /* eslint-disable sort-keys */
     databaseName: Type.String(),
+    booleanExpression: TransformEmptyStringSchema,
     startTimestamp: Type.Number(),
     endTimestamp: Type.Number(),
     timestampKey: Type.String(),
+    /* eslint-enable sort-keys */
 });
 
 /**
@@ -93,7 +96,7 @@ const BuildSqlTestingInputs = () => {
             <label>select:</label>
             <input name={"selectItemList"}/>
             <label>from:</label>
-            <input name={"relationList"}/>
+            <input name={"databaseName"}/>
             <label>where:</label>
             <input name={"booleanExpression"}/>
             <label>order:</label>
@@ -101,8 +104,6 @@ const BuildSqlTestingInputs = () => {
             <label>limit:</label>
             <input name={"limitValue"}/>
             <br/>
-            <label>database_name:</label>
-            <input name={"databaseName"}/>
             <label>start_timestamp:</label>
             <input name={"startTimestamp"}/>
             <label>end_timestamp:</label>

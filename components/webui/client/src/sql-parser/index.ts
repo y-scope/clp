@@ -8,6 +8,10 @@ import {
 
 import SqlLexer from "./generated/SqlLexer";
 import SqlParser from "./generated/SqlParser";
+import {
+    BuildSearchQueryProps,
+    BuildTimelineQueryProps,
+} from "./typings";
 
 
 class SyntaxError extends Error {
@@ -74,23 +78,12 @@ const validate = (sqlString: string) => {
     buildParser(sqlString).singleStatement();
 };
 
-interface BuildSearchQueryProps {
-    selectItemList: string;
-    relationList: string;
-    booleanExpression?: string | undefined;
-    sortItemList?: string | undefined;
-    limitValue?: string | undefined;
-    startTimestamp: number;
-    endTimestamp: number;
-    timestampKey: string;
-}
-
 /**
  * Constructs a SQL search query string from a set of structured components.
  *
  * @param props
  * @param props.selectItemList
- * @param props.relationList
+ * @param props.databaseName
  * @param props.booleanExpression
  * @param props.sortItemList
  * @param props.limitValue
@@ -102,7 +95,7 @@ interface BuildSearchQueryProps {
  */
 const buildSearchQuery = ({
     selectItemList,
-    relationList,
+    databaseName,
     booleanExpression,
     sortItemList,
     limitValue,
@@ -110,7 +103,7 @@ const buildSearchQuery = ({
     endTimestamp,
     timestampKey,
 }: BuildSearchQueryProps): string => {
-    let queryString = `SELECT ${selectItemList} FROM ${relationList}
+    let queryString = `SELECT ${selectItemList} FROM ${databaseName}
 WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp} AND ${endTimestamp}`;
 
     if ("undefined" !== typeof booleanExpression) {
@@ -132,14 +125,6 @@ WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp} AND ${endTimestamp}
     return queryString;
 };
 
-interface BuildTimelineQueryProps {
-    databaseName: string;
-    startTimestamp: number;
-    endTimestamp: number;
-    bucketCount: number;
-    timestampKey: string;
-}
-
 /**
  * Constructs a bucketed timeline query.
  *
@@ -149,11 +134,13 @@ interface BuildTimelineQueryProps {
  * @param props.endTimestamp
  * @param props.bucketCount
  * @param props.timestampKey
+ * @param props.booleanExpression
  * @return
  * @throws {Error} if the constructed SQL string is not valid.
  */
 const buildTimelineQuery = ({
     databaseName,
+    booleanExpression,
     startTimestamp,
     endTimestamp,
     bucketCount,
@@ -165,6 +152,10 @@ const buildTimelineQuery = ({
         (_, i) => startTimestamp + (i * step)
     );
 
+    const booleanExpressionQuery = "undefined" === typeof booleanExpression ?
+        "" :
+        `AND (${booleanExpression})`;
+
     const queryString = `WITH buckets AS (
     SELECT
         width_bucket(
@@ -175,6 +166,7 @@ const buildTimelineQuery = ({
         COUNT(*) AS cnt
     FROM ${databaseName}
     WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp} AND ${endTimestamp}
+        ${booleanExpressionQuery}
     GROUP BY 1
     ORDER BY 1
 ),
