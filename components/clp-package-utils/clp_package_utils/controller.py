@@ -6,6 +6,7 @@ import pathlib
 import socket
 import stat
 import subprocess
+import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
@@ -18,6 +19,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     DB_COMPONENT_NAME,
+    DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -28,7 +30,7 @@ from clp_py_utils.clp_config import (
     RESULTS_CACHE_COMPONENT_NAME,
     StorageEngine,
     StorageType,
-    WEBUI_COMPONENT_NAME, DeploymentType,
+    WEBUI_COMPONENT_NAME,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     get_archives_table_name,
@@ -457,7 +459,8 @@ class DockerComposeController(BaseController):
     Controller for deploying CLP components using Docker Compose.
     """
 
-    def __init__(self, clp_config: CLPConfig):
+    def __init__(self, clp_config: CLPConfig, instance_id: str):
+        self._project_name = f"clp-package-{instance_id}"
         super().__init__(clp_config)
 
     def deploy(self):
@@ -467,12 +470,13 @@ class DockerComposeController(BaseController):
         2. Provisioning environment variables and configuration.
         3. Running `docker compose up -d`.
         """
-        check_docker_dependencies(should_compose_run=False)
+        check_docker_dependencies(should_compose_run=False, project_name=self._project_name)
         self._provision()
 
         deployment_type = self.clp_config.get_deployment_type()
         logger.info(f"Starting CLP using Docker Compose ({deployment_type})...")
-        cmd = ["docker", "compose"]
+
+        cmd = ["docker", "compose", "--project-name", self._project_name]
         if deployment_type == DeploymentType.BASE:
             cmd += ["--file", "docker-compose.base.yaml"]
         cmd += ["up", "--detach"]
@@ -491,12 +495,12 @@ class DockerComposeController(BaseController):
         """
         Stops CLP components deployed via Docker Compose.
         """
-        check_docker_dependencies(should_compose_run=True)
+        check_docker_dependencies(should_compose_run=True, project_name=self._project_name)
 
         logger.info("Stopping all CLP containers using Docker Compose...")
         try:
             subprocess.run(
-                ["docker", "compose", "down"],
+                ["docker", "compose", "--project-name", self._project_name, "down"],
                 cwd=self.clp_home,
                 stderr=subprocess.STDOUT,
                 check=True,
@@ -564,6 +568,26 @@ class DockerComposeController(BaseController):
         with open(f"{self.clp_home}/.env", "w") as env_file:
             for key, value in env_dict.items():
                 env_file.write(f"{key}={value}\n")
+
+
+def get_or_create_instance_id(clp_config: CLPConfig):
+    """
+    Gets or create a unique instance ID for this CLP instance.
+    :param clp_config:
+    :return: The instance ID.
+    """
+    instance_id_file_path = clp_config.logs_directory / "instance-id"
+
+    if instance_id_file_path.exists():
+        with open(instance_id_file_path, "r") as f:
+            instance_id = f.readline()
+    else:
+        instance_id = str(uuid.uuid4())[-4:]
+        with open(instance_id_file_path, "w") as f:
+            f.write(instance_id)
+            f.flush()
+
+    return instance_id
 
 
 def _chown_paths_if_root(*paths: pathlib.Path):

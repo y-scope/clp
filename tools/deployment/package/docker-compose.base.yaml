@@ -17,6 +17,7 @@ x-healthcheck-defaults: &healthcheck_defaults
 networks:
   clp-network:
     driver: "bridge"
+    name: "clp-network"
 
 secrets:
   CLP_DB_PASS_FILE:
