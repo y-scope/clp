@@ -82,7 +82,6 @@ graph LR
   db_table_creator -->|completed_successfully| webui
   results_cache_indices_creator -->|completed_successfully| webui
   db_table_creator -->|completed_successfully| garbage_collector
-  query_scheduler -->|healthy| garbage_collector
   results_cache_indices_creator -->|completed_successfully| garbage_collector
 
   subgraph Databases

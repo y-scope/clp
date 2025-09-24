@@ -385,8 +385,6 @@ services:
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
-      query-scheduler:
-        condition: "service_healthy"
       results-cache-indices-creator:
         condition: "service_completed_successfully"
     command: [
