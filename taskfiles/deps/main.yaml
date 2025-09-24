@@ -345,8 +345,13 @@ tasks:
     run: "once"
     platforms: ["linux"]
     status:
+      # Skips the `mariadb-connector-cpp` on platforms other than Ubuntu.
+      # `mariadb-connector-cpp` is only needed by `spider`, and `spider` is not used by other
+      # platforms.
+      # `status` skips the task if the command exits with zero. Thus, we negate the condition so
+      # the command evaluates to false iff on Ubuntu.
       - >-
-        ! grep -q '^ID=ubuntu' /etc/os-release
+        source /etc/os-release && [[ "$ID" != "ubuntu" ]]
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
@@ -471,9 +476,10 @@ tasks:
     deps:
       - "cpp"
     platforms: ["linux"]
-    status:
+    preconditions:
+      # We do not support building `spider` on platforms other than Ubuntu.
       - >-
-        ! grep -q '^ID=ubuntu' /etc/os-release
+        source /etc/os-release && [[ "$ID" == "ubuntu" ]]
     cmds:
       - task: "yscope-dev-utils:cmake:install-remote-tar"
         vars:
