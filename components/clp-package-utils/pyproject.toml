@@ -3,7 +3,7 @@ requires-python = ">= 3.9"
 
 [tool.poetry]
 name = "clp-package-utils"
-version = "0.5.1-dev"
+version = "0.5.2-dev"
 description = "Utilities for the CLP package."
 authors = ["YScope Inc. <dev@yscope.com>"]
 readme = "README.md"
@@ -12,6 +12,7 @@ readme = "README.md"
 python = ">= 3.9"
 Brotli = "^1.1.0"
 msgpack = "^1.0.7"
+psutil = "^7.1.0"
 pymongo = "^4.7.2"
 PyYAML = "^6.0.1"
 

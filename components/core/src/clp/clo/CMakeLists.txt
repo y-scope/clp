@@ -49,7 +49,9 @@ set(
         ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
+        ../LogTypeDictionaryEntryReq.hpp
         ../LogTypeDictionaryReader.hpp
+        ../LogTypeDictionaryReaderReq.hpp
         ../networking/socket_utils.cpp
         ../networking/socket_utils.hpp
         ../networking/SocketOperationFailed.hpp
@@ -117,9 +119,12 @@ set(
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
         ../VariableDictionaryEntry.hpp
+        ../VariableDictionaryEntryReq.hpp
         ../VariableDictionaryReader.hpp
+        ../VariableDictionaryReaderReq.hpp
         ../VariableDictionaryWriter.cpp
         ../VariableDictionaryWriter.hpp
+        ../VariableDictionaryWriterReq.hpp
         ../version.hpp
         ../WriterInterface.cpp
         ../WriterInterface.hpp

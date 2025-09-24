@@ -188,17 +188,10 @@ endmacro()
 
 
 # Finds and sets up ystdlib.
-function(clp_find_ystdlib)
-    # We can not call `add_subdirectory` for the same directory multiple times.
-    get_clp_checked_find(ystdlib)
-    if(CLP_CHECKED_FIND)
-        return()
-    endif()
-
-    set(YSTDLIB_CPP_BUILD_TESTING OFF)
-    add_subdirectory("${CLP_YSTDLIB_SOURCE_DIRECTORY}" "${CMAKE_BINARY_DIR}/ystdlib" EXCLUDE_FROM_ALL)
-    set_clp_checked_find(ystdlib)
-endfunction()
+# @return Forwards any variables from the `find_package` call.
+macro(clp_find_ystdlib)
+    find_package(ystdlib REQUIRED)
+endmacro()
 
 # Finds and sets up the ZStd library.
 # @return Forwards any variables from the `find_package` call.
