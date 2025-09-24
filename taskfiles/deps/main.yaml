@@ -352,7 +352,7 @@ tasks:
         vars:
           CMAKE_GEN_ARGS:
             - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
-            - "-DINSTALL_LAYOUT=RPM"
+            - "-DINSTALL_LAYOUT=DEB"
           LIB_NAME: "mariadb-connector-cpp"
           TARBALL_URL: "https://github.com/mariadb-corporation/mariadb-connector-cpp/archive/refs/\
             tags/1.1.5.tar.gz"
