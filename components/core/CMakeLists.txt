@@ -140,6 +140,11 @@ endif()
 
 find_package(Threads REQUIRED)
 
+# Temporarily find ystdlib unconditionally, since the global include guards in ystdlib's cmake
+# config files prevent clp_find_ystdlib() from correctly resolving ystdlib when called from multiple
+# different scopes.
+clp_find_ystdlib()
+
 add_subdirectory(src/clp/regex_utils)
 add_subdirectory(src/clp/string_utils)
 
