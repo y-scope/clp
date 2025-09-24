@@ -1,7 +1,5 @@
 /**
  * The `compression_jobs` table's column names.
- *
- * @enum {string}
  */
 enum COMPRESSION_JOBS_TABLE_COLUMN_NAMES {
     ID = "id",

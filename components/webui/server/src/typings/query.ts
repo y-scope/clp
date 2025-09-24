@@ -4,8 +4,6 @@ import {RowDataPacket} from "mysql2/promise";
 
 /**
  * Matching the `QueryJobStatus` class in `job_orchestration.scheduler.constants`.
- *
- * @enum {number}
  */
 enum QUERY_JOB_STATUS {
     PENDING = 0,
@@ -28,8 +26,6 @@ const QUERY_JOB_STATUS_WAITING_STATES = new Set([
 
 /**
  * The `query_jobs` table's column names.
- *
- * @enum {string}
  */
 enum QUERY_JOBS_TABLE_COLUMN_NAMES {
     ID = "id",
