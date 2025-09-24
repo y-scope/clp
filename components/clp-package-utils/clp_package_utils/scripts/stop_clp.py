@@ -39,7 +39,7 @@ def stop_running_container(
 ):
     if is_container_running(container_name):
         logger.info(f"Stopping {container_name}...")
-        cmd = ["docker", "stop", "--timeout", str(timeout), container_name]
+        cmd = ["docker", "stop", "-t", str(timeout), container_name]
         subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
         logger.info(f"Removing {container_name}...")
