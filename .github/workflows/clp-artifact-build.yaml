@@ -360,6 +360,7 @@ jobs:
             --source-dir /mnt/repo/components/core
             --build-dir /mnt/repo/components/core/build
             --num-jobs $(getconf _NPROCESSORS_ONLN)
+            && CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task deps:spider
 
       - if: "matrix.upload_binaries == true"
         id: "copy_binaries"
