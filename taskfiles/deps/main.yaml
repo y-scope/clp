@@ -350,7 +350,6 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
-            - "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
             - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
             - "-DINSTALL_LAYOUT=RPM"
           LIB_NAME: "mariadb-connector-cpp"
