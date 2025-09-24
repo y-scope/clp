@@ -2,7 +2,6 @@ name: "clp-package-base"
 
 # Common service defaults.
 x-service-defaults: &service_defaults
-  networks: ["clp-network"]
   stop_grace_period: "3s"
   user: "${CLP_UID_GID:-1000:1000}"
 
@@ -13,11 +12,6 @@ x-healthcheck-defaults: &healthcheck_defaults
   start_interval: "1s"
   start_period: "10s"
   timeout: "10s"
-
-networks:
-  clp-network:
-    driver: "bridge"
-    name: "clp-network"
 
 secrets:
   CLP_DB_PASS_FILE:
