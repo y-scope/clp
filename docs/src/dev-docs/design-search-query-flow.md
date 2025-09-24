@@ -12,6 +12,50 @@ The CLP search query flow involves multiple components working together:
 - **Job Orchestration**: Uses Celery to manage query execution
 - **MongoDB**: Caches search results with real-time updates
 
+### Search Query Sequence Diagram
+
+The diagram below illustrates the end-to-end lifecycle of a search query within the CLP package.
+
+```mermaid
+sequenceDiagram
+    participant Client as WebUI Client
+    participant Server as WebUI Server
+    participant MySQL as MySQL Database
+    participant Mongo as MongoDB
+    participant Scheduler as Job Scheduler
+    participant Worker as CLP/CLP-S Workers
+
+    %% Step 1: Query Submission from Client
+    Client->>Server: POST /api/search/query (QueryJobCreation)
+
+    %% Step 2: Server-Side Processing
+    Server->>MySQL: Insert Search + Aggregation jobs
+    Server->>Mongo: Create collections (searchJobId, aggregationJobId)
+    Server->>Mongo: Insert SearchResultsMetadataDocument
+    Server-->>Client: Return {searchJobId, aggregationJobId}
+
+    %% Step 3: Job Orchestration with Job Scheduler
+    Scheduler->>MySQL: Poll for jobs (PENDING)
+    MySQL-->>Scheduler: Pending jobs list
+    Scheduler->>Scheduler: Create sub-tasks per archive
+    Scheduler->>Worker: Dispatch search/aggregation tasks
+
+    %% Step 4: Result Caching in MongoDB
+    Worker->>Worker: Run clp / clp-s binaries
+    Worker->>Mongo: Write search results to job collections
+
+    %% Step 5: Job Status Management
+    Server->>Mongo: Update SearchResultsMetadataDocument
+    MySQL->>MySQL: Update job state (RUNNING → SUCCEEDED/FAILED)
+
+    %% Step 6: Result Retrieval and Streaming
+    Client->>Server: Subscribe (collection::find::subscribe)
+    Server->>Mongo: Watch job collection
+    Mongo-->>Server: New documents (real-time)
+    Server-->>Client: Emit collection::find::update events
+    Client->>Server: Unsubscribe (collection::find::unsubscribe)
+```
+
 ## Package Configuration: CLP-S vs CLP
 
 CLP comes in two flavors with different capabilities: **CLP-S (JSON logs)** and **CLP (Text logs)**.
@@ -144,34 +188,7 @@ Search results are stored in MongoDB with the following characteristics:
 
 4. **Real-time Updates**: As tasks complete, results are immediately written to the MongoDB collection
 
-### 5. Result Retrieval and Streaming
-
-Results can be retrieved through the MongoDB collections:
-
-#### Real-time Streaming via Socket.IO
-- **Subscription**: Clients can subscribe to real-time updates using the `collection::find::subscribe` event
-- **Event Flow**:
-  1. Client sends subscription request with collection name (job ID) and query parameters
-  2. Server responds with `collection::find::update` events as documents are added/changed in the collection
-  3. Updates continue until the job completes
-
-**Socket Event Types**:
-- `collection::find::subscribe`: Subscribe to collection changes
-- `collection::find::update`: Server sends updates when collection content changes
-- `collection::find::unsubscribe`: Unsubscribe from updates
-
-#### Search Job Metadata Updates
-
-As the search job progresses, the WebUI server also inserts a special document in the search job 
-metadata collection:
-
-- **Metadata Updates**: When jobs complete, metadata is updated in `SearchResultsMetadataDocument`
-  with:
-  - `lastSignal` set to `RESP_DONE`
-  - `numTotalResults` indicating count of results
-  - `errorMsg` if the job failed
-
-### 6. Job Status Management
+### 5. Job Status Management
 
 Job states are tracked in the MySQL database using the `QueryJobStatus` enum:
 
@@ -192,3 +209,30 @@ class QueryJobStatus(StatusIntEnum):
     # Job was forcefully killed
     KILLED = auto()
 ```
+
+### 6. Result Retrieval and Streaming
+
+Query progress and results can be retrieved through the MongoDB collections:
+
+#### Search Job Metadata Updates
+
+As the search job progresses, the WebUI server also inserts a special document in the search job 
+metadata collection:
+
+- **Metadata Updates**: When jobs complete, metadata is updated in `SearchResultsMetadataDocument`
+  with:
+  - `lastSignal` set to `RESP_DONE`
+  - `numTotalResults` indicating count of results
+  - `errorMsg` if the job failed
+
+#### Real-time Streaming via Socket.IO
+- **Subscription**: Clients can subscribe to real-time updates using the `collection::find::subscribe` event
+- **Event Flow**:
+  1. Client sends subscription request with collection name (job ID) and query parameters
+  2. Server responds with `collection::find::update` events as documents are added/changed in the collection
+  3. Updates continue until the job completes
+
+**Socket Event Types**:
+- `collection::find::subscribe`: Subscribe to collection changes
+- `collection::find::update`: Server sends updates when collection content changes
+- `collection::find::unsubscribe`: Unsubscribe from updates
