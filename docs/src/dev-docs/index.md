@@ -16,6 +16,13 @@ Docs about building CLP.
 :::
 
 :::{grid-item-card}
+:link: testing/index
+Testing
+^^^
+Docs about testing CLP.
+:::
+
+:::{grid-item-card}
 :link: contributing-getting-started
 Contributing
 ^^^
@@ -48,6 +55,15 @@ Any design docs describing parts of this project.
 :hidden:
 
 building-package
+:::
+
+:::{toctree}
+:caption: Testing
+:hidden:
+
+testing/index
+testing/unit-tests
+testing/integration-tests
 :::
 
 :::{toctree}

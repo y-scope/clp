@@ -1,9 +1,8 @@
 import os
 import pathlib
 from enum import auto
-from typing import ClassVar, Literal, Optional, Union
+from typing import ClassVar, Literal, Optional, Set, Union
 
-from dotenv import dotenv_values
 from pydantic import BaseModel, PrivateAttr, root_validator, validator
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
@@ -28,6 +27,45 @@ COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
+
+# Component groups
+GENERAL_SCHEDULING_COMPONENTS = {
+    QUEUE_COMPONENT_NAME,
+    REDIS_COMPONENT_NAME,
+}
+COMPRESSION_COMPONENTS = GENERAL_SCHEDULING_COMPONENTS | {
+    DB_COMPONENT_NAME,
+    COMPRESSION_SCHEDULER_COMPONENT_NAME,
+    COMPRESSION_WORKER_COMPONENT_NAME,
+}
+QUERY_COMPONENTS = GENERAL_SCHEDULING_COMPONENTS | {
+    DB_COMPONENT_NAME,
+    QUERY_SCHEDULER_COMPONENT_NAME,
+    QUERY_WORKER_COMPONENT_NAME,
+    REDUCER_COMPONENT_NAME,
+}
+UI_COMPONENTS = {
+    RESULTS_CACHE_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME,
+}
+STORAGE_MANAGEMENT_COMPONENTS = {GARBAGE_COLLECTOR_COMPONENT_NAME}
+ALL_COMPONENTS = (
+    COMPRESSION_COMPONENTS | QUERY_COMPONENTS | UI_COMPONENTS | STORAGE_MANAGEMENT_COMPONENTS
+)
+
+# Target names
+ALL_TARGET_NAME = ""
+CONTROLLER_TARGET_NAME = "controller"
+
+TARGET_TO_COMPONENTS = {
+    ALL_TARGET_NAME: ALL_COMPONENTS,
+    CONTROLLER_TARGET_NAME: GENERAL_SCHEDULING_COMPONENTS
+    | {
+        COMPRESSION_SCHEDULER_COMPONENT_NAME,
+        QUERY_SCHEDULER_COMPONENT_NAME,
+    }
+    | STORAGE_MANAGEMENT_COMPONENTS,
+}
 
 # Action names
 ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
@@ -808,6 +846,21 @@ class GarbageCollector(BaseModel):
         return field
 
 
+class Presto(BaseModel):
+    host: str
+    port: int
+
+    @validator("host")
+    def validate_host(cls, field):
+        _validate_host(cls, field)
+        return field
+
+    @validator("port")
+    def validate_port(cls, field):
+        _validate_port(cls, field)
+        return field
+
+
 def _get_env_var(name: str) -> str:
     value = os.getenv(name)
     if value is None:
@@ -833,6 +886,8 @@ class CLPConfig(BaseModel):
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
+
+    presto: Optional[Presto] = None
 
     archive_output: ArchiveOutput = ArchiveOutput()
     stream_output: StreamOutput = StreamOutput()
@@ -969,6 +1024,24 @@ class CLPConfig(BaseModel):
             d["aws_config_directory"] = None
 
         return d
+
+    # We set `pre=True` so that we print errors about a mismatch between the query engine and presto
+    # config before errors about the presto config itself.
+    @root_validator(pre=True)
+    def validate_presto_config(cls, values):
+        package = values.get("package")
+        if not isinstance(package, Package):
+            # Skip validation since `package` is not a valid `Package` (Pydantic will validate it
+            # later and throw an error).
+            return values
+
+        query_engine = package.get("query_engine")
+        presto = values.get("presto")
+        if query_engine == QueryEngine.PRESTO and presto is None:
+            raise ValueError(
+                f"`presto` config must be non-null when query_engine is `{query_engine}`"
+            )
+        return values
 
     def transform_for_container(self):
         """

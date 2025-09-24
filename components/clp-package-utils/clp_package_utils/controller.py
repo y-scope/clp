@@ -21,6 +21,7 @@ from clp_py_utils.clp_config import (
     GARBAGE_COLLECTOR_COMPONENT_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
+    QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
@@ -375,6 +376,14 @@ class BaseController(ABC):
             server_settings_json_updates["StreamFilesS3Region"] = None
             server_settings_json_updates["StreamFilesS3PathPrefix"] = None
             server_settings_json_updates["StreamFilesS3Profile"] = None
+
+        query_engine = self.clp_config.package.query_engine
+        if QueryEngine.PRESTO == query_engine:
+            server_settings_json_updates["PrestoHost"] = self.clp_config.presto.host
+            server_settings_json_updates["PrestoPort"] = self.clp_config.presto.port
+        else:
+            server_settings_json_updates["PrestoHost"] = None
+            server_settings_json_updates["PrestoPort"] = None
 
         server_settings_json = self._read_and_update_settings_json(
             server_settings_json_path, server_settings_json_updates
