@@ -1,5 +1,8 @@
 #include "ColumnWriter.hpp"
 
+#include <algorithm>
+#include <cassert>
+#include <cctype>
 #include <cstdint>
 #include <variant>
 
@@ -44,6 +47,33 @@ size_t FloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
 void FloatColumnWriter::store(ZstdCompressor& compressor) {
     size_t size = m_values.size() * sizeof(double);
     compressor.write(reinterpret_cast<char const*>(m_values.data()), size);
+}
+
+size_t FormattedFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
+    auto const& [float_value, format]{std::get<std::pair<double, float_format_t>>(value)};
+    m_values.push_back(float_value);
+    m_formats.push_back(format);
+    return sizeof(double) + sizeof(float_format_t);
+}
+
+void FormattedFloatColumnWriter::store(ZstdCompressor& compressor) {
+    assert(m_formats.size() == m_values.size());
+    auto const values_size = m_values.size() * sizeof(double);
+    auto const format_size = m_formats.size() * sizeof(float_format_t);
+    compressor.write(reinterpret_cast<char const*>(m_values.data()), values_size);
+    compressor.write(reinterpret_cast<char const*>(m_formats.data()), format_size);
+}
+
+size_t DictionaryFloatColumnWriter::add_value(ParsedMessage::variable_t& value) {
+    clp::variable_dictionary_id_t id{};
+    m_var_dict->add_entry(std::get<std::string>(value), id);
+    m_var_dict_ids.push_back(id);
+    return sizeof(clp::variable_dictionary_id_t);
+}
+
+void DictionaryFloatColumnWriter::store(ZstdCompressor& compressor) {
+    auto size{m_var_dict_ids.size() * sizeof(clp::variable_dictionary_id_t)};
+    compressor.write(reinterpret_cast<char const*>(m_var_dict_ids.data()), size);
 }
 
 size_t BooleanColumnWriter::add_value(ParsedMessage::variable_t& value) {

@@ -64,7 +64,7 @@ const QueryInput = () => {
             placeholder={"Enter your query"}
             progress={pseudoProgress}
             ref={inputRef}
-            size={"large"}
+            size={"middle"}
             value={queryString}
             disabled={
                 searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
