@@ -265,65 +265,67 @@ auto restore_encoded_float(double value, float_format_t format)
     std::ostringstream oss;
     oss.imbue(std::locale::classic());
     auto const num_significant_digits{get_num_significant_digits(format)};
-    oss << std::scientific << std::setprecision(num_significant_digits - 1);
-    if (has_scientific_notation(format)) {
-        if (is_uppercase_exponent(format)) {
-            oss << std::uppercase;
-        }
+    oss << std::scientific << std::setprecision(static_cast<int>(num_significant_digits) - 1);
+    if (false == has_scientific_notation(format)) {
+        // Convert the scientific notation to the standard decimal
         oss << value;
-        auto formatted_double_str = oss.str();
-        auto const exp_pos = formatted_double_str.find_first_of("Ee");
-        if (std::string::npos == exp_pos || exp_pos + 1 >= formatted_double_str.length()) {
-            return std::errc::protocol_error;
+        return scientific_to_decimal(oss.str());
+    }
+
+    if (is_uppercase_exponent(format)) {
+        oss << std::uppercase;
+    }
+    oss << value;
+    auto formatted_double_str = oss.str();
+    auto const exp_pos = formatted_double_str.find_first_of("Ee");
+    if (std::string::npos == exp_pos || exp_pos + 1 >= formatted_double_str.length()) {
+        return std::errc::protocol_error;
+    }
+
+    auto const maybe_sign = static_cast<unsigned char>(formatted_double_str[exp_pos + 1]);
+    auto const num_exp_digits{get_num_exponent_digits(format)};
+    if (has_matching_exponent_sign_flag(format, cEmptyExponentSignFlag)) {
+        if ('+' == maybe_sign || '-' == maybe_sign) {
+            formatted_double_str.erase(exp_pos + 1, 1);
         }
-        unsigned char const maybe_sign
-                = static_cast<unsigned char>(formatted_double_str[exp_pos + 1]);
-        auto const num_exp_digits{get_num_exponent_digits(format)};
-        if (has_matching_exponent_sign_flag(format, cEmptyExponentSignFlag)) {
-            if ('+' == maybe_sign || '-' == maybe_sign) {
-                formatted_double_str.erase(exp_pos + 1, 1);
-            }
-            if (num_exp_digits < (formatted_double_str.length() - exp_pos - 1)) {
-                formatted_double_str
-                        = trim_leading_zeros(formatted_double_str, exp_pos + 1, num_exp_digits);
-            } else {
-                formatted_double_str.insert(
-                        exp_pos + 1,
-                        num_exp_digits - (formatted_double_str.length() - exp_pos - 1),
-                        '0'
-                );
-            }
+        if (num_exp_digits < (formatted_double_str.length() - exp_pos - 1)) {
+            formatted_double_str
+                    = trim_leading_zeros(formatted_double_str, exp_pos + 1, num_exp_digits);
         } else {
-            if (num_exp_digits < (formatted_double_str.length() - exp_pos - 2)) {
-                formatted_double_str
-                        = trim_leading_zeros(formatted_double_str, exp_pos + 2, num_exp_digits);
-            } else {
-                formatted_double_str.insert(
-                        exp_pos + 2,
-                        num_exp_digits - (formatted_double_str.length() - exp_pos - 2),
-                        '0'
-                );
-            }
-            if (has_matching_exponent_sign_flag(format, cPlusExponentSignFlag)) {
-                if (std::isdigit(maybe_sign)) {
-                    formatted_double_str.insert(exp_pos + 1, "+");
-                } else {
-                    formatted_double_str[exp_pos + 1] = '+';
-                }
-            } else if (has_matching_exponent_sign_flag(format, cMinusExponentSignFlag)) {
-                if (std::isdigit(maybe_sign)) {
-                    formatted_double_str.insert(exp_pos + 1, "-");
-                } else {
-                    formatted_double_str[exp_pos + 1] = '-';
-                }
-            }
+            formatted_double_str.insert(
+                    exp_pos + 1,
+                    num_exp_digits - (formatted_double_str.length() - exp_pos - 1),
+                    '0'
+            );
         }
 
         return formatted_double_str;
     }
 
-    // Convert the scientific notation to the standard decimal
-    oss << value;
-    return scientific_to_decimal(oss.str());
+    if (num_exp_digits < (formatted_double_str.length() - exp_pos - 2)) {
+        formatted_double_str
+                = trim_leading_zeros(formatted_double_str, exp_pos + 2, num_exp_digits);
+    } else {
+        formatted_double_str.insert(
+                exp_pos + 2,
+                num_exp_digits - (formatted_double_str.length() - exp_pos - 2),
+                '0'
+        );
+    }
+    if (has_matching_exponent_sign_flag(format, cPlusExponentSignFlag)) {
+        if (static_cast<bool>(std::isdigit(maybe_sign))) {
+            formatted_double_str.insert(exp_pos + 1, "+");
+        } else {
+            formatted_double_str[exp_pos + 1] = '+';
+        }
+    } else if (has_matching_exponent_sign_flag(format, cMinusExponentSignFlag)) {
+        if (static_cast<bool>(std::isdigit(maybe_sign))) {
+            formatted_double_str.insert(exp_pos + 1, "-");
+        } else {
+            formatted_double_str[exp_pos + 1] = '-';
+        }
+    }
+
+    return formatted_double_str;
 }
 }  // namespace clp_s
