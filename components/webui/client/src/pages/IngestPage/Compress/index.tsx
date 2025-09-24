@@ -32,7 +32,6 @@ type FormValues = {
  */
 const Compress = () => {
     const [form] = Form.useForm<FormValues>();
-    const [messageApi, contextHolder] = message.useMessage();
 
     const queryClient = useQueryClient();
     const {
@@ -50,13 +49,6 @@ const Compress = () => {
         },
         onSuccess: () => {
             form.resetFields();
-        },
-        onError: (err: unknown) => {
-            const errorMessage = err instanceof Error ?
-                err.message :
-                "Unknown error";
-
-            messageApi.error(`Failed to submit compression job: ${errorMessage}`);
         },
     });
 
@@ -83,7 +75,6 @@ const Compress = () => {
 
     return (
         <DashboardCard title={"Start Ingestion"}>
-            {contextHolder}
             <Form
                 form={form}
                 layout={"vertical"}
