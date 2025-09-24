@@ -9,27 +9,28 @@ import styles from "./index.module.css";
 const {Text} = Typography;
 
 /**
- * Renders a label for the dataset selector.
+ * Renders a label for an input field.
  *
+ * @param props
+ * @param props.children The label text to display.
  * @return
  */
-const DatasetLabel = () => {
+const InputLabel = ({children}: {children: React.ReactNode}) => {
     const {token} = theme.useToken();
 
     return (
         <Text
-            className={styles["datasetLabel"] || ""}
+            className={styles["label"] || ""}
             style={{
-                backgroundColor: token.colorFillTertiary,
+                backgroundColor: token.colorBorder,
                 borderBottomLeftRadius: `${token.borderRadius}px`,
-                borderColor: token.colorBorder,
                 borderTopLeftRadius: `${token.borderRadius}px`,
-                fontSize: token.fontSizeLG,
+                fontSize: token.fontSize,
             }}
         >
-            Dataset
+            {children}
         </Text>
     );
 };
 
-export default DatasetLabel;
+export default InputLabel;
