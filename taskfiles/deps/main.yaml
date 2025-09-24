@@ -18,15 +18,9 @@ vars:
   G_DEPS_CPP_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_DIR}}/cmake-settings"
 
   # Library names
-  G_ABSL_LIB_NAME: "absl"
-  G_ANTLR_RUNTIME_LIB_NAME: "antlr4-runtime"
   G_BOOST_LIB_NAME: "Boost"
   G_FMT_LIB_NAME: "fmt"
   G_GSL_LIB_NAME: "Microsoft.GSL"
-  G_MARIADB_CONNECTOR_CPP_LIB_NAME: "mariadb-connector-cpp"
-  G_MSGPACK_CXX_LIB_NAME: "msgpack-cxx"
-  G_SPDLOG_LIB_NAME: "spdlog"
-  G_YSTDLIB_LIB_NAME: "ystdlib"
 
   # Antlr
   G_ANTLR_VERSION: "4.13.2"
@@ -105,7 +99,7 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_CXX_STANDARD=20"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-          LIB_NAME: "{{.G_ABSL_LIB_NAME}}"
+          LIB_NAME: "absl"
           TARBALL_SHA256: "7262daa7c1711406248c10f41026d685e88223bc92817d16fb93c19adb57f669"
           TARBALL_URL: "https://github.com/abseil/abseil-cpp/releases/download/20250512.0/\
                         abseil-cpp-20250512.0.tar.gz"
@@ -141,7 +135,7 @@ tasks:
     internal: true
     run: "once"
     vars:
-      LIB_NAME: "{{.G_ANTLR_RUNTIME_LIB_NAME}}"
+      LIB_NAME: "antlr4-runtime"
 
       # Paths
       BUILD_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-build"
@@ -359,7 +353,7 @@ tasks:
             - "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
             - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
             - "-DINSTALL_LAYOUT=RPM"
-          LIB_NAME: "{{.G_MARIADB_CONNECTOR_CPP_LIB_NAME}}"
+          LIB_NAME: "mariadb-connector-cpp"
           TARBALL_URL: "https://github.com/mariadb-corporation/mariadb-connector-cpp/archive/refs/\
             tags/1.1.5.tar.gz"
           TARBALL_SHA256: "0e3dfe9f2bc3f7bb6f7c159009556290064a7c23402ea08019fa8aebfc3ff2c9"
@@ -414,7 +408,7 @@ tasks:
             - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
             - "-DMSGPACK_BUILD_DOCS=OFF"
             - "-DMSGPACK_CXX20=ON"
-          LIB_NAME: "{{.G_MSGPACK_CXX_LIB_NAME}}"
+          LIB_NAME: "msgpack-cxx"
           TARBALL_SHA256: "7504b7af7e7b9002ce529d4f941e1b7fb1fb435768780ce7da4abaac79bb156f"
           TARBALL_URL: "https://github.com/msgpack/msgpack-c/releases/download/cpp-{{.VERSION}}\
           /msgpack-cxx-{{.VERSION}}.tar.gz"
@@ -466,7 +460,7 @@ tasks:
             - "-DSPDLOG_BUILD_EXAMPLE=OFF"
             - "-DSPDLOG_BUILD_EXAMPLE_HO=OFF"
             - "-DSPDLOG_FMT_EXTERNAL=ON"
-          LIB_NAME: "{{.G_SPDLOG_LIB_NAME}}"
+          LIB_NAME: "spdlog"
           TARBALL_SHA256: "1586508029a7d0670dfcb2d97575dcdc242d3868a259742b69f100801ab4e16b"
 
           # NOTE: Since spdlog depends on fmt, we need to choose a version of spdlog that's
@@ -549,7 +543,7 @@ tasks:
             - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
             - "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
             - "-Dystdlib_BUILD_TESTING=OFF"
-          LIB_NAME: "{{.G_YSTDLIB_LIB_NAME}}"
+          LIB_NAME: "ystdlib"
           TARBALL_SHA256: "65990dc2bcc4a355c2181bfe31a7800f492309d1bcd340f52a34e85047e61bc8"
           TARBALL_URL: "https://github.com/y-scope/ystdlib-cpp/archive/9ed78cd.tar.gz"
 
