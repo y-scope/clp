@@ -116,7 +116,7 @@ tasks:
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
       - "components/package-template/src/**/*"
-      - "tools/deployment/package/docker-compose.yaml"
+      - "tools/deployment/package/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "core"
@@ -166,7 +166,7 @@ tasks:
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm ci --omit=dev
       - >-
         rsync -a
-        "tools/deployment/package/docker-compose.yaml"
+        "tools/deployment/package/"
         "{{.OUTPUT_DIR}}"
       # This command must be last
       - task: "utils:checksum:compute"

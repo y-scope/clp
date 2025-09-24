@@ -28,7 +28,7 @@ from clp_py_utils.clp_config import (
     RESULTS_CACHE_COMPONENT_NAME,
     StorageEngine,
     StorageType,
-    WEBUI_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME, DeploymentType,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     get_archives_table_name,
@@ -470,10 +470,15 @@ class DockerComposeController(BaseController):
         check_docker_dependencies(should_compose_run=False)
         self._provision()
 
-        logger.info(f"Starting CLP using Docker Compose...")
+        deployment_type = self.clp_config.get_deployment_type()
+        logger.info(f"Starting CLP using Docker Compose ({deployment_type})...")
+        cmd = ["docker", "compose"]
+        if deployment_type == DeploymentType.BASE:
+            cmd += ["--file", "docker-compose.base.yaml"]
+        cmd += ["up", "--detach"]
         try:
             subprocess.run(
-                ["docker", "compose", "up", "-d"],
+                cmd,
                 cwd=self.clp_home,
                 stderr=subprocess.STDOUT,
                 check=True,
