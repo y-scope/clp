@@ -16,7 +16,7 @@ The CLP search query flow involves multiple components working together:
 
 The diagram below illustrates the end-to-end lifecycle of a search query within the CLP package.
 
-```mermaid
+:::{mermaid}
 sequenceDiagram
     participant Client as WebUI Client
     participant Server as WebUI Server
@@ -54,7 +54,7 @@ sequenceDiagram
     Mongo-->>Server: New documents (real-time)
     Server-->>Client: Emit collection::find::update events
     Client->>Server: Unsubscribe (collection::find::unsubscribe)
-```
+:::
 
 ## Package Configuration: CLP-S vs CLP
 
