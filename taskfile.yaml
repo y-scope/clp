@@ -22,12 +22,12 @@ vars:
   # Build paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
-  G_SPIDER_BUILD_DIR: "{{.G_BUILD_DIR}}/spider"
   G_NODEJS_22_BUILD_DIR: "{{.G_BUILD_DIR}}/nodejs-22"
   G_NODEJS_22_BIN_DIR: "{{.G_NODEJS_22_BUILD_DIR}}/bin"
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
+  G_SPIDER_BUILD_DIR: "{{.G_BUILD_DIR}}/spider"
 
   # Taskfile paths
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
