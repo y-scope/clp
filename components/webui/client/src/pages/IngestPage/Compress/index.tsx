@@ -6,7 +6,6 @@ import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {CompressionJobCreation} from "@webui/common/schemas/compression";
 import {
     Form,
-    message,
     Typography,
 } from "antd";
 
