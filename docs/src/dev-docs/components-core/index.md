@@ -28,10 +28,10 @@ tools/scripts/deps-download/init.sh
 
 ### Source Dependencies
 
-To get all dependencies required by CLP core, run the `deps:core` task:
+To get all dependencies required by CLP core, run the `deps:cpp` task:
 
 ```shell
-task deps:core
+task deps:cpp
 ```
 
 The task will download, build, and install (within the build directory) the following libraries:
