@@ -210,27 +210,6 @@ tasks:
           JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
 
-  spider:
-    deps:
-      - "deps:cpp"
-    platforms: ["linux"]
-    status:
-      - >-
-        ! grep -q '^ID=ubuntu' /etc/os-release
-    cmds:
-      - task: "utils:cmake:install-remote-tar"
-        vars:
-          CMAKE_PACKAGE_NAME: "spider"
-          TAR_SHA256: "43478b6da99aa2df50c960573ec68c6fcf67cdfbab39b5e314676218aa93b959"
-          TAR_URL: "https://github.com/y-scope/spider/archive/6a7bad3.tar.gz"
-          WORK_DIR: "{{.G_SPIDER_BUILD_DIR}}"
-          CMAKE_JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
-          CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all.cmake"
-            - "-DCMAKE_BUILD_TYPE=Release"
-            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-            - "-DSPIDER_BUILD_TESTING=OFF"
-
   clp-package-utils:
     - task: "python-component"
       vars:
