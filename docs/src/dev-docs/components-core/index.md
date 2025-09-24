@@ -61,6 +61,13 @@ The task will download, build, and install (within the build directory) the foll
 | [zlib](https://github.com/madler/zlib)                                | v1.3.1         |
 | [zstd](https://github.com/facebook/zstd)                              | v1.5.7         |
 
+Notice that this task will also download, build, and install the following libraries that are not
+directly used by CLP core, but are required by some other C++ components such as [Spider]:
+
+| Library                                                                               | Version/commit  | Note                                                               |
+|---------------------------------------------------------------------------------------|-----------------|--------------------------------------------------------------------|
+| [mariadb-connector-cpp](https://github.com/mariadb-corporation/mariadb-connector-cpp) | v1.1.5          | Required by [Spider]. Built only when the host platform is Ubuntu. |
+
 ### Environment
 
 A handful of packages and libraries are required to build CLP. There are two options to use them:
@@ -130,6 +137,7 @@ regex-utils
 
 [CMake]: https://cmake.org/
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[Spider]: https://github.com/y-scope/spider
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
 [y-scope/clp-ffi-js#110]: https://github.com/y-scope/clp-ffi-js/issues/110
