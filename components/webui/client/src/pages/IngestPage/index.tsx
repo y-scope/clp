@@ -15,10 +15,10 @@ const IngestPage = () => {
         <div className={styles["ingestPageGrid"]}>
             <SpaceSavings/>
             <Details/>
-            <div className={styles["jobsGrid"] || ""}>
+            <div className={styles["fullRow"] || ""}>
                 <Compress/>
             </div>
-            <div className={styles["jobsGrid"] || ""}>
+            <div className={styles["fullRow"] || ""}>
                 <Jobs/>
             </div>
         </div>
