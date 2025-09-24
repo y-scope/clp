@@ -6,7 +6,8 @@ import {
 
 
 const DATASET_HELPER_TEXT = "The dataset that the archives belong to. If left empty, dataset " +
-    "\"default\" is used.";
+    `"${CLP_DEFAULT_DATASET_NAME}" will be used.`;
+const DATASET_PLACEHOLDER_TEXT = "The dataset for new archives";
 const TIMESTAMP_KEY_HELPER_TEXT = "The path (e.g. x.y) for the field containing the log event's" +
     " timestamp.";
 const TIMESTAMP_KEY_HELPER_TEXT_EXTRA = "If not provided, events will not have assigned" +
@@ -25,9 +26,7 @@ const ClpSFormItems = () => (
             name={"dataset"}
             tooltip={DATASET_HELPER_TEXT}
         >
-            <Input
-                defaultValue={CLP_DEFAULT_DATASET_NAME}
-                placeholder={DATASET_HELPER_TEXT}/>
+            <Input placeholder={DATASET_PLACEHOLDER_TEXT}/>
         </Form.Item>
         <Form.Item
             label={"Timestamp Key"}
