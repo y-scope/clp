@@ -880,6 +880,7 @@ def start_webui(
         "SqlDbPort": clp_config.database.port,
         "SqlDbName": clp_config.database.name,
         "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
+        "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
         "MongoDbHost": clp_config.results_cache.host,
         "MongoDbPort": clp_config.results_cache.port,
         "MongoDbName": clp_config.results_cache.db_name,
