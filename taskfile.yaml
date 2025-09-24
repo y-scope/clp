@@ -186,7 +186,7 @@ tasks:
       - "/etc/os-release"
     deps:
       - "codegen:clp-s-generate-parsers"
-      - "deps:cpp"
+      - "deps:core"
     cmds:
       - task: "utils:cmake:generate"
         vars:

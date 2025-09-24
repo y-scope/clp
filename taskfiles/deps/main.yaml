@@ -33,10 +33,10 @@ vars:
 tasks:
   default:
     deps:
-      - "cpp"
+      - "core"
       - "log-viewer"
 
-  cpp:
+  core:
     deps:
       - "utils:clean-outdated-cpp-checksum-files"
       - "utils:init"
@@ -46,7 +46,7 @@ tasks:
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
-          DEP_TASK: "cpp-all-parallel"
+          DEP_TASK: "core-all-parallel"
       - task: "utils:combine-cpp-checksum-files"
 
   log-viewer:
@@ -61,7 +61,7 @@ tasks:
           TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
           URL: "https://github.com/y-scope/yscope-log-viewer/archive/3abe4cc.tar.gz"
 
-  cpp-all-parallel:
+  core-all-parallel:
     internal: true
     run: "once"
     deps:
@@ -75,7 +75,6 @@ tasks:
       - task: "liblzma"
       - task: "log-surgeon"
       - task: "lz4"
-      - task: "mariadb-connector-cpp"
       - task: "microsoft.gsl"
       - task: "mongocxx"
       - task: "msgpack-cxx"
@@ -88,6 +87,56 @@ tasks:
       - task: "ystdlib"
       - task: "zlib"
       - task: "zstd"
+
+  spider:
+    deps:
+      - "spider-dep"
+    platforms: ["linux"]
+    preconditions:
+      # We do not support building `spider` on platforms other than Ubuntu.
+      - >-
+        source /etc/os-release && [[ "$ID" == "ubuntu" ]]
+    cmds:
+      - task: "yscope-dev-utils:cmake:install-remote-tar"
+        vars:
+          CMAKE_PACKAGE_NAME: "spider"
+          TAR_SHA256: "43478b6da99aa2df50c960573ec68c6fcf67cdfbab39b5e314676218aa93b959"
+          TAR_URL: "https://github.com/y-scope/spider/archive/6a7bad3.tar.gz"
+          WORK_DIR: "{{.G_SPIDER_BUILD_DIR}}"
+          CMAKE_JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DSPIDER_BUILD_TESTING=OFF"
+
+  spider-dep:
+    internal: true
+    deps:
+      - "utils:clean-outdated-cpp-checksum-files"
+      - "utils:init"
+    cmds:
+      - "rm -rf '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
+      - "mkdir -p '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
+      - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
+          DEP_TASK: "spider-all-parallel"
+      - task: "utils:combine-cpp-checksum-files"
+
+  spider-all-parallel:
+    internal: true
+    run: "once"
+    deps:
+      - task: "absl"
+      - task: "antlr-jar"
+      - task: "antlr-runtime"
+      - task: "boost"
+      - task: "fmt"
+      - task: "mariadb-connector-cpp"
+      - task: "msgpack-cxx"
+      - task: "spdlog"
+      - task: "ystdlib"
 
   absl:
     internal: true
@@ -342,15 +391,6 @@ tasks:
   mariadb-connector-cpp:
     internal: true
     run: "once"
-    platforms: ["linux"]
-    status:
-      # Skips the `mariadb-connector-cpp` on platforms other than Ubuntu.
-      # `mariadb-connector-cpp` is only needed by `spider`, and `spider` is not used by other
-      # platforms.
-      # `status` skips the task if the command exits with zero. Thus, we negate the condition so
-      # the command evaluates to false iff on Ubuntu.
-      - >-
-        source /etc/os-release && [[ "$ID" != "ubuntu" ]]
     cmds:
       - task: "utils:install-remote-cmake-lib"
         vars:
@@ -470,28 +510,6 @@ tasks:
           # NOTE: Since spdlog depends on fmt, we need to choose a version of spdlog that's
           # compatible with the version of fmt we use.
           TARBALL_URL: "https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz"
-
-  spider:
-    deps:
-      - "cpp"
-    platforms: ["linux"]
-    preconditions:
-      # We do not support building `spider` on platforms other than Ubuntu.
-      - >-
-        source /etc/os-release && [[ "$ID" == "ubuntu" ]]
-    cmds:
-      - task: "yscope-dev-utils:cmake:install-remote-tar"
-        vars:
-          CMAKE_PACKAGE_NAME: "spider"
-          TAR_SHA256: "43478b6da99aa2df50c960573ec68c6fcf67cdfbab39b5e314676218aa93b959"
-          TAR_URL: "https://github.com/y-scope/spider/archive/6a7bad3.tar.gz"
-          WORK_DIR: "{{.G_SPIDER_BUILD_DIR}}"
-          CMAKE_JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
-          CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all.cmake"
-            - "-DCMAKE_BUILD_TYPE=Release"
-            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-            - "-DSPIDER_BUILD_TESTING=OFF"
 
   sqlite3:
     internal: true
