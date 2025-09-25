@@ -535,10 +535,10 @@ class AwsAuthentication(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def validate_authentication(cls, values):
-        auth_type = values.get("type")
-        profile = values.get("profile")
-        credentials = values.get("credentials")
+    def validate_authentication(cls, data):
+        auth_type = data.get("type")
+        profile = data.get("profile")
+        credentials = data.get("credentials")
 
         try:
             auth_enum = AwsAuthType(auth_type)
@@ -553,7 +553,7 @@ class AwsAuthentication(BaseModel):
             raise ValueError(f"credentials must be set when type is '{auth_enum}.'")
         if auth_enum in [AwsAuthType.ec2, AwsAuthType.env_vars] and (profile or credentials):
             raise ValueError(f"profile and credentials must not be set when type is '{auth_enum}.'")
-        return values
+        return data
 
 
 class S3Config(BaseModel):
@@ -1022,20 +1022,20 @@ class CLPConfig(BaseModel):
     # config before errors about the presto config itself.
     @model_validator(mode="before")
     @classmethod
-    def validate_presto_config(cls, values):
-        package = values.get("package")
+    def validate_presto_config(cls, data):
+        package = data.get("package")
         if not isinstance(package, Package):
             # Skip validation since `package` is not a valid `Package` (Pydantic will validate it
             # later and throw an error).
-            return values
+            return data
 
         query_engine = package.get("query_engine")
-        presto = values.get("presto")
+        presto = data.get("presto")
         if query_engine == QueryEngine.PRESTO and presto is None:
             raise ValueError(
                 f"`presto` config must be non-null when query_engine is `{query_engine}`"
             )
-        return values
+        return data
 
 
 class WorkerConfig(BaseModel):
