@@ -12,6 +12,8 @@ fi
 # We lock to version 3.44.0 to avoid https://github.com/y-scope/clp-ffi-js/issues/110
 readonly required_version="3.44.0"
 
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+
 go_task_bin="$(command -v task 2>/dev/null || true)"
 if [ -n "${go_task_bin}" ]; then
     package_preinstalled=0
@@ -20,11 +22,10 @@ else
     package_preinstalled=1
     pipx install --force "go-task-bin==${required_version}"
     pipx ensurepath
-    go_task_bin="${PIPX_BIN_DIR:-$HOME/.local/bin}/task"
+    go_task_bin=$("${script_dir}/find-pipx-bin.sh" go-task-bin task)
     echo "Pipx Task installed at: ${go_task_bin}"
 fi
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 installed_version=$(${go_task_bin} --silent --taskfile "${script_dir}/print-go-task-version.yaml")
 if [[ "${installed_version}" != "${required_version}" ]]; then
     echo "Error: Task version ${installed_version} is currently unsupported (must be" \

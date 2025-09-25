@@ -21,7 +21,8 @@ else
     package_preinstalled=1
     pipx install --force "uv>=${required_version_min}"
     pipx ensurepath
-    uv_bin="${PIPX_BIN_DIR:-$HOME/.local/bin}/uv"
+    script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+    uv_bin=$("${script_dir}/find-pipx-bin.sh" uv uv)
     echo "Pipx uv installed at: ${uv_bin}"
 fi
 
