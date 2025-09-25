@@ -28,6 +28,10 @@ DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     software-properties-common \
     unzip
 
-# Install remaining packages through pipx
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
+
+# Install Rust toolchain
+"${script_dir}/../rust-toolchain/setup.sh"
+
+# Install remaining packages through pipx
 "${script_dir}/../pipx-packages/install-all.sh"
