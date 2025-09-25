@@ -4,7 +4,7 @@ import typing
 from enum import auto
 
 from clp_py_utils.clp_config import S3Config
-from pydantic import field_validator, BaseModel
+from pydantic import BaseModel, field_validator
 from strenum import LowercaseStrEnum
 
 

@@ -16,7 +16,7 @@ from job_orchestration.scheduler.job_config import (
     SearchJobConfig,
 )
 from job_orchestration.scheduler.query.reducer_handler import ReducerHandlerMessageQueues
-from pydantic import field_validator, ConfigDict, BaseModel
+from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class CompressionJob(BaseModel):
@@ -92,6 +92,7 @@ class SearchJob(QueryJob):
 
     def get_config(self) -> QueryJobConfig:
         return self.search_config
+
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
