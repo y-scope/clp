@@ -596,7 +596,6 @@ def generic_start_scheduler(
     logs_dir.mkdir(parents=True, exist_ok=True)
     container_logs_dir = container_clp_config.logs_directory / component_name
 
-    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     # fmt: off
     container_start_cmd = [
         "docker", "run",
@@ -1002,7 +1001,6 @@ def start_reducer(
     logs_dir.mkdir(parents=True, exist_ok=True)
     container_logs_dir = container_clp_config.logs_directory / component_name
 
-    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     # fmt: off
     container_start_cmd = [
         "docker", "run",
