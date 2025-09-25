@@ -1,21 +1,13 @@
-from celery import signals
-from celery.app.task import Task
-from celery.utils.log import get_task_logger
-from job_orchestration.executor.compress.celery import app
+from clp_py_utils.clp_logging import get_logger
 from job_orchestration.executor.compress.compression_task import general_compress
+from spider_py import TaskContext
 
 # Setup logging
-logger = get_task_logger(__name__)
+logger = get_logger("spider_compression_scheduler")
 
 
-@signals.worker_shutdown.connect
-def worker_shutdown_handler(signal=None, sender=None, **kwargs):
-    logger.info("Shutdown signal received.")
-
-
-@app.task(bind=True)
 def compress(
-    _: Task,
+    _: TaskContext,
     job_id: int,
     task_id: int,
     tag_ids,

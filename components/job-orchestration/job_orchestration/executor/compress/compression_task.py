@@ -1,3 +1,4 @@
+import datetime
 import json
 import os
 import pathlib
@@ -16,10 +17,12 @@ from clp_py_utils.clp_config import (
     StorageType,
     WorkerConfig,
 )
+from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
     get_archive_tags_table_name,
     get_archives_table_name,
 )
+from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import (
     generate_s3_virtual_hosted_style_url,
     get_credential_env_vars,
@@ -33,6 +36,7 @@ from job_orchestration.scheduler.job_config import (
     PathsToCompress,
     S3InputConfig,
 )
+from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
 
 
 def update_compression_task_metadata(db_cursor, task_id, kv):
@@ -512,3 +516,87 @@ def run_clp(
             error_msgs.append(s3_error)
         worker_output["error_message"] = "\n".join(error_msgs)
         return CompressionTaskStatus.FAILED, worker_output
+
+
+def general_compress(
+    job_id: int,
+    task_id: int,
+    tag_ids,
+    clp_io_config_json: str,
+    paths_to_compress_json: str,
+    clp_metadata_db_connection_config,
+    logger,
+):
+    clp_home = pathlib.Path(os.getenv("CLP_HOME"))
+
+    # Set logging level
+    logs_dir = pathlib.Path(os.getenv("CLP_LOGS_DIR"))
+    clp_logging_level = str(os.getenv("CLP_LOGGING_LEVEL"))
+    set_logging_level(logger, clp_logging_level)
+
+    # Load configuration
+    try:
+        worker_config = WorkerConfig.parse_obj(
+            read_yaml_config_file(pathlib.Path(os.getenv("CLP_CONFIG_PATH")))
+        )
+    except Exception as ex:
+        error_msg = "Failed to load worker config"
+        logger.exception(error_msg)
+        return CompressionTaskResult(
+            task_id=task_id,
+            status=CompressionTaskStatus.FAILED,
+            duration=0,
+            error_message=error_msg,
+        )
+
+    clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
+    paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
+
+    sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_connection_config))
+
+    start_time = datetime.datetime.now()
+    logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
+    compression_task_status, worker_output = run_clp(
+        worker_config,
+        clp_io_config,
+        clp_home,
+        logs_dir,
+        job_id,
+        task_id,
+        tag_ids,
+        paths_to_compress,
+        sql_adapter,
+        clp_metadata_db_connection_config,
+        logger,
+    )
+    duration = (datetime.datetime.now() - start_time).total_seconds()
+    logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
+
+    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
+        db_conn.cursor(dictionary=True)
+    ) as db_cursor:
+        update_compression_task_metadata(
+            db_cursor,
+            task_id,
+            dict(
+                start_time=start_time,
+                status=compression_task_status,
+                partition_uncompressed_size=worker_output["total_uncompressed_size"],
+                partition_compressed_size=worker_output["total_compressed_size"],
+                duration=duration,
+            ),
+        )
+        if CompressionTaskStatus.SUCCEEDED == compression_task_status:
+            increment_compression_job_metadata(db_cursor, job_id, dict(num_tasks_completed=1))
+        db_conn.commit()
+
+    compression_task_result = CompressionTaskResult(
+        task_id=task_id,
+        status=compression_task_status,
+        duration=duration,
+    )
+
+    if CompressionTaskStatus.FAILED == compression_task_status:
+        compression_task_result.error_message = worker_output["error_message"]
+
+    return compression_task_result.dict()
