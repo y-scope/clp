@@ -27,17 +27,18 @@ vars:
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
+  G_SPIDER_BUILD_DIR: "{{.G_BUILD_DIR}}/spider"
 
   # Taskfile paths
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
   # Versions
-  G_PACKAGE_VERSION: "0.5.1-dev"
+  G_PACKAGE_VERSION: "0.5.2-dev"
 
   # Build parameters
   # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
-  G_CORE_MAX_PARALLELISM_PER_BUILD_TASK: >-
-    {{default "" (env "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK")}}
+  G_CPP_MAX_PARALLELISM_PER_BUILD_TASK: >-
+    {{default "" (env "CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK")}}
 
   # Checksum files
   G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
@@ -121,6 +122,7 @@ tasks:
       - "core"
       - "clp-package-utils"
       - "clp-py-utils"
+      - "deps:spider"
       - "init"
       - "job-orchestration"
       - "package-venv"
@@ -150,6 +152,8 @@ tasks:
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+        "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_scheduler"
+        "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_worker"
         "{{.OUTPUT_DIR}}/bin/"
       - >-
         rsync -a
@@ -177,7 +181,7 @@ tasks:
   core-generate:
     internal: true
     sources: &core_source_files
-      - "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
+      - "{{.G_DEPS_CPP_CHECKSUM_FILE}}"
       - "{{.G_CORE_COMPONENT_DIR}}/cmake/**/*"
       - "{{.G_CORE_COMPONENT_DIR}}/CMakeLists.txt"
       - "{{.G_CORE_COMPONENT_DIR}}/src/**/*"
@@ -206,7 +210,7 @@ tasks:
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
-          JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
+          JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
 
   clp-package-utils:
