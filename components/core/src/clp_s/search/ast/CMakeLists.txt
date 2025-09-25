@@ -50,6 +50,8 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_SEARCH_AST)
+    clp_find_simdjson()
+
     add_library(
         clp_s_search_ast
         ${CLP_S_AST_SOURCES}
