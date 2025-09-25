@@ -419,7 +419,7 @@ def load_config_file(
         if raw_clp_config is None:
             clp_config = CLPConfig()
         else:
-            clp_config = CLPConfig.parse_obj(raw_clp_config)
+            clp_config = CLPConfig.model_validate(raw_clp_config)
     else:
         if config_file_path != default_config_file_path:
             raise ValueError(f"Config file '{config_file_path}' does not exist.")

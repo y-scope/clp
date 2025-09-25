@@ -547,7 +547,7 @@ def compress(
 
     # Load configuration
     try:
-        worker_config = WorkerConfig.parse_obj(
+        worker_config = WorkerConfig.model_validate(
             read_yaml_config_file(pathlib.Path(os.getenv("CLP_CONFIG_PATH")))
         )
     except Exception as ex:
@@ -563,7 +563,7 @@ def compress(
     clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
     paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
 
-    sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_connection_config))
+    sql_adapter = SQL_Adapter(Database.model_validate(clp_metadata_db_connection_config))
 
     start_time = datetime.datetime.now()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")

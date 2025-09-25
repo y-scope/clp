@@ -251,7 +251,7 @@ def main(argv):
     logs_to_compress = _get_logs_to_compress(pathlib.Path(parsed_args.logs_list).resolve())
 
     clp_input_config = _generate_clp_io_config(clp_config, logs_to_compress, parsed_args)
-    clp_output_config = OutputConfig.parse_obj(clp_config.archive_output)
+    clp_output_config = OutputConfig.model_validate(clp_config.archive_output.model_dump())
     if parsed_args.tags:
         tag_list = [tag.strip().lower() for tag in parsed_args.tags.split(",") if tag]
         if len(tag_list) > 0:
