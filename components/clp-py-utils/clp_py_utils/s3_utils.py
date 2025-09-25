@@ -174,7 +174,7 @@ def generate_container_auth_options(
                 f"{AWS_ENV_VAR_SESSION_TOKEN} not supported for environmental variable credentials."
             )
 
-    return (config_mount, credentials_env_vars)
+    return config_mount, credentials_env_vars
 
 
 def _create_s3_client(
