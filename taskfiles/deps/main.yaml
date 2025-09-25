@@ -46,7 +46,7 @@ tasks:
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
-          CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/core-all.cmake"
+          CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-core.cmake"
           DEP_TASK: "core-all-parallel"
       - task: "utils:combine-cpp-checksum-files"
 
@@ -106,7 +106,7 @@ tasks:
           WORK_DIR: "{{.G_SPIDER_BUILD_DIR}}"
           CMAKE_JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/spider-all.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-spider.cmake"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DSPIDER_BUILD_TESTING=OFF"
@@ -122,7 +122,7 @@ tasks:
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
-          CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/spider-all.cmake"
+          CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-spider.cmake"
           DEP_TASK: "spider-all-parallel"
       - task: "utils:combine-cpp-checksum-files"
 
