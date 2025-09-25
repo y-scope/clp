@@ -236,7 +236,7 @@ def generate_container_config(
     :param clp_home:
     :return: The container config and the mounts.
     """
-    container_clp_config = clp_config.copy(deep=True)
+    container_clp_config = clp_config.model_copy(deep=True)
 
     docker_mounts = CLPDockerMounts(clp_home, CONTAINER_CLP_HOME)
 
@@ -312,8 +312,8 @@ def generate_container_config(
 
 def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
     worker_config = WorkerConfig()
-    worker_config.package = clp_config.package.copy(deep=True)
-    worker_config.archive_output = clp_config.archive_output.copy(deep=True)
+    worker_config.package = clp_config.package.model_copy(deep=True)
+    worker_config.archive_output = clp_config.archive_output.model_copy(deep=True)
     worker_config.data_directory = clp_config.data_directory
 
     worker_config.stream_output = clp_config.stream_output
