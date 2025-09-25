@@ -26,7 +26,7 @@ else
     echo "Pipx uv installed at: ${uv_bin}"
 fi
 
-installed_version=$(uv self version --output-format json | jq --raw-output ".version")
+installed_version=$(${uv_bin} self version --output-format json | jq --raw-output ".version")
 IFS=. read -r installd_version_major installed_version_minor _ <<<"${installed_version}"
 
 if (("${installd_version_major}" == "${required_version_major_min}" && \
