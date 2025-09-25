@@ -7,10 +7,10 @@ from dotenv import dotenv_values
 from pydantic import (
     BaseModel,
     ConfigDict,
+    Field,
     field_validator,
     model_validator,
     PrivateAttr,
-    root_validator,
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
@@ -151,10 +151,10 @@ class Package(BaseModel):
             )
         return field
 
-    @root_validator
-    def validate_query_engine_package_compatibility(cls, values):
-        query_engine = values.get("query_engine")
-        storage_engine = values.get("storage_engine")
+    @model_validator(mode="after")
+    def validate_query_engine_package_compatibility(self):
+        query_engine = self.query_engine
+        storage_engine = self.storage_engine
 
         if query_engine in [QueryEngine.CLP, QueryEngine.CLP_S]:
             if query_engine != storage_engine:
@@ -171,7 +171,7 @@ class Package(BaseModel):
         else:
             raise ValueError(f"Unsupported query_engine '{query_engine}'.")
 
-        return values
+        return self
 
 
 class Database(BaseModel):
@@ -617,9 +617,9 @@ class S3Storage(BaseModel):
             raise ValueError("staging_directory cannot be empty")
         return field
 
-    @root_validator
-    def validate_key_prefix(cls, values):
-        s3_config = values.get("s3_config")
+    @model_validator(mode="after")
+    def validate_key_prefix(self):
+        s3_config = self.s3_config
         if not hasattr(s3_config, "key_prefix"):
             raise ValueError("s3_config must have field key_prefix")
         key_prefix = s3_config.key_prefix
@@ -627,7 +627,8 @@ class S3Storage(BaseModel):
             raise ValueError("s3_config.key_prefix cannot be empty")
         if not key_prefix.endswith("/"):
             raise ValueError('s3_config.key_prefix must end with "/"')
-        return values
+
+        return self
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.staging_directory = make_config_path_absolute(clp_home, self.staging_directory)
@@ -804,17 +805,9 @@ class WebUi(BaseModel):
 
 
 class SweepInterval(BaseModel):
-    archive: int = 60
-    search_result: int = 30
+    archive: int = Field(default=60, gt=0)
+    search_result: int = Field(default=30, gt=0)
     model_config = ConfigDict(extra="forbid")
-
-    @root_validator
-    def validate_sweep_interval(cls, values):
-        for field, value in values.items():
-            if value <= 0:
-                raise ValueError(f"Sweep interval of {field} must be greater than 0")
-        return values
-
 
 class GarbageCollector(BaseModel):
     logging_level: str = "INFO"
