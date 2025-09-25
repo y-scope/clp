@@ -12,17 +12,22 @@ fi
 # We lock to version 3.44.0 to avoid https://github.com/y-scope/clp-ffi-js/issues/110
 readonly required_version="3.44.0"
 
-package_preinstalled=0
-if ! command -v task >/dev/null 2>&1; then
+go_task_bin="$(command -v task 2>/dev/null || true)"
+if [ -n "${go_task_bin}" ]; then
+    package_preinstalled=0
+    echo "Preinstalled Task found at: ${go_task_bin}"
+else
     package_preinstalled=1
     pipx install --force "go-task-bin==${required_version}"
     pipx ensurepath
+    go_task_bin="${PIPX_BIN_DIR:-$HOME/.local/bin}/task"
+    echo "Pipx Task installed at: ${go_task_bin}"
 fi
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-task_version=$(task --silent --taskfile "${script_dir}/print-go-task-version.yaml")
-if [[ "${task_version}" != "${required_version}" ]]; then
-    echo "Error: Task version ${task_version} is currently unsupported (must be" \
+installed_version=$(${go_task_bin} --silent --taskfile "${script_dir}/print-go-task-version.yaml")
+if [[ "${installed_version}" != "${required_version}" ]]; then
+    echo "Error: Task version ${installed_version} is currently unsupported (must be" \
         "${required_version})."
 
     if ((0 == "${package_preinstalled}")); then
@@ -35,3 +40,5 @@ if [[ "${task_version}" != "${required_version}" ]]; then
 
     exit 1
 fi
+
+echo "Task version ${installed_version} installed at ${go_task_bin} satisfies version requirements."
