@@ -84,7 +84,7 @@ async def main(argv: List[str]) -> int:
             try:
                 _ = task.result()
                 logger.error(f"{gc_name} unexpectedly terminated without an error.")
-            except Exception as e:
+            except Exception:
                 logger.exception(f"{gc_name} failed.")
 
     logger.error("All garbage collectors terminated unexpectedly.")
