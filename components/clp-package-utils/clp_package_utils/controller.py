@@ -273,7 +273,7 @@ class BaseController(ABC):
 
         return {
             "CLP_QUERY_WORKER_LOGGING_LEVEL": self.clp_config.query_worker.logging_level,
-            "CLP_QUERY_WORKER_LOGS_DIR": str(logs_dir),
+            "CLP_QUERY_WORKER_LOGS_DIR_HOST": str(logs_dir),
             "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
         }
 
@@ -292,7 +292,7 @@ class BaseController(ABC):
 
         return {
             "CLP_REDUCER_LOGGING_LEVEL": self.clp_config.reducer.logging_level,
-            "CLP_REDUCER_LOGS_DIR": str(logs_dir),
+            "CLP_REDUCER_LOGS_DIR_HOST": str(logs_dir),
             "CLP_REDUCER_CONCURRENCY": str(num_workers),
             "CLP_REDUCER_UPSERT_INTERVAL": str(self.clp_config.reducer.upsert_interval),
         }

@@ -76,7 +76,7 @@ services:
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}:/var/data/archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "${CLP_QUERY_WORKER_LOGS_DIR:-./var/log/query_worker}:/var/log/query_worker"
+      - "${CLP_QUERY_WORKER_LOGS_DIR_HOST:-./var/log/query_worker}:/var/log/query_worker"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/staged-streams}:/var/data/staged-streams"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}:/var/data/streams"
     command: [
@@ -103,7 +103,7 @@ services:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "${CLP_REDUCER_LOGS_DIR:-./var/log/reducer}:/var/log/reducer"
+      - "${CLP_REDUCER_LOGS_DIR_HOST:-./var/log/reducer}:/var/log/reducer"
     depends_on:
       query-scheduler:
         condition: "service_healthy"
