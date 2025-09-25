@@ -7,7 +7,7 @@ script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 iid_file="${script_dir}/image.id"
 repo_root=${script_dir}/../../../
 
-# Remove the previous image after the build to allow layer reuse.
+# Remove the previous image to save space, but only after the build so its contents can be reused.
 prev_image_id=""
 if [[ -f "$iid_file" ]]; then
     prev_image_id=$(cat "$iid_file")
