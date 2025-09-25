@@ -196,7 +196,7 @@ class BaseController(ABC):
         _chown_paths_if_root(data_dir, logs_dir)
 
         return {
-            "CLP_RESULTS_CACHE_CONF_DIR_HOST": str(conf_file),
+            "CLP_RESULTS_CACHE_CONF_FILE_HOST": str(conf_file),
             "CLP_RESULTS_CACHE_DATA_DIR_HOST": str(data_dir),
             "CLP_RESULTS_CACHE_LOGS_DIR_HOST": str(logs_dir),
             "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self.clp_config.results_cache.host),

@@ -123,7 +123,7 @@ services:
     ports:
       - "${CLP_RESULTS_CACHE_HOST:-127.0.0.1}:${CLP_RESULTS_CACHE_PORT:-6379}:27017"
     volumes:
-      - "${CLP_RESULTS_CACHE_CONF_DIR_HOST:-./etc/mongo/mongod.conf}:/etc/mongo/mongod.conf:ro"
+      - "${CLP_RESULTS_CACHE_CONF_FILE_HOST:-./etc/mongo/mongod.conf}:/etc/mongo/mongod.conf:ro"
       - "${CLP_RESULTS_CACHE_DATA_DIR_HOST:-./var/data/results_cache}:/data/db"
       - "${CLP_RESULTS_CACHE_LOGS_DIR_HOST:-./var/log/results_cache}:/var/log/mongodb"
     healthcheck:
