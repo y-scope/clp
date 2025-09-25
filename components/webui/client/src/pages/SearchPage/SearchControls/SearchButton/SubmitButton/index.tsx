@@ -31,6 +31,7 @@ import {
  *
  * @return
  */
+// eslint-disable-next-line max-lines-per-function
 const SubmitButton = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
@@ -113,10 +114,18 @@ const SubmitButton = () => {
             dataset: selectDataset,
             ignoreCase: false === queryIsCaseSensitive,
             queryString: queryString,
-            timeRangeBucketSizeMillis:
-        newTimelineConfig.bucketDuration.asMilliseconds(),
-            timestampBegin: timeRange[0].valueOf(),
-            timestampEnd: timeRange[1].valueOf(),
+            timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
+            ...(
+                timeRangeOption === TIME_RANGE_OPTION.ALL_TIME ?
+                    {
+                        timestampBegin: null,
+                        timestampEnd: null,
+                    } :
+                    {
+                        timestampBegin: timeRange[0].valueOf(),
+                        timestampEnd: timeRange[1].valueOf(),
+                    }
+            ),
         });
     }, [
         queryString,
