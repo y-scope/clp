@@ -5,7 +5,7 @@ import pathlib
 import sys
 import time
 from contextlib import closing
-from typing import List, Optional, Union
+from typing import List, Union
 
 import brotli
 import msgpack
