@@ -4,7 +4,7 @@ This document explains the technical details of CLP's Docker Compose implementat
 
 ## Overview
 
-The Docker Compose implementation depends on a new controller architecture with a `BaseController` 
+The Docker Compose implementation depends on a new controller architecture with a `BaseController`
 abstract class and a `DockerComposeController` implementation.
 
 ## Architecture
