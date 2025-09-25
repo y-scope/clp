@@ -12,3 +12,4 @@ tasks:
       - ":package"
     cmds:
       - "./build.sh"
+      - "rsync -a 'image.id' '{{.G_PACKAGE_BUILD_DIR}}'"
