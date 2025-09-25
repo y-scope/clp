@@ -80,6 +80,9 @@ class ExtractJsonJob(QueryJob):
 
 
 class SearchJob(QueryJob):
+    # To allow asyncio.Task and asyncio.Queue
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     search_config: SearchJobConfig
     num_archives_to_search: int
     num_archives_searched: int
@@ -92,8 +95,6 @@ class SearchJob(QueryJob):
 
     def get_config(self) -> QueryJobConfig:
         return self.search_config
-
-    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
 class QueryTaskResult(BaseModel):

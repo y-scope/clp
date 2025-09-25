@@ -805,9 +805,10 @@ class WebUi(BaseModel):
 
 
 class SweepInterval(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     archive: int = Field(default=60, gt=0)
     search_result: int = Field(default=30, gt=0)
-    model_config = ConfigDict(extra="forbid")
 
 class GarbageCollector(BaseModel):
     logging_level: str = "INFO"
