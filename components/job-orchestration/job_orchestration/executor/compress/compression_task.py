@@ -560,8 +560,8 @@ def compress(
             error_message=error_msg,
         )
 
-    clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
-    paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
+    clp_io_config = ClpIoConfig.model_validate_json(clp_io_config_json)
+    paths_to_compress = PathsToCompress.model_validate_json(paths_to_compress_json)
 
     sql_adapter = SQL_Adapter(Database.model_validate(clp_metadata_db_connection_config))
 
