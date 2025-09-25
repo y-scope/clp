@@ -69,8 +69,8 @@ class BaseController(ABC):
 
     def __init__(self, clp_config: CLPConfig):
         self.clp_config = clp_config
-        self.clp_home = get_clp_home()
-        self._conf_dir = self.clp_home / "etc"
+        self._clp_home = get_clp_home()
+        self._conf_dir = self._clp_home / "etc"
 
     @abstractmethod
     def deploy(self):
@@ -309,10 +309,10 @@ class BaseController(ABC):
 
         container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
         client_settings_json_path = (
-            self.clp_home / "var" / "www" / "webui" / "client" / "settings.json"
+                self._clp_home / "var" / "www" / "webui" / "client" / "settings.json"
         )
         server_settings_json_path = (
-            self.clp_home / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
+                self._clp_home / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
         )
 
         validate_webui_config(self.clp_config, client_settings_json_path, server_settings_json_path)
@@ -483,7 +483,7 @@ class DockerComposeController(BaseController):
         try:
             subprocess.run(
                 cmd,
-                cwd=self.clp_home,
+                cwd=self._clp_home,
                 stderr=subprocess.STDOUT,
                 check=True,
             )
@@ -501,7 +501,7 @@ class DockerComposeController(BaseController):
         try:
             subprocess.run(
                 ["docker", "compose", "--project-name", self._project_name, "down"],
-                cwd=self.clp_home,
+                cwd=self._clp_home,
                 stderr=subprocess.STDOUT,
                 check=True,
             )
@@ -565,7 +565,7 @@ class DockerComposeController(BaseController):
         if self.clp_config.aws_config_directory is not None:
             env_dict["CLP_AWS_CONFIG_DIR_HOST"] = str(self.clp_config.aws_config_directory)
 
-        with open(f"{self.clp_home}/.env", "w") as env_file:
+        with open(f"{self._clp_home}/.env", "w") as env_file:
             for key, value in env_dict.items():
                 env_file.write(f"{key}={value}\n")
 
