@@ -853,7 +853,7 @@ class CLPConfig(BaseModel):
     database: Database = Database()
     queue: Queue = Queue()
     redis: Redis = Redis()
-    reducer: Reducer() = Reducer()
+    reducer: Reducer = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
     query_scheduler: QueryScheduler = QueryScheduler()
