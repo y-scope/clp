@@ -115,7 +115,7 @@ def append_docker_options(
 
 
 def append_docker_port_settings_for_host_ips(
-    hostname: str, host_port: int, container_port: int, cmd: [str]
+    hostname: str, host_port: int, container_port: int, cmd: List[str]
 ):
     # Note: We use a set because gethostbyname_ex can return the same IP twice for one hostname
     for ip in set(socket.gethostbyname_ex(hostname)[2]):
@@ -138,7 +138,7 @@ def chown_recursively(
     subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
 
 
-def wait_for_container_cmd(container_name: str, cmd_to_run: [str], timeout: int):
+def wait_for_container_cmd(container_name: str, cmd_to_run: List[str], timeout: int):
     container_exec_cmd = ["docker", "exec", container_name]
     cmd = container_exec_cmd + cmd_to_run
 
