@@ -52,7 +52,7 @@ The Docker Compose setup includes the following services:
 :::{mermaid}
 graph LR
   %% Services
-  db["db (MySQL)"]
+  database["database (MySQL)"]
   queue["queue (RabbitMQ)"]
   redis["redis (Redis)"]
   results_cache["results-cache (MongoDB)"]
@@ -69,7 +69,7 @@ graph LR
   results_cache_indices_creator["results-cache-indices-creator"]
 
   %% Dependencies
-  db -->|healthy| db_table_creator
+  database -->|healthy| db_table_creator
   results_cache -->|healthy| results_cache_indices_creator
   db_table_creator -->|completed_successfully| compression_scheduler
   queue -->|healthy| compression_scheduler
@@ -85,7 +85,7 @@ graph LR
   results_cache_indices_creator -->|completed_successfully| garbage_collector
 
   subgraph Databases
-    db
+    database
     queue
     redis
     results_cache

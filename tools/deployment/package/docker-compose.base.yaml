@@ -18,7 +18,7 @@ secrets:
     environment: "CLP_DB_PASS"
 
 services:
-  db:
+  database:
     <<: *service_defaults
     container_name: "database"
     image: "${CLP_DB_IMAGE:-mysql:8.0.23}"
@@ -58,7 +58,7 @@ services:
     volumes:
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml"
     depends_on:
-      db:
+      database:
         condition: "service_healthy"
     command: [
       "python3",
@@ -173,7 +173,7 @@ services:
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "/:/mnt/logs:ro"
     depends_on:
-      db-table-creator:
+      database:
         condition: "service_completed_successfully"
       queue:
         condition: "service_healthy"
@@ -245,7 +245,7 @@ services:
       - "./var/www/webui/server/dist/settings.json\
 :/opt/clp/var/www/webui/server/dist/settings.json:ro"
     depends_on:
-      db-table-creator:
+      database:
         condition: "service_completed_successfully"
       results-cache-indices-creator:
         condition: "service_completed_successfully"
@@ -277,7 +277,7 @@ services:
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "${CLP_LOGS_DIR_HOST:-./var/log}/garbage_collector:/var/log/garbage_collector"
     depends_on:
-      db-table-creator:
+      database:
         condition: "service_completed_successfully"
       results-cache-indices-creator:
         condition: "service_completed_successfully"
