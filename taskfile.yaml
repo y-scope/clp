@@ -172,6 +172,7 @@ tasks:
         rsync -a
         "tools/deployment/package/"
         "{{.OUTPUT_DIR}}"
+      - "echo '{{.G_PACKAGE_VERSION}}' > '{{.OUTPUT_DIR}}/VERSION'"
       # This command must be last
       - task: "utils:checksum:compute"
         vars:
