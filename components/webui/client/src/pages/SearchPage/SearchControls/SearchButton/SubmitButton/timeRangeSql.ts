@@ -30,5 +30,6 @@ FROM ${settings.SqlDbClpTablePrefix}${datasetName}_${SqlTableSuffix.ARCHIVES}`;
 };
 
 export {
-    buildClpsTimeRangeSql, buildClpTimeRangeSql,
+    buildClpsTimeRangeSql,
+    buildClpTimeRangeSql,
 };

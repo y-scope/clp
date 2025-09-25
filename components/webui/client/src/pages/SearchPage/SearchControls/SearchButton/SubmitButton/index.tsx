@@ -4,6 +4,7 @@ import {SearchOutlined} from "@ant-design/icons";
 import {Nullable} from "@webui/common/utility-types";
 import {
     Button,
+    message,
     Tooltip,
 } from "antd";
 import dayjs, {Dayjs} from "dayjs";
@@ -42,6 +43,7 @@ const SubmitButton = () => {
     const updateCachedDataset = useSearchStore(
         (state) => state.updateCachedDataset,
     );
+    const [messageApi, contextHolder] = message.useMessage();
 
     const fetchAllTimeTimeRange = useCallback(async (): Promise<
         [Dayjs, Dayjs]
@@ -60,10 +62,10 @@ const SubmitButton = () => {
         >(sql);
         const [timestamps] = resp.data;
         if ("undefined" === typeof timestamps ||
-            null === timestamps.begin_timestamp ||
-            null === timestamps.end_timestamp
+              null === timestamps.begin_timestamp ||
+              null === timestamps.end_timestamp
         ) {
-            throw new Error();
+            throw new Error("Unable to get All Time range");
         }
 
         return [
@@ -80,8 +82,10 @@ const SubmitButton = () => {
         if (timeRangeOption === TIME_RANGE_OPTION.ALL_TIME) {
             try {
                 updatedTimeRange = await fetchAllTimeTimeRange();
-            } catch (err: unknown) {
-                console.error("Cannot fetch all time time range.", err);
+            } catch {
+                messageApi.warning(
+                    'Cannot fetch the time range for "All Time". Fallback to the unix epoch.',
+                );
                 updatedTimeRange = timeRange;
             }
         } else {
@@ -109,7 +113,8 @@ const SubmitButton = () => {
             dataset: selectDataset,
             ignoreCase: false === queryIsCaseSensitive,
             queryString: queryString,
-            timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
+            timeRangeBucketSizeMillis:
+        newTimelineConfig.bucketDuration.asMilliseconds(),
             timestampBegin: timeRange[0].valueOf(),
             timestampEnd: timeRange[1].valueOf(),
         });
@@ -119,6 +124,7 @@ const SubmitButton = () => {
         timeRange,
         timeRangeOption,
         fetchAllTimeTimeRange,
+        messageApi,
         selectDataset,
         updateCachedDataset,
     ]);
@@ -127,8 +133,7 @@ const SubmitButton = () => {
 
     // Submit button must be disabled if there are no datasets since clp-s requires dataset option
     // for queries.
-    const isNoDatasetsAndClpS =
-        null === selectDataset &&
+    const isNoDatasetsAndClpS = null === selectDataset &&
         CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE;
 
     let tooltipTitle = "";
@@ -140,17 +145,16 @@ const SubmitButton = () => {
 
     return (
         <Tooltip title={tooltipTitle}>
+            {contextHolder}
             <Button
                 className={styles["gradientButton"] || ""}
                 htmlType={"submit"}
                 icon={<SearchOutlined/>}
                 size={"middle"}
                 type={"primary"}
-                disabled={
-                    isQueryStringEmpty ||
+                disabled={isQueryStringEmpty ||
                     isNoDatasetsAndClpS ||
-                    searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING
-                }
+                    searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
                 onClick={() => {
                     handleSubmitButtonClick().catch((err: unknown) => {
                         throw err;
