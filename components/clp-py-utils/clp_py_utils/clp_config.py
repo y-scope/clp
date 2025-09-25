@@ -315,8 +315,8 @@ class CompressionScheduler(BaseModel):
 
 
 class QueryScheduler(BaseModel):
-    host = "localhost"
-    port = 7000
+    host: str = "localhost"
+    port: int = 7000
     jobs_poll_delay: float = 0.1  # seconds
     num_archives_to_search_per_sub_job: int = 16
     logging_level: str = "INFO"
