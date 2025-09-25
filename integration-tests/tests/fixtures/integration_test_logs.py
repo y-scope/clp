@@ -69,7 +69,7 @@ def _download_and_extract_dataset(
             curl_bin,
             "--fail",
             "--location",
-            "--output", str(integration_test_logs.tarball_path),
+            "--output", str(integration_test_logs.tar_gz_path),
             "--show-error",
             tarball_url,
         ]
@@ -78,7 +78,7 @@ def _download_and_extract_dataset(
 
         unlink(integration_test_logs.extraction_dir)
         shutil.unpack_archive(
-            integration_test_logs.tarball_path, integration_test_logs.extraction_dir
+            integration_test_logs.tar_gz_path, integration_test_logs.extraction_dir
         )
     except Exception as e:
         err_msg = f"Failed to download and extract dataset `{name}`."
@@ -89,7 +89,37 @@ def _download_and_extract_dataset(
     if chmod_bin is None:
         err_msg = "chmod executable not found"
         raise RuntimeError(err_msg)
-    subprocess.run([chmod_bin, "-R", "gu+w", integration_test_logs.extraction_dir], check=True)
+    subprocess.run([chmod_bin, "-R", "gu+w", str(integration_test_logs.extraction_dir)], check=True)
+
+    # Create base tar stream object to be compressed into different formats
+    gzip_bin = shutil.which("gzip")
+    if gzip_bin is None:
+        err_msg = "gzip executable not found"
+        raise RuntimeError(err_msg)
+    gzip_cmds = [gzip_bin, "--decompress", "--stdout", str(integration_test_logs.tar_gz_path)]
+    with integration_test_logs.base_tar_path.open(mode="wb") as fout:
+        subprocess.run(gzip_cmds, check=True, stdout=fout, stdin=subprocess.DEVNULL)
+
+    # Create lz4 tar
+    lz4_bin = str(integration_test_config.deps_config.lz4_binary_path)
+    lz4_cmds = [
+        lz4_bin,
+        str(integration_test_logs.base_tar_path),
+        str(integration_test_logs.tar_lz4_path),
+    ]
+    subprocess.run(lz4_cmds, check=True)
+
+    # Create xz tar
+    xz_bin = str(integration_test_config.deps_config.xz_binary_path)
+    xz_cmds = [xz_bin, "--compress", "--stdout", str(integration_test_logs.base_tar_path)]
+    with integration_test_logs.tar_xz_path.open(mode="wb") as fout:
+        subprocess.run(xz_cmds, check=True, stdout=fout, stdin=subprocess.DEVNULL)
+
+    # Create zstd tar
+    zstd_bin = str(integration_test_config.deps_config.zstd_binary_path)
+    zstd_cmds = [zstd_bin, "--stdout", str(integration_test_logs.base_tar_path)]
+    with integration_test_logs.tar_zstd_path.open(mode="wb") as fout:
+        subprocess.run(zstd_cmds, check=True, stdout=fout, stdin=subprocess.DEVNULL)
 
     logger.info("Downloaded and extracted uncompressed logs for dataset `%s`.", name)
     request.config.cache.set(name, True)
