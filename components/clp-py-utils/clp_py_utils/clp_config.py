@@ -4,7 +4,7 @@ from enum import auto
 from typing import Literal, Optional, Set, Union
 
 from dotenv import dotenv_values
-from pydantic import BaseModel, PrivateAttr, root_validator, validator
+from pydantic import field_validator, model_validator, ConfigDict, BaseModel, PrivateAttr, root_validator
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
 from .clp_logging import get_valid_logging_level, is_valid_logging_level
@@ -124,7 +124,8 @@ class Package(BaseModel):
     storage_engine: str = "clp"
     query_engine: str = "clp"
 
-    @validator("storage_engine")
+    @field_validator("storage_engine")
+    @classmethod
     def validate_storage_engine(cls, field):
         if field not in VALID_STORAGE_ENGINES:
             raise ValueError(
@@ -133,7 +134,8 @@ class Package(BaseModel):
             )
         return field
 
-    @validator("query_engine")
+    @field_validator("query_engine")
+    @classmethod
     def validate_query_engine(cls, field):
         if field not in VALID_QUERY_ENGINES:
             raise ValueError(
@@ -177,7 +179,8 @@ class Database(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
 
-    @validator("type")
+    @field_validator("type")
+    @classmethod
     def validate_database_type(cls, field):
         supported_database_types = ["mysql", "mariadb"]
         if field not in supported_database_types:
@@ -186,13 +189,15 @@ class Database(BaseModel):
             )
         return field
 
-    @validator("name")
+    @field_validator("name")
+    @classmethod
     def validate_database_name(cls, field):
         if "" == field:
             raise ValueError("database.name cannot be empty.")
         return field
 
-    @validator("host")
+    @field_validator("host")
+    @classmethod
     def validate_database_host(cls, field):
         if "" == field:
             raise ValueError("database.host cannot be empty.")
@@ -295,7 +300,8 @@ class CompressionScheduler(BaseModel):
     jobs_poll_delay: float = 0.1  # seconds
     logging_level: str = "INFO"
 
-    @validator("logging_level")
+    @field_validator("logging_level")
+    @classmethod
     def validate_logging_level(cls, field):
         _validate_logging_level(cls, field)
         return field
@@ -308,18 +314,21 @@ class QueryScheduler(BaseModel):
     num_archives_to_search_per_sub_job: int = 16
     logging_level: str = "INFO"
 
-    @validator("logging_level")
+    @field_validator("logging_level")
+    @classmethod
     def validate_logging_level(cls, field):
         _validate_logging_level(cls, field)
         return field
 
-    @validator("host")
+    @field_validator("host")
+    @classmethod
     def validate_host(cls, field):
         if "" == field:
             raise ValueError(f"Cannot be empty.")
         return field
 
-    @validator("port")
+    @field_validator("port")
+    @classmethod
     def validate_port(cls, field):
         if not field > 0:
             raise ValueError(f"{field} is not greater than zero")
@@ -329,7 +338,8 @@ class QueryScheduler(BaseModel):
 class CompressionWorker(BaseModel):
     logging_level: str = "INFO"
 
-    @validator("logging_level")
+    @field_validator("logging_level")
+    @classmethod
     def validate_logging_level(cls, field):
         _validate_logging_level(cls, field)
         return field
@@ -338,7 +348,8 @@ class CompressionWorker(BaseModel):
 class QueryWorker(BaseModel):
     logging_level: str = "INFO"
 
-    @validator("logging_level")
+    @field_validator("logging_level")
+    @classmethod
     def validate_logging_level(cls, field):
         _validate_logging_level(cls, field)
         return field
@@ -352,7 +363,8 @@ class Redis(BaseModel):
     # redis can perform authentication without a username
     password: Optional[str] = None
 
-    @validator("host")
+    @field_validator("host")
+    @classmethod
     def validate_host(cls, field):
         if "" == field:
             raise ValueError(f"{REDIS_COMPONENT_NAME}.host cannot be empty.")
@@ -385,24 +397,28 @@ class Reducer(BaseModel):
     logging_level: str = "INFO"
     upsert_interval: int = 100  # milliseconds
 
-    @validator("host")
+    @field_validator("host")
+    @classmethod
     def validate_host(cls, field):
         if "" == field:
             raise ValueError(f"{field} cannot be empty")
         return field
 
-    @validator("logging_level")
+    @field_validator("logging_level")
+    @classmethod
     def validate_logging_level(cls, field):
         _validate_logging_level(cls, field)
         return field
 
-    @validator("base_port")
+    @field_validator("base_port")
+    @classmethod
     def validate_base_port(cls, field):
         if not field > 0:
             raise ValueError(f"{field} is not greater than zero")
         return field
 
-    @validator("upsert_interval")
+    @field_validator("upsert_interval")
+    @classmethod
     def validate_upsert_interval(cls, field):
         if not field > 0:
             raise ValueError(f"{field} is not greater than zero")
@@ -416,19 +432,22 @@ class ResultsCache(BaseModel):
     stream_collection_name: str = "stream-files"
     retention_period: Optional[int] = 60
 
-    @validator("host")
+    @field_validator("host")
+    @classmethod
     def validate_host(cls, field):
         if "" == field:
             raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.host cannot be empty.")
         return field
 
-    @validator("db_name")
+    @field_validator("db_name")
+    @classmethod
     def validate_db_name(cls, field):
         if "" == field:
             raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.db_name cannot be empty.")
         return field
 
-    @validator("stream_collection_name")
+    @field_validator("stream_collection_name")
+    @classmethod
     def validate_stream_collection_name(cls, field):
         if "" == field:
             raise ValueError(
@@ -436,7 +455,8 @@ class ResultsCache(BaseModel):
             )
         return field
 
-    @validator("retention_period")
+    @field_validator("retention_period")
+    @classmethod
     def validate_retention_period(cls, field):
         if field is not None and field <= 0:
             raise ValueError("retention_period must be greater than 0")
@@ -479,15 +499,17 @@ class Queue(BaseModel):
 class S3Credentials(BaseModel):
     access_key_id: str
     secret_access_key: str
-    session_token: Optional[str]
+    session_token: Optional[str] = None
 
-    @validator("access_key_id")
+    @field_validator("access_key_id")
+    @classmethod
     def validate_access_key_id(cls, field):
         if "" == field:
             raise ValueError("access_key_id cannot be empty")
         return field
 
-    @validator("secret_access_key")
+    @field_validator("secret_access_key")
+    @classmethod
     def validate_secret_access_key(cls, field):
         if "" == field:
             raise ValueError("secret_access_key cannot be empty")
@@ -504,7 +526,8 @@ class AwsAuthentication(BaseModel):
     profile: Optional[str] = None
     credentials: Optional[S3Credentials] = None
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def validate_authentication(cls, values):
         auth_type = values.get("type")
         profile = values.get("profile")
@@ -532,13 +555,15 @@ class S3Config(BaseModel):
     key_prefix: str
     aws_authentication: AwsAuthentication
 
-    @validator("region_code")
+    @field_validator("region_code")
+    @classmethod
     def validate_region_code(cls, field):
         if "" == field:
             raise ValueError("region_code cannot be empty")
         return field
 
-    @validator("bucket")
+    @field_validator("bucket")
+    @classmethod
     def validate_bucket(cls, field):
         if "" == field:
             raise ValueError("bucket cannot be empty")
@@ -557,7 +582,8 @@ class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
     directory: pathlib.Path
 
-    @validator("directory")
+    @field_validator("directory")
+    @classmethod
     def validate_directory(cls, field):
         if "" == field:
             raise ValueError("directory cannot be empty")
@@ -577,7 +603,8 @@ class S3Storage(BaseModel):
     s3_config: S3Config
     staging_directory: pathlib.Path
 
-    @validator("staging_directory")
+    @field_validator("staging_directory")
+    @classmethod
     def validate_staging_directory(cls, field):
         if "" == field:
             raise ValueError("staging_directory cannot be empty")
@@ -657,37 +684,43 @@ class ArchiveOutput(BaseModel):
     compression_level: int = 3
     retention_period: Optional[int] = None
 
-    @validator("target_archive_size")
+    @field_validator("target_archive_size")
+    @classmethod
     def validate_target_archive_size(cls, field):
         if field <= 0:
             raise ValueError("target_archive_size must be greater than 0")
         return field
 
-    @validator("target_dictionaries_size")
+    @field_validator("target_dictionaries_size")
+    @classmethod
     def validate_target_dictionaries_size(cls, field):
         if field <= 0:
             raise ValueError("target_dictionaries_size must be greater than 0")
         return field
 
-    @validator("target_encoded_file_size")
+    @field_validator("target_encoded_file_size")
+    @classmethod
     def validate_target_encoded_file_size(cls, field):
         if field <= 0:
             raise ValueError("target_encoded_file_size must be greater than 0")
         return field
 
-    @validator("target_segment_size")
+    @field_validator("target_segment_size")
+    @classmethod
     def validate_target_segment_size(cls, field):
         if field <= 0:
             raise ValueError("target_segment_size must be greater than 0")
         return field
 
-    @validator("compression_level")
+    @field_validator("compression_level")
+    @classmethod
     def validate_compression_level(cls, field):
         if field < 1 or 19 < field:
             raise ValueError("compression_level must be a value from 1 to 19")
         return field
 
-    @validator("retention_period")
+    @field_validator("retention_period")
+    @classmethod
     def validate_retention_period(cls, field):
         if field is not None and field <= 0:
             raise ValueError("retention_period must be greater than 0")
@@ -709,7 +742,8 @@ class StreamOutput(BaseModel):
     storage: Union[StreamFsStorage, StreamS3Storage] = StreamFsStorage()
     target_uncompressed_size: int = 128 * 1024 * 1024
 
-    @validator("target_uncompressed_size")
+    @field_validator("target_uncompressed_size")
+    @classmethod
     def validate_target_uncompressed_size(cls, field):
         if field <= 0:
             raise ValueError("target_uncompressed_size must be greater than 0")
@@ -733,17 +767,20 @@ class WebUi(BaseModel):
     results_metadata_collection_name: str = "results-metadata"
     rate_limit: int = 1000
 
-    @validator("host")
+    @field_validator("host")
+    @classmethod
     def validate_host(cls, field):
         _validate_host(cls, field)
         return field
 
-    @validator("port")
+    @field_validator("port")
+    @classmethod
     def validate_port(cls, field):
         _validate_port(cls, field)
         return field
 
-    @validator("results_metadata_collection_name")
+    @field_validator("results_metadata_collection_name")
+    @classmethod
     def validate_results_metadata_collection_name(cls, field):
         if "" == field:
             raise ValueError(
@@ -751,7 +788,8 @@ class WebUi(BaseModel):
             )
         return field
 
-    @validator("rate_limit")
+    @field_validator("rate_limit")
+    @classmethod
     def validate_rate_limit(cls, field):
         if field <= 0:
             raise ValueError(f"rate_limit must be greater than 0")
@@ -761,10 +799,7 @@ class WebUi(BaseModel):
 class SweepInterval(BaseModel):
     archive: int = 60
     search_result: int = 30
-
-    # Explicitly disallow any unexpected key
-    class Config:
-        extra = "forbid"
+    model_config = ConfigDict(extra="forbid")
 
     @root_validator
     def validate_sweep_interval(cls, values):
@@ -778,7 +813,8 @@ class GarbageCollector(BaseModel):
     logging_level: str = "INFO"
     sweep_interval: SweepInterval = SweepInterval()
 
-    @validator("logging_level")
+    @field_validator("logging_level")
+    @classmethod
     def validate_logging_level(cls, field):
         _validate_logging_level(cls, field)
         return field
@@ -788,12 +824,14 @@ class Presto(BaseModel):
     host: str
     port: int
 
-    @validator("host")
+    @field_validator("host")
+    @classmethod
     def validate_host(cls, field):
         _validate_host(cls, field)
         return field
 
-    @validator("port")
+    @field_validator("port")
+    @classmethod
     def validate_port(cls, field):
         _validate_port(cls, field)
         return field
@@ -981,7 +1019,8 @@ class CLPConfig(BaseModel):
 
     # We set `pre=True` so that we print errors about a mismatch between the query engine and presto
     # config before errors about the presto config itself.
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def validate_presto_config(cls, values):
         package = values.get("package")
         if not isinstance(package, Package):
