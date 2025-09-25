@@ -1,7 +1,6 @@
 name: "clp-package"
 
-include:
-  - "docker-compose.base.yaml"
+include: ["docker-compose.base.yaml"]
 
 # Common service defaults.
 x-service-defaults: &service_defaults
