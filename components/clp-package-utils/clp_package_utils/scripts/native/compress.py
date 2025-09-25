@@ -117,7 +117,7 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
     ) as db_cursor:
         try:
             compressed_clp_io_config = brotli.compress(
-                msgpack.packb(clp_io_config.dict(exclude_none=True, exclude_unset=True)), quality=4
+                msgpack.packb(clp_io_config.model_dump(exclude_none=True, exclude_unset=True)), quality=4
             )
             db_cursor.execute(
                 f"INSERT INTO {COMPRESSION_JOBS_TABLE_NAME} (clp_config) VALUES (%s)",

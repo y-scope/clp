@@ -292,4 +292,4 @@ def extract_stream(
         else:
             logger.info(f"Finished uploading streams.")
 
-    return task_results.dict()
+    return task_results.model_dump()

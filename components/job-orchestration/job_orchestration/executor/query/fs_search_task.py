@@ -228,4 +228,4 @@ def search(
         start_time=start_time,
     )
 
-    return task_results.dict()
+    return task_results.model_dump()

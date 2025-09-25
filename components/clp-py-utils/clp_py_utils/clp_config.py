@@ -259,7 +259,7 @@ class Database(BaseModel):
         return connection_params_and_type
 
     def dump_to_primitive_dict(self):
-        return self.dict(exclude={"username", "password"})
+        return self.model_dump(exclude={"username", "password"})
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
@@ -378,7 +378,7 @@ class Redis(BaseModel):
         return field
 
     def dump_to_primitive_dict(self):
-        return self.dict(exclude={"password"})
+        return self.model_dump(exclude={"password"})
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
@@ -481,7 +481,7 @@ class Queue(BaseModel):
     password: Optional[str] = None
 
     def dump_to_primitive_dict(self):
-        return self.dict(exclude={"username", "password"})
+        return self.model_dump(exclude={"username", "password"})
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
@@ -582,7 +582,7 @@ class S3IngestionConfig(BaseModel):
     aws_authentication: AwsAuthentication
 
     def dump_to_primitive_dict(self):
-        return self.dict()
+        return self.model_dump()
 
 
 class FsStorage(BaseModel):
@@ -600,7 +600,7 @@ class FsStorage(BaseModel):
         self.directory = make_config_path_absolute(clp_home, self.directory)
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
+        d = self.model_dump()
         d["directory"] = str(d["directory"])
         return d
 
@@ -634,7 +634,7 @@ class S3Storage(BaseModel):
         self.staging_directory = make_config_path_absolute(clp_home, self.staging_directory)
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
+        d = self.model_dump()
         d["staging_directory"] = str(d["staging_directory"])
         return d
 
@@ -741,7 +741,7 @@ class ArchiveOutput(BaseModel):
         return _get_directory_from_storage_config(self.storage)
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
+        d = self.model_dump()
         d["storage"] = self.storage.dump_to_primitive_dict()
         return d
 
@@ -764,7 +764,7 @@ class StreamOutput(BaseModel):
         return _get_directory_from_storage_config(self.storage)
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
+        d = self.model_dump()
         d["storage"] = self.storage.dump_to_primitive_dict()
         return d
 
@@ -1002,7 +1002,7 @@ class CLPConfig(BaseModel):
             "archive_output",
             "stream_output",
         )
-        d = self.dict(exclude=set(custom_serialized_fields))
+        d = self.model_dump(exclude=set(custom_serialized_fields))
         for key in custom_serialized_fields:
             d[key] = getattr(self, key).dump_to_primitive_dict()
 
@@ -1047,7 +1047,7 @@ class WorkerConfig(BaseModel):
     stream_collection_name: str = ResultsCache().stream_collection_name
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
+        d = self.model_dump()
         d["archive_output"] = self.archive_output.dump_to_primitive_dict()
 
         # Turn paths into primitive strings

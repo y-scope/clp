@@ -83,7 +83,7 @@ class PathsToCompressBuffer:
             {
                 "partition_original_size": str(sum(st_sizes)),
                 "clp_paths_to_compress": brotli.compress(
-                    msgpack.packb(paths_to_compress.dict(exclude_none=True)), quality=4
+                    msgpack.packb(paths_to_compress.model_dump(exclude_none=True)), quality=4
                 ),
             }
         )

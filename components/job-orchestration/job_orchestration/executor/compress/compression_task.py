@@ -609,4 +609,4 @@ def compress(
     if CompressionTaskStatus.FAILED == compression_task_status:
         compression_task_result.error_message = worker_output["error_message"]
 
-    return compression_task_result.dict()
+    return compression_task_result.model_dump()

@@ -511,7 +511,7 @@ def get_task_group_for_job(
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
 ):
-    job_config = job.get_config().dict()
+    job_config = job.get_config().model_dump()
     job_type = job.get_type()
     if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
         return celery.group(
