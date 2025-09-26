@@ -1100,7 +1100,11 @@ def _validate_directory(value: Any):
     Validates that the given value represents a directory path.
 
     :param value:
-    :raise ValueError: if value is not of type str or is an empty string.
+    :raise ValueError: if the value is not of type str.
+    :raise ValueError: if the value is an empty string.
     """
-    if not isinstance(value, str) or "" == value.strip():
-        raise ValueError("directory cannot be empty")
+    if not isinstance(value, str):
+        raise ValueError("must be a string.")
+
+    if "" == value.strip():
+        raise ValueError("cannot be empty")
