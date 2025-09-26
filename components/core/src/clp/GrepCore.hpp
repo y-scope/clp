@@ -24,7 +24,11 @@
 #include "VariableDictionaryReaderReq.hpp"
 
 namespace clp {
+class GrepCoreTest;
+
 class GrepCore {
+friend class GrepCoreTest;
+
 public:
     // Methods
     /**
@@ -181,7 +185,7 @@ private:
     );
 
     /**
-     * Scans the interpretation and returns the indicies of all encodable     * wildcard variables.
+     * Scans the interpretation and returns the indicies of all encodable wildcard variables.
      *
      * An encodable variable is a variable token than:
      *   - Contains a wildcard (e.g. *1).
@@ -227,7 +231,7 @@ private:
      * @param sub_query Returns the updated sub query object.
      * @return True if the variable is encoded or is in the variable dictionary, false otherwise.
      */
-    template <typename VariableDictionaryReaderType>
+    template <VariableDictionaryReaderReq VariableDictionaryReaderType>
     static auto process_schema_var_token(
             log_surgeon::wildcard_query_parser::VariableQueryToken const& variable_token,
             VariableDictionaryReaderType const& var_dict,
@@ -547,7 +551,7 @@ void GrepCore::generate_schema_sub_queries(
                 wildcard_mask_map[wildcard_encodable_positions[i]] = mask >> i & 1;
             }
 
-            auto const& logtype_string{generate_logtype_string(interpretation, wildcard_mask_map)};
+            auto logtype_string{generate_logtype_string(interpretation, wildcard_mask_map)};
 
             std::unordered_set<typename LogTypeDictionaryReaderType::Entry const*> logtype_entries;
             logtype_dict.get_entries_matching_wildcard_string(
@@ -562,7 +566,7 @@ void GrepCore::generate_schema_sub_queries(
             SubQuery sub_query;
             bool has_vars{true};
             for (size_t i{0}; i < interpretation.get_logtype().size(); ++i) {
-                auto const& token{interpretation.get_logtype()[i]};
+                auto const token{interpretation.get_logtype()[i]};
                 if (std::holds_alternative<log_surgeon::wildcard_query_parser::VariableQueryToken>(
                             token
                     ))
@@ -598,7 +602,7 @@ void GrepCore::generate_schema_sub_queries(
     }
 }
 
-template <typename VariableDictionaryReaderType>
+template <VariableDictionaryReaderReq VariableDictionaryReaderType>
 auto GrepCore::process_schema_var_token(
         log_surgeon::wildcard_query_parser::VariableQueryToken const& variable_token,
         VariableDictionaryReaderType const& var_dict,

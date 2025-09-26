@@ -149,7 +149,7 @@ auto GrepCore::get_wildcard_encodable_positions(QueryInterpretation const& inter
         -> vector<size_t> {
     vector<size_t> wildcard_encodable_positions;
     for (size_t i{0}; i < interpretation.get_logtype().size(); ++i) {
-        auto const& token{interpretation.get_logtype()[i]};
+        auto const token{interpretation.get_logtype()[i]};
         if (std::holds_alternative<VariableQueryToken>(token)) {
             auto const& variable_token{std::get<VariableQueryToken>(token)};
             auto const var_type{variable_token.get_variable_type()};
@@ -171,7 +171,7 @@ auto GrepCore::generate_logtype_string(
 
     // Reserve size for `logtype_string`.
     size_t logtype_string_size{0};
-    for (auto const& token : interpretation.get_logtype()) {
+    for (auto const token : interpretation.get_logtype()) {
         if (std::holds_alternative<StaticQueryToken>(token)) {
             auto const& static_token{std::get<StaticQueryToken>(token)};
             logtype_string_size += static_token.get_query_substring().size();
@@ -183,7 +183,7 @@ auto GrepCore::generate_logtype_string(
 
     // Generete `logtype_string`.
     for (size_t i{0}; i < interpretation.get_logtype().size(); ++i) {
-        auto const& token{interpretation.get_logtype()[i]};
+        auto const token{interpretation.get_logtype()[i]};
         if (std::holds_alternative<StaticQueryToken>(token)) {
             logtype_string += std::get<StaticQueryToken>(token).get_query_substring();
             continue;
