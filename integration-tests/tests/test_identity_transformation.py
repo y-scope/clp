@@ -8,6 +8,7 @@ import pytest
 from tests.utils.asserting_utils import run_and_assert
 from tests.utils.config import (
     CompressionTestConfig,
+    CoreConfig,
     IntegrationTestConfig,
     IntegrationTestLogs,
 )
@@ -37,6 +38,7 @@ json_datasets = pytest.mark.parametrize(
 @text_datasets
 def test_clp_identity_transform(
     request: pytest.FixtureRequest,
+    core_config: CoreConfig,
     integration_test_config: IntegrationTestConfig,
     test_logs_fixture: str,
 ) -> None:
@@ -45,6 +47,7 @@ def test_clp_identity_transform(
     lossless.
 
     :param request:
+    :param core_config:
     :param integration_test_config:
     :param test_logs_fixture:
     """
@@ -56,7 +59,7 @@ def test_clp_identity_transform(
     )
     test_paths.clear_test_outputs()
 
-    bin_path = str(integration_test_config.core_config.clp_binary_path)
+    bin_path = str(core_config.clp_binary_path)
     src_path = str(test_paths.logs_source_dir)
     compression_path = str(test_paths.compression_dir)
     decompression_path = str(test_paths.decompression_dir)
@@ -89,6 +92,7 @@ def test_clp_identity_transform(
 @json_datasets
 def test_clp_s_identity_transform(
     request: pytest.FixtureRequest,
+    core_config: CoreConfig,
     integration_test_config: IntegrationTestConfig,
     test_logs_fixture: str,
 ) -> None:
@@ -97,6 +101,7 @@ def test_clp_s_identity_transform(
     lossless.
 
     :param request:
+    :param core_config:
     :param integration_test_config:
     :param test_logs_fixture:
     """
@@ -108,7 +113,7 @@ def test_clp_s_identity_transform(
         logs_source_dir=integration_test_logs.extraction_dir,
         integration_test_config=integration_test_config,
     )
-    _clp_s_compress_and_decompress(integration_test_config, test_paths)
+    _clp_s_compress_and_decompress(core_config, test_paths)
 
     # Recompress the decompressed output that's consolidated into a single json file, and decompress
     # it again to verify consistency. The compression input of the second iteration points to the
@@ -121,7 +126,7 @@ def test_clp_s_identity_transform(
         logs_source_dir=test_paths.decompression_dir,
         integration_test_config=integration_test_config,
     )
-    _clp_s_compress_and_decompress(integration_test_config, consolidated_json_test_paths)
+    _clp_s_compress_and_decompress(core_config, consolidated_json_test_paths)
 
     _consolidated_json_file_name = "original"
     input_path = consolidated_json_test_paths.logs_source_dir / _consolidated_json_file_name
@@ -135,10 +140,11 @@ def test_clp_s_identity_transform(
 
 
 def _clp_s_compress_and_decompress(
-    integration_test_config: IntegrationTestConfig, test_paths: CompressionTestConfig
+    core_config: CoreConfig,
+    test_paths: CompressionTestConfig,
 ) -> None:
     test_paths.clear_test_outputs()
-    bin_path = str(integration_test_config.core_config.clp_s_binary_path)
+    bin_path = str(core_config.clp_s_binary_path)
     src_path = str(test_paths.logs_source_dir)
     compression_path = str(test_paths.compression_dir)
     decompression_path = str(test_paths.decompression_dir)

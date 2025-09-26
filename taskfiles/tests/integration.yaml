@@ -17,8 +17,7 @@ tasks:
 
   core:
     deps:
-      # TODO: https://github.com/y-scope/clp/issues/1281
-      - task: "::package"
+      - task: "::core"
     dir: "{{.G_INTEGRATION_TESTS_DIR}}"
     env:
       CLP_BUILD_DIR: "{{.G_BUILD_DIR}}"
