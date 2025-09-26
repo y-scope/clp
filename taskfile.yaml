@@ -167,7 +167,6 @@ tasks:
       - |-
         cd "{{.OUTPUT_DIR}}/var/www/webui"
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm ci --omit=dev
-      - "echo '{{.G_PACKAGE_VERSION}}' > '{{.OUTPUT_DIR}}/VERSION'"
       # This command must be last
       - task: "utils:checksum:compute"
         vars:
