@@ -224,7 +224,7 @@ tasks:
 
   core-generate:
     internal: true
-    sources: &core_source_fildbes
+    sources: &core_source_files
       - "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
       - "{{.G_CORE_COMPONENT_DIR}}/cmake/**/*"
       - "{{.G_CORE_COMPONENT_DIR}}/CMakeLists.txt"
