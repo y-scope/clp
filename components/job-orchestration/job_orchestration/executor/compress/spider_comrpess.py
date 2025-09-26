@@ -10,7 +10,7 @@ def compress(
     _: TaskContext,
     job_id: int,
     task_id: int,
-    tag_ids: list[int],
+    tag_ids: list[int] | None,
     clp_io_config_json: str,
     paths_to_compress_json: str,
     clp_metadata_db_connection_config: dict[str, bool | int | str | None],
