@@ -24,10 +24,6 @@ if ! command -v pipx >/dev/null 2>&1; then
     python3 -m pip install pipx
 fi
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
-
-# Install Rust toolchain
-"${script_dir}/../rust-toolchain/setup.sh"
-
 # Install remaining packages through pipx
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 "${script_dir}/../pipx-packages/install-all.sh"
