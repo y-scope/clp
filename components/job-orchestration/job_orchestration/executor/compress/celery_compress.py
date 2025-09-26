@@ -23,7 +23,7 @@ def compress(
     paths_to_compress_json: str,
     clp_metadata_db_connection_config,
 ):
-    general_compress(
+    return general_compress(
         job_id,
         task_id,
         tag_ids,
