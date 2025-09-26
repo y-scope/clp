@@ -19,6 +19,8 @@ vars:
   G_CORE_COMPONENT_SUBMODULES_DIR: "{{.G_CORE_COMPONENT_DIR}}/submodules"
   G_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/webui"
 
+  G_DATASET_LOCATION: "{{.ROOT_DIR}}/datasets/dataset.log"
+
   # Build paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"
   G_CORE_COMPONENT_BUILD_DIR: "{{.G_BUILD_DIR}}/core"
@@ -56,6 +58,7 @@ tasks:
   clean:
     cmds:
       - "rm -rf '{{.G_BUILD_DIR}}'"
+      - "rm -f .task/build_with_symbols_*.stamp"
       - task: "clean-python-component"
         vars:
           COMPONENT: "clp-package-utils"
@@ -102,6 +105,7 @@ tasks:
     vars:
       CHECKSUM_FILE: "{{.G_PACKAGE_CHECKSUM_FILE}}"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
+      BUILD_WITH_SYMBOLS: "{{.BUILD_WITH_SYMBOLS | default false}}"
     sources:
       - "{{.G_BUILD_DIR}}/package-venv.md5"
       - "{{.G_BUILD_DIR}}/webui.md5"
@@ -119,7 +123,9 @@ tasks:
       - "components/package-template/src/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
-      - "core"
+      - task: "core"
+        vars:
+          BUILD_WITH_SYMBOLS: "{{.BUILD_WITH_SYMBOLS}}"
       - "clp-package-utils"
       - "clp-py-utils"
       - "deps:spider"
@@ -175,11 +181,17 @@ tasks:
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   core:
+    vars:
+      BUILD_WITH_SYMBOLS: "{{.BUILD_WITH_SYMBOLS | default false}}"
     cmds:
       - task: "core-generate"
+        vars:
+          BUILD_WITH_SYMBOLS: "{{.BUILD_WITH_SYMBOLS}}"
       - task: "core-build"
 
   core-generate:
+    vars:
+      BUILD_WITH_SYMBOLS: "{{.BUILD_WITH_SYMBOLS | default false}}"
     internal: true
     sources: &core_source_files
       - "{{.G_DEPS_CPP_CHECKSUM_FILE}}"
@@ -188,14 +200,23 @@ tasks:
       - "{{.G_CORE_COMPONENT_DIR}}/src/**/*"
       - "{{.TASKFILE}}"
       - "/etc/os-release"
+    generates:
+      # ugly workaround so that when the var changes, the task gets re-run (triggering core-build
+      # re-run)
+      - ".task/build_with_symbols_{{.BUILD_WITH_SYMBOLS}}.stamp"
     deps:
       - "codegen:clp-s-generate-parsers"
       - "deps:core"
     cmds:
       - task: "utils:cmake:generate"
         vars:
+          EXTRA_ARGS:
+            - >-
+              {{if eq .BUILD_WITH_SYMBOLS "true"}}-DCMAKE_BUILD_TYPE=RelWithDebInfo{{end}}
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
           SOURCE_DIR: "{{.G_CORE_COMPONENT_DIR}}"
+      - "rm -f .task/build_with_symbols_*.stamp"
+      - "touch .task/build_with_symbols_{{.BUILD_WITH_SYMBOLS}}.stamp"
 
   core-build:
     internal: true
@@ -581,6 +602,37 @@ tasks:
     dir: "components/{{.COMPONENT}}"
     cmds:
       - "rm -rf dist"
+
+  download-dataset:
+    status:
+      - "test -f {{.G_DATASET_LOCATION}}"
+    cmds:
+      - >-
+        curl --fail --location --show-error --silent
+        --output output.tar.gz
+        https://zenodo.org/records/10516387/files/cockroachdb.tar.gz?download=1
+      - "tar -xzf output.tar.gz"
+      - "rm -f output.tar.gz"
+      - >-
+        mkdir -p "$(dirname "{{.G_DATASET_LOCATION}}")"
+      - "mv cockroachdb/cockroach.node1.log {{.G_DATASET_LOCATION}}"
+      - "rmdir cockroachdb"
+
+  perf:
+    deps:
+      - "download-dataset"
+    cmds:
+      - task: "package"
+        vars:
+          BUILD_WITH_SYMBOLS: true
+      - "rm -f perf.data"
+      - >-
+        perf record -F 99 -g -- ./build/core/clp-s c --timestamp-key "timestamp"
+        --target-encoded-size 268435456 build/clp_cockroachdb_perf_output "{{.G_DATASET_LOCATION}}"
+      - "chmod 644 perf.data"
+      - >-
+        perf report -i perf.data --call-graph=graph,0.5,0,caller,function,percent --stdio --demangle
+        --no-inline > perf-report.txt
 
   init:
     internal: true
