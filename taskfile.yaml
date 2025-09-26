@@ -278,10 +278,7 @@ tasks:
       - |-
         mkdir -p "{{.G_BUILD_DIR}}/clp-mcp-server"
         cp -r components/clp-mcp-server/* "{{.G_BUILD_DIR}}/clp-mcp-server/"
-        # Optionally copy uv.lock if you use uv
-        if [ -f components/clp-mcp-server/uv.lock ]; then
-          cp "components/clp-mcp-server/uv.lock" "{{.G_BUILD_DIR}}/clp-mcp-server/uv.lock"
-        fi
+       
 
   webui:
     vars:
