@@ -305,7 +305,8 @@ TEMPLATE_TEST_CASE(
                 std::conditional_t<
                         std::is_same_v<TestType, four_byte_encoded_variable_t>,
                         uint32_t,
-                        uint64_t>
+                        uint64_t
+                >
                         digits = 0;
                 for (size_t i = 0; i < num_digits_in_digits_property; ++i) {
                     digits = digits * 10 + 9;
@@ -313,7 +314,8 @@ TEMPLATE_TEST_CASE(
                 std::conditional_t<
                         std::is_same_v<TestType, four_byte_encoded_variable_t>,
                         uint32_t,
-                        uint64_t>
+                        uint64_t
+                >
                         cEncodedFloatDigitsBitMask
                         = std::is_same_v<TestType, four_byte_encoded_variable_t>
                                   ? clp::ffi::cFourByteEncodedFloatDigitsBitMask

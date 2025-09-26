@@ -525,11 +525,18 @@ class AwsAuthentication(BaseModel):
             raise ValueError(f"profile and credentials must not be set when type is '{auth_enum}.'")
         return values
 
+class S3KeyPrefix(BaseModel):
+    key_prefix: str
+
+
+class S3Keys(BaseModel):
+    keys: list[str]
+
 
 class S3Config(BaseModel):
     region_code: str
     bucket: str
-    key_prefix: str
+    objects: Union[S3KeyPrefix, S3Keys]
     aws_authentication: AwsAuthentication
 
     @validator("region_code")
