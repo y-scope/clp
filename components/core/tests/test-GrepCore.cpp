@@ -291,7 +291,7 @@ TEST_CASE("generate_logtype_string_for_single_variable_interpretation", "[dfa_se
     size_t const num_combos{static_cast<size_t>(1) << wildcard_encodable_positions.size()};
     REQUIRE(1 == num_combos);
 
-    std::unordered_map<size_t, bool> const wildcard_mask_map{false};
+    std::unordered_map<size_t, bool> const wildcard_mask_map{};
     auto logtype_string{
             clp::GrepCoreTest::generate_logtype_string(interpretation, wildcard_mask_map)
     };
