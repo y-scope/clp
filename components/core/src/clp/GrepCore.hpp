@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -204,7 +205,7 @@ private:
      *   - 0: Treat as dictionary variable.
      *   - 1: Treat as an encoded variable.
      *
-     * @param interpretation The interpetation to convert to a logtype string.
+     * @param interpretation The interpretation to convert to a logtype string.
      * @param wildcard_mask_map A map indicating the state of encodable wildcard variables.
      * @return The logtype string corresponding to this combination of encoded variables.
      */
@@ -289,7 +290,9 @@ std::optional<Query> GrepCore::process_raw_query(
         // we fall-back to decompression + wildcard matching for those.
         std::vector<QueryToken*> ambiguous_tokens;
         for (auto& query_token : query_tokens) {
-            if (!query_token.has_greedy_wildcard_in_middle() && query_token.is_ambiguous_token()) {
+            if (false == query_token.has_greedy_wildcard_in_middle()
+                && query_token.is_ambiguous_token())
+            {
                 ambiguous_tokens.push_back(&query_token);
             }
         }
