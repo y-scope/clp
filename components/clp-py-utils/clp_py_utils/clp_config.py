@@ -1,7 +1,7 @@
 import os
 import pathlib
 from enum import auto
-from typing import Literal, Optional, Set, Union
+from typing import Literal, Optional, Set, Union, Any
 
 from dotenv import dotenv_values
 from pydantic import (
@@ -618,11 +618,10 @@ class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
     directory: pathlib.Path
 
-    @field_validator("directory")
+    @field_validator("directory", mode="before")
     @classmethod
     def validate_directory(cls, value):
-        if "" == value:
-            raise ValueError("directory cannot be empty")
+        _validate_directory(value)
         return value
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
@@ -639,11 +638,10 @@ class S3Storage(BaseModel):
     s3_config: S3Config
     staging_directory: pathlib.Path
 
-    @field_validator("staging_directory")
+    @field_validator("staging_directory", mode="before")
     @classmethod
     def validate_staging_directory(cls, value):
-        if "" == value:
-            raise ValueError("staging_directory cannot be empty")
+        _validate_directory(value)
         return value
 
     @model_validator(mode="after")
@@ -1094,3 +1092,14 @@ def get_components_for_target(target: str) -> Set[str]:
         return {target}
     else:
         return set()
+
+
+def _validate_directory(value: Any):
+    """
+    Validates that the given value represents a directory path.
+
+    :param value:
+    :raise ValueError: if value is not of type str or is an empty string.
+    """
+    if not isinstance(value, str) or "" == value.strip():
+        raise ValueError("directory cannot be empty")
