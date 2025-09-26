@@ -1,12 +1,10 @@
 import SyntaxHighlighter from "react-syntax-highlighter";
 import {tomorrow} from "react-syntax-highlighter/dist/esm/styles/hljs";
 
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {Typography} from "antd";
 
-import {
-    CLP_STORAGE_ENGINES,
-    SETTINGS_STORAGE_ENGINE,
-} from "../.././../../../config";
+import {SETTINGS_STORAGE_ENGINE} from "../.././../../../config";
 import LogViewerLink from "./LogViewerLink";
 import {highlighterCustomStyles} from "./utils";
 
