@@ -10,7 +10,6 @@
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
-
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/wildcard_query_parser/QueryInterpretation.hpp>
@@ -46,15 +45,14 @@ using std::vector;
 
 class clp::GrepCoreTest {
 public:
-    static auto get_wildcard_encodable_positions(
-            QueryInterpretation const& interpretation
-    ) -> vector<size_t> {
+    static auto get_wildcard_encodable_positions(QueryInterpretation const& interpretation)
+            -> vector<size_t> {
         return GrepCore::get_wildcard_encodable_positions(interpretation);
     }
 
     static auto generate_logtype_string(
-        QueryInterpretation const& interpretation,
-        unordered_map<size_t, bool> const& wildcard_mask_map
+            QueryInterpretation const& interpretation,
+            unordered_map<size_t, bool> const& wildcard_mask_map
     ) -> string {
         return GrepCore::generate_logtype_string(interpretation, wildcard_mask_map);
     }
@@ -65,13 +63,7 @@ public:
             VariableDictionaryReaderType const& var_dict,
             SubQuery& sub_query
     ) -> bool {
-        return GrepCore::process_schema_var_token(
-                var_token,
-                var_dict,
-                false,
-                false,
-                sub_query
-        );
+        return GrepCore::process_schema_var_token(var_token, var_dict, false, false, sub_query);
     }
 
     template <typename VariableDictionaryReaderType>
@@ -80,13 +72,7 @@ public:
             VariableDictionaryReaderType const& var_dict,
             SubQuery& sub_query
     ) -> bool {
-        return GrepCore::process_schema_var_token(
-                var_token,
-                var_dict,
-                false,
-                true,
-                sub_query
-        );
+        return GrepCore::process_schema_var_token(var_token, var_dict, false, true, sub_query);
     }
 
     template <
@@ -110,15 +96,15 @@ public:
 
 namespace {
 class FakeVarEntry {
-public:    
-    explicit FakeVarEntry(variable_dictionary_id_t const id, string value) :
-            m_id{id},
-            m_value{value} {}
+public:
+    explicit FakeVarEntry(variable_dictionary_id_t const id, string value)
+            : m_id{id},
+              m_value{value} {}
 
-    [[nodiscard]] auto get_id() const -> variable_dictionary_id_t {return m_id;}
-    
-    [[nodiscard]] auto get_value() const -> string const& {return m_value;}
-    
+    [[nodiscard]] auto get_id() const -> variable_dictionary_id_t { return m_id; }
+
+    [[nodiscard]] auto get_value() const -> string const& { return m_value; }
+
 private:
     variable_dictionary_id_t m_id;
     string m_value;
@@ -129,24 +115,22 @@ public:
     using Entry = FakeVarEntry;
     using dictionary_id_t = variable_dictionary_id_t;
 
-    auto add_entry(dictionary_id_t const id, string value) -> void{
+    auto add_entry(dictionary_id_t const id, string value) -> void {
         m_storage.emplace(id, Entry{id, std::move(value)});
     }
-    
+
     [[nodiscard]] auto get_value(dictionary_id_t const id) const -> string const& {
-        static const string empty{};
+        static string const empty{};
         if (m_storage.contains(id)) {
             return m_storage.at(id).get_value();
         }
         return empty;
     }
 
-    auto get_entry_matching_value(
-            string_view const val,
-            bool ignore_case
-    ) const -> vector<Entry const*> {
+    auto get_entry_matching_value(string_view const val, bool ignore_case) const
+            -> vector<Entry const*> {
         vector<Entry const*> results;
-        for(auto const& [id, entry] : m_storage) {
+        for (auto const& [id, entry] : m_storage) {
             if (val == entry.get_value()) {
                 results.push_back(&entry);
             }
@@ -159,7 +143,7 @@ public:
             bool ignore_case,
             unordered_set<Entry const*>& results
     ) const -> void {
-        for(auto const& [id, entry] : m_storage) {
+        for (auto const& [id, entry] : m_storage) {
             if (wildcard_match_unsafe_case_sensitive(entry.get_value(), val)) {
                 results.insert(&entry);
             }
@@ -172,17 +156,13 @@ private:
 
 class FakeLogTypeEntry {
 public:
-    FakeLogTypeEntry(string const value, clp::logtype_dictionary_id_t const id) :
-            m_value(value),
-            m_id(id) {}
-    
-    auto clear() -> void {
-        m_value.clear();
-    }
+    FakeLogTypeEntry(string const value, clp::logtype_dictionary_id_t const id)
+            : m_value(value),
+              m_id(id) {}
 
-    auto reserve_constant_length(size_t length) -> void {
-        m_value.reserve(length);
-    }
+    auto clear() -> void { m_value.clear(); }
+
+    auto reserve_constant_length(size_t length) -> void { m_value.reserve(length); }
 
     auto parse_next_var(string_view msg, size_t begin, size_t end, string_view& parsed) -> bool {
         return false;
@@ -192,45 +172,30 @@ public:
         m_value.append(msg.substr(begin_pos, length));
     }
 
-    auto add_int_var() -> void {
-        EncodedVariableInterpreter::add_int_var(m_value);
-    }
+    auto add_int_var() -> void { EncodedVariableInterpreter::add_int_var(m_value); }
 
-    auto add_float_var() -> void {
-        EncodedVariableInterpreter::add_float_var(m_value);
-    }
+    auto add_float_var() -> void { EncodedVariableInterpreter::add_float_var(m_value); }
 
-    auto add_dictionary_var() -> void {
-        EncodedVariableInterpreter::add_dict_var(m_value);
-    }
+    auto add_dictionary_var() -> void { EncodedVariableInterpreter::add_dict_var(m_value); }
 
-    [[nodiscard]] auto get_value() const -> string const& {
-        return m_value;
-    }
+    [[nodiscard]] auto get_value() const -> string const& { return m_value; }
 
-    [[nodiscard]] auto get_num_variables() const -> size_t {
-        return 0;
-    }
+    [[nodiscard]] auto get_num_variables() const -> size_t { return 0; }
 
-    [[nodiscard]] auto get_num_placeholders() const -> size_t {
-        return 0;
-    }
+    [[nodiscard]] auto get_num_placeholders() const -> size_t { return 0; }
 
     [[nodiscard]] auto get_placeholder_info(size_t idx, auto& ref) const -> size_t {
         return SIZE_MAX;
     }
 
-    [[nodiscard]] auto get_id() const -> clp::logtype_dictionary_id_t {
-        return m_id;
-    }
+    [[nodiscard]] auto get_id() const -> clp::logtype_dictionary_id_t { return m_id; }
 
 private:
     string m_value;
     clp::logtype_dictionary_id_t m_id{0};
 };
 
-
-class FakeLogTypeDict{
+class FakeLogTypeDict {
 public:
     using Entry = FakeLogTypeEntry;
     using dictionary_id_t = clp::logtype_dictionary_id_t;
@@ -239,12 +204,10 @@ public:
         m_storage.emplace_back(value, id);
     }
 
-    auto get_entry_matching_value(
-             string_view const logtype,
-             bool ignore_case
-    ) const -> vector<Entry const*> {
+    auto get_entry_matching_value(string_view const logtype, bool ignore_case) const
+            -> vector<Entry const*> {
         vector<Entry const*> results;
-        for(auto const& entry : m_storage) {
+        for (auto const& entry : m_storage) {
             if (logtype == entry.get_value()) {
                 results.push_back(&entry);
             }
@@ -257,17 +220,17 @@ public:
             bool ignore_case,
             unordered_set<Entry const*>& results
     ) const -> void {
-        for(auto const& entry : m_storage) {
+        for (auto const& entry : m_storage) {
             if (wildcard_match_unsafe_case_sensitive(entry.get_value(), logtype)) {
                 results.insert(&entry);
             }
         }
-    } 
+    }
 
 private:
     vector<Entry> m_storage;
 };
-} //  namespace
+}  //  namespace
 
 // Tests: `get_wildcard_encodable_positions`
 TEST_CASE("get_wildcard_encodable_positions_for_empty_interpretation", "[dfa_search]") {
@@ -293,7 +256,6 @@ TEST_CASE("get_wildcard_encodable_positions_for_multi_variable_interpretation", 
     REQUIRE(3 == positions[0]);
     REQUIRE(4 == positions[1]);
 }
-
 
 // Tests: `generate_logtype_string`
 TEST_CASE("generate_logtype_string_for_empty_interpretation", "[dfa_search]") {
@@ -674,7 +636,7 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
     logtype_dict.add_entry(logtype_string, 4);
 
     set<QueryInterpretation> interpretations;
-    
+
     QueryInterpretation interpretation1{};
     interpretation1.append_static_token("static_text ");
     interpretation1.append_variable_token(cIntId, "100", false);
@@ -700,7 +662,7 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
     interpretation3.append_variable_token(cIntId, "10?", true);
     interpretation3.append_static_token(" 3.14*");
     interpretations.insert(interpretation3);
-    
+
     QueryInterpretation interpretation4{};
     interpretation4.append_static_token("static_text ");
     interpretation4.append_variable_token(cIntId, "100", false);
@@ -726,7 +688,7 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
     interpretation6.append_variable_token(cHasNumberId, "10?", true);
     interpretation6.append_static_token(" 3.14*");
     interpretations.insert(interpretation6);
-    
+
     QueryInterpretation interpretation7{};
     interpretation7.append_static_token("static_text ");
     interpretation7.append_variable_token(cIntId, "100", false);
@@ -777,7 +739,7 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
         CAPTURE(logtype_ids);
         REQUIRE(logtype_ids.contains(0));
     }
-    
+
     REQUIRE(sub_queries[1].wildcard_match_required());
     REQUIRE(1 == sub_queries[1].get_num_possible_vars());
     {

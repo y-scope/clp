@@ -27,7 +27,7 @@ namespace clp {
 class GrepCoreTest;
 
 class GrepCore {
-friend class GrepCoreTest;
+    friend class GrepCoreTest;
 
 public:
     // Methods
