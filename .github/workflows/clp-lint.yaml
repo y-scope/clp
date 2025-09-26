@@ -45,4 +45,6 @@ jobs:
 
       - name: "Run lint task"
         shell: "bash"
-        run: "task lint:check-no-cpp"
+        run: |-
+          task lint:check-no-cpp
+          echo $?
