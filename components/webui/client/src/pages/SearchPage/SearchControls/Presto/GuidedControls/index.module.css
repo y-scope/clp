@@ -6,7 +6,7 @@
 }
 
 .select {
-    grid-column: span 3;
+    grid-column: span 2;
     display: flex;
 }
 
@@ -26,6 +26,11 @@
 }
 
 .limit {
+    grid-column: span 1;
+    display: flex;
+}
+
+.timestampKey {
     grid-column: span 1;
     display: flex;
 }
