@@ -13,10 +13,10 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 # Source the cargo environment to make rustup and cargo available in the current shell session.
 . "$HOME/.cargo/env"
 
-# This command installs or updates the Rust nightly toolchain to the latest version. If the nightly
-# toolchain is already present, it will be updated.
-rustup toolchain install nightly
-
-# Add rustfmt and clippy components to the nightly toolchain.
-rustup component add rustfmt --toolchain nightly
-rustup component add clippy --toolchain nightly
+# This command installs or updates the Rust nightly toolchain to the latest version with clippy and
+# rustfmt components.
+# NOTE: The `--allow-downgrade` flag allows rustup to select a previous version of that toolchain if
+# the newest one does not support all the requested components.
+rustup toolchain install nightly --allow-downgrade \
+    --component clippy \
+    --component rustfmt
