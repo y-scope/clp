@@ -26,12 +26,6 @@ tasks:
       - task: "check-cpp-format"
       - task: "check-cpp-static-full"
 
-  check-no-cpp:
-    cmds:
-      - task: "check-js"
-      - task: "check-py"
-      - task: "check-yaml"
-
   fix:
     cmds:
       - task: "fix-cpp-full"
@@ -54,6 +48,7 @@ tasks:
     cmds:
       - task: "fix-js"
       - task: "fix-py"
+      - task: "fix-rust"
       - task: "fix-yaml"
 
   check-js:
