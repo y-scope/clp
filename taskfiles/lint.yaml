@@ -13,6 +13,7 @@ tasks:
       - task: "check-cpp-full"
       - task: "check-js"
       - task: "check-py"
+      - task: "check-rust"
       - task: "check-yaml"
 
   check-cpp-diff:
@@ -36,6 +37,7 @@ tasks:
       - task: "fix-cpp-full"
       - task: "fix-js"
       - task: "fix-py"
+      - task: "fix-rust"
       - task: "fix-yaml"
 
   fix-cpp-diff:
@@ -785,6 +787,64 @@ tasks:
           uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
           uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} .
           uv run --directory "{{.ITEM}}" mypy .
+
+  check-rust:
+    cmds:
+      - task: "check-rust-format"
+      - task: "check-rust-static"
+
+  fix-rust:
+    cmds:
+      - task: "fix-rust-format"
+      - task: "fix-rust-static"
+
+  check-rust-format:
+    cmds:
+      - task: "rust-workspace-fmt"
+        vars:
+          RUSTFMT_FLAGS: "--check"
+
+  fix-rust-format:
+    cmds:
+      - task: "rust-workspace-fmt"
+        vars:
+          RUSTFMT_FLAGS: ""
+
+  check-rust-static:
+    cmds:
+      - task: "rust-workspace-clippy"
+        vars:
+          RUST_CLIPPY_FLAGS: "-- -D warnings"
+
+  fix-rust-static:
+    cmds:
+      - task: "rust-workspace-clippy"
+        vars:
+          RUST_CLIPPY_FLAGS: "--fix --allow-dirty --allow-staged"
+
+  rust-lint-configs:
+    internal: true
+    run: "once"
+    cmd: |
+      cp \
+        {{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/.rustfmt.toml \
+        {{.ROOT_DIR}}/.rustfmt.toml
+
+  rust-workspace-fmt:
+    internal: true
+    deps:
+      - "rust-lint-configs"
+    requires:
+      vars: ["RUSTFMT_FLAGS"]
+    cmds:
+      - cargo +nightly fmt --all -- {{.RUSTFMT_FLAGS}}
+
+  rust-workspace-clippy:
+    internal: true
+    requires:
+      vars: ["RUST_CLIPPY_FLAGS"]
+    cmds:
+      - cargo +nightly clippy --all-targets --all-features {{.RUST_CLIPPY_FLAGS}}
 
   venv:
     internal: true
