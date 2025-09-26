@@ -539,11 +539,11 @@ void GrepCore::generate_schema_sub_queries(
         if (wildcard_encodable_positions.size() > cMaxEncodableWildcardVariables) {
             throw std::runtime_error("Too many encodable variables.");
         }
-        size_t const num_combos{static_cast<size_t>(1) << wildcard_encodable_positions.size()};
-        for (size_t mask{0}; mask < num_combos; ++mask) {
+        uint64_t const num_combos{1ULL << wildcard_encodable_positions.size()};
+        for (uint64_t mask{0}; mask < num_combos; ++mask) {
             std::unordered_map<size_t, bool> wildcard_mask_map;
             for (size_t i{0}; i < wildcard_encodable_positions.size(); ++i) {
-                wildcard_mask_map[wildcard_encodable_positions[i]] = mask >> i & 1;
+                wildcard_mask_map[wildcard_encodable_positions[i]] = mask >> i & 1ULL;
             }
 
             auto logtype_string{generate_logtype_string(interpretation, wildcard_mask_map)};
