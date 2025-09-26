@@ -10,7 +10,7 @@ iid_file="${repo_root}/build/clp-package-image.id"
 # Remove the previous image to save space, but only after the build so its contents can be reused.
 prev_image_id=""
 if [[ -f "$iid_file" ]]; then
-    prev_image_id=$(cat "$iid_file")
+    prev_image_id=$(<"$iid_file")
 fi
 cleanup() {
     if [[ -n "$prev_image_id" ]] && docker image inspect "$prev_image_id" >/dev/null 2>&1; then
