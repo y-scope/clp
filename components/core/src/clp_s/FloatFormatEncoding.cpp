@@ -302,16 +302,6 @@ auto restore_encoded_float(double value, float_format_t format)
         return formatted_double_str;
     }
 
-    if (num_exp_digits < (formatted_double_str.length() - exp_pos - 2)) {
-        formatted_double_str
-                = trim_leading_zeros(formatted_double_str, exp_pos + 2, num_exp_digits);
-    } else {
-        formatted_double_str.insert(
-                exp_pos + 2,
-                num_exp_digits - (formatted_double_str.length() - exp_pos - 2),
-                '0'
-        );
-    }
     if (has_matching_exponent_sign_flag(format, cPlusExponentSignFlag)) {
         if (static_cast<bool>(std::isdigit(maybe_sign))) {
             formatted_double_str.insert(exp_pos + 1, "+");
@@ -324,6 +314,17 @@ auto restore_encoded_float(double value, float_format_t format)
         } else {
             formatted_double_str[exp_pos + 1] = '-';
         }
+    }
+
+    if (num_exp_digits < (formatted_double_str.length() - exp_pos - 2)) {
+        formatted_double_str
+                = trim_leading_zeros(formatted_double_str, exp_pos + 2, num_exp_digits);
+    } else {
+        formatted_double_str.insert(
+                exp_pos + 2,
+                num_exp_digits - (formatted_double_str.length() - exp_pos - 2),
+                '0'
+        );
     }
 
     return formatted_double_str;
