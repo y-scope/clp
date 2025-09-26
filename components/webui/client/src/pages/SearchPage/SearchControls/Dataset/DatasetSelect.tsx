@@ -11,6 +11,13 @@ import useSearchStore from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import {fetchDatasetNames} from "./sql";
 
+
+/**
+ * Renders a dataset selector component that allows users to select from available datasets.
+ *
+ * @param selectProps
+ * @return
+ */
 const DatasetSelect = (selectProps: SelectProps) => {
     const dataset = useSearchStore((state) => state.selectDataset);
     const updateDataset = useSearchStore((state) => state.updateSelectDataset);
