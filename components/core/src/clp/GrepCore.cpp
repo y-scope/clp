@@ -4,6 +4,7 @@
 #include <string>
 #include <string_view>
 #include <unordered_map>
+#include <variant>
 #include <vector>
 
 #include <log_surgeon/Constants.hpp>
@@ -151,11 +152,11 @@ auto GrepCore::get_wildcard_encodable_positions(QueryInterpretation const& inter
     for (size_t i{0}; i < interpretation.get_logtype().size(); ++i) {
         auto const token{interpretation.get_logtype()[i]};
         if (std::holds_alternative<VariableQueryToken>(token)) {
-            auto const& variable_token{std::get<VariableQueryToken>(token)};
-            auto const var_type{variable_token.get_variable_type()};
-            bool const is_int{static_cast<uint32_t>(TokenInt) == var_type};
-            bool const is_float{static_cast<uint32_t>(TokenFloat) == var_type};
-            if (variable_token.get_contains_wildcard() && (is_int || is_float)) {
+            auto const& var_token{std::get<VariableQueryToken>(token)};
+            auto const var_type{static_cast<log_surgeon::SymbolId>(var_token.get_variable_type())};
+            bool const is_int{TokenInt == var_type};
+            bool const is_float{TokenFloat == var_type};
+            if (var_token.get_contains_wildcard() && (is_int || is_float)) {
                 wildcard_encodable_positions.push_back(i);
             }
         }
@@ -191,11 +192,9 @@ auto GrepCore::generate_logtype_string(
 
         auto const& var_token{std::get<VariableQueryToken>(token)};
         auto const& raw_string{var_token.get_query_substring()};
-        auto const var_type{var_token.get_variable_type()};
-
-        bool const is_int{static_cast<uint32_t>(TokenInt) == var_type};
-        bool const is_float{static_cast<uint32_t>(TokenFloat) == var_type};
-
+        auto const var_type{static_cast<log_surgeon::SymbolId>(var_token.get_variable_type())};
+        bool const is_int{TokenInt == var_type};
+        bool const is_float{TokenFloat == var_type};
         if (wildcard_mask_map.contains(i)) {
             bool const use_encoded{wildcard_mask_map.at(i)};
             if (use_encoded) {
