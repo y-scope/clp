@@ -4,7 +4,7 @@ import styles from "./index.module.css";
 
 
 /**
- * Renders a dataset selector and label.
+ * Renders a dataset selector with an input label.
  *
  * @return
  */
