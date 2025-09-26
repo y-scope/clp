@@ -1048,22 +1048,15 @@ class CLPConfig(BaseModel):
 
     # We set `pre=True` so that we print errors about a mismatch between the query engine and presto
     # config before errors about the presto config itself.
-    @model_validator(mode="before")
-    @classmethod
-    def validate_presto_config(cls, data):
-        package = data.get("package")
-        if not isinstance(package, Package):
-            # Skip validation since `package` is not a valid `Package` (Pydantic will validate it
-            # later and throw an error).
-            return data
-
-        query_engine = package.get("query_engine")
-        presto = data.get("presto")
+    @model_validator(mode="after")
+    def validate_presto_config(self):
+        query_engine = self.package.query_engine
+        presto = self.presto
         if query_engine == QueryEngine.PRESTO and presto is None:
             raise ValueError(
                 f"`presto` config must be non-null when query_engine is `{query_engine}`"
             )
-        return data
+        return self
 
 
 class WorkerConfig(BaseModel):
