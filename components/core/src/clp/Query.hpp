@@ -155,7 +155,7 @@ private:
     std::unordered_set<logtype_dictionary_id_t> m_possible_logtypes;
     std::set<segment_id_t> m_ids_of_matching_segments;
     std::vector<QueryVar> m_vars;
-    bool m_wildcard_match_required;
+    bool m_wildcard_match_required{false};
 };
 
 /**

@@ -12,6 +12,7 @@
 #include <catch2/generators/catch_generators.hpp>
 #include <fmt/core.h>
 #include <fmt/format.h>
+#include <fmt/ranges.h>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include "../../../../../clp_s/archive_constants.hpp"
