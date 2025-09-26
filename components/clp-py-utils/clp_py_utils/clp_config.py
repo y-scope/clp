@@ -337,8 +337,7 @@ class QueryScheduler(BaseModel):
     @field_validator("port")
     @classmethod
     def validate_port(cls, value):
-        if not value > 0:
-            raise ValueError(f"{value} is not greater than zero")
+        _validate_port(cls, value)
         return value
 
 
@@ -420,8 +419,7 @@ class Reducer(BaseModel):
     @field_validator("base_port")
     @classmethod
     def validate_base_port(cls, value):
-        if not value > 0:
-            raise ValueError(f"{value} is not greater than zero")
+        _validate_port(cls, value)
         return value
 
     @field_validator("upsert_interval")
