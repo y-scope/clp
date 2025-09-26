@@ -29,7 +29,9 @@ concept VariableDictionaryReaderReq = requires(
      * @param id
      * @return The value of the dictionary entry with the given Id.
      */
-    { reader.get_value(id) } -> std::same_as<std::string const&>;
+    {
+        reader.get_value(id)
+    } -> std::same_as<std::string const&>;
 
     /**
      * Gets entries matching a given variable value.
@@ -51,9 +53,9 @@ concept VariableDictionaryReaderReq = requires(
         reader.get_entries_matching_wildcard_string(variable, ignore_case, entries)
     } -> std::same_as<void>;
 
-    requires std::
-            same_as<typename VariableDictionaryReaderType::dictionary_id_t,
-                    variable_dictionary_id_t>;
+    requires std::same_as<
+            typename VariableDictionaryReaderType::dictionary_id_t,
+            variable_dictionary_id_t>;
 };
 }  // namespace clp
 

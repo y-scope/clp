@@ -128,8 +128,7 @@ public:
      */
     template <
             LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
-            VariableDictionaryWriterReq VariableDictionaryWriterType
-    >
+            VariableDictionaryWriterReq VariableDictionaryWriterType>
     static void encode_and_add_to_dictionary(
             std::string_view message,
             LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -156,8 +155,7 @@ public:
     template <
             typename EncodedVariableType,
             LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
-            VariableDictionaryWriterReq VariableDictionaryWriterType
-    >
+            VariableDictionaryWriterReq VariableDictionaryWriterType>
     static void encode_and_add_to_dictionary(
             ir::LogEvent<EncodedVariableType> const& log_event,
             LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -181,8 +179,7 @@ public:
     template <
             LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
             VariableDictionaryReaderReq VariableDictionaryReaderType,
-            typename EncodedVariableContainerType
-    >
+            typename EncodedVariableContainerType>
     static bool decode_variables_into_message(
             LogTypeDictionaryEntryType const& logtype_dict_entry,
             VariableDictionaryReaderType const& var_dict,
@@ -244,8 +241,7 @@ private:
      */
     template <
             LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
-            VariableDictionaryWriterReq VariableDictionaryWriterType
-    >
+            VariableDictionaryWriterReq VariableDictionaryWriterType>
     static encoded_variable_t encode_var(
             std::string_view var,
             LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -266,8 +262,7 @@ private:
      */
     template <
             LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
-            VariableDictionaryWriterReq VariableDictionaryWriterType
-    >
+            VariableDictionaryWriterReq VariableDictionaryWriterType>
     static variable_dictionary_id_t add_dict_var(
             std::string_view var,
             LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -278,8 +273,7 @@ private:
 
 template <
         LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
-        VariableDictionaryWriterReq VariableDictionaryWriterType
->
+        VariableDictionaryWriterReq VariableDictionaryWriterType>
 void EncodedVariableInterpreter::encode_and_add_to_dictionary(
         std::string_view message,
         LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -304,8 +298,7 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary(
 template <
         typename EncodedVariableType,
         LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
-        VariableDictionaryWriterReq VariableDictionaryWriterType
->
+        VariableDictionaryWriterReq VariableDictionaryWriterType>
 void EncodedVariableInterpreter::encode_and_add_to_dictionary(
         ir::LogEvent<EncodedVariableType> const& log_event,
         LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -379,8 +372,7 @@ void EncodedVariableInterpreter::encode_and_add_to_dictionary(
 template <
         LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
         VariableDictionaryReaderReq VariableDictionaryReaderType,
-        typename EncodedVariableContainerType
->
+        typename EncodedVariableContainerType>
 bool EncodedVariableInterpreter::decode_variables_into_message(
         LogTypeDictionaryEntryType const& logtype_dict_entry,
         VariableDictionaryReaderType const& var_dict,
@@ -531,8 +523,7 @@ bool EncodedVariableInterpreter::wildcard_search_dictionary_and_get_encoded_matc
 
 template <
         LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
-        VariableDictionaryWriterReq VariableDictionaryWriterType
->
+        VariableDictionaryWriterReq VariableDictionaryWriterType>
 encoded_variable_t EncodedVariableInterpreter::encode_var(
         std::string_view var,
         LogTypeDictionaryEntryType& logtype_dict_entry,
@@ -553,8 +544,7 @@ encoded_variable_t EncodedVariableInterpreter::encode_var(
 
 template <
         LogTypeDictionaryEntryReq LogTypeDictionaryEntryType,
-        VariableDictionaryWriterReq VariableDictionaryWriterType
->
+        VariableDictionaryWriterReq VariableDictionaryWriterType>
 variable_dictionary_id_t EncodedVariableInterpreter::add_dict_var(
         std::string_view var,
         LogTypeDictionaryEntryType& logtype_dict_entry,

@@ -38,7 +38,7 @@ concept IrUnitHandlerInterfaceReq = requires(
      * @return IRErrorCode::Success on success, user-defined error code on failures.
      */
     {
-        handler.handle_log_event(std::forward<KeyValuePairLogEvent&&>(log_event), log_event_idx)
+        handler.handle_log_event(std::forward<KeyValuePairLogEvent &&>(log_event), log_event_idx)
     } -> std::same_as<IRErrorCode>;
 
     /**
@@ -70,7 +70,9 @@ concept IrUnitHandlerInterfaceReq = requires(
      * Handles an end-of-stream indicator IR unit.
      * @return IRErrorCode::Success on success, user-defined error code on failures.
      */
-    { handler.handle_end_of_stream() } -> std::same_as<IRErrorCode>;
+    {
+        handler.handle_end_of_stream()
+    } -> std::same_as<IRErrorCode>;
 };
 
 /**

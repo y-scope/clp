@@ -173,8 +173,7 @@ auto test_value_get_immutable_view(Value const& value, Type const& typed_value) 
         REQUIRE((value.get_immutable_view<Type>() == typed_value));
         REQUIRE((std::is_same_v<
                  EightByteEncodedTextAst const&,
-                 decltype(value.get_immutable_view<Type>())
-        >));
+                 decltype(value.get_immutable_view<Type>())>));
     } else {
         REQUIRE_THROWS(value.get_immutable_view<EightByteEncodedTextAst>());
     }
@@ -183,8 +182,7 @@ auto test_value_get_immutable_view(Value const& value, Type const& typed_value) 
         REQUIRE((value.get_immutable_view<Type>() == typed_value));
         REQUIRE((std::is_same_v<
                  FourByteEncodedTextAst const&,
-                 decltype(value.get_immutable_view<Type>())
-        >));
+                 decltype(value.get_immutable_view<Type>())>));
     } else {
         REQUIRE_THROWS(value.get_immutable_view<FourByteEncodedTextAst>());
     }

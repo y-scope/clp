@@ -191,8 +191,7 @@ public:
 
     [[nodiscard]] auto get_resolved_column_to_schema_tree_node_ids() const -> std::unordered_map<
             clp_s::search::ast::ColumnDescriptor*,
-            std::unordered_set<SchemaTree::Node::id_t>
-    > {
+            std::unordered_set<SchemaTree::Node::id_t>> {
         return m_resolved_column_to_schema_tree_node_ids;
     }
 
@@ -267,10 +266,10 @@ private:
 
     private:
         // Types
-        using ExprVariant = std::
-                variant<clp_s::search::ast::AndExpr*,
-                        clp_s::search::ast::OrExpr*,
-                        clp_s::search::ast::FilterExpr*>;
+        using ExprVariant = std::variant<
+                clp_s::search::ast::AndExpr*,
+                clp_s::search::ast::OrExpr*,
+                clp_s::search::ast::FilterExpr*>;
 
         // Constructor
         AstExprIterator(
@@ -392,8 +391,7 @@ private:
     PartialResolutionMap m_user_gen_namespace_partial_resolutions;
     std::unordered_map<
             clp_s::search::ast::ColumnDescriptor*,
-            std::unordered_set<SchemaTree::Node::id_t>
-    >
+            std::unordered_set<SchemaTree::Node::id_t>>
             m_resolved_column_to_schema_tree_node_ids;
     std::vector<std::shared_ptr<clp_s::search::ast::ColumnDescriptor>> m_projected_columns;
     ProjectionMap m_projected_column_to_original_key_and_index;

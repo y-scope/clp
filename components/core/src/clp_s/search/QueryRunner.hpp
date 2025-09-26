@@ -144,10 +144,10 @@ private:
     ast::literal_type_bitmask_t m_wildcard_type_mask{0};
     std::unordered_set<int32_t> m_metadata_columns;
 
-    std::
-            stack<std::pair<ExpressionType, ast::OpList::iterator>,
-                  std::vector<std::pair<ExpressionType, ast::OpList::iterator>>>
-                    m_expression_state;
+    std::stack<
+            std::pair<ExpressionType, ast::OpList::iterator>,
+            std::vector<std::pair<ExpressionType, ast::OpList::iterator>>>
+            m_expression_state;
 
     simdjson::ondemand::parser m_array_parser;
     std::string m_array_search_string;

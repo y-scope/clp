@@ -15,13 +15,13 @@ namespace clp_s {
 class ParsedMessage {
 public:
     // Types
-    using variable_t = std::
-            variant<int64_t,
-                    double,
-                    std::string,
-                    bool,
-                    std::pair<uint64_t, epochtime_t>,
-                    std::pair<double, float_format_t>>;
+    using variable_t = std::variant<
+            int64_t,
+            double,
+            std::string,
+            bool,
+            std::pair<uint64_t, epochtime_t>,
+            std::pair<double, float_format_t>>;
 
     // Constructor
     ParsedMessage() : m_schema_id(-1) {}

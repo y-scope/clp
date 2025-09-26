@@ -1,5 +1,6 @@
 black>=24.4.2
-clang-format>=21.1.2
+# Lock to 20.1.x until we can upgrade our settings to work with 21.x.
+clang-format~=20.1
 # Lock to v19.x until we can upgrade our code to fix new v20 issues.
 clang-tidy~=19.1
 ruff>=0.4.4

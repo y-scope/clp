@@ -17,9 +17,9 @@ namespace clp::ffi::search {
 template <typename encoded_variable_t>
 class Subquery {
 public:
-    using QueryVariables = std::vector<
-            std::variant<ExactVariableToken<encoded_variable_t>, WildcardToken<encoded_variable_t>>
-    >;
+    using QueryVariables = std::vector<std::variant<
+            ExactVariableToken<encoded_variable_t>,
+            WildcardToken<encoded_variable_t>>>;
 
     // Constructors
     Subquery(std::string logtype_query, QueryVariables variables);

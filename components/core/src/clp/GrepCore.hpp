@@ -46,8 +46,7 @@ public:
      */
     template <
             LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
-            VariableDictionaryReaderReq VariableDictionaryReaderType
-    >
+            VariableDictionaryReaderReq VariableDictionaryReaderType>
     static std::optional<Query> process_raw_query(
             LogTypeDictionaryReaderType const& logtype_dict,
             VariableDictionaryReaderType const& var_dict,
@@ -137,8 +136,7 @@ private:
      */
     template <
             LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
-            VariableDictionaryReaderReq VariableDictionaryReaderType
-    >
+            VariableDictionaryReaderReq VariableDictionaryReaderType>
     static SubQueryMatchabilityResult generate_logtypes_and_vars_for_subquery(
             LogTypeDictionaryReaderType const& logtype_dict,
             VariableDictionaryReaderType const& var_dict,
@@ -151,8 +149,7 @@ private:
 
 template <
         LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
-        VariableDictionaryReaderReq VariableDictionaryReaderType
->
+        VariableDictionaryReaderReq VariableDictionaryReaderType>
 std::optional<Query> GrepCore::process_raw_query(
         LogTypeDictionaryReaderType const& logtype_dict,
         VariableDictionaryReaderType const& var_dict,
@@ -336,8 +333,7 @@ bool GrepCore::process_var_token(
 
 template <
         LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
-        VariableDictionaryReaderReq VariableDictionaryReaderType
->
+        VariableDictionaryReaderReq VariableDictionaryReaderType>
 GrepCore::SubQueryMatchabilityResult GrepCore::generate_logtypes_and_vars_for_subquery(
         LogTypeDictionaryReaderType const& logtype_dict,
         VariableDictionaryReaderType const& var_dict,

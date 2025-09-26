@@ -152,8 +152,7 @@ private:
 // templates).
 #define LOG_CONTINUOUS_MEASUREMENT(x) \
     if (PROF_ENABLED \
-        && ::glt::Profiler::cContinuousMeasurementEnabled[enum_to_underlying_type(x)]) \
-    { \
+        && ::glt::Profiler::cContinuousMeasurementEnabled[enum_to_underlying_type(x)]) { \
         SPDLOG_INFO( \
                 "{} took {} s", \
                 #x, \
@@ -162,8 +161,7 @@ private:
     }
 #define LOG_FRAGMENTED_MEASUREMENT(x) \
     if (PROF_ENABLED \
-        && ::glt::Profiler::cFragmentedMeasurementEnabled[enum_to_underlying_type(x)]) \
-    { \
+        && ::glt::Profiler::cFragmentedMeasurementEnabled[enum_to_underlying_type(x)]) { \
         SPDLOG_INFO( \
                 "{} took {} s", \
                 #x, \
