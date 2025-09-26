@@ -173,7 +173,7 @@ services:
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "/:/mnt/logs:ro"
     depends_on:
-      database:
+      db-table-creator:
         condition: "service_completed_successfully"
       queue:
         condition: "service_healthy"
@@ -245,7 +245,7 @@ services:
       - "./var/www/webui/server/dist/settings.json\
 :/opt/clp/var/www/webui/server/dist/settings.json:ro"
     depends_on:
-      database:
+      db-table-creator:
         condition: "service_completed_successfully"
       results-cache-indices-creator:
         condition: "service_completed_successfully"
@@ -277,7 +277,7 @@ services:
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "${CLP_LOGS_DIR_HOST:-./var/log}/garbage_collector:/var/log/garbage_collector"
     depends_on:
-      database:
+      db-table-creator:
         condition: "service_completed_successfully"
       results-cache-indices-creator:
         condition: "service_completed_successfully"
