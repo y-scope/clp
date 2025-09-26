@@ -210,6 +210,12 @@ class Database(BaseModel):
             raise ValueError("database.host cannot be empty.")
         return value
 
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value):
+        _validate_port(cls, value)
+        return value
+
     def ensure_credentials_loaded(self):
         if self.username is None or self.password is None:
             raise ValueError("Credentials not loaded.")
@@ -376,6 +382,12 @@ class Redis(BaseModel):
             raise ValueError(f"{REDIS_COMPONENT_NAME}.host cannot be empty.")
         return value
 
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value):
+        _validate_port(cls, value)
+        return value
+
     def dump_to_primitive_dict(self):
         return self.model_dump(exclude={"password"})
 
@@ -444,6 +456,12 @@ class ResultsCache(BaseModel):
             raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.host cannot be empty.")
         return value
 
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value):
+        _validate_port(cls, value)
+        return value
+
     @field_validator("db_name")
     @classmethod
     def validate_db_name(cls, value):
@@ -477,6 +495,19 @@ class Queue(BaseModel):
 
     username: Optional[str] = None
     password: Optional[str] = None
+
+    @field_validator("host")
+    @classmethod
+    def validate_host(cls, value):
+        if "" == value:
+            raise ValueError(f"{QUEUE_COMPONENT_NAME}.host cannot be empty.")
+        return value
+
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value):
+        _validate_port(cls, value)
+        return value
 
     def dump_to_primitive_dict(self):
         return self.model_dump(exclude={"username", "password"})
