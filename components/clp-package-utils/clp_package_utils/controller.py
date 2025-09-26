@@ -523,6 +523,8 @@ class DockerComposeController(BaseController):
             ),
             # Package container
             "CLP_PACKAGE_CONTAINER": self.clp_config.execution_container,
+            "CLP_PACKAGE_MCP_SERVER_CONTAINER": "clp-package-mcp-server:dev",
+
             # Global paths
             "CLP_DATA_DIR_HOST": str(self.clp_config.data_directory),
             "CLP_LOGS_DIR_HOST": str(self.clp_config.logs_directory),

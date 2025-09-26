@@ -368,6 +368,30 @@ services:
         "< /dev/tcp/webui/4000"
       ]
 
+  mcp-server:
+    <<: *service_defaults
+    container_name: "mcp_server"
+    image: "${CLP_PACKAGE_MCP_SERVER_CONTAINER}"
+    environment:
+      CLP_DB_PASS: "${CLP_DB_PASS}"
+      CLP_DB_USER: "${CLP_DB_USER}"
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "${CLP_MCP_PORT:-8000}"
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      CLP_LOGGING_LEVEL: "${CLP_MCP_LOGGING_LEVEL:-INFO}"
+    ports:
+      - "${CLP_MCP_HOST:-127.0.0.1}:${CLP_MCP_PORT:-8000}:8000"
+    volumes:
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}:/var/data/streams"
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}:/var/data/archives:ro"
+      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "${CLP_MCP_LOGS_DIR_HOST:-./var/log/mcp-server}:/var/log/mcp-server"
+    user: 0:0
+    command: [
+      "bash", "-c",
+      "cd /opt/clp && pip install . && python3 -m clp_mcp_server --transport http --host 0.0.0.0 --port 8000"
+    ]
+
   garbage-collector:
     <<: *service_defaults
     container_name: "garbage_collector"

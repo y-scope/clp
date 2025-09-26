@@ -62,6 +62,9 @@ tasks:
       - task: "clean-python-component"
         vars:
           COMPONENT: "job-orchestration"
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "clp-mcp-server"
       - task: "clean-webui"
 
   clean-core:
@@ -112,6 +115,7 @@ tasks:
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
+      # - "components/clp-mcp-server/dist/*.whl"
       - "components/package-template/src/**/*"
       - "tools/deployment/package/docker-compose.yaml"
     generates: ["{{.CHECKSUM_FILE}}"]
@@ -121,6 +125,7 @@ tasks:
       - "clp-py-utils"
       - "init"
       - "job-orchestration"
+      - "clp-mcp-server"
       - "package-venv"
       - task: "utils:checksum:validate"
         vars:
@@ -219,7 +224,7 @@ tasks:
 
   core-generate:
     internal: true
-    sources: &core_source_files
+    sources: &core_source_fildbes
       - "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
       - "{{.G_CORE_COMPONENT_DIR}}/cmake/**/*"
       - "{{.G_CORE_COMPONENT_DIR}}/CMakeLists.txt"
@@ -266,6 +271,17 @@ tasks:
     - task: "python-component"
       vars:
         COMPONENT: "{{.TASK}}"
+
+  clp-mcp-server:
+    cmds:
+      # Only copy files, do not build or install dependencies at build time
+      - |-
+        mkdir -p "{{.G_BUILD_DIR}}/clp-mcp-server"
+        cp -r components/clp-mcp-server/* "{{.G_BUILD_DIR}}/clp-mcp-server/"
+        # Optionally copy uv.lock if you use uv
+        if [ -f components/clp-mcp-server/uv.lock ]; then
+          cp "components/clp-mcp-server/uv.lock" "{{.G_BUILD_DIR}}/clp-mcp-server/uv.lock"
+        fi
 
   webui:
     vars:
