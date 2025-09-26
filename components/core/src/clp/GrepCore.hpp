@@ -342,18 +342,9 @@ std::optional<Query> GrepCore::process_raw_query(
             }
         }
     } else {
-        static bool interpretations_generated{false};
-        static std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> interpretations;
-
-        // TODO: This needs to be done for every archive until we have per schema logic.
-        constexpr bool cExecuteForEveryArchive{true};
-        if (cExecuteForEveryArchive || false == interpretations_generated) {
-            log_surgeon::wildcard_query_parser::Query const query(search_string);
-            interpretations.clear();
-            interpretations = query.get_all_multi_token_interpretations(lexer);
-            interpretations_generated = true;
-        }
-        // Transfrom log-surgeon interpretations into CLP sub-queries.
+        // TODO: Optimize such that interpretations are only generated once per schema.
+        log_surgeon::wildcard_query_parser::Query const query{search_string};
+        auto const interpretations{query.get_all_multi_token_interpretations(lexer)};
         generate_schema_sub_queries(
                 interpretations,
                 logtype_dict,
