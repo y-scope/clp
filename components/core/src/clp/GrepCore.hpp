@@ -539,9 +539,10 @@ void GrepCore::generate_schema_sub_queries(
         bool const ignore_case,
         std::vector<SubQuery>& sub_queries
 ) {
+    constexpr size_t cMaxEncodableWildcardVariables{32};
     for (auto const& interpretation : interpretations) {
         auto wildcard_encodable_positions{get_wildcard_encodable_positions(interpretation)};
-        if (wildcard_encodable_positions.size() > 32) {
+        if (wildcard_encodable_positions.size() > cMaxEncodableWildcardVariables) {
             throw std::runtime_error("Too many encodable variables.");
         }
         size_t const num_combos{static_cast<size_t>(1) << wildcard_encodable_positions.size()};
