@@ -1,5 +1,5 @@
-import {create} from "zustand";
 import {Nullable} from "@webui/common/utility-types";
+import {create} from "zustand";
 
 import {PRESTO_SQL_INTERFACE} from "./typings";
 

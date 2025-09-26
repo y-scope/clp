@@ -1,11 +1,24 @@
 import {useEffect} from "react";
+
 import {useQuery} from "@tanstack/react-query";
-import {message, Select, SelectProps} from "antd";
+import {
+    message,
+    Select,
+    SelectProps,
+} from "antd";
+
 import useSearchStore from "../../../../SearchState/index";
 import usePrestoSearchState from "../../../../SearchState/Presto/index";
 import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
 import {fetchTimestampColumns} from "./sql";
 
+
+/**
+ * Renders a timestamp key selector component
+ *
+ * @param selectProps
+ * @return
+ */
 const TimestampKeySelect = (selectProps: SelectProps) => {
     const dataset = useSearchStore((state) => state.selectDataset);
     const timestampKey = usePrestoSearchState((state) => state.timestampKey);
@@ -15,9 +28,12 @@ const TimestampKeySelect = (selectProps: SelectProps) => {
     const [messageApi, contextHolder] = message.useMessage();
 
     const {data, isPending, isSuccess, error} = useQuery({
-        queryKey: ["timestampColumns", dataset],
+        queryKey: [
+            "timestampColumns",
+            dataset
+        ],
         queryFn: () => fetchTimestampColumns(dataset!),
-        enabled: !!dataset,
+        enabled: Boolean(dataset),
     });
 
     useEffect(() => {
@@ -26,7 +42,12 @@ const TimestampKeySelect = (selectProps: SelectProps) => {
                 updateTimestampKey(data[0]);
             }
         }
-    }, [isSuccess, data, timestampKey, updateTimestampKey]);
+    }, [
+        isSuccess,
+        data,
+        timestampKey,
+        updateTimestampKey
+    ]);
 
     useEffect(() => {
         if (error) {
@@ -35,22 +56,33 @@ const TimestampKeySelect = (selectProps: SelectProps) => {
                 content: "Error fetching timestamp columns.",
             });
         }
-    }, [error, messageApi]);
+    }, [
+        error,
+        messageApi
+    ]);
 
     useEffect(() => {
         if (isSuccess && 0 === data.length) {
             messageApi.warning({
                 key: "noTimestamps",
-                content: "No timestamp columns found for selected dataset.",
+                content: "No timestamp columns found for selected dataset. Guided UI requires a timestamp column.",
             });
             updateTimestampKey(null);
         }
-    }, [data, isSuccess, messageApi, updateTimestampKey]);
+    }, [
+        data,
+        isSuccess,
+        messageApi,
+        updateTimestampKey
+    ]);
 
     // Reset timestamp key when dataset changes
     useEffect(() => {
         updateTimestampKey(null);
-    }, [dataset, updateTimestampKey]);
+    }, [
+        dataset,
+        updateTimestampKey
+    ]);
 
     const handleTimestampKeyChange = (value: string) => {
         updateTimestampKey(value);
@@ -69,8 +101,7 @@ const TimestampKeySelect = (selectProps: SelectProps) => {
                     searchUiState === SEARCH_UI_STATE.QUERYING
                 }
                 onChange={handleTimestampKeyChange}
-                {...selectProps}
-            />
+                {...selectProps}/>
         </>
     );
 };

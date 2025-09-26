@@ -1,6 +1,6 @@
 import InputLabel from "../../../../components/InputLabel";
-import styles from "./index.module.css";
 import DatasetSelect from "./DatasetSelect";
+import styles from "./index.module.css";
 
 
 /**
@@ -12,7 +12,7 @@ const Dataset = () => {
     return (
         <div className={styles["datasetContainer"]}>
             <InputLabel>Dataset</InputLabel>
-            <DatasetSelect className={styles["select"] || ""} />
+            <DatasetSelect className={styles["select"] || ""}/>
         </div>
     );
 };

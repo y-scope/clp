@@ -1,6 +1,12 @@
 import {useEffect} from "react";
+
 import {useQuery} from "@tanstack/react-query";
-import {message, Select, SelectProps} from "antd";
+import {
+    message,
+    Select,
+    SelectProps,
+} from "antd";
+
 import useSearchStore from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import {fetchDatasetNames} from "./sql";
@@ -23,7 +29,10 @@ const DatasetSelect = (selectProps: SelectProps) => {
                 updateDataset(data[0]);
             }
         }
-    }, [isSuccess, data, dataset, updateDataset]);
+    }, [isSuccess,
+        data,
+        dataset,
+        updateDataset]);
 
     useEffect(() => {
         if (error) {
@@ -32,7 +41,8 @@ const DatasetSelect = (selectProps: SelectProps) => {
                 content: "Error fetching datasets.",
             });
         }
-    }, [error, messageApi]);
+    }, [error,
+        messageApi]);
 
     useEffect(() => {
         if (isSuccess && 0 === data.length) {
@@ -42,7 +52,10 @@ const DatasetSelect = (selectProps: SelectProps) => {
             });
             updateDataset(null);
         }
-    }, [data, isSuccess, messageApi, updateDataset]);
+    }, [data,
+        isSuccess,
+        messageApi,
+        updateDataset]);
 
     const handleDatasetChange = (value: string) => {
         updateDataset(value);
@@ -54,15 +67,14 @@ const DatasetSelect = (selectProps: SelectProps) => {
             <Select
                 loading={isPending}
                 options={(data || []).map((option) => ({label: option, value: option}))}
+                size={"middle"}
                 value={dataset}
-                size="middle"
                 disabled={
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                     searchUiState === SEARCH_UI_STATE.QUERYING
                 }
                 onChange={handleDatasetChange}
-                {...selectProps}
-            />
+                {...selectProps}/>
         </>
     );
 };
