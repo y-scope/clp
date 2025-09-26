@@ -14,7 +14,7 @@ if [[ -f "$iid_file" ]]; then
 fi
 cleanup() {
     if [[ -n "$prev_image_id" ]] && docker image inspect "$prev_image_id" >/dev/null 2>&1; then
-        echo "Removing previous image $prev_image_id"
+        echo "Removing previous image $prev_image_id."
         docker image remove "$prev_image_id"
     fi
 }
