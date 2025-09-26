@@ -1,11 +1,15 @@
 import {useCallback} from "react";
 
 import {SearchOutlined} from "@ant-design/icons";
+import {Nullable} from "@webui/common/utility-types";
 import {
     Button,
+    message,
     Tooltip,
 } from "antd";
+import dayjs, {Dayjs} from "dayjs";
 
+import {querySql} from "../../../../../api/sql";
 import {
     CLP_STORAGE_ENGINES,
     SETTINGS_STORAGE_ENGINE,
@@ -14,7 +18,12 @@ import {computeTimelineConfig} from "../../../SearchResults/SearchResultsTimelin
 import useSearchStore from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import {handleQuerySubmit} from "../../search-requests";
+import {TIME_RANGE_OPTION} from "../../TimeRangeInput/utils";
 import styles from "./index.module.css";
+import {
+    buildClpsTimeRangeSql,
+    buildClpTimeRangeSql,
+} from "./timeRangeSql";
 
 
 /**
@@ -22,20 +31,70 @@ import styles from "./index.module.css";
  *
  * @return
  */
+// eslint-disable-next-line max-lines-per-function
 const SubmitButton = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
+    const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
     const timeRange = useSearchStore((state) => state.timeRange);
-    const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
+    const queryIsCaseSensitive = useSearchStore(
+        (state) => state.queryIsCaseSensitive,
+    );
     const queryString = useSearchStore((state) => state.queryString);
     const selectDataset = useSearchStore((state) => state.selectDataset);
-    const updateCachedDataset = useSearchStore((state) => state.updateCachedDataset);
+    const updateCachedDataset = useSearchStore(
+        (state) => state.updateCachedDataset,
+    );
+    const [messageApi, contextHolder] = message.useMessage();
+
+    const fetchAllTimeTimeRange = useCallback(async (): Promise<
+        [Dayjs, Dayjs]
+    > => {
+        let sql: string;
+        if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
+            sql = buildClpTimeRangeSql();
+        } else {
+            sql = buildClpsTimeRangeSql(selectDataset ?? "default");
+        }
+        const resp = await querySql<
+            {
+                begin_timestamp: Nullable<number>;
+                end_timestamp: Nullable<number>;
+            }[]
+        >(sql);
+        const [timestamps] = resp.data;
+        if ("undefined" === typeof timestamps ||
+              null === timestamps.begin_timestamp ||
+              null === timestamps.end_timestamp
+        ) {
+            throw new Error("Unable to get All Time range");
+        }
+
+        return [
+            dayjs.utc(timestamps.begin_timestamp),
+            dayjs.utc(timestamps.end_timestamp),
+        ];
+    }, [selectDataset]);
 
     /**
      * Submits search query.
      */
-    const handleSubmitButtonClick = useCallback(() => {
+    const handleSubmitButtonClick = useCallback(async () => {
+        let updatedTimeRange: [Dayjs, Dayjs];
+        if (timeRangeOption === TIME_RANGE_OPTION.ALL_TIME) {
+            try {
+                updatedTimeRange = await fetchAllTimeTimeRange();
+            } catch {
+                messageApi.warning(
+                    'Cannot fetch the time range for "All Time". Fallback to the unix epoch.',
+                );
+                updatedTimeRange = timeRange;
+            }
+        } else {
+            updatedTimeRange = timeRange;
+        }
+
         // Update timeline to match range picker selection.
-        const newTimelineConfig = computeTimelineConfig(timeRange);
+        const newTimelineConfig = computeTimelineConfig(updatedTimeRange);
         const {updateTimelineConfig} = useSearchStore.getState();
         updateTimelineConfig(newTimelineConfig);
 
@@ -43,7 +102,9 @@ const SubmitButton = () => {
             if (null !== selectDataset) {
                 updateCachedDataset(selectDataset);
             } else {
-                console.error("Cannot submit a clp-s query without a dataset selection.");
+                console.error(
+                    "Cannot submit a clp-s query without a dataset selection.",
+                );
 
                 return;
             }
@@ -54,21 +115,35 @@ const SubmitButton = () => {
             ignoreCase: false === queryIsCaseSensitive,
             queryString: queryString,
             timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
-            timestampBegin: timeRange[0].valueOf(),
-            timestampEnd: timeRange[1].valueOf(),
+            ...(
+                timeRangeOption === TIME_RANGE_OPTION.ALL_TIME ?
+                    {
+                        timestampBegin: null,
+                        timestampEnd: null,
+                    } :
+                    {
+                        timestampBegin: timeRange[0].valueOf(),
+                        timestampEnd: timeRange[1].valueOf(),
+                    }
+            ),
         });
-    }, [queryString,
+    }, [
+        queryString,
         queryIsCaseSensitive,
         timeRange,
+        timeRangeOption,
+        fetchAllTimeTimeRange,
+        messageApi,
         selectDataset,
-        updateCachedDataset]);
+        updateCachedDataset,
+    ]);
 
     const isQueryStringEmpty = "" === queryString;
 
     // Submit button must be disabled if there are no datasets since clp-s requires dataset option
     // for queries.
-    const isNoDatasetsAndClpS = (null === selectDataset) &&
-                          (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE);
+    const isNoDatasetsAndClpS = null === selectDataset &&
+        CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE;
 
     let tooltipTitle = "";
     if (isNoDatasetsAndClpS) {
@@ -79,15 +154,21 @@ const SubmitButton = () => {
 
     return (
         <Tooltip title={tooltipTitle}>
+            {contextHolder}
             <Button
                 className={styles["gradientButton"] || ""}
                 htmlType={"submit"}
                 icon={<SearchOutlined/>}
                 size={"middle"}
                 type={"primary"}
-                disabled={isQueryStringEmpty || isNoDatasetsAndClpS ||
-                          searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
-                onClick={handleSubmitButtonClick}
+                disabled={isQueryStringEmpty ||
+                    isNoDatasetsAndClpS ||
+                    searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
+                onClick={() => {
+                    handleSubmitButtonClick().catch((err: unknown) => {
+                        throw err;
+                    });
+                }}
             >
                 Search
             </Button>

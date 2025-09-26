@@ -20,8 +20,10 @@ const QueryJobCreationSchema = Type.Object({
     ignoreCase: Type.Boolean(),
     queryString: StringSchema,
     timeRangeBucketSizeMillis: Type.Integer(),
-    timestampBegin: Type.Integer(),
-    timestampEnd: Type.Integer(),
+    timestampBegin: Type.Union([Type.Null(),
+        Type.Integer()]),
+    timestampEnd: Type.Union([Type.Null(),
+        Type.Integer()]),
 });
 
 /**
