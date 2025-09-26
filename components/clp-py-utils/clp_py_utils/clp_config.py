@@ -750,7 +750,7 @@ class ArchiveOutput(BaseModel):
     @field_validator("compression_level")
     @classmethod
     def validate_compression_level(cls, value):
-        if 1 > value or 19 < value:
+        if value < 1 or value > 19:
             raise ValueError("compression_level must be a value from 1 to 19")
         return value
 
