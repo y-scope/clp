@@ -188,7 +188,7 @@ class Database(BaseModel):
 
     @field_validator("type")
     @classmethod
-    def validate_database_type(cls, value):
+    def validate_type(cls, value):
         supported_database_types = ["mysql", "mariadb"]
         if value not in supported_database_types:
             raise ValueError(
@@ -198,14 +198,14 @@ class Database(BaseModel):
 
     @field_validator("name")
     @classmethod
-    def validate_database_name(cls, value):
+    def validate_name(cls, value):
         if "" == value:
             raise ValueError("database.name cannot be empty.")
         return value
 
     @field_validator("host")
     @classmethod
-    def validate_database_host(cls, value):
+    def validate_host(cls, value):
         if "" == value:
             raise ValueError("database.host cannot be empty.")
         return value
