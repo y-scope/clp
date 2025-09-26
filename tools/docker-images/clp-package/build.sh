@@ -4,8 +4,8 @@ set -eu
 set -o pipefail
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-iid_file="${script_dir}/image.id"
 repo_root=${script_dir}/../../../
+iid_file="${repo_root}/build/clp-package-image.id"
 
 # Remove the previous image to save space, but only after the build so its contents can be reused.
 prev_image_id=""
