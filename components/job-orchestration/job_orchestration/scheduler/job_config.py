@@ -17,7 +17,7 @@ class PathsToCompress(BaseModel):
     file_paths: typing.List[str]
     group_ids: typing.List[int]
     st_sizes: typing.List[int]
-    empty_directories: typing.List[str] = None
+    empty_directories: typing.Optional[typing.List[str]] = None
 
 
 class FsInputConfig(BaseModel):
