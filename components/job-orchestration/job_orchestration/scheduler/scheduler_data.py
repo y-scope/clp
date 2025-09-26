@@ -22,7 +22,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 class CompressionJob(BaseModel):
     id: int
     start_time: datetime.datetime
-    async_task_result: Any = None
+    async_task_result: Optional[Any] = None
 
 
 class CompressionTaskResult(BaseModel):
