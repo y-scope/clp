@@ -89,7 +89,9 @@ class PathsToCompressBuffer:
         )
 
         task_arguments = self.__task_arguments.copy()
-        task_arguments["paths_to_compress_json"] = paths_to_compress.model_dump_json(exclude_none=True)
+        task_arguments["paths_to_compress_json"] = paths_to_compress.model_dump_json(
+            exclude_none=True
+        )
         self.__tasks.append(copy.deepcopy(task_arguments))
         self.num_tasks += 1
 

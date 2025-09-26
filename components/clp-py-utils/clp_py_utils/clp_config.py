@@ -1,7 +1,7 @@
 import os
 import pathlib
 from enum import auto
-from typing import Literal, Optional, Set, Union, Any
+from typing import Any, Literal, Optional, Set, Union
 
 from dotenv import dotenv_values
 from pydantic import (
@@ -836,6 +836,7 @@ class SweepInterval(BaseModel):
 
     archive: int = Field(default=60, gt=0)
     search_result: int = Field(default=30, gt=0)
+
 
 class GarbageCollector(BaseModel):
     logging_level: str = "INFO"
