@@ -182,7 +182,7 @@ auto GrepCore::generate_logtype_string(
     }
     logtype_string.reserve(logtype_string_size);
 
-    // Generete `logtype_string`.
+    // Generate `logtype_string`.
     for (size_t i{0}; i < interpretation.get_logtype().size(); ++i) {
         auto const token{interpretation.get_logtype()[i]};
         if (std::holds_alternative<StaticQueryToken>(token)) {

@@ -185,7 +185,7 @@ private:
     );
 
     /**
-     * Scans the interpretation and returns the indicies of all encodable wildcard variables.
+     * Scans the interpretation and returns the indices of all encodable wildcard variables.
      *
      * An encodable variable is a variable token than:
      *   - Contains a wildcard (e.g. *1).
