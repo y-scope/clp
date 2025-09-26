@@ -5,8 +5,8 @@
   "main": "src/main.tsx",
   "scripts": {
     "build": "tsc -b && vite build",
-    "lint:check": "eslint",
-    "lint:fix": "eslint --fix",
+    "lint:check": "eslint . --max-warnings 0",
+    "lint:fix": "npm run lint:check -- --fix",
     "start": "vite",
     "guided": "VITE_GUIDED_DEV=true npm run start"
   },
