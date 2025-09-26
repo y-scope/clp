@@ -66,10 +66,9 @@ constexpr value_bool_t cRefTestBool{false};
 [[nodiscard]] auto generate_projections(
         std::string_view column_namespace,
         std::map<std::string, ColumnQueryPossibleMatches> const& column_query_to_possible_matches
-)
-        -> std::pair<
-                std::vector<std::pair<std::string, literal_type_bitmask_t>>,
-                std::map<std::string, std::set<SchemaTree::Node::id_t>>>;
+) -> std::
+        pair<std::vector<std::pair<std::string, literal_type_bitmask_t>>,
+             std::map<std::string, std::set<SchemaTree::Node::id_t>>>;
 
 /**
  * @param column_resolutions
@@ -200,10 +199,9 @@ auto generate_matchable_kql_expressions(
 auto generate_projections(
         std::string_view column_namespace,
         std::map<std::string, ColumnQueryPossibleMatches> const& column_query_to_possible_matches
-)
-        -> std::pair<
-                std::vector<std::pair<std::string, literal_type_bitmask_t>>,
-                std::map<std::string, std::set<SchemaTree::Node::id_t>>> {
+) -> std::
+        pair<std::vector<std::pair<std::string, literal_type_bitmask_t>>,
+             std::map<std::string, std::set<SchemaTree::Node::id_t>>> {
     std::vector<std::pair<std::string, literal_type_bitmask_t>> projections;
     std::map<std::string, std::set<SchemaTree::Node::id_t>> expected_resolved_projections;
     for (auto const& [column_query, possible_matches] : column_query_to_possible_matches) {

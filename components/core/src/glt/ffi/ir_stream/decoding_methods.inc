@@ -16,7 +16,8 @@ template <
         typename ConstantHandler,
         typename EncodedIntHandler,
         typename EncodedFloatHandler,
-        typename DictVarHandler>
+        typename DictVarHandler
+>
 void generic_decode_message(
         std::string const& logtype,
         std::vector<encoded_variable_t> const& encoded_vars,
