@@ -827,19 +827,21 @@ tasks:
 
   rust-workspace-fmt:
     internal: true
-    deps:
-      - "rust-lint-configs"
+    deps: ["rust-lint-configs", ":toolchains:rust"]
+    dir: "{{.ROOT_DIR}}"
     requires:
       vars: ["RUSTFMT_FLAGS"]
-    cmds:
-      - cargo +nightly fmt --all -- {{.RUSTFMT_FLAGS}}
+    cmd: |
+      cargo +nightly fmt --all -- {{.RUSTFMT_FLAGS}}
 
   rust-workspace-clippy:
     internal: true
+    deps: [":toolchains:rust"]
+    dir: "{{.ROOT_DIR}}"
     requires:
       vars: ["RUST_CLIPPY_FLAGS"]
-    cmds:
-      - cargo +nightly clippy --all-targets --all-features {{.RUST_CLIPPY_FLAGS}}
+    cmd: |
+      cargo +nightly clippy --all-targets --all-features {{.RUST_CLIPPY_FLAGS}}
 
   venv:
     internal: true

@@ -20,14 +20,6 @@ jobs:
     steps:
       - uses: "actions/checkout@v4"
 
-      - name: "Install nightly (fmt + clippy)"
-        uses: "dtolnay/rust-toolchain@nightly"
-        with:
-          components: rustfmt, clippy
-
-      - name: "Install stable"
-        uses: "dtolnay/rust-toolchain@stable"
-
       - name: "Install task"
         shell: "bash"
         run: "npm install -g @go-task/cli"
@@ -36,10 +28,6 @@ jobs:
         shell: "bash"
         run: "task lint:check-rust"
 
-      - name: "Check"
-        shell: "bash"
-        run: "cargo check --all --all-features"
-
       - name: "Test"
         shell: "bash"
-        run: "cargo test --all --all-features --release"
+        run: "task tests:rust-all"
