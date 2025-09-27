@@ -518,7 +518,7 @@ def run_clp(
         return CompressionTaskStatus.FAILED, worker_output
 
 
-def general_compress(
+def compression_entry_point(
     job_id: int,
     task_id: int,
     tag_ids,
