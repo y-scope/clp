@@ -24,6 +24,8 @@ Usage:
     where `size` is the total size of the dictionaries and encoded messages in an archive.
     * This option acts as a soft limit on memory usage for compression, decompression, and search.
     * This option significantly affects compression ratio.
+  * `--no-retain-float-format` specifies that `clp-s` should not store extra information to
+    preserve the original textual representation of floating-point numbers.
   * `--structurize-arrays` specifies that arrays should be fully parsed and array entries should be
     encoded into dedicated columns.
   * `--auth <s3|none>` specifies the authentication method that should be used for network requests
@@ -152,6 +154,10 @@ compressed data:**
 * The order of log events is not preserved.
 * The input directory structure is not preserved and during decompression all files are written to
   the same file.
+* For floating-point numbers:
+  * KV-IR inputs currently don't support preserving the original printed float formats.
+  * Comparisons against floating point numbers at query time treat each stored number as if it were
+    the nearest representable double-precision value, which can potentially lose precision.
 * In addition, there are a few limitations, related to querying arrays, described in the search
   syntax [reference](reference-json-search-syntax).
 
