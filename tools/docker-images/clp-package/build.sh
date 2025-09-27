@@ -4,11 +4,26 @@ set -eu
 set -o pipefail
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+iid_file="${script_dir}/image.id"
 repo_root=${script_dir}/../../../
+
+# Remove the previous image after the build to allow layer reuse.
+prev_image_id=""
+if [[ -f "$iid_file" ]]; then
+    prev_image_id=$(cat "$iid_file")
+fi
+cleanup() {
+    if [[ -n "$prev_image_id" ]] && docker image inspect "$prev_image_id" >/dev/null 2>&1; then
+        echo "Removing previous image $prev_image_id"
+        docker image remove "$prev_image_id"
+    fi
+}
+trap cleanup EXIT
 
 build_cmd=(
     docker build
-    --tag "clp-package:dev"
+    --iidfile "$iid_file"
+    --tag "clp-package:dev-${USER}-$(date +%s)"
     "$repo_root"
     --file "${script_dir}/Dockerfile"
 )

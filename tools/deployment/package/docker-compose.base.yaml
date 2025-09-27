@@ -1,0 +1,288 @@
+name: "clp-package-base"
+
+# Common service defaults.
+x-service-defaults: &service_defaults
+  stop_grace_period: "3s"
+  user: "${CLP_UID_GID:-1000:1000}"
+
+# Common healthcheck defaults.
+x-healthcheck-defaults: &healthcheck_defaults
+  interval: "30s"
+  retries: 3
+  start_interval: "1s"
+  start_period: "10s"
+  timeout: "10s"
+
+secrets:
+  CLP_DB_PASS_FILE:
+    environment: "CLP_DB_PASS"
+
+services:
+  database:
+    <<: *service_defaults
+    container_name: "database"
+    image: "${CLP_DB_IMAGE:-mysql:8.0.23}"
+    user: "${CLP_SERVICE_CONTAINER_UID_GID:-1000:1000}"
+    environment:
+      MYSQL_DATABASE: "${CLP_DB_NAME}"
+      MYSQL_PASSWORD_FILE: "/run/secrets/CLP_DB_PASS_FILE"
+      MYSQL_ROOT_PASSWORD_FILE: "/run/secrets/CLP_DB_PASS_FILE"
+      MYSQL_USER: "${CLP_DB_USER}"
+    secrets:
+      - "CLP_DB_PASS_FILE"
+    ports:
+      - "${CLP_DB_HOST:-127.0.0.1}:${CLP_DB_PORT:-3306}:3306"
+    volumes:
+      - "${CLP_DB_CONF_FILE_HOST:-./etc/mysql/conf.d/logging.cnf}:/etc/mysql/conf.d/logging.cnf:ro"
+      - "${CLP_DB_DATA_DIR_HOST:-./var/data/database}:/var/lib/mysql"
+      - "${CLP_DB_LOGS_DIR_HOST:-./var/log/database}:/var/log/mysql"
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: [
+        "CMD",
+        "mysqladmin", "ping",
+        "--silent",
+        "-h", "127.0.0.1",
+        "-u", "${CLP_DB_USER}",
+        "--password=${CLP_DB_PASS}"
+      ]
+
+  db-table-creator:
+    <<: *service_defaults
+    container_name: "db_table_creator"
+    image: "${CLP_PACKAGE_CONTAINER}"
+    environment:
+      CLP_DB_PASS: "${CLP_DB_PASS}"
+      CLP_DB_USER: "${CLP_DB_USER}"
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+    volumes:
+      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml"
+    depends_on:
+      database:
+        condition: "service_healthy"
+    command: [
+      "python3",
+      "-u",
+      "-m", "clp_py_utils.create-db-tables",
+      "--config", "/etc/clp-config.yml",
+      "--storage-engine", "${CLP_PACKAGE_STORAGE_ENGINE}"
+    ]
+
+  queue:
+    <<: *service_defaults
+    container_name: "queue"
+    image: "rabbitmq:3.9.8"
+    user: "${CLP_SERVICE_CONTAINER_UID_GID:-1000:1000}"
+    environment:
+      RABBITMQ_DEFAULT_PASS: "${CLP_QUEUE_PASS}"
+      RABBITMQ_DEFAULT_USER: "${CLP_QUEUE_USER}"
+      RABBITMQ_LOGS: "/var/log/rabbitmq/rabbitmq.log"
+    ports:
+      - "${CLP_QUEUE_HOST:-127.0.0.1}:${CLP_QUEUE_PORT:-5672}:5672"
+    volumes:
+      - "${CLP_QUEUE_LOGS_DIR_HOST:-./var/log/queue}:/var/log/rabbitmq"
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: [
+        "CMD",
+        "rabbitmq-diagnostics", "check_running"
+      ]
+
+  redis:
+    <<: *service_defaults
+    container_name: "redis"
+    image: "redis:7.2.4"
+    user: "${CLP_SERVICE_CONTAINER_UID_GID:-1000:1000}"
+    ports:
+      - "${CLP_REDIS_HOST:-127.0.0.1}:${CLP_REDIS_PORT:-6379}:6379"
+    volumes:
+      - "${CLP_REDIS_CONF_FILE_HOST:-./etc/redis/redis.conf}:/usr/local/etc/redis/redis.conf:ro"
+      - "${CLP_REDIS_DATA_DIR_HOST:-./var/data/redis}:/data"
+      - "${CLP_REDIS_LOGS_DIR_HOST:-./var/log/redis}:/var/log/redis"
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: [
+        "CMD",
+        "redis-cli",
+        "-h", "127.0.0.1",
+        "-p", "6379",
+        "-a", "${CLP_REDIS_PASS}",
+        "PING"
+      ]
+    command: [
+      "redis-server",
+      "/usr/local/etc/redis/redis.conf",
+      "--requirepass", "${CLP_REDIS_PASS}"
+    ]
+
+  results-cache:
+    <<: *service_defaults
+    container_name: "results_cache"
+    image: "mongo:7.0.1"
+    user: "${CLP_SERVICE_CONTAINER_UID_GID:-1000:1000}"
+    ports:
+      - "${CLP_RESULTS_CACHE_HOST:-127.0.0.1}:${CLP_RESULTS_CACHE_PORT:-6379}:27017"
+    volumes:
+      - "${CLP_RESULTS_CACHE_CONF_FILE_HOST:-./etc/mongo/mongod.conf}:/etc/mongo/mongod.conf:ro"
+      - "${CLP_RESULTS_CACHE_DATA_DIR_HOST:-./var/data/results_cache}:/data/db"
+      - "${CLP_RESULTS_CACHE_LOGS_DIR_HOST:-./var/log/results_cache}:/var/log/mongodb"
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: >-
+        echo 'db.runCommand("ping").ok' |
+        mongosh 127.0.0.1:27017/test --quiet
+    command: [
+      "--config", "/etc/mongo/mongod.conf",
+      "--bind_ip", "0.0.0.0",
+    ]
+
+  results-cache-indices-creator:
+    <<: *service_defaults
+    container_name: "results_cache_indices_creator"
+    image: "${CLP_PACKAGE_CONTAINER}"
+    environment:
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+    depends_on:
+      results-cache:
+        condition: "service_healthy"
+    command: [
+      "python3",
+      "-u",
+      "-m", "clp_py_utils.initialize-results-cache",
+      "--uri", "mongodb://results_cache:27017/${RESULTS_CACHE_CLP_DB_NAME:-clp-query-results}",
+      "--stream-collection", "${CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME:-stream-files}",
+    ]
+
+  compression-scheduler:
+    <<: *service_defaults
+    container_name: "compression_scheduler"
+    image: "${CLP_PACKAGE_CONTAINER}"
+    environment:
+      BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
+      CLP_DB_PASS: "${CLP_DB_PASS}"
+      CLP_DB_USER: "${CLP_DB_USER}"
+      CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL:-INFO}"
+      CLP_LOGS_DIR: "/var/log"
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      RESULT_BACKEND: >-
+        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_COMPRESSION_BACKEND_DB:-1}
+    volumes:
+      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
+      - "${CLP_COMPRESSION_SCHEDULER_LOGS_FILE_HOST:-./var/log/compression_scheduler.log}\
+:/var/log/compression_scheduler.log"
+      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "/:/mnt/logs:ro"
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
+      queue:
+        condition: "service_healthy"
+      redis:
+        condition: "service_healthy"
+    command: [
+      "python3",
+      "-u",
+      "-m", "job_orchestration.scheduler.compress.compression_scheduler",
+      "--config", "/etc/clp-config.yml"
+    ]
+
+  compression-worker:
+    <<: *service_defaults
+    container_name: "compression_worker"
+    image: "${CLP_PACKAGE_CONTAINER}"
+    environment:
+      AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${CLP_AWS_SECRET_ACCESS_KEY}"
+      BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
+      CLP_CONFIG_PATH: "/etc/clp-config.yml"
+      CLP_HOME: "/opt/clp"
+      CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
+      CLP_LOGS_DIR: "/var/log/compression_worker"
+      CLP_WORKER_LOG_PATH: "/var/log/compression_worker/worker.log"
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      RESULT_BACKEND: >-
+        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_COMPRESSION_BACKEND_DB:-1}
+    volumes:
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}:/var/data/archives"
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/staged-archives}:/var/data/staged-archives"
+      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
+      - "${CLP_COMPRESSION_WORKER_LOGS_DIR_HOST:-./var/log/compression_worker}:\
+/var/log/compression_worker"
+      - "${CLP_DATA_DIR_HOST:-./var/data}:/var/data"
+      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "/:/mnt/logs:ro"
+    command: [
+      "python3",
+      "-u",
+      "/opt/clp/lib/python3/site-packages/bin/celery",
+      "-A", "job_orchestration.executor.compress",
+      "worker",
+      "--concurrency", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
+      "--loglevel", "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}",
+      "-f", "/var/log/compression_worker/worker.log",
+      "-Q", "compression",
+      "-n", "compression-worker"
+    ]
+
+  webui:
+    <<: *service_defaults
+    container_name: "webui"
+    image: "${CLP_PACKAGE_CONTAINER}"
+    environment:
+      CLP_DB_PASS: "${CLP_DB_PASS}"
+      CLP_DB_USER: "${CLP_DB_USER}"
+      HOST: "0.0.0.0"
+      NODE_ENV: "production"
+      NODE_PATH: "/opt/clp/var/www/webui/server/node_modules"
+      PORT: "4000"
+      RATE_LIMIT: "${CLP_WEBUI_RATE_LIMIT:-1000}"
+    ports:
+      - "${CLP_WEBUI_HOST:-127.0.0.1}:${CLP_WEBUI_PORT:-4000}:4000"
+    volumes:
+      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}:/var/data/streams"
+      - "./var/www/webui/client/settings.json:/opt/clp/var/www/webui/client/settings.json:ro"
+      - "./var/www/webui/server/dist/settings.json\
+:/opt/clp/var/www/webui/server/dist/settings.json:ro"
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
+      results-cache-indices-creator:
+        condition: "service_completed_successfully"
+    command: [
+      "/opt/clp/bin/node-22",
+      "/opt/clp/var/www/webui/server/dist/src/main.js"
+    ]
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: [
+        "CMD",
+        "bash",
+        "-c",
+        "< /dev/tcp/webui/4000"
+      ]
+
+  garbage-collector:
+    <<: *service_defaults
+    container_name: "garbage_collector"
+    image: "${CLP_PACKAGE_CONTAINER}"
+    environment:
+      CLP_DB_PASS: "${CLP_DB_PASS}"
+      CLP_DB_USER: "${CLP_DB_USER}"
+      CLP_HOME: "/opt/clp"
+      CLP_LOGGING_LEVEL: "${CLP_GC_LOGGING_LEVEL:-INFO}"
+      CLP_LOGS_DIR: "/var/log/garbage_collector"
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+    volumes:
+      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "${CLP_LOGS_DIR_HOST:-./var/log}/garbage_collector:/var/log/garbage_collector"
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
+      results-cache-indices-creator:
+        condition: "service_completed_successfully"
+    command: [
+      "python3", "-u",
+      "-m", "job_orchestration.garbage_collector.garbage_collector",
+      "--config", "/etc/clp-config.yml",
+    ]

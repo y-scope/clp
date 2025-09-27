@@ -80,6 +80,12 @@ task docker-images:package
 
 This will create a Docker image named `clp-package:dev`.
 
+The package includes a `docker-compose.yaml` file that can be used to deploy CLP using Docker Compose.
+If you want to manually deploy with Docker Compose instead of using the package scripts, see the 
+[Docker Compose design][docker-compose-design] for more information.
+
+[clp-issue-872]: https://github.com/y-scope/clp/issues/872
+[docker-compose-design]: ../dev-docs/design-docker-compose.md
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
 [y-scope/clp-ffi-js#110]: https://github.com/y-scope/clp-ffi-js/issues/110
