@@ -150,7 +150,7 @@ def handle_extract_file_cmd(
         extract_cmd.append(path)
     if container_paths_to_extract_file_path:
         extract_cmd.append("--input-list")
-        extract_cmd.append(container_paths_to_extract_file_path)
+        extract_cmd.append(str(container_paths_to_extract_file_path))
 
     cmd = container_start_cmd + extract_cmd
 

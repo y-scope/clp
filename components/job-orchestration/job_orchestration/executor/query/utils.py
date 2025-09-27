@@ -35,7 +35,7 @@ def report_task_failure(
         task_id=task_id,
         status=task_status,
         duration=0,
-    ).dict()
+    ).model_dump()
 
 
 def run_query_task(

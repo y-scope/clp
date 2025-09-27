@@ -65,7 +65,7 @@ def submit_query_job(
         # Create job
         db_cursor.execute(
             f"INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (%s, %s)",
-            (msgpack.packb(job_config.dict()), job_type),
+            (msgpack.packb(job_config.model_dump()), job_type),
         )
         db_conn.commit()
         return db_cursor.lastrowid

@@ -184,7 +184,7 @@ def search(
     logger.info(f"Started {task_name} task for job {job_id}")
 
     start_time = datetime.datetime.now()
-    sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
+    sql_adapter = SQL_Adapter(Database.model_validate(clp_metadata_db_conn_params))
 
     # Load configuration
     clp_config_path = Path(os.getenv("CLP_CONFIG_PATH"))
@@ -198,7 +198,7 @@ def search(
 
     # Make task_command
     clp_home = Path(os.getenv("CLP_HOME"))
-    search_config = SearchJobConfig.parse_obj(job_config)
+    search_config = SearchJobConfig.model_validate(job_config)
 
     task_command, core_clp_env_vars = _make_command_and_env_vars(
         clp_home=clp_home,
@@ -228,4 +228,4 @@ def search(
         start_time=start_time,
     )
 
-    return task_results.dict()
+    return task_results.model_dump()

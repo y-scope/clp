@@ -41,7 +41,7 @@ def _get_session_credentials(aws_profile: Optional[str] = None) -> Optional[S3Cr
     :param aws_profile: Name of profile configured in ~/.aws directory
     :return: An S3Credentials object with access key pair and session token if applicable.
     """
-    aws_session: Optional[boto3.Session] = None
+    aws_session: Optional[boto3.Session]
     if aws_profile is not None:
         aws_session = boto3.Session(profile_name=aws_profile)
     else:
@@ -66,8 +66,8 @@ def get_credential_env_vars(auth: AwsAuthentication) -> Dict[str, str]:
     :raise: ValueError if `auth.type` is not a supported type or fails to authenticate with the
     given `auth`.
     """
-    env_vars: Optional[Dict[str, str]] = None
-    aws_credentials: Optional[S3Credentials] = None
+    env_vars: Optional[Dict[str, str]]
+    aws_credentials: Optional[S3Credentials]
 
     if AwsAuthType.env_vars == auth.type:
         # Environmental variables are already set
@@ -110,7 +110,7 @@ def generate_container_auth_options(
     :return: Tuple of (whether aws config mount is needed, credential env_vars to set).
     :raises: ValueError if environment variables are not set correctly.
     """
-    output_storages_by_component_type: List[Union[S3Storage, FsStorage]] = []
+    output_storages_by_component_type: List[Union[S3Storage, FsStorage]]
     input_storage_needed = False
 
     if container_type in (
@@ -174,13 +174,13 @@ def generate_container_auth_options(
                 f"{AWS_ENV_VAR_SESSION_TOKEN} not supported for environmental variable credentials."
             )
 
-    return (config_mount, credentials_env_vars)
+    return config_mount, credentials_env_vars
 
 
 def _create_s3_client(
     region_code: str, s3_auth: AwsAuthentication, boto3_config: Optional[Config] = None
 ) -> boto3.client:
-    aws_session: Optional[boto3.Session] = None
+    aws_session: Optional[boto3.Session]
     if AwsAuthType.profile == s3_auth.type:
         aws_session = boto3.Session(
             profile_name=s3_auth.profile,

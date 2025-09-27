@@ -181,12 +181,12 @@ def main(argv: List[str]) -> int:
         logger.exception("Failed to load config.")
         return -1
 
-    storage_type: StorageType = clp_config.archive_output.storage.type
+    storage_type = StorageType(clp_config.archive_output.storage.type)
     if StorageType.FS != storage_type:
         logger.error(f"Archive manager is not supported for storage type: {storage_type}.")
         return -1
 
-    storage_engine: StorageEngine = clp_config.package.storage_engine
+    storage_engine = StorageEngine(clp_config.package.storage_engine)
     dataset = parsed_args.dataset
     if StorageEngine.CLP_S == storage_engine:
         dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset

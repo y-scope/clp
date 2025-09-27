@@ -43,7 +43,7 @@ def main(argv: List[str]) -> int:
     # Load configuration
     config_path = Path(parsed_args.config)
     try:
-        clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
+        clp_config = CLPConfig.model_validate(read_yaml_config_file(config_path))
     except ValidationError as err:
         logger.error(err)
         return 1
