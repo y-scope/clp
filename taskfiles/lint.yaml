@@ -831,7 +831,8 @@ tasks:
     dir: "{{.ROOT_DIR}}"
     requires:
       vars: ["RUSTFMT_FLAGS"]
-    cmd: |
+    cmd: |-
+      . "$HOME/.cargo/env"
       cargo +nightly fmt --all -- {{.RUSTFMT_FLAGS}}
 
   rust-workspace-clippy:
@@ -840,7 +841,8 @@ tasks:
     dir: "{{.ROOT_DIR}}"
     requires:
       vars: ["RUST_CLIPPY_FLAGS"]
-    cmd: |
+    cmd: |-
+      . "$HOME/.cargo/env"
       cargo +nightly clippy --all-targets --all-features {{.RUST_CLIPPY_FLAGS}}
 
   venv:

@@ -7,6 +7,7 @@ tasks:
       # Installs Rust toolchains using rustup. If the toolchains are already installed, this task
       # will ensure they are updated to the latest versions.
       - |-
-        curl --proto "=https" --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+        curl --proto "=https" --tlsv1.2 --silent --show-error --fail https://sh.rustup.rs \
+          | sh -s -- --default-toolchain none
         . "$HOME/.cargo/env"
         rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt

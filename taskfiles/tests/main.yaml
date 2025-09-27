@@ -7,5 +7,6 @@ tasks:
   rust-all:
     deps: [":toolchains:rust"]
     dir: "{{.ROOT_DIR}}"
-    cmd: |
+    cmd: |-
+      . "$HOME/.cargo/env"
       cargo test --all --all-features --release
