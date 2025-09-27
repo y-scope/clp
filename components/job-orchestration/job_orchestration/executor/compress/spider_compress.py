@@ -16,15 +16,18 @@ def compress(
     clp_metadata_db_connection_config: dict[str, bool | int | str | None],
 ) -> dict[str, int | float | str | None]:
     """
-    Compress files using the general compression function.
-    :param _:
+    Compresses files using the general compression entry point.
+    :param _: Spider's task context. Not used in the function.
     :param job_id:
     :param task_id:
     :param tag_ids:
-    :param clp_io_config_json: A Json string representing `ClpIoConfig`.
-    :param paths_to_compress_json: A Json string representing `PathsToCompress`.
-    :param clp_metadata_db_connection_config: A dict representing `Database`.
-    :return: A dict representing `CompressionTaskResult`.
+    :param clp_io_config_json: A JSON string representation of
+        `job_orchestration.scheduler.constants.ClpIoConfig`.
+    :param paths_to_compress_json: A JSON string representation of
+        `job_orchestration.scheduler.constants.PathToCompress`.
+    :param clp_metadata_db_connection_config: A dict representation of
+        `clp_py_utils.clp_config.Database`.
+    :return: A dict representation of `job_orchestration.scheduler.constants.CompressionTaskResult`.
     """
     return general_compress(
         job_id,
