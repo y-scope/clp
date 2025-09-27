@@ -8,12 +8,12 @@ CLP core is the low-level component that performs compression, decompression, an
   * If you have trouble building for another OS, file an issue, and we may be able to help.
 * A recent compiler that fully supports C++20 features such as
   * std::span
-  * std::source_location
 * [CMake] >= 3.23.0 and < 4.0.0
   * Minimum version 3.23.0 is required for [yscope-dev-utils].
   * We constrain the version to < 4.0.0 due to [y-scope/clp#795].
 * [Task] 3.44.0
   * We pin the version to 3.44.0 due to [y-scope/clp-ffi-js#110].
+* [uv] >= 0.8
 
 To build, we require some source dependencies, packages from package managers, and libraries built
 from source.
@@ -57,7 +57,7 @@ The task will download, build, and install (within the build directory) the foll
 | [utfcpp](https://github.com/nemtrif/utfcpp)                           | v4.0.6         |
 | [yaml-cpp](https://github.com/jbeder/yaml-cpp)                        | v0.7.0         |
 | [yscope-log-viewer](https://github.com/y-scope/yscope-log-viewer)     | 3abe4cc        |
-| [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp)                 | d80cf86        |
+| [ystdlib-cpp](https://github.com/y-scope/ystdlib-cpp)                 | 9ed78cd        |
 | [zlib](https://github.com/madler/zlib)                                | v1.3.1         |
 | [zstd](https://github.com/facebook/zstd)                              | v1.5.7         |
 
@@ -113,6 +113,12 @@ the relevant paths on your machine.
   make -j
   ```
 
+## Test
+
+```shell
+task tests:integration:core
+```
+
 :::{toctree}
 :hidden:
 
@@ -125,6 +131,7 @@ regex-utils
 [CMake]: https://cmake.org/
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
 [Task]: https://taskfile.dev/
+[uv]: https://docs.astral.sh/uv/
 [y-scope/clp-ffi-js#110]: https://github.com/y-scope/clp-ffi-js/issues/110
 [y-scope/clp#795]: https://github.com/y-scope/clp/issues/795
 [yscope-dev-utils]: https://github.com/y-scope/yscope-dev-utils

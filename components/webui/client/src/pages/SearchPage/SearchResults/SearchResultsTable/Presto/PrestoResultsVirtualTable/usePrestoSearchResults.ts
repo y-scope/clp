@@ -1,4 +1,4 @@
-import type {PrestoSearchResult} from "@webui/common";
+import type {PrestoSearchResult} from "@webui/common/presto";
 
 import MongoSocketCollection from "../../../../../../api/socket/MongoSocketCollection";
 import {useCursor} from "../../../../../../api/socket/useCursor";
