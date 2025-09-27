@@ -8,6 +8,6 @@ tasks:
       # will ensure they are updated to the latest versions.
       - |-
         curl --proto "=https" --tlsv1.2 --silent --show-error --fail https://sh.rustup.rs \
-          | sh -s -- --default-toolchain none
+          | sh -s -- --default-toolchain none -y
         . "$HOME/.cargo/env"
         rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt
