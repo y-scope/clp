@@ -1,0 +1,13 @@
+version: "3"
+
+tasks:
+  rust:
+    run: "once"
+    cmds:
+      # Installs Rust toolchains using rustup. If the toolchains are already installed, this task
+      # will ensure they are updated to the latest versions.
+      - |-
+        curl --proto "=https" --tlsv1.2 --silent --show-error --fail https://sh.rustup.rs \
+          | sh -s -- --default-toolchain none -y
+        . "$HOME/.cargo/env"
+        rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt

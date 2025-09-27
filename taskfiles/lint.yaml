@@ -13,6 +13,7 @@ tasks:
       - task: "check-cpp-full"
       - task: "check-js"
       - task: "check-py"
+      - task: "check-rust"
       - task: "check-yaml"
 
   check-cpp-diff:
@@ -25,17 +26,12 @@ tasks:
       - task: "check-cpp-format"
       - task: "check-cpp-static-full"
 
-  check-no-cpp:
-    cmds:
-      - task: "check-js"
-      - task: "check-py"
-      - task: "check-yaml"
-
   fix:
     cmds:
       - task: "fix-cpp-full"
       - task: "fix-js"
       - task: "fix-py"
+      - task: "fix-rust"
       - task: "fix-yaml"
 
   fix-cpp-diff:
@@ -52,6 +48,7 @@ tasks:
     cmds:
       - task: "fix-js"
       - task: "fix-py"
+      - task: "fix-rust"
       - task: "fix-yaml"
 
   check-js:
@@ -785,6 +782,68 @@ tasks:
           uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
           uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} .
           uv run --directory "{{.ITEM}}" mypy .
+
+  check-rust:
+    cmds:
+      - task: "check-rust-format"
+      - task: "check-rust-static"
+
+  fix-rust:
+    cmds:
+      - task: "fix-rust-format"
+      - task: "fix-rust-static"
+
+  check-rust-format:
+    cmds:
+      - task: "rust-workspace-fmt"
+        vars:
+          RUSTFMT_FLAGS: "--check"
+
+  fix-rust-format:
+    cmds:
+      - task: "rust-workspace-fmt"
+        vars:
+          RUSTFMT_FLAGS: ""
+
+  check-rust-static:
+    cmds:
+      - task: "rust-workspace-clippy"
+        vars:
+          RUST_CLIPPY_FLAGS: "-- -D warnings"
+
+  fix-rust-static:
+    cmds:
+      - task: "rust-workspace-clippy"
+        vars:
+          RUST_CLIPPY_FLAGS: "--fix --allow-dirty --allow-staged"
+
+  rust-lint-configs:
+    internal: true
+    run: "once"
+    cmd: |
+      cp \
+        {{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/.rustfmt.toml \
+        {{.ROOT_DIR}}/.rustfmt.toml
+
+  rust-workspace-fmt:
+    internal: true
+    deps: ["rust-lint-configs", ":toolchains:rust"]
+    dir: "{{.ROOT_DIR}}"
+    requires:
+      vars: ["RUSTFMT_FLAGS"]
+    cmd: |-
+      . "$HOME/.cargo/env"
+      cargo +nightly fmt --all -- {{.RUSTFMT_FLAGS}}
+
+  rust-workspace-clippy:
+    internal: true
+    deps: [":toolchains:rust"]
+    dir: "{{.ROOT_DIR}}"
+    requires:
+      vars: ["RUST_CLIPPY_FLAGS"]
+    cmd: |-
+      . "$HOME/.cargo/env"
+      cargo +nightly clippy --all-targets --all-features {{.RUST_CLIPPY_FLAGS}}
 
   venv:
     internal: true
