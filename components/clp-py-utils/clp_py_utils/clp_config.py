@@ -902,6 +902,12 @@ class CLPConfig(BaseModel):
 
     _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
 
+    @validator("aws_config_directory")
+    def expand_profile_user_home(cls, value: Optional[pathlib.Path]):
+        if value is not None:
+            value = value.expanduser()
+        return value
+
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         if StorageType.FS == self.logs_input.type:
             self.logs_input.make_config_paths_absolute(clp_home)
@@ -990,7 +996,9 @@ class CLPConfig(BaseModel):
                     "aws_config_directory must be set when using profile authentication"
                 )
             if not self.aws_config_directory.exists():
-                raise ValueError("aws_config_directory does not exist")
+                raise ValueError(
+                    f"aws_config_directory does not exist: '{self.aws_config_directory}'"
+                )
         if not profile_auth_used and self.aws_config_directory is not None:
             raise ValueError(
                 "aws_config_directory should not be set when profile authentication is not used"
