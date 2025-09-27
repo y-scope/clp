@@ -902,7 +902,8 @@ class CLPConfig(BaseModel):
 
     _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
 
-    @validator("aws_config_directory")
+    @field_validator("aws_config_directory")
+    @classmethod
     def expand_profile_user_home(cls, value: Optional[pathlib.Path]):
         if value is not None:
             value = value.expanduser()
