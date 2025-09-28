@@ -9,7 +9,7 @@ if ! command -v pipx >/dev/null 2>&1; then
     exit 1
 fi
 
-# We lock to version 3.44.0 to avoid https://github.com/y-scope/clp-ffi-js/issues/110
+# We lock to version 3.44.0 to avoid https://github.com/y-scope/clp/issues/1352
 readonly required_version="3.44.0"
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
