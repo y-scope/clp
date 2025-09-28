@@ -69,10 +69,9 @@ using clp_s::search::ast::literal_type_bitmask_t;
 [[nodiscard]] auto create_projected_columns_and_projection_map(
         std::vector<std::pair<std::string, literal_type_bitmask_t>> const& projections,
         bool allow_duplicate_projected_columns
-)
-        -> ystdlib::error_handling::Result<std::pair<
-                std::vector<std::shared_ptr<ColumnDescriptor>>,
-                QueryHandlerImpl::ProjectionMap>>;
+) -> ystdlib::error_handling::Result<std::
+                                             pair<std::vector<std::shared_ptr<ColumnDescriptor>>,
+                                                  QueryHandlerImpl::ProjectionMap>>;
 
 /**
  * Creates initial partial resolutions for the given query and projections.
@@ -90,10 +89,9 @@ using clp_s::search::ast::literal_type_bitmask_t;
 [[nodiscard]] auto create_initial_partial_resolutions(
         std::shared_ptr<Expression> const& query,
         QueryHandlerImpl::ProjectionMap const& projected_column_to_original_key_and_index
-)
-        -> ystdlib::error_handling::Result<std::pair<
-                QueryHandlerImpl::PartialResolutionMap,
-                QueryHandlerImpl::PartialResolutionMap>>;
+) -> ystdlib::error_handling::Result<std::
+                                             pair<QueryHandlerImpl::PartialResolutionMap,
+                                                  QueryHandlerImpl::PartialResolutionMap>>;
 
 /**
  * Initializes partial resolutions from a search AST.
@@ -187,10 +185,9 @@ auto preprocess_query(std::shared_ptr<Expression> query)
 auto create_projected_columns_and_projection_map(
         std::vector<std::pair<std::string, literal_type_bitmask_t>> const& projections,
         bool allow_duplicate_projected_columns
-)
-        -> ystdlib::error_handling::Result<std::pair<
-                std::vector<std::shared_ptr<ColumnDescriptor>>,
-                QueryHandlerImpl::ProjectionMap>> {
+) -> ystdlib::error_handling::Result<std::
+                                             pair<std::vector<std::shared_ptr<ColumnDescriptor>>,
+                                                  QueryHandlerImpl::ProjectionMap>> {
     std::unordered_set<std::string_view> unique_projected_columns;
     std::vector<std::shared_ptr<ColumnDescriptor>> projected_columns;
     QueryHandlerImpl::ProjectionMap projected_column_to_original_key_and_index;
@@ -243,10 +240,9 @@ auto create_projected_columns_and_projection_map(
 auto create_initial_partial_resolutions(
         std::shared_ptr<Expression> const& query,
         QueryHandlerImpl::ProjectionMap const& projected_column_to_original_key_and_index
-)
-        -> ystdlib::error_handling::Result<std::pair<
-                QueryHandlerImpl::PartialResolutionMap,
-                QueryHandlerImpl::PartialResolutionMap>> {
+) -> ystdlib::error_handling::Result<std::
+                                             pair<QueryHandlerImpl::PartialResolutionMap,
+                                                  QueryHandlerImpl::PartialResolutionMap>> {
     QueryHandlerImpl::PartialResolutionMap auto_gen_namespace_partial_resolutions;
     QueryHandlerImpl::PartialResolutionMap user_gen_namespace_partial_resolutions;
     for (auto const& [col, _] : projected_column_to_original_key_and_index) {
