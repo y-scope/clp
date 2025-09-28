@@ -44,8 +44,7 @@ def stop_running_container(
 
         logger.info(f"Removing {container_name}...")
         cmd = ["docker", "rm", container_name]
-        subprocess.run(cmd, stdout=subprocess.DEVNULL,
-                       check=True)
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, check=True)
 
         logger.info(f"Stopped and removed {container_name}.")
     elif is_container_exited(container_name):
