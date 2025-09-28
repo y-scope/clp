@@ -15,9 +15,7 @@ concept VariableDictionaryEntryReq = requires(VariableDictionaryEntryType entry)
     /**
      * @return The dictionary ID for this variable.
      */
-    {
-        entry.get_id()
-    } -> std::same_as<variable_dictionary_id_t>;
+    { entry.get_id() } -> std::same_as<variable_dictionary_id_t>;
 };
 }  // namespace clp
 

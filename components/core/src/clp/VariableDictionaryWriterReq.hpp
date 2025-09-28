@@ -22,9 +22,7 @@ concept VariableDictionaryWriterReq = requires(
      * @param id_ref Returns the entry ID of the given variable.
      * @return Whether this call resulted in inserting a new entry.
      */
-    {
-        writer.add_entry(value, id_ref)
-    } -> std::same_as<bool>;
+    { writer.add_entry(value, id_ref) } -> std::same_as<bool>;
 };
 }  // namespace clp
 
