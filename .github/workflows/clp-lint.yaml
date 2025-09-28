@@ -43,6 +43,14 @@ jobs:
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
 
-      - name: "Run lint task"
+      - name: "Lint .js files"
         shell: "bash"
-        run: "task lint:check-no-cpp"
+        run: "task lint:check-js"
+
+      - name: "Lint .py files"
+        shell: "bash"
+        run: "task lint:check-py"
+
+      - name: "Lint .yaml files"
+        shell: "bash"
+        run: "task lint:check-yaml"

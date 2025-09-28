@@ -1,0 +1,38 @@
+name: "clp-rust-checks"
+
+on:
+  pull_request:
+  push:
+  schedule:
+    # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
+    - cron: "15 0 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: "${{github.workflow}}-${{github.ref}}"
+  # Cancel in-progress jobs for efficiency
+  cancel-in-progress: true
+
+jobs:
+  rust-checks:
+    strategy:
+      matrix:
+        os:
+          - "macos-15"
+          - "ubuntu-22.04"
+          - "ubuntu-24.04"
+    runs-on: "${{matrix.os}}"
+    steps:
+      - uses: "actions/checkout@v4"
+
+      - name: "Install task"
+        shell: "bash"
+        run: "npm install -g @go-task/cli"
+
+      - name: "Lint"
+        shell: "bash"
+        run: "task lint:check-rust"
+
+      - name: "Test"
+        shell: "bash"
+        run: "task tests:rust-all"
