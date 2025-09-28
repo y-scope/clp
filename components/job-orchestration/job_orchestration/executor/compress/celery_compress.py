@@ -15,7 +15,7 @@ def worker_shutdown_handler(signal=None, sender=None, **kwargs):
 
 @app.task(bind=True)
 def compress(
-    _: Task,
+    self: Task,
     job_id: int,
     task_id: int,
     tag_ids,
