@@ -16,7 +16,7 @@ To run the linting tools, besides commonly installed tools like `tar`, you'll ne
 * Python 3.9 or newer
 * python3-venv (for the version of Python installed)
 * [Task] 3.44.0
-  * We pin the version to 3.44.0 due to [y-scope/clp-ffi-js#110].
+  * We pin the version to 3.44.0 due to [y-scope/clp#1352].
 * [uv] >= 0.8
 
 ## Running the linters
@@ -39,5 +39,5 @@ task lint:fix
 [feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&projects=&template=feature-request.yml
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
-[y-scope/clp-ffi-js#110]: https://github.com/y-scope/clp-ffi-js/issues/110
+[y-scope/clp#1352]: https://github.com/y-scope/clp/issues/1352
 [yscope-dev-utils]: https://github.com/y-scope/yscope-dev-utils
