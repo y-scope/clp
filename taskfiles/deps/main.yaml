@@ -370,8 +370,8 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-Dlog_surgeon_BUILD_TESTING=OFF"
           LIB_NAME: "log_surgeon"
-          TARBALL_SHA256: "bace11814b6d12aa7b86bcd0a4c389420f9af20d191724f397060bdbb08e29bd"
-          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/831a9f9.tar.gz"
+          TARBALL_SHA256: "69a99e0804a52c6b6397c5e7eabecc9bb4915d0145632c66fc63ad13678ff56a"
+          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/a722d07.tar.gz"
 
   lz4:
     internal: true
