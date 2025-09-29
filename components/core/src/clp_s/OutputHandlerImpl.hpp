@@ -165,7 +165,8 @@ private:
     std::priority_queue<
             std::unique_ptr<QueryResult>,
             std::vector<std::unique_ptr<QueryResult>>,
-            QueryResultGreaterTimestampComparator>
+            QueryResultGreaterTimestampComparator
+    >
             m_latest_results;
 };
 
