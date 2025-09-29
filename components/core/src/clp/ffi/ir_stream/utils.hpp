@@ -96,7 +96,8 @@ template <
         bool is_auto_generated_node,
         int8_t one_byte_length_indicator_tag,
         int8_t two_byte_length_indicator_tag,
-        int8_t four_byte_length_indicator_tag>
+        int8_t four_byte_length_indicator_tag
+>
 [[nodiscard]] auto encode_and_serialize_schema_tree_node_id(
         SchemaTree::Node::id_t node_id,
         std::vector<int8_t>& output_buf
@@ -120,7 +121,8 @@ template <
 template <
         int8_t one_byte_length_indicator_tag,
         int8_t two_byte_length_indicator_tag,
-        int8_t four_byte_length_indicator_tag>
+        int8_t four_byte_length_indicator_tag
+>
 [[nodiscard]] auto deserialize_and_decode_schema_tree_node_id(
         encoded_tag_t length_indicator_tag,
         ReaderInterface& reader
@@ -199,7 +201,8 @@ template <
         bool is_auto_generated_node,
         int8_t one_byte_length_indicator_tag,
         int8_t two_byte_length_indicator_tag,
-        int8_t four_byte_length_indicator_tag>
+        int8_t four_byte_length_indicator_tag
+>
 auto encode_and_serialize_schema_tree_node_id(
         SchemaTree::Node::id_t node_id,
         std::vector<int8_t>& output_buf
@@ -236,7 +239,8 @@ auto encode_and_serialize_schema_tree_node_id(
 template <
         int8_t one_byte_length_indicator_tag,
         int8_t two_byte_length_indicator_tag,
-        int8_t four_byte_length_indicator_tag>
+        int8_t four_byte_length_indicator_tag
+>
 auto deserialize_and_decode_schema_tree_node_id(
         encoded_tag_t length_indicator_tag,
         ReaderInterface& reader
