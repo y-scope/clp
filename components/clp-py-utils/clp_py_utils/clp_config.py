@@ -566,7 +566,10 @@ class AwsAuthentication(BaseModel):
     @classmethod
     def validate_authentication(cls, data):
         if not isinstance(data, dict):
-            raise ValueError(f"authentication config expects to be initialized from a dict, but received {type(data).__name__}.")
+            raise ValueError(
+                "authentication config expects to be initialized from a dict, but received"
+                f" {type(data).__name__}."
+            )
         auth_type = data.get("type")
         profile = data.get("profile")
         credentials = data.get("credentials")
