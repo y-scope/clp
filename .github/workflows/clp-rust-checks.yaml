@@ -1,4 +1,4 @@
-name: "clp-lint"
+name: "clp-rust-checks"
 
 on:
   pull_request:
@@ -14,12 +14,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint-check:
-    name: "lint-check"
+  rust-checks:
     strategy:
       matrix:
         os:
           - "macos-15"
+          - "ubuntu-22.04"
           - "ubuntu-24.04"
     runs-on: "${{matrix.os}}"
     steps:
@@ -27,30 +27,14 @@ jobs:
         with:
           submodules: "recursive"
 
-      - uses: "actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38"
-        with:
-          python-version: "3.11"
-
       - name: "Install task"
         shell: "bash"
         run: "npm install -g @go-task/cli@3.44.0"
 
-      - name: "Install uv"
+      - name: "Lint"
         shell: "bash"
-        run: "curl --fail --location --silent --show-error https://astral.sh/uv/install.sh | sh"
+        run: "task lint:check-rust"
 
-      - if: "matrix.os == 'macos-15'"
-        name: "Install coreutils (for md5sum)"
-        run: "brew install coreutils"
-
-      - name: "Lint .js files"
+      - name: "Test"
         shell: "bash"
-        run: "task lint:check-js"
-
-      - name: "Lint .py files"
-        shell: "bash"
-        run: "task lint:check-py"
-
-      - name: "Lint .yaml files"
-        shell: "bash"
-        run: "task lint:check-yaml"
+        run: "task tests:rust-all"

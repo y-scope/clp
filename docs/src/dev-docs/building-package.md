@@ -14,7 +14,7 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
 * python3-dev
 * python3-venv (for the version of Python installed)
 * [Task] 3.44.0
-  * We pin the version to 3.44.0 due to [y-scope/clp-ffi-js#110].
+  * We pin the version to 3.44.0 due to [y-scope/clp#1352].
 * [uv] >= 0.8
 
 ## Setup
@@ -82,4 +82,4 @@ This will create a Docker image named `clp-package:dev`.
 
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
-[y-scope/clp-ffi-js#110]: https://github.com/y-scope/clp-ffi-js/issues/110
+[y-scope/clp#1352]: https://github.com/y-scope/clp/issues/1352
