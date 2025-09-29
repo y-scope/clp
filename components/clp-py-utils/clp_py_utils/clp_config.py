@@ -1,10 +1,17 @@
 import os
 import pathlib
 from enum import auto
-from typing import Literal, Optional, Set, Union
+from typing import Any, Literal, Optional, Set, Union
 
 from dotenv import dotenv_values
-from pydantic import BaseModel, PrivateAttr, root_validator, validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_validator,
+    model_validator,
+    PrivateAttr,
+)
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
 from .clp_logging import get_valid_logging_level, is_valid_logging_level
@@ -124,28 +131,30 @@ class Package(BaseModel):
     storage_engine: str = "clp"
     query_engine: str = "clp"
 
-    @validator("storage_engine")
-    def validate_storage_engine(cls, field):
-        if field not in VALID_STORAGE_ENGINES:
+    @field_validator("storage_engine")
+    @classmethod
+    def validate_storage_engine(cls, value):
+        if value not in VALID_STORAGE_ENGINES:
             raise ValueError(
                 f"package.storage_engine must be one of the following"
                 f" {'|'.join(VALID_STORAGE_ENGINES)}"
             )
-        return field
+        return value
 
-    @validator("query_engine")
-    def validate_query_engine(cls, field):
-        if field not in VALID_QUERY_ENGINES:
+    @field_validator("query_engine")
+    @classmethod
+    def validate_query_engine(cls, value):
+        if value not in VALID_QUERY_ENGINES:
             raise ValueError(
                 f"package.query_engine must be one of the following"
                 f" {'|'.join(VALID_QUERY_ENGINES)}"
             )
-        return field
+        return value
 
-    @root_validator
-    def validate_query_engine_package_compatibility(cls, values):
-        query_engine = values.get("query_engine")
-        storage_engine = values.get("storage_engine")
+    @model_validator(mode="after")
+    def validate_query_engine_package_compatibility(self):
+        query_engine = self.query_engine
+        storage_engine = self.storage_engine
 
         if query_engine in [QueryEngine.CLP, QueryEngine.CLP_S]:
             if query_engine != storage_engine:
@@ -162,7 +171,7 @@ class Package(BaseModel):
         else:
             raise ValueError(f"Unsupported query_engine '{query_engine}'.")
 
-        return values
+        return self
 
 
 class Database(BaseModel):
@@ -177,26 +186,35 @@ class Database(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
 
-    @validator("type")
-    def validate_database_type(cls, field):
+    @field_validator("type")
+    @classmethod
+    def validate_type(cls, value):
         supported_database_types = ["mysql", "mariadb"]
-        if field not in supported_database_types:
+        if value not in supported_database_types:
             raise ValueError(
                 f"database.type must be one of the following {'|'.join(supported_database_types)}"
             )
-        return field
+        return value
 
-    @validator("name")
-    def validate_database_name(cls, field):
-        if "" == field:
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value):
+        if "" == value:
             raise ValueError("database.name cannot be empty.")
-        return field
+        return value
 
-    @validator("host")
-    def validate_database_host(cls, field):
-        if "" == field:
+    @field_validator("host")
+    @classmethod
+    def validate_host(cls, value):
+        if "" == value:
             raise ValueError("database.host cannot be empty.")
-        return field
+        return value
+
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value):
+        _validate_port(cls, value)
+        return value
 
     def ensure_credentials_loaded(self):
         if self.username is None or self.password is None:
@@ -247,7 +265,7 @@ class Database(BaseModel):
         return connection_params_and_type
 
     def dump_to_primitive_dict(self):
-        return self.dict(exclude={"username", "password"})
+        return self.model_dump(exclude={"username", "password"})
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
@@ -269,23 +287,23 @@ class Database(BaseModel):
         self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
 
 
-def _validate_logging_level(cls, field):
-    if not is_valid_logging_level(field):
+def _validate_logging_level(cls, value):
+    if not is_valid_logging_level(value):
         raise ValueError(
-            f"{cls.__name__}: '{field}' is not a valid logging level. Use one of"
+            f"{cls.__name__}: '{value}' is not a valid logging level. Use one of"
             f" {get_valid_logging_level()}"
         )
 
 
-def _validate_host(cls, field):
-    if "" == field:
+def _validate_host(cls, value):
+    if "" == value:
         raise ValueError(f"{cls.__name__}.host cannot be empty.")
 
 
-def _validate_port(cls, field):
+def _validate_port(cls, value):
     min_valid_port = 0
     max_valid_port = 2**16 - 1
-    if min_valid_port > field or max_valid_port < field:
+    if min_valid_port > value or max_valid_port < value:
         raise ValueError(
             f"{cls.__name__}.port is not within valid range " f"{min_valid_port}-{max_valid_port}."
         )
@@ -295,53 +313,58 @@ class CompressionScheduler(BaseModel):
     jobs_poll_delay: float = 0.1  # seconds
     logging_level: str = "INFO"
 
-    @validator("logging_level")
-    def validate_logging_level(cls, field):
-        _validate_logging_level(cls, field)
-        return field
+    @field_validator("logging_level")
+    @classmethod
+    def validate_logging_level(cls, value):
+        _validate_logging_level(cls, value)
+        return value
 
 
 class QueryScheduler(BaseModel):
-    host = "localhost"
-    port = 7000
+    host: str = "localhost"
+    port: int = 7000
     jobs_poll_delay: float = 0.1  # seconds
     num_archives_to_search_per_sub_job: int = 16
     logging_level: str = "INFO"
 
-    @validator("logging_level")
-    def validate_logging_level(cls, field):
-        _validate_logging_level(cls, field)
-        return field
+    @field_validator("logging_level")
+    @classmethod
+    def validate_logging_level(cls, value):
+        _validate_logging_level(cls, value)
+        return value
 
-    @validator("host")
-    def validate_host(cls, field):
-        if "" == field:
+    @field_validator("host")
+    @classmethod
+    def validate_host(cls, value):
+        if "" == value:
             raise ValueError(f"Cannot be empty.")
-        return field
+        return value
 
-    @validator("port")
-    def validate_port(cls, field):
-        if not field > 0:
-            raise ValueError(f"{field} is not greater than zero")
-        return field
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value):
+        _validate_port(cls, value)
+        return value
 
 
 class CompressionWorker(BaseModel):
     logging_level: str = "INFO"
 
-    @validator("logging_level")
-    def validate_logging_level(cls, field):
-        _validate_logging_level(cls, field)
-        return field
+    @field_validator("logging_level")
+    @classmethod
+    def validate_logging_level(cls, value):
+        _validate_logging_level(cls, value)
+        return value
 
 
 class QueryWorker(BaseModel):
     logging_level: str = "INFO"
 
-    @validator("logging_level")
-    def validate_logging_level(cls, field):
-        _validate_logging_level(cls, field)
-        return field
+    @field_validator("logging_level")
+    @classmethod
+    def validate_logging_level(cls, value):
+        _validate_logging_level(cls, value)
+        return value
 
 
 class Redis(BaseModel):
@@ -352,14 +375,21 @@ class Redis(BaseModel):
     # redis can perform authentication without a username
     password: Optional[str] = None
 
-    @validator("host")
-    def validate_host(cls, field):
-        if "" == field:
+    @field_validator("host")
+    @classmethod
+    def validate_host(cls, value):
+        if "" == value:
             raise ValueError(f"{REDIS_COMPONENT_NAME}.host cannot be empty.")
-        return field
+        return value
+
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value):
+        _validate_port(cls, value)
+        return value
 
     def dump_to_primitive_dict(self):
-        return self.dict(exclude={"password"})
+        return self.model_dump(exclude={"password"})
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
@@ -385,28 +415,31 @@ class Reducer(BaseModel):
     logging_level: str = "INFO"
     upsert_interval: int = 100  # milliseconds
 
-    @validator("host")
-    def validate_host(cls, field):
-        if "" == field:
-            raise ValueError(f"{field} cannot be empty")
-        return field
+    @field_validator("host")
+    @classmethod
+    def validate_host(cls, value):
+        if "" == value:
+            raise ValueError(f"{value} cannot be empty")
+        return value
 
-    @validator("logging_level")
-    def validate_logging_level(cls, field):
-        _validate_logging_level(cls, field)
-        return field
+    @field_validator("logging_level")
+    @classmethod
+    def validate_logging_level(cls, value):
+        _validate_logging_level(cls, value)
+        return value
 
-    @validator("base_port")
-    def validate_base_port(cls, field):
-        if not field > 0:
-            raise ValueError(f"{field} is not greater than zero")
-        return field
+    @field_validator("base_port")
+    @classmethod
+    def validate_base_port(cls, value):
+        _validate_port(cls, value)
+        return value
 
-    @validator("upsert_interval")
-    def validate_upsert_interval(cls, field):
-        if not field > 0:
-            raise ValueError(f"{field} is not greater than zero")
-        return field
+    @field_validator("upsert_interval")
+    @classmethod
+    def validate_upsert_interval(cls, value):
+        if not value > 0:
+            raise ValueError(f"{value} is not greater than zero")
+        return value
 
 
 class ResultsCache(BaseModel):
@@ -416,31 +449,41 @@ class ResultsCache(BaseModel):
     stream_collection_name: str = "stream-files"
     retention_period: Optional[int] = 60
 
-    @validator("host")
-    def validate_host(cls, field):
-        if "" == field:
+    @field_validator("host")
+    @classmethod
+    def validate_host(cls, value):
+        if "" == value:
             raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.host cannot be empty.")
-        return field
+        return value
 
-    @validator("db_name")
-    def validate_db_name(cls, field):
-        if "" == field:
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value):
+        _validate_port(cls, value)
+        return value
+
+    @field_validator("db_name")
+    @classmethod
+    def validate_db_name(cls, value):
+        if "" == value:
             raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.db_name cannot be empty.")
-        return field
+        return value
 
-    @validator("stream_collection_name")
-    def validate_stream_collection_name(cls, field):
-        if "" == field:
+    @field_validator("stream_collection_name")
+    @classmethod
+    def validate_stream_collection_name(cls, value):
+        if "" == value:
             raise ValueError(
                 f"{RESULTS_CACHE_COMPONENT_NAME}.stream_collection_name cannot be empty."
             )
-        return field
+        return value
 
-    @validator("retention_period")
-    def validate_retention_period(cls, field):
-        if field is not None and field <= 0:
+    @field_validator("retention_period")
+    @classmethod
+    def validate_retention_period(cls, value):
+        if value is not None and value <= 0:
             raise ValueError("retention_period must be greater than 0")
-        return field
+        return value
 
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
@@ -453,8 +496,21 @@ class Queue(BaseModel):
     username: Optional[str] = None
     password: Optional[str] = None
 
+    @field_validator("host")
+    @classmethod
+    def validate_host(cls, value):
+        if "" == value:
+            raise ValueError(f"{QUEUE_COMPONENT_NAME}.host cannot be empty.")
+        return value
+
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value):
+        _validate_port(cls, value)
+        return value
+
     def dump_to_primitive_dict(self):
-        return self.dict(exclude={"username", "password"})
+        return self.model_dump(exclude={"username", "password"})
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
@@ -479,19 +535,21 @@ class Queue(BaseModel):
 class S3Credentials(BaseModel):
     access_key_id: str
     secret_access_key: str
-    session_token: Optional[str]
+    session_token: Optional[str] = None
 
-    @validator("access_key_id")
-    def validate_access_key_id(cls, field):
-        if "" == field:
+    @field_validator("access_key_id")
+    @classmethod
+    def validate_access_key_id(cls, value):
+        if "" == value:
             raise ValueError("access_key_id cannot be empty")
-        return field
+        return value
 
-    @validator("secret_access_key")
-    def validate_secret_access_key(cls, field):
-        if "" == field:
+    @field_validator("secret_access_key")
+    @classmethod
+    def validate_secret_access_key(cls, value):
+        if "" == value:
             raise ValueError("secret_access_key cannot be empty")
-        return field
+        return value
 
 
 class AwsAuthentication(BaseModel):
@@ -504,11 +562,17 @@ class AwsAuthentication(BaseModel):
     profile: Optional[str] = None
     credentials: Optional[S3Credentials] = None
 
-    @root_validator(pre=True)
-    def validate_authentication(cls, values):
-        auth_type = values.get("type")
-        profile = values.get("profile")
-        credentials = values.get("credentials")
+    @model_validator(mode="before")
+    @classmethod
+    def validate_authentication(cls, data):
+        if not isinstance(data, dict):
+            raise ValueError(
+                "authentication config expects to be initialized from a dict, but received"
+                f" {type(data).__name__}."
+            )
+        auth_type = data.get("type")
+        profile = data.get("profile")
+        credentials = data.get("credentials")
 
         try:
             auth_enum = AwsAuthType(auth_type)
@@ -523,7 +587,7 @@ class AwsAuthentication(BaseModel):
             raise ValueError(f"credentials must be set when type is '{auth_enum}.'")
         if auth_enum in [AwsAuthType.ec2, AwsAuthType.env_vars] and (profile or credentials):
             raise ValueError(f"profile and credentials must not be set when type is '{auth_enum}.'")
-        return values
+        return data
 
 
 class S3Config(BaseModel):
@@ -532,17 +596,19 @@ class S3Config(BaseModel):
     key_prefix: str
     aws_authentication: AwsAuthentication
 
-    @validator("region_code")
-    def validate_region_code(cls, field):
-        if "" == field:
+    @field_validator("region_code")
+    @classmethod
+    def validate_region_code(cls, value):
+        if "" == value:
             raise ValueError("region_code cannot be empty")
-        return field
+        return value
 
-    @validator("bucket")
-    def validate_bucket(cls, field):
-        if "" == field:
+    @field_validator("bucket")
+    @classmethod
+    def validate_bucket(cls, value):
+        if "" == value:
             raise ValueError("bucket cannot be empty")
-        return field
+        return value
 
 
 class S3IngestionConfig(BaseModel):
@@ -550,24 +616,24 @@ class S3IngestionConfig(BaseModel):
     aws_authentication: AwsAuthentication
 
     def dump_to_primitive_dict(self):
-        return self.dict()
+        return self.model_dump()
 
 
 class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
     directory: pathlib.Path
 
-    @validator("directory")
-    def validate_directory(cls, field):
-        if "" == field:
-            raise ValueError("directory cannot be empty")
-        return field
+    @field_validator("directory", mode="before")
+    @classmethod
+    def validate_directory(cls, value):
+        _validate_directory(value)
+        return value
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.directory = make_config_path_absolute(clp_home, self.directory)
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
+        d = self.model_dump()
         d["directory"] = str(d["directory"])
         return d
 
@@ -577,29 +643,27 @@ class S3Storage(BaseModel):
     s3_config: S3Config
     staging_directory: pathlib.Path
 
-    @validator("staging_directory")
-    def validate_staging_directory(cls, field):
-        if "" == field:
-            raise ValueError("staging_directory cannot be empty")
-        return field
+    @field_validator("staging_directory", mode="before")
+    @classmethod
+    def validate_staging_directory(cls, value):
+        _validate_directory(value)
+        return value
 
-    @root_validator
-    def validate_key_prefix(cls, values):
-        s3_config = values.get("s3_config")
-        if not hasattr(s3_config, "key_prefix"):
-            raise ValueError("s3_config must have field key_prefix")
-        key_prefix = s3_config.key_prefix
+    @field_validator("s3_config")
+    @classmethod
+    def validate_key_prefix(cls, value):
+        key_prefix = value.key_prefix
         if "" == key_prefix:
             raise ValueError("s3_config.key_prefix cannot be empty")
         if not key_prefix.endswith("/"):
             raise ValueError('s3_config.key_prefix must end with "/"')
-        return values
+        return value
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.staging_directory = make_config_path_absolute(clp_home, self.staging_directory)
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
+        d = self.model_dump()
         d["staging_directory"] = str(d["staging_directory"])
         return d
 
@@ -657,41 +721,47 @@ class ArchiveOutput(BaseModel):
     compression_level: int = 3
     retention_period: Optional[int] = None
 
-    @validator("target_archive_size")
-    def validate_target_archive_size(cls, field):
-        if field <= 0:
+    @field_validator("target_archive_size")
+    @classmethod
+    def validate_target_archive_size(cls, value):
+        if value <= 0:
             raise ValueError("target_archive_size must be greater than 0")
-        return field
+        return value
 
-    @validator("target_dictionaries_size")
-    def validate_target_dictionaries_size(cls, field):
-        if field <= 0:
+    @field_validator("target_dictionaries_size")
+    @classmethod
+    def validate_target_dictionaries_size(cls, value):
+        if value <= 0:
             raise ValueError("target_dictionaries_size must be greater than 0")
-        return field
+        return value
 
-    @validator("target_encoded_file_size")
-    def validate_target_encoded_file_size(cls, field):
-        if field <= 0:
+    @field_validator("target_encoded_file_size")
+    @classmethod
+    def validate_target_encoded_file_size(cls, value):
+        if value <= 0:
             raise ValueError("target_encoded_file_size must be greater than 0")
-        return field
+        return value
 
-    @validator("target_segment_size")
-    def validate_target_segment_size(cls, field):
-        if field <= 0:
+    @field_validator("target_segment_size")
+    @classmethod
+    def validate_target_segment_size(cls, value):
+        if value <= 0:
             raise ValueError("target_segment_size must be greater than 0")
-        return field
+        return value
 
-    @validator("compression_level")
-    def validate_compression_level(cls, field):
-        if field < 1 or 19 < field:
+    @field_validator("compression_level")
+    @classmethod
+    def validate_compression_level(cls, value):
+        if value < 1 or value > 19:
             raise ValueError("compression_level must be a value from 1 to 19")
-        return field
+        return value
 
-    @validator("retention_period")
-    def validate_retention_period(cls, field):
-        if field is not None and field <= 0:
+    @field_validator("retention_period")
+    @classmethod
+    def validate_retention_period(cls, value):
+        if value is not None and value <= 0:
             raise ValueError("retention_period must be greater than 0")
-        return field
+        return value
 
     def set_directory(self, directory: pathlib.Path):
         _set_directory_for_storage_config(self.storage, directory)
@@ -700,7 +770,7 @@ class ArchiveOutput(BaseModel):
         return _get_directory_from_storage_config(self.storage)
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
+        d = self.model_dump()
         d["storage"] = self.storage.dump_to_primitive_dict()
         return d
 
@@ -709,11 +779,12 @@ class StreamOutput(BaseModel):
     storage: Union[StreamFsStorage, StreamS3Storage] = StreamFsStorage()
     target_uncompressed_size: int = 128 * 1024 * 1024
 
-    @validator("target_uncompressed_size")
-    def validate_target_uncompressed_size(cls, field):
-        if field <= 0:
+    @field_validator("target_uncompressed_size")
+    @classmethod
+    def validate_target_uncompressed_size(cls, value):
+        if value <= 0:
             raise ValueError("target_uncompressed_size must be greater than 0")
-        return field
+        return value
 
     def set_directory(self, directory: pathlib.Path):
         _set_directory_for_storage_config(self.storage, directory)
@@ -722,7 +793,7 @@ class StreamOutput(BaseModel):
         return _get_directory_from_storage_config(self.storage)
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
+        d = self.model_dump()
         d["storage"] = self.storage.dump_to_primitive_dict()
         return d
 
@@ -733,70 +804,68 @@ class WebUi(BaseModel):
     results_metadata_collection_name: str = "results-metadata"
     rate_limit: int = 1000
 
-    @validator("host")
-    def validate_host(cls, field):
-        _validate_host(cls, field)
-        return field
+    @field_validator("host")
+    @classmethod
+    def validate_host(cls, value):
+        _validate_host(cls, value)
+        return value
 
-    @validator("port")
-    def validate_port(cls, field):
-        _validate_port(cls, field)
-        return field
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value):
+        _validate_port(cls, value)
+        return value
 
-    @validator("results_metadata_collection_name")
-    def validate_results_metadata_collection_name(cls, field):
-        if "" == field:
+    @field_validator("results_metadata_collection_name")
+    @classmethod
+    def validate_results_metadata_collection_name(cls, value):
+        if "" == value:
             raise ValueError(
                 f"{WEBUI_COMPONENT_NAME}.results_metadata_collection_name cannot be empty."
             )
-        return field
+        return value
 
-    @validator("rate_limit")
-    def validate_rate_limit(cls, field):
-        if field <= 0:
+    @field_validator("rate_limit")
+    @classmethod
+    def validate_rate_limit(cls, value):
+        if value <= 0:
             raise ValueError(f"rate_limit must be greater than 0")
-        return field
+        return value
 
 
 class SweepInterval(BaseModel):
-    archive: int = 60
-    search_result: int = 30
+    model_config = ConfigDict(extra="forbid")
 
-    # Explicitly disallow any unexpected key
-    class Config:
-        extra = "forbid"
-
-    @root_validator
-    def validate_sweep_interval(cls, values):
-        for field, value in values.items():
-            if value <= 0:
-                raise ValueError(f"Sweep interval of {field} must be greater than 0")
-        return values
+    archive: int = Field(default=60, gt=0)
+    search_result: int = Field(default=30, gt=0)
 
 
 class GarbageCollector(BaseModel):
     logging_level: str = "INFO"
     sweep_interval: SweepInterval = SweepInterval()
 
-    @validator("logging_level")
-    def validate_logging_level(cls, field):
-        _validate_logging_level(cls, field)
-        return field
+    @field_validator("logging_level")
+    @classmethod
+    def validate_logging_level(cls, value):
+        _validate_logging_level(cls, value)
+        return value
 
 
 class Presto(BaseModel):
     host: str
     port: int
 
-    @validator("host")
-    def validate_host(cls, field):
-        _validate_host(cls, field)
-        return field
+    @field_validator("host")
+    @classmethod
+    def validate_host(cls, value):
+        _validate_host(cls, value)
+        return value
 
-    @validator("port")
-    def validate_port(cls, field):
-        _validate_port(cls, field)
-        return field
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value):
+        _validate_port(cls, value)
+        return value
 
 
 def _get_env_var(name: str) -> str:
@@ -815,7 +884,7 @@ class CLPConfig(BaseModel):
     database: Database = Database()
     queue: Queue = Queue()
     redis: Redis = Redis()
-    reducer: Reducer() = Reducer()
+    reducer: Reducer = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
     query_scheduler: QueryScheduler = QueryScheduler()
@@ -835,7 +904,8 @@ class CLPConfig(BaseModel):
 
     _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
 
-    @validator("aws_config_directory")
+    @field_validator("aws_config_directory")
+    @classmethod
     def expand_profile_user_home(cls, value: Optional[pathlib.Path]):
         if value is not None:
             value = value.expanduser()
@@ -972,7 +1042,7 @@ class CLPConfig(BaseModel):
             "archive_output",
             "stream_output",
         )
-        d = self.dict(exclude=set(custom_serialized_fields))
+        d = self.model_dump(exclude=set(custom_serialized_fields))
         for key in custom_serialized_fields:
             d[key] = getattr(self, key).dump_to_primitive_dict()
 
@@ -987,23 +1057,15 @@ class CLPConfig(BaseModel):
 
         return d
 
-    # We set `pre=True` so that we print errors about a mismatch between the query engine and presto
-    # config before errors about the presto config itself.
-    @root_validator(pre=True)
-    def validate_presto_config(cls, values):
-        package = values.get("package")
-        if not isinstance(package, Package):
-            # Skip validation since `package` is not a valid `Package` (Pydantic will validate it
-            # later and throw an error).
-            return values
-
-        query_engine = package.get("query_engine")
-        presto = values.get("presto")
+    @model_validator(mode="after")
+    def validate_presto_config(self):
+        query_engine = self.package.query_engine
+        presto = self.presto
         if query_engine == QueryEngine.PRESTO and presto is None:
             raise ValueError(
                 f"`presto` config must be non-null when query_engine is `{query_engine}`"
             )
-        return values
+        return self
 
 
 class WorkerConfig(BaseModel):
@@ -1016,7 +1078,7 @@ class WorkerConfig(BaseModel):
     stream_collection_name: str = ResultsCache().stream_collection_name
 
     def dump_to_primitive_dict(self):
-        d = self.dict()
+        d = self.model_dump()
         d["archive_output"] = self.archive_output.dump_to_primitive_dict()
 
         # Turn paths into primitive strings
@@ -1033,3 +1095,18 @@ def get_components_for_target(target: str) -> Set[str]:
         return {target}
     else:
         return set()
+
+
+def _validate_directory(value: Any):
+    """
+    Validates that the given value represents a directory path.
+
+    :param value:
+    :raise ValueError: if the value is not of type str.
+    :raise ValueError: if the value is an empty string.
+    """
+    if not isinstance(value, str):
+        raise ValueError("must be a string.")
+
+    if "" == value.strip():
+        raise ValueError("cannot be empty")
