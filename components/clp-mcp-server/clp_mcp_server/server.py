@@ -4,6 +4,8 @@ Minimal MCP Server implementation for CLP.
 
 from typing import Any, Dict
 from fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 
 def CLPMcpServer(**settings: Any) -> FastMCP:
@@ -22,6 +24,21 @@ def CLPMcpServer(**settings: Any) -> FastMCP:
         **settings
     )
     
+    @mcp.custom_route("/health", methods=["GET"])
+    async def health_check(request: Request) -> JSONResponse:
+        """
+        Health check endpoint for monitoring and load balancers.
+        
+        Returns:
+            JSON response indicating server health status
+        """
+        return JSONResponse({
+            "status": "healthy",
+            "service": "clp-mcp-server",
+            "version": "0.1.0",
+            "timestamp": request.headers.get("date", "unknown")
+        })
+
     @mcp.tool()
     async def hello_world(name: str = "World") -> Dict[str, Any]:
         """

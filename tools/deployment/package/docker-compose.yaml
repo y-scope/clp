@@ -387,6 +387,14 @@ services:
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
       - "${CLP_MCP_LOGS_DIR_HOST:-./var/log/mcp-server}:/var/log/mcp-server"
     user: 0:0
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: [
+        "CMD",
+        "bash",
+        "-c",
+        "< /dev/tcp/127.0.0.1/8000"
+      ]
     command: [
       "bash", "-c",
       "cd /opt/clp && pip install . && python3 -m clp_mcp_server --transport http --host 0.0.0.0 --port 8000"
