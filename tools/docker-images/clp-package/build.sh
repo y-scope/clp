@@ -3,6 +3,17 @@
 set -eu
 set -o pipefail
 
+remove_prev_image_and_temp_file() {
+    if [[ -n "$prev_image_id" && "$prev_image_id" != "$new_image_id" ]]; then
+        if docker image inspect "$prev_image_id" >/dev/null 2>&1; then
+            echo "Removing previous image $prev_image_id."
+            docker image remove "$prev_image_id"
+        fi
+    fi
+    rm -f "$temp_iid_file"
+}
+trap remove_prev_image_and_temp_file EXIT
+
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 repo_root=${script_dir}/../../../
 iid_file="${repo_root}/build/clp-package-image.id"
@@ -14,17 +25,6 @@ fi
 
 temp_iid_file="$(mktemp)"
 new_image_id=""
-
-remove_prev_image() {
-    if [[ -n "$prev_image_id" && "$prev_image_id" != "$new_image_id" ]]; then
-        if docker image inspect "$prev_image_id" >/dev/null 2>&1; then
-            echo "Removing previous image $prev_image_id."
-            docker image remove "$prev_image_id"
-        fi
-    fi
-    rm -f "$temp_iid_file"
-}
-trap remove_prev_image EXIT
 
 build_cmd=(
     docker build
