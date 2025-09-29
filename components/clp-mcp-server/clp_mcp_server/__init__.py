@@ -1,4 +1,7 @@
 import click
+import logging
+import os
+import sys
 import enum
 from typing import Optional
 from .server import CLPMcpServer
@@ -29,6 +32,15 @@ def main(
     """
     Run the CLP MCP Server with the specified transport.
     """
+
+    # Setup logging to file and stdout
+    log_dir = os.environ.get("CLP_MCP_LOGS_DIR", "/var/log/mcp-server")
+    os.makedirs(log_dir, exist_ok=True)
+    log_path = os.path.join(log_dir, "mcp_server.log")
+
+    sys.stdout = open(log_path, "a", buffering=1)
+    sys.stderr = open(log_path, "a", buffering=1)
+
     # Create the MCP server instance
     mcp = CLPMcpServer()
 
