@@ -1,9 +1,9 @@
 interface BuildSearchQueryProps {
     selectItemList: string;
     databaseName: string;
-    booleanExpression?: string | undefined;
-    sortItemList?: string | undefined;
-    limitValue?: string | undefined;
+    booleanExpression: string;
+    sortItemList: string;
+    limitValue: number;
     startTimestamp: number;
     endTimestamp: number;
     timestampKey: string;

@@ -106,15 +106,13 @@ const buildSearchQuery = ({
     let queryString = `SELECT ${selectItemList} FROM ${databaseName}
 WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp} AND ${endTimestamp}`;
 
-    if ("undefined" !== typeof booleanExpression) {
+    if ("" !== booleanExpression) {
         queryString += ` AND (${booleanExpression})`;
     }
-    if ("undefined" !== typeof sortItemList) {
+    if ("" !== sortItemList) {
         queryString += ` ORDER BY ${sortItemList}`;
     }
-    if ("undefined" !== typeof limitValue) {
-        queryString += ` LIMIT ${limitValue}`;
-    }
+    queryString += ` LIMIT ${String(limitValue)}`;
 
     try {
         validate(queryString);
@@ -152,7 +150,7 @@ const buildTimelineQuery = ({
         (_, i) => startTimestamp + (i * step)
     );
 
-    const booleanExpressionQuery = "undefined" === typeof booleanExpression ?
+    const booleanExpressionQuery = "" === booleanExpression ?
         "" :
         `AND (${booleanExpression})`;
 
@@ -200,5 +198,7 @@ export {
 
 export type {
     BuildSearchQueryProps,
+    BuildTimelineQueryProps,
+};
     BuildTimelineQueryProps,
 };

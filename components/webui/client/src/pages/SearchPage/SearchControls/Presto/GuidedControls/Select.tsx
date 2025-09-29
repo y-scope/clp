@@ -1,5 +1,6 @@
 import InputLabel from "../../../../../components/InputLabel";
 import SqlInput from "../../../../../components/SqlInput";
+import usePrestoSearchState from "../../../SearchState/Presto";
 import guidedGrid from "./index.module.css";
 
 
@@ -8,13 +9,21 @@ import guidedGrid from "./index.module.css";
  *
  * @return
  */
-const Select = () => (
-    <div className={guidedGrid["select"]}>
-        <InputLabel>SELECT</InputLabel>
-        <SqlInput
-            className={guidedGrid["noLeftBorderRadius"] || ""}
-            disabled={false}/>
-    </div>
-);
+const Select = () => {
+    const select = usePrestoSearchState((state) => state.select);
+    const updateSelect = usePrestoSearchState((state) => state.updateSelect);
+
+    return (
+        <div className={guidedGrid["select"]}>
+            <InputLabel>SELECT</InputLabel>
+            <SqlInput
+                className={guidedGrid["noLeftBorderRadius"] || ""}
+                disabled={false}
+                value={select}
+                onChange={(value) => updateSelect(value || "")}
+            />
+        </div>
+    );
+};
 
 export default Select;

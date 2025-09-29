@@ -1,6 +1,7 @@
 import {Select} from "antd";
 
 import InputLabel from "../../../../../components/InputLabel";
+import usePrestoSearchState from "../../../SearchState/Presto";
 import guidedGrid from "./index.module.css";
 
 
@@ -17,17 +18,24 @@ const LIMIT_OPTIONS = [
  *
  * @return
  */
-const Limit = () => (
-    <div className={guidedGrid["limit"]}>
-        <InputLabel>LIMIT</InputLabel>
-        <Select
-            defaultValue={LIMIT_OPTIONS[0]?.value}
-            options={LIMIT_OPTIONS}
-            className={
-                `${guidedGrid["noLeftBorderRadiusSelect"]} ${
-                    guidedGrid["widthSelect"]}`
-            }/>
-    </div>
-);
+const Limit = () => {
+    const limit = usePrestoSearchState((state) => state.limit);
+    const updateLimit = usePrestoSearchState((state) => state.updateLimit);
+
+    return (
+        <div className={guidedGrid["limit"]}>
+            <InputLabel>LIMIT</InputLabel>
+            <Select
+                value={limit}
+                options={LIMIT_OPTIONS}
+                onChange={updateLimit}
+                className={
+                    `${guidedGrid["noLeftBorderRadiusSelect"]} ${
+                        guidedGrid["widthSelect"]}`
+                }
+            />
+        </div>
+    );
+};
 
 export default Limit;
