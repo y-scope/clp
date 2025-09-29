@@ -17,13 +17,12 @@ const From = () => {
         <div className={guidedGrid["from"]}>
             <InputLabel>FROM</InputLabel>
             <DatasetSelect
+                value={from}
                 className={
                     `${guidedGrid["noLeftBorderRadiusSelect"]} ${
                         guidedGrid["widthSelect"]}`
                 }
-                value={from}
-                onChange={updateFrom}
-            />
+                onChange={updateFrom}/>
         </div>
     );
 };

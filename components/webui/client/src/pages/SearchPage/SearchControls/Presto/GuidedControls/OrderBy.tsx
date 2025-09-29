@@ -20,8 +20,9 @@ const OrderBy = () => {
                 className={guidedGrid["noLeftBorderRadius"] || ""}
                 disabled={false}
                 value={orderBy}
-                onChange={(value) => updateOrderBy(value || "")}
-            />
+                onChange={(value) => {
+                    updateOrderBy(value || "");
+                }}/>
         </div>
     );
 };

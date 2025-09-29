@@ -30,9 +30,9 @@ const TimestampKeySelect = (selectProps: SelectProps) => {
     const {data, isPending, isSuccess, error} = useQuery({
         queryKey: [
             "timestampColumns",
-            dataset
+            dataset,
         ],
-        queryFn: () => fetchTimestampColumns(dataset!),
+        queryFn: () => dataset ? fetchTimestampColumns(dataset) : Promise.resolve([]),
         enabled: Boolean(dataset),
     });
 
@@ -46,7 +46,7 @@ const TimestampKeySelect = (selectProps: SelectProps) => {
         isSuccess,
         data,
         timestampKey,
-        updateTimestampKey
+        updateTimestampKey,
     ]);
 
     useEffect(() => {
@@ -58,14 +58,15 @@ const TimestampKeySelect = (selectProps: SelectProps) => {
         }
     }, [
         error,
-        messageApi
+        messageApi,
     ]);
 
     useEffect(() => {
         if (isSuccess && 0 === data.length) {
             messageApi.warning({
                 key: "noTimestamps",
-                content: "No timestamp columns found for selected dataset. Guided UI requires a timestamp column.",
+                content: "No timestamp columns found for selected dataset. " +
+                    "Guided UI requires a timestamp column.",
             });
             updateTimestampKey(null);
         }
@@ -73,7 +74,7 @@ const TimestampKeySelect = (selectProps: SelectProps) => {
         data,
         isSuccess,
         messageApi,
-        updateTimestampKey
+        updateTimestampKey,
     ]);
 
     // Reset timestamp key when dataset changes
@@ -81,7 +82,7 @@ const TimestampKeySelect = (selectProps: SelectProps) => {
         updateTimestampKey(null);
     }, [
         dataset,
-        updateTimestampKey
+        updateTimestampKey,
     ]);
 
     const handleTimestampKeyChange = (value: string) => {

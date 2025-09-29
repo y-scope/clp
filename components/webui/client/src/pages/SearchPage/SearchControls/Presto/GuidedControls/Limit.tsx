@@ -26,14 +26,13 @@ const Limit = () => {
         <div className={guidedGrid["limit"]}>
             <InputLabel>LIMIT</InputLabel>
             <Select
-                value={limit}
                 options={LIMIT_OPTIONS}
-                onChange={updateLimit}
+                value={limit}
                 className={
                     `${guidedGrid["noLeftBorderRadiusSelect"]} ${
                         guidedGrid["widthSelect"]}`
                 }
-            />
+                onChange={updateLimit}/>
         </div>
     );
 };

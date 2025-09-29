@@ -200,5 +200,3 @@ export type {
     BuildSearchQueryProps,
     BuildTimelineQueryProps,
 };
-    BuildTimelineQueryProps,
-};

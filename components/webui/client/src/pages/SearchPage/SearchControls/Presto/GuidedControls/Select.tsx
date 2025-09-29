@@ -20,8 +20,9 @@ const Select = () => {
                 className={guidedGrid["noLeftBorderRadius"] || ""}
                 disabled={false}
                 value={select}
-                onChange={(value) => updateSelect(value || "")}
-            />
+                onChange={(value) => {
+                    updateSelect(value || "");
+                }}/>
         </div>
     );
 };

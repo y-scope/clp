@@ -1,6 +1,5 @@
 import usePrestoSearchState from "../../../../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../../../../SearchState/Presto/typings";
-
 import FreeformRunButton from "./FreeformRunButton";
 import GuidedRunButton from "./GuidedRunButton";
 

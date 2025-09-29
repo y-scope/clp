@@ -7,8 +7,8 @@ import {
 } from "antd";
 
 import {buildSearchQuery} from "../../../../../../sql-parser";
-import usePrestoSearchState from "../../../../SearchState/Presto";
 import useSearchStore from "../../../../SearchState/index";
+import usePrestoSearchState from "../../../../SearchState/Presto";
 import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
 import {handlePrestoQuerySubmit} from "../../presto-search-requests";
 import styles from "./index.module.css";
@@ -31,30 +31,32 @@ const GuidedRunButton = () => {
         null !== from &&
         null !== timestampKey;
 
-    const tooltipTitle = false === isQueryReady  ?
+    const tooltipTitle = false === isQueryReady ?
         "Enter minimal SQL fields to query" :
         "";
 
     const handleClick = useCallback(() => {
         if (null === from) {
             console.error("Cannot build guided query: from input is missing");
+
             return;
         }
 
         if (null === timestampKey) {
             console.error("Cannot build guided query: timestampKey input is missing");
+
             return;
         }
 
         try {
             const queryString = buildSearchQuery({
-                selectItemList: select.trim(),
-                databaseName: from,
                 booleanExpression: where.trim(),
-                sortItemList: orderBy.trim(),
-                limitValue: limit,
-                startTimestamp: startTimestamp.unix(),
+                databaseName: from,
                 endTimestamp: endTimestamp.unix(),
+                limitValue: limit,
+                selectItemList: select.trim(),
+                sortItemList: orderBy.trim(),
+                startTimestamp: startTimestamp.unix(),
                 timestampKey,
             });
 
@@ -70,7 +72,7 @@ const GuidedRunButton = () => {
         limit,
         timestampKey,
         startTimestamp,
-        endTimestamp
+        endTimestamp,
     ]);
 
     return (

@@ -20,8 +20,9 @@ const Where = () => {
                 className={guidedGrid["noLeftBorderRadius"] || ""}
                 disabled={false}
                 value={where}
-                onChange={(value) => updateWhere(value || "")}
-            />
+                onChange={(value) => {
+                    updateWhere(value || "");
+                }}/>
         </div>
     );
 };

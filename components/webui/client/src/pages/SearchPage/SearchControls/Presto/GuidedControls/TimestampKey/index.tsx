@@ -17,13 +17,12 @@ const TimestampKey = () => {
         <div className={guidedGrid["timestampKey"]}>
             <InputLabel>TIME KEY</InputLabel>
             <TimestampKeySelect
+                value={timestampKey}
                 className={
                     `${guidedGrid["noLeftBorderRadiusSelect"]} ${
                         guidedGrid["widthSelect"]}`
                 }
-                value={timestampKey}
-                onChange={updateTimestampKey}
-            />
+                onChange={updateTimestampKey}/>
         </div>
     );
 };
