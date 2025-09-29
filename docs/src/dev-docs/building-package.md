@@ -14,6 +14,8 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
 * python3-dev
 * python3-venv (for the version of Python installed)
 * [Task] 3.44.0
+  * We pin the version to 3.44.0 due to [y-scope/clp#1352].
+* [uv] >= 0.8
 
 ## Setup
 
@@ -68,5 +70,16 @@ To clean up all build artifacts, run:
 task clean
 ```
 
-[clp-issue-872]: https://github.com/y-scope/clp/issues/872
+## Building a Docker image
+
+To build a Docker image containing the CLP package, run:
+
+```shell
+task docker-images:package
+```
+
+This will create a Docker image named `clp-package:dev`.
+
 [Task]: https://taskfile.dev/
+[uv]: https://docs.astral.sh/uv/
+[y-scope/clp#1352]: https://github.com/y-scope/clp/issues/1352

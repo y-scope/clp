@@ -52,9 +52,9 @@ public:
      */
     void add_to_query(
             std::string& logtype_query,
-            std::vector<std::variant<
-                    ExactVariableToken<encoded_variable_t>,
-                    WildcardToken<encoded_variable_t>>>& variable_tokens
+            std::vector<std::
+                                variant<ExactVariableToken<encoded_variable_t>,
+                                        WildcardToken<encoded_variable_t>>>& variable_tokens
     ) const;
 
     /**
@@ -83,7 +83,8 @@ private:
     // Variables
     std::vector<QueryWildcard> m_wildcards;
     std::vector<
-            std::variant<ExactVariableToken<encoded_variable_t>, WildcardToken<encoded_variable_t>>>
+            std::variant<ExactVariableToken<encoded_variable_t>, WildcardToken<encoded_variable_t>>
+    >
             m_variables;
 };
 }  // namespace glt::ffi::search

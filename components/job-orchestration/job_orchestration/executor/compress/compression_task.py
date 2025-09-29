@@ -6,6 +6,7 @@ import subprocess
 from contextlib import closing
 from typing import Any, Dict, List, Optional, Tuple
 
+from celery import signals
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
@@ -520,6 +521,11 @@ def run_clp(
             error_msgs.append(s3_error)
         worker_output["error_message"] = "\n".join(error_msgs)
         return CompressionTaskStatus.FAILED, worker_output
+
+
+@signals.worker_shutdown.connect
+def worker_shutdown_handler(signal=None, sender=None, **kwargs):
+    logger.info("Shutdown signal received.")
 
 
 @app.task(bind=True)

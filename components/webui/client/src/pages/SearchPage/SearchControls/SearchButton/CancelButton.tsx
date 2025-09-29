@@ -32,7 +32,10 @@ const CancelButton = () => {
             return;
         }
         handleQueryCancel(
-            {searchJobId, aggregationJobId}
+            {
+                searchJobId: Number(searchJobId),
+                aggregationJobId: Number(aggregationJobId),
+            }
         );
     }, [searchJobId,
         aggregationJobId]);
@@ -42,7 +45,7 @@ const CancelButton = () => {
             danger={true}
             htmlType={"button"}
             icon={<CloseOutlined/>}
-            size={"large"}
+            size={"middle"}
             type={"primary"}
             onClick={handleCancelButtonClick}
         >

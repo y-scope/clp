@@ -7,6 +7,10 @@ set(
         ../clp/aws/AwsAuthenticationSigner.hpp
         ../clp/BoundedReader.cpp
         ../clp/BoundedReader.hpp
+        ../clp/BufferedReader.cpp
+        ../clp/BufferedReader.hpp
+        ../clp/BufferReader.cpp
+        ../clp/BufferReader.hpp
         ../clp/CurlDownloadHandler.cpp
         ../clp/CurlDownloadHandler.hpp
         ../clp/CurlEasyHandle.hpp
@@ -70,6 +74,8 @@ set(
         ../clp/ir/types.hpp
         ../clp/LogSurgeonReader.cpp
         ../clp/LogSurgeonReader.hpp
+        ../clp/LogTypeDictionaryEntryReq.hpp
+        ../clp/LogTypeDictionaryReaderReq.hpp
         ../clp/NetworkReader.cpp
         ../clp/NetworkReader.hpp
         ../clp/networking/socket_utils.cpp
@@ -86,6 +92,8 @@ set(
         ../clp/streaming_archive/ArchiveMetadata.cpp
         ../clp/streaming_archive/ArchiveMetadata.hpp
         ../clp/streaming_archive/Constants.hpp
+        ../clp/streaming_compression/Constants.hpp
+        ../clp/streaming_compression/Decompressor.hpp
         ../clp/streaming_compression/zstd/Decompressor.cpp
         ../clp/streaming_compression/zstd/Decompressor.hpp
         ../clp/StringReader.cpp
@@ -97,6 +105,9 @@ set(
         ../clp/type_utils.hpp
         ../clp/utf8_utils.cpp
         ../clp/utf8_utils.hpp
+        ../clp/VariableDictionaryEntryReq.hpp
+        ../clp/VariableDictionaryReaderReq.hpp
+        ../clp/VariableDictionaryWriterReq.hpp
         ../clp/WriterInterface.cpp
         ../clp/WriterInterface.hpp
 )
@@ -221,6 +232,8 @@ set(
         DictionaryWriter.cpp
         DictionaryWriter.hpp
         ErrorCode.hpp
+        FloatFormatEncoding.cpp
+        FloatFormatEncoding.hpp
         JsonFileIterator.cpp
         JsonFileIterator.hpp
         JsonParser.cpp
@@ -263,6 +276,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
                 simdjson::simdjson
+                ystdlib::error_handling
                 PRIVATE
                 Boost::url
                 clp_s::clp_dependencies
@@ -288,6 +302,8 @@ set(
         DictionaryEntry.hpp
         DictionaryReader.hpp
         ErrorCode.hpp
+        FloatFormatEncoding.cpp
+        FloatFormatEncoding.hpp
         JsonSerializer.hpp
         PackedStreamReader.cpp
         PackedStreamReader.hpp
@@ -324,6 +340,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 clp_s::io
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
+                ystdlib::error_handling
                 PRIVATE
                 Boost::url
                 clp_s::clp_dependencies

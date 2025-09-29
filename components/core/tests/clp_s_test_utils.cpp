@@ -1,6 +1,7 @@
 #include "clp_s_test_utils.hpp"
 
 #include <filesystem>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -13,9 +14,10 @@
 auto compress_archive(
         std::string const& file_path,
         std::string const& archive_directory,
+        std::optional<std::string> timestamp_key,
+        bool retain_float_format,
         bool single_file_archive,
-        bool structurize_arrays,
-        clp_s::FileType file_type
+        bool structurize_arrays
 ) -> std::vector<clp_s::ArchiveStats> {
     constexpr auto cDefaultTargetEncodedSize{8ULL * 1024 * 1024 * 1024};  // 8 GiB
     constexpr auto cDefaultMaxDocumentSize{512ULL * 1024 * 1024};  // 512 MiB
@@ -36,20 +38,16 @@ auto compress_archive(
     parser_option.min_table_size = cDefaultMinTableSize;
     parser_option.compression_level = cDefaultCompressionLevel;
     parser_option.print_archive_stats = cDefaultPrintArchiveStats;
+    parser_option.retain_float_format = retain_float_format;
     parser_option.structurize_arrays = structurize_arrays;
     parser_option.single_file_archive = single_file_archive;
-    parser_option.input_file_type = file_type;
+    if (timestamp_key.has_value()) {
+        parser_option.timestamp_key = std::move(timestamp_key.value());
+    }
 
     clp_s::JsonParser parser{parser_option};
     std::vector<clp_s::ArchiveStats> archive_stats;
-    if (clp_s::FileType::Json == file_type) {
-        REQUIRE(parser.parse());
-    } else if (clp_s::FileType::KeyValueIr == file_type) {
-        REQUIRE(parser.parse_from_ir());
-    } else {
-        // This branch should be unreachable.
-        REQUIRE(false);
-    }
+    REQUIRE(parser.ingest());
     REQUIRE_NOTHROW(archive_stats = parser.store());
 
     REQUIRE((false == std::filesystem::is_empty(archive_directory)));

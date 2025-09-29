@@ -2,6 +2,7 @@
 #include <exception>
 #include <filesystem>
 #include <memory>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <string>
@@ -40,11 +41,13 @@
 constexpr std::string_view cTestSearchArchiveDirectory{"test-clp-s-search-archive"};
 constexpr std::string_view cTestInputFileDirectory{"test_log_files"};
 constexpr std::string_view cTestSearchInputFile{"test_search.jsonl"};
+constexpr std::string_view cTestSearchFormattedFloatFile{"test_search_formatted_float.jsonl"};
 constexpr std::string_view cTestIdxKey{"idx"};
 
 namespace {
-auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path;
-auto get_test_input_local_path() -> std::string;
+auto get_test_input_path_relative_to_tests_dir(std::string_view test_input_path)
+        -> std::filesystem::path;
+auto get_test_input_local_path(std::string_view test_input_path) -> std::string;
 auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search::ast::Expression>;
 void
 search(std::string const& query, bool ignore_case, std::vector<int64_t> const& expected_results);
@@ -58,14 +61,15 @@ void validate_results(
         std::vector<int64_t> const& expected_results
 );
 
-auto get_test_input_path_relative_to_tests_dir() -> std::filesystem::path {
-    return std::filesystem::path{cTestInputFileDirectory} / cTestSearchInputFile;
+auto get_test_input_path_relative_to_tests_dir(std::string_view test_input_path)
+        -> std::filesystem::path {
+    return std::filesystem::path{cTestInputFileDirectory} / test_input_path;
 }
 
-auto get_test_input_local_path() -> std::string {
+auto get_test_input_local_path(std::string_view test_input_path) -> std::string {
     std::filesystem::path const current_file_path{__FILE__};
     auto const tests_dir{current_file_path.parent_path()};
-    return (tests_dir / get_test_input_path_relative_to_tests_dir()).string();
+    return (tests_dir / get_test_input_path_relative_to_tests_dir(test_input_path)).string();
 }
 
 auto create_first_record_match_metadata_query() -> std::shared_ptr<clp_s::search::ast::Expression> {
@@ -124,7 +128,6 @@ void validate_results(
 
 void
 search(std::string const& query, bool ignore_case, std::vector<int64_t> const& expected_results) {
-    REQUIRE(expected_results.size() > 0);
     auto query_stream = std::istringstream{query};
     auto expr = clp_s::search::kql::parse_kql_expression(query_stream);
     search(expr, ignore_case, expected_results);
@@ -202,19 +205,17 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
             {R"aa(msg: "Msg 1: \"Abc123\"")aa", {1}},
             {R"aa(msg: "Msg 2: 'Abc123'")aa", {2}},
             {R"aa(msg: "Msg 3: \nAbc123")aa", {3}},
-            // CLP incorrectly generates no subqueries in Grep::process_raw_query for the following
-            // query, so we skip it for now.
-            //{R"aa(msg: "Msg 4: \\Abc123")aa", {4}}
+            {R"aa(msg: "Msg 4: \\Abc123")aa", {4}},
             {R"aa(msg: "Msg 5: \rAbc123")aa", {5}},
             {R"aa(msg: "Msg 6: \tAbc123")aa", {6}},
-            {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 5, 6}},
+            {R"aa(msg: "*Abc123*")aa", {1, 2, 3, 4, 5, 6}},
             {R"aa(arr.b > 1000)aa", {7, 8}},
             {R"aa(var_string: *)aa", {9}},
             {R"aa(clp_string: *)aa", {9}},
             {fmt::format(
                      R"aa($_filename: "{}" AND $_file_split_number: 0 AND )aa"
                      R"aa($_archive_creator_id: * AND idx: 0)aa",
-                     get_test_input_local_path()
+                     get_test_input_local_path(cTestSearchInputFile)
              ),
              {0}},
             {R"aa(idx: 0 AND NOT $_filename: "clp string")aa", {0}},
@@ -223,7 +224,8 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
              R"aa(idx: 0 OR idx: 1)aa",
              {1}},
             {R"aa(ambiguous_varstring: "a*e")aa", {10, 11, 12}},
-            {R"aa(ambiguous_varstring: "a\*e")aa", {12}}
+            {R"aa(ambiguous_varstring: "a\*e")aa", {12}},
+            {R"aa(idx: * AND NOT idx: null AND idx: 0)aa", {0}}
     };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
@@ -232,11 +234,49 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
 
     REQUIRE_NOTHROW(
             std::ignore = compress_archive(
-                    get_test_input_local_path(),
+                    get_test_input_local_path(cTestSearchInputFile),
                     std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestIdxKey},
+                    false,
                     single_file_archive,
-                    structurize_arrays,
-                    clp_s::FileType::Json
+                    structurize_arrays
+            )
+    );
+
+    for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
+        REQUIRE_NOTHROW(search(query, false, expected_results));
+    }
+
+    std::shared_ptr<clp_s::search::ast::Expression> expr{nullptr};
+    REQUIRE_NOTHROW(expr = create_first_record_match_metadata_query());
+    REQUIRE_NOTHROW(search(expr, false, {0}));
+}
+
+TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
+    std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{
+            {R"aa(NOT formattedFloatValue: 0)aa", {0, 1, 2, 6, 7, 8, 9, 10, 11, 12}},
+            {R"aa(formattedFloatValue: 0)aa", {3, 4, 5}},
+            {R"aa(formattedFloatValue: 1e-16)aa", {6, 7}},
+            {R"aa(formattedFloatValue > 0.00)aa", {6, 7, 8, 9, 10, 11, 12}},
+            {R"aa(formattedFloatValue > 5000.000000000001)aa", {12}},
+            {R"aa(formattedFloatValue < 0.00 AND formattedFloatValue >= -0.01)aa", {1, 2}},
+            {R"aa(idx: 0 AND NOT formattedFloatValue: -1000.0)aa", {}},
+            {R"aa(msg: "xxx" AND formattedFloatValue: 3000.0)aa", {}},
+            {R"aa(msg: "xxx" OR formattedFloatValue: 3000.0)aa", {0, 9}}
+    };
+    auto single_file_archive = GENERATE(true, false);
+
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchFormattedFloatFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::nullopt,
+                    true,
+                    single_file_archive,
+                    false
             )
     );
 
