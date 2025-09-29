@@ -3,15 +3,6 @@
 set -eu
 set -o pipefail
 
-# Remove the previous image only after the build so its contents can be reused.
-remove_prev_image() {
-    if [[ -n "$prev_image_id" ]] && docker image inspect "$prev_image_id" >/dev/null 2>&1; then
-        echo "Removing previous image $prev_image_id."
-        docker image remove "$prev_image_id"
-    fi
-}
-trap remove_prev_image EXIT
-
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 repo_root=${script_dir}/../../../
 iid_file="${repo_root}/build/clp-package-image.id"
@@ -21,10 +12,23 @@ if [[ -f "$iid_file" ]]; then
     prev_image_id=$(<"$iid_file")
 fi
 
+temp_iid_file="$(mktemp)"
+new_image_id=""
+
+remove_prev_image() {
+    if [[ -n "$prev_image_id" && "$prev_image_id" != "$new_image_id" ]]; then
+        if docker image inspect "$prev_image_id" >/dev/null 2>&1; then
+            echo "Removing previous image $prev_image_id."
+            docker image remove "$prev_image_id"
+        fi
+    fi
+    rm -f "$temp_iid_file"
+}
+trap remove_prev_image EXIT
+
 build_cmd=(
     docker build
-    --iidfile "$iid_file"
-    --tag "clp-package:dev-${USER}-$(date +%s)"
+    --iidfile "$temp_iid_file"
     "$repo_root"
     --file "${script_dir}/Dockerfile"
 )
@@ -38,3 +42,12 @@ then
 fi
 
 "${build_cmd[@]}"
+
+if [[ -s "$temp_iid_file" ]]; then
+    new_image_id=$(<"$temp_iid_file")
+    echo "$new_image_id" > "$iid_file"
+
+    short_id=${new_image_id#sha256:}
+    short_id=${short_id:0:4}
+    docker tag "$new_image_id" "clp-package:dev-${USER}-${short_id}"
+fi
