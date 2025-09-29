@@ -1,3 +1,5 @@
+import json
+
 from clp_py_utils.clp_config import Database
 from clp_py_utils.clp_logging import get_logger
 from job_orchestration.executor.compress.compression_task import compression_entry_point
@@ -40,7 +42,7 @@ def compress(
     :return: A JSON string representation of
         `job_orchestration.scheduler.constants.CompressionTaskResult`.
     """
-    result_json_bytes = (
+    result_json_bytes = json.dumps(
         compression_entry_point(
             job_id,
             task_id,
@@ -50,8 +52,6 @@ def compress(
             Database.model_validate_json(convert_to_str(clp_metadata_db_connection_config_json)),
             logger,
         )
-        .model_dump_json()
-        .encode("utf-8")
-    )
+    ).encode("utf-8")
 
     return [Int8(byte) for byte in result_json_bytes]
