@@ -21,6 +21,7 @@ DB_COMPONENT_NAME = "database"
 QUEUE_COMPONENT_NAME = "queue"
 REDIS_COMPONENT_NAME = "redis"
 REDUCER_COMPONENT_NAME = "reducer"
+MCP_SERVER_COMPONENT_NAME = "mcp-server"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
 QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
@@ -798,6 +799,24 @@ class SweepInterval(BaseModel):
         return values
 
 
+class McpServer(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 8000
+
+    host: str = "localhost"
+    port: int = DEFAULT_PORT
+    logging_level: str = "INFO"
+
+    @validator("host")
+    def validate_host(cls, field):
+        _validate_host(cls, field)
+        return field
+
+    @validator("port")
+    def validate_port(cls, field):
+        _validate_port(cls, field)
+        return field
+
+
 class GarbageCollector(BaseModel):
     logging_level: str = "INFO"
     sweep_interval: SweepInterval = SweepInterval()
@@ -831,6 +850,7 @@ class CLPConfig(BaseModel):
     compression_worker: CompressionWorker = CompressionWorker()
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
+    mcp_server: McpServer = McpServer()
     garbage_collector: GarbageCollector = GarbageCollector()
     credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 

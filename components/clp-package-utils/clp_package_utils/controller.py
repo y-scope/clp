@@ -24,6 +24,7 @@ from clp_py_utils.clp_config import (
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
+    MCP_SERVER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
     StorageEngine,
     StorageType,
@@ -42,6 +43,7 @@ from clp_package_utils.general import (
     generate_docker_compose_container_config,
     get_clp_home,
     validate_db_config,
+    validate_mcp_server_config,
     validate_queue_config,
     validate_redis_config,
     validate_results_cache_config,
@@ -388,6 +390,27 @@ class BaseController(ABC):
             "CLP_WEBUI_RATE_LIMIT": str(self.clp_config.webui.rate_limit),
         }
 
+    def _set_up_env_for_mcp_server(self, container_clp_config: CLPConfig) -> EnvVarsDict:
+        """
+        Prepares environment variables and settings for the MCP server component.
+
+        :param container_clp_config: CLP configuration inside the containers.
+        :return: Dictionary of component-related environment variables.
+        """
+        component_name = MCP_SERVER_COMPONENT_NAME
+        logger.info(f"Setting up environment for {component_name}...")
+
+        logs_dir = self.clp_config.logs_directory / component_name
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        
+        validate_mcp_server_config(self.clp_config, logs_dir)
+
+        return {
+            "CLP_MCP_LOGS_DIR_HOST": str(logs_dir),
+            "CLP_MCP_HOST": _get_ip_from_hostname(self.clp_config.mcp_server.host),
+            "CLP_MCP_PORT": str(self.clp_config.mcp_server.port),
+        }
+
     def _set_up_env_for_garbage_collector(self) -> EnvVarsDict:
         """
         Prepares environment variables for the garbage collector component.
@@ -543,6 +566,7 @@ class DockerComposeController(BaseController):
             **self._set_up_env_for_query_worker(num_workers),
             **self._set_up_env_for_reducer(num_workers),
             **self._set_up_env_for_webui(container_clp_config),
+            **self._set_up_env_for_mcp_server(container_clp_config),
             **self._set_up_env_for_garbage_collector(),
         }
 
