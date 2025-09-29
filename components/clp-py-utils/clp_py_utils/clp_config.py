@@ -1052,8 +1052,6 @@ class CLPConfig(BaseModel):
 
         return d
 
-    # We set `pre=True` so that we print errors about a mismatch between the query engine and presto
-    # config before errors about the presto config itself.
     @model_validator(mode="after")
     def validate_presto_config(self):
         query_engine = self.package.query_engine
