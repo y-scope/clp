@@ -16,13 +16,14 @@ from job_orchestration.scheduler.job_config import (
     SearchJobConfig,
 )
 from job_orchestration.scheduler.query.reducer_handler import ReducerHandlerMessageQueues
+from job_orchestration.scheduler.scheduler.scheduler import Scheduler
 from pydantic import BaseModel, validator
 
 
 class CompressionJob(BaseModel):
     id: int
     start_time: datetime.datetime
-    async_task_result: Any
+    result_handle: Scheduler.ResultHandle
 
 
 class CompressionTaskResult(BaseModel):

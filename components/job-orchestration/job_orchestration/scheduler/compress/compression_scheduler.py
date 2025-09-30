@@ -372,7 +372,8 @@ def search_and_schedule_new_tasks(
             task["tag_ids"] = tag_ids
         result_handle = scheduler.compress(tasks)
 
-        job = CompressionJob(id=job_id, start_time=start_time, async_task_result=result_handle)
+        # TODO: Figure out whether we need `async_task_result`
+        job = CompressionJob(id=job_id, start_time=start_time, result_handle=result_handle)
         db_cursor.execute(
             f"""
             UPDATE {COMPRESSION_TASKS_TABLE_NAME}
@@ -398,7 +399,7 @@ def poll_running_jobs(db_conn, db_cursor, scheduler: Scheduler):
         error_message = ""
 
         try:
-            returned_results = scheduler.get_compress_result(job.result_handle)
+            returned_results = job.result_handle.get_result()
             if returned_results is None:
                 continue
 
