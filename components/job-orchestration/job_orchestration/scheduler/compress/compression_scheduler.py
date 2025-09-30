@@ -217,7 +217,7 @@ def search_and_schedule_new_tasks(
     db_conn,
     db_cursor,
     clp_metadata_db_connection_config: Dict[str, Any],
-    scheduler: Scheduler
+    scheduler: Scheduler,
 ):
     """
     For all jobs with PENDING status, splits the job into tasks and schedules them.
@@ -372,9 +372,7 @@ def search_and_schedule_new_tasks(
             task["tag_ids"] = tag_ids
         result_handle = scheduler.compress(tasks)
 
-        job = CompressionJob(
-            id=job_id, start_time=start_time, async_task_result=result_handle
-        )
+        job = CompressionJob(id=job_id, start_time=start_time, async_task_result=result_handle)
         db_cursor.execute(
             f"""
             UPDATE {COMPRESSION_TASKS_TABLE_NAME}
@@ -511,11 +509,7 @@ def main(argv):
             try:
                 if not received_sigterm:
                     search_and_schedule_new_tasks(
-                        clp_config,
-                        db_conn,
-                        db_cursor,
-                        clp_metadata_db_connection_config,
-                        scheduler
+                        clp_config, db_conn, db_cursor, clp_metadata_db_connection_config, scheduler
                     )
                 poll_running_jobs(db_conn, db_cursor, scheduler)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)

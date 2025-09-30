@@ -12,11 +12,9 @@ from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
 class CeleryScheduler(Scheduler):
 
     def compress(self, task_params: list[dict[str, Any]]) -> Any:
-        task_instances = [
-            compress.s(**params) for params in task_params]
+        task_instances = [compress.s(**params) for params in task_params]
         task_group = celery.group(task_instances)
         return task_group.apply_async()
-
 
     def get_compress_result(
         self, result_handle: Any, timeout: float = 0.1

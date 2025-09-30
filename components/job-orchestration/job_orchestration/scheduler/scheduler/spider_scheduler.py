@@ -28,14 +28,17 @@ class SpiderScheduler(Scheduler):
         job = spider_py.group(
             [compress for _ in range(len(task_params))],
         )
-        return self.driver.submit_jobs(job, [
-            spider_py.Int64(task_params["job_id"]),
-            spider_py.Int64(task_params["task_id"]),
-            [spider_py.Int64(tag_id) for tag_id in task_params["tag_ids"]],
-            convert_from_str(task_params["clp_io_config_json"]),
-            convert_from_str(task_params["paths_to_compress_json"]),
-            convert_from_str(json.loads(task_params["clp_io_config_json"])),
-        ])
+        return self.driver.submit_jobs(
+            job,
+            [
+                spider_py.Int64(task_params["job_id"]),
+                spider_py.Int64(task_params["task_id"]),
+                [spider_py.Int64(tag_id) for tag_id in task_params["tag_ids"]],
+                convert_from_str(task_params["clp_io_config_json"]),
+                convert_from_str(task_params["paths_to_compress_json"]),
+                convert_from_str(json.loads(task_params["clp_io_config_json"])),
+            ],
+        )
 
     def get_compress_result(
         self, result_handle: Any, timeout: float = 0.1
@@ -43,4 +46,6 @@ class SpiderScheduler(Scheduler):
         results = result_handle.get_results()
         if results is None:
             return None
-        return [CompressionTaskResult.validate_model_json(convert_to_str(result)) for result in results]
+        return [
+            CompressionTaskResult.validate_model_json(convert_to_str(result)) for result in results
+        ]
