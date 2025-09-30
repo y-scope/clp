@@ -256,14 +256,14 @@ class Database(BaseModel):
 
 
 class CompressionScheduler(BaseModel):
-    jobs_poll_delay_sec: PositiveFloat = 0.1
+    jobs_poll_delay: PositiveFloat = 0.1  # seconds
     logging_level: LoggingLevel = "INFO"
 
 
 class QueryScheduler(BaseModel):
     host: Host = "localhost"
     port: Port = 7000
-    jobs_poll_delay_sec: PositiveFloat = 0.1
+    jobs_poll_delay: PositiveFloat = 0.1  # seconds
     num_archives_to_search_per_sub_job: PositiveInt = 16
     logging_level: LoggingLevel = "INFO"
 

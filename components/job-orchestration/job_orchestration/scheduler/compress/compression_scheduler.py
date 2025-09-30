@@ -523,7 +523,7 @@ def main(argv):
                         clp_metadata_db_connection_config,
                     )
                 poll_running_jobs(db_conn, db_cursor)
-                time.sleep(clp_config.compression_scheduler.jobs_poll_delay_sec)
+                time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
                 logger.info("Forcefully shutting down")
                 return -1

@@ -1180,7 +1180,7 @@ async def main(argv: List[str]) -> int:
         logger.exception("Failed to kill hanging query jobs.")
         return -1
 
-    logger.debug(f"Job polling interval {clp_config.query_scheduler.jobs_poll_delay_sec} seconds.")
+    logger.debug(f"Job polling interval {clp_config.query_scheduler.jobs_poll_delay} seconds.")
     try:
         reducer_handler = await asyncio.start_server(
             lambda reader, writer: handle_reducer_connection(
@@ -1214,7 +1214,7 @@ async def main(argv: List[str]) -> int:
                 ),
                 results_cache_uri=clp_config.results_cache.get_uri(),
                 stream_collection_name=clp_config.results_cache.stream_collection_name,
-                jobs_poll_delay=clp_config.query_scheduler.jobs_poll_delay_sec,
+                jobs_poll_delay=clp_config.query_scheduler.jobs_poll_delay,
                 num_archives_to_search_per_sub_job=batch_size,
                 archive_retention_period=clp_config.archive_output.retention_period,
             )
