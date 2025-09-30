@@ -100,7 +100,8 @@ CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 
 # Types
-Host = Annotated[str, Field(min_length=1)]
+NonEmptyStr = Annotated[str, Field(min_length=1)]
+Host = NonEmptyStr
 Port = Annotated[int, Field(gt=0, lt=2**16)]
 
 
@@ -169,20 +170,13 @@ class Database(BaseModel):
     type: DatabaseEngine = DatabaseEngine.MARIADB
     host: Host = "localhost"
     port: Port = 3306
-    name: str = "clp-db"
+    name: NonEmptyStr = "clp-db"
     ssl_cert: Optional[str] = None
     auto_commit: bool = False
     compress: bool = True
 
     username: Optional[str] = None
     password: Optional[str] = None
-
-    @field_validator("name")
-    @classmethod
-    def validate_name(cls, value):
-        if "" == value:
-            raise ValueError("database.name cannot be empty.")
-        return value
 
     def ensure_credentials_loaded(self):
         if self.username is None or self.password is None:
@@ -362,25 +356,9 @@ class Reducer(BaseModel):
 class ResultsCache(BaseModel):
     host: Host = "localhost"
     port: Port = 27017
-    db_name: str = "clp-query-results"
-    stream_collection_name: str = "stream-files"
+    db_name: NonEmptyStr = "clp-query-results"
+    stream_collection_name: NonEmptyStr = "stream-files"
     retention_period: Optional[int] = 60
-
-    @field_validator("db_name")
-    @classmethod
-    def validate_db_name(cls, value):
-        if "" == value:
-            raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.db_name cannot be empty.")
-        return value
-
-    @field_validator("stream_collection_name")
-    @classmethod
-    def validate_stream_collection_name(cls, value):
-        if "" == value:
-            raise ValueError(
-                f"{RESULTS_CACHE_COMPONENT_NAME}.stream_collection_name cannot be empty."
-            )
-        return value
 
     @field_validator("retention_period")
     @classmethod
@@ -424,23 +402,9 @@ class Queue(BaseModel):
 
 
 class S3Credentials(BaseModel):
-    access_key_id: str
-    secret_access_key: str
+    access_key_id: NonEmptyStr
+    secret_access_key: NonEmptyStr
     session_token: Optional[str] = None
-
-    @field_validator("access_key_id")
-    @classmethod
-    def validate_access_key_id(cls, value):
-        if "" == value:
-            raise ValueError("access_key_id cannot be empty")
-        return value
-
-    @field_validator("secret_access_key")
-    @classmethod
-    def validate_secret_access_key(cls, value):
-        if "" == value:
-            raise ValueError("secret_access_key cannot be empty")
-        return value
 
 
 class AwsAuthentication(BaseModel):
@@ -482,24 +446,10 @@ class AwsAuthentication(BaseModel):
 
 
 class S3Config(BaseModel):
-    region_code: str
-    bucket: str
+    region_code: NonEmptyStr
+    bucket: NonEmptyStr
     key_prefix: str
     aws_authentication: AwsAuthentication
-
-    @field_validator("region_code")
-    @classmethod
-    def validate_region_code(cls, value):
-        if "" == value:
-            raise ValueError("region_code cannot be empty")
-        return value
-
-    @field_validator("bucket")
-    @classmethod
-    def validate_bucket(cls, value):
-        if "" == value:
-            raise ValueError("bucket cannot be empty")
-        return value
 
 
 class S3IngestionConfig(BaseModel):
@@ -692,17 +642,8 @@ class StreamOutput(BaseModel):
 class WebUi(BaseModel):
     host: Host = "localhost"
     port: Port = 4000
-    results_metadata_collection_name: str = "results-metadata"
+    results_metadata_collection_name: NonEmptyStr = "results-metadata"
     rate_limit: int = 1000
-
-    @field_validator("results_metadata_collection_name")
-    @classmethod
-    def validate_results_metadata_collection_name(cls, value):
-        if "" == value:
-            raise ValueError(
-                f"{WEBUI_COMPONENT_NAME}.results_metadata_collection_name cannot be empty."
-            )
-        return value
 
     @field_validator("rate_limit")
     @classmethod
