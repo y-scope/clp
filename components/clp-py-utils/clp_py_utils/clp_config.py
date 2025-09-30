@@ -1,7 +1,7 @@
 import os
 import pathlib
 from enum import auto
-from typing import Any, Literal, Optional, Set, Union
+from typing import ClassVar, Any, Literal, Optional, Set, Union
 
 from dotenv import dotenv_values
 from pydantic import (
@@ -303,6 +303,8 @@ class CompressionScheduler(BaseModel):
 
 
 class QueryScheduler(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 7000
+    
     host: str = "localhost"
     port: int = 7000
     jobs_poll_delay: float = 0.1  # seconds
@@ -875,15 +877,18 @@ class McpServer(BaseModel):
     port: int = DEFAULT_PORT
     logging_level: str = "INFO"
 
-    @validator("host")
-    def validate_host(cls, field):
-        _validate_host(cls, field)
-        return field
+    @field_validator("host")
+    @classmethod
+    def validate_host(cls, value):
+        if "" == value:
+            raise ValueError(f"{value} cannot be empty")
+        return value
 
-    @validator("port")
-    def validate_port(cls, field):
-        _validate_port(cls, field)
-        return field
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value):
+        _validate_port(cls, value)
+        return value
 
 
 class GarbageCollector(BaseModel):
