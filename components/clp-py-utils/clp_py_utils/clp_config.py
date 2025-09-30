@@ -99,9 +99,11 @@ CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 
-# Types
-PositiveFloat = Annotated[float, Field(gt=0)]
+# Generic types
 NonEmptyStr = Annotated[str, Field(min_length=1)]
+PositiveFloat = Annotated[float, Field(gt=0)]
+PositiveInt = Annotated[int, Field(gt=0)]
+# Type aliases
 Host = NonEmptyStr
 Port = Annotated[int, Field(gt=0, lt=2**16)]
 
@@ -275,7 +277,7 @@ class QueryScheduler(BaseModel):
     host: Host = "localhost"
     port: Port = 7000
     jobs_poll_delay_sec: PositiveFloat = 0.1
-    num_archives_to_search_per_sub_job: int = 16
+    num_archives_to_search_per_sub_job: PositiveInt = 16
     logging_level: str = "INFO"
 
     @field_validator("logging_level")
@@ -338,19 +340,12 @@ class Reducer(BaseModel):
     host: Host = "localhost"
     base_port: Port = 14009
     logging_level: str = "INFO"
-    upsert_interval: int = 100  # milliseconds
+    upsert_interval: PositiveInt = 100  # milliseconds
 
     @field_validator("logging_level")
     @classmethod
     def validate_logging_level(cls, value):
         _validate_logging_level(cls, value)
-        return value
-
-    @field_validator("upsert_interval")
-    @classmethod
-    def validate_upsert_interval(cls, value):
-        if not value > 0:
-            raise ValueError(f"{value} is not greater than zero")
         return value
 
 
@@ -359,14 +354,7 @@ class ResultsCache(BaseModel):
     port: Port = 27017
     db_name: NonEmptyStr = "clp-query-results"
     stream_collection_name: NonEmptyStr = "stream-files"
-    retention_period: Optional[int] = 60
-
-    @field_validator("retention_period")
-    @classmethod
-    def validate_retention_period(cls, value):
-        if value is not None and value <= 0:
-            raise ValueError("retention_period must be greater than 0")
-        return value
+    retention_period: Optional[PositiveInt] = 60
 
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
@@ -556,53 +544,18 @@ def _set_directory_for_storage_config(
 
 class ArchiveOutput(BaseModel):
     storage: Union[ArchiveFsStorage, ArchiveS3Storage] = ArchiveFsStorage()
-    target_archive_size: int = 256 * 1024 * 1024  # 256 MB
-    target_dictionaries_size: int = 32 * 1024 * 1024  # 32 MB
-    target_encoded_file_size: int = 256 * 1024 * 1024  # 256 MB
-    target_segment_size: int = 256 * 1024 * 1024  # 256 MB
+    target_archive_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
+    target_dictionaries_size: PositiveInt = 32 * 1024 * 1024  # 32 MB
+    target_encoded_file_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
+    target_segment_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
     compression_level: int = 3
-    retention_period: Optional[int] = None
-
-    @field_validator("target_archive_size")
-    @classmethod
-    def validate_target_archive_size(cls, value):
-        if value <= 0:
-            raise ValueError("target_archive_size must be greater than 0")
-        return value
-
-    @field_validator("target_dictionaries_size")
-    @classmethod
-    def validate_target_dictionaries_size(cls, value):
-        if value <= 0:
-            raise ValueError("target_dictionaries_size must be greater than 0")
-        return value
-
-    @field_validator("target_encoded_file_size")
-    @classmethod
-    def validate_target_encoded_file_size(cls, value):
-        if value <= 0:
-            raise ValueError("target_encoded_file_size must be greater than 0")
-        return value
-
-    @field_validator("target_segment_size")
-    @classmethod
-    def validate_target_segment_size(cls, value):
-        if value <= 0:
-            raise ValueError("target_segment_size must be greater than 0")
-        return value
+    retention_period: Optional[PositiveInt] = None
 
     @field_validator("compression_level")
     @classmethod
     def validate_compression_level(cls, value):
         if value < 1 or value > 19:
             raise ValueError("compression_level must be a value from 1 to 19")
-        return value
-
-    @field_validator("retention_period")
-    @classmethod
-    def validate_retention_period(cls, value):
-        if value is not None and value <= 0:
-            raise ValueError("retention_period must be greater than 0")
         return value
 
     def set_directory(self, directory: pathlib.Path):
@@ -619,14 +572,7 @@ class ArchiveOutput(BaseModel):
 
 class StreamOutput(BaseModel):
     storage: Union[StreamFsStorage, StreamS3Storage] = StreamFsStorage()
-    target_uncompressed_size: int = 128 * 1024 * 1024
-
-    @field_validator("target_uncompressed_size")
-    @classmethod
-    def validate_target_uncompressed_size(cls, value):
-        if value <= 0:
-            raise ValueError("target_uncompressed_size must be greater than 0")
-        return value
+    target_uncompressed_size: PositiveInt = 128 * 1024 * 1024
 
     def set_directory(self, directory: pathlib.Path):
         _set_directory_for_storage_config(self.storage, directory)
@@ -644,21 +590,14 @@ class WebUi(BaseModel):
     host: Host = "localhost"
     port: Port = 4000
     results_metadata_collection_name: NonEmptyStr = "results-metadata"
-    rate_limit: int = 1000
-
-    @field_validator("rate_limit")
-    @classmethod
-    def validate_rate_limit(cls, value):
-        if value <= 0:
-            raise ValueError(f"rate_limit must be greater than 0")
-        return value
+    rate_limit: PositiveInt = 1000
 
 
 class SweepInterval(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
-    archive: int = Field(default=60, gt=0)
-    search_result: int = Field(default=30, gt=0)
+    archive: PositiveInt = 60
+    search_result: PositiveInt = 30
 
 
 class GarbageCollector(BaseModel):
