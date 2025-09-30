@@ -9,7 +9,7 @@ from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
 class Scheduler(ABC):
     """Abstract base class for a scheduler framework."""
 
-    class ResultHandle(ABC):
+    class CompressResultHandle(ABC):
         @abstractmethod
         def get_result(self, timeout: float = 0.1) -> list[CompressionTaskResult] | None:
             """
@@ -21,7 +21,7 @@ class Scheduler(ABC):
             pass
 
     @abstractmethod
-    def compress(self, task_params: list[dict[str, Any]]) -> ResultHandle:
+    def compress(self, task_params: list[dict[str, Any]]) -> CompressionTaskResult:
         """
         Starts a batch of compression tasks as a job.
         :param task_params: A list of dictionaries containing parameters for each compression task.

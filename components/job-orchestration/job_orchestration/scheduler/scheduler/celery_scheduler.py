@@ -10,7 +10,7 @@ from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
 
 class CeleryScheduler(Scheduler):
 
-    class ResultHandle(Scheduler.ResultHandle):
+    class CompressResultHandle(Scheduler.CompressResultHandle):
         def __init__(self, celery_result: celery.result.GroupResult) -> None:
             self._celery_result: celery.result.GroupResult = celery_result
 
@@ -21,7 +21,7 @@ class CeleryScheduler(Scheduler):
             except celery.exceptions.TimeoutError:
                 return None
 
-    def compress(self, task_params: list[dict[str, Any]]) -> Scheduler.ResultHandle:
+    def compress(self, task_params: list[dict[str, Any]]) -> Scheduler.CompressResultHandle:
         task_instances = [compress.s(**params) for params in task_params]
         task_group = celery.group(task_instances)
-        return CeleryScheduler.ResultHandle(task_group)
+        return CeleryScheduler.CompressResultHandle(task_group)
