@@ -14,7 +14,7 @@ from pydantic import (
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
-from .clp_logging import get_valid_logging_level, is_valid_logging_level
+from .clp_logging import LoggingLevel
 from .core import (
     get_config_value,
     make_config_path_absolute,
@@ -255,23 +255,9 @@ class Database(BaseModel):
         self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
 
 
-def _validate_logging_level(cls, value):
-    if not is_valid_logging_level(value):
-        raise ValueError(
-            f"{cls.__name__}: '{value}' is not a valid logging level. Use one of"
-            f" {get_valid_logging_level()}"
-        )
-
-
 class CompressionScheduler(BaseModel):
     jobs_poll_delay_sec: PositiveFloat = 0.1
-    logging_level: str = "INFO"
-
-    @field_validator("logging_level")
-    @classmethod
-    def validate_logging_level(cls, value):
-        _validate_logging_level(cls, value)
-        return value
+    logging_level: LoggingLevel = "INFO"
 
 
 class QueryScheduler(BaseModel):
@@ -279,33 +265,15 @@ class QueryScheduler(BaseModel):
     port: Port = 7000
     jobs_poll_delay_sec: PositiveFloat = 0.1
     num_archives_to_search_per_sub_job: PositiveInt = 16
-    logging_level: str = "INFO"
-
-    @field_validator("logging_level")
-    @classmethod
-    def validate_logging_level(cls, value):
-        _validate_logging_level(cls, value)
-        return value
+    logging_level: LoggingLevel = "INFO"
 
 
 class CompressionWorker(BaseModel):
-    logging_level: str = "INFO"
-
-    @field_validator("logging_level")
-    @classmethod
-    def validate_logging_level(cls, value):
-        _validate_logging_level(cls, value)
-        return value
+    logging_level: LoggingLevel = "INFO"
 
 
 class QueryWorker(BaseModel):
-    logging_level: str = "INFO"
-
-    @field_validator("logging_level")
-    @classmethod
-    def validate_logging_level(cls, value):
-        _validate_logging_level(cls, value)
-        return value
+    logging_level: LoggingLevel = "INFO"
 
 
 class Redis(BaseModel):
@@ -340,14 +308,8 @@ class Redis(BaseModel):
 class Reducer(BaseModel):
     host: Host = "localhost"
     base_port: Port = 14009
-    logging_level: str = "INFO"
+    logging_level: LoggingLevel = "INFO"
     upsert_interval: PositiveInt = 100  # milliseconds
-
-    @field_validator("logging_level")
-    @classmethod
-    def validate_logging_level(cls, value):
-        _validate_logging_level(cls, value)
-        return value
 
 
 class ResultsCache(BaseModel):
@@ -595,14 +557,8 @@ class SweepInterval(BaseModel):
 
 
 class GarbageCollector(BaseModel):
-    logging_level: str = "INFO"
+    logging_level: LoggingLevel = "INFO"
     sweep_interval: SweepInterval = SweepInterval()
-
-    @field_validator("logging_level")
-    @classmethod
-    def validate_logging_level(cls, value):
-        _validate_logging_level(cls, value)
-        return value
 
 
 class Presto(BaseModel):
