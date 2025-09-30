@@ -29,7 +29,7 @@ interface TimestampColumnItem {
  */
 const buildTimestampColumnsSql = (datasetName: string): string => `
     SELECT DISTINCT
-        ${CLP_COLUMN_METADATA_TABLE_COLUMN_NAMES.NAME} AS name
+        ${CLP_COLUMN_METADATA_TABLE_COLUMN_NAMES.NAME}
     FROM ${settings.SqlDbClpTablePrefix}${datasetName}_${SqlTableSuffix.COLUMN_METADATA}
     WHERE ${CLP_COLUMN_METADATA_TABLE_COLUMN_NAMES.TYPE} = ${TIMESTAMP_TYPE}
     ORDER BY ${CLP_COLUMN_METADATA_TABLE_COLUMN_NAMES.NAME};

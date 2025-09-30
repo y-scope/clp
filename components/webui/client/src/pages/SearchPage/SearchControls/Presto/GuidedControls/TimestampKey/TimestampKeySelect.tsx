@@ -7,8 +7,8 @@ import {
     SelectProps,
 } from "antd";
 
-import useSearchStore from "../../../../SearchState/index";
-import usePrestoSearchState from "../../../../SearchState/Presto/index";
+import useSearchStore from "../../../../SearchState";
+import usePrestoSearchState from "../../../../SearchState/Presto";
 import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
 import {fetchTimestampColumns} from "./sql";
 
@@ -96,7 +96,7 @@ const TimestampKeySelect = (selectProps: SelectProps<string>) => {
                 options={(timestampKeys || []).map((option) => ({label: option, value: option}))}
                 value={timestampKey}
                 disabled={
-                    !dataset ||
+                    null === dataset ||
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                     searchUiState === SEARCH_UI_STATE.QUERYING
                 }
