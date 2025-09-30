@@ -49,7 +49,7 @@ def compress(
             [int(tag_id) for tag_id in tag_ids],
             convert_to_str(clp_io_config_json),
             convert_to_str(paths_to_compress_json),
-            Database.model_validate_json(convert_to_str(clp_metadata_db_connection_config_json)),
+            Database.parse_raw(convert_to_str(clp_metadata_db_connection_config_json)),
             logger,
         )
     ).encode("utf-8")
