@@ -106,6 +106,7 @@ PositiveInt = Annotated[int, Field(gt=0)]
 # Specific types
 Host = NonEmptyStr
 Port = Annotated[int, Field(gt=0, lt=2**16)]
+ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
 
 
 class StorageEngine(KebabCaseStrEnum):
@@ -548,15 +549,8 @@ class ArchiveOutput(BaseModel):
     target_dictionaries_size: PositiveInt = 32 * 1024 * 1024  # 32 MB
     target_encoded_file_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
     target_segment_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
-    compression_level: int = 3
+    compression_level: ZstdCompressionLevel = 3
     retention_period: Optional[PositiveInt] = None
-
-    @field_validator("compression_level")
-    @classmethod
-    def validate_compression_level(cls, value):
-        if value < 1 or value > 19:
-            raise ValueError("compression_level must be a value from 1 to 19")
-        return value
 
     def set_directory(self, directory: pathlib.Path):
         _set_directory_for_storage_config(self.storage, directory)
