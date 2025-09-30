@@ -109,6 +109,11 @@ class StorageEngine(KebabCaseStrEnum):
     CLP_S = auto()
 
 
+class DatabaseEngine(KebabCaseStrEnum):
+    MARIADB = auto()
+    MYSQL = auto()
+
+
 class QueryEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
@@ -161,7 +166,7 @@ class Package(BaseModel):
 
 
 class Database(BaseModel):
-    type: str = "mariadb"
+    type: DatabaseEngine = DatabaseEngine.MARIADB
     host: Host = "localhost"
     port: Port = 3306
     name: str = "clp-db"
@@ -171,16 +176,6 @@ class Database(BaseModel):
 
     username: Optional[str] = None
     password: Optional[str] = None
-
-    @field_validator("type")
-    @classmethod
-    def validate_type(cls, value):
-        supported_database_types = ["mysql", "mariadb"]
-        if value not in supported_database_types:
-            raise ValueError(
-                f"database.type must be one of the following {'|'.join(supported_database_types)}"
-            )
-        return value
 
     @field_validator("name")
     @classmethod
@@ -223,7 +218,7 @@ class Database(BaseModel):
 
         connection_params_and_type = {
             # NOTE: clp-core does not distinguish between mysql and mariadb
-            "type": "mysql",
+            "type": DatabaseEngine.MYSQL.value,
             "host": host,
             "port": self.port,
             "username": self.username,
@@ -238,7 +233,9 @@ class Database(BaseModel):
         return connection_params_and_type
 
     def dump_to_primitive_dict(self):
-        return self.model_dump(exclude={"username", "password"})
+        d = self.model_dump(exclude={"username", "password"})
+        d["type"] = d["type"].value
+        return d
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
