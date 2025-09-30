@@ -15,7 +15,7 @@ remove_temp_file_and_prev_image() {
 }
 trap remove_temp_file_and_prev_image EXIT
 
-script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 repo_root="${script_dir}/../../../"
 iid_file="${repo_root}/build/clp-package-image.id"
 
