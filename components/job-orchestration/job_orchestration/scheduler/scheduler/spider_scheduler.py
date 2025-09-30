@@ -4,7 +4,6 @@ import json
 from typing import Any
 
 import spider_py
-
 from job_orchestration.executor.compress.spider_compress import compress, convert_to_str
 from job_orchestration.scheduler.scheduler.scheduler import Scheduler
 from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
