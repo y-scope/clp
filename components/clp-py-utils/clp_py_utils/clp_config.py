@@ -1015,7 +1015,7 @@ class CLPConfig(BaseModel):
             return ALL_COMPONENTS
 
     def dump_to_primitive_dict(self):
-        custom_serialized_fields = (
+        custom_serialized_fields = {
             "package",
             "database",
             "queue",
@@ -1023,8 +1023,8 @@ class CLPConfig(BaseModel):
             "logs_input",
             "archive_output",
             "stream_output",
-        )
-        d = self.model_dump(exclude=set(custom_serialized_fields))
+        }
+        d = self.model_dump(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
             d[key] = getattr(self, key).dump_to_primitive_dict()
 
