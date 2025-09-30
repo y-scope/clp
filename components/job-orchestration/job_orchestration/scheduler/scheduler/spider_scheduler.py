@@ -5,7 +5,7 @@ from typing import Any
 
 import spider_py
 
-from job_orchestration.executor.compress.spider_compress import compress
+from job_orchestration.executor.compress.spider_compress import compress, convert_to_str
 from job_orchestration.scheduler.scheduler.scheduler import Scheduler
 from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
 
@@ -43,4 +43,4 @@ class SpiderScheduler(Scheduler):
         results = result_handle.get_results()
         if results is None:
             return None
-        return [CompressionTaskResult.validate_model_json(result) for result in results]
+        return [CompressionTaskResult.validate_model_json(convert_to_str(result)) for result in results]
