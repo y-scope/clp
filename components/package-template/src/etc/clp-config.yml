@@ -1,6 +1,3 @@
-## Docker image to use for CLP package execution.
-#execution_container: "clp-package:dev"
-#
 ## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
 ## workers.
 #logs_input:
@@ -118,6 +115,9 @@
 #  sweep_interval:
 #    archive: 60
 #    search_result: 30
+#
+## Presto client config
+#presto: null
 #
 ## Location where other data (besides archives) are stored. It will be created if
 ## it doesn't exist.

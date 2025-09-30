@@ -1,4 +1,4 @@
-import type {PrestoRowObject} from "@webui/common";
+import type {PrestoRowObject} from "@webui/common/presto";
 import type {
     Db,
     InsertManyResult,

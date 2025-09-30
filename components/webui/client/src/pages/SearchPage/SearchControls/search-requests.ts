@@ -1,10 +1,12 @@
+import {
+    type QueryJob,
+    type QueryJobCreation,
+} from "@webui/common/schemas/search";
 import {message} from "antd";
 
 import {
     cancelQuery,
     clearQueryResults,
-    QueryJobCreationSchema,
-    QueryJobSchema,
     submitQuery,
 } from "../../../api/search";
 import {
@@ -40,7 +42,10 @@ const handleClearResults = () => {
     }
 
     clearQueryResults(
-        {searchJobId, aggregationJobId}
+        {
+            searchJobId: Number(searchJobId),
+            aggregationJobId: Number(aggregationJobId),
+        }
     ).catch((err: unknown) => {
         console.error("Failed to clear query results:", err);
     });
@@ -51,7 +56,7 @@ const handleClearResults = () => {
  *
  * @param payload
  */
-const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
+const handleQuerySubmit = (payload: QueryJobCreation) => {
     const store = useSearchStore.getState();
 
     // User should NOT be able to submit a new query while an existing query is in progress.
@@ -90,13 +95,14 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
 
     store.updateNumSearchResultsTable(SEARCH_STATE_DEFAULT.numSearchResultsTable);
     store.updateNumSearchResultsTimeline(SEARCH_STATE_DEFAULT.numSearchResultsTimeline);
+    store.updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
     store.updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 
     submitQuery(payload)
         .then((result) => {
             const {searchJobId, aggregationJobId} = result.data;
-            store.updateSearchJobId(searchJobId);
-            store.updateAggregationJobId(aggregationJobId);
+            store.updateSearchJobId(searchJobId.toString());
+            store.updateAggregationJobId(aggregationJobId.toString());
             store.updateSearchUiState(SEARCH_UI_STATE.QUERYING);
             console.debug(
                 "Search job created - ",
@@ -116,7 +122,7 @@ const handleQuerySubmit = (payload: QueryJobCreationSchema) => {
  *
  * @param payload
  */
-const handleQueryCancel = (payload: QueryJobSchema) => {
+const handleQueryCancel = (payload: QueryJob) => {
     const store = useSearchStore.getState();
 
     if (store.searchUiState !== SEARCH_UI_STATE.QUERYING) {

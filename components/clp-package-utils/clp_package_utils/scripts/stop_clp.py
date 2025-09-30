@@ -3,7 +3,7 @@ import sys
 
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
-from clp_package_utils.controller import DockerComposeController
+from clp_package_utils.controller import DockerComposeController, get_or_create_instance_id
 from clp_package_utils.general import (
     get_clp_home,
     load_config_file,
@@ -22,8 +22,9 @@ def main():
         logger.exception("Failed to load config.")
         return -1
 
+    instance_id = get_or_create_instance_id(clp_config)
     try:
-        controller = DockerComposeController(clp_config)
+        controller = DockerComposeController(clp_config, instance_id)
         controller.stop()
     except:
         logger.exception("Failed to stop CLP.")

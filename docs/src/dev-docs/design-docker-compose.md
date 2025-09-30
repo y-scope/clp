@@ -4,7 +4,7 @@ This document explains the technical details of CLP's Docker Compose implementat
 
 ## Overview
 
-The Docker Compose implementation depends on a new controller architecture with a `BaseController` 
+The Docker Compose implementation depends on a new controller architecture with a `BaseController`
 abstract class and a `DockerComposeController` implementation.
 
 ## Architecture
@@ -52,7 +52,7 @@ The Docker Compose setup includes the following services:
 :::{mermaid}
 graph LR
   %% Services
-  db["db (MySQL)"]
+  database["database (MySQL)"]
   queue["queue (RabbitMQ)"]
   redis["redis (Redis)"]
   results_cache["results-cache (MongoDB)"]
@@ -69,7 +69,7 @@ graph LR
   results_cache_indices_creator["results-cache-indices-creator"]
 
   %% Dependencies
-  db -->|healthy| db_table_creator
+  database -->|healthy| db_table_creator
   results_cache -->|healthy| results_cache_indices_creator
   db_table_creator -->|completed_successfully| compression_scheduler
   queue -->|healthy| compression_scheduler
@@ -82,11 +82,10 @@ graph LR
   db_table_creator -->|completed_successfully| webui
   results_cache_indices_creator -->|completed_successfully| webui
   db_table_creator -->|completed_successfully| garbage_collector
-  query_scheduler -->|healthy| garbage_collector
   results_cache_indices_creator -->|completed_successfully| garbage_collector
 
   subgraph Databases
-    db
+    database
     queue
     redis
     results_cache

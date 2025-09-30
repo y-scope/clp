@@ -149,11 +149,12 @@ def is_docker_compose_running(project_name: str) -> bool:
         raise EnvironmentError("docker-compose is not installed or not functioning properly.")
 
 
-def check_docker_dependencies(should_compose_run: bool = False):
+def check_docker_dependencies(should_compose_run: bool, project_name: str):
     """
     Checks if Docker and Docker Compose are installed, and whether Docker Compose is running or not.
 
     :param should_compose_run:
+    :param project_name: The Docker Compose project name to check.
     :raises EnvironmentError: If any Docker dependency is not installed or Docker Compose state
     does not match expectation.
     """
@@ -168,7 +169,7 @@ def check_docker_dependencies(should_compose_run: bool = False):
     except subprocess.CalledProcessError:
         raise EnvironmentError("docker is not installed or available on the path")
 
-    is_running = is_docker_compose_running("clp-package")
+    is_running = is_docker_compose_running(project_name)
     if should_compose_run and not is_running:
         raise EnvironmentError("docker-compose is not running.")
     if not should_compose_run and is_running:

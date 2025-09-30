@@ -1,29 +1,9 @@
+import {
+    type QueryJob,
+    type QueryJobCreation,
+} from "@webui/common/schemas/search";
 import axios, {AxiosResponse} from "axios";
 
-import {Nullable} from "../../typings/common";
-
-
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with shared type from the `@common` directory once refactoring is completed.
-// Currently, server schema types require typebox dependency so they cannot be moved to the
-// `@common` directory with current implementation.
-type QueryJobSchema = {
-    searchJobId: string;
-    aggregationJobId: string;
-};
-
-// eslint-disable-next-line no-warning-comments
-// TODO: Replace with shared type from the `@common` directory once refactoring is completed.
-// Currently, server schema types require typebox dependency so they cannot be moved to the
-// `@common` directory with current implementation.
-type QueryJobCreationSchema = {
-    dataset: Nullable<string>;
-    ignoreCase: boolean;
-    queryString: string;
-    timeRangeBucketSizeMillis: number;
-    timestampBegin: number;
-    timestampEnd: number;
-};
 
 /**
  * Sends post request to server to submit query.
@@ -31,10 +11,10 @@ type QueryJobCreationSchema = {
  * @param payload
  * @return
  */
-const submitQuery = (payload: QueryJobCreationSchema): Promise<AxiosResponse<QueryJobSchema>> => {
+const submitQuery = (payload: QueryJobCreation): Promise<AxiosResponse<QueryJob>> => {
     console.log("Submitting query:", JSON.stringify(payload));
 
-    return axios.post<QueryJobSchema>("/api/search/query", payload);
+    return axios.post<QueryJob>("/api/search/query", payload);
 };
 
 /**
@@ -43,7 +23,7 @@ const submitQuery = (payload: QueryJobCreationSchema): Promise<AxiosResponse<Que
  * @param payload
  * @return
  */
-const cancelQuery = (payload: QueryJobSchema): Promise<AxiosResponse<null>> => {
+const cancelQuery = (payload: QueryJob): Promise<AxiosResponse<null>> => {
     console.log("Cancelling query:", JSON.stringify(payload));
 
     return axios.post("/api/search/cancel", payload);
@@ -55,15 +35,12 @@ const cancelQuery = (payload: QueryJobSchema): Promise<AxiosResponse<null>> => {
  * @param payload
  * @return
  */
-const clearQueryResults = (payload: QueryJobSchema): Promise<AxiosResponse<null>> => {
+const clearQueryResults = (payload: QueryJob): Promise<AxiosResponse<null>> => {
     console.log("Clearing query:", JSON.stringify(payload));
 
     return axios.delete("/api/search/results", {data: payload});
 };
-export type {
-    QueryJobCreationSchema,
-    QueryJobSchema,
-};
+
 export {
     cancelQuery,
     clearQueryResults,

@@ -6,6 +6,7 @@ import pathlib
 import socket
 import stat
 import subprocess
+import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
@@ -18,9 +19,11 @@ from clp_py_utils.clp_config import (
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     DB_COMPONENT_NAME,
+    DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
+    QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
@@ -68,8 +71,8 @@ class BaseController(ABC):
 
     def __init__(self, clp_config: CLPConfig):
         self.clp_config = clp_config
-        self.clp_home = get_clp_home()
-        self._conf_dir = self.clp_home / "etc"
+        self._clp_home = get_clp_home()
+        self._conf_dir = self._clp_home / "etc"
 
     @abstractmethod
     def deploy(self):
@@ -195,7 +198,7 @@ class BaseController(ABC):
         _chown_paths_if_root(data_dir, logs_dir)
 
         return {
-            "CLP_RESULTS_CACHE_CONF_DIR_HOST": str(conf_file),
+            "CLP_RESULTS_CACHE_CONF_FILE_HOST": str(conf_file),
             "CLP_RESULTS_CACHE_DATA_DIR_HOST": str(data_dir),
             "CLP_RESULTS_CACHE_LOGS_DIR_HOST": str(logs_dir),
             "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self.clp_config.results_cache.host),
@@ -272,7 +275,7 @@ class BaseController(ABC):
 
         return {
             "CLP_QUERY_WORKER_LOGGING_LEVEL": self.clp_config.query_worker.logging_level,
-            "CLP_QUERY_WORKER_LOGS_DIR": str(logs_dir),
+            "CLP_QUERY_WORKER_LOGS_DIR_HOST": str(logs_dir),
             "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
         }
 
@@ -291,7 +294,7 @@ class BaseController(ABC):
 
         return {
             "CLP_REDUCER_LOGGING_LEVEL": self.clp_config.reducer.logging_level,
-            "CLP_REDUCER_LOGS_DIR": str(logs_dir),
+            "CLP_REDUCER_LOGS_DIR_HOST": str(logs_dir),
             "CLP_REDUCER_CONCURRENCY": str(num_workers),
             "CLP_REDUCER_UPSERT_INTERVAL": str(self.clp_config.reducer.upsert_interval),
         }
@@ -308,10 +311,10 @@ class BaseController(ABC):
 
         container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
         client_settings_json_path = (
-            self.clp_home / "var" / "www" / "webui" / "client" / "settings.json"
+                self._clp_home / "var" / "www" / "webui" / "client" / "settings.json"
         )
         server_settings_json_path = (
-            self.clp_home / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
+                self._clp_home / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
         )
 
         validate_webui_config(self.clp_config, client_settings_json_path, server_settings_json_path)
@@ -377,6 +380,14 @@ class BaseController(ABC):
             server_settings_json_updates["StreamFilesS3Region"] = None
             server_settings_json_updates["StreamFilesS3PathPrefix"] = None
             server_settings_json_updates["StreamFilesS3Profile"] = None
+
+        query_engine = self.clp_config.package.query_engine
+        if QueryEngine.PRESTO == query_engine:
+            server_settings_json_updates["PrestoHost"] = self.clp_config.presto.host
+            server_settings_json_updates["PrestoPort"] = self.clp_config.presto.port
+        else:
+            server_settings_json_updates["PrestoHost"] = None
+            server_settings_json_updates["PrestoPort"] = None
 
         server_settings_json = self._read_and_update_settings_json(
             server_settings_json_path, server_settings_json_updates
@@ -471,7 +482,8 @@ class DockerComposeController(BaseController):
     Controller for deploying CLP components using Docker Compose.
     """
 
-    def __init__(self, clp_config: CLPConfig):
+    def __init__(self, clp_config: CLPConfig, instance_id: str):
+        self._project_name = f"clp-package-{instance_id}"
         super().__init__(clp_config)
 
     def deploy(self):
@@ -481,14 +493,20 @@ class DockerComposeController(BaseController):
         2. Provisioning environment variables and configuration.
         3. Running `docker compose up -d`.
         """
-        check_docker_dependencies(should_compose_run=False)
+        check_docker_dependencies(should_compose_run=False, project_name=self._project_name)
         self._provision()
 
-        logger.info(f"Starting CLP using Docker Compose...")
+        deployment_type = self.clp_config.get_deployment_type()
+        logger.info(f"Starting CLP using Docker Compose ({deployment_type})...")
+
+        cmd = ["docker", "compose", "--project-name", self._project_name]
+        if deployment_type == DeploymentType.BASE:
+            cmd += ["--file", "docker-compose.base.yaml"]
+        cmd += ["up", "--detach"]
         try:
             subprocess.run(
-                ["docker", "compose", "up", "-d"],
-                cwd=self.clp_home,
+                cmd,
+                cwd=self._clp_home,
                 stderr=subprocess.STDOUT,
                 check=True,
             )
@@ -500,13 +518,13 @@ class DockerComposeController(BaseController):
         """
         Stops CLP components deployed via Docker Compose.
         """
-        check_docker_dependencies(should_compose_run=True)
+        check_docker_dependencies(should_compose_run=True, project_name=self._project_name)
 
         logger.info("Stopping all CLP containers using Docker Compose...")
         try:
             subprocess.run(
-                ["docker", "compose", "down"],
-                cwd=self.clp_home,
+                ["docker", "compose", "--project-name", self._project_name, "down"],
+                cwd=self._clp_home,
                 stderr=subprocess.STDOUT,
                 check=True,
             )
@@ -573,9 +591,29 @@ class DockerComposeController(BaseController):
         if self.clp_config.aws_config_directory is not None:
             env_dict["CLP_AWS_CONFIG_DIR_HOST"] = str(self.clp_config.aws_config_directory)
 
-        with open(f"{self.clp_home}/.env", "w") as env_file:
+        with open(f"{self._clp_home}/.env", "w") as env_file:
             for key, value in env_dict.items():
                 env_file.write(f"{key}={value}\n")
+
+
+def get_or_create_instance_id(clp_config: CLPConfig):
+    """
+    Gets or create a unique instance ID for this CLP instance.
+    :param clp_config:
+    :return: The instance ID.
+    """
+    instance_id_file_path = clp_config.logs_directory / "instance-id"
+
+    if instance_id_file_path.exists():
+        with open(instance_id_file_path, "r") as f:
+            instance_id = f.readline()
+    else:
+        instance_id = str(uuid.uuid4())[-4:]
+        with open(instance_id_file_path, "w") as f:
+            f.write(instance_id)
+            f.flush()
+
+    return instance_id
 
 
 def _chown_paths_if_root(*paths: pathlib.Path):

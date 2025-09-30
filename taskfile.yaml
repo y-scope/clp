@@ -4,10 +4,12 @@ set: ["u", "pipefail"]
 shopt: ["globstar"]
 
 includes:
+  codegen: "taskfiles/codegen.yaml"
   deps: "taskfiles/deps/main.yaml"
   docker-images: "taskfiles/docker-images.yaml"
   docs: "taskfiles/docs.yaml"
   lint: "taskfiles/lint.yaml"
+  tests: "taskfiles/tests/main.yaml"
   utils: "tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 vars:
@@ -25,17 +27,18 @@ vars:
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
+  G_SPIDER_BUILD_DIR: "{{.G_BUILD_DIR}}/spider"
 
   # Taskfile paths
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
   # Versions
-  G_PACKAGE_VERSION: "0.5.1-dev"
+  G_PACKAGE_VERSION: "0.5.2-dev"
 
   # Build parameters
   # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
-  G_CORE_MAX_PARALLELISM_PER_BUILD_TASK: >-
-    {{default "" (env "CLP_CORE_MAX_PARALLELISM_PER_BUILD_TASK")}}
+  G_CPP_MAX_PARALLELISM_PER_BUILD_TASK: >-
+    {{default "" (env "CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK")}}
 
   # Checksum files
   G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
@@ -66,6 +69,7 @@ tasks:
         vars:
           COMPONENT: "clp-mcp-server"
       - task: "clean-webui"
+      - task: "tests:integration:cache-clear"
 
   clean-core:
     cmds:
@@ -117,12 +121,13 @@ tasks:
       - "components/job-orchestration/dist/*.whl"
       # - "components/clp-mcp-server/dist/*.whl"
       - "components/package-template/src/**/*"
-      - "tools/deployment/package/docker-compose.yaml"
+      - "tools/deployment/package/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "core"
       - "clp-package-utils"
       - "clp-py-utils"
+      - "deps:spider"
       - "init"
       - "job-orchestration"
       - "clp-mcp-server"
@@ -153,6 +158,8 @@ tasks:
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+        "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_scheduler"
+        "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_worker"
         "{{.OUTPUT_DIR}}/bin/"
       - >-
         rsync -a
@@ -168,54 +175,14 @@ tasks:
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm ci --omit=dev
       - >-
         rsync -a
-        "tools/deployment/package/docker-compose.yaml"
+        "tools/deployment/package/"
         "{{.OUTPUT_DIR}}"
+      - "echo '{{.G_PACKAGE_VERSION}}' > '{{.OUTPUT_DIR}}/VERSION'"
       # This command must be last
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-
-  clp-s-generate-parsers:
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
-      OUTPUT_DIRS:
-        - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/generated"
-        - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/generated"
-    deps:
-      - "deps:antlr-jar"
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS:
-            ref: ".OUTPUT_DIRS"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    sources:
-      - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/Kql.g4"
-      - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/sql/Sql.g4"
-    dir: "{{.G_CORE_COMPONENT_DIR}}/src/"
-    cmds:
-      - for: ["kql", "sql"]
-        cmd: |-
-          rm -rf "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/generated/"* \
-          && java -jar {{.G_ANTLR_JAR_FILE}} \
-            -Dlanguage=Cpp \
-            -no-listener \
-            -visitor \
-            -package clp_s::search::{{.ITEM}}::generated \
-            -o clp_s/search/{{.ITEM}}/generated \
-            -Xexact-output-dir \
-            clp_s/search/{{.ITEM}}/*.g4 \
-            && find "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/{{.ITEM}}/generated" \
-              -type f -and -not \( -name "*.cpp" -o -name "*.h" \) \
-              -exec rm {} \;
-
-      # This command must be last
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS:
-            ref: ".OUTPUT_DIRS"
 
   core:
     cmds:
@@ -225,14 +192,14 @@ tasks:
   core-generate:
     internal: true
     sources: &core_source_files
-      - "{{.G_DEPS_CORE_CHECKSUM_FILE}}"
+      - "{{.G_DEPS_CPP_CHECKSUM_FILE}}"
       - "{{.G_CORE_COMPONENT_DIR}}/cmake/**/*"
       - "{{.G_CORE_COMPONENT_DIR}}/CMakeLists.txt"
       - "{{.G_CORE_COMPONENT_DIR}}/src/**/*"
       - "{{.TASKFILE}}"
       - "/etc/os-release"
     deps:
-      - "clp-s-generate-parsers"
+      - "codegen:clp-s-generate-parsers"
       - "deps:core"
     cmds:
       - task: "utils:cmake:generate"
@@ -254,7 +221,7 @@ tasks:
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
-          JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
+          JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
 
   clp-package-utils:
@@ -623,6 +590,7 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
   clean-python-component:
     internal: true
     label: "clean-{{.COMPONENT}}"
