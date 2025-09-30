@@ -32,7 +32,9 @@ const TimestampKeySelect = (selectProps: SelectProps<string>) => {
             "timestampColumns",
             dataset,
         ],
-        queryFn: () => fetchTimestampColumns(dataset!),
+        queryFn: () => (dataset ?
+            fetchTimestampColumns(dataset) :
+            []),
         enabled: null !== dataset,
     });
 
@@ -65,7 +67,8 @@ const TimestampKeySelect = (selectProps: SelectProps<string>) => {
         if (isSuccess && 0 === timestampKeys.length) {
             messageApi.warning({
                 key: "noTimestamps",
-                content: "No timestamp columns found for selected dataset. Guided UI requires a timestamp column.",
+                content: "No timestamp columns found for selected dataset. " +
+                         "Guided UI requires a timestamp column.",
             });
             updateTimestampKey(null);
         }
