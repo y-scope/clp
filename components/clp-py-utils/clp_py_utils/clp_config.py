@@ -103,7 +103,7 @@ CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 NonEmptyStr = Annotated[str, Field(min_length=1)]
 PositiveFloat = Annotated[float, Field(gt=0)]
 PositiveInt = Annotated[int, Field(gt=0)]
-# Type aliases
+# Specific types
 Host = NonEmptyStr
 Port = Annotated[int, Field(gt=0, lt=2**16)]
 
