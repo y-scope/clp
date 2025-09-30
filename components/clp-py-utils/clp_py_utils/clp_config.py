@@ -261,7 +261,7 @@ def _validate_logging_level(cls, value):
 
 
 class CompressionScheduler(BaseModel):
-    jobs_poll_delay: PositiveFloat = 0.1  # seconds
+    jobs_poll_delay_sec: PositiveFloat = 0.1
     logging_level: str = "INFO"
 
     @field_validator("logging_level")
@@ -274,7 +274,7 @@ class CompressionScheduler(BaseModel):
 class QueryScheduler(BaseModel):
     host: Host = "localhost"
     port: Port = 7000
-    jobs_poll_delay: PositiveFloat = 0.1  # seconds
+    jobs_poll_delay_sec: PositiveFloat = 0.1
     num_archives_to_search_per_sub_job: int = 16
     logging_level: str = "INFO"
 
