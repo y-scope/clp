@@ -375,14 +375,13 @@ services:
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS}"
       CLP_DB_USER: "${CLP_DB_USER}"
-      MCP_HOST: "${CLP_MCP_HOST:-0.0.0.0}"
-      MCP_PORT: "${CLP_MCP_PORT:-8000}"
+      MCP_HOST: "0.0.0.0"
+      MCP_PORT: "8000"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     ports:
-      - "${CLP_MCP_HOST:-0.0.0.0}:${CLP_MCP_PORT:-8000}:${CLP_MCP_PORT:-8000}"
+      - "${CLP_MCP_HOST:-127.0.0.1}:${CLP_MCP_PORT:-8000}:8000"
     volumes:
       - "${CLP_MCP_LOGS_DIR_HOST:-./var/log/mcp-server}:/var/log/mcp-server"
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
     user: 0:0
     healthcheck:
       <<: *healthcheck_defaults

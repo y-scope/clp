@@ -24,7 +24,7 @@ class Transport(enum.Enum):
     type=click.Choice([t.name for t in Transport], case_sensitive=False),
     help="Specify the transport protocol.",
 )
-@click.option("--host", type=str, default="127.0.0.1", help="The server's host.")
+@click.option("--host", type=str, default="0.0.0.0", help="The server's host.")
 @click.option("--port", type=int, default=8000, help="The server's port number")
 def main(
     sse: bool, transport: Optional[str], host: str, port: int
