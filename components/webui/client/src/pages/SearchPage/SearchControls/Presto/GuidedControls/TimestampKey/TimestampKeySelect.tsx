@@ -19,7 +19,7 @@ import {fetchTimestampColumns} from "./sql";
  * @param selectProps
  * @return
  */
-const TimestampKeySelect = (selectProps: SelectProps) => {
+const TimestampKeySelect = (selectProps: SelectProps<string>) => {
     const dataset = useSearchStore((state) => state.selectDataset);
     const timestampKey = usePrestoSearchState((state) => state.timestampKey);
     const updateTimestampKey = usePrestoSearchState((state) => state.updateTimestampKey);
@@ -27,42 +27,42 @@ const TimestampKeySelect = (selectProps: SelectProps) => {
 
     const [messageApi, contextHolder] = message.useMessage();
 
-    const {data, isPending, isSuccess, error} = useQuery({
+    const {data: timestampKeys, isPending, isSuccess, isError} = useQuery({
         queryKey: [
             "timestampColumns",
-            dataset
+            dataset,
         ],
         queryFn: () => fetchTimestampColumns(dataset!),
-        enabled: Boolean(dataset),
+        enabled: null !== dataset,
     });
 
     useEffect(() => {
         if (isSuccess) {
-            if ("undefined" !== typeof data[0] && null === timestampKey) {
-                updateTimestampKey(data[0]);
+            if ("undefined" !== typeof timestampKeys[0] && null === timestampKey) {
+                updateTimestampKey(timestampKeys[0]);
             }
         }
     }, [
         isSuccess,
-        data,
+        timestampKeys,
         timestampKey,
-        updateTimestampKey
+        updateTimestampKey,
     ]);
 
     useEffect(() => {
-        if (error) {
+        if (isError) {
             messageApi.error({
                 key: "fetchTimestampError",
                 content: "Error fetching timestamp columns.",
             });
         }
     }, [
-        error,
-        messageApi
+        isError,
+        messageApi,
     ]);
 
     useEffect(() => {
-        if (isSuccess && 0 === data.length) {
+        if (isSuccess && 0 === timestampKeys.length) {
             messageApi.warning({
                 key: "noTimestamps",
                 content: "No timestamp columns found for selected dataset. Guided UI requires a timestamp column.",
@@ -70,10 +70,10 @@ const TimestampKeySelect = (selectProps: SelectProps) => {
             updateTimestampKey(null);
         }
     }, [
-        data,
+        timestampKeys,
         isSuccess,
         messageApi,
-        updateTimestampKey
+        updateTimestampKey,
     ]);
 
     // Reset timestamp key when dataset changes
@@ -81,7 +81,7 @@ const TimestampKeySelect = (selectProps: SelectProps) => {
         updateTimestampKey(null);
     }, [
         dataset,
-        updateTimestampKey
+        updateTimestampKey,
     ]);
 
     const handleTimestampKeyChange = (value: string) => {
@@ -91,9 +91,9 @@ const TimestampKeySelect = (selectProps: SelectProps) => {
     return (
         <>
             {contextHolder}
-            <Select
+            <Select<string>
                 loading={isPending}
-                options={(data || []).map((option) => ({label: option, value: option}))}
+                options={(timestampKeys || []).map((option) => ({label: option, value: option}))}
                 value={timestampKey}
                 disabled={
                     !dataset ||
