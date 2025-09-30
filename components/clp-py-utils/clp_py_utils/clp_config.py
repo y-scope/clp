@@ -174,7 +174,7 @@ class Database(BaseModel):
     host: Host = "localhost"
     port: Port = 3306
     name: NonEmptyStr = "clp-db"
-    ssl_cert: Optional[str] = None
+    ssl_cert: Optional[NonEmptyStr] = None
     auto_commit: bool = False
     compress: bool = True
 
@@ -364,7 +364,7 @@ class Queue(BaseModel):
     host: Host = "localhost"
     port: Port = 5672
 
-    username: Optional[str] = None
+    username: Optional[NonEmptyStr] = None
     password: Optional[str] = None
 
     def dump_to_primitive_dict(self):
@@ -393,7 +393,7 @@ class Queue(BaseModel):
 class S3Credentials(BaseModel):
     access_key_id: NonEmptyStr
     secret_access_key: NonEmptyStr
-    session_token: Optional[str] = None
+    session_token: Optional[NonEmptyStr] = None
 
 
 class AwsAuthentication(BaseModel):
@@ -403,7 +403,7 @@ class AwsAuthentication(BaseModel):
         AwsAuthType.env_vars.value,
         AwsAuthType.ec2.value,
     ]
-    profile: Optional[str] = None
+    profile: Optional[NonEmptyStr] = None
     credentials: Optional[S3Credentials] = None
 
     @model_validator(mode="before")
@@ -624,7 +624,7 @@ def _get_env_var(name: str) -> str:
 
 
 class CLPConfig(BaseModel):
-    execution_container: Optional[str] = None
+    execution_container: Optional[NonEmptyStr] = None
 
     logs_input: Union[FsIngestionConfig, S3IngestionConfig] = FsIngestionConfig()
 
