@@ -2,6 +2,7 @@ __pycache__/
 .clang-format
 .clang-tidy
 .lint-venv/
+.rustfmt.toml
 .task/
 build/
 dist/

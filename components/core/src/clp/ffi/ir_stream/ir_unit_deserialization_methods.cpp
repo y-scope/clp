@@ -217,7 +217,8 @@ auto deserialize_schema_tree_node_parent_id(ReaderInterface& reader)
     return deserialize_and_decode_schema_tree_node_id<
             cProtocol::Payload::EncodedSchemaTreeNodeParentIdByte,
             cProtocol::Payload::EncodedSchemaTreeNodeParentIdShort,
-            cProtocol::Payload::EncodedSchemaTreeNodeParentIdInt>(tag, reader);
+            cProtocol::Payload::EncodedSchemaTreeNodeParentIdInt
+    >(tag, reader);
 }
 
 auto deserialize_schema_tree_node_key_name(ReaderInterface& reader, std::string& key_name)
@@ -314,7 +315,8 @@ auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         auto const schema_tree_node_id_result{deserialize_and_decode_schema_tree_node_id<
                 cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
                 cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
-                cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(tag, reader)};
+                cProtocol::Payload::EncodedSchemaTreeNodeIdInt
+        >(tag, reader)};
         if (schema_tree_node_id_result.has_error()) {
             return schema_tree_node_id_result.error();
         }
@@ -358,7 +360,8 @@ auto deserialize_auto_gen_node_id_value_pairs_and_user_gen_schema(
         auto const schema_tree_node_id_result{deserialize_and_decode_schema_tree_node_id<
                 cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
                 cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
-                cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(tag, reader)};
+                cProtocol::Payload::EncodedSchemaTreeNodeIdInt
+        >(tag, reader)};
         if (schema_tree_node_id_result.has_error()) {
             return schema_tree_node_id_result.error();
         }
@@ -424,7 +427,8 @@ auto deserialize_value_and_insert_to_node_id_value_pairs(
         }
         case cProtocol::Payload::ValueEightByteEncodingClpStr:
             if (auto const err{deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs<
-                        ir::eight_byte_encoded_variable_t>(reader, node_id, node_id_value_pairs)};
+                        ir::eight_byte_encoded_variable_t
+                >(reader, node_id, node_id_value_pairs)};
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return err;
@@ -432,7 +436,8 @@ auto deserialize_value_and_insert_to_node_id_value_pairs(
             break;
         case cProtocol::Payload::ValueFourByteEncodingClpStr:
             if (auto const err{deserialize_encoded_text_ast_and_insert_to_node_id_value_pairs<
-                        ir::four_byte_encoded_variable_t>(reader, node_id, node_id_value_pairs)};
+                        ir::four_byte_encoded_variable_t
+                >(reader, node_id, node_id_value_pairs)};
                 IRErrorCode::IRErrorCode_Success != err)
             {
                 return err;

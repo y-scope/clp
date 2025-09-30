@@ -234,7 +234,7 @@ def generate_container_config(
     :param clp_home:
     :return: The container config and the mounts.
     """
-    container_clp_config = clp_config.copy(deep=True)
+    container_clp_config = clp_config.model_copy(deep=True)
 
     docker_mounts = CLPDockerMounts(clp_home, CONTAINER_CLP_HOME)
 
@@ -323,8 +323,8 @@ def generate_docker_compose_container_config(clp_config: CLPConfig) -> CLPConfig
 
 def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
     worker_config = WorkerConfig()
-    worker_config.package = clp_config.package.copy(deep=True)
-    worker_config.archive_output = clp_config.archive_output.copy(deep=True)
+    worker_config.package = clp_config.package.model_copy(deep=True)
+    worker_config.archive_output = clp_config.archive_output.model_copy(deep=True)
     worker_config.data_directory = clp_config.data_directory
 
     worker_config.stream_output = clp_config.stream_output
@@ -430,7 +430,7 @@ def load_config_file(
         if raw_clp_config is None:
             clp_config = CLPConfig()
         else:
-            clp_config = CLPConfig.parse_obj(raw_clp_config)
+            clp_config = CLPConfig.model_validate(raw_clp_config)
     else:
         if config_file_path != default_config_file_path:
             raise ValueError(f"Config file '{config_file_path}' does not exist.")
