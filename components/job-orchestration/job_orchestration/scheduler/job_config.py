@@ -4,7 +4,7 @@ import typing
 from enum import auto
 
 from clp_py_utils.clp_config import S3Config
-from pydantic import BaseModel, validator
+from pydantic import BaseModel, field_validator
 from strenum import LowercaseStrEnum
 
 
@@ -17,7 +17,7 @@ class PathsToCompress(BaseModel):
     file_paths: typing.List[str]
     group_ids: typing.List[int]
     st_sizes: typing.List[int]
-    empty_directories: typing.List[str] = None
+    empty_directories: typing.Optional[typing.List[str]] = None
 
 
 class FsInputConfig(BaseModel):
@@ -84,7 +84,8 @@ class SearchJobConfig(QueryJobConfig):
     network_address: typing.Optional[typing.Tuple[str, int]] = None
     aggregation_config: typing.Optional[AggregationConfig] = None
 
-    @validator("network_address")
+    @field_validator("network_address")
+    @classmethod
     def validate_network_address(cls, field):
         if field is not None and (field[1] < 1 or field[1] > 65535):
             raise ValueError("Port must be in the range [1, 65535]")

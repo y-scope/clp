@@ -38,7 +38,7 @@ class PathsToCompressBuffer:
             "job_id": scheduling_job_id,
             "tag_ids": None,
             "task_id": -1,
-            "clp_io_config_json": clp_io_config.json(exclude_none=True),
+            "clp_io_config_json": clp_io_config.model_dump_json(exclude_none=True),
             "paths_to_compress_json": None,
             "clp_metadata_db_connection_config": clp_metadata_db_connection_config,
         }
@@ -83,13 +83,15 @@ class PathsToCompressBuffer:
             {
                 "partition_original_size": str(sum(st_sizes)),
                 "clp_paths_to_compress": brotli.compress(
-                    msgpack.packb(paths_to_compress.dict(exclude_none=True)), quality=4
+                    msgpack.packb(paths_to_compress.model_dump(exclude_none=True)), quality=4
                 ),
             }
         )
 
         task_arguments = self.__task_arguments.copy()
-        task_arguments["paths_to_compress_json"] = paths_to_compress.json(exclude_none=True)
+        task_arguments["paths_to_compress_json"] = paths_to_compress.model_dump_json(
+            exclude_none=True
+        )
         self.__tasks.append(copy.deepcopy(task_arguments))
         self.num_tasks += 1
 

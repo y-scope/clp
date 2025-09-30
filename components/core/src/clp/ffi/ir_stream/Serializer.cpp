@@ -47,9 +47,7 @@ concept SchemaTreeNodeSerializationMethodReq = requires(
         SerializationMethod serialization_method,
         SchemaTree::NodeLocator const& locator
 ) {
-    {
-        serialization_method(locator)
-    } -> std::same_as<bool>;
+    { serialization_method(locator) } -> std::same_as<bool>;
 };
 
 /**
@@ -67,9 +65,7 @@ concept NodeIdValuePairSerializationMethodReq = requires(
         msgpack::object const& val,
         SchemaTree::Node::Type schema_tree_node_type
 ) {
-    {
-        serialization_method(id, val, schema_tree_node_type)
-    } -> std::same_as<bool>;
+    { serialization_method(id, val, schema_tree_node_type) } -> std::same_as<bool>;
 };
 
 /**
@@ -81,9 +77,7 @@ concept NodeIdValuePairSerializationMethodReq = requires(
 template <typename SerializationMethod>
 concept EmptyMapSerializationMethodReq
         = requires(SerializationMethod serialization_method, SchemaTree::Node::id_t node_id) {
-              {
-                  serialization_method(node_id)
-              } -> std::same_as<bool>;
+              { serialization_method(node_id) } -> std::same_as<bool>;
           };
 
 /**
@@ -237,7 +231,8 @@ template <typename encoded_variable_t>
 template <
         SchemaTreeNodeSerializationMethodReq SchemaTreeNodeSerializationMethod,
         NodeIdValuePairSerializationMethodReq NodeIdValuePairSerializationMethod,
-        EmptyMapSerializationMethodReq EmptyMapSerializationMethod>
+        EmptyMapSerializationMethodReq EmptyMapSerializationMethod
+>
 [[nodiscard]] auto serialize_msgpack_map_using_dfs(
         msgpack::object_map const& msgpack_map,
         SchemaTree& schema_tree,
@@ -435,7 +430,8 @@ auto is_msgpack_array_serializable(msgpack::object const& array) -> bool {
 template <
         SchemaTreeNodeSerializationMethodReq SchemaTreeNodeSerializationMethod,
         NodeIdValuePairSerializationMethodReq NodeIdValuePairSerializationMethod,
-        EmptyMapSerializationMethodReq EmptyMapSerializationMethod>
+        EmptyMapSerializationMethodReq EmptyMapSerializationMethod
+>
 [[nodiscard]] auto serialize_msgpack_map_using_dfs(
         msgpack::object_map const& msgpack_map,
         SchemaTree& schema_tree,
@@ -608,10 +604,8 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(
                     true,
                     cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
                     cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
-                    cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(
-                    node_id,
-                    m_sequential_serialization_buf
-            ))
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdInt
+            >(node_id, m_sequential_serialization_buf))
         {
             return false;
         }
@@ -634,10 +628,8 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(
                     true,
                     cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
                     cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
-                    cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(
-                    node_id,
-                    m_sequential_serialization_buf
-            ))
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdInt
+            >(node_id, m_sequential_serialization_buf))
         {
             return false;
         }
@@ -673,10 +665,8 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(
                     false,
                     cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
                     cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
-                    cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(
-                    node_id,
-                    m_sequential_serialization_buf
-            ))
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdInt
+            >(node_id, m_sequential_serialization_buf))
         {
             return false;
         }
@@ -699,10 +689,8 @@ auto Serializer<encoded_variable_t>::serialize_msgpack_map(
                     false,
                     cProtocol::Payload::EncodedSchemaTreeNodeIdByte,
                     cProtocol::Payload::EncodedSchemaTreeNodeIdShort,
-                    cProtocol::Payload::EncodedSchemaTreeNodeIdInt>(
-                    node_id,
-                    m_sequential_serialization_buf
-            ))
+                    cProtocol::Payload::EncodedSchemaTreeNodeIdInt
+            >(node_id, m_sequential_serialization_buf))
         {
             return false;
         }
@@ -781,10 +769,8 @@ auto Serializer<encoded_variable_t>::serialize_schema_tree_node(
                 is_auto_generated_node,
                 cProtocol::Payload::EncodedSchemaTreeNodeParentIdByte,
                 cProtocol::Payload::EncodedSchemaTreeNodeParentIdShort,
-                cProtocol::Payload::EncodedSchemaTreeNodeParentIdInt>(
-                locator.get_parent_id(),
-                m_schema_tree_node_buf
-        ))
+                cProtocol::Payload::EncodedSchemaTreeNodeParentIdInt
+        >(locator.get_parent_id(), m_schema_tree_node_buf))
     {
         return false;
     }
