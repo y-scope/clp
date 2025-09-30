@@ -100,6 +100,7 @@ CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 
 # Types
+PositiveFloat = Annotated[float, Field(gt=0)]
 NonEmptyStr = Annotated[str, Field(min_length=1)]
 Host = NonEmptyStr
 Port = Annotated[int, Field(gt=0, lt=2**16)]
@@ -260,7 +261,7 @@ def _validate_logging_level(cls, value):
 
 
 class CompressionScheduler(BaseModel):
-    jobs_poll_delay: float = 0.1  # seconds
+    jobs_poll_delay: PositiveFloat = 0.1  # seconds
     logging_level: str = "INFO"
 
     @field_validator("logging_level")
@@ -273,7 +274,7 @@ class CompressionScheduler(BaseModel):
 class QueryScheduler(BaseModel):
     host: Host = "localhost"
     port: Port = 7000
-    jobs_poll_delay: float = 0.1  # seconds
+    jobs_poll_delay: PositiveFloat = 0.1  # seconds
     num_archives_to_search_per_sub_job: int = 16
     logging_level: str = "INFO"
 
