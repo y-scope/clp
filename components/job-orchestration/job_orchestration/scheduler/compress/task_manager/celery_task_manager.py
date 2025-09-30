@@ -5,7 +5,7 @@ from typing import Any
 import celery
 from job_orchestration.executor.compress.celery_compress import compress
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
-from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
+from job_orchestration.scheduler.scheduler_result import CompressionTaskResult
 
 
 class CeleryTaskManager(TaskManager):

@@ -7,7 +7,7 @@ from typing import Any
 import spider_py
 from job_orchestration.executor.compress.spider_compress import compress, convert_to_str
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
-from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
+from job_orchestration.scheduler.scheduler_result import CompressionTaskResult
 from spider_py.client.job import Job
 
 

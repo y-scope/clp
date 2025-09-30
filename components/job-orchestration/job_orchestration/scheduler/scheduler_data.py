@@ -6,7 +6,6 @@ from typing import Any, Dict, List, Optional
 
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.constants import (
-    CompressionTaskStatus,
     QueryJobType,
     QueryTaskStatus,
 )
@@ -24,20 +23,6 @@ class CompressionJob(BaseModel):
     id: int
     start_time: datetime.datetime
     result_handle: TaskManager.CompressResultHandle
-
-
-class CompressionTaskResult(BaseModel):
-    task_id: int
-    status: int
-    duration: float
-    error_message: Optional[str]
-
-    @validator("status")
-    def valid_status(cls, field):
-        supported_status = [CompressionTaskStatus.SUCCEEDED, CompressionTaskStatus.FAILED]
-        if field not in supported_status:
-            raise ValueError(f'must be one of the following {"|".join(supported_status)}')
-        return field
 
 
 class InternalJobState(Enum):
