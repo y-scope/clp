@@ -3,7 +3,7 @@
 set -eu
 set -o pipefail
 
-remove_prev_image_and_temp_file() {
+remove_temp_file_and_prev_image() {
     rm -f "$temp_iid_file"
 
     [[ -z "$prev_image_id" || "$prev_image_id" == "$new_image_id" ]] && return
@@ -13,7 +13,7 @@ remove_prev_image_and_temp_file() {
         docker image remove "$prev_image_id"
     fi
 }
-trap remove_prev_image_and_temp_file EXIT
+trap remove_temp_file_and_prev_image EXIT
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 repo_root="${script_dir}/../../../"
