@@ -11,8 +11,8 @@ from job_orchestration.scheduler.scheduler_result import CompressionTaskResult
 class CeleryTaskManager(TaskManager):
 
     class CompressResultHandle(TaskManager.CompressResultHandle):
-        def __init__(self, celery_result: celery.result.GroupResult) -> None:
-            self._celery_result: celery.result.GroupResult = celery_result
+        def __init__(self, celery_result: celery.result.AsyncResult) -> None:
+            self._celery_result: celery.result.AsyncResult = celery_result
 
         def get_result(self, timeout: float = 0.1) -> list[CompressionTaskResult] | None:
             try:
@@ -24,4 +24,4 @@ class CeleryTaskManager(TaskManager):
     def compress(self, task_params: list[dict[str, Any]]) -> TaskManager.CompressResultHandle:
         task_instances = [compress.s(**params) for params in task_params]
         task_group = celery.group(task_instances)
-        return CeleryTaskManager.CompressResultHandle(task_group)
+        return CeleryTaskManager.CompressResultHandle(task_group.apply_async())
