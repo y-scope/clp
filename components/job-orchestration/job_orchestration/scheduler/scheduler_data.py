@@ -23,7 +23,7 @@ from pydantic import BaseModel, validator
 class CompressionJob(BaseModel):
     id: int
     start_time: datetime.datetime
-    result_handle: Scheduler.ResultHandle
+    result_handle: Scheduler.CompressResultHandle
 
 
 class CompressionTaskResult(BaseModel):

@@ -372,7 +372,6 @@ def search_and_schedule_new_tasks(
             task["tag_ids"] = tag_ids
         result_handle = scheduler.compress(tasks)
 
-        # TODO: Figure out whether we need `async_task_result`
         job = CompressionJob(id=job_id, start_time=start_time, result_handle=result_handle)
         db_cursor.execute(
             f"""
