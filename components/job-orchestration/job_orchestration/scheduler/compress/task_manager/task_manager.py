@@ -6,7 +6,7 @@ from typing import Any
 from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
 
 
-class Scheduler(ABC):
+class TaskManager(ABC):
     """Abstract base class for a scheduler framework."""
 
     class CompressResultHandle(ABC):

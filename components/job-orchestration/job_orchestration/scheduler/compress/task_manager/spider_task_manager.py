@@ -2,18 +2,19 @@ from __future__ import annotations
 
 import itertools
 import json
-from typing import Any, Sequence
+from typing import Any
 
 import spider_py
-from job_orchestration.executor.compress.spider_compress import compress, convert_to_str
-from job_orchestration.scheduler.scheduler.scheduler import Scheduler
-from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
 from spider_py.client.job import Job
 
+from job_orchestration.executor.compress.spider_compress import compress, convert_to_str
+from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
+from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
 
-class SpiderScheduler(Scheduler):
 
-    class CompressResultHandle(Scheduler.CompressResultHandle):
+class SpiderTaskManager(TaskManager):
+
+    class CompressResultHandle(TaskManager.CompressResultHandle):
         def __init__(self, spider_job: Job) -> None:
             self._spider_job: Job = spider_job
 
@@ -29,7 +30,7 @@ class SpiderScheduler(Scheduler):
     def __init__(self, storage_url: str) -> None:
         self._driver = spider_py.Driver(storage_url)
 
-    def compress(self, task_params: list[dict[str, Any]]) -> Scheduler.CompressResultHandle:
+    def compress(self, task_params: list[dict[str, Any]]) -> TaskManager.CompressResultHandle:
         job = spider_py.group(
             [compress for _ in range(len(task_params))],
         )
@@ -45,7 +46,7 @@ class SpiderScheduler(Scheduler):
             for task_param in task_params
         ]
         submitted_job = self._driver.submit_jobs([job], [list(itertools.chain(*task_params_list))])
-        return SpiderScheduler.CompressResultHandle(submitted_job)
+        return SpiderTaskManager.CompressResultHandle(submitted_job)
 
 
 def _from_str(string: str) -> list[spider_py.Int8]:

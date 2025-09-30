@@ -13,7 +13,6 @@ import brotli
 import msgpack
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
-    ArchiveOutput,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -31,6 +30,8 @@ from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
+from job_orchestration.scheduler.compress.task_manager.celery_task_manager import CeleryTaskManager
+from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.constants import (
     CompressionJobStatus,
     CompressionTaskStatus,
@@ -42,8 +43,6 @@ from job_orchestration.scheduler.job_config import (
     InputType,
     S3InputConfig,
 )
-from job_orchestration.scheduler.scheduler.celery_scheduler import CeleryScheduler
-from job_orchestration.scheduler.scheduler.scheduler import Scheduler
 from job_orchestration.scheduler.scheduler_data import (
     CompressionJob,
 )
@@ -217,7 +216,7 @@ def search_and_schedule_new_tasks(
     db_conn,
     db_cursor,
     clp_metadata_db_connection_config: Dict[str, Any],
-    scheduler: Scheduler,
+    task_manager: TaskManager,
 ):
     """
     For all jobs with PENDING status, splits the job into tasks and schedules them.
@@ -225,7 +224,7 @@ def search_and_schedule_new_tasks(
     :param db_conn:
     :param db_cursor:
     :param clp_metadata_db_connection_config:
-    :param scheduler:
+    :param task_manager:
     """
     global scheduled_jobs
 
@@ -370,7 +369,7 @@ def search_and_schedule_new_tasks(
             db_conn.commit()
             task["task_id"] = db_cursor.lastrowid
             task["tag_ids"] = tag_ids
-        result_handle = scheduler.compress(tasks)
+        result_handle = task_manager.compress(tasks)
 
         job = CompressionJob(id=job_id, start_time=start_time, result_handle=result_handle)
         db_cursor.execute(
@@ -384,7 +383,7 @@ def search_and_schedule_new_tasks(
         scheduled_jobs[job_id] = job
 
 
-def poll_running_jobs(db_conn, db_cursor, scheduler: Scheduler):
+def poll_running_jobs(db_conn, db_cursor):
     """
     Poll for running jobs and update their status.
     """
@@ -487,7 +486,7 @@ def main(argv):
     logger.info(f"Starting {COMPRESSION_SCHEDULER_COMPONENT_NAME}")
     sql_adapter = SQL_Adapter(clp_config.database)
 
-    scheduler = CeleryScheduler()
+    task_manager = CeleryTaskManager()
 
     try:
         killed_jobs = kill_hanging_jobs(sql_adapter, SchedulerType.COMPRESSION)
@@ -509,9 +508,13 @@ def main(argv):
             try:
                 if not received_sigterm:
                     search_and_schedule_new_tasks(
-                        clp_config, db_conn, db_cursor, clp_metadata_db_connection_config, scheduler
+                        clp_config,
+                        db_conn,
+                        db_cursor,
+                        clp_metadata_db_connection_config,
+                        task_manager,
                     )
-                poll_running_jobs(db_conn, db_cursor, scheduler)
+                poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
                 logger.info("Forcefully shutting down")

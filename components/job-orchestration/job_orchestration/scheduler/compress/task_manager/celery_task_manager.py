@@ -3,14 +3,15 @@ from __future__ import annotations
 from typing import Any
 
 import celery
+
 from job_orchestration.executor.compress.celery_compress import compress
-from job_orchestration.scheduler.scheduler.scheduler import Scheduler
+from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
 
 
-class CeleryScheduler(Scheduler):
+class CeleryTaskManager(TaskManager):
 
-    class CompressResultHandle(Scheduler.CompressResultHandle):
+    class CompressResultHandle(TaskManager.CompressResultHandle):
         def __init__(self, celery_result: celery.result.GroupResult) -> None:
             self._celery_result: celery.result.GroupResult = celery_result
 
@@ -21,7 +22,7 @@ class CeleryScheduler(Scheduler):
             except celery.exceptions.TimeoutError:
                 return None
 
-    def compress(self, task_params: list[dict[str, Any]]) -> Scheduler.CompressResultHandle:
+    def compress(self, task_params: list[dict[str, Any]]) -> TaskManager.CompressResultHandle:
         task_instances = [compress.s(**params) for params in task_params]
         task_group = celery.group(task_instances)
-        return CeleryScheduler.CompressResultHandle(task_group)
+        return CeleryTaskManager.CompressResultHandle(task_group)
