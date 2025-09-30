@@ -123,33 +123,9 @@ class AwsAuthType(LowercaseStrEnum):
     ec2 = auto()
 
 
-VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
-VALID_QUERY_ENGINES = [query_engine.value for query_engine in QueryEngine]
-
-
 class Package(BaseModel):
-    storage_engine: str = "clp"
-    query_engine: str = "clp"
-
-    @field_validator("storage_engine")
-    @classmethod
-    def validate_storage_engine(cls, value):
-        if value not in VALID_STORAGE_ENGINES:
-            raise ValueError(
-                f"package.storage_engine must be one of the following"
-                f" {'|'.join(VALID_STORAGE_ENGINES)}"
-            )
-        return value
-
-    @field_validator("query_engine")
-    @classmethod
-    def validate_query_engine(cls, value):
-        if value not in VALID_QUERY_ENGINES:
-            raise ValueError(
-                f"package.query_engine must be one of the following"
-                f" {'|'.join(VALID_QUERY_ENGINES)}"
-            )
-        return value
+    storage_engine: StorageEngine = StorageEngine.CLP
+    query_engine: QueryEngine = QueryEngine.CLP
 
     @model_validator(mode="after")
     def validate_query_engine_package_compatibility(self):
@@ -173,6 +149,11 @@ class Package(BaseModel):
 
         return self
 
+    def dump_to_primitive_dict(self):
+        d = self.model_dump()
+        d["storage_engine"] = d["storage_engine"].value
+        d["query_engine"] = d["query_engine"].value
+        return d
 
 class Database(BaseModel):
     type: str = "mariadb"
@@ -1035,6 +1016,7 @@ class CLPConfig(BaseModel):
 
     def dump_to_primitive_dict(self):
         custom_serialized_fields = (
+            "package",
             "database",
             "queue",
             "redis",
