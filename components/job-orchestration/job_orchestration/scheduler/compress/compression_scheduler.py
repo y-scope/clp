@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 import brotli
-import celery
 import msgpack
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
@@ -31,7 +30,6 @@ from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.executor.compress.celery_compress import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.constants import (
     CompressionJobStatus,
@@ -44,9 +42,10 @@ from job_orchestration.scheduler.job_config import (
     InputType,
     S3InputConfig,
 )
+from job_orchestration.scheduler.scheduler.celery_scheduler import CeleryScheduler
+from job_orchestration.scheduler.scheduler.scheduler import Scheduler
 from job_orchestration.scheduler.scheduler_data import (
     CompressionJob,
-    CompressionTaskResult,
 )
 from job_orchestration.scheduler.utils import kill_hanging_jobs
 from pydantic import ValidationError
@@ -218,6 +217,7 @@ def search_and_schedule_new_tasks(
     db_conn,
     db_cursor,
     clp_metadata_db_connection_config: Dict[str, Any],
+    scheduler: Scheduler
 ):
     """
     For all jobs with PENDING status, splits the job into tasks and schedules them.
@@ -225,6 +225,7 @@ def search_and_schedule_new_tasks(
     :param db_conn:
     :param db_cursor:
     :param clp_metadata_db_connection_config:
+    :param scheduler:
     """
     global scheduled_jobs
 
@@ -357,7 +358,6 @@ def search_and_schedule_new_tasks(
             tag_ids = [tags["tag_id"] for tags in db_cursor.fetchall()]
             db_conn.commit()
 
-        task_instances = []
         for task_idx, task in enumerate(tasks):
             db_cursor.execute(
                 f"""
@@ -370,11 +370,10 @@ def search_and_schedule_new_tasks(
             db_conn.commit()
             task["task_id"] = db_cursor.lastrowid
             task["tag_ids"] = tag_ids
-            task_instances.append(compress.s(**task))
-        tasks_group = celery.group(task_instances)
+        result_handle = scheduler.compress(tasks)
 
         job = CompressionJob(
-            id=job_id, start_time=start_time, async_task_result=tasks_group.apply_async()
+            id=job_id, start_time=start_time, async_task_result=result_handle
         )
         db_cursor.execute(
             f"""
@@ -387,14 +386,7 @@ def search_and_schedule_new_tasks(
         scheduled_jobs[job_id] = job
 
 
-def get_results_or_timeout(result):
-    try:
-        return result.get(timeout=0.1)
-    except celery.exceptions.TimeoutError:
-        return None
-
-
-def poll_running_jobs(db_conn, db_cursor):
+def poll_running_jobs(db_conn, db_cursor, scheduler: Scheduler):
     """
     Poll for running jobs and update their status.
     """
@@ -408,14 +400,13 @@ def poll_running_jobs(db_conn, db_cursor):
         error_message = ""
 
         try:
-            returned_results = get_results_or_timeout(job.async_task_result)
+            returned_results = scheduler.get_compress_result(job.result_handle)
             if returned_results is None:
                 continue
 
             duration = (datetime.datetime.now() - job.start_time).total_seconds()
             # Check for finished jobs
             for task_result in returned_results:
-                task_result = CompressionTaskResult.parse_obj(task_result)
                 if task_result.status == CompressionTaskStatus.SUCCEEDED:
                     logger.info(
                         f"Compression task job-{job_id}-task-{task_result.task_id} completed in"
@@ -498,6 +489,8 @@ def main(argv):
     logger.info(f"Starting {COMPRESSION_SCHEDULER_COMPONENT_NAME}")
     sql_adapter = SQL_Adapter(clp_config.database)
 
+    scheduler = CeleryScheduler()
+
     try:
         killed_jobs = kill_hanging_jobs(sql_adapter, SchedulerType.COMPRESSION)
         if killed_jobs is not None:
@@ -522,8 +515,9 @@ def main(argv):
                         db_conn,
                         db_cursor,
                         clp_metadata_db_connection_config,
+                        scheduler
                     )
-                poll_running_jobs(db_conn, db_cursor)
+                poll_running_jobs(db_conn, db_cursor, scheduler)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
                 logger.info("Forcefully shutting down")
