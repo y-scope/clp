@@ -52,7 +52,7 @@ vars:
 
 tasks:
   default:
-    deps: ["package"]
+    deps: ["docker-images:package"]
 
   clean:
     cmds:

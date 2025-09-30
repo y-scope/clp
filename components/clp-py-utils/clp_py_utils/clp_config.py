@@ -83,14 +83,13 @@ QUERY_TASKS_TABLE_NAME = "query_tasks"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 
-OS_RELEASE_FILE_PATH = pathlib.Path("etc") / "os-release"
-
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
 CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
+CLP_PACKAGE_IMAGE_ID_PATH = pathlib.Path("clp-package-image.id")
 CLP_SHARED_CONFIG_FILENAME = ".clp-config.yml"
-
+CLP_VERSION_FILE_PATH = pathlib.Path("VERSION")
 
 # Environment variable names
 CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
@@ -902,7 +901,8 @@ class CLPConfig(BaseModel):
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
     aws_config_directory: Optional[pathlib.Path] = None
 
-    _os_release_file_path: pathlib.Path = PrivateAttr(default=OS_RELEASE_FILE_PATH)
+    _image_id_path: pathlib.Path = PrivateAttr(default=CLP_PACKAGE_IMAGE_ID_PATH)
+    _version_file_path: pathlib.Path = PrivateAttr(default=CLP_VERSION_FILE_PATH)
 
     @field_validator("aws_config_directory")
     @classmethod
@@ -919,7 +919,8 @@ class CLPConfig(BaseModel):
         self.stream_output.storage.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
-        self._os_release_file_path = make_config_path_absolute(clp_home, self._os_release_file_path)
+        self._image_id_path = make_config_path_absolute(clp_home, self._image_id_path)
+        self._version_file_path = make_config_path_absolute(clp_home, self._version_file_path)
 
     def validate_logs_input_config(self):
         logs_input_type = self.logs_input.type
@@ -1012,17 +1013,14 @@ class CLPConfig(BaseModel):
             # Accept configured value for debug purposes
             return
 
-        os_release = dotenv_values(self._os_release_file_path)
-        if "ubuntu" == os_release["ID"]:
-            self.execution_container = (
-                f"clp-execution-x86-{os_release['ID']}-{os_release['VERSION_CODENAME']}:main"
-            )
-        else:
-            raise NotImplementedError(
-                f"Unsupported OS {os_release['ID']} in {OS_RELEASE_FILE_PATH}"
-            )
+        if self._image_id_path.exists():
+            with open(self._image_id_path) as image_id_file:
+                self.execution_container = image_id_file.read().strip()
 
-        self.execution_container = "ghcr.io/y-scope/clp/" + self.execution_container
+        if self.execution_container == "":
+            with open(self._version_file_path) as version_file:
+                clp_package_version = version_file.read().strip()
+            self.execution_container = f"ghcr.io/y-scope/clp/clp-package:{clp_package_version}"
 
     def get_shared_config_file_path(self) -> pathlib.Path:
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
