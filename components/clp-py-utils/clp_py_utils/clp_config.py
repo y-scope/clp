@@ -100,6 +100,7 @@ CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 
 # Types
+Host = Annotated[str, Field(min_length=1)]
 Port = Annotated[int, Field(gt=0, lt=2**16)]
 
 
@@ -161,7 +162,7 @@ class Package(BaseModel):
 
 class Database(BaseModel):
     type: str = "mariadb"
-    host: str = "localhost"
+    host: Host = "localhost"
     port: Port = 3306
     name: str = "clp-db"
     ssl_cert: Optional[str] = None
@@ -186,13 +187,6 @@ class Database(BaseModel):
     def validate_name(cls, value):
         if "" == value:
             raise ValueError("database.name cannot be empty.")
-        return value
-
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        if "" == value:
-            raise ValueError("database.host cannot be empty.")
         return value
 
     def ensure_credentials_loaded(self):
@@ -274,11 +268,6 @@ def _validate_logging_level(cls, value):
         )
 
 
-def _validate_host(cls, value):
-    if "" == value:
-        raise ValueError(f"{cls.__name__}.host cannot be empty.")
-
-
 class CompressionScheduler(BaseModel):
     jobs_poll_delay: float = 0.1  # seconds
     logging_level: str = "INFO"
@@ -291,7 +280,7 @@ class CompressionScheduler(BaseModel):
 
 
 class QueryScheduler(BaseModel):
-    host: str = "localhost"
+    host: Host = "localhost"
     port: Port = 7000
     jobs_poll_delay: float = 0.1  # seconds
     num_archives_to_search_per_sub_job: int = 16
@@ -301,13 +290,6 @@ class QueryScheduler(BaseModel):
     @classmethod
     def validate_logging_level(cls, value):
         _validate_logging_level(cls, value)
-        return value
-
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        if "" == value:
-            raise ValueError(f"Cannot be empty.")
         return value
 
 
@@ -332,19 +314,12 @@ class QueryWorker(BaseModel):
 
 
 class Redis(BaseModel):
-    host: str = "localhost"
+    host: Host = "localhost"
     port: Port = 6379
     query_backend_database: int = 0
     compression_backend_database: int = 1
     # redis can perform authentication without a username
     password: Optional[str] = None
-
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        if "" == value:
-            raise ValueError(f"{REDIS_COMPONENT_NAME}.host cannot be empty.")
-        return value
 
     def dump_to_primitive_dict(self):
         return self.model_dump(exclude={"password"})
@@ -368,17 +343,10 @@ class Redis(BaseModel):
 
 
 class Reducer(BaseModel):
-    host: str = "localhost"
+    host: Host = "localhost"
     base_port: Port = 14009
     logging_level: str = "INFO"
     upsert_interval: int = 100  # milliseconds
-
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        if "" == value:
-            raise ValueError(f"{value} cannot be empty")
-        return value
 
     @field_validator("logging_level")
     @classmethod
@@ -395,18 +363,11 @@ class Reducer(BaseModel):
 
 
 class ResultsCache(BaseModel):
-    host: str = "localhost"
+    host: Host = "localhost"
     port: Port = 27017
     db_name: str = "clp-query-results"
     stream_collection_name: str = "stream-files"
     retention_period: Optional[int] = 60
-
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        if "" == value:
-            raise ValueError(f"{RESULTS_CACHE_COMPONENT_NAME}.host cannot be empty.")
-        return value
 
     @field_validator("db_name")
     @classmethod
@@ -436,18 +397,11 @@ class ResultsCache(BaseModel):
 
 
 class Queue(BaseModel):
-    host: str = "localhost"
+    host: Host = "localhost"
     port: Port = 5672
 
     username: Optional[str] = None
     password: Optional[str] = None
-
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        if "" == value:
-            raise ValueError(f"{QUEUE_COMPONENT_NAME}.host cannot be empty.")
-        return value
 
     def dump_to_primitive_dict(self):
         return self.model_dump(exclude={"username", "password"})
@@ -739,16 +693,10 @@ class StreamOutput(BaseModel):
 
 
 class WebUi(BaseModel):
-    host: str = "localhost"
+    host: Host = "localhost"
     port: Port = 4000
     results_metadata_collection_name: str = "results-metadata"
     rate_limit: int = 1000
-
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        _validate_host(cls, value)
-        return value
 
     @field_validator("results_metadata_collection_name")
     @classmethod
@@ -786,14 +734,8 @@ class GarbageCollector(BaseModel):
 
 
 class Presto(BaseModel):
-    host: str
+    host: Host
     port: Port
-
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        _validate_host(cls, value)
-        return value
 
 
 def _get_env_var(name: str) -> str:
