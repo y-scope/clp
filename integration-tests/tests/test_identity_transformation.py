@@ -140,8 +140,7 @@ def test_clp_s_identity_transform(
 
 
 def _clp_s_compress_and_decompress(
-    core_config: CoreConfig,
-    test_paths: CompressionTestConfig,
+    core_config: CoreConfig, test_paths: CompressionTestConfig
 ) -> None:
     test_paths.clear_test_outputs()
     bin_path = str(core_config.clp_s_binary_path)
