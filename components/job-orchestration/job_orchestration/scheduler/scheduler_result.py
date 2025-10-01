@@ -8,7 +8,7 @@ class CompressionTaskResult(BaseModel):
     task_id: int
     status: int
     duration: float
-    error_message: Optional[str]
+    error_message: Optional[str] = None
 
     @field_validator("status")
     def valid_status(cls, value):
