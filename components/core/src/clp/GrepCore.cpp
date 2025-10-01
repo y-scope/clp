@@ -149,9 +149,12 @@ bool GrepCore::get_bounds_of_next_potential_var(
 
 auto GrepCore::get_wildcard_encodable_positions(QueryInterpretation const& interpretation)
         -> vector<size_t> {
+    auto const logtype{interpretation.get_logtype()};
     vector<size_t> wildcard_encodable_positions;
-    for (size_t i{0}; i < interpretation.get_logtype().size(); ++i) {
-        auto const token{interpretation.get_logtype()[i]};
+    wildcard_encodable_positions.reserve(logtype.size());
+
+    for (size_t i{0}; i < logtype.size(); ++i) {
+        auto const token{logtype[i]};
         if (std::holds_alternative<VariableQueryToken>(token)) {
             auto const& var_token{std::get<VariableQueryToken>(token)};
             auto const var_type{static_cast<log_surgeon::SymbolId>(var_token.get_variable_type())};
