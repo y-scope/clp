@@ -524,7 +524,7 @@ def compression_entry_point(
     tag_ids,
     clp_io_config_json: str,
     paths_to_compress_json: str,
-    clp_metadata_db_connection_config,
+    clp_metadata_db_connection_config: Dict[str, Any],
     logger,
 ):
     clp_home = pathlib.Path(os.getenv("CLP_HOME"))

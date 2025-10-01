@@ -1,6 +1,5 @@
 import json
 
-from clp_py_utils.clp_config import Database
 from clp_py_utils.clp_logging import get_logger
 from job_orchestration.executor.compress.compression_task import compression_entry_point
 from job_orchestration.utils.spider_utils import int8_list_to_utf8_str, utf8_str_to_int8_list
@@ -29,7 +28,7 @@ def compress(
         `job_orchestration.scheduler.constants.ClpIoConfig`.
     :param paths_to_compress_json: A JSON string representation of
         `job_orchestration.scheduler.constants.PathToCompress`.
-    :param : A JSON string representation of
+    :param clp_metadata_db_connection_config_json: A JSON string representation of
         `clp_py_utils.clp_config.Database`.
     :return: A JSON string representation of
         `job_orchestration.scheduler.constants.CompressionTaskResult`, encoded as a list of
@@ -42,9 +41,7 @@ def compress(
             [int(tag_id) for tag_id in tag_ids],
             int8_list_to_utf8_str(clp_io_config_json),
             int8_list_to_utf8_str(paths_to_compress_json),
-            Database.model_validate(
-                json.loads(int8_list_to_utf8_str(clp_metadata_db_connection_config_json))
-            ),
+            json.loads(int8_list_to_utf8_str(clp_metadata_db_connection_config_json)),
             logger,
         )
     )
