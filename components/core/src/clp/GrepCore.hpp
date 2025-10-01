@@ -25,10 +25,14 @@
 #include "VariableDictionaryReaderReq.hpp"
 
 namespace clp {
+#ifdef CLP_BUILD_TESTING
 class GrepCoreTest;
+#endif
 
 class GrepCore {
+#ifdef CLP_BUILD_TESTING
     friend class GrepCoreTest;
+#endif
 
 public:
     // Methods

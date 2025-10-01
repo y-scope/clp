@@ -771,4 +771,7 @@ if(CLP_BUILD_TESTING)
     target_compile_features(unitTest
             PRIVATE cxx_std_20
             )
+    target_compile_definitions(unitTest
+            PRIVATE CLP_BUILD_TESTING
+            )
 endif()
