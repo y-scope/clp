@@ -192,12 +192,12 @@ private:
     /**
      * Scans the interpretation and returns the indices of all encodable wildcard variables.
      *
-     * An encodable variable is a variable token than:
+     * An encodable variable is a variable token that:
      *   - Contains a wildcard (e.g. *1).
      *   - Is of an encodable type (integer or float).
      *
      * @param interpretation The `QueryInterpretation` to scan.
-     * @return A vector of positions of encodabe wildcard variables.
+     * @return A vector of positions of encodable wildcard variables.
      */
     static auto get_wildcard_encodable_positions(
             log_surgeon::wildcard_query_parser::QueryInterpretation const& interpretation
