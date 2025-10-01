@@ -427,7 +427,7 @@ def load_config_file(
         clp_config = CLPConfig()
 
     clp_config.make_config_paths_absolute(clp_home)
-    clp_config.load_execution_container_name()
+    clp_config.load_container_image_ref()
 
     validate_path_for_container_mount(clp_config.data_directory)
     validate_path_for_container_mount(clp_config.logs_directory)

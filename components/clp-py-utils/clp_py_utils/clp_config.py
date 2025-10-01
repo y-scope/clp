@@ -1008,7 +1008,7 @@ class CLPConfig(BaseModel):
                 "aws_config_directory should not be set when profile authentication is not used"
             )
 
-    def load_execution_container_name(self):
+    def load_container_image_ref(self):
         if self.container_image_ref is not None:
             # Accept configured value for debug purposes
             return
