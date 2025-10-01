@@ -657,6 +657,7 @@ auto GrepCore::process_schema_var_token(
     std::unordered_set<encoded_variable_t> encoded_vars;
     std::unordered_set<variable_dictionary_id_t> var_dict_ids;
     encoded_vars.reserve(entries.size());
+    var_dict_ids.reserve(entries.size());
     for (auto const* entry : entries) {
         encoded_vars.emplace(EncodedVariableInterpreter::encode_var_dict_id(entry->get_id()));
         var_dict_ids.emplace(entry->get_id());
