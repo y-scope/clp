@@ -24,6 +24,10 @@ class CompressionJob(BaseModel):
     start_time: datetime.datetime
     result_handle: TaskManager.CompressResultHandle
 
+    class Config:
+        # Allow the use of TaskManager.CompressResultHandle
+        arbitrary_types_allowed = True
+
 
 class InternalJobState(Enum):
     WAITING_FOR_REDUCER = auto()
