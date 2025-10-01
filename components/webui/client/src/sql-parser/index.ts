@@ -106,13 +106,13 @@ const buildSearchQuery = ({
     let queryString = `SELECT ${selectItemList} FROM ${databaseName}
 WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp} AND ${endTimestamp}`;
 
-    if ("" !== booleanExpression) {
+    if (booleanExpression !== undefined) {
         queryString += ` AND (${booleanExpression})`;
     }
-    if ("" !== sortItemList) {
+    if (sortItemList !== undefined) {
         queryString += ` ORDER BY ${sortItemList}`;
     }
-    queryString += ` LIMIT ${String(limitValue)}`;
+    queryString += ` LIMIT ${limitValue}`;
 
     try {
         validate(queryString);

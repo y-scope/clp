@@ -49,13 +49,15 @@ const GuidedRunButton = () => {
         }
 
         try {
+            // eslint-disable-next-line no-undefined
+            const getUndefinedIfEmpty = (str: string) => str === "" ? undefined : str;
             const queryString = buildSearchQuery({
-                booleanExpression: where.trim(),
+                booleanExpression: getUndefinedIfEmpty(where.trim()),
                 databaseName: from,
                 endTimestamp: endTimestamp.unix(),
-                limitValue: limit,
+                limitValue: String(limit),
                 selectItemList: select.trim(),
-                sortItemList: orderBy.trim(),
+                sortItemList: getUndefinedIfEmpty(orderBy.trim()),
                 startTimestamp: startTimestamp.unix(),
                 timestampKey: timestampKey,
             });
