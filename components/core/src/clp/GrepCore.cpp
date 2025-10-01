@@ -10,6 +10,7 @@
 #include <log_surgeon/Constants.hpp>
 #include <string_utils/string_utils.hpp>
 
+#include "EncodedVariableInterpreter.hpp"
 #include "ir/parsing.hpp"
 #include "StringReader.hpp"
 
