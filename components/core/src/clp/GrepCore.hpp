@@ -564,8 +564,9 @@ void GrepCore::generate_schema_sub_queries(
 
             SubQuery sub_query;
             bool has_vars{true};
-            for (size_t i{0}; i < interpretation.get_logtype().size(); ++i) {
-                auto const token{interpretation.get_logtype()[i]};
+            auto const logtype{interpretation.get_logtype()};
+            for (size_t i{0}; i < logtype.size(); ++i) {
+                auto const& token{logtype[i]};
                 if (std::holds_alternative<log_surgeon::wildcard_query_parser::VariableQueryToken>(
                             token
                     ))
