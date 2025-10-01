@@ -54,6 +54,18 @@ constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
 constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
 constexpr uint32_t cHasNumId{111};
 
+/**
+ * Helper to expose `GrepCore` functionality for unit-testing.
+ *
+ * This class provides static wrappers around `GrepCore` methods, allowing test
+ * code to access internal logic such as:
+ * - Finding wildcard encodable positions in a `QueryInterpretation`;
+ * - Generating logtype strings with wildcard masks;
+ * - Processing variable tokens with or without encoding;
+ * - Generating schema-based sub-queries.
+ *
+ * All methods forward directly to `GrepCore` and are intended for testing only.
+ */
 class clp::GrepCoreTest {
 public:
     static auto get_wildcard_encodable_positions(QueryInterpretation const& interpretation)
@@ -106,6 +118,11 @@ public:
 };
 
 namespace {
+/**
+ * Simple helper class representing a fake variable dictionary entry for unit tests.
+ *
+ * Adheres to `VariableDictionaryEntryReq`.
+ */
 class FakeVarEntry {
 public:
     explicit FakeVarEntry(variable_dictionary_id_t const id, string value)
@@ -121,6 +138,11 @@ private:
     string m_value;
 };
 
+/**
+ * Simple helper class representing a fake variable dictionary for unit tests.
+ *
+ * Provides a method for adding entries and adheres to `VariableDictionaryReaderReq`.
+ */
 class FakeVarDict {
 public:
     using Entry = FakeVarEntry;
@@ -165,6 +187,11 @@ private:
     unordered_map<dictionary_id_t, Entry> m_storage;
 };
 
+/**
+ * Simple helper class representing a fake logtype dictionary entry for unit tests.
+ *
+ * Adheres to `LogtypeDictionaryEntryReq`.
+ */
 class FakeLogTypeEntry {
 public:
     FakeLogTypeEntry(string value, clp::logtype_dictionary_id_t const id)
@@ -212,6 +239,11 @@ private:
     clp::logtype_dictionary_id_t m_id{0};
 };
 
+/**
+ * Simple helper class representing a fake logtype dictionary for unit tests.
+ *
+ * Provides a method for adding entries and adheres to `LogtypeDictionaryReaderReq`.
+ */
 class FakeLogTypeDict {
 public:
     using Entry = FakeLogTypeEntry;
@@ -249,16 +281,71 @@ private:
     vector<Entry> m_storage;
 };
 
+/**
+ * @param entries Vector of (id, value) pairs to populate the variable
+ * dictionary.
+ * @return A `FakeVarDict` initialized with the given entries.
+ */
 auto make_var_dict(vector<pair<size_t, string>> const& entries) -> FakeVarDict;
 
+/**
+ * @param entries Vector of logtypes, where each logtype is represented by a vector of tokens. Each
+ * token is either a literal substring (`string_view`) or a variable placeholder (`char`).
+ * @return A `FakeLogtypeDict` initialized with the given entries.
+ */
 auto make_logtype_dict(vector<vector<variant<string_view, char>>> const& entries)
         -> FakeLogTypeDict;
 
+/**
+ * Constructs a `QueryInterpretation` from a vector of tokens.
+ *
+ * Each token is either:
+ * - a `string` representing a static substring, or
+ * - a `pair<uint32_t, string>`, representing a variable placeholder and its value.
+ *
+ * This method automatically detects whether a variable token contains a
+ * wildcard (`*` or `?`).
+ *
+ * @param tokens Vector of tokens to populate the `QueryInterpretation`.
+ * @return A `QueryInterpretation` populated with the given tokens.
+ */
 auto make_query_interpretation(vector<variant<string, pair<uint32_t, string>>> const& tokens)
         -> QueryInterpretation;
 
+/**
+ * Generates a logtype string from a vector of tokens.
+ *
+ * Each token is either:
+ * - a literal substring (`string_view`) to append directly, or
+ * - a variable placeholder (`char`) indicating the type of variable:
+ *   - `i` -> integer variable;
+ *   - `f` -> float variable;
+ *   - `d` -> dictionary variable.
+ *
+ * The function forwards variable tokens to `EncodedVariableInterpreter` to
+ * append their encoded representations to the resulting string.
+ *
+ * @param tokens Vector of tokens to convert into a logtype string.
+ * @return A `string` representing the expected encoded logtype.
+ */
 auto generate_expected_logtype_string(vector<variant<string_view, char>> const& tokens) -> string;
 
+/**
+ * Checks that a `SubQuery` at a given index matches the expected properties.
+ *
+ * This method verifies:
+ * - Whether wildcard matching is required;
+ * - The number and type of variables;
+ * - For dictionary variables, the precise or possible dictionary IDs;
+ * - The set of possible logtype IDs.
+ *
+ * @param id Index of the sub-query to check in `sub_queries`.
+ * @param sub_queries Vector of `SubQuery` objects.
+ * @param wildcard_match_required Expected wildcard match requirement.
+ * @param vars_info Vector of tuples describing expected variable properties: (`is_dict_var`,
+ * `is_precise_var`, `var_dict_ids`).
+ * @param logtype_ids Expected set of possible logtype IDs.
+ */
 auto check_sub_query(
         size_t id,
         vector<SubQuery> const& sub_queries,
