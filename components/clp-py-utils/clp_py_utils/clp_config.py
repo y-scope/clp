@@ -901,7 +901,9 @@ class CLPConfig(BaseModel):
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
     aws_config_directory: Optional[pathlib.Path] = None
 
-    _container_image_id_path: pathlib.Path = PrivateAttr(default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH)
+    _container_image_id_path: pathlib.Path = PrivateAttr(
+        default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH
+    )
     _version_file_path: pathlib.Path = PrivateAttr(default=CLP_VERSION_FILE_PATH)
 
     @field_validator("aws_config_directory")
@@ -919,7 +921,9 @@ class CLPConfig(BaseModel):
         self.stream_output.storage.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
-        self._container_image_id_path = make_config_path_absolute(clp_home, self._container_image_id_path)
+        self._container_image_id_path = make_config_path_absolute(
+            clp_home, self._container_image_id_path
+        )
         self._version_file_path = make_config_path_absolute(clp_home, self._version_file_path)
 
     def validate_logs_input_config(self):
