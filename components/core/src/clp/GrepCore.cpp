@@ -200,9 +200,10 @@ auto GrepCore::generate_logtype_string(
         auto const var_type{static_cast<log_surgeon::SymbolId>(var_token.get_variable_type())};
         bool const is_int{TokenInt == var_type};
         bool const is_float{TokenFloat == var_type};
-        if (wildcard_mask_map.contains(i)) {
-            bool const use_encoded{wildcard_mask_map.at(i)};
-            if (use_encoded) {
+
+        auto const it{wildcard_mask_map.find(i)};
+        if (wildcard_mask_map.end() != it) {
+            if (it->second) {
                 if (is_int) {
                     EncodedVariableInterpreter::add_int_var(logtype_string);
                 } else {
