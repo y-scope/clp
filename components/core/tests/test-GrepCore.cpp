@@ -502,8 +502,8 @@ TEST_CASE("process_schema_empty_token ", "[dfa_search]") {
     FakeVarDict const var_dict{make_var_dict({pair{0, "100"}})};
 
     SubQuery sub_query;
-    VariableQueryToken const static_token{0, "", false};
-    REQUIRE(false == clp::GrepCoreTest::process_token(static_token, var_dict, sub_query));
+    VariableQueryToken const empty_int_token{cIntId, "", false};
+    REQUIRE(false == clp::GrepCoreTest::process_token(empty_int_token, var_dict, sub_query));
     REQUIRE(false == sub_query.wildcard_match_required());
     REQUIRE(0 == sub_query.get_num_possible_vars());
 }
@@ -512,8 +512,8 @@ TEST_CASE("process_schema_unmatched_token ", "[dfa_search]") {
     FakeVarDict const var_dict{make_var_dict({pair{0, "100"}})};
 
     SubQuery sub_query;
-    VariableQueryToken const static_token{0, "200", false};
-    REQUIRE(false == clp::GrepCoreTest::process_token(static_token, var_dict, sub_query));
+    VariableQueryToken const int_token{cIntId, "200", false};
+    REQUIRE(false == clp::GrepCoreTest::process_token(int_token, var_dict, sub_query));
     REQUIRE(false == sub_query.wildcard_match_required());
     REQUIRE(0 == sub_query.get_num_possible_vars());
 }
@@ -522,7 +522,7 @@ TEST_CASE("process_schema_int_token ", "[dfa_search]") {
     FakeVarDict const var_dict{make_var_dict({pair{0, "100"}})};
 
     SubQuery sub_query;
-    VariableQueryToken const int_token{0, "100", false};
+    VariableQueryToken const int_token{cIntId, "100", false};
     REQUIRE(clp::GrepCoreTest::process_token(int_token, var_dict, sub_query));
     REQUIRE(false == sub_query.wildcard_match_required());
     REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -595,7 +595,7 @@ TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token ", "[dfa_search]
 
     SECTION("interpret_as_int") {
         SubQuery sub_query;
-        VariableQueryToken const int_token{0, "1000000000000000000000000?0", true};
+        VariableQueryToken const int_token{cIntId, "1000000000000000000000000?0", true};
         REQUIRE(clp::GrepCoreTest::process_token(int_token, var_dict, sub_query));
         REQUIRE(false == sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -610,7 +610,7 @@ TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token ", "[dfa_search]
 
     SECTION("interpret_as_float") {
         SubQuery sub_query;
-        VariableQueryToken const float_token{1, "1000000000000000000000000?0", true};
+        VariableQueryToken const float_token{cFloatId, "1000000000000000000000000?0", true};
         REQUIRE(clp::GrepCoreTest::process_token(float_token, var_dict, sub_query));
         REQUIRE(false == sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -625,7 +625,7 @@ TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token ", "[dfa_search]
 
     SECTION("interpret_as_has_number") {
         SubQuery sub_query;
-        VariableQueryToken const has_number_token{2, "1000000000000000000000000?0", true};
+        VariableQueryToken const has_number_token{cHasNumId, "1000000000000000000000000?0", true};
         REQUIRE(clp::GrepCoreTest::process_token(has_number_token, var_dict, sub_query));
         REQUIRE(false == sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -653,7 +653,7 @@ TEST_CASE("process_schema_greedy_wildcard_token ", "[dfa_search]") {
 
     SECTION("interpret_as_non_encoded_int") {
         SubQuery sub_query;
-        VariableQueryToken const int_token{0, "10*0", true};
+        VariableQueryToken const int_token{cIntId, "10*0", true};
         REQUIRE(clp::GrepCoreTest::process_token(int_token, var_dict, sub_query));
         REQUIRE(false == sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -668,7 +668,7 @@ TEST_CASE("process_schema_greedy_wildcard_token ", "[dfa_search]") {
 
     SECTION("interpret_as_non_encoded_float") {
         SubQuery sub_query;
-        VariableQueryToken const float_token{0, "10*0", true};
+        VariableQueryToken const float_token{cFloatId, "10*0", true};
         REQUIRE(clp::GrepCoreTest::process_token(float_token, var_dict, sub_query));
         REQUIRE(false == sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -683,7 +683,7 @@ TEST_CASE("process_schema_greedy_wildcard_token ", "[dfa_search]") {
 
     SECTION("interpret_as_non_encoded_imprecise_has_number") {
         SubQuery sub_query;
-        VariableQueryToken const has_number_token{0, "10*0", true};
+        VariableQueryToken const has_number_token{cHasNumId, "10*0", true};
         REQUIRE(clp::GrepCoreTest::process_token(has_number_token, var_dict, sub_query));
         REQUIRE(false == sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -698,7 +698,7 @@ TEST_CASE("process_schema_greedy_wildcard_token ", "[dfa_search]") {
 
     SECTION("interpret_as_non_encoded_precise_has_number") {
         SubQuery sub_query;
-        VariableQueryToken const has_number_token{0, "10b*", true};
+        VariableQueryToken const has_number_token{cHasNumId, "10b*", true};
         REQUIRE(clp::GrepCoreTest::process_token(has_number_token, var_dict, sub_query));
         REQUIRE(false == sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -711,7 +711,7 @@ TEST_CASE("process_schema_greedy_wildcard_token ", "[dfa_search]") {
 
     SECTION("interpret_as_encoded_int") {
         SubQuery sub_query;
-        VariableQueryToken const int_token{0, "10*0", true};
+        VariableQueryToken const int_token{cIntId, "10*0", true};
         REQUIRE(clp::GrepCoreTest::process_encoded_token(int_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(0 == sub_query.get_num_possible_vars());
@@ -719,7 +719,7 @@ TEST_CASE("process_schema_greedy_wildcard_token ", "[dfa_search]") {
 
     SECTION("interpret_as_encoded_float") {
         SubQuery sub_query;
-        VariableQueryToken const float_token{1, "10*0", true};
+        VariableQueryToken const float_token{cFloatId, "10*0", true};
         REQUIRE(clp::GrepCoreTest::process_encoded_token(float_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(0 == sub_query.get_num_possible_vars());
