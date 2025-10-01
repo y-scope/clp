@@ -572,8 +572,9 @@ void GrepCore::generate_schema_sub_queries(
                     ))
                 {
                     bool is_wildcard_mask_encoded{false};
-                    if (wildcard_mask_map.contains(i)) {
-                        is_wildcard_mask_encoded = wildcard_mask_map.at(i);
+                    auto const it{wildcard_mask_map.find(i)};
+                    if (wildcard_mask_map.end() != it) {
+                        is_wildcard_mask_encoded = it->second;
                     }
 
                     has_vars = process_schema_var_token(
