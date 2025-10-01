@@ -99,6 +99,6 @@ class SearchJob(QueryJob):
 
 class QueryTaskResult(BaseModel):
     status: QueryTaskStatus
-    task_id: str
+    task_id: int
     duration: float
     error_log_path: Optional[str] = None
