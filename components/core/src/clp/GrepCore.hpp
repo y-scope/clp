@@ -147,8 +147,8 @@ private:
      *    - 0: treat as a dictionary variable (\d)
      *    - 1: treat as an encoded variable (\i for integers, \f for floats)
      *
-     *    If there are k encodable wildcard variables, then 2^k logtype strings are possible. Each
-     *    bit in the mask corresponds to one variable.
+     *    If there are k encodable wildcard variables, then 2^k logtype strings are possible. As a
+     *    result we limit k <= 16. We represents these alternatives using a bit mask.
      *
      *    Example:
      *      Search query: "a *1 *2 b",
@@ -537,7 +537,7 @@ void GrepCore::generate_schema_sub_queries(
         bool const ignore_case,
         std::vector<SubQuery>& sub_queries
 ) {
-    constexpr size_t cMaxEncodableWildcardVariables{32};
+    constexpr size_t cMaxEncodableWildcardVariables{16};
     for (auto const& interpretation : interpretations) {
         auto wildcard_encodable_positions{get_wildcard_encodable_positions(interpretation)};
         if (wildcard_encodable_positions.size() > cMaxEncodableWildcardVariables) {
