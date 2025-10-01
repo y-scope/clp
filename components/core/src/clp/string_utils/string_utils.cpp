@@ -263,8 +263,8 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
             while ('*' == *wild_current) {
                 ++wild_current;
                 if (wild_end == wild_current) {
-                  // Trailing '*' means everything remaining in tame will match
-                  return true;
+                    // Trailing '*' means everything remaining in tame will match
+                    return true;
                 }
             }
 

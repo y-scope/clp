@@ -146,8 +146,8 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
         }
 
         GIVEN("Double wild with no suffix char") {
-          tameString = "abcd", wildString = "a**";
-          REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
+            tameString = "abcd", wildString = "a**";
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
         }
 
         GIVEN("Single wild with no prefix char") {
@@ -156,8 +156,8 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
         }
 
         GIVEN("Double wild with no prefix char") {
-          tameString = "abcd", wildString = "**d";
-          REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
+            tameString = "abcd", wildString = "**d";
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
         }
 
         GIVEN("Single wild on both side & has 1st char as literal") {

@@ -196,10 +196,8 @@ public:
 
     [[nodiscard]] auto get_num_placeholders() const -> size_t { return 0; }
 
-    [[nodiscard]] auto get_placeholder_info(
-            [[maybe_unused]] size_t idx,
-            [[maybe_unused]] auto& ref
-    ) const -> size_t {
+    [[nodiscard]] auto
+    get_placeholder_info([[maybe_unused]] size_t idx, [[maybe_unused]] auto& ref) const -> size_t {
         return SIZE_MAX;
     }
 
@@ -219,7 +217,8 @@ public:
         m_storage.emplace_back(value, id);
     }
 
-    auto get_entry_matching_value(string_view const logtype, [[maybe_unused]] bool ignore_case) const
+    auto
+    get_entry_matching_value(string_view const logtype, [[maybe_unused]] bool ignore_case) const
             -> vector<Entry const*> {
         vector<Entry const*> results;
         for (auto const& entry : m_storage) {
@@ -251,9 +250,8 @@ auto make_var_dict(vector<pair<size_t, string>> const& entries) -> FakeVarDict;
 auto make_logtype_dict(vector<vector<variant<string_view, char>>> const& entries)
         -> FakeLogTypeDict;
 
-auto make_query_interpretation(
-        vector<variant<string, pair<uint32_t, string>>> const& tokens
-) -> QueryInterpretation;
+auto make_query_interpretation(vector<variant<string, pair<uint32_t, string>>> const& tokens)
+        -> QueryInterpretation;
 
 auto generate_expected_logtype_string(vector<variant<string_view, char>> const& tokens) -> string;
 
@@ -291,9 +289,8 @@ auto make_logtype_dict(vector<vector<variant<string_view, char>>> const& entries
     return dict;
 }
 
-auto make_query_interpretation(
-        vector<variant<string, pair<uint32_t, string>>> const& tokens
-) -> QueryInterpretation {
+auto make_query_interpretation(vector<variant<string, pair<uint32_t, string>>> const& tokens)
+        -> QueryInterpretation {
     QueryInterpretation interp;
     for (auto const& token : tokens) {
         if (holds_alternative<string>(token)) {
@@ -314,10 +311,17 @@ auto generate_expected_logtype_string(vector<variant<string_view, char>> const& 
             result.append(get<string_view>(token));
         } else {
             switch (get<char>(token)) {
-                case 'i': EncodedVariableInterpreter::add_int_var(result); break;
-                case 'f': EncodedVariableInterpreter::add_float_var(result); break;
-                case 'd': EncodedVariableInterpreter::add_dict_var(result); break;
-                default: break;
+                case 'i':
+                    EncodedVariableInterpreter::add_int_var(result);
+                    break;
+                case 'f':
+                    EncodedVariableInterpreter::add_float_var(result);
+                    break;
+                case 'd':
+                    EncodedVariableInterpreter::add_dict_var(result);
+                    break;
+                default:
+                    break;
             }
         }
     }
@@ -405,14 +409,14 @@ TEST_CASE("get_wildcard_encodable_positions_for_multi_variable_interpretation", 
     constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
     constexpr uint32_t cHasNumId{111};
 
-    auto const interpretation{make_query_interpretation({
-            "text",
-            pair{cIntId,"100"},
-            pair{cFloatId,"32.2"},
-            pair{cIntId,"10?"},
-            pair{cFloatId,"3.14*"},
-            pair{cHasNumId,"3.14*"}
-    })};
+    auto const interpretation{make_query_interpretation(
+            {"text",
+             pair{cIntId, "100"},
+             pair{cFloatId, "32.2"},
+             pair{cIntId, "10?"},
+             pair{cFloatId, "3.14*"},
+             pair{cHasNumId, "3.14*"}}
+    )};
 
     auto const positions{clp::GrepCoreTest::get_wildcard_encodable_positions(interpretation)};
     REQUIRE(2 == positions.size());
@@ -466,21 +470,21 @@ TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_sea
     constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
     constexpr uint32_t cHasNumId{111};
 
-    unordered_set<string> const expected_logtype_strings{{
-          {generate_expected_logtype_string({"text", 'i', 'f', 'd', 'd', 'd'})},
-          {generate_expected_logtype_string({"text", 'i', 'f', 'i', 'd', 'd'})},
-          {generate_expected_logtype_string({"text", 'i', 'f', 'd', 'f', 'd'})},
-          {generate_expected_logtype_string({"text", 'i', 'f', 'i', 'f', 'd'})}
-    }};
+    unordered_set<string> const expected_logtype_strings{
+            {{generate_expected_logtype_string({"text", 'i', 'f', 'd', 'd', 'd'})},
+             {generate_expected_logtype_string({"text", 'i', 'f', 'i', 'd', 'd'})},
+             {generate_expected_logtype_string({"text", 'i', 'f', 'd', 'f', 'd'})},
+             {generate_expected_logtype_string({"text", 'i', 'f', 'i', 'f', 'd'})}}
+    };
 
-    auto const interpretation{make_query_interpretation({
-            "text",
-            pair{cIntId,"100"},
-            pair{cFloatId,"32.2"},
-            pair{cIntId,"10?"},
-            pair{cFloatId,"3.14*"},
-            pair{cHasNumId,"3.14*"}
-    })};
+    auto const interpretation{make_query_interpretation(
+            {"text",
+             pair{cIntId, "100"},
+             pair{cFloatId, "32.2"},
+             pair{cIntId, "10?"},
+             pair{cFloatId, "3.14*"},
+             pair{cHasNumId, "3.14*"}}
+    )};
 
     auto const wildcard_encodable_positions{
             clp::GrepCoreTest::get_wildcard_encodable_positions(interpretation)
@@ -589,13 +593,13 @@ TEST_CASE("process_schema_encoded_non_greedy_wildcard_token ", "[dfa_search]") {
 // this. In the future if CLP is more sophisticated, the two sections behave differently.
 TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token ", "[dfa_search]") {
     size_t id{0};
-    FakeVarDict const var_dict{make_var_dict({
-            pair{id++, "100000000000000000000000010"},
-            pair{id++, "100000000000000000000000020"},
-            pair{id++, "100000000000000000000000030"},
-            pair{id++, "1000000000000000000000000.0"},
-            pair{id++, "1000000000000000000000000a0"}
-    })};
+    FakeVarDict const var_dict{make_var_dict(
+            {pair{id++, "100000000000000000000000010"},
+             pair{id++, "100000000000000000000000020"},
+             pair{id++, "100000000000000000000000030"},
+             pair{id++, "1000000000000000000000000.0"},
+             pair{id++, "1000000000000000000000000a0"}}
+    )};
 
     SECTION("interpret_as_int") {
         SubQuery sub_query;
@@ -645,15 +649,15 @@ TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token ", "[dfa_search]
 
 TEST_CASE("process_schema_greedy_wildcard_token ", "[dfa_search]") {
     size_t id{0};
-    FakeVarDict const var_dict{make_var_dict({
-            pair{id++, "10a0"},
-            pair{id++, "10b0"},
-            pair{id++, "100000000000000000000000010"},
-            pair{id++, "100000000000000000000000020"},
-            pair{id++, "100000000000000000000000030"},
-            pair{id++, "1000000000000000000000000.0"},
-            pair{id++, "1000000000000000000000000a0"}
-    })};
+    FakeVarDict const var_dict{make_var_dict(
+            {pair{id++, "10a0"},
+             pair{id++, "10b0"},
+             pair{id++, "100000000000000000000000010"},
+             pair{id++, "100000000000000000000000020"},
+             pair{id++, "100000000000000000000000030"},
+             pair{id++, "1000000000000000000000000.0"},
+             pair{id++, "1000000000000000000000000a0"}}
+    )};
 
     SECTION("interpret_as_non_encoded_int") {
         SubQuery sub_query;
@@ -737,24 +741,24 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
     constexpr uint32_t cHasNumId{111};
 
     FakeVarDict const var_dict{make_var_dict({pair{0, "10a"}, pair{1, "1a3"}})};
-    FakeLogTypeDict const logtype_dict{make_logtype_dict({
-            {"text ", 'i', " ", 'i', " ", 'f'},
-            {"text ", 'i', " ", 'd', " ", 'f'},
-            {"text ", 'i', " ", 'd', " 3.14ab$"},
-            {"text ", 'i', " ", 'd', " 3.14abc$"},
-            {"text ", 'i', " ", 'd', " 3.15ab$"},
-            {"text ", 'i', " 10$ ", 'f'}
-    })};
+    FakeLogTypeDict const logtype_dict{make_logtype_dict(
+            {{"text ", 'i', " ", 'i', " ", 'f'},
+             {"text ", 'i', " ", 'd', " ", 'f'},
+             {"text ", 'i', " ", 'd', " 3.14ab$"},
+             {"text ", 'i', " ", 'd', " 3.14abc$"},
+             {"text ", 'i', " ", 'd', " 3.15ab$"},
+             {"text ", 'i', " 10$ ", 'f'}}
+    )};
 
     using V = pair<uint32_t, string>;
     vector<vector<variant<string, V>>> raw_interpretations{
-            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " ", V{cFloatId," 3.14*"}},
+            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " ", V{cFloatId, " 3.14*"}},
             {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " ", V{cHasNumId, "3.14*"}},
             {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " 3.14*"},
-            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " ", V{cFloatId," 3.14*"}},
+            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " ", V{cFloatId, " 3.14*"}},
             {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " ", V{cHasNumId, "3.14*"}},
             {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " 3.14*"},
-            {"text ", V{cIntId, "100"}, " 10? ", V{cFloatId," 3.14*"}},
+            {"text ", V{cIntId, "100"}, " 10? ", V{cFloatId, " 3.14*"}},
             {"text ", V{cIntId, "100"}, " 10? ", V{cHasNumId, "3.14*"}},
             {"text ", V{cIntId, "100"}, " 10? 3.14*"}
     };
@@ -771,17 +775,17 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
             sub_queries
     );
 
-    using Info = tuple<bool, bool, unordered_set<size_t>>;
+    using Var = tuple<bool, bool, unordered_set<size_t>>;
     REQUIRE(6 == sub_queries.size());
     size_t i{0};
     // NOTE: sub queries 0 and 2 are a duplicate of 3 and 5 because we use a vector instead of a set
     // when storing `m_sub_queries` in `Query`.
-    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}, Info{true, true, {0}}}, {1});
-    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}}, {0});
-    check_sub_query(i++, sub_queries, false, {Info{false, true, {}}, Info{true, true, {0}}}, {2,3});
-    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}, Info{true, true, {0}}}, {1});
-    check_sub_query(i++, sub_queries, false, {Info{false, true, {}}, Info{true, true, {0}}}, {2,3});
-    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}}, {5});
+    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}, Var{true, true, {0}}}, {1});
+    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}}, {0});
+    check_sub_query(i++, sub_queries, false, {Var{false, true, {}}, Var{true, true, {0}}}, {2, 3});
+    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}, Var{true, true, {0}}}, {1});
+    check_sub_query(i++, sub_queries, false, {Var{false, true, {}}, Var{true, true, {0}}}, {2, 3});
+    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}}, {5});
 }
 
 TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]") {
@@ -790,24 +794,24 @@ TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]
     constexpr uint32_t cHasNumId{111};
 
     FakeVarDict const var_dict{make_var_dict({pair{0, "10a"}, pair{1, "1a3"}})};
-    FakeLogTypeDict const logtype_dict{make_logtype_dict({
-            {"text ", 'i', " ", 'i', " ", 'f'},
-            {"text ", 'i', " ", 'd', " ", 'f'},
-            {"text ", 'i', " ", 'd', " 3.14ab$"},
-            {"text ", 'i', " ", 'd', " 3.14abc$"},
-            {"text ", 'i', " ", 'd', " 3.15ab$"},
-            {"text ", 'i', " 10$ ", 'f'}
-    })};
+    FakeLogTypeDict const logtype_dict{make_logtype_dict(
+            {{"text ", 'i', " ", 'i', " ", 'f'},
+             {"text ", 'i', " ", 'd', " ", 'f'},
+             {"text ", 'i', " ", 'd', " 3.14ab$"},
+             {"text ", 'i', " ", 'd', " 3.14abc$"},
+             {"text ", 'i', " ", 'd', " 3.15ab$"},
+             {"text ", 'i', " 10$ ", 'f'}}
+    )};
 
     using V = pair<uint32_t, string>;
     vector<vector<variant<string, V>>> raw_interpretations{
-            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " ", V{cFloatId," 3.14*"}, "*"},
+            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " ", V{cFloatId, " 3.14*"}, "*"},
             {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " ", V{cHasNumId, "3.14*"}, "*"},
             {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " 3.14**"},
-            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " ", V{cFloatId," 3.14*"}, "*"},
+            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " ", V{cFloatId, " 3.14*"}, "*"},
             {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " ", V{cHasNumId, "3.14*"}, "*"},
             {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " 3.14**"},
-            {"text ", V{cIntId, "100"}, " 10? ", V{cFloatId," 3.14*"}, "*"},
+            {"text ", V{cIntId, "100"}, " 10? ", V{cFloatId, " 3.14*"}, "*"},
             {"text ", V{cIntId, "100"}, " 10? ", V{cHasNumId, "3.14*"}, "*"},
             {"text ", V{cIntId, "100"}, " 10? 3.14**"}
     };
@@ -824,60 +828,51 @@ TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]
             sub_queries
     );
 
-    using Info = tuple<bool, bool, unordered_set<size_t>>;
+    using Var = tuple<bool, bool, unordered_set<size_t>>;
     REQUIRE(6 == sub_queries.size());
     size_t i{0};
-    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}, Info{true, true, {0}}}, {1});
-    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}}, {0});
-    check_sub_query(i++, sub_queries, false, {Info{false, true, {}}, Info{true, true, {0}}}, {2,3});
-    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}, Info{true, true, {0}}}, {1});
-    check_sub_query(i++, sub_queries, false, {Info{false, true, {}}, Info{true, true, {0}}}, {2,3});
-    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}}, {5});
+    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}, Var{true, true, {0}}}, {1});
+    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}}, {0});
+    check_sub_query(i++, sub_queries, false, {Var{false, true, {}}, Var{true, true, {0}}}, {2, 3});
+    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}, Var{true, true, {0}}}, {1});
+    check_sub_query(i++, sub_queries, false, {Var{false, true, {}}, Var{true, true, {0}}}, {2, 3});
+    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}}, {5});
 }
 
 // Tests: `process_raw_query`
 TEST_CASE("process_raw_query", "[dfa_search]") {
-    auto lexer{make_test_lexer({
-            {R"(int:(\d+))"},
-            {R"(float:(\d+\.\d+))"},
-            {R"(hasNumber:[^ $]*\d+[^ $]*)"}
-    })};
+    auto lexer{make_test_lexer(
+            {{R"(int:(\d+))"}, {R"(float:(\d+\.\d+))"}, {R"(hasNumber:[^ $]*\d+[^ $]*)"}}
+    )};
 
     FakeVarDict const var_dict{make_var_dict({pair{0, "10a"}, pair{1, "1a3"}})};
-    FakeLogTypeDict const logtype_dict{make_logtype_dict({
-            {"text ", 'i', " ", 'i', " ", 'f'},
-            {"text ", 'i', " ", 'd', " ", 'f'},
-            {"text ", 'i', " ", 'd', " 3.14ab$"},
-            {"text ", 'i', " ", 'd', " 3.14abc$"},
-            {"text ", 'i', " ", 'd', " 3.15ab$"},
-            {"text ", 'i', " 10$ ", 'f'}
-    })};
+    FakeLogTypeDict const logtype_dict{make_logtype_dict(
+            {{"text ", 'i', " ", 'i', " ", 'f'},
+             {"text ", 'i', " ", 'd', " ", 'f'},
+             {"text ", 'i', " ", 'd', " 3.14ab$"},
+             {"text ", 'i', " ", 'd', " 3.14abc$"},
+             {"text ", 'i', " ", 'd', " 3.15ab$"},
+             {"text ", 'i', " 10$ ", 'f'}}
+    )};
 
     string const raw_query{"text 100 10? 3.14*"};
 
-    auto const query{GrepCore::process_raw_query(
-            logtype_dict,
-            var_dict,
-            raw_query,
-            0,
-            0,
-            true,
-            lexer,
-            false
-    )};
+    auto const query{
+            GrepCore::process_raw_query(logtype_dict, var_dict, raw_query, 0, 0, true, lexer, false)
+    };
 
     REQUIRE(query.has_value());
 
-    using Info = tuple<bool, bool, unordered_set<size_t>>;
+    using Var = tuple<bool, bool, unordered_set<size_t>>;
     auto const& sub_queries{query.value().get_sub_queries()};
     REQUIRE(6 == sub_queries.size());
     size_t i{0};
-    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}, Info{true, true, {0}}}, {1});
-    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}}, {0});
-    check_sub_query(i++, sub_queries, false, {Info{false, true, {}}, Info{true, true, {0}}}, {2,3});
-    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}, Info{true, true, {0}}}, {1});
-    check_sub_query(i++, sub_queries, false, {Info{false, true, {}}, Info{true, true, {0}}}, {2,3});
-    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}}, {5});
+    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}, Var{true, true, {0}}}, {1});
+    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}}, {0});
+    check_sub_query(i++, sub_queries, false, {Var{false, true, {}}, Var{true, true, {0}}}, {2, 3});
+    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}, Var{true, true, {0}}}, {1});
+    check_sub_query(i++, sub_queries, false, {Var{false, true, {}}, Var{true, true, {0}}}, {2, 3});
+    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}}, {5});
 }
 
 // Tests: `get_bounds_of_next_potential_var`
