@@ -1,5 +1,5 @@
 import {Nullable} from "@webui/common/utility-types";
-import dayjs, {Dayjs} from "dayjs";
+import {Dayjs} from "dayjs";
 import {create} from "zustand";
 
 import {TimelineConfig} from "../../../components/ResultsTimeline/typings";
@@ -87,7 +87,7 @@ interface SearchState {
     /**
      * Time range for search query.
      */
-    timeRange: [dayjs.Dayjs, dayjs.Dayjs];
+    timeRange: [Dayjs, Dayjs];
 
     /**
      * Time range preset.
@@ -111,7 +111,7 @@ interface SearchState {
     updateSearchJobId: (id: string | null) => void;
     updateSearchUiState: (state: SEARCH_UI_STATE) => void;
     updateSelectDataset: (dataset: string | null) => void;
-    updateTimeRange: (range: [dayjs.Dayjs, dayjs.Dayjs]) => void;
+    updateTimeRange: (range: [Dayjs, Dayjs]) => void;
     updateTimeRangeOption: (option: TIME_RANGE_OPTION) => void;
     updateTimelineConfig: (config: TimelineConfig) => void;
 }
