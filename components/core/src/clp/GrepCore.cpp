@@ -154,7 +154,7 @@ auto GrepCore::get_wildcard_encodable_positions(QueryInterpretation const& inter
     wildcard_encodable_positions.reserve(logtype.size());
 
     for (size_t i{0}; i < logtype.size(); ++i) {
-        auto const token{logtype[i]};
+        auto const& token{logtype[i]};
         if (std::holds_alternative<VariableQueryToken>(token)) {
             auto const& var_token{std::get<VariableQueryToken>(token)};
             auto const var_type{static_cast<log_surgeon::SymbolId>(var_token.get_variable_type())};
@@ -176,7 +176,8 @@ auto GrepCore::generate_logtype_string(
 
     // Reserve size for `logtype_string`.
     size_t logtype_string_size{0};
-    for (auto const token : interpretation.get_logtype()) {
+    auto const logtype{interpretation.get_logtype()};
+    for (auto const& token : logtype) {
         if (std::holds_alternative<StaticQueryToken>(token)) {
             auto const& static_token{std::get<StaticQueryToken>(token)};
             logtype_string_size += static_token.get_query_substring().size();
@@ -187,8 +188,8 @@ auto GrepCore::generate_logtype_string(
     logtype_string.reserve(logtype_string_size);
 
     // Generate `logtype_string`.
-    for (size_t i{0}; i < interpretation.get_logtype().size(); ++i) {
-        auto const token{interpretation.get_logtype()[i]};
+    for (size_t i{0}; i < logtype.size(); ++i) {
+        auto const& token{logtype[i]};
         if (std::holds_alternative<StaticQueryToken>(token)) {
             logtype_string += std::get<StaticQueryToken>(token).get_query_substring();
             continue;
