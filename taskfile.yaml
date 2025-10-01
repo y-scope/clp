@@ -120,7 +120,7 @@ tasks:
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
-      # - "components/clp-mcp-server/dist/*.whl"
+      - "components/clp-mcp-server/dist/*.whl"
       - "components/package-template/src/**/*"
       - "tools/deployment/package/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
@@ -149,6 +149,7 @@ tasks:
           components/clp-package-utils/dist/*.whl \
           components/clp-py-utils/dist/*.whl \
           components/job-orchestration/dist/*.whl \
+          components/clp-mcp-server/dist/*.whl \
           -t "{{.OUTPUT_DIR}}/lib/python3/site-packages"
       - "mkdir -p '{{.OUTPUT_DIR}}/bin'"
       - >-
@@ -242,10 +243,9 @@ tasks:
 
   clp-mcp-server:
     cmds:
-      # Only copy files, do not build or install dependencies at build time
-      - |-
-        mkdir -p "{{.G_BUILD_DIR}}/clp-mcp-server"
-        cp -r components/clp-mcp-server/* "{{.G_BUILD_DIR}}/clp-mcp-server/"
+    - task: "python-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
        
 
   webui:

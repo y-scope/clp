@@ -120,7 +120,7 @@ services:
   mcp-server:
     <<: *service_defaults
     container_name: "mcp_server"
-    image: "${CLP_PACKAGE_MCP_SERVER_CONTAINER}"
+    image: "${CLP_PACKAGE_CONTAINER}"
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS}"
       CLP_DB_USER: "${CLP_DB_USER}"
@@ -142,5 +142,5 @@ services:
       ]
     command: [
       "bash", "-c",
-      "cd /opt/clp && pip install . && python3 -m clp_mcp_server --transport http --host $$MCP_HOST --port $$MCP_PORT"
+      "cd /opt/clp/lib/python3/site-packages && python3 -m clp_mcp_server --transport http --host $$MCP_HOST --port $$MCP_PORT"
     ]
