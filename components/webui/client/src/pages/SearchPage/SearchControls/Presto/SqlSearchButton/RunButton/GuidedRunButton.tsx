@@ -54,14 +54,14 @@ const GuidedRunButton = () => {
             const limitString = String(limit);
 
             const queryString = buildSearchQuery({
-                selectItemList: select.trim(),
+                ...(trimmedWhere && {booleanExpression: trimmedWhere}),
                 databaseName: from,
-                startTimestamp: startTimestamp.unix(),
                 endTimestamp: endTimestamp.unix(),
+                ...(limitString && {limitValue: limitString}),
+                selectItemList: select.trim(),
+                ...(trimmedOrderBy && {sortItemList: trimmedOrderBy}),
+                startTimestamp: startTimestamp.unix(),
                 timestampKey: timestampKey,
-                ...(trimmedWhere && { booleanExpression: trimmedWhere }),
-                ...(trimmedOrderBy && { sortItemList: trimmedOrderBy }),
-                ...(limitString && { limitValue: limitString }),
             });
 
             handlePrestoQuerySubmit({queryString});
