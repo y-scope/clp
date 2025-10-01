@@ -309,10 +309,10 @@ class BaseController(ABC):
 
         container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
         client_settings_json_path = (
-                self._clp_home / "var" / "www" / "webui" / "client" / "settings.json"
+            self._clp_home / "var" / "www" / "webui" / "client" / "settings.json"
         )
         server_settings_json_path = (
-                self._clp_home / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
+            self._clp_home / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
         )
 
         validate_webui_config(self.clp_config, client_settings_json_path, server_settings_json_path)
