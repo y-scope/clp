@@ -151,9 +151,9 @@ private:
      *      Interpretation (one of many): "a <int>(*1) <float>(*2) b"
      *      Possible logtypes (for the above interpretation):
      *        mask 00 -> "a \d \d b"
-     *        mask 01 ->"a \d \f b"
-     *        mask 10 ->"a \i \d b"
-     *        mask 11 ->"a \i \f b"
+     *        mask 01 -> "a \d \f b"
+     *        mask 10 -> "a \i \d b"
+     *        mask 11 -> "a \i \f b"
      *
      * B. Each candidate combination becomes a useful subquery only if:
      *   1. The logtype exists in the logtype dictionary, and

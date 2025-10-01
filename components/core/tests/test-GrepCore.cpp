@@ -4,14 +4,18 @@
 #include <set>
 #include <string>
 #include <string_view>
+#include <tuple>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
+#include <variant>
 #include <vector>
 
 #include <catch2/catch_test_macros.hpp>
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/Lexer.hpp>
+#include <log_surgeon/Schema.hpp>
+#include <log_surgeon/SchemaParser.hpp>
 #include <log_surgeon/wildcard_query_parser/QueryInterpretation.hpp>
 
 #include "../src/clp/Defs.h"
@@ -30,17 +34,20 @@ using clp::SubQuery;
 using clp::variable_dictionary_id_t;
 using clp::VariableDictionaryReaderReq;
 using log_surgeon::lexers::ByteLexer;
+using log_surgeon::Schema;
+using log_surgeon::SchemaVarAST;
 using log_surgeon::SymbolId::TokenFloat;
 using log_surgeon::SymbolId::TokenInt;
 using log_surgeon::wildcard_query_parser::QueryInterpretation;
 using log_surgeon::wildcard_query_parser::VariableQueryToken;
-using std::make_unique;
+using std::pair;
 using std::set;
 using std::string;
 using std::string_view;
-using std::unique_ptr;
+using std::tuple;
 using std::unordered_map;
 using std::unordered_set;
+using std::variant;
 using std::vector;
 
 class clp::GrepCoreTest {
@@ -99,7 +106,7 @@ class FakeVarEntry {
 public:
     explicit FakeVarEntry(variable_dictionary_id_t const id, string value)
             : m_id{id},
-              m_value{value} {}
+              m_value{std::move(value)} {}
 
     [[nodiscard]] auto get_id() const -> variable_dictionary_id_t { return m_id; }
 
@@ -120,14 +127,14 @@ public:
     }
 
     [[nodiscard]] auto get_value(dictionary_id_t const id) const -> string const& {
-        static string const empty{};
+        static string const cEmpty{};
         if (m_storage.contains(id)) {
             return m_storage.at(id).get_value();
         }
-        return empty;
+        return cEmpty;
     }
 
-    auto get_entry_matching_value(string_view const val, bool ignore_case) const
+    auto get_entry_matching_value(string_view const val, [[maybe_unused]] bool ignore_case) const
             -> vector<Entry const*> {
         vector<Entry const*> results;
         for (auto const& [id, entry] : m_storage) {
@@ -140,7 +147,7 @@ public:
 
     auto get_entries_matching_wildcard_string(
             string_view const val,
-            bool ignore_case,
+            [[maybe_unused]] bool ignore_case,
             unordered_set<Entry const*>& results
     ) const -> void {
         for (auto const& [id, entry] : m_storage) {
@@ -156,15 +163,20 @@ private:
 
 class FakeLogTypeEntry {
 public:
-    FakeLogTypeEntry(string const value, clp::logtype_dictionary_id_t const id)
-            : m_value(value),
+    FakeLogTypeEntry(string value, clp::logtype_dictionary_id_t const id)
+            : m_value(std::move(value)),
               m_id(id) {}
 
     auto clear() -> void { m_value.clear(); }
 
-    auto reserve_constant_length(size_t length) -> void { m_value.reserve(length); }
+    auto reserve_constant_length(size_t const length) -> void { m_value.reserve(length); }
 
-    auto parse_next_var(string_view msg, size_t begin, size_t end, string_view& parsed) -> bool {
+    auto parse_next_var(
+            [[maybe_unused]] string_view msg,
+            [[maybe_unused]] size_t begin,
+            [[maybe_unused]] size_t end,
+            [[maybe_unused]] string_view& parsed
+    ) -> bool {
         return false;
     }
 
@@ -184,7 +196,10 @@ public:
 
     [[nodiscard]] auto get_num_placeholders() const -> size_t { return 0; }
 
-    [[nodiscard]] auto get_placeholder_info(size_t idx, auto& ref) const -> size_t {
+    [[nodiscard]] auto get_placeholder_info(
+            [[maybe_unused]] size_t idx,
+            [[maybe_unused]] auto& ref
+    ) const -> size_t {
         return SIZE_MAX;
     }
 
@@ -204,7 +219,7 @@ public:
         m_storage.emplace_back(value, id);
     }
 
-    auto get_entry_matching_value(string_view const logtype, bool ignore_case) const
+    auto get_entry_matching_value(string_view const logtype, [[maybe_unused]] bool ignore_case) const
             -> vector<Entry const*> {
         vector<Entry const*> results;
         for (auto const& entry : m_storage) {
@@ -217,7 +232,7 @@ public:
 
     auto get_entries_matching_wildcard_string(
             string_view const logtype,
-            bool ignore_case,
+            [[maybe_unused]] bool ignore_case,
             unordered_set<Entry const*>& results
     ) const -> void {
         for (auto const& entry : m_storage) {
@@ -230,6 +245,151 @@ public:
 private:
     vector<Entry> m_storage;
 };
+
+auto make_var_dict(vector<pair<size_t, string>> const& entries) -> FakeVarDict;
+
+auto make_logtype_dict(vector<vector<variant<string_view, char>>> const& entries)
+        -> FakeLogTypeDict;
+
+auto make_query_interpretation(
+        vector<variant<string, pair<uint32_t, string>>> const& tokens
+) -> QueryInterpretation;
+
+auto generate_expected_logtype_string(vector<variant<string_view, char>> const& tokens) -> string;
+
+auto check_sub_query(
+        size_t id,
+        vector<SubQuery> const& sub_queries,
+        bool wildcard_match_required,
+        vector<tuple<bool, bool, unordered_set<size_t>>> const& vars_info,
+        unordered_set<clp::logtype_dictionary_id_t> const& logtype_ids
+) -> void;
+
+/**
+ * Initializes a `ByteLexer` with space as a delimiter and the given `schema_rules`.
+ *
+ * @param schema_rules A vector of strings, each string representing a schema rule.
+ * @return The initialized `ByteLexer`.
+ */
+auto make_test_lexer(vector<string> const& schema_rules) -> ByteLexer;
+
+auto make_var_dict(vector<pair<size_t, string>> const& entries) -> FakeVarDict {
+    FakeVarDict dict;
+    for (auto const& [id, val] : entries) {
+        dict.add_entry(id, val);
+    }
+    return dict;
+}
+
+auto make_logtype_dict(vector<vector<variant<string_view, char>>> const& entries)
+        -> FakeLogTypeDict {
+    FakeLogTypeDict dict;
+    clp::logtype_dictionary_id_t id{0};
+    for (auto const& entry : entries) {
+        dict.add_entry(generate_expected_logtype_string(entry), id++);
+    }
+    return dict;
+}
+
+auto make_query_interpretation(
+        vector<variant<string, pair<uint32_t, string>>> const& tokens
+) -> QueryInterpretation {
+    QueryInterpretation interp;
+    for (auto const& token : tokens) {
+        if (holds_alternative<string>(token)) {
+            interp.append_static_token(get<string>(token));
+        } else {
+            auto const& [symbol, value]{get<pair<uint32_t, string>>(token)};
+            auto const contains_wildcard{value.find_first_of("*?") != string::npos};
+            interp.append_variable_token(symbol, value, contains_wildcard);
+        }
+    }
+    return interp;
+}
+
+auto generate_expected_logtype_string(vector<variant<string_view, char>> const& tokens) -> string {
+    string result;
+    for (auto const& token : tokens) {
+        if (holds_alternative<string_view>(token)) {
+            result.append(get<string_view>(token));
+        } else {
+            switch (get<char>(token)) {
+                case 'i': EncodedVariableInterpreter::add_int_var(result); break;
+                case 'f': EncodedVariableInterpreter::add_float_var(result); break;
+                case 'd': EncodedVariableInterpreter::add_dict_var(result); break;
+                default: break;
+            }
+        }
+    }
+    return result;
+}
+
+auto check_sub_query(
+        size_t id,
+        vector<SubQuery> const& sub_queries,
+        bool const wildcard_match_required,
+        vector<tuple<bool, bool, unordered_set<size_t>>> const& vars_info,
+        unordered_set<clp::logtype_dictionary_id_t> const& logtype_ids
+) -> void {
+    CAPTURE(id);
+    auto const& sub_query{sub_queries[id]};
+
+    REQUIRE(wildcard_match_required == sub_query.wildcard_match_required());
+    REQUIRE(vars_info.size() == sub_query.get_num_possible_vars());
+
+    for (size_t i{0}; i < vars_info.size(); ++i) {
+        auto const& [is_dict_var, is_precise_var, var_dict_ids]{vars_info[i]};
+        auto const& var{sub_query.get_vars()[i]};
+        REQUIRE(is_dict_var == var.is_dict_var());
+        REQUIRE(is_precise_var == var.is_precise_var());
+        if (is_dict_var) {
+            if (is_precise_var) {
+                REQUIRE(1 == var_dict_ids.size());
+                REQUIRE(var_dict_ids.contains(var.get_var_dict_id()));
+            } else {
+                REQUIRE(var_dict_ids == var.get_possible_var_dict_ids());
+            }
+        }
+    }
+
+    REQUIRE(logtype_ids == sub_query.get_possible_logtypes());
+}
+
+auto make_test_lexer(vector<string> const& schema_rules) -> ByteLexer {
+    constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
+    constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
+    constexpr uint32_t cHasNumId{111};
+
+    ByteLexer lexer;
+    lexer.m_symbol_id["int"] = cIntId;
+    lexer.m_symbol_id["float"] = cFloatId;
+    lexer.m_symbol_id["hasNumber"] = cHasNumId;
+    lexer.m_id_symbol[cIntId] = "int";
+    lexer.m_id_symbol[cFloatId] = "float";
+    lexer.m_id_symbol[cHasNumId] = "hasNumber";
+    lexer.set_delimiters({' '});
+
+    Schema schema;
+    for (auto const& schema_rule : schema_rules) {
+        schema.add_variable(schema_rule, -1);
+    }
+
+    auto const schema_ast = schema.release_schema_ast_ptr();
+    REQUIRE(nullptr != schema_ast);
+    REQUIRE(schema_rules.size() == schema_ast->m_schema_vars.size());
+    for (size_t i{0}; i < schema_ast->m_schema_vars.size(); ++i) {
+        REQUIRE(nullptr != schema_ast->m_schema_vars[i]);
+        auto* capture_rule_ast{dynamic_cast<SchemaVarAST*>(schema_ast->m_schema_vars[i].get())};
+        REQUIRE(nullptr != capture_rule_ast);
+        lexer.add_rule(
+                lexer.m_symbol_id[capture_rule_ast->m_name],
+                std::move(capture_rule_ast->m_regex_ptr)
+        );
+    }
+
+    lexer.generate();
+    return lexer;
+}
 }  //  namespace
 
 // Tests: `get_wildcard_encodable_positions`
@@ -241,15 +401,18 @@ TEST_CASE("get_wildcard_encodable_positions_for_empty_interpretation", "[dfa_sea
 }
 
 TEST_CASE("get_wildcard_encodable_positions_for_multi_variable_interpretation", "[dfa_search]") {
-    constexpr uint32_t cHasNumberId{100};
+    constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
+    constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
+    constexpr uint32_t cHasNumId{111};
 
-    QueryInterpretation interpretation{};
-    interpretation.append_static_token("static_text");
-    interpretation.append_variable_token(static_cast<uint32_t>(TokenInt), "100", false);
-    interpretation.append_variable_token(static_cast<uint32_t>(TokenFloat), "32.2", false);
-    interpretation.append_variable_token(static_cast<uint32_t>(TokenInt), "10?", true);
-    interpretation.append_variable_token(static_cast<uint32_t>(TokenFloat), "3.14*", true);
-    interpretation.append_variable_token(cHasNumberId, "3.14*", true);
+    auto const interpretation{make_query_interpretation({
+            "text",
+            pair{cIntId,"100"},
+            pair{cFloatId,"32.2"},
+            pair{cIntId,"10?"},
+            pair{cFloatId,"3.14*"},
+            pair{cHasNumId,"3.14*"}
+    })};
 
     auto const positions{clp::GrepCoreTest::get_wildcard_encodable_positions(interpretation)};
     REQUIRE(2 == positions.size());
@@ -274,7 +437,7 @@ TEST_CASE("generate_logtype_string_for_empty_interpretation", "[dfa_search]") {
         auto logtype_string{
                 clp::GrepCoreTest::generate_logtype_string(interpretation, wildcard_mask_map)
         };
-        REQUIRE("" == logtype_string);
+        REQUIRE(logtype_string.empty());
     }
 }
 
@@ -299,44 +462,25 @@ TEST_CASE("generate_logtype_string_for_single_variable_interpretation", "[dfa_se
 }
 
 TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_search]") {
-    constexpr uint32_t cHasNumberId{100};
+    constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
+    constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
+    constexpr uint32_t cHasNumId{111};
 
-    vector<string> expected_logtype_strings;
-    expected_logtype_strings.push_back("static_text");
-    EncodedVariableInterpreter::add_int_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_float_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_dict_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_dict_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_dict_var(expected_logtype_strings.back());
+    unordered_set<string> const expected_logtype_strings{{
+          {generate_expected_logtype_string({"text", 'i', 'f', 'd', 'd', 'd'})},
+          {generate_expected_logtype_string({"text", 'i', 'f', 'i', 'd', 'd'})},
+          {generate_expected_logtype_string({"text", 'i', 'f', 'd', 'f', 'd'})},
+          {generate_expected_logtype_string({"text", 'i', 'f', 'i', 'f', 'd'})}
+    }};
 
-    expected_logtype_strings.push_back("static_text");
-    EncodedVariableInterpreter::add_int_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_float_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_int_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_dict_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_dict_var(expected_logtype_strings.back());
-
-    expected_logtype_strings.push_back("static_text");
-    EncodedVariableInterpreter::add_int_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_float_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_dict_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_float_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_dict_var(expected_logtype_strings.back());
-
-    expected_logtype_strings.push_back("static_text");
-    EncodedVariableInterpreter::add_int_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_float_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_int_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_float_var(expected_logtype_strings.back());
-    EncodedVariableInterpreter::add_dict_var(expected_logtype_strings.back());
-
-    QueryInterpretation interpretation{};
-    interpretation.append_static_token("static_text");
-    interpretation.append_variable_token(static_cast<uint32_t>(TokenInt), "100", false);
-    interpretation.append_variable_token(static_cast<uint32_t>(TokenFloat), "32.2", false);
-    interpretation.append_variable_token(static_cast<uint32_t>(TokenInt), "10?", true);
-    interpretation.append_variable_token(static_cast<uint32_t>(TokenFloat), "3.14*", true);
-    interpretation.append_variable_token(cHasNumberId, "3.14*", true);
+    auto const interpretation{make_query_interpretation({
+            "text",
+            pair{cIntId,"100"},
+            pair{cFloatId,"32.2"},
+            pair{cIntId,"10?"},
+            pair{cFloatId,"3.14*"},
+            pair{cHasNumId,"3.14*"}
+    })};
 
     auto const wildcard_encodable_positions{
             clp::GrepCoreTest::get_wildcard_encodable_positions(interpretation)
@@ -344,23 +488,22 @@ TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_sea
 
     size_t const num_combos{static_cast<size_t>(1) << wildcard_encodable_positions.size()};
     REQUIRE(num_combos == 4);
+    unordered_set<string> logtype_strings;
     for (size_t mask{0}; mask < num_combos; ++mask) {
         unordered_map<size_t, bool> wildcard_mask_map;
         for (size_t i{0}; i < wildcard_encodable_positions.size(); ++i) {
             wildcard_mask_map[wildcard_encodable_positions[i]] = mask >> i & 1;
         }
-        auto logtype_string{
+        logtype_strings.insert(
                 clp::GrepCoreTest::generate_logtype_string(interpretation, wildcard_mask_map)
-        };
-        CAPTURE(mask);
-        REQUIRE(expected_logtype_strings[mask] == logtype_string);
+        );
     }
+    REQUIRE(expected_logtype_strings == logtype_strings);
 }
 
 // Tests: `process_schema_var_token`
 TEST_CASE("process_schema_empty_token ", "[dfa_search]") {
-    FakeVarDict var_dict;
-    var_dict.add_entry(0, "100");
+    FakeVarDict const var_dict{make_var_dict({pair{0, "100"}})};
 
     SubQuery sub_query;
     VariableQueryToken const static_token{0, "", false};
@@ -370,8 +513,7 @@ TEST_CASE("process_schema_empty_token ", "[dfa_search]") {
 }
 
 TEST_CASE("process_schema_unmatched_token ", "[dfa_search]") {
-    FakeVarDict var_dict;
-    var_dict.add_entry(0, "100");
+    FakeVarDict const var_dict{make_var_dict({pair{0, "100"}})};
 
     SubQuery sub_query;
     VariableQueryToken const static_token{0, "200", false};
@@ -381,8 +523,7 @@ TEST_CASE("process_schema_unmatched_token ", "[dfa_search]") {
 }
 
 TEST_CASE("process_schema_int_token ", "[dfa_search]") {
-    FakeVarDict var_dict;
-    var_dict.add_entry(0, "100");
+    FakeVarDict const var_dict{make_var_dict({pair{0, "100"}})};
 
     SubQuery sub_query;
     VariableQueryToken const int_token{0, "100", false};
@@ -397,9 +538,7 @@ TEST_CASE("process_schema_int_token ", "[dfa_search]") {
 }
 
 TEST_CASE("process_schema_encoded_non_greedy_wildcard_token ", "[dfa_search]") {
-    FakeVarDict var_dict;
-    var_dict.add_entry(0, "10a0");
-    var_dict.add_entry(1, "10b0");
+    FakeVarDict const var_dict{make_var_dict({pair{0, "10a0"}, pair{1, "10b0"}})};
 
     SECTION("interpret_as_int") {
         SubQuery sub_query;
@@ -449,12 +588,14 @@ TEST_CASE("process_schema_encoded_non_greedy_wildcard_token ", "[dfa_search]") {
 // NOTE: CLP currently treats all non-encoded variables as the same, so the below test demonstrates
 // this. In the future if CLP is more sophisticated, the two sections behave differently.
 TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token ", "[dfa_search]") {
-    FakeVarDict var_dict;
-    var_dict.add_entry(0, "100000000000000000000000010");
-    var_dict.add_entry(1, "100000000000000000000000020");
-    var_dict.add_entry(2, "100000000000000000000000030");
-    var_dict.add_entry(3, "1000000000000000000000000.0");
-    var_dict.add_entry(4, "1000000000000000000000000a0");
+    size_t id{0};
+    FakeVarDict const var_dict{make_var_dict({
+            pair{id++, "100000000000000000000000010"},
+            pair{id++, "100000000000000000000000020"},
+            pair{id++, "100000000000000000000000030"},
+            pair{id++, "1000000000000000000000000.0"},
+            pair{id++, "1000000000000000000000000a0"}
+    })};
 
     SECTION("interpret_as_int") {
         SubQuery sub_query;
@@ -503,14 +644,16 @@ TEST_CASE("process_schema_non_encoded_non_greedy_wildcard_token ", "[dfa_search]
 }
 
 TEST_CASE("process_schema_greedy_wildcard_token ", "[dfa_search]") {
-    FakeVarDict var_dict;
-    var_dict.add_entry(0, "10a0");
-    var_dict.add_entry(1, "10b0");
-    var_dict.add_entry(2, "100000000000000000000000010");
-    var_dict.add_entry(3, "100000000000000000000000020");
-    var_dict.add_entry(4, "100000000000000000000000030");
-    var_dict.add_entry(5, "1000000000000000000000000.0");
-    var_dict.add_entry(6, "1000000000000000000000000a0");
+    size_t id{0};
+    FakeVarDict const var_dict{make_var_dict({
+            pair{id++, "10a0"},
+            pair{id++, "10b0"},
+            pair{id++, "100000000000000000000000010"},
+            pair{id++, "100000000000000000000000020"},
+            pair{id++, "100000000000000000000000030"},
+            pair{id++, "1000000000000000000000000.0"},
+            pair{id++, "1000000000000000000000000a0"}
+    })};
 
     SECTION("interpret_as_non_encoded_int") {
         SubQuery sub_query;
@@ -589,125 +732,36 @@ TEST_CASE("process_schema_greedy_wildcard_token ", "[dfa_search]") {
 
 // Tests: `generate_schema_sub_queries`
 TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
-    constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
-    constexpr uint32_t cHasNumberId{100};
     constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
+    constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
+    constexpr uint32_t cHasNumId{111};
 
-    FakeVarDict var_dict;
-    var_dict.add_entry(0, "10a");
-    var_dict.add_entry(1, "1a3");
+    FakeVarDict const var_dict{make_var_dict({pair{0, "10a"}, pair{1, "1a3"}})};
+    FakeLogTypeDict const logtype_dict{make_logtype_dict({
+            {"text ", 'i', " ", 'i', " ", 'f'},
+            {"text ", 'i', " ", 'd', " ", 'f'},
+            {"text ", 'i', " ", 'd', " 3.14ab$"},
+            {"text ", 'i', " ", 'd', " 3.14abc$"},
+            {"text ", 'i', " ", 'd', " 3.15ab$"},
+            {"text ", 'i', " 10$ ", 'f'}
+    })};
 
-    FakeLogTypeDict logtype_dict;
-
-    string logtype_string{"static_text "};
-    EncodedVariableInterpreter::add_int_var(logtype_string);
-    logtype_string += " ";
-    EncodedVariableInterpreter::add_int_var(logtype_string);
-    logtype_string += " ";
-    EncodedVariableInterpreter::add_float_var(logtype_string);
-    logtype_dict.add_entry(logtype_string, 0);
-
-    logtype_string = "static_text ";
-    EncodedVariableInterpreter::add_int_var(logtype_string);
-    logtype_string += " ";
-    EncodedVariableInterpreter::add_dict_var(logtype_string);
-    logtype_string += " ";
-    EncodedVariableInterpreter::add_float_var(logtype_string);
-    logtype_dict.add_entry(logtype_string, 1);
-
-    logtype_string = "static_text ";
-    EncodedVariableInterpreter::add_int_var(logtype_string);
-    logtype_string += " ";
-    EncodedVariableInterpreter::add_dict_var(logtype_string);
-    logtype_string += " 3.14ab'";
-    logtype_dict.add_entry(logtype_string, 2);
-
-    logtype_string = "static_text ";
-    EncodedVariableInterpreter::add_int_var(logtype_string);
-    logtype_string += " ";
-    EncodedVariableInterpreter::add_dict_var(logtype_string);
-    logtype_string += " 3.15ab'";
-    logtype_dict.add_entry(logtype_string, 3);
-
-    logtype_string = "static_text ";
-    EncodedVariableInterpreter::add_int_var(logtype_string);
-    logtype_string += " 10' ";
-    EncodedVariableInterpreter::add_float_var(logtype_string);
-    logtype_dict.add_entry(logtype_string, 4);
-
+    using V = pair<uint32_t, string>;
+    vector<vector<variant<string, V>>> raw_interpretations{
+            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " ", V{cFloatId," 3.14*"}},
+            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " ", V{cHasNumId, "3.14*"}},
+            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " 3.14*"},
+            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " ", V{cFloatId," 3.14*"}},
+            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " ", V{cHasNumId, "3.14*"}},
+            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " 3.14*"},
+            {"text ", V{cIntId, "100"}, " 10? ", V{cFloatId," 3.14*"}},
+            {"text ", V{cIntId, "100"}, " 10? ", V{cHasNumId, "3.14*"}},
+            {"text ", V{cIntId, "100"}, " 10? 3.14*"}
+    };
     set<QueryInterpretation> interpretations;
-
-    QueryInterpretation interpretation1{};
-    interpretation1.append_static_token("static_text ");
-    interpretation1.append_variable_token(cIntId, "100", false);
-    interpretation1.append_static_token(" ");
-    interpretation1.append_variable_token(cIntId, "10?", true);
-    interpretation1.append_static_token(" ");
-    interpretation1.append_variable_token(cFloatId, "3.14*", true);
-    interpretations.insert(interpretation1);
-
-    QueryInterpretation interpretation2{};
-    interpretation2.append_static_token("static_text ");
-    interpretation2.append_variable_token(cIntId, "100", false);
-    interpretation2.append_static_token(" ");
-    interpretation2.append_variable_token(cIntId, "10?", true);
-    interpretation2.append_static_token(" ");
-    interpretation2.append_variable_token(cHasNumberId, "3.14*", true);
-    interpretations.insert(interpretation2);
-
-    QueryInterpretation interpretation3{};
-    interpretation3.append_static_token("static_text ");
-    interpretation3.append_variable_token(cIntId, "100", false);
-    interpretation3.append_static_token(" ");
-    interpretation3.append_variable_token(cIntId, "10?", true);
-    interpretation3.append_static_token(" 3.14*");
-    interpretations.insert(interpretation3);
-
-    QueryInterpretation interpretation4{};
-    interpretation4.append_static_token("static_text ");
-    interpretation4.append_variable_token(cIntId, "100", false);
-    interpretation4.append_static_token(" ");
-    interpretation4.append_variable_token(cHasNumberId, "10?", true);
-    interpretation4.append_static_token(" ");
-    interpretation4.append_variable_token(cFloatId, "3.14*", true);
-    interpretations.insert(interpretation4);
-
-    QueryInterpretation interpretation5{};
-    interpretation5.append_static_token("static_text ");
-    interpretation5.append_variable_token(cIntId, "100", false);
-    interpretation5.append_static_token(" ");
-    interpretation5.append_variable_token(cHasNumberId, "10?", true);
-    interpretation5.append_static_token(" ");
-    interpretation5.append_variable_token(cHasNumberId, "3.14*", true);
-    interpretations.insert(interpretation5);
-
-    QueryInterpretation interpretation6{};
-    interpretation6.append_static_token("static_text ");
-    interpretation6.append_variable_token(cIntId, "100", false);
-    interpretation6.append_static_token(" ");
-    interpretation6.append_variable_token(cHasNumberId, "10?", true);
-    interpretation6.append_static_token(" 3.14*");
-    interpretations.insert(interpretation6);
-
-    QueryInterpretation interpretation7{};
-    interpretation7.append_static_token("static_text ");
-    interpretation7.append_variable_token(cIntId, "100", false);
-    interpretation7.append_static_token(" 10? ");
-    interpretation7.append_variable_token(cFloatId, "3.14*", true);
-    interpretations.insert(interpretation7);
-
-    QueryInterpretation interpretation8{};
-    interpretation8.append_static_token("static_text ");
-    interpretation8.append_variable_token(cIntId, "100", false);
-    interpretation8.append_static_token(" 10? ");
-    interpretation8.append_variable_token(cHasNumberId, "3.14*", true);
-    interpretations.insert(interpretation8);
-
-    QueryInterpretation interpretation9{};
-    interpretation9.append_static_token("static_text ");
-    interpretation9.append_variable_token(cIntId, "100", false);
-    interpretation9.append_static_token(" 10? 3.14*");
-    interpretations.insert(interpretation9);
+    for (auto const& raw_interpretation : raw_interpretations) {
+        interpretations.insert(make_query_interpretation(raw_interpretation));
+    }
 
     vector<SubQuery> sub_queries;
     clp::GrepCoreTest::generate_schema_sub_queries(
@@ -717,165 +771,89 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
             sub_queries
     );
 
+    using Info = tuple<bool, bool, unordered_set<size_t>>;
     REQUIRE(6 == sub_queries.size());
-
-    REQUIRE(sub_queries[0].wildcard_match_required());
-    REQUIRE(2 == sub_queries[0].get_num_possible_vars());
-    {
-        auto const& var{sub_queries[0].get_vars()[0]};
-        REQUIRE(false == var.is_dict_var());
-        REQUIRE(var.is_precise_var());
-    }
-    {
-        auto const& var{sub_queries[0].get_vars()[1]};
-        REQUIRE(var.is_dict_var());
-        REQUIRE(var.is_precise_var());
-        REQUIRE(0 == var.get_var_dict_id());
-        REQUIRE(var.get_possible_var_dict_ids().empty());
-    }
-    {
-        auto logtype_ids{sub_queries[1].get_possible_logtypes()};
-        REQUIRE(1 == logtype_ids.size());
-        CAPTURE(logtype_ids);
-        REQUIRE(logtype_ids.contains(0));
-    }
-
-    REQUIRE(sub_queries[1].wildcard_match_required());
-    REQUIRE(1 == sub_queries[1].get_num_possible_vars());
-    {
-        auto const& var{sub_queries[1].get_vars()[0]};
-        REQUIRE(false == var.is_dict_var());
-        REQUIRE(var.is_precise_var());
-    }
-    {
-        auto logtype_ids{sub_queries[1].get_possible_logtypes()};
-        REQUIRE(1 == logtype_ids.size());
-        CAPTURE(logtype_ids);
-        REQUIRE(logtype_ids.contains(0));
-    }
-
-    REQUIRE(false == sub_queries[2].wildcard_match_required());
-    REQUIRE(2 == sub_queries[2].get_num_possible_vars());
-    {
-        auto const& var{sub_queries[2].get_vars()[0]};
-        REQUIRE(false == var.is_dict_var());
-        REQUIRE(var.is_precise_var());
-    }
-    {
-        auto const& var{sub_queries[2].get_vars()[1]};
-        REQUIRE(var.is_dict_var());
-        REQUIRE(var.is_precise_var());
-    }
-    {
-        auto logtype_ids{sub_queries[2].get_possible_logtypes()};
-        REQUIRE(1 == logtype_ids.size());
-        CAPTURE(logtype_ids);
-        REQUIRE(logtype_ids.contains(2));
-    }
-
-    REQUIRE(sub_queries[3].wildcard_match_required());
-    REQUIRE(2 == sub_queries[3].get_num_possible_vars());
-    {
-        auto const& var{sub_queries[3].get_vars()[0]};
-        REQUIRE(false == var.is_dict_var());
-        REQUIRE(var.is_precise_var());
-    }
-    {
-        auto const& var{sub_queries[3].get_vars()[1]};
-        REQUIRE(var.is_dict_var());
-        REQUIRE(var.is_precise_var());
-    }
-    {
-        auto logtype_ids{sub_queries[3].get_possible_logtypes()};
-        REQUIRE(1 == logtype_ids.size());
-        CAPTURE(logtype_ids);
-        REQUIRE(logtype_ids.contains(1));
-    }
-
-    REQUIRE(false == sub_queries[4].wildcard_match_required());
-    REQUIRE(2 == sub_queries[4].get_num_possible_vars());
-    {
-        auto const& var{sub_queries[4].get_vars()[0]};
-        REQUIRE(false == var.is_dict_var());
-        REQUIRE(var.is_precise_var());
-    }
-    {
-        auto const& var{sub_queries[4].get_vars()[1]};
-        REQUIRE(var.is_dict_var());
-        REQUIRE(var.is_precise_var());
-    }
-    {
-        auto logtype_ids{sub_queries[4].get_possible_logtypes()};
-        REQUIRE(1 == logtype_ids.size());
-        CAPTURE(logtype_ids);
-        REQUIRE(logtype_ids.contains(2));
-    }
-
-    REQUIRE(sub_queries[5].wildcard_match_required());
-    REQUIRE(1 == sub_queries[5].get_num_possible_vars());
-    {
-        auto const& var{sub_queries[5].get_vars()[0]};
-        REQUIRE(false == var.is_dict_var());
-        REQUIRE(var.is_precise_var());
-    }
-    {
-        auto logtype_ids{sub_queries[5].get_possible_logtypes()};
-        REQUIRE(1 == logtype_ids.size());
-        CAPTURE(logtype_ids);
-        REQUIRE(logtype_ids.contains(4));
-    }
+    size_t i{0};
+    // NOTE: sub queries 0 and 2 are a duplicate of 3 and 5 because we use a vector instead of a set
+    // when storing `m_sub_queries` in `Query`.
+    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}, Info{true, true, {0}}}, {1});
+    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}}, {0});
+    check_sub_query(i++, sub_queries, false, {Info{false, true, {}}, Info{true, true, {0}}}, {2,3});
+    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}, Info{true, true, {0}}}, {1});
+    check_sub_query(i++, sub_queries, false, {Info{false, true, {}}, Info{true, true, {0}}}, {2,3});
+    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}}, {5});
 }
 
-/*
+TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]") {
+    constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
+    constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
+    constexpr uint32_t cHasNumId{111};
+
+    FakeVarDict const var_dict{make_var_dict({pair{0, "10a"}, pair{1, "1a3"}})};
+    FakeLogTypeDict const logtype_dict{make_logtype_dict({
+            {"text ", 'i', " ", 'i', " ", 'f'},
+            {"text ", 'i', " ", 'd', " ", 'f'},
+            {"text ", 'i', " ", 'd', " 3.14ab$"},
+            {"text ", 'i', " ", 'd', " 3.14abc$"},
+            {"text ", 'i', " ", 'd', " 3.15ab$"},
+            {"text ", 'i', " 10$ ", 'f'}
+    })};
+
+    using V = pair<uint32_t, string>;
+    vector<vector<variant<string, V>>> raw_interpretations{
+            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " ", V{cFloatId," 3.14*"}, "*"},
+            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " ", V{cHasNumId, "3.14*"}, "*"},
+            {"text ", V{cIntId, "100"}, " ", V{cIntId, "10?"}, " 3.14**"},
+            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " ", V{cFloatId," 3.14*"}, "*"},
+            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " ", V{cHasNumId, "3.14*"}, "*"},
+            {"text ", V{cIntId, "100"}, " ", V{cHasNumId, "10?"}, " 3.14**"},
+            {"text ", V{cIntId, "100"}, " 10? ", V{cFloatId," 3.14*"}, "*"},
+            {"text ", V{cIntId, "100"}, " 10? ", V{cHasNumId, "3.14*"}, "*"},
+            {"text ", V{cIntId, "100"}, " 10? 3.14**"}
+    };
+    set<QueryInterpretation> interpretations;
+    for (auto const& raw_interpretation : raw_interpretations) {
+        interpretations.insert(make_query_interpretation(raw_interpretation));
+    }
+
+    vector<SubQuery> sub_queries;
+    clp::GrepCoreTest::generate_schema_sub_queries(
+            interpretations,
+            logtype_dict,
+            var_dict,
+            sub_queries
+    );
+
+    using Info = tuple<bool, bool, unordered_set<size_t>>;
+    REQUIRE(6 == sub_queries.size());
+    size_t i{0};
+    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}, Info{true, true, {0}}}, {1});
+    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}}, {0});
+    check_sub_query(i++, sub_queries, false, {Info{false, true, {}}, Info{true, true, {0}}}, {2,3});
+    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}, Info{true, true, {0}}}, {1});
+    check_sub_query(i++, sub_queries, false, {Info{false, true, {}}, Info{true, true, {0}}}, {2,3});
+    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}}, {5});
+}
+
 // Tests: `process_raw_query`
 TEST_CASE("process_raw_query", "[dfa_search]") {
-    constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
-    constexpr uint32_t cHasNumberId{100};
-    constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
+    auto lexer{make_test_lexer({
+            {R"(int:(\d+))"},
+            {R"(float:(\d+\.\d+))"},
+            {R"(hasNumber:[^ $]*\d+[^ $]*)"}
+    })};
 
-    FakeVarDict var_dict;
-    var_dict.add_entry(0, "10a");
-    var_dict.add_entry(1, "1a3");
+    FakeVarDict const var_dict{make_var_dict({pair{0, "10a"}, pair{1, "1a3"}})};
+    FakeLogTypeDict const logtype_dict{make_logtype_dict({
+            {"text ", 'i', " ", 'i', " ", 'f'},
+            {"text ", 'i', " ", 'd', " ", 'f'},
+            {"text ", 'i', " ", 'd', " 3.14ab$"},
+            {"text ", 'i', " ", 'd', " 3.14abc$"},
+            {"text ", 'i', " ", 'd', " 3.15ab$"},
+            {"text ", 'i', " 10$ ", 'f'}
+    })};
 
-    FakeLogTypeDict logtype_dict;
-
-    string logtype_string{"static_text "};
-    EncodedVariableInterpreter::add_int_var(logtype_string);
-    logtype_string += " ";
-    EncodedVariableInterpreter::add_int_var(logtype_string);
-    logtype_string += " ";
-    EncodedVariableInterpreter::add_float_var(logtype_string);
-    logtype_dict.add_entry(logtype_string, 0);
-
-    logtype_string = "static_text ";
-    EncodedVariableInterpreter::add_int_var(logtype_string);
-    logtype_string += " ";
-    EncodedVariableInterpreter::add_dict_var(logtype_string);
-    logtype_string += " ";
-    EncodedVariableInterpreter::add_float_var(logtype_string);
-    logtype_dict.add_entry(logtype_string, 0);
-
-    logtype_string = "static_text ";
-    EncodedVariableInterpreter::add_int_var(logtype_string);
-    logtype_string += " ";
-    EncodedVariableInterpreter::add_dict_var(logtype_string);
-    logtype_string += " 3.14ab'";
-    logtype_dict.add_entry(logtype_string, 0);
-
-    logtype_string = "static_text ";
-    EncodedVariableInterpreter::add_int_var(logtype_string);
-    logtype_string += " ";
-    EncodedVariableInterpreter::add_dict_var(logtype_string);
-    logtype_string += " 3.15ab'";
-    logtype_dict.add_entry(logtype_string, 0);
-
-    logtype_string = "static_text ";
-    EncodedVariableInterpreter::add_int_var(logtype_string);
-    logtype_string += " 10' ";
-    EncodedVariableInterpreter::add_float_var(logtype_string);
-    logtype_dict.add_entry(logtype_string, 0);
-
-    string raw_query{"static_text 100 10? 3.14*"};
+    string const raw_query{"text 100 10? 3.14*"};
 
     auto const query{GrepCore::process_raw_query(
             logtype_dict,
@@ -883,15 +861,24 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
             raw_query,
             0,
             0,
-            false,
+            true,
             lexer,
             false
     )};
 
-    auto const& sub_queries{query.get_sub_queries()};
+    REQUIRE(query.has_value());
+
+    using Info = tuple<bool, bool, unordered_set<size_t>>;
+    auto const& sub_queries{query.value().get_sub_queries()};
     REQUIRE(6 == sub_queries.size());
+    size_t i{0};
+    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}, Info{true, true, {0}}}, {1});
+    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}}, {0});
+    check_sub_query(i++, sub_queries, false, {Info{false, true, {}}, Info{true, true, {0}}}, {2,3});
+    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}, Info{true, true, {0}}}, {1});
+    check_sub_query(i++, sub_queries, false, {Info{false, true, {}}, Info{true, true, {0}}}, {2,3});
+    check_sub_query(i++, sub_queries, true, {Info{false, true, {}}}, {5});
 }
-*/
 
 // Tests: `get_bounds_of_next_potential_var`
 TEST_CASE("get_bounds_of_next_potential_var", "[get_bounds_of_next_potential_var]") {

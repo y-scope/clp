@@ -14,11 +14,13 @@ namespace {
  * Helper for ``wildcard_match_unsafe_case_sensitive`` to advance the pointer in
  * tame to the next character which matches wild. This method should be inlined
  * for performance.
+ *
+ * This method assumes that `wild_current` has no duplicate greedy wildcards ('*').
+ *
  * @param tame_current
  * @param tame_bookmark
  * @param tame_end
  * @param wild_current
- * @param wild_bookmark
  * @return true on success, false if wild cannot match tame
  */
 inline bool advance_tame_to_next_match(
@@ -258,10 +260,12 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
     while (true) {
         w = *wild_current;
         if ('*' == w) {
-            ++wild_current;
-            if (wild_end == wild_current) {
-                // Trailing '*' means everything remaining in tame will match
-                return true;
+            while ('*' == *wild_current) {
+                ++wild_current;
+                if (wild_end == wild_current) {
+                  // Trailing '*' means everything remaining in tame will match
+                  return true;
+                }
             }
 
             // Set wild and tame bookmarks
@@ -309,8 +313,10 @@ bool wildcard_match_unsafe_case_sensitive(string_view tame, string_view wild) {
 
         // Handle reaching the end of tame or wild
         if (tame_end == tame_current) {
-            return (wild_end == wild_current
-                    || ('*' == *wild_current && (wild_current + 1) == wild_end));
+            while (wild_end != wild_current && '*' == *wild_current) {
+                ++wild_current;
+            }
+            return wild_end == wild_current;
         } else {
             if (wild_end == wild_current) {
                 if (nullptr == wild_bookmark) {

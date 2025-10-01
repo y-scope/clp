@@ -145,13 +145,28 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
             REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
         }
 
+        GIVEN("Double wild with no suffix char") {
+          tameString = "abcd", wildString = "a**";
+          REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
+        }
+
         GIVEN("Single wild with no prefix char") {
             tameString = "abcd", wildString = "*d";
             REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
         }
 
+        GIVEN("Double wild with no prefix char") {
+          tameString = "abcd", wildString = "**d";
+          REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
+        }
+
         GIVEN("Single wild on both side & has 1st char as literal") {
             tameString = "abcd", wildString = "*a*";
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
+        }
+
+        GIVEN("Double wild on both side & has 1st char as literal") {
+            tameString = "abcd", wildString = "**a**";
             REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
         }
 
@@ -160,13 +175,28 @@ SCENARIO("Test case sensitive wild card match in all possible ways", "[wildcard]
             REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
         }
 
+        GIVEN("Double wild on both side & has middle char as literal") {
+            tameString = "abcd", wildString = "**b**";
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
+        }
+
         GIVEN("Single wild on both side & has last char as literal") {
             tameString = "abcd", wildString = "*d*";
             REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
         }
 
+        GIVEN("Double wild on both side & has last char as literal") {
+            tameString = "abcd", wildString = "**d**";
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
+        }
+
         GIVEN("Single wild only") {
             tameString = "abcd", wildString = "*";
+            REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
+        }
+
+        GIVEN("Double wild only") {
+            tameString = "abcd", wildString = "**";
             REQUIRE(wildcard_match_unsafe_case_sensitive(tameString, wildString) == true);
         }
     }
