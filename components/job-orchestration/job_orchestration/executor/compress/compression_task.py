@@ -6,6 +6,7 @@ import subprocess
 from contextlib import closing
 from typing import Any, Dict, List, Optional, Tuple
 
+from celery import signals
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
@@ -522,6 +523,11 @@ def run_clp(
         return CompressionTaskStatus.FAILED, worker_output
 
 
+@signals.worker_shutdown.connect
+def worker_shutdown_handler(signal=None, sender=None, **kwargs):
+    logger.info("Shutdown signal received.")
+
+
 @app.task(bind=True)
 def compress(
     self: Task,
@@ -541,7 +547,7 @@ def compress(
 
     # Load configuration
     try:
-        worker_config = WorkerConfig.parse_obj(
+        worker_config = WorkerConfig.model_validate(
             read_yaml_config_file(pathlib.Path(os.getenv("CLP_CONFIG_PATH")))
         )
     except Exception as ex:
@@ -554,10 +560,10 @@ def compress(
             error_message=error_msg,
         )
 
-    clp_io_config = ClpIoConfig.parse_raw(clp_io_config_json)
-    paths_to_compress = PathsToCompress.parse_raw(paths_to_compress_json)
+    clp_io_config = ClpIoConfig.model_validate_json(clp_io_config_json)
+    paths_to_compress = PathsToCompress.model_validate_json(paths_to_compress_json)
 
-    sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_connection_config))
+    sql_adapter = SQL_Adapter(Database.model_validate(clp_metadata_db_connection_config))
 
     start_time = datetime.datetime.now()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
@@ -603,4 +609,4 @@ def compress(
     if CompressionTaskStatus.FAILED == compression_task_status:
         compression_task_result.error_message = worker_output["error_message"]
 
-    return compression_task_result.dict()
+    return compression_task_result.model_dump()

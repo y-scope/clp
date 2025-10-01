@@ -61,7 +61,7 @@ const TimeRangeInput = () => {
                 listHeight={400}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
-                size={"large"}
+                size={"middle"}
                 value={timeRangeOption}
                 variant={"filled"}
                 className={timeRangeOption === TIME_RANGE_OPTION.CUSTOM ?
@@ -75,7 +75,7 @@ const TimeRangeInput = () => {
                     allowClear={true}
                     className={styles["rangePicker"] || ""}
                     showTime={true}
-                    size={"large"}
+                    size={"middle"}
                     value={timeRange}
                     disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                                 searchUiState === SEARCH_UI_STATE.QUERYING}
