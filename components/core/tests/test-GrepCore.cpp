@@ -600,9 +600,13 @@ TEST_CASE("process_schema_unmatched_token ", "[dfa_search]") {
 
     SubQuery sub_query;
     VariableQueryToken const int_token{cIntId, "200", false};
-    REQUIRE(false == clp::GrepCoreTest::process_token(int_token, var_dict, sub_query));
+    REQUIRE(clp::GrepCoreTest::process_token(int_token, var_dict, sub_query));
     REQUIRE(false == sub_query.wildcard_match_required());
-    REQUIRE(0 == sub_query.get_num_possible_vars());
+    REQUIRE(1 == sub_query.get_num_possible_vars());
+    auto const& var{sub_query.get_vars()[0]};
+    REQUIRE(false == var.is_dict_var());
+    REQUIRE(var.is_precise_var());
+    REQUIRE(var.get_possible_var_dict_ids().empty());
 }
 
 TEST_CASE("process_schema_int_token ", "[dfa_search]") {
@@ -614,9 +618,8 @@ TEST_CASE("process_schema_int_token ", "[dfa_search]") {
     REQUIRE(false == sub_query.wildcard_match_required());
     REQUIRE(1 == sub_query.get_num_possible_vars());
     auto const& var{sub_query.get_vars()[0]};
-    REQUIRE(var.is_dict_var());
+    REQUIRE(false == var.is_dict_var());
     REQUIRE(var.is_precise_var());
-    REQUIRE(0 == var.get_var_dict_id());
     REQUIRE(var.get_possible_var_dict_ids().empty());
 }
 
