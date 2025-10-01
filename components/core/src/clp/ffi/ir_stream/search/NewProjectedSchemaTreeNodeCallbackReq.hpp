@@ -29,7 +29,8 @@ concept NewProjectedSchemaTreeNodeCallbackReq = std::is_invocable_r_v<
         NewProjectedSchemaTreeNodeCallbackType,
         bool,
         SchemaTree::Node::id_t,
-        std::pair<std::string_view, size_t>>;
+        std::pair<std::string_view, size_t>
+>;
 }  // namespace clp::ffi::ir_stream::search
 
 #endif  // CLP_FFI_IR_STREAM_SEARCH_NEWPROJECTEDSCHEMATREENODECALLBACKREQ_HPP

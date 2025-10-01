@@ -2,3 +2,11 @@ version: "3"
 
 includes:
   integration: "integration.yaml"
+
+tasks:
+  rust-all:
+    deps: [":toolchains:rust"]
+    dir: "{{.ROOT_DIR}}"
+    cmd: |-
+      . "$HOME/.cargo/env"
+      cargo test --all --all-features --release
