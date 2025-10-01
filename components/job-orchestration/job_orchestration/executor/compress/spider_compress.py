@@ -7,7 +7,7 @@ from job_orchestration.utils.spider_utils import int8_list_to_utf8_str, utf8_str
 from spider_py import Int8, Int64, TaskContext
 
 # Setup logging
-logger = get_logger("spider_compression_scheduler")
+logger = get_logger("spider_compression")
 
 
 def compress(
@@ -29,7 +29,7 @@ def compress(
         `job_orchestration.scheduler.constants.ClpIoConfig`.
     :param paths_to_compress_json: A JSON string representation of
         `job_orchestration.scheduler.constants.PathToCompress`.
-    :param clp_metadata_db_connection_config_json: A JSON string representation of
+    :param : A JSON string representation of
         `clp_py_utils.clp_config.Database`.
     :return: A JSON string representation of
         `job_orchestration.scheduler.constants.CompressionTaskResult`, encoded as a list of
