@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import spider_py
 
 
@@ -18,4 +20,4 @@ def utf8_str_to_int8_list(utf8_str: str) -> list[spider_py.Int8]:
     :param utf8_str:
     :return: A list of `spider_py.Int8` values representing the input string.
     """
-    return [spider_py.Int8(byte) for byte in s.encode("utf-8")]
+    return [spider_py.Int8(byte) for byte in utf8_str.encode("utf-8")]

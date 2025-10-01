@@ -40,10 +40,10 @@ def compress(
             int(job_id),
             int(task_id),
             [int(tag_id) for tag_id in tag_ids],
-            spider_int8_list_to_utf8_str(clp_io_config_json),
-            spider_int8_list_to_utf8_str(paths_to_compress_json),
-            Database.parse_raw(
-                spider_int8_list_to_utf8_str(clp_metadata_db_connection_config_json)
+            int8_list_to_utf8_str(clp_io_config_json),
+            int8_list_to_utf8_str(paths_to_compress_json),
+            Database.model_validate.parse_raw(
+                int8_list_to_utf8_str(clp_metadata_db_connection_config_json)
             ),
             logger,
         )
