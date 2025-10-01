@@ -20,13 +20,12 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class CompressionJob(BaseModel):
+    # Allow the use of TaskManager.ResultHandle
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     id: int
     start_time: datetime.datetime
     result_handle: TaskManager.ResultHandle
-
-    class Config:
-        # Allow the use of TaskManager.CompressResultHandle
-        arbitrary_types_allowed = True
 
 
 class InternalJobState(Enum):
