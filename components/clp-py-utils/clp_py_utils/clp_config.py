@@ -87,7 +87,7 @@ CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
 CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
-CLP_PACKAGE_IMAGE_ID_PATH = pathlib.Path("clp-package-image.id")
+CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH = pathlib.Path("clp-package-image.id")
 CLP_SHARED_CONFIG_FILENAME = ".clp-config.yml"
 CLP_VERSION_FILE_PATH = pathlib.Path("VERSION")
 
@@ -901,7 +901,7 @@ class CLPConfig(BaseModel):
     logs_directory: pathlib.Path = pathlib.Path("var") / "log"
     aws_config_directory: Optional[pathlib.Path] = None
 
-    _image_id_path: pathlib.Path = PrivateAttr(default=CLP_PACKAGE_IMAGE_ID_PATH)
+    _image_id_path: pathlib.Path = PrivateAttr(default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH)
     _version_file_path: pathlib.Path = PrivateAttr(default=CLP_VERSION_FILE_PATH)
 
     @field_validator("aws_config_directory")
