@@ -1016,8 +1016,7 @@ class CLPConfig(BaseModel):
         if self._image_id_path.exists():
             with open(self._image_id_path) as image_id_file:
                 self.execution_container = image_id_file.read().strip()
-
-        if self.execution_container == "":
+        else:
             with open(self._version_file_path) as version_file:
                 clp_package_version = version_file.read().strip()
             self.execution_container = f"ghcr.io/y-scope/clp/clp-package:{clp_package_version}"
