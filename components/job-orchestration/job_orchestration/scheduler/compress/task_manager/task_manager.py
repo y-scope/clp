@@ -9,7 +9,7 @@ from job_orchestration.scheduler.scheduler_result import CompressionTaskResult
 class TaskManager(ABC):
     """Abstract base class for a scheduler framework."""
 
-    class CompressResultHandle(ABC):
+    class ResultHandle(ABC):
         @abstractmethod
         def get_result(self, timeout: float = 0.1) -> list[CompressionTaskResult] | None:
             """

@@ -13,7 +13,7 @@ from spider_py.client.job import Job
 
 class SpiderTaskManager(TaskManager):
 
-    class CompressResultHandle(TaskManager.CompressResultHandle):
+    class ResultHandle(TaskManager.ResultHandle):
         def __init__(self, spider_job: Job) -> None:
             self._spider_job: Job = spider_job
 
@@ -29,7 +29,7 @@ class SpiderTaskManager(TaskManager):
     def __init__(self, storage_url: str) -> None:
         self._driver = spider_py.Driver(storage_url)
 
-    def compress(self, task_params: list[dict[str, Any]]) -> TaskManager.CompressResultHandle:
+    def compress(self, task_params: list[dict[str, Any]]) -> TaskManager.ResultHandle:
         job = spider_py.group(
             [compress for _ in range(len(task_params))],
         )
@@ -45,7 +45,7 @@ class SpiderTaskManager(TaskManager):
             for task_param in task_params
         ]
         submitted_job = self._driver.submit_jobs([job], [list(itertools.chain(*task_params_list))])
-        return SpiderTaskManager.CompressResultHandle(submitted_job)
+        return SpiderTaskManager.ResultHandle(submitted_job)
 
 
 def _from_str(string: str) -> list[spider_py.Int8]:

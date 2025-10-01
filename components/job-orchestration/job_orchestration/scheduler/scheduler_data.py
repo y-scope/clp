@@ -22,7 +22,7 @@ from pydantic import BaseModel, validator
 class CompressionJob(BaseModel):
     id: int
     start_time: datetime.datetime
-    result_handle: TaskManager.CompressResultHandle
+    result_handle: TaskManager.ResultHandle
 
     class Config:
         # Allow the use of TaskManager.CompressResultHandle
