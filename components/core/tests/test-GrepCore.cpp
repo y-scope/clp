@@ -455,7 +455,7 @@ TEST_CASE("generate_logtype_string_for_single_variable_interpretation", "[dfa_se
     auto const wildcard_encodable_positions{
             clp::GrepCoreTest::get_wildcard_encodable_positions(interpretation)
     };
-    size_t const num_combos{static_cast<size_t>(1) << wildcard_encodable_positions.size()};
+    uint64_t const num_combos{1ULL << wildcard_encodable_positions.size()};
     REQUIRE(1 == num_combos);
 
     std::unordered_map<size_t, bool> const wildcard_mask_map{};
@@ -490,7 +490,7 @@ TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_sea
             clp::GrepCoreTest::get_wildcard_encodable_positions(interpretation)
     };
 
-    size_t const num_combos{static_cast<size_t>(1) << wildcard_encodable_positions.size()};
+    uint64_t const num_combos{1ULL << wildcard_encodable_positions.size()};
     REQUIRE(num_combos == 4);
     unordered_set<string> logtype_strings;
     for (size_t mask{0}; mask < num_combos; ++mask) {
