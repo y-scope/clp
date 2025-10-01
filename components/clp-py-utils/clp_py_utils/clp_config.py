@@ -875,7 +875,7 @@ def _get_env_var(name: str) -> str:
 
 
 class CLPConfig(BaseModel):
-    execution_container: Optional[str] = None
+    container_image_ref: Optional[str] = None
 
     logs_input: Union[FsIngestionConfig, S3IngestionConfig] = FsIngestionConfig()
 
@@ -1009,17 +1009,17 @@ class CLPConfig(BaseModel):
             )
 
     def load_execution_container_name(self):
-        if self.execution_container is not None:
+        if self.container_image_ref is not None:
             # Accept configured value for debug purposes
             return
 
         if self._container_image_id_path.exists():
             with open(self._container_image_id_path) as image_id_file:
-                self.execution_container = image_id_file.read().strip()
+                self.container_image_ref = image_id_file.read().strip()
         else:
             with open(self._version_file_path) as version_file:
                 clp_package_version = version_file.read().strip()
-            self.execution_container = f"ghcr.io/y-scope/clp/clp-package:{clp_package_version}"
+            self.container_image_ref = f"ghcr.io/y-scope/clp/clp-package:{clp_package_version}"
 
     def get_shared_config_file_path(self) -> pathlib.Path:
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
