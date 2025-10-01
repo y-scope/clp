@@ -10,11 +10,16 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
     environment.
   * It should be possible to build a package for a different environment, it just requires a some
     extra configuration.
+* [Docker]
+  * `containerd.io` >= 1.7.18
+  * `docker-buildx-plugin` >= 0.15.1
+  * `docker-ce` >= 27.0.3
+  * `docker-ce-cli` >= 27.0.3
 * Python 3.9 or newer
 * python3-dev
 * python3-venv (for the version of Python installed)
 * [Task] 3.44.0
-  * We pin the version to 3.44.0 due to [y-scope/clp-ffi-js#110].
+  * We pin the version to 3.44.0 due to [y-scope/clp#1352].
 * [uv] >= 0.8
 
 ## Setup
@@ -84,8 +89,8 @@ The package includes a `docker-compose.yaml` file that can be used to deploy CLP
 If you want to manually deploy with Docker Compose instead of using the package scripts, see the 
 [Docker Compose design][docker-compose-design] for more information.
 
-[clp-issue-872]: https://github.com/y-scope/clp/issues/872
+[Docker]: https://docs.docker.com/engine/install/
 [docker-compose-design]: ../dev-docs/design-docker-compose.md
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
-[y-scope/clp-ffi-js#110]: https://github.com/y-scope/clp-ffi-js/issues/110
+[y-scope/clp#1352]: https://github.com/y-scope/clp/issues/1352

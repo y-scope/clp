@@ -166,10 +166,9 @@ load_lexer_from_file(std::string const& schema_file_path, log_surgeon::lexers::B
             lexer.m_symbol_id["newLine"],
             std::move(
                     std::make_unique<log_surgeon::finite_automata::RegexASTLiteral<
-                            log_surgeon::finite_automata::ByteNfaState>>(
-                            log_surgeon::finite_automata::RegexASTLiteral<
-                                    log_surgeon::finite_automata::ByteNfaState>('\n')
-                    )
+                            log_surgeon::finite_automata::ByteNfaState
+                    >>(log_surgeon::finite_automata::
+                               RegexASTLiteral<log_surgeon::finite_automata::ByteNfaState>('\n'))
             )
     );
 
