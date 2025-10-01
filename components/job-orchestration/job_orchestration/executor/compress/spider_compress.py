@@ -42,8 +42,8 @@ def compress(
             [int(tag_id) for tag_id in tag_ids],
             int8_list_to_utf8_str(clp_io_config_json),
             int8_list_to_utf8_str(paths_to_compress_json),
-            Database.model_validate.parse_raw(
-                int8_list_to_utf8_str(clp_metadata_db_connection_config_json)
+            Database.model_validate(
+                json.loads(int8_list_to_utf8_str(clp_metadata_db_connection_config_json))
             ),
             logger,
         )
