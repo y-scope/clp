@@ -241,7 +241,7 @@ def search_and_schedule_new_tasks(
     db_conn.commit()
     for job_row in jobs:
         job_id = job_row["id"]
-        clp_io_config = ClpIoConfig.parse_obj(
+        clp_io_config = ClpIoConfig.model_validate(
             msgpack.unpackb(brotli.decompress(job_row["clp_config"]))
         )
         input_config = clp_io_config.input
@@ -473,7 +473,7 @@ def main(argv):
     # Load configuration
     config_path = Path(args.config)
     try:
-        clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
+        clp_config = CLPConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
         logger.error(err)

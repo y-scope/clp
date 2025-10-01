@@ -33,7 +33,7 @@ jobs:
 
       - name: "Install task"
         shell: "bash"
-        run: "npm install -g @go-task/cli"
+        run: "npm install -g @go-task/cli@3.44.0"
 
       - name: "Install uv"
         shell: "bash"
@@ -43,6 +43,14 @@ jobs:
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
 
-      - name: "Run lint task"
+      - name: "Lint .js files"
         shell: "bash"
-        run: "task lint:check-no-cpp"
+        run: "task lint:check-js"
+
+      - name: "Lint .py files"
+        shell: "bash"
+        run: "task lint:check-py"
+
+      - name: "Lint .yaml files"
+        shell: "bash"
+        run: "task lint:check-yaml"

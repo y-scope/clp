@@ -17,7 +17,7 @@ def load_worker_config(
     :return: The loaded WorkerConfig object on success, None otherwise.
     """
     try:
-        return WorkerConfig.parse_obj(read_yaml_config_file(config_path))
+        return WorkerConfig.model_validate(read_yaml_config_file(config_path))
     except Exception:
         logger.exception("Failed to load worker config")
         return None
