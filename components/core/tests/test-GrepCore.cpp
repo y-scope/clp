@@ -100,7 +100,8 @@ public:
 
     template <
             LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
-            VariableDictionaryReaderReq VariableDictionaryReaderType>
+            VariableDictionaryReaderReq VariableDictionaryReaderType
+    >
     static void generate_schema_sub_queries(
             std::set<QueryInterpretation> const& interpretations,
             LogTypeDictionaryReaderType const& logtype_dict,

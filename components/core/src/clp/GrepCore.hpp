@@ -181,7 +181,8 @@ private:
      */
     template <
             LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
-            VariableDictionaryReaderReq VariableDictionaryReaderType>
+            VariableDictionaryReaderReq VariableDictionaryReaderType
+    >
     static void generate_schema_sub_queries(
             std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> const&
                     interpretations,
@@ -533,7 +534,8 @@ GrepCore::SubQueryMatchabilityResult GrepCore::generate_logtypes_and_vars_for_su
 
 template <
         LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
-        VariableDictionaryReaderReq VariableDictionaryReaderType>
+        VariableDictionaryReaderReq VariableDictionaryReaderType
+>
 void GrepCore::generate_schema_sub_queries(
         std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> const& interpretations,
         LogTypeDictionaryReaderType const& logtype_dict,
