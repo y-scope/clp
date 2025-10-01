@@ -3,7 +3,7 @@ interface BuildSearchQueryProps {
     databaseName: string;
     booleanExpression?: string | undefined;
     sortItemList?: string | undefined;
-    limitValue: string;
+    limitValue?: string | undefined;
     startTimestamp: number;
     endTimestamp: number;
     timestampKey: string;

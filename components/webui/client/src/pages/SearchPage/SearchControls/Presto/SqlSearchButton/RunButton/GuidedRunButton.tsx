@@ -49,17 +49,19 @@ const GuidedRunButton = () => {
         }
 
         try {
-            // eslint-disable-next-line no-undefined
-            const getUndefinedIfEmpty = (str: string) => str === "" ? undefined : str;
+            const trimmedWhere = where.trim();
+            const trimmedOrderBy = orderBy.trim();
+            const limitString = String(limit);
+
             const queryString = buildSearchQuery({
-                booleanExpression: getUndefinedIfEmpty(where.trim()),
-                databaseName: from,
-                endTimestamp: endTimestamp.unix(),
-                limitValue: String(limit),
                 selectItemList: select.trim(),
-                sortItemList: getUndefinedIfEmpty(orderBy.trim()),
+                databaseName: from,
                 startTimestamp: startTimestamp.unix(),
+                endTimestamp: endTimestamp.unix(),
                 timestampKey: timestampKey,
+                ...(trimmedWhere && { booleanExpression: trimmedWhere }),
+                ...(trimmedOrderBy && { sortItemList: trimmedOrderBy }),
+                ...(limitString && { limitValue: limitString }),
             });
 
             handlePrestoQuerySubmit({queryString});
