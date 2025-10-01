@@ -485,10 +485,10 @@ TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_sea
     uint64_t const num_combos{1ULL << wildcard_encodable_positions.size()};
     REQUIRE(num_combos == 4);
     unordered_set<string> logtype_strings;
-    for (size_t mask{0}; mask < num_combos; ++mask) {
+    for (uint64_t mask{0}; mask < num_combos; ++mask) {
         unordered_map<size_t, bool> wildcard_mask_map;
         for (size_t i{0}; i < wildcard_encodable_positions.size(); ++i) {
-            wildcard_mask_map[wildcard_encodable_positions[i]] = mask >> i & 1;
+            wildcard_mask_map[wildcard_encodable_positions[i]] = mask >> i & 1ULL;
         }
         logtype_strings.insert(
                 clp::GrepCoreTest::generate_logtype_string(interpretation, wildcard_mask_map)
