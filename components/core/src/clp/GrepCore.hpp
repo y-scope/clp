@@ -611,10 +611,9 @@ auto GrepCore::process_schema_var_token(
 ) -> bool {
     auto const& raw_string{variable_token.get_query_substring()};
     auto const var_has_wildcard{variable_token.get_contains_wildcard()};
-    auto const var_type{variable_token.get_variable_type()};
-
-    bool const is_int{static_cast<uint32_t>(log_surgeon::SymbolId::TokenInt) == var_type};
-    bool const is_float{static_cast<uint32_t>(log_surgeon::SymbolId::TokenFloat) == var_type};
+    auto const var_type{static_cast<log_surgeon::SymbolId>(variable_token.get_variable_type())};
+    bool const is_int{log_surgeon::SymbolId::TokenInt == var_type};
+    bool const is_float{log_surgeon::SymbolId::TokenFloat == var_type};
 
     if (is_wildcard_mask_encoded) {
         sub_query.mark_wildcard_match_required();
