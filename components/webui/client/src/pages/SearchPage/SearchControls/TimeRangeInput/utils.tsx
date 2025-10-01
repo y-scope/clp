@@ -1,8 +1,27 @@
-import dayjs from "dayjs";
+import {Nullable} from "@webui/common/utility-types";
+import dayjs, {Dayjs} from "dayjs";
 import utc from "dayjs/plugin/utc";
+
+import {querySql} from "../../../../api/sql";
+import {
+    CLP_STORAGE_ENGINES,
+    SETTINGS_STORAGE_ENGINE,
+} from "../../../../config";
+import {
+    buildClpsTimeRangeSql,
+    buildClpTimeRangeSql,
+} from "./timeRangeSql";
 
 
 dayjs.extend(utc);
+
+
+const TIME_RANGE_SINCE_UNIX_EPOCH: [Dayjs, Dayjs] = [
+    dayjs(0).utc(),
+    dayjs().utc()
+        .add(1, "year"),
+];
+
 
 /**
  * Time range options.
@@ -23,25 +42,28 @@ enum TIME_RANGE_OPTION {
 
 const DEFAULT_TIME_RANGE = TIME_RANGE_OPTION.ALL_TIME;
 
-/* eslint-disable no-magic-numbers */
-const TIME_RANGE_OPTION_DAYJS_MAP: Record<TIME_RANGE_OPTION, () => [dayjs.Dayjs, dayjs.Dayjs]> = {
-    [TIME_RANGE_OPTION.LAST_15_MINUTES]: () => [
+/* eslint-disable no-magic-numbers, @typescript-eslint/require-await */
+const TIME_RANGE_OPTION_DAYJS_MAP: Record<
+    TIME_RANGE_OPTION,
+    (selectDataset: Nullable<string>) => Promise<[dayjs.Dayjs, dayjs.Dayjs]>
+> = {
+    [TIME_RANGE_OPTION.LAST_15_MINUTES]: async () => [
         dayjs().utc()
             .subtract(15, "minute"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.LAST_HOUR]: () => [
+    [TIME_RANGE_OPTION.LAST_HOUR]: async () => [
         dayjs().utc()
             .subtract(1, "hour"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.TODAY]: () => [
+    [TIME_RANGE_OPTION.TODAY]: async () => [
         dayjs().utc()
             .startOf("day"),
         dayjs().utc()
             .endOf("day"),
     ],
-    [TIME_RANGE_OPTION.YESTERDAY]: () => [
+    [TIME_RANGE_OPTION.YESTERDAY]: async () => [
         dayjs().utc()
             .subtract(1, "day")
             .startOf("day"),
@@ -49,44 +71,66 @@ const TIME_RANGE_OPTION_DAYJS_MAP: Record<TIME_RANGE_OPTION, () => [dayjs.Dayjs,
             .subtract(1, "day")
             .endOf("day"),
     ],
-    [TIME_RANGE_OPTION.LAST_7_DAYS]: () => [
+    [TIME_RANGE_OPTION.LAST_7_DAYS]: async () => [
         dayjs().utc()
             .subtract(7, "day"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.LAST_30_DAYS]: () => [
+    [TIME_RANGE_OPTION.LAST_30_DAYS]: async () => [
         dayjs().utc()
             .subtract(30, "day"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.LAST_12_MONTHS]: () => [
+    [TIME_RANGE_OPTION.LAST_12_MONTHS]: async () => [
         dayjs().utc()
             .subtract(12, "month"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.MONTH_TO_DATE]: () => [
+    [TIME_RANGE_OPTION.MONTH_TO_DATE]: async () => [
         dayjs().utc()
             .startOf("month"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.YEAR_TO_DATE]: () => [
+    [TIME_RANGE_OPTION.YEAR_TO_DATE]: async () => [
         dayjs().utc()
             .startOf("year"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.ALL_TIME]: () => [
-        dayjs(0).utc(),
-        dayjs().utc()
-            .add(1, "year"),
-    ],
+    [TIME_RANGE_OPTION.ALL_TIME]: async (selectDataset) => {
+        let sql: string;
+        if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
+            sql = buildClpTimeRangeSql();
+        } else {
+            sql = buildClpsTimeRangeSql(selectDataset ?? "default");
+        }
+        const resp = await querySql<
+            {
+                begin_timestamp: Nullable<number>;
+                end_timestamp: Nullable<number>;
+            }[]
+        >(sql);
+        const [timestamps] = resp.data;
+        if ("undefined" === typeof timestamps ||
+              null === timestamps.begin_timestamp ||
+              null === timestamps.end_timestamp
+        ) {
+            throw new Error("Unable to get All Time range");
+        }
+
+        return [
+            dayjs.utc(timestamps.begin_timestamp),
+            dayjs.utc(timestamps.end_timestamp),
+        ];
+    },
 
     // Custom option is just a placeholder for typing purposes, its DayJs values should not
     // be used.
-    [TIME_RANGE_OPTION.CUSTOM]: () => [
+    [TIME_RANGE_OPTION.CUSTOM]: async () => [
         dayjs().utc(),
         dayjs().utc(),
     ],
 };
+/* eslint-enable no-magic-numbers, @typescript-eslint/require-await */
 
 
 /**
@@ -115,4 +159,5 @@ export {
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
     TIME_RANGE_OPTION_NAMES,
+    TIME_RANGE_SINCE_UNIX_EPOCH,
 };

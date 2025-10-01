@@ -1,6 +1,6 @@
-import {SqlTableSuffix} from "../../../../../config/sql-table-suffix";
-import {settings} from "../../../../../settings";
-import {CLP_ARCHIVES_TABLE_COLUMN_NAMES} from "../../../../IngestPage/sqlConfig";
+import {SqlTableSuffix} from "../../../../config/sql-table-suffix";
+import {settings} from "../../../../settings";
+import {CLP_ARCHIVES_TABLE_COLUMN_NAMES} from "../../../IngestPage/sqlConfig";
 
 
 /**

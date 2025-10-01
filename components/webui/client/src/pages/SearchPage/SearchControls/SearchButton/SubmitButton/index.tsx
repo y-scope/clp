@@ -1,15 +1,13 @@
 import {useCallback} from "react";
 
 import {SearchOutlined} from "@ant-design/icons";
-import {Nullable} from "@webui/common/utility-types";
 import {
     Button,
     message,
     Tooltip,
 } from "antd";
-import dayjs, {Dayjs} from "dayjs";
+import {Dayjs} from "dayjs";
 
-import {querySql} from "../../../../../api/sql";
 import {
     CLP_STORAGE_ENGINES,
     SETTINGS_STORAGE_ENGINE,
@@ -18,12 +16,12 @@ import {computeTimelineConfig} from "../../../SearchResults/SearchResultsTimelin
 import useSearchStore from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import {handleQuerySubmit} from "../../search-requests";
-import {TIME_RANGE_OPTION} from "../../TimeRangeInput/utils";
-import styles from "./index.module.css";
 import {
-    buildClpsTimeRangeSql,
-    buildClpTimeRangeSql,
-} from "./timeRangeSql";
+    TIME_RANGE_OPTION,
+    TIME_RANGE_OPTION_DAYJS_MAP,
+    TIME_RANGE_SINCE_UNIX_EPOCH,
+} from "../../TimeRangeInput/utils";
+import styles from "./index.module.css";
 
 
 /**
@@ -31,11 +29,11 @@ import {
  *
  * @return
  */
-// eslint-disable-next-line max-lines-per-function
 const SubmitButton = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
     const timeRange = useSearchStore((state) => state.timeRange);
+    const updateTimeRange = useSearchStore((state) => state.updateTimeRange);
     const queryIsCaseSensitive = useSearchStore(
         (state) => state.queryIsCaseSensitive,
     );
@@ -46,55 +44,27 @@ const SubmitButton = () => {
     );
     const [messageApi, contextHolder] = message.useMessage();
 
-    const fetchAllTimeTimeRange = useCallback(async (): Promise<
-        [Dayjs, Dayjs]
-    > => {
-        let sql: string;
-        if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
-            sql = buildClpTimeRangeSql();
-        } else {
-            sql = buildClpsTimeRangeSql(selectDataset ?? "default");
-        }
-        const resp = await querySql<
-            {
-                begin_timestamp: Nullable<number>;
-                end_timestamp: Nullable<number>;
-            }[]
-        >(sql);
-        const [timestamps] = resp.data;
-        if ("undefined" === typeof timestamps ||
-              null === timestamps.begin_timestamp ||
-              null === timestamps.end_timestamp
-        ) {
-            throw new Error("Unable to get All Time range");
-        }
-
-        return [
-            dayjs.utc(timestamps.begin_timestamp),
-            dayjs.utc(timestamps.end_timestamp),
-        ];
-    }, [selectDataset]);
-
     /**
      * Submits search query.
      */
     const handleSubmitButtonClick = useCallback(async () => {
-        let updatedTimeRange: [Dayjs, Dayjs];
-        if (timeRangeOption === TIME_RANGE_OPTION.ALL_TIME) {
+        let newTimeRange: [Dayjs, Dayjs];
+        if (timeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
             try {
-                updatedTimeRange = await fetchAllTimeTimeRange();
+                newTimeRange = await TIME_RANGE_OPTION_DAYJS_MAP[timeRangeOption](selectDataset);
             } catch {
                 messageApi.warning(
                     'Cannot fetch the time range for "All Time". Fallback to the unix epoch.',
                 );
-                updatedTimeRange = timeRange;
+                newTimeRange = TIME_RANGE_SINCE_UNIX_EPOCH;
             }
+            updateTimeRange(newTimeRange);
         } else {
-            updatedTimeRange = timeRange;
+            newTimeRange = timeRange;
         }
 
         // Update timeline to match range picker selection.
-        const newTimelineConfig = computeTimelineConfig(updatedTimeRange);
+        const newTimelineConfig = computeTimelineConfig(newTimeRange);
         const {updateTimelineConfig} = useSearchStore.getState();
         updateTimelineConfig(newTimelineConfig);
 
@@ -122,8 +92,8 @@ const SubmitButton = () => {
                         timestampEnd: null,
                     } :
                     {
-                        timestampBegin: timeRange[0].valueOf(),
-                        timestampEnd: timeRange[1].valueOf(),
+                        timestampBegin: newTimeRange[0].valueOf(),
+                        timestampEnd: newTimeRange[1].valueOf(),
                     }
             ),
         });
@@ -132,7 +102,7 @@ const SubmitButton = () => {
         queryIsCaseSensitive,
         timeRange,
         timeRangeOption,
-        fetchAllTimeTimeRange,
+        updateTimeRange,
         messageApi,
         selectDataset,
         updateCachedDataset,
