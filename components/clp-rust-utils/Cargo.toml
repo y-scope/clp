@@ -1,0 +1,8 @@
+[package]
+name = "clp-rust-utils"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+aws-sdk-s3 = { version = "1.106.0", features = ["behavior-version-latest"] }
+secrecy = { version = "0.10.3", features = ["serde"] }
