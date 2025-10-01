@@ -32,7 +32,9 @@ const TimestampKeySelect = (selectProps: SelectProps) => {
             "timestampColumns",
             dataset,
         ],
-        queryFn: () => dataset ? fetchTimestampColumns(dataset) : Promise.resolve([]),
+        queryFn: () => (dataset ?
+            fetchTimestampColumns(dataset) :
+            Promise.resolve([])),
         enabled: Boolean(dataset),
     });
 
