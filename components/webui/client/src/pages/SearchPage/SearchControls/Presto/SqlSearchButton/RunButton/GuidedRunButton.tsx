@@ -57,7 +57,7 @@ const GuidedRunButton = () => {
                 selectItemList: select.trim(),
                 sortItemList: orderBy.trim(),
                 startTimestamp: startTimestamp.unix(),
-                timestampKey,
+                timestampKey: timestampKey,
             });
 
             handlePrestoQuerySubmit({queryString});
