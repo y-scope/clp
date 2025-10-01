@@ -50,6 +50,10 @@ using std::unordered_set;
 using std::variant;
 using std::vector;
 
+constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
+constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
+constexpr uint32_t cHasNumId{111};
+
 class clp::GrepCoreTest {
 public:
     static auto get_wildcard_encodable_positions(QueryInterpretation const& interpretation)
@@ -360,10 +364,6 @@ auto check_sub_query(
 }
 
 auto make_test_lexer(vector<string> const& schema_rules) -> ByteLexer {
-    constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
-    constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
-    constexpr uint32_t cHasNumId{111};
-
     ByteLexer lexer;
     lexer.m_symbol_id["int"] = cIntId;
     lexer.m_symbol_id["float"] = cFloatId;
@@ -405,10 +405,6 @@ TEST_CASE("get_wildcard_encodable_positions_for_empty_interpretation", "[dfa_sea
 }
 
 TEST_CASE("get_wildcard_encodable_positions_for_multi_variable_interpretation", "[dfa_search]") {
-    constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
-    constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
-    constexpr uint32_t cHasNumId{111};
-
     auto const interpretation{make_query_interpretation(
             {"text",
              pair{cIntId, "100"},
@@ -466,10 +462,6 @@ TEST_CASE("generate_logtype_string_for_single_variable_interpretation", "[dfa_se
 }
 
 TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_search]") {
-    constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
-    constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
-    constexpr uint32_t cHasNumId{111};
-
     unordered_set<string> const expected_logtype_strings{
             {{generate_expected_logtype_string({"text", 'i', 'f', 'd', 'd', 'd'})},
              {generate_expected_logtype_string({"text", 'i', 'f', 'i', 'd', 'd'})},
@@ -546,7 +538,7 @@ TEST_CASE("process_schema_encoded_non_greedy_wildcard_token ", "[dfa_search]") {
 
     SECTION("interpret_as_int") {
         SubQuery sub_query;
-        VariableQueryToken const int_token{0, "10?0", true};
+        VariableQueryToken const int_token{cIntId, "10?0", true};
         REQUIRE(clp::GrepCoreTest::process_encoded_token(int_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(0 == sub_query.get_num_possible_vars());
@@ -554,7 +546,7 @@ TEST_CASE("process_schema_encoded_non_greedy_wildcard_token ", "[dfa_search]") {
 
     SECTION("interpret_as_float") {
         SubQuery sub_query;
-        VariableQueryToken const float_token{1, "10?0", true};
+        VariableQueryToken const float_token{cFloatId, "10?0", true};
         REQUIRE(clp::GrepCoreTest::process_encoded_token(float_token, var_dict, sub_query));
         REQUIRE(sub_query.wildcard_match_required());
         REQUIRE(0 == sub_query.get_num_possible_vars());
@@ -562,7 +554,7 @@ TEST_CASE("process_schema_encoded_non_greedy_wildcard_token ", "[dfa_search]") {
 
     SECTION("interpret_as_precise_has_number") {
         SubQuery sub_query;
-        VariableQueryToken const has_number_token{2, "10a?", true};
+        VariableQueryToken const has_number_token{cHasNumId, "10a?", true};
         REQUIRE(clp::GrepCoreTest::process_token(has_number_token, var_dict, sub_query));
         REQUIRE(false == sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -575,7 +567,7 @@ TEST_CASE("process_schema_encoded_non_greedy_wildcard_token ", "[dfa_search]") {
 
     SECTION("interpret_as_imprecise_has_number") {
         SubQuery sub_query;
-        VariableQueryToken const has_number_token{2, "10?0", true};
+        VariableQueryToken const has_number_token{cHasNumId, "10?0", true};
         REQUIRE(clp::GrepCoreTest::process_token(has_number_token, var_dict, sub_query));
         REQUIRE(false == sub_query.wildcard_match_required());
         REQUIRE(1 == sub_query.get_num_possible_vars());
@@ -736,10 +728,6 @@ TEST_CASE("process_schema_greedy_wildcard_token ", "[dfa_search]") {
 
 // Tests: `generate_schema_sub_queries`
 TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
-    constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
-    constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
-    constexpr uint32_t cHasNumId{111};
-
     FakeVarDict const var_dict{make_var_dict({pair{0, "10a"}, pair{1, "1a3"}})};
     FakeLogTypeDict const logtype_dict{make_logtype_dict(
             {{"text ", 'i', " ", 'i', " ", 'f'},
@@ -789,10 +777,6 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
 }
 
 TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]") {
-    constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
-    constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
-    constexpr uint32_t cHasNumId{111};
-
     FakeVarDict const var_dict{make_var_dict({pair{0, "10a"}, pair{1, "1a3"}})};
     FakeLogTypeDict const logtype_dict{make_logtype_dict(
             {{"text ", 'i', " ", 'i', " ", 'f'},
