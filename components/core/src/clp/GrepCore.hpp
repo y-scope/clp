@@ -547,7 +547,7 @@ void GrepCore::generate_schema_sub_queries(
         for (uint64_t mask{0}; mask < num_combos; ++mask) {
             std::unordered_map<size_t, bool> wildcard_mask_map;
             for (size_t i{0}; i < wildcard_encodable_positions.size(); ++i) {
-                wildcard_mask_map[wildcard_encodable_positions[i]] = mask >> i & 1ULL;
+                wildcard_mask_map[wildcard_encodable_positions[i]] = (mask >> i) & 1ULL;
             }
 
             auto logtype_string{generate_logtype_string(interpretation, wildcard_mask_map)};
