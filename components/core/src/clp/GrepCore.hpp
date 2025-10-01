@@ -594,6 +594,7 @@ void GrepCore::generate_schema_sub_queries(
             }
 
             std::unordered_set<logtype_dictionary_id_t> possible_logtype_ids;
+            possible_logtype_ids.reserve(logtype_entries.size());
             for (auto const* entry : logtype_entries) {
                 possible_logtype_ids.emplace(entry->get_id());
             }
