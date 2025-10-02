@@ -17,7 +17,7 @@ class CeleryTaskManager(TaskManager):
         def get_result(self, timeout: float = 0.1) -> list[CompressionTaskResult] | None:
             try:
                 results = self._celery_result.get(timeout=timeout)
-                return [CompressionTaskResult.parse_obj(res) for res in results]
+                return [CompressionTaskResult.model_validate(res) for res in results]
             except celery.exceptions.TimeoutError:
                 return None
 
