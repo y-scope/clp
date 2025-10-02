@@ -6,9 +6,6 @@ import subprocess
 from contextlib import closing
 from typing import Any, Dict, List, Optional, Tuple
 
-from celery import signals
-from celery.app.task import Task
-from celery.utils.log import get_task_logger
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
@@ -32,7 +29,6 @@ from clp_py_utils.s3_utils import (
     s3_put,
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.executor.compress.celery import app
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
@@ -41,9 +37,6 @@ from job_orchestration.scheduler.job_config import (
     S3InputConfig,
 )
 from job_orchestration.scheduler.scheduler_data import CompressionTaskResult
-
-# Setup logging
-logger = get_task_logger(__name__)
 
 
 def update_compression_task_metadata(db_cursor, task_id, kv):
@@ -322,6 +315,7 @@ def run_clp(
     paths_to_compress: PathsToCompress,
     sql_adapter: SQL_Adapter,
     clp_metadata_db_connection_config,
+    logger,
 ):
     """
     Compresses logs into archives.
@@ -336,6 +330,7 @@ def run_clp(
     :param paths_to_compress: PathToCompress
     :param sql_adapter: SQL_Adapter
     :param clp_metadata_db_connection_config
+    :param logger
     :return: tuple -- (whether compression was successful, output messages)
     """
     instance_id_str = f"compression-job-{job_id}-task-{task_id}"
@@ -523,20 +518,14 @@ def run_clp(
         return CompressionTaskStatus.FAILED, worker_output
 
 
-@signals.worker_shutdown.connect
-def worker_shutdown_handler(signal=None, sender=None, **kwargs):
-    logger.info("Shutdown signal received.")
-
-
-@app.task(bind=True)
-def compress(
-    self: Task,
+def compression_entry_point(
     job_id: int,
     task_id: int,
     tag_ids,
     clp_io_config_json: str,
     paths_to_compress_json: str,
-    clp_metadata_db_connection_config,
+    clp_metadata_db_connection_config: Dict[str, Any],
+    logger,
 ):
     clp_home = pathlib.Path(os.getenv("CLP_HOME"))
 
@@ -578,6 +567,7 @@ def compress(
         paths_to_compress,
         sql_adapter,
         clp_metadata_db_connection_config,
+        logger,
     )
     duration = (datetime.datetime.now() - start_time).total_seconds()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
