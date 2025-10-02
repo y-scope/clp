@@ -1,0 +1,21 @@
+[project]
+name = "clp-mcp-server"
+version = "0.5.1-dev"
+description = "MCP server for CLP"
+authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "httpx>=0.28.1",
+    "click>=8.2.1",
+    "fastmcp>=2.10.0,<2.11.0",
+    "smart-open>=1.8.2",
+    "uvicorn>=0.27.0",
+]
+
+[project.scripts]
+clp-mcp-server = "clp_mcp_server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

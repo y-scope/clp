@@ -66,6 +66,9 @@ tasks:
       - task: "clean-python-component"
         vars:
           COMPONENT: "job-orchestration"
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "clp-mcp-server"
       - task: "clean-webui"
       - task: "tests:integration:cache-clear"
 
@@ -116,6 +119,7 @@ tasks:
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
+      - "components/clp-mcp-server/dist/*.whl"
       - "components/package-template/src/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
@@ -125,6 +129,7 @@ tasks:
       - "deps:spider"
       - "init"
       - "job-orchestration"
+      - "clp-mcp-server"
       - "package-venv"
       - task: "utils:checksum:validate"
         vars:
@@ -141,6 +146,7 @@ tasks:
           components/clp-package-utils/dist/*.whl \
           components/clp-py-utils/dist/*.whl \
           components/job-orchestration/dist/*.whl \
+          components/clp-mcp-server/dist/*.whl \
           -t "{{.OUTPUT_DIR}}/lib/python3/site-packages"
       - "mkdir -p '{{.OUTPUT_DIR}}/bin'"
       - >-
@@ -227,6 +233,12 @@ tasks:
     - task: "python-component"
       vars:
         COMPONENT: "{{.TASK}}"
+
+  clp-mcp-server:
+    cmds:
+      - task: "uv-component"
+        vars:
+          COMPONENT: "{{.TASK}}"
 
   webui:
     vars:
@@ -539,6 +551,36 @@ tasks:
       - |-
         . "{{.VENV_DIR}}/bin/activate"
         poetry build --format wheel
+
+  uv-component:
+    internal: true
+    label: "{{.COMPONENT}}"
+    vars:
+      VENV_DIR: "{{.G_BUILD_DIR}}/{{.COMPONENT}}/venv"
+    requires:
+      vars: ["COMPONENT"]
+    sources:
+      - "{{.G_BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
+      - "{{.ROOT_DIR}}/requirements.txt"
+      - "{{.TASKFILE}}"
+      - "/etc/os-release"
+      - "**/*"
+      - exclude: "dist/**/*"
+    dir: "components/{{.COMPONENT}}"
+    generates:
+      - "dist/*.whl"
+    deps:
+      - task: "component-venv"
+        vars:
+          COMPONENT: "{{.COMPONENT}}"
+          OUTPUT_DIR: "{{.VENV_DIR}}"
+    cmds:
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "{{.COMPONENT}}"
+      - |-
+        . "{{.VENV_DIR}}/bin/activate"
+        uv build --wheel
 
   component-venv:
     internal: true
