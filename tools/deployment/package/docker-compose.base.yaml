@@ -2,6 +2,7 @@ name: "clp-package-base"
 
 # Common service defaults.
 x-service-defaults: &service_defaults
+  image: "${CLP_PACKAGE_CONTAINER}"
   stop_grace_period: "3s"
   user: "${CLP_UID_GID:-1000:1000}"
 
@@ -49,7 +50,6 @@ services:
 
   db-table-creator:
     <<: *service_defaults
-    image: "${CLP_PACKAGE_CONTAINER}"
     hostname: "db_table_creator"
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS}"
@@ -138,7 +138,6 @@ services:
 
   results-cache-indices-creator:
     <<: *service_defaults
-    image: "${CLP_PACKAGE_CONTAINER}"
     hostname: "results_cache_indices_creator"
     environment:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -155,7 +154,6 @@ services:
 
   compression-scheduler:
     <<: *service_defaults
-    image: "${CLP_PACKAGE_CONTAINER}"
     hostname: "compression_scheduler"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
@@ -188,7 +186,6 @@ services:
 
   compression-worker:
     <<: *service_defaults
-    image: "${CLP_PACKAGE_CONTAINER}"
     hostname: "compression_worker"
     environment:
       AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID}"
@@ -226,7 +223,6 @@ services:
 
   webui:
     <<: *service_defaults
-    image: "${CLP_PACKAGE_CONTAINER}"
     hostname: "webui"
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS}"
@@ -264,7 +260,6 @@ services:
 
   garbage-collector:
     <<: *service_defaults
-    image: "${CLP_PACKAGE_CONTAINER}"
     hostname: "garbage_collector"
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS}"
