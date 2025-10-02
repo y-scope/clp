@@ -23,7 +23,7 @@ class SpiderTaskManager(TaskManager):
             if job_result is None:
                 return None
             return [
-                CompressionTaskResult.validate_model_json(convert_to_str(task_result))
+                CompressionTaskResult.model_validate_json(convert_to_str(task_result))
                 for task_result in job_result
             ]
 
