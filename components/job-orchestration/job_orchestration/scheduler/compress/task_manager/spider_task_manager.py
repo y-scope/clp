@@ -29,7 +29,7 @@ class SpiderTaskManager(TaskManager):
     def __init__(self, storage_url: str) -> None:
         self._driver = spider_py.Driver(storage_url)
 
-    def compress(self, task_params: list[dict[str, Any]]) -> TaskManager.ResultHandle:
+    def submit(self, task_params: list[dict[str, Any]]) -> TaskManager.ResultHandle:
         job = spider_py.group(
             [compress for _ in range(len(task_params))],
         )

@@ -369,7 +369,7 @@ def search_and_schedule_new_tasks(
             db_conn.commit()
             task["task_id"] = db_cursor.lastrowid
             task["tag_ids"] = tag_ids
-        result_handle = task_manager.compress(tasks)
+        result_handle = task_manager.submit(tasks)
 
         job = CompressionJob(id=job_id, start_time=start_time, result_handle=result_handle)
         db_cursor.execute(
