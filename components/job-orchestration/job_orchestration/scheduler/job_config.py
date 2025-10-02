@@ -86,8 +86,8 @@ class SearchJobConfig(QueryJobConfig):
 
     @field_validator("network_address")
     @classmethod
-    def validate_network_address(cls, field):
-        if field is not None and (field[1] < 1 or field[1] > 65535):
+    def validate_network_address(cls, value):
+        if value is not None and (value[1] < 1 or value[1] > 65535):
             raise ValueError("Port must be in the range [1, 65535]")
 
-        return field
+        return value
