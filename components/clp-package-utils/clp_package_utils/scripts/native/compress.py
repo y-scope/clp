@@ -184,6 +184,7 @@ def _generate_clp_io_config(
 def _generate_s3_input_config_with_key_validation(
     clp_config: CLPConfig, logs_to_compress: List[str], parsed_args: argparse.Namespace
 ) -> S3InputConfig:
+    # TODO: Add docstring
     if len(logs_to_compress) == 0:
         raise ValueError("No URLs given.")
 

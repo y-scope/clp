@@ -107,6 +107,8 @@ def _generate_compress_cmd(
         compress_cmd.append(parsed_args.tags)
     if parsed_args.no_progress_reporting is True:
         compress_cmd.append("--no-progress-reporting")
+    if parsed_args.s3_single_prefix is True:
+        compress_cmd.append("--s3-single-prefix")
 
     compress_cmd.append("--logs-list")
     compress_cmd.append(str(logs_list_path))
