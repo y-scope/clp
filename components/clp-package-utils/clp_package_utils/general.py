@@ -7,7 +7,6 @@ import re
 import secrets
 import socket
 import subprocess
-import typing
 import uuid
 from enum import auto
 from typing import Dict, List, Optional, Tuple
@@ -85,16 +84,16 @@ class DockerMount:
 
 class CLPDockerMounts:
     def __init__(self, clp_home: pathlib.Path, docker_clp_home: pathlib.Path):
-        self.input_logs_dir: typing.Optional[DockerMount] = None
-        self.clp_home: typing.Optional[DockerMount] = DockerMount(
+        self.input_logs_dir: Optional[DockerMount] = None
+        self.clp_home: Optional[DockerMount] = DockerMount(
             DockerMountType.BIND, clp_home, docker_clp_home
         )
-        self.data_dir: typing.Optional[DockerMount] = None
-        self.logs_dir: typing.Optional[DockerMount] = None
-        self.archives_output_dir: typing.Optional[DockerMount] = None
-        self.stream_output_dir: typing.Optional[DockerMount] = None
-        self.aws_config_dir: typing.Optional[DockerMount] = None
-        self.generated_config_file: typing.Optional[DockerMount] = None
+        self.data_dir: Optional[DockerMount] = None
+        self.logs_dir: Optional[DockerMount] = None
+        self.archives_output_dir: Optional[DockerMount] = None
+        self.stream_output_dir: Optional[DockerMount] = None
+        self.aws_config_dir: Optional[DockerMount] = None
+        self.generated_config_file: Optional[DockerMount] = None
 
 
 def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
