@@ -243,7 +243,7 @@ tasks:
 
   clp-mcp-server:
     cmds:
-    - task: "python-component"
+    - task: "uv-component"
       vars:
         COMPONENT: "{{.TASK}}"
        
@@ -559,6 +559,36 @@ tasks:
       - |-
         . "{{.VENV_DIR}}/bin/activate"
         poetry build --format wheel
+
+  uv-component:
+    internal: true
+    label: "{{.COMPONENT}}"
+    vars:
+      VENV_DIR: "{{.G_BUILD_DIR}}/{{.COMPONENT}}/venv"
+    requires:
+      vars: ["COMPONENT"]
+    sources:
+      - "{{.G_BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
+      - "{{.ROOT_DIR}}/requirements.txt"
+      - "{{.TASKFILE}}"
+      - "/etc/os-release"
+      - "**/*"
+      - exclude: "dist/**/*"
+    dir: "components/{{.COMPONENT}}"
+    generates:
+      - "dist/*.whl"
+    deps:
+      - task: "component-venv"
+        vars:
+          COMPONENT: "{{.COMPONENT}}"
+          OUTPUT_DIR: "{{.VENV_DIR}}"
+    cmds:
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "{{.COMPONENT}}"
+      - |-
+        . "{{.VENV_DIR}}/bin/activate"
+        uv build --wheel
 
   component-venv:
     internal: true
