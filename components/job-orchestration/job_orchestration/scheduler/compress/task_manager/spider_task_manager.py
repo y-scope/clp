@@ -18,12 +18,12 @@ class SpiderTaskManager(TaskManager):
             self._spider_job: Job = spider_job
 
         def get_result(self, timeout: float = 0.1) -> list[CompressionTaskResult] | None:
-            job_result = self._spider_job.get_results()
-            if job_result is None:
+            job_results = self._spider_job.get_results()
+            if job_results is None:
                 return None
             return [
                 CompressionTaskResult.model_validate_json(int8_list_to_utf8_str(task_result))
-                for task_result in job_result
+                for task_result in job_results
             ]
 
     def __init__(self, storage_url: str) -> None:
