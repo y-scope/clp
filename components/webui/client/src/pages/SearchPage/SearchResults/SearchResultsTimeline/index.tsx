@@ -5,13 +5,16 @@ import {
 
 import {Card} from "antd";
 import {Dayjs} from "dayjs";
-import {TimelineConfig} from "src/components/ResultsTimeline/typings";
 
 import ResultsTimeline from "../../../../components/ResultsTimeline/index";
+import {TimelineConfig} from "../../../../components/ResultsTimeline/typings";
 import {
+    CLP_QUERY_ENGINES,
     CLP_STORAGE_ENGINES,
+    SETTINGS_QUERY_ENGINE,
     SETTINGS_STORAGE_ENGINE,
 } from "../../../../config";
+import {handlePrestoQuerySubmit} from "../../SearchControls/Presto/presto-search-requests";
 import {handleQuerySubmit} from "../../SearchControls/search-requests";
 import {TIME_RANGE_OPTION} from "../../SearchControls/TimeRangeInput/utils";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
@@ -48,29 +51,33 @@ const SearchResultsTimeline = () => {
         updateTimeRangeOption(TIME_RANGE_OPTION.CUSTOM);
         updateTimelineConfig(newTimelineConfig);
 
-        const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
-        if (isQueryStringEmpty) {
-            return;
-        }
-
-        if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
-            if (null !== selectDataset) {
-                updateCachedDataset(selectDataset);
-            } else {
-                console.error("Cannot submit a clp-s query without a dataset selection.");
-
+        if (CLP_QUERY_ENGINES.PRESTO !== SETTINGS_QUERY_ENGINE) {
+            const isQueryStringEmpty = queryString === SEARCH_STATE_DEFAULT.queryString;
+            if (isQueryStringEmpty) {
                 return;
             }
-        }
 
-        handleQuerySubmit({
-            dataset: selectDataset,
-            ignoreCase: false === queryIsCaseSensitive,
-            queryString: queryString,
-            timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
-            timestampBegin: newTimeRange[0].valueOf(),
-            timestampEnd: newTimeRange[1].valueOf(),
-        });
+            if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
+                if (null !== selectDataset) {
+                    updateCachedDataset(selectDataset);
+                } else {
+                    console.error("Cannot submit a clp-s query without a dataset selection.");
+
+                    return;
+                }
+            }
+
+            handleQuerySubmit({
+                dataset: selectDataset,
+                ignoreCase: false === queryIsCaseSensitive,
+                queryString: queryString,
+                timeRangeBucketSizeMillis: newTimelineConfig.bucketDuration.asMilliseconds(),
+                timestampBegin: newTimeRange[0].valueOf(),
+                timestampEnd: newTimeRange[1].valueOf(),
+            });
+        } else {
+            handlePrestoQuerySubmit();
+        }
     }, [
         queryIsCaseSensitive,
         queryString,

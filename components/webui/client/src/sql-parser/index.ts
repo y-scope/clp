@@ -125,6 +125,8 @@ WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp} AND ${endTimestamp}
     return queryString;
 };
 
+const MILLISECONDS_IN_SECOND = 1_000;
+
 /**
  * Constructs a bucketed timeline query.
  *
@@ -150,7 +152,8 @@ const buildTimelineQuery = ({
     const timestamps = Array.from(
         {length: bucketCount},
         (_, i) => startTimestamp + (i * step)
-    );
+    )
+        .map((timestamp) => MILLISECONDS_IN_SECOND * timestamp);
 
     const booleanExpressionQuery = "undefined" === typeof booleanExpression ?
         "" :
@@ -176,9 +179,9 @@ timestamps AS (
 )
 SELECT
     COALESCE(cnt, 0) AS count,
-    timestamp
-FROM timestamps
-LEFT JOIN buckets ON buckets.idx = timestamps.idx
+    CAST(timestamp AS double) AS timestamp
+FROM buckets
+LEFT JOIN timestamps ON buckets.idx = timestamps.idx
 ORDER BY timestamps.idx
 `;
 
