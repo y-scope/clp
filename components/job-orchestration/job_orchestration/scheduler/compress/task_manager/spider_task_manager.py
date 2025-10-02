@@ -5,10 +5,10 @@ import json
 from typing import Any
 
 import spider_py
-from job_orchestration.executor.compress.spider_compress import compress, convert_to_str
+from job_orchestration.executor.compress.spider_compress import compress
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.scheduler_result import CompressionTaskResult
-from job_orchestration.utils.spider_utils import utf8_str_to_int8_list
+from job_orchestration.utils.spider_utils import int8_list_to_utf8_str, utf8_str_to_int8_list
 from spider_py.client.job import Job
 
 
@@ -23,7 +23,7 @@ class SpiderTaskManager(TaskManager):
             if job_result is None:
                 return None
             return [
-                CompressionTaskResult.model_validate_json(convert_to_str(task_result))
+                CompressionTaskResult.model_validate_json(int8_list_to_utf8_str(task_result))
                 for task_result in job_result
             ]
 
@@ -45,5 +45,7 @@ class SpiderTaskManager(TaskManager):
             ]
             for task_param in task_params
         ]
-        submitted_job = self._driver.submit_jobs([job], [list(itertools.chain(*task_params_list))])
+        submitted_job = self._driver.submit_jobs([job], [list(itertools.chain(*task_params_list))])[
+            0
+        ]
         return SpiderTaskManager.ResultHandle(submitted_job)
