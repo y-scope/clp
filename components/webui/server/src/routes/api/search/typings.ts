@@ -1,4 +1,4 @@
-import {type SearchResultsMetadataDocument} from "@webui/common";
+import {type SearchResultsMetadataDocument} from "@webui/common/metadata";
 import {
     FastifyBaseLogger,
     FastifyInstance,

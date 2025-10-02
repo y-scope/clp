@@ -3,7 +3,7 @@ requires-python = ">= 3.9"
 
 [tool.poetry]
 name = "clp-py-utils"
-version = "0.5.1-dev"
+version = "0.5.2-dev"
 description = "Utilities for other Python packages in CLP."
 authors = ["YScope Inc. <dev@yscope.com>"]
 readme = "README.md"
@@ -15,7 +15,7 @@ boto3 = "^1.35.81"
 # See https://mariadb.com/docs/server/connect/programming-languages/python/install/#Dependencies
 mariadb = "~1.0.11"
 mysql-connector-python = "^8.2.0"
-pydantic = "^1.10.13"
+pydantic = "^2.11.9"
 python-dotenv = "^1.0.1"
 python-Levenshtein = "~0.22"
 sqlalchemy = "~2.0"

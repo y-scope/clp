@@ -1,15 +1,15 @@
 [project]
-requires-python = ">= 3.9"
+requires-python = ">= 3.9,<4.0"
 
 [tool.poetry]
 name = "job-orchestration"
-version = "0.5.1-dev"
+version = "0.5.2-dev"
 description = "Scheduler and worker cluster for CLP's distributed architecture."
 authors = ["YScope Inc. <dev@yscope.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
-python = ">= 3.9"
+python = ">= 3.9,<4.0"
 Brotli = "^1.1.0"
 celery = {extras = ["redis"], version = "^5.5.3"}
 # mariadb version must be compatible with libmariadev installed in runtime env.
@@ -18,9 +18,10 @@ mariadb = "~1.0.11"
 msgpack = "^1.0.7"
 mysql-connector-python = "^8.2.0"
 pika = "^1.3.2"
-pydantic = "^1.10.13"
+pydantic = "^2.11.9"
 pymongo = "^4.7.2"
 PyYAML = "^6.0.1"
+yscope-spider-py="0.1.0"
 
 [build-system]
 requires = ["poetry-core"]

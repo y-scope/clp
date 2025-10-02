@@ -3,7 +3,7 @@ import {
     InterServerEvents,
     ServerToClientEvents,
     SocketData,
-} from "@webui/common";
+} from "@webui/common/socket";
 import {
     ChangeStream,
     Document,
