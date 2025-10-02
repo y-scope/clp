@@ -52,7 +52,7 @@ vars:
 
 tasks:
   default:
-    deps: ["package"]
+    deps: ["docker-images:package"]
 
   clean:
     cmds:
@@ -113,11 +113,11 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
       - "{{.TASKFILE}}"
-      - "/etc/os-release"
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
       - "components/package-template/src/**/*"
+      - "tools/deployment/package/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "core"
@@ -135,7 +135,6 @@ tasks:
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
       - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
-      - "rsync --copy-links /etc/os-release '{{.OUTPUT_DIR}}/etc/os-release'"
       - "mkdir -p '{{.OUTPUT_DIR}}/lib/python3/site-packages'"
       - |-
         . "{{.G_PACKAGE_VENV_DIR}}/bin/activate"
@@ -168,6 +167,10 @@ tasks:
       - |-
         cd "{{.OUTPUT_DIR}}/var/www/webui"
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm ci --omit=dev
+      - >-
+        rsync -a
+        "tools/deployment/package/"
+        "{{.OUTPUT_DIR}}"
       - "echo '{{.G_PACKAGE_VERSION}}' > '{{.OUTPUT_DIR}}/VERSION'"
       # This command must be last
       - task: "utils:checksum:compute"

@@ -1,0 +1,118 @@
+name: "clp-package"
+
+include: ["docker-compose.base.yaml"]
+
+# Common service defaults.
+x-service-defaults: &service_defaults
+  stop_grace_period: "3s"
+  user: "${CLP_UID_GID:-1000:1000}"
+
+# Common healthcheck defaults.
+x-healthcheck-defaults: &healthcheck_defaults
+  interval: "30s"
+  retries: 3
+  start_interval: "1s"
+  start_period: "10s"
+  timeout: "10s"
+
+services:
+  query-scheduler:
+    <<: *service_defaults
+    container_name: "query_scheduler"
+    image: "${CLP_PACKAGE_CONTAINER}"
+    environment:
+      BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
+      CLP_DB_PASS: "${CLP_DB_PASS}"
+      CLP_DB_USER: "${CLP_DB_USER}"
+      CLP_LOGGING_LEVEL: "${CLP_QUERY_SCHEDULER_LOGGING_LEVEL:-INFO}"
+      CLP_LOGS_DIR: "/var/log"
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      RESULT_BACKEND: >-
+        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
+    volumes:
+      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "${CLP_QUERY_SCHEDULER_LOGS_FILE_HOST:-./var/log/query_scheduler.log}:\
+/var/log/query_scheduler.log"
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
+      queue:
+        condition: "service_healthy"
+      redis:
+        condition: "service_healthy"
+    command: [
+      "python3",
+      "-u",
+      "-m", "job_orchestration.scheduler.query.query_scheduler",
+      "--config", "/etc/clp-config.yml"
+    ]
+    healthcheck:
+      <<: *healthcheck_defaults
+      # FIXME: need to suppressing warnings in the scheduler for reading 0 out of 8 expected bytes
+      test: [
+        "CMD",
+        "bash",
+        "-c",
+        "< /dev/tcp/query_scheduler/7000"
+      ]
+
+  query-worker:
+    <<: *service_defaults
+    container_name: "query_worker"
+    image: "${CLP_PACKAGE_CONTAINER}"
+    environment:
+      AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${CLP_AWS_SECRET_ACCESS_KEY}"
+      BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
+      CLP_CONFIG_PATH: "/etc/clp-config.yml"
+      CLP_HOME: "/opt/clp"
+      CLP_LOGGING_LEVEL: "${CLP_QUERY_WORKER_LOGGING_LEVEL:-INFO}"
+      CLP_LOGS_DIR: "/var/log/query_worker"
+      CLP_WORKER_LOG_PATH: "/var/log/query_worker/worker.log"
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      RESULT_BACKEND: >-
+        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
+    volumes:
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}:/var/data/archives"
+      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
+      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "${CLP_QUERY_WORKER_LOGS_DIR_HOST:-./var/log/query_worker}:/var/log/query_worker"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/staged-streams}:/var/data/staged-streams"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}:/var/data/streams"
+    command: [
+      "python3",
+      "-u",
+      "/opt/clp/lib/python3/site-packages/bin/celery",
+      "-A", "job_orchestration.executor.query",
+      "worker",
+      "--concurrency", "${CLP_QUERY_WORKER_CONCURRENCY:-1}",
+      "--loglevel", "${CLP_QUERY_WORKER_LOGGING_LEVEL:-INFO}",
+      "-f", "/var/log/query_worker/worker.log",
+      "-Q", "query",
+      "-n", "query-worker"
+    ]
+
+  reducer:
+    <<: *service_defaults
+    container_name: "reducer"
+    image: "${CLP_PACKAGE_CONTAINER}"
+    environment:
+      CLP_HOME: "/opt/clp"
+      CLP_LOGGING_LEVEL: "${CLP_REDUCER_LOGGING_LEVEL:-INFO}"
+      CLP_LOGS_DIR: "/var/log/reducer"
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+    volumes:
+      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "${CLP_REDUCER_LOGS_DIR_HOST:-./var/log/reducer}:/var/log/reducer"
+    depends_on:
+      query-scheduler:
+        condition: "service_healthy"
+      results-cache-indices-creator:
+        condition: "service_completed_successfully"
+    command: [
+      "python3", "-u",
+      "-m", "job_orchestration.reducer.reducer",
+      "--config", "/etc/clp-config.yml",
+      "--concurrency", "${CLP_REDUCER_CONCURRENCY:-1}",
+      "--upsert-interval", "${CLP_REDUCER_UPSERT_INTERVAL:-100}"
+    ]

@@ -10,6 +10,7 @@ from typing import List, Union
 import brotli
 import msgpack
 from clp_py_utils.clp_config import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
 )
@@ -29,7 +30,6 @@ from job_orchestration.scheduler.job_config import (
 )
 
 from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     get_clp_home,
     load_config_file,
