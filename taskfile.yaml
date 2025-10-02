@@ -59,6 +59,9 @@ tasks:
       - "rm -rf '{{.G_BUILD_DIR}}'"
       - task: "clean-python-component"
         vars:
+          COMPONENT: "clp-mcp-server"
+      - task: "clean-python-component"
+        vars:
           COMPONENT: "clp-package-utils"
       - task: "clean-python-component"
         vars:
@@ -66,9 +69,6 @@ tasks:
       - task: "clean-python-component"
         vars:
           COMPONENT: "job-orchestration"
-      - task: "clean-python-component"
-        vars:
-          COMPONENT: "clp-mcp-server"
       - task: "clean-webui"
       - task: "tests:integration:cache-clear"
 
@@ -116,20 +116,20 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
       - "{{.TASKFILE}}"
+      - "components/clp-mcp-server/dist/*.whl"
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
-      - "components/clp-mcp-server/dist/*.whl"
       - "components/package-template/src/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "core"
+      - "clp-mcp-server"
       - "clp-package-utils"
       - "clp-py-utils"
       - "deps:spider"
       - "init"
       - "job-orchestration"
-      - "clp-mcp-server"
       - "package-venv"
       - task: "utils:checksum:validate"
         vars:
@@ -143,10 +143,10 @@ tasks:
       - |-
         . "{{.G_PACKAGE_VENV_DIR}}/bin/activate"
         pip3 install --upgrade \
+          components/clp-mcp-server/dist/*.whl \
           components/clp-package-utils/dist/*.whl \
           components/clp-py-utils/dist/*.whl \
           components/job-orchestration/dist/*.whl \
-          components/clp-mcp-server/dist/*.whl \
           -t "{{.OUTPUT_DIR}}/lib/python3/site-packages"
       - "mkdir -p '{{.OUTPUT_DIR}}/bin'"
       - >-
@@ -218,6 +218,11 @@ tasks:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
           JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
+  
+  clp-mcp-server:
+    - task: "uv-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
 
   clp-package-utils:
     - task: "python-component"
@@ -231,11 +236,6 @@ tasks:
 
   job-orchestration:
     - task: "python-component"
-      vars:
-        COMPONENT: "{{.TASK}}"
-
-  clp-mcp-server:
-    - task: "uv-component"
       vars:
         COMPONENT: "{{.TASK}}"
 

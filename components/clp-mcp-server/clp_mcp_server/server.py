@@ -1,8 +1,6 @@
-"""
-Minimal MCP Server implementation for CLP.
-"""
+"""Minimal MCP Server implementation for CLP."""
 
-from typing import Any, Dict
+from typing import Any
 
 from fastmcp import FastMCP
 
@@ -27,7 +25,7 @@ class CLPMCPServerConfig:
         return [cls.TOOL_HELLO_WORLD, cls.TOOL_GET_SERVER_INFO]
 
 
-def CLPMcpServer(**settings: Any) -> FastMCP:
+def clp_mcp_server(**settings: Any) -> FastMCP:
     """
     Create and configure the CLP MCP Server.
 
@@ -36,6 +34,7 @@ def CLPMcpServer(**settings: Any) -> FastMCP:
 
     Returns:
         A configured FastMCP instance
+
     """
     config = CLPMCPServerConfig()
 
@@ -43,7 +42,22 @@ def CLPMcpServer(**settings: Any) -> FastMCP:
     mcp = FastMCP(name=config.SERVER_NAME, **settings)
 
     @mcp.tool()
-    async def hello_world(name: str = "clp-mcp-server user") -> Dict[str, Any]:
+    async def get_server_info() -> dict[str, Any]:
+        """
+        Get basic information about the MCP server.
+
+        Returns:
+            Server information including version and capabilities
+
+        """
+        return {
+            "name": config.SERVER_NAME,
+            "capabilities": config.get_capabilities(),
+            "status": config.STATUS_RUNNING,
+        }
+
+    @mcp.tool()
+    async def hello_world(name: str = "clp-mcp-server user") -> dict[str, Any]:
         """
         A simple hello world function.
 
@@ -52,26 +66,12 @@ def CLPMcpServer(**settings: Any) -> FastMCP:
 
         Returns:
             A greeting message with metadata
+
         """
         return {
             "message": f"Hello World, {name.strip()}!",
             "server": config.SERVER_NAME,
             "status": config.STATUS_SUCCESS,
-        }
-
-    @mcp.tool()
-    async def get_server_info() -> Dict[str, Any]:
-        """
-        Get basic information about the MCP server.
-
-        Returns:
-            Server information including version and capabilities
-        """
-
-        return {
-            "name": config.SERVER_NAME,
-            "capabilities": config.get_capabilities(),
-            "status": config.STATUS_RUNNING,
         }
 
     return mcp

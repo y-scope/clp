@@ -1,6 +1,6 @@
 # CLP MCP Server
 
-A minimal Model Context Protocol (MCP) server for CLP operations.
+A Model Context Protocol (MCP) server for AI to invoke CLP operations.
 
 ## Overview
 
@@ -37,9 +37,10 @@ python3 -m clp_mcp_server --host 127.0.0.1 --port 3000
 
 The server currently provides these tools:
 
-1. **hello_world**: A simple greeting function
+1. **get_server_info**: Get server information
+   - Returns: Server name, version, and capabilities
+
+2. **hello_world**: A simple greeting function
    - Parameters: `name` (optional, defaults to "World")
    - Returns: A greeting message with status information
 
-2. **get_server_info**: Get server information
-   - Returns: Server name, version, and capabilities
