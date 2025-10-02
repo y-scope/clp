@@ -1,79 +1,44 @@
-import click
 import logging
-import os
 import sys
-import enum
-from typing import Optional
+
+import click
+
 from .server import CLPMcpServer
-
-
-class Transport(enum.Enum):
-    stdio = enum.auto()
-    sse = enum.auto()
-    http = enum.auto()
-
-
-def setup_logging() -> None:
-    """Setup logging configuration for the MCP server."""
-    log_dir = os.environ.get("CLP_MCP_LOGS_DIR", "/var/log/mcp-server")
-    os.makedirs(log_dir, exist_ok=True)
-    log_path = os.path.join(log_dir, "mcp_server.log")
-    
-    # Configure logging instead of redirecting stdout/stderr
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        handlers=[
-            logging.FileHandler(log_path),
-            logging.StreamHandler(sys.stderr)  # Keep stderr for MCP communication
-        ]
-    )
 
 
 @click.command()
 @click.option(
-    "--sse",
-    is_flag=True,
-    help="Run the MCP server in SSE mode. This option is overridden if you also specify a protocol with --transport.",
+    "--host", type=str, default="0.0.0.0", help="The server's host address (default: 0.0.0.0)."
 )
-@click.option(
-    "--transport",
-    type=click.Choice([t.name for t in Transport], case_sensitive=False),
-    help="Specify the transport protocol.",
-)
-@click.option("--host", type=str, default="0.0.0.0", help="The server's host.")
-@click.option("--port", type=int, default=8000, help="The server's port number")
-def main(
-    sse: bool, transport: Optional[str], host: str, port: int
-) -> None:
+@click.option("--port", type=int, default=8000, help="The server's port number (default: 8000).")
+def main(host: str, port: int) -> None:
     """
-    Run the CLP MCP Server with the specified transport.
+    Run the CLP MCP Server with HTTP transport.
     """
-    # Setup logging
-    setup_logging()
+    # Configure logging
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+    )
     logger = logging.getLogger(__name__)
-    
+
+    # Validate host and port
+    if not host.strip():
+        logger.error("Host cannot be empty")
+        sys.exit(1)
+
+    if port <= 0 or port > 65535:
+        logger.error(f"Port must be between 1 and 65535, got: {port}")
+        sys.exit(1)
+
     try:
         # Create the MCP server instance
         mcp = CLPMcpServer()
 
-        # Determine transport if not specified
-        if transport is None:
-            transport_enum = Transport.sse if sse else Transport.stdio
-        else:
-            transport_enum = Transport[transport]
+        logger.info(f"Starting CLP MCP Server on {host}:{port}")
 
-        logger.info(f"Starting CLP MCP Server with {transport_enum.name} transport")
-        
-        # Run the server with the appropriate transport
-        match transport_enum:
-            case Transport.stdio:
-                mcp.run(transport="stdio")
-            case Transport.sse:
-                mcp.run(transport="sse", host=host, port=port)
-            case Transport.http:
-                mcp.run(transport="streamable-http", host=host, port=port)
-                
+        # Run the server with HTTP transport
+        mcp.run(transport="streamable-http", host=host, port=port)
+
     except Exception as e:
         logger.error(f"Failed to start MCP server: {e}")
         sys.exit(1)

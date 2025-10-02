@@ -235,10 +235,9 @@ tasks:
         COMPONENT: "{{.TASK}}"
 
   clp-mcp-server:
-    cmds:
-      - task: "uv-component"
-        vars:
-          COMPONENT: "{{.TASK}}"
+    - task: "uv-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
 
   webui:
     vars:
