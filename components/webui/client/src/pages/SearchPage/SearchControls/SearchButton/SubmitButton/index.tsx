@@ -17,9 +17,9 @@ import useSearchStore from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import {handleQuerySubmit} from "../../search-requests";
 import {
+    DEFAULT_TIME_RANGE,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
-    TIME_RANGE_SINCE_UNIX_EPOCH,
 } from "../../TimeRangeInput/utils";
 import styles from "./index.module.css";
 
@@ -51,12 +51,12 @@ const SubmitButton = () => {
         let newTimeRange: [Dayjs, Dayjs];
         if (timeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
             try {
-                newTimeRange = await TIME_RANGE_OPTION_DAYJS_MAP[timeRangeOption](selectDataset);
+                newTimeRange = await TIME_RANGE_OPTION_DAYJS_MAP[timeRangeOption]();
             } catch {
                 messageApi.warning(
-                    'Cannot fetch the time range for "All Time". Fallback to the unix epoch.',
+                    "Cannot fetch the time range. Fallback to the unix epoch.",
                 );
-                newTimeRange = TIME_RANGE_SINCE_UNIX_EPOCH;
+                newTimeRange = DEFAULT_TIME_RANGE;
             }
             updateTimeRange(newTimeRange);
         } else {

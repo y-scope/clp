@@ -5,8 +5,8 @@ import {create} from "zustand";
 import {TimelineConfig} from "../../../components/ResultsTimeline/typings";
 import {
     DEFAULT_TIME_RANGE,
+    DEFAULT_TIME_RANGE_OPTION,
     TIME_RANGE_OPTION,
-    TIME_RANGE_SINCE_UNIX_EPOCH,
 } from "../SearchControls/TimeRangeInput/utils";
 import {computeTimelineConfig} from "../SearchResults/SearchResultsTimeline/utils";
 import {SEARCH_UI_STATE} from "./typings";
@@ -26,9 +26,9 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
     searchJobId: null,
     searchUiState: SEARCH_UI_STATE.DEFAULT,
     selectDataset: null,
-    timeRange: TIME_RANGE_SINCE_UNIX_EPOCH,
-    timeRangeOption: DEFAULT_TIME_RANGE,
-    timelineConfig: computeTimelineConfig(TIME_RANGE_SINCE_UNIX_EPOCH),
+    timeRange: DEFAULT_TIME_RANGE,
+    timeRangeOption: DEFAULT_TIME_RANGE_OPTION,
+    timelineConfig: computeTimelineConfig(DEFAULT_TIME_RANGE),
 });
 
 interface SearchState {

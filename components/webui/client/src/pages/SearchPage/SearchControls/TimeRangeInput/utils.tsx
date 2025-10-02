@@ -1,22 +1,14 @@
-import {Nullable} from "@webui/common/utility-types";
 import dayjs, {Dayjs} from "dayjs";
 import utc from "dayjs/plugin/utc";
 
-import {querySql} from "../../../../api/sql";
-import {
-    CLP_STORAGE_ENGINES,
-    SETTINGS_STORAGE_ENGINE,
-} from "../../../../config";
-import {
-    buildClpsTimeRangeSql,
-    buildClpTimeRangeSql,
-} from "./timeRangeSql";
+import useSearchStore from "../../SearchState";
+import {fetchAllTimeRange} from "./sql";
 
 
 dayjs.extend(utc);
 
 
-const TIME_RANGE_SINCE_UNIX_EPOCH: [Dayjs, Dayjs] = [
+const DEFAULT_TIME_RANGE: [Dayjs, Dayjs] = [
     dayjs(0).utc(),
     dayjs().utc()
         .add(1, "year"),
@@ -40,12 +32,12 @@ enum TIME_RANGE_OPTION {
     CUSTOM = "Custom",
 }
 
-const DEFAULT_TIME_RANGE = TIME_RANGE_OPTION.ALL_TIME;
+const DEFAULT_TIME_RANGE_OPTION = TIME_RANGE_OPTION.ALL_TIME;
 
 /* eslint-disable no-magic-numbers, @typescript-eslint/require-await */
 const TIME_RANGE_OPTION_DAYJS_MAP: Record<
     TIME_RANGE_OPTION,
-    (selectDataset: Nullable<string>) => Promise<[dayjs.Dayjs, dayjs.Dayjs]>
+    () => Promise<[dayjs.Dayjs, dayjs.Dayjs]>
 > = {
     [TIME_RANGE_OPTION.LAST_15_MINUTES]: async () => [
         dayjs().utc()
@@ -96,31 +88,9 @@ const TIME_RANGE_OPTION_DAYJS_MAP: Record<
             .startOf("year"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.ALL_TIME]: async (selectDataset) => {
-        let sql: string;
-        if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
-            sql = buildClpTimeRangeSql();
-        } else {
-            sql = buildClpsTimeRangeSql(selectDataset ?? "default");
-        }
-        const resp = await querySql<
-            {
-                begin_timestamp: Nullable<number>;
-                end_timestamp: Nullable<number>;
-            }[]
-        >(sql);
-        const [timestamps] = resp.data;
-        if ("undefined" === typeof timestamps ||
-              null === timestamps.begin_timestamp ||
-              null === timestamps.end_timestamp
-        ) {
-            throw new Error("Unable to get All Time range");
-        }
-
-        return [
-            dayjs.utc(timestamps.begin_timestamp),
-            dayjs.utc(timestamps.end_timestamp),
-        ];
+    [TIME_RANGE_OPTION.ALL_TIME]: async () => {
+        const {selectDataset} = useSearchStore.getState();
+        return fetchAllTimeRange(selectDataset);
     },
 
     // Custom option is just a placeholder for typing purposes, its DayJs values should not
@@ -155,9 +125,9 @@ const isValidDateRange = (
 
 export {
     DEFAULT_TIME_RANGE,
+    DEFAULT_TIME_RANGE_OPTION,
     isValidDateRange,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
     TIME_RANGE_OPTION_NAMES,
-    TIME_RANGE_SINCE_UNIX_EPOCH,
 };
