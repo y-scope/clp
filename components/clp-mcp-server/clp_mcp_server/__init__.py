@@ -26,6 +26,18 @@ def main(host: str, port: int) -> None:
         logger.error("Host cannot be empty")
         sys.exit(1)
 
+    # Validate host format (IP address or resolvable hostname) 
+    try: 
+        # Try to parse as IP address 
+        ipaddress.ip_address(host) 
+    except ValueError: 
+        # If not an IP, try to resolve as hostname 
+        try: 
+            socket.gethostbyname(host) 
+        except socket.error: 
+            logger.error(f"Invalid host: {host} is neither a valid IP address nor a resolvable hostname") 
+            sys.exit(1)
+
     if port <= 0 or port > 65535:
         logger.error(f"Port must be between 1 and 65535, got: {port}")
         sys.exit(1)

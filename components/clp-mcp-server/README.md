@@ -9,6 +9,7 @@ This component provides an MCP server that integrates with the CLP package. The 
 ## Installation
 
 Build the package using the taskfile:
+
 ```bash
 task clp-mcp-server
 ```
@@ -18,12 +19,15 @@ task clp-mcp-server
 The server only supports HTTP transport. Host and port parameters are optional with defaults:
 
 ### Quick Start (using defaults)
+
 ```bash
 python3 -m clp_mcp_server
 ```
+
 This will start the server on `0.0.0.0:8000`.
 
 ### Custom Configuration
+
 ```bash
 python3 -m clp_mcp_server --host 127.0.0.1 --port 3000
 ```
