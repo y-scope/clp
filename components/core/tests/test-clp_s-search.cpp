@@ -329,6 +329,7 @@ TEST_CASE("clp-s-search-epoch-timestamp", "[clp-s][search]") {
             {R"aa(timestamp > 1759417023100)aa", {0, 1, 2}},
             {R"aa(timestamp > 1759417024000)aa", {0, 1, 2}},
             {R"aa(timestamp > 1759417024100 AND timestamp < 1759417024300)aa", {1}},
+            {R"aa(timestamp > 1759417024299.9)aa", {2}}
     };
     auto single_file_archive = GENERATE(true, false);
 
