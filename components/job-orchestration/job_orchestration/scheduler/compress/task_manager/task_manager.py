@@ -21,7 +21,7 @@ class TaskManager(ABC):
             pass
 
     @abstractmethod
-    def compress(self, task_params: list[dict[str, Any]]) -> CompressionTaskResult:
+    def compress(self, task_params: list[dict[str, Any]]) -> ResultHandle:
         """
         Starts a batch of compression tasks as a job.
         :param task_params: A list of dictionaries containing parameters for each compression task.
