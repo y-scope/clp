@@ -25,7 +25,7 @@ class CLPMCPServerConfig:
         return [cls.TOOL_HELLO_WORLD, cls.TOOL_GET_SERVER_INFO]
 
 
-def clp_mcp_server(**settings: Any) -> FastMCP:
+def create_mcp_server(**settings: Any) -> FastMCP:
     """
     Create and configure the CLP MCP Server.
 
@@ -42,7 +42,7 @@ def clp_mcp_server(**settings: Any) -> FastMCP:
     mcp = FastMCP(name=config.SERVER_NAME, **settings)
 
     @mcp.tool()
-    async def get_server_info() -> dict[str, Any]:
+    def get_server_info() -> dict[str, Any]:
         """
         Get basic information about the MCP server.
 
@@ -57,7 +57,7 @@ def clp_mcp_server(**settings: Any) -> FastMCP:
         }
 
     @mcp.tool()
-    async def hello_world(name: str = "clp-mcp-server user") -> dict[str, Any]:
+    def hello_world(name: str = "clp-mcp-server user") -> dict[str, Any]:
         """
         A simple hello world function.
 

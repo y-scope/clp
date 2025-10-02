@@ -14,7 +14,7 @@ dependencies = [
 ]
 
 [project.scripts]
-clp-mcp-server = "clp_mcp_server:main"
+clp-mcp-server = "clp_mcp_server.clp_mcp_server:main"
 
 [build-system]
 requires = ["hatchling"]
