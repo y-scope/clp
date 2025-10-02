@@ -4,10 +4,9 @@ import {
     useState,
 } from "react";
 
-import {
-    CLP_QUERY_ENGINES,
-    SETTINGS_QUERY_ENGINE,
-} from "../../../../config";
+import {CLP_QUERY_ENGINES} from "@webui/common/config";
+
+import {SETTINGS_QUERY_ENGINE} from "../../../../config";
 import PrestoResultsVirtualTable from "./Presto/PrestoResultsVirtualTable";
 import SearchResultsVirtualTable from "./SearchResultsVirtualTable";
 import {TABLE_BOTTOM_PADDING} from "./typings";

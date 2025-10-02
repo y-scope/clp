@@ -1,7 +1,6 @@
-import {
-    CLP_QUERY_ENGINES,
-    SETTINGS_QUERY_ENGINE,
-} from "../../../config";
+import {CLP_QUERY_ENGINES} from "@webui/common/config";
+
+import {SETTINGS_QUERY_ENGINE} from "../../../config";
 import usePrestoSearchState from "../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../SearchState/Presto/typings";
 import NativeControls from "./NativeControls";
