@@ -7,7 +7,7 @@ import sys
 
 import click
 
-from .server.server import create_mcp_server
+from .server import create_mcp_server
 
 
 @click.command()
@@ -16,7 +16,14 @@ from .server.server import create_mcp_server
 )
 @click.option("--port", type=int, default=8000, help="The server's port number (default: 8000).")
 def main(host: str, port: int) -> None:
-    """Run the CLP MCP Server with HTTP transport."""
+    """
+    Runs the CLP MCP server with HTTP transport.
+
+    :param host: The server's host address (IP address or hostname).
+    :param port: The server's port number (1-65535).
+    :return: None
+    :raise SystemExit: If host/port validation fails or server startup fails.
+    """
     # Configure logging
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"

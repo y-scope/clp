@@ -1,5 +1,6 @@
 """Minimal MCP Server implementation for CLP."""
 
+from enum import Enum
 from typing import Any
 
 from fastmcp import FastMCP
@@ -14,10 +15,10 @@ class CLPMCPServerConfig:
     TOOL_HELLO_WORLD = "hello_world"
     TOOL_GET_SERVER_INFO = "get_server_info"
 
-    # Status constants
-    STATUS_SUCCESS = "success"
-    STATUS_ERROR = "error"
-    STATUS_RUNNING = "running"
+    class Status(Enum):
+        SUCCESS = "success"
+        ERROR = "error"
+        RUNNING = "running"
 
     @classmethod
     def get_capabilities(cls) -> list[str]:
@@ -27,14 +28,11 @@ class CLPMCPServerConfig:
 
 def create_mcp_server(**settings: Any) -> FastMCP:
     """
-    Create and configure the CLP MCP Server.
+    Creates and defines API tool calls for CLP MCP server.
 
-    Args:
-        **settings: Additional settings for the MCP server
-
-    Returns:
-        A configured FastMCP instance
-
+    :param settings: Additional settings for the MCP server configuration.
+    :return: A configured FastMCP instance ready to run.
+    :raise: Any exceptions from FastMCP initialization.
     """
     config = CLPMCPServerConfig()
 
@@ -44,34 +42,28 @@ def create_mcp_server(**settings: Any) -> FastMCP:
     @mcp.tool()
     def get_server_info() -> dict[str, Any]:
         """
-        Get basic information about the MCP server.
+        Gets basic information about the MCP server.
 
-        Returns:
-            Server information including version and capabilities
-
+        :return: Server information including version and capabilities.
         """
         return {
             "name": config.SERVER_NAME,
             "capabilities": config.get_capabilities(),
-            "status": config.STATUS_RUNNING,
+            "status": config.Status.RUNNING.value,
         }
 
     @mcp.tool()
     def hello_world(name: str = "clp-mcp-server user") -> dict[str, Any]:
         """
-        A simple hello world function.
+        Provides a simple hello world greeting.
 
-        Args:
-            name: The name to greet
-
-        Returns:
-            A greeting message with metadata
-
+        :param name: The name to greet.
+        :return: A greeting message with metadata.
         """
         return {
             "message": f"Hello World, {name.strip()}!",
             "server": config.SERVER_NAME,
-            "status": config.STATUS_SUCCESS,
+            "status": config.Status.SUCCESS.value,
         }
 
     return mcp

@@ -18,7 +18,7 @@ The server only supports HTTP transport. Host and port parameters are optional w
 ### Quick Start (using defaults)
 
 ```bash
-python3 -m clp_mcp_server
+clp_mcp_server
 ```
 
 This will start the server on `0.0.0.0:8000`.
@@ -26,7 +26,7 @@ This will start the server on `0.0.0.0:8000`.
 ### Custom Configuration
 
 ```bash
-python3 -m clp_mcp_server --host 127.0.0.1 --port 3000
+clp_mcp_server --host 127.0.0.1 --port 3000
 ```
 
 ## Available Tools
