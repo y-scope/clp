@@ -93,7 +93,6 @@ services:
 
   reducer:
     <<: *service_defaults
-    image: "${CLP_PACKAGE_CONTAINER}"
     hostname: "reducer"
     environment:
       CLP_HOME: "/opt/clp"
