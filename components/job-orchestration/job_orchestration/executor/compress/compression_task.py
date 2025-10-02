@@ -36,7 +36,7 @@ from job_orchestration.scheduler.job_config import (
     PathsToCompress,
     S3InputConfig,
 )
-from job_orchestration.scheduler.scheduler_result import CompressionTaskResult
+from job_orchestration.scheduler.task_result import CompressionTaskResult
 
 
 def update_compression_task_metadata(db_cursor, task_id, kv):

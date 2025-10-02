@@ -6,7 +6,7 @@ from typing import Any
 import spider_py
 from job_orchestration.executor.compress.spider_compress import compress
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
-from job_orchestration.scheduler.scheduler_result import CompressionTaskResult
+from job_orchestration.scheduler.task_result import CompressionTaskResult
 from job_orchestration.utils.spider_utils import int8_list_to_utf8_str, utf8_str_to_int8_list
 from spider_py.client.job import Job
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any
 
-from job_orchestration.scheduler.scheduler_result import CompressionTaskResult
+from job_orchestration.scheduler.task_result import CompressionTaskResult
 
 
 class TaskManager(ABC):
