@@ -541,7 +541,6 @@ jobs:
 
       - uses: "./.github/actions/clp-build-runtime-image"
         with:
-          image_type: "package"
           image_registry: "ghcr.io"
           image_registry_username: "${{github.actor}}"
           image_registry_password: "${{secrets.GITHUB_TOKEN}}"

@@ -12,4 +12,4 @@ tasks:
       - ":package"
     cmds:
       - "./build.sh"
-      - "rsync -a 'image.id' '{{.G_PACKAGE_BUILD_DIR}}'"
+      - "rsync --archive '{{.G_BUILD_DIR}}/clp-package-image.id' '{{.G_PACKAGE_BUILD_DIR}}'"

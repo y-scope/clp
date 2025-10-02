@@ -540,7 +540,7 @@ class DockerComposeController(BaseController):
                 SERVICE_CONTAINER_UID_GID if os.geteuid() == 0 else DEFAULT_UID_GID
             ),
             # Package container
-            "CLP_PACKAGE_CONTAINER": self.clp_config.execution_container,
+            "CLP_PACKAGE_CONTAINER": self.clp_config.container_image_ref,
             # Global paths
             "CLP_DATA_DIR_HOST": str(self.clp_config.data_directory),
             "CLP_LOGS_DIR_HOST": str(self.clp_config.logs_directory),
