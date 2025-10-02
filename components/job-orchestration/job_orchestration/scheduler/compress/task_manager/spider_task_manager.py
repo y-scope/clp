@@ -8,6 +8,7 @@ import spider_py
 from job_orchestration.executor.compress.spider_compress import compress, convert_to_str
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.scheduler_result import CompressionTaskResult
+from job_orchestration.utils.spider_utils import utf8_str_to_int8_list
 from spider_py.client.job import Job
 
 
@@ -38,20 +39,11 @@ class SpiderTaskManager(TaskManager):
                 spider_py.Int64(task_param["job_id"]),
                 spider_py.Int64(task_param["task_id"]),
                 [spider_py.Int64(tag_id) for tag_id in task_param["tag_ids"]],
-                _from_str(task_param["clp_io_config_json"]),
-                _from_str(task_param["paths_to_compress_json"]),
-                _from_str(json.loads(task_param["clp_io_config_json"])),
+                utf8_str_to_int8_list(task_param["clp_io_config_json"]),
+                utf8_str_to_int8_list(task_param["paths_to_compress_json"]),
+                utf8_str_to_int8_list(json.loads(task_param["clp_io_config_json"])),
             ]
             for task_param in task_params
         ]
         submitted_job = self._driver.submit_jobs([job], [list(itertools.chain(*task_params_list))])
         return SpiderTaskManager.ResultHandle(submitted_job)
-
-
-def _from_str(string: str) -> list[spider_py.Int8]:
-    """
-    Converts a string to a list of `spider_py.Int8` as utf-8 bytes.
-    :param string: The string to convert.
-    :return: A list of `spider_py.Int8` representing the string.
-    """
-    return [spider_py.Int8(byte) for byte in string.encode("utf-8")]
