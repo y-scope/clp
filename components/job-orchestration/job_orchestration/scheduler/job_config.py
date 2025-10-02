@@ -30,6 +30,7 @@ class FsInputConfig(BaseModel):
 
 class S3InputConfig(S3Config):
     type: typing.Literal[InputType.S3.value] = InputType.S3.value
+    keys: typing.Optional[typing.List[str]] = None
     dataset: typing.Optional[str] = None
     timestamp_key: typing.Optional[str] = None
 

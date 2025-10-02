@@ -38,35 +38,46 @@ def _generate_logs_list(
     container_logs_list_path: pathlib.Path,
     parsed_args: argparse.Namespace,
 ) -> None:
+    host_logs_list_path = parsed_args.path_list
     if InputType.FS == input_type:
-        host_logs_list_path = parsed_args.path_list
         with open(container_logs_list_path, "w") as container_logs_list_file:
             if host_logs_list_path is not None:
                 with open(host_logs_list_path, "r") as host_logs_list_file:
                     for line in host_logs_list_file:
-                        stripped_path_str = line.rstrip()
-                        if "" == stripped_path_str:
+                        stripped_url_str = line.rstrip()
+                        if "" == stripped_url_str:
                             # Skip empty paths
                             continue
-                        resolved_path = pathlib.Path(stripped_path_str).resolve()
+                        resolved_path = pathlib.Path(stripped_url_str).resolve()
                         mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
                             resolved_path.anchor
                         )
                         container_logs_list_file.write(f"{mounted_path}\n")
 
-            for path in parsed_args.paths:
-                resolved_path = pathlib.Path(path).resolve()
+            for url in parsed_args.paths:
+                resolved_path = pathlib.Path(url).resolve()
                 mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
                     resolved_path.anchor
                 )
                 container_logs_list_file.write(f"{mounted_path}\n")
 
-    elif InputType.S3 == input_type:
-        with open(container_logs_list_path, "w") as container_logs_list_file:
-            container_logs_list_file.write(f"{parsed_args.paths[0]}\n")
-
-    else:
+    elif InputType.S3 != input_type:
         raise ValueError(f"Unsupported input type: {input_type}.")
+
+    # Handle S3 inputs
+    with open(container_logs_list_path, "w") as container_logs_list_file:
+        if host_logs_list_path is None:
+            for url in parsed_args.paths:
+                container_logs_list_file.write(f"{url}\n")
+            return
+
+        with open(host_logs_list_path, "r") as host_logs_list_file:
+            for line in host_logs_list_file:
+                stripped_url_str = line.rstrip()
+                if "" == stripped_url_str:
+                    # Skip empty lines
+                    continue
+                container_logs_list_file.write(f"{stripped_url_str}\n")
 
 
 def _generate_compress_cmd(
@@ -126,10 +137,20 @@ def _validate_s3_input_args(
             f"Input type {InputType.S3} is only supported for the storage engine"
             f" {StorageEngine.CLP_S}."
         )
-    if len(parsed_args.paths) != 1:
-        args_parser.error(f"Only one URL can be specified for input type {InputType.S3}.")
-    if parsed_args.path_list is not None:
-        args_parser.error(f"Path list file is unsupported for input type {InputType.S3}.")
+
+    if parsed_args.s3_single_prefix:
+        if len(parsed_args.paths) != 1:
+            args_parser.error(f"Only one URL can be specified for input type {InputType.S3}.")
+        if parsed_args.path_list is not None:
+            # TODO: Do we want to support path lists for S3 input?
+            args_parser.error(f"Path list file is unsupported for input type {InputType.S3}.")
+        return
+
+    if len(parsed_args.paths) == 0 and parsed_args.path_list is None:
+        args_parser.error("No URLs specified.")
+
+    if len(parsed_args.paths) > 0 and parsed_args.path_list is not None:
+        args_parser.error("URLs cannot be specified on the command line AND through a file.")
 
 
 def main(argv):
@@ -172,6 +193,14 @@ def main(argv):
     )
     args_parser.add_argument(
         "-f", "--path-list", dest="path_list", help="A file listing all paths to compress."
+    )
+    args_parser.add_argument(
+        "--s3-single-prefix",
+        action="store_true",
+        help=(
+            "Treat the S3 URL as a single prefix. If set, only a single S3 URL should be provided"
+            " and it must be explicitly given as a positional argument."
+        ),
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
