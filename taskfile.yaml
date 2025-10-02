@@ -579,7 +579,7 @@ tasks:
           COMPONENT: "{{.COMPONENT}}"
       - |-
         . "{{.VENV_DIR}}/bin/activate"
-        uv build --wheel
+        UV_CACHE_DIR="{{.G_BUILD_DIR}}/uv-cache" uv build --wheel
 
   component-venv:
     internal: true
