@@ -17,7 +17,6 @@ import useSearchStore from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import {handleQuerySubmit} from "../../search-requests";
 import {
-    DEFAULT_TIME_RANGE,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
 } from "../../TimeRangeInput/utils";
@@ -52,13 +51,14 @@ const SubmitButton = () => {
         if (timeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
             try {
                 newTimeRange = await TIME_RANGE_OPTION_DAYJS_MAP[timeRangeOption]();
+                updateTimeRange(newTimeRange);
             } catch {
                 messageApi.warning(
-                    "Cannot fetch the time range. Fallback to the default range.",
+                    "Cannot fetch the time range.",
                 );
-                newTimeRange = DEFAULT_TIME_RANGE;
+
+                return;
             }
-            updateTimeRange(newTimeRange);
         } else {
             newTimeRange = timeRange;
         }
