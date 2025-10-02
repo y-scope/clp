@@ -228,7 +228,8 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
              {1}},
             {R"aa(ambiguous_varstring: "a*e")aa", {10, 11, 12}},
             {R"aa(ambiguous_varstring: "a\*e")aa", {12}},
-            {R"aa(idx: * AND NOT idx: null AND idx: 0)aa", {0}}
+            {R"aa(idx: * AND NOT idx: null AND idx: 0)aa", {0}},
+            {R"aa(one > 0.9 AND one < 1.1 AND one: 1.0)aa", {13}}
     };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
