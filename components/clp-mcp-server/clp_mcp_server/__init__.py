@@ -1,4 +1,6 @@
+import ipaddress 
 import logging
+import socket
 import sys
 
 import click
