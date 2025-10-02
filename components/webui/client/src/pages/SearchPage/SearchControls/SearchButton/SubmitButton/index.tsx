@@ -54,7 +54,7 @@ const SubmitButton = () => {
                 newTimeRange = await TIME_RANGE_OPTION_DAYJS_MAP[timeRangeOption]();
             } catch {
                 messageApi.warning(
-                    "Cannot fetch the time range. Fallback to the unix epoch.",
+                    "Cannot fetch the time range. Fallback to the default range.",
                 );
                 newTimeRange = DEFAULT_TIME_RANGE;
             }
