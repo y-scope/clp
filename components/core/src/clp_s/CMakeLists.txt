@@ -380,6 +380,32 @@ if(CLP_BUILD_CLP_S_JSONCONSTRUCTOR)
 endif()
 
 set(
+        CLP_S_TIMESTAMP_PARSER_SOURCES
+        Defs.hpp
+        TimestampParser.cpp
+        TimestampParser.hpp
+        TimestampParserErrorCode.cpp
+        TimestampParserErrorCode.hpp
+)
+
+if(CLP_BUILD_CLP_S_TIMESTAMP_PARSER)
+        add_library(
+                clp_s_timestamp_parser
+                ${CLP_S_TIMESTAMPPARSER_SOURCES}
+        )
+        add_library(clp_s::timestamp_parser ALIAS clp_s_timestamp_parser)
+        target_compile_features(clp_s_timestamp_parser PRIVATE cxx_std_20)
+        target_include_directories(clp_s_timestamp_parser PUBLIC ../)
+        target_link_libraries(
+                clp_s_timestamp_parser
+                PRIVATE
+                clp::string_utils
+                date::date
+                ystdlib::error_handling
+        )
+endif()
+
+set(
         CLP_S_TIMESTAMP_PATTERN_SOURCES
         Defs.hpp
         ErrorCode.hpp
