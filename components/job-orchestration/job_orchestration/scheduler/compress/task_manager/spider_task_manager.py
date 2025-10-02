@@ -34,18 +34,15 @@ class SpiderTaskManager(TaskManager):
         job = spider_py.group(
             [compress for _ in range(len(task_params))],
         )
-        task_params_list = [
-            [
-                spider_py.Int64(task_param["job_id"]),
-                spider_py.Int64(task_param["task_id"]),
-                [spider_py.Int64(tag_id) for tag_id in task_param["tag_ids"]],
-                utf8_str_to_int8_list(task_param["clp_io_config_json"]),
-                utf8_str_to_int8_list(task_param["paths_to_compress_json"]),
-                utf8_str_to_int8_list(json.dumps(task_param["clp_metadata_db_connection_config"])),
-            ]
-            for task_param in task_params
-        ]
-        submitted_job = self._driver.submit_jobs([job], [list(itertools.chain(*task_params_list))])[
-            0
-        ]
+        job_args = []
+        for task_param in task_params:
+            job_args.append(spider_py.Int64(task_param["job_id"]))
+            job_args.append(spider_py.Int64(task_param["task_id"]))
+            job_args.append([spider_py.Int64(tag_id) for tag_id in task_param["tag_ids"]])
+            job_args.append(utf8_str_to_int8_list(task_param["clp_io_config_json"]))
+            job_args.append(utf8_str_to_int8_list(task_param["paths_to_compress_json"]))
+            job_args.append(
+                utf8_str_to_int8_list(json.dumps(task_param["clp_metadata_db_connection_config"]))
+            )
+        submitted_job = self._driver.submit_jobs([job], [job_args])[0]
         return SpiderTaskManager.ResultHandle(submitted_job)

@@ -14,8 +14,8 @@ class TaskManager(ABC):
         def get_result(self, timeout: float = 0.1) -> list[CompressionTaskResult] | None:
             """
             Gets the result of a compression job.
-            :param timeout: The maximum time to wait for the result. Notice that some task managers
-             ignore this parameter.
+            :param timeout: Maximum time (in seconds) to wait for retrieving the result. Depending
+                on the implementation, this parameter may be ignored.
             :return: A list of task results.
             """
             pass
@@ -23,7 +23,7 @@ class TaskManager(ABC):
     @abstractmethod
     def compress(self, task_params: list[dict[str, Any]]) -> ResultHandle:
         """
-        Starts a batch of compression tasks as a job.
+        Submits a batch of compression tasks as a single compression job.
         :param task_params: A list of dictionaries containing parameters for each compression task.
         :return: A handle through which to get the result of the job.
         """
