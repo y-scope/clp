@@ -2,7 +2,7 @@ name: "clp-package-base"
 
 # Common service defaults.
 x-service-defaults: &service_defaults
-  image: "${CLP_PACKAGE_CONTAINER}"
+  image: "${CLP_PACKAGE_CONTAINER:-clp-package}"
   stop_grace_period: "3s"
   user: "${CLP_UID_GID:-1000:1000}"
 
@@ -65,7 +65,7 @@ services:
       "-u",
       "-m", "clp_py_utils.create-db-tables",
       "--config", "/etc/clp-config.yml",
-      "--storage-engine", "${CLP_PACKAGE_STORAGE_ENGINE}"
+      "--storage-engine", "${CLP_PACKAGE_STORAGE_ENGINE:-clp}",
     ]
 
   queue:

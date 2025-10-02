@@ -4,7 +4,7 @@ include: ["docker-compose.base.yaml"]
 
 # Common service defaults.
 x-service-defaults: &service_defaults
-  image: "${CLP_PACKAGE_CONTAINER}"
+  image: "${CLP_PACKAGE_CONTAINER:-clp-package}"
   stop_grace_period: "3s"
   user: "${CLP_UID_GID:-1000:1000}"
 
