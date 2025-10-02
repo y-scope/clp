@@ -33,11 +33,11 @@ class CompressionTaskResult(BaseModel):
 
     @field_validator("status")
     @classmethod
-    def valid_status(cls, field):
+    def valid_status(cls, value):
         supported_status = [CompressionTaskStatus.SUCCEEDED, CompressionTaskStatus.FAILED]
-        if field not in supported_status:
+        if value not in supported_status:
             raise ValueError(f'must be one of the following {"|".join(supported_status)}')
-        return field
+        return value
 
 
 class InternalJobState(Enum):
@@ -99,6 +99,6 @@ class SearchJob(QueryJob):
 
 class QueryTaskResult(BaseModel):
     status: QueryTaskStatus
-    task_id: str
+    task_id: int
     duration: float
     error_log_path: Optional[str] = None
