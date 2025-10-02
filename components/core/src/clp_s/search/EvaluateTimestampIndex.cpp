@@ -98,7 +98,7 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
             double float_literal{};
 
             auto const encoding{range_it->second->get_timestamp_encoding()};
-            switch(encoding) {
+            switch (encoding) {
                 case TimestampEntry::TimestampEncoding::DoubleEpoch:
                     if (false == literal->as_float(float_literal, filter_op)) {
                         return EvaluatedValue::Unknown;
