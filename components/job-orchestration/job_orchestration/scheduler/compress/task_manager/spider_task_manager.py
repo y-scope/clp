@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import itertools
 import json
 from typing import Any
 
