@@ -14,8 +14,8 @@ class TaskManager(ABC):
         def get_result(self, timeout: float = 0.1) -> list[CompressionTaskResult] | None:
             """
             Gets the result of a compression job.
-            :param timeout: The maximum time to wait for the result. Notice that some schedulers
-                ignore this parameter.
+            :param timeout: The maximum time to wait for the result. Notice that some task managers
+             ignore this parameter.
             :return: A list of task results.
             """
             pass
