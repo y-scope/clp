@@ -254,36 +254,25 @@ def generate_s3_virtual_hosted_style_url(
 
 def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]:
     """
-    Gets the metadata of all objects under the <bucket>/<key_prefix> specified by s3_input_config.
+    TODO: Update docstring
     NOTE: We reuse FileMetadata to store the metadata of S3 objects where the object's key is stored
     as `path` in FileMetadata.
 
     :param s3_input_config:
-    :return: List[FileMetadata] containing the object's metadata on success,
-    :raises: Propagates `boto3.client`'s exceptions.
-    :raises: Propagates `boto3.client.get_paginator`'s exceptions.
-    :raises: Propagates `boto3.paginator`'s exceptions.
+    :return: A list of `FileMetadata` containing the object's metadata on success.
+    :raises: Propagates `_s3_get_object_metadata_from_single_prefix`'s exceptions.
     """
 
     s3_client = _create_s3_client(s3_input_config.region_code, s3_input_config.aws_authentication)
 
-    file_metadata_list: List[FileMetadata] = list()
-    paginator = s3_client.get_paginator("list_objects_v2")
-    pages = paginator.paginate(Bucket=s3_input_config.bucket, Prefix=s3_input_config.key_prefix)
-    for page in pages:
-        contents = page.get("Contents", None)
-        if contents is None:
-            continue
+    if s3_input_config.keys is None:
+        return _s3_get_object_metadata_from_single_prefix(
+            s3_client, s3_input_config.bucket, s3_input_config.key_prefix
+        )
 
-        for obj in contents:
-            object_key = obj["Key"]
-            if object_key.endswith("/"):
-                # Skip any object that resolves to a directory-like path
-                continue
-
-            file_metadata_list.append(FileMetadata(Path(object_key), obj["Size"]))
-
-    return file_metadata_list
+    return _s3_get_object_metadata_from_keys(
+        s3_client, s3_input_config.bucket, s3_input_config.key_prefix, s3_input_config.keys
+    )
 
 
 def s3_put(s3_config: S3Config, src_file: Path, dest_path: str) -> None:
@@ -392,3 +381,64 @@ def s3_delete_objects(s3_config: S3Config, object_keys: Set[str]) -> None:
             Bucket=s3_config.bucket,
             Delete=_gen_deletion_config(objects_to_delete),
         )
+
+
+def _s3_get_object_metadata_from_single_prefix(
+    s3_client: boto3.client, bucket: str, key_prefix: str
+) -> List[FileMetadata]:
+    """
+    Gets the metadata of all objects under the <`bucket`>/<`key_prefix`>.
+
+    :param s3_client:
+    :param bucket:
+    :param key_prefix:
+    :return: A list of `FileMetadata` containing the object's metadata on success.
+    :raises: Propagates `boto3.client`'s exceptions.
+    :raises: Propagates `boto3.client.get_paginator`'s exceptions.
+    :raises: Propagates `boto3.paginator`'s exceptions.
+    """
+    file_metadata_list: List[FileMetadata] = list()
+    paginator = s3_client.get_paginator("list_objects_v2")
+    pages = paginator.paginate(Bucket=bucket, Prefix=key_prefix)
+    for page in pages:
+        contents = page.get("Contents", None)
+        if contents is None:
+            continue
+
+        for obj in contents:
+            object_key = obj["Key"]
+            if object_key.endswith("/"):
+                # Skip any object that resolves to a directory-like path
+                continue
+
+            file_metadata_list.append(FileMetadata(Path(object_key), obj["Size"]))
+
+    return file_metadata_list
+
+
+def _s3_get_object_metadata_from_keys(
+    s3_client: boto3.client, bucket: str, key_prefix: str, keys: List[str]
+) -> List[FileMetadata]:
+    """
+    Gets the metadata of all objects specified in `keys` under the <`bucket`>.
+
+    :param s3_client:
+    :param bucket:
+    :param keys:
+    :return: A list of `FileMetadata` containing the object's metadata on success.
+    :raises: Propagates `boto3.client`'s exceptions.
+    :raises: Propagates `boto3.client.head_object`'s exceptions.
+    """
+    file_metadata_list: List[FileMetadata] = list()
+
+    for object_key in keys:
+        if object_key.endswith("/"):
+            # Skip any object that resolves to a directory-like path
+            continue
+
+        head_object_response = s3_client.head_object(Bucket=bucket, Key=object_key)
+        file_metadata_list.append(
+            FileMetadata(Path(object_key), head_object_response["ContentLength"])
+        )
+
+    return file_metadata_list
