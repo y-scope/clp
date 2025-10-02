@@ -52,7 +52,7 @@ const fetchAllTimeRange = async (selectDataset: Nullable<string>)
         sql = buildClpTimeRangeSql();
     } else {
         if (null === selectDataset) {
-            console.error("No selected dataset.");
+            console.error("Cannot fetch \"All Time\" time range. No selected dataset.");
 
             return DEFAULT_TIME_RANGE;
         }
@@ -69,7 +69,7 @@ const fetchAllTimeRange = async (selectDataset: Nullable<string>)
               null === timestamps.begin_timestamp ||
               null === timestamps.end_timestamp
     ) {
-        throw new Error("Unable to get All Time range");
+        return DEFAULT_TIME_RANGE;
     }
 
     return [
