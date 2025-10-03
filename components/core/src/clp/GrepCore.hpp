@@ -165,7 +165,7 @@ private:
      *    - 1: treat as an encoded variable (\i for integers, \f for floats)
      *
      *    If there are k encodable wildcard variables, then 2^k logtype strings are possible. As a
-     *    result we limit k <= 16. We represents these alternatives using a bit mask.
+     *    result we limit k <= 16. We represent these alternatives using a bitmask.
      *
      *    Example:
      *      Search query: "a *1 *2 b",
@@ -190,7 +190,7 @@ private:
      * @param interpretations Log-surgeon's interpretations of the search query.
      * @param logtype_dict The logtype dictionary.
      * @param var_dict The variable dictionary.
-     * @param ignore_case Flag indicating if search is case sensitive.
+     * @param ignore_case If true, perform a case-insensitive search.
      * @param sub_queries Returns the subqueries to compare against CLP's archives.
      * @throw std::runtime_error If there are too many candidate combinations.
      */
