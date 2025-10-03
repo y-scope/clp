@@ -12,7 +12,7 @@ from .server import create_mcp_server
 
 @click.command()
 @click.option(
-    "--host", type=str, default="0.0.0.0", help="The server's host address (default: 127.0.0.1)."
+    "--host", type=str, default="127.0.0.1", help="The server's host address (default: 127.0.0.1)."
 )
 @click.option("--port", type=int, default=8000, help="The server's port number (default: 8000).")
 def main(host: str, port: int) -> None:

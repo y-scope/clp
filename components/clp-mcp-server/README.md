@@ -31,12 +31,12 @@ cd /path/to/build/clp-package/lib/python3/site-packages
 python3 -m clp_mcp_server.clp_mcp_server
 ```
 
-This will start the server on `0.0.0.0:8000`.
+This will start the server on `127.0.0.1:8000`.
 
 ### Custom Configuration
 
 ```bash
-python3 -m clp_mcp_server.clp_mcp_server --host 127.0.0.1 --port 3000
+python3 -m clp_mcp_server.clp_mcp_server --host 0.0.0.0 --port 3000
 ```
 
 ## Available Tools
