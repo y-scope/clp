@@ -1,6 +1,5 @@
-"""Minimal MCP Server implementation for CLP."""
+"""Minimal MCP Server Implementation for CLP."""
 
-from enum import Enum
 from typing import Any
 
 from fastmcp import FastMCP
@@ -14,11 +13,6 @@ class CLPMCPServerConfig:
     # Tool names
     TOOL_HELLO_WORLD = "hello_world"
     TOOL_GET_SERVER_INFO = "get_server_info"
-
-    class Status(Enum):
-        SUCCESS = "success"
-        ERROR = "error"
-        RUNNING = "running"
 
     @classmethod
     def get_capabilities(cls) -> list[str]:
@@ -34,10 +28,8 @@ def create_mcp_server(**settings: Any) -> FastMCP:
     :return: A configured FastMCP instance ready to run.
     :raise: Any exceptions from FastMCP initialization.
     """
-    config = CLPMCPServerConfig()
-
     # Initialize the MCP server with basic metadata
-    mcp = FastMCP(name=config.SERVER_NAME, **settings)
+    mcp = FastMCP(name=CLPMCPServerConfig.SERVER_NAME, **settings)
 
     @mcp.tool()
     def get_server_info() -> dict[str, Any]:
@@ -47,9 +39,9 @@ def create_mcp_server(**settings: Any) -> FastMCP:
         :return: Server information including version and capabilities.
         """
         return {
-            "name": config.SERVER_NAME,
-            "capabilities": config.get_capabilities(),
-            "status": config.Status.RUNNING.value,
+            "name": CLPMCPServerConfig.SERVER_NAME,
+            "capabilities": CLPMCPServerConfig.get_capabilities(),
+            "status": "running",
         }
 
     @mcp.tool()
@@ -62,8 +54,8 @@ def create_mcp_server(**settings: Any) -> FastMCP:
         """
         return {
             "message": f"Hello World, {name.strip()}!",
-            "server": config.SERVER_NAME,
-            "status": config.Status.SUCCESS.value,
+            "server": CLPMCPServerConfig.SERVER_NAME,
+            "status": "running",
         }
 
     return mcp

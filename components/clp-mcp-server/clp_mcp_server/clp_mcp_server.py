@@ -45,7 +45,8 @@ def main(host: str, port: int) -> None:
             socket.gethostbyname(host)
         except OSError:
             logger.exception(
-                "Invalid host: %s is neither a valid IP address nor a resolvable hostname", host
+                "Host validation failed: '%s' is not a valid IP address and DNS resolution failed",
+                host,
             )
             sys.exit(1)
 
@@ -63,7 +64,7 @@ def main(host: str, port: int) -> None:
         # Run the server with HTTP transport
         mcp.run(transport="streamable-http", host=host, port=port)
 
-    except (OSError, RuntimeError):
+    except Exception:
         logger.exception("Failed to start MCP server")
         sys.exit(1)
 
