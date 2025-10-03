@@ -16,6 +16,7 @@ class CLPMCPServerConfig:
 
     @classmethod
     def get_capabilities(cls) -> list[str]:
+        """Returns a list of capabilities (tool names) supported by the server."""
         return [cls.TOOL_HELLO_WORLD, cls.TOOL_GET_SERVER_INFO]
 
 
