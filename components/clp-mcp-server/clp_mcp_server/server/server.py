@@ -25,7 +25,6 @@ def create_mcp_server(**settings: Any) -> FastMCP:
 
     :param settings: Additional settings for the MCP server configuration.
     :return: A configured FastMCP instance ready to run.
-    :raise: Any exceptions from FastMCP initialization.
     """
     mcp = FastMCP(name=CLPMCPServerConfig.SERVER_NAME, **settings)
 
