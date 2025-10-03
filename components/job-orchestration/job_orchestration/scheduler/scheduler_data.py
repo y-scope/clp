@@ -4,8 +4,8 @@ from abc import ABC, abstractmethod
 from enum import auto, Enum
 from typing import Any, Dict, List, Optional
 
+from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.constants import (
-    CompressionTaskStatus,
     QueryJobType,
     QueryTaskStatus,
 )
@@ -20,24 +20,12 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class CompressionJob(BaseModel):
+    # Allow the use of `TaskManager.ResultHandle`
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     id: int
     start_time: datetime.datetime
-    async_task_result: Optional[Any] = None
-
-
-class CompressionTaskResult(BaseModel):
-    task_id: int
-    status: int
-    duration: float
-    error_message: Optional[str] = None
-
-    @field_validator("status")
-    @classmethod
-    def valid_status(cls, field):
-        supported_status = [CompressionTaskStatus.SUCCEEDED, CompressionTaskStatus.FAILED]
-        if field not in supported_status:
-            raise ValueError(f'must be one of the following {"|".join(supported_status)}')
-        return field
+    result_handle: TaskManager.ResultHandle
 
 
 class InternalJobState(Enum):
@@ -99,6 +87,6 @@ class SearchJob(QueryJob):
 
 class QueryTaskResult(BaseModel):
     status: QueryTaskStatus
-    task_id: str
+    task_id: int
     duration: float
     error_log_path: Optional[str] = None
