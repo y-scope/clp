@@ -23,25 +23,26 @@ class ProtocolConstant:
         return [cls.TOOL_HELLO_WORLD, cls.TOOL_GET_SERVER_INFO]
 
 
-def create_mcp_server(**settings: Any) -> FastMCP:
+def create_mcp_server() -> FastMCP:
     """
-    Creates and defines API tool calls for CLP MCP server.
+    Creates and defines API tool calls for the CLP MCP server.
 
-    :param settings: Additional settings for the MCP server configuration.
     :return: A configured `FastMCP` instance.
+    :raise: Propagates `FastMCP.__init__`'s exceptions.
+    :raise: Propagates `FastMCP.tool`'s exceptions.
     """
-    mcp = FastMCP(name=CLPMCPServerConfig.SERVER_NAME, **settings)
+    mcp = FastMCP(name=ProtocolConstant.SERVER_NAME)
 
     @mcp.tool()
     def get_server_info() -> dict[str, Any]:
         """
-        Gets basic information about the MCP server.
+        Gets the MCP server's information.
 
-        :return: The server information with a list of capabilities.
+        :return: The server's information with a list of capabilities.
         """
         return {
-            "name": CLPMCPServerConfig.SERVER_NAME,
-            "capabilities": CLPMCPServerConfig.get_capabilities(),
+            "name": ProtocolConstant.SERVER_NAME,
+            "capabilities": ProtocolConstant.get_capabilities(),
             "status": "running",
         }
 
@@ -55,7 +56,7 @@ def create_mcp_server(**settings: Any) -> FastMCP:
         """
         return {
             "message": f"Hello World, {name.strip()}!",
-            "server": CLPMCPServerConfig.SERVER_NAME,
+            "server": ProtocolConstant.SERVER_NAME,
             "status": "running",
         }
 
