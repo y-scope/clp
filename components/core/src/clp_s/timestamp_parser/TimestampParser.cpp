@@ -12,11 +12,11 @@
 #include <string_utils/string_utils.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
-#include "TimestampParserErrorCode.hpp"
+#include "ErrorCode.hpp"
 
-namespace clp_s {
+namespace clp_s::timestamp_parser {
 namespace {
-constexpr std::array < std::string_view >> cAbbreviatedDaysOfWeek
+constexpr std::array cAbbreviatedDaysOfWeek
         = {std::string_view{"Sun"},
            std::string_view{"Mon"},
            std::string_view{"Tue"},
@@ -25,7 +25,7 @@ constexpr std::array < std::string_view >> cAbbreviatedDaysOfWeek
            std::string_view{"Fri"},
            std::string_view{"Sat"}};
 
-constexpr std::array < std::string_view >> cMonthNames
+constexpr std::array cMonthNames
         = {std::string_view{"January"},
            std::string_view{"February"},
            std::string_view{"March"},
@@ -39,7 +39,7 @@ constexpr std::array < std::string_view >> cMonthNames
            std::string_view{"November"},
            std::string_view{"December"}};
 
-constexpr std::array < std::string_view >> cAbbreviatedMonthNames
+constexpr std::array cAbbreviatedMonthNames
         = {std::string_view{"Jan"},
            std::string_view{"Feb"},
            std::string_view{"Mar"},
@@ -64,14 +64,15 @@ auto convert_padded_string_to_number(std::string_view str, char padding_characte
 
 /**
  * Finds the first matching prefix from a list of candidates.
+ * @tparam CandidateArrayType
  * @param str Substring with a prefix potentially matching one of the candidates.
  * @param candidates Candidate prefixes that will be matched against `str`.
  * @return The index of the matching prefix in the candidates array, or
- * `TimestampPatternErrorCodeEnum::IncompatibleTimestampPattern` on error.
+ * `ErrorCodeEnum::IncompatibleTimestampPattern` on error.
  */
-auto
-find_first_matching_prefix(std::string_view str, std::array < std::string_view >> const& candidates)
-        -> ystdlib::error_handling::Result<size_t, TimestampParserErrorCode>;
+template <typename CandidateArrayType>
+auto find_first_matching_prefix(std::string_view str, CandidateArrayType const& candidates)
+        -> ystdlib::error_handling::Result<size_t, ErrorCode>;
 
 auto convert_padded_string_to_number(std::string_view str, char padding_character, int& value) {
     size_t i{};
@@ -82,25 +83,24 @@ auto convert_padded_string_to_number(std::string_view str, char padding_characte
     return clp::string_utils::convert_string_to_int(str.substr(i), value);
 }
 
-auto
-find_first_matching_prefix(std::string_view str, std::array < std::string_view >> const& candidates)
-        -> ystdlib::error_handling::Result<size_t, TimestampParserErrorCode> {
+template <typename CandidateArrayType>
+auto find_first_matching_prefix(std::string_view str, CandidateArrayType const& candidates)
+        -> ystdlib::error_handling::Result<size_t, ErrorCode> {
     for (size_t candidate_idx{0ULL}; candidate_idx < candidates.size(); ++candidate_idx) {
         auto const& candidate{candidates[candidate_idx]};
         if (candidate == str.substr(0ULL, candidate.size())) {
             return candidate_idx;
         }
     }
-    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+    return ErrorCodeEnum::IncompatibleTimestampPattern;
 }
 }  // namespace
 
-auto TimestampParser::parse_timestamp(
+auto parse_timestamp(
         std::string_view timestamp,
         std::string_view pattern,
         std::string& generated_pattern
-) -> ystdlib::error_handling::
-        Result<std::pair<epochtime_t, std::string_view>, TimestampParserErrorCode> {
+) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>, ErrorCode> {
     std::vector<std::pair<size_t, std::string>> cat_sequence_resolutions;
 
     size_t pattern_idx{};
@@ -125,14 +125,14 @@ auto TimestampParser::parse_timestamp(
                 ++timestamp_idx;
                 continue;
             }
-            return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+            return ErrorCodeEnum::IncompatibleTimestampPattern;
         }
 
         switch (pattern[pattern_idx]) {
             case 'y': {  // Zero-padded 2-digit year in century.
                 constexpr size_t cFieldLength = 2;
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
                 int two_digit_year{};
@@ -143,10 +143,10 @@ auto TimestampParser::parse_timestamp(
                             two_digit_year
                     ))
                 {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
                 if (two_digit_year < 0 || two_digit_year > 99) {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
                 if (two_digit_year >= 69) {
@@ -161,7 +161,7 @@ auto TimestampParser::parse_timestamp(
             case 'Y': {  // Zero-padded 4-digit year.
                 constexpr size_t cFieldLength = 4;
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
                 if (false
@@ -171,10 +171,10 @@ auto TimestampParser::parse_timestamp(
                             parsed_year
                     ))
                 {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
                 if (parsed_year < 0 || parsed_year > 9999) {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
                 timestamp_idx += cFieldLength;
@@ -203,7 +203,7 @@ auto TimestampParser::parse_timestamp(
             case 'm': {  // Zero-padded month.
                 constexpr size_t cFieldLength = 2;
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
                 if (false
@@ -213,10 +213,10 @@ auto TimestampParser::parse_timestamp(
                             parsed_month
                     ))
                 {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
                 if (parsed_month < 1 || parsed_month > 12) {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
                 timestamp_idx += cFieldLength;
@@ -226,7 +226,7 @@ auto TimestampParser::parse_timestamp(
             case 'd': {  // Zero-padded day in month.
                 constexpr size_t cFieldLength = 2;
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
                 if (false
@@ -236,10 +236,10 @@ auto TimestampParser::parse_timestamp(
                             parsed_day
                     ))
                 {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
                 if (parsed_day < 1 || parsed_day > 31) {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
                 timestamp_idx += cFieldLength;
@@ -249,7 +249,7 @@ auto TimestampParser::parse_timestamp(
             case 'e': {  // Space-padded day in month.
                 constexpr size_t cFieldLength = 2;
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
                 if (false
@@ -259,10 +259,10 @@ auto TimestampParser::parse_timestamp(
                             parsed_day
                     ))
                 {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
                 if (parsed_day < 1 || parsed_day > 31) {
-                    return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
                 timestamp_idx += cFieldLength;
@@ -298,37 +298,37 @@ auto TimestampParser::parse_timestamp(
             case 'Z':
             case '?':
             case 'P':
-                return TimestampParserErrorCodeEnum::FormatSpecifierNotImplemented;
+                return ErrorCodeEnum::FormatSpecifierNotImplemented;
             case '\\': {
                 if ('\\' == timestamp[timestamp_idx]) {
                     ++timestamp_idx;
                     continue;
                 }
-                return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+                return ErrorCodeEnum::IncompatibleTimestampPattern;
             }
             default:
-                return TimestampParserErrorCodeEnum::InvalidTimestampPattern;
+                return ErrorCodeEnum::InvalidTimestampPattern;
         }
     }
 
     // Do not allow trailing unmatched content.
     if (false == (pattern_idx == pattern.size() && timestamp_idx == timestamp.size())) {
-        return TimestampParserErrorCodeEnum::IncompatibleTimestampPattern;
+        return ErrorCodeEnum::IncompatibleTimestampPattern;
     }
 
     // Do not allow mixing format specifiers for date-and-time type timestamps and epoch-number type
     // timestamps.
     if (date_type_representation && number_type_representation) {
-        return TimestampParserErrorCodeEnum::InvalidTimestampPattern;
+        return ErrorCodeEnum::InvalidTimestampPattern;
     }
 
     if (number_type_representation) {
-        return TimestampParserErrorCodeEnum::FormatSpecifierNotImplemented;
+        return ErrorCodeEnum::FormatSpecifierNotImplemented;
     }
 
     auto year_month_day{date::year(parsed_year) / parsed_month / parsed_day};
     if (false == year_month_day.ok()) {
-        return TimestampParserErrorCodeEnum::InvalidDate;
+        return ErrorCodeEnum::InvalidDate;
     }
 
     auto time_point = date::sys_days(year_month_day) + std::chrono::hours(0)
@@ -336,15 +336,13 @@ auto TimestampParser::parse_timestamp(
                       + std::chrono::nanoseconds(0);
 
     if (day_of_week_idx.has_value()) {
-        auto const actual_day_of_week_idx{
-                (date::year_month_weekday(date::sys_days(year_month_day))
-                         .weekday_indexed()
-                         .weekday()
-                 - date::Sunday)
-                        .count()
-        };
+        auto const actual_day_of_week_idx{(date::year_month_weekday(date::sys_days(year_month_day))
+                                                   .weekday_indexed()
+                                                   .weekday()
+                                           - date::Sunday)
+                                                  .count()};
         if (actual_day_of_week_idx != day_of_week_idx.value()) {
-            return TimestampParserErrorCodeEnum::InvalidDate;
+            return ErrorCodeEnum::InvalidDate;
         }
     }
 
@@ -354,4 +352,4 @@ auto TimestampParser::parse_timestamp(
     };
     return {epoch_nanoseconds, pattern};
 }
-}  // namespace clp_s
+}  // namespace clp_s::timestamp_parser

@@ -5,17 +5,17 @@
 
 #include <ystdlib/error_handling/ErrorCode.hpp>
 
-namespace clp_s {
-enum class TimestampParserErrorCodeEnum : uint8_t {
+namespace clp_s::timestamp_parser {
+enum class ErrorCodeEnum : uint8_t {
     InvalidTimestampPattern = 1,
     IncompatibleTimestampPattern,
     InvalidDate,
     FormatSpecifierNotImplemented
 };
 
-using TimestampParserErrorCode = ystdlib::error_handling::ErrorCode<TimestampParserErrorCodeEnum>;
-}  // namespace clp_s
+using ErrorCode = ystdlib::error_handling::ErrorCode<ErrorCodeEnum>;
+}  // namespace clp_s::timestamp_parser
 
-YSTDLIB_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(clp_s::TimestampParserErrorCodeEnum);
+YSTDLIB_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(clp_s::timestamp_parser::ErrorCodeEnum);
 
 #endif  // CLP_S_TIMESTAMPPARSERERRORCODE_HPP
