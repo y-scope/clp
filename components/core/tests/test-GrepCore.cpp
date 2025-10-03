@@ -68,6 +68,30 @@ constexpr uint32_t cHasNumId{111};
  */
 class clp::GrepCoreTest {
 public:
+    static auto normalize_interpretations(set<QueryInterpretation> const& interpretations)
+            -> set<QueryInterpretation> {
+        return GrepCore::normalize_interpretations(interpretations);
+    }
+
+    template <
+            LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
+            VariableDictionaryReaderReq VariableDictionaryReaderType
+    >
+    static auto generate_schema_sub_queries(
+            std::set<QueryInterpretation> const& interpretations,
+            LogTypeDictionaryReaderType const& logtype_dict,
+            VariableDictionaryReaderType const& var_dict,
+            std::vector<SubQuery>& sub_queries
+    ) -> void {
+        GrepCore::generate_schema_sub_queries(
+                interpretations,
+                logtype_dict,
+                var_dict,
+                false,
+                sub_queries
+        );
+    }
+
     static auto get_wildcard_encodable_positions(QueryInterpretation const& interpretation)
             -> vector<size_t> {
         return GrepCore::get_wildcard_encodable_positions(interpretation);
@@ -96,25 +120,6 @@ public:
             SubQuery& sub_query
     ) -> bool {
         return GrepCore::process_schema_var_token(var_token, var_dict, false, true, sub_query);
-    }
-
-    template <
-            LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
-            VariableDictionaryReaderReq VariableDictionaryReaderType
-    >
-    static void generate_schema_sub_queries(
-            std::set<QueryInterpretation> const& interpretations,
-            LogTypeDictionaryReaderType const& logtype_dict,
-            VariableDictionaryReaderType const& var_dict,
-            std::vector<SubQuery>& sub_queries
-    ) {
-        GrepCore::generate_schema_sub_queries(
-                interpretations,
-                logtype_dict,
-                var_dict,
-                false,
-                sub_queries
-        );
     }
 };
 
@@ -894,10 +899,13 @@ TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]
     for (auto const& raw_interpretation : raw_interpretations) {
         interpretations.insert(make_query_interpretation(raw_interpretation));
     }
+    auto const normalized_interpretations{
+            clp::GrepCoreTest::normalize_interpretations(interpretations)
+    };
 
     vector<SubQuery> sub_queries;
     clp::GrepCoreTest::generate_schema_sub_queries(
-            interpretations,
+            normalized_interpretations,
             logtype_dict,
             var_dict,
             sub_queries

@@ -141,6 +141,19 @@ private:
     );
 
     /**
+     * Normalizes a set of interpretations by collapsing consecutive greedy wildcards ('*') within
+     * each token.
+     *
+     * Consecutive wildcards that span across the boundary of tokens are preserved.
+     *
+     * @param interpretations The original set of `QueryInterpretation`s to normalize.
+     * @return The normalized set of `QueryInterpretation`s.
+     */
+    static auto normalize_interpretations(
+            std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> const& interpretations
+    ) -> std::set<log_surgeon::wildcard_query_parser::QueryInterpretation>;
+
+    /**
      * Compare all log-surgeon interpretations against the dictionaries to determine the sub queries
      * to search for within the archive.
      *
@@ -183,14 +196,14 @@ private:
             LogTypeDictionaryReaderReq LogTypeDictionaryReaderType,
             VariableDictionaryReaderReq VariableDictionaryReaderType
     >
-    static void generate_schema_sub_queries(
+    static auto generate_schema_sub_queries(
             std::set<log_surgeon::wildcard_query_parser::QueryInterpretation> const&
                     interpretations,
             LogTypeDictionaryReaderType const& logtype_dict,
             VariableDictionaryReaderType const& var_dict,
             bool ignore_case,
             std::vector<SubQuery>& sub_queries
-    );
+    ) -> void;
 
     /**
      * Scans the interpretation and returns the indices of all encodable wildcard variables.
@@ -353,8 +366,9 @@ std::optional<Query> GrepCore::process_raw_query(
         // TODO: Optimize such that interpretations are only generated once per schema.
         log_surgeon::wildcard_query_parser::Query const query{search_string};
         auto const interpretations{query.get_all_multi_token_interpretations(lexer)};
+        auto const normalized_interpretations{normalize_interpretations(interpretations)};
         generate_schema_sub_queries(
-                interpretations,
+                normalized_interpretations,
                 logtype_dict,
                 var_dict,
                 ignore_case,

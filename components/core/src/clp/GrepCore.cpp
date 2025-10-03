@@ -1,6 +1,7 @@
 #include "GrepCore.hpp"
 
 #include <cstddef>
+#include <set>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -22,6 +23,8 @@ using log_surgeon::SymbolId::TokenInt;
 using log_surgeon::wildcard_query_parser::QueryInterpretation;
 using log_surgeon::wildcard_query_parser::StaticQueryToken;
 using log_surgeon::wildcard_query_parser::VariableQueryToken;
+using std::holds_alternative;
+using std::set;
 using std::string;
 using std::unordered_map;
 using std::vector;
@@ -147,6 +150,41 @@ bool GrepCore::get_bounds_of_next_potential_var(
     return (value_length != begin_pos);
 }
 
+auto GrepCore::normalize_interpretations(set<QueryInterpretation> const& interpretations)
+        -> set<QueryInterpretation> {
+    set<QueryInterpretation> normalized_interpretations;
+    for (auto const& interpretation : interpretations) {
+        QueryInterpretation normalized_interpretation;
+        for (auto const& token : interpretation.get_logtype()) {
+            auto const& src_string{
+                    holds_alternative<VariableQueryToken>(token)
+                    ? std::get<VariableQueryToken>(token).get_query_substring()
+                    : std::get<StaticQueryToken>(token).get_query_substring()
+            };
+            string normalized_string;
+            normalized_string.reserve(src_string.size());
+            for (auto const c : src_string) {
+                if (c != '*' || normalized_string.empty() || normalized_string.back() != '*') {
+                    normalized_string += c;
+                }
+            }
+
+            if (holds_alternative<VariableQueryToken>(token)) {
+                auto const& variable_token{std::get<VariableQueryToken>(token)};
+                normalized_interpretation.append_variable_token(
+                        variable_token.get_variable_type(),
+                        normalized_string,
+                        variable_token.get_contains_wildcard()
+                );
+            } else {
+                normalized_interpretation.append_static_token(normalized_string);
+            }
+        }
+        normalized_interpretations.insert(normalized_interpretation);
+    }
+    return normalized_interpretations;
+}
+
 auto GrepCore::get_wildcard_encodable_positions(QueryInterpretation const& interpretation)
         -> vector<size_t> {
     auto const logtype{interpretation.get_logtype()};
@@ -155,7 +193,7 @@ auto GrepCore::get_wildcard_encodable_positions(QueryInterpretation const& inter
 
     for (size_t i{0}; i < logtype.size(); ++i) {
         auto const& token{logtype[i]};
-        if (std::holds_alternative<VariableQueryToken>(token)) {
+        if (holds_alternative<VariableQueryToken>(token)) {
             auto const& var_token{std::get<VariableQueryToken>(token)};
             auto const var_type{static_cast<log_surgeon::SymbolId>(var_token.get_variable_type())};
             bool const is_int{TokenInt == var_type};
@@ -178,7 +216,7 @@ auto GrepCore::generate_logtype_string(
     size_t logtype_string_size{0};
     auto const logtype{interpretation.get_logtype()};
     for (auto const& token : logtype) {
-        if (std::holds_alternative<StaticQueryToken>(token)) {
+        if (holds_alternative<StaticQueryToken>(token)) {
             auto const& static_token{std::get<StaticQueryToken>(token)};
             logtype_string_size += static_token.get_query_substring().size();
         } else {
@@ -190,7 +228,7 @@ auto GrepCore::generate_logtype_string(
     // Generate `logtype_string`.
     for (size_t i{0}; i < logtype.size(); ++i) {
         auto const& token{logtype[i]};
-        if (std::holds_alternative<StaticQueryToken>(token)) {
+        if (holds_alternative<StaticQueryToken>(token)) {
             logtype_string += std::get<StaticQueryToken>(token).get_query_substring();
             continue;
         }
