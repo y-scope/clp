@@ -1,6 +1,7 @@
 import {
     useCallback,
     useEffect,
+    useState,
 } from "react";
 
 import {
@@ -37,6 +38,8 @@ const SqlEditor = (props: SqlEditorProps) => {
     const {disabled, onEditorReady, className, ...editorProps} = props;
     const monacoEditor = useMonaco();
     const {token} = theme.useToken();
+    const [isFocused, setIsFocused] = useState(false);
+    const [isHovered, setIsHovered] = useState(false);
 
     const handleEditorDidMount = useCallback((
         editor: SqlEditorType,
@@ -76,16 +79,45 @@ const SqlEditor = (props: SqlEditorProps) => {
         token,
     ]);
 
+    let borderColor = token.colorBorder;
+    if (isFocused) {
+        borderColor = token.colorPrimary;
+    } else if (isHovered) {
+        borderColor = token.colorPrimaryHover;
+    }
+
+    const boxShadow = isFocused ?
+        "0 0 0 2px rgba(5, 172, 255, 0.06)" :
+        "none";
+
+    const pointerEvents = disabled ?
+        "none" :
+        "auto";
+
     return (
         <div
             className={[styles["editor"],
                 className].filter(Boolean).join(" ")}
             style={{
-                border: `1px solid ${token.colorBorder}`,
+                border: `1px solid ${borderColor}`,
                 borderRadius: token.borderRadius,
-                pointerEvents: disabled ?
-                    "none" :
-                    "auto",
+                boxShadow: boxShadow,
+                pointerEvents: pointerEvents,
+            }}
+            tabIndex={disabled ?
+                -1 :
+                0}
+            onBlur={() => {
+                setIsFocused(false);
+            }}
+            onFocus={() => {
+                setIsFocused(true);
+            }}
+            onMouseEnter={() => {
+                setIsHovered(true);
+            }}
+            onMouseLeave={() => {
+                setIsHovered(false);
             }}
         >
             <Editor
