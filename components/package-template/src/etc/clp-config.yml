@@ -71,6 +71,7 @@
 # clp_mcp_server:
 #   host: "localhost"
 #   port: 8000
+#
 ## Where archives should be output to
 #archive_output:
 #  storage:

@@ -1,10 +1,7 @@
 import os
 import pathlib
 from enum import auto
-from typing import ClassVar, Any, Literal, Optional, Set, Union
-
-from dotenv import dotenv_values
-
+from typing import Any, ClassVar, Literal, Optional, Set, Union
 
 from pydantic import (
     BaseModel,
@@ -1090,14 +1087,14 @@ class CLPConfig(BaseModel):
             return DeploymentType.FULL
 
     def dump_to_primitive_dict(self):
-        custom_serialized_fields = (
+        custom_serialized_fields = {
             "database",
             "queue",
             "redis",
             "logs_input",
             "archive_output",
             "stream_output",
-        )
+        }
         d = self.model_dump(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
             d[key] = getattr(self, key).dump_to_primitive_dict()
@@ -1164,7 +1161,6 @@ class WorkerConfig(BaseModel):
         d["stream_output"] = self.stream_output.dump_to_primitive_dict()
 
         return d
-
 
 
 def _validate_directory(value: Any):
