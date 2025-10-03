@@ -160,8 +160,9 @@ public:
 
     [[nodiscard]] auto get_value(dictionary_id_t const id) const -> string const& {
         static string const cEmpty{};
-        if (m_storage.contains(id)) {
-            return m_storage.at(id).get_value();
+        auto const it{m_storage.find(id)};
+        if (m_storage.end() != it) {
+            return it->second.get_value();
         }
         return cEmpty;
     }
