@@ -2,6 +2,7 @@
 
 #include <array>
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -108,6 +109,7 @@ auto TimestampParser::parse_timestamp(
     int parsed_year{1970};
     int parsed_month{1};
     int parsed_day{1};
+    std::optional<int> day_of_week_idx;
 
     bool date_type_representation{false};
     bool number_type_representation{false};
@@ -273,7 +275,7 @@ auto TimestampParser::parse_timestamp(
                         cAbbreviatedDaysOfWeek
                 ))};
                 timestamp_idx += cAbbreviatedDaysOfWeek[day_idx].length();
-                // Weekday is not necessary for determining absolute timestamp, so we discard it.
+                day_of_week_idx = static_cast<int>(day_idx);
                 date_type_representation = true;
                 break;
             }
@@ -332,6 +334,19 @@ auto TimestampParser::parse_timestamp(
     auto time_point = date::sys_days(year_month_day) + std::chrono::hours(0)
                       + std::chrono::minutes(0) + std::chrono::seconds(0)
                       + std::chrono::nanoseconds(0);
+
+    if (day_of_week_idx.has_value()) {
+        auto const actual_day_of_week_idx{
+                (date::year_month_weekday(date::sys_days(year_month_day))
+                         .weekday_indexed()
+                         .weekday()
+                 - date::Sunday)
+                        .count()
+        };
+        if (actual_day_of_week_idx != day_of_week_idx.value()) {
+            return TimestampParserErrorCodeEnum::InvalidDate;
+        }
+    }
 
     epochtime_t epoch_nanoseconds{
             std::chrono::duration_cast<std::chrono::nanoseconds>(time_point.time_since_epoch())
