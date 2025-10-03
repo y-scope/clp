@@ -158,8 +158,8 @@ auto GrepCore::normalize_interpretations(set<QueryInterpretation> const& interpr
         for (auto const& token : interpretation.get_logtype()) {
             auto const& src_string{
                     holds_alternative<VariableQueryToken>(token)
-                    ? std::get<VariableQueryToken>(token).get_query_substring()
-                    : std::get<StaticQueryToken>(token).get_query_substring()
+                            ? std::get<VariableQueryToken>(token).get_query_substring()
+                            : std::get<StaticQueryToken>(token).get_query_substring()
             };
             string normalized_string;
             normalized_string.reserve(src_string.size());
