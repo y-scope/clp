@@ -826,7 +826,7 @@ TEST_CASE("process_schema_greedy_wildcard_token ", "[dfa_search]") {
 
 // Tests: `generate_schema_sub_queries`
 TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
-    FakeVarDict const var_dict{make_var_dict({pair{0, "10a"}, pair{1, "1a3"}})};
+    FakeVarDict const var_dict{make_var_dict({pair{0, "1a3"}, pair{1, "10a"}, pair{2, "10b"}})};
     FakeLogTypeDict const logtype_dict{make_logtype_dict(
             {{"text ", 'i', " ", 'i', " ", 'f'},
              {"text ", 'i', " ", 'd', " ", 'f'},
@@ -861,21 +861,22 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
             sub_queries
     );
 
-    using Var = tuple<bool, bool, unordered_set<size_t>>;
     REQUIRE(6 == sub_queries.size());
     size_t i{0};
+    tuple<bool, bool, unordered_set<size_t>> const wild_int{false, true, {}};
+    tuple<bool, bool, unordered_set<size_t>> const wild_has_num{true, false, {1LL, 2LL}};
     // NOTE: sub queries 0 and 2 are a duplicate of 3 and 5 because we use a vector instead of a set
     // when storing `m_sub_queries` in `Query`.
-    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}, Var{true, true, {0}}}, {1});
-    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}}, {0});
-    check_sub_query(i++, sub_queries, false, {Var{false, true, {}}, Var{true, true, {0}}}, {2, 3});
-    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}, Var{true, true, {0}}}, {1});
-    check_sub_query(i++, sub_queries, false, {Var{false, true, {}}, Var{true, true, {0}}}, {2, 3});
-    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}}, {5});
+    check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
+    check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
+    check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
+    check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
+    check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
+    check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
 }
 
 TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]") {
-    FakeVarDict const var_dict{make_var_dict({pair{0, "10a"}, pair{1, "1a3"}})};
+    FakeVarDict const var_dict{make_var_dict({pair{0, "1a3"}, pair{1, "10a"}})};
     FakeLogTypeDict const logtype_dict{make_logtype_dict(
             {{"text ", 'i', " ", 'i', " ", 'f'},
              {"text ", 'i', " ", 'd', " ", 'f'},
@@ -913,15 +914,16 @@ TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]
             sub_queries
     );
 
-    using Var = tuple<bool, bool, unordered_set<size_t>>;
+    tuple<bool, bool, unordered_set<size_t>> const wild_int{false, true, {}};
+    tuple<bool, bool, unordered_set<size_t>> const wild_has_num{true, true, {1LL}};
     REQUIRE(6 == sub_queries.size());
     size_t i{0};
-    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}, Var{true, true, {0}}}, {1});
-    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}}, {0});
-    check_sub_query(i++, sub_queries, false, {Var{false, true, {}}, Var{true, true, {0}}}, {2, 3});
-    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}, Var{true, true, {0}}}, {1});
-    check_sub_query(i++, sub_queries, false, {Var{false, true, {}}, Var{true, true, {0}}}, {2, 3});
-    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}}, {5});
+    check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
+    check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
+    check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
+    check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
+    check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
+    check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
 }
 
 // Tests: `process_raw_query`
@@ -930,7 +932,7 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
             {{R"(int:(\d+))"}, {R"(float:(\d+\.\d+))"}, {R"(hasNumber:[^ $]*\d+[^ $]*)"}}
     )};
 
-    FakeVarDict const var_dict{make_var_dict({pair{0, "10a"}, pair{1, "1a3"}})};
+    FakeVarDict const var_dict{make_var_dict({pair{0, "1a3"}, pair{1, "10a"}})};
     FakeLogTypeDict const logtype_dict{make_logtype_dict(
             {{"text ", 'i', " ", 'i', " ", 'f'},
              {"text ", 'i', " ", 'd', " ", 'f'},
@@ -947,17 +949,18 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
     };
 
     REQUIRE(query.has_value());
-
-    using Var = tuple<bool, bool, unordered_set<size_t>>;
     auto const& sub_queries{query.value().get_sub_queries()};
+
+    tuple<bool, bool, unordered_set<size_t>> const wild_int{false, true, {}};
+    tuple<bool, bool, unordered_set<size_t>> const wild_has_num{true, true, {1LL}};
     REQUIRE(6 == sub_queries.size());
     size_t i{0};
-    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}, Var{true, true, {0}}}, {1});
-    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}}, {0});
-    check_sub_query(i++, sub_queries, false, {Var{false, true, {}}, Var{true, true, {0}}}, {2, 3});
-    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}, Var{true, true, {0}}}, {1});
-    check_sub_query(i++, sub_queries, false, {Var{false, true, {}}, Var{true, true, {0}}}, {2, 3});
-    check_sub_query(i++, sub_queries, true, {Var{false, true, {}}}, {5});
+    check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
+    check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
+    check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
+    check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
+    check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
+    check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
 }
 
 // Tests: `get_bounds_of_next_potential_var`
