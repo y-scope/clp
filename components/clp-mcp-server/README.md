@@ -1,79 +1,28 @@
 # CLP MCP Server
 
-A Model Context Protocol (MCP) server for AI to invoke CLP operations.
+The CLP MCP Server is a Python module that provides a [Model Context Protocol][mcp] (MCP) interface
+for AI agents to invoke CLP operations.
 
-## Installation
+## Build/Packaging
 
-Build the package using the taskfile:
+This module is built and packaged as a part of the CLP package.
 
-```bash
-task package
-```
+## Connecting Agent to CLP MCP Server
 
-## Usage
+Any MCP-compatible agent can connect to the CLP MCP server. This guide uses
+[Claude Desktop][claude-desktop] as an example.
 
-The server only supports HTTP transport. Host and port parameters are optional with defaults:
+### Example: Connect Claude Desktop to CLP MCP Server
 
-### Quick Start (using defaults)
+#### Prerequisites
 
-```bash
-cd /path/to/build/clp-package/lib/python3/site-packages
-export PYTHONPATH=/path/to/build/clp-package/lib/python3/site-packages
+* CLP package is running with the MCP server enabled.
+* [Node.js][node-js] is installed.
+* [mcp-remote] is installed and available via `npx`.
 
-bin/clp-mcp-server
-```
+#### Configuration
 
-or
-
-```bash
-cd /path/to/build/clp-package/lib/python3/site-packages
-
-python3 -m clp_mcp_server.clp_mcp_server
-```
-
-This will start the server on `127.0.0.1:8000`.
-
-### Custom Configuration
-
-```bash
-python3 -m clp_mcp_server.clp_mcp_server --host 0.0.0.0 --port 3000
-```
-
-## Available Tools
-
-The server currently provides these tools:
-
-1. **get_server_info**: Get server information
-   * Returns: Server name, version, and capabilities
-
-2. **hello_world**: A simple greeting function
-   * Parameters: username
-   * Returns: A greeting message to username with status information
-
-## Connecting Agent to MCP Server
-
-To connect Claude Desktop to the CLP MCP server, you need to configure the MCP client settings in
-your Claude Desktop configuration.
-
-### Prerequisites
-
-1. **Start the MCP Server**: First, ensure the CLP MCP server is running:
-
-   ```bash
-   python3 -m clp_mcp_server
-   ```
-
-   The server will start on `http://0.0.0.0:8000` by default.
-
-2. **Install mcp-remote**: The configuration uses `mcp-remote` to connect to HTTP-based MCP servers:
-
-   ```bash
-   npm install -g mcp-remote
-   ```
-
-### Configuration
-
-Add the following configuration to your Claude Desktop settings file (`claude-settings.json`):
+Add the following snippet to your Claude Desktop settings file (`claude-settings.json`):
 
 ```json
 {
@@ -89,17 +38,19 @@ Add the following configuration to your Claude Desktop settings file (`claude-se
 }
 ```
 
-### Configuration Details
+* You can replace the server name (`clp`) with any name you prefer.
+* Update the URL (http://0.0.0.0:8000) to the actual host or port where your CLP MCP server is
+  running.
 
-* **Server Name** (`clp`): This is the connector's name that will appear in your Claude 
-conversation interface. You'll see it displayed as an available MCP server that you can toggle 
-on/off during conversations. When enabled, Claude can use CLP’s API tools. By default, all tools 
-are active, but you can toggle them individually depending on your needs.
+For more details on Claude Desktop MCP setup, see the
+[official documentation][claude-desktop-mcp-doc].
 
-* **Command** (`npx`): Uses the Node.js package runner to execute the 'mcp-remote' package. This 
-handles the process of connecting Claude Desktop to HTTP-based MCP servers.
+## Available Tools
 
-* **Arguments**:
-  * `mcp-remote`: The npm package that provides HTTP transport capabilities for MCP connections
-  * `http://0.0.0.0:8000/mcp`: The full URL endpoint where your CLP MCP server is running and
-  listening for requests
+> **Warning:** 🚧 This section is still under construction.
+
+[claude-desktop]: https://claude.ai/download
+[claude-desktop-mcp-doc]: https://modelcontextprotocol.io/docs/develop/connect-local-servers
+[mcp]: https://modelcontextprotocol.io/docs/getting-started/intro
+[mcp-remote]: https://www.npmjs.com/package/mcp-remote
+[node-js]: https://nodejs.org/en
