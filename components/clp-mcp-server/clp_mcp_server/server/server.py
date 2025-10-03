@@ -5,8 +5,8 @@ from typing import Any
 from fastmcp import FastMCP
 
 
-class CLPMCPServerConfig:
-    """Configuration constants for the CLP MCP Server."""
+class ProtocolConstant:
+    """Constants for the CLP MCP Server."""
 
     SERVER_NAME = "clp-mcp-server"
 
@@ -16,7 +16,10 @@ class CLPMCPServerConfig:
 
     @classmethod
     def get_capabilities(cls) -> list[str]:
-        """Returns a list of capabilities (tool names) supported by the server."""
+        """
+        Gets the capabilities of the server.
+        :return: A list of tool names supported by the server.
+        """
         return [cls.TOOL_HELLO_WORLD, cls.TOOL_GET_SERVER_INFO]
 
 
