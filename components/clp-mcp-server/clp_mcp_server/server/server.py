@@ -47,8 +47,8 @@ def create_mcp_server(**settings: Any) -> FastMCP:
         """
         Provides a simple hello world greeting.
 
-        :param name: The name to greet.
-        :return: A greeting message with metadata.
+        :param name:
+        :return: A greeting message to the given `name`.
         """
         return {
             "message": f"Hello World, {name.strip()}!",
