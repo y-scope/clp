@@ -16,7 +16,6 @@ class CLPMCPServerConfig:
 
     @classmethod
     def get_capabilities(cls) -> list[str]:
-        """Get list of available tool capabilities."""
         return [cls.TOOL_HELLO_WORLD, cls.TOOL_GET_SERVER_INFO]
 
 
@@ -28,7 +27,6 @@ def create_mcp_server(**settings: Any) -> FastMCP:
     :return: A configured FastMCP instance ready to run.
     :raise: Any exceptions from FastMCP initialization.
     """
-    # Initialize the MCP server with basic metadata
     mcp = FastMCP(name=CLPMCPServerConfig.SERVER_NAME, **settings)
 
     @mcp.tool()
