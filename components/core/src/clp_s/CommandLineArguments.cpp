@@ -6,7 +6,7 @@
 
 #include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
 #include "../clp/cli_utils.hpp"

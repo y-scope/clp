@@ -115,7 +115,7 @@ def append_docker_options(
 
 
 def append_docker_port_settings_for_host_ips(
-    hostname: str, host_port: int, container_port: int, cmd: [str]
+    hostname: str, host_port: int, container_port: int, cmd: List[str]
 ):
     # Note: We use a set because gethostbyname_ex can return the same IP twice for one hostname
     for ip in set(socket.gethostbyname_ex(hostname)[2]):
@@ -138,7 +138,7 @@ def chown_recursively(
     subprocess.run(chown_cmd, stdout=subprocess.DEVNULL, check=True)
 
 
-def wait_for_container_cmd(container_name: str, cmd_to_run: [str], timeout: int):
+def wait_for_container_cmd(container_name: str, cmd_to_run: List[str], timeout: int):
     container_exec_cmd = ["docker", "exec", container_name]
     cmd = container_exec_cmd + cmd_to_run
 
@@ -261,7 +261,7 @@ def create_db_tables(
         mounts.generated_config_file,
     ]
     append_docker_options(container_start_cmd, necessary_mounts, env_vars)
-    container_start_cmd.append(clp_config.execution_container)
+    container_start_cmd.append(clp_config.container_image_ref)
 
     clp_py_utils_dir = clp_site_packages_dir / "clp_py_utils"
     # fmt: off
@@ -306,7 +306,7 @@ def create_results_cache_indices(
     env_vars = [f"PYTHONPATH={clp_site_packages_dir}"]
     necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
     append_docker_options(container_start_cmd, necessary_mounts, env_vars)
-    container_start_cmd.append(clp_config.execution_container)
+    container_start_cmd.append(clp_config.container_image_ref)
 
     clp_py_utils_dir = clp_site_packages_dir / "clp_py_utils"
     # fmt: off
@@ -596,7 +596,6 @@ def generic_start_scheduler(
     logs_dir.mkdir(parents=True, exist_ok=True)
     container_logs_dir = container_clp_config.logs_directory / component_name
 
-    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     # fmt: off
     container_start_cmd = [
         "docker", "run",
@@ -628,7 +627,7 @@ def generic_start_scheduler(
     ):
         necessary_mounts.append(mounts.input_logs_dir)
     append_docker_options(container_start_cmd, necessary_mounts, env_vars)
-    container_start_cmd.append(clp_config.execution_container)
+    container_start_cmd.append(clp_config.container_image_ref)
 
     # fmt: off
     scheduler_cmd = [
@@ -763,7 +762,7 @@ def generic_start_worker(
         env_vars.extend(aws_env_vars)
 
     append_docker_options(container_start_cmd, necessary_mounts, env_vars)
-    container_start_cmd.append(clp_config.execution_container)
+    container_start_cmd.append(clp_config.container_image_ref)
 
     worker_cmd = [
         "python3",
@@ -970,7 +969,7 @@ def start_webui(
         necessary_mounts.append(mounts.stream_output_dir)
 
     append_docker_options(container_cmd, necessary_mounts, env_vars)
-    container_cmd.append(clp_config.execution_container)
+    container_cmd.append(clp_config.container_image_ref)
 
     node_cmd = [
         str(CONTAINER_CLP_HOME / "bin" / "node-22"),
@@ -1002,7 +1001,6 @@ def start_reducer(
     logs_dir.mkdir(parents=True, exist_ok=True)
     container_logs_dir = container_clp_config.logs_directory / component_name
 
-    clp_site_packages_dir = CONTAINER_CLP_HOME / "lib" / "python3" / "site-packages"
     # fmt: off
     container_start_cmd = [
         "docker", "run",
@@ -1025,7 +1023,7 @@ def start_reducer(
         mounts.generated_config_file,
     ]
     append_docker_options(container_start_cmd, necessary_mounts, env_vars)
-    container_start_cmd.append(clp_config.execution_container)
+    container_start_cmd.append(clp_config.container_image_ref)
 
     # fmt: off
     reducer_cmd = [
@@ -1103,7 +1101,7 @@ def start_garbage_collector(
         env_vars.extend(aws_env_vars)
 
     append_docker_options(container_start_cmd, necessary_mounts, env_vars)
-    container_start_cmd.append(clp_config.execution_container)
+    container_start_cmd.append(clp_config.container_image_ref)
 
     # fmt: off
     garbage_collector_cmd = [

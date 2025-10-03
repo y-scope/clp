@@ -10,6 +10,11 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
     environment.
   * It should be possible to build a package for a different environment, it just requires a some
     extra configuration.
+* [Docker]
+  * `containerd.io` >= 1.7.18
+  * `docker-buildx-plugin` >= 0.15.1
+  * `docker-ce` >= 27.0.3
+  * `docker-ce-cli` >= 27.0.3
 * Python 3.9 or newer
 * python3-dev
 * python3-venv (for the version of Python installed)
@@ -80,6 +85,7 @@ task docker-images:package
 
 This will create a Docker image named `clp-package:dev`.
 
+[Docker]: https://docs.docker.com/engine/install/
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
 [y-scope/clp#1352]: https://github.com/y-scope/clp/issues/1352

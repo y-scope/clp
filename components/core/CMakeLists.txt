@@ -122,13 +122,13 @@ if(PROJECT_IS_TOP_LEVEL)
     # Include dependency settings if the project isn't being included as a subproject.
     # NOTE: We mark the file optional since it's not required if the user happens to have the
     # dependencies installed already.
-    set(CLP_CORE_DEPS_DIR "${CMAKE_SOURCE_DIR}/../../build/deps/cpp")
-    include("${CLP_CORE_DEPS_DIR}/cmake-settings/all-core.cmake"
+    set(CLP_DEPS_CPP_DIR "${CMAKE_SOURCE_DIR}/../../build/deps/cpp")
+    include("${CLP_DEPS_CPP_DIR}/cmake-settings/all-core.cmake"
             OPTIONAL
-            RESULT_VARIABLE CLP_DEPS_SETTINGS_FILE_PATH
+            RESULT_VARIABLE CLP_DEPS_CPP_CORE_SETTINGS_FILE_PATH
     )
 
-    if(NOT CLP_DEPS_SETTINGS_FILE_PATH STREQUAL "NOTFOUND")
+    if(NOT CLP_DEPS_CPP_CORE_SETTINGS_FILE_PATH STREQUAL "NOTFOUND")
         # Set CMP0144 since our minimum required CMake version is less than 3.27.
         if(POLICY "CMP0144")
             cmake_policy(SET "CMP0144" "NEW")

@@ -6,7 +6,6 @@ import re
 import secrets
 import socket
 import subprocess
-import typing
 import uuid
 from enum import auto
 from typing import Dict, List, Optional, Tuple
@@ -87,16 +86,16 @@ class DockerMount:
 
 class CLPDockerMounts:
     def __init__(self, clp_home: pathlib.Path, docker_clp_home: pathlib.Path):
-        self.input_logs_dir: typing.Optional[DockerMount] = None
-        self.clp_home: typing.Optional[DockerMount] = DockerMount(
+        self.input_logs_dir: Optional[DockerMount] = None
+        self.clp_home: Optional[DockerMount] = DockerMount(
             DockerMountType.BIND, clp_home, docker_clp_home
         )
-        self.data_dir: typing.Optional[DockerMount] = None
-        self.logs_dir: typing.Optional[DockerMount] = None
-        self.archives_output_dir: typing.Optional[DockerMount] = None
-        self.stream_output_dir: typing.Optional[DockerMount] = None
-        self.aws_config_dir: typing.Optional[DockerMount] = None
-        self.generated_config_file: typing.Optional[DockerMount] = None
+        self.data_dir: Optional[DockerMount] = None
+        self.logs_dir: Optional[DockerMount] = None
+        self.archives_output_dir: Optional[DockerMount] = None
+        self.stream_output_dir: Optional[DockerMount] = None
+        self.aws_config_dir: Optional[DockerMount] = None
+        self.generated_config_file: Optional[DockerMount] = None
 
 
 def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
@@ -236,7 +235,7 @@ def generate_container_config(
     :param clp_home:
     :return: The container config and the mounts.
     """
-    container_clp_config = clp_config.copy(deep=True)
+    container_clp_config = clp_config.model_copy(deep=True)
 
     docker_mounts = CLPDockerMounts(clp_home, CONTAINER_CLP_HOME)
 
@@ -312,8 +311,8 @@ def generate_container_config(
 
 def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
     worker_config = WorkerConfig()
-    worker_config.package = clp_config.package.copy(deep=True)
-    worker_config.archive_output = clp_config.archive_output.copy(deep=True)
+    worker_config.package = clp_config.package.model_copy(deep=True)
+    worker_config.archive_output = clp_config.archive_output.model_copy(deep=True)
     worker_config.data_directory = clp_config.data_directory
 
     worker_config.stream_output = clp_config.stream_output
@@ -419,7 +418,7 @@ def load_config_file(
         if raw_clp_config is None:
             clp_config = CLPConfig()
         else:
-            clp_config = CLPConfig.parse_obj(raw_clp_config)
+            clp_config = CLPConfig.model_validate(raw_clp_config)
     else:
         if config_file_path != default_config_file_path:
             raise ValueError(f"Config file '{config_file_path}' does not exist.")
@@ -427,7 +426,7 @@ def load_config_file(
         clp_config = CLPConfig()
 
     clp_config.make_config_paths_absolute(clp_home)
-    clp_config.load_execution_container_name()
+    clp_config.load_container_image_ref()
 
     validate_path_for_container_mount(clp_config.data_directory)
     validate_path_for_container_mount(clp_config.logs_directory)
