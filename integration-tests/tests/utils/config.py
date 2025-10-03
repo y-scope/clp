@@ -74,10 +74,6 @@ class PackageConfig:
 class IntegrationTestConfig:
     """The general configuration for integration tests."""
 
-    #:
-    core_config: CoreConfig
-    #:
-    package_config: PackageConfig
     #: Root directory for integration tests output.
     test_root_dir: Path
     logs_download_dir_init: InitVar[Path | None] = None

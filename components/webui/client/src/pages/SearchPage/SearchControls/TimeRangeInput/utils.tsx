@@ -1,8 +1,19 @@
-import dayjs from "dayjs";
+import dayjs, {Dayjs} from "dayjs";
 import utc from "dayjs/plugin/utc";
+
+import useSearchStore from "../../SearchState";
+import {fetchAllTimeRange} from "./sql";
 
 
 dayjs.extend(utc);
+
+
+const DEFAULT_TIME_RANGE: [Dayjs, Dayjs] = [
+    dayjs(0).utc(),
+    dayjs().utc()
+        .add(1, "year"),
+];
+
 
 /**
  * Time range options.
@@ -21,27 +32,30 @@ enum TIME_RANGE_OPTION {
     CUSTOM = "Custom",
 }
 
-const DEFAULT_TIME_RANGE = TIME_RANGE_OPTION.ALL_TIME;
+const DEFAULT_TIME_RANGE_OPTION = TIME_RANGE_OPTION.ALL_TIME;
 
-/* eslint-disable no-magic-numbers */
-const TIME_RANGE_OPTION_DAYJS_MAP: Record<TIME_RANGE_OPTION, () => [dayjs.Dayjs, dayjs.Dayjs]> = {
-    [TIME_RANGE_OPTION.LAST_15_MINUTES]: () => [
+/* eslint-disable no-magic-numbers, @typescript-eslint/require-await */
+const TIME_RANGE_OPTION_DAYJS_MAP: Record<
+    TIME_RANGE_OPTION,
+    () => Promise<[dayjs.Dayjs, dayjs.Dayjs]>
+> = {
+    [TIME_RANGE_OPTION.LAST_15_MINUTES]: async () => [
         dayjs().utc()
             .subtract(15, "minute"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.LAST_HOUR]: () => [
+    [TIME_RANGE_OPTION.LAST_HOUR]: async () => [
         dayjs().utc()
             .subtract(1, "hour"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.TODAY]: () => [
+    [TIME_RANGE_OPTION.TODAY]: async () => [
         dayjs().utc()
             .startOf("day"),
         dayjs().utc()
             .endOf("day"),
     ],
-    [TIME_RANGE_OPTION.YESTERDAY]: () => [
+    [TIME_RANGE_OPTION.YESTERDAY]: async () => [
         dayjs().utc()
             .subtract(1, "day")
             .startOf("day"),
@@ -49,44 +63,44 @@ const TIME_RANGE_OPTION_DAYJS_MAP: Record<TIME_RANGE_OPTION, () => [dayjs.Dayjs,
             .subtract(1, "day")
             .endOf("day"),
     ],
-    [TIME_RANGE_OPTION.LAST_7_DAYS]: () => [
+    [TIME_RANGE_OPTION.LAST_7_DAYS]: async () => [
         dayjs().utc()
             .subtract(7, "day"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.LAST_30_DAYS]: () => [
+    [TIME_RANGE_OPTION.LAST_30_DAYS]: async () => [
         dayjs().utc()
             .subtract(30, "day"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.LAST_12_MONTHS]: () => [
+    [TIME_RANGE_OPTION.LAST_12_MONTHS]: async () => [
         dayjs().utc()
             .subtract(12, "month"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.MONTH_TO_DATE]: () => [
+    [TIME_RANGE_OPTION.MONTH_TO_DATE]: async () => [
         dayjs().utc()
             .startOf("month"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.YEAR_TO_DATE]: () => [
+    [TIME_RANGE_OPTION.YEAR_TO_DATE]: async () => [
         dayjs().utc()
             .startOf("year"),
         dayjs().utc(),
     ],
-    [TIME_RANGE_OPTION.ALL_TIME]: () => [
-        dayjs(0).utc(),
-        dayjs().utc()
-            .add(1, "year"),
-    ],
+    [TIME_RANGE_OPTION.ALL_TIME]: async () => {
+        const {selectDataset} = useSearchStore.getState();
+        return fetchAllTimeRange(selectDataset);
+    },
 
     // Custom option is just a placeholder for typing purposes, its DayJs values should not
     // be used.
-    [TIME_RANGE_OPTION.CUSTOM]: () => [
+    [TIME_RANGE_OPTION.CUSTOM]: async () => [
         dayjs().utc(),
         dayjs().utc(),
     ],
 };
+/* eslint-enable no-magic-numbers, @typescript-eslint/require-await */
 
 
 /**
@@ -111,6 +125,7 @@ const isValidDateRange = (
 
 export {
     DEFAULT_TIME_RANGE,
+    DEFAULT_TIME_RANGE_OPTION,
     isValidDateRange,
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
