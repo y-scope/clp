@@ -13,6 +13,7 @@
 
 namespace clp_s {
 size_t Int64ColumnWriter::add_value(ParsedMessage::variable_t& value) {
+    std::cerr << fmt::format("[clpsls] int column value: '{}'\n", std::get<int64_t>(value));
     m_values.push_back(std::get<int64_t>(value));
     return sizeof(int64_t);
 }
@@ -112,7 +113,22 @@ void ClpStringColumnWriter::store(ZstdCompressor& compressor) {
     compressor.write(reinterpret_cast<char const*>(m_encoded_vars.data()), encoded_vars_size);
 }
 
+auto LogTypeColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_t {
+    auto logtype_dict_entry{std::get<clp_s::LogTypeDictionaryEntry>(value)};
+    clp::logtype_dictionary_id_t id{};
+    m_log_dict->add_entry(logtype_dict_entry, id);
+    m_logtypes.push_back(static_cast<encoded_log_dict_id_t>(id));
+    std::cerr << fmt::format("[clpsls] logtype column value: '{}'\n", logtype_dict_entry.get_value());
+    return sizeof(int64_t);
+}
+
+auto LogTypeColumnWriter::store(ZstdCompressor& compressor) -> void {
+    size_t logtypes_size = m_logtypes.size() * sizeof(int64_t);
+    compressor.write(reinterpret_cast<char const*>(m_logtypes.data()), logtypes_size);
+}
+
 size_t VariableStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
+    std::cerr << fmt::format("[clpsls] varstring column value: '{}'\n", std::get<std::string>(value));
     clp::variable_dictionary_id_t id{};
     m_var_dict->add_entry(std::get<std::string>(value), id);
     m_var_dict_ids.push_back(id);

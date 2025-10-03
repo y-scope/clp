@@ -3,6 +3,8 @@
 #include <filesystem>
 #include <string_view>
 
+#include <fmt/core.h>
+
 #include "archive_constants.hpp"
 #include "ArchiveReaderAdaptor.hpp"
 #include "InputConfig.hpp"
@@ -203,8 +205,12 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         case NodeType::ClpString:
             column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
             break;
+        case NodeType::LogType:
+            column_reader = new LogTypeColumnReader(column_id, m_log_dict);
+            break;
+        case NodeType::FullMatch:
         case NodeType::VarString:
-            column_reader = new VariableStringColumnReader(column_id, m_var_dict);
+            column_reader = new VariableStringColumnReader(column_id, m_var_dict, node.get_type());
             break;
         case NodeType::Boolean:
             column_reader = new BooleanColumnReader(column_id);
@@ -220,6 +226,8 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
         case NodeType::NullValue:
         case NodeType::Object:
         case NodeType::StructuredArray:
+        case NodeType::LogMessage:
+        case NodeType::CaptureVar:
         case NodeType::Unknown:
             break;
     }
@@ -238,11 +246,22 @@ void ArchiveReader::append_unordered_reader_columns(
 ) {
     size_t object_begin_pos = reader.get_column_size();
     for (int32_t column_id : schema_ids) {
+        std::cerr << fmt::format(
+                "[clpsls] append unordered root node: {} col: {}\n",
+                mst_subtree_root_node_id,
+                column_id
+        );
         if (Schema::schema_entry_is_unordered_object(column_id)) {
             continue;
         }
         BaseColumnReader* column_reader = nullptr;
         auto const& node = m_schema_tree->get_node(column_id);
+        std::cerr << fmt::format(
+                "[clpsls] append unordered root node: {} col: {} type: {}\n",
+                mst_subtree_root_node_id,
+                column_id,
+                static_cast<uint8_t>(node.get_type())
+        );
         switch (node.get_type()) {
             case NodeType::Integer:
                 column_reader = new Int64ColumnReader(column_id);
@@ -262,8 +281,13 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::ClpString:
                 column_reader = new ClpStringColumnReader(column_id, m_var_dict, m_log_dict);
                 break;
+            case NodeType::LogType:
+                column_reader = new LogTypeColumnReader(column_id, m_log_dict);
+                break;
+            case NodeType::FullMatch:
             case NodeType::VarString:
-                column_reader = new VariableStringColumnReader(column_id, m_var_dict);
+                column_reader
+                        = new VariableStringColumnReader(column_id, m_var_dict, node.get_type());
                 break;
             case NodeType::Boolean:
                 column_reader = new BooleanColumnReader(column_id);
@@ -277,6 +301,8 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::Object:
             case NodeType::Metadata:
             case NodeType::NullValue:
+            case NodeType::LogMessage:
+            case NodeType::CaptureVar:
             case NodeType::Unknown:
                 break;
         }

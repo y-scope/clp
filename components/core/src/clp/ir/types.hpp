@@ -12,6 +12,7 @@ enum class VariablePlaceholder : char {
     Integer = 0x11,
     Dictionary = 0x12,
     Float = 0x13,
+    Schema = 0x14,
     Escape = '\\',
 };
 }  // namespace clp::ir

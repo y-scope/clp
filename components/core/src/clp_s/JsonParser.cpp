@@ -15,8 +15,19 @@
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <curl/curl.h>
+#include <fmt/core.h>
+#include <log_surgeon/Constants.hpp>
+#include <log_surgeon/LogEvent.hpp>
+#include <log_surgeon/Token.hpp>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
+#include <ystdlib/error_handling/Result.hpp>
+
+#include "clp_s/DictionaryEntry.hpp"
+#include "clp_s/ParsedMessage.hpp"
+#include "clp_s/SchemaTree.hpp"
+#include <clp/EncodedVariableInterpreter.hpp>
+#include <clp_s/Defs.hpp>
 
 #include "../clp/ffi/ir_stream/decoding_methods.hpp"
 #include "../clp/ffi/ir_stream/Deserializer.hpp"
@@ -34,7 +45,6 @@
 #include "FloatFormatEncoding.hpp"
 #include "InputConfig.hpp"
 #include "JsonFileIterator.hpp"
-#include "JsonParser.hpp"
 #include "search/ast/ColumnDescriptor.hpp"
 #include "search/ast/SearchUtils.hpp"
 
@@ -145,7 +155,8 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_record_log_order(option.record_log_order),
           m_retain_float_format(option.retain_float_format),
           m_input_paths(option.input_paths),
-          m_network_auth(option.network_auth) {
+          m_network_auth(option.network_auth),
+          m_log_surgeon_parser(log_surgeon::BufferParser(option.log_surgeon_schema_file_path)) {
     if (false == m_timestamp_key.empty()) {
         if (false
             == clp_s::search::ast::tokenize_column_descriptor(
@@ -304,6 +315,7 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
             case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
+                    // TODO clpsls: check if any delim from schema exists
                     node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
                 } else {
@@ -409,6 +421,7 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
             case simdjson::ondemand::json_type::string: {
                 std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
+                    // TODO clpsls: check if any delim from schema exists
                     node_id = m_archive_writer->add_node(parent_node_id, NodeType::ClpString, "");
                 } else {
                     node_id = m_archive_writer->add_node(parent_node_id, NodeType::VarString, "");
@@ -456,6 +469,7 @@ void JsonParser::parse_line(
             line = cur_field.value();
         }
 
+        std::cerr << fmt::format("[clpsls] handling line, top node: {}\n", node_id_stack.top());
         switch (line.type()) {
             case simdjson::ondemand::json_type::object: {
                 node_id = m_archive_writer
@@ -572,17 +586,32 @@ void JsonParser::parse_line(
                             encoding_id
                     );
                     m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
+                    m_current_schema.insert_ordered(node_id);
                 } else if (value.find(' ') != std::string::npos) {
-                    node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
-                    m_current_parsed_message.add_value(node_id, value);
+                    // TODO clpsls: check if any delim from schema exists
+                    // Doesn't seem possible to get through the parser atm (could store
+                    // separately...  after parsing schema file).
+
+                    node_id = m_archive_writer->add_node(
+                            node_id_stack.top(),
+                            NodeType::LogMessage,
+                            cur_key
+                    );
+                    auto const parse_result{parse_log_message(node_id, value)};
+                    if (parse_result.has_error()) {
+                        // TODO clpsls: if parsing fails we could try to treat the string as a
+                        // VarString
+                        throw(std::runtime_error(
+                                "parse_log_message failed with: " + parse_result.error().message()
+                        ));
+                    }
+                    m_current_schema.insert_unordered(node_id);
                 } else {
                     node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::VarString, cur_key);
                     m_current_parsed_message.add_value(node_id, value);
+                    m_current_schema.insert_ordered(node_id);
                 }
-
-                m_current_schema.insert_ordered(node_id);
                 break;
             }
             case simdjson::ondemand::json_type::boolean: {
@@ -630,6 +659,7 @@ bool JsonParser::ingest() {
 
         auto const [nested_readers, file_type] = try_deduce_reader_type(reader);
         bool ingestion_successful{};
+        // TODO clpsls: add path for plain text file
         switch (file_type) {
             case FileType::Json:
                 ingestion_successful = ingest_json(nested_readers.back(), path, archive_creator_id);
@@ -772,6 +802,23 @@ auto JsonParser::ingest_json(
                     bytes_consumed_up_to_prev_record
             );
             return false;
+        }
+
+        {
+            std::cerr << fmt::format(
+                    "[clpsls] ingest json ordered message size: {}\n",
+                    m_current_parsed_message.get_content().size()
+            );
+            for (auto& i : m_current_parsed_message.get_content()) {
+                std::cerr << fmt::format("\tcol {} variant {}\n", i.first, i.second.index());
+            }
+            std::cerr << fmt::format(
+                    "[clpsls] ingest json unordered message size: {}\n",
+                    m_current_parsed_message.get_unordered_content().size()
+            );
+            for (auto& i : m_current_parsed_message.get_unordered_content()) {
+                std::cerr << fmt::format("\tvariant {}\n", i.index());
+            }
         }
 
         int32_t current_schema_id = m_archive_writer->add_schema(m_current_schema);
@@ -1308,5 +1355,205 @@ bool JsonParser::check_and_log_curl_error(
         }
     }
     return false;
+}
+
+// TODO clpsls: variable repetition inside a log message
+// It is possible to find multiple variables of the same type (therefore having the same name)
+// inside the a single log event. This would result in the same node id in the clps schema tree. It
+// is invalid JSON to have the same key in an object meaning we either need to create an array of
+// values for the key or append to the key (variable type name / token name) to make it unique.
+// Storing as an array complicates (named) search as the type of a variable's node would now be
+// T|Array[T] (rather than just T).
+//
+// If it is possible to efficiently search all keys starting with a prefix, we could uniquely store
+// each variable instance by appending to the key name (e.g. a node in a log message with no
+// repetition would be named "var" while nodes in a message with repetition would be named var.0
+// var.1, ..., var.n).
+//
+//
+// TODO clpsls: capture group repetition
+// Similarly, to variable repetition storing the capture group variable node as an array in cases
+// with repetition creates a node type of T|Array[T].
+//
+// TODO clpsls:
+// Storing both the full match and capture groups creates potential duplication of the capture
+// group's substring.
+// One option is to re-write the full match similar to a logtype where the capture groups are
+// replaced with encoded placeholders. The full match would need to be rebuilt using its capture
+// groups to display.
+// Additionally wildcard search must know to avoid searching both the full match and capture groups.
+// Using placeholders allows for rebuilding the variable (and log message) through node
+// position/ordering as the placeholders in the full match enable you to know how many subsequent
+// nodes are captures. Otherwise we either need to specially type the node (e.g. VarString and
+// CaptureString) or do some other indexing/checking.
+//
+// ... Storing as a separate type seems the most sensible.
+// There is a possible trade-off where de-duplicating the capture group string using placeholders in
+// the full match node improves compression ration, but slows down search in certain cases as you
+// maybe need to rebuild the full match's value.
+
+// TODO clpsls: probably want string view API to ls
+auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view)
+        -> ystdlib::error_handling::Result<void> {
+    m_log_surgeon_parser.reset();
+    size_t offset{};
+    // TODO clpsls: add string_view api to log surgeon
+    std::string str{view};
+    if (log_surgeon::ErrorCode::Success
+        != m_log_surgeon_parser.parse_next_event(str.data(), str.size(), offset, true))
+    {
+        return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+    }
+
+    auto msg_start{m_current_schema.start_unordered_object(NodeType::LogMessage)};
+
+    auto const& log_parser{m_log_surgeon_parser.get_log_parser()};
+    auto const& event{log_parser.get_log_event_view()};
+    auto const& log_buf = event.get_log_output_buffer();
+
+    clp_s::LogTypeDictionaryEntry logtype_dict_entry{};
+    logtype_dict_entry.reserve_constant_length(view.size());
+    auto starting_token_idx{log_buf->has_timestamp() ? 0 : 1};
+    for (auto token_idx{starting_token_idx}; token_idx < log_buf->pos(); token_idx++) {
+        auto token_view{log_buf->get_token(token_idx)};
+        auto const token_type{token_view.m_type_ids_ptr->at(0)};
+        // TODO clpsls: if we've seen the token_name already we either need to append to it or store
+        // as an array...
+        auto const token_name{log_parser.get_id_symbol(token_type)};
+
+        // handle delim before token (TODO clpsls: fix/hide this in log surgeon)
+        if (log_buf->has_delimiters() && (log_buf->has_timestamp() || token_idx > 1)
+            && token_type != static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString)
+            && token_type != static_cast<int>(log_surgeon::SymbolId::TokenNewline))
+        {
+            logtype_dict_entry.encode_constant(token_view.get_delimiter());
+            if (token_view.m_start_pos == token_view.m_buffer_size - 1) {
+                token_view.m_start_pos = 0;
+            } else {
+                token_view.m_start_pos++;
+            }
+        }
+
+        std::cerr << fmt::format(
+                "[clpsls] token name: {} ({}) value: {}\n",
+                token_name,
+                token_type,
+                token_view.to_string_view()
+        );
+        switch (token_type) {
+            case static_cast<int>(log_surgeon::SymbolId::TokenNewline):
+            case static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString): {
+                logtype_dict_entry.encode_constant(token_view.to_string());
+                break;
+            }
+            case static_cast<int>(log_surgeon::SymbolId::TokenInt): {
+                int32_t node_id{};
+                clp_s::encoded_variable_t encoded_var{};
+                if (!clp::EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                            token_view.to_string(),
+                            encoded_var
+                    ))
+                {
+                    node_id = m_archive_writer
+                                      ->add_node(parent_node_id, NodeType::VarString, token_name);
+                    m_current_parsed_message.add_unordered_value(token_view.to_string());
+
+                } else {
+                    node_id = m_archive_writer
+                                      ->add_node(parent_node_id, NodeType::Integer, token_name);
+                    m_current_parsed_message.add_unordered_value(encoded_var);
+                }
+                m_current_schema.insert_unordered(node_id);
+                logtype_dict_entry.add_schema_var();
+                break;
+            }
+            case static_cast<int>(log_surgeon::SymbolId::TokenFloat): {
+                int32_t node_id{};
+                encoded_variable_t encoded_var{};
+                if (!clp::EncodedVariableInterpreter::convert_string_to_representable_float_var(
+                            token_view.to_string(),
+                            encoded_var
+                    ))
+                {
+                    node_id = m_archive_writer
+                                      ->add_node(parent_node_id, NodeType::VarString, token_name);
+                    m_current_parsed_message.add_unordered_value(token_view.to_string());
+                } else {
+                    node_id = m_archive_writer
+                                      ->add_node(parent_node_id, NodeType::Float, token_name);
+                    m_current_parsed_message.add_unordered_value(encoded_var);
+                }
+                m_current_schema.insert_unordered(node_id);
+                logtype_dict_entry.add_schema_var();
+                break;
+            }
+            default: {
+                auto const& lexer{event.get_log_parser().m_lexer};
+                auto capture_ids{lexer.get_capture_ids_from_rule_id(token_type)};
+                if (false == capture_ids.has_value()) {
+                    logtype_dict_entry.add_schema_var();
+                    m_current_parsed_message.add_unordered_value(token_view.to_string());
+                    m_current_schema.insert_unordered(m_archive_writer->add_node(
+                            parent_node_id,
+                            NodeType::VarString,
+                            token_name
+                    ));
+                    break;
+                }
+
+                auto capture_node_id{
+                        m_archive_writer->add_node(parent_node_id, NodeType::CaptureVar, token_name)
+                };
+                auto capture_start{m_current_schema.start_unordered_object(NodeType::CaptureVar)};
+
+                logtype_dict_entry.add_schema_var();
+                m_current_parsed_message.add_unordered_value(token_view.to_string());
+                m_current_schema.insert_unordered(
+                        m_archive_writer->add_node(capture_node_id, NodeType::FullMatch, token_name)
+                );
+
+                for (auto const capture_id : capture_ids.value()) {
+                    auto const register_ids{lexer.get_reg_ids_from_capture_id(capture_id)};
+                    if (false == register_ids.has_value()) {
+                        return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+                    }
+
+                    auto const [start_reg_id, end_reg_id]{register_ids.value()};
+                    auto const start_positions{token_view.get_reversed_reg_positions(start_reg_id)};
+                    auto const end_positions{token_view.get_reversed_reg_positions(end_reg_id)};
+
+                    // TODO clpsls: change to store as an array?
+                    auto capture_name{lexer.m_id_symbol.at(capture_id)};
+                    for (auto i{0}; i < start_positions.size(); i++) {
+                        token_view.m_start_pos = start_positions.at(start_positions.size() - 1 - i);
+                        token_view.m_end_pos = end_positions.at(i);
+                        logtype_dict_entry.add_schema_var();
+                        m_current_parsed_message.add_unordered_value(token_view.to_string());
+                        m_current_schema.insert_unordered(m_archive_writer->add_node(
+                                capture_node_id,
+                                NodeType::VarString,
+                                // fmt::format("{}.{}", capture_name, i)
+                                capture_name
+                        ));
+                    }
+                }
+
+                m_current_schema.end_unordered_object(capture_start);
+                m_current_schema.insert_unordered(capture_node_id);
+                break;
+            }
+        }
+    }
+
+    if (logtype_dict_entry.get_value().empty()) {
+        return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+    }
+
+    m_current_parsed_message.add_unordered_value(logtype_dict_entry);
+    m_current_schema.insert_unordered(
+            m_archive_writer->add_node(parent_node_id, NodeType::LogType, "LogType")
+    );
+    m_current_schema.end_unordered_object(msg_start);
+    return ystdlib::error_handling::success();
 }
 }  // namespace clp_s

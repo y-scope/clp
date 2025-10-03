@@ -120,6 +120,8 @@ public:
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
 
+    std::string const& get_log_surgeon_schema_file_path() const { return m_log_surgeon_schema_file_path; }
+
 private:
     // Methods
     /**
@@ -218,6 +220,9 @@ private:
     int64_t m_count_by_time_bucket_size{0};  // Milliseconds
 
     OutputHandlerType m_output_handler_type{OutputHandlerType::Stdout};
+
+    // Log surgeon
+    std::string m_log_surgeon_schema_file_path;
 };
 }  // namespace clp_s
 

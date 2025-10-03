@@ -45,6 +45,7 @@ set(
     CLP_S_CORE_SOURCES
     ../../archive_constants.hpp
     ../../Defs.hpp
+    ../../ErrorCode.cpp
     ../../ErrorCode.hpp
     ../../TraceableException.hpp
 )

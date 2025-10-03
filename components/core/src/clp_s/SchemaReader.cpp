@@ -3,6 +3,8 @@
 #include <stack>
 #include <string>
 
+#include <fmt/core.h>
+
 #include "archive_constants.hpp"
 #include "BufferViewReader.hpp"
 #include "Schema.hpp"
@@ -63,6 +65,8 @@ SchemaReader::load(std::shared_ptr<char[]> stream_buffer, size_t offset, size_t 
     }
 }
 
+// TODO clpsls: need a begin/end structurized string to rebuild the original string value through
+// the logtype + variables.
 void SchemaReader::generate_json_string() {
     m_json_serializer.reset();
     m_json_serializer.begin_document();
@@ -288,6 +292,16 @@ void SchemaReader::generate_local_tree(int32_t global_id) {
     do {
         auto const& node = m_global_schema_tree->get_node(global_id_stack.top());
         int32_t parent_id = node.get_parent_id();
+
+        std::cerr
+                << fmt::format("[clpsls]\tgenerating local tree for global node: {}\n", global_id);
+        std::cerr << fmt::format(
+                "[clpsls]\t\tnode: {} parent: {} key: '{}' type: {}\n",
+                node.get_id(),
+                parent_id,
+                node.get_key_name(),
+                static_cast<uint8_t>(node.get_type())
+        );
 
         auto it = m_global_id_to_local_id.find(parent_id);
         if (-1 != parent_id && it == m_global_id_to_local_id.end()) {
@@ -590,7 +604,16 @@ void SchemaReader::initialize_serializer() {
 
     for (int32_t global_column_id : m_ordered_schema) {
         if (m_projection->matches_node(global_column_id)) {
+            std::cerr << fmt::format(
+                    "[clpsls] generating ordered tree for node {}\n",
+                    global_column_id
+            );
             generate_local_tree(global_column_id);
+        } else {
+            std::cerr << fmt::format(
+                    "[clpsls] skipping ordered tree for node {}\n",
+                    global_column_id
+            );
         }
     }
 
@@ -599,7 +622,10 @@ void SchemaReader::initialize_serializer() {
          ++it)
     {
         if (m_projection->matches_node(it->first)) {
+            std::cerr << fmt::format("[clpsls] generating unordered tree for node {}\n", it->first);
             generate_local_tree(it->first);
+        } else {
+            std::cerr << fmt::format("[clpsls] skipping unordered tree for node {}\n", it->first);
         }
     }
 
@@ -610,6 +636,7 @@ void SchemaReader::initialize_serializer() {
         );
         -1 != subtree_root)
     {
+        std::cerr << fmt::format("[clpsls] generating json for node {}\n", subtree_root);
         generate_json_template(subtree_root);
     }
 }
@@ -617,11 +644,23 @@ void SchemaReader::initialize_serializer() {
 void SchemaReader::generate_json_template(int32_t id) {
     auto const& node = m_local_schema_tree.get_node(id);
     auto const& children_ids = node.get_children_ids();
+    std::cerr << fmt::format(
+            "[clpsls] node id: {} key: '{}' type: {}\n",
+            node.get_id(),
+            node.get_key_name(),
+            static_cast<int>(node.get_type())
+    );
 
     for (int32_t child_id : children_ids) {
         int32_t child_global_id = m_local_id_to_global_id[child_id];
         auto const& child_node = m_local_schema_tree.get_node(child_id);
         auto key = child_node.get_key_name();
+        std::cerr << fmt::format(
+                "[clpsls] child id: {} key: '{}' type: {}\n",
+                child_id,
+                key,
+                static_cast<int>(child_node.get_type())
+        );
         switch (child_node.get_type()) {
             case NodeType::Object: {
                 m_json_serializer.add_op(JsonSerializer::Op::BeginObject);
@@ -651,6 +690,19 @@ void SchemaReader::generate_json_template(int32_t id) {
                 m_json_serializer.add_op(JsonSerializer::Op::EndArray);
                 break;
             }
+            case NodeType::CaptureVar:
+            case NodeType::LogMessage: {
+                m_json_serializer.add_op(JsonSerializer::Op::BeginObject);
+                m_json_serializer.add_special_key(key);
+                auto structured_it = m_global_id_to_unordered_object.find(child_global_id);
+                if (m_global_id_to_unordered_object.end() != structured_it) {
+                    size_t column_start = structured_it->second.first;
+                    std::span<int32_t> structured_schema = structured_it->second.second;
+                    generate_log_message_template(child_global_id, column_start, structured_schema);
+                }
+                m_json_serializer.add_op(JsonSerializer::Op::EndObject);
+                break;
+            }
             case NodeType::DeltaInteger:
             case NodeType::Integer: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
@@ -675,6 +727,8 @@ void SchemaReader::generate_json_template(int32_t id) {
             }
             case NodeType::ClpString:
             case NodeType::VarString:
+            case NodeType::FullMatch:
+            case NodeType::LogType:
             case NodeType::DateString: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
@@ -690,5 +744,88 @@ void SchemaReader::generate_json_template(int32_t id) {
                 break;
         }
     }
+}
+
+auto SchemaReader::generate_log_message_template(
+        int32_t log_message_root,
+        size_t column_start,
+        std::span<int32_t> schema
+) -> size_t {
+    size_t column_idx = column_start;
+    std::vector<int32_t> path_to_intersection;
+    auto const depth{m_global_schema_tree->get_node(log_message_root).get_depth()};
+
+    for (size_t i = 0; i < schema.size(); ++i) {
+        auto const global_column_id{schema[i]};
+        if (Schema::schema_entry_is_unordered_object(global_column_id)) {
+            auto type{Schema::get_unordered_object_type(global_column_id)};
+            auto length{Schema::get_unordered_object_length(global_column_id)};
+            auto const sub_object_schema{schema.subspan(i + 1, length)};
+            if (NodeType::CaptureVar == type) {
+                throw(std::runtime_error("TODO CaptureVar unimplemented"));
+            } else {
+                throw(std::runtime_error(
+                        fmt::format(
+                                "unexpected unordered object NodeType found inside LogMessage: "
+                                "{}\n",
+                                static_cast<uint8_t>(type)
+                        )
+                ));
+            }
+            i += length;
+        } else {
+            auto const& node = m_global_schema_tree->get_node(global_column_id);
+            switch (node.get_type()) {
+                case NodeType::DeltaInteger:
+                case NodeType::Integer: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddIntField);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
+                case NodeType::Float: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddFloatField);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
+                case NodeType::FormattedFloat:
+                case NodeType::DictionaryFloat: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddFormattedFloatField);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
+                case NodeType::Boolean: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddBoolField);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
+                case NodeType::LogType:
+                case NodeType::FullMatch:
+                case NodeType::VarString: {
+                    m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
+                    m_reordered_columns.push_back(m_columns[column_idx++]);
+                    break;
+                }
+                case NodeType::CaptureVar:
+                case NodeType::LogMessage:
+                case NodeType::Object:
+                case NodeType::StructuredArray:
+                case NodeType::ClpString:
+                case NodeType::NullValue:
+                case NodeType::DateString:
+                case NodeType::UnstructuredArray:
+                case NodeType::Metadata:
+                case NodeType::Unknown: {
+                    throw(std::runtime_error(
+                            fmt::format(
+                                    "unexpected NodeType found inside LogMessage: {}",
+                                    static_cast<uint8_t>(node.get_type())
+                            )
+                    ));
+                    break;
+                }
+            }
+        }
+    }
+    return column_idx;
 }
 }  // namespace clp_s

@@ -29,7 +29,8 @@ endif()
 
 # Run pkg-config
 find_package(PkgConfig)
-pkg_check_modules(libarchive_PKGCONF QUIET "lib${libarchive_LIBNAME}")
+set(ENV{PKG_CONFIG_PATH} "/home/lion/yscope/clp/build/deps/core/LibArchive-install/lib/pkgconfig")
+pkg_check_modules(libarchive_PKGCONF REQUIRED "lib${libarchive_LIBNAME}")
 
 # Set include directory
 find_path(LibArchive_INCLUDE_DIR archive.h
@@ -58,8 +59,19 @@ if (LibArchive_LIBRARY)
 endif()
 
 if(LibArchive_USE_STATIC_LIBS)
-    FindStaticLibraryDependencies(${libarchive_LIBNAME} libarchive
-                                  "${libarchive_PKGCONF_STATIC_LIBRARIES}")
+    # FindStaticLibraryDependencies(${libarchive_LIBNAME} libarchive
+    #                               "${libarchive_PKGCONF_STATIC_LIBRARIES}")
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .so)
+    find_library(libarchive_z_LIBRARY
+            NAMES z
+            PATH_SUFFIXES lib
+            )
+    if(libarchive_z_LIBRARY)
+        list(APPEND libarchive_LIBRARY_DEPENDENCIES
+             "${libarchive_z_LIBRARY}")
+    else()
+        message(SEND_ERROR "TEST z library not found")
+    endif()
 
     # Restore original value of CMAKE_FIND_LIBRARY_SUFFIXES
     set(CMAKE_FIND_LIBRARY_SUFFIXES ${libarchive_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})

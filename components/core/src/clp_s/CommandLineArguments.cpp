@@ -4,6 +4,7 @@
 #include <iostream>
 #include <string_view>
 
+#include <boost/filesystem/operations.hpp>
 #include <boost/program_options.hpp>
 #include <fmt/core.h>
 #include <spdlog/spdlog.h>
@@ -269,6 +270,13 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Type of authentication required for network requests (s3 | none). Authentication"
                     " with s3 requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment"
                     " variables, and optionally the AWS_SESSION_TOKEN environment variable."
+            )(
+                    "schema-path",
+                    po::value<std::string>(&m_log_surgeon_schema_file_path)
+                            ->value_name("FILE")
+                            ->default_value(m_log_surgeon_schema_file_path),
+                    "Path to a log surgeon schema file. If not specified, heuristics are used to"
+                    " determine dictionary variables. See README-Schema.md for details."
             );
             // clang-format on
 
@@ -329,6 +337,18 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             validate_network_auth(auth, m_network_auth);
+
+            if (false == m_log_surgeon_schema_file_path.empty()) {
+                if (false == boost::filesystem::exists(m_log_surgeon_schema_file_path)) {
+                    throw std::invalid_argument("Specified schema file does not exist.");
+                }
+                if (false == boost::filesystem::is_regular_file(m_log_surgeon_schema_file_path)) {
+                    throw std::invalid_argument(
+                            "Specified schema file '" + m_log_surgeon_schema_file_path
+                            + "' is not a regular file."
+                    );
+                }
+            }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
             std::string archive_path;

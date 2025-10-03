@@ -7,6 +7,8 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
+#include "clp_s/ColumnWriter.hpp"
+
 #include "archive_constants.hpp"
 #include "Defs.hpp"
 #include "SchemaTree.hpp"
@@ -325,6 +327,10 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::ClpString:
                 writer->append_column(new ClpStringColumnWriter(id, m_var_dict, m_log_dict));
                 break;
+            case NodeType::LogType:
+                writer->append_column(new LogTypeColumnWriter(id, m_log_dict));
+                break;
+            case NodeType::FullMatch:
             case NodeType::VarString:
                 writer->append_column(new VariableStringColumnWriter(id, m_var_dict));
                 break;
@@ -344,6 +350,8 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::NullValue:
             case NodeType::Object:
             case NodeType::StructuredArray:
+            case NodeType::LogMessage:
+            case NodeType::CaptureVar:
             case NodeType::Unknown:
                 break;
         }

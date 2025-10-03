@@ -3,6 +3,7 @@
 
 #include <cstdint>
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -12,7 +13,9 @@
 
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/random_generator.hpp>
+#include <log_surgeon/BufferParser.hpp>
 #include <simdjson.h>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include "../clp/ffi/KeyValuePairLogEvent.hpp"
 #include "../clp/ffi/SchemaTree.hpp"
@@ -44,6 +47,7 @@ struct JsonParserOption {
     bool retain_float_format{false};
     bool single_file_archive{false};
     NetworkAuthOption network_auth{};
+    std::string log_surgeon_schema_file_path;
 };
 
 class JsonParser {
@@ -224,6 +228,14 @@ private:
     static bool
     check_and_log_curl_error(Path const& path, std::shared_ptr<clp::ReaderInterface> reader);
 
+    /**
+     * Parse an unstructured log message using log surgeon and structure it in JSON.
+     * @param str
+     * @return
+     */
+    auto parse_log_message(int32_t parent_node_id, std::string_view view)
+            -> ystdlib::error_handling::Result<void>;
+
     std::vector<Path> m_input_paths;
     NetworkAuthOption m_network_auth{};
 
@@ -249,6 +261,8 @@ private:
             m_autogen_ir_node_to_archive_node_id_mapping;
 
     std::vector<ArchiveStats> m_archive_stats;
+
+    log_surgeon::BufferParser m_log_surgeon_parser;
 };
 }  // namespace clp_s
 

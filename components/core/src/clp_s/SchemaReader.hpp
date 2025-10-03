@@ -271,6 +271,19 @@ private:
     generate_structured_object_template(int32_t id, size_t column_start, std::span<int32_t> schema);
 
     /**
+     * Generates a json template for a LogMessage
+     * @param id
+     * @param column_start the index of the first reader in m_columns belonging to this object
+     * @param schema
+     * @return the index of the next reader in m_columns after those consumed by this object
+     */
+    auto generate_log_message_template(
+            int32_t array_root,
+            size_t column_start,
+            std::span<int32_t> schema
+    ) -> size_t;
+
+    /**
      * Finds the common root of the subtree containing cur_root and next_root, and adds brackets
      * and keys to m_json_serializer as necessary so that the json object is correct between the
      * previous field which is a child of cur_root, and the next field which is a child of
