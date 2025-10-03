@@ -28,7 +28,7 @@ def create_mcp_server(**settings: Any) -> FastMCP:
     Creates and defines API tool calls for CLP MCP server.
 
     :param settings: Additional settings for the MCP server configuration.
-    :return: A configured FastMCP instance ready to run.
+    :return: A configured `FastMCP` instance.
     """
     mcp = FastMCP(name=CLPMCPServerConfig.SERVER_NAME, **settings)
 
