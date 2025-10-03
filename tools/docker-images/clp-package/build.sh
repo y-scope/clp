@@ -27,19 +27,6 @@ fi
 temp_iid_file="$(mktemp)"
 new_image_id=""
 
-# Remove the previous image after the build to allow layer reuse.
-prev_image_id=""
-if [[ -f "$iid_file" ]]; then
-    prev_image_id=$(cat "$iid_file")
-fi
-cleanup() {
-    if [[ -n "$prev_image_id" ]] && docker image inspect "$prev_image_id" >/dev/null 2>&1; then
-        echo "Removing previous image $prev_image_id"
-        docker image remove "$prev_image_id"
-    fi
-}
-trap cleanup EXIT
-
 build_cmd=(
     docker build
     --iidfile "$temp_iid_file"

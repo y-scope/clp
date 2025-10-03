@@ -311,10 +311,10 @@ class BaseController(ABC):
 
         container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
         client_settings_json_path = (
-                self._clp_home / "var" / "www" / "webui" / "client" / "settings.json"
+            self._clp_home / "var" / "www" / "webui" / "client" / "settings.json"
         )
         server_settings_json_path = (
-                self._clp_home / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
+            self._clp_home / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
         )
 
         validate_webui_config(self.clp_config, client_settings_json_path, server_settings_json_path)
@@ -563,9 +563,8 @@ class DockerComposeController(BaseController):
                 SERVICE_CONTAINER_UID_GID if os.geteuid() == 0 else DEFAULT_UID_GID
             ),
             # Package container
-            "CLP_PACKAGE_CONTAINER": self.clp_config.execution_container,
-            "CLP_PACKAGE_MCP_SERVER_CONTAINER": "clp-package-mcp-server:dev",
-
+            "CLP_PACKAGE_CONTAINER": self.clp_config.container_image_ref,
+            
             # Global paths
             "CLP_DATA_DIR_HOST": str(self.clp_config.data_directory),
             "CLP_LOGS_DIR_HOST": str(self.clp_config.logs_directory),

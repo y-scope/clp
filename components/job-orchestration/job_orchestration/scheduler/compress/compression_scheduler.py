@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Set
 
 import brotli
-import celery
 import msgpack
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
@@ -30,8 +29,9 @@ from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.executor.compress.compression_task import compress
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
+from job_orchestration.scheduler.compress.task_manager.celery_task_manager import CeleryTaskManager
+from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.constants import (
     CompressionJobStatus,
     CompressionTaskStatus,
@@ -45,7 +45,6 @@ from job_orchestration.scheduler.job_config import (
 )
 from job_orchestration.scheduler.scheduler_data import (
     CompressionJob,
-    CompressionTaskResult,
 )
 from job_orchestration.scheduler.utils import kill_hanging_jobs
 from pydantic import ValidationError
@@ -217,6 +216,7 @@ def search_and_schedule_new_tasks(
     db_conn,
     db_cursor,
     clp_metadata_db_connection_config: Dict[str, Any],
+    task_manager: TaskManager,
 ):
     """
     For all jobs with PENDING status, splits the job into tasks and schedules them.
@@ -224,6 +224,7 @@ def search_and_schedule_new_tasks(
     :param db_conn:
     :param db_cursor:
     :param clp_metadata_db_connection_config:
+    :param task_manager:
     """
     global scheduled_jobs
 
@@ -356,7 +357,6 @@ def search_and_schedule_new_tasks(
             tag_ids = [tags["tag_id"] for tags in db_cursor.fetchall()]
             db_conn.commit()
 
-        task_instances = []
         for task_idx, task in enumerate(tasks):
             db_cursor.execute(
                 f"""
@@ -369,12 +369,9 @@ def search_and_schedule_new_tasks(
             db_conn.commit()
             task["task_id"] = db_cursor.lastrowid
             task["tag_ids"] = tag_ids
-            task_instances.append(compress.s(**task))
-        tasks_group = celery.group(task_instances)
+        result_handle = task_manager.submit(tasks)
 
-        job = CompressionJob(
-            id=job_id, start_time=start_time, async_task_result=tasks_group.apply_async()
-        )
+        job = CompressionJob(id=job_id, start_time=start_time, result_handle=result_handle)
         db_cursor.execute(
             f"""
             UPDATE {COMPRESSION_TASKS_TABLE_NAME}
@@ -384,13 +381,6 @@ def search_and_schedule_new_tasks(
         db_conn.commit()
 
         scheduled_jobs[job_id] = job
-
-
-def get_results_or_timeout(result):
-    try:
-        return result.get(timeout=0.1)
-    except celery.exceptions.TimeoutError:
-        return None
 
 
 def poll_running_jobs(db_conn, db_cursor):
@@ -407,14 +397,13 @@ def poll_running_jobs(db_conn, db_cursor):
         error_message = ""
 
         try:
-            returned_results = get_results_or_timeout(job.async_task_result)
+            returned_results = job.result_handle.get_result()
             if returned_results is None:
                 continue
 
             duration = (datetime.datetime.now() - job.start_time).total_seconds()
             # Check for finished jobs
             for task_result in returned_results:
-                task_result = CompressionTaskResult.model_validate(task_result)
                 if task_result.status == CompressionTaskStatus.SUCCEEDED:
                     logger.info(
                         f"Compression task job-{job_id}-task-{task_result.task_id} completed in"
@@ -497,6 +486,8 @@ def main(argv):
     logger.info(f"Starting {COMPRESSION_SCHEDULER_COMPONENT_NAME}")
     sql_adapter = SQL_Adapter(clp_config.database)
 
+    task_manager = CeleryTaskManager()
+
     try:
         killed_jobs = kill_hanging_jobs(sql_adapter, SchedulerType.COMPRESSION)
         if killed_jobs is not None:
@@ -521,6 +512,7 @@ def main(argv):
                         db_conn,
                         db_cursor,
                         clp_metadata_db_connection_config,
+                        task_manager,
                     )
                 poll_running_jobs(db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)

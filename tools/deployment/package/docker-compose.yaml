@@ -4,6 +4,7 @@ include: ["docker-compose.base.yaml"]
 
 # Common service defaults.
 x-service-defaults: &service_defaults
+  image: "${CLP_PACKAGE_CONTAINER:-clp-package}"
   stop_grace_period: "3s"
   user: "${CLP_UID_GID:-1000:1000}"
 
@@ -18,8 +19,7 @@ x-healthcheck-defaults: &healthcheck_defaults
 services:
   query-scheduler:
     <<: *service_defaults
-    container_name: "query_scheduler"
-    image: "${CLP_PACKAGE_CONTAINER}"
+    hostname: "query_scheduler"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
       CLP_DB_PASS: "${CLP_DB_PASS}"
@@ -58,8 +58,7 @@ services:
 
   query-worker:
     <<: *service_defaults
-    container_name: "query_worker"
-    image: "${CLP_PACKAGE_CONTAINER}"
+    hostname: "query_worker"
     environment:
       AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID}"
       AWS_SECRET_ACCESS_KEY: "${CLP_AWS_SECRET_ACCESS_KEY}"
@@ -94,8 +93,7 @@ services:
 
   reducer:
     <<: *service_defaults
-    container_name: "reducer"
-    image: "${CLP_PACKAGE_CONTAINER}"
+    hostname: "reducer"
     environment:
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_REDUCER_LOGGING_LEVEL:-INFO}"

@@ -134,7 +134,7 @@ def main(argv):
         CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
     }
     container_start_cmd = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
+        container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
     )
 
     # fmt: off

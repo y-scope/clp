@@ -4,6 +4,8 @@ from enum import auto
 from typing import ClassVar, Any, Literal, Optional, Set, Union
 
 from dotenv import dotenv_values
+
+
 from pydantic import (
     BaseModel,
     ConfigDict,
@@ -59,7 +61,7 @@ CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "s
 CLP_DEFAULT_LOG_DIRECTORY_PATH = pathlib.Path("var") / "log"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
-CLP_PACKAGE_IMAGE_ID_PATH = pathlib.Path("image.id")
+CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH = pathlib.Path("clp-package-image.id")
 CLP_SHARED_CONFIG_FILENAME = ".clp-config.yml"
 CLP_VERSION_FILE_PATH = pathlib.Path("VERSION")
 
@@ -304,7 +306,7 @@ class CompressionScheduler(BaseModel):
 
 class QueryScheduler(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 7000
-    
+
     host: str = "localhost"
     port: int = 7000
     jobs_poll_delay: float = 0.1  # seconds
@@ -927,7 +929,7 @@ def _get_env_var(name: str) -> str:
 
 
 class CLPConfig(BaseModel):
-    execution_container: Optional[str] = None
+    container_image_ref: Optional[str] = None
 
     logs_input: Union[FsIngestionConfig, S3IngestionConfig] = FsIngestionConfig()
 
@@ -954,7 +956,9 @@ class CLPConfig(BaseModel):
     logs_directory: pathlib.Path = CLP_DEFAULT_LOG_DIRECTORY_PATH
     aws_config_directory: Optional[pathlib.Path] = None
 
-    _image_id_path: pathlib.Path = PrivateAttr(default=CLP_PACKAGE_IMAGE_ID_PATH)
+    _container_image_id_path: pathlib.Path = PrivateAttr(
+        default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH
+    )
     _version_file_path: pathlib.Path = PrivateAttr(default=CLP_VERSION_FILE_PATH)
 
     @field_validator("aws_config_directory")
@@ -972,7 +976,9 @@ class CLPConfig(BaseModel):
         self.stream_output.storage.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
-        self._image_id_path = make_config_path_absolute(clp_home, self._image_id_path)
+        self._container_image_id_path = make_config_path_absolute(
+            clp_home, self._container_image_id_path
+        )
         self._version_file_path = make_config_path_absolute(clp_home, self._version_file_path)
 
     def validate_logs_input_config(self):
@@ -1061,19 +1067,18 @@ class CLPConfig(BaseModel):
                 "aws_config_directory should not be set when profile authentication is not used"
             )
 
-    def load_execution_container_name(self):
-        if self.execution_container is not None:
+    def load_container_image_ref(self):
+        if self.container_image_ref is not None:
             # Accept configured value for debug purposes
             return
 
-        if self._image_id_path.exists():
-            with open(self._image_id_path) as image_id_file:
-                self.execution_container = image_id_file.read().strip()
-
-        if not bool(self.execution_container):
+        if self._container_image_id_path.exists():
+            with open(self._container_image_id_path) as image_id_file:
+                self.container_image_ref = image_id_file.read().strip()
+        else:
             with open(self._version_file_path) as version_file:
-                package_version = version_file.read().strip()
-            self.execution_container = f"ghcr.io/y-scope/clp/clp-package:{package_version}"
+                clp_package_version = version_file.read().strip()
+            self.container_image_ref = f"ghcr.io/y-scope/clp/clp-package:{clp_package_version}"
 
     def get_shared_config_file_path(self) -> pathlib.Path:
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
@@ -1093,7 +1098,7 @@ class CLPConfig(BaseModel):
             "archive_output",
             "stream_output",
         )
-        d = self.model_dump(exclude=set(custom_serialized_fields))
+        d = self.model_dump(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
             d[key] = getattr(self, key).dump_to_primitive_dict()
 
@@ -1160,14 +1165,6 @@ class WorkerConfig(BaseModel):
 
         return d
 
-
-def get_components_for_target(target: str) -> Set[str]:
-    if target in TARGET_TO_COMPONENTS:
-        return TARGET_TO_COMPONENTS[target]
-    elif target in ALL_COMPONENTS:
-        return {target}
-    else:
-        return set()
 
 
 def _validate_directory(value: Any):
