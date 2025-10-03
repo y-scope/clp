@@ -18,9 +18,16 @@ The server only supports HTTP transport. Host and port parameters are optional w
 
 ```bash
 cd /path/to/build/clp-package/lib/python3/site-packages
+export PYTHONPATH=/path/to/build/clp-package/lib/python3/site-packages
+
+bin/clp-mcp-server
 ```
 
+or
+
 ```bash
+cd /path/to/build/clp-package/lib/python3/site-packages
+
 python3 -m clp_mcp_server.clp_mcp_server
 ```
 
