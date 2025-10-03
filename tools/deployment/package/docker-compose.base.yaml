@@ -128,9 +128,10 @@ services:
       - "${CLP_RESULTS_CACHE_LOGS_DIR_HOST:-./var/log/results_cache}:/var/log/mongodb"
     healthcheck:
       <<: *healthcheck_defaults
-      test: >-
-        echo 'db.runCommand("ping").ok' |
-        mongosh 127.0.0.1:27017/test --quiet
+      test: [
+        "CMD-SHELL",
+        "echo 'db.runCommand(\"ping\").ok' | mongosh 127.0.0.1:27017/test --quiet"
+      ]
     command: [
       "--config", "/etc/mongo/mongod.conf",
       "--bind_ip", "0.0.0.0",
