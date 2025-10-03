@@ -249,7 +249,7 @@ private:
      * @tparam VariableDictionaryReaderType Variable dictionary reader type.
      * @param variable_token The variable token to process.
      * @param var_dict The variable dictionary.
-     * @param ignore_case If the search is case sensitive.
+     * @param ignore_case If true, perform a case-insensitive search.
      * @param is_wildcard_mask_encoded If the token is an encodable wildcard and is to be encoded.
      * @param sub_query Returns the updated sub query object.
      * @return True if the variable is encoded or is in the variable dictionary, false otherwise.
