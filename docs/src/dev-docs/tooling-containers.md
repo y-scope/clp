@@ -129,24 +129,6 @@ Jammy x86 environment.
   components/core/tools/docker-images/clp-core-ubuntu-jammy
   ```
 
-## clp-execution-x86-ubuntu-jammy
-
-An image containing the dependencies necessary to run the CLP package in an Ubuntu Jammy x86
-environment.
-
-* [GitHub Packages page][exe-ubuntu-jammy]
-* Pull command:
-
-  ```bash
-  docker pull ghcr.io/y-scope/clp/clp-execution-x86-ubuntu-jammy:main
-  ```
-
-* Path:
-
-  ```text
-  tools/docker-images/clp-execution-base-ubuntu-jammy
-  ```
-
 ## clp-package
 
 An image containing the CLP package.
@@ -162,7 +144,6 @@ An image containing the CLP package.
 [core-deps-musllinux_1_2-x86_64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-musllinux_1_2
 [core-deps-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-ubuntu-jammy
 [core-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-x86-ubuntu-jammy
-[exe-ubuntu-jammy]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-execution-x86-ubuntu-jammy
 [gh-packages]: https://github.com/orgs/y-scope/packages?repo_name=clp
 [manylinux_2_28]: https://github.com/pypa/manylinux?tab=readme-ov-file#manylinux_2_28-almalinux-8-based
 [musllinux_1_2]: https://github.com/pypa/manylinux?tab=readme-ov-file#musllinux_1_2-alpine-linux-322-based-313-compatible

@@ -8,7 +8,7 @@
 
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/value_semantic.hpp>
-#include <fmt/core.h>
+#include <fmt/format.h>
 
 #include "GlobalMySQLMetadataDB.hpp"
 #include "type_utils.hpp"
