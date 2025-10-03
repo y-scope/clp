@@ -12,7 +12,9 @@ class CompressionTaskResult(BaseModel):
 
     @field_validator("status")
     def valid_status(cls, value):
-        supported_status = [CompressionTaskStatus.SUCCEEDED, CompressionTaskStatus.FAILED]
-        if value not in supported_status:
-            raise ValueError(f'must be one of the following {"|".join(supported_status)}')
+        if value != CompressionTaskStatus.SUCCEEDED and value != CompressionTaskStatus.FAILED:
+            raise ValueError(
+                f"Must be either {CompressionTaskStatus.SUCCEEDED} or"
+                f" {CompressionTaskStatus.FAILED}"
+            )
         return value

@@ -20,7 +20,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class CompressionJob(BaseModel):
-    # Allow the use of TaskManager.ResultHandle
+    # Allow the use of `TaskManager.ResultHandle`
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     id: int
