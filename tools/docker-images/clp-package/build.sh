@@ -48,9 +48,9 @@ if [[ -s "$temp_iid_file" ]]; then
     new_image_id="$(<"$temp_iid_file")"
     echo "$new_image_id" > "$iid_file"
 
-    user="${USER:-$(id -un 2>/dev/null)}" \
+    user="${USER:-$(whoami 2>/dev/null)}" \
+        || user=$(id -un 2>/dev/null) \
         || user=$(id -u 2>/dev/null) \
-        || user=$(whoami 2>/dev/null) \
         || user="unknown";
     short_id="${new_image_id#sha256:}"
     short_id="${short_id:0:4}"
