@@ -1,5 +1,6 @@
 #include "GrepCore.hpp"
 
+#include <algorithm>
 #include <cstddef>
 #include <set>
 #include <string>
