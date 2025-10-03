@@ -1,13 +1,13 @@
 #ifndef CLP_GREPCORE_HPP
 #define CLP_GREPCORE_HPP
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <set>
 #include <string>
 #include <string_view>
-#include <unordered_map>
 #include <unordered_set>
 #include <variant>
 #include <vector>
