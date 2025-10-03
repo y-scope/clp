@@ -561,10 +561,10 @@ TEST_CASE("generate_logtype_string_for_single_variable_interpretation", "[dfa_se
 
 TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_search]") {
     unordered_set<string> const expected_logtype_strings{
-             generate_expected_logtype_string({"text", 'i', 'f', 'd', 'd', 'd'}),
-             generate_expected_logtype_string({"text", 'i', 'f', 'i', 'd', 'd'}),
-             generate_expected_logtype_string({"text", 'i', 'f', 'd', 'f', 'd'}),
-             generate_expected_logtype_string({"text", 'i', 'f', 'i', 'f', 'd'})
+            generate_expected_logtype_string({"text", 'i', 'f', 'd', 'd', 'd'}),
+            generate_expected_logtype_string({"text", 'i', 'f', 'i', 'd', 'd'}),
+            generate_expected_logtype_string({"text", 'i', 'f', 'd', 'f', 'd'}),
+            generate_expected_logtype_string({"text", 'i', 'f', 'i', 'f', 'd'})
     };
 
     auto const interpretation{make_query_interpretation(
@@ -588,11 +588,13 @@ TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_sea
         for (size_t i{0}; i < wildcard_encodable_positions.size(); ++i) {
             mask_encoded_flags[wildcard_encodable_positions[i]] = (mask >> i) & 1ULL;
         }
-        logtype_strings.insert(clp::GrepCoreTest::generate_logtype_string(
-                interpretation,
-                wildcard_encodable_positions,
-                mask_encoded_flags
-        ));
+        logtype_strings.insert(
+                clp::GrepCoreTest::generate_logtype_string(
+                        interpretation,
+                        wildcard_encodable_positions,
+                        mask_encoded_flags
+                )
+        );
     }
     REQUIRE(expected_logtype_strings == logtype_strings);
 }

@@ -241,11 +241,13 @@ auto GrepCore::generate_logtype_string(
         bool const is_int{TokenInt == var_type};
         bool const is_float{TokenFloat == var_type};
 
-        if (wildcard_encodable_positions.end() != std::ranges::find(
-                wildcard_encodable_positions.begin(),
-                wildcard_encodable_positions.end(),
-                i
-        )) {
+        if (wildcard_encodable_positions.end()
+            != std::ranges::find(
+                    wildcard_encodable_positions.begin(),
+                    wildcard_encodable_positions.end(),
+                    i
+            ))
+        {
             if (mask_encoded_flags[i]) {
                 if (is_int) {
                     EncodedVariableInterpreter::add_int_var(logtype_string);

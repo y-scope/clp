@@ -578,8 +578,8 @@ void GrepCore::generate_schema_sub_queries(
             auto logtype_string{generate_logtype_string(
                     interpretation,
                     wildcard_encodable_positions,
-                    mask_encoded_flags)
-            };
+                    mask_encoded_flags
+            )};
 
             std::unordered_set<typename LogTypeDictionaryReaderType::Entry const*> logtype_entries;
             logtype_dict.get_entries_matching_wildcard_string(
@@ -600,11 +600,13 @@ void GrepCore::generate_schema_sub_queries(
                     ))
                 {
                     bool is_mask_encoded{false};
-                    if (wildcard_encodable_positions.end() != std::ranges::find(
-                            wildcard_encodable_positions.begin(),
-                            wildcard_encodable_positions.end(),
-                            i
-                    )) {
+                    if (wildcard_encodable_positions.end()
+                        != std::ranges::find(
+                                wildcard_encodable_positions.begin(),
+                                wildcard_encodable_positions.end(),
+                                i
+                        ))
+                    {
                         is_mask_encoded = mask_encoded_flags[i];
                     }
 
