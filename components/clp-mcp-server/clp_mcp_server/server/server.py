@@ -34,7 +34,7 @@ def create_mcp_server(**settings: Any) -> FastMCP:
         """
         Gets basic information about the MCP server.
 
-        :return: Server information including version and capabilities.
+        :return: The server information with a list of capabilities.
         """
         return {
             "name": CLPMCPServerConfig.SERVER_NAME,
