@@ -9,8 +9,10 @@
 #include <string_view>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 
+#include <log_surgeon/Lexer.hpp>
 #include <log_surgeon/wildcard_query_parser/Query.hpp>
 #include <string_utils/constants.hpp>
 #include <string_utils/string_utils.hpp>
