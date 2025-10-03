@@ -28,6 +28,7 @@
 
 using clp::EncodedVariableInterpreter;
 using clp::GrepCore;
+using clp::logtype_dictionary_id_t;
 using clp::LogTypeDictionaryReaderReq;
 using clp::string_utils::wildcard_match_unsafe_case_sensitive;
 using clp::SubQuery;
@@ -201,7 +202,7 @@ private:
  */
 class FakeLogTypeEntry {
 public:
-    FakeLogTypeEntry(string value, clp::logtype_dictionary_id_t const id)
+    FakeLogTypeEntry(string value, logtype_dictionary_id_t const id)
             : m_value(std::move(value)),
               m_id(id) {}
 
@@ -239,11 +240,11 @@ public:
         return SIZE_MAX;
     }
 
-    [[nodiscard]] auto get_id() const -> clp::logtype_dictionary_id_t { return m_id; }
+    [[nodiscard]] auto get_id() const -> logtype_dictionary_id_t { return m_id; }
 
 private:
     string m_value;
-    clp::logtype_dictionary_id_t m_id{0};
+    logtype_dictionary_id_t m_id{0};
 };
 
 /**
@@ -254,7 +255,7 @@ private:
 class FakeLogTypeDict {
 public:
     using Entry = FakeLogTypeEntry;
-    using dictionary_id_t = clp::logtype_dictionary_id_t;
+    using dictionary_id_t = logtype_dictionary_id_t;
 
     auto add_entry(string const& value, dictionary_id_t id) -> void {
         m_storage.emplace_back(value, id);
@@ -357,8 +358,8 @@ auto check_sub_query(
         size_t id,
         vector<SubQuery> const& sub_queries,
         bool wildcard_match_required,
-        vector<tuple<bool, bool, unordered_set<size_t>>> const& vars_info,
-        unordered_set<clp::logtype_dictionary_id_t> const& logtype_ids
+        vector<tuple<bool, bool, unordered_set<variable_dictionary_id_t>>> const& vars_info,
+        unordered_set<logtype_dictionary_id_t> const& logtype_ids
 ) -> void;
 
 /**
@@ -380,7 +381,7 @@ auto make_var_dict(vector<pair<size_t, string>> const& entries) -> FakeVarDict {
 auto make_logtype_dict(vector<vector<variant<string_view, char>>> const& entries)
         -> FakeLogTypeDict {
     FakeLogTypeDict dict;
-    clp::logtype_dictionary_id_t id{0};
+    logtype_dictionary_id_t id{0};
     for (auto const& entry : entries) {
         dict.add_entry(generate_expected_logtype_string(entry), id++);
     }
@@ -430,8 +431,8 @@ auto check_sub_query(
         size_t id,
         vector<SubQuery> const& sub_queries,
         bool const wildcard_match_required,
-        vector<tuple<bool, bool, unordered_set<size_t>>> const& vars_info,
-        unordered_set<clp::logtype_dictionary_id_t> const& logtype_ids
+        vector<tuple<bool, bool, unordered_set<variable_dictionary_id_t>>> const& vars_info,
+        unordered_set<logtype_dictionary_id_t> const& logtype_ids
 ) -> void {
     CAPTURE(id);
     auto const& sub_query{sub_queries[id]};
