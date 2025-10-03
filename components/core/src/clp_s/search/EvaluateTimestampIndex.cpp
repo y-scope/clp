@@ -96,12 +96,23 @@ EvaluatedValue EvaluateTimestampIndex::run(std::shared_ptr<Expression> const& ex
             auto const filter_op{filter->get_operation()};
             int64_t int_literal{};
             double float_literal{};
-            if (literal->as_int(int_literal, filter_op)) {
-                ret = range_it->second->evaluate_filter(filter_op, int_literal);
-            } else if (literal->as_float(float_literal, filter_op)) {
-                ret = range_it->second->evaluate_filter(filter_op, float_literal);
-            } else {
-                return EvaluatedValue::Unknown;
+
+            auto const encoding{range_it->second->get_timestamp_encoding()};
+            switch (encoding) {
+                case TimestampEntry::TimestampEncoding::DoubleEpoch:
+                    if (false == literal->as_float(float_literal, filter_op)) {
+                        return EvaluatedValue::Unknown;
+                    }
+                    ret = range_it->second->evaluate_filter(filter_op, float_literal);
+                    break;
+                case TimestampEntry::TimestampEncoding::Epoch:
+                    if (false == literal->as_int(int_literal, filter_op)) {
+                        return EvaluatedValue::Unknown;
+                    }
+                    ret = range_it->second->evaluate_filter(filter_op, int_literal);
+                    break;
+                default:
+                    return EvaluatedValue::Unknown;
             }
 
             if (ret == EvaluatedValue::True) {
