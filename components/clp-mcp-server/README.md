@@ -17,6 +17,10 @@ The server only supports HTTP transport. Host and port parameters are optional w
 ### Quick Start (using defaults)
 
 ```bash
+cd /path/to/build/clp-package/lib/python3/site-packages
+```
+
+```bash
 python3 -m clp_mcp_server.clp_mcp_server
 ```
 
