@@ -1,0 +1,55 @@
+version: "3"
+
+tasks:
+  spider:
+    deps:
+      - task: "spider-dep"
+    platforms: ["linux"]
+    preconditions:
+      # NOTE: Spider is only supported on Ubuntu at present.
+      - >-
+        source /etc/os-release && [[ "$ID" == "ubuntu" ]]
+    cmds:
+      - task: "yscope-dev-utils:cmake:install-remote-tar"
+        vars:
+          CMAKE_PACKAGE_NAME: "spider"
+          TAR_SHA256: "43478b6da99aa2df50c960573ec68c6fcf67cdfbab39b5e314676218aa93b959"
+          TAR_URL: "https://github.com/y-scope/spider/archive/6a7bad3.tar.gz"
+          WORK_DIR: "{{.G_SPIDER_BUILD_DIR}}"
+          CMAKE_JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-spider.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DSPIDER_BUILD_TESTING=OFF"
+
+  spider-dep:
+    deps:
+      - task: "init"
+      - task: "utils:clean-outdated-cpp-checksum-files"
+    cmds:
+      - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
+          CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-spider.cmake"
+          DEP_TASK: "spider-all-parallel"
+      - task: "utils:combine-cpp-checksum-files"
+
+  spider-all-parallel:
+    internal: true
+    vars:
+      CPP_SPIDER_TASKS:
+        - "absl"
+        - "antlr-jar"
+        - "antlr-runtime"
+        - "boost"
+        - "fmt"
+        - "mariadb-connector-cpp"
+        - "msgpack-cxx"
+        - "spdlog"
+        - "ystdlib"
+    run: "once"
+    deps:
+      - for:
+          var: "CPP_SPIDER_TASKS"
+        task: "{{.ITEM}}"

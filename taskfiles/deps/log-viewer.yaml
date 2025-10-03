@@ -1,0 +1,14 @@
+version: "3"
+
+tasks:
+  log-viewer:
+    deps:
+      - task: "init"
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
+          FILE_SHA256: "f9baaae0886439862204e8062c69dd49354cb14ad4e59f7c35779d544384955e"
+          OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer"
+          TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
+          URL: "https://github.com/y-scope/yscope-log-viewer/archive/3abe4cc.tar.gz"

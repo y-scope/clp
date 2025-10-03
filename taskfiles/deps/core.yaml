@@ -1,0 +1,46 @@
+version: "3"
+
+tasks:
+  core:
+    deps:
+      - task: "init"
+      - task: "utils:clean-outdated-cpp-checksum-files"
+    cmds:
+      - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
+          CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-core.cmake"
+          DEP_TASK: "core-all-parallel"
+      - task: "utils:combine-cpp-checksum-files"
+
+  core-all-parallel:
+    internal: true
+    vars:
+      CPP_CORE_TASKS:
+        - "absl"
+        - "antlr-jar"
+        - "antlr-runtime"
+        - "boost"
+        - "catch2"
+        - "date"
+        - "fmt"
+        - "liblzma"
+        - "log-surgeon"
+        - "lz4"
+        - "microsoft.gsl"
+        - "mongocxx"
+        - "msgpack-cxx"
+        - "nlohmann_json"
+        - "simdjson"
+        - "spdlog"
+        - "sqlite3"
+        - "utfcpp"
+        - "yaml-cpp"
+        - "ystdlib"
+        - "zlib"
+        - "zstd"
+    run: "once"
+    deps:
+      - for:
+          var: "CPP_CORE_TASKS"
+        task: "{{.ITEM}}"

@@ -1,0 +1,136 @@
+version: "3"
+
+tasks:
+  antlr-jar:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/antlr-jar.md5"
+      OUTPUT_FILE: "{{.G_ANTLR_JAR_FILE}}"
+    run: "once"
+    deps:
+      - task: "yscope-dev-utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS:
+            - "{{.OUTPUT_FILE}}"
+    cmds:
+      - task: "yscope-dev-utils:remote:curl"
+        vars:
+          FILE_SHA256: "eae2dfa119a64327444672aff63e9ec35a20180dc5b8090b7a6ab85125df4d76"
+          OUTPUT_FILE: "{{.OUTPUT_FILE}}"
+          URL: "https://www.antlr.org/download/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
+
+      # This command must be last
+      - task: "yscope-dev-utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS:
+            - "{{.OUTPUT_FILE}}"
+
+  antlr-runtime:
+    internal: true
+    run: "once"
+    vars:
+      LIB_NAME: "antlr4-runtime"
+
+      # Paths
+      BUILD_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-build"
+      CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+      INSTALL_PREFIX: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
+      SOURCE_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+    deps:
+      - task: "yscope-dev-utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
+
+    # NOTE: We can't use `yscope-dev-utils:cmake:install-remote-tar` (and by extension
+    # `utils:install-remote-cmake-lib`) since it doesn't yet support the `INCLUDE_PATTERNS` and
+    # `NUM_COMPONENTS_TO_STRIP` parameters.
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          FILE_SHA256: "9f18272a9b32b622835a3365f850dd1063d60f5045fb1e12ce475ae6e18a35bb"
+          INCLUDE_PATTERNS: ["*/runtime/Cpp"]
+          NUM_COMPONENTS_TO_STRIP: 3
+          OUTPUT_DIR: "{{.SOURCE_DIR}}"
+          URL: "https://github.com/antlr/antlr4/archive/refs/tags/{{.G_ANTLR_VERSION}}.tar.gz"
+      - task: "yscope-dev-utils:cmake:generate"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          EXTRA_ARGS:
+            - "-DANTLR4_INSTALL=ON"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+
+            # Set CMP0135 so that extracted files use the current timestamp as their modification
+            # timestamp, which ensures the library gets rebuilt if the extracted files change.
+            - "-DCMAKE_POLICY_DEFAULT_CMP0135=NEW"
+          SOURCE_DIR: "{{.SOURCE_DIR}}"
+      - task: "yscope-dev-utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
+      - task: "yscope-dev-utils:cmake:install"
+        vars:
+          BUILD_DIR: "{{.BUILD_DIR}}"
+          CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+
+      # This command must be last
+      - task: "yscope-dev-utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
+
+  boost:
+    internal: true
+    vars:
+      VERSION: "1.87.0"
+    run: "once"
+    cmds:
+      - task: "yscope-dev-utils:boost:download-and-install"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
+          FILE_SHA256: "d6c69e4459eb5d6ec208250291221e7ff4a2affde9af6e49c9303b89c687461f"
+          TARGETS:
+            - "filesystem"
+            - "iostreams"
+            - "process"
+            - "program_options"
+            - "regex"
+            - "system"
+            - "url"
+          URL: "https://github.com/boostorg/boost/releases/download/boost-{{.VERSION}}/\
+          boost-{{.VERSION}}-b2-nodocs.tar.gz"
+          WORK_DIR: "{{.G_DEPS_CPP_DIR}}"
+
+
+  sqlite3:
+    internal: true
+    vars:
+      LIB_NAME: "sqlite3"
+
+      # Paths
+      EXTRACTION_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+      INSTALL_INCLUDE_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install/include"
+      INSTALL_SYMLINK: "{{.INSTALL_INCLUDE_DIR}}/{{.LIB_NAME}}"
+      ZIP_FILENAME_STEM: "sqlite-amalgamation-3360000"
+      SRC_DIR: "{{.EXTRACTION_DIR}}/{{.ZIP_FILENAME_STEM}}"
+    run: "once"
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-zip"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          FILE_SHA256: "999826fe4c871f18919fdb8ed7ec9dd8217180854dd1fe21eea96aed36186729"
+          OUTPUT_DIR: "{{.EXTRACTION_DIR}}"
+          URL: "https://www.sqlite.org/2021/{{.ZIP_FILENAME_STEM}}.zip"
+      - "mkdir -p '{{.INSTALL_INCLUDE_DIR}}'"
+      - "rm -f '{{.INSTALL_SYMLINK}}'"
+      - "ln -s '{{.SRC_DIR}}' '{{.INSTALL_SYMLINK}}'"
+      - |-
+        echo "set(CLP_SQLITE3_SOURCE_DIRECTORY \"{{.SRC_DIR}}\")" \
+        > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        echo "set(CLP_SQLITE3_INCLUDE_DIRECTORY \"{{.INSTALL_INCLUDE_DIR}}\")" \
+        >> "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
