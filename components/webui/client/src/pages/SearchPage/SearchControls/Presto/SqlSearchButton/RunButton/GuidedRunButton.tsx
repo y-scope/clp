@@ -16,7 +16,7 @@ import {
     TIME_RANGE_OPTION,
     TIME_RANGE_OPTION_DAYJS_MAP,
 } from "../../../TimeRangeInput/utils";
-import {handlePrestoQuerySubmit} from "../../presto-search-requests";
+import {handlePrestoGuidedQuerySubmit} from "../../presto-search-requests";
 import styles from "./index.module.css";
 
 
@@ -60,7 +60,7 @@ const GuidedRunButton = () => {
             newTimeRange = timeRange;
         }
 
-        handlePrestoQuerySubmit();
+        handlePrestoGuidedQuerySubmit();
 
         const newTimelineConfig = computeTimelineConfig(newTimeRange);
         updateTimelineConfig(newTimelineConfig);

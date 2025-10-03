@@ -1,9 +1,4 @@
-import {
-    useEffect,
-    useState,
-} from "react";
-
-import {Nullable} from "@webui/common/utility-types";
+import {useMemo} from "react";
 
 import MongoSocketCollection from "../../../../api/socket/MongoSocketCollection";
 import {useCursor} from "../../../../api/socket/useCursor";
@@ -41,12 +36,9 @@ const useAggregationResults = () => {
         [aggregationJobId]
     );
 
-    const [transformedData, setTransformedData] = useState<Nullable<TimelineBucket[]>>(null);
-    useEffect(() => {
+    const transformedData = useMemo(() => {
         if (null === aggregationResultsCursor) {
-            setTransformedData(null);
-
-            return;
+            return null;
         }
 
         if (CLP_QUERY_ENGINES.PRESTO === SETTINGS_QUERY_ENGINE) {
@@ -55,11 +47,10 @@ const useAggregationResults = () => {
                 return bucket.row;
             });
 
-            setTransformedData(newTransformedData);
-        } else {
-            const cursor = aggregationResultsCursor as TimelineBucket[];
-            setTransformedData(cursor);
+            return newTransformedData;
         }
+
+        return aggregationResultsCursor as TimelineBucket[];
     }, [aggregationResultsCursor]);
 
     return transformedData;

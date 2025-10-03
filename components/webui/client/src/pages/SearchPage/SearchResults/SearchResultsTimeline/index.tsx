@@ -14,7 +14,7 @@ import {
     SETTINGS_QUERY_ENGINE,
     SETTINGS_STORAGE_ENGINE,
 } from "../../../../config";
-import {handlePrestoQuerySubmit} from "../../SearchControls/Presto/presto-search-requests";
+import {handlePrestoGuidedQuerySubmit} from "../../SearchControls/Presto/presto-search-requests";
 import {handleQuerySubmit} from "../../SearchControls/search-requests";
 import {TIME_RANGE_OPTION} from "../../SearchControls/TimeRangeInput/utils";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
@@ -76,7 +76,7 @@ const SearchResultsTimeline = () => {
                 timestampEnd: newTimeRange[1].valueOf(),
             });
         } else {
-            handlePrestoQuerySubmit();
+            handlePrestoGuidedQuerySubmit();
         }
     }, [
         queryIsCaseSensitive,
