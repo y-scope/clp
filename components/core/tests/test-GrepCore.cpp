@@ -51,6 +51,8 @@ using std::unordered_set;
 using std::variant;
 using std::vector;
 
+using VarInfo = tuple<bool, bool, unordered_set<variable_dictionary_id_t>>;
+
 constexpr uint32_t cIntId{static_cast<uint32_t>(TokenInt)};
 constexpr uint32_t cFloatId{static_cast<uint32_t>(TokenFloat)};
 constexpr uint32_t cHasNumId{111};
@@ -363,7 +365,7 @@ auto check_sub_query(
         size_t id,
         vector<SubQuery> const& sub_queries,
         bool wildcard_match_required,
-        vector<tuple<bool, bool, unordered_set<variable_dictionary_id_t>>> const& vars_info,
+        vector<VarInfo> const& vars_info,
         unordered_set<logtype_dictionary_id_t> const& logtype_ids
 ) -> void;
 
@@ -436,7 +438,7 @@ auto check_sub_query(
         size_t id,
         vector<SubQuery> const& sub_queries,
         bool const wildcard_match_required,
-        vector<tuple<bool, bool, unordered_set<variable_dictionary_id_t>>> const& vars_info,
+        vector<VarInfo> const& vars_info,
         unordered_set<logtype_dictionary_id_t> const& logtype_ids
 ) -> void {
     CAPTURE(id);
@@ -866,8 +868,8 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
 
     REQUIRE(6 == sub_queries.size());
     size_t i{0};
-    tuple<bool, bool, unordered_set<size_t>> const wild_int{false, true, {}};
-    tuple<bool, bool, unordered_set<size_t>> const wild_has_num{true, false, {1LL, 2LL}};
+    VarInfo const wild_int{false, true, {}};
+    VarInfo const wild_has_num{true, false, {1LL, 2LL}};
     // NOTE: sub queries 0 and 2 are a duplicate of 3 and 5 because we use a vector instead of a set
     // when storing `m_sub_queries` in `Query`.
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
@@ -917,8 +919,8 @@ TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]
             sub_queries
     );
 
-    tuple<bool, bool, unordered_set<size_t>> const wild_int{false, true, {}};
-    tuple<bool, bool, unordered_set<size_t>> const wild_has_num{true, true, {1LL}};
+    VarInfo const wild_int{false, true, {}};
+    VarInfo const wild_has_num{true, true, {1LL}};
     REQUIRE(6 == sub_queries.size());
     size_t i{0};
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
@@ -954,8 +956,8 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
     REQUIRE(query.has_value());
     auto const& sub_queries{query.value().get_sub_queries()};
 
-    tuple<bool, bool, unordered_set<size_t>> const wild_int{false, true, {}};
-    tuple<bool, bool, unordered_set<size_t>> const wild_has_num{true, true, {1LL}};
+    VarInfo const wild_int{false, true, {}};
+    VarInfo const wild_has_num{true, true, {1LL}};
     REQUIRE(6 == sub_queries.size());
     size_t i{0};
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
