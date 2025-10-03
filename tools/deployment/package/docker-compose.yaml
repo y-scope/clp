@@ -131,7 +131,6 @@ services:
       - "${CLP_MCP_HOST:-127.0.0.1}:${CLP_MCP_PORT:-8000}:8000"
     volumes:
       - "${CLP_MCP_LOGS_DIR_HOST:-./var/log/mcp-server}:/var/log/mcp-server"
-    user: 0:0
     healthcheck:
       <<: *healthcheck_defaults
       test: [
@@ -142,5 +141,5 @@ services:
       ]
     command: [
       "bash", "-c",
-      "cd /opt/clp/lib/python3/site-packages && python3 -m clp_mcp_server --transport http --host $$MCP_HOST --port $$MCP_PORT"
+      "cd $$PYTHONPATH && python3 -m clp_mcp_server.clp_mcp_server --host $$MCP_HOST --port $$MCP_PORT"
     ]
