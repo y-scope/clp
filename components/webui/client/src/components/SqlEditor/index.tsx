@@ -79,16 +79,20 @@ const SqlEditor = (props: SqlEditorProps) => {
         token,
     ]);
 
-    const borderColor =
-        isFocused ? token.colorPrimary :
-        isHovered ? token.colorPrimaryHover :
-        token.colorBorder;
+    let borderColor = token.colorBorder;
+    if (isFocused) {
+        borderColor = token.colorPrimary;
+    } else if (isHovered) {
+        borderColor = token.colorPrimaryHover;
+    }
 
     const boxShadow = isFocused ?
         "0 0 0 2px rgba(5, 172, 255, 0.06)" :
         "none";
 
-    const pointerEvents = disabled ? "none" : "auto";
+    const pointerEvents = disabled ?
+        "none" :
+        "auto";
 
     return (
         <div
@@ -97,14 +101,24 @@ const SqlEditor = (props: SqlEditorProps) => {
             style={{
                 border: `1px solid ${borderColor}`,
                 borderRadius: token.borderRadius,
-                boxShadow,
-                pointerEvents,
+                boxShadow: boxShadow,
+                pointerEvents: pointerEvents,
             }}
-            tabIndex={disabled ? -1 : 0}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={() => setIsHovered(false)}
+            tabIndex={disabled ?
+                -1 :
+                0}
+            onBlur={() => {
+                setIsFocused(false);
+            }}
+            onFocus={() => {
+                setIsFocused(true);
+            }}
+            onMouseEnter={() => {
+                setIsHovered(true);
+            }}
+            onMouseLeave={() => {
+                setIsHovered(false);
+            }}
         >
             <Editor
                 language={"sql"}
