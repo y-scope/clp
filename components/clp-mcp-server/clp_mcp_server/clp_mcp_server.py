@@ -55,7 +55,6 @@ def main(host: str, port: int) -> None:
         mcp = create_mcp_server()
         logger.info("Starting CLP MCP Server on %s:%d.", host, port)
         mcp.run(transport="streamable-http", host=host, port=port)
-
     except Exception:
         logger.exception("Failed to start MCP server.")
         sys.exit(1)
