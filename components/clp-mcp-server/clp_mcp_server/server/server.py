@@ -5,8 +5,8 @@ from typing import Any
 from fastmcp import FastMCP
 
 
-class CLPMCPServerConfig:
-    """Configuration constants for the CLP MCP Server."""
+class ProtocolConstant:
+    """Constants for the CLP MCP Server."""
 
     SERVER_NAME = "clp-mcp-server"
 
@@ -16,31 +16,33 @@ class CLPMCPServerConfig:
 
     @classmethod
     def get_capabilities(cls) -> list[str]:
-        """Get list of available tool capabilities."""
+        """
+        Gets the capabilities of the server.
+        :return: A list of tool names supported by the server.
+        """
         return [cls.TOOL_HELLO_WORLD, cls.TOOL_GET_SERVER_INFO]
 
 
-def create_mcp_server(**settings: Any) -> FastMCP:
+def create_mcp_server() -> FastMCP:
     """
-    Creates and defines API tool calls for CLP MCP server.
+    Creates and defines API tool calls for the CLP MCP server.
 
-    :param settings: Additional settings for the MCP server configuration.
-    :return: A configured FastMCP instance ready to run.
-    :raise: Any exceptions from FastMCP initialization.
+    :return: A configured `FastMCP` instance.
+    :raise: Propagates `FastMCP.__init__`'s exceptions.
+    :raise: Propagates `FastMCP.tool`'s exceptions.
     """
-    # Initialize the MCP server with basic metadata
-    mcp = FastMCP(name=CLPMCPServerConfig.SERVER_NAME, **settings)
+    mcp = FastMCP(name=ProtocolConstant.SERVER_NAME)
 
     @mcp.tool()
     def get_server_info() -> dict[str, Any]:
         """
-        Gets basic information about the MCP server.
+        Gets the MCP server's information.
 
-        :return: Server information including version and capabilities.
+        :return: The server's information with a list of capabilities.
         """
         return {
-            "name": CLPMCPServerConfig.SERVER_NAME,
-            "capabilities": CLPMCPServerConfig.get_capabilities(),
+            "name": ProtocolConstant.SERVER_NAME,
+            "capabilities": ProtocolConstant.get_capabilities(),
             "status": "running",
         }
 
@@ -49,12 +51,12 @@ def create_mcp_server(**settings: Any) -> FastMCP:
         """
         Provides a simple hello world greeting.
 
-        :param name: The name to greet.
-        :return: A greeting message with metadata.
+        :param name:
+        :return: A greeting message to the given `name`.
         """
         return {
             "message": f"Hello World, {name.strip()}!",
-            "server": CLPMCPServerConfig.SERVER_NAME,
+            "server": ProtocolConstant.SERVER_NAME,
             "status": "running",
         }
 

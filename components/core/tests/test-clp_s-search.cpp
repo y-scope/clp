@@ -42,7 +42,10 @@ constexpr std::string_view cTestSearchArchiveDirectory{"test-clp-s-search-archiv
 constexpr std::string_view cTestInputFileDirectory{"test_log_files"};
 constexpr std::string_view cTestSearchInputFile{"test_search.jsonl"};
 constexpr std::string_view cTestSearchFormattedFloatFile{"test_search_formatted_float.jsonl"};
+constexpr std::string_view cTestSearchFloatTimestampFile{"test_search_float_timestamp.jsonl"};
+constexpr std::string_view cTestSearchIntTimestampFile{"test_search_int_timestamp.jsonl"};
 constexpr std::string_view cTestIdxKey{"idx"};
+constexpr std::string_view cTestTimestampKey{"timestamp"};
 
 namespace {
 auto get_test_input_path_relative_to_tests_dir(std::string_view test_input_path)
@@ -225,7 +228,8 @@ TEST_CASE("clp-s-search", "[clp-s][search]") {
              {1}},
             {R"aa(ambiguous_varstring: "a*e")aa", {10, 11, 12}},
             {R"aa(ambiguous_varstring: "a\*e")aa", {12}},
-            {R"aa(idx: * AND NOT idx: null AND idx: 0)aa", {0}}
+            {R"aa(idx: * AND NOT idx: null AND idx: 0)aa", {0}},
+            {R"aa(one > 0.9 AND one < 1.1 AND one: 1.0)aa", {13}}
     };
     auto structurize_arrays = GENERATE(true, false);
     auto single_file_archive = GENERATE(true, false);
@@ -288,4 +292,62 @@ TEST_CASE("clp-s-search-formatted-float", "[clp-s][search]") {
     std::shared_ptr<clp_s::search::ast::Expression> expr{nullptr};
     REQUIRE_NOTHROW(expr = create_first_record_match_metadata_query());
     REQUIRE_NOTHROW(search(expr, false, {0}));
+}
+
+TEST_CASE("clp-s-search-float-timestamp", "[clp-s][search]") {
+    std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{
+            {R"aa(timestamp < 1759417024.4)aa", {0, 1, 2}},
+            {R"aa(timestamp > 1759417023.1)aa", {0, 1, 2}},
+            {R"aa(timestamp > 1759417024)aa", {0, 1, 2}},
+            {R"aa(timestamp > 1759417024.1 AND timestamp < 1759417024.3)aa", {1}},
+    };
+    auto single_file_archive = GENERATE(true, false);
+    auto retain_float_format = GENERATE(true, false);
+
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchFloatTimestampFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestTimestampKey},
+                    retain_float_format,
+                    single_file_archive,
+                    false
+            )
+    );
+
+    for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
+        REQUIRE_NOTHROW(search(query, false, expected_results));
+    }
+}
+
+TEST_CASE("clp-s-search-epoch-timestamp", "[clp-s][search]") {
+    std::vector<std::pair<std::string, std::vector<int64_t>>> queries_and_results{
+            {R"aa(timestamp < 1759417024400)aa", {0, 1, 2}},
+            {R"aa(timestamp > 1759417023100)aa", {0, 1, 2}},
+            {R"aa(timestamp > 1759417024000)aa", {0, 1, 2}},
+            {R"aa(timestamp > 1759417024100 AND timestamp < 1759417024300)aa", {1}},
+            {R"aa(timestamp > 1759417024299.9)aa", {2}}
+    };
+    auto single_file_archive = GENERATE(true, false);
+
+    TestOutputCleaner const test_cleanup{{std::string{cTestSearchArchiveDirectory}}};
+
+    REQUIRE_NOTHROW(
+            std::ignore = compress_archive(
+                    get_test_input_local_path(cTestSearchIntTimestampFile),
+                    std::string{cTestSearchArchiveDirectory},
+                    std::string{cTestTimestampKey},
+                    true,
+                    single_file_archive,
+                    false
+            )
+    );
+
+    for (auto const& [query, expected_results] : queries_and_results) {
+        CAPTURE(query);
+        REQUIRE_NOTHROW(search(query, false, expected_results));
+    }
 }

@@ -1,6 +1,6 @@
 import copy
 import pathlib
-import typing
+from typing import Any, Dict, List, Optional
 
 import brotli
 import msgpack
@@ -21,14 +21,14 @@ class PathsToCompressBuffer:
         clp_io_config: ClpIoConfig,
         clp_metadata_db_connection_config: dict,
     ):
-        self.__files: typing.List[FileMetadata] = []
-        self.__tasks: typing.List[typing.Dict[str, typing.Any]] = []
-        self.__partition_info: typing.List[typing.Dict[str, typing.Any]] = []
+        self.__files: List[FileMetadata] = []
+        self.__tasks: List[Dict[str, Any]] = []
+        self.__partition_info: List[Dict[str, Any]] = []
         self.__maintain_file_ordering: bool = maintain_file_ordering
         if empty_directories_allowed:
-            self.__empty_directories: typing.Optional[typing.List[str]] = []
+            self.__empty_directories: Optional[List[str]] = []
         else:
-            self.__empty_directories: typing.Optional[typing.List[str]] = None
+            self.__empty_directories: Optional[List[str]] = None
         self.__total_file_size: int = 0
         self.__target_archive_size: int = clp_io_config.output.target_archive_size
         self.__file_size_to_trigger_compression: int = clp_io_config.output.target_archive_size * 2
