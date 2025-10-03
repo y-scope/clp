@@ -1,1 +1,1 @@
-"""CLP MCP Server Package Export."""
+"""Top-level package for CLP MCP Server."""

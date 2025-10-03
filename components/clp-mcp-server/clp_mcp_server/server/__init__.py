@@ -1,4 +1,4 @@
-"""CLP MCP Server Export"""
+"""Implementation of CLP MCP Server."""
 
 from .server import create_mcp_server
 
