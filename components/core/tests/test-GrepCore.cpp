@@ -79,10 +79,10 @@ public:
             VariableDictionaryReaderReq VariableDictionaryReaderType
     >
     static auto generate_schema_sub_queries(
-            std::set<QueryInterpretation> const& interpretations,
+            set<QueryInterpretation> const& interpretations,
             LogTypeDictionaryReaderType const& logtype_dict,
             VariableDictionaryReaderType const& var_dict,
-            std::vector<SubQuery>& sub_queries
+            vector<SubQuery>& sub_queries
     ) -> void {
         GrepCore::generate_schema_sub_queries(
                 interpretations,
@@ -100,9 +100,14 @@ public:
 
     static auto generate_logtype_string(
             QueryInterpretation const& interpretation,
-            unordered_map<size_t, bool> const& wildcard_mask_map
+            vector<size_t> const& wildcard_encodable_positions,
+            vector<bool> const& mask_encoded_flags
     ) -> string {
-        return GrepCore::generate_logtype_string(interpretation, wildcard_mask_map);
+        return GrepCore::generate_logtype_string(
+                interpretation,
+                wildcard_encodable_positions,
+                mask_encoded_flags
+        );
     }
 
     template <typename VariableDictionaryReaderType>
@@ -522,18 +527,14 @@ TEST_CASE("generate_logtype_string_for_empty_interpretation", "[dfa_search]") {
     auto const wildcard_encodable_positions{
             clp::GrepCoreTest::get_wildcard_encodable_positions(interpretation)
     };
-    uint64_t const num_combos{1ULL << wildcard_encodable_positions.size()};
-    REQUIRE(1 == num_combos);
-    for (uint64_t mask{0}; mask < num_combos; ++mask) {
-        std::unordered_map<size_t, bool> wildcard_mask_map;
-        for (size_t i{0}; i < wildcard_encodable_positions.size(); ++i) {
-            wildcard_mask_map[wildcard_encodable_positions[i]] = (mask >> i) & 1ULL;
-        }
-        auto logtype_string{
-                clp::GrepCoreTest::generate_logtype_string(interpretation, wildcard_mask_map)
-        };
-        REQUIRE(logtype_string.empty());
-    }
+
+    REQUIRE(wildcard_encodable_positions.empty());
+    auto const logtype_string{clp::GrepCoreTest::generate_logtype_string(
+            interpretation,
+            wildcard_encodable_positions,
+            {false}
+    )};
+    REQUIRE(logtype_string.empty());
 }
 
 TEST_CASE("generate_logtype_string_for_single_variable_interpretation", "[dfa_search]") {
@@ -546,22 +547,22 @@ TEST_CASE("generate_logtype_string_for_single_variable_interpretation", "[dfa_se
     auto const wildcard_encodable_positions{
             clp::GrepCoreTest::get_wildcard_encodable_positions(interpretation)
     };
-    uint64_t const num_combos{1ULL << wildcard_encodable_positions.size()};
-    REQUIRE(1 == num_combos);
 
-    std::unordered_map<size_t, bool> const wildcard_mask_map{};
-    auto logtype_string{
-            clp::GrepCoreTest::generate_logtype_string(interpretation, wildcard_mask_map)
-    };
+    REQUIRE(wildcard_encodable_positions.empty());
+    auto const logtype_string{clp::GrepCoreTest::generate_logtype_string(
+            interpretation,
+            wildcard_encodable_positions,
+            {false}
+    )};
     REQUIRE(expected_logtype_string == logtype_string);
 }
 
 TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_search]") {
     unordered_set<string> const expected_logtype_strings{
-            {{generate_expected_logtype_string({"text", 'i', 'f', 'd', 'd', 'd'})},
-             {generate_expected_logtype_string({"text", 'i', 'f', 'i', 'd', 'd'})},
-             {generate_expected_logtype_string({"text", 'i', 'f', 'd', 'f', 'd'})},
-             {generate_expected_logtype_string({"text", 'i', 'f', 'i', 'f', 'd'})}}
+             generate_expected_logtype_string({"text", 'i', 'f', 'd', 'd', 'd'}),
+             generate_expected_logtype_string({"text", 'i', 'f', 'i', 'd', 'd'}),
+             generate_expected_logtype_string({"text", 'i', 'f', 'd', 'f', 'd'}),
+             generate_expected_logtype_string({"text", 'i', 'f', 'i', 'f', 'd'})
     };
 
     auto const interpretation{make_query_interpretation(
@@ -581,13 +582,15 @@ TEST_CASE("generate_logtype_string_for_multi_variable_interpretation", "[dfa_sea
     REQUIRE(num_combos == 4);
     unordered_set<string> logtype_strings;
     for (uint64_t mask{0}; mask < num_combos; ++mask) {
-        unordered_map<size_t, bool> wildcard_mask_map;
+        vector<bool> mask_encoded_flags(interpretation.get_logtype().size(), false);
         for (size_t i{0}; i < wildcard_encodable_positions.size(); ++i) {
-            wildcard_mask_map[wildcard_encodable_positions[i]] = (mask >> i) & 1ULL;
+            mask_encoded_flags[wildcard_encodable_positions[i]] = (mask >> i) & 1ULL;
         }
-        logtype_strings.insert(
-                clp::GrepCoreTest::generate_logtype_string(interpretation, wildcard_mask_map)
-        );
+        logtype_strings.insert(clp::GrepCoreTest::generate_logtype_string(
+                interpretation,
+                wildcard_encodable_positions,
+                mask_encoded_flags
+        ));
     }
     REQUIRE(expected_logtype_strings == logtype_strings);
 }

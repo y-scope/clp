@@ -208,9 +208,10 @@ auto GrepCore::get_wildcard_encodable_positions(QueryInterpretation const& inter
 
 auto GrepCore::generate_logtype_string(
         QueryInterpretation const& interpretation,
-        unordered_map<size_t, bool> const& wildcard_mask_map
-) -> std::string {
-    std::string logtype_string;
+        vector<size_t> const& wildcard_encodable_positions,
+        vector<bool> const& mask_encoded_flags
+) -> string {
+    string logtype_string;
 
     // Reserve size for `logtype_string`.
     size_t logtype_string_size{0};
@@ -239,9 +240,12 @@ auto GrepCore::generate_logtype_string(
         bool const is_int{TokenInt == var_type};
         bool const is_float{TokenFloat == var_type};
 
-        auto const it{wildcard_mask_map.find(i)};
-        if (wildcard_mask_map.end() != it) {
-            if (it->second) {
+        if (wildcard_encodable_positions.end() != std::ranges::find(
+                wildcard_encodable_positions.begin(),
+                wildcard_encodable_positions.end(),
+                i
+        )) {
+            if (mask_encoded_flags[i]) {
                 if (is_int) {
                     EncodedVariableInterpreter::add_int_var(logtype_string);
                 } else {

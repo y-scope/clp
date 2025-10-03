@@ -228,12 +228,14 @@ private:
      *   - 1: Treat as an encoded variable.
      *
      * @param interpretation The interpretation to convert to a logtype string.
-     * @param wildcard_mask_map A map indicating the state of encodable wildcard variables.
+     * @param wildcard_encodable_positions A vector of positions of encodable wildcard variables.
+     * @param mask_encoded_flags A vector indicating if a variables is mask encoded.
      * @return The logtype string corresponding to this combination of encoded variables.
      */
     static auto generate_logtype_string(
             log_surgeon::wildcard_query_parser::QueryInterpretation const& interpretation,
-            std::unordered_map<size_t, bool> const& wildcard_mask_map
+            std::vector<size_t> const& wildcard_encodable_positions,
+            std::vector<bool> const& mask_encoded_flags
     ) -> std::string;
 
     /**
@@ -250,7 +252,7 @@ private:
      * @param variable_token The variable token to process.
      * @param var_dict The variable dictionary.
      * @param ignore_case If true, perform a case-insensitive search.
-     * @param is_wildcard_mask_encoded If the token is an encodable wildcard and is to be encoded.
+     * @param is_mask_encoded If the token is an encodable wildcard and is to be encoded.
      * @param sub_query Returns the updated sub query object.
      * @return True if the variable is encoded or is in the variable dictionary, false otherwise.
      */
@@ -259,7 +261,7 @@ private:
             log_surgeon::wildcard_query_parser::VariableQueryToken const& variable_token,
             VariableDictionaryReaderType const& var_dict,
             bool ignore_case,
-            bool is_wildcard_mask_encoded,
+            bool is_mask_encoded,
             SubQuery& sub_query
     ) -> bool;
 };
@@ -561,18 +563,23 @@ void GrepCore::generate_schema_sub_queries(
 ) {
     constexpr size_t cMaxEncodableWildcardVariables{16};
     for (auto const& interpretation : interpretations) {
+        auto const logtype{interpretation.get_logtype()};
         auto wildcard_encodable_positions{get_wildcard_encodable_positions(interpretation)};
         if (wildcard_encodable_positions.size() > cMaxEncodableWildcardVariables) {
             throw std::runtime_error("Too many encodable variables.");
         }
         uint64_t const num_combos{1ULL << wildcard_encodable_positions.size()};
         for (uint64_t mask{0}; mask < num_combos; ++mask) {
-            std::unordered_map<size_t, bool> wildcard_mask_map;
+            std::vector<bool> mask_encoded_flags(logtype.size(), false);
             for (size_t i{0}; i < wildcard_encodable_positions.size(); ++i) {
-                wildcard_mask_map[wildcard_encodable_positions[i]] = (mask >> i) & 1ULL;
+                mask_encoded_flags[wildcard_encodable_positions[i]] = (mask >> i) & 1ULL;
             }
 
-            auto logtype_string{generate_logtype_string(interpretation, wildcard_mask_map)};
+            auto logtype_string{generate_logtype_string(
+                    interpretation,
+                    wildcard_encodable_positions,
+                    mask_encoded_flags)
+            };
 
             std::unordered_set<typename LogTypeDictionaryReaderType::Entry const*> logtype_entries;
             logtype_dict.get_entries_matching_wildcard_string(
@@ -586,24 +593,26 @@ void GrepCore::generate_schema_sub_queries(
 
             SubQuery sub_query;
             bool has_vars{true};
-            auto const logtype{interpretation.get_logtype()};
             for (size_t i{0}; i < logtype.size(); ++i) {
                 auto const& token{logtype[i]};
                 if (std::holds_alternative<log_surgeon::wildcard_query_parser::VariableQueryToken>(
                             token
                     ))
                 {
-                    bool is_wildcard_mask_encoded{false};
-                    auto const it{wildcard_mask_map.find(i)};
-                    if (wildcard_mask_map.end() != it) {
-                        is_wildcard_mask_encoded = it->second;
+                    bool is_mask_encoded{false};
+                    if (wildcard_encodable_positions.end() != std::ranges::find(
+                            wildcard_encodable_positions.begin(),
+                            wildcard_encodable_positions.end(),
+                            i
+                    )) {
+                        is_mask_encoded = mask_encoded_flags[i];
                     }
 
                     has_vars = process_schema_var_token(
                             std::get<log_surgeon::wildcard_query_parser::VariableQueryToken>(token),
                             var_dict,
                             ignore_case,
-                            is_wildcard_mask_encoded,
+                            is_mask_encoded,
                             sub_query
                     );
                 }
@@ -631,7 +640,7 @@ auto GrepCore::process_schema_var_token(
         log_surgeon::wildcard_query_parser::VariableQueryToken const& variable_token,
         VariableDictionaryReaderType const& var_dict,
         bool const ignore_case,
-        bool const is_wildcard_mask_encoded,
+        bool const is_mask_encoded,
         SubQuery& sub_query
 ) -> bool {
     auto const& raw_string{variable_token.get_query_substring()};
@@ -640,7 +649,7 @@ auto GrepCore::process_schema_var_token(
     bool const is_int{log_surgeon::SymbolId::TokenInt == var_type};
     bool const is_float{log_surgeon::SymbolId::TokenFloat == var_type};
 
-    if (is_wildcard_mask_encoded) {
+    if (is_mask_encoded) {
         sub_query.mark_wildcard_match_required();
         return true;
     }
