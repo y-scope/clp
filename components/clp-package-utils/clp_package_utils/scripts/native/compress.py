@@ -212,6 +212,7 @@ def _generate_s3_input_config_with_key_validation(
 
         if key in keys:
             raise ValueError(f"Duplicate S3 key found: {key}.")
+        keys.add(key)
 
     # Determine the common prefix
     key_list = list(keys)

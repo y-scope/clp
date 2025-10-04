@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict, Final, List, Optional, Set, Tuple, Union
 
 import boto3
+import botocore
 from botocore.config import Config
 from job_orchestration.scheduler.job_config import S3InputConfig
 
@@ -254,13 +255,15 @@ def generate_s3_virtual_hosted_style_url(
 
 def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]:
     """
-    TODO: Update docstring
+    Gets the metadata of all objects specified by the given input config.
+
     NOTE: We reuse FileMetadata to store the metadata of S3 objects where the object's key is stored
     as `path` in FileMetadata.
 
     :param s3_input_config:
     :return: A list of `FileMetadata` containing the object's metadata on success.
     :raises: Propagates `_s3_get_object_metadata_from_single_prefix`'s exceptions.
+    :raises: Propagates `_s3_get_object_metadata_from_keys`'s exceptions.
     """
 
     s3_client = _create_s3_client(s3_input_config.region_code, s3_input_config.aws_authentication)
@@ -426,19 +429,89 @@ def _s3_get_object_metadata_from_keys(
     :param bucket:
     :param keys:
     :return: A list of `FileMetadata` containing the object's metadata on success.
-    :raises: Propagates `boto3.client`'s exceptions.
-    :raises: Propagates `boto3.client.head_object`'s exceptions.
+    :raises: ValueError if `keys` is an empty list.
+    :raises: ValueError if any key in `keys` doesn't start with `key_prefix`.
+    :raises: ValueError if duplicate keys are found in `keys`.
+    :raises: ValueError if any key in `keys` doesn't exist in the bucket.
+    :raises: Propagates `_s3_get_object_metadata_from_key`'s exceptions.
+    :raises: Propagates `boto3.client.get_paginator`'s exceptions.
+    :raises: Propagates `boto3.paginator`'s exceptions.
     """
-    file_metadata_list: List[FileMetadata] = list()
+    # Key validation
+    if len(keys) == 0:
+        raise ValueError("The list of keys is empty.")
 
-    for object_key in keys:
-        if object_key.endswith("/"):
-            # Skip any object that resolves to a directory-like path
+    keys.sort()
+    for idx, key in enumerate(keys):
+        if not key.startswith(key_prefix):
+            raise ValueError(f"Key `{key}` doesn't start with the specified prefix `{key_prefix}`.")
+        if idx > 0 and key == keys[idx - 1]:
+            raise ValueError(f"Duplicate key found: `{key}`.")
+
+    key_iterator = iter(keys)
+    first_key = next(key_iterator)
+    file_metadata_list: List[FileMetadata] = list()
+    file_metadata_list.append(_s3_get_object_metadata_from_key(s3_client, bucket, first_key))
+
+    next_key = next(key_iterator, None)
+    if next_key is None:
+        return file_metadata_list
+
+    paginator = s3_client.get_paginator("list_objects_v2")
+    for page in paginator.paginate(Bucket=bucket, Prefix=key_prefix, StartAfter=first_key):
+        contents = page.get("Contents", None)
+        if contents is None:
             continue
 
-        head_object_response = s3_client.head_object(Bucket=bucket, Key=object_key)
-        file_metadata_list.append(
-            FileMetadata(Path(object_key), head_object_response["ContentLength"])
-        )
+        for obj in contents:
+            object_key = obj["Key"]
+            if object_key.endswith("/"):
+                # Skip any object that resolves to a directory-like path
+                continue
 
-    return file_metadata_list
+            # We need to do both < and > checks since they are handled differently. Ideally, we can
+            # do it with a single comparison. However, Python doesn't support three-way comparison.
+            if object_key < next_key:
+                continue
+            if object_key > next_key:
+                raise ValueError(f"Key `{next_key}` doesn't exist in the bucket `{bucket}`.")
+
+            file_metadata_list.append(FileMetadata(Path(object_key), obj["Size"]))
+            next_key = next(key_iterator, None)
+            if next_key is None:
+                # Early exit sine all keys have been found.
+                return file_metadata_list
+
+    # If control flow reaches here, it means there are still keys left to find.
+    absent_keys = []
+    while next_key is not None:
+        absent_keys.append(next_key)
+        next_key = next(key_iterator, None)
+    serialized_absent_keys = "\n".join(absent_keys)
+    raise ValueError(
+        f"Cannot find following keys in the bucket `{bucket}`:\n{serialized_absent_keys}"
+    )
+
+
+def _s3_get_object_metadata_from_key(
+    s3_client: boto3.client, bucket: str, key: str
+) -> FileMetadata:
+    """
+    Gets the metadata of an object specified by the `key` under the <`bucket`>.
+
+    :param s3_client:
+    :param bucket:
+    :param key:
+    :return: A `FileMetadata` containing the object's metadata on success.
+    :raises: ValueError if the object doesn't exist or fails to read the metadata.
+    :raises: Propagates `boto3.client.head_object`'s exceptions.
+    """
+    try:
+        return FileMetadata(
+            Path(key), s3_client.head_object(Bucket=bucket, Key=key)["ContentLength"]
+        )
+    except botocore.exceptions.ClientError as e:
+        raise ValueError(
+            f"Failed to read metadata of the key `{key}` from the bucket `{bucket}`"
+            f" with the error: {e}."
+        )
