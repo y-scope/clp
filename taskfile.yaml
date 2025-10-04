@@ -554,8 +554,6 @@ tasks:
   uv-component:
     internal: true
     label: "{{.COMPONENT}}"
-    env:
-      UV_CACHE_DIR: "{{.G_BUILD_DIR}}/uv-cache"
     requires:
       vars: ["COMPONENT"]
     sources:
@@ -570,7 +568,7 @@ tasks:
       - task: "clean-python-component"
         vars:
           COMPONENT: "{{.COMPONENT}}"
-      - "uv build --wheel -o dist"
+      - "uv build --wheel --no-cache -o dist"
 
   component-venv:
     internal: true
