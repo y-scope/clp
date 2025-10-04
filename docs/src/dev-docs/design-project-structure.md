@@ -2,6 +2,7 @@
 
 CLP is currently split across a few different components in the [components] directory:
 
+* [clp-mcp-server] contains code for CLP MCP Server.
 * [clp-package-utils] contains Python utilities for operating the CLP package.
 * [clp-py-utils] contains Python utilities common to several of the other components.
 * [core] contains code to compress uncompressed logs, decompress compressed logs, and search
@@ -11,6 +12,7 @@ CLP is currently split across a few different components in the [components] dir
 * [webui] contains the web interface for the CLP package.
 
 [components]: https://github.com/y-scope/clp/tree/main/components
+[clp-mcp-server]: https://github.com/y-scope/clp/tree/main/components/clp-mcp-server
 [clp-package-utils]: https://github.com/y-scope/clp/tree/main/components/clp-package-utils
 [clp-py-utils]: https://github.com/y-scope/clp/tree/main/components/clp-py-utils
 [core]: https://github.com/y-scope/clp/tree/main/components/core
