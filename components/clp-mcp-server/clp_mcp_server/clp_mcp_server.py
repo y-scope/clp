@@ -1,4 +1,4 @@
-"""CLP MCP Server package."""
+"""CLP MCP Server entry point."""
 
 import ipaddress
 import logging
