@@ -6,7 +6,7 @@ vars:
 tasks:
   default:
     deps:
-      - task: "init"
+      - task: ":init"
     cmds:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:

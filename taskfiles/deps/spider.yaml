@@ -29,7 +29,7 @@ tasks:
 
   spider-dep:
     deps:
-      - task: "init"
+      - task: ":init"
       - task: "utils:clean-outdated-cpp-checksum-files"
     cmds:
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
