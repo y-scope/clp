@@ -554,13 +554,9 @@ tasks:
   uv-component:
     internal: true
     label: "{{.COMPONENT}}"
-    vars:
-      VENV_DIR: "{{.G_BUILD_DIR}}/{{.COMPONENT}}/venv"
     requires:
       vars: ["COMPONENT"]
     sources:
-      - "{{.G_BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
-      - "{{.ROOT_DIR}}/requirements.txt"
       - "{{.TASKFILE}}"
       - "/etc/os-release"
       - "**/*"
@@ -568,18 +564,11 @@ tasks:
     dir: "components/{{.COMPONENT}}"
     generates:
       - "dist/*.whl"
-    deps:
-      - task: "component-venv"
-        vars:
-          COMPONENT: "{{.COMPONENT}}"
-          OUTPUT_DIR: "{{.VENV_DIR}}"
     cmds:
       - task: "clean-python-component"
         vars:
           COMPONENT: "{{.COMPONENT}}"
-      - |-
-        . "{{.VENV_DIR}}/bin/activate"
-        UV_CACHE_DIR="{{.G_BUILD_DIR}}/uv-cache" uv build --wheel
+      - "uv build --wheel -o dist"
 
   component-venv:
     internal: true
