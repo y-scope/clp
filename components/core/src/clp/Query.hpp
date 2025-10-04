@@ -25,7 +25,7 @@ public:
     );
 
     // Methods
-    auto operator==(const QueryVar& lhs) const -> bool = default;
+    auto operator==(QueryVar const& lhs) const -> bool = default;
 
     /**
      * Checks if the given encoded variable matches this QueryVar
@@ -77,7 +77,7 @@ private:
 class SubQuery {
 public:
     // Methods
-    auto operator==(const SubQuery& lhs) const -> bool = default;
+    auto operator==(SubQuery const& lhs) const -> bool = default;
 
     /**
      * Adds a precise non-dictionary variable to the subquery
