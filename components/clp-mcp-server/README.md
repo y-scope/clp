@@ -39,7 +39,7 @@ Add the following snippet to your Claude Desktop settings file (`claude-settings
 ```
 
 * You can replace the server name (`clp`) with any name you prefer.
-* Update the URL (http://0.0.0.0:8000) to the actual host or port where your CLP MCP server is
+* Update the URL (<http://0.0.0.0:8000>) to the actual host or port where your CLP MCP server is
   running.
 
 For more details on Claude Desktop MCP setup, see the

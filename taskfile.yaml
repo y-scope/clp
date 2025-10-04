@@ -554,6 +554,8 @@ tasks:
   uv-component:
     internal: true
     label: "{{.COMPONENT}}"
+    env:
+      UV_CACHE_DIR: "{{.G_BUILD_DIR}}/uv-cache"
     requires:
       vars: ["COMPONENT"]
     sources:
