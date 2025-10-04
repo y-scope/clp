@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import typing
 from enum import auto
 from typing import List, Literal, Optional, Tuple, Union
 
@@ -71,7 +70,7 @@ class ExtractIrJobConfig(QueryJobConfig):
 
 class ExtractJsonJobConfig(QueryJobConfig):
     archive_id: str
-    target_chunk_size: typing.Optional[int] = None
+    target_chunk_size: Optional[int] = None
 
 
 class SearchJobConfig(QueryJobConfig):
