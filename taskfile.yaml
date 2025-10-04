@@ -122,7 +122,7 @@ tasks:
       - "core"
       - "clp-package-utils"
       - "clp-py-utils"
-      - "deps:spider"
+      - "deps:spider:spider-dep"
       - "init"
       - "job-orchestration"
       - "package-venv"

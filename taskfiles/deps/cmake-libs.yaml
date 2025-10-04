@@ -1,5 +1,11 @@
 version: "3"
 
+vars:
+  # Library names
+  G_BOOST_LIB_NAME: "Boost"
+  G_FMT_LIB_NAME: "fmt"
+  G_GSL_LIB_NAME: "Microsoft.GSL"
+
 # NOTE: For dependencies built using CMake, we set CMP0074 to NEW whenever:
 # - a component's minimum required CMake version is less than 3.27 (where CMP0074 defaults to OLD);
 #   and

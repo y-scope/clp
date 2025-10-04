@@ -1,7 +1,10 @@
 version: "3"
 
+vars:
+  G_DEPS_LOG_VIEWER_CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer.md5"
+
 tasks:
-  log-viewer:
+  default:
     deps:
       - task: "init"
     cmds:
