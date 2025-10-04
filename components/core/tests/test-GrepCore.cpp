@@ -868,16 +868,12 @@ TEST_CASE("generate_schema_sub_queries", "[dfa_search]") {
             sub_queries
     );
 
-    REQUIRE(6 == sub_queries.size());
-    size_t i{0};
     VarInfo const wild_int{false, true, {}};
     VarInfo const wild_has_num{true, false, {1LL, 2LL}};
-    // NOTE: sub queries 0 and 2 are a duplicate of 3 and 5 because we use a vector instead of a set
-    // when storing `m_sub_queries` in `Query`.
+    REQUIRE(4 == sub_queries.size());
+    size_t i{0};
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
-    check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
-    check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
     check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
 }
@@ -923,12 +919,10 @@ TEST_CASE("generate_schema_sub_queries_with_wildcard_duplication", "[dfa_search]
 
     VarInfo const wild_int{false, true, {}};
     VarInfo const wild_has_num{true, true, {1LL}};
-    REQUIRE(6 == sub_queries.size());
+    REQUIRE(4 == sub_queries.size());
     size_t i{0};
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
-    check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
-    check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
     check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
 }
@@ -960,12 +954,10 @@ TEST_CASE("process_raw_query", "[dfa_search]") {
 
     VarInfo const wild_int{false, true, {}};
     VarInfo const wild_has_num{true, true, {1LL}};
-    REQUIRE(6 == sub_queries.size());
+    REQUIRE(4 == sub_queries.size());
     size_t i{0};
     check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {0LL});
-    check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
-    check_sub_query(i++, sub_queries, true, {wild_int, wild_has_num}, {1LL});
     check_sub_query(i++, sub_queries, false, {wild_int, wild_has_num}, {2LL, 3LL});
     check_sub_query(i++, sub_queries, true, {wild_int}, {5LL});
 }

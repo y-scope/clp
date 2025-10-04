@@ -632,7 +632,9 @@ void GrepCore::generate_schema_sub_queries(
                 possible_logtype_ids.emplace(entry->get_id());
             }
             sub_query.set_possible_logtypes(possible_logtype_ids);
-            sub_queries.push_back(std::move(sub_query));
+            if (sub_queries.end() == std::ranges::find(sub_queries, sub_query)) {
+                sub_queries.push_back(std::move(sub_query));
+            }
         }
     }
 }
