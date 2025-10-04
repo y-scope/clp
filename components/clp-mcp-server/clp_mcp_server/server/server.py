@@ -1,4 +1,4 @@
-"""Minimal MCP Server Implementation for CLP."""
+"""MCP Server implementation."""
 
 from typing import Any
 
