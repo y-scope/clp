@@ -1,5 +1,15 @@
 version: "3"
 
+includes:
+  cmake-libs:
+    flatten: true
+    taskfile: "cmake-libs.yaml"
+  misc-libs:
+    flatten: true
+    taskfile: "misc-libs.yaml"
+  utils: "utils.yaml"
+  yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
 vars:
   G_DEPS_LOG_VIEWER_CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer.md5"
 

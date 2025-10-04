@@ -1,13 +1,7 @@
 version: "3"
 
 includes:
-  cmake-libs:
-    flatten: true
-    taskfile: "cmake-libs.yaml"
   core: "core.yaml"
-  misc-libs:
-    flatten: true
-    taskfile: "misc-libs.yaml"
   spider: "spider.yaml"
   log-viewer: "log-viewer.yaml"
   utils: "utils.yaml"
