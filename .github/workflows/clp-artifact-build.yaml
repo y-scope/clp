@@ -475,8 +475,12 @@ jobs:
             .task/checksum/utils-cpp-lint-clang-tidy-*
             build/lint-clang-tidy
 
-          # NOTE: We use a per-OS cache since different OSes may trigger different clang-tidy
-          # violations.
+          # NOTE:
+          # - This key must be kept in-sync with the `actions/cache/save` step below (we can't use
+          #   the output of the current step since this workflow never runs `actions/cache/restore`
+          #   and `actions/cache/save` in the same run).
+          # - We use a per-OS cache since different OSes may trigger different clang-tidy
+          #   violations.
           key: "main-branch-ubuntu-jammy-lint:check-cpp-static-full"
 
       - uses: "./.github/actions/run-on-image"
@@ -505,7 +509,9 @@ jobs:
             .task/checksum/lint-check-cpp-static-full
             .task/checksum/utils-cpp-lint-clang-tidy-*
             build/lint-clang-tidy
-          key: "${{steps.cache-restore-lint-check-cpp-static-full.outputs.cache-primary-key}}"
+
+          # NOTE: This key must be kept in-sync with the `actions/cache/restore` step above.
+          key: "main-branch-ubuntu-jammy-lint:check-cpp-static-full"
 
   package-image:
     name: "package-image"
