@@ -34,7 +34,6 @@ tasks:
 
   antlr-runtime:
     internal: true
-    run: "once"
     vars:
       LIB_NAME: "antlr4-runtime"
 
@@ -43,6 +42,7 @@ tasks:
       CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
       INSTALL_PREFIX: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
       SOURCE_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+    run: "once"
     deps:
       - task: "yscope-dev-utils:checksum:validate"
         vars:

@@ -1,15 +1,5 @@
 version: "3"
 
-includes:
-  cmake-libs:
-    flatten: true
-    taskfile: "cmake-libs.yaml"
-  misc-libs:
-    flatten: true
-    taskfile: "misc-libs.yaml"
-  utils: "utils.yaml"
-  yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
-
 tasks:
   default:
     deps:
@@ -24,7 +14,7 @@ tasks:
       - >-
         source /etc/os-release && [[ "$ID" == "ubuntu" ]]
     cmds:
-      - task: "yscope-dev-utils:cmake:install-remote-tar"
+      - task: ":yscope-dev-utils:cmake:install-remote-tar"
         vars:
           CMAKE_PACKAGE_NAME: "spider"
           TAR_SHA256: "43478b6da99aa2df50c960573ec68c6fcf67cdfbab39b5e314676218aa93b959"
@@ -40,14 +30,14 @@ tasks:
   spider-dep:
     deps:
       - task: ":init"
-      - task: "utils:clean-outdated-cpp-checksum-files"
+      - task: ":utils:clean-outdated-cpp-checksum-files"
     cmds:
-      - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
+      - task: ":yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
           CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-spider.cmake"
-          DEP_TASK: "spider-all-parallel"
-      - task: "utils:combine-cpp-checksum-files"
+          DEP_TASK: "spider:spider-all-parallel"
+      - task: ":utils:combine-cpp-checksum-files"
 
   spider-all-parallel:
     internal: true
@@ -66,4 +56,4 @@ tasks:
     deps:
       - for:
           var: "CPP_SPIDER_TASKS"
-        task: "{{.ITEM}}"
+        task: ":{{.ITEM}}"

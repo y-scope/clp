@@ -1,16 +1,35 @@
 version: "3"
 
 includes:
+  # Components
   core: "core.yaml"
   spider: "spider.yaml"
   log-viewer: "log-viewer.yaml"
+
+  # Utils
   utils: "utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
+  # Individual library installs
+  cmake-libs:
+    flatten: true
+    taskfile: "cmake-libs.yaml"
+  misc-libs:
+    flatten: true
+    taskfile: "misc-libs.yaml"
 
 vars:
   # Directories
   G_DEPS_DIR: "{{.G_BUILD_DIR}}/deps"
   G_DEPS_CPP_DIR: "{{.G_DEPS_DIR}}/cpp"
+
+  # Checksum dirs and paths
+  G_DEPS_CPP_CHECKSUMS_DIR: "{{.G_DEPS_CPP_DIR}}/checksums"
+  G_DEPS_CPP_CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/all.md5"
+
+  # CMake settings paths
+  # NOTE: This must be kept in-sync with its usage in components/core/CMakeLists.txt
+  G_DEPS_CPP_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_DIR}}/cmake-settings"
 
 tasks:
   default:

@@ -1,24 +1,5 @@
 version: "3"
 
-includes:
-  cmake-libs:
-    flatten: true
-    taskfile: "cmake-libs.yaml"
-  misc-libs:
-    flatten: true
-    taskfile: "misc-libs.yaml"
-  utils: "utils.yaml"
-  yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
-
-vars:
-  # Checksum paths
-  G_DEPS_CPP_CHECKSUMS_DIR: "{{.G_DEPS_CPP_DIR}}/checksums"
-  G_DEPS_CPP_CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/all.md5"
-
-  # CMake settings paths
-  # NOTE: This must be kept in-sync with its usage in components/core/CMakeLists.txt
-  G_DEPS_CPP_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_DIR}}/cmake-settings"
-
 tasks:
   default:
     deps:
@@ -27,14 +8,14 @@ tasks:
   core:
     deps:
       - task: ":init"
-      - task: "utils:clean-outdated-cpp-checksum-files"
+      - task: ":utils:clean-outdated-cpp-checksum-files"
     cmds:
-      - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
+      - task: ":yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
           CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-core.cmake"
-          DEP_TASK: "core-all-parallel"
-      - task: "utils:combine-cpp-checksum-files"
+          DEP_TASK: "core:core-all-parallel"
+      - task: ":utils:combine-cpp-checksum-files"
 
   core-all-parallel:
     internal: true
@@ -66,4 +47,4 @@ tasks:
     deps:
       - for:
           var: "CPP_CORE_TASKS"
-        task: "{{.ITEM}}"
+        task: ":{{.ITEM}}"
