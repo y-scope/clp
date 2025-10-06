@@ -87,9 +87,10 @@ class BaseController(ABC):
         pass
 
     @abstractmethod
-    def _provision(self) -> EnvVarsDict:
+    def _set_up_env(self) -> EnvVarsDict:
         """
-        Prepares all components with orchestrator-specific logic.
+        Sets up all components for the orchestrator by preparing environment variables, directories,
+        and configuration files.
 
         :return: Dictionary of environment variables to be used by the orchestrator.
         """
@@ -471,7 +472,7 @@ class DockerComposeController(BaseController):
         3. Running `docker compose up -d`.
         """
         check_docker_dependencies(should_compose_run=False, project_name=self._project_name)
-        self._provision()
+        self._set_up_env()
 
         deployment_type = self.clp_config.get_deployment_type()
         logger.info(f"Starting CLP using Docker Compose ({deployment_type})...")
@@ -519,7 +520,7 @@ class DockerComposeController(BaseController):
         """
         return multiprocessing.cpu_count() // 2
 
-    def _provision(self):
+    def _set_up_env(self):
         """
         Provisions all CLP components for Docker Compose by:
         - Generating container-specific config.
