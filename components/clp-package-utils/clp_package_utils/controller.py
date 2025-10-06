@@ -51,7 +51,8 @@ from clp_package_utils.general import (
 # Type alias for environment variables dictionary.
 EnvVarsDict = Dict[str, str]
 
-LOGS_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+LOG_FILE_ACCESS_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+
 DEFAULT_UID_GID = f"{os.getuid()}:{os.getgid()}"
 SERVICE_CONTAINER_USER_ID = 999
 SERVICE_CONTAINER_GROUP_ID = 999
@@ -215,7 +216,7 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_file = self.clp_config.logs_directory / f"{component_name}.log"
-        logs_file.touch(mode=LOGS_FILE_MODE, exist_ok=True)
+        logs_file.touch(mode=LOG_FILE_ACCESS_MODE, exist_ok=True)
 
         return {
             "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL": self.clp_config.compression_scheduler.logging_level,
@@ -232,7 +233,7 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_file = self.clp_config.logs_directory / f"{component_name}.log"
-        logs_file.touch(mode=LOGS_FILE_MODE, exist_ok=True)
+        logs_file.touch(mode=LOG_FILE_ACCESS_MODE, exist_ok=True)
 
         return {
             "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": self.clp_config.query_scheduler.logging_level,
