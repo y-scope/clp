@@ -627,7 +627,7 @@ def _get_ip_from_hostname(hostname: str) -> str:
     """
     Resolves a hostname to an IPv4 IP address.
 
-    :param hostname: The hostname to resolve.
+    :param hostname:
     :return: The resolved IP address.
     """
     return socket.gethostbyname(hostname)
