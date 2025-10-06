@@ -27,14 +27,11 @@ vars:
   G_DEPS_CPP_CHECKSUMS_DIR: "{{.G_DEPS_CPP_DIR}}/checksums"
   G_DEPS_CPP_CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/all.md5"
 
-  # CMake settings paths
-  # NOTE: This must be kept in-sync with its usage in components/core/CMakeLists.txt
-  G_DEPS_CPP_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_DIR}}/cmake-settings"
-
 tasks:
   default:
     deps:
       - "core"
+      - "spider"
       - "log-viewer"
 
   init:
@@ -44,4 +41,3 @@ tasks:
       - "mkdir -p '{{.G_DEPS_DIR}}'"
       - "mkdir -p '{{.G_DEPS_CPP_DIR}}'"
       - "mkdir -p '{{.G_DEPS_CPP_CHECKSUMS_DIR}}'"
-      - "mkdir -p '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"

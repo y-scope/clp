@@ -42,7 +42,8 @@ tasks:
       CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
       INSTALL_PREFIX: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
       SOURCE_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
-    run: "once"
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
     deps:
       - task: "yscope-dev-utils:checksum:validate"
         vars:
@@ -80,7 +81,7 @@ tasks:
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
           CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
-          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
           INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
 
       # This command must be last
@@ -89,16 +90,25 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
 
+      - task: "yscope-dev-utils:cmake:generate-cmake-settings"
+        vars:
+          CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          PACKAGE_INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+
   boost:
     internal: true
     vars:
+      LIB_NAME: "Boost"
       VERSION: "1.87.0"
-    run: "once"
+      INSTALL_PREFIX: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
     cmds:
       - task: "yscope-dev-utils:boost:download-and-install"
         vars:
-          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
           FILE_SHA256: "d6c69e4459eb5d6ec208250291221e7ff4a2affde9af6e49c9303b89c687461f"
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
           TARGETS:
             - "filesystem"
             - "iostreams"
@@ -110,6 +120,11 @@ tasks:
           URL: "https://github.com/boostorg/boost/releases/download/boost-{{.VERSION}}/\
           boost-{{.VERSION}}-b2-nodocs.tar.gz"
           WORK_DIR: "{{.G_DEPS_CPP_DIR}}"
+      - task: "yscope-dev-utils:cmake:generate-cmake-settings"
+        vars:
+          CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          PACKAGE_INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
 
 
   sqlite3:
@@ -123,6 +138,10 @@ tasks:
       INSTALL_SYMLINK: "{{.INSTALL_INCLUDE_DIR}}/{{.LIB_NAME}}"
       ZIP_FILENAME_STEM: "sqlite-amalgamation-3360000"
       SRC_DIR: "{{.EXTRACTION_DIR}}/{{.ZIP_FILENAME_STEM}}"
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    # TODO: use checksums to properly decide if this task is up-to-date once more than one main deps
+    # target depends on this library.
     run: "once"
     cmds:
       - task: "yscope-dev-utils:remote:download-and-extract-zip"
@@ -136,6 +155,6 @@ tasks:
       - "ln -s '{{.SRC_DIR}}' '{{.INSTALL_SYMLINK}}'"
       - |-
         echo "set(CLP_SQLITE3_SOURCE_DIRECTORY \"{{.SRC_DIR}}\")" \
-        > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        > "{{.CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
         echo "set(CLP_SQLITE3_INCLUDE_DIRECTORY \"{{.INSTALL_INCLUDE_DIR}}\")" \
-        >> "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        >> "{{.CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"

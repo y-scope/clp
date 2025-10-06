@@ -1,5 +1,10 @@
 version: "3"
 
+vars:
+  # NOTE: This must be kept in-sync with its usage in components/core/CMakeLists.txt
+  G_DEPS_CPP_CORE_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_DIR}}/cmake-settings/core"
+  G_DEPS_CPP_CORE_CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CORE_CMAKE_SETTINGS_DIR}}/all-core.cmake"
+
 tasks:
   default:
     deps:
@@ -12,8 +17,8 @@ tasks:
     cmds:
       - task: ":yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
-          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
-          CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-core.cmake"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CORE_CMAKE_SETTINGS_DIR}}"
+          CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CORE_CMAKE_SETTINGS_FILE}}"
           DEP_TASK: "core:core-all-parallel"
       - task: ":utils:combine-cpp-checksum-files"
 
@@ -48,3 +53,5 @@ tasks:
       - for:
           var: "CPP_CORE_TASKS"
         task: ":{{.ITEM}}"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"

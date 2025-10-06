@@ -1,5 +1,9 @@
 version: "3"
 
+vars:
+  G_DEPS_CPP_SPIDER_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_DIR}}/cmake-settings/spider"
+  G_DEPS_CPP_SPIDER_CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_SPIDER_CMAKE_SETTINGS_DIR}}/all-spider.cmake"
+
 tasks:
   default:
     deps:
@@ -17,12 +21,13 @@ tasks:
       - task: ":yscope-dev-utils:cmake:install-remote-tar"
         vars:
           CMAKE_PACKAGE_NAME: "spider"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_SPIDER_CMAKE_SETTINGS_DIR}}"
           TAR_SHA256: "43478b6da99aa2df50c960573ec68c6fcf67cdfbab39b5e314676218aa93b959"
           TAR_URL: "https://github.com/y-scope/spider/archive/6a7bad3.tar.gz"
           WORK_DIR: "{{.G_SPIDER_BUILD_DIR}}"
           CMAKE_JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-spider.cmake"
+            - "-C {{.G_DEPS_CPP_SPIDER_CMAKE_SETTINGS_FILE}}"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DSPIDER_BUILD_TESTING=OFF"
@@ -34,8 +39,8 @@ tasks:
     cmds:
       - task: ":yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
-          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
-          CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-spider.cmake"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_SPIDER_CMAKE_SETTINGS_DIR}}"
+          CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_SPIDER_CMAKE_SETTINGS_FILE}}"
           DEP_TASK: "spider:spider-all-parallel"
       - task: ":utils:combine-cpp-checksum-files"
 
@@ -57,3 +62,5 @@ tasks:
       - for:
           var: "CPP_SPIDER_TASKS"
         task: ":{{.ITEM}}"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
