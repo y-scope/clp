@@ -118,6 +118,8 @@ public:
      */
     epochtime_t get_end_timestamp() const;
 
+    auto get_timestamp_encoding() const -> TimestampEncoding { return m_encoding; }
+
 private:
     TimestampEncoding m_encoding;
     double m_epoch_start_double, m_epoch_end_double;
