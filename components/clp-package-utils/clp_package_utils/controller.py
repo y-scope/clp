@@ -590,7 +590,6 @@ def get_or_create_instance_id(clp_config: CLPConfig):
         instance_id = str(uuid.uuid4())[-4:]
         with open(instance_id_file_path, "w") as f:
             f.write(instance_id)
-            f.flush()
 
     return instance_id
 
