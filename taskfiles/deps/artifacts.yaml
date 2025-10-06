@@ -1,8 +1,5 @@
 version: "3"
 
-vars:
-  G_ANTLR_JAR_FILE: "{{.G_DEPS_CPP_DIR}}/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
-
 tasks:
   antlr-jar:
     internal: true

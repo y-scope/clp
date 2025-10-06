@@ -1,8 +1,5 @@
 version: "3"
 
-vars:
-  G_ANTLR_VERSION: "4.13.2"
-
 tasks:
   antlr-runtime:
     internal: true
