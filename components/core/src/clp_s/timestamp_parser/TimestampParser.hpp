@@ -10,7 +10,7 @@
 #include "ErrorCode.hpp"
 
 namespace clp_s::timestamp_parser {
-auto parse_timestamp(
+[[nodiscard]] auto parse_timestamp(
         std::string_view timestamp,
         std::string_view pattern,
         std::string& generated_pattern

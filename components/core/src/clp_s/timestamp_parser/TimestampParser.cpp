@@ -60,7 +60,8 @@ constexpr std::array cAbbreviatedMonthNames
  * @param value The integer value, returned by reference.
  * @return Whether conversion was successful.
  */
-auto convert_padded_string_to_number(std::string_view str, char padding_character, int& value);
+[[nodiscard]] auto
+convert_padded_string_to_number(std::string_view str, char padding_character, int& value) -> bool;
 
 /**
  * Finds the first matching prefix from a list of candidates.
@@ -71,15 +72,19 @@ auto convert_padded_string_to_number(std::string_view str, char padding_characte
  * `ErrorCodeEnum::IncompatibleTimestampPattern` on error.
  */
 template <typename CandidateArrayType>
-auto find_first_matching_prefix(std::string_view str, CandidateArrayType const& candidates)
+[[nodiscard]] auto
+find_first_matching_prefix(std::string_view str, CandidateArrayType const& candidates)
         -> ystdlib::error_handling::Result<size_t, ErrorCode>;
 
-auto convert_padded_string_to_number(std::string_view str, char padding_character, int& value) {
-    size_t i{};
-    for (; i < str.size() && padding_character == str[i]; ++i) {}
-    if (0ULL == (str.size() - i)) {
+auto convert_padded_string_to_number(std::string_view str, char padding_character, int& value)
+        -> bool {
+    if (str.empty()) {
         return false;
     }
+
+    // Leave at least one character for parsing to ensure we actually parse number content.
+    size_t i{};
+    for (; i < (str.size() - 1) && padding_character == str[i]; ++i) {}
     return clp::string_utils::convert_string_to_int(str.substr(i), value);
 }
 
