@@ -502,6 +502,9 @@ jobs:
             HOME=/tmp
             task lint:check-cpp-full
 
+      - run: "echo ${{steps.cache-restore-lint-check-cpp-static-full.outputs.cache-primary-key}}"
+        shell: "bash"
+
       # Cache the source file checksums and the generated files (logs) for the
       # lint:check-cpp-static-full task, but only if it runs successfully on the main branch.
       # NOTE: If we don't cache the generated files, the task will re-run to generate them.
@@ -515,7 +518,7 @@ jobs:
             build/lint-clang-tidy
 
           # NOTE: This key must be kept in-sync with the `actions/cache/restore` step above.
-          key: "lint:check-cpp-static-full-on-ubuntu-jammy@main"
+          key: "${{steps.cache-restore-lint-check-cpp-static-full.outputs.cache-primary-key}}"
 
   package-image:
     name: "package-image"
