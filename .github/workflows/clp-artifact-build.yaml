@@ -472,7 +472,7 @@ jobs:
       - if: "'schedule' != github.event_name && 'workflow_dispatch' != github.event_name"
         name: "Restore lint:check-cpp-static-full cache"
         id: "cache-restore-lint-check-cpp-static-full"
-        uses: "actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684"
+        uses: "actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830"  # v4.3.0
         with:
           path: |
             .task/checksum/lint-check-cpp-static-full
@@ -507,7 +507,7 @@ jobs:
       # NOTE: If we don't cache the generated files, the task will re-run to generate them.
       - if: "'pull_request' != github.event_name && 'refs/heads/main' == github.ref"
         name: "Update lint:check-cpp-static-full cache"
-        uses: "actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684"
+        uses: "actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830"  # v4.3.0
         with:
           path: |
             .task/checksum/lint-check-cpp-static-full
