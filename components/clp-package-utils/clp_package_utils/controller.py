@@ -217,12 +217,12 @@ class BaseController(ABC):
         component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
-        logs_file = self.clp_config.logs_directory / f"{component_name}.log"
-        logs_file.touch(mode=LOG_FILE_ACCESS_MODE, exist_ok=True)
+        log_file = self.clp_config.logs_directory / f"{component_name}.log"
+        log_file.touch(mode=LOG_FILE_ACCESS_MODE, exist_ok=True)
 
         return {
             "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL": self.clp_config.compression_scheduler.logging_level,
-            "CLP_COMPRESSION_SCHEDULER_LOGS_FILE_HOST": str(logs_file),
+            "CLP_COMPRESSION_SCHEDULER_LOGS_FILE_HOST": str(log_file),
         }
 
     def _set_up_env_for_query_scheduler(self) -> EnvVarsDict:
@@ -234,12 +234,12 @@ class BaseController(ABC):
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
-        logs_file = self.clp_config.logs_directory / f"{component_name}.log"
-        logs_file.touch(mode=LOG_FILE_ACCESS_MODE, exist_ok=True)
+        log_file = self.clp_config.logs_directory / f"{component_name}.log"
+        log_file.touch(mode=LOG_FILE_ACCESS_MODE, exist_ok=True)
 
         return {
             "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": self.clp_config.query_scheduler.logging_level,
-            "CLP_QUERY_SCHEDULER_LOGS_FILE_HOST": str(logs_file),
+            "CLP_QUERY_SCHEDULER_LOGS_FILE_HOST": str(log_file),
         }
 
     def _set_up_env_for_compression_worker(self, num_workers: int) -> EnvVarsDict:
