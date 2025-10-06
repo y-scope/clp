@@ -75,6 +75,7 @@ Each file defines services with:
 The Docker Compose setup includes the following services:
 
 :::{mermaid}
+
 graph LR
   %% Services
   database["database (MySQL)"]
@@ -88,12 +89,15 @@ graph LR
   reducer["reducer"]
   webui["webui"]
   garbage_collector["garbage-collector"]
+  mcp_server["mcp-server"]
 
   %% One-time jobs
   db_table_creator["db-table-creator"]
   results_cache_indices_creator["results-cache-indices-creator"]
 
   %% Dependencies
+  database -->|healthy| mcp_server
+  results_cache --> |healthy| mcp_server
   database -->|healthy| db_table_creator
   results_cache -->|healthy| results_cache_indices_creator
   db_table_creator -->|completed_successfully| compression_scheduler
@@ -136,6 +140,10 @@ graph LR
     webui
     garbage_collector
   end
+
+  subgraph AI
+    mcp_server
+  end
 :::
 
 ### Services overview
@@ -147,6 +155,7 @@ The CLP package is composed of several service components. The tables below list
 
 | Service               | Description                                                     |
 |-----------------------|-----------------------------------------------------------------|
+| mcp_server            | MCP server for AI agent to invoke CLP operations                |
 | database              | Database for archive metadata, compression jobs, and query jobs |
 | queue                 | Task queue for schedulers                                       |
 | redis                 | Task result storage for workers                                 |

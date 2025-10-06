@@ -52,4 +52,6 @@ if [[ -s "$temp_iid_file" ]]; then
     short_id="${new_image_id#sha256:}"
     short_id="${short_id:0:4}"
     docker tag "$new_image_id" "clp-package:dev-${user}-${short_id}"
+
+    echo "iid file: $iid_file, with new image ID: $new_image_id"
 fi
