@@ -34,7 +34,7 @@ services:
     ports:
       - "${CLP_DB_HOST:-127.0.0.1}:${CLP_DB_PORT:-3306}:3306"
     volumes:
-      - "${CLP_DB_CONF_FILE_HOST:-./etc/mysql/conf.d/logging.cnf}:/etc/mysql/conf.d/logging.cnf:ro"
+      - "${CLP_DB_CONF_LOGGING_FILE_HOST:-./etc/mysql/conf.d/logging.cnf}:/etc/mysql/conf.d/logging.cnf:ro"
       - "${CLP_DB_DATA_DIR_HOST:-./var/data/database}:/var/lib/mysql"
       - "${CLP_DB_LOGS_DIR_HOST:-./var/log/database}:/var/log/mysql"
     healthcheck:

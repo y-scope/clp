@@ -103,17 +103,17 @@ class BaseController(ABC):
         component_name = DB_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
-        conf_file = self._conf_dir / "mysql" / "conf.d" / "logging.cnf"
+        conf_logging_file = self._conf_dir / "mysql" / "conf.d" / "logging.cnf"
         data_dir = self.clp_config.data_directory / component_name
         logs_dir = self.clp_config.logs_directory / component_name
-        validate_db_config(self.clp_config, conf_file, data_dir, logs_dir)
+        validate_db_config(self.clp_config, conf_logging_file, data_dir, logs_dir)
 
         data_dir.mkdir(exist_ok=True, parents=True)
         logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(data_dir, logs_dir)
 
         return {
-            "CLP_DB_CONF_FILE_HOST": str(conf_file),
+            "CLP_DB_CONF_LOGGING_FILE_HOST": str(conf_logging_file),
             "CLP_DB_DATA_DIR_HOST": str(data_dir),
             "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
             "CLP_DB_HOST": _get_ip_from_hostname(self.clp_config.database.host),
