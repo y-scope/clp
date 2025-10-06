@@ -49,7 +49,7 @@ auto generate_padded_numbers_in_range(size_t begin, size_t end, size_t field_len
     REQUIRE(begin < end);
     std::vector<std::string> generated_numbers;
     auto const pattern{fmt::format("{{:{}>{}d}}", padding, field_length)};
-    for (size_t i{begin}; i < end; ++i) {
+    for (size_t i{begin}; i <= end; ++i) {
         generated_numbers.emplace_back(fmt::vformat(pattern, fmt::make_format_args(i)));
     }
     return generated_numbers;
