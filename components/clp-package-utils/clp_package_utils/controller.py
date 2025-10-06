@@ -63,9 +63,8 @@ logger = logging.getLogger(__name__)
 
 class BaseController(ABC):
     """
-    Abstract base controller for preparing and deploying CLP components.
-    Provides common logic for preparing environment variables, directories,
-    and configuration files for each service.
+    Abstract base controller for preparing and deploying CLP components. Provides common logic for
+    preparing environment variables, directories, and configuration files for each service.
     """
 
     def __init__(self, clp_config: CLPConfig):
