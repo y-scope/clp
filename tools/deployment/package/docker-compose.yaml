@@ -85,7 +85,7 @@ services:
       "-A", "job_orchestration.executor.query",
       "worker",
       "--concurrency", "${CLP_QUERY_WORKER_CONCURRENCY:-1}",
-      "--loglevel", "${CLP_QUERY_WORKER_LOGGING_LEVEL:-INFO}",
+      "--loglevel", "WARNING",
       "-f", "/var/log/query_worker/worker.log",
       "-Q", "query",
       "-n", "query-worker"

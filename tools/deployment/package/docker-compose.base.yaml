@@ -216,7 +216,7 @@ services:
       "-A", "job_orchestration.executor.compress",
       "worker",
       "--concurrency", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
-      "--loglevel", "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}",
+      "--loglevel", "WARNING",
       "-f", "/var/log/compression_worker/worker.log",
       "-Q", "compression",
       "-n", "compression-worker"
