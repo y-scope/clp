@@ -120,8 +120,6 @@ services:
     container_name: "mcp_server"
     image: "${CLP_PACKAGE_CONTAINER}"
     environment:
-      CLP_DB_PASS: "${CLP_DB_PASS}"
-      CLP_DB_USER: "${CLP_DB_USER}"
       MCP_HOST: "0.0.0.0"
       MCP_PORT: "8000"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -133,9 +131,9 @@ services:
       <<: *healthcheck_defaults
       test: [
         "CMD",
-        "bash",
-        "-c",
-        "< /dev/tcp/127.0.0.1/$$MCP_PORT"
+        "curl",
+        "-f",
+        http://127.0.0.1:$$MCP_PORT/health"
       ]
     command: [
       "bash", "-c",
