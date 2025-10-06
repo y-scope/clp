@@ -34,7 +34,8 @@ services:
     ports:
       - "${CLP_DB_HOST:-127.0.0.1}:${CLP_DB_PORT:-3306}:3306"
     volumes:
-      - "${CLP_DB_CONF_LOGGING_FILE_HOST:-./etc/mysql/conf.d/logging.cnf}:/etc/mysql/conf.d/logging.cnf:ro"
+      - "${CLP_DB_CONF_LOGGING_FILE_HOST:-./etc/mysql/conf.d/logging.cnf}\
+:/etc/mysql/conf.d/logging.cnf:readonly"
       - "${CLP_DB_DATA_DIR_HOST:-./var/data/database}:/var/lib/mysql"
       - "${CLP_DB_LOGS_DIR_HOST:-./var/log/database}:/var/log/mysql"
     healthcheck:
@@ -96,7 +97,8 @@ services:
     ports:
       - "${CLP_REDIS_HOST:-127.0.0.1}:${CLP_REDIS_PORT:-6379}:6379"
     volumes:
-      - "${CLP_REDIS_CONF_FILE_HOST:-./etc/redis/redis.conf}:/usr/local/etc/redis/redis.conf:ro"
+      - "${CLP_REDIS_CONF_FILE_HOST:-./etc/redis/redis.conf}:/usr/local/etc/redis/redis.conf\
+:readonly"
       - "${CLP_REDIS_DATA_DIR_HOST:-./var/data/redis}:/data"
       - "${CLP_REDIS_LOGS_DIR_HOST:-./var/log/redis}:/var/log/redis"
     healthcheck:
@@ -123,7 +125,8 @@ services:
     ports:
       - "${CLP_RESULTS_CACHE_HOST:-127.0.0.1}:${CLP_RESULTS_CACHE_PORT:-6379}:27017"
     volumes:
-      - "${CLP_RESULTS_CACHE_CONF_FILE_HOST:-./etc/mongo/mongod.conf}:/etc/mongo/mongod.conf:ro"
+      - "${CLP_RESULTS_CACHE_CONF_FILE_HOST:-./etc/mongo/mongod.conf}:/etc/mongo/mongod.conf\
+:readonly"
       - "${CLP_RESULTS_CACHE_DATA_DIR_HOST:-./var/data/results_cache}:/data/db"
       - "${CLP_RESULTS_CACHE_LOGS_DIR_HOST:-./var/log/results_cache}:/var/log/mongodb"
     healthcheck:
@@ -166,11 +169,11 @@ services:
       RESULT_BACKEND: >-
         redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_COMPRESSION_BACKEND_DB:-1}
     volumes:
-      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
+      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:readonly"
       - "${CLP_COMPRESSION_SCHEDULER_LOG_FILE_HOST:-./var/log/compression_scheduler.log}\
 :/var/log/compression_scheduler.log"
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "/:/mnt/logs:ro"
+      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:readonly"
+      - "/:/mnt/logs:readonly"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -203,12 +206,12 @@ services:
     volumes:
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}:/var/data/archives"
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/staged-archives}:/var/data/staged-archives"
-      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
+      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:readonly"
       - "${CLP_COMPRESSION_WORKER_LOGS_DIR_HOST:-./var/log/compression_worker}:\
 /var/log/compression_worker"
       - "${CLP_DATA_DIR_HOST:-./var/data}:/var/data"
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "/:/mnt/logs:ro"
+      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:readonly"
+      - "/:/mnt/logs:readonly"
     command: [
       "python3",
       "-u",
@@ -236,11 +239,11 @@ services:
     ports:
       - "${CLP_WEBUI_HOST:-127.0.0.1}:${CLP_WEBUI_PORT:-4000}:4000"
     volumes:
-      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
+      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:readonly"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}:/var/data/streams"
-      - "./var/www/webui/client/settings.json:/opt/clp/var/www/webui/client/settings.json:ro"
+      - "./var/www/webui/client/settings.json:/opt/clp/var/www/webui/client/settings.json:readonly"
       - "./var/www/webui/server/dist/settings.json\
-:/opt/clp/var/www/webui/server/dist/settings.json:ro"
+:/opt/clp/var/www/webui/server/dist/settings.json:readonly"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -270,7 +273,7 @@ services:
       CLP_LOGS_DIR: "/var/log/garbage_collector"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
+      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:readonly"
       - "${CLP_LOGS_DIR_HOST:-./var/log}/garbage_collector:/var/log/garbage_collector"
     depends_on:
       db-table-creator:
