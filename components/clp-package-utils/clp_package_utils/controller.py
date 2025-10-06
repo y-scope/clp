@@ -625,7 +625,7 @@ def _chown_recursively(
 
 def _get_ip_from_hostname(hostname: str) -> str:
     """
-    Resolves a hostname to an IP address.
+    Resolves a hostname to an IPv4 IP address.
 
     :param hostname: The hostname to resolve.
     :return: The resolved IP address.
