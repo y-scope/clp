@@ -75,7 +75,7 @@ class BaseController(ABC):
     @abstractmethod
     def start(self):
         """
-        Starts the provisioned components with orchestrator-specific logic.
+        Starts the set-up components with orchestrator-specific logic.
         """
         pass
 
@@ -98,7 +98,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_database(self) -> EnvVarsDict:
         """
-        Prepares environment variables and directories for the database component.
+        Sets up environment variables and directories for the database component.
 
         :return: Dictionary of component-related environment variables.
         """
@@ -129,7 +129,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_queue(self) -> EnvVarsDict:
         """
-        Prepares environment variables and directories for the message queue component.
+        Sets up environment variables and directories for the message queue component.
 
         :return: Dictionary of component-related environment variables.
         """
@@ -151,7 +151,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_redis(self) -> EnvVarsDict:
         """
-        Prepares environment variables and directories for the Redis component.
+        Sets up environment variables and directories for the Redis component.
 
         :return: Dictionary of component-related environment variables.
         """
@@ -181,7 +181,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_results_cache(self) -> EnvVarsDict:
         """
-        Prepares environment variables and directories for the results cache (MongoDB) component.
+        Sets up environment variables and directories for the results cache (MongoDB) component.
 
         :return: Dictionary of component-related environment variables.
         """
@@ -208,7 +208,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_compression_scheduler(self) -> EnvVarsDict:
         """
-        Prepares environment variables and files for the compression scheduler component.
+        Sets up environment variables and files for the compression scheduler component.
 
         :return: Dictionary of component-related environment variables.
         """
@@ -225,7 +225,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_query_scheduler(self) -> EnvVarsDict:
         """
-        Prepares environment variables and files for the query scheduler component.
+        Sets up environment variables and files for the query scheduler component.
 
         :return: Dictionary of component-related environment variables.
         """
@@ -242,7 +242,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_compression_worker(self, num_workers: int) -> EnvVarsDict:
         """
-        Prepares environment variables for the compression worker component.
+        Sets up environment variables for the compression worker component.
 
         :param num_workers: Number of worker processes to run.
         :return: Dictionary of compression worker-related environment variables.
@@ -261,7 +261,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_query_worker(self, num_workers: int) -> EnvVarsDict:
         """
-        Prepares environment variables for the query worker component.
+        Sets up environment variables for the query worker component.
 
         :param num_workers: Number of worker processes to run.
         :return: Dictionary of component-related environment variables.
@@ -280,7 +280,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_reducer(self, num_workers: int) -> EnvVarsDict:
         """
-        Prepares environment variables for the reducer component.
+        Sets up environment variables for the reducer component.
 
         :param num_workers: Number of worker processes to run.
         :return: Dictionary of component-related environment variables.
@@ -300,7 +300,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_webui(self, container_clp_config: CLPConfig) -> EnvVarsDict:
         """
-        Prepares environment variables and settings for the Web UI component.
+        Sets up environment variables and settings for the Web UI component.
 
         :param container_clp_config: CLP configuration inside the containers.
         :return: Dictionary of component-related environment variables.
@@ -402,7 +402,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_garbage_collector(self) -> EnvVarsDict:
         """
-        Prepares environment variables for the garbage collector component.
+        Sets up environment variables for the garbage collector component.
 
         :return: Dictionary of component-related environment variables.
         """
@@ -468,7 +468,7 @@ class DockerComposeController(BaseController):
         """
         Deploys CLP components using Docker Compose by:
         1. Checking Docker dependencies.
-        2. Provisioning environment variables and configuration.
+        2. Setting up environment variables and configuration.
         3. Running `docker compose up -d`.
         """
         check_docker_dependencies(should_compose_run=False, project_name=self._project_name)
@@ -522,7 +522,7 @@ class DockerComposeController(BaseController):
 
     def _set_up_env(self):
         """
-        Provisions all CLP components for Docker Compose by:
+        Sets up all CLP components for Docker Compose by:
         - Generating container-specific config.
         - Preparing environment variables for all components.
         - Writing environment variables to `.env`.
