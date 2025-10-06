@@ -267,6 +267,63 @@ class Database(BaseModel):
         self.port = self.DEFAULT_PORT
 
 
+class SpiderDb(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 3306
+
+    type: str = "mariadb"
+    host: str = "localhost"
+    port: int = DEFAULT_PORT
+    name: str = "spider-db"
+    ssl_cert: Optional[str] = None
+    auto_commit: bool = False
+    compress: bool = True
+
+    username: Optional[str] = None
+    password: Optional[str] = None
+
+    @field_validator("type")
+    @classmethod
+    def validate_type(cls, value):
+        supported_database_types = ["mysql", "mariadb"]
+        if value not in supported_database_types:
+            raise ValueError(
+                f"database.type must be one of the following {'|'.join(supported_database_types)}"
+            )
+        return value
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value):
+        if "" == value:
+            raise ValueError("database.name cannot be empty.")
+        return value
+
+    @field_validator("host")
+    @classmethod
+    def validate_host(cls, value):
+        if "" == value:
+            raise ValueError("database.host cannot be empty.")
+        return value
+
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value):
+        _validate_port(cls, value)
+        return value
+
+
+class SpiderScheduler(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 6000
+
+    port: int = DEFAULT_PORT
+
+    @field_validator("port")
+    @classmethod
+    def validate_port(cls, value):
+        _validate_port(cls, value)
+        return value
+
+
 def _validate_logging_level(cls, value):
     if not is_valid_logging_level(value):
         raise ValueError(
@@ -289,9 +346,15 @@ def _validate_port(cls, value):
         )
 
 
+class OrchestrationType(KebabCaseStrEnum):
+    celery = auto()
+    spider = auto()
+
+
 class CompressionScheduler(BaseModel):
     jobs_poll_delay: float = 0.1  # seconds
     logging_level: str = "INFO"
+    type: OrchestrationType = OrchestrationType.celery
 
     @field_validator("logging_level")
     @classmethod
