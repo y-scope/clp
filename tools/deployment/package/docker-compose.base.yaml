@@ -149,7 +149,7 @@ services:
       "python3",
       "-u",
       "-m", "clp_py_utils.initialize-results-cache",
-      "--uri", "mongodb://results_cache:27017/${RESULTS_CACHE_CLP_DB_NAME:-clp-query-results}",
+      "--uri", "mongodb://results_cache:27017/${CLP_RESULTS_CACHE_DB_NAME:-clp-query-results}",
       "--stream-collection", "${CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME:-stream-files}",
     ]
 
