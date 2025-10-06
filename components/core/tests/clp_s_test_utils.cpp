@@ -10,7 +10,6 @@
 #include "../src/clp_s/ArchiveWriter.hpp"
 #include "../src/clp_s/InputConfig.hpp"
 #include "../src/clp_s/JsonParser.hpp"
-#include "../src/clp_s/TimestampPattern.hpp"
 
 auto compress_archive(
         std::string const& file_path,
@@ -46,7 +45,6 @@ auto compress_archive(
         parser_option.timestamp_key = std::move(timestamp_key.value());
     }
 
-    clp_s::TimestampPattern::init();
     clp_s::JsonParser parser{parser_option};
     std::vector<clp_s::ArchiveStats> archive_stats;
     REQUIRE(parser.ingest());

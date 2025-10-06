@@ -59,9 +59,6 @@ tasks:
       - "rm -rf '{{.G_BUILD_DIR}}'"
       - task: "clean-python-component"
         vars:
-          COMPONENT: "clp-mcp-server"
-      - task: "clean-python-component"
-        vars:
           COMPONENT: "clp-package-utils"
       - task: "clean-python-component"
         vars:
@@ -119,7 +116,6 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
       - "{{.TASKFILE}}"
-      - "components/clp-mcp-server/dist/*.whl"
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
@@ -129,7 +125,6 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "core"
-      - "clp-mcp-server"
       - "clp-package-utils"
       - "clp-py-utils"
       - "deps:spider"
@@ -149,7 +144,6 @@ tasks:
       - |-
         . "{{.G_PACKAGE_VENV_DIR}}/bin/activate"
         pip3 install --upgrade \
-          components/clp-mcp-server/dist/*.whl \
           components/clp-package-utils/dist/*.whl \
           components/clp-py-utils/dist/*.whl \
           components/job-orchestration/dist/*.whl \
@@ -229,11 +223,6 @@ tasks:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
           JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
-
-  clp-mcp-server:
-    - task: "uv-component"
-      vars:
-        COMPONENT: "{{.TASK}}"
 
   clp-package-utils:
     - task: "python-component"
@@ -572,9 +561,13 @@ tasks:
   uv-component:
     internal: true
     label: "{{.COMPONENT}}"
+    vars:
+      VENV_DIR: "{{.G_BUILD_DIR}}/{{.COMPONENT}}/venv"
     requires:
       vars: ["COMPONENT"]
     sources:
+      - "{{.G_BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
+      - "{{.ROOT_DIR}}/requirements.txt"
       - "{{.TASKFILE}}"
       - "/etc/os-release"
       - "**/*"
@@ -582,11 +575,18 @@ tasks:
     dir: "components/{{.COMPONENT}}"
     generates:
       - "dist/*.whl"
+    deps:
+      - task: "component-venv"
+        vars:
+          COMPONENT: "{{.COMPONENT}}"
+          OUTPUT_DIR: "{{.VENV_DIR}}"
     cmds:
       - task: "clean-python-component"
         vars:
           COMPONENT: "{{.COMPONENT}}"
-      - "uv build --wheel --no-cache -o dist"
+      - |-
+        . "{{.VENV_DIR}}/bin/activate"
+        uv build --wheel
 
   component-venv:
     internal: true

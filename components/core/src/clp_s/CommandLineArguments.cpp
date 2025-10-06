@@ -5,7 +5,7 @@
 #include <string_view>
 
 #include <boost/program_options.hpp>
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include <spdlog/spdlog.h>
 
 #include "../clp/cli_utils.hpp"

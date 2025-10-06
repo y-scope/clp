@@ -10,8 +10,8 @@
 #include <utility>
 #include <vector>
 
+#include <fmt/core.h>
 #include <fmt/format.h>
-#include <fmt/ranges.h>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include "../../../../../clp_s/search/ast/Literal.hpp"

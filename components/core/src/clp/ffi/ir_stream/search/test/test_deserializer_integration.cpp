@@ -10,7 +10,7 @@
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include <nlohmann/json_fwd.hpp>
 
 #include "../../../../../clp_s/search/kql/kql.hpp"

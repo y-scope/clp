@@ -1,7 +1,6 @@
 #include "GlobalMySQLMetadataDB.hpp"
 
-#include <fmt/base.h>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 #include "database_utils.hpp"
 #include "streaming_archive/Constants.hpp"

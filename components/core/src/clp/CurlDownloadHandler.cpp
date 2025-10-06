@@ -14,7 +14,7 @@
 #include <utility>
 
 #include <curl/curl.h>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 #include "ErrorCode.hpp"
 

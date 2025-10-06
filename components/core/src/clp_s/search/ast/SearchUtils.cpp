@@ -52,14 +52,11 @@ bool double_as_int(double in, FilterOperation op, int64_t& out) {
         case FilterOperation::LT:
         case FilterOperation::GTE:
             out = std::ceil(in);
-            break;
         case FilterOperation::GT:
         case FilterOperation::LTE:
             out = std::floor(in);
-            break;
         default:
             out = static_cast<int64_t>(in);
-            break;
     }
     return true;
 }

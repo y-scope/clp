@@ -7,7 +7,7 @@
 #include <set>
 
 #include <boost/url.hpp>
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include <spdlog/spdlog.h>
 #include <string_utils/string_utils.hpp>
 

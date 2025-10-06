@@ -1,7 +1,6 @@
 #include "MySQLIndexStorage.hpp"
 
-#include <fmt/base.h>
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include <spdlog/spdlog.h>
 
 #include "../../clp/database_utils.hpp"

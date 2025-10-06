@@ -2,8 +2,7 @@
 
 #include <vector>
 
-#include <fmt/base.h>
-#include <fmt/format.h>
+#include <fmt/core.h>
 
 #include "../database_utils.hpp"
 #include "../Defs.h"

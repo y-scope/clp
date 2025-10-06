@@ -8,7 +8,7 @@
 #include <string_view>
 #include <utility>
 
-#include <fmt/format.h>
+#include <fmt/core.h>
 #include <nlohmann/json_fwd.hpp>
 #include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/ErrorCode.hpp>
