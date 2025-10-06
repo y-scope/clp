@@ -128,6 +128,7 @@ auto parse_timestamp(
             return ErrorCodeEnum::IncompatibleTimestampPattern;
         }
 
+        escaped = false;
         switch (pattern[pattern_idx]) {
             case 'y': {  // Zero-padded 2-digit year in century.
                 constexpr size_t cFieldLength = 2;
