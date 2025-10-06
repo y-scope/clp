@@ -222,7 +222,7 @@ class BaseController(ABC):
 
         return {
             "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL": self.clp_config.compression_scheduler.logging_level,
-            "CLP_COMPRESSION_SCHEDULER_LOGS_FILE_HOST": str(log_file),
+            "CLP_COMPRESSION_SCHEDULER_LOG_FILE_HOST": str(log_file),
         }
 
     def _set_up_env_for_query_scheduler(self) -> EnvVarsDict:
@@ -239,7 +239,7 @@ class BaseController(ABC):
 
         return {
             "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": self.clp_config.query_scheduler.logging_level,
-            "CLP_QUERY_SCHEDULER_LOGS_FILE_HOST": str(log_file),
+            "CLP_QUERY_SCHEDULER_LOG_FILE_HOST": str(log_file),
         }
 
     def _set_up_env_for_compression_worker(self, num_workers: int) -> EnvVarsDict:

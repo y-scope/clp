@@ -31,7 +31,7 @@ services:
         redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
     volumes:
       - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "${CLP_QUERY_SCHEDULER_LOGS_FILE_HOST:-./var/log/query_scheduler.log}:\
+      - "${CLP_QUERY_SCHEDULER_LOG_FILE_HOST:-./var/log/query_scheduler.log}:\
 /var/log/query_scheduler.log"
     depends_on:
       db-table-creator:
