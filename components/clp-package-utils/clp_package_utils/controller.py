@@ -87,12 +87,10 @@ class BaseController(ABC):
         pass
 
     @abstractmethod
-    def _set_up_env(self) -> EnvVarsDict:
+    def _set_up_env(self):
         """
         Sets up all components for the orchestrator by preparing environment variables, directories,
         and configuration files.
-
-        :return: Dictionary of environment variables to be used by the orchestrator.
         """
         pass
 
@@ -100,7 +98,7 @@ class BaseController(ABC):
         """
         Sets up environment variables and directories for the database component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = DB_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
@@ -131,7 +129,7 @@ class BaseController(ABC):
         """
         Sets up environment variables and directories for the message queue component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUEUE_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
@@ -153,7 +151,7 @@ class BaseController(ABC):
         """
         Sets up environment variables and directories for the Redis component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = REDIS_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
@@ -183,7 +181,7 @@ class BaseController(ABC):
         """
         Sets up environment variables and directories for the results cache (MongoDB) component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = RESULTS_CACHE_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
@@ -210,7 +208,7 @@ class BaseController(ABC):
         """
         Sets up environment variables and files for the compression scheduler component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
@@ -227,7 +225,7 @@ class BaseController(ABC):
         """
         Sets up environment variables and files for the query scheduler component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
@@ -245,7 +243,7 @@ class BaseController(ABC):
         Sets up environment variables for the compression worker component.
 
         :param num_workers: Number of worker processes to run.
-        :return: Dictionary of compression worker-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = COMPRESSION_WORKER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
@@ -264,7 +262,7 @@ class BaseController(ABC):
         Sets up environment variables for the query worker component.
 
         :param num_workers: Number of worker processes to run.
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUERY_WORKER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
@@ -283,7 +281,7 @@ class BaseController(ABC):
         Sets up environment variables for the reducer component.
 
         :param num_workers: Number of worker processes to run.
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = REDUCER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
@@ -303,7 +301,7 @@ class BaseController(ABC):
         Sets up environment variables and settings for the Web UI component.
 
         :param container_clp_config: CLP configuration inside the containers.
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = WEBUI_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
@@ -404,7 +402,7 @@ class BaseController(ABC):
         """
         Sets up environment variables for the garbage collector component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = GARBAGE_COLLECTOR_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
@@ -526,8 +524,6 @@ class DockerComposeController(BaseController):
         - Generating container-specific config.
         - Preparing environment variables for all components.
         - Writing environment variables to `.env`.
-
-        :return: Dictionary of all environment variables.
         """
         container_clp_config = generate_docker_compose_container_config(self.clp_config)
         num_workers = self._get_num_workers()
