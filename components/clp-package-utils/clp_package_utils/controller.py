@@ -159,8 +159,8 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         conf_file = self._conf_dir / "redis" / "redis.conf"
-        logs_dir = self.clp_config.logs_directory / component_name
         data_dir = self.clp_config.data_directory / component_name
+        logs_dir = self.clp_config.logs_directory / component_name
         validate_redis_config(self.clp_config, conf_file, data_dir, logs_dir)
 
         data_dir.mkdir(exist_ok=True, parents=True)
