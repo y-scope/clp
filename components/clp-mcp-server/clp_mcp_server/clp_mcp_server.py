@@ -1,4 +1,4 @@
-"""CLP MCP Server package."""
+"""CLP MCP Server entry point."""
 
 import ipaddress
 import logging
@@ -21,23 +21,19 @@ def main(host: str, port: int) -> None:
 
     :param host: The server's host address (IP address or hostname).
     :param port: The server's port number (1-65535).
-    :return: None
-    :raise SystemExit: If host/port validation fails or server startup fails.
     """
-    # Configure logging
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     )
     logger = logging.getLogger(__name__)
 
     # Validate host and port
-    if not host.strip():
-        logger.error("Host cannot be empty")
+    if len(host.strip()) == 0:
+        logger.error("Host cannot be empty.")
         sys.exit(1)
 
     # Validate host format (IP address or resolvable hostname)
     try:
-        # Try to parse as IP address
         ipaddress.ip_address(host)
     except ValueError:
         # If not an IP, try to resolve as hostname
@@ -45,27 +41,22 @@ def main(host: str, port: int) -> None:
             socket.gethostbyname(host)
         except OSError:
             logger.exception(
-                "Host validation failed: '%s' is not a valid IP address and DNS resolution failed",
+                "Host validation failed: '%s' is not a valid IP address and DNS resolution failed.",
                 host,
             )
             sys.exit(1)
 
     max_port = 65535
     if port <= 0 or port > max_port:
-        logger.error("Port must be between 1 and %d, got: %d", max_port, port)
+        logger.error("Port must be between 1 and %d, got: %d.", max_port, port)
         sys.exit(1)
 
     try:
-        # Create the MCP server instance
         mcp = create_mcp_server()
-
-        logger.info("Starting CLP MCP Server on %s:%d", host, port)
-
-        # Run the server with HTTP transport
+        logger.info("Starting CLP MCP Server on %s:%d.", host, port)
         mcp.run(transport="streamable-http", host=host, port=port)
-
     except Exception:
-        logger.exception("Failed to start MCP server")
+        logger.exception("Failed to start MCP server.")
         sys.exit(1)
 
 
