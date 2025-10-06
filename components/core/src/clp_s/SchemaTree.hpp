@@ -122,7 +122,7 @@ private:
     std::string_view m_key_name;
     NodeType m_type;
     int32_t m_count;
-    int32_t m_depth{0};
+    int32_t m_depth;
 };
 
 class SchemaTree {
