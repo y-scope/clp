@@ -1,7 +1,7 @@
 import os
 import pathlib
 from enum import auto
-from typing import Any, ClassVar, Literal, Optional, Set, Union
+from typing import Any, ClassVar, Literal, Optional, Union
 
 from pydantic import (
     BaseModel,
@@ -878,8 +878,7 @@ class McpServer(BaseModel):
     @field_validator("host")
     @classmethod
     def validate_host(cls, value):
-        if "" == value:
-            raise ValueError(f"{value} cannot be empty")
+        _validate_host(cls, value)
         return value
 
     @field_validator("port")
