@@ -99,7 +99,7 @@ const SqlEditor = (props: SqlEditorProps) => {
             className={[styles["editor"],
                 className].filter(Boolean).join(" ")}
             style={{
-                border: `1px solid ${borderColor}`,
+                border: `${token.lineWidth}px ${token.lineType} ${borderColor}`,
                 borderRadius: token.borderRadius,
                 boxShadow: boxShadow,
                 pointerEvents: pointerEvents,
