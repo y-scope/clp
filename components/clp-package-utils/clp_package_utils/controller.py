@@ -10,9 +10,6 @@ import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
-# Type alias for environment variables dictionary.
-EnvVarsDict = Dict[str, str]
-
 from clp_py_utils.clp_config import (
     AwsAuthType,
     CLPConfig,
@@ -50,6 +47,9 @@ from clp_package_utils.general import (
     validate_results_cache_config,
     validate_webui_config,
 )
+
+# Type alias for environment variables dictionary.
+EnvVarsDict = Dict[str, str]
 
 LOGS_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
 DEFAULT_UID_GID = f"{os.getuid()}:{os.getgid()}"
