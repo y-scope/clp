@@ -107,6 +107,7 @@ class BaseController(ABC):
         data_dir = self.clp_config.data_directory / component_name
         logs_dir = self.clp_config.logs_directory / component_name
         validate_db_config(self.clp_config, conf_file, data_dir, logs_dir)
+
         data_dir.mkdir(exist_ok=True, parents=True)
         logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(data_dir, logs_dir)
@@ -136,6 +137,7 @@ class BaseController(ABC):
 
         logs_dir = self.clp_config.logs_directory / component_name
         validate_queue_config(self.clp_config, logs_dir)
+
         logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(logs_dir)
 
@@ -160,6 +162,7 @@ class BaseController(ABC):
         logs_dir = self.clp_config.logs_directory / component_name
         data_dir = self.clp_config.data_directory / component_name
         validate_redis_config(self.clp_config, conf_file, data_dir, logs_dir)
+
         data_dir.mkdir(exist_ok=True, parents=True)
         logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(data_dir, logs_dir)
@@ -190,6 +193,7 @@ class BaseController(ABC):
         data_dir = self.clp_config.data_directory / component_name
         logs_dir = self.clp_config.logs_directory / component_name
         validate_results_cache_config(self.clp_config, conf_file, data_dir, logs_dir)
+
         data_dir.mkdir(exist_ok=True, parents=True)
         logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(data_dir, logs_dir)
@@ -249,6 +253,7 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
+
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         return {
@@ -268,6 +273,7 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
+
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         return {
@@ -287,6 +293,7 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
+
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         return {
@@ -408,6 +415,7 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
+
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         return {"CLP_GC_LOGGING_LEVEL": self.clp_config.garbage_collector.logging_level}
