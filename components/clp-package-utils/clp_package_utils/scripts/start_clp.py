@@ -62,7 +62,7 @@ def main(argv):
     instance_id = get_or_create_instance_id(clp_config)
     try:
         controller = DockerComposeController(clp_config, instance_id)
-        controller.deploy()
+        controller.start()
     except Exception as ex:
         if type(ex) == ValueError:
             logger.error(f"Failed to start CLP: {ex}")

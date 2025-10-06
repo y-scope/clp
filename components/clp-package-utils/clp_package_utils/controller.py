@@ -73,9 +73,9 @@ class BaseController(ABC):
         self._conf_dir = self._clp_home / "etc"
 
     @abstractmethod
-    def deploy(self):
+    def start(self):
         """
-        Deploys the provisioned components with orchestrator-specific logic.
+        Starts the provisioned components with orchestrator-specific logic.
         """
         pass
 
@@ -463,7 +463,7 @@ class DockerComposeController(BaseController):
         self._project_name = f"clp-package-{instance_id}"
         super().__init__(clp_config)
 
-    def deploy(self):
+    def start(self):
         """
         Deploys CLP components using Docker Compose by:
         1. Checking Docker dependencies.
