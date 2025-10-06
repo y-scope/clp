@@ -136,6 +136,6 @@ services:
     command: [
       "python3", "-u",
       "-m", "clp_mcp_server.clp_mcp_server",
-      "--host","${CLP_MCP_CONTAINER_HOST:-0.0.0.0}",
-      "--port","${CLP_MCP_CONTAINER_PORT:-8000}",
+      "--host", "${CLP_MCP_CONTAINER_HOST:-0.0.0.0}",
+      "--port", "${CLP_MCP_CONTAINER_PORT:-8000}",
     ]

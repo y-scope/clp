@@ -37,9 +37,10 @@ def create_mcp_server() -> FastMCP:
 
     @mcp.custom_route("/health", methods=["GET"])
     async def health_check(_request: Request) -> JSONResponse:
-        """Health check endpoint.
+        """
+        Health check endpoint.
         
-        :arg _request: The incoming request object.
+        :arg _request: An HTTP request object.
         :return: A JSON response indicating the health status of the server.
         """
         health = {
