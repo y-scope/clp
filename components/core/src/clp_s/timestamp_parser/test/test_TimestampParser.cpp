@@ -56,7 +56,7 @@ auto generate_padded_numbers_in_range(size_t begin, size_t end, size_t field_len
 }
 }  // namespace
 
-TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp_parser]") {
+TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
     SECTION("Format specifiers accept valid content.") {
         auto const two_digit_years{generate_padded_numbers_in_range(0, 99, 2, '0')};
         assert_specifier_accepts_valid_content('y', two_digit_years);
