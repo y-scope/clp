@@ -87,7 +87,7 @@ const SqlEditor = (props: SqlEditorProps) => {
     }
 
     const boxShadow = isFocused ?
-        "0 0 0 2px rgba(5, 172, 255, 0.06)" :
+        `0 0 0 ${token.controlOutlineWidth}px ${token.controlOutline}` :
         "none";
 
     const pointerEvents = disabled ?
