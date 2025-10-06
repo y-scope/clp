@@ -20,7 +20,6 @@ from clp_py_utils.clp_config import (
     CONTAINER_CLP_HOME,
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     DB_COMPONENT_NAME,
-    MCP_SERVER_COMPONENT_NAME,
     QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
@@ -28,6 +27,7 @@ from clp_py_utils.clp_config import (
     RESULTS_CACHE_COMPONENT_NAME,
     StorageType,
     WEBUI_COMPONENT_NAME,
+    MCP_SERVER_COMPONENT_NAME,
     WorkerConfig,
 )
 from clp_py_utils.clp_metadata_db_utils import (

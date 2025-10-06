@@ -154,7 +154,6 @@ The CLP package is composed of several service components. The tables below list
 
 | Service               | Description                                                     |
 |-----------------------|-----------------------------------------------------------------|
-| mcp_server            | MCP server for AI agent to invoke CLP operations                |
 | database              | Database for archive metadata, compression jobs, and query jobs |
 | queue                 | Task queue for schedulers                                       |
 | redis                 | Task result storage for workers                                 |
@@ -165,6 +164,7 @@ The CLP package is composed of several service components. The tables below list
 | query_worker          | Worker processes for search/aggregation jobs                    |
 | reducer               | Reducers for performing the final stages of aggregation jobs    |
 | webui                 | Web server for the UI                                           |
+| mcp_server            | MCP server for AI agent to invoke CLP operations                |
 | garbage_collector     | Background process for retention control                        |
 :::
 

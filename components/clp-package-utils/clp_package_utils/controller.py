@@ -27,11 +27,11 @@ from clp_py_utils.clp_config import (
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
-    MCP_SERVER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
+    MCP_SERVER_COMPONENT_NAME,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     get_archives_table_name,
@@ -46,11 +46,11 @@ from clp_package_utils.general import (
     generate_docker_compose_container_config,
     get_clp_home,
     validate_db_config,
-    validate_mcp_server_config,
     validate_queue_config,
     validate_redis_config,
     validate_results_cache_config,
     validate_webui_config,
+    validate_mcp_server_config,
 )
 
 LOGS_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
