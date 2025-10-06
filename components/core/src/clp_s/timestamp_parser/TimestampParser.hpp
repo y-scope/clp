@@ -10,6 +10,70 @@
 #include "ErrorCode.hpp"
 
 namespace clp_s::timestamp_parser {
+/**
+ * Parses a timestamp, as described by a timestamp pattern.
+ *
+ * Timestamp patterns are composed of literal characters, as well as escape sequences which belong
+ * to two classes:
+ *
+ * 1. Regular format specifiers which capture a well-defined feature in a timestamp (e.g., 3-digit
+ *    milliseconds, 6-digit microseconds, etc.).
+ * 2. Capture And Transform (CAT) sequences, which attempt to capture any of a class of features
+ *    (e.g., sub-second component of epoch timestamp) and produce a more specific timestamp pattern
+ *    depending on the actual content of the timestamp (e.g., see ".123", and determine that the
+ *    sub-second component of the timestamp is 3-digit milliseconds). After parsing, all CAT
+ *    sequences are resolved to regular format specifiers.
+ *
+ * The general motivation for CAT sequences is to ease maintenance burden for specifying timestamp
+ * patterns. By allowing users to capture classes of features, they can avoid manually specifying
+ * every possible combination of features that can appear in several similar classes of timestamp.
+ *
+ * We support the following format specifiers:
+ *
+ *      - \y Zero-padded year in century (69-99 -> 1969-1999, 00-68 -> 2000-2068).
+ *      - \Y Zero-padded year (0000-9999).
+ *      - \B Full month name (e.g., January).
+ *      - \b Abbreviated month name (e.g., Jan).
+ *      - \m Zero-padded month (01-12).
+ *      - \d Zero-padded day in month (01-31).
+ *      - \e Space-padded day in month( 1-31).
+ *      - \a Abbreviated day in week (e.g., Mon).
+ *      - \p Part of day (AM/PM).
+ *      - \H 24-hour clock, zero-padded hour (00-23).
+ *      - \k 24-hour clock, space-padded hour ( 0-23).
+ *      - \I 12-hour clock, zero-padded hour (01-12).
+ *      - \l 12-hour clock, space-padded hour ( 1-12).
+ *      - \M Zero-padded minute (00-59).
+ *      - \S Zero-padded second (00-60) (60 for leap seconds).
+ *      - \3 Zero-padded millisecond (000-999).
+ *      - \6 Zero-padded microsecond (000000-999999).
+ *      - \9 Zero-padded nanosecond (000000000-999999999).
+ *      - \T Zero-padded fractional second, up to nanoseconds, without trailing zeroes.
+ *      - \E Epoch seconds.
+ *      - \L Epoch miLliseconds.
+ *      - \C Epoch miCroseconds.
+ *      - \N Epoch Nanoseconds.
+ *      - \z{...} Specific timezone, described by content between {}.
+ *      - \\ Literal backslash.
+ *
+ * We also support the following CAT sequences:
+ *
+ *      - \Z Generic timezone -- resolves to literal content, and potentially \z{...}.
+ *      - \? Generic fractional second -- resolves to \3, \6, \9, or \T.
+ *      - \P Unknown-precision epoch time -- resolves to \E, \L, \C, or \N based on heuristic.
+ *
+ * @param timestamp
+ * @param pattern A timestamp pattern made up of literals, format specifiers, and potentially CAT
+ *                sequences.
+ * @param generated_pattern A buffer where a newly-generated timestamp pattern can be written, if
+ *                          necessary.
+ * @return On success:
+ *              - The timestamp in epoch nanoseconds.
+ *              - A string_view of the timestamp pattern that corresponds to the timestamp.
+ *                      - Lifetime is least of `pattern` and `generated_pattern`.
+ *         On error:
+ *              - A `clp_s::timestamp_parser::ErrorCode`.
+ */
 [[nodiscard]] auto parse_timestamp(
         std::string_view timestamp,
         std::string_view pattern,
