@@ -401,11 +401,10 @@ class BaseController(ABC):
             "CLP_WEBUI_RATE_LIMIT": str(self.clp_config.webui.rate_limit),
         }
 
-    def _set_up_env_for_mcp_server(self, container_clp_config: CLPConfig) -> EnvVarsDict:
+    def _set_up_env_for_mcp_server(self) -> EnvVarsDict:
         """
         Prepares environment variables and settings for the MCP server component.
 
-        :param container_clp_config: CLP configuration inside the containers.
         :return: Dictionary of component-related environment variables.
         """
         component_name = MCP_SERVER_COMPONENT_NAME
@@ -420,6 +419,8 @@ class BaseController(ABC):
             "CLP_MCP_LOGS_DIR_HOST": str(logs_dir),
             "CLP_MCP_HOST": _get_ip_from_hostname(self.clp_config.mcp_server.host),
             "CLP_MCP_PORT": str(self.clp_config.mcp_server.port),
+            "CLP_MCP_CONTAINER_HOST": "0.0.0.0",
+            "CLP_MCP_CONTAINER_PORT": "8000",
         }
 
     def _set_up_env_for_garbage_collector(self) -> EnvVarsDict:
@@ -564,7 +565,6 @@ class DockerComposeController(BaseController):
             ),
             # Package container
             "CLP_PACKAGE_CONTAINER": self.clp_config.container_image_ref,
-            
             # Global paths
             "CLP_DATA_DIR_HOST": str(self.clp_config.data_directory),
             "CLP_LOGS_DIR_HOST": str(self.clp_config.logs_directory),
@@ -583,7 +583,7 @@ class DockerComposeController(BaseController):
             **self._set_up_env_for_query_worker(num_workers),
             **self._set_up_env_for_reducer(num_workers),
             **self._set_up_env_for_webui(container_clp_config),
-            **self._set_up_env_for_mcp_server(container_clp_config),
+            **self._set_up_env_for_mcp_server(),
             **self._set_up_env_for_garbage_collector(),
         }
 

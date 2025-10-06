@@ -117,11 +117,9 @@ services:
 
   mcp-server:
     <<: *service_defaults
-    container_name: "mcp_server"
-    image: "${CLP_PACKAGE_CONTAINER}"
+    hostname: "mcp_server"
     environment:
-      MCP_HOST: "0.0.0.0"
-      MCP_PORT: "8000"
+      CLP_LOGS_DIR: "/var/log/mcp-server"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     ports:
       - "${CLP_MCP_HOST:-127.0.0.1}:${CLP_MCP_PORT:-8000}:8000"
@@ -133,9 +131,11 @@ services:
         "CMD",
         "curl",
         "-f",
-        http://127.0.0.1:$$MCP_PORT/health"
+        "http://${CLP_MCP_CONTAINER_HOST:-0.0.0.0}:${CLP_MCP_CONTAINER_PORT:-8000}/health"
       ]
     command: [
-      "bash", "-c",
-      "cd $$PYTHONPATH && python3 -m clp_mcp_server.clp_mcp_server --host $$MCP_HOST --port $$MCP_PORT"
+      "python3", "-u",
+      "-m", "clp_mcp_server.clp_mcp_server",
+      "--host","${CLP_MCP_CONTAINER_HOST:-0.0.0.0}",
+      "--port","${CLP_MCP_CONTAINER_PORT:-8000}",
     ]

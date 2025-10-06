@@ -7,7 +7,7 @@ import sys
 
 import click
 
-from .server import create_mcp_server, add_health_check
+from .server import create_mcp_server
 
 
 @click.command()
@@ -53,7 +53,6 @@ def main(host: str, port: int) -> None:
 
     try:
         mcp = create_mcp_server()
-        add_health_check(mcp)
         logger.info("Starting CLP MCP Server on %s:%d.", host, port)
         mcp.run(transport="streamable-http", host=host, port=port)
     except Exception:

@@ -75,7 +75,6 @@ Each file defines services with:
 The Docker Compose setup includes the following services:
 
 :::{mermaid}
-
 graph LR
   %% Services
   database["database (MySQL)"]

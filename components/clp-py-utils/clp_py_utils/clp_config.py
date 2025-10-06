@@ -874,7 +874,6 @@ class McpServer(BaseModel):
 
     host: str = "localhost"
     port: int = DEFAULT_PORT
-    logging_level: str = "INFO"
 
     @field_validator("host")
     @classmethod

@@ -3,6 +3,8 @@
 from typing import Any
 
 from fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 
 class ProtocolConstant:
@@ -32,6 +34,17 @@ def create_mcp_server() -> FastMCP:
     :raise: Propagates `FastMCP.tool`'s exceptions.
     """
     mcp = FastMCP(name=ProtocolConstant.SERVER_NAME)
+
+    @mcp.custom_route("/health", methods=["GET"])
+    async def health_check(_request: Request) -> JSONResponse:
+        """Health check endpoint for Docker/monitoring."""
+        health = {
+            "status": "running",
+            "service": ProtocolConstant.SERVER_NAME
+        }
+
+        return JSONResponse(health)
+
 
     @mcp.tool()
     def get_server_info() -> dict[str, Any]:
