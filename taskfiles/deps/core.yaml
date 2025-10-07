@@ -48,4 +48,4 @@ tasks:
           var: "CPP_CORE_TASKS"
         task: ":{{.ITEM}}"
     cmds:
-      - task: "antlr-runtime"
+      - task: ":antlr-runtime"

@@ -57,4 +57,4 @@ tasks:
           var: "CPP_SPIDER_TASKS"
         task: ":{{.ITEM}}"
     cmds:
-      - task: "antlr-runtime"
+      - task: ":antlr-runtime"
