@@ -12,9 +12,9 @@ x-service-defaults: &service_defaults
 x-healthcheck-defaults: &healthcheck_defaults
   interval: "30s"
   retries: 3
-  start_interval: "1s"
-  start_period: "10s"
-  timeout: "10s"
+  start_interval: "2s"
+  start_period: "60s"
+  timeout: "2s"
 
 secrets:
   CLP_DB_PASS_FILE:
