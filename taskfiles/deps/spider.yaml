@@ -45,6 +45,7 @@ tasks:
       CPP_SPIDER_TASKS:
         - "absl"
         - "antlr-jar"
+        - "antlr-runtime"
         - "boost"
         - "fmt"
         - "mariadb-connector-cpp"
@@ -56,5 +57,3 @@ tasks:
       - for:
           var: "CPP_SPIDER_TASKS"
         task: ":{{.ITEM}}"
-    cmds:
-      - task: ":antlr-runtime"
