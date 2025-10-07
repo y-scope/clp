@@ -8,13 +8,7 @@ import {
     clearQueryResults,
     submitQuery,
 } from "../../../../api/presto-search";
-import {MAX_DATA_POINTS_PER_TIMELINE} from "../../../../components/ResultsTimeline/typings";
-import {
-    buildSearchQuery,
-    buildTimelineQuery,
-} from "../../../../sql-parser";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState";
-import usePrestoSearchState from "../../SearchState/Presto";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 
 
@@ -91,78 +85,6 @@ const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreation) => {
 
 
 /**
- * Build the search query and timeline query for guided Presto search.
- *
- * @return
- * @throws {Error} if any component is missing
- */
-const buildPrestoQueries = () => {
-    const {timeRange} = useSearchStore.getState();
-    const [startTimestamp, endTimestamp] = timeRange;
-    const {select, from, where, orderBy, limit, timestampKey} = usePrestoSearchState.getState();
-
-    if (null === from) {
-        throw new Error("Cannot build guided query: from input is missing");
-    }
-
-    if (null === timestampKey) {
-        throw new Error("Cannot build guided query: timestampKey input is missing");
-    }
-
-    const trimmedWhere = where.trim();
-    const trimmedOrderBy = orderBy.trim();
-    const limitString = String(limit);
-
-    const searchQueryString = buildSearchQuery({
-        ...(trimmedWhere && {booleanExpression: trimmedWhere}),
-        databaseName: from,
-        endTimestamp: endTimestamp,
-        ...(limitString && {limitValue: limitString}),
-        selectItemList: select.trim(),
-        ...(trimmedOrderBy && {sortItemList: trimmedOrderBy}),
-        startTimestamp: startTimestamp,
-        timestampKey: timestampKey,
-    });
-
-    const timelineQueryString = buildTimelineQuery({
-        bucketCount: MAX_DATA_POINTS_PER_TIMELINE,
-        databaseName: from,
-        endTimestamp: endTimestamp,
-        startTimestamp: startTimestamp,
-        timestampKey: timestampKey,
-        ...(trimmedWhere && {booleanExpression: trimmedWhere}),
-    });
-
-    return {searchQueryString, timelineQueryString};
-};
-
-
-/**
- * Submits a new Presto query to server.
- */
-const handlePrestoGuidedQuerySubmit = () => {
-    const {searchQueryString, timelineQueryString} = buildPrestoQueries();
-
-    handlePrestoQuerySubmit({queryString: searchQueryString});
-
-    submitQuery({queryString: timelineQueryString})
-        .then((result) => {
-            const {updateAggregationJobId} = useSearchStore.getState();
-
-            const {searchJobId: aggregationJobId} = result.data;
-            updateAggregationJobId(aggregationJobId);
-            console.debug(
-                "Presto aggregation job created - ",
-                "Aggregation job ID:",
-                aggregationJobId
-            );
-        })
-        .catch((err: unknown) => {
-            console.error("Failed to submit aggregation query:", err);
-        });
-};
-
-/**
  * Cancels an ongoing Presto search query on server.
  *
  * @param payload
@@ -186,7 +108,6 @@ const handlePrestoQueryCancel = (payload: PrestoQueryJob) => {
 };
 
 export {
-    handlePrestoGuidedQuerySubmit,
     handlePrestoQueryCancel,
     handlePrestoQuerySubmit,
 };

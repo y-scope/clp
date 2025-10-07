@@ -7,7 +7,10 @@ import {Dayjs} from "dayjs";
 
 import ResultsTimeline from "../../../../../components/ResultsTimeline/index";
 import {TimelineConfig} from "../../../../../components/ResultsTimeline/typings";
-import {handlePrestoGuidedQuerySubmit} from "../../../SearchControls/Presto/presto-search-requests";
+import {
+    buildPrestoGuidedQueries,
+    handlePrestoGuidedQuerySubmit,
+} from "../../../SearchControls/Presto/presto-guided-search-requests";
 import {TIME_RANGE_OPTION} from "../../../SearchControls/TimeRangeInput/utils";
 import useSearchStore from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
@@ -39,7 +42,8 @@ const PrestoVirtualResultsTimeline = () => {
         updateTimeRangeOption(TIME_RANGE_OPTION.CUSTOM);
         updateTimelineConfig(newTimelineConfig);
 
-        handlePrestoGuidedQuerySubmit();
+        const {searchQueryString, timelineQueryString} = buildPrestoGuidedQueries();
+        handlePrestoGuidedQuerySubmit(searchQueryString, timelineQueryString);
     }, []);
 
     useEffect(() => {
