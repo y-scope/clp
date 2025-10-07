@@ -33,7 +33,7 @@ QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
-MCP_SERVER_COMPONENT_NAME = "mcp-server"
+MCP_SERVER_COMPONENT_NAME = "mcp_server"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
 
 # Action names
