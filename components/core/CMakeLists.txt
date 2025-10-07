@@ -123,7 +123,7 @@ if(PROJECT_IS_TOP_LEVEL)
     # NOTE: We mark the file optional since it's not required if the user happens to have the
     # dependencies installed already.
     set(CLP_DEPS_CPP_DIR "${CMAKE_SOURCE_DIR}/../../build/deps/cpp")
-    include("${CLP_DEPS_CPP_DIR}/cmake-settings/all-core.cmake"
+    include("${CLP_DEPS_CPP_DIR}/cmake-settings/core/all-core.cmake"
             OPTIONAL
             RESULT_VARIABLE CLP_DEPS_CPP_CORE_SETTINGS_FILE_PATH
     )
