@@ -3,8 +3,8 @@
 A multi-node deployment allows you to run CLP across a distributed set of hosts.
 
 :::{warning}
-CLP now uses Docker Compose for orchestration and support for multi-node deployments is
-temporarily removed. Please contact us if you need immediate support for multi-node deployments, or
+CLP now uses Docker Compose for orchestration and support for multi-node deployments has been
+removed temporarily. Please contact us if you need immediate support for multi-node deployments, or
 stay tuned for future updates on Kubernetes Helm support.
 :::
 
