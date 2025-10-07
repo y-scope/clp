@@ -23,7 +23,6 @@ tasks:
       CPP_CORE_TASKS:
         - "absl"
         - "antlr-jar"
-        - "antlr-runtime"
         - "boost"
         - "catch2"
         - "date"
@@ -48,3 +47,5 @@ tasks:
       - for:
           var: "CPP_CORE_TASKS"
         task: ":{{.ITEM}}"
+    cmds:
+      - task: "antlr-runtime"
