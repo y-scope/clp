@@ -127,7 +127,7 @@ tasks:
       - "clp-mcp-server"
       - "clp-package-utils"
       - "clp-py-utils"
-      - "deps:spider:spider-dep"
+      - "deps:spider"
       - "init"
       - "job-orchestration"
       - "package-venv"
