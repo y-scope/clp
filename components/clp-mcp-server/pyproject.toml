@@ -8,6 +8,7 @@ requires-python = ">=3.10"
 dependencies = [
     "click>=8.3.0",
     "fastmcp>=2.12.4",
+    "paginate>=0.5.7",
 ]
 
 [project.scripts]
