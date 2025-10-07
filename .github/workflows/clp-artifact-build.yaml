@@ -463,6 +463,10 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
+      - run: |-
+          ls "$GITHUB_WORKSPACE"
+        shell: "bash"
+
       # NOTE:
       # - We don't restore the cache for `schedule` runs so that below, lint:check-cpp-static-full
       #   runs on all files. If we don't do this periodically, lint:check-cpp-static-full could miss
@@ -487,6 +491,11 @@ jobs:
           #   violations.
           key: "lint:check-cpp-static-full"
 
+      - run: |-
+          ls -R "$GITHUB_WORKSPACE/.task/checksum"
+          ls -R "$GITHUB_WORKSPACE/build/lint-clang-tidy"
+        shell: "bash"
+
       - uses: "./.github/actions/run-on-image"
         env:
           OS_NAME: "ubuntu-jammy"
@@ -501,9 +510,6 @@ jobs:
             CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
             HOME=/tmp
             task lint:check-cpp-full
-
-      - run: "echo ${{steps.cache-restore-lint-check-cpp-static-full.outputs.cache-primary-key}}"
-        shell: "bash"
 
       # Cache the source file checksums and the generated files (logs) for the
       # lint:check-cpp-static-full task, but only if it runs successfully on the main branch.
