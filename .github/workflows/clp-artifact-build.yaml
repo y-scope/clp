@@ -463,38 +463,24 @@ jobs:
         run: "chown $(id -u):$(id -g) -R ."
         shell: "bash"
 
-      - run: |-
-          ls "$GITHUB_WORKSPACE"
-        shell: "bash"
-
-      # NOTE:
-      # - We don't restore the cache for `schedule` runs so that below, lint:check-cpp-static-full
-      #   runs on all files. If we don't do this periodically, lint:check-cpp-static-full could miss
-      #   issues in files that haven't changed but that depend on files which have changed.
-      # - We don't use the cache for `workflow_dispatch` runs to allow users to forcibly update the
-      #   cache entry.
-      - if: "'schedule' != github.event_name && 'workflow_dispatch' != github.event_name"
+      # NOTE: We don't restore the cache for `schedule` runs so that below,
+      # `lint:check-cpp-static-full` runs on all files. If we don't do this periodically,
+      # `lint:check-cpp-static-full` could miss issues in files that haven't changed but that depend
+      # on files which have changed.
+      - if: "'schedule' != github.event_name"
         name: "Restore lint:check-cpp-static-full cache"
         id: "cache-restore-lint-check-cpp-static-full"
-        uses: "actions/cache/restore@0057852bfaa89a56745cba8c7296529d2fc39830"  # v4.3.0
+        uses: "actions/cache/restore@5a3ec84eff668545956fd18022155c47e93e2684"
         with:
           path: |
             .task/checksum/lint-check-cpp-static-full
             .task/checksum/utils-cpp-lint-clang-tidy-*
             build/lint-clang-tidy
 
-          # NOTE:
-          # - This key must be kept in-sync with the key prefix in the `actions/cache/save` step
-          #   below (we can't use the output of the current step since this workflow never runs
-          #   `actions/cache/restore` and `actions/cache/save` in the same run).
-          # - We use a per-OS cache since different OSes may trigger different clang-tidy
-          #   violations.
+          # NOTE: This key must be kept in-sync with the key prefix in the `actions/cache/save` step
+          # below (we can't use the output of the current step since scheduled workflow runs don't
+          # run this step).
           key: "lint:check-cpp-static-full"
-
-      - run: |-
-          ls -R "$GITHUB_WORKSPACE/.task/checksum"
-          ls -R "$GITHUB_WORKSPACE/build/lint-clang-tidy"
-        shell: "bash"
 
       - uses: "./.github/actions/run-on-image"
         env:
@@ -516,19 +502,20 @@ jobs:
       # NOTE: If we don't cache the generated files, the task will re-run to generate them.
       - if: "'pull_request' != github.event_name && 'refs/heads/main' == github.ref"
         name: "Update lint:check-cpp-static-full cache"
-        uses: "actions/cache/save@0057852bfaa89a56745cba8c7296529d2fc39830"  # v4.3.0
+        uses: "actions/cache/save@5a3ec84eff668545956fd18022155c47e93e2684"
         with:
           path: |
             .task/checksum/lint-check-cpp-static-full
             .task/checksum/utils-cpp-lint-clang-tidy-*
             build/lint-clang-tidy
 
-          # NOTE: This key prefix must be kept in-sync with the `actions/cache/restore` step above.
+          # NOTE: This key prefix (without the hash) must be kept in-sync with the
+          # `actions/cache/restore` step above.
           key: >-
             lint:check-cpp-static-full-${{hashFiles(
-            '.task/checksum/lint-check-cpp-static-full',
-            '.task/checksum/utils-cpp-lint-clang-tidy-*',
-            'build/lint-clang-tidy/**/*'
+              '.task/checksum/lint-check-cpp-static-full',
+              '.task/checksum/utils-cpp-lint-clang-tidy-*',
+              'build/lint-clang-tidy/**/*'
             )}}
 
   package-image:
