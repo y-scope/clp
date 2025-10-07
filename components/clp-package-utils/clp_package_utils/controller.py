@@ -411,7 +411,7 @@ class BaseController(ABC):
         """
         Sets up environment variables and settings for the MCP server component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = MCP_SERVER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
