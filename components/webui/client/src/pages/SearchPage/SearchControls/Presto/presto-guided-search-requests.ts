@@ -14,7 +14,7 @@ import {SEARCH_UI_STATE} from "../../SearchState/typings";
 
 
 /**
- * Clears current presto query results on server.
+ * Clears current presto guided query results on server.
  */
 const handlePrestoGuidedClearResults = () => {
     const {searchUiState, searchJobId, aggregationJobId} = useSearchStore.getState();
@@ -97,7 +97,7 @@ const buildPrestoGuidedQueries = () => {
 
 
 /**
- * Submits a new Presto query to server.
+ * Submits guided Presto queries to server.
  *
  * @param searchQueryString
  * @param timelineQueryString
@@ -161,7 +161,7 @@ const handlePrestoGuidedQuerySubmit = (searchQueryString: string, timelineQueryS
 };
 
 /**
- * Cancels an ongoing Presto search query on server.
+ * Cancels ongoing Presto guided queries on server.
  *
  * @param searchJobId
  * @param aggregationJobId
