@@ -53,8 +53,8 @@ services:
       - "CLP_DB_PASS_FILE"
     ports:
       - host_ip: "${CLP_DB_HOST:-127.0.0.1}"
-        target: 3306
         published: "${CLP_DB_PORT:-3306}"
+        target: 3306
     volumes:
       - type: "bind"
         source: "${CLP_DB_CONF_LOGGING_FILE_HOST:-./etc/mysql/conf.d/logging.cnf}"
@@ -108,8 +108,8 @@ services:
       RABBITMQ_LOGS: "/var/log/rabbitmq/rabbitmq.log"
     ports:
       - host_ip: "${CLP_QUEUE_HOST:-127.0.0.1}"
-        target: 5672
         published: "${CLP_QUEUE_PORT:-5672}"
+        target: 5672
     volumes:
       - type: "bind"
         source: "${CLP_QUEUE_LOGS_DIR_HOST:-./var/log/queue}"
@@ -128,8 +128,8 @@ services:
     user: "${CLP_SERVICE_CONTAINER_UID_GID:-1000:1000}"
     ports:
       - host_ip: "${CLP_REDIS_HOST:-127.0.0.1}"
-        target: 6379
         published: "${CLP_REDIS_PORT:-6379}"
+        target: 6379
     volumes:
       - type: "bind"
         source: "${CLP_REDIS_CONF_FILE_HOST:-./etc/redis/redis.conf}"
@@ -164,8 +164,8 @@ services:
     user: "${CLP_SERVICE_CONTAINER_UID_GID:-1000:1000}"
     ports:
       - host_ip: "${CLP_RESULTS_CACHE_HOST:-127.0.0.1}"
-        target: 27017
         published: "${CLP_RESULTS_CACHE_PORT:-27017}"
+        target: 27017
     volumes:
       - type: "bind"
         source: "${CLP_RESULTS_CACHE_CONF_FILE_HOST:-./etc/mongo/mongod.conf}"
@@ -294,8 +294,8 @@ services:
       RATE_LIMIT: "${CLP_WEBUI_RATE_LIMIT:-1000}"
     ports:
       - host_ip: "${CLP_WEBUI_HOST:-127.0.0.1}"
-        target: 4000
         published: "${CLP_WEBUI_PORT:-4000}"
+        target: 4000
     volumes:
       - *volume_aws_config_readonly
       - type: "bind"
