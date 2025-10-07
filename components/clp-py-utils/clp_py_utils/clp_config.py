@@ -686,7 +686,10 @@ class FsIngestionConfig(FsStorage):
     directory: pathlib.Path = pathlib.Path("/")
 
     def transform_for_container(self):
-        self.directory = CONTAINER_INPUT_LOGS_ROOT_DIR
+        input_logs_dir = self.directory.resolve()
+        self.directory = CONTAINER_INPUT_LOGS_ROOT_DIR / input_logs_dir.relative_to(
+            input_logs_dir.anchor
+        )
 
 
 class ArchiveFsStorage(FsStorage):

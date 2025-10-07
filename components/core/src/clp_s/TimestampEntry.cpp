@@ -147,107 +147,57 @@ EvaluatedValue TimestampEntry::evaluate_filter(FilterOperation op, double timest
         return EvaluatedValue::Unknown;
     }
 
-    if (m_encoding == DoubleEpoch) {
-        switch (op) {
-            case FilterOperation::EQ:
-                if (timestamp >= m_epoch_start_double && timestamp <= m_epoch_end_double) {
-                    return EvaluatedValue::Unknown;
-                } else {
-                    return EvaluatedValue::False;
-                }
-            case FilterOperation::NEQ:
-                if (timestamp >= m_epoch_start_double && timestamp <= m_epoch_end_double) {
-                    return EvaluatedValue::Unknown;
-                } else {
-                    return EvaluatedValue::True;
-                }
-            case FilterOperation::LT:
-                if (timestamp > m_epoch_end_double) {
-                    return EvaluatedValue::True;
-                } else if (timestamp <= m_epoch_start_double) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            case FilterOperation::LTE:
-                if (timestamp >= m_epoch_end_double) {
-                    return EvaluatedValue::True;
-                } else if (timestamp < m_epoch_start_double) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            case FilterOperation::GT:
-                if (timestamp < m_epoch_start_double) {
-                    return EvaluatedValue::True;
-                } else if (timestamp >= m_epoch_end_double) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            case FilterOperation::GTE:
-                if (timestamp <= m_epoch_start_double) {
-                    return EvaluatedValue::True;
-                } else if (timestamp > m_epoch_end_double) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            default:
-                return EvaluatedValue::Unknown;
-        }
-    } else if (m_encoding == Epoch) {
-        double epoch_start_tmp = m_epoch_start, epoch_end_tmp = m_epoch_end;
-        switch (op) {
-            case FilterOperation::EQ:
-                if (timestamp >= epoch_start_tmp && timestamp <= epoch_end_tmp) {
-                    return EvaluatedValue::Unknown;
-                } else {
-                    return EvaluatedValue::False;
-                }
-            case FilterOperation::NEQ:
-                if (timestamp >= epoch_start_tmp && timestamp <= epoch_end_tmp) {
-                    return EvaluatedValue::Unknown;
-                } else {
-                    return EvaluatedValue::True;
-                }
-            case FilterOperation::LT:
-                if (timestamp > epoch_end_tmp) {
-                    return EvaluatedValue::True;
-                } else if (timestamp <= epoch_start_tmp) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            case FilterOperation::LTE:
-                if (timestamp >= epoch_end_tmp) {
-                    return EvaluatedValue::True;
-                } else if (timestamp < epoch_start_tmp) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            case FilterOperation::GT:
-                if (timestamp < epoch_start_tmp) {
-                    return EvaluatedValue::True;
-                } else if (timestamp >= epoch_end_tmp) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            case FilterOperation::GTE:
-                if (timestamp <= epoch_start_tmp) {
-                    return EvaluatedValue::True;
-                } else if (timestamp > epoch_end_tmp) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            default:
-                return EvaluatedValue::Unknown;
-        }
-    } else {
+    if (DoubleEpoch != m_encoding) {
         return EvaluatedValue::Unknown;
+    }
+
+    switch (op) {
+        case FilterOperation::EQ:
+            if (timestamp >= m_epoch_start_double && timestamp <= m_epoch_end_double) {
+                return EvaluatedValue::Unknown;
+            } else {
+                return EvaluatedValue::False;
+            }
+        case FilterOperation::NEQ:
+            if (timestamp >= m_epoch_start_double && timestamp <= m_epoch_end_double) {
+                return EvaluatedValue::Unknown;
+            } else {
+                return EvaluatedValue::True;
+            }
+        case FilterOperation::LT:
+            if (timestamp > m_epoch_end_double) {
+                return EvaluatedValue::True;
+            } else if (timestamp <= m_epoch_start_double) {
+                return EvaluatedValue::False;
+            } else {
+                return EvaluatedValue::Unknown;
+            }
+        case FilterOperation::LTE:
+            if (timestamp >= m_epoch_end_double) {
+                return EvaluatedValue::True;
+            } else if (timestamp < m_epoch_start_double) {
+                return EvaluatedValue::False;
+            } else {
+                return EvaluatedValue::Unknown;
+            }
+        case FilterOperation::GT:
+            if (timestamp < m_epoch_start_double) {
+                return EvaluatedValue::True;
+            } else if (timestamp >= m_epoch_end_double) {
+                return EvaluatedValue::False;
+            } else {
+                return EvaluatedValue::Unknown;
+            }
+        case FilterOperation::GTE:
+            if (timestamp <= m_epoch_start_double) {
+                return EvaluatedValue::True;
+            } else if (timestamp > m_epoch_end_double) {
+                return EvaluatedValue::False;
+            } else {
+                return EvaluatedValue::Unknown;
+            }
+        default:
+            return EvaluatedValue::Unknown;
     }
 }
 
@@ -256,114 +206,57 @@ EvaluatedValue TimestampEntry::evaluate_filter(FilterOperation op, epochtime_t t
         return EvaluatedValue::Unknown;
     }
 
-    if (m_encoding == DoubleEpoch) {
-        /**
-         * TODO: this borrows logic from the double_as_int function
-         * should
-         */
-        epochtime_t epoch_start_tmp_ltgte = std::ceil(m_epoch_start_double);
-        epochtime_t epoch_start_tmp_gtlte = std::floor(m_epoch_start_double);
-        epochtime_t epoch_end_tmp_ltgte = std::ceil(m_epoch_end_double);
-        epochtime_t epoch_end_tmp_gtlte = std::floor(m_epoch_end_double);
-        switch (op) {
-            case FilterOperation::EQ:
-                if (timestamp >= epoch_start_tmp_ltgte && timestamp <= epoch_end_tmp_gtlte) {
-                    return EvaluatedValue::Unknown;
-                } else {
-                    return EvaluatedValue::False;
-                }
-            case FilterOperation::NEQ:
-                if (timestamp >= epoch_start_tmp_ltgte && timestamp <= epoch_end_tmp_gtlte) {
-                    return EvaluatedValue::Unknown;
-                } else {
-                    return EvaluatedValue::True;
-                }
-            case FilterOperation::LT:
-                if (timestamp > epoch_end_tmp_gtlte) {
-                    return EvaluatedValue::True;
-                } else if (timestamp <= epoch_start_tmp_gtlte) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            case FilterOperation::LTE:
-                if (timestamp >= epoch_end_tmp_ltgte) {
-                    return EvaluatedValue::True;
-                } else if (timestamp < epoch_start_tmp_ltgte) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            case FilterOperation::GT:
-                if (timestamp < epoch_start_tmp_ltgte) {
-                    return EvaluatedValue::True;
-                } else if (timestamp >= epoch_end_tmp_ltgte) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            case FilterOperation::GTE:
-                if (timestamp <= epoch_start_tmp_gtlte) {
-                    return EvaluatedValue::True;
-                } else if (timestamp > epoch_end_tmp_gtlte) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            default:
-                return EvaluatedValue::Unknown;
-        }
-    } else if (m_encoding == Epoch) {
-        switch (op) {
-            case FilterOperation::EQ:
-                if (timestamp >= m_epoch_start && timestamp <= m_epoch_end) {
-                    return EvaluatedValue::Unknown;
-                } else {
-                    return EvaluatedValue::False;
-                }
-            case FilterOperation::NEQ:
-                if (timestamp >= m_epoch_start && timestamp <= m_epoch_end) {
-                    return EvaluatedValue::Unknown;
-                } else {
-                    return EvaluatedValue::True;
-                }
-            case FilterOperation::LT:
-                if (timestamp > m_epoch_end) {
-                    return EvaluatedValue::True;
-                } else if (timestamp <= m_epoch_start) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            case FilterOperation::LTE:
-                if (timestamp >= m_epoch_end) {
-                    return EvaluatedValue::True;
-                } else if (timestamp < m_epoch_start) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            case FilterOperation::GT:
-                if (timestamp < m_epoch_start) {
-                    return EvaluatedValue::True;
-                } else if (timestamp >= m_epoch_end) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            case FilterOperation::GTE:
-                if (timestamp <= m_epoch_start) {
-                    return EvaluatedValue::True;
-                } else if (timestamp > m_epoch_end) {
-                    return EvaluatedValue::False;
-                } else {
-                    return EvaluatedValue::Unknown;
-                }
-            default:
-                return EvaluatedValue::Unknown;
-        }
-    } else {
+    if (Epoch != m_encoding) {
         return EvaluatedValue::Unknown;
+    }
+
+    switch (op) {
+        case FilterOperation::EQ:
+            if (timestamp >= m_epoch_start && timestamp <= m_epoch_end) {
+                return EvaluatedValue::Unknown;
+            } else {
+                return EvaluatedValue::False;
+            }
+        case FilterOperation::NEQ:
+            if (timestamp >= m_epoch_start && timestamp <= m_epoch_end) {
+                return EvaluatedValue::Unknown;
+            } else {
+                return EvaluatedValue::True;
+            }
+        case FilterOperation::LT:
+            if (timestamp > m_epoch_end) {
+                return EvaluatedValue::True;
+            } else if (timestamp <= m_epoch_start) {
+                return EvaluatedValue::False;
+            } else {
+                return EvaluatedValue::Unknown;
+            }
+        case FilterOperation::LTE:
+            if (timestamp >= m_epoch_end) {
+                return EvaluatedValue::True;
+            } else if (timestamp < m_epoch_start) {
+                return EvaluatedValue::False;
+            } else {
+                return EvaluatedValue::Unknown;
+            }
+        case FilterOperation::GT:
+            if (timestamp < m_epoch_start) {
+                return EvaluatedValue::True;
+            } else if (timestamp >= m_epoch_end) {
+                return EvaluatedValue::False;
+            } else {
+                return EvaluatedValue::Unknown;
+            }
+        case FilterOperation::GTE:
+            if (timestamp <= m_epoch_start) {
+                return EvaluatedValue::True;
+            } else if (timestamp > m_epoch_end) {
+                return EvaluatedValue::False;
+            } else {
+                return EvaluatedValue::Unknown;
+            }
+        default:
+            return EvaluatedValue::Unknown;
     }
 }
 

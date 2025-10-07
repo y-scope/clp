@@ -3,6 +3,8 @@ name: "clp-package-base"
 # Common service defaults.
 x-service-defaults: &service_defaults
   image: "${CLP_PACKAGE_CONTAINER:-clp-package}"
+  logging:
+    driver: "local"
   stop_grace_period: "3s"
   user: "${CLP_UID_GID:-1000:1000}"
 
@@ -10,13 +12,27 @@ x-service-defaults: &service_defaults
 x-healthcheck-defaults: &healthcheck_defaults
   interval: "30s"
   retries: 3
-  start_interval: "1s"
-  start_period: "10s"
-  timeout: "10s"
+  start_interval: "2s"
+  start_period: "60s"
+  timeout: "2s"
 
-secrets:
-  CLP_DB_PASS_FILE:
-    environment: "CLP_DB_PASS"
+# Common volume definitions.
+x-volume-definitions:
+  aws-config-readonly: &volume_aws_config_readonly
+    type: "bind"
+    source: "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}"
+    target: "/.aws"
+    read_only: true
+  clp-config-readonly: &volume_clp_config_readonly
+    type: "bind"
+    source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml"
+    target: "/etc/clp-config.yml"
+    read_only: true
+  logs-input-readonly: &volume_root_logs_readonly
+    type: "bind"
+    source: "${CLP_LOGS_INPUT_DIR_HOST:-/}"
+    target: "${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
+    read_only: true
 
 services:
   database:
@@ -26,17 +42,24 @@ services:
     user: "${CLP_SERVICE_CONTAINER_UID_GID:-1000:1000}"
     environment:
       MYSQL_DATABASE: "${CLP_DB_NAME}"
-      MYSQL_PASSWORD_FILE: "/run/secrets/CLP_DB_PASS_FILE"
-      MYSQL_ROOT_PASSWORD_FILE: "/run/secrets/CLP_DB_PASS_FILE"
+      MYSQL_PASSWORD: "${CLP_DB_PASS}"
+      MYSQL_ROOT_PASSWORD: "${CLP_DB_PASS}"
       MYSQL_USER: "${CLP_DB_USER}"
-    secrets:
-      - "CLP_DB_PASS_FILE"
     ports:
-      - "${CLP_DB_HOST:-127.0.0.1}:${CLP_DB_PORT:-3306}:3306"
+      - host_ip: "${CLP_DB_HOST:-127.0.0.1}"
+        published: "${CLP_DB_PORT:-3306}"
+        target: 3306
     volumes:
-      - "${CLP_DB_CONF_FILE_HOST:-./etc/mysql/conf.d/logging.cnf}:/etc/mysql/conf.d/logging.cnf:ro"
-      - "${CLP_DB_DATA_DIR_HOST:-./var/data/database}:/var/lib/mysql"
-      - "${CLP_DB_LOGS_DIR_HOST:-./var/log/database}:/var/log/mysql"
+      - type: "bind"
+        source: "${CLP_DB_CONF_LOGGING_FILE_HOST:-./etc/mysql/conf.d/logging.cnf}"
+        target: "/etc/mysql/conf.d/logging.cnf"
+        read_only: true
+      - type: "bind"
+        source: "${CLP_DB_DATA_DIR_HOST:-./var/data/database}"
+        target: "/var/lib/mysql"
+      - type: "bind"
+        source: "${CLP_DB_LOGS_DIR_HOST:-./var/log/database}"
+        target: "/var/log/mysql"
     healthcheck:
       <<: *healthcheck_defaults
       test: [
@@ -56,7 +79,7 @@ services:
       CLP_DB_USER: "${CLP_DB_USER}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml"
+      - *volume_clp_config_readonly
     depends_on:
       database:
         condition: "service_healthy"
@@ -78,9 +101,13 @@ services:
       RABBITMQ_DEFAULT_USER: "${CLP_QUEUE_USER}"
       RABBITMQ_LOGS: "/var/log/rabbitmq/rabbitmq.log"
     ports:
-      - "${CLP_QUEUE_HOST:-127.0.0.1}:${CLP_QUEUE_PORT:-5672}:5672"
+      - host_ip: "${CLP_QUEUE_HOST:-127.0.0.1}"
+        published: "${CLP_QUEUE_PORT:-5672}"
+        target: 5672
     volumes:
-      - "${CLP_QUEUE_LOGS_DIR_HOST:-./var/log/queue}:/var/log/rabbitmq"
+      - type: "bind"
+        source: "${CLP_QUEUE_LOGS_DIR_HOST:-./var/log/queue}"
+        target: "/var/log/rabbitmq"
     healthcheck:
       <<: *healthcheck_defaults
       test: [
@@ -94,11 +121,20 @@ services:
     hostname: "redis"
     user: "${CLP_SERVICE_CONTAINER_UID_GID:-1000:1000}"
     ports:
-      - "${CLP_REDIS_HOST:-127.0.0.1}:${CLP_REDIS_PORT:-6379}:6379"
+      - host_ip: "${CLP_REDIS_HOST:-127.0.0.1}"
+        published: "${CLP_REDIS_PORT:-6379}"
+        target: 6379
     volumes:
-      - "${CLP_REDIS_CONF_FILE_HOST:-./etc/redis/redis.conf}:/usr/local/etc/redis/redis.conf:ro"
-      - "${CLP_REDIS_DATA_DIR_HOST:-./var/data/redis}:/data"
-      - "${CLP_REDIS_LOGS_DIR_HOST:-./var/log/redis}:/var/log/redis"
+      - type: "bind"
+        source: "${CLP_REDIS_CONF_FILE_HOST:-./etc/redis/redis.conf}"
+        target: "/usr/local/etc/redis/redis.conf"
+        read_only: true
+      - type: "bind"
+        source: "${CLP_REDIS_DATA_DIR_HOST:-./var/data/redis}"
+        target: "/data"
+      - type: "bind"
+        source: "${CLP_REDIS_LOGS_DIR_HOST:-./var/log/redis}"
+        target: "/var/log/redis"
     healthcheck:
       <<: *healthcheck_defaults
       test: [
@@ -121,11 +157,20 @@ services:
     hostname: "results_cache"
     user: "${CLP_SERVICE_CONTAINER_UID_GID:-1000:1000}"
     ports:
-      - "${CLP_RESULTS_CACHE_HOST:-127.0.0.1}:${CLP_RESULTS_CACHE_PORT:-6379}:27017"
+      - host_ip: "${CLP_RESULTS_CACHE_HOST:-127.0.0.1}"
+        published: "${CLP_RESULTS_CACHE_PORT:-27017}"
+        target: 27017
     volumes:
-      - "${CLP_RESULTS_CACHE_CONF_FILE_HOST:-./etc/mongo/mongod.conf}:/etc/mongo/mongod.conf:ro"
-      - "${CLP_RESULTS_CACHE_DATA_DIR_HOST:-./var/data/results_cache}:/data/db"
-      - "${CLP_RESULTS_CACHE_LOGS_DIR_HOST:-./var/log/results_cache}:/var/log/mongodb"
+      - type: "bind"
+        source: "${CLP_RESULTS_CACHE_CONF_FILE_HOST:-./etc/mongo/mongod.conf}"
+        target: "/etc/mongo/mongod.conf"
+        read_only: true
+      - type: "bind"
+        source: "${CLP_RESULTS_CACHE_DATA_DIR_HOST:-./var/data/results_cache}"
+        target: "/data/db"
+      - type: "bind"
+        source: "${CLP_RESULTS_CACHE_LOGS_DIR_HOST:-./var/log/results_cache}"
+        target: "/var/log/mongodb"
     healthcheck:
       <<: *healthcheck_defaults
       test: [
@@ -149,7 +194,7 @@ services:
       "python3",
       "-u",
       "-m", "clp_py_utils.initialize-results-cache",
-      "--uri", "mongodb://results_cache:27017/${RESULTS_CACHE_CLP_DB_NAME:-clp-query-results}",
+      "--uri", "mongodb://results_cache:27017/${CLP_RESULTS_CACHE_DB_NAME:-clp-query-results}",
       "--stream-collection", "${CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME:-stream-files}",
     ]
 
@@ -166,11 +211,12 @@ services:
       RESULT_BACKEND: >-
         redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_COMPRESSION_BACKEND_DB:-1}
     volumes:
-      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
-      - "${CLP_COMPRESSION_SCHEDULER_LOGS_FILE_HOST:-./var/log/compression_scheduler.log}\
-:/var/log/compression_scheduler.log"
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "/:/mnt/logs:ro"
+      - *volume_aws_config_readonly
+      - *volume_clp_config_readonly
+      - *volume_root_logs_readonly
+      - type: "bind"
+        source: "${CLP_COMPRESSION_SCHEDULER_LOG_FILE_HOST:-./var/log/compression_scheduler.log}"
+        target: "/var/log/compression_scheduler.log"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -201,14 +247,21 @@ services:
       RESULT_BACKEND: >-
         redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_COMPRESSION_BACKEND_DB:-1}
     volumes:
-      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}:/var/data/archives"
-      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/staged-archives}:/var/data/staged-archives"
-      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
-      - "${CLP_COMPRESSION_WORKER_LOGS_DIR_HOST:-./var/log/compression_worker}:\
-/var/log/compression_worker"
-      - "${CLP_DATA_DIR_HOST:-./var/data}:/var/data"
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "/:/mnt/logs:ro"
+      - *volume_aws_config_readonly
+      - *volume_clp_config_readonly
+      - *volume_root_logs_readonly
+      - type: "bind"
+        source: "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}"
+        target: "/var/data/archives"
+      - type: "bind"
+        source: "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/staged-archives}"
+        target: "/var/data/staged-archives"
+      - type: "bind"
+        source: "${CLP_COMPRESSION_WORKER_LOGS_DIR_HOST:-./var/log/compression_worker}"
+        target: "/var/log/compression_worker"
+      - type: "bind"
+        source: "${CLP_DATA_DIR_HOST:-./var/data}"
+        target: "/var/data"
     command: [
       "python3",
       "-u",
@@ -216,7 +269,7 @@ services:
       "-A", "job_orchestration.executor.compress",
       "worker",
       "--concurrency", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
-      "--loglevel", "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}",
+      "--loglevel", "WARNING",
       "-f", "/var/log/compression_worker/worker.log",
       "-Q", "compression",
       "-n", "compression-worker"
@@ -234,13 +287,22 @@ services:
       PORT: "4000"
       RATE_LIMIT: "${CLP_WEBUI_RATE_LIMIT:-1000}"
     ports:
-      - "${CLP_WEBUI_HOST:-127.0.0.1}:${CLP_WEBUI_PORT:-4000}:4000"
+      - host_ip: "${CLP_WEBUI_HOST:-127.0.0.1}"
+        published: "${CLP_WEBUI_PORT:-4000}"
+        target: 4000
     volumes:
-      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
-      - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}:/var/data/streams"
-      - "./var/www/webui/client/settings.json:/opt/clp/var/www/webui/client/settings.json:ro"
-      - "./var/www/webui/server/dist/settings.json\
-:/opt/clp/var/www/webui/server/dist/settings.json:ro"
+      - *volume_aws_config_readonly
+      - type: "bind"
+        source: "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}"
+        target: "/var/data/streams"
+      - type: "bind"
+        source: "./var/www/webui/client/settings.json"
+        target: "/opt/clp/var/www/webui/client/settings.json"
+        read_only: true
+      - type: "bind"
+        source: "./var/www/webui/server/dist/settings.json"
+        target: "/opt/clp/var/www/webui/server/dist/settings.json"
+        read_only: true
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -270,8 +332,10 @@ services:
       CLP_LOGS_DIR: "/var/log/garbage_collector"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/garbage_collector:/var/log/garbage_collector"
+      - *volume_clp_config_readonly
+      - type: "bind"
+        source: "${CLP_LOGS_DIR_HOST:-./var/log}/garbage_collector"
+        target: "/var/log/garbage_collector"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"

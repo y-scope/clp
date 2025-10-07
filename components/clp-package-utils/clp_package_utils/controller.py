@@ -10,9 +10,6 @@ import uuid
 from abc import ABC, abstractmethod
 from typing import Any, Dict
 
-# Type alias for environment variables dictionary.
-EnvVarsDict = Dict[str, str]
-
 from clp_py_utils.clp_config import (
     AwsAuthType,
     CLPConfig,
@@ -53,7 +50,11 @@ from clp_package_utils.general import (
     validate_mcp_server_config,
 )
 
-LOGS_FILE_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+# Type alias for environment variables dictionary.
+EnvVarsDict = Dict[str, str]
+
+LOG_FILE_ACCESS_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
+
 DEFAULT_UID_GID = f"{os.getuid()}:{os.getgid()}"
 SERVICE_CONTAINER_USER_ID = 999
 SERVICE_CONTAINER_GROUP_ID = 999
@@ -64,9 +65,8 @@ logger = logging.getLogger(__name__)
 
 class BaseController(ABC):
     """
-    Abstract base controller for preparing and deploying CLP components.
-    Provides common logic for preparing environment variables, directories,
-    and configuration files for each service.
+    Abstract base controller for preparing and deploying CLP components. Provides common logic for
+    preparing environment variables, directories, and configuration files for each service.
     """
 
     def __init__(self, clp_config: CLPConfig):
@@ -75,9 +75,9 @@ class BaseController(ABC):
         self._conf_dir = self._clp_home / "etc"
 
     @abstractmethod
-    def deploy(self):
+    def start(self):
         """
-        Deploys the provisioned components with orchestrator-specific logic.
+        Starts the set-up components with orchestrator-specific logic.
         """
         pass
 
@@ -89,33 +89,33 @@ class BaseController(ABC):
         pass
 
     @abstractmethod
-    def _provision(self) -> EnvVarsDict:
+    def _set_up_env(self):
         """
-        Prepares all components with orchestrator-specific logic.
-
-        :return: Dictionary of environment variables to be used by the orchestrator.
+        Sets up all components for the orchestrator by preparing environment variables, directories,
+        and configuration files.
         """
         pass
 
     def _set_up_env_for_database(self) -> EnvVarsDict:
         """
-        Prepares environment variables and directories for the database component.
+        Sets up environment variables and directories for the database component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = DB_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
-        conf_file = self._conf_dir / "mysql" / "conf.d" / "logging.cnf"
+        conf_logging_file = self._conf_dir / "mysql" / "conf.d" / "logging.cnf"
         data_dir = self.clp_config.data_directory / component_name
         logs_dir = self.clp_config.logs_directory / component_name
-        validate_db_config(self.clp_config, conf_file, data_dir, logs_dir)
+        validate_db_config(self.clp_config, conf_logging_file, data_dir, logs_dir)
+
         data_dir.mkdir(exist_ok=True, parents=True)
         logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(data_dir, logs_dir)
 
         return {
-            "CLP_DB_CONF_FILE_HOST": str(conf_file),
+            "CLP_DB_CONF_LOGGING_FILE_HOST": str(conf_logging_file),
             "CLP_DB_DATA_DIR_HOST": str(data_dir),
             "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
             "CLP_DB_HOST": _get_ip_from_hostname(self.clp_config.database.host),
@@ -130,15 +130,16 @@ class BaseController(ABC):
 
     def _set_up_env_for_queue(self) -> EnvVarsDict:
         """
-        Prepares environment variables and directories for the message queue component.
+        Sets up environment variables and directories for the message queue component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUEUE_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
         validate_queue_config(self.clp_config, logs_dir)
+
         logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(logs_dir)
 
@@ -152,17 +153,18 @@ class BaseController(ABC):
 
     def _set_up_env_for_redis(self) -> EnvVarsDict:
         """
-        Prepares environment variables and directories for the Redis component.
+        Sets up environment variables and directories for the Redis component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = REDIS_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
         conf_file = self._conf_dir / "redis" / "redis.conf"
-        logs_dir = self.clp_config.logs_directory / component_name
         data_dir = self.clp_config.data_directory / component_name
+        logs_dir = self.clp_config.logs_directory / component_name
         validate_redis_config(self.clp_config, conf_file, data_dir, logs_dir)
+
         data_dir.mkdir(exist_ok=True, parents=True)
         logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(data_dir, logs_dir)
@@ -182,9 +184,9 @@ class BaseController(ABC):
 
     def _set_up_env_for_results_cache(self) -> EnvVarsDict:
         """
-        Prepares environment variables and directories for the results cache (MongoDB) component.
+        Sets up environment variables and directories for the results cache (MongoDB) component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = RESULTS_CACHE_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
@@ -193,6 +195,7 @@ class BaseController(ABC):
         data_dir = self.clp_config.data_directory / component_name
         logs_dir = self.clp_config.logs_directory / component_name
         validate_results_cache_config(self.clp_config, conf_file, data_dir, logs_dir)
+
         data_dir.mkdir(exist_ok=True, parents=True)
         logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(data_dir, logs_dir)
@@ -209,49 +212,50 @@ class BaseController(ABC):
 
     def _set_up_env_for_compression_scheduler(self) -> EnvVarsDict:
         """
-        Prepares environment variables and files for the compression scheduler component.
+        Sets up environment variables and files for the compression scheduler component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
-        logs_file = self.clp_config.logs_directory / f"{component_name}.log"
-        logs_file.touch(mode=LOGS_FILE_MODE, exist_ok=True)
+        log_file = self.clp_config.logs_directory / f"{component_name}.log"
+        log_file.touch(mode=LOG_FILE_ACCESS_MODE, exist_ok=True)
 
         return {
             "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL": self.clp_config.compression_scheduler.logging_level,
-            "CLP_COMPRESSION_SCHEDULER_LOGS_FILE_HOST": str(logs_file),
+            "CLP_COMPRESSION_SCHEDULER_LOG_FILE_HOST": str(log_file),
         }
 
     def _set_up_env_for_query_scheduler(self) -> EnvVarsDict:
         """
-        Prepares environment variables and files for the query scheduler component.
+        Sets up environment variables and files for the query scheduler component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
-        logs_file = self.clp_config.logs_directory / f"{component_name}.log"
-        logs_file.touch(mode=LOGS_FILE_MODE, exist_ok=True)
+        log_file = self.clp_config.logs_directory / f"{component_name}.log"
+        log_file.touch(mode=LOG_FILE_ACCESS_MODE, exist_ok=True)
 
         return {
             "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": self.clp_config.query_scheduler.logging_level,
-            "CLP_QUERY_SCHEDULER_LOGS_FILE_HOST": str(logs_file),
+            "CLP_QUERY_SCHEDULER_LOG_FILE_HOST": str(log_file),
         }
 
     def _set_up_env_for_compression_worker(self, num_workers: int) -> EnvVarsDict:
         """
-        Prepares environment variables for the compression worker component.
+        Sets up environment variables for the compression worker component.
 
         :param num_workers: Number of worker processes to run.
-        :return: Dictionary of compression worker-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = COMPRESSION_WORKER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
+
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         return {
@@ -262,15 +266,16 @@ class BaseController(ABC):
 
     def _set_up_env_for_query_worker(self, num_workers: int) -> EnvVarsDict:
         """
-        Prepares environment variables for the query worker component.
+        Sets up environment variables for the query worker component.
 
         :param num_workers: Number of worker processes to run.
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUERY_WORKER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
+
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         return {
@@ -281,15 +286,16 @@ class BaseController(ABC):
 
     def _set_up_env_for_reducer(self, num_workers: int) -> EnvVarsDict:
         """
-        Prepares environment variables for the reducer component.
+        Sets up environment variables for the reducer component.
 
         :param num_workers: Number of worker processes to run.
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = REDUCER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
+
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         return {
@@ -301,10 +307,10 @@ class BaseController(ABC):
 
     def _set_up_env_for_webui(self, container_clp_config: CLPConfig) -> EnvVarsDict:
         """
-        Prepares environment variables and settings for the Web UI component.
+        Sets up environment variables and settings for the Web UI component.
 
         :param container_clp_config: CLP configuration inside the containers.
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = WEBUI_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
@@ -425,14 +431,15 @@ class BaseController(ABC):
 
     def _set_up_env_for_garbage_collector(self) -> EnvVarsDict:
         """
-        Prepares environment variables for the garbage collector component.
+        Sets up environment variables for the garbage collector component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = GARBAGE_COLLECTOR_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
+
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         return {"CLP_GC_LOGGING_LEVEL": self.clp_config.garbage_collector.logging_level}
@@ -487,15 +494,15 @@ class DockerComposeController(BaseController):
         self._project_name = f"clp-package-{instance_id}"
         super().__init__(clp_config)
 
-    def deploy(self):
+    def start(self):
         """
         Deploys CLP components using Docker Compose by:
         1. Checking Docker dependencies.
-        2. Provisioning environment variables and configuration.
+        2. Setting up environment variables and configuration.
         3. Running `docker compose up -d`.
         """
         check_docker_dependencies(should_compose_run=False, project_name=self._project_name)
-        self._provision()
+        self._set_up_env()
 
         deployment_type = self.clp_config.get_deployment_type()
         logger.info(f"Starting CLP using Docker Compose ({deployment_type})...")
@@ -543,14 +550,12 @@ class DockerComposeController(BaseController):
         """
         return multiprocessing.cpu_count() // 2
 
-    def _provision(self):
+    def _set_up_env(self):
         """
-        Provisions all CLP components for Docker Compose by:
+        Sets up all CLP components for Docker Compose by:
         - Generating container-specific config.
         - Preparing environment variables for all components.
         - Writing environment variables to `.env`.
-
-        :return: Dictionary of all environment variables.
         """
         container_clp_config = generate_docker_compose_container_config(self.clp_config)
         num_workers = self._get_num_workers()
@@ -565,9 +570,13 @@ class DockerComposeController(BaseController):
             ),
             # Package container
             "CLP_PACKAGE_CONTAINER": self.clp_config.container_image_ref,
-            # Global paths
+            # Runtime data directories
             "CLP_DATA_DIR_HOST": str(self.clp_config.data_directory),
             "CLP_LOGS_DIR_HOST": str(self.clp_config.logs_directory),
+            # Input directories
+            "CLP_LOGS_INPUT_DIR_HOST": str(self.clp_config.logs_input.directory),
+            "CLP_LOGS_INPUT_DIR_CONTAINER": str(container_clp_config.logs_input.directory),
+            # Output directories
             "CLP_ARCHIVE_OUTPUT_DIR_HOST": str(self.clp_config.archive_output.get_directory()),
             "CLP_STREAM_OUTPUT_DIR_HOST": str(self.clp_config.stream_output.get_directory()),
             # AWS credentials
@@ -610,7 +619,6 @@ def get_or_create_instance_id(clp_config: CLPConfig):
         instance_id = str(uuid.uuid4())[-4:]
         with open(instance_id_file_path, "w") as f:
             f.write(instance_id)
-            f.flush()
 
     return instance_id
 
@@ -646,9 +654,9 @@ def _chown_recursively(
 
 def _get_ip_from_hostname(hostname: str) -> str:
     """
-    Resolves a hostname to an IP address.
+    Resolves a hostname to an IPv4 IP address.
 
-    :param hostname: The hostname to resolve.
+    :param hostname:
     :return: The resolved IP address.
     """
     return socket.gethostbyname(hostname)
