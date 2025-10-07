@@ -37,7 +37,6 @@ def create_mcp_server() -> FastMCP:
     """
     mcp = FastMCP(name=ProtocolConstant.SERVER_NAME)
 
-    # Initialize the session manager with configuration
     session_manager = SessionManager(
         page_size=10,
         max_cached_results=1000,
@@ -82,6 +81,8 @@ def create_mcp_server() -> FastMCP:
         
         Note: Results are paginated with 10 items per page. Use get_nth_page to retrieve additional pages."""
         
+        session.flags["ran_instructions"] = True
+
         return instructions
 
     @mcp.tool
@@ -99,10 +100,8 @@ def create_mcp_server() -> FastMCP:
         """
         # Mark instructions as run for this session
         session = session_manager.get_or_create_session(ctx.session_id)
-        session.flags["ran_instructions"] = True
         
-        # TODO: Replace with actual log search implementation
-        # This is a placeholder that generates sample log data
+        # TODO: Replace with actual CLP log search implementation
         sample_logs = [
             f"Log entry {i}: Query '{kql_query}' matched this log message"
             for i in range(25)  # Simulate 25 results (3 pages)
@@ -111,7 +110,6 @@ def create_mcp_server() -> FastMCP:
         # Cache the query results and get the first page
         first_page_data, total_pages = session_manager.cache_query_result(
             session_id=ctx.session_id,
-            query=kql_query,
             results=sample_logs,
         )
         
@@ -144,7 +142,6 @@ def create_mcp_server() -> FastMCP:
         """
         # Mark instructions as run for this session
         session = session_manager.get_or_create_session(ctx.session_id)
-        session.flags["ran_instructions"] = True
         
         # TODO: Replace with actual log search implementation with timestamp filtering
         # This is a placeholder that generates sample log data
@@ -156,7 +153,6 @@ def create_mcp_server() -> FastMCP:
         # Cache the query results and get the first page
         first_page_data, total_pages = session_manager.cache_query_result(
             session_id=ctx.session_id,
-            query=f"{kql_query} [timestamp: {begin_timestamp} to {end_timestamp}]",
             results=sample_logs,
         )
         

@@ -20,7 +20,6 @@ class TestQueryResult:
         # Create a result with more than max_cached_results
         large_results = [f"log_{i}" for i in range(1500)]
         query_result = QueryResult(
-            query="test query",
             timestamp=datetime.now(),
             total_results=large_results,
             max_cached_results=1000,
@@ -35,7 +34,6 @@ class TestQueryResult:
         """Test pagination functionality."""
         results = [f"log_{i}" for i in range(25)]
         query_result = QueryResult(
-            query="test",
             timestamp=datetime.now(),
             total_results=results,
             page_size=10,
@@ -66,7 +64,6 @@ class TestQueryResult:
         """Test total pages calculation."""
         # Test with exact multiple
         query_result = QueryResult(
-            query="test",
             timestamp=datetime.now(),
             total_results=["log"] * 20,
             page_size=10,
@@ -75,7 +72,6 @@ class TestQueryResult:
         
         # Test with remainder
         query_result = QueryResult(
-            query="test",
             timestamp=datetime.now(),
             total_results=["log"] * 25,
             page_size=10,
@@ -84,7 +80,6 @@ class TestQueryResult:
         
         # Test with empty results
         query_result = QueryResult(
-            query="test",
             timestamp=datetime.now(),
             total_results=[],
             page_size=10,
@@ -111,39 +106,13 @@ class TestSessionState:
         results = [f"log_{i}" for i in range(50)]
         
         cached_result = session.cache_query_result(
-            query="test query",
             results=results,
             page_size=15,
         )
         
         assert session.current_query_result is not None
-        assert session.current_query_result.query == "test query"
         assert len(session.current_query_result.total_results) == 50
         assert session.current_query_result.page_size == 15
-    
-    def test_get_page(self):
-        """Test getting pages from cached results."""
-        session = SessionState(session_id="test_session")
-        results = [f"log_{i}" for i in range(25)]
-        
-        session.cache_query_result(
-            query="test",
-            results=results,
-            page_size=10,
-        )
-        
-        # Test 0-based indexing (converted to 1-based internally)
-        page0 = session.get_page(0)
-        assert page0 is not None
-        assert list(page0) == [f"log_{i}" for i in range(10)]
-        
-        page1 = session.get_page(1)
-        assert page1 is not None
-        assert list(page1) == [f"log_{i}" for i in range(10, 20)]
-        
-        # Test with no cached result
-        session.current_query_result = None
-        assert session.get_page(0) is None
     
     def test_get_page_data(self):
         """Test getting page data in dictionary format."""
@@ -151,11 +120,11 @@ class TestSessionState:
         results = [f"log_{i}" for i in range(25)]
         
         session.cache_query_result(
-            query="test",
             results=results,
             page_size=10,
         )
         
+        # Test first page (0-based index)
         page_data = session.get_page_data(0)
         assert page_data is not None
         assert page_data["items"] == [f"log_{i}" for i in range(10)]
@@ -166,10 +135,23 @@ class TestSessionState:
         assert page_data["has_next"] is True
         assert page_data["has_previous"] is False
         
+        # Test second page
+        page_data = session.get_page_data(1)
+        assert page_data is not None
+        assert page_data["items"] == [f"log_{i}" for i in range(10, 20)]
+        assert page_data["page_number"] == 2
+        assert page_data["has_next"] is True
+        assert page_data["has_previous"] is True
+        
         # Test last page
         page_data = session.get_page_data(2)
+        assert page_data["items"] == [f"log_{i}" for i in range(20, 25)]
         assert page_data["has_next"] is False
         assert page_data["has_previous"] is True
+        
+        # Test with no cached result
+        session.current_query_result = None
+        assert session.get_page_data(0) is None
     
     def test_session_expiration(self):
         """Test session expiration check."""
@@ -206,7 +188,6 @@ class TestSessionManager:
         
         first_page, total_pages = manager.cache_query_result(
             session_id="test_session",
-            query="test query",
             results=results,
         )
         
@@ -222,7 +203,6 @@ class TestSessionManager:
         # Cache results first
         manager.cache_query_result(
             session_id="test_session",
-            query="test",
             results=results,
         )
         
@@ -292,7 +272,6 @@ class TestSessionManager:
         
         manager.cache_query_result(
             session_id="test_session",
-            query="test query",
             results=results,
         )
         
@@ -300,10 +279,12 @@ class TestSessionManager:
         assert info is not None
         assert info["session_id"] == "test_session"
         assert info["has_cached_query"] is True
-        assert info["cached_query"] == "test query"
         assert info["total_results"] == 15
         assert info["total_pages"] == 2
         assert info["page_size"] == 10
+        assert "flags" in info
+        assert "created_at" in info
+        assert "last_accessed" in info
         
         # Test non-existent session
         assert manager.get_session_info("non_existent") is None

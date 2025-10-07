@@ -11,9 +11,8 @@ from paginate import Page
 class QueryResult:
     """Represents a cached query result with metadata."""
     
-    query: str
     timestamp: datetime
-    total_results: List[str]  # List of log entries
+    total_results: List[str]
     page_size: int = 10
     max_cached_results: int = 1000
     
@@ -30,6 +29,9 @@ class QueryResult:
         :return: Page object or None if page number is invalid
         """
         if not self.total_results:
+            return None
+        
+        if page_number > self.get_total_pages() or page_number <= 0:
             return None
             
         try:
@@ -57,7 +59,6 @@ class SessionState:
     last_accessed: datetime = field(default_factory=datetime.now)
     current_query_result: Optional[QueryResult] = None
     flags: Dict[str, Any] = field(default_factory=dict)
-    metadata: Dict[str, Any] = field(default_factory=dict)
     
     def __post_init__(self) -> None:
         """Initialize default flags if not provided."""
@@ -70,7 +71,6 @@ class SessionState:
     
     def cache_query_result(
         self,
-        query: str,
         results: List[str],
         page_size: int = 10,
         max_cached_results: int = 1000,
@@ -78,14 +78,12 @@ class SessionState:
         """
         Cache a new query result for this session.
         
-        :param query: The query string
         :param results: List of log entries
         :param page_size: Number of items per page
         :param max_cached_results: Maximum number of results to cache
         :return: The cached QueryResult object
         """
         self.current_query_result = QueryResult(
-            query=query,
             timestamp=datetime.now(),
             total_results=results,
             page_size=page_size,
@@ -94,12 +92,12 @@ class SessionState:
         self.update_access_time()
         return self.current_query_result
     
-    def get_page(self, page_index: int) -> Optional[Page]:
+    def get_page_data(self, page_index: int) -> Optional[Dict[str, Any]]:
         """
-        Get a specific page from the current cached query result.
+        Get page data in a dictionary format.
         
-        :param page_index: 0-based page index (will be converted to 1-based for paginate)
-        :return: Page object or None if no cached result or invalid page
+        :param page_index: 0-based page index
+        :return: Dictionary with page data or None if unavailable
         """
         self.update_access_time()
         
@@ -108,16 +106,8 @@ class SessionState:
         
         # Convert 0-based index to 1-based page number for paginate library
         page_number = page_index + 1
-        return self.current_query_result.get_page(page_number)
-    
-    def get_page_data(self, page_index: int) -> Optional[Dict[str, Any]]:
-        """
-        Get page data in a dictionary format.
+        page = self.current_query_result.get_page(page_number)
         
-        :param page_index: 0-based page index
-        :return: Dictionary with page data or None if unavailable
-        """
-        page = self.get_page(page_index)
         if not page:
             return None
         
@@ -179,7 +169,6 @@ class SessionManager:
     def cache_query_result(
         self,
         session_id: str,
-        query: str,
         results: List[str],
         page_size: Optional[int] = None,
     ) -> Tuple[Dict[str, Any], int]:
@@ -187,7 +176,6 @@ class SessionManager:
         Cache query results for a session and return the first page.
         
         :param session_id: Session identifier
-        :param query: Query string
         :param results: List of log entries
         :param page_size: Optional page size override
         :return: Tuple of (first page data, total pages)
@@ -195,7 +183,6 @@ class SessionManager:
         session = self.get_or_create_session(session_id)
         
         query_result = session.cache_query_result(
-            query=query,
             results=results,
             page_size=page_size or self.page_size,
             max_cached_results=self.max_cached_results,
@@ -258,12 +245,10 @@ class SessionManager:
             "last_accessed": session.last_accessed.isoformat(),
             "has_cached_query": session.current_query_result is not None,
             "flags": session.flags,
-            "metadata": session.metadata,
         }
         
         if session.current_query_result:
             info.update({
-                "cached_query": session.current_query_result.query,
                 "query_timestamp": session.current_query_result.timestamp.isoformat(),
                 "total_results": len(session.current_query_result.total_results),
                 "total_pages": session.current_query_result.get_total_pages(),
