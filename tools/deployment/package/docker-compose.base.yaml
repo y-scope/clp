@@ -30,8 +30,8 @@ x-volume-definitions:
     read_only: true
   logs-input-readonly: &volume_root_logs_readonly
     type: "bind"
-    source: "/"
-    target: "/mnt/logs"
+    source: "${CLP_LOGS_INPUT_DIR_HOST:-/}"
+    target: "${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
     read_only: true
 
 secrets:

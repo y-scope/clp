@@ -546,9 +546,13 @@ class DockerComposeController(BaseController):
             ),
             # Package container
             "CLP_PACKAGE_CONTAINER": self.clp_config.container_image_ref,
-            # Global paths
+            # Runtime data directories
             "CLP_DATA_DIR_HOST": str(self.clp_config.data_directory),
             "CLP_LOGS_DIR_HOST": str(self.clp_config.logs_directory),
+            # Input directories
+            "CLP_LOGS_INPUT_DIR_HOST": str(self.clp_config.logs_input.directory),
+            "CLP_LOGS_INPUT_DIR_CONTAINER": str(container_clp_config.logs_input.directory),
+            # Output directories
             "CLP_ARCHIVE_OUTPUT_DIR_HOST": str(self.clp_config.archive_output.get_directory()),
             "CLP_STREAM_OUTPUT_DIR_HOST": str(self.clp_config.stream_output.get_directory()),
             # AWS credentials
