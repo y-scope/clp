@@ -18,6 +18,19 @@ x-healthcheck-defaults: &healthcheck_defaults
   start_period: "60s"
   timeout: "2s"
 
+# Common volume definitions.
+x-volume-definitions:
+  aws-config-readonly: &volume_aws_config_readonly
+    type: "bind"
+    source: "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}"
+    target: "/.aws"
+    read_only: true
+  clp-config-readonly: &volume_clp_config_readonly
+    type: "bind"
+    source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml"
+    target: "/etc/clp-config.yml"
+    read_only: true
+
 services:
   query-scheduler:
     <<: *service_defaults
@@ -32,9 +45,10 @@ services:
       RESULT_BACKEND: >-
         redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
     volumes:
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:readonly"
-      - "${CLP_QUERY_SCHEDULER_LOG_FILE_HOST:-./var/log/query_scheduler.log}:\
-/var/log/query_scheduler.log"
+      - *volume_clp_config_readonly
+      - type: "bind"
+        source: "${CLP_QUERY_SCHEDULER_LOG_FILE_HOST:-./var/log/query_scheduler.log}"
+        target: "/var/log/query_scheduler.log"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -74,12 +88,20 @@ services:
       RESULT_BACKEND: >-
         redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
     volumes:
-      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}:/var/data/archives"
-      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:readonly"
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:readonly"
-      - "${CLP_QUERY_WORKER_LOGS_DIR_HOST:-./var/log/query_worker}:/var/log/query_worker"
-      - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/staged-streams}:/var/data/staged-streams"
-      - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}:/var/data/streams"
+      - *volume_aws_config_readonly
+      - *volume_clp_config_readonly
+      - type: "bind"
+        source: "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}"
+        target: "/var/data/archives"
+      - type: "bind"
+        source: "${CLP_QUERY_WORKER_LOGS_DIR_HOST:-./var/log/query_worker}"
+        target: "/var/log/query_worker"
+      - type: "bind"
+        source: "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/staged-streams}"
+        target: "/var/data/staged-streams"
+      - type: "bind"
+        source: "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}"
+        target: "/var/data/streams"
     command: [
       "python3",
       "-u",
@@ -102,8 +124,10 @@ services:
       CLP_LOGS_DIR: "/var/log/reducer"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:readonly"
-      - "${CLP_REDUCER_LOGS_DIR_HOST:-./var/log/reducer}:/var/log/reducer"
+      - *volume_clp_config_readonly
+      - type: "bind"
+        source: "${CLP_REDUCER_LOGS_DIR_HOST:-./var/log/reducer}"
+        target: "/var/log/reducer"
     depends_on:
       query-scheduler:
         condition: "service_healthy"
