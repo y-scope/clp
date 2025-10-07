@@ -107,7 +107,14 @@ async def handle_reducer_connection(
     reducer_connection_queue: asyncio.Queue,
 ):
     try:
-        message_bytes = await _recv_msg_from_reducer(reader)
+        try:
+            message_bytes = await _recv_msg_from_reducer(reader)
+        except asyncio.IncompleteReadError as err:
+            if len(err.partial) == 0:
+                # Connection was opened but no data was sent; treat as benign noise.
+                logger.debug("Reducer connection closed without sending handshake bytes.")
+                return
+            raise
         reducer_addr_info = msgpack.unpackb(message_bytes)
 
         msg_queues = ReducerHandlerMessageQueues()
@@ -215,12 +222,6 @@ async def handle_reducer_connection(
                 msg = ReducerHandlerMessage(ReducerHandlerMessageType.SUCCESS)
                 await msg_queues.put_to_listeners(msg)
                 break
-    except asyncio.IncompleteReadError as err:
-        if len(err.partial) == 0:
-            # Connection was opened but no data was sent; treat as benign noise.
-            logger.debug("Reducer connection closed without sending handshake bytes.")
-            return
-        raise
     finally:
         writer.close()
         await writer.wait_closed()
