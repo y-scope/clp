@@ -20,6 +20,7 @@ from clp_py_utils.clp_config import (
     CONTAINER_CLP_HOME,
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     DB_COMPONENT_NAME,
+    MCP_SERVER_COMPONENT_NAME,
     QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
@@ -27,7 +28,6 @@ from clp_py_utils.clp_config import (
     RESULTS_CACHE_COMPONENT_NAME,
     StorageType,
     WEBUI_COMPONENT_NAME,
-    MCP_SERVER_COMPONENT_NAME,
     WorkerConfig,
 )
 from clp_py_utils.clp_metadata_db_utils import (
@@ -578,17 +578,14 @@ def validate_webui_config(
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
 
 
-def validate_mcp_server_config(
-    clp_config: CLPConfig, 
-    logs_dir: pathlib.Path
-):
+def validate_mcp_server_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
     if not logs_dir.exists():
-        raise ValueError(f"{MCP_SERVER_COMPONENT_NAME} logs directory at {str(logs_dir)} is missing.")
-        
+        raise ValueError(
+            f"{MCP_SERVER_COMPONENT_NAME} logs directory at {str(logs_dir)} is missing."
+        )
+
     validate_port(
-        f"{MCP_SERVER_COMPONENT_NAME}.port", 
-        clp_config.mcp_server.host, 
-        clp_config.mcp_server.port
+        f"{MCP_SERVER_COMPONENT_NAME}.port", clp_config.mcp_server.host, clp_config.mcp_server.port
     )
 
 

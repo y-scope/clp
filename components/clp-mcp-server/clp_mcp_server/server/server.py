@@ -4,7 +4,7 @@ from typing import Any
 
 from fastmcp import FastMCP
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import PlainTextResponse
 
 
 class ProtocolConstant:
@@ -36,19 +36,14 @@ def create_mcp_server() -> FastMCP:
     mcp = FastMCP(name=ProtocolConstant.SERVER_NAME)
 
     @mcp.custom_route("/health", methods=["GET"])
-    async def health_check(_request: Request) -> JSONResponse:
+    async def health_check(_request: Request) -> PlainTextResponse:
         """
         Health check endpoint.
-        
-        :arg _request: An HTTP request object.
-        :return: A JSON response indicating the health status of the server.
-        """
-        health = {
-            "status": "running",
-            "service": ProtocolConstant.SERVER_NAME
-        }
 
-        return JSONResponse(health)
+        :param _request: An HTTP request object.
+        :return: A JSON response indicating server is healthy.
+        """
+        return PlainTextResponse("OK")
 
 
     @mcp.tool()

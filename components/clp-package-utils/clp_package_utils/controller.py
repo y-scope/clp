@@ -18,6 +18,7 @@ from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
+    MCP_SERVER_COMPONENT_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
     QueryEngine,
@@ -28,7 +29,6 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
-    MCP_SERVER_COMPONENT_NAME,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     get_archives_table_name,
@@ -43,11 +43,11 @@ from clp_package_utils.general import (
     generate_docker_compose_container_config,
     get_clp_home,
     validate_db_config,
+    validate_mcp_server_config,
     validate_queue_config,
     validate_redis_config,
     validate_results_cache_config,
     validate_webui_config,
-    validate_mcp_server_config,
 )
 
 # Type alias for environment variables dictionary.
@@ -418,15 +418,13 @@ class BaseController(ABC):
 
         logs_dir = self.clp_config.logs_directory / component_name
         logs_dir.mkdir(parents=True, exist_ok=True)
-        
+
         validate_mcp_server_config(self.clp_config, logs_dir)
 
         return {
             "CLP_MCP_LOGS_DIR_HOST": str(logs_dir),
             "CLP_MCP_HOST": _get_ip_from_hostname(self.clp_config.mcp_server.host),
             "CLP_MCP_PORT": str(self.clp_config.mcp_server.port),
-            "CLP_MCP_CONTAINER_HOST": "0.0.0.0",
-            "CLP_MCP_CONTAINER_PORT": "8000",
         }
 
     def _set_up_env_for_garbage_collector(self) -> EnvVarsDict:
