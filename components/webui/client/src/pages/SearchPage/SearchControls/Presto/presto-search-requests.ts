@@ -116,19 +116,19 @@ const buildPrestoQueries = () => {
     const searchQueryString = buildSearchQuery({
         ...(trimmedWhere && {booleanExpression: trimmedWhere}),
         databaseName: from,
-        endTimestamp: endTimestamp.unix(),
+        endTimestamp: endTimestamp,
         ...(limitString && {limitValue: limitString}),
         selectItemList: select.trim(),
         ...(trimmedOrderBy && {sortItemList: trimmedOrderBy}),
-        startTimestamp: startTimestamp.unix(),
+        startTimestamp: startTimestamp,
         timestampKey: timestampKey,
     });
 
     const timelineQueryString = buildTimelineQuery({
         bucketCount: MAX_DATA_POINTS_PER_TIMELINE,
         databaseName: from,
-        endTimestamp: endTimestamp.unix(),
-        startTimestamp: startTimestamp.unix(),
+        endTimestamp: endTimestamp,
+        startTimestamp: startTimestamp,
         timestampKey: timestampKey,
         ...(trimmedWhere && {booleanExpression: trimmedWhere}),
     });

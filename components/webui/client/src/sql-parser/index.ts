@@ -104,7 +104,7 @@ const buildSearchQuery = ({
     timestampKey,
 }: BuildSearchQueryProps): string => {
     let queryString = `SELECT ${selectItemList} FROM ${databaseName}
-WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp} AND ${endTimestamp}`;
+WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp.unix()} AND ${endTimestamp.unix()}`;
 
     if ("undefined" !== typeof booleanExpression) {
         queryString += ` AND (${booleanExpression})`;
@@ -124,8 +124,6 @@ WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp} AND ${endTimestamp}
 
     return queryString;
 };
-
-const MILLISECONDS_IN_SECOND = 1_000;
 
 /**
  * Constructs a bucketed timeline query.
@@ -148,12 +146,11 @@ const buildTimelineQuery = ({
     bucketCount,
     timestampKey,
 }: BuildTimelineQueryProps) => {
-    const step = (endTimestamp - startTimestamp) / bucketCount;
+    const step = (endTimestamp.valueOf() - startTimestamp.valueOf()) / bucketCount;
     const timestamps = Array.from(
         {length: bucketCount},
-        (_, i) => startTimestamp + (i * step)
-    )
-        .map((timestamp) => MILLISECONDS_IN_SECOND * timestamp);
+        (_, i) => Math.floor(startTimestamp.valueOf() + (i * step))
+    );
 
     const booleanExpressionQuery = "undefined" === typeof booleanExpression ?
         "" :
@@ -163,12 +160,12 @@ const buildTimelineQuery = ({
     SELECT
         width_bucket(
             to_unixtime(${timestampKey}),
-            ${startTimestamp},
-            ${endTimestamp},
+            ${startTimestamp.unix()},
+            ${endTimestamp.unix()},
             ${bucketCount}) AS idx,
         COUNT(*) AS cnt
     FROM ${databaseName}
-    WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp} AND ${endTimestamp}
+    WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp.unix()} AND ${endTimestamp.unix()}
         ${booleanExpressionQuery}
     GROUP BY 1
     ORDER BY 1
