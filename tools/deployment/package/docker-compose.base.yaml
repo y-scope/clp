@@ -34,10 +34,6 @@ x-volume-definitions:
     target: "${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
     read_only: true
 
-secrets:
-  CLP_DB_PASS_FILE:
-    environment: "CLP_DB_PASS"
-
 services:
   database:
     <<: *service_defaults
@@ -46,11 +42,9 @@ services:
     user: "${CLP_SERVICE_CONTAINER_UID_GID:-1000:1000}"
     environment:
       MYSQL_DATABASE: "${CLP_DB_NAME}"
-      MYSQL_PASSWORD_FILE: "/run/secrets/CLP_DB_PASS_FILE"
-      MYSQL_ROOT_PASSWORD_FILE: "/run/secrets/CLP_DB_PASS_FILE"
+      MYSQL_PASSWORD: "${CLP_DB_PASS}"
+      MYSQL_ROOT_PASSWORD: "${CLP_DB_PASS}"
       MYSQL_USER: "${CLP_DB_USER}"
-    secrets:
-      - "CLP_DB_PASS_FILE"
     ports:
       - host_ip: "${CLP_DB_HOST:-127.0.0.1}"
         published: "${CLP_DB_PORT:-3306}"
