@@ -23,7 +23,6 @@ tasks:
           boost-{{.VERSION}}-b2-nodocs.tar.gz"
           WORK_DIR: "{{.G_DEPS_CPP_DIR}}"
 
-
   sqlite3:
     internal: true
     vars:

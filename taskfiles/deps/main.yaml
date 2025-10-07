@@ -1,7 +1,7 @@
 version: "3"
 
 includes:
-  # Main targets
+  # Main project targets
   core: "core.yaml"
   spider: "spider.yaml"
   log-viewer: "log-viewer.yaml"
@@ -10,7 +10,7 @@ includes:
   utils: "utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
-  # Individual component tasks
+  # Individual library component installation tasks
   artifacts:
     flatten: true
     taskfile: "artifacts.yaml"
