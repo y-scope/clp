@@ -1,7 +1,9 @@
-import MongoSocketCollection from "../../../../api/socket/MongoSocketCollection";
-import {useCursor} from "../../../../api/socket/useCursor";
-import {TimelineBucket} from "../../../../components/ResultsTimeline/typings";
-import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
+import {useMemo} from "react";
+
+import MongoSocketCollection from "../../../../../api/socket/MongoSocketCollection";
+import {useCursor} from "../../../../../api/socket/useCursor";
+import {TimelineBucket} from "../../../../../components/ResultsTimeline/typings";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../SearchState/index";
 
 
 /**
@@ -12,7 +14,7 @@ import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState/index";
 const useAggregationResults = () => {
     const {aggregationJobId} = useSearchStore();
 
-    const aggregationResultsCursor = useCursor<TimelineBucket>(
+    const aggregationResultsCursor = useCursor<{row: TimelineBucket}>(
         () => {
             // If there is no active aggregation job, there are no results to fetch. The cursor will
             // return null.
@@ -30,7 +32,18 @@ const useAggregationResults = () => {
         [aggregationJobId]
     );
 
-    return aggregationResultsCursor;
+    const transformedData = useMemo(() => {
+        if (null === aggregationResultsCursor) {
+            return null;
+        }
+
+        const cursor = aggregationResultsCursor as {row: TimelineBucket}[];
+        return cursor.map((bucket) => {
+            return bucket.row;
+        });
+    }, [aggregationResultsCursor]);
+
+    return transformedData;
 };
 
 export {useAggregationResults};
