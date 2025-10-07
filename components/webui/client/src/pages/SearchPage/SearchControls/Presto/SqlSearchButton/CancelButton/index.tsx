@@ -31,7 +31,7 @@ const CancelButton = () => {
 
             return;
         }
-        if (!isPrestoGuided || null === aggregationJobId) {
+        if (false === isPrestoGuided || null === aggregationJobId) {
             handlePrestoQueryCancel({searchJobId});
         } else {
             handlePrestoGuidedQueryCancel(searchJobId, aggregationJobId);

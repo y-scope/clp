@@ -12,7 +12,7 @@ import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../SearchState/index";
  * @return
  */
 const useAggregationResults = () => {
-    const {aggregationJobId} = useSearchStore();
+    const aggregationJobId = useSearchStore((state) => state.aggregationJobId);
 
     const aggregationResultsCursor = useCursor<{row: TimelineBucket}>(
         () => {
