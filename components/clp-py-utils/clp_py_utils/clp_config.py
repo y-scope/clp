@@ -939,12 +939,12 @@ class CLPConfig(BaseModel):
 
     package: Package = Package()
     database: Database = Database()
-    queue: Queue = Queue()
-    redis: Redis = Redis()
+    queue: Optional[Queue] = None
+    redis: Optional[Redis] = None
     reducer: Reducer = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
-    spider_db : Optional[SpiderDb] = None
+    spider_db: Optional[SpiderDb] = None
     spider_scheduler: Optional[SpiderScheduler] = None
     query_scheduler: QueryScheduler = QueryScheduler()
     compression_worker: CompressionWorker = CompressionWorker()
@@ -1126,6 +1126,30 @@ class CLPConfig(BaseModel):
             raise ValueError(
                 f"`presto` config must be non-null when query_engine is `{query_engine}`"
             )
+        return self
+
+    @model_validator(mode="after")
+    def validate_spider_config(self):
+        orchestration_type = self.compression_scheduler.type
+        if orchestration_type != OrchestrationType.spider:
+            return self
+        if self.spider_db is None:
+            raise ValueError("SpiderDb config must be set when using spider orchestration.")
+        if self.spider_scheduler is None:
+            raise ValueError("SpiderScheduler config must be set when using spider orchestration.")
+        if self.database.type != "mariadb":
+            raise ValueError("Database type must be 'mariadb' when using spider orchestration.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_celery_config(self):
+        orchestration_type = self.compression_scheduler.type
+        if orchestration_type != OrchestrationType.celery:
+            return self
+        if self.queue is None:
+            raise ValueError("Queue config must be set when using celery orchestration.")
+        if self.redis is None:
+            raise ValueError("Redis config must be set when using celery orchestration.")
         return self
 
     def transform_for_container(self):
