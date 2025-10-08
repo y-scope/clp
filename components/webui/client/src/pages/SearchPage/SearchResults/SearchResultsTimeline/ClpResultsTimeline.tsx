@@ -24,7 +24,7 @@ import {computeTimelineConfig} from "./utils";
  *
  * @return
  */
-const VirtualResultsTimeline = () => {
+const ClpResultsTimeline = () => {
     const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
     const queryString = useSearchStore((state) => state.queryString);
     const searchUiState = useSearchStore((state) => state.searchUiState);
@@ -105,4 +105,4 @@ const VirtualResultsTimeline = () => {
     );
 };
 
-export default VirtualResultsTimeline;
+export default ClpResultsTimeline;

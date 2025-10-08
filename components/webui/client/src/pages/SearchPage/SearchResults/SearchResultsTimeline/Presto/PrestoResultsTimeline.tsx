@@ -23,7 +23,7 @@ import {usePrestoAggregationResults} from "./usePrestoAggregationResults";
  *
  * @return
  */
-const PrestoVirtualResultsTimeline = () => {
+const PrestoResultsTimeline = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const timelineConfig = useSearchStore((state) => state.timelineConfig);
 
@@ -75,4 +75,4 @@ const PrestoVirtualResultsTimeline = () => {
     );
 };
 
-export default PrestoVirtualResultsTimeline;
+export default PrestoResultsTimeline;
