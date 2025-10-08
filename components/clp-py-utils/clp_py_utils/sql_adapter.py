@@ -1,6 +1,7 @@
 import contextlib
 import logging
 import time
+from typing import Optional
 
 import mariadb
 import mysql.connector
@@ -8,7 +9,7 @@ import sqlalchemy.pool as pool
 from mysql.connector import errorcode
 from sqlalchemy.dialects.mysql import mariadbconnector, mysqlconnector
 
-from clp_py_utils.clp_config import Database
+from clp_py_utils.clp_config import Database, SpiderDb
 
 
 class DummyCloseableObject:
@@ -58,8 +59,11 @@ class ConnectionPoolWrapper:
 
 
 class SQL_Adapter:
-    def __init__(self, database_config: Database):
+    def __init__(
+        self, database_config: Database, spider_database_config: Optional[SpiderDb] = None
+    ):
         self.database_config = database_config
+        self._spider_database_config = spider_database_config
 
     def create_mysql_connection(
         self, disable_localhost_socket_connection: bool = False
