@@ -13,17 +13,27 @@ class ProtocolConstant:
 
     SERVER_NAME = "clp-mcp-server"
 
-    # Tool names
-    TOOL_HELLO_WORLD = "hello_world"
-    TOOL_GET_SERVER_INFO = "get_server_info"
-
-    @classmethod
-    def get_capabilities(cls) -> list[str]:
-        """
-        Gets the capabilities of the server.
-        :return: A list of tool names supported by the server.
-        """
-        return [cls.TOOL_HELLO_WORLD, cls.TOOL_GET_SERVER_INFO]
+    SYSTEM_PROMPT = (
+        "You are an AI assistant that helps users query a log database using KQL "
+        "(Kibana Query Language). When given a user query, you should generate a KQL "
+        "query that accurately captures the user's intent. The KQL query should be as "
+        "specific as possible to minimize the number of log messages returned. "
+        "You should also consider the following guidelines when generating KQL queries: "
+        "- Use specific field names and values to narrow down the search. "
+        "- Avoid using wildcards (*) unless absolutely necessary, as they can lead to "
+        "large result sets. - Use logical operators (AND, OR, NOT) to combine multiple "
+        "conditions. - Consider the time range of the logs you are searching. If the "
+        "user specifies a time range, include it in the KQL query. - If the user query "
+        "is ambiguous or lacks detail, ask clarifying questions to better understand "
+        "their intent before generating the KQL query. - Always ensure that the "
+        "generated KQL query is syntactically correct and can be executed without errors. "
+        "\nAvailable tools:\n"
+        "1. search_kql_query: Search logs with a KQL query\n"
+        "2. search_kql_query_with_timestamp: Search logs with a KQL query and timestamp range\n"
+        "3. get_nth_page: Retrieve additional pages of results from the last query\n"
+        "\nNote: Results are paginated with 10 items per page. Use get_nth_page to "
+        "retrieve additional pages."
+    )
 
 
 def create_mcp_server() -> FastMCP:
@@ -42,12 +52,12 @@ def create_mcp_server() -> FastMCP:
         session_ttl_minutes=60,
     )
 
-    def ensure_instructions_run(session_id: str) -> str | None:
+    def validate_session_initialized(session_id: str) -> str | None:
         """
-        Ensures that get_instructions has been called once per session.
+        Validates that get_instructions has been called once per session.
 
         :param session_id: The session identifier
-        :return: Error message if instructions haven't been run, None otherwise
+        :return: Error message if session hasn't been initialized, None otherwise
         """
         session = session_manager.get_or_create_session(session_id)
         if not session.flags.get("ran_instructions", False):
@@ -63,30 +73,9 @@ def create_mcp_server() -> FastMCP:
             instructions: A string of instructions on how to use this MCP server.
 
         """
-        instructions = (
-            "You are an AI assistant that helps users query a log database using KQL "
-            "(Kibana Query Language). When given a user query, you should generate a KQL "
-            "query that accurately captures the user's intent. The KQL query should be as "
-            "specific as possible to minimize the number of log messages returned. "
-            "You should also consider the following guidelines when generating KQL queries: "
-            "- Use specific field names and values to narrow down the search. "
-            "- Avoid using wildcards (*) unless absolutely necessary, as they can lead to "
-            "large result sets. - Use logical operators (AND, OR, NOT) to combine multiple "
-            "conditions. - Consider the time range of the logs you are searching. If the "
-            "user specifies a time range, include it in the KQL query. - If the user query "
-            "is ambiguous or lacks detail, ask clarifying questions to better understand "
-            "their intent before generating the KQL query. - Always ensure that the "
-            "generated KQL query is syntactically correct and can be executed without errors. "
-            "\nAvailable tools:\n"
-            "1. search_kql_query: Search logs with a KQL query\n"
-            "2. search_kql_query_with_timestamp: Search logs with a KQL query and timestamp range\n"
-            "3. get_nth_page: Retrieve additional pages of results from the last query\n"
-            "\nNote: Results are paginated with 10 items per page. Use get_nth_page to "
-            "retrieve additional pages."
-        )
         session = session_manager.get_or_create_session(ctx.session_id)
         session.flags["ran_instructions"] = True
-        return instructions
+        return ProtocolConstant.SYSTEM_PROMPT
 
     @mcp.tool
     def search_kql_query(kql_query: str, ctx: Context) -> dict[str, object]:
@@ -100,24 +89,27 @@ def create_mcp_server() -> FastMCP:
 
         Returns:
          A dictionary with two keys:
-          - Page0: The latest 10 log messages matching the query.
+          - FirstPage: The latest 10 log messages matching the query.
           - NumPages: Total number of pages that can be indexed
 
         """
+        error_msg = validate_session_initialized(ctx.session_id)
+        if error_msg:
+            return {"error": error_msg}
+
         # TODO: Replace with actual CLP log search implementation
-        sample_logs = [
+        queried_logs = [
             f"Log entry {i}: Query '{kql_query}' matched this log message"
             for i in range(25)  # Simulate 25 results (3 pages)
         ]
 
-        # Cache the query results and get the first page
         first_page_data, total_pages = session_manager.cache_query_result(
             session_id=ctx.session_id,
-            results=sample_logs,
+            results=queried_logs,
         )
 
         return {
-            "Page0": first_page_data.get("items", []),
+            "FirstPage": first_page_data.get("items", []),
             "NumPages": total_pages,
             "TotalResults": first_page_data.get("total_items", 0),
         }
@@ -141,27 +133,29 @@ def create_mcp_server() -> FastMCP:
 
         Returns:
          A dictionary with keys:
-          - Page0: The latest 10 log messages matching the query and timestamp range
+          - FirstPage: The latest 10 log messages matching the query and timestamp range
           - NumPages: Total number of pages that can be indexed
           - TotalResults: Total number of matching results
 
         """
+        error_msg = validate_session_initialized(ctx.session_id)
+        if error_msg:
+            return {"error": error_msg}
+
         # TODO: Replace with actual log search implementation with timestamp filtering
-        # This is a placeholder that generates sample log data
-        sample_logs = [
+        queried_logs = [
             f"Log entry {i}: Query '{kql_query}' matched between "
             f"{begin_timestamp.isoformat()} and {end_timestamp.isoformat()}"
             for i in range(35)  # Simulate 35 results (4 pages)
         ]
 
-        # Cache the query results and get the first page
         first_page_data, total_pages = session_manager.cache_query_result(
             session_id=ctx.session_id,
-            results=sample_logs,
+            results=queried_logs,
         )
 
         return {
-            "Page0": first_page_data.get("items", []),
+            "FirstPage": first_page_data.get("items", []),
             "NumPages": total_pages,
             "TotalResults": first_page_data.get("total_items", 0),
         }
@@ -180,19 +174,15 @@ def create_mcp_server() -> FastMCP:
             The part of the response at page index, or an error message if unavailable.
 
         """
-        # Check if instructions have been run
-        error_msg = ensure_instructions_run(ctx.session_id)
+        error_msg = validate_session_initialized(ctx.session_id)
         if error_msg:
             return {"error": error_msg}
 
-        # Get the requested page from the session manager
         page_data = session_manager.get_nth_page(ctx.session_id, page_index)
 
-        # If there's an error, return it
         if "error" in page_data:
             return page_data
 
-        # Return the page data with additional metadata
         return {
             "Page": page_data.get("items", []),
             "PageNumber": page_data.get("page_number", 0),
