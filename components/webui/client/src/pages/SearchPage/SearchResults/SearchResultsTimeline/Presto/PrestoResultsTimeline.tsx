@@ -15,7 +15,7 @@ import {TIME_RANGE_OPTION} from "../../../SearchControls/TimeRangeInput/utils";
 import useSearchStore from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import {computeTimelineConfig} from "../utils";
-import {useAggregationResults} from "./useAggregationResults";
+import {usePrestoAggregationResults} from "./usePrestoAggregationResults";
 
 
 /**
@@ -27,7 +27,7 @@ const PrestoVirtualResultsTimeline = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const timelineConfig = useSearchStore((state) => state.timelineConfig);
 
-    const aggregationResults = useAggregationResults();
+    const aggregationResults = usePrestoAggregationResults();
 
     const handleTimelineZoom = useCallback((newTimeRange: [Dayjs, Dayjs]) => {
         const newTimelineConfig: TimelineConfig = computeTimelineConfig(newTimeRange);
@@ -42,7 +42,7 @@ const PrestoVirtualResultsTimeline = () => {
         updateTimeRangeOption(TIME_RANGE_OPTION.CUSTOM);
         updateTimelineConfig(newTimelineConfig);
 
-        const {searchQueryString, timelineQueryString} = buildPrestoGuidedQueries();
+        const {searchQueryString, timelineQueryString} = buildPrestoGuidedQueries(newTimeRange);
         handlePrestoGuidedQuerySubmit(searchQueryString, timelineQueryString);
     }, []);
 

@@ -4,8 +4,8 @@ import {
     CLP_QUERY_ENGINES,
     SETTINGS_QUERY_ENGINE,
 } from "../../../../config";
-import PrestoVirtualResultsTimeline from "./Presto/PrestoVirtualResultsTimeline";
-import VirtualResultsTimeline from "./VirtualResultsTimeline";
+import PrestoResultsTimeline from "./Presto/PrestoResultsTimeline";
+import ResultsTimeline from "./ResultsTimeline";
 
 
 /**
@@ -17,8 +17,8 @@ const SearchResultsTimeline = () => {
     return (
         <Card>
             {CLP_QUERY_ENGINES.PRESTO === SETTINGS_QUERY_ENGINE ?
-                <PrestoVirtualResultsTimeline/> :
-                <VirtualResultsTimeline/>}
+                <PrestoResultsTimeline/> :
+                <ResultsTimeline/>}
         </Card>
     );
 };

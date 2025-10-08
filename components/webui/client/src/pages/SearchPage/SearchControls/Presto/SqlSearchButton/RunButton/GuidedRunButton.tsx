@@ -63,7 +63,7 @@ const GuidedRunButton = () => {
             newTimeRange = timeRange;
         }
 
-        const {searchQueryString, timelineQueryString} = buildPrestoGuidedQueries();
+        const {searchQueryString, timelineQueryString} = buildPrestoGuidedQueries(newTimeRange);
         handlePrestoGuidedQuerySubmit(searchQueryString, timelineQueryString);
 
         const newTimelineConfig = computeTimelineConfig(newTimeRange);

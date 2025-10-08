@@ -1,3 +1,5 @@
+import {Dayjs} from "dayjs";
+
 import {
     cancelQuery,
     clearQueryResults,
@@ -37,7 +39,7 @@ const handlePrestoGuidedClearResults = () => {
     }
 
     clearQueryResults(
-        {searchJobId}
+        {searchJobId: searchJobId}
     ).catch((err: unknown) => {
         console.error("Failed to clear query results:", err);
     });
@@ -52,11 +54,11 @@ const handlePrestoGuidedClearResults = () => {
 /**
  * Build the search query and timeline query for guided Presto search.
  *
+ * @param timeRange
  * @return
  * @throws {Error} if any component is missing
  */
-const buildPrestoGuidedQueries = () => {
-    const {timeRange} = useSearchStore.getState();
+const buildPrestoGuidedQueries = (timeRange: [Dayjs, Dayjs]) => {
     const [startTimestamp, endTimestamp] = timeRange;
     const {select, from, where, orderBy, limit, timestampKey} = usePrestoSearchState.getState();
 
@@ -105,6 +107,7 @@ const buildPrestoGuidedQueries = () => {
 const handlePrestoGuidedQuerySubmit = (searchQueryString: string, timelineQueryString: string) => {
     const {
         updateNumSearchResultsTable,
+        updateNumSearchResultsTimeline,
         updateNumSearchResultsMetadata,
         updateSearchJobId,
         updateSearchUiState,
@@ -125,6 +128,7 @@ const handlePrestoGuidedQuerySubmit = (searchQueryString: string, timelineQueryS
     handlePrestoGuidedClearResults();
 
     updateNumSearchResultsTable(SEARCH_STATE_DEFAULT.numSearchResultsTable);
+    updateNumSearchResultsTimeline(SEARCH_STATE_DEFAULT.numSearchResultsTimeline);
     updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
     updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 
@@ -175,7 +179,7 @@ const handlePrestoGuidedQueryCancel = (searchJobId: string, aggregationJobId: st
     }
 
     updateSearchUiState(SEARCH_UI_STATE.DONE);
-    cancelQuery({searchJobId})
+    cancelQuery({searchJobId: searchJobId})
         .then(() => {
             console.debug("Query cancelled successfully");
         })

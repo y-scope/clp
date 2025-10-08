@@ -11,7 +11,7 @@ import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../../SearchState/index";
  *
  * @return
  */
-const useAggregationResults = () => {
+const usePrestoAggregationResults = () => {
     const aggregationJobId = useSearchStore((state) => state.aggregationJobId);
 
     const aggregationResultsCursor = useCursor<{row: TimelineBucket}>(
@@ -31,19 +31,11 @@ const useAggregationResults = () => {
         },
         [aggregationJobId]
     );
-
     const transformedData = useMemo(() => {
-        if (null === aggregationResultsCursor) {
-            return null;
-        }
-
-        const cursor = aggregationResultsCursor as {row: TimelineBucket}[];
-        return cursor.map((bucket) => {
-            return bucket.row;
-        });
+        return aggregationResultsCursor?.map(({row}) => row) ?? null;
     }, [aggregationResultsCursor]);
 
     return transformedData;
 };
 
-export {useAggregationResults};
+export {usePrestoAggregationResults};

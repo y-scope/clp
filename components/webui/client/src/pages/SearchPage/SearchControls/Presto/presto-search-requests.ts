@@ -1,6 +1,6 @@
 import {
     type PrestoQueryJob,
-    PrestoQueryJobCreation,
+    type PrestoQueryJobCreation,
 } from "@webui/common/schemas/presto-search";
 
 import {
