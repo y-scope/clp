@@ -944,6 +944,8 @@ class CLPConfig(BaseModel):
     reducer: Reducer = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
+    spider_db : Optional[SpiderDb] = None
+    spider_scheduler: Optional[SpiderScheduler] = None
     query_scheduler: QueryScheduler = QueryScheduler()
     compression_worker: CompressionWorker = CompressionWorker()
     query_worker: QueryWorker = QueryWorker()
