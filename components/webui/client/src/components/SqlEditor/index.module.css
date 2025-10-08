@@ -4,10 +4,5 @@
     min-width: 0;
     width: 100%;
     transition: border-color 0.2s, box-shadow 0.2s;
-}
-
-/* Apply border radius to Monaco editor internal elements */
-.editor :global(.monaco-editor) {
-    border-radius: var(--ant-border-radius);
-    overflow: hidden !important;
+    overflow: hidden;
 }
