@@ -4,8 +4,8 @@ import {
     CLP_QUERY_ENGINES,
     SETTINGS_QUERY_ENGINE,
 } from "../../../../config";
-import PrestoResultsTimeline from "./Presto/PrestoResultsTimeline";
 import ClpResultsTimeline from "./ClpResultsTimeline";
+import PrestoResultsTimeline from "./Presto/PrestoResultsTimeline";
 
 
 /**
