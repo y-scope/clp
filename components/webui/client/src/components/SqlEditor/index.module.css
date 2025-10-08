@@ -9,5 +9,5 @@
 /* Apply border radius to Monaco editor internal elements */
 .editor :global(.monaco-editor) {
     border-radius: var(--ant-border-radius);
-    overflow: hidden  !important;
+    overflow: hidden !important;
 }
