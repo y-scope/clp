@@ -108,6 +108,16 @@ class SQL_Adapter:
         else:
             raise NotImplementedError
 
+    def create_root_mariadb_connection(self, disable_localhost_socket_connection: bool = False):
+        if "mariadb" != self.database_config.type:
+            raise NotImplementedError
+        params = self.database_config.get_mysql_connection_params(
+            disable_localhost_socket_connection
+        )
+        params["user"] = "root"
+        params.pop("database", None)
+        return mariadb.connect(**params)
+
     def create_connection_pool(
         self,
         logger: logging.Logger,
