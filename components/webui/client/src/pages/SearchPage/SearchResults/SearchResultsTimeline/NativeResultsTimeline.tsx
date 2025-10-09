@@ -24,7 +24,7 @@ import {computeTimelineConfig} from "./utils";
  *
  * @return
  */
-const ClpResultsTimeline = () => {
+const NativeResultsTimeline = () => {
     const queryIsCaseSensitive = useSearchStore((state) => state.queryIsCaseSensitive);
     const queryString = useSearchStore((state) => state.queryString);
     const searchUiState = useSearchStore((state) => state.searchUiState);
@@ -105,4 +105,4 @@ const ClpResultsTimeline = () => {
     );
 };
 
-export default ClpResultsTimeline;
+export default NativeResultsTimeline;
