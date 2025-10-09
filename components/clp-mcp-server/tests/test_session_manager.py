@@ -1,5 +1,7 @@
 """Tests for the SessionManager class."""
 
+import threading
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -235,6 +237,35 @@ class TestSessionManager:
         assert "session2" not in manager.sessions
         assert "session3" in manager.sessions
 
+    @pytest.mark.repeat(10)
+    def test_thread_safety_cleanup_and_get_or_create_session(self) -> None:
+        """Test thread safety of cleanup_expired_sessions and get_or_create_session."""
+        manager = SessionManager(session_ttl_minutes=10)
+        
+        def cleanup_task() -> None:
+            """Continuously cleanup expired sessions."""
+            for _ in range(10000):
+                for i in range(50):
+                    session = manager.get_or_create_session(f"session_{i}")
+                    if i < 25:
+                        session.last_accessed = datetime.now(timezone.utc) - timedelta(minutes=20)
+                manager.cleanup_expired_sessions()
+        
+        def access_task() -> None:
+            """Continuously create and access sessions."""
+            for i in range(10000):
+                session_id = f"session_{i % 50}"
+                session = manager.get_or_create_session(session_id)
+        
+        # Run cleanup and access operations concurrently
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            futures = []
+            futures.append(executor.submit(cleanup_task))
+            futures.append(executor.submit(access_task))
+            
+            for future in futures:
+                future.result() # ensure no run time exceptions
+        
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
