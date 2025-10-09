@@ -35,7 +35,7 @@ class TestQueryResult:
         """Test QueryResult initialization and truncation."""
         # Create a result with more than max_cached_results
         large_results = [f"log_{i}" for i in range(1500)]
-        query_result = QueryResult(total_results=large_results)
+        query_result = QueryResult(total_results=large_results, page_size=PAGE_SIZE_DEFAULT)
 
         # Should be truncated to max_cached_results
         assert len(query_result.total_results) == MAX_CACHED_RESULTS_DEFAULT
@@ -45,7 +45,7 @@ class TestQueryResult:
     def test_get_page(self) -> None:
         """Test pagination functionality."""
         results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_25)]
-        query_result = QueryResult(total_results=results)
+        query_result = QueryResult(total_results=results, page_size=PAGE_SIZE_DEFAULT)
 
         # Test first page
         page1 = query_result.get_page(1)
@@ -71,16 +71,31 @@ class TestQueryResult:
     def test_get_total_pages(self) -> None:
         """Test total pages calculation."""
         # Test with exact multiple
-        query_result = QueryResult(total_results=["log"] * 20)
+        query_result = QueryResult(total_results=["log"] * 20, page_size=PAGE_SIZE_DEFAULT)
         assert query_result.get_total_pages() == EXPECTED_PAGES_20_ITEMS
 
         # Test with remainder
-        query_result = QueryResult(total_results=["log"] * SAMPLE_RESULTS_COUNT_25)
+        query_result = QueryResult(total_results=["log"] * SAMPLE_RESULTS_COUNT_25, page_size=PAGE_SIZE_DEFAULT)
         assert query_result.get_total_pages() == EXPECTED_PAGES_25_ITEMS
 
         # Test with empty results
-        query_result = QueryResult(total_results=[])
+        query_result = QueryResult(total_results=[], page_size=PAGE_SIZE_DEFAULT)
         assert query_result.get_total_pages() == 0
+
+    def test_custom_page_size(self) -> None:
+        """Test QueryResult with custom page size."""
+        results = [f"log_{i}" for i in range(30)]
+        query_result = QueryResult(total_results=results, page_size=PAGE_SIZE_15)
+        
+        assert query_result.get_total_pages() == 2
+        
+        # First page should have 15 items
+        page1 = query_result.get_page(1)
+        assert len(list(page1)) == PAGE_SIZE_15
+        
+        # Second page should have remaining 15 items
+        page2 = query_result.get_page(2)
+        assert len(list(page2)) == PAGE_SIZE_15
 
 
 class TestSessionState:
@@ -88,16 +103,26 @@ class TestSessionState:
 
     def test_session_initialization(self) -> None:
         """Test SessionState initialization."""
-        session = SessionState(session_id="test_session")
+        session = SessionState(
+            session_id="test_session",
+            page_size=PAGE_SIZE_DEFAULT,
+            session_ttl_minutes=SESSION_TTL_60_MIN
+        )
 
         assert session.session_id == "test_session"
+        assert session.page_size == PAGE_SIZE_DEFAULT
+        assert session.session_ttl_minutes == SESSION_TTL_60_MIN
         assert session.current_query_result is None
         assert session.ran_instructions is False
         assert isinstance(session.last_accessed, datetime)
 
     def test_cache_query_result(self) -> None:
         """Test caching query results."""
-        session = SessionState(session_id="test_session")
+        session = SessionState(
+            session_id="test_session",
+            page_size=PAGE_SIZE_DEFAULT,
+            session_ttl_minutes=SESSION_TTL_60_MIN
+        )
         results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_50)]
 
         query_result = session.cache_query_result(results=results)
@@ -105,10 +130,15 @@ class TestSessionState:
         assert session.current_query_result is not None
         assert len(session.current_query_result.total_results) == SAMPLE_RESULTS_COUNT_50
         assert query_result is session.current_query_result
+        assert query_result.page_size == PAGE_SIZE_DEFAULT
 
     def test_get_page_data(self) -> None:
         """Test getting page data in dictionary format."""
-        session = SessionState(session_id="test_session")
+        session = SessionState(
+            session_id="test_session",
+            page_size=PAGE_SIZE_DEFAULT,
+            session_ttl_minutes=SESSION_TTL_60_MIN
+        )
         results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_25)]
 
         session.cache_query_result(results=results)
@@ -144,14 +174,37 @@ class TestSessionState:
 
     def test_session_expiration(self) -> None:
         """Test session expiration check."""
-        session = SessionState(session_id="test_session")
+        session = SessionState(
+            session_id="test_session",
+            page_size=PAGE_SIZE_DEFAULT,
+            session_ttl_minutes=SESSION_TTL_60_MIN
+        )
 
         # Test not expired
-        assert session.is_expired(session_ttl_minutes=SESSION_TTL_60_MIN) is False
+        assert session.is_expired() is False
 
         # Simulate old session
         session.last_accessed = datetime.now(timezone.utc) - timedelta(minutes=61)
-        assert session.is_expired(session_ttl_minutes=SESSION_TTL_60_MIN) is True
+        assert session.is_expired() is True
+
+    def test_custom_ttl(self) -> None:
+        """Test SessionState with custom TTL."""
+        session = SessionState(
+            session_id="test_session",
+            page_size=PAGE_SIZE_DEFAULT,
+            session_ttl_minutes=SESSION_TTL_30_MIN
+        )
+        
+        # Test not expired
+        assert session.is_expired() is False
+        
+        # Simulate session that's 31 minutes old
+        session.last_accessed = datetime.now(timezone.utc) - timedelta(minutes=31)
+        assert session.is_expired() is True
+        
+        # Simulate session that's 29 minutes old
+        session.last_accessed = datetime.now(timezone.utc) - timedelta(minutes=29)
+        assert session.is_expired() is False
 
 
 class TestSessionManager:
@@ -159,11 +212,13 @@ class TestSessionManager:
 
     def test_get_or_create_session(self) -> None:
         """Test session creation and retrieval."""
-        manager = SessionManager()
+        manager = SessionManager(page_size=PAGE_SIZE_DEFAULT, session_ttl_minutes=CLPMcpConstants.SESSION_TTL_MINUTES)
 
         # Create new session
         session1 = manager.get_or_create_session("session1")
         assert session1.session_id == "session1"
+        assert session1.page_size == PAGE_SIZE_DEFAULT
+        assert session1.session_ttl_minutes == CLPMcpConstants.SESSION_TTL_MINUTES
         assert "session1" in manager.sessions
 
         # Get existing session
@@ -172,7 +227,7 @@ class TestSessionManager:
 
     def test_cache_query_result(self) -> None:
         """Test caching query results through manager."""
-        manager = SessionManager()
+        manager = SessionManager(page_size=PAGE_SIZE_DEFAULT, session_ttl_minutes=CLPMcpConstants.SESSION_TTL_MINUTES)
         results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_12)]
 
         first_page, total_pages = manager.cache_query_result(
@@ -186,7 +241,7 @@ class TestSessionManager:
 
     def test_get_nth_page(self) -> None:
         """Test retrieving specific pages."""
-        manager = SessionManager()
+        manager = SessionManager(page_size=PAGE_SIZE_DEFAULT, session_ttl_minutes=CLPMcpConstants.SESSION_TTL_MINUTES)
         results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_25)]
 
         # Cache results first
@@ -213,7 +268,7 @@ class TestSessionManager:
 
     def test_session_expiration(self) -> None:
         """Test session expiration handling."""
-        manager = SessionManager(session_ttl_minutes=1)  # 1 minute TTL for testing
+        manager = SessionManager(page_size=PAGE_SIZE_DEFAULT, session_ttl_minutes=1)  # 1 minute TTL for testing
 
         session = manager.get_or_create_session("test_session")
         session.last_accessed = datetime.now(timezone.utc) - timedelta(minutes=2)
@@ -228,7 +283,7 @@ class TestSessionManager:
 
     def test_no_cached_query(self) -> None:
         """Test handling when no query has been cached."""
-        manager = SessionManager()
+        manager = SessionManager(page_size=PAGE_SIZE_DEFAULT, session_ttl_minutes=CLPMcpConstants.SESSION_TTL_MINUTES)
 
         # Create session but don't cache any query
         manager.get_or_create_session("test_session")
@@ -239,7 +294,7 @@ class TestSessionManager:
 
     def test_cleanup_expired_sessions(self) -> None:
         """Test cleanup of expired sessions."""
-        manager = SessionManager(session_ttl_minutes=SESSION_TTL_30_MIN)
+        manager = SessionManager(page_size=PAGE_SIZE_DEFAULT, session_ttl_minutes=SESSION_TTL_30_MIN)
 
         # Create sessions with different ages
         session1 = manager.get_or_create_session("session1")
@@ -257,29 +312,51 @@ class TestSessionManager:
         assert "session2" not in manager.sessions
         assert "session3" in manager.sessions
 
-    def test_get_session_info(self) -> None:
-        """Test getting session information."""
-        manager = SessionManager()
-        results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_15)]
-
-        manager.cache_query_result(
+    def test_custom_page_size(self) -> None:
+        """Test SessionManager with custom page size."""
+        manager = SessionManager(page_size=5, session_ttl_minutes=CLPMcpConstants.SESSION_TTL_MINUTES)
+        
+        assert manager.page_size == 5
+        
+        results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_12)]
+        first_page, total_pages = manager.cache_query_result(
             session_id="test_session",
             results=results,
         )
+        
+        assert len(first_page["items"]) == 5
+        assert total_pages == 3  # 12 items with page size 5 = 3 pages
+        
+        # Check that session has the correct page size
+        session = manager.get_or_create_session("test_session")
+        assert session.page_size == 5
 
-        info = manager.get_session_info("test_session")
-        assert info is not None
-        assert info["session_id"] == "test_session"
-        assert info["has_cached_query"] is True
-        assert info["total_results"] == SAMPLE_RESULTS_COUNT_15
-        assert info["total_pages"] == 2  # 15 items with page size 10 = 2 pages
-        assert info["page_size"] == PAGE_SIZE_DEFAULT
-        assert "ran_instructions" in info
-        assert "created_at" in info
-        assert "last_accessed" in info
+    def test_custom_ttl(self) -> None:
+        """Test SessionManager with custom TTL."""
+        manager = SessionManager(page_size=PAGE_SIZE_DEFAULT, session_ttl_minutes=15)
+        
+        assert manager.session_ttl_minutes == 15
+        
+        session = manager.get_or_create_session("test_session")
+        assert session.session_ttl_minutes == 15
+        
+        # Test expiration with custom TTL
+        session.last_accessed = datetime.now(timezone.utc) - timedelta(minutes=16)
+        assert session.is_expired() is True
+        
+        session.last_accessed = datetime.now(timezone.utc) - timedelta(minutes=14)
+        assert session.is_expired() is False
 
-        # Test non-existent session
-        assert manager.get_session_info("non_existent") is None
+    def test_custom_page_size_and_ttl(self) -> None:
+        """Test SessionManager with both custom page size and TTL."""
+        manager = SessionManager(page_size=7, session_ttl_minutes=45)
+        
+        assert manager.page_size == 7
+        assert manager.session_ttl_minutes == 45
+        
+        session = manager.get_or_create_session("test_session")
+        assert session.page_size == 7
+        assert session.session_ttl_minutes == 45
 
 
 if __name__ == "__main__":
