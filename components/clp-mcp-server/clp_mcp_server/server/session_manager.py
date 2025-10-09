@@ -53,7 +53,6 @@ class QueryResult:
             items_per_page=self.items_per_page,
         )
 
-
     @property
     def total_pages(self) -> int:
         """:return: Total number of pages."""
@@ -71,25 +70,19 @@ class SessionState:
     cached_query_result: QueryResult | None = None
     ran_instructions: bool = False
 
-    def update_access_time(self) -> None:
-        """Update the last accessed timestamp."""
-        self.last_accessed = datetime.now(timezone.utc)
-
     def cache_query_result(
         self,
         results: list[str],
-    ) -> QueryResult:
+    ) -> None:
         """
-        Cache the lastest query result of the session.
+        Caches the lastest query result of the session.
 
-        :param results: List of log entries
-        :return: The cached QueryResult object
+        :param results: List of log entries.
         """
         self.cached_query_result = QueryResult(
             total_results=results,
             items_per_page=self.items_per_page
         )
-        return self.cached_query_result
 
     def get_page_data(self, page_number: int) -> dict[str, Any]:
         """
@@ -122,37 +115,53 @@ class SessionState:
         """
         time_diff = datetime.now(timezone.utc) - self.last_accessed
         return time_diff > timedelta(minutes=self.session_ttl_minutes)
+    
+    def update_access_time(self) -> None:
+        """Update the last accessed timestamp."""
+        self.last_accessed = datetime.now(timezone.utc)
 
 
 class SessionManager:
-    """Session manager for handling multiple user sessions."""
+    """Session manager for all user sessions."""
 
     def __init__(
         self,
-        items_per_page: int,
         session_ttl_minutes: int
     ):
         """
-        Initialize the SessionManager.
+        Initializes the SessionManager.
         
-        :param page_size: Number of items per page (defaults to CLPMcpConstants.PAGE_SIZE)
-        :param session_ttl_minutes: Session TTL in minutes (defaults to CLPMcpConstants.SESSION_TTL_MINUTES)
+        :param session_ttl_minutes:
         """
-        self.items_per_page = items_per_page
         self.session_ttl_minutes = session_ttl_minutes
+        # sessions is a shared variable as there may be multiple session attached to the MCP server
+        # session state is NOT a shared variable because each session is accessed by only one
+        # connection at a time, and all calls are synchronous.
         self._sessions_lock = threading.Lock()
         self.sessions: dict[str, SessionState] = {}
         self._cleanup_thread = threading.Thread(target=self._cleanup_loop, daemon=True)
         self._cleanup_thread.start()
 
     def _cleanup_loop(self) -> None:
+        """Background thread to periodically clean up expired sessions."""
         while True:
             time.sleep(CLPMcpConstants.CLEAN_UP_SECONDS)
             self.cleanup_expired_sessions()
 
+    def cleanup_expired_sessions(self) -> None:
+        """Cleanup all expired sessions."""
+        with self._sessions_lock:
+            expired_sessions = [
+                sid for sid, session in self.sessions.items()
+                if session.is_expired()
+            ]
+
+            for sid in expired_sessions:
+                del self.sessions[sid]
+
     def get_or_create_session(self, session_id: str) -> SessionState:
         """
-        Get an existing session or create a new one (thread-safe).
+        Gets an existing session or creates a new one.
         
         :param session_id: Unique identifier for the session
         :return: The SessionState object for the given session_id
@@ -163,7 +172,7 @@ class SessionManager:
             
             if session_id not in self.sessions:
                 self.sessions[session_id] = SessionState(
-                    session_id, self.items_per_page, self.session_ttl_minutes
+                    session_id, CLPMcpConstants.ITEM_PER_PAGE, self.session_ttl_minutes
                 )
             
             session = self.sessions[session_id]
@@ -171,62 +180,39 @@ class SessionManager:
             session.update_access_time()
             return session
 
-    def cache_query_result(
-        self,
-        session_id: str,
-        results: list[str],
-        items_per_page: int | None = None,
-    ) -> tuple[dict[str, Any], int]:
+    def cache_query_result(self, session_id: str, results: list[str]) -> dict[str, Any]:
         """
-        Cache query results for a session and return the first page.
+        Caches query results for a session and return the first page.
         
         :param session_id: Unique identifier for the session
         :param results: List of log entries to cache
-        :param items_per_page: Optional override for items per page
         :return: Tuple of (first page data as dict, total number of pages)
         """
         session = self.get_or_create_session(session_id)
         if session.ran_instructions is False:
-            return (
-                {
+            return {
                 "Error": "Please call get_instructions() first to understand how to use this MCP server."
-                }, 
-                0
-            )
+            }
 
-        query_result = session.cache_query_result(results=results)
-        first_page_data = session.get_page_data(1)
-        return first_page_data, query_result.total_pages
+        session.cache_query_result(results=results)
+
+        return session.get_page_data(1)
 
     def get_nth_page(self, session_id: str, page_index: int) -> dict[str, Any]:
         """
-        Retrieve a specific page from the cached query results.
+        Retrieves the n-th page of a paginated response from the previous query.
         
         :param session_id: Unique identifier for the session
         :param page_index: Zero-based index, e.g., 0 for the first page
-        :return: The part of the response at page index, or an error message if unavailable
+        :return: On success, dictionary containing paged log entrie and pagination metadata. 
+        On error, dictionary with ``{"Error": "error message describing the failure"}``.
         """
         session = self.get_or_create_session(session_id)
         if session.ran_instructions is False:
-            return { "Error": "Please call get_instructions() first to understand how to use this MCP server."}
+            return { 
+                "Error": "Please call get_instructions() first to understand how to use this MCP server."
+            }
 
         page_number = page_index + 1  # Convert zero-based to one-based
         return session.get_page_data(page_number)
         
-
-    def cleanup_expired_sessions(self) -> int:
-        """
-        Cleanup all expired sessions.
-        
-        :return: Number of sessions cleaned up
-        """
-        with self._sessions_lock:
-            expired_sessions = [
-                sid for sid, session in self.sessions.items()
-                if session.is_expired()
-            ]
-
-            for sid in expired_sessions:
-                del self.sessions[sid]
-
-            return len(expired_sessions)

@@ -18,10 +18,7 @@ def create_mcp_server() -> FastMCP:
     """
     mcp = FastMCP(name=CLPMcpConstants.SERVER_NAME)
 
-    session_manager = SessionManager(
-        CLPMcpConstants.ITEM_PER_PAGE, 
-        CLPMcpConstants.SESSION_TTL_MINUTES
-    )
+    session_manager = SessionManager(CLPMcpConstants.SESSION_TTL_MINUTES)
 
     @mcp.tool
     def get_instructions(ctx: Context) -> str:
@@ -43,8 +40,8 @@ def create_mcp_server() -> FastMCP:
 
         :param page_index: Zero-based index, e.g., 0 for the first page
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
-        :return: On success, dictionary containing page items and pagination metadata. On error, 
-        dictionary with ``{"Error": "<error message>"}``.
+        :return: On success, dictionary containing paged log entrie and pagination metadata. 
+        On error, dictionary with ``{"Error": "error message describing the failure"}``.
         """
         return session_manager.get_nth_page(ctx.session_id, page_index)
 
