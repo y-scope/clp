@@ -42,7 +42,7 @@ class QueryResult:
         :param page_number: One-based indexing, e.g., 1 for the first page
         :return: Page object or None if page number is out of bounds
         """
-        if page_number > self.total_pages or page_number <= 0:
+        if page_number > self._total_pages or page_number <= 0:
             return None
 
         return Page(
@@ -50,11 +50,6 @@ class QueryResult:
             page=page_number,
             items_per_page=self.items_per_page,
         )
-
-    @property
-    def total_pages(self) -> int:
-        """:return: Total number of pages."""
-        return self._total_pages
 
 
 @dataclass
