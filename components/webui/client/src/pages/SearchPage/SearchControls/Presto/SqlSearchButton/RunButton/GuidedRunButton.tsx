@@ -23,8 +23,10 @@ const GuidedRunButton = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const timeRange = useSearchStore((state) => state.timeRange);
     const [startTimestamp, endTimestamp] = timeRange;
+    const select = usePrestoSearchState((state) => state.select);
+    const from = usePrestoSearchState((state) => state.from);
+    const timestampKey = usePrestoSearchState((state) => state.timestampKey);
 
-    const {select, from, where, orderBy, limit, timestampKey} = usePrestoSearchState();
 
     const isQueryReady =
         "" !== select.trim() &&
@@ -36,6 +38,7 @@ const GuidedRunButton = () => {
         "";
 
     const handleClick = useCallback(() => {
+        const {where, orderBy} = usePrestoSearchState.getState();
         if (null === from) {
             console.error("Cannot build guided query: from input is missing");
 
@@ -51,13 +54,11 @@ const GuidedRunButton = () => {
         try {
             const trimmedWhere = where.trim();
             const trimmedOrderBy = orderBy.trim();
-            const limitString = String(limit);
 
             const queryString = buildSearchQuery({
                 ...(trimmedWhere && {booleanExpression: trimmedWhere}),
                 databaseName: from,
                 endTimestamp: endTimestamp.unix(),
-                ...(limitString && {limitValue: limitString}),
                 selectItemList: select.trim(),
                 ...(trimmedOrderBy && {sortItemList: trimmedOrderBy}),
                 startTimestamp: startTimestamp.unix(),
@@ -71,9 +72,6 @@ const GuidedRunButton = () => {
     }, [
         select,
         from,
-        where,
-        orderBy,
-        limit,
         timestampKey,
         startTimestamp,
         endTimestamp,
