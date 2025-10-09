@@ -158,15 +158,12 @@ services:
     environment:
       AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID}"
       AWS_SECRET_ACCESS_KEY: "${CLP_AWS_SECRET_ACCESS_KEY}"
-      BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
       CLP_CONFIG_PATH: "/etc/clp-config.yml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/compression_worker"
       CLP_WORKER_LOG_PATH: "/var/log/compression_worker/worker.log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
-      RESULT_BACKEND: >-
-        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_COMPRESSION_BACKEND_DB:-1}
     volumes:
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}:/var/data/archives"
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/staged-archives}:/var/data/staged-archives"
@@ -179,14 +176,11 @@ services:
     command: [
       "python3",
       "-u",
-      "/opt/clp/lib/python3/site-packages/bin/celery",
-      "-A", "job_orchestration.executor.compress",
-      "worker",
+      "/opt/clp/lib/python3/site-packages/clp_py_utils/start-spider-worker.py",
       "--concurrency", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
-      "--loglevel", "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}",
-      "-f", "/var/log/compression_worker/worker.log",
-      "-Q", "compression",
-      "-n", "compression-worker"
+      "--storage-url", "${SPIDER_DB_URL}",
+      # NOTE: Leave host to spider scheduler's host. This only affects task placement.
+      "--host", "${SPIDER_SCHEDULER_HOST}",
     ]
 
   webui:
