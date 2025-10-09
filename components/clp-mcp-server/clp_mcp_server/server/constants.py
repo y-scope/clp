@@ -4,6 +4,10 @@
 
 class CLPMcpConstants:
     """Constants for the CLP MCP Server."""
+    CLEAN_UP_SECONDS = 600  # 10 minutes
+    ITEM_PER_PAGE = 10
+    MAX_CACHED_RESULTS = 1000
+    SESSION_TTL_MINUTES = 60
 
     SERVER_NAME = "clp-mcp-server"
     SYSTEM_PROMPT = (
@@ -20,16 +24,4 @@ class CLPMcpConstants:
         "is ambiguous or lacks detail, ask clarifying questions to better understand "
         "their intent before generating the KQL query. - Always ensure that the "
         "generated KQL query is syntactically correct and can be executed without errors. "
-        "\nAvailable tools:\n"
-        "1. search_kql_query: Search logs with a KQL query\n"
-        "2. search_kql_query_with_timestamp: Search logs with a KQL query and timestamp range\n"
-        "3. get_nth_page: Retrieve additional pages of results from the last query\n"
-        "\nNote: Results are paginated with 10 items per page. Use get_nth_page to "
-        "retrieve additional pages."
     )
-
-
-    ITEM_PER_PAGE = 10
-    MAX_CACHED_RESULTS = 1000
-    SESSION_TTL_MINUTES = 60
-    CLEAN_UP_SECONDS = 600  # 10 minutes

@@ -1,6 +1,5 @@
 """MCP Server implementation."""
 
-from datetime import datetime
 from typing import Any
 
 from fastmcp import Context, FastMCP
@@ -27,10 +26,11 @@ def create_mcp_server() -> FastMCP:
     @mcp.tool
     def get_instructions(ctx: Context) -> str:
         """
-        Provides instructions on how to use this MCP server.
-        
-        :param ctx: The MCP context containing session information
-        :return: A string of instructions on how to use this MCP server.
+        Gets a pre-defined “system prompt” that guides the LLM’s behavior.
+        This function must be invoked before any other `FastMCP.tool`. 
+
+        :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
+        :return: A string of “system prompt”.
         """
         session = session_manager.get_or_create_session(ctx.session_id)
         session.ran_instructions = True
@@ -39,11 +39,12 @@ def create_mcp_server() -> FastMCP:
     @mcp.tool
     def get_nth_page(page_index: int, ctx: Context) -> dict[str, Any]:
         """
-        Retrieve the last paginated response by index.
+        Retrieves the n-th page of a paginated response from the previous query.
 
         :param page_index: Zero-based index, e.g., 0 for the first page
-        :param ctx: The MCP context containing session information
-        :return: The part of the response at page index, or an error message if unavailable.
+        :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
+        :return: On success, dictionary containing page items and pagination metadata. On error, 
+        dictionary with ``{"Error": "<error message>"}``.
         """
         return session_manager.get_nth_page(ctx.session_id, page_index)
 

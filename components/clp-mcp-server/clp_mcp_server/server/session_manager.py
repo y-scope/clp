@@ -109,7 +109,6 @@ class SessionState:
 
         return {
             "items": list(page),
-            "page_number": page.page,
             "total_pages": page.page_count,
             "total_items": page.item_count,
             "items_per_page": page.items_per_page,
