@@ -17,7 +17,8 @@ from clp_py_utils.clp_config import (
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
-    StorageEngine, OrchestrationType,
+    OrchestrationType,
+    StorageEngine,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.clp_metadata_db_utils import (
@@ -493,8 +494,7 @@ def main(argv):
         task_manager = SpiderTaskManager()
     else:
         logger.error(
-            f"Unsupported compression scheduler type:"
-            f" {clp_config.compression_scheduler.type}"
+            f"Unsupported compression scheduler type:" f" {clp_config.compression_scheduler.type}"
         )
         return -1
 
