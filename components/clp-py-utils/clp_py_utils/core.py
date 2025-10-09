@@ -3,9 +3,6 @@ import pathlib
 import yaml
 from yaml.parser import ParserError
 
-# Use `CSafeLoader` when available as it offers faster C-based parsing.
-YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
-
 
 class FileMetadata:
     __slots__ = ("path", "size", "estimated_uncompressed_size")
@@ -59,7 +56,7 @@ def make_config_path_absolute(default_root: pathlib.Path, config_path: pathlib.P
 def read_yaml_config_file(yaml_config_file_path: pathlib.Path):
     with open(yaml_config_file_path, "r") as yaml_config_file:
         try:
-            config = yaml.load(yaml_config_file, Loader=YAML_LOADER)
+            config = yaml.load(yaml_config_file, Loader=yaml.CSafeLoader)
         except ParserError as ex:
             raise ValueError(f"Unable to parse configuration from {yaml_config_file_path}: {ex}")
     return config
