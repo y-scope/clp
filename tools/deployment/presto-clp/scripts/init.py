@@ -150,7 +150,7 @@ def _add_clp_env_vars(
         return False
 
     with open(credentials_file_path, "r") as credentials_file:
-        credentials = yaml.load(credentials_file, Loader=YAML_LOADER)
+        credentials = yaml.load(credentials_file, Loader=yaml.CSafeLoader)
 
     try:
         database_user = _get_required_config_value(
