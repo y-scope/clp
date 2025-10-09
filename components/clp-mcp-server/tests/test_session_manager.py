@@ -32,18 +32,12 @@ class TestQueryResult:
     """Test cases for QueryResult class."""
 
     def test_query_result_initialization(self) -> None:
-        """Test QueryResult initialization and truncation."""
+        """Test QueryResult initialization and error on too many results."""
         # Create a result with more than max_cached_results
         large_results = [f"log_{i}" for i in range(1500)]
-        query_result = QueryResult(
-            total_results=large_results, 
-            items_per_page=ITEMS_PER_PAGE_DEFAULT
-        )
-
-        # Should be truncated to max_cached_results
-        assert len(query_result.total_results) == MAX_CACHED_RESULTS_DEFAULT
-        assert query_result.total_results[0] == "log_0"
-        assert query_result.total_results[-1] == "log_999"
+        with pytest.raises(ValueError) as excinfo:
+            QueryResult(total_results=large_results, items_per_page=ITEMS_PER_PAGE_DEFAULT)
+        assert "exceeds maximum allowed cached results" in str(excinfo.value)
 
     def test_get_page(self) -> None:
         """Test pagination functionality."""
@@ -53,14 +47,14 @@ class TestQueryResult:
         # Test first page
         page1 = query_result.get_page(1)
         assert page1 is not None
-        assert list(page1) == [f"log_{i}" for i in range(PAGE_SIZE_DEFAULT)]
+        assert list(page1) == [f"log_{i}" for i in range(ITEMS_PER_PAGE_DEFAULT)]
         assert page1.page == 1
         assert page1.page_count == EXPECTED_PAGES_25_ITEMS
 
         # Test second page
         page2 = query_result.get_page(2)
         assert page2 is not None
-        assert list(page2) == [f"log_{i}" for i in range(PAGE_SIZE_DEFAULT, 20)]
+        assert list(page2) == [f"log_{i}" for i in range(ITEMS_PER_PAGE_DEFAULT, 20)]
 
         # Test last page
         page3 = query_result.get_page(3)
@@ -71,51 +65,25 @@ class TestQueryResult:
         page4 = query_result.get_page(4)
         assert page4 is None
 
-    def test_get_total_pages(self) -> None:
+    def test_total_pages(self) -> None:
         """Test total pages calculation."""
         # Test with exact multiple
         query_result = QueryResult(total_results=["log"] * 20, items_per_page=ITEMS_PER_PAGE_DEFAULT)
-        assert query_result.get_total_pages() == EXPECTED_PAGES_20_ITEMS
+        assert query_result.total_pages == EXPECTED_PAGES_20_ITEMS
 
         # Test with remainder
         query_result = QueryResult(total_results=["log"] * SAMPLE_RESULTS_COUNT_25, items_per_page=ITEMS_PER_PAGE_DEFAULT)
-        assert query_result.get_total_pages() == EXPECTED_PAGES_25_ITEMS
+        assert query_result.total_pages == EXPECTED_PAGES_25_ITEMS
 
         # Test with empty results
         query_result = QueryResult(total_results=[], items_per_page=ITEMS_PER_PAGE_DEFAULT)
-        assert query_result.get_total_pages() == 0
-
-    def test_custom_page_size(self) -> None:
-        """Test QueryResult with custom page size."""
-        results = [f"log_{i}" for i in range(30)]
-        query_result = QueryResult(total_results=results, items_per_page=ITEMS_PER_PAGE_15)
-        assert query_result.get_total_pages() == 2
-        # First page should have 15 items
-        page1 = query_result.get_page(1)
-        assert len(list(page1)) == ITEMS_PER_PAGE_15
-        # Second page should have remaining 15 items
-        page2 = query_result.get_page(2)
-        assert len(list(page2)) == ITEMS_PER_PAGE_15
+        assert query_result.total_pages == 0
 
 
 class TestSessionState:
     """Test cases for SessionState class."""
 
-    def test_session_initialization(self) -> None:
-        """Test SessionState initialization."""
-        session = SessionState(
-            session_id="test_session",
-            items_per_page=ITEMS_PER_PAGE_DEFAULT,
-            session_ttl_minutes=SESSION_TTL_60_MIN
-        )
-        assert session.session_id == "test_session"
-        assert session.items_per_page == ITEMS_PER_PAGE_DEFAULT
-        assert session.session_ttl_minutes == SESSION_TTL_60_MIN
-        assert session.current_query_result is None
-        assert session.ran_instructions is False
-        assert isinstance(session.last_accessed, datetime)
-
-    def test_cache_query_result(self) -> None:
+    def test_cached_query_result(self) -> None:
         """Test caching query results."""
         session = SessionState(
             session_id="test_session",
@@ -126,9 +94,9 @@ class TestSessionState:
 
         query_result = session.cache_query_result(results=results)
 
-        assert session.current_query_result is not None
-        assert len(session.current_query_result.total_results) == SAMPLE_RESULTS_COUNT_50
-        assert query_result is session.current_query_result
+        assert session.cached_query_result is not None
+        assert len(session.cached_query_result.total_results) == SAMPLE_RESULTS_COUNT_50
+        assert query_result is session.cached_query_result
         assert query_result.items_per_page == ITEMS_PER_PAGE_DEFAULT
 
     def test_get_page_data(self) -> None:
@@ -142,34 +110,35 @@ class TestSessionState:
 
         session.cache_query_result(results=results)
 
-        # Test first page (0-based index)
-        page_data = session.get_page_data(0)
+        # Test first page
+        page_data = session.get_page_data(1)
         assert page_data is not None
-        assert page_data["items"] == [f"log_{i}" for i in range(PAGE_SIZE_DEFAULT)]
+        assert page_data["items"] == [f"log_{i}" for i in range(ITEMS_PER_PAGE_DEFAULT)]
         assert page_data["page_number"] == 1
         assert page_data["total_pages"] == EXPECTED_PAGES_25_ITEMS
         assert page_data["total_items"] == SAMPLE_RESULTS_COUNT_25
-        assert page_data["items_per_page"] == PAGE_SIZE_DEFAULT
+        assert page_data["items_per_page"] == ITEMS_PER_PAGE_DEFAULT
         assert page_data["has_next"] is True
         assert page_data["has_previous"] is False
 
         # Test second page
-        page_data = session.get_page_data(1)
+        page_data = session.get_page_data(2)
         assert page_data is not None
-        assert page_data["items"] == [f"log_{i}" for i in range(PAGE_SIZE_DEFAULT, 20)]
+        assert page_data["items"] == [f"log_{i}" for i in range(ITEMS_PER_PAGE_DEFAULT, 20)]
         assert page_data["page_number"] == PAGE_NUMBER_2
         assert page_data["has_next"] is True
         assert page_data["has_previous"] is True
 
         # Test last page
-        page_data = session.get_page_data(2)
+        page_data = session.get_page_data(3)
         assert page_data["items"] == [f"log_{i}" for i in range(20, SAMPLE_RESULTS_COUNT_25)]
         assert page_data["has_next"] is False
         assert page_data["has_previous"] is True
 
         # Test with no cached result
-        session.current_query_result = None
-        assert session.get_page_data(0) is None
+        session.cached_query_result = None
+        page_data = session.get_page_data(0)
+        assert page_data["Error"] == "No previous paginated response in this session."
 
     def test_session_expiration(self) -> None:
         """Test session expiration check."""
@@ -216,7 +185,7 @@ class TestSessionManager:
         # Create new session
         session1 = manager.get_or_create_session("session1")
         assert session1.session_id == "session1"
-        assert session1.page_size == PAGE_SIZE_DEFAULT
+        assert session1.items_per_page == ITEMS_PER_PAGE_DEFAULT
         assert session1.session_ttl_minutes == CLPMcpConstants.SESSION_TTL_MINUTES
         assert "session1" in manager.sessions
 
@@ -224,17 +193,19 @@ class TestSessionManager:
         session1_again = manager.get_or_create_session("session1")
         assert session1_again is session1
 
-    def test_cache_query_result(self) -> None:
+    def test_cached_query_result(self) -> None:
         """Test caching query results through manager."""
         manager = SessionManager(items_per_page=ITEMS_PER_PAGE_DEFAULT, session_ttl_minutes=CLPMcpConstants.SESSION_TTL_MINUTES)
         results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_12)]
+        manager.get_or_create_session("test_session")
+        manager.sessions["test_session"].ran_instructions = True  # Simulate that instructions were run
 
         first_page, total_pages = manager.cache_query_result(
             session_id="test_session",
             results=results,
         )
 
-        assert first_page["items"] == [f"log_{i}" for i in range(PAGE_SIZE_DEFAULT)]
+        assert first_page["items"] == [f"log_{i}" for i in range(ITEMS_PER_PAGE_DEFAULT)]
         assert total_pages == 2  # 12 items with page size 10 = 2 pages
         assert first_page["total_items"] == SAMPLE_RESULTS_COUNT_12
 
@@ -242,6 +213,8 @@ class TestSessionManager:
         """Test retrieving specific pages."""
         manager = SessionManager(items_per_page=ITEMS_PER_PAGE_DEFAULT, session_ttl_minutes=CLPMcpConstants.SESSION_TTL_MINUTES)
         results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_25)]
+        manager.get_or_create_session("test_session")
+        manager.sessions["test_session"].ran_instructions = True  # Simulate that instructions were run
 
         # Cache results first
         manager.cache_query_result(
@@ -251,45 +224,49 @@ class TestSessionManager:
 
         # Get second page (index 1)
         page_data = manager.get_nth_page("test_session", 1)
-        assert "error" not in page_data
-        assert page_data["items"] == [f"log_{i}" for i in range(PAGE_SIZE_DEFAULT, 20)]
+        assert "Error" not in page_data
+        assert page_data["items"] == [f"log_{i}" for i in range(ITEMS_PER_PAGE_DEFAULT, 20)]
         assert page_data["page_number"] == PAGE_NUMBER_2
 
         # Test invalid page
         page_data = manager.get_nth_page("test_session", 10)
-        assert "error" in page_data
-        assert "Invalid page index" in page_data["error"]
+        assert "Error" in page_data
+        assert "Page index is out of bounds." in page_data["Error"]
 
         # Test non-existent session - this will create a new session, so no error
+        manager.get_or_create_session("non_existent")
+        manager.sessions["non_existent"].ran_instructions = True  # Simulate that instructions were run
         page_data = manager.get_nth_page("non_existent", 0)
-        assert "error" in page_data
-        assert "No cached query results" in page_data["error"]
+        assert "Error" in page_data
+        assert "No previous paginated response in this session." in page_data["Error"]
 
     def test_session_expiration(self) -> None:
         """Test session expiration handling."""
-        manager = SessionManager(items_per_page=ITEMS_PER_PAGE_DEFAULT, session_ttl_minutes=1)  # 1 minute TTL for testing
+        manager = SessionManager(items_per_page=ITEMS_PER_PAGE_DEFAULT, session_ttl_minutes=1)
+        manager.get_or_create_session("test_session")
+        manager.sessions["test_session"].ran_instructions = True  # Simulate that instructions were run
+
 
         session = manager.get_or_create_session("test_session")
         session.last_accessed = datetime.now(timezone.utc) - timedelta(minutes=2)
 
         # When we try to get the session again, it should be recreated (expired session is deleted)
         new_session = manager.get_or_create_session("test_session")
+        manager.sessions["test_session"].ran_instructions = True  # Simulate that instructions were run
         assert new_session.session_id == "test_session"
         # The session should be newly created, so no cached query
         page_data = manager.get_nth_page("test_session", 0)
-        assert "error" in page_data
-        assert "No cached query results" in page_data["error"]
+        assert "Error" in page_data
+        assert "No previous paginated response in this session." in page_data["Error"]
 
     def test_no_cached_query(self) -> None:
         """Test handling when no query has been cached."""
         manager = SessionManager(items_per_page=ITEMS_PER_PAGE_DEFAULT, session_ttl_minutes=CLPMcpConstants.SESSION_TTL_MINUTES)
-
-        # Create session but don't cache any query
         manager.get_or_create_session("test_session")
-
+        manager.sessions["test_session"].ran_instructions = True  # Simulate that instructions were run
         page_data = manager.get_nth_page("test_session", 0)
-        assert "error" in page_data
-        assert "No cached query results" in page_data["error"]
+        assert "Error" in page_data
+        assert "No previous paginated response in this session." in page_data["Error"]
 
     def test_cleanup_expired_sessions(self) -> None:
         """Test cleanup of expired sessions."""
@@ -314,6 +291,9 @@ class TestSessionManager:
     def test_custom_page_size(self) -> None:
         """Test SessionManager with custom page size."""
         manager = SessionManager(items_per_page=5, session_ttl_minutes=CLPMcpConstants.SESSION_TTL_MINUTES)
+        manager.get_or_create_session("test_session")
+        manager.sessions["test_session"].ran_instructions = True  # Simulate that instructions were run
+        
         assert manager.items_per_page == 5
         results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_12)]
         first_page, total_pages = manager.cache_query_result(

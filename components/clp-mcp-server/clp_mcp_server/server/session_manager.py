@@ -41,7 +41,7 @@ class QueryResult:
         """
         Get a specific page from the cached response.
 
-        :param page_number: 1-based indexing, e.g., 1 for the first page
+        :param page_number: One-based indexing, e.g., 1 for the first page
         :return: Page object or None if page number is out of bounds
         """
         if page_number > self.total_pages or page_number <= 0:
@@ -91,11 +91,11 @@ class SessionState:
         )
         return self.cached_query_result
 
-    def get_page_data(self, page_index: int) -> dict[str, Any]:
+    def get_page_data(self, page_number: int) -> dict[str, Any]:
         """
         Get page data in a dictionary format.
 
-        :param page_index: 0-based page index
+        :param page_number: One-based indexing, e.g., 1 for the first page
         :return: Dictionary with page data or None if unavailable
         """
         if self.cached_query_result is None:
@@ -103,15 +103,12 @@ class SessionState:
                 "Error": "No previous paginated response in this session."
             }
 
-        # Convert 0-based index to 1-based page number for paginate library
-        page_number = page_index + 1
-        page = self.current_query_result.get_page(page_number)
-
+        page = self.cached_query_result.get_page(page_number)
         if page is None:
-            return { "Error": "Page index is out of bounds"}
+            return { "Error": "Page index is out of bounds."}
 
         return {
-            "items": page,
+            "items": list(page),
             "page_number": page.page,
             "total_pages": page.page_count,
             "total_items": page.item_count,
@@ -158,8 +155,8 @@ class SessionManager:
         """
         Get an existing session or create a new one (thread-safe).
         
-        Multiple requests can call this simultaneously, so we need
-        to protect the dict operations.
+        :param session_id: Unique identifier for the session
+        :return: The SessionState object for the given session_id
         """
         with self._sessions_lock:
             if session_id in self.sessions and self.sessions[session_id].is_expired():
@@ -184,47 +181,45 @@ class SessionManager:
         """
         Cache query results for a session and return the first page.
         
-        No lock needed after getting session - session object operations
-        are safe (synchronous per session_id).
+        :param session_id: Unique identifier for the session
+        :param results: List of log entries to cache
+        :param items_per_page: Optional override for items per page
+        :return: Tuple of (first page data as dict, total number of pages)
         """
         session = self.get_or_create_session(session_id)
+        if session.ran_instructions is False:
+            return (
+                {
+                "Error": "Please call get_instructions() first to understand how to use this MCP server."
+                }, 
+                0
+            )
 
-        # Session operations don't need lock - synchronous per session
         query_result = session.cache_query_result(results=results)
-
-        first_page_data = session.get_page_data(0)
-        if not first_page_data:
-            return {"items": [], "error": "No results found"}, 0
-
-        return first_page_data, query_result.get_total_pages()
+        first_page_data = session.get_page_data(1)
+        return first_page_data, query_result.total_pages
 
     def get_nth_page(self, session_id: str, page_index: int) -> dict[str, Any]:
         """
         Retrieve a specific page from the cached query results.
         
-        Locks when accessing dict, then uses session outside lock.
+        :param session_id: Unique identifier for the session
+        :param page_index: Zero-based index, e.g., 0 for the first page
+        :return: The part of the response at page index, or an error message if unavailable
         """
         session = self.get_or_create_session(session_id)
+        if session.ran_instructions is False:
+            return { "Error": "Please call get_instructions() first to understand how to use this MCP server."}
 
-        if not session.current_query_result:
-            return {"error": "No cached query results. Please run a query first."}
-
-        page_data = session.get_page_data(page_index)
-        if not page_data:
-            total_pages = session.current_query_result.get_total_pages()
-            return {
-                "error": f"Invalid page index. Valid range: 0-{total_pages - 1}",
-                "total_pages": total_pages,
-            }
-
-        return page_data
+        page_number = page_index + 1  # Convert zero-based to one-based
+        return session.get_page_data(page_number)
+        
 
     def cleanup_expired_sessions(self) -> int:
         """
         Cleanup all expired sessions.
         
-        Can be called from cron job, admin endpoint, or health check.
-        Thread-safe with lock.
+        :return: Number of sessions cleaned up
         """
         with self._sessions_lock:
             expired_sessions = [
