@@ -14,8 +14,12 @@ from clp_mcp_server.clp_connector import ClpConnector, QueryJobStatus
 def mock_clp_config() -> Any:
     """Provides a mock CLP configuration for testing."""
     return SimpleNamespace(
-        results_cache=SimpleNamespace(host="localhost", port=27017, db_name="mock_results_cache"),
-        database=SimpleNamespace(host="localhost", port=3306, name="mock_clp_db"),
+        results_cache=SimpleNamespace(
+            host="results-cache",
+            port=27017,
+            db_name="clp-query-results"
+        ),
+        database=SimpleNamespace(host="db", port=3306, name="clp-db"),
     )
 
 

@@ -124,7 +124,7 @@ class ClpConnector:
         """
         waiting_states = {QueryJobStatus.PENDING, QueryJobStatus.RUNNING, QueryJobStatus.CANCELLING}
         error_states = {QueryJobStatus.FAILED, QueryJobStatus.CANCELLED, QueryJobStatus.KILLED}
-        event_loop = asyncio.get_event_loop()
+        event_loop = asyncio.get_running_loop()
         start_time = event_loop.time()
 
         while True:
