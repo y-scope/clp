@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from clp_mcp_server.server.constants import CLPMcpConstants
 from clp_mcp_server.server.session_manager import (
     QueryResult,
     SessionManager,
@@ -11,7 +12,8 @@ from clp_mcp_server.server.session_manager import (
 )
 
 # Test constants to avoid magic values
-MAX_CACHED_RESULTS = 1000
+PAGE_SIZE_DEFAULT = CLPMcpConstants.PAGE_SIZE
+MAX_CACHED_RESULTS_DEFAULT = CLPMcpConstants.MAX_CACHED_RESULTS
 EXPECTED_PAGES_25_ITEMS = 3
 EXPECTED_PAGES_20_ITEMS = 2
 EXPECTED_PAGES_35_ITEMS = 4
@@ -19,7 +21,6 @@ SAMPLE_RESULTS_COUNT_50 = 50
 SAMPLE_RESULTS_COUNT_25 = 25
 SAMPLE_RESULTS_COUNT_15 = 15
 SAMPLE_RESULTS_COUNT_12 = 12
-PAGE_SIZE_10 = 10
 PAGE_SIZE_15 = 15
 SESSION_TTL_30_MIN = 30
 SESSION_TTL_60_MIN = 60
@@ -34,37 +35,29 @@ class TestQueryResult:
         """Test QueryResult initialization and truncation."""
         # Create a result with more than max_cached_results
         large_results = [f"log_{i}" for i in range(1500)]
-        query_result = QueryResult(
-            timestamp=datetime.now(timezone.utc),
-            total_results=large_results,
-            max_cached_results=MAX_CACHED_RESULTS,
-        )
+        query_result = QueryResult(total_results=large_results)
 
         # Should be truncated to max_cached_results
-        assert len(query_result.total_results) == MAX_CACHED_RESULTS
+        assert len(query_result.total_results) == MAX_CACHED_RESULTS_DEFAULT
         assert query_result.total_results[0] == "log_0"
         assert query_result.total_results[-1] == "log_999"
 
     def test_get_page(self) -> None:
         """Test pagination functionality."""
         results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_25)]
-        query_result = QueryResult(
-            timestamp=datetime.now(timezone.utc),
-            total_results=results,
-            page_size=PAGE_SIZE_10,
-        )
+        query_result = QueryResult(total_results=results)
 
         # Test first page
         page1 = query_result.get_page(1)
         assert page1 is not None
-        assert list(page1) == [f"log_{i}" for i in range(PAGE_SIZE_10)]
+        assert list(page1) == [f"log_{i}" for i in range(PAGE_SIZE_DEFAULT)]
         assert page1.page == 1
         assert page1.page_count == EXPECTED_PAGES_25_ITEMS
 
         # Test second page
         page2 = query_result.get_page(2)
         assert page2 is not None
-        assert list(page2) == [f"log_{i}" for i in range(PAGE_SIZE_10, 20)]
+        assert list(page2) == [f"log_{i}" for i in range(PAGE_SIZE_DEFAULT, 20)]
 
         # Test last page
         page3 = query_result.get_page(3)
@@ -78,27 +71,15 @@ class TestQueryResult:
     def test_get_total_pages(self) -> None:
         """Test total pages calculation."""
         # Test with exact multiple
-        query_result = QueryResult(
-            timestamp=datetime.now(timezone.utc),
-            total_results=["log"] * 20,
-            page_size=PAGE_SIZE_10,
-        )
+        query_result = QueryResult(total_results=["log"] * 20)
         assert query_result.get_total_pages() == EXPECTED_PAGES_20_ITEMS
 
         # Test with remainder
-        query_result = QueryResult(
-            timestamp=datetime.now(timezone.utc),
-            total_results=["log"] * SAMPLE_RESULTS_COUNT_25,
-            page_size=PAGE_SIZE_10,
-        )
+        query_result = QueryResult(total_results=["log"] * SAMPLE_RESULTS_COUNT_25)
         assert query_result.get_total_pages() == EXPECTED_PAGES_25_ITEMS
 
         # Test with empty results
-        query_result = QueryResult(
-            timestamp=datetime.now(timezone.utc),
-            total_results=[],
-            page_size=PAGE_SIZE_10,
-        )
+        query_result = QueryResult(total_results=[])
         assert query_result.get_total_pages() == 0
 
 
@@ -111,8 +92,7 @@ class TestSessionState:
 
         assert session.session_id == "test_session"
         assert session.current_query_result is None
-        assert session.flags["ran_instructions"] is False
-        assert isinstance(session.created_at, datetime)
+        assert session.ran_instructions is False
         assert isinstance(session.last_accessed, datetime)
 
     def test_cache_query_result(self) -> None:
@@ -120,40 +100,34 @@ class TestSessionState:
         session = SessionState(session_id="test_session")
         results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_50)]
 
-        session.cache_query_result(
-            results=results,
-            page_size=PAGE_SIZE_15,
-        )
+        query_result = session.cache_query_result(results=results)
 
         assert session.current_query_result is not None
         assert len(session.current_query_result.total_results) == SAMPLE_RESULTS_COUNT_50
-        assert session.current_query_result.page_size == PAGE_SIZE_15
+        assert query_result is session.current_query_result
 
     def test_get_page_data(self) -> None:
         """Test getting page data in dictionary format."""
         session = SessionState(session_id="test_session")
         results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_25)]
 
-        session.cache_query_result(
-            results=results,
-            page_size=PAGE_SIZE_10,
-        )
+        session.cache_query_result(results=results)
 
         # Test first page (0-based index)
         page_data = session.get_page_data(0)
         assert page_data is not None
-        assert page_data["items"] == [f"log_{i}" for i in range(PAGE_SIZE_10)]
+        assert page_data["items"] == [f"log_{i}" for i in range(PAGE_SIZE_DEFAULT)]
         assert page_data["page_number"] == 1
         assert page_data["total_pages"] == EXPECTED_PAGES_25_ITEMS
         assert page_data["total_items"] == SAMPLE_RESULTS_COUNT_25
-        assert page_data["items_per_page"] == PAGE_SIZE_10
+        assert page_data["items_per_page"] == PAGE_SIZE_DEFAULT
         assert page_data["has_next"] is True
         assert page_data["has_previous"] is False
 
         # Test second page
         page_data = session.get_page_data(1)
         assert page_data is not None
-        assert page_data["items"] == [f"log_{i}" for i in range(PAGE_SIZE_10, 20)]
+        assert page_data["items"] == [f"log_{i}" for i in range(PAGE_SIZE_DEFAULT, 20)]
         assert page_data["page_number"] == PAGE_NUMBER_2
         assert page_data["has_next"] is True
         assert page_data["has_previous"] is True
@@ -198,7 +172,7 @@ class TestSessionManager:
 
     def test_cache_query_result(self) -> None:
         """Test caching query results through manager."""
-        manager = SessionManager(page_size=5)
+        manager = SessionManager()
         results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_12)]
 
         first_page, total_pages = manager.cache_query_result(
@@ -206,13 +180,13 @@ class TestSessionManager:
             results=results,
         )
 
-        assert first_page["items"] == [f"log_{i}" for i in range(5)]
-        assert total_pages == EXPECTED_PAGES_25_ITEMS
+        assert first_page["items"] == [f"log_{i}" for i in range(PAGE_SIZE_DEFAULT)]
+        assert total_pages == 2  # 12 items with page size 10 = 2 pages
         assert first_page["total_items"] == SAMPLE_RESULTS_COUNT_12
 
     def test_get_nth_page(self) -> None:
         """Test retrieving specific pages."""
-        manager = SessionManager(page_size=PAGE_SIZE_10)
+        manager = SessionManager()
         results = [f"log_{i}" for i in range(SAMPLE_RESULTS_COUNT_25)]
 
         # Cache results first
@@ -224,7 +198,7 @@ class TestSessionManager:
         # Get second page (index 1)
         page_data = manager.get_nth_page("test_session", 1)
         assert "error" not in page_data
-        assert page_data["items"] == [f"log_{i}" for i in range(PAGE_SIZE_10, 20)]
+        assert page_data["items"] == [f"log_{i}" for i in range(PAGE_SIZE_DEFAULT, 20)]
         assert page_data["page_number"] == PAGE_NUMBER_2
 
         # Test invalid page
@@ -232,22 +206,25 @@ class TestSessionManager:
         assert "error" in page_data
         assert "Invalid page index" in page_data["error"]
 
-        # Test non-existent session
+        # Test non-existent session - this will create a new session, so no error
         page_data = manager.get_nth_page("non_existent", 0)
         assert "error" in page_data
-        assert "Session not found" in page_data["error"]
+        assert "No cached query results" in page_data["error"]
 
     def test_session_expiration(self) -> None:
         """Test session expiration handling."""
-        manager = SessionManager(session_ttl_minutes=0.01)  # Very short TTL for testing
+        manager = SessionManager(session_ttl_minutes=1)  # 1 minute TTL for testing
 
         session = manager.get_or_create_session("test_session")
-        session.last_accessed = datetime.now(timezone.utc) - timedelta(minutes=1)
+        session.last_accessed = datetime.now(timezone.utc) - timedelta(minutes=2)
 
+        # When we try to get the session again, it should be recreated (expired session is deleted)
+        new_session = manager.get_or_create_session("test_session")
+        assert new_session.session_id == "test_session"
+        # The session should be newly created, so no cached query
         page_data = manager.get_nth_page("test_session", 0)
         assert "error" in page_data
-        assert "Session expired" in page_data["error"]
-        assert "test_session" not in manager.sessions
+        assert "No cached query results" in page_data["error"]
 
     def test_no_cached_query(self) -> None:
         """Test handling when no query has been cached."""
@@ -295,9 +272,9 @@ class TestSessionManager:
         assert info["session_id"] == "test_session"
         assert info["has_cached_query"] is True
         assert info["total_results"] == SAMPLE_RESULTS_COUNT_15
-        assert info["total_pages"] == EXPECTED_PAGES_20_ITEMS
-        assert info["page_size"] == PAGE_SIZE_10
-        assert "flags" in info
+        assert info["total_pages"] == 2  # 15 items with page size 10 = 2 pages
+        assert info["page_size"] == PAGE_SIZE_DEFAULT
+        assert "ran_instructions" in info
         assert "created_at" in info
         assert "last_accessed" in info
 

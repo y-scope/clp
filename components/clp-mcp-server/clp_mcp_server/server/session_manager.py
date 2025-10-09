@@ -1,25 +1,33 @@
 """Session management for CLP MCP Server with pagination support."""
 
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from paginate import Page
 
+from .constants import CLPMcpConstants
+
 
 @dataclass
 class QueryResult:
-    """Represents a cached query result with metadata."""
+    """Cached results from previous query's response."""
 
-    timestamp: datetime
     total_results: list[str]
-    page_size: int = 10
-    max_cached_results: int = 1000
+    total_pages: int = field(init=False)
 
     def __post_init__(self) -> None:
-        """Validate and truncate results if necessary."""
-        if len(self.total_results) > self.max_cached_results:
-            self.total_results = self.total_results[:self.max_cached_results]
+        """
+        Truncate results if they exceed MAX_CACHED_RESULTS.
+        """
+        if len(self.total_results) > CLPMcpConstants.MAX_CACHED_RESULTS:
+            self.total_results = self.total_results[:CLPMcpConstants.MAX_CACHED_RESULTS]
+
+        self.total_pages = (
+            (len(self.total_results) + CLPMcpConstants.PAGE_SIZE - 1)
+            // CLPMcpConstants.PAGE_SIZE
+        )
 
     def get_page(self, page_number: int) -> Page | None:
         """
@@ -31,23 +39,21 @@ class QueryResult:
         if not self.total_results:
             return None
 
-        if page_number > self.get_total_pages() or page_number <= 0:
+        if page_number > self.total_pages or page_number <= 0:
             return None
 
         try:
             return Page(
                 self.total_results,
                 page=page_number,
-                items_per_page=self.page_size,
+                items_per_page=CLPMcpConstants.PAGE_SIZE,
             )
         except (ValueError, IndexError):
             return None
 
     def get_total_pages(self) -> int:
-        """Calculate the total number of pages."""
-        if not self.total_results:
-            return 0
-        return (len(self.total_results) + self.page_size - 1) // self.page_size
+        """Get the total number of pages."""
+        return self.total_pages
 
 
 @dataclass
@@ -55,15 +61,9 @@ class SessionState:
     """Represents the state of a single user session."""
 
     session_id: str
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     current_query_result: QueryResult | None = None
-    flags: dict[str, Any] = field(default_factory=dict)
-
-    def __post_init__(self) -> None:
-        """Initialize default flags if not provided."""
-        if "ran_instructions" not in self.flags:
-            self.flags["ran_instructions"] = False
+    ran_instructions: bool = False
 
     def update_access_time(self) -> None:
         """Update the last accessed timestamp."""
@@ -72,24 +72,14 @@ class SessionState:
     def cache_query_result(
         self,
         results: list[str],
-        page_size: int = 10,
-        max_cached_results: int = 1000,
     ) -> QueryResult:
         """
         Cache a new query result for this session.
 
         :param results: List of log entries
-        :param page_size: Number of items per page
-        :param max_cached_results: Maximum number of results to cache
         :return: The cached QueryResult object
         """
-        self.current_query_result = QueryResult(
-            timestamp=datetime.now(timezone.utc),
-            total_results=results,
-            page_size=page_size,
-            max_cached_results=max_cached_results,
-        )
-        self.update_access_time()
+        self.current_query_result = QueryResult(total_results=results)
         return self.current_query_result
 
     def get_page_data(self, page_index: int) -> dict[str, Any] | None:
@@ -99,8 +89,6 @@ class SessionState:
         :param page_index: 0-based page index
         :return: Dictionary with page data or None if unavailable
         """
-        self.update_access_time()
-
         if not self.current_query_result:
             return None
 
@@ -132,38 +120,106 @@ class SessionState:
         return time_diff > timedelta(minutes=session_ttl_minutes)
 
 
+@dataclass
 class SessionManager:
-    """Manages multiple user sessions with pagination support."""
+    """
+    Session manager with thread-safe dict access.
+    
+    Thread-safety: Lock protects the sessions dict from concurrent
+    modifications by multiple request handlers.
+    """
 
-    def __init__(
-        self,
-        page_size: int = 10,
-        max_cached_results: int = 1000,
-        session_ttl_minutes: int = 60,
-    ) -> None:
-        """
-        Initialize the session manager.
+    sessions: dict[str, SessionState] = field(default_factory=dict)
+    session_ttl_minutes: int = 60
 
-        :param page_size: Default number of items per page
-        :param max_cached_results: Maximum number of results to cache per query
-        :param session_ttl_minutes: Session expiration time in minutes
+    # Lock to protect sessions dict
+    _lock: threading.Lock = field(
+        default_factory=threading.Lock, init=False, repr=False
+    )
+
+    # Timer for periodic cleanup
+    _cleanup_timer: threading.Timer | None = field(
+        default=None, init=False, repr=False
+    )
+    _cleanup_interval_seconds: int = field(default=600, init=False)  # 10 minutes
+
+    def __post_init__(self) -> None:
+        """Initialize the cleanup timer."""
+        self.start_cleanup_timer()
+
+    def __del__(self) -> None:
+        """Cleanup timer when SessionManager is destroyed."""
+        self.stop_cleanup_timer()
+
+    def start_cleanup_timer(self) -> None:
+        """Start the periodic cleanup timer (thread-safe)."""
+        with self._lock:
+            if self._cleanup_timer is not None:
+                self._cleanup_timer.cancel()
+
+            self._cleanup_timer = threading.Timer(
+                self._cleanup_interval_seconds,
+                self._periodic_cleanup
+            )
+            self._cleanup_timer.daemon = True  # Don't prevent program exit
+            self._cleanup_timer.start()
+
+    def stop_cleanup_timer(self) -> None:
+        """Stop the periodic cleanup timer (thread-safe)."""
+        with self._lock:
+            if self._cleanup_timer is not None:
+                self._cleanup_timer.cancel()
+                self._cleanup_timer = None
+
+    def shutdown(self) -> None:
         """
-        self.sessions: dict[str, SessionState] = {}
-        self.page_size = page_size
-        self.max_cached_results = max_cached_results
-        self.session_ttl_minutes = session_ttl_minutes
+        Graceful shutdown of the SessionManager.
+        
+        Call this method when your application is shutting down to ensure
+        proper cleanup of resources.
+        """
+        self.stop_cleanup_timer()
+        # Perform final cleanup of expired sessions
+        self.cleanup_all_expired()
+
+    def _periodic_cleanup(self) -> None:
+        """
+        Internal method for periodic cleanup.
+        
+        This runs in a separate timer thread and schedules the next cleanup.
+        """
+        try:
+            expired_count = self.cleanup_all_expired()
+            # Log cleanup results if needed (optional)
+            # print(f"Cleaned up {expired_count} expired sessions")
+        except Exception:
+            # Silently handle any cleanup errors to prevent timer thread crashes
+            pass
+        finally:
+            # Schedule next cleanup (only if not shutting down)
+            with self._lock:
+                if self._cleanup_timer is not None:  # Check if we're still active
+                    self.start_cleanup_timer()
 
     def get_or_create_session(self, session_id: str) -> SessionState:
         """
-        Get an existing session or create a new one.
-
-        :param session_id: Unique session identifier
-        :return: SessionState object
+        Get an existing session or create a new one (thread-safe).
+        
+        Multiple requests can call this simultaneously, so we need
+        to protect the dict operations.
         """
-        if session_id not in self.sessions:
-            self.sessions[session_id] = SessionState(session_id=session_id)
+        with self._lock:
+            if session_id in self.sessions:
+                session = self.sessions[session_id]
+                if session.is_expired(self.session_ttl_minutes):
+                    del self.sessions[session_id]
 
-        session = self.sessions[session_id]
+            # Create new session if doesn't exist
+            if session_id not in self.sessions:
+                self.sessions[session_id] = SessionState(session_id=session_id)
+
+            session = self.sessions[session_id]
+
         session.update_access_time()
         return session
 
@@ -175,21 +231,15 @@ class SessionManager:
     ) -> tuple[dict[str, Any], int]:
         """
         Cache query results for a session and return the first page.
-
-        :param session_id: Session identifier
-        :param results: List of log entries
-        :param page_size: Optional page size override
-        :return: Tuple of (first page data, total pages)
+        
+        No lock needed after getting session - session object operations
+        are safe (synchronous per session_id).
         """
         session = self.get_or_create_session(session_id)
 
-        query_result = session.cache_query_result(
-            results=results,
-            page_size=page_size or self.page_size,
-            max_cached_results=self.max_cached_results,
-        )
+        # Session operations don't need lock - synchronous per session
+        query_result = session.cache_query_result(results=results)
 
-        # Get the first page
         first_page_data = session.get_page_data(0)
         if not first_page_data:
             return {"items": [], "error": "No results found"}, 0
@@ -199,26 +249,15 @@ class SessionManager:
     def get_nth_page(self, session_id: str, page_index: int) -> dict[str, Any]:
         """
         Retrieve a specific page from the cached query results.
-
-        :param session_id: Session identifier
-        :param page_index: 0-based page index
-        :return: Dictionary with page data or error message
+        
+        Locks when accessing dict, then uses session outside lock.
         """
-        if session_id not in self.sessions:
-            return {"error": "Session not found. Please run a query first."}
+        session = self.get_or_create_session(session_id)
 
-        session = self.sessions[session_id]
-
-        # Check if session has expired
-        if session.is_expired(self.session_ttl_minutes):
-            del self.sessions[session_id]
-            return {"error": "Session expired. Please run a new query."}
-
-        # Check if there's a cached query result
+        # Have session reference, safe to use outside lock
         if not session.current_query_result:
             return {"error": "No cached query results. Please run a query first."}
 
-        # Get the requested page
         page_data = session.get_page_data(page_index)
         if not page_data:
             total_pages = session.current_query_result.get_total_pages()
@@ -229,47 +268,59 @@ class SessionManager:
 
         return page_data
 
-    def get_session_info(self, session_id: str) -> dict[str, Any] | None:
+    def cleanup_all_expired(self) -> int:
         """
-        Get information about a session.
-
-        :param session_id: Session identifier
-        :return: Session information or None if not found
+        Cleanup all expired sessions.
+        
+        Can be called from cron job, admin endpoint, or health check.
+        Thread-safe with lock.
         """
-        if session_id not in self.sessions:
-            return None
+        with self._lock:
+            expired_sessions = [
+                sid for sid, session in self.sessions.items()
+                if session.is_expired(self.session_ttl_minutes)
+            ]
 
-        session = self.sessions[session_id]
-        info = {
-            "session_id": session_id,
-            "created_at": session.created_at.isoformat(),
-            "last_accessed": session.last_accessed.isoformat(),
-            "has_cached_query": session.current_query_result is not None,
-            "flags": session.flags,
-        }
+            for sid in expired_sessions:
+                del self.sessions[sid]
 
-        if session.current_query_result:
-            info.update({
-                "query_timestamp": session.current_query_result.timestamp.isoformat(),
-                "total_results": len(session.current_query_result.total_results),
-                "total_pages": session.current_query_result.get_total_pages(),
-                "page_size": session.current_query_result.page_size,
-            })
-
-        return info
+            return len(expired_sessions)
 
     def cleanup_expired_sessions(self) -> int:
         """
-        Remove expired sessions from memory.
-
+        Cleanup expired sessions (alias for cleanup_all_expired for backward compatibility).
+        
         :return: Number of sessions removed
         """
-        expired_sessions = [
-            sid for sid, session in self.sessions.items()
-            if session.is_expired(self.session_ttl_minutes)
-        ]
+        return self.cleanup_all_expired()
 
-        for sid in expired_sessions:
-            del self.sessions[sid]
-
-        return len(expired_sessions)
+    def get_session_info(self, session_id: str) -> dict[str, Any] | None:
+        """
+        Get information about a session.
+        
+        :param session_id: The session ID to get info for
+        :return: Dictionary with session info or None if session doesn't exist
+        """
+        with self._lock:
+            if session_id not in self.sessions:
+                return None
+            
+            session = self.sessions[session_id]
+        
+        # Build session info outside the lock
+        info = {
+            "session_id": session.session_id,
+            "has_cached_query": session.current_query_result is not None,
+            "ran_instructions": session.ran_instructions,
+            "created_at": session.last_accessed.isoformat(),  # Using last_accessed as created_at since we don't have created_at field
+            "last_accessed": session.last_accessed.isoformat(),
+        }
+        
+        if session.current_query_result:
+            info.update({
+                "total_results": len(session.current_query_result.total_results),
+                "total_pages": session.current_query_result.get_total_pages(),
+                "page_size": CLPMcpConstants.PAGE_SIZE,
+            })
+        
+        return info
