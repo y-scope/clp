@@ -142,10 +142,8 @@ services:
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
-      queue:
-        condition: "service_healthy"
-      redis:
-        condition: "service_healthy"
+      spider-scheduler:
+        condition: "service_started"
     command: [
       "python3",
       "-u",

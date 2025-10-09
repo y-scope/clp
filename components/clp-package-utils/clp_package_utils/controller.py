@@ -200,7 +200,11 @@ class BaseController(ABC):
             return {}
         logger.info(f"Setting up environment for {component_name}...")
 
-        return {"SPIDER_DB_URL": self.clp_config.spider_db.get_url()}
+        return {
+            "SPIDER_DB_USER": self.clp_config.spider_db.username,
+            "SPIDER_DB_PASS": self.clp_config.spider_db.password,
+            "SPIDER_DB_URL": self.clp_config.spider_db.get_url(),
+        }
 
     def _set_up_env_for_spider_scheduler(self) -> EnvVarsDict:
         """
