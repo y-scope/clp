@@ -7,7 +7,6 @@ from typing import Any, Dict, Optional
 import yaml
 from dotenv import dotenv_values
 
-
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter(
