@@ -7,6 +7,9 @@ from typing import Any, Dict, Optional
 import yaml
 from dotenv import dotenv_values
 
+# Use `CSafeLoader` when available as it offers faster C-based parsing.
+YAML_LOADER = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
+
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter(
@@ -53,7 +56,7 @@ def main(argv=None) -> int:
         return 1
 
     with open(clp_config_file_path, "r") as clp_config_file:
-        clp_config = yaml.safe_load(clp_config_file)
+        clp_config = yaml.load(clp_config_file, Loader=YAML_LOADER)
 
     env_vars: Dict[str, str] = {}
     if not _add_clp_env_vars(clp_config, clp_config_file_path, clp_package_dir, env_vars):
@@ -149,7 +152,7 @@ def _add_clp_env_vars(
         return False
 
     with open(credentials_file_path, "r") as credentials_file:
-        credentials = yaml.safe_load(credentials_file)
+        credentials = yaml.load(credentials_file, Loader=YAML_LOADER)
 
     try:
         database_user = _get_required_config_value(
