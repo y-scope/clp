@@ -3,7 +3,7 @@ import logging
 import pathlib
 import sys
 
-from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, OrchestrationType
 
 from clp_package_utils.controller import DockerComposeController, get_or_create_instance_id
 from clp_package_utils.general import (
@@ -12,6 +12,7 @@ from clp_package_utils.general import (
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
+    validate_and_load_spider_db_credentials_file,
     validate_logs_input_config,
     validate_output_storage_config,
     validate_retention_config,
@@ -40,8 +41,12 @@ def main(argv):
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
 
         validate_and_load_db_credentials_file(clp_config, clp_home, True)
-        validate_and_load_queue_credentials_file(clp_config, clp_home, True)
-        validate_and_load_redis_credentials_file(clp_config, clp_home, True)
+        if clp_config.queue is not None:
+            validate_and_load_queue_credentials_file(clp_config, clp_home, True)
+        if clp_config.redis is not None:
+            validate_and_load_redis_credentials_file(clp_config, clp_home, True)
+        if clp_config.spider_db is not None:
+            validate_and_load_spider_db_credentials_file(clp_config, clp_home, True)
         validate_logs_input_config(clp_config)
         validate_output_storage_config(clp_config)
         validate_retention_config(clp_config)
