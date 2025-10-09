@@ -73,22 +73,6 @@ Each file defines services with:
 * Network configuration
 * User permissions
 
-### Health check defaults
-
-Below are the default health check settings and the rationale for each:
-
-* `interval: 30s` — default probe interval in steady state. Avoid setting this too low to avoid 
-  excessive resource usage.
-* `timeout: 2s` — no remote communication is expected, so a short timeout is sufficient.
-* `retries: 3`
-  - a service is deemed unhealthy if it does not respond in ~(30s * 3) = 90s since it is in the
-    steady state.
-  - a service is deemed unhealthy if it does not respond within ~(60s + 90s) since it is started.
-* `start_interval: 2s` — A short interval allows the service to become healthy quickly once it 
-  is ready, allowing other services which depend on it to start.
-* `start_period: 60s` — the first minute of startup ignores failures, effectively granting around 30
-  fast attempts to become healthy before retries start counting.
-
 ## Service architecture
 
 The Docker Compose setup includes the following services:
