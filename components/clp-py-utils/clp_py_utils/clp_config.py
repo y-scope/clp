@@ -26,6 +26,7 @@ from .core import (
 DB_COMPONENT_NAME = "database"
 QUEUE_COMPONENT_NAME = "queue"
 REDIS_COMPONENT_NAME = "redis"
+SPIDER_SCHEDULER_COMPONENT_NAME = "spider_scheduler"
 REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
@@ -277,10 +278,15 @@ class SpiderDb(Database):
         if value != "mariadb":
             raise ValueError(f"Spider only support MariaDB storage.")
 
+    def get_url(self):
+        self.ensure_credentials_loaded()
+        return f"mariadb://{self.host}:{self.port}/{self.name}?user={self.username}&password={self.password}"
+
 
 class SpiderScheduler(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 6000
 
+    host: str = "localhost"
     port: int = DEFAULT_PORT
 
     @field_validator("port")

@@ -28,6 +28,7 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SPIDER_SCHEDULER_COMPONENT_NAME,
     StorageEngine,
     StorageType,
     WEBUI_COMPONENT_NAME,
@@ -130,9 +131,13 @@ class BaseController(ABC):
         """
         Prepares environment variables and directories for the message queue component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of component-related environment variables. Empty if queue is not
+         configured.
         """
         component_name = QUEUE_COMPONENT_NAME
+        if self.clp_config.queue is None:
+            logger.info(f"{component_name} is not configured, skipping setup.")
+            return {}
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self.clp_config.logs_directory / component_name
@@ -152,9 +157,13 @@ class BaseController(ABC):
         """
         Prepares environment variables and directories for the Redis component.
 
-        :return: Dictionary of component-related environment variables.
+        :return: Dictionary of component-related environment variables. Empty if Redis is not
+         configured.
         """
         component_name = REDIS_COMPONENT_NAME
+        if self.clp_config.redis is None:
+            logger.info(f"{component_name} is not configured, skipping setup.")
+            return {}
         logger.info(f"Setting up environment for {component_name}...")
 
         conf_file = self._conf_dir / "redis" / "redis.conf"
@@ -176,6 +185,43 @@ class BaseController(ABC):
             "CLP_REDIS_COMPRESSION_BACKEND_DB": str(
                 self.clp_config.redis.compression_backend_database
             ),
+        }
+
+    def _set_up_env_for_spider_db(self) -> EnvVarsDict:
+        """
+        Prepares environment variables and directories for the spider database component.
+
+        :return: Dictionary of component-related environment variables. Empty if spider DB is not
+         configured.
+        """
+        component_name = "spider_db"
+        if self.clp_config.spider_db is None:
+            logger.info(f"{component_name} is not configured, skipping setup.")
+            return {}
+        logger.info(f"Setting up environment for {component_name}...")
+
+        return {"SPIDER_DB_URL": self.clp_config.spider_db.get_url()}
+
+    def _set_up_env_for_spider_scheduler(self) -> EnvVarsDict:
+        """
+        Prepares environment variables and files for the spider scheduler component.
+
+        :return: Dictionary of component-related environment variables. Empty if spider scheduler
+         is not configured.
+        """
+        component_name = SPIDER_SCHEDULER_COMPONENT_NAME
+        if self.clp_config.spider_scheduler is None:
+            logger.info(f"{component_name} is not configured, skipping setup.")
+            return {}
+        logger.info(f"Setting up environment for {component_name}...")
+
+        logs_file = self.clp_config.logs_directory / f"{component_name}.log"
+        logs_file.touch(mode=LOGS_FILE_MODE, exist_ok=True)
+
+        return {
+            "SPIDER_SCHEDULER_LOGS_FILE_HOST": str(logs_file),
+            "SPIDER_SCHEDULER_HOST": _get_ip_from_hostname(self.clp_config.spider_scheduler.host),
+            "SPIDER_SCHEDULER_PORT": str(self.clp_config.scheduler.port),
         }
 
     def _set_up_env_for_results_cache(self) -> EnvVarsDict:
@@ -552,6 +598,8 @@ class DockerComposeController(BaseController):
             **self._set_up_env_for_database(),
             **self._set_up_env_for_queue(),
             **self._set_up_env_for_redis(),
+            **self._set_up_env_for_spider_db(),
+            **self._set_up_env_for_spider_scheduler(),
             **self._set_up_env_for_results_cache(),
             **self._set_up_env_for_compression_scheduler(),
             **self._set_up_env_for_query_scheduler(),
