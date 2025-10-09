@@ -32,6 +32,8 @@ def main(argv):
     try:
         clp_config = CLPConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
+        if clp_config.spider_db is None:
+            return 0
         clp_config.spider_db.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
         logger.error(err)
