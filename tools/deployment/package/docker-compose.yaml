@@ -64,7 +64,6 @@ services:
     ]
     healthcheck:
       <<: *healthcheck_defaults
-      # FIXME: need to suppressing warnings in the scheduler for reading 0 out of 8 expected bytes
       test: [
         "CMD",
         "bash",
