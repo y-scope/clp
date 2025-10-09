@@ -42,22 +42,17 @@ class QueryResult:
         Get a specific page from the cached response.
 
         :param page_number: 1-based indexing, e.g., 1 for the first page
-        :return: Page object or None if failed to get the page
+        :return: Page object or None if page number is out of bounds
         """
-        if self.total_results is None:
-            return None
-
         if page_number > self.total_pages or page_number <= 0:
             return None
 
-        try:
-            return Page(
-                self.total_results,
-                page=page_number,
-                items_per_page=self.items_per_page,
-            )
-        except (ValueError, IndexError):
-            return None
+        return Page(
+            self.total_results,
+            page=page_number,
+            items_per_page=self.items_per_page,
+        )
+
 
     @property
     def total_pages(self) -> int:
@@ -67,13 +62,13 @@ class QueryResult:
 
 @dataclass
 class SessionState:
-    """Represents the state of a single user session."""
+    """States of a single user session."""
 
     session_id: str
     items_per_page: int
     session_ttl_minutes: int
     last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    current_query_result: QueryResult | None = None
+    cached_query_result: QueryResult | None = None
     ran_instructions: bool = False
 
     def update_access_time(self) -> None:
@@ -85,36 +80,38 @@ class SessionState:
         results: list[str],
     ) -> QueryResult:
         """
-        Cache a new query result for this session.
+        Cache the lastest query result of the session.
 
         :param results: List of log entries
         :return: The cached QueryResult object
         """
-        self.current_query_result = QueryResult(
+        self.cached_query_result = QueryResult(
             total_results=results,
             items_per_page=self.items_per_page
         )
-        return self.current_query_result
+        return self.cached_query_result
 
-    def get_page_data(self, page_index: int) -> dict[str, Any] | None:
+    def get_page_data(self, page_index: int) -> dict[str, Any]:
         """
         Get page data in a dictionary format.
 
         :param page_index: 0-based page index
         :return: Dictionary with page data or None if unavailable
         """
-        if not self.current_query_result:
-            return None
+        if self.cached_query_result is None:
+            return {
+                "Error": "No previous paginated response in this session."
+            }
 
         # Convert 0-based index to 1-based page number for paginate library
         page_number = page_index + 1
         page = self.current_query_result.get_page(page_number)
 
-        if not page:
-            return None
+        if page is None:
+            return { "Error": "Page index is out of bounds"}
 
         return {
-            "items": list(page),
+            "items": page,
             "page_number": page.page,
             "total_pages": page.page_count,
             "total_items": page.item_count,
@@ -125,9 +122,7 @@ class SessionState:
 
     def is_expired(self) -> bool:
         """
-        Check if the session has expired.
-
-        :return: True if expired, False otherwise
+        :return: whether the session has expired.
         """
         time_diff = datetime.now(timezone.utc) - self.last_accessed
         return time_diff > timedelta(minutes=self.session_ttl_minutes)
