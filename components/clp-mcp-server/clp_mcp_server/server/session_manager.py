@@ -11,34 +11,40 @@ from paginate import Page
 from .constants import CLPMcpConstants
 
 
-@dataclass
+@dataclass(frozen=True)
 class QueryResult:
     """Cached results from previous query's response."""
 
     total_results: list[str]
-    page_size: int
-    total_pages: int = field(init=False)
+    items_per_page: int
+
+    _total_pages: int = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         """
-        Truncate results if they exceed MAX_CACHED_RESULTS.
+        Validate that the number of log entries in the cached response is up to MAX_CACHED_RESULTS.
         """
         if len(self.total_results) > CLPMcpConstants.MAX_CACHED_RESULTS:
-            self.total_results = self.total_results[:CLPMcpConstants.MAX_CACHED_RESULTS]
+            err_msg = (
+                f"QueryResult exceeds maximum allowed cached results: "
+                f"{len(self.total_results)} > {CLPMcpConstants.MAX_CACHED_RESULTS}. "
+            )
+            raise ValueError(err_msg)
 
-        self.total_pages = (
-            (len(self.total_results) + self.page_size - 1)
-            // self.page_size
+        object.__setattr__(
+            self, '_total_pages',
+            (len(self.total_results) + self.items_per_page - 1)
+            // self.items_per_page
         )
 
     def get_page(self, page_number: int) -> Page | None:
         """
-        Get a specific page from the cached results.
+        Get a specific page from the cached response.
 
-        :param page_number: 1-based page number
-        :return: Page object or None if page number is invalid
+        :param page_number: 1-based indexing, e.g., 1 for the first page
+        :return: Page object or None if failed to get the page
         """
-        if not self.total_results:
+        if self.total_results is None:
             return None
 
         if page_number > self.total_pages or page_number <= 0:
@@ -48,14 +54,15 @@ class QueryResult:
             return Page(
                 self.total_results,
                 page=page_number,
-                items_per_page=self.page_size,
+                items_per_page=self.items_per_page,
             )
         except (ValueError, IndexError):
             return None
 
-    def get_total_pages(self) -> int:
-        """Get the total number of pages."""
-        return self.total_pages
+    @property
+    def total_pages(self) -> int:
+        """:return: Total number of pages."""
+        return self._total_pages
 
 
 @dataclass
@@ -63,7 +70,7 @@ class SessionState:
     """Represents the state of a single user session."""
 
     session_id: str
-    page_size: int
+    items_per_page: int
     session_ttl_minutes: int
     last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     current_query_result: QueryResult | None = None
@@ -85,7 +92,7 @@ class SessionState:
         """
         self.current_query_result = QueryResult(
             total_results=results,
-            page_size=self.page_size
+            items_per_page=self.items_per_page
         )
         return self.current_query_result
 
@@ -131,7 +138,7 @@ class SessionManager:
 
     def __init__(
         self,
-        page_size: int,
+        items_per_page: int,
         session_ttl_minutes: int
     ):
         """
@@ -140,7 +147,7 @@ class SessionManager:
         :param page_size: Number of items per page (defaults to CLPMcpConstants.PAGE_SIZE)
         :param session_ttl_minutes: Session TTL in minutes (defaults to CLPMcpConstants.SESSION_TTL_MINUTES)
         """
-        self.page_size = page_size
+        self.items_per_page = items_per_page
         self.session_ttl_minutes = session_ttl_minutes
         self._sessions_lock = threading.Lock()
         self.sessions: dict[str, SessionState] = {}
@@ -165,7 +172,7 @@ class SessionManager:
             
             if session_id not in self.sessions:
                 self.sessions[session_id] = SessionState(
-                    session_id, self.page_size, self.session_ttl_minutes
+                    session_id, self.items_per_page, self.session_ttl_minutes
                 )
             
             session = self.sessions[session_id]
@@ -177,7 +184,7 @@ class SessionManager:
         self,
         session_id: str,
         results: list[str],
-        page_size: int | None = None,
+        items_per_page: int | None = None,
     ) -> tuple[dict[str, Any], int]:
         """
         Cache query results for a session and return the first page.
@@ -204,7 +211,6 @@ class SessionManager:
         """
         session = self.get_or_create_session(session_id)
 
-        # Have session reference, safe to use outside lock
         if not session.current_query_result:
             return {"error": "No cached query results. Please run a query first."}
 

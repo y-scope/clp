@@ -19,7 +19,10 @@ def create_mcp_server() -> FastMCP:
     """
     mcp = FastMCP(name=CLPMcpConstants.SERVER_NAME)
 
-    session_manager = SessionManager(CLPMcpConstants.PAGE_SIZE, CLPMcpConstants.SESSION_TTL_MINUTES)
+    session_manager = SessionManager(
+        CLPMcpConstants.ITEM_PER_PAGE, 
+        CLPMcpConstants.SESSION_TTL_MINUTES
+    )
 
     def validate_session_initialized(session_id: str) -> str | None:
         """

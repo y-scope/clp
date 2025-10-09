@@ -29,7 +29,7 @@ class CLPMcpConstants:
     )
 
 
-    PAGE_SIZE = 10
+    ITEM_PER_PAGE = 10
     MAX_CACHED_RESULTS = 1000
     SESSION_TTL_MINUTES = 60
     CLEAN_UP_SECONDS = 600  # 10 minutes
