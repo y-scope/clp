@@ -4,46 +4,90 @@ This document explains the technical details of CLP's Docker Compose implementat
 
 ## Overview
 
-The Docker Compose implementation depends on a new controller architecture with a `BaseController`
-abstract class and a `DockerComposeController` implementation.
+The Docker Compose implementation follows a controller architecture with a `BaseController` abstract
+class and a `DockerComposeController` implementation.
 
 ## Architecture
 
-### Controller
+### Controller Pattern
 
-The orchestration implementation uses a controller pattern:
+The orchestration uses a controller pattern:
 
 * `BaseController` (abstract): Defines the interface for provisioning and managing CLP components.
-* `DockerComposeController`: Implements the Docker Compose-specific logic.
+* `DockerComposeController`: Implements Docker Compose-specific logic.
 
-### Initialization
+## Initialization
 
-1. **Provisioning Methods**: Each CLP component has a dedicated provisioning method in the 
-   controller: `provision_<component-name>()`.
-2. **Environment Generation**: The controller generates a `.env` file with all necessary environment 
-   variables for Docker Compose.
-3. **Configuration Transformation**: The `transform_for_container_config()` method in `CLPConfig`
-   and related classes adapts the configuration for containerized environments.
+The controller performs these initialization steps:
 
-## Docker Compose File
+1. **Provisioning**: Provisions all components and generates component specific configuration
+   variables.
+2. **Configuration Transformation**: The `transform_for_container()` method in `CLPConfig` adapts
+   configurations for containerized environments
+3. **Environment Generation**: Creates a `.env` file with necessary Docker Compose variables  
 
-The `docker-compose.yaml` file defines all services with:
+### Configuration Transformation
 
-* Proper service dependencies using `depends_on`
-* Health checks for critical services
-* Volume mounts for persistent data
-* Network configuration
-* User permissions
-* Resource limits
+The `transform_for_container()` method in the `CLPConfig` class and related component classes
+adapts the configuration for containerized environments by:
+
+1. Converting host paths to container paths
+2. Updating service hostnames to match Docker Compose service names
+3. Setting appropriate ports for container communication
+
+### Environment Variables
+
+The controller generates a comprehensive set of environment variables that are written to a `.env`
+file, including:
+
+* Component-specific settings (ports, logging levels, concurrency)
+* Credentials for database, queue, and Redis services
+* Paths for data, logs, archives, and streams
+* AWS credentials when needed
 
 ## Deployment Process
 
-The `start-clp.py` script performs the following steps:
+The `start-clp.sh` script executes the `start_clp.py` Python script to orchestrate the deployment.
 
-1. **Configuration Loading**: The start script loads and validates the CLP configuration.
-2. **Provisioning**: The controller provisions all components and generates environment variables.
-3. **Environment File Generation**: A `.env` file is created with all necessary variables.
-4. **Docker Compose Execution**: `docker compose up -d` is executed to start all services.
+### Deployment Types
+
+CLP supports two deployment types determined by the `package.query_engine` configuration setting:
+
+1. **BASE**: For deployments using [Presto][presto-integration] as the query engine. Uses only
+   `docker-compose.base.yaml`.
+2. **FULL**: For deployments using CLP's native query engine. Uses both compose files.
+
+## Docker Compose Files
+
+The Docker Compose setup uses two files:
+
+* `docker-compose.base.yaml`: Defines base services for all deployment types, excluding Celery
+  scheduler and worker components to allow separate Presto [integration][presto-integration].
+* `docker-compose.yaml`: Extends the base file with additional services for complete deployments
+
+Each file defines services with:
+
+* Service dependencies via `depends_on`
+* Health checks for critical services
+* Volume binding mounts for persistent data
+* Network configuration
+* User permissions
+
+### Health check defaults
+
+Below are the default health check settings and the rationale for each:
+
+* `interval: 30s` — default probe interval in steady state. Avoid setting this too low to avoid 
+  excessive resource usage.
+* `timeout: 2s` — no remote communication is expected, so a short timeout is sufficient.
+* `retries: 3`
+  - a service is deemed unhealthy if it does not respond in ~(30s * 3) = 90s since it is in the
+    steady state.
+  - a service is deemed unhealthy if it does not respond within ~(60s + 90s) since it is started.
+* `start_interval: 2s` — A short interval allows the service to become healthy quickly once it 
+  is ready, allowing other services which depend on it to start.
+* `start_period: 60s` — the first minute of startup ignores failures, effectively granting around 30
+  fast attempts to become healthy before retries start counting.
 
 ## Service architecture
 
@@ -115,7 +159,8 @@ graph LR
 
 ### Services overview
 
-The CLP package is composed of several service components. The tables below list the services and their functions.
+The CLP package is composed of several service components. The tables below list the services and
+their functions.
 
 :::{table} Services
 :align: left
@@ -166,3 +211,5 @@ If you encounter issues with the Docker Compose deployment:
    ```bash
    docker compose config
    ```
+
+[presto-integration]: ../user-docs/guides-using-presto.md

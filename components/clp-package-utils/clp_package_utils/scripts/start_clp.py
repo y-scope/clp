@@ -35,8 +35,8 @@ def main(argv):
 
     parsed_args = args_parser.parse_args(argv[1:])
 
-    # Validate and load config file
     try:
+        # Validate and load config file.
         config_file_path = pathlib.Path(parsed_args.config)
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
 
@@ -54,20 +54,24 @@ def main(argv):
         clp_config.validate_data_dir()
         clp_config.validate_logs_dir()
         clp_config.validate_aws_config_dir()
+    except:
+        logger.exception("Failed to load config.")
+        return -1
 
-        # Create necessary directories
+    try:
+        # Create necessary directories.
         clp_config.data_directory.mkdir(parents=True, exist_ok=True)
         clp_config.logs_directory.mkdir(parents=True, exist_ok=True)
         clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
         clp_config.stream_output.get_directory().mkdir(parents=True, exist_ok=True)
     except:
-        logger.exception("Failed to load config.")
+        logger.exception("Failed to create necessary directories.")
         return -1
 
     instance_id = get_or_create_instance_id(clp_config)
     try:
         controller = DockerComposeController(clp_config, instance_id)
-        controller.deploy()
+        controller.start()
     except Exception as ex:
         if type(ex) == ValueError:
             logger.error(f"Failed to start CLP: {ex}")
