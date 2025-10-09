@@ -948,8 +948,9 @@ class CLPConfig(BaseModel):
 
     package: Package = Package()
     database: Database = Database()
-    queue: Optional[Queue] = None
-    redis: Optional[Redis] = None
+    # Default to use celery backend
+    queue: Optional[Queue] = Queue()
+    redis: Optional[Redis] = Redis()
     reducer: Reducer = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
