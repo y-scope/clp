@@ -10,6 +10,7 @@ from clp_py_utils.clp_config import (
     QUERY_TASKS_TABLE_NAME,
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
+
 from job_orchestration.scheduler.constants import (
     CompressionJobStatus,
     CompressionTaskStatus,

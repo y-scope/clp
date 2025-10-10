@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "YScope Inc.", email = "dev@yscope.com" }
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 [project.scripts]
 integration-tests = "integration_tests:main"

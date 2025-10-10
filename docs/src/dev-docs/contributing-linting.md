@@ -13,7 +13,7 @@ To run the linting tools, besides commonly installed tools like `tar`, you'll ne
 
 * `curl`
 * `md5sum`
-* Python 3.9 or newer
+* Python 3.10 or newer
 * python3-venv (for the version of Python installed)
 * [Task] 3.44.0
   * We pin the version to 3.44.0 due to [y-scope/clp#1352].
