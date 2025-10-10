@@ -135,6 +135,19 @@ set(
 )
 
 if(CLP_BUILD_EXECUTABLES)
+        clp_find_absl()
+        clp_find_boost()
+        clp_find_date()
+        clp_find_fmt()
+        clp_find_log_surgeon()
+        clp_find_mariadb_client()
+        clp_find_msgpack()
+        clp_find_nlohmann_json()
+        clp_find_spdlog()
+        clp_find_sqlite()
+        clp_find_ystdlib()
+        clp_find_zstd()
+
         add_executable(clg ${CLG_SOURCES})
         target_compile_features(clg PRIVATE cxx_std_20)
         target_include_directories(clg
