@@ -317,10 +317,13 @@ class OrchestrationType(KebabCaseStrEnum):
     spider = auto()
 
 
+OrchestrationTypeStr = Annotated[OrchestrationType, StrEnumSerializer]
+
+
 class CompressionScheduler(BaseModel):
     jobs_poll_delay: float = 0.1  # seconds
     logging_level: str = "INFO"
-    type: OrchestrationType = OrchestrationType.celery
+    type: OrchestrationTypeStr = OrchestrationType.celery
 
     @field_validator("logging_level")
     @classmethod
