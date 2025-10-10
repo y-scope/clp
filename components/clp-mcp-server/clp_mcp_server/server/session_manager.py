@@ -13,7 +13,7 @@ from .constants import CLPMcpConstants
 
 @dataclass(frozen=True)
 class QueryResult:
-    """Cached results from previous query's response."""
+    """Cached results from the previous query's response."""
 
     total_results: list[str]
     items_per_page: int
@@ -130,9 +130,11 @@ class SessionManager:
         :param session_ttl_minutes: Session time-to-live in minutes.
         """
         self.session_ttl_minutes = session_ttl_minutes
-        # sessions is a shared variable as there may be multiple session attached to the MCP server
-        # session state is NOT a shared variable because each session is accessed by only one
-        # connection at a time, and API calls for a single session are synchronous.
+        """
+        sessions is a shared variable as there may be multiple session attached to the MCP server
+        session state is NOT a shared variable because each session is accessed by only one
+        connection at a time, and API calls for a single session are synchronous.
+        """
         self._sessions_lock = threading.Lock()
         self.sessions: dict[str, SessionState] = {}
         self._cleanup_thread = threading.Thread(target=self._cleanup_loop, daemon=True)
@@ -177,7 +179,7 @@ class SessionManager:
 
     def cache_query_result(self, session_id: str, query_results: list[str]) -> dict[str, Any]:
         """
-        Caches query results for a session and return the first page and the paging metadata.
+        Caches query results for a session and returns the first page and the paging metadata.
 
         :param session_id: Unique identifier for the session.
         :param query_results: Complete log entries from previous query for caching.
@@ -203,7 +205,7 @@ class SessionManager:
 
         :param session_id: Unique identifier for the session.
         :param page_index: Zero-based index, e.g., 0 for the first page.
-        :return: Forwards `get_page_data`'s return values.
+        :return: Forwards `SessionState.get_page_data`'s return values.
         """
         session = self.get_or_create_session(session_id)
         if session.ran_instructions is False:
