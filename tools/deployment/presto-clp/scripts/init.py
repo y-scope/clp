@@ -53,7 +53,7 @@ def main(argv=None) -> int:
         return 1
 
     with open(clp_config_file_path, "r") as clp_config_file:
-        clp_config = yaml.safe_load(clp_config_file)
+        clp_config = yaml.load(clp_config_file, Loader=yaml.CSafeLoader)
 
     env_vars: Dict[str, str] = {}
     if not _add_clp_env_vars(clp_config, clp_config_file_path, clp_package_dir, env_vars):
@@ -149,7 +149,7 @@ def _add_clp_env_vars(
         return False
 
     with open(credentials_file_path, "r") as credentials_file:
-        credentials = yaml.safe_load(credentials_file)
+        credentials = yaml.load(credentials_file, Loader=yaml.CSafeLoader)
 
     try:
         database_user = _get_required_config_value(
