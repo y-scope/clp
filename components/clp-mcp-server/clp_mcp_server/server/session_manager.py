@@ -1,4 +1,4 @@
-"""Session management for CLP MCP Server with pagination support."""
+"""Session management for CLP MCP Server."""
 
 import threading
 import time
@@ -21,7 +21,7 @@ class QueryResult:
     _total_pages: int = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        """Validates that the number of log entries in the cache is up to MAX_CACHED_RESULTS."""
+        """Validates that cached results don't exceed MAX_CACHED_RESULTS."""
         if len(self.total_results) > CLPMcpConstants.MAX_CACHED_RESULTS:
             err_msg = (
                 f"QueryResult exceeds maximum allowed cached results: "
@@ -68,7 +68,7 @@ class SessionState:
         results: list[str],
     ) -> None:
         """
-        Caches the lastest query result of the session.
+        Caches the latest query result of the session.
 
         :param query_results: Complete log entries to cache
         """
@@ -115,7 +115,7 @@ class SessionManager:
 
     def __init__(self, session_ttl_minutes: int) -> None:
         """
-        Initializes the SessionManager.
+        Initializes the SessionManager and starts background cleanup thread.
 
         :param session_ttl_minutes: Session time-to-live in minutes.
         """
@@ -129,7 +129,7 @@ class SessionManager:
         self._cleanup_thread.start()
 
     def _cleanup_loop(self) -> None:
-        """Cleans up all expired sessions periodically."""
+        """Cleans up all expired sessions periodically in a separate cleanup thread."""
         while True:
             time.sleep(CLPMcpConstants.CLEAN_UP_SECONDS)
             self.cleanup_expired_sessions()

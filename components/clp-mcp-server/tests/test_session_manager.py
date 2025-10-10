@@ -29,7 +29,7 @@ class TestQueryResult:
     """Unit tests for QueryResult class."""
 
     def test_query_result_initialization(self) -> None:
-        """Validates QueryResult errors out on too many results."""
+        """Validates QueryResult raises ValueError when results exceed MAX_CACHED_RESULTS."""
         # Create a result with more than max_cached_results
         large_results = [f"log_{i}" for i in range(1500)]
         with pytest.raises(ValueError, match="exceeds maximum allowed cached results"):
@@ -159,7 +159,7 @@ class TestSessionManager:
         assert session1_again is session1
 
     def test_cached_query_result(self) -> None:
-        """Validates caching query results."""
+        """Validates caching query results returns correct first page data."""
         manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
         results = [f"log_{i}" for i in range(25)]
         manager.get_or_create_session("test_session")
@@ -204,7 +204,7 @@ class TestSessionManager:
         assert "No previous paginated response in this session." in page_data["Error"]
 
     def test_no_get_instruction(self) -> None:
-        """Validates the error handling when get_instruction is not run."""
+        """Validates error handling when get_instructions() has not been called."""
         manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
         manager.get_or_create_session("test_session")
 
@@ -238,7 +238,7 @@ class TestSessionManager:
         manager = SessionManager(session_ttl_minutes=10)
 
         def cleanup_task() -> None:
-            """Continuously cleanup expired sessions."""
+            """Continuously expires some sessions and cleans up expired sessions."""
             for _ in range(10000):
                 for i in range(50):
                     session = manager.get_or_create_session(f"session_{i}")
@@ -247,7 +247,7 @@ class TestSessionManager:
                 manager.cleanup_expired_sessions()
 
         def access_task() -> None:
-            """Continuously create and access sessions."""
+            """Continuously creates and accesses sessions."""
             for i in range(10000):
                 session_id = f"session_{i % 50}"
                 manager.get_or_create_session(session_id)
@@ -259,7 +259,7 @@ class TestSessionManager:
             futures.append(executor.submit(access_task))
 
             for future in futures:
-                future.result() # ensure no run time exceptions
+                future.result() # ensure thread completion with no run time exceptions
 
 
 if __name__ == "__main__":
