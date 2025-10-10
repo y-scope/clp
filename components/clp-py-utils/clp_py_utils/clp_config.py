@@ -104,7 +104,8 @@ NonEmptyStr = Annotated[str, Field(min_length=1)]
 PositiveFloat = Annotated[float, Field(gt=0)]
 PositiveInt = Annotated[int, Field(gt=0)]
 # Specific types
-Host = NonEmptyStr
+# TODO: Replace this with pydantic_extra_types.domain.DomainStr.
+DomainStr = NonEmptyStr
 Port = Annotated[int, Field(gt=0, lt=2**16)]
 ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
 
@@ -172,7 +173,7 @@ class Package(BaseModel):
 
 class Database(BaseModel):
     type: DatabaseEngine = DatabaseEngine.MARIADB
-    host: Host = "localhost"
+    host: DomainStr = "localhost"
     port: Port = 3306
     name: NonEmptyStr = "clp-db"
     ssl_cert: Optional[NonEmptyStr] = None
@@ -261,7 +262,7 @@ class CompressionScheduler(BaseModel):
 
 
 class QueryScheduler(BaseModel):
-    host: Host = "localhost"
+    host: DomainStr = "localhost"
     port: Port = 7000
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
     num_archives_to_search_per_sub_job: PositiveInt = 16
@@ -277,7 +278,7 @@ class QueryWorker(BaseModel):
 
 
 class Redis(BaseModel):
-    host: Host = "localhost"
+    host: DomainStr = "localhost"
     port: Port = 6379
     query_backend_database: int = 0
     compression_backend_database: int = 1
@@ -306,14 +307,14 @@ class Redis(BaseModel):
 
 
 class Reducer(BaseModel):
-    host: Host = "localhost"
+    host: DomainStr = "localhost"
     base_port: Port = 14009
     logging_level: LoggingLevel = "INFO"
     upsert_interval: PositiveInt = 100  # milliseconds
 
 
 class ResultsCache(BaseModel):
-    host: Host = "localhost"
+    host: DomainStr = "localhost"
     port: Port = 27017
     db_name: NonEmptyStr = "clp-query-results"
     stream_collection_name: NonEmptyStr = "stream-files"
@@ -324,7 +325,7 @@ class ResultsCache(BaseModel):
 
 
 class Queue(BaseModel):
-    host: Host = "localhost"
+    host: DomainStr = "localhost"
     port: Port = 5672
 
     username: Optional[NonEmptyStr] = None
@@ -543,7 +544,7 @@ class StreamOutput(BaseModel):
 
 
 class WebUi(BaseModel):
-    host: Host = "localhost"
+    host: DomainStr = "localhost"
     port: Port = 4000
     results_metadata_collection_name: NonEmptyStr = "results-metadata"
     rate_limit: PositiveInt = 1000
@@ -562,7 +563,7 @@ class GarbageCollector(BaseModel):
 
 
 class Presto(BaseModel):
-    host: Host
+    host: DomainStr
     port: Port
 
 
