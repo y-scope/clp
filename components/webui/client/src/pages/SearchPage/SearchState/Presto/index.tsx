@@ -9,7 +9,6 @@ import {PRESTO_SQL_INTERFACE} from "./typings";
  */
 const PRESTO_SEARCH_STATE_DEFAULT = Object.freeze({
     from: null,
-    limit: 10,
     orderBy: "",
     select: "*",
     sqlInterface: PRESTO_SQL_INTERFACE.FREEFORM,
@@ -22,11 +21,6 @@ interface PrestoSearchState {
      * FROM input.
      */
     from: Nullable<string>;
-
-    /**
-     * LIMIT input.
-     */
-    limit: number;
 
     /**
      * ORDER BY input.
@@ -55,7 +49,6 @@ interface PrestoSearchState {
 
     setSqlInterface: (iface: PRESTO_SQL_INTERFACE) => void;
     updateFrom: (database: Nullable<string>) => void;
-    updateLimit: (value: number) => void;
     updateOrderBy: (items: string) => void;
     updateSelect: (items: string) => void;
     updateTimestampKey: (key: Nullable<string>) => void;
@@ -69,9 +62,6 @@ const usePrestoSearchState = create<PrestoSearchState>((set) => ({
     },
     updateFrom: (database) => {
         set({from: database});
-    },
-    updateLimit: (value) => {
-        set({limit: value});
     },
     updateOrderBy: (items) => {
         set({orderBy: items});

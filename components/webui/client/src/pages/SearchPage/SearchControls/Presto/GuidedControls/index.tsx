@@ -5,7 +5,6 @@ import SqlInterfaceButton from "../SqlInterfaceButton";
 import SqlSearchButton from "../SqlSearchButton";
 import From from "./From";
 import guidedGrid from "./index.module.css";
-import Limit from "./Limit";
 import OrderBy from "./OrderBy";
 import Select from "./Select";
 import TimestampKey from "./TimestampKey";
@@ -25,7 +24,6 @@ const GuidedControls = () => (
             <TimestampKey/>
             <Where/>
             <OrderBy/>
-            <Limit/>
         </div>
         <div className={searchStyles["statusAndButtonsRow"]}>
             <div className={searchStyles["status"]}>

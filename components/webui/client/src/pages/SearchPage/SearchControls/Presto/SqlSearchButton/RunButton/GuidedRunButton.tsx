@@ -34,7 +34,11 @@ const GuidedRunButton = () => {
     const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
     const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
     const timeRange = useSearchStore((state) => state.timeRange);
-    const {select, from, timestampKey} = usePrestoSearchState();
+
+    const select = usePrestoSearchState((state) => state.select);
+    const from = usePrestoSearchState((state) => state.from);
+    const timestampKey = usePrestoSearchState((state) => state.timestampKey);
+
     const [messageApi, contextHolder] = message.useMessage();
 
     const isQueryReady =
@@ -65,7 +69,6 @@ const GuidedRunButton = () => {
 
         const {searchQueryString, timelineQueryString} = buildPrestoGuidedQueries(newTimeRange);
         handlePrestoGuidedQuerySubmit(searchQueryString, timelineQueryString);
-
         const newTimelineConfig = computeTimelineConfig(newTimeRange);
         updateTimelineConfig(newTimelineConfig);
     }, [

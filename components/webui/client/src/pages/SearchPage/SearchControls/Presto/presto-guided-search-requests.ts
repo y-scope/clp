@@ -16,6 +16,12 @@ import {SEARCH_UI_STATE} from "../../SearchState/typings";
 
 
 /**
+ * Default limit for presto search query
+ */
+const DEFAULT_SEARCH_LIMIT = 1000;
+
+
+/**
  * Clears current presto guided query results on server.
  */
 const handlePrestoGuidedClearResults = () => {
@@ -60,7 +66,7 @@ const handlePrestoGuidedClearResults = () => {
  */
 const buildPrestoGuidedQueries = (timeRange: [Dayjs, Dayjs]) => {
     const [startTimestamp, endTimestamp] = timeRange;
-    const {select, from, where, orderBy, limit, timestampKey} = usePrestoSearchState.getState();
+    const {select, from, where, orderBy, timestampKey} = usePrestoSearchState.getState();
 
     if (null === from) {
         throw new Error("Cannot build guided query: from input is missing");
@@ -72,15 +78,14 @@ const buildPrestoGuidedQueries = (timeRange: [Dayjs, Dayjs]) => {
 
     const trimmedWhere = where.trim();
     const trimmedOrderBy = orderBy.trim();
-    const limitString = String(limit);
 
     const searchQueryString = buildSearchQuery({
         ...(trimmedWhere && {booleanExpression: trimmedWhere}),
         databaseName: from,
         endTimestamp: endTimestamp,
-        ...(limitString && {limitValue: limitString}),
         selectItemList: select.trim(),
         ...(trimmedOrderBy && {sortItemList: trimmedOrderBy}),
+        limitValue: String(DEFAULT_SEARCH_LIMIT),
         startTimestamp: startTimestamp,
         timestampKey: timestampKey,
     });
