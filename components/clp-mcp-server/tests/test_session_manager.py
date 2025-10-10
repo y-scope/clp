@@ -1,4 +1,4 @@
-"""Tests for the SessionManager class."""
+"""Unit tests for the SessionManager."""
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
@@ -14,38 +14,36 @@ from clp_mcp_server.server.session_manager import (
 
 
 class TestConstants:
-    """Constants used for the test suite."""
+    """Constants for the test suite."""
 
     # Default values from CLPMcpConstants
-    ITEMS_PER_PAGE_DEFAULT = CLPMcpConstants.ITEM_PER_PAGE
-    SESSION_TTL_MINUTES_DEFAULT = CLPMcpConstants.SESSION_TTL_MINUTES
+    ITEMS_PER_PAGE = CLPMcpConstants.ITEM_PER_PAGE
+    SESSION_TTL_MINUTES = CLPMcpConstants.SESSION_TTL_MINUTES
 
-    # Expected page counts for different result sizes
+    # Number of logs tested in unit test and its expected page counts
     EXPECTED_PAGES_25_ITEMS = 3
-
-    # Sample result counts for testing
     SAMPLE_RESULTS_COUNT_25 = 25
 
 
 class TestQueryResult:
-    """Test cases for QueryResult class."""
+    """Unit tests for QueryResult class."""
 
     def test_query_result_initialization(self) -> None:
-        """Test QueryResult initialization and error on too many results."""
+        """Validates QueryResult errors out on too many results."""
         # Create a result with more than max_cached_results
         large_results = [f"log_{i}" for i in range(1500)]
         with pytest.raises(ValueError, match="exceeds maximum allowed cached results"):
             QueryResult(
                 total_results=large_results,
-                items_per_page=TestConstants.ITEMS_PER_PAGE_DEFAULT
+                items_per_page=TestConstants.ITEMS_PER_PAGE
             )
 
     def test_get_page(self) -> None:
-        """Test pagination functionality."""
+        """Validates pagination functionality."""
         results = [f"log_{i}" for i in range(25)]
         query_result = QueryResult(
             total_results=results,
-            items_per_page=TestConstants.ITEMS_PER_PAGE_DEFAULT
+            items_per_page=TestConstants.ITEMS_PER_PAGE
         )
 
         # Test first page
@@ -74,14 +72,14 @@ class TestQueryResult:
 
 
 class TestSessionState:
-    """Test cases for SessionState class."""
+    """Unit tests for SessionState class."""
 
     def test_get_page_data(self) -> None:
-        """Test getting page data in dictionary format."""
+        """Validates pagination functionality is respecting the defined dictionary format."""
         session = SessionState(
             session_id="test_session",
-            items_per_page=TestConstants.ITEMS_PER_PAGE_DEFAULT,
-            session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES_DEFAULT
+            items_per_page=TestConstants.ITEMS_PER_PAGE,
+            session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES
         )
         results = [f"log_{i}" for i in range(25)]
 
@@ -96,11 +94,11 @@ class TestSessionState:
         assert page_data is not None
         assert (
             page_data["items"] ==
-            [f"log_{i}" for i in range(TestConstants.ITEMS_PER_PAGE_DEFAULT)]
+            [f"log_{i}" for i in range(TestConstants.ITEMS_PER_PAGE)]
         )
         assert page_data["total_pages"] == TestConstants.EXPECTED_PAGES_25_ITEMS
         assert page_data["total_items"] == TestConstants.SAMPLE_RESULTS_COUNT_25
-        assert page_data["items_per_page"] == TestConstants.ITEMS_PER_PAGE_DEFAULT
+        assert page_data["items_per_page"] == TestConstants.ITEMS_PER_PAGE
         assert page_data["has_next"] is True
         assert page_data["has_previous"] is False
 
@@ -109,7 +107,7 @@ class TestSessionState:
         assert page_data is not None
         assert (
             page_data["items"] ==
-            [f"log_{i}" for i in range(TestConstants.ITEMS_PER_PAGE_DEFAULT, 20)]
+            [f"log_{i}" for i in range(TestConstants.ITEMS_PER_PAGE, 20)]
         )
         assert page_data["has_next"] is True
         assert page_data["has_previous"] is True
@@ -128,11 +126,11 @@ class TestSessionState:
         assert page_data["Error"] == "Page index is out of bounds."
 
     def test_session_expiration(self) -> None:
-        """Test session expiration check."""
+        """Validates session expiration check."""
         session = SessionState(
             session_id="test_session",
-            items_per_page=TestConstants.ITEMS_PER_PAGE_DEFAULT,
-            session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES_DEFAULT
+            items_per_page=TestConstants.ITEMS_PER_PAGE,
+            session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES
         )
 
         assert session.is_expired() is False
@@ -143,17 +141,17 @@ class TestSessionState:
 
 
 class TestSessionManager:
-    """Test cases for SessionManager class."""
+    """Unit tests for SessionManager class."""
 
     def test_get_or_create_session(self) -> None:
-        """Test session creation and retrieval."""
-        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES_DEFAULT)
+        """Validates session creation and retrieval."""
+        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
 
         # Create new session
         session1 = manager.get_or_create_session("session1")
         assert session1.session_id == "session1"
-        assert session1.items_per_page == TestConstants.ITEMS_PER_PAGE_DEFAULT
-        assert session1.session_ttl_minutes == TestConstants.SESSION_TTL_MINUTES_DEFAULT
+        assert session1.items_per_page == TestConstants.ITEMS_PER_PAGE
+        assert session1.session_ttl_minutes == TestConstants.SESSION_TTL_MINUTES
         assert "session1" in manager.sessions
 
         # Get existing session
@@ -161,26 +159,24 @@ class TestSessionManager:
         assert session1_again is session1
 
     def test_cached_query_result(self) -> None:
-        """Test caching query results through manager."""
-        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES_DEFAULT)
+        """Validates caching query results."""
+        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
         results = [f"log_{i}" for i in range(25)]
         manager.get_or_create_session("test_session")
         # Simulate get_instructions was run
         manager.sessions["test_session"].ran_instructions = True
-        first_page = manager.cache_query_result(
-            session_id="test_session",
-            results=results,
-        )
+
+        first_page = manager.cache_query_result(session_id="test_session", results=results)
 
         assert (
             first_page["items"] ==
-            [f"log_{i}" for i in range(TestConstants.ITEMS_PER_PAGE_DEFAULT)]
+            [f"log_{i}" for i in range(TestConstants.ITEMS_PER_PAGE)]
         )
         assert first_page["total_items"] == TestConstants.SAMPLE_RESULTS_COUNT_25
 
     def test_get_nth_page(self) -> None:
-        """Test retrieving specific pages."""
-        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES_DEFAULT)
+        """Validates retrieving specific pages."""
+        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
         results = [f"log_{i}" for i in range(TestConstants.SAMPLE_RESULTS_COUNT_25)]
         manager.get_or_create_session("test_session")
         # Simulate get_instructions was run
@@ -193,7 +189,7 @@ class TestSessionManager:
         assert "Error" not in page_data
         assert (
             page_data["items"] ==
-            [f"log_{i}" for i in range(TestConstants.ITEMS_PER_PAGE_DEFAULT, 20)]
+            [f"log_{i}" for i in range(TestConstants.ITEMS_PER_PAGE, 20)]
         )
 
         # Test invalid page
@@ -208,8 +204,8 @@ class TestSessionManager:
         assert "No previous paginated response in this session." in page_data["Error"]
 
     def test_no_get_instruction(self) -> None:
-        """Test handling when no query has been cached."""
-        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES_DEFAULT)
+        """Validates the error handling when get_instruction is not run."""
+        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
         manager.get_or_create_session("test_session")
 
         first_page = manager.cache_query_result("test_session", [f"log_{i}" for i in range(15)])
@@ -218,8 +214,8 @@ class TestSessionManager:
         assert "Please call get_instructions()" in page_data["Error"]
 
     def test_cleanup_expired_sessions(self) -> None:
-        """Test cleanup of expired sessions."""
-        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES_DEFAULT)
+        """Validates the cleanup of expired sessions."""
+        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
 
         # Create sessions with different ages
         session1 = manager.get_or_create_session("session1")
@@ -238,7 +234,7 @@ class TestSessionManager:
 
     @pytest.mark.repeat(10)
     def test_thread_safety_cleanup_and_get_or_create_session(self) -> None:
-        """Test thread safety of cleanup_expired_sessions and get_or_create_session."""
+        """Validates thread safety of cleanup_expired_sessions and get_or_create_session."""
         manager = SessionManager(session_ttl_minutes=10)
 
         def cleanup_task() -> None:

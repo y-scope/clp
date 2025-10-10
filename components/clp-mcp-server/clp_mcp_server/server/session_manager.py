@@ -121,7 +121,7 @@ class SessionManager:
         self.session_ttl_minutes = session_ttl_minutes
         # sessions is a shared variable as there may be multiple session attached to the MCP server
         # session state is NOT a shared variable because each session is accessed by only one
-        # connection at a time, and all calls are synchronous.
+        # connection at a time, and API calls for a single session are synchronous.
         self._sessions_lock = threading.Lock()
         self.sessions: dict[str, SessionState] = {}
         self._cleanup_thread = threading.Thread(target=self._cleanup_loop, daemon=True)
