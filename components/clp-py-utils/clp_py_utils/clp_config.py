@@ -517,7 +517,7 @@ class StreamOutput(BaseModel):
         _set_directory_for_storage_config(self.storage, directory)
 
     def get_directory(self) -> pathlib.Path:
-        return _get_directory_from_storage_config(self.pathlib.Path)
+        return _get_directory_from_storage_config(self.storage)
 
 
 class WebUi(BaseModel):
