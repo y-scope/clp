@@ -166,7 +166,7 @@ class TestSessionManager:
         # Simulate get_instructions was run
         manager.sessions["test_session"].ran_instructions = True
 
-        first_page = manager.cache_query_result(session_id="test_session", results=results)
+        first_page = manager.cache_query_result(session_id="test_session", query_results=results)
 
         assert (
             first_page["items"] ==
@@ -182,7 +182,7 @@ class TestSessionManager:
         # Simulate get_instructions was run
         manager.sessions["test_session"].ran_instructions = True
 
-        manager.cache_query_result(session_id="test_session", results=results)
+        manager.cache_query_result(session_id="test_session", query_results=results)
 
         # Get second page (index 1)
         page_data = manager.get_nth_page("test_session", 1)

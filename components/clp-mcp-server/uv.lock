@@ -274,7 +274,7 @@ dev = [
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-asyncio", specifier = ">=1.2.0" },
     { name = "pytest-env", specifier = ">=1.1.5" },
-    { name = "pytest-repeat", specifier = ">=0.9.3" },
+    { name = "pytest-repeat", specifier = ">=0.9.4" },
     { name = "ruff", specifier = ">=0.11.12" },
 ]
 

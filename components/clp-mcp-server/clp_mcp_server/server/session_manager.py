@@ -21,7 +21,7 @@ class QueryResult:
     _total_pages: int = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        """Validate that the number of log entries in the cache is up to MAX_CACHED_RESULTS."""
+        """Validates that the number of log entries in the cache is up to MAX_CACHED_RESULTS."""
         if len(self.total_results) > CLPMcpConstants.MAX_CACHED_RESULTS:
             err_msg = (
                 f"QueryResult exceeds maximum allowed cached results: "
@@ -37,7 +37,7 @@ class QueryResult:
 
     def get_page(self, page_number: int) -> Page | None:
         """
-        Get a specific page from the cached response.
+        Gets a specific page from the cached response.
 
         :param page_number: One-based indexing, e.g., 1 for the first page
         :return: Page object or None if page number is out of bounds
@@ -54,7 +54,7 @@ class QueryResult:
 
 @dataclass
 class SessionState:
-    """States of a single user session."""
+    """State of a single user session."""
 
     session_id: str
     items_per_page: int
@@ -70,7 +70,7 @@ class SessionState:
         """
         Caches the lastest query result of the session.
 
-        :param results: List of log entries.
+        :param query_results: Complete log entries to cache
         """
         self.cached_query_result = QueryResult(
             total_results=results, items_per_page=self.items_per_page
@@ -78,10 +78,11 @@ class SessionState:
 
     def get_page_data(self, page_number: int) -> dict[str, Any]:
         """
-        Get page data in a dictionary format.
+        Gets page data in a dictionary format.
 
         :param page_number: One-based indexing, e.g., 1 for the first page
-        :return: Dictionary with page data or None if unavailable
+        :return: On success, dictionary containing paged log entries and pagination metadata.
+        On error, dictionary with ``{"Error": "error message describing the failure"}``.
         """
         if self.cached_query_result is None:
             return {"Error": "No previous paginated response in this session."}
@@ -105,7 +106,7 @@ class SessionState:
         return time_diff > timedelta(minutes=self.session_ttl_minutes)
 
     def update_access_time(self) -> None:
-        """Update the last accessed timestamp."""
+        """Updates the last accessed timestamp."""
         self.last_accessed = datetime.now(timezone.utc)
 
 
@@ -116,7 +117,7 @@ class SessionManager:
         """
         Initializes the SessionManager.
 
-        :param session_ttl_minutes:
+        :param session_ttl_minutes: Session time-to-live in minutes.
         """
         self.session_ttl_minutes = session_ttl_minutes
         # sessions is a shared variable as there may be multiple session attached to the MCP server
@@ -128,13 +129,13 @@ class SessionManager:
         self._cleanup_thread.start()
 
     def _cleanup_loop(self) -> None:
-        """Background thread to periodically clean up expired sessions."""
+        """Cleans up all expired sessions periodically."""
         while True:
             time.sleep(CLPMcpConstants.CLEAN_UP_SECONDS)
             self.cleanup_expired_sessions()
 
     def cleanup_expired_sessions(self) -> None:
-        """Cleanup all expired sessions."""
+        """Cleans up all expired sessions."""
         with self._sessions_lock:
             expired_sessions = [
                 sid for sid, session in self.sessions.items() if session.is_expired()
@@ -164,13 +165,15 @@ class SessionManager:
             session.update_access_time()
             return session
 
-    def cache_query_result(self, session_id: str, results: list[str]) -> dict[str, Any]:
+    def cache_query_result(self, session_id: str, query_results: list[str]) -> dict[str, Any]:
         """
         Caches query results for a session and return the first page.
 
         :param session_id: Unique identifier for the session
-        :param results: List of log entries to cache
-        :return: Tuple of (first page data as dict, total number of pages)
+        :param query_results: Complete log entries to cache
+        :return: On success, dictionary containing the first page of log entries and
+        pagination metadata. On error, dictionary with
+        ``{"Error": "error message describing the failure"}``.
         """
         session = self.get_or_create_session(session_id)
         if session.ran_instructions is False:
@@ -179,7 +182,7 @@ class SessionManager:
                 "to understand how to use this MCP server."
             }
 
-        session.cache_query_result(results=results)
+        session.cache_query_result(results=query_results)
 
         return session.get_page_data(1)
 
@@ -189,7 +192,7 @@ class SessionManager:
 
         :param session_id: Unique identifier for the session
         :param page_index: Zero-based index, e.g., 0 for the first page
-        :return: On success, dictionary containing paged log entrie and pagination metadata.
+        :return: On success, dictionary containing paged log entries and pagination metadata.
         On error, dictionary with ``{"Error": "error message describing the failure"}``.
         """
         session = self.get_or_create_session(session_id)
