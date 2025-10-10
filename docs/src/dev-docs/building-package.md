@@ -51,10 +51,19 @@ Both flavours contain the same binaries but are configured with different values
 To build the package, run:
 
 ```shell
-task package
+task
 ```
 
 The build will be in `build/clp-package` and defaults to using the storage engine for `clp-text`.
+
+:::{note}
+The `task` command runs `task docker-images:package` under the hood. In addition to the build, a
+Docker image named `clp-package:dev-<user>-<unique-id>` will also be created.
+
+The package includes a `docker-compose.yaml` file that can be used to deploy CLP using Docker
+Compose. If you want to manually deploy with Docker Compose instead of using the package scripts,
+see the [Docker Compose design][docker-compose-design] for more information.
+:::
 
 To build a releasable tar of either flavour, run:
 
@@ -74,20 +83,6 @@ To clean up all build artifacts, run:
 ```shell
 task clean
 ```
-
-## Building a Docker image
-
-To build a Docker image containing the CLP package, run:
-
-```shell
-task docker-images:package
-```
-
-This will create a Docker image named `clp-package:dev`.
-
-The package includes a `docker-compose.yaml` file that can be used to deploy CLP using Docker Compose.
-If you want to manually deploy with Docker Compose instead of using the package scripts, see the 
-[Docker Compose design][docker-compose-design] for more information.
 
 [Docker]: https://docs.docker.com/engine/install/
 [docker-compose-design]: ../dev-docs/design-docker-compose.md
