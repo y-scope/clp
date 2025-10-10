@@ -88,10 +88,10 @@ class SessionState:
 
     def get_page_data(self, page_number: int) -> dict[str, Any]:
         """
-        Gets page data in a dictionary format.
+        Gets page data and its metadata in a dictionary format.
 
         :param page_number: One-based indexing, e.g., 1 for the first page.
-        :return: On success, dictionary containing paged log entries and pagination metadata.
+        :return: On success, dictionary containing paged log entries and the paging metadata.
         On error, dictionary with ``{"Error": "error message describing the failure"}``.
         """
         if self.cached_query_result is None:
@@ -177,7 +177,7 @@ class SessionManager:
 
     def cache_query_result(self, session_id: str, query_results: list[str]) -> dict[str, Any]:
         """
-        Caches query results for a session and return the first page and its metadata.
+        Caches query results for a session and return the first page and the paging metadata.
 
         :param session_id: Unique identifier for the session.
         :param query_results: Complete log entries from previous query for caching.
@@ -198,7 +198,8 @@ class SessionManager:
 
     def get_nth_page(self, session_id: str, page_index: int) -> dict[str, Any]:
         """
-        Retrieves the n-th page of a paginated response with its metadata from the previous query.
+        Retrieves the n-th page of a paginated response with the paging metadata from the previous
+        query.
 
         :param session_id: Unique identifier for the session.
         :param page_index: Zero-based index, e.g., 0 for the first page.
