@@ -47,7 +47,7 @@ const SqlInput = (props: SqlEditorProps) => {
                 overviewRulerBorder: false,
                 overviewRulerLanes: 0,
                 padding: {
-                    top: 4,
+                    top: 6,
                     bottom: 4,
                 },
                 renderLineHighlight: "none",

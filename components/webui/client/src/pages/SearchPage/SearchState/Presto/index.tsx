@@ -8,11 +8,36 @@ import {PRESTO_SQL_INTERFACE} from "./typings";
  * Default values of the Presto search state.
  */
 const PRESTO_SEARCH_STATE_DEFAULT = Object.freeze({
+    from: null,
+    limit: 10,
+    orderBy: "",
+    select: "*",
     sqlInterface: PRESTO_SQL_INTERFACE.FREEFORM,
     timestampKey: null,
+    where: "",
 });
 
 interface PrestoSearchState {
+    /**
+     * FROM input.
+     */
+    from: Nullable<string>;
+
+    /**
+     * LIMIT input.
+     */
+    limit: number;
+
+    /**
+     * ORDER BY input.
+     */
+    orderBy: string;
+
+    /**
+     * SELECT input.
+     */
+    select: string;
+
     /**
      * Presto SQL interface.
      */
@@ -23,8 +48,18 @@ interface PrestoSearchState {
      */
     timestampKey: Nullable<string>;
 
+    /**
+     * WHERE input.
+     */
+    where: string;
+
     setSqlInterface: (iface: PRESTO_SQL_INTERFACE) => void;
+    updateFrom: (database: Nullable<string>) => void;
+    updateLimit: (value: number) => void;
+    updateOrderBy: (items: string) => void;
+    updateSelect: (items: string) => void;
     updateTimestampKey: (key: Nullable<string>) => void;
+    updateWhere: (expression: string) => void;
 }
 
 const usePrestoSearchState = create<PrestoSearchState>((set) => ({
@@ -32,8 +67,23 @@ const usePrestoSearchState = create<PrestoSearchState>((set) => ({
     setSqlInterface: (iface) => {
         set({sqlInterface: iface});
     },
+    updateFrom: (database) => {
+        set({from: database});
+    },
+    updateLimit: (value) => {
+        set({limit: value});
+    },
+    updateOrderBy: (items) => {
+        set({orderBy: items});
+    },
+    updateSelect: (items) => {
+        set({select: items});
+    },
     updateTimestampKey: (key) => {
         set({timestampKey: key});
+    },
+    updateWhere: (expression) => {
+        set({where: expression});
     },
 }));
 
