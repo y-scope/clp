@@ -491,7 +491,7 @@ def main(argv):
     if clp_config.compression_scheduler.type == OrchestrationType.celery:
         task_manager = CeleryTaskManager()
     elif clp_config.compression_scheduler.type == OrchestrationType.spider:
-        task_manager = SpiderTaskManager()
+        task_manager = SpiderTaskManager(clp_config.spider_db.get_url())
     else:
         logger.error(
             f"Unsupported compression scheduler type:" f" {clp_config.compression_scheduler.type}"
