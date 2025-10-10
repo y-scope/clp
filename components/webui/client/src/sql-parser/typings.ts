@@ -21,13 +21,8 @@ interface BuildTimelineQueryProps {
     timestampKey: string;
 }
 
-/**
- * Default limit for presto search query
- */
-const DEFAULT_SEARCH_LIMIT = 1000;
 
 export type {
     BuildSearchQueryProps,
     BuildTimelineQueryProps,
 };
-export {DEFAULT_SEARCH_LIMIT};

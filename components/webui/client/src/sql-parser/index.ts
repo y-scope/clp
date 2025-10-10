@@ -11,7 +11,6 @@ import SqlParser from "./generated/SqlParser";
 import {
     BuildSearchQueryProps,
     BuildTimelineQueryProps,
-    DEFAULT_SEARCH_LIMIT,
 } from "./typings";
 
 
@@ -115,8 +114,6 @@ WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp.unix()} AND ${endTim
     }
     if ("undefined" !== typeof limitValue) {
         queryString += ` LIMIT ${limitValue}`;
-    } else {
-        queryString += ` LIMIT ${DEFAULT_SEARCH_LIMIT.toString()}`;
     }
 
     try {

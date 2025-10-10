@@ -16,6 +16,12 @@ import {SEARCH_UI_STATE} from "../../SearchState/typings";
 
 
 /**
+ * Default limit for presto search query
+ */
+const DEFAULT_SEARCH_LIMIT = 1000;
+
+
+/**
  * Clears current presto guided query results on server.
  */
 const handlePrestoGuidedClearResults = () => {
@@ -79,6 +85,7 @@ const buildPrestoGuidedQueries = (timeRange: [Dayjs, Dayjs]) => {
         endTimestamp: endTimestamp,
         selectItemList: select.trim(),
         ...(trimmedOrderBy && {sortItemList: trimmedOrderBy}),
+        limitValue: String(DEFAULT_SEARCH_LIMIT),
         startTimestamp: startTimestamp,
         timestampKey: timestampKey,
     });
