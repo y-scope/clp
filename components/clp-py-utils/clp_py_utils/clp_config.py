@@ -517,7 +517,7 @@ class StreamOutput(BaseModel):
         _set_directory_for_storage_config(self.storage, directory)
 
     def get_directory(self) -> pathlib.Path:
-        return _get_directory_from_storage_config(self.storage)
+        return _get_directory_from_storage_config(self.pathlib.Path)
 
 
 class WebUi(BaseModel):
@@ -711,13 +711,9 @@ class CLPConfig(BaseModel):
 
     def dump_to_primitive_dict(self):
         custom_serialized_fields = {
-            "package",
             "database",
             "queue",
             "redis",
-            "logs_input",
-            "archive_output",
-            "stream_output",
         }
         d = self.model_dump(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
