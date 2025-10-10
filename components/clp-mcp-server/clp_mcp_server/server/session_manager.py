@@ -30,9 +30,9 @@ class QueryResult:
             raise ValueError(err_msg)
 
         object.__setattr__(
-            self, "_total_pages",
-            (len(self.total_results) + self.items_per_page - 1)
-            // self.items_per_page
+            self,
+            "_total_pages",
+            (len(self.total_results) + self.items_per_page - 1) // self.items_per_page,
         )
 
     def get_page(self, page_number: int) -> Page | None:
@@ -73,8 +73,7 @@ class SessionState:
         :param results: List of log entries.
         """
         self.cached_query_result = QueryResult(
-            total_results=results,
-            items_per_page=self.items_per_page
+            total_results=results, items_per_page=self.items_per_page
         )
 
     def get_page_data(self, page_number: int) -> dict[str, Any]:
@@ -85,13 +84,11 @@ class SessionState:
         :return: Dictionary with page data or None if unavailable
         """
         if self.cached_query_result is None:
-            return {
-                "Error": "No previous paginated response in this session."
-            }
+            return {"Error": "No previous paginated response in this session."}
 
         page = self.cached_query_result.get_page(page_number)
         if page is None:
-            return { "Error": "Page index is out of bounds."}
+            return {"Error": "Page index is out of bounds."}
 
         return {
             "items": list(page),
@@ -140,8 +137,7 @@ class SessionManager:
         """Cleanup all expired sessions."""
         with self._sessions_lock:
             expired_sessions = [
-                sid for sid, session in self.sessions.items()
-                if session.is_expired()
+                sid for sid, session in self.sessions.items() if session.is_expired()
             ]
 
             for sid in expired_sessions:
@@ -179,8 +175,8 @@ class SessionManager:
         session = self.get_or_create_session(session_id)
         if session.ran_instructions is False:
             return {
-                "Error":
-                "Please call get_instructions() first to understand how to use this MCP server."
+                "Error": "Please call get_instructions() first"
+                "to understand how to use this MCP server."
             }
 
         session.cache_query_result(results=results)
@@ -199,10 +195,9 @@ class SessionManager:
         session = self.get_or_create_session(session_id)
         if session.ran_instructions is False:
             return {
-                "Error":
-                "Please call get_instructions() first to understand how to use this MCP server."
+                "Error": "Please call get_instructions() first"
+                "to understand how to use this MCP server."
             }
 
         page_number = page_index + 1  # Convert zero-based to one-based
         return session.get_page_data(page_number)
-

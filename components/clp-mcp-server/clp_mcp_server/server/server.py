@@ -45,7 +45,6 @@ def create_mcp_server() -> FastMCP:
         """
         return session_manager.get_nth_page(ctx.session_id, page_index)
 
-
     @mcp.tool
     def hello_world(name: str = "clp-mcp-server user") -> dict[str, Any]:
         """
