@@ -3,14 +3,23 @@ import {useCallback} from "react";
 import {CaretRightOutlined} from "@ant-design/icons";
 import {
     Button,
+    message,
     Tooltip,
 } from "antd";
+import {Dayjs} from "dayjs";
 
-import {buildSearchQuery} from "../../../../../../sql-parser";
+import {computeTimelineConfig} from "../../../../SearchResults/SearchResultsTimeline/utils";
 import useSearchStore from "../../../../SearchState/index";
 import usePrestoSearchState from "../../../../SearchState/Presto";
 import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
-import {handlePrestoQuerySubmit} from "../../presto-search-requests";
+import {
+    TIME_RANGE_OPTION,
+    TIME_RANGE_OPTION_DAYJS_MAP,
+} from "../../../TimeRangeInput/utils";
+import {
+    buildPrestoGuidedQueries,
+    handlePrestoGuidedQuerySubmit,
+} from "../../presto-guided-search-requests";
 import styles from "./index.module.css";
 
 
@@ -21,12 +30,16 @@ import styles from "./index.module.css";
  */
 const GuidedRunButton = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
+    const updateTimeRange = useSearchStore((state) => state.updateTimeRange);
+    const updateTimelineConfig = useSearchStore((state) => state.updateTimelineConfig);
+    const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
     const timeRange = useSearchStore((state) => state.timeRange);
-    const [startTimestamp, endTimestamp] = timeRange;
+
     const select = usePrestoSearchState((state) => state.select);
     const from = usePrestoSearchState((state) => state.from);
     const timestampKey = usePrestoSearchState((state) => state.timestampKey);
 
+    const [messageApi, contextHolder] = message.useMessage();
 
     const isQueryReady =
         "" !== select.trim() &&
@@ -37,48 +50,38 @@ const GuidedRunButton = () => {
         "Enter minimal SQL fields to query" :
         "";
 
-    const handleClick = useCallback(() => {
-        const {where, orderBy} = usePrestoSearchState.getState();
-        if (null === from) {
-            console.error("Cannot build guided query: from input is missing");
+    const handleClick = useCallback(async () => {
+        let newTimeRange: [Dayjs, Dayjs];
+        if (timeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
+            try {
+                newTimeRange = await TIME_RANGE_OPTION_DAYJS_MAP[timeRangeOption]();
+                updateTimeRange(newTimeRange);
+            } catch {
+                messageApi.warning(
+                    "Cannot fetch the time range.",
+                );
 
-            return;
+                return;
+            }
+        } else {
+            newTimeRange = timeRange;
         }
 
-        if (null === timestampKey) {
-            console.error("Cannot build guided query: timestampKey input is missing");
-
-            return;
-        }
-
-        try {
-            const trimmedWhere = where.trim();
-            const trimmedOrderBy = orderBy.trim();
-
-            const queryString = buildSearchQuery({
-                ...(trimmedWhere && {booleanExpression: trimmedWhere}),
-                databaseName: from,
-                endTimestamp: endTimestamp.unix(),
-                selectItemList: select.trim(),
-                ...(trimmedOrderBy && {sortItemList: trimmedOrderBy}),
-                startTimestamp: startTimestamp.unix(),
-                timestampKey: timestampKey,
-            });
-
-            handlePrestoQuerySubmit({queryString});
-        } catch (err) {
-            console.error("Failed to build guided query:", err);
-        }
+        const {searchQueryString, timelineQueryString} = buildPrestoGuidedQueries(newTimeRange);
+        handlePrestoGuidedQuerySubmit(searchQueryString, timelineQueryString);
+        const newTimelineConfig = computeTimelineConfig(newTimeRange);
+        updateTimelineConfig(newTimelineConfig);
     }, [
-        select,
-        from,
-        timestampKey,
-        startTimestamp,
-        endTimestamp,
+        messageApi,
+        timeRange,
+        timeRangeOption,
+        updateTimeRange,
+        updateTimelineConfig,
     ]);
 
     return (
         <Tooltip title={tooltipTitle}>
+            {contextHolder}
             <Button
                 className={styles["runButton"] || ""}
                 color={"green"}
@@ -87,7 +90,11 @@ const GuidedRunButton = () => {
                 variant={"solid"}
                 disabled={!isQueryReady ||
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
-                onClick={handleClick}
+                onClick={() => {
+                    handleClick().catch((err: unknown) => {
+                        throw err;
+                    });
+                }}
             >
                 Run
             </Button>
