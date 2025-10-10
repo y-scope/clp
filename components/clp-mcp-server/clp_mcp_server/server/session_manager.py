@@ -178,7 +178,7 @@ class SessionManager:
         session = self.get_or_create_session(session_id)
         if session.ran_instructions is False:
             return {
-                "Error": "Please call get_instructions() first"
+                "Error": "Please call get_instructions() first "
                 "to understand how to use this MCP server."
             }
 
@@ -198,7 +198,7 @@ class SessionManager:
         session = self.get_or_create_session(session_id)
         if session.ran_instructions is False:
             return {
-                "Error": "Please call get_instructions() first"
+                "Error": "Please call get_instructions() first "
                 "to understand how to use this MCP server."
             }
 

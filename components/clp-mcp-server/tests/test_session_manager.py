@@ -260,7 +260,3 @@ class TestSessionManager:
 
             for future in futures:
                 future.result() # ensure thread completion with no run time exceptions
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
