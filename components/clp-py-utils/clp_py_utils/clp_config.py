@@ -324,8 +324,6 @@ class OrchestrationType(KebabCaseStrEnum):
 
 
 class CompressionScheduler(BaseModel):
-    model_config = ConfigDict(use_enum_values=True)
-
     jobs_poll_delay: float = 0.1  # seconds
     logging_level: str = "INFO"
     type: OrchestrationType = OrchestrationType.celery
