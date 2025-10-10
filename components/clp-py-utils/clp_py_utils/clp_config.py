@@ -1,7 +1,7 @@
 import os
 import pathlib
 from enum import auto
-from typing import Any, ClassVar, Literal, Optional, Union
+from typing import Any, ClassVar, Literal, Optional, Union, Annotated
 
 from pydantic import (
     BaseModel,
@@ -20,6 +20,7 @@ from .core import (
     read_yaml_config_file,
     validate_path_could_be_dir,
 )
+from .pydantic_serialization_utils import PathStr, StrEnumSerializer
 
 # Constants
 # Component names
@@ -80,10 +81,24 @@ class StorageEngine(KebabCaseStrEnum):
     CLP_S = auto()
 
 
+StorageEngineStr = Annotated[StorageEngine, StrEnumSerializer]
+
+
+class DatabaseEngine(KebabCaseStrEnum):
+    MARIADB = auto()
+    MYSQL = auto()
+
+
+DatabaseEngineStr = Annotated[DatabaseEngine, StrEnumSerializer]
+
+
 class QueryEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
     PRESTO = auto()
+
+
+QueryEngineStr = Annotated[QueryEngine, StrEnumSerializer]
 
 
 class StorageType(LowercaseStrEnum):
@@ -98,33 +113,12 @@ class AwsAuthType(LowercaseStrEnum):
     ec2 = auto()
 
 
-VALID_STORAGE_ENGINES = [storage_engine.value for storage_engine in StorageEngine]
-VALID_QUERY_ENGINES = [query_engine.value for query_engine in QueryEngine]
+AwsAuthTypeStr = Annotated[AwsAuthType, StrEnumSerializer]
 
 
 class Package(BaseModel):
-    storage_engine: str = "clp"
-    query_engine: str = "clp"
-
-    @field_validator("storage_engine")
-    @classmethod
-    def validate_storage_engine(cls, value):
-        if value not in VALID_STORAGE_ENGINES:
-            raise ValueError(
-                f"package.storage_engine must be one of the following"
-                f" {'|'.join(VALID_STORAGE_ENGINES)}"
-            )
-        return value
-
-    @field_validator("query_engine")
-    @classmethod
-    def validate_query_engine(cls, value):
-        if value not in VALID_QUERY_ENGINES:
-            raise ValueError(
-                f"package.query_engine must be one of the following"
-                f" {'|'.join(VALID_QUERY_ENGINES)}"
-            )
-        return value
+    storage_engine: StorageEngineStr = StorageEngine.CLP
+    query_engine: QueryEngineStr = QueryEngine.CLP
 
     @model_validator(mode="after")
     def validate_query_engine_package_compatibility(self):
@@ -152,7 +146,7 @@ class Package(BaseModel):
 class Database(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 3306
 
-    type: str = "mariadb"
+    type: DatabaseEngineStr = DatabaseEngine.MARIADB
     host: str = "localhost"
     port: int = DEFAULT_PORT
     name: str = "clp-db"
@@ -598,12 +592,7 @@ class S3Credentials(BaseModel):
 
 
 class AwsAuthentication(BaseModel):
-    type: Literal[
-        AwsAuthType.credentials.value,
-        AwsAuthType.profile.value,
-        AwsAuthType.env_vars.value,
-        AwsAuthType.ec2.value,
-    ]
+    type: AwsAuthTypeStr
     profile: Optional[str] = None
     credentials: Optional[S3Credentials] = None
 
@@ -660,16 +649,10 @@ class S3IngestionConfig(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     aws_authentication: AwsAuthentication
 
-    def dump_to_primitive_dict(self):
-        return self.model_dump()
-
-    def transform_for_container(self):
-        pass
-
 
 class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
-    directory: pathlib.Path
+    directory: PathStr
 
     @field_validator("directory", mode="before")
     @classmethod
@@ -680,16 +663,11 @@ class FsStorage(BaseModel):
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.directory = make_config_path_absolute(clp_home, self.directory)
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["directory"] = str(d["directory"])
-        return d
-
 
 class S3Storage(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     s3_config: S3Config
-    staging_directory: pathlib.Path
+    staging_directory: PathStr
 
     @field_validator("staging_directory", mode="before")
     @classmethod
@@ -710,14 +688,9 @@ class S3Storage(BaseModel):
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.staging_directory = make_config_path_absolute(clp_home, self.staging_directory)
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["staging_directory"] = str(d["staging_directory"])
-        return d
-
 
 class FsIngestionConfig(FsStorage):
-    directory: pathlib.Path = pathlib.Path("/")
+    directory: PathStr = pathlib.Path("/")
 
     def transform_for_container(self):
         input_logs_dir = self.directory.resolve()
@@ -727,31 +700,19 @@ class FsIngestionConfig(FsStorage):
 
 
 class ArchiveFsStorage(FsStorage):
-    directory: pathlib.Path = CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
-
-    def transform_for_container(self):
-        self.directory = pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
+    directory: PathStr = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
 
 
 class StreamFsStorage(FsStorage):
-    directory: pathlib.Path = CLP_DEFAULT_STREAM_DIRECTORY_PATH
-
-    def transform_for_container(self):
-        self.directory = pathlib.Path("/") / CLP_DEFAULT_STREAM_DIRECTORY_PATH
+    directory: PathStr = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
 
 
 class ArchiveS3Storage(S3Storage):
-    staging_directory: pathlib.Path = CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
-
-    def transform_for_container(self):
-        self.staging_directory = pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
+    staging_directory: PathStr = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
 
 
 class StreamS3Storage(S3Storage):
-    staging_directory: pathlib.Path = CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
-
-    def transform_for_container(self):
-        self.staging_directory = pathlib.Path("/") / CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
+    staging_directory: PathStr = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
 
 
 def _get_directory_from_storage_config(
@@ -835,11 +796,6 @@ class ArchiveOutput(BaseModel):
     def get_directory(self) -> pathlib.Path:
         return _get_directory_from_storage_config(self.storage)
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["storage"] = self.storage.dump_to_primitive_dict()
-        return d
-
 
 class StreamOutput(BaseModel):
     storage: Union[StreamFsStorage, StreamS3Storage] = StreamFsStorage()
@@ -857,11 +813,6 @@ class StreamOutput(BaseModel):
 
     def get_directory(self) -> pathlib.Path:
         return _get_directory_from_storage_config(self.storage)
-
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["storage"] = self.storage.dump_to_primitive_dict()
-        return d
 
 
 class WebUi(BaseModel):
@@ -961,20 +912,18 @@ class CLPConfig(BaseModel):
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
-    credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
+    credentials_file_path: PathStr = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     presto: Optional[Presto] = None
 
     archive_output: ArchiveOutput = ArchiveOutput()
     stream_output: StreamOutput = StreamOutput()
-    data_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH
-    logs_directory: pathlib.Path = CLP_DEFAULT_LOG_DIRECTORY_PATH
+    data_directory: PathStr = CLP_DEFAULT_DATA_DIRECTORY_PATH
+    logs_directory: PathStr = CLP_DEFAULT_LOG_DIRECTORY_PATH
     aws_config_directory: Optional[pathlib.Path] = None
 
-    _container_image_id_path: pathlib.Path = PrivateAttr(
-        default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH
-    )
-    _version_file_path: pathlib.Path = PrivateAttr(default=CLP_VERSION_FILE_PATH)
+    _container_image_id_path: PathStr = PrivateAttr(default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH)
+    _version_file_path: PathStr = PrivateAttr(default=CLP_VERSION_FILE_PATH)
 
     @field_validator("aws_config_directory")
     @classmethod
@@ -1118,9 +1067,6 @@ class CLPConfig(BaseModel):
             d[key] = getattr(self, key).dump_to_primitive_dict()
 
         # Turn paths into primitive strings
-        d["credentials_file_path"] = str(self.credentials_file_path)
-        d["data_directory"] = str(self.data_directory)
-        d["logs_directory"] = str(self.logs_directory)
         if self.aws_config_directory is not None:
             d["aws_config_directory"] = str(self.aws_config_directory)
         else:
@@ -1193,16 +1139,6 @@ class WorkerConfig(BaseModel):
     # Only needed by query workers.
     stream_output: StreamOutput = StreamOutput()
     stream_collection_name: str = ResultsCache().stream_collection_name
-
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["archive_output"] = self.archive_output.dump_to_primitive_dict()
-
-        # Turn paths into primitive strings
-        d["data_directory"] = str(self.data_directory)
-        d["stream_output"] = self.stream_output.dump_to_primitive_dict()
-
-        return d
 
 
 def _validate_directory(value: Any):
