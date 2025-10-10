@@ -649,6 +649,12 @@ class S3IngestionConfig(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     aws_authentication: AwsAuthentication
 
+    def dump_to_primitive_dict(self):
+        return self.model_dump()
+
+    def transform_for_container(self):
+        pass
+
 
 class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
@@ -700,19 +706,31 @@ class FsIngestionConfig(FsStorage):
 
 
 class ArchiveFsStorage(FsStorage):
-    directory: PathStr = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
+    directory: PathStr = CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
+
+    def transform_for_container(self):
+        self.directory = pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_DIRECTORY_PATH
 
 
 class StreamFsStorage(FsStorage):
-    directory: PathStr = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
+    directory: PathStr = CLP_DEFAULT_STREAM_DIRECTORY_PATH
+
+    def transform_for_container(self):
+        self.directory = pathlib.Path("/") / CLP_DEFAULT_STREAM_DIRECTORY_PATH
 
 
 class ArchiveS3Storage(S3Storage):
-    staging_directory: PathStr = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
+    staging_directory: PathStr = CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
+
+    def transform_for_container(self):
+        self.staging_directory = pathlib.Path("/") / CLP_DEFAULT_ARCHIVE_STAGING_DIRECTORY_PATH
 
 
 class StreamS3Storage(S3Storage):
-    staging_directory: PathStr = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
+    staging_directory: PathStr = CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
+
+    def transform_for_container(self):
+        self.staging_directory = pathlib.Path("/") / CLP_DEFAULT_STREAM_STAGING_DIRECTORY_PATH
 
 
 def _get_directory_from_storage_config(
