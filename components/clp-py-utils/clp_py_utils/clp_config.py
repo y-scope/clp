@@ -1,7 +1,7 @@
 import os
 import pathlib
 from enum import auto
-from typing import Any, ClassVar, Literal, Optional, Union, Annotated
+from typing import Annotated, Any, ClassVar, Literal, Optional, Union
 
 from pydantic import (
     BaseModel,
