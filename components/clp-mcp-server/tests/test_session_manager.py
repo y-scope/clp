@@ -31,7 +31,7 @@ class TestQueryResult:
     def test_query_result_initialization(self) -> None:
         """Validates QueryResult raises ValueError when results exceed MAX_CACHED_RESULTS."""
         # Create a result with more than max_cached_results
-        large_results = [f"log_{i}" for i in range(1500)]
+        large_results = [f"log_{i}" for i in range(CLPMcpConstants.MAX_CACHED_RESULTS + 1)]
         with pytest.raises(ValueError, match="exceeds maximum allowed cached results"):
             QueryResult(
                 total_results=large_results,

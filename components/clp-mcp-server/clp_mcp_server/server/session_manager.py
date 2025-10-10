@@ -21,11 +21,21 @@ class QueryResult:
     _total_pages: int = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
-        """Validates that cached results don't exceed MAX_CACHED_RESULTS."""
+        """
+        Validates that cached results don't exceed MAX_CACHED_RESULTS.
+
+        :raise: ValueError if the number of cached results or items_per_page is invalid.
+        """
         if len(self.total_results) > CLPMcpConstants.MAX_CACHED_RESULTS:
             err_msg = (
                 f"QueryResult exceeds maximum allowed cached results: "
                 f"{len(self.total_results)} > {CLPMcpConstants.MAX_CACHED_RESULTS}. "
+            )
+            raise ValueError(err_msg)
+
+        if self.items_per_page <= 0:
+            err_msg = (
+                f"Invalid items_per_page: {self.items_per_page}, it must be a positive integer. "
             )
             raise ValueError(err_msg)
 
@@ -70,7 +80,7 @@ class SessionState:
         """
         Caches the latest query result of the session.
 
-        :param query_results: Complete log entries to cache
+        :param results: Complete log entries to cache
         """
         self.cached_query_result = QueryResult(
             total_results=results, items_per_page=self.items_per_page
