@@ -38,7 +38,7 @@ def create_mcp_server() -> FastMCP:
         """
         Retrieves the n-th page of a paginated response from the previous query.
 
-        :param page_index: Zero-based index, e.g., 0 for the first page
+        :param page_index: Zero-based index, e.g., 0 for the first page.
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
         :return: On success, dictionary containing paged log entries and pagination metadata.
         On error, dictionary with ``{"Error": "error message describing the failure"}``.

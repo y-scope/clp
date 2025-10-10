@@ -220,7 +220,7 @@ class TestSessionManager:
         # Create sessions with different ages
         session1 = manager.get_or_create_session("session1")
         session2 = manager.get_or_create_session("session2")
-        manager.get_or_create_session("session3")  # Keep session3 but don't assign to variable
+        manager.get_or_create_session("session3")
 
         # Make session1 and session2 expired
         session1.last_accessed = datetime.now(timezone.utc) - timedelta(minutes=61)

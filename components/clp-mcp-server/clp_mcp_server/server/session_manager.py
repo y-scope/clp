@@ -49,8 +49,8 @@ class QueryResult:
         """
         Gets a specific page from the cached response.
 
-        :param page_number: One-based indexing, e.g., 1 for the first page
-        :return: Page object or None if page number is out of bounds
+        :param page_number: One-based indexing, e.g., 1 for the first page.
+        :return: Page object or None if page number is out of bounds.
         """
         if page_number > self._total_pages or page_number <= 0:
             return None
@@ -80,7 +80,7 @@ class SessionState:
         """
         Caches the latest query result of the session.
 
-        :param results: Complete log entries to cache
+        :param results: Complete log entries from previous query for caching.
         """
         self.cached_query_result = QueryResult(
             total_results=results, items_per_page=self.items_per_page
@@ -90,7 +90,7 @@ class SessionState:
         """
         Gets page data in a dictionary format.
 
-        :param page_number: One-based indexing, e.g., 1 for the first page
+        :param page_number: One-based indexing, e.g., 1 for the first page.
         :return: On success, dictionary containing paged log entries and pagination metadata.
         On error, dictionary with ``{"Error": "error message describing the failure"}``.
         """
@@ -121,7 +121,7 @@ class SessionState:
 
 
 class SessionManager:
-    """Session manager for all user sessions."""
+    """Session manager for concurrent user sessions."""
 
     def __init__(self, session_ttl_minutes: int) -> None:
         """
@@ -158,8 +158,8 @@ class SessionManager:
         """
         Gets an existing session or creates a new one.
 
-        :param session_id: Unique identifier for the session
-        :return: The SessionState object for the given session_id
+        :param session_id: Unique identifier for the session.
+        :return: The SessionState object for the given session_id.
         """
         with self._sessions_lock:
             if session_id in self.sessions and self.sessions[session_id].is_expired():
@@ -177,10 +177,10 @@ class SessionManager:
 
     def cache_query_result(self, session_id: str, query_results: list[str]) -> dict[str, Any]:
         """
-        Caches query results for a session and return the first page.
+        Caches query results for a session and return the first page and its metadata.
 
-        :param session_id: Unique identifier for the session
-        :param query_results: Complete log entries to cache
+        :param session_id: Unique identifier for the session.
+        :param query_results: Complete log entries from previous query for caching.
         :return: On success, dictionary containing the first page of log entries and
         pagination metadata. On error, dictionary with
         ``{"Error": "error message describing the failure"}``.
@@ -198,12 +198,11 @@ class SessionManager:
 
     def get_nth_page(self, session_id: str, page_index: int) -> dict[str, Any]:
         """
-        Retrieves the n-th page of a paginated response from the previous query.
+        Retrieves the n-th page of a paginated response with its metadata from the previous query.
 
-        :param session_id: Unique identifier for the session
-        :param page_index: Zero-based index, e.g., 0 for the first page
-        :return: On success, dictionary containing paged log entries and pagination metadata.
-        On error, dictionary with ``{"Error": "error message describing the failure"}``.
+        :param session_id: Unique identifier for the session.
+        :param page_index: Zero-based index, e.g., 0 for the first page.
+        :return: Forwards `get_page_data`'s return values.
         """
         session = self.get_or_create_session(session_id)
         if session.ran_instructions is False:
