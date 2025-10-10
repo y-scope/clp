@@ -223,7 +223,7 @@ class BaseController(ABC):
 
         return {
             "SPIDER_SCHEDULER_HOST": _get_ip_from_hostname(self.clp_config.spider_scheduler.host),
-            "SPIDER_SCHEDULER_PORT": str(self.clp_config.scheduler.port),
+            "SPIDER_SCHEDULER_PORT": str(self.clp_config.spider_scheduler.port),
         }
 
     def _set_up_env_for_results_cache(self) -> EnvVarsDict:
