@@ -60,6 +60,7 @@ def _generate_logs_list(
                     resolved_path.anchor
                 )
                 container_logs_list_file.write(f"{mounted_path}\n")
+        return
 
     elif InputType.S3 != input_type:
         raise ValueError(f"Unsupported input type: {input_type}.")
