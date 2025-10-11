@@ -132,11 +132,11 @@ class SessionManager:
         self.session_ttl_minutes = session_ttl_minutes
         """
         MCP Server Concurrency Model:
-        The server supports multiple concurrent clients, where each client makes syncronous API 
-        calls. This assumptions leads to the following design decisions:
+        The server supports multiple concurrent clients, where each client only makes synchronous
+        API calls. This assumptions leads to the following design decisions:
         sessions is a shared variable as there may be multiple session attached to the MCP server
         session state is NOT a shared variable because each session is accessed by only one
-        connection at a time, and API calls for a single session are synchronous.
+        connection at a time because API calls for a single session are synchronous.
         """
         self._sessions_lock = threading.Lock()
         self.sessions: dict[str, SessionState] = {}
