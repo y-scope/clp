@@ -52,7 +52,7 @@ class QueryResult:
         :param page_number: One-based indexing, e.g., 1 for the first page.
         :return: Page object or None if page number is out of bounds.
         """
-        if page_number > self._total_pages or page_number <= 0:
+        if 0 <= page_number or self._total_pages < page_number:
             return None
 
         return Page(
@@ -64,7 +64,7 @@ class QueryResult:
 
 @dataclass
 class SessionState:
-    """State of a single user session."""
+    """Represents the state of a user session."""
 
     session_id: str
     num_items_per_page: int
