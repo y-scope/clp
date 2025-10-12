@@ -34,6 +34,13 @@ class S3InputConfig(S3Config):
     dataset: Optional[str] = None
     timestamp_key: Optional[str] = None
 
+    @field_validator("keys")
+    @classmethod
+    def validate_keys(cls, value):
+        if value is not None and len(value) == 0:
+            raise ValueError("Keys cannot be an empty list")
+        return value
+
 
 class OutputConfig(BaseModel):
     tags: Optional[List[str]] = None
