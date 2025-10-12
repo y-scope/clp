@@ -11,40 +11,35 @@ from paginate import Page
 from .server import constants
 
 
-@dataclass(frozen=True)
-class QueryResult:
-    """Cached results from the previous query's response."""
+class PaginatedQueryResult:
+    """Paginates the cached log entries returned from a query's response."""
 
-    cached_response: list[str]
-    num_items_per_page: int
-
-    _num_pages: int = field(init=False, repr=False)
-
-    def __post_init__(self) -> None:
+    def __init__(self, result_log_entries: list[str], num_items_per_page: int) -> None:
         """
-        Validates that cached results don't exceed MAX_CACHED_RESULTS.
+        Initializes the QueryResultPaginator.
 
+        :param result_log_entries: List of cached log entries to paginate.
+        :param num_items_per_page:
         :raise: ValueError if the number of cached results or num_items_per_page is invalid.
         """
-        if len(self.cached_response) > constants.MAX_CACHED_RESULTS:
+        if len(result_log_entries) > constants.MAX_CACHED_RESULTS:
             err_msg = (
-                f"QueryResult exceeds maximum allowed cached results:"
-                f" {len(self.cached_response)} > {constants.MAX_CACHED_RESULTS}."
+                f"QueryResultPaginator exceeds maximum allowed cached results:"
+                f" {len(result_log_entries)} > {constants.MAX_CACHED_RESULTS}."
             )
             raise ValueError(err_msg)
 
-        if self.num_items_per_page <= 0:
+        if num_items_per_page <= 0:
             err_msg = (
-                f"Invalid num_items_per_page: {self.num_items_per_page}, "
+                f"Invalid num_items_per_page: {num_items_per_page}, "
                 "it must be a positive integer. "
             )
             raise ValueError(err_msg)
 
-        object.__setattr__(
-            self,
-            "_num_pages",
-            (len(self.cached_response) + self.num_items_per_page - 1) // self.num_items_per_page,
-        )
+        self.result_log_entries = result_log_entries
+        self.num_items_per_page = num_items_per_page
+
+        self._num_pages = (len(result_log_entries) + num_items_per_page - 1) // num_items_per_page
 
     def get_page(self, page_index: int) -> Page | None:
         """
@@ -59,7 +54,7 @@ class QueryResult:
             return None
 
         return Page(
-            self.cached_response,
+            self.result_log_entries,
             page=page_number,
             items_per_page=self.num_items_per_page,
         )
@@ -70,11 +65,12 @@ class SessionState:
     """Represents the state of a user session."""
 
     session_id: str
-    num_items_per_page: int
-    session_ttl_minutes: int
-    last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    cached_query_result: QueryResult | None = None
+    _num_items_per_page: int
+    _session_ttl_minutes: int
+
     is_instructions_retrieved: bool = False
+    last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    _cached_query_result: PaginatedQueryResult | None = None
 
     def cache_query_result(
         self,
@@ -85,8 +81,8 @@ class SessionState:
 
         :param results: Complete log entries from previous query for caching.
         """
-        self.cached_query_result = QueryResult(
-            cached_response=results, num_items_per_page=self.num_items_per_page
+        self._cached_query_result = PaginatedQueryResult(
+            result_log_entries=results, num_items_per_page=self._num_items_per_page
         )
 
     def get_page_data(self, page_index: int) -> dict[str, Any]:
@@ -99,10 +95,10 @@ class SessionState:
         :return: Dictionary with ``{"Error": "error message describing the failure"}`` if fails to
         retrieve page `page_index`.
         """
-        if self.cached_query_result is None:
+        if self._cached_query_result is None:
             return {"Error": "No previous paginated response in this session."}
 
-        page = self.cached_query_result.get_page(page_index)
+        page = self._cached_query_result.get_page(page_index)
         if page is None:
             return {"Error": "Page index is out of bounds."}
 
@@ -118,7 +114,7 @@ class SessionState:
     def is_expired(self) -> bool:
         """:return: Whether the session has expired."""
         time_diff = datetime.now(timezone.utc) - self.last_accessed
-        return time_diff > timedelta(minutes=self.session_ttl_minutes)
+        return time_diff > timedelta(minutes=self._session_ttl_minutes)
 
     def update_access_time(self) -> None:
         """Updates the last accessed timestamp."""
@@ -126,7 +122,16 @@ class SessionState:
 
 
 class SessionManager:
-    """Session manager for concurrent user sessions."""
+    """
+    Session manager for concurrent user sessions.
+    `SessionManger` respects MCP Server Concurrency Model, that is:
+    The server supports multiple concurrent clients, where each client only makes synchronous
+    API calls.
+    This model leads to the following design decisions:
+    sessions is a shared variable as there may be multiple session attached to the MCP server
+    session state is NOT a shared variable because each session is accessed by only one
+    connection at a time because API calls for a single session are synchronous.
+    """
 
     def __init__(self, session_ttl_minutes: int) -> None:
         """
@@ -134,24 +139,16 @@ class SessionManager:
 
         :param session_ttl_minutes: Session time-to-live in minutes.
         """
-        self.session_ttl_minutes = session_ttl_minutes
-        """
-        MCP Server Concurrency Model:
-        The server supports multiple concurrent clients, where each client only makes synchronous
-        API calls. This assumptions leads to the following design decisions:
-        sessions is a shared variable as there may be multiple session attached to the MCP server
-        session state is NOT a shared variable because each session is accessed by only one
-        connection at a time because API calls for a single session are synchronous.
-        """
-        self._sessions_lock = threading.Lock()
         self.sessions: dict[str, SessionState] = {}
+        self._session_ttl_minutes = session_ttl_minutes
+        self._sessions_lock = threading.Lock()
         self._cleanup_thread = threading.Thread(target=self._cleanup_loop, daemon=True)
         self._cleanup_thread.start()
 
     def _cleanup_loop(self) -> None:
         """Cleans up all expired sessions periodically in a separate cleanup thread."""
         while True:
-            time.sleep(constants.EXPEIRED_SESSION_SWEEP_INTERVAL_SECONDS)
+            time.sleep(constants.EXPIRED_SESSION_SWEEP_INTERVAL_SECONDS)
             self.cleanup_expired_sessions()
 
     def cleanup_expired_sessions(self) -> None:
@@ -177,7 +174,7 @@ class SessionManager:
 
             if session_id not in self.sessions:
                 self.sessions[session_id] = SessionState(
-                    session_id, constants.ITEM_PER_PAGE, self.session_ttl_minutes
+                    session_id, constants.ITEM_PER_PAGE, self._session_ttl_minutes
                 )
 
             session = self.sessions[session_id]

@@ -7,7 +7,7 @@ import pytest
 
 from clp_mcp_server.server import constants
 from clp_mcp_server.server.session_manager import (
-    QueryResult,
+    PaginatedQueryResult,
     SessionManager,
     SessionState,
 )
@@ -25,24 +25,24 @@ class TestConstants:
     SAMPLE_RESULTS_COUNT_25 = 25
 
 
-class TestQueryResult:
-    """Unit tests for QueryResult class."""
+class TestPaginatedQueryResult:
+    """Unit tests for PaginatedQueryResult class."""
 
     def test_query_result_initialization(self) -> None:
-        """Validates QueryResult raises ValueError when results exceed MAX_CACHED_RESULTS."""
+        """Validates PaginatedQueryResult raises ValueError when results exceed MAX_CACHED_RESULTS."""
         # Create a result with more than max_cached_results
         large_results = [f"log_{i}" for i in range(constants.MAX_CACHED_RESULTS + 1)]
         with pytest.raises(ValueError, match="exceeds maximum allowed cached results"):
-            QueryResult(
-                cached_response=large_results,
+            PaginatedQueryResult(
+                result_log_entries=large_results,
                 num_items_per_page=TestConstants.ITEMS_PER_PAGE
             )
 
     def test_get_page(self) -> None:
         """Validates pagination functionality."""
         results = [f"log_{i}" for i in range(25)]
-        query_result = QueryResult(
-            cached_response=results,
+        query_result = PaginatedQueryResult(
+            result_log_entries=results,
             num_items_per_page=TestConstants.ITEMS_PER_PAGE
         )
 
@@ -78,8 +78,8 @@ class TestSessionState:
         """Validates pagination functionality is respecting the defined dictionary format."""
         session = SessionState(
             session_id="test_session",
-            num_items_per_page=TestConstants.ITEMS_PER_PAGE,
-            session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES
+            _num_items_per_page=TestConstants.ITEMS_PER_PAGE,
+            _session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES
         )
         results = [f"log_{i}" for i in range(25)]
 
@@ -129,8 +129,8 @@ class TestSessionState:
         """Validates session expiration check."""
         session = SessionState(
             session_id="test_session",
-            num_items_per_page=TestConstants.ITEMS_PER_PAGE,
-            session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES
+            _num_items_per_page=TestConstants.ITEMS_PER_PAGE,
+            _session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES
         )
 
         assert session.is_expired() is False
@@ -150,8 +150,6 @@ class TestSessionManager:
         # Create new session
         session1 = manager.get_or_create_session("session1")
         assert session1.session_id == "session1"
-        assert session1.num_items_per_page == TestConstants.ITEMS_PER_PAGE
-        assert session1.session_ttl_minutes == TestConstants.SESSION_TTL_MINUTES
         assert "session1" in manager.sessions
 
         # Get existing session
