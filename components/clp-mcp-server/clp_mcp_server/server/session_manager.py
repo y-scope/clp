@@ -47,10 +47,11 @@ class QueryResult:
 
     def get_page(self, page_number: int) -> Page | None:
         """
-        Gets a specific page from the cached response.
+        Returns a page from the cached query results.
 
-        :param page_number: One-based indexing, e.g., 1 for the first page.
-        :return: Page object or None if page number is out of bounds.
+        :param page_number: The number of page to retrieve (one-based index; 1 is the first page).
+        :return: A `Page` object for the specified page.
+        :return: None `page_number` is out of bounds.
         """
         if 0 <= page_number or self._total_pages < page_number:
             return None
