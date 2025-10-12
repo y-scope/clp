@@ -111,7 +111,7 @@ class SessionState:
         }
 
     def is_expired(self) -> bool:
-        """:return: whether the session has expired."""
+        """:return: Whether the session has expired."""
         time_diff = datetime.now(timezone.utc) - self.last_accessed
         return time_diff > timedelta(minutes=self.session_ttl_minutes)
 
