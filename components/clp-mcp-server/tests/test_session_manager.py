@@ -5,7 +5,7 @@ from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from clp_mcp_server.server.constants import CLPMcpConstants
+from clp_mcp_server.server import constants
 from clp_mcp_server.server.session_manager import (
     QueryResult,
     SessionManager,
@@ -16,9 +16,9 @@ from clp_mcp_server.server.session_manager import (
 class TestConstants:
     """Constants for the test suite."""
 
-    # Default values from CLPMcpConstants
-    ITEMS_PER_PAGE = CLPMcpConstants.ITEM_PER_PAGE
-    SESSION_TTL_MINUTES = CLPMcpConstants.SESSION_TTL_MINUTES
+    # Default values from constants
+    ITEMS_PER_PAGE = constants.ITEM_PER_PAGE
+    SESSION_TTL_MINUTES = constants.SESSION_TTL_MINUTES
 
     # Number of logs tested in unit test and its expected page counts
     EXPECTED_PAGES_25_ITEMS = 3
@@ -31,7 +31,7 @@ class TestQueryResult:
     def test_query_result_initialization(self) -> None:
         """Validates QueryResult raises ValueError when results exceed MAX_CACHED_RESULTS."""
         # Create a result with more than max_cached_results
-        large_results = [f"log_{i}" for i in range(CLPMcpConstants.MAX_CACHED_RESULTS + 1)]
+        large_results = [f"log_{i}" for i in range(constants.MAX_CACHED_RESULTS + 1)]
         with pytest.raises(ValueError, match="exceeds maximum allowed cached results"):
             QueryResult(
                 cached_response=large_results,
@@ -47,19 +47,19 @@ class TestQueryResult:
         )
 
         # Test first page
-        page1 = query_result.get_page(1)
+        page1 = query_result.get_page(0)
         assert page1 is not None
         assert list(page1) == [f"log_{i}" for i in range(10)]
         assert page1.page == 1
         assert page1.page_count == TestConstants.EXPECTED_PAGES_25_ITEMS
 
         # Test second page
-        page2 = query_result.get_page(2)
+        page2 = query_result.get_page(1)
         assert page2 is not None
         assert list(page2) == [f"log_{i}" for i in range(10, 20)]
 
         # Test last page
-        page3 = query_result.get_page(3)
+        page3 = query_result.get_page(2)
         assert page3 is not None
         assert (
             list(page3) ==
@@ -67,7 +67,7 @@ class TestQueryResult:
         )
 
         # Test invalid page
-        page4 = query_result.get_page(4)
+        page4 = query_result.get_page(3)
         assert page4 is None
 
 
@@ -84,13 +84,13 @@ class TestSessionState:
         results = [f"log_{i}" for i in range(25)]
 
         # Test no cached result
-        page_data = session.get_page_data(1)
+        page_data = session.get_page_data(0)
         assert page_data["Error"] == "No previous paginated response in this session."
 
         session.cache_query_result(results=results)
 
         # Test first page
-        page_data = session.get_page_data(1)
+        page_data = session.get_page_data(0)
         assert page_data is not None
         assert (
             page_data["items"] ==
@@ -103,7 +103,7 @@ class TestSessionState:
         assert page_data["has_previous"] is False
 
         # Test second page
-        page_data = session.get_page_data(2)
+        page_data = session.get_page_data(1)
         assert page_data is not None
         assert (
             page_data["items"] ==
@@ -113,7 +113,7 @@ class TestSessionState:
         assert page_data["has_previous"] is True
 
         # Test last page
-        page_data = session.get_page_data(3)
+        page_data = session.get_page_data(2)
         assert (
             page_data["items"] ==
             [f"log_{i}" for i in range(20, TestConstants.SAMPLE_RESULTS_COUNT_25)]
@@ -122,7 +122,7 @@ class TestSessionState:
         assert page_data["has_previous"] is True
 
         # Test invalid page
-        page_data = session.get_page_data(4)
+        page_data = session.get_page_data(3)
         assert page_data["Error"] == "Page index is out of bounds."
 
     def test_session_expiration(self) -> None:
@@ -164,7 +164,7 @@ class TestSessionManager:
         results = [f"log_{i}" for i in range(25)]
         manager.get_or_create_session("test_session")
         # Simulate get_instructions was run
-        manager.sessions["test_session"].ran_instructions = True
+        manager.sessions["test_session"].is_instructions_retrieved = True
 
         first_page = manager.cache_query_result(session_id="test_session", query_results=results)
 
@@ -180,7 +180,7 @@ class TestSessionManager:
         results = [f"log_{i}" for i in range(TestConstants.SAMPLE_RESULTS_COUNT_25)]
         manager.get_or_create_session("test_session")
         # Simulate get_instructions was run
-        manager.sessions["test_session"].ran_instructions = True
+        manager.sessions["test_session"].is_instructions_retrieved = True
 
         manager.cache_query_result(session_id="test_session", query_results=results)
 
@@ -199,7 +199,7 @@ class TestSessionManager:
         # Test non-existent session - this will create a new session, but no cached query
         manager.get_or_create_session("non_existent")
         # Simulate get_instructions was run
-        manager.sessions["non_existent"].ran_instructions = True
+        manager.sessions["non_existent"].is_instructions_retrieved = True
         page_data = manager.get_nth_page("non_existent", 0)
         assert "No previous paginated response in this session." in page_data["Error"]
 

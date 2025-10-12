@@ -4,7 +4,7 @@ from typing import Any
 
 from fastmcp import Context, FastMCP
 
-from .constants import CLPMcpConstants
+from . import constants
 from .session_manager import SessionManager
 
 
@@ -16,9 +16,9 @@ def create_mcp_server() -> FastMCP:
     :raise: Propagates `FastMCP.__init__`'s exceptions.
     :raise: Propagates `FastMCP.tool`'s exceptions.
     """
-    mcp = FastMCP(name=CLPMcpConstants.SERVER_NAME)
+    mcp = FastMCP(name=constants.SERVER_NAME)
 
-    session_manager = SessionManager(CLPMcpConstants.SESSION_TTL_MINUTES)
+    session_manager = SessionManager(constants.SESSION_TTL_MINUTES)
 
     @mcp.tool
     def get_instructions(ctx: Context) -> str:
@@ -30,8 +30,8 @@ def create_mcp_server() -> FastMCP:
         :return: A string of “system prompt”.
         """
         session = session_manager.get_or_create_session(ctx.session_id)
-        session.ran_instructions = True
-        return CLPMcpConstants.SYSTEM_PROMPT
+        session.is_instructions_retrieved = True
+        return constants.SYSTEM_PROMPT
 
     @mcp.tool
     def get_nth_page(page_index: int, ctx: Context) -> dict[str, Any]:
@@ -41,8 +41,10 @@ def create_mcp_server() -> FastMCP:
 
         :param page_index: Zero-based index, e.g., 0 for the first page.
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
-        :return: On success, dictionary containing paged log entries and pagination metadata.
-        On error, dictionary with ``{"Error": "error message describing the failure"}``.
+        :return: Dictionary containing the first page log entries and the paging metadata if the
+        first page can be retrieved.
+        :return: Dictionary with ``{"Error": "error message describing the failure"}`` if fails to
+        retrieve the first page."}``.
         """
         return session_manager.get_nth_page(ctx.session_id, page_index)
 
@@ -56,7 +58,7 @@ def create_mcp_server() -> FastMCP:
         """
         return {
             "message": f"Hello World, {name.strip()}!",
-            "server": CLPMcpConstants.SERVER_NAME,
+            "server": constants.SERVER_NAME,
             "status": "running",
         }
 

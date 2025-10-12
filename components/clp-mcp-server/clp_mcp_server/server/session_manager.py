@@ -8,7 +8,7 @@ from typing import Any
 
 from paginate import Page
 
-from .constants import CLPMcpConstants
+from .server import constants
 
 
 @dataclass(frozen=True)
@@ -18,7 +18,7 @@ class QueryResult:
     cached_response: list[str]
     num_items_per_page: int
 
-    _total_pages: int = field(init=False, repr=False)
+    _num_pages: int = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
         """
@@ -26,34 +26,36 @@ class QueryResult:
 
         :raise: ValueError if the number of cached results or num_items_per_page is invalid.
         """
-        if len(self.cached_response) > CLPMcpConstants.MAX_CACHED_RESULTS:
+        if len(self.cached_response) > constants.MAX_CACHED_RESULTS:
             err_msg = (
                 f"QueryResult exceeds maximum allowed cached results:"
-                f" {len(self.cached_response)} > {CLPMcpConstants.MAX_CACHED_RESULTS}."
+                f" {len(self.cached_response)} > {constants.MAX_CACHED_RESULTS}."
             )
             raise ValueError(err_msg)
 
         if self.num_items_per_page <= 0:
             err_msg = (
-                f"Invalid num_items_per_page: {self.num_items_per_page}, it must be a positive integer. "
+                f"Invalid num_items_per_page: {self.num_items_per_page}, "
+                "it must be a positive integer. "
             )
             raise ValueError(err_msg)
 
         object.__setattr__(
             self,
-            "_total_pages",
+            "_num_pages",
             (len(self.cached_response) + self.num_items_per_page - 1) // self.num_items_per_page,
         )
 
-    def get_page(self, page_number: int) -> Page | None:
+    def get_page(self, page_index: int) -> Page | None:
         """
         Returns a page from the cached query results.
 
-        :param page_number: The number of page to retrieve (one-based index; 1 is the first page).
+        :param page_index: The number of page to retrieve (zero-based index; 0 is the first page).
         :return: A `Page` object for the specified page.
-        :return: None `page_number` is out of bounds.
+        :return: None if `page_index` is out of bounds.
         """
-        if 0 <= page_number or self._total_pages < page_number:
+        page_number = page_index + 1  # Convert zero-based to one-based
+        if page_number <= 0 or self._num_pages < page_number:
             return None
 
         return Page(
@@ -72,7 +74,7 @@ class SessionState:
     session_ttl_minutes: int
     last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     cached_query_result: QueryResult | None = None
-    ran_instructions: bool = False
+    is_instructions_retrieved: bool = False
 
     def cache_query_result(
         self,
@@ -87,18 +89,20 @@ class SessionState:
             cached_response=results, num_items_per_page=self.num_items_per_page
         )
 
-    def get_page_data(self, page_number: int) -> dict[str, Any]:
+    def get_page_data(self, page_index: int) -> dict[str, Any]:
         """
         Gets page data and its metadata in a dictionary format.
 
-        :param page_number: One-based indexing, e.g., 1 for the first page.
-        :return: On success, dictionary containing paged log entries and the paging metadata.
-        On error, dictionary with ``{"Error": "error message describing the failure"}``.
+        :param page_index: The number of page to retrieve (zero-based index; 0 is the first page).
+        :return: Dictionary containing paged log entries and the paging metadata if the
+        page `page_index` can be retrieved.
+        :return: Dictionary with ``{"Error": "error message describing the failure"}`` if fails to
+        retrieve page `page_index`.
         """
         if self.cached_query_result is None:
             return {"Error": "No previous paginated response in this session."}
 
-        page = self.cached_query_result.get_page(page_number)
+        page = self.cached_query_result.get_page(page_index)
         if page is None:
             return {"Error": "Page index is out of bounds."}
 
@@ -147,7 +151,7 @@ class SessionManager:
     def _cleanup_loop(self) -> None:
         """Cleans up all expired sessions periodically in a separate cleanup thread."""
         while True:
-            time.sleep(CLPMcpConstants.EXPEIRED_SESSION_SWEEP_INTERVAL_SECONDS)
+            time.sleep(constants.EXPEIRED_SESSION_SWEEP_INTERVAL_SECONDS)
             self.cleanup_expired_sessions()
 
     def cleanup_expired_sessions(self) -> None:
@@ -173,7 +177,7 @@ class SessionManager:
 
             if session_id not in self.sessions:
                 self.sessions[session_id] = SessionState(
-                    session_id, CLPMcpConstants.ITEM_PER_PAGE, self.session_ttl_minutes
+                    session_id, constants.ITEM_PER_PAGE, self.session_ttl_minutes
                 )
 
             session = self.sessions[session_id]
@@ -187,12 +191,13 @@ class SessionManager:
 
         :param session_id: Unique identifier for the session.
         :param query_results: Complete log entries from previous query for caching.
-        :return: On success, dictionary containing the first page of log entries and
-        pagination metadata. On error, dictionary with
-        ``{"Error": "error message describing the failure"}``.
+        :return: Dictionary containing the first page log entries and the paging metadata if the
+        first page can be retrieved.
+        :return: Dictionary with ``{"Error": "error message describing the failure"}`` if fails to
+        retrieve the first page.
         """
         session = self.get_or_create_session(session_id)
-        if session.ran_instructions is False:
+        if session.is_instructions_retrieved is False:
             return {
                 "Error": "Please call get_instructions() first "
                 "to understand how to use this MCP server."
@@ -200,7 +205,7 @@ class SessionManager:
 
         session.cache_query_result(results=query_results)
 
-        return session.get_page_data(1)
+        return session.get_page_data(0)
 
     def get_nth_page(self, session_id: str, page_index: int) -> dict[str, Any]:
         """
@@ -208,15 +213,14 @@ class SessionManager:
         query.
 
         :param session_id: Unique identifier for the session.
-        :param page_index: Zero-based index, e.g., 0 for the first page.
+        :param page_index: The number of page to retrieve (zero-based index; 0 is the first page).
         :return: Forwards `SessionState.get_page_data`'s return values.
         """
         session = self.get_or_create_session(session_id)
-        if session.ran_instructions is False:
+        if session.is_instructions_retrieved is False:
             return {
                 "Error": "Please call get_instructions() first "
                 "to understand how to use this MCP server."
             }
 
-        page_number = page_index + 1  # Convert zero-based to one-based
-        return session.get_page_data(page_number)
+        return session.get_page_data(page_index)
