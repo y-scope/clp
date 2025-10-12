@@ -28,8 +28,8 @@ class QueryResult:
         """
         if len(self.total_results) > CLPMcpConstants.MAX_CACHED_RESULTS:
             err_msg = (
-                f"QueryResult exceeds maximum allowed cached results: "
-                f"{len(self.total_results)} > {CLPMcpConstants.MAX_CACHED_RESULTS}. "
+                f"QueryResult exceeds maximum allowed cached results:"
+                f" {len(self.total_results)} > {CLPMcpConstants.MAX_CACHED_RESULTS}."
             )
             raise ValueError(err_msg)
 
