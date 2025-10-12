@@ -64,7 +64,7 @@ class QueryResult:
 
 @dataclass
 class SessionState:
-    """State of a single user session."""
+    """Represents the state of a user session."""
 
     session_id: str
     items_per_page: int
