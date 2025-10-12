@@ -15,8 +15,8 @@ from .constants import CLPMcpConstants
 class QueryResult:
     """Cached results from the previous query's response."""
 
-    total_results: list[str]
-    items_per_page: int
+    cached_response: list[str]
+    num_items_per_page: int
 
     _total_pages: int = field(init=False, repr=False)
 
@@ -24,25 +24,25 @@ class QueryResult:
         """
         Validates that cached results don't exceed MAX_CACHED_RESULTS.
 
-        :raise: ValueError if the number of cached results or items_per_page is invalid.
+        :raise: ValueError if the number of cached results or num_items_per_page is invalid.
         """
-        if len(self.total_results) > CLPMcpConstants.MAX_CACHED_RESULTS:
+        if len(self.cached_response) > CLPMcpConstants.MAX_CACHED_RESULTS:
             err_msg = (
                 f"QueryResult exceeds maximum allowed cached results:"
-                f" {len(self.total_results)} > {CLPMcpConstants.MAX_CACHED_RESULTS}."
+                f" {len(self.cached_response)} > {CLPMcpConstants.MAX_CACHED_RESULTS}."
             )
             raise ValueError(err_msg)
 
-        if self.items_per_page <= 0:
+        if self.num_items_per_page <= 0:
             err_msg = (
-                f"Invalid items_per_page: {self.items_per_page}, it must be a positive integer. "
+                f"Invalid num_items_per_page: {self.num_items_per_page}, it must be a positive integer. "
             )
             raise ValueError(err_msg)
 
         object.__setattr__(
             self,
             "_total_pages",
-            (len(self.total_results) + self.items_per_page - 1) // self.items_per_page,
+            (len(self.cached_response) + self.num_items_per_page - 1) // self.num_items_per_page,
         )
 
     def get_page(self, page_number: int) -> Page | None:
@@ -56,9 +56,9 @@ class QueryResult:
             return None
 
         return Page(
-            self.total_results,
+            self.cached_response,
             page=page_number,
-            items_per_page=self.items_per_page,
+            items_per_page=self.num_items_per_page,
         )
 
 
@@ -67,7 +67,7 @@ class SessionState:
     """State of a single user session."""
 
     session_id: str
-    items_per_page: int
+    num_items_per_page: int
     session_ttl_minutes: int
     last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     cached_query_result: QueryResult | None = None
@@ -83,7 +83,7 @@ class SessionState:
         :param results: Complete log entries from previous query for caching.
         """
         self.cached_query_result = QueryResult(
-            total_results=results, items_per_page=self.items_per_page
+            cached_response=results, num_items_per_page=self.num_items_per_page
         )
 
     def get_page_data(self, page_number: int) -> dict[str, Any]:
@@ -105,7 +105,7 @@ class SessionState:
             "items": list(page),
             "total_pages": page.page_count,
             "total_items": page.item_count,
-            "items_per_page": page.items_per_page,
+            "num_items_per_page": page.items_per_page,
             "has_next": page.next_page is not None,
             "has_previous": page.previous_page is not None,
         }
@@ -146,7 +146,7 @@ class SessionManager:
     def _cleanup_loop(self) -> None:
         """Cleans up all expired sessions periodically in a separate cleanup thread."""
         while True:
-            time.sleep(CLPMcpConstants.CLEAN_UP_SECONDS)
+            time.sleep(CLPMcpConstants.EXPEIRED_SESSION_SWEEP_INTERVAL_SECONDS)
             self.cleanup_expired_sessions()
 
     def cleanup_expired_sessions(self) -> None:

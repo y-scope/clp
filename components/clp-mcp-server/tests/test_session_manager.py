@@ -34,16 +34,16 @@ class TestQueryResult:
         large_results = [f"log_{i}" for i in range(CLPMcpConstants.MAX_CACHED_RESULTS + 1)]
         with pytest.raises(ValueError, match="exceeds maximum allowed cached results"):
             QueryResult(
-                total_results=large_results,
-                items_per_page=TestConstants.ITEMS_PER_PAGE
+                cached_response=large_results,
+                num_items_per_page=TestConstants.ITEMS_PER_PAGE
             )
 
     def test_get_page(self) -> None:
         """Validates pagination functionality."""
         results = [f"log_{i}" for i in range(25)]
         query_result = QueryResult(
-            total_results=results,
-            items_per_page=TestConstants.ITEMS_PER_PAGE
+            cached_response=results,
+            num_items_per_page=TestConstants.ITEMS_PER_PAGE
         )
 
         # Test first page
@@ -78,7 +78,7 @@ class TestSessionState:
         """Validates pagination functionality is respecting the defined dictionary format."""
         session = SessionState(
             session_id="test_session",
-            items_per_page=TestConstants.ITEMS_PER_PAGE,
+            num_items_per_page=TestConstants.ITEMS_PER_PAGE,
             session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES
         )
         results = [f"log_{i}" for i in range(25)]
@@ -98,7 +98,7 @@ class TestSessionState:
         )
         assert page_data["total_pages"] == TestConstants.EXPECTED_PAGES_25_ITEMS
         assert page_data["total_items"] == TestConstants.SAMPLE_RESULTS_COUNT_25
-        assert page_data["items_per_page"] == TestConstants.ITEMS_PER_PAGE
+        assert page_data["num_items_per_page"] == TestConstants.ITEMS_PER_PAGE
         assert page_data["has_next"] is True
         assert page_data["has_previous"] is False
 
@@ -129,7 +129,7 @@ class TestSessionState:
         """Validates session expiration check."""
         session = SessionState(
             session_id="test_session",
-            items_per_page=TestConstants.ITEMS_PER_PAGE,
+            num_items_per_page=TestConstants.ITEMS_PER_PAGE,
             session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES
         )
 
@@ -150,7 +150,7 @@ class TestSessionManager:
         # Create new session
         session1 = manager.get_or_create_session("session1")
         assert session1.session_id == "session1"
-        assert session1.items_per_page == TestConstants.ITEMS_PER_PAGE
+        assert session1.num_items_per_page == TestConstants.ITEMS_PER_PAGE
         assert session1.session_ttl_minutes == TestConstants.SESSION_TTL_MINUTES
         assert "session1" in manager.sessions
 

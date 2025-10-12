@@ -4,7 +4,7 @@
 class CLPMcpConstants:
     """Constants for the CLP MCP Server."""
 
-    CLEAN_UP_SECONDS = 600  # 10 minutes
+    EXPEIRED_SESSION_SWEEP_INTERVAL_SECONDS = 600  # 10 minutes
     ITEM_PER_PAGE = 10
     MAX_CACHED_RESULTS = 1000
     SESSION_TTL_MINUTES = 60
