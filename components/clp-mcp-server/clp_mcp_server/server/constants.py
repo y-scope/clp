@@ -14,7 +14,7 @@ SYSTEM_PROMPT = (
     "You should also consider the following guidelines when generating KQL queries:\n"
     "- Use specific field names and values to narrow down the search.\n"
     "- Avoid using wildcards (*) unless absolutely necessary, as they can lead to large result"
-    "sets.\n"
+    " sets.\n"
     "- Use logical operators (AND, OR, NOT) to combine multiple conditions.\n"
     "- Consider the time range of the logs you are searching. If the user specifies a time range,"
     " include it in the KQL query.\n"
