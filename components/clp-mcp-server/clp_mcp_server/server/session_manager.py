@@ -8,7 +8,7 @@ from typing import Any
 
 from paginate import Page
 
-from .server import constants
+from . import constants
 
 
 class PaginatedQueryResult:
@@ -16,7 +16,7 @@ class PaginatedQueryResult:
 
     def __init__(self, result_log_entries: list[str], num_items_per_page: int) -> None:
         """
-        Initializes the QueryResultPaginator.
+        Initializes the PaginatedQueryResult.
 
         :param result_log_entries: List of cached log entries to paginate.
         :param num_items_per_page:
@@ -24,7 +24,7 @@ class PaginatedQueryResult:
         """
         if len(result_log_entries) > constants.MAX_CACHED_RESULTS:
             err_msg = (
-                f"QueryResultPaginator exceeds maximum allowed cached results:"
+                f"PaginatedQueryResult exceeds maximum allowed cached results:"
                 f" {len(result_log_entries)} > {constants.MAX_CACHED_RESULTS}."
             )
             raise ValueError(err_msg)
@@ -124,7 +124,7 @@ class SessionState:
 class SessionManager:
     """
     Session manager for concurrent user sessions.
-    `SessionManger` respects MCP Server Concurrency Model, that is:
+    `SessionManager` respects MCP Server Concurrency Model, that is:
     The server supports multiple concurrent clients, where each client only makes synchronous
     API calls.
     This model leads to the following design decisions:
