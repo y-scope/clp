@@ -432,7 +432,7 @@ tasks:
     deps:
       - task: "mariadb-connector-cpp-download-and-validate-checksum"
     cmds:
-      # Copy extracted files so that the build won't pollute the extracted files and cause
+      # Copies extracted files so that the build won't pollute the extracted files and cause
       # unnecessary rebuilds.
       - |-
         rm -rf "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-src"
