@@ -18,4 +18,4 @@ RUN apt-get clean \
 
 # Flatten the image
 FROM scratch
-COPY --from=base / /
+COPY --link --from=base / /

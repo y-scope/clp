@@ -22,7 +22,7 @@ ADD ./make-dictionaries-readable ./
 
 # Flatten the image
 FROM scratch
-COPY --from=base / /
+COPY --link --from=base / /
 
 WORKDIR /clp
 
