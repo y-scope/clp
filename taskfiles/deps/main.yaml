@@ -392,6 +392,8 @@ tasks:
 
   mariadb-connector-cpp-download-and-validate-checksum:
     internal: true
+    requires:
+      vars: ["CHECKSUM_FILE"]
     cmds:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
@@ -431,6 +433,8 @@ tasks:
     run: "once"
     deps:
       - task: "mariadb-connector-cpp-download-and-validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
     cmds:
       # Copies extracted files so that the build won't pollute the extracted files and cause
       # unnecessary rebuilds.
