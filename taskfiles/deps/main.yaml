@@ -390,6 +390,27 @@ tasks:
           TARBALL_SHA256: "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b"
           TARBALL_URL: "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz"
 
+  mariadb-connector-cpp-download-and-validate-checksum:
+    internal: true
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          FILE_SHA256: "0e3dfe9f2bc3f7bb6f7c159009556290064a7c23402ea08019fa8aebfc3ff2c9"
+          OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-extracted"
+          URL: "https://github.com/mariadb-corporation/mariadb-connector-cpp/archive/refs/tags/\
+            1.1.5.tar.gz"
+      # Uses checksum to skip mariadb-connector-cpp installation because the build updates the
+      # source directory and will always rebuild.
+      - task: "yscope-dev-utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: &mariadb-cmake-include-patterns
+            - "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-build"
+            - "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-extracted"
+            - "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-extracted.tar.gz"
+            - "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-install"
+            - "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-src"
+
   mariadb-connector-cpp:
     platforms: ["linux"]
     preconditions:
@@ -400,17 +421,44 @@ tasks:
       - >-
         source /etc/os-release && [[ "$ID" == "ubuntu" ]]
     internal: true
+    vars:
+      # Cannot use dependency checksum directory because it is cleaned up in `utils:init`.
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/mariadb-connector-cpp.md5"
+    sources:
+      - "{{.TASKFILE}}"
+      - "{{.CHECKSUM_FILE}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
     run: "once"
+    deps:
+      - task: "mariadb-connector-cpp-download-and-validate-checksum"
     cmds:
-      - task: "utils:install-remote-cmake-lib"
+      # Copy extracted files so that the build won't pollute the extracted files and cause
+      # unnecessary rebuilds.
+      - |-
+        rm -rf "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-src"
+        cp -r "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-extracted" \
+        "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-src"
+      - task: "yscope-dev-utils:cmake:generate"
         vars:
-          CMAKE_GEN_ARGS:
+          BUILD_DIR: "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-build"
+          EXTRA_ARGS:
             - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
             - "-DINSTALL_LAYOUT=DEB"
-          LIB_NAME: "mariadb-connector-cpp"
-          TARBALL_URL: "https://github.com/mariadb-corporation/mariadb-connector-cpp/archive/refs/\
-            tags/1.1.5.tar.gz"
-          TARBALL_SHA256: "0e3dfe9f2bc3f7bb6f7c159009556290064a7c23402ea08019fa8aebfc3ff2c9"
+          SOURCE_DIR: "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-src"
+      - task: "yscope-dev-utils:cmake:build"
+        vars:
+          BUILD_DIR: "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-build"
+          JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
+      - task: "yscope-dev-utils:cmake:install"
+        vars:
+          BUILD_DIR: "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-build"
+          CMAKE_PACKAGE_NAME: "mariadb-connector-cpp"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
+          INSTALL_PREFIX: "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-install"
+      - task: "yscope-dev-utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: *mariadb-cmake-include-patterns
 
   microsoft.gsl:
     internal: true
