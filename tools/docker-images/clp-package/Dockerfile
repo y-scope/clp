@@ -11,8 +11,7 @@ RUN apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
 COPY ./build/clp-package /opt/clp
-COPY --link ./build/deps/cpp/mariadb-connector-cpp-install/lib/x86_64-linux-gnu/libmariadbcpp.so \
-    /opt/clp/lib/libmariadbcpp.so
+COPY --link ./build/deps/cpp/mariadb-connector-cpp-install/lib/*/libmariadbcpp.so* /opt/clp/lib/
 
 # Flatten the image
 FROM scratch
