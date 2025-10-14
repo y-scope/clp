@@ -115,14 +115,14 @@ tasks:
       - task: "liblzma-install"
         vars:
           BUILD_SHARED_LIBS: true
-          COMMON_CMAKE_GEN_ARGS:
+          LIBLZMA_CMAKE_GEN_ARGS:
             ref: ".LIBLZMA_CMAKE_GEN_ARGS"
           TARBALL_SHA256: "{{.TARBALL_SHA256}}"
           TARBALL_URL: "{{.TARBALL_URL}}"
       - task: "liblzma-install"
         vars:
           BUILD_SHARED_LIBS: false
-          COMMON_CMAKE_GEN_ARGS:
+          LIBLZMA_CMAKE_GEN_ARGS:
             ref: ".LIBLZMA_CMAKE_GEN_ARGS"
           TARBALL_SHA256: "{{.TARBALL_SHA256}}"
           TARBALL_URL: "{{.TARBALL_URL}}"
