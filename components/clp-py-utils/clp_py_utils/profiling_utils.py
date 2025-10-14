@@ -2,18 +2,10 @@
 Profiling utilities for CLP query execution performance analysis.
 
 This module provides lightweight profiling decorators using pyinstrument.
-Profiling is controlled via the CLP_ENABLE_PROFILING environment variable and has
-minimal overhead when disabled (single boolean check per function call).
 
 Profile outputs include:
 - HTML files with interactive flame graphs and call trees
 - Text summaries showing call hierarchy and timing
-
-Usage:
-    Set enable_profiling: true in clp-config.yml. The CLP startup scripts will automatically
-    set the CLP_ENABLE_PROFILING environment variable for query components. Decorated functions
-    will then automatically generate profile data in $CLP_LOGS_DIR/profiles/ (typically
-    clp-package/var/log/<component>/profiles/).
 """
 
 import datetime
@@ -49,7 +41,6 @@ def is_profiling_enabled() -> bool:
 def get_profiling_output_dir() -> Path:
     """
     Get the directory for profile output files. Creates directory if needed.
-    Uses $CLP_LOGS_DIR/profiles (following CLP's logging conventions).
 
     :return: Path object pointing to the profiles directory.
     :raises RuntimeError: If CLP_LOGS_DIR environment variable is not set.
@@ -78,16 +69,13 @@ def _extract_context_from_args(
     task_id_param: Optional[str] = None,
 ) -> Tuple[str, str]:
     """
-    Extract job_id and task_id from function arguments using introspection. Supports both direct
-    values and attribute access (e.g., "job.id" to get the id attribute from a job parameter).
+    Extract job_id and task_id from function arguments.
 
     :param func: The function being profiled
     :param args: Positional arguments passed to the function
     :param kwargs: Keyword arguments passed to the function
     :param job_id_param: Name/path of the parameter containing job_id (default: "job_id").
-                         Can use dot notation for attributes, e.g., "job.id"
     :param task_id_param: Name/path of the parameter containing task_id (default: "task_id").
-                          Can use dot notation for attributes, e.g., "task.id"
     :return: Tuple of (job_id, task_id) as strings. Empty strings if not found.
     """
     job_id = ""
@@ -147,9 +135,7 @@ def _save_profile(
     profiler: Profiler, section_name: str, job_id: str = "", task_id: str = ""
 ) -> None:
     """
-    Save profiler output to HTML and text formats. Generates:
-    1. .html file: Interactive flame graph and call tree visualization
-    2. .txt file: Human-readable call hierarchy with timing
+    Save profiler output to HTML and text formats. Generates .html and .txt files.
 
     :param profiler: The pyinstrument Profiler object containing profiling data
     :param section_name: Name identifying this profiling section
@@ -218,9 +204,7 @@ def profile(
     Decorator for profiling function execution with automatic context extraction.
 
     Output files are written to $CLP_LOGS_DIR/profiles/ (e.g., clp-package/var/log/query_worker/
-    profiles/). Generated files:
-    - {section}_{job_id}_{task_id}_{timestamp}.html - Interactive flame graph and call tree
-    - {section}_{job_id}_{task_id}_{timestamp}.txt - Human-readable summary
+    profiles/).
 
     :param section_name: Override for profile section name. If None, uses function name.
     :param job_id_param: Parameter name to extract job_id from (default: "job_id").
