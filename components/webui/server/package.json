@@ -31,7 +31,6 @@
     "@fastify/type-provider-typebox": "^5.2.0",
     "@msgpack/msgpack": "^3.1.2",
     "@sinclair/typebox": "^0.34.41",
-    "@types/node": "^24.7.2",
     "@webui/common": "*",
     "close-with-grace": "^2.3.0",
     "dotenv": "^17.2.3",
@@ -42,6 +41,7 @@
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
+    "@types/node": "^22.18.10",
     "@types/presto-client": "^1.0.2",
     "concurrently": "^9.2.1",
     "eslint-config-yscope": "1.1.2",
