@@ -575,8 +575,10 @@ class StreamOutput(BaseModel):
 
 
 class WebUi(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 4000
+
     host: DomainStr = "localhost"
-    port: Port = 4000
+    port: Port = DEFAULT_PORT
     results_metadata_collection_name: NonEmptyStr = "results-metadata"
     rate_limit: PositiveInt = 1000
 
