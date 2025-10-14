@@ -30,7 +30,9 @@ class TestPaginatedQueryResult:
     """Unit tests for PaginatedQueryResult class."""
 
     def test_query_result_initialization(self) -> None:
-        """Validates PaginatedQueryResult raises ValueError when results exceed MAX_CACHED_RESULTS."""
+        """
+        Validates PaginatedQueryResult raises ValueError when results exceed MAX_CACHED_RESULTS.
+        """
         # Create a result with more than max_cached_results
         large_results = [f"log_{i}" for i in range(constants.MAX_CACHED_RESULTS + 1)]
         with pytest.raises(ValueError, match="exceeds maximum allowed cached results"):
@@ -162,7 +164,9 @@ class TestSessionManager:
         """Validates caching query results returns correct first page data."""
         results = [f"log_{i}" for i in range(25)]
 
-        first_page = active_session_manager.cache_query_result(session_id="test_session", query_results=results)
+        first_page = active_session_manager.cache_query_result(
+            session_id="test_session", query_results=results
+        )
 
         assert (
             first_page["items"] ==
@@ -200,7 +204,9 @@ class TestSessionManager:
         session = active_session_manager.get_or_create_session("test_session")
         session.is_instructions_retrieved = False # Simulate get_instructions was NOT run
 
-        first_page = active_session_manager.cache_query_result("test_session", [f"log_{i}" for i in range(15)])
+        first_page = active_session_manager.cache_query_result(
+            "test_session", [f"log_{i}" for i in range(15)]
+        )
         assert "Please call get_instructions()" in first_page["Error"]
         page_data = active_session_manager.get_nth_page("test_session", 0)
         assert "Please call get_instructions()" in page_data["Error"]
@@ -215,8 +221,14 @@ class TestSessionManager:
         manager.get_or_create_session("session3")
 
         # Make session1 and session2 expired
-        session1.last_accessed = datetime.now(timezone.utc) - timedelta(minutes=61)
-        session2.last_accessed = datetime.now(timezone.utc) - timedelta(minutes=65)
+        session1.last_accessed = (
+            datetime.now(timezone.utc) -
+            timedelta(minutes=TestConstants.EXPIRED_SESSION_TTL_MINUTES)
+        )
+        session2.last_accessed = (
+            datetime.now(timezone.utc) -
+            timedelta(minutes=TestConstants.EXPIRED_SESSION_TTL_MINUTES)
+        )
 
         manager.cleanup_expired_sessions()
 
@@ -227,15 +239,18 @@ class TestSessionManager:
     @pytest.mark.repeat(10)
     def test_thread_safety_cleanup_and_get_or_create_session(self) -> None:
         """Validates thread safety of cleanup_expired_sessions and get_or_create_session."""
-        manager = SessionManager(session_ttl_minutes=10)
+        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
 
         def cleanup_task() -> None:
             """Continuously expires some sessions and cleans up expired sessions."""
             for _ in range(10000):
-                for i in range(50):
+                for i in range(50): # mark half of them expired
                     session = manager.get_or_create_session(f"session_{i}")
-                    if i < TestConstants.SAMPLE_RESULTS_COUNT_25:
-                        session.last_accessed = datetime.now(timezone.utc) - timedelta(minutes=20)
+                    if i < 25:
+                        session.last_accessed = (
+                            datetime.now(timezone.utc) -
+                            timedelta(minutes=TestConstants.EXPIRED_SESSION_TTL_MINUTES)
+                        )
                 manager.cleanup_expired_sessions()
 
         def access_task() -> None:
