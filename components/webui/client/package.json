@@ -41,7 +41,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "@types/node": "24.7.2",
+    "@types/node": "22.18.10",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
     "@types/react-syntax-highlighter": "^15.5.13",
