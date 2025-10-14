@@ -1,17 +1,18 @@
 #include "TimestampParser.hpp"
 
 #include <array>
+#include <chrono>
 #include <cstddef>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
-#include <vector>
 
 #include <date/date.h>
 #include <string_utils/string_utils.hpp>
 #include <ystdlib/error_handling/Result.hpp>
 
+#include "../Defs.hpp"
 #include "ErrorCode.hpp"
 
 namespace clp_s::timestamp_parser {
@@ -96,7 +97,7 @@ template <typename CandidateArrayType>
 auto find_first_matching_prefix(std::string_view str, CandidateArrayType const& candidates)
         -> ystdlib::error_handling::Result<size_t, ErrorCode> {
     for (size_t candidate_idx{0ULL}; candidate_idx < candidates.size(); ++candidate_idx) {
-        auto const& candidate{candidates[candidate_idx]};
+        auto const& candidate{candidates.at(candidate_idx)};
         if (candidate == str.substr(0ULL, candidate.size())) {
             return candidate_idx;
         }
@@ -105,13 +106,12 @@ auto find_first_matching_prefix(std::string_view str, CandidateArrayType const& 
 }
 }  // namespace
 
+// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers,readability-function-cognitive-complexity)
 auto parse_timestamp(
         std::string_view timestamp,
         std::string_view pattern,
-        std::string& generated_pattern
+        [[maybe_unused]] std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>, ErrorCode> {
-    std::vector<std::pair<size_t, std::string>> cat_sequence_resolutions;
-
     size_t pattern_idx{};
     size_t timestamp_idx{};
 
@@ -121,7 +121,7 @@ auto parse_timestamp(
     std::optional<int> day_of_week_idx;
 
     bool date_type_representation{false};
-    bool number_type_representation{false};
+    bool const number_type_representation{false};
 
     bool escaped{false};
     for (; pattern_idx < pattern.size() && timestamp_idx < timestamp.size(); ++pattern_idx) {
@@ -195,7 +195,7 @@ auto parse_timestamp(
                         find_first_matching_prefix(timestamp.substr(timestamp_idx), cMonthNames)
                 )};
                 parsed_month = static_cast<int>(month_idx) + 1;
-                timestamp_idx += cMonthNames[month_idx].length();
+                timestamp_idx += cMonthNames.at(month_idx).length();
                 date_type_representation = true;
                 break;
             }
@@ -205,7 +205,7 @@ auto parse_timestamp(
                         cAbbreviatedMonthNames
                 ))};
                 parsed_month = static_cast<int>(month_idx) + 1;
-                timestamp_idx += cAbbreviatedMonthNames[month_idx].length();
+                timestamp_idx += cAbbreviatedMonthNames.at(month_idx).length();
                 date_type_representation = true;
                 break;
             }
@@ -283,7 +283,7 @@ auto parse_timestamp(
                         timestamp.substr(timestamp_idx),
                         cAbbreviatedDaysOfWeek
                 ))};
-                timestamp_idx += cAbbreviatedDaysOfWeek[day_idx].length();
+                timestamp_idx += cAbbreviatedDaysOfWeek.at(day_idx).length();
                 day_of_week_idx = static_cast<int>(day_idx);
                 date_type_representation = true;
                 break;
@@ -361,4 +361,6 @@ auto parse_timestamp(
     };
     return {epoch_nanoseconds, pattern};
 }
+
+// NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers,readability-function-cognitive-complexity)
 }  // namespace clp_s::timestamp_parser
