@@ -30,49 +30,56 @@ namespace clp_s::timestamp_parser {
  *
  * We support the following format specifiers:
  *
- *      - \y Zero-padded year in century (69-99 -> 1969-1999, 00-68 -> 2000-2068).
- *      - \Y Zero-padded year (0000-9999).
- *      - \B Full month name (e.g., January).
- *      - \b Abbreviated month name (e.g., Jan).
- *      - \m Zero-padded month (01-12).
- *      - \d Zero-padded day in month (01-31).
- *      - \e Space-padded day in month( 1-31).
- *      - \a Abbreviated day in week (e.g., Mon).
- *      - \p Part of day (AM/PM).
- *      - \H 24-hour clock, zero-padded hour (00-23).
- *      - \k 24-hour clock, space-padded hour ( 0-23).
- *      - \I 12-hour clock, zero-padded hour (01-12).
- *      - \l 12-hour clock, space-padded hour ( 1-12).
- *      - \M Zero-padded minute (00-59).
- *      - \S Zero-padded second (00-60) (60 for leap seconds).
- *      - \3 Zero-padded millisecond (000-999).
- *      - \6 Zero-padded microsecond (000000-999999).
- *      - \9 Zero-padded nanosecond (000000000-999999999).
- *      - \T Zero-padded fractional second, up to nanoseconds, without trailing zeroes.
- *      - \E Epoch seconds.
- *      - \L Epoch miLliseconds.
- *      - \C Epoch miCroseconds.
- *      - \N Epoch Nanoseconds.
- *      - \z{...} Specific timezone, described by content between {}.
- *      - \\ Literal backslash.
+ * - \y Zero-padded year in century (69-99 -> 1969-1999, 00-68 -> 2000-2068).
+ * - \Y Zero-padded year (0000-9999).
+ * - \B Full month name (e.g., January).
+ * - \b Abbreviated month name (e.g., Jan).
+ * - \m Zero-padded month (01-12).
+ * - \d Zero-padded day in month (01-31).
+ * - \e Space-padded day in month( 1-31).
+ * - \a Abbreviated day in week (e.g., Mon).
+ * - \p Part of day (AM/PM).
+ * - \H 24-hour clock, zero-padded hour (00-23).
+ * - \k 24-hour clock, space-padded hour ( 0-23).
+ * - \I 12-hour clock, zero-padded hour (01-12).
+ * - \l 12-hour clock, space-padded hour ( 1-12).
+ * - \M Zero-padded minute (00-59).
+ * - \S Zero-padded second (00-60) (60 for leap seconds).
+ * - \3 Zero-padded millisecond (000-999).
+ * - \6 Zero-padded microsecond (000000-999999).
+ * - \9 Zero-padded nanosecond (000000000-999999999).
+ * - \T Zero-padded fractional second, up to nanoseconds, without trailing zeroes.
+ * - \E Epoch seconds.
+ * - \L Epoch miLliseconds.
+ * - \C Epoch miCroseconds.
+ * - \N Epoch Nanoseconds.
+ * - \z{...} Specific timezone, described by content between {}.
+ * - \\ Literal backslash.
  *
  * We also support the following CAT sequences:
  *
- *      - \Z Generic timezone -- resolves to literal content, and potentially \z{...}.
- *      - \? Generic fractional second -- resolves to \3, \6, \9, or \T.
- *      - \P Unknown-precision epoch time -- resolves to \E, \L, \C, or \N based on heuristic.
+ * - \Z Generic timezone -- resolves to literal content, and potentially \z{...}.
+ * - \? Generic fractional second -- resolves to \3, \6, \9, or \T.
+ * - \P Unknown-precision epoch time -- resolves to \E, \L, \C, or \N based on a heuristic.
  *
  * @param timestamp
  * @param pattern A timestamp pattern made up of literals, format specifiers, and potentially CAT
  *                sequences.
  * @param generated_pattern A buffer where a newly-generated timestamp pattern can be written, if
  *                          necessary.
- * @return On success:
- *              - The timestamp in epoch nanoseconds.
- *              - A string_view of the timestamp pattern that corresponds to the timestamp.
- *                      - Lifetime is least of `pattern` and `generated_pattern`.
- *         On error:
- *              - A `clp_s::timestamp_parser::ErrorCode`.
+ * @return A result containing a pair, or an error code indicating the failure:
+ * - The pair:
+ *   - The timestamp in epoch nanoseconds.
+ *   - An `std::string_view` of the timestamp pattern that corresponds to the timestamp.
+ *     - The lifetime of the `std::string_view` is the least of `pattern` and `generated_pattern`.
+ * - The possible error codes from `clp_s::timestamp_parser::ErrorCodeEnum`:
+ *   - `InvalidTimestampPattern` if the pattern is illegal, per the specification.
+ *   - `IncompatibleTimestampPattern` if the pattern is not able to exactly consume the timestamp.
+ *   - `InvalidDate` if parsing was successful, but some components of the timestamp offer
+ *     conflicting information about the actual date (e.g., if the parsed day of the week doesn't
+ *     match up with the rest of the timestamp information).
+ *   - `FormatSpecifierNotImplemented` if the pattern contains format specifiers that have not been
+ *     implemented yet.
  */
 [[nodiscard]] auto parse_timestamp(
         std::string_view timestamp,

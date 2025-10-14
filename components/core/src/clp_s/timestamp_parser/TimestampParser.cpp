@@ -67,8 +67,8 @@ constexpr std::array cAbbreviatedMonthNames
  * @tparam CandidateArrayType
  * @param str Substring with a prefix potentially matching one of the candidates.
  * @param candidates Candidate prefixes that will be matched against `str`.
- * @return The index of the matching prefix in the candidates array, or
- * `ErrorCodeEnum::IncompatibleTimestampPattern` on error.
+ * @return A result containing the index of the matching prefix in the candidates array, or
+ * `clp_s::timestamp_parser::ErrorCodeEnum::IncompatibleTimestampPattern` on failure.
  */
 template <typename CandidateArrayType>
 [[nodiscard]] auto
