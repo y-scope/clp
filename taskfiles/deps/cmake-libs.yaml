@@ -18,7 +18,6 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
-            - "-DABSL_BUILD_TESTING=OFF"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_CXX_STANDARD=20"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
@@ -72,7 +71,6 @@ tasks:
           CMAKE_GEN_ARGS:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-            - "-DENABLE_DATE_TESTING=OFF"
           LIB_NAME: "date"
           TARBALL_SHA256: "7a390f200f0ccd207e8cff6757e04817c1a0aec3e327b006b7eb451c57ee3538"
           TARBALL_URL: "https://github.com/HowardHinnant/date/archive/refs/tags/v3.0.1.tar.gz"
@@ -195,7 +193,6 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DINSTALL_LAYOUT=DEB"
             - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
-            - "-DWITH_UNIT_TESTS=OFF"
           LIB_NAME: "mariadb-connector-cpp"
           TARBALL_SHA256: "0e3dfe9f2bc3f7bb6f7c159009556290064a7c23402ea08019fa8aebfc3ff2c9"
           TARBALL_URL: "https://github.com/mariadb-corporation/mariadb-connector-cpp/archive/refs/\
@@ -226,7 +223,6 @@ tasks:
           CMAKE_GEN_ARGS:
             - "-DBUILD_SHARED_AND_STATIC_LIBS=ON"
             - "-DBUILD_SHARED_LIBS_WITH_STATIC_MONGOC=ON"
-            - "-DENABLE_TESTS=OFF"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DENABLE_UNINSTALL=OFF"
@@ -251,7 +247,6 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
             - "-DMSGPACK_BUILD_DOCS=OFF"
-            - "-DMSGPACK_BUILD_TESTS=OFF"
             - "-DMSGPACK_CXX20=ON"
           LIB_NAME: "msgpack-cxx"
           TARBALL_SHA256: "7504b7af7e7b9002ce529d4f941e1b7fb1fb435768780ce7da4abaac79bb156f"
@@ -303,8 +298,7 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
             - "-DSPDLOG_BUILD_EXAMPLE=OFF"
-            - "-DSPDLOG_BUILD_TESTS=OFF"
-            - "-DSPDLOG_BUILD_TESTS_HO=OFF"
+            - "-DSPDLOG_BUILD_EXAMPLE_HO=OFF"
             - "-DSPDLOG_FMT_EXTERNAL=ON"
           LIB_NAME: "spdlog"
           TARBALL_SHA256: "15a04e69c222eb6c01094b5c7ff8a249b36bb22788d72519646fb85feb267e67"
