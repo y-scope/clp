@@ -410,6 +410,12 @@ tasks:
             - "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-install"
 
   mariadb-connector-cpp:
+    vars:
+      # Cannot use dependency checksum directory because it is cleaned up in `utils:init`.
+      CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/mariadb-connector-cpp.md5"
+    sources:
+      - "{{.TASKFILE}}"
+      - "{{.CHECKSUM_FILE}}"
     platforms: ["linux"]
     preconditions:
       # NOTE: The MariaDB connector is only required for building Spider, which is only supported on
@@ -419,12 +425,6 @@ tasks:
       - >-
         source /etc/os-release && [[ "$ID" == "ubuntu" ]]
     internal: true
-    vars:
-      # Cannot use dependency checksum directory because it is cleaned up in `utils:init`.
-      CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/mariadb-connector-cpp.md5"
-    sources:
-      - "{{.TASKFILE}}"
-      - "{{.CHECKSUM_FILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
     run: "once"
     deps:
