@@ -669,7 +669,7 @@ class CLPConfig(BaseModel):
             auth_configs.append(self.stream_output.storage.s3_config.aws_authentication)
 
         for auth in auth_configs:
-            if AwsAuthType.profile.value == auth.type:
+            if AwsAuthType.profile == auth.type:
                 profile_auth_used = True
                 break
 
