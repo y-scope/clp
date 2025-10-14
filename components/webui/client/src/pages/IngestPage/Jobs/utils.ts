@@ -11,18 +11,23 @@ import {formatSizeInBytes} from "./units";
 /**
  * Convert a QueryJobsItem to JobData
  *
- * @param job
+ * @param props
+ * @param props._id
+ * @param props.compressed_size
+ * @param props.duration
+ * @param props.start_time
+ * @param props.status
+ * @param props.uncompressed_size
  * @return
  */
-const convertQueryJobsItemToJobData = (job: QueryJobsItem): JobData => {
-    const {
-        compressed_size: compressedSize,
-        uncompressed_size: uncompressedSize,
-        start_time: startTime,
-        status,
-        _id: id,
-    } = job;
-    let {duration} = job;
+const convertQueryJobsItemToJobData = ({
+    _id: id,
+    compressed_size: compressedSize,
+    duration,
+    start_time: startTime,
+    status,
+    uncompressed_size: uncompressedSize,
+}: QueryJobsItem): JobData => {
     let uncompressedSizeText = "";
     let compressedSizeText = "";
     let speedText = "";
