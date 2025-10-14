@@ -27,12 +27,12 @@ const convertQueryJobsItemToJobData = (job: QueryJobsItem): JobData => {
         }
     }
 
-    const uncompressedSize = Number(job.uncompressed_size);
+    const uncompressedSize = job.uncompressed_size;
     if (false === isNaN(uncompressedSize) && 0 !== uncompressedSize) {
         uncompressedSizeText = formatSizeInBytes(uncompressedSize, false);
     }
 
-    const compressedSize = Number(job.compressed_size);
+    const compressedSize = job.compressed_size;
     if (false === isNaN(compressedSize) && 0 !== compressedSize) {
         compressedSizeText = formatSizeInBytes(compressedSize, false);
     }
