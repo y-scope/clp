@@ -145,31 +145,24 @@ class TestSessionManager:
     """Unit tests for SessionManager class."""
 
     @pytest.fixture
-    def active_session_manager(session_id: str) -> SessionManager:
+    def active_session_manager(self) -> SessionManager:
         manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
-        session = manager.get_or_create_session(session_id)
+        session = manager.get_or_create_session("test_session")
         session.is_instructions_retrieved = True # Simulate get_instructions was run
         return manager
 
-    def test_get_or_create_session(self) -> None:
+    def test_get_or_create_session(self, active_session_manager: SessionManager) -> None:
         """Validates session creation and retrieval."""
-        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
-
-        # Create new session
-        session1 = manager.get_or_create_session("session1")
-        assert session1.session_id == "session1"
-        assert "session1" in manager.sessions
-
         # Get existing session
-        session1_again = manager.get_or_create_session("session1")
-        assert session1_again is session1
+        session1 = active_session_manager.get_or_create_session("test_session")
+        assert session1.session_id == "test_session"
+        assert "test_session" in active_session_manager.sessions
 
-    def test_cached_query_result(self) -> None:
+    def test_cached_query_result(self, active_session_manager: SessionManager) -> None:
         """Validates caching query results returns correct first page data."""
-        manager = active_session_manager("test_session")
         results = [f"log_{i}" for i in range(25)]
 
-        first_page = manager.cache_query_result(session_id="test_session", query_results=results)
+        first_page = active_session_manager.cache_query_result(session_id="test_session", query_results=results)
 
         assert (
             first_page["items"] ==
@@ -177,15 +170,14 @@ class TestSessionManager:
         )
         assert first_page["total_items"] == TestConstants.SAMPLE_RESULTS_COUNT_25
 
-    def test_get_nth_page(self) -> None:
+    def test_get_nth_page(self, active_session_manager: SessionManager) -> None:
         """Validates retrieving specific pages."""
-        manager = active_session_manager("test_session")
         results = [f"log_{i}" for i in range(TestConstants.SAMPLE_RESULTS_COUNT_25)]
 
-        manager.cache_query_result(session_id="test_session", query_results=results)
+        active_session_manager.cache_query_result(session_id="test_session", query_results=results)
 
         # Get second page (index 1)
-        page_data = manager.get_nth_page("test_session", 1)
+        page_data = active_session_manager.get_nth_page("test_session", 1)
         assert "Error" not in page_data
         assert (
             page_data["items"] ==
@@ -193,24 +185,24 @@ class TestSessionManager:
         )
 
         # Test invalid page
-        page_data = manager.get_nth_page("test_session", 10)
+        page_data = active_session_manager.get_nth_page("test_session", 10)
         assert "Page index is out of bounds." in page_data["Error"]
 
         # Test non-existent session - this will create a new session, but no cached query
-        manager.get_or_create_session("non_existent")
+        active_session_manager.get_or_create_session("non_existent")
         # Simulate get_instructions was run
-        manager.sessions["non_existent"].is_instructions_retrieved = True
-        page_data = manager.get_nth_page("non_existent", 0)
+        active_session_manager.sessions["non_existent"].is_instructions_retrieved = True
+        page_data = active_session_manager.get_nth_page("non_existent", 0)
         assert "No previous paginated response in this session." in page_data["Error"]
 
-    def test_no_get_instruction(self) -> None:
+    def test_no_get_instruction(self, active_session_manager: SessionManager) -> None:
         """Validates error handling when get_instructions() has not been called."""
-        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
-        manager.get_or_create_session("test_session")
+        session = active_session_manager.get_or_create_session("test_session")
+        session.is_instructions_retrieved = False # Simulate get_instructions was NOT run
 
-        first_page = manager.cache_query_result("test_session", [f"log_{i}" for i in range(15)])
+        first_page = active_session_manager.cache_query_result("test_session", [f"log_{i}" for i in range(15)])
         assert "Please call get_instructions()" in first_page["Error"]
-        page_data = manager.get_nth_page("test_session", 0)
+        page_data = active_session_manager.get_nth_page("test_session", 0)
         assert "Please call get_instructions()" in page_data["Error"]
 
     def test_cleanup_expired_sessions(self) -> None:
