@@ -1,4 +1,3 @@
-#include <iostream>
 #include <string>
 #include <vector>
 
@@ -46,7 +45,7 @@ assert_specifier_accepts_valid_content(char specifier, std::vector<std::string> 
 
 auto generate_padded_numbers_in_range(size_t begin, size_t end, size_t field_length, char padding)
         -> std::vector<std::string> {
-    REQUIRE(begin < end);
+    REQUIRE(begin <= end);
     std::vector<std::string> generated_numbers;
     auto const pattern{fmt::format("{{:{}>{}d}}", padding, field_length)};
     for (size_t i{begin}; i <= end; ++i) {
