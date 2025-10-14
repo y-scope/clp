@@ -99,7 +99,7 @@ class SessionState:
 
     @property
     def last_accessed(self) -> datetime:
-        """:return: The timestamp when the seesion was last accessed."""
+        """:return: The timestamp when the session was last accessed."""
         with self._lock:
             return self._last_accessed
 

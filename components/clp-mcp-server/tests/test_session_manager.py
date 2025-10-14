@@ -43,7 +43,7 @@ class TestPaginatedQueryResult:
 
     def test_get_page(self) -> None:
         """Validates pagination functionality."""
-        results = [f"log_{i}" for i in range(25)]
+        results = [f"log_{i}" for i in range(TestConstants.SAMPLE_RESULTS_COUNT_25)]
         query_result = PaginatedQueryResult(
             result_log_entries=results,
             num_items_per_page=TestConstants.ITEMS_PER_PAGE
@@ -52,21 +52,25 @@ class TestPaginatedQueryResult:
         # Test first page
         page1 = query_result.get_page(0)
         assert page1 is not None
-        assert list(page1) == [f"log_{i}" for i in range(10)]
+        assert list(page1) == [f"log_{i}" for i in range(TestConstants.ITEMS_PER_PAGE)]
         assert page1.page == 1
         assert page1.page_count == TestConstants.EXPECTED_PAGES_25_ITEMS
 
         # Test second page
         page2 = query_result.get_page(1)
         assert page2 is not None
-        assert list(page2) == [f"log_{i}" for i in range(10, 20)]
+        assert list(page2) == [f"log_{i}" for i in range(
+            TestConstants.ITEMS_PER_PAGE, TestConstants.ITEMS_PER_PAGE * 2
+        )]
 
         # Test last page
         page3 = query_result.get_page(2)
         assert page3 is not None
         assert (
             list(page3) ==
-            [f"log_{i}" for i in range(20, 25)]
+            [f"log_{i}" for i in range(
+                TestConstants.ITEMS_PER_PAGE * 2, TestConstants.SAMPLE_RESULTS_COUNT_25
+            )]
         )
 
         # Test invalid page
@@ -84,7 +88,7 @@ class TestSessionState:
             _num_items_per_page=TestConstants.ITEMS_PER_PAGE,
             _session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES
         )
-        results = [f"log_{i}" for i in range(25)]
+        results = [f"log_{i}" for i in range(TestConstants.SAMPLE_RESULTS_COUNT_25)]
 
         # Test no cached result
         page_data = session.get_page_data(0)
@@ -110,7 +114,9 @@ class TestSessionState:
         assert page_data is not None
         assert (
             page_data["items"] ==
-            [f"log_{i}" for i in range(TestConstants.ITEMS_PER_PAGE, 20)]
+            [f"log_{i}" for i in range(
+                TestConstants.ITEMS_PER_PAGE, TestConstants.ITEMS_PER_PAGE * 2
+            )]
         )
         assert page_data["has_next"] is True
         assert page_data["has_previous"] is True
@@ -119,7 +125,9 @@ class TestSessionState:
         page_data = session.get_page_data(2)
         assert (
             page_data["items"] ==
-            [f"log_{i}" for i in range(20, TestConstants.SAMPLE_RESULTS_COUNT_25)]
+            [f"log_{i}" for i in range(
+                TestConstants.ITEMS_PER_PAGE * 2, TestConstants.SAMPLE_RESULTS_COUNT_25
+            )]
         )
         assert page_data["has_next"] is False
         assert page_data["has_previous"] is True
@@ -163,7 +171,7 @@ class TestSessionManager:
 
     def test_cached_query_result(self, active_session_manager: SessionManager) -> None:
         """Validates caching query results returns correct first page data."""
-        results = [f"log_{i}" for i in range(25)]
+        results = [f"log_{i}" for i in range(TestConstants.SAMPLE_RESULTS_COUNT_25)]
 
         first_page = active_session_manager.cache_query_result(
             session_id="test_session", query_results=results
@@ -186,7 +194,9 @@ class TestSessionManager:
         assert "Error" not in page_data
         assert (
             page_data["items"] ==
-            [f"log_{i}" for i in range(TestConstants.ITEMS_PER_PAGE, 20)]
+            [f"log_{i}" for i in range(
+                TestConstants.ITEMS_PER_PAGE, TestConstants.ITEMS_PER_PAGE * 2
+            )]
         )
 
         # Test invalid page
@@ -206,7 +216,7 @@ class TestSessionManager:
         session.is_instructions_retrieved = False # Simulate get_instructions was NOT run
 
         first_page = active_session_manager.cache_query_result(
-            "test_session", [f"log_{i}" for i in range(15)]
+            "test_session", [f"log_{i}" for i in range(TestConstants.SAMPLE_RESULTS_COUNT_25)]
         )
         assert "Please call get_instructions()" in first_page["Error"]
         page_data = active_session_manager.get_nth_page("test_session", 0)
