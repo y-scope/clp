@@ -15,12 +15,11 @@ COPY --from=base / /
 ENV CLP_HOME="/opt/clp"
 COPY ./build/clp-package ${CLP_HOME}
 
-ENV PATH="${CLP_HOME}/bin:${PATH}" \
+ENV PATH="${CLP_HOME}/bin:${PATH}"
+ENV PATH="${CLP_HOME}/sbin:${PATH}" \
     PYTHONPATH="${CLP_HOME}/lib/python3/site-packages"
-ENV PATH="${CLP_HOME}/sbin:${PATH}"
+    USER="clp-user"
 
-# Create a non-root user.
-ENV USER="clp-user"
 RUN useradd --uid 1000 --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
 USER ${USER}
 WORKDIR ${CLP_HOME}
