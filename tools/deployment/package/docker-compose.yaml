@@ -2,23 +2,20 @@ name: "clp-package"
 
 include: ["docker-compose.base.yaml"]
 
-# Common service defaults.
+# Below x-* definitions are duplicated from docker-compose.base.yaml. Refer to that file for
+# documentation.
 x-service-defaults: &service_defaults
   image: "${CLP_PACKAGE_CONTAINER:-clp-package}"
   logging:
     driver: "local"
   stop_grace_period: "3s"
   user: "${CLP_UID_GID:-1000:1000}"
-
-# Common healthcheck defaults.
 x-healthcheck-defaults: &healthcheck_defaults
   interval: "30s"
   retries: 3
   start_interval: "2s"
   start_period: "60s"
   timeout: "2s"
-
-# Common volume definitions.
 x-volume-definitions:
   aws-config-readonly: &volume_aws_config_readonly
     type: "bind"

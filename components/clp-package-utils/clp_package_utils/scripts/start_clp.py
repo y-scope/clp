@@ -32,8 +32,19 @@ def main(argv):
         default=str(default_config_file_path),
         help="CLP package configuration file.",
     )
+    args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
 
     parsed_args = args_parser.parse_args(argv[1:])
+
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     try:
         # Validate and load config file.

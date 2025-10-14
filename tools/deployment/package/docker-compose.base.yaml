@@ -10,10 +10,17 @@ x-service-defaults: &service_defaults
 
 # Common healthcheck defaults.
 x-healthcheck-defaults: &healthcheck_defaults
+  # Avoid lowering to prevent excessive resource usage.
   interval: "30s"
+  # Mark unhealthy after 3 failed probes.
+  # - In steady state, (<interval> + <timeout>) × 3 = ~90s before the service is marked unhealthy.
+  # - From startup, <start_period> (60s) + ~90s = ~150s before the service is marked unhealthy.
   retries: 3
+  # Frequent checks during startup allow fast transition to healthy.
   start_interval: "2s"
+  # Ignore failures for ~15 frequent checks before counting retries.
   start_period: "60s"
+  # Short timeout since no remote communication is expected.
   timeout: "2s"
 
 # Common volume definitions.
