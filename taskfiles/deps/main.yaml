@@ -425,7 +425,7 @@ tasks:
     internal: true
     vars:
       # Cannot use dependency checksum directory because it is cleaned up in `utils:init`.
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/mariadb-connector-cpp.md5"
+      CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUM_DIR}}/mariadb-connector-cpp.md5"
     sources:
       - "{{.TASKFILE}}"
       - "{{.CHECKSUM_FILE}}"
