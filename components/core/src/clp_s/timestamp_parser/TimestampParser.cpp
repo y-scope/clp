@@ -17,6 +17,22 @@
 
 namespace clp_s::timestamp_parser {
 namespace {
+constexpr int cMinParsedDay = 1;
+constexpr int cMaxParsedDay = 31;
+constexpr int cMinParsedMonth = 1;
+constexpr int cMaxParsedMonth = 12;
+constexpr int cMinParsedYear = 0;
+constexpr int cMaxParsedYear = 9999;
+constexpr int cMinTwoDigitYear = 0;
+constexpr int cTwoDigitYearOffsetBoundary = 69;
+constexpr int cMaxTwoDigitYear = 99;
+constexpr int cTwoDigitYearLowOffset = 1900;
+constexpr int cTwoDigitYearHighOffset = 2000;
+
+constexpr int cDefaultYear = 1970;
+constexpr int cDefaultMonth = 1;
+constexpr int cDefaultDay = 1;
+
 constexpr std::array cAbbreviatedDaysOfWeek
         = {std::string_view{"Sun"},
            std::string_view{"Mon"},
@@ -106,7 +122,7 @@ auto find_first_matching_prefix(std::string_view str, CandidateArrayType const& 
 }
 }  // namespace
 
-// NOLINTBEGIN(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers,readability-function-cognitive-complexity)
+// NOLINTBEGIN(readability-function-cognitive-complexity)
 auto parse_timestamp(
         std::string_view timestamp,
         std::string_view pattern,
@@ -115,9 +131,9 @@ auto parse_timestamp(
     size_t pattern_idx{};
     size_t timestamp_idx{};
 
-    int parsed_year{1970};
-    int parsed_month{1};
-    int parsed_day{1};
+    int parsed_year{cDefaultYear};
+    int parsed_month{cDefaultMonth};
+    int parsed_day{cDefaultDay};
     std::optional<int> day_of_week_idx;
 
     bool date_type_representation{false};
@@ -154,14 +170,14 @@ auto parse_timestamp(
                 }
 
                 auto const two_digit_year{two_digit_year_option.value()};
-                if (two_digit_year < 0 || two_digit_year > 99) {
+                if (two_digit_year < cMinTwoDigitYear || two_digit_year > cMaxTwoDigitYear) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                if (two_digit_year >= 69) {
-                    parsed_year = two_digit_year + 1900;
+                if (two_digit_year >= cTwoDigitYearOffsetBoundary) {
+                    parsed_year = two_digit_year + cTwoDigitYearLowOffset;
                 } else {
-                    parsed_year = two_digit_year + 2000;
+                    parsed_year = two_digit_year + cTwoDigitYearHighOffset;
                 }
                 timestamp_idx += cFieldLength;
                 date_type_representation = true;
@@ -182,7 +198,7 @@ auto parse_timestamp(
                 }
 
                 parsed_year = parsed_year_option.value();
-                if (parsed_year < 0 || parsed_year > 9999) {
+                if (parsed_year < cMinParsedYear || parsed_year > cMaxParsedYear) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
@@ -224,7 +240,7 @@ auto parse_timestamp(
                 }
 
                 parsed_month = parsed_month_option.value();
-                if (parsed_month < 1 || parsed_month > 12) {
+                if (parsed_month < cMinParsedMonth || parsed_month > cMaxParsedMonth) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
@@ -247,7 +263,7 @@ auto parse_timestamp(
                 }
 
                 parsed_day = parsed_day_option.value();
-                if (parsed_day < 1 || parsed_day > 31) {
+                if (parsed_day < cMinParsedDay || parsed_day > cMaxParsedDay) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
@@ -270,7 +286,7 @@ auto parse_timestamp(
                 }
 
                 parsed_day = parsed_day_option.value();
-                if (parsed_day < 1 || parsed_day > 31) {
+                if (parsed_day < cMinParsedDay || parsed_day > cMaxParsedDay) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
@@ -362,5 +378,5 @@ auto parse_timestamp(
     return {epoch_nanoseconds, pattern};
 }
 
-// NOLINTEND(cppcoreguidelines-avoid-magic-numbers,readability-magic-numbers,readability-function-cognitive-complexity)
+// NOLINTEND(readability-function-cognitive-complexity)
 }  // namespace clp_s::timestamp_parser
