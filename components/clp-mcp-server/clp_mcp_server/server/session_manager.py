@@ -62,15 +62,51 @@ class PaginatedQueryResult:
 
 @dataclass
 class SessionState:
-    """Represents the state of a user session."""
+    """
+    Represents the state of a user session.
+    `SessionState` respects our MCP Server Concurrency Model, that is:
+    The server supports multiple concurrent clients, where each client makes synchronous API calls,
+    meaning that:
+    States in `SessionState` are NOT shared variables because we assume each API call is issued
+    sequentially. However, this is a soft assumption that may be violated. For gracefully handling
+    the violation of the assumption, we use locks to prevent data races. Note that while locks
+    ensure thread safety, we do NOT guarantee any specific consistency semantics when asynchronous
+    calls occur.
+
+    A future release will introduce a multiversion concurrency control (MVCC) mechanism to allow
+    clients to specify which cached result version to retrieve using an atomic version counter.
+    """
 
     session_id: str
     _num_items_per_page: int
     _session_ttl_minutes: int
 
-    is_instructions_retrieved: bool = False
-    last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     _cached_query_result: PaginatedQueryResult | None = None
+    _is_instructions_retrieved: bool = False
+    _last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    _lock: threading.Lock = field(default_factory=threading.Lock, repr=False, compare=False)
+
+    @property
+    def is_instructions_retrieved(self) -> bool:
+        """:return: Whether the session has run get_instructions() for retrieving system prompt."""
+        with self._lock:
+            return self._is_instructions_retrieved
+
+    @is_instructions_retrieved.setter
+    def is_instructions_retrieved(self, value: bool) -> None:
+        with self._lock:
+            self._is_instructions_retrieved = value
+
+    @property
+    def last_accessed(self) -> datetime:
+        """:return: The timestamp when the seesion was last accessed."""
+        with self._lock:
+            return self._last_accessed
+
+    @last_accessed.setter
+    def last_accessed(self, value: datetime) -> None:
+        with self._lock:
+            self._last_accessed = value
 
     def cache_query_result(
         self,
@@ -81,9 +117,10 @@ class SessionState:
 
         :param results: Complete log entries from previous query for caching.
         """
-        self._cached_query_result = PaginatedQueryResult(
-            result_log_entries=results, num_items_per_page=self._num_items_per_page
-        )
+        with self._lock:
+            self._cached_query_result = PaginatedQueryResult(
+                result_log_entries=results, num_items_per_page=self._num_items_per_page
+            )
 
     def get_page_data(self, page_index: int) -> dict[str, Any]:
         """
@@ -95,42 +132,43 @@ class SessionState:
         :return: Dictionary with ``{"Error": "error message describing the failure"}`` if fails to
         retrieve page `page_index`.
         """
-        if self._cached_query_result is None:
-            return {"Error": "No previous paginated response in this session."}
+        with self._lock:
+            if self._cached_query_result is None:
+                return {"Error": "No previous paginated response in this session."}
 
-        page = self._cached_query_result.get_page(page_index)
-        if page is None:
-            return {"Error": "Page index is out of bounds."}
+            page = self._cached_query_result.get_page(page_index)
+            if page is None:
+                return {"Error": "Page index is out of bounds."}
 
-        return {
-            "items": list(page),
-            "total_pages": page.page_count,
-            "total_items": page.item_count,
-            "num_items_per_page": page.items_per_page,
-            "has_next": page.next_page is not None,
-            "has_previous": page.previous_page is not None,
-        }
+            return {
+                "items": list(page),
+                "total_pages": page.page_count,
+                "total_items": page.item_count,
+                "num_items_per_page": page.items_per_page,
+                "has_next": page.next_page is not None,
+                "has_previous": page.previous_page is not None,
+            }
 
     def is_expired(self) -> bool:
         """:return: Whether the session has expired."""
-        time_diff = datetime.now(timezone.utc) - self.last_accessed
-        return time_diff > timedelta(minutes=self._session_ttl_minutes)
+        with self._lock:
+            time_diff = datetime.now(timezone.utc) - self._last_accessed
+            return time_diff > timedelta(minutes=self._session_ttl_minutes)
 
     def update_access_time(self) -> None:
         """Updates the last accessed timestamp."""
-        self.last_accessed = datetime.now(timezone.utc)
+        with self._lock:
+            self._last_accessed = datetime.now(timezone.utc)
 
 
 class SessionManager:
     """
     Session manager for concurrent user sessions.
-    `SessionManager` respects MCP Server Concurrency Model, that is:
-    The server supports multiple concurrent clients, where each client only makes synchronous
-    API calls.
-    This model leads to the following design decisions:
-    sessions is a shared variable as there may be multiple session attached to the MCP server
-    session state is NOT a shared variable because each session is accessed by only one
-    connection at a time because API calls for a single session are synchronous.
+    `SessionManager` respects our MCP Server Concurrency Model, that is:
+    The server supports multiple concurrent clients, where each client makes synchronous API calls,
+    meaning that:
+    sessions is a shared variable as there may be multiple session to be added or deleted in the
+    MCP server.
     """
 
     _GET_INSTRUCTIONS_NOT_RUN_ERROR: ClassVar[dict[str, str]] = {
