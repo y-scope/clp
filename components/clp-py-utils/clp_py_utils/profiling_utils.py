@@ -38,7 +38,7 @@ __all__ = ["profile"]
 
 def is_profiling_enabled() -> bool:
     """
-    Check if profiling is enabled. 
+    Check if profiling is enabled.
     TODO: Add `CLPConfig` mechanism to enable/disable profiling for each component.
 
     :return: False
