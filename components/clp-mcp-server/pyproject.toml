@@ -8,6 +8,9 @@ requires-python = ">=3.10"
 dependencies = [
     "click>=8.3.0",
     "fastmcp>=2.12.4",
+    "pymongo>=4.15.1",
+    "aiomysql>=0.2.0",
+    "msgpack>=1.1.1",
 ]
 
 [project.scripts]
@@ -23,7 +26,11 @@ dev = [
     "ruff>=0.11.12",
     "pytest>=8.4.1",
     "pytest-env>=1.1.5",
+    "pytest-asyncio>=1.2.0",
 ]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.mypy]
 strict = true
@@ -65,3 +72,9 @@ isort.order-by-type = false
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 100
+
+[tool.ruff.lint.per-file-ignores]
+    "tests/test_clp_connector.py" = [
+        "INP001",  # Allow implicit namespace package for tests
+        "S101",  # Allow "assert" in test cases
+    ]
