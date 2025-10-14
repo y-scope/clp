@@ -51,10 +51,15 @@ Both flavours contain the same binaries but are configured with different values
 To build the package, run:
 
 ```shell
-task package
+task
 ```
 
 The build will be in `build/clp-package` and defaults to using the storage engine for `clp-text`.
+
+:::{note}
+The `task` command runs `task docker-images:package` under the hood. In addition to the build, a
+Docker image named `clp-package:dev-<user>-<unique-id>` will also be created.
+:::
 
 To build a releasable tar of either flavour, run:
 
