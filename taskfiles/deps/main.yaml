@@ -42,8 +42,8 @@ tasks:
   default:
     deps:
       - "core"
-      - "spider"
       - "log-viewer"
+      - "spider"
 
   init:
     internal: true
