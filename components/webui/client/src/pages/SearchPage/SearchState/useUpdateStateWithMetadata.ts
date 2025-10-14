@@ -8,6 +8,7 @@ import {notification} from "antd";
 
 import useSearchStore from "./index";
 import usePrestoSearchState from "./Presto";
+import PRESTO_SQL_INTERFACE from "./Presto/typings";
 import {SEARCH_UI_STATE} from "./typings";
 import {useResultsMetadata} from "./useResultsMetadata";
 
@@ -29,7 +30,7 @@ const useUpdateStateWithMetadata = () => {
         updateNumSearchResultsMetadata,
         updateSearchUiState,
     } = useSearchStore();
-    const {updateErrorMsg, updateErrorName} = usePrestoSearchState();
+    const {updateErrorMsg, updateErrorName, sqlInterface} = usePrestoSearchState();
     const resultsMetadata = useResultsMetadata();
 
     useEffect(() => {
@@ -62,15 +63,19 @@ const useUpdateStateWithMetadata = () => {
                     break;
                 }
                 updateSearchUiState(SEARCH_UI_STATE.FAILED);
-                notification.error({
-                    description: errorMsg,
-                    duration: 15,
-                    key: `search-failed-${resultsMetadata._id}`,
-                    message: errorName,
-                    pauseOnHover: true,
-                    placement: "bottomRight",
-                    showProgress: true,
-                });
+
+                // Error for guided UI is shown in drawer.
+                if (sqlInterface === PRESTO_SQL_INTERFACE.FREEFORM) {
+                    notification.error({
+                        description: errorMsg,
+                        duration: 15,
+                        key: `search-failed-${resultsMetadata._id}`,
+                        message: errorName,
+                        pauseOnHover: true,
+                        placement: "bottomRight",
+                        showProgress: true,
+                    });
+            }
                 break;
             }
             default:
