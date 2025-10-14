@@ -148,6 +148,7 @@ class TestSessionManager:
 
     @pytest.fixture
     def active_session_manager(self) -> SessionManager:
+        """Create a SessionManager with a test session that with get_instructions() ran."""
         manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
         session = manager.get_or_create_session("test_session")
         session.is_instructions_retrieved = True # Simulate get_instructions was run

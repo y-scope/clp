@@ -199,7 +199,7 @@ class SessionManager:
         """
         session = self.get_or_create_session(session_id)
         if session.is_instructions_retrieved is False:
-            return self._GET_INSTRUCTIONS_NOT_RUN_ERROR
+            return self._GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
 
         session.cache_query_result(results=query_results)
 
@@ -216,6 +216,6 @@ class SessionManager:
         """
         session = self.get_or_create_session(session_id)
         if session.is_instructions_retrieved is False:
-            return self._GET_INSTRUCTIONS_NOT_RUN_ERROR
+            return self._GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
 
         return session.get_page_data(page_index)
