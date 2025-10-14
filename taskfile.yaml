@@ -115,6 +115,8 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+      - "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_scheduler"
+      - "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_worker"
       - "{{.TASKFILE}}"
       - "components/clp-mcp-server/dist/*.whl"
       - "components/clp-package-utils/dist/*.whl"
