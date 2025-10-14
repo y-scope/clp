@@ -107,6 +107,20 @@ private:
     ) -> bool;
 
     /**
+     * Parses plain text input and ingests it into the current archive, splitting the archive if it grows
+     * beyond the target encoded size.
+     * @param reader
+     * @param path
+     * @param archive_creator_id
+     * @return Result of ingestion.
+     */
+    [[nodiscard]] auto ingest_plain_text(
+            std::shared_ptr<clp::ReaderInterface> reader,
+            Path const& path,
+            std::string const& archive_creator_id
+    ) -> ystdlib::error_handling::Result<void>;
+
+    /**
      * Parses a JSON line
      * @param line the JSON line
      * @param parent_node_id the parent node id

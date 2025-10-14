@@ -104,7 +104,7 @@ auto get_archive_id_from_path(Path const& archive_path, std::string& archive_id)
 namespace {
 /**
  * Peeks the first few bytes of input from a reader and tries to deduce the type of the underlying
- * content.
+ * content. If the file is non-empty, but not a known type it is treated as raw text.
  * @param reader
  * @return The deduced type, or `FileType::Unknown` if the type could not be deduced.
  */
@@ -262,7 +262,7 @@ auto peek_start_and_deduce_type(std::shared_ptr<clp::BufferedReader>& reader) ->
         return FileType::Json;
     }
 
-    return FileType::Unknown;
+    return FileType::Text;
 }
 }  // namespace
 
@@ -307,6 +307,7 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
         switch (type) {
             case FileType::Json:
             case FileType::KeyValueIr:
+            case FileType::Text:
                 return {std::move(readers), type};
             case FileType::Zstd: {
                 readers.emplace_back(
@@ -320,7 +321,8 @@ auto try_create_reader(Path const& path, NetworkAuthOption const& network_auth)
                 } catch (std::exception const&) {
                     return {{}, FileType::Unknown};
                 }
-            } break;
+                break;
+            }
             case FileType::Unknown:
             default:
                 return {{}, FileType::Unknown};

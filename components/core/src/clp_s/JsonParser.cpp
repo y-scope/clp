@@ -156,6 +156,8 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_retain_float_format(option.retain_float_format),
           m_input_paths(option.input_paths),
           m_network_auth(option.network_auth),
+          // TODO clpsls the type of parser for ls depends on the file which isn't known yet
+          // probably want to move some logic outside of JsonParser
           m_log_surgeon_parser(log_surgeon::BufferParser(option.log_surgeon_schema_file_path)) {
     if (false == m_timestamp_key.empty()) {
         if (false
@@ -659,13 +661,18 @@ bool JsonParser::ingest() {
 
         auto const [nested_readers, file_type] = try_deduce_reader_type(reader);
         bool ingestion_successful{};
-        // TODO clpsls: add path for plain text file
         switch (file_type) {
             case FileType::Json:
                 ingestion_successful = ingest_json(nested_readers.back(), path, archive_creator_id);
                 break;
             case FileType::KeyValueIr:
                 ingestion_successful = ingest_kvir(nested_readers.back(), path, archive_creator_id);
+                break;
+            case FileType::Text:
+                ingestion_successful
+                        = false
+                          == ingest_plain_text(nested_readers.back(), path, archive_creator_id)
+                                     .has_error();
                 break;
             case FileType::Zstd:
             case FileType::Unknown:
@@ -1555,5 +1562,33 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
     );
     m_current_schema.end_unordered_object(msg_start);
     return ystdlib::error_handling::success();
+}
+
+auto JsonParser::ingest_plain_text(
+        std::shared_ptr<clp::ReaderInterface> reader,
+        Path const& path,
+        std::string const& archive_creator_id
+) -> ystdlib::error_handling::Result<void> {
+    (void)reader;
+    (void)path;
+    (void)archive_creator_id;
+
+    return ystdlib::error_handling::success();
+
+    // m_log_surgeon_parser.parse_next_event()
+
+    // auto node_id {m_archive_writer->add_node(
+    //         constants::cRootNodeId,
+    //         NodeType::LogMessage,
+    //         ""
+    // )};
+    // if (auto const result{parse_log_message(node_id, value)}; result.has_error()) {
+    //     // TODO clpsls: if parsing fails we could try to treat the string as a
+    //     // VarString
+    //     throw(std::runtime_error(
+    //             "parse_log_message failed with: " + result.error().message()
+    //     ));
+    // }
+    // m_current_schema.insert_unordered(node_id);
 }
 }  // namespace clp_s
