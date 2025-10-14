@@ -8,7 +8,7 @@ import {notification} from "antd";
 
 import useSearchStore from "./index";
 import usePrestoSearchState from "./Presto";
-import PRESTO_SQL_INTERFACE from "./Presto/typings";
+import {PRESTO_SQL_INTERFACE} from "./Presto/typings";
 import {SEARCH_UI_STATE} from "./typings";
 import {useResultsMetadata} from "./useResultsMetadata";
 
