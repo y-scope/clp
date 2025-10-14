@@ -1,5 +1,5 @@
-#ifndef CLP_S_TIMESTAMPPARSERERRORCODE_HPP
-#define CLP_S_TIMESTAMPPARSERERRORCODE_HPP
+#ifndef CLP_S_TIMESTAMP_PARSER_ERRORCODE_HPP
+#define CLP_S_TIMESTAMP_PARSER_ERRORCODE_HPP
 
 #include <cstdint>
 
@@ -18,4 +18,4 @@ using ErrorCode = ystdlib::error_handling::ErrorCode<ErrorCodeEnum>;
 
 YSTDLIB_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(clp_s::timestamp_parser::ErrorCodeEnum);
 
-#endif  // CLP_S_TIMESTAMPPARSERERRORCODE_HPP
+#endif  // CLP_S_TIMESTAMP_PARSER_ERRORCODE_HPP

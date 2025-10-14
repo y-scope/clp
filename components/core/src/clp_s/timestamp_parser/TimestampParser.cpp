@@ -57,11 +57,10 @@ constexpr std::array cAbbreviatedMonthNames
  * Converts a padded decimal integer string to an integer.
  * @param str Substring containg the padded decimal integer string.
  * @param padding_character Padding character which may prefix the integer.
- * @param value The integer value, returned by reference.
- * @return Whether conversion was successful.
+ * @return The integer value on success, or `std::nullopt` on failure.
  */
-[[nodiscard]] auto
-convert_padded_string_to_number(std::string_view str, char padding_character, int& value) -> bool;
+[[nodiscard]] auto convert_padded_string_to_number(std::string_view str, char padding_character)
+        -> std::optional<int>;
 
 /**
  * Finds the first matching prefix from a list of candidates.
@@ -76,8 +75,8 @@ template <typename CandidateArrayType>
 find_first_matching_prefix(std::string_view str, CandidateArrayType const& candidates)
         -> ystdlib::error_handling::Result<size_t, ErrorCode>;
 
-auto convert_padded_string_to_number(std::string_view str, char padding_character, int& value)
-        -> bool {
+auto convert_padded_string_to_number(std::string_view str, char padding_character)
+        -> std::optional<int> {
     if (str.empty()) {
         return false;
     }
@@ -85,7 +84,12 @@ auto convert_padded_string_to_number(std::string_view str, char padding_characte
     // Leave at least one character for parsing to ensure we actually parse number content.
     size_t i{};
     for (; i < (str.size() - 1) && padding_character == str[i]; ++i) {}
-    return clp::string_utils::convert_string_to_int(str.substr(i), value);
+
+    int value{};
+    if (clp::string_utils::convert_string_to_int(str.substr(i), value)) {
+        return value;
+    }
+    return std::nullopt;
 }
 
 template <typename CandidateArrayType>
@@ -141,16 +145,15 @@ auto parse_timestamp(
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                int two_digit_year{};
-                if (false
-                    == convert_padded_string_to_number(
-                            timestamp.substr(timestamp_idx, cFieldLength),
-                            '0',
-                            two_digit_year
-                    ))
-                {
+                auto const two_digit_year_option{convert_padded_string_to_number(
+                        timestamp.substr(timestamp_idx, cFieldLength),
+                        '0'
+                )};
+                if (false == two_digit_year_option.has_value()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
+
+                auto const two_digit_year{two_digit_year_option.value()};
                 if (two_digit_year < 0 || two_digit_year > 99) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
@@ -170,15 +173,15 @@ auto parse_timestamp(
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                if (false
-                    == convert_padded_string_to_number(
-                            timestamp.substr(timestamp_idx, cFieldLength),
-                            '0',
-                            parsed_year
-                    ))
-                {
+                auto const parsed_year_option{convert_padded_string_to_number(
+                        timestamp.substr(timestamp_idx, cFieldLength),
+                        '0'
+                )};
+                if (false == parsed_year_option.has_value()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
+
+                parsed_year = parsed_year_option.value();
                 if (parsed_year < 0 || parsed_year > 9999) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
@@ -212,15 +215,15 @@ auto parse_timestamp(
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                if (false
-                    == convert_padded_string_to_number(
-                            timestamp.substr(timestamp_idx, cFieldLength),
-                            '0',
-                            parsed_month
-                    ))
-                {
+                auto const parsed_month_option{convert_padded_string_to_number(
+                        timestamp.substr(timestamp_idx, cFieldLength),
+                        '0'
+                )};
+                if (false == parsed_month_option.has_value()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
+
+                parsed_month = parsed_month_option.value();
                 if (parsed_month < 1 || parsed_month > 12) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
@@ -235,15 +238,15 @@ auto parse_timestamp(
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                if (false
-                    == convert_padded_string_to_number(
-                            timestamp.substr(timestamp_idx, cFieldLength),
-                            '0',
-                            parsed_day
-                    ))
-                {
+                auto const parsed_day_option{convert_padded_string_to_number(
+                        timestamp.substr(timestamp_idx, cFieldLength),
+                        '0'
+                )};
+                if (false == parsed_day_option.has_value()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
+
+                parsed_day = parsed_day_option.value();
                 if (parsed_day < 1 || parsed_day > 31) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
@@ -258,15 +261,15 @@ auto parse_timestamp(
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                if (false
-                    == convert_padded_string_to_number(
-                            timestamp.substr(timestamp_idx, cFieldLength),
-                            ' ',
-                            parsed_day
-                    ))
-                {
+                auto const parsed_day_option{convert_padded_string_to_number(
+                        timestamp.substr(timestamp_idx, cFieldLength),
+                        ' '
+                )};
+                if (false == parsed_day_option.has_value()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
+
+                parsed_day = parsed_day_option.value();
                 if (parsed_day < 1 || parsed_day > 31) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }

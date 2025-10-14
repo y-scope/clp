@@ -1,5 +1,5 @@
-#ifndef CLP_S_TIMESTAMPPARSER_HPP
-#define CLP_S_TIMESTAMPPARSER_HPP
+#ifndef CLP_S_TIMESTAMP_PARSER_TIMESTAMPPARSER_HPP
+#define CLP_S_TIMESTAMP_PARSER_TIMESTAMPPARSER_HPP
 
 #include <string>
 #include <string_view>
@@ -81,4 +81,4 @@ namespace clp_s::timestamp_parser {
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>, ErrorCode>;
 }  // namespace clp_s::timestamp_parser
 
-#endif  // CLP_S_TIMESTAMPPARSER_HPP
+#endif  // CLP_S_TIMESTAMP_PARSER_TIMESTAMPPARSER_HPP
