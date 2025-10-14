@@ -7,6 +7,7 @@ import {
 import {notification} from "antd";
 
 import useSearchStore from "./index";
+import usePrestoSearchState from "./Presto";
 import {SEARCH_UI_STATE} from "./typings";
 import {useResultsMetadata} from "./useResultsMetadata";
 
@@ -24,7 +25,11 @@ const PRESTO_CANCEL_ERROR_NAME = "USER_CANCELED";
  * - Updates the number of search results from the metadata.
  */
 const useUpdateStateWithMetadata = () => {
-    const {updateSearchUiState, updateNumSearchResultsMetadata} = useSearchStore();
+    const {
+        updateNumSearchResultsMetadata,
+        updateSearchUiState,
+    } = useSearchStore();
+    const {updateErrorMsg, updateErrorName} = usePrestoSearchState();
     const resultsMetadata = useResultsMetadata();
 
     useEffect(() => {
@@ -40,33 +45,43 @@ const useUpdateStateWithMetadata = () => {
             case SEARCH_SIGNAL.RESP_DONE:
             case PRESTO_SEARCH_SIGNAL.DONE:
                 updateSearchUiState(SEARCH_UI_STATE.DONE);
+                updateErrorMsg(null);
+                updateErrorName(null);
                 break;
-            case PRESTO_SEARCH_SIGNAL.FAILED:
+            case PRESTO_SEARCH_SIGNAL.FAILED: {
+                const errorMsg = resultsMetadata.errorMsg || "An error occurred during search";
+                const errorName = resultsMetadata.errorName || "Search Failed";
+
+                updateErrorMsg(errorMsg);
+                updateErrorName(errorName);
+
                 // Presto reports query cancellation as a failure, but we treat as a successful
                 // completion.
                 if (resultsMetadata.errorName === PRESTO_CANCEL_ERROR_NAME) {
                     updateSearchUiState(SEARCH_UI_STATE.DONE);
-
                     break;
                 }
                 updateSearchUiState(SEARCH_UI_STATE.FAILED);
                 notification.error({
-                    description: resultsMetadata.errorMsg || "An error occurred during search",
+                    description: errorMsg,
                     duration: 15,
                     key: `search-failed-${resultsMetadata._id}`,
-                    message: resultsMetadata.errorName || "Search Failed",
+                    message: errorName,
                     pauseOnHover: true,
                     placement: "bottomRight",
                     showProgress: true,
                 });
                 break;
+            }
             default:
                 break;
         }
     }, [
         resultsMetadata,
-        updateSearchUiState,
         updateNumSearchResultsMetadata,
+        updateErrorMsg,
+        updateErrorName,
+        updateSearchUiState,
     ]);
 };
 
