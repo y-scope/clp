@@ -17,7 +17,7 @@ COPY ./build/clp-package ${CLP_HOME}
 
 ENV PATH="${CLP_HOME}/bin:${PATH}"
 ENV PATH="${CLP_HOME}/sbin:${PATH}" \
-    PYTHONPATH="${CLP_HOME}/lib/python3/site-packages"
+    PYTHONPATH="${CLP_HOME}/lib/python3/site-packages" \
     USER="clp-user"
 
 RUN useradd --uid 1000 --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
