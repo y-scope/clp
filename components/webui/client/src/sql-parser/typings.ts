@@ -21,7 +21,6 @@ interface BuildTimelineQueryProps {
     timestampKey: string;
 }
 
-
 export type {
     BuildSearchQueryProps,
     BuildTimelineQueryProps,
