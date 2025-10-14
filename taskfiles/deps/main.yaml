@@ -407,11 +407,7 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: &mariadb-cmake-include-patterns
-            - "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-build"
-            - "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-extracted"
-            - "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-extracted.tar.gz"
             - "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-install"
-            - "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-src"
 
   mariadb-connector-cpp:
     platforms: ["linux"]
