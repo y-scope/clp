@@ -37,7 +37,6 @@
     "dotenv": "^17.2.3",
     "fastify": "^5.6.1",
     "fastify-plugin": "^5.1.0",
-    "http-status-codes": "^2.3.0",
     "pino-pretty": "^13.1.2",
     "presto-client": "^1.1.0",
     "socket.io": "^4.8.1"
