@@ -4,7 +4,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
-from typing import Any
+from typing import Any, ClassVar
 
 from paginate import Page
 
@@ -133,6 +133,10 @@ class SessionManager:
     connection at a time because API calls for a single session are synchronous.
     """
 
+    _GET_INSTRUCTIONS_NOT_RUN_ERROR: ClassVar[dict[str, str]] = {
+        "Error": "Please call get_instructions() first to understand how to use this MCP server."
+    }
+
     def __init__(self, session_ttl_minutes: int) -> None:
         """
         Initializes the SessionManager and starts background cleanup thread.
@@ -174,7 +178,7 @@ class SessionManager:
 
             if session_id not in self.sessions:
                 self.sessions[session_id] = SessionState(
-                    session_id, constants.ITEM_PER_PAGE, self._session_ttl_minutes
+                    session_id, constants.NUM_ITEMS_PER_PAGE, self._session_ttl_minutes
                 )
 
             session = self.sessions[session_id]
@@ -195,10 +199,7 @@ class SessionManager:
         """
         session = self.get_or_create_session(session_id)
         if session.is_instructions_retrieved is False:
-            return {
-                "Error": "Please call get_instructions() first "
-                "to understand how to use this MCP server."
-            }
+            return self._GET_INSTRUCTIONS_NOT_RUN_ERROR
 
         session.cache_query_result(results=query_results)
 
@@ -215,9 +216,6 @@ class SessionManager:
         """
         session = self.get_or_create_session(session_id)
         if session.is_instructions_retrieved is False:
-            return {
-                "Error": "Please call get_instructions() first "
-                "to understand how to use this MCP server."
-            }
+            return self._GET_INSTRUCTIONS_NOT_RUN_ERROR
 
         return session.get_page_data(page_index)

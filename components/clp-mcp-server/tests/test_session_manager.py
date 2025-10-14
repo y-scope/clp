@@ -17,8 +17,9 @@ class TestConstants:
     """Constants for the test suite."""
 
     # Default values from constants
-    ITEMS_PER_PAGE = constants.ITEM_PER_PAGE
+    ITEMS_PER_PAGE = constants.NUM_ITEMS_PER_PAGE
     SESSION_TTL_MINUTES = constants.SESSION_TTL_MINUTES
+    EXPIRED_SESSION_TTL_MINUTES = constants.SESSION_TTL_MINUTES + 1
 
     # Number of logs tested in unit test and its expected page counts
     EXPECTED_PAGES_25_ITEMS = 3
@@ -143,6 +144,13 @@ class TestSessionState:
 class TestSessionManager:
     """Unit tests for SessionManager class."""
 
+    @pytest.fixture
+    def active_session_manager(session_id: str) -> SessionManager:
+        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
+        session = manager.get_or_create_session(session_id)
+        session.is_instructions_retrieved = True # Simulate get_instructions was run
+        return manager
+
     def test_get_or_create_session(self) -> None:
         """Validates session creation and retrieval."""
         manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
@@ -158,11 +166,8 @@ class TestSessionManager:
 
     def test_cached_query_result(self) -> None:
         """Validates caching query results returns correct first page data."""
-        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
+        manager = active_session_manager("test_session")
         results = [f"log_{i}" for i in range(25)]
-        manager.get_or_create_session("test_session")
-        # Simulate get_instructions was run
-        manager.sessions["test_session"].is_instructions_retrieved = True
 
         first_page = manager.cache_query_result(session_id="test_session", query_results=results)
 
@@ -174,11 +179,8 @@ class TestSessionManager:
 
     def test_get_nth_page(self) -> None:
         """Validates retrieving specific pages."""
-        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
+        manager = active_session_manager("test_session")
         results = [f"log_{i}" for i in range(TestConstants.SAMPLE_RESULTS_COUNT_25)]
-        manager.get_or_create_session("test_session")
-        # Simulate get_instructions was run
-        manager.sessions["test_session"].is_instructions_retrieved = True
 
         manager.cache_query_result(session_id="test_session", query_results=results)
 
