@@ -1,6 +1,9 @@
+from __future__ import annotations
+
 import argparse
 import datetime
 import logging
+import os
 import pathlib
 import sys
 import time
@@ -153,7 +156,11 @@ def _generate_clp_io_config(
             timestamp_key=parsed_args.timestamp_key,
             path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
         )
-    elif InputType.S3 == input_type:
+    elif InputType.S3 != input_type:
+        raise ValueError(f"Unsupported input type: {input_type}")
+
+    # Generate S3 input config
+    if parsed_args.s3_single_prefix:
         if len(logs_to_compress) == 0:
             raise ValueError("No URLs given.")
         elif len(logs_to_compress) != 1:
@@ -170,8 +177,58 @@ def _generate_clp_io_config(
             aws_authentication=aws_authentication,
             timestamp_key=parsed_args.timestamp_key,
         )
-    else:
-        raise ValueError(f"Unsupported input type: {input_type}")
+
+    return _generate_s3_input_config_with_key_validation(clp_config, logs_to_compress, parsed_args)
+
+
+def _generate_s3_input_config_with_key_validation(
+    clp_config: CLPConfig, logs_to_compress: List[str], parsed_args: argparse.Namespace
+) -> S3InputConfig:
+    # TODO: Add docstring
+    if len(logs_to_compress) == 0:
+        raise ValueError("No URLs given.")
+
+    # Validate all the given URLs
+    region_code: str | None = None
+    bucket_name: str | None = None
+    keys = set()
+    for s3_url in logs_to_compress:
+        parsed_region_code, parsed_bucket_name, key = parse_s3_url(s3_url)
+        if region_code is None:
+            region_code = parsed_region_code
+        elif region_code != parsed_region_code:
+            raise ValueError(
+                "All S3 URLs must be in the same region."
+                f" Found {region_code} and {parsed_region_code}."
+            )
+
+        if bucket_name is None:
+            bucket_name = parsed_bucket_name
+        elif bucket_name != parsed_bucket_name:
+            raise ValueError(
+                "All S3 URLs must be in the same bucket."
+                f" Found {bucket_name} and {parsed_bucket_name}."
+            )
+
+        if key in keys:
+            raise ValueError(f"Duplicate S3 key found: {key}.")
+        keys.add(key)
+
+    # Determine the common prefix
+    key_list = list(keys)
+    prefix = os.path.commonprefix(key_list)
+    if len(prefix) == 0:
+        raise ValueError("The given S3 URLs do not share a common prefix.")
+
+    return S3InputConfig(
+        dataset=parsed_args.dataset,
+        region_code=region_code,
+        bucket=bucket_name,
+        keys=key_list,
+        key_prefix=prefix,
+        aws_authentication=clp_config.logs_input.aws_authentication,
+        timestamp_key=parsed_args.timestamp_key,
+    )
 
 
 def _get_logs_to_compress(logs_list_path: pathlib.Path) -> List[str]:
@@ -225,6 +282,9 @@ def main(argv):
     args_parser.add_argument(
         "--timestamp-key",
         help="The path (e.g. x.y) for the field containing the log event's timestamp.",
+    )
+    args_parser.add_argument(
+        "--s3-single-prefix", action="store_true", help="Treat the input S3 URL as a single prefix."
     )
     args_parser.add_argument(
         "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
