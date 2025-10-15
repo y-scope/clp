@@ -95,7 +95,7 @@ find_first_matching_prefix(std::string_view str, CandidateArrayType const& candi
 auto convert_padded_string_to_number(std::string_view str, char padding_character)
         -> std::optional<int> {
     if (str.empty()) {
-        return false;
+        return std::nullopt;
     }
 
     // Leave at least one character for parsing to ensure we actually parse number content.
