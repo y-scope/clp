@@ -59,6 +59,9 @@ tasks:
       - "rm -rf '{{.G_BUILD_DIR}}'"
       - task: "clean-python-component"
         vars:
+          COMPONENT: "clp-mcp-server"
+      - task: "clean-python-component"
+        vars:
           COMPONENT: "clp-package-utils"
       - task: "clean-python-component"
         vars:
@@ -112,7 +115,10 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+      - "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_scheduler"
+      - "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_worker"
       - "{{.TASKFILE}}"
+      - "components/clp-mcp-server/dist/*.whl"
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
@@ -120,6 +126,7 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "core"
+      - "clp-mcp-server"
       - "clp-package-utils"
       - "clp-py-utils"
       - "deps:spider"
@@ -138,6 +145,7 @@ tasks:
       - |-
         . "{{.G_PACKAGE_VENV_DIR}}/bin/activate"
         pip3 install --upgrade \
+          components/clp-mcp-server/dist/*.whl \
           components/clp-package-utils/dist/*.whl \
           components/clp-py-utils/dist/*.whl \
           components/job-orchestration/dist/*.whl \
@@ -213,6 +221,11 @@ tasks:
           JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
 
+  clp-mcp-server:
+    - task: "uv-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
+
   clp-package-utils:
     - task: "python-component"
       vars:
@@ -284,7 +297,7 @@ tasks:
       - task: "nodejs"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          NODEJS_VERSION: "v22.4.0"
+          NODEJS_VERSION: "v22.20.0"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
 
   download-and-extract-tar:
@@ -539,6 +552,25 @@ tasks:
       - |-
         . "{{.VENV_DIR}}/bin/activate"
         poetry build --format wheel
+
+  uv-component:
+    internal: true
+    label: "{{.COMPONENT}}"
+    requires:
+      vars: ["COMPONENT"]
+    sources:
+      - "{{.TASKFILE}}"
+      - "/etc/os-release"
+      - "**/*"
+      - exclude: "dist/**/*"
+    dir: "components/{{.COMPONENT}}"
+    generates:
+      - "dist/*.whl"
+    cmds:
+      - task: "clean-python-component"
+        vars:
+          COMPONENT: "{{.COMPONENT}}"
+      - "uv build --wheel --no-cache -o dist"
 
   component-venv:
     internal: true

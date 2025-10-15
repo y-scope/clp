@@ -1,6 +1,6 @@
 #include "GlobalMetadataDBConfig.hpp"
 
-#include <fmt/core.h>
+#include <fmt/format.h>
 #include <yaml-cpp/yaml.h>
 
 using std::exception;
