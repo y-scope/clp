@@ -111,7 +111,7 @@ jobs:
           # NOTE: This key must be kept in-sync with the key prefix in the `actions/cache/save` step
           # below (we can't use the output of the current step since scheduled workflow runs don't
           # run this step).
-          key: "lint:check-cpp-static-full-with\
+          key: "lint:check-cpp-static-full-on-${{matrix.os}}-with\
           -${{matrix.use_shared_libs == true && 'shared' || 'static'}}-libs"
 
       # TODO: When enough files are passing clang-tidy, switch to a full pass on schedule only.
@@ -137,7 +137,7 @@ jobs:
           # NOTE: This key prefix (without the hash) must be kept in-sync with the
           # `actions/cache/restore` step above.
           key: >-
-            lint:check-cpp-static-full-with-${{
+            lint:check-cpp-static-full-on-${{matrix.os}}-with-${{
               matrix.use_shared_libs == true && 'shared' || 'static'
             }}-libs-${{hashFiles(
               '.task/checksum/lint-check-cpp-static-full',

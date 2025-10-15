@@ -480,7 +480,7 @@ jobs:
           # NOTE: This key must be kept in-sync with the key prefix in the `actions/cache/save` step
           # below (we can't use the output of the current step since scheduled workflow runs don't
           # run this step).
-          key: "lint:check-cpp-static-full"
+          key: "lint:check-cpp-static-full-on-ubuntu-24.04"
 
       - uses: "./.github/actions/run-on-image"
         env:
@@ -512,7 +512,7 @@ jobs:
           # NOTE: This key prefix (without the hash) must be kept in-sync with the
           # `actions/cache/restore` step above.
           key: >-
-            lint:check-cpp-static-full-${{hashFiles(
+            lint:check-cpp-static-full-on-ubuntu-24.04-${{hashFiles(
               '.task/checksum/lint-check-cpp-static-full',
               '.task/checksum/utils-cpp-lint-clang-tidy-*',
               'build/lint-clang-tidy/**/*'
