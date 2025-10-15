@@ -18,6 +18,7 @@ from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
+    OrchestrationType,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
     QueryEngine,
@@ -531,7 +532,12 @@ class DockerComposeController(BaseController):
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
         if deployment_type == DeploymentType.BASE:
-            cmd += ["--file", "docker-compose.base.yaml"]
+            if self.clp_config.compression_scheduler.type == OrchestrationType.spider:
+                cmd += ["--file", "docker-compose.spider.base.yaml"]
+            else:
+                cmd += ["--file", "docker-compose.base.yaml"]
+        if self.clp_config.compression_scheduler.type == OrchestrationType.spider:
+            cmd += ["--file", "docker-compose.spider.yaml"]
         cmd += ["up", "--detach"]
         try:
             subprocess.run(

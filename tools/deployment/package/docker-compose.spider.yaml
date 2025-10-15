@@ -1,216 +1,123 @@
-name: "clp-package-base"
+name: "clp-package"
 
-# Common service defaults.
+include: ["docker-compose.spider.base.yaml"]
+
+# Below x-* definitions are duplicated from docker-compose.base.yaml. Refer to that file for
+# documentation.
 x-service-defaults: &service_defaults
+  image: "${CLP_PACKAGE_CONTAINER:-clp-package}"
+  logging:
+    driver: "local"
   stop_grace_period: "3s"
   user: "${CLP_UID_GID:-1000:1000}"
-
-# Common healthcheck defaults.
 x-healthcheck-defaults: &healthcheck_defaults
   interval: "30s"
   retries: 3
-  start_interval: "1s"
-  start_period: "10s"
-  timeout: "10s"
-
-secrets:
-  CLP_DB_PASS_FILE:
-    environment: "CLP_DB_PASS"
+  start_interval: "2s"
+  start_period: "60s"
+  timeout: "2s"
+x-volume-definitions:
+  aws-config-readonly: &volume_aws_config_readonly
+    type: "bind"
+    source: "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}"
+    target: "/.aws"
+    read_only: true
+  clp-config-readonly: &volume_clp_config_readonly
+    type: "bind"
+    source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml"
+    target: "/etc/clp-config.yml"
+    read_only: true
 
 services:
-  database:
+  queue:
     <<: *service_defaults
-    container_name: "database"
-    image: "${CLP_DB_IMAGE:-mysql:8.0.23}"
+    image: "rabbitmq:3.9.8"
+    hostname: "queue"
     user: "${CLP_SERVICE_CONTAINER_UID_GID:-1000:1000}"
     environment:
-      MYSQL_DATABASE: "${CLP_DB_NAME}"
-      MYSQL_PASSWORD_FILE: "/run/secrets/CLP_DB_PASS_FILE"
-      MYSQL_ROOT_PASSWORD_FILE: "/run/secrets/CLP_DB_PASS_FILE"
-      MYSQL_USER: "${CLP_DB_USER}"
-    secrets:
-      - "CLP_DB_PASS_FILE"
+      RABBITMQ_DEFAULT_PASS: "${CLP_QUEUE_PASS}"
+      RABBITMQ_DEFAULT_USER: "${CLP_QUEUE_USER}"
+      RABBITMQ_LOGS: "/var/log/rabbitmq/rabbitmq.log"
     ports:
-      - "${CLP_DB_HOST:-127.0.0.1}:${CLP_DB_PORT:-3306}:3306"
+      - host_ip: "${CLP_QUEUE_HOST:-127.0.0.1}"
+        published: "${CLP_QUEUE_PORT:-5672}"
+        target: 5672
     volumes:
-      - "${CLP_DB_CONF_FILE_HOST:-./etc/mysql/conf.d/logging.cnf}:/etc/mysql/conf.d/logging.cnf:ro"
-      - "${CLP_DB_DATA_DIR_HOST:-./var/data/database}:/var/lib/mysql"
-      - "${CLP_DB_LOGS_DIR_HOST:-./var/log/database}:/var/log/mysql"
+      - type: "bind"
+        source: "${CLP_QUEUE_LOGS_DIR_HOST:-./var/log/queue}"
+        target: "/var/log/rabbitmq"
     healthcheck:
       <<: *healthcheck_defaults
       test: [
         "CMD",
-        "mysqladmin", "ping",
-        "--silent",
-        "-h", "127.0.0.1",
-        "-u", "${CLP_DB_USER}",
-        "--password=${CLP_DB_PASS}"
+        "rabbitmq-diagnostics", "check_running"
       ]
 
-  db-table-creator:
+  redis:
     <<: *service_defaults
-    container_name: "db_table_creator"
-    image: "${CLP_PACKAGE_CONTAINER}"
-    environment:
-      CLP_DB_PASS: "${CLP_DB_PASS}"
-      CLP_DB_USER: "${CLP_DB_USER}"
-      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
-    volumes:
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml"
-    depends_on:
-      database:
-        condition: "service_healthy"
-    command: [
-      "python3",
-      "-u",
-      "-m", "clp_py_utils.create-db-tables",
-      "--config", "/etc/clp-config.yml",
-      "--storage-engine", "${CLP_PACKAGE_STORAGE_ENGINE}"
-    ]
-
-  spider-scheduler:
-    <<: *service_defaults
-    container_name: "spider_scheduler"
-    image: "${CLP_PACKAGE_CONTAINER}"
-    depends_on:
-      database:
-        condition: "service_healthy"
-    command: [
-      "/opt/clp/bin/spider_scheduler",
-      "--host", "${SPIDER_SCHEDULER_HOST}",
-      "--port", "${SPIDER_SCHEDULER_PORT}",
-      "--storage_url", "${SPIDER_DB_URL}"
-    ]
-
-  results-cache:
-    <<: *service_defaults
-    container_name: "results_cache"
-    image: "mongo:7.0.1"
+    image: "redis:7.2.4"
+    hostname: "redis"
     user: "${CLP_SERVICE_CONTAINER_UID_GID:-1000:1000}"
     ports:
-      - "${CLP_RESULTS_CACHE_HOST:-127.0.0.1}:${CLP_RESULTS_CACHE_PORT:-6379}:27017"
+      - host_ip: "${CLP_REDIS_HOST:-127.0.0.1}"
+        published: "${CLP_REDIS_PORT:-6379}"
+        target: 6379
     volumes:
-      - "${CLP_RESULTS_CACHE_CONF_FILE_HOST:-./etc/mongo/mongod.conf}:/etc/mongo/mongod.conf:ro"
-      - "${CLP_RESULTS_CACHE_DATA_DIR_HOST:-./var/data/results_cache}:/data/db"
-      - "${CLP_RESULTS_CACHE_LOGS_DIR_HOST:-./var/log/results_cache}:/var/log/mongodb"
+      - type: "bind"
+        source: "${CLP_REDIS_CONF_FILE_HOST:-./etc/redis/redis.conf}"
+        target: "/usr/local/etc/redis/redis.conf"
+        read_only: true
+      - type: "bind"
+        source: "${CLP_REDIS_DATA_DIR_HOST:-./var/data/redis}"
+        target: "/data"
+      - type: "bind"
+        source: "${CLP_REDIS_LOGS_DIR_HOST:-./var/log/redis}"
+        target: "/var/log/redis"
     healthcheck:
       <<: *healthcheck_defaults
-      test: >-
-        echo 'db.runCommand("ping").ok' |
-        mongosh 127.0.0.1:27017/test --quiet
+      test: [
+        "CMD",
+        "redis-cli",
+        "-h", "127.0.0.1",
+        "-p", "6379",
+        "-a", "${CLP_REDIS_PASS}",
+        "PING"
+      ]
     command: [
-      "--config", "/etc/mongo/mongod.conf",
-      "--bind_ip", "0.0.0.0",
+      "redis-server",
+      "/usr/local/etc/redis/redis.conf",
+      "--requirepass", "${CLP_REDIS_PASS}"
     ]
 
-  results-cache-indices-creator:
+  query-scheduler:
     <<: *service_defaults
-    container_name: "results_cache_indices_creator"
-    image: "${CLP_PACKAGE_CONTAINER}"
-    environment:
-      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
-    depends_on:
-      results-cache:
-        condition: "service_healthy"
-    command: [
-      "python3",
-      "-u",
-      "-m", "clp_py_utils.initialize-results-cache",
-      "--uri", "mongodb://results_cache:27017/${RESULTS_CACHE_CLP_DB_NAME:-clp-query-results}",
-      "--stream-collection", "${CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME:-stream-files}",
-    ]
-
-  compression-scheduler:
-    <<: *service_defaults
-    container_name: "compression_scheduler"
-    image: "${CLP_PACKAGE_CONTAINER}"
+    hostname: "query_scheduler"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
       CLP_DB_PASS: "${CLP_DB_PASS}"
       CLP_DB_USER: "${CLP_DB_USER}"
-      CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL:-INFO}"
+      CLP_LOGGING_LEVEL: "${CLP_QUERY_SCHEDULER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       RESULT_BACKEND: >-
-        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_COMPRESSION_BACKEND_DB:-1}
+        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
     volumes:
-      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
-      - "${CLP_COMPRESSION_SCHEDULER_LOGS_FILE_HOST:-./var/log/compression_scheduler.log}\
-:/var/log/compression_scheduler.log"
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "/:/mnt/logs:ro"
+      - *volume_clp_config_readonly
+      - type: "bind"
+        source: "${CLP_QUERY_SCHEDULER_LOG_FILE_HOST:-./var/log/query_scheduler.log}"
+        target: "/var/log/query_scheduler.log"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
-      spider-scheduler:
-        condition: "service_started"
+      queue:
+        condition: "service_healthy"
+      redis:
+        condition: "service_healthy"
     command: [
       "python3",
       "-u",
-      "-m", "job_orchestration.scheduler.compress.compression_scheduler",
+      "-m", "job_orchestration.scheduler.query.query_scheduler",
       "--config", "/etc/clp-config.yml"
-    ]
-
-  compression-worker:
-    <<: *service_defaults
-    container_name: "compression_worker"
-    image: "${CLP_PACKAGE_CONTAINER}"
-    environment:
-      AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID}"
-      AWS_SECRET_ACCESS_KEY: "${CLP_AWS_SECRET_ACCESS_KEY}"
-      CLP_CONFIG_PATH: "/etc/clp-config.yml"
-      CLP_HOME: "/opt/clp"
-      CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
-      CLP_LOGS_DIR: "/var/log/compression_worker"
-      CLP_WORKER_LOG_PATH: "/var/log/compression_worker/worker.log"
-      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
-    volumes:
-      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}:/var/data/archives"
-      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/staged-archives}:/var/data/staged-archives"
-      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
-      - "${CLP_COMPRESSION_WORKER_LOGS_DIR_HOST:-./var/log/compression_worker}:\
-/var/log/compression_worker"
-      - "${CLP_DATA_DIR_HOST:-./var/data}:/var/data"
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "/:/mnt/logs:ro"
-    command: [
-      "python3",
-      "-u",
-      "/opt/clp/lib/python3/site-packages/clp_py_utils/start-spider-worker.py",
-      "--concurrency", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
-      "--storage-url", "${SPIDER_DB_URL}",
-      # NOTE: Leave host to spider scheduler's host. This only affects task placement.
-      "--host", "${SPIDER_SCHEDULER_HOST}",
-    ]
-
-  webui:
-    <<: *service_defaults
-    container_name: "webui"
-    image: "${CLP_PACKAGE_CONTAINER}"
-    environment:
-      CLP_DB_PASS: "${CLP_DB_PASS}"
-      CLP_DB_USER: "${CLP_DB_USER}"
-      HOST: "0.0.0.0"
-      NODE_ENV: "production"
-      NODE_PATH: "/opt/clp/var/www/webui/server/node_modules"
-      PORT: "4000"
-      RATE_LIMIT: "${CLP_WEBUI_RATE_LIMIT:-1000}"
-    ports:
-      - "${CLP_WEBUI_HOST:-127.0.0.1}:${CLP_WEBUI_PORT:-4000}:4000"
-    volumes:
-      - "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}:/.aws:ro"
-      - "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}:/var/data/streams"
-      - "./var/www/webui/client/settings.json:/opt/clp/var/www/webui/client/settings.json:ro"
-      - "./var/www/webui/server/dist/settings.json\
-:/opt/clp/var/www/webui/server/dist/settings.json:ro"
-    depends_on:
-      db-table-creator:
-        condition: "service_completed_successfully"
-      results-cache-indices-creator:
-        condition: "service_completed_successfully"
-    command: [
-      "/opt/clp/bin/node-22",
-      "/opt/clp/var/www/webui/server/dist/src/main.js"
     ]
     healthcheck:
       <<: *healthcheck_defaults
@@ -218,30 +125,74 @@ services:
         "CMD",
         "bash",
         "-c",
-        "< /dev/tcp/webui/4000"
+        "< /dev/tcp/query_scheduler/7000"
       ]
 
-  garbage-collector:
+  query-worker:
     <<: *service_defaults
-    container_name: "garbage_collector"
-    image: "${CLP_PACKAGE_CONTAINER}"
+    hostname: "query_worker"
     environment:
-      CLP_DB_PASS: "${CLP_DB_PASS}"
-      CLP_DB_USER: "${CLP_DB_USER}"
+      AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${CLP_AWS_SECRET_ACCESS_KEY}"
+      BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
+      CLP_CONFIG_PATH: "/etc/clp-config.yml"
       CLP_HOME: "/opt/clp"
-      CLP_LOGGING_LEVEL: "${CLP_GC_LOGGING_LEVEL:-INFO}"
-      CLP_LOGS_DIR: "/var/log/garbage_collector"
+      CLP_LOGGING_LEVEL: "${CLP_QUERY_WORKER_LOGGING_LEVEL:-INFO}"
+      CLP_LOGS_DIR: "/var/log/query_worker"
+      CLP_WORKER_LOG_PATH: "/var/log/query_worker/worker.log"
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      RESULT_BACKEND: >-
+        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
+    volumes:
+      - *volume_aws_config_readonly
+      - *volume_clp_config_readonly
+      - type: "bind"
+        source: "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}"
+        target: "/var/data/archives"
+      - type: "bind"
+        source: "${CLP_QUERY_WORKER_LOGS_DIR_HOST:-./var/log/query_worker}"
+        target: "/var/log/query_worker"
+      - type: "bind"
+        source: "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/staged-streams}"
+        target: "/var/data/staged-streams"
+      - type: "bind"
+        source: "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}"
+        target: "/var/data/streams"
+    command: [
+      "python3",
+      "-u",
+      "/opt/clp/lib/python3/site-packages/bin/celery",
+      "-A", "job_orchestration.executor.query",
+      "worker",
+      "--concurrency", "${CLP_QUERY_WORKER_CONCURRENCY:-1}",
+      "--loglevel", "WARNING",
+      "-f", "/var/log/query_worker/worker.log",
+      "-Q", "query",
+      "-n", "query-worker"
+    ]
+
+  reducer:
+    <<: *service_defaults
+    hostname: "reducer"
+    environment:
+      CLP_HOME: "/opt/clp"
+      CLP_LOGGING_LEVEL: "${CLP_REDUCER_LOGGING_LEVEL:-INFO}"
+      CLP_LOGS_DIR: "/var/log/reducer"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml:/etc/clp-config.yml:ro"
-      - "${CLP_LOGS_DIR_HOST:-./var/log}/garbage_collector:/var/log/garbage_collector"
+      - *volume_clp_config_readonly
+      - type: "bind"
+        source: "${CLP_REDUCER_LOGS_DIR_HOST:-./var/log/reducer}"
+        target: "/var/log/reducer"
     depends_on:
-      db-table-creator:
-        condition: "service_completed_successfully"
+      query-scheduler:
+        condition: "service_healthy"
       results-cache-indices-creator:
         condition: "service_completed_successfully"
     command: [
       "python3", "-u",
-      "-m", "job_orchestration.garbage_collector.garbage_collector",
+      "-m", "job_orchestration.reducer.reducer",
       "--config", "/etc/clp-config.yml",
+      "--concurrency", "${CLP_REDUCER_CONCURRENCY:-1}",
+      "--upsert-interval", "${CLP_REDUCER_UPSERT_INTERVAL:-100}"
     ]
