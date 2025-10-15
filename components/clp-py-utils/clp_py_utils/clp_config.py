@@ -162,9 +162,11 @@ class Package(BaseModel):
 
 
 class Database(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 3306
+
     type: DatabaseEngineStr = DatabaseEngine.MARIADB
     host: DomainStr = "localhost"
-    port: Port = 3306
+    port: Port = DEFAULT_PORT
     name: NonEmptyStr = "clp-db"
     ssl_cert: Optional[NonEmptyStr] = None
     auto_commit: bool = False
@@ -276,8 +278,10 @@ class CompressionScheduler(BaseModel):
 
 
 class QueryScheduler(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 7000
+
     host: DomainStr = "localhost"
-    port: Port = 7000
+    port: Port = DEFAULT_PORT
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
     num_archives_to_search_per_sub_job: PositiveInt = 16
     logging_level: LoggingLevel = "INFO"
@@ -296,8 +300,10 @@ class QueryWorker(BaseModel):
 
 
 class Redis(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 6379
+
     host: DomainStr = "localhost"
-    port: Port = 6379
+    port: Port = DEFAULT_PORT
     query_backend_database: int = 0
     compression_backend_database: int = 1
     # redis can perform authentication without a username
@@ -329,8 +335,10 @@ class Redis(BaseModel):
 
 
 class Reducer(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 14009
+
     host: DomainStr = "localhost"
-    base_port: Port = 14009
+    base_port: Port = DEFAULT_PORT
     logging_level: LoggingLevel = "INFO"
     upsert_interval: PositiveInt = 100  # milliseconds
 
@@ -340,8 +348,10 @@ class Reducer(BaseModel):
 
 
 class ResultsCache(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 27017
+
     host: DomainStr = "localhost"
-    port: Port = 27017
+    port: Port = DEFAULT_PORT
     db_name: NonEmptyStr = "clp-query-results"
     stream_collection_name: NonEmptyStr = "stream-files"
     retention_period: Optional[PositiveInt] = 60
@@ -355,8 +365,10 @@ class ResultsCache(BaseModel):
 
 
 class Queue(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 5672
+
     host: DomainStr = "localhost"
-    port: Port = 5672
+    port: Port = DEFAULT_PORT
 
     username: Optional[NonEmptyStr] = None
     password: Optional[str] = None
@@ -568,8 +580,10 @@ class StreamOutput(BaseModel):
 
 
 class WebUi(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 4000
+
     host: DomainStr = "localhost"
-    port: Port = 4000
+    port: Port = DEFAULT_PORT
     results_metadata_collection_name: NonEmptyStr = "results-metadata"
     rate_limit: PositiveInt = 1000
 
