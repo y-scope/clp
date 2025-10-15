@@ -396,9 +396,9 @@ def _s3_get_object_metadata_from_single_prefix(
     :param bucket:
     :param key_prefix:
     :return: A list of `FileMetadata` containing the object's metadata on success.
-    :raises: Propagates `boto3.client`'s exceptions.
-    :raises: Propagates `boto3.client.get_paginator`'s exceptions.
-    :raises: Propagates `boto3.paginator`'s exceptions.
+    :raise: Propagates `boto3.client`'s exceptions.
+    :raise: Propagates `boto3.client.get_paginator`'s exceptions.
+    :raise: Propagates `boto3.paginator`'s exceptions.
     """
     file_metadata_list: List[FileMetadata] = list()
     paginator = s3_client.get_paginator("list_objects_v2")
