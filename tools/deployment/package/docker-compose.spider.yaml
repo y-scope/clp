@@ -1,6 +1,6 @@
 name: "clp-package"
 
-include: ["docker-compose.spider.base.yaml"]
+include: ["docker-compose.base.yaml"]
 
 # Below x-* definitions are duplicated from docker-compose.base.yaml. Refer to that file for
 # documentation.
@@ -9,7 +9,7 @@ x-service-defaults: &service_defaults
   logging:
     driver: "local"
   stop_grace_period: "3s"
-  user: "${CLP_UID_GID:-1000:1000}"
+  user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:1000}"
 x-healthcheck-defaults: &healthcheck_defaults
   interval: "30s"
   retries: 3
@@ -28,12 +28,13 @@ x-volume-definitions:
     target: "/etc/clp-config.yml"
     read_only: true
 
+
 services:
   queue:
     <<: *service_defaults
     image: "rabbitmq:3.9.8"
     hostname: "queue"
-    user: "${CLP_SERVICE_CONTAINER_UID_GID:-1000:1000}"
+    user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     environment:
       RABBITMQ_DEFAULT_PASS: "${CLP_QUEUE_PASS}"
       RABBITMQ_DEFAULT_USER: "${CLP_QUEUE_USER}"
@@ -57,7 +58,7 @@ services:
     <<: *service_defaults
     image: "redis:7.2.4"
     hostname: "redis"
-    user: "${CLP_SERVICE_CONTAINER_UID_GID:-1000:1000}"
+    user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     ports:
       - host_ip: "${CLP_REDIS_HOST:-127.0.0.1}"
         published: "${CLP_REDIS_PORT:-6379}"
@@ -89,6 +90,53 @@ services:
       "--requirepass", "${CLP_REDIS_PASS}"
     ]
 
+  results-cache:
+    <<: *service_defaults
+    image: "mongo:7.0.1"
+    hostname: "results_cache"
+    user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
+    ports:
+      - host_ip: "${CLP_RESULTS_CACHE_HOST:-127.0.0.1}"
+        published: "${CLP_RESULTS_CACHE_PORT:-27017}"
+        target: 27017
+    volumes:
+      - type: "bind"
+        source: "${CLP_RESULTS_CACHE_CONF_FILE_HOST:-./etc/mongo/mongod.conf}"
+        target: "/etc/mongo/mongod.conf"
+        read_only: true
+      - type: "bind"
+        source: "${CLP_RESULTS_CACHE_DATA_DIR_HOST:-./var/data/results_cache}"
+        target: "/data/db"
+      - type: "bind"
+        source: "${CLP_RESULTS_CACHE_LOGS_DIR_HOST:-./var/log/results_cache}"
+        target: "/var/log/mongodb"
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: [
+        "CMD-SHELL",
+        "echo 'db.runCommand(\"ping\").ok' | mongosh 127.0.0.1:27017/test --quiet"
+      ]
+    command: [
+      "--config", "/etc/mongo/mongod.conf",
+      "--bind_ip", "0.0.0.0",
+    ]
+
+  results-cache-indices-creator:
+    <<: *service_defaults
+    hostname: "results_cache_indices_creator"
+    environment:
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+    depends_on:
+      results-cache:
+        condition: "service_healthy"
+    command: [
+      "python3",
+      "-u",
+      "-m", "clp_py_utils.initialize-results-cache",
+      "--uri", "mongodb://results_cache:27017/${CLP_RESULTS_CACHE_DB_NAME:-clp-query-results}",
+      "--stream-collection", "${CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME:-stream-files}",
+    ]
+
   query-scheduler:
     <<: *service_defaults
     hostname: "query_scheduler"
@@ -100,7 +148,7 @@ services:
       CLP_LOGS_DIR: "/var/log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       RESULT_BACKEND: >-
-        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
+        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_BACKEND_DB_QUERY:-0}
     volumes:
       - *volume_clp_config_readonly
       - type: "bind"
@@ -142,7 +190,7 @@ services:
       CLP_WORKER_LOG_PATH: "/var/log/query_worker/worker.log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       RESULT_BACKEND: >-
-        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
+        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_BACKEND_DB_QUERY:-0}
     volumes:
       - *volume_aws_config_readonly
       - *volume_clp_config_readonly
