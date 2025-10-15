@@ -433,7 +433,7 @@ def _s3_get_object_metadata_from_keys(
     if len(keys) == 0:
         raise ValueError("The list of keys is empty.")
 
-    keys.sort()
+    keys = sorted(keys)
     for idx, key in enumerate(keys):
         if not key.startswith(key_prefix):
             raise ValueError(f"Key `{key}` doesn't start with the specified prefix `{key_prefix}`.")
