@@ -13,7 +13,6 @@ import {
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState";
 import usePrestoSearchState from "../../SearchState/Presto";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
-import { use } from "react";
 
 
 /**
@@ -121,7 +120,7 @@ const handlePrestoGuidedQuerySubmit = (searchQueryString: string, timelineQueryS
     } = useSearchStore.getState();
 
     const {
-        updateErrorMsg, updateErrorName
+        updateErrorMsg, updateErrorName,
     } = usePrestoSearchState.getState();
 
     // User should NOT be able to submit a new query while an existing query is in progress.
