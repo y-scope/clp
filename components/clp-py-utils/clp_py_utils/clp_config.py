@@ -263,7 +263,7 @@ class SpiderDb(Database):
 
     def get_url(self):
         self.ensure_credentials_loaded()
-        return f"mariadb://{self.host}:{self.port}/{self.name}?user={self.username}&password={self.password}"
+        return f"jdbc:mariadb://{self.host}:{self.port}/{self.name}?user={self.username}&password={self.password}"
 
 
 class SpiderScheduler(BaseModel):
