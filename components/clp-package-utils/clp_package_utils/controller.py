@@ -165,7 +165,7 @@ class BaseController(ABC):
         Redis is not configured.
         """
         component_name = REDIS_COMPONENT_NAME
-        if self.clp_config.redis is None:
+        if self._clp_config.redis is None:
             logger.info(f"{component_name} is not configured, skipping setup.")
             return {}
         logger.info(f"Setting up environment for {component_name}...")
@@ -200,15 +200,15 @@ class BaseController(ABC):
         configured.
         """
         component_name = "spider_db"
-        if self.clp_config.spider_db is None:
+        if self._clp_config.spider_db is None:
             logger.info(f"{component_name} is not configured, skipping setup.")
             return {}
         logger.info(f"Setting up environment for {component_name}...")
 
         return {
-            "SPIDER_DB_USER": self.clp_config.spider_db.username,
-            "SPIDER_DB_PASS": self.clp_config.spider_db.password,
-            "SPIDER_DB_URL": self.clp_config.spider_db.get_url(),
+            "SPIDER_DB_USER": self._clp_config.spider_db.username,
+            "SPIDER_DB_PASS": self._clp_config.spider_db.password,
+            "SPIDER_DB_URL": self._clp_config.spider_db.get_url(),
         }
 
     def _set_up_env_for_spider_scheduler(self) -> EnvVarsDict:
@@ -219,14 +219,14 @@ class BaseController(ABC):
         is not configured.
         """
         component_name = SPIDER_SCHEDULER_COMPONENT_NAME
-        if self.clp_config.spider_scheduler is None:
+        if self._clp_config.spider_scheduler is None:
             logger.info(f"{component_name} is not configured, skipping setup.")
             return {}
         logger.info(f"Setting up environment for {component_name}...")
 
         return {
-            "SPIDER_SCHEDULER_HOST": _get_ip_from_hostname(self.clp_config.spider_scheduler.host),
-            "SPIDER_SCHEDULER_PORT": str(self.clp_config.spider_scheduler.port),
+            "SPIDER_SCHEDULER_HOST": _get_ip_from_hostname(self._clp_config.spider_scheduler.host),
+            "SPIDER_SCHEDULER_PORT": str(self._clp_config.spider_scheduler.port),
         }
 
     def _set_up_env_for_results_cache(self) -> EnvVarsDict:
@@ -532,11 +532,11 @@ class DockerComposeController(BaseController):
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
         if deployment_type == DeploymentType.BASE:
-            if self.clp_config.compression_scheduler.type == OrchestrationType.spider:
+            if self._clp_config.compression_scheduler.type == OrchestrationType.spider:
                 cmd += ["--file", "docker-compose.spider.base.yaml"]
             else:
                 cmd += ["--file", "docker-compose.base.yaml"]
-        if self.clp_config.compression_scheduler.type == OrchestrationType.spider:
+        if self._clp_config.compression_scheduler.type == OrchestrationType.spider:
             cmd += ["--file", "docker-compose.spider.yaml"]
         cmd += ["up", "--detach"]
         try:
