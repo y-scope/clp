@@ -48,7 +48,6 @@ from clp_package_utils.general import (
     validate_webui_config,
 )
 
-# Type alias for environment variables dictionary.
 EnvVarsDict = Dict[str, str]
 
 LOG_FILE_ACCESS_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
@@ -63,8 +62,9 @@ logger = logging.getLogger(__name__)
 
 class BaseController(ABC):
     """
-    Abstract base controller for preparing and deploying CLP components. Provides common logic for
-    preparing environment variables, directories, and configuration files for each service.
+    Base controller for orchestrating CLP components. Derived classes should implement any
+    orchestrator-specific logic. This class provides common logic for preparing environment
+    variables, directories, and configuration files for each component.
     """
 
     def __init__(self, clp_config: CLPConfig):
@@ -75,22 +75,22 @@ class BaseController(ABC):
     @abstractmethod
     def start(self):
         """
-        Starts the set-up components with orchestrator-specific logic.
+        Starts the components.
         """
         pass
 
     @abstractmethod
     def stop(self):
         """
-        Stops the deployed components with orchestrator-specific logic.
+        Stops the components.
         """
         pass
 
     @abstractmethod
     def _set_up_env(self):
         """
-        Sets up all components for the orchestrator by preparing environment variables, directories,
-        and configuration files.
+        Sets up all components to run by preparing environment variables, directories, and
+        configuration files.
         """
         pass
 
@@ -463,7 +463,7 @@ class BaseController(ABC):
 
 class DockerComposeController(BaseController):
     """
-    Controller for deploying CLP components using Docker Compose.
+    Controller for orchestrating CLP components using Docker Compose.
     """
 
     def __init__(self, clp_config: CLPConfig, instance_id: str):
@@ -472,16 +472,13 @@ class DockerComposeController(BaseController):
 
     def start(self):
         """
-        Deploys CLP components using Docker Compose by:
-        1. Checking Docker dependencies.
-        2. Setting up environment variables and configuration.
-        3. Running `docker compose up -d`.
+        Starts CLP's components using Docker Compose.
         """
         check_docker_dependencies(should_compose_run=False, project_name=self._project_name)
         self._set_up_env()
 
         deployment_type = self.clp_config.get_deployment_type()
-        logger.info(f"Starting CLP using Docker Compose ({deployment_type})...")
+        logger.info(f"Starting CLP using Docker Compose ({deployment_type} deployment)...")
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
         if deployment_type == DeploymentType.BASE:
@@ -520,9 +517,8 @@ class DockerComposeController(BaseController):
     @staticmethod
     def _get_num_workers() -> int:
         """
-        Gets the parallelism number for worker components.
         TODO: Revisit after moving from single-container to multi-container workers.
-        :return: Number of worker processes.
+        :return: Number of worker processes to run.
         """
         return multiprocessing.cpu_count() // 2
 
@@ -558,6 +554,7 @@ class DockerComposeController(BaseController):
             # AWS credentials
             "CLP_AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID", ""),
             "CLP_AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY", ""),
+            # Component-specific environment variables
             **self._set_up_env_for_database(),
             **self._set_up_env_for_queue(),
             **self._set_up_env_for_redis(),
@@ -581,7 +578,8 @@ class DockerComposeController(BaseController):
 
 def get_or_create_instance_id(clp_config: CLPConfig):
     """
-    Gets or create a unique instance ID for this CLP instance.
+    Gets or creates a unique instance ID for this CLP instance.
+
     :param clp_config:
     :return: The instance ID.
     """
