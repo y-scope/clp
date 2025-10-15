@@ -160,15 +160,9 @@ class Package(BaseModel):
 
         return self
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["storage_engine"] = d["storage_engine"].value
-        d["query_engine"] = d["query_engine"].value
-        return d
-
 
 class Database(BaseModel):
-    type: DatabaseEngine = DatabaseEngine.MARIADB
+    type: DatabaseEngineStr = DatabaseEngine.MARIADB
     host: DomainStr = "localhost"
     port: Port = 3306
     name: NonEmptyStr = "clp-db"
@@ -229,7 +223,6 @@ class Database(BaseModel):
 
     def dump_to_primitive_dict(self):
         d = self.model_dump(exclude={"username", "password"})
-        d["type"] = d["type"].value
         return d
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
@@ -444,12 +437,6 @@ class S3Config(BaseModel):
 class S3IngestionConfig(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     aws_authentication: AwsAuthentication
-
-    def dump_to_primitive_dict(self):
-        return self.model_dump()
-
-    def transform_for_container(self):
-        pass
 
 
 class FsStorage(BaseModel):
@@ -732,7 +719,7 @@ class CLPConfig(BaseModel):
             auth_configs.append(self.stream_output.storage.s3_config.aws_authentication)
 
         for auth in auth_configs:
-            if AwsAuthType.profile.value == auth.type:
+            if AwsAuthType.profile == auth.type:
                 profile_auth_used = True
                 break
 
