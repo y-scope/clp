@@ -97,7 +97,7 @@ interface LoadingProps {
 const Loading = ({
     currentState,
     errorMsg,
-}:LoadingProps) => {
+}: LoadingProps) => {
     const steps: React.ReactNode[] = [];
     QUERY_LOADING_STATE_VALUES.forEach((state) => {
         const isActive = (currentState === state);
