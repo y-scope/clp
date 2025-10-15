@@ -245,23 +245,27 @@ void ArchiveReader::append_unordered_reader_columns(
         bool should_marshal_records
 ) {
     size_t object_begin_pos = reader.get_column_size();
-    for (int32_t column_id : schema_ids) {
-        std::cerr << fmt::format(
-                "[clpsls] append unordered root node: {} col: {}\n",
-                mst_subtree_root_node_id,
-                column_id
-        );
+    for (size_t i = 0; i < schema_ids.size(); ++i) {
+        auto const column_id{schema_ids[i]};
         if (Schema::schema_entry_is_unordered_object(column_id)) {
+            auto length{Schema::get_unordered_object_length(column_id)};
+            auto sub_schema{schema_ids.subspan(i + 1, length)};
+            auto subtree_root_node_id{m_schema_tree->find_matching_subtree_root_in_subtree(
+                    mst_subtree_root_node_id,
+                    SchemaReader::get_first_column_in_span(sub_schema),
+                    Schema::get_unordered_object_type(column_id)
+            )};
+            append_unordered_reader_columns(
+                    reader,
+                    subtree_root_node_id,
+                    sub_schema,
+                    should_marshal_records
+            );
+            i += length;
             continue;
         }
         BaseColumnReader* column_reader = nullptr;
         auto const& node = m_schema_tree->get_node(column_id);
-        std::cerr << fmt::format(
-                "[clpsls] append unordered root node: {} col: {} type: {}\n",
-                mst_subtree_root_node_id,
-                column_id,
-                static_cast<uint8_t>(node.get_type())
-        );
         switch (node.get_type()) {
             case NodeType::Integer:
                 column_reader = new Int64ColumnReader(column_id);

@@ -318,13 +318,26 @@ void JsonParser::parse_obj_in_array(simdjson::ondemand::object line, int32_t par
                 std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
                     // TODO clpsls: check if any delim from schema exists
-                    node_id = m_archive_writer
-                                      ->add_node(node_id_stack.top(), NodeType::ClpString, cur_key);
+                    // Doesn't seem possible to get through the parser atm (could store
+                    // separately...  after parsing schema file).
+
+                    node_id = m_archive_writer->add_node(
+                            node_id_stack.top(),
+                            NodeType::LogMessage,
+                            cur_key
+                    );
+                    if (auto const result{parse_log_message(node_id, value)}; result.has_error()) {
+                        // TODO clpsls: if parsing fails we could try to treat the string as a
+                        // VarString
+                        throw(std::runtime_error(
+                                "parse_log_message failed with: " + result.error().message()
+                        ));
+                    }
                 } else {
                     node_id = m_archive_writer
                                       ->add_node(node_id_stack.top(), NodeType::VarString, cur_key);
+                    m_current_parsed_message.add_unordered_value(value);
                 }
-                m_current_parsed_message.add_unordered_value(value);
                 m_current_schema.insert_unordered(node_id);
                 break;
             }
@@ -424,11 +437,21 @@ void JsonParser::parse_array(simdjson::ondemand::array array, int32_t parent_nod
                 std::string_view value = cur_value.get_string(true);
                 if (value.find(' ') != std::string::npos) {
                     // TODO clpsls: check if any delim from schema exists
-                    node_id = m_archive_writer->add_node(parent_node_id, NodeType::ClpString, "");
+                    // Doesn't seem possible to get through the parser atm (could store
+                    // separately...  after parsing schema file).
+
+                    node_id = m_archive_writer->add_node(parent_node_id, NodeType::LogMessage, "");
+                    if (auto const result{parse_log_message(node_id, value)}; result.has_error()) {
+                        // TODO clpsls: if parsing fails we could try to treat the string as a
+                        // VarString
+                        throw(std::runtime_error(
+                                "parse_log_message failed with: " + result.error().message()
+                        ));
+                    }
                 } else {
                     node_id = m_archive_writer->add_node(parent_node_id, NodeType::VarString, "");
+                    m_current_parsed_message.add_unordered_value(value);
                 }
-                m_current_parsed_message.add_unordered_value(value);
                 m_current_schema.insert_unordered(node_id);
                 break;
             }
@@ -471,7 +494,6 @@ void JsonParser::parse_line(
             line = cur_field.value();
         }
 
-        std::cerr << fmt::format("[clpsls] handling line, top node: {}\n", node_id_stack.top());
         switch (line.type()) {
             case simdjson::ondemand::json_type::object: {
                 node_id = m_archive_writer
@@ -599,12 +621,11 @@ void JsonParser::parse_line(
                             NodeType::LogMessage,
                             cur_key
                     );
-                    auto const parse_result{parse_log_message(node_id, value)};
-                    if (parse_result.has_error()) {
+                    if (auto const result{parse_log_message(node_id, value)}; result.has_error()) {
                         // TODO clpsls: if parsing fails we could try to treat the string as a
                         // VarString
                         throw(std::runtime_error(
-                                "parse_log_message failed with: " + parse_result.error().message()
+                                "parse_log_message failed with: " + result.error().message()
                         ));
                     }
                     m_current_schema.insert_unordered(node_id);
@@ -1516,7 +1537,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                 logtype_dict_entry.add_schema_var();
                 m_current_parsed_message.add_unordered_value(token_view.to_string());
                 m_current_schema.insert_unordered(
-                        m_archive_writer->add_node(capture_node_id, NodeType::FullMatch, token_name)
+                        m_archive_writer->add_node(capture_node_id, NodeType::FullMatch, "FullMatch")
                 );
 
                 for (auto const capture_id : capture_ids.value()) {
