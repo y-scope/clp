@@ -75,7 +75,7 @@ const useUpdateStateWithMetadata = () => {
                         placement: "bottomRight",
                         showProgress: true,
                     });
-            }
+                }
                 break;
             }
             default:
@@ -87,6 +87,7 @@ const useUpdateStateWithMetadata = () => {
         updateErrorMsg,
         updateErrorName,
         updateSearchUiState,
+        sqlInterface,
     ]);
 };
 

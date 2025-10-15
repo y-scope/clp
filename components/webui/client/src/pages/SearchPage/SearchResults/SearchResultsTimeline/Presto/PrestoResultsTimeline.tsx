@@ -38,7 +38,7 @@ const PrestoResultsTimeline = () => {
             updateTimelineConfig,
         } = useSearchStore.getState();
 
-        const updateCachedGuidedSearchQueryString = usePrestoSearchState.getState().updateCachedGuidedSearchQueryString;
+        const {updateCachedGuidedSearchQueryString} = usePrestoSearchState.getState();
 
         // Update range picker selection to match zoomed range.
         updateTimeRange(newTimeRange);

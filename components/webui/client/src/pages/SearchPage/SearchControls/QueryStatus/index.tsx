@@ -1,15 +1,16 @@
-import {
-    Typography,
-} from "antd";
+import {Typography} from "antd";
 
+import {
+    CLP_QUERY_ENGINES,
+    SETTINGS_QUERY_ENGINE,
+} from "../../../../config";
 import useSearchStore from "../../SearchState/index";
-import {SEARCH_UI_STATE} from "../../SearchState/typings";
-import Results from "./Results";
 import usePrestoSearchState from "../../SearchState/Presto";
-import {CLP_QUERY_ENGINES, SETTINGS_QUERY_ENGINE} from "../../../../config";
 import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
+import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import OpenQueryDrawerButton from "./OpenQueryDrawerButton";
 import QueryDrawer from "./QueryDrawer";
+import Results from "./Results";
 
 
 const {Text} = Typography;
@@ -33,8 +34,7 @@ const QueryStatus = () => {
         <div>
             {(
                 searchUiState === SEARCH_UI_STATE.QUERYING ||
-                searchUiState === SEARCH_UI_STATE.DONE ||
-                searchUiState === SEARCH_UI_STATE.FAILED || true
+                searchUiState === SEARCH_UI_STATE.DONE
             ) && (
                 <Text type={"secondary"}>
                     Search job
@@ -44,6 +44,16 @@ const QueryStatus = () => {
                     {isPrestoGuided && <OpenQueryDrawerButton/>}
                     {" "}
                     found
+                    {" "}
+                </Text>
+            )}
+            {(searchUiState === SEARCH_UI_STATE.FAILED) && (
+                <Text type={"secondary"}>
+                    Failure in search job
+                    {" "}
+                    {searchJobId}
+                    {" "}
+                    {isPrestoGuided && <OpenQueryDrawerButton/>}
                     {" "}
                 </Text>
             )}
