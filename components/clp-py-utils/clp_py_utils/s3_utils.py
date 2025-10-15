@@ -1,7 +1,7 @@
 import os
 import re
 from pathlib import Path
-from typing import Dict, Final, List, Optional, Set, Tuple, Union
+from typing import Dict, Final, Generator, List, Optional, Set, Tuple, Union
 
 import boto3
 import botocore
@@ -401,20 +401,12 @@ def _s3_get_object_metadata_from_single_prefix(
     :raise: Propagates `boto3.paginator`'s exceptions.
     """
     file_metadata_list: List[FileMetadata] = list()
-    paginator = s3_client.get_paginator("list_objects_v2")
-    pages = paginator.paginate(Bucket=bucket, Prefix=key_prefix)
-    for page in pages:
-        contents = page.get("Contents", None)
-        if contents is None:
+    for object_key, object_size in _iter_s3_objects(s3_client, bucket, key_prefix):
+        if object_key.endswith("/"):
+            # Skip any object that resolves to a directory-like path
             continue
 
-        for obj in contents:
-            object_key = obj["Key"]
-            if object_key.endswith("/"):
-                # Skip any object that resolves to a directory-like path
-                continue
-
-            file_metadata_list.append(FileMetadata(Path(object_key), obj["Size"]))
+        file_metadata_list.append(FileMetadata(Path(object_key), object_size))
 
     return file_metadata_list
 
@@ -457,30 +449,23 @@ def _s3_get_object_metadata_from_keys(
     if next_key is None:
         return file_metadata_list
 
-    paginator = s3_client.get_paginator("list_objects_v2")
-    for page in paginator.paginate(Bucket=bucket, Prefix=key_prefix, StartAfter=first_key):
-        contents = page.get("Contents", None)
-        if contents is None:
+    for object_key, object_size in _iter_s3_objects(s3_client, bucket, key_prefix, first_key):
+        if object_key.endswith("/"):
+            # Skip any object that resolves to a directory-like path
             continue
 
-        for obj in contents:
-            object_key = obj["Key"]
-            if object_key.endswith("/"):
-                # Skip any object that resolves to a directory-like path
-                continue
+        # We need to do both < and > checks since they are handled differently. Ideally, we can do
+        # it with a single comparison. However, Python doesn't support three-way comparison.
+        if object_key < next_key:
+            continue
+        if object_key > next_key:
+            raise ValueError(f"Key `{next_key}` doesn't exist in the bucket `{bucket}`.")
 
-            # We need to do both < and > checks since they are handled differently. Ideally, we can
-            # do it with a single comparison. However, Python doesn't support three-way comparison.
-            if object_key < next_key:
-                continue
-            if object_key > next_key:
-                raise ValueError(f"Key `{next_key}` doesn't exist in the bucket `{bucket}`.")
-
-            file_metadata_list.append(FileMetadata(Path(object_key), obj["Size"]))
-            next_key = next(key_iterator, None)
-            if next_key is None:
-                # Early exit sine all keys have been found.
-                return file_metadata_list
+        file_metadata_list.append(FileMetadata(Path(object_key), object_size))
+        next_key = next(key_iterator, None)
+        if next_key is None:
+            # Early exit sine all keys have been found.
+            return file_metadata_list
 
     # If control flow reaches here, it means there are still keys left to find.
     absent_keys = []
@@ -515,3 +500,33 @@ def _s3_get_object_metadata_from_key(
             f"Failed to read metadata of the key `{key}` from the bucket `{bucket}`"
             f" with the error: {e}."
         )
+
+
+def _iter_s3_objects(
+    s3_client: boto3.client, bucket: str, key_prefix: str, start_from: str | None = None
+) -> Generator[Tuple[str, int], None, None]:
+    """
+    Iterates over objects in an S3 bucket under the specified prefix, optionally starting after a
+    given key.
+
+    :param s3_client:
+    :param bucket:
+    :param key_prefix:
+    :param start_from: Optional key to start listing after.
+    :yield: The next object to iterator, presenting as a tuple that contains:
+        - The key of the object.
+        - The size of the object.
+    """
+    paginator = s3_client.get_paginator("list_objects_v2")
+    paginator_args = {"Bucket": bucket, "Prefix": key_prefix}
+    if start_from is not None:
+        paginator_args["StartAfter"] = start_from
+    pages = paginator.paginate(**paginator_args)
+    for page in pages:
+        contents = page.get("Contents", None)
+        if contents is None:
+            continue
+        for obj in contents:
+            object_key = obj["Key"]
+            object_size = obj["Size"]
+            yield object_key, object_size
