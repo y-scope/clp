@@ -486,7 +486,7 @@ class DockerComposeController(BaseController):
         cmd = ["docker", "compose", "--project-name", self._project_name]
         if deployment_type == DeploymentType.BASE:
             cmd += ["--file", "docker-compose.base.yaml"]
-        cmd += ["up", "--detach"]
+        cmd += ["up", "--detach", "--wait"]
         try:
             subprocess.run(
                 cmd,
