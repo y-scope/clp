@@ -138,7 +138,7 @@ class BaseController(ABC):
         queue is not configured.
         """
         component_name = QUEUE_COMPONENT_NAME
-        if self.clp_config.queue is None:
+        if self._clp_config.queue is None:
             logger.info(f"{component_name} is not configured, skipping setup.")
             return {}
         logger.info(f"Setting up environment for {component_name}...")
