@@ -13,11 +13,13 @@ from typing import Any, Dict
 from clp_py_utils.clp_config import (
     AwsAuthType,
     CLPConfig,
+    COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     DB_COMPONENT_NAME,
     DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
+    QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
     QueryEngine,
@@ -343,7 +345,7 @@ class BaseController(ABC):
             "SqlDbClpDatasetsTableName": get_datasets_table_name(table_prefix),
             "SqlDbClpFilesTableName": files_table_name,
             "SqlDbClpTablePrefix": table_prefix,
-            "SqlDbCompressionJobsTableName": "compression_jobs",
+            "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
         }
         client_settings_json = self._read_and_update_settings_json(
             client_settings_json_path, client_settings_json_updates
@@ -355,7 +357,7 @@ class BaseController(ABC):
             "SqlDbHost": container_clp_config.database.host,
             "SqlDbPort": container_clp_config.database.port,
             "SqlDbName": self._clp_config.database.name,
-            "SqlDbQueryJobsTableName": "query_jobs",
+            "SqlDbQueryJobsTableName": QUERY_JOBS_TABLE_NAME,
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbPort": container_clp_config.results_cache.port,
             "MongoDbName": self._clp_config.results_cache.db_name,
