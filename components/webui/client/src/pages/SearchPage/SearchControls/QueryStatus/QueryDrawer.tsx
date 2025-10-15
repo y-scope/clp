@@ -17,7 +17,7 @@ const {Text} = Typography;
 /**
  * Renders the query details drawer, showing the modified SQL query and error (if any).
  *
- * @return The drawer component.
+ * @return
  */
 const QueryDrawer = () => {
     const {token} = theme.useToken();
