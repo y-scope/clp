@@ -25,8 +25,6 @@ F = TypeVar("F", bound=Callable[..., Any])
 # Sampling interval tuned for low-overhead profiling (1ms)
 PROFILING_INTERVAL = 0.001
 
-__all__ = ["profile"]
-
 
 def is_profiling_enabled() -> bool:
     """
