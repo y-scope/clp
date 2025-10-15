@@ -221,7 +221,6 @@ LogTypeColumnReader::extract_string_value_into_buffer(uint64_t cur_message, std:
         entry.decode_log_type();
     }
 
-    std::cerr << fmt::format("[clpsls] reading logtype column: {}\n", entry.get_value());
     buffer.append(entry.get_value());
 }
 

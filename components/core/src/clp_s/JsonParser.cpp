@@ -832,23 +832,6 @@ auto JsonParser::ingest_json(
             return false;
         }
 
-        {
-            std::cerr << fmt::format(
-                    "[clpsls] ingest json ordered message size: {}\n",
-                    m_current_parsed_message.get_content().size()
-            );
-            for (auto& i : m_current_parsed_message.get_content()) {
-                std::cerr << fmt::format("\tcol {} variant {}\n", i.first, i.second.index());
-            }
-            std::cerr << fmt::format(
-                    "[clpsls] ingest json unordered message size: {}\n",
-                    m_current_parsed_message.get_unordered_content().size()
-            );
-            for (auto& i : m_current_parsed_message.get_unordered_content()) {
-                std::cerr << fmt::format("\tvariant {}\n", i.index());
-            }
-        }
-
         int32_t current_schema_id = m_archive_writer->add_schema(m_current_schema);
         m_current_parsed_message.set_id(current_schema_id);
         m_archive_writer
