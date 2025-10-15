@@ -46,8 +46,6 @@ const useUpdateStateWithMetadata = () => {
             case SEARCH_SIGNAL.RESP_DONE:
             case PRESTO_SEARCH_SIGNAL.DONE:
                 updateSearchUiState(SEARCH_UI_STATE.DONE);
-                updateErrorMsg(null);
-                updateErrorName(null);
                 break;
             case PRESTO_SEARCH_SIGNAL.FAILED: {
                 const errorMsg = resultsMetadata.errorMsg || "An error occurred during search";
