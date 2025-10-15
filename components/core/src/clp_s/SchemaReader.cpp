@@ -475,7 +475,6 @@ size_t SchemaReader::generate_structured_array_template(
                     break;
                 }
                 case NodeType::ClpString:
-                case NodeType::FullMatch:
                 case NodeType::LogType:
                 case NodeType::VarString: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddStringValue);
@@ -568,7 +567,6 @@ size_t SchemaReader::generate_structured_object_template(
                     break;
                 }
                 case NodeType::ClpString:
-                case NodeType::FullMatch:
                 case NodeType::LogType:
                 case NodeType::VarString: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
@@ -696,7 +694,6 @@ void SchemaReader::generate_json_template(int32_t id) {
             }
             case NodeType::ClpString:
             case NodeType::DateString:
-            case NodeType::FullMatch:
             case NodeType::LogType:
             case NodeType::VarString: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
@@ -778,7 +775,6 @@ auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
                     column_idx++;
                     break;
                 }
-                case NodeType::FullMatch:
                 case NodeType::LogType:
                 case NodeType::VarString: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
@@ -854,7 +850,6 @@ auto SchemaReader::generate_capture_var_template(int32_t capture_id)
                 column_idx++;
                 break;
             }
-            case NodeType::FullMatch:
             case NodeType::LogType:
             case NodeType::VarString: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddStringField);

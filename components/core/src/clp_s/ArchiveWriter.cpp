@@ -330,7 +330,6 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
             case NodeType::LogType:
                 writer->append_column(new LogTypeColumnWriter(id, m_log_dict));
                 break;
-            case NodeType::FullMatch:
             case NodeType::VarString:
                 writer->append_column(new VariableStringColumnWriter(id, m_var_dict));
                 break;

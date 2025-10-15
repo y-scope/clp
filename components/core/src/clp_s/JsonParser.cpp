@@ -1519,9 +1519,11 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
 
                 logtype_dict_entry.add_schema_var();
                 m_current_parsed_message.add_unordered_value(token_view.to_string());
-                m_current_schema.insert_unordered(
-                        m_archive_writer->add_node(capture_node_id, NodeType::FullMatch, "FullMatch")
-                );
+                m_current_schema.insert_unordered(m_archive_writer->add_node(
+                        capture_node_id,
+                        NodeType::VarString,
+                        "FullMatch"
+                ));
 
                 for (auto const capture_id : capture_ids.value()) {
                     auto const register_ids{lexer.get_reg_ids_from_capture_id(capture_id)};

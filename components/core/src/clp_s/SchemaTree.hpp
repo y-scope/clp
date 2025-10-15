@@ -39,15 +39,13 @@ namespace clp_s {
  * variables are stored in their own nodes unlike a ClpsString. The logtype dictionary component is
  * identical.
  *
- * CaptureVar: Contains a FullMatch node representing the entire log surgeon schema variable and any
- * number of primitive type nodes for each named capture group in the variable.
+ * CaptureVar: Contains a VarString node representing the entire log surgeon schema variable (a
+ * "full match" of the regex pattern) and any number of primitive type nodes for each named capture
+ * group in the variable.
  *
- * FullMatch: is functionally the same as a VarString, but is used when a variable type contains
- * capture groups to identify the node containig the full match of the variable (including all
- * captures). The actual captures are stored in nodes of their appropriate type (currently just
- * VarString). It may be improve compression to put placeholders in the FullMatch (similar to a
- * LogType). In theory a FullMatch could be something other than a string, but log surgeon won't
- * support that in the near future (e.g. `(?<parent>(?<int>123\d+321)(?<float>123.\d+))`).
+ * The actual captures are stored in nodes of their appropriate type (currently just VarString). It
+ * may be improve compression to store the "full match" of a variable similar to a log type using
+ * placeholders for the capture groups.
  */
 enum class NodeType : uint8_t {
     Integer,
@@ -67,7 +65,6 @@ enum class NodeType : uint8_t {
     LogMessage,
     LogType,
     CaptureVar,
-    FullMatch,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };
 
