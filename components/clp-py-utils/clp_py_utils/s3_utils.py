@@ -402,10 +402,6 @@ def _s3_get_object_metadata_from_single_prefix(
     """
     file_metadata_list: List[FileMetadata] = list()
     for object_key, object_size in _iter_s3_objects(s3_client, bucket, key_prefix):
-        if object_key.endswith("/"):
-            # Skip any object that resolves to a directory-like path
-            continue
-
         file_metadata_list.append(FileMetadata(Path(object_key), object_size))
 
     return file_metadata_list
@@ -421,13 +417,14 @@ def _s3_get_object_metadata_from_keys(
     :param bucket:
     :param keys:
     :return: A list of `FileMetadata` containing the object's metadata on success.
-    :raises: ValueError if `keys` is an empty list.
-    :raises: ValueError if any key in `keys` doesn't start with `key_prefix`.
-    :raises: ValueError if duplicate keys are found in `keys`.
-    :raises: ValueError if any key in `keys` doesn't exist in the bucket.
-    :raises: Propagates `_s3_get_object_metadata_from_key`'s exceptions.
-    :raises: Propagates `boto3.client.get_paginator`'s exceptions.
-    :raises: Propagates `boto3.paginator`'s exceptions.
+    :raise: ValueError if `keys` is an empty list.
+    :raise: ValueError if any key in `keys` doesn't start with `key_prefix`.
+    :raise: ValueError if duplicate keys are found in `keys`.
+    :raise: ValueError if any key in `keys` ends with `/`.
+    :raise: ValueError if any key in `keys` doesn't exist in the bucket.
+    :raise: Propagates `_s3_get_object_metadata_from_key`'s exceptions.
+    :raise: Propagates `boto3.client.get_paginator`'s exceptions.
+    :raise: Propagates `boto3.paginator`'s exceptions.
     """
     # Key validation
     if len(keys) == 0:
@@ -439,6 +436,8 @@ def _s3_get_object_metadata_from_keys(
             raise ValueError(f"Key `{key}` doesn't start with the specified prefix `{key_prefix}`.")
         if idx > 0 and key == keys[idx - 1]:
             raise ValueError(f"Duplicate key found: `{key}`.")
+        if key.endswith("/"):
+            raise ValueError(f"Key `{key}` is invalid: S3 object keys must not end with `/`.")
 
     key_iterator = iter(keys)
     first_key = next(key_iterator)
@@ -450,10 +449,6 @@ def _s3_get_object_metadata_from_keys(
         return file_metadata_list
 
     for object_key, object_size in _iter_s3_objects(s3_client, bucket, key_prefix, first_key):
-        if object_key.endswith("/"):
-            # Skip any object that resolves to a directory-like path
-            continue
-
         # We need to do both < and > checks since they are handled differently. Ideally, we can do
         # it with a single comparison. However, Python doesn't support three-way comparison.
         if object_key < next_key:
@@ -488,8 +483,8 @@ def _s3_get_object_metadata_from_key(
     :param bucket:
     :param key:
     :return: A `FileMetadata` containing the object's metadata on success.
-    :raises: ValueError if the object doesn't exist or fails to read the metadata.
-    :raises: Propagates `boto3.client.head_object`'s exceptions.
+    :raise: ValueError if the object doesn't exist or fails to read the metadata.
+    :raise: Propagates `boto3.client.head_object`'s exceptions.
     """
     try:
         return FileMetadata(
@@ -508,6 +503,9 @@ def _iter_s3_objects(
     """
     Iterates over objects in an S3 bucket under the specified prefix, optionally starting after a
     given key.
+
+    NOTE: Any object key that resolves to a directory-like path (i.e., ends with `/`) will be
+    skipped.
 
     :param s3_client:
     :param bucket:
@@ -528,5 +526,8 @@ def _iter_s3_objects(
             continue
         for obj in contents:
             object_key = obj["Key"]
+            if object_key.endswith("/"):
+                # Skip any object that resolves to a directory-like path
+                continue
             object_size = obj["Size"]
             yield object_key, object_size
