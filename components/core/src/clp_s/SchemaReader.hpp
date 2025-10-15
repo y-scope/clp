@@ -155,11 +155,11 @@ public:
     uint64_t get_num_messages() const { return m_num_messages; }
 
     /**
-     * Generates a json string from the extracted values
-     * @param message_index the index of the message to generate the json string for
-     * @return the generated json string
+     * Generates a JSON string from the encoded columns
+     * @param message_index The index of the message to generate the JSON string for.
+     * @return The generated JSON string
      */
-    std::string generate_json_string(uint64_t message_index);
+    [[nodiscard]] auto generate_json_string(uint64_t message_index) -> std::string;
 
     /**
      * Gets next message

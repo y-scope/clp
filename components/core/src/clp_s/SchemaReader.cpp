@@ -63,7 +63,7 @@ SchemaReader::load(std::shared_ptr<char[]> stream_buffer, size_t offset, size_t 
     }
 }
 
-std::string SchemaReader::generate_json_string(uint64_t message_index) {
+auto SchemaReader::generate_json_string(uint64_t message_index) -> std::string {
     m_json_serializer.reset();
     m_json_serializer.begin_document();
     size_t column_id_index = 0;
