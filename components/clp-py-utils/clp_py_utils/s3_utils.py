@@ -262,8 +262,8 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
 
     :param s3_input_config:
     :return: A list of `FileMetadata` containing the object's metadata on success.
-    :raises: Propagates `_s3_get_object_metadata_from_single_prefix`'s exceptions.
-    :raises: Propagates `_s3_get_object_metadata_from_keys`'s exceptions.
+    :raise: Propagates `_s3_get_object_metadata_from_single_prefix`'s exceptions.
+    :raise: Propagates `_s3_get_object_metadata_from_keys`'s exceptions.
     """
 
     s3_client = _create_s3_client(s3_input_config.region_code, s3_input_config.aws_authentication)
