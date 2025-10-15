@@ -53,9 +53,9 @@ EnvVarsDict = Dict[str, str]
 LOG_FILE_ACCESS_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
 
 DEFAULT_UID_GID = f"{os.getuid()}:{os.getgid()}"
-SERVICE_CONTAINER_USER_ID = 999
-SERVICE_CONTAINER_GROUP_ID = 999
-SERVICE_CONTAINER_UID_GID = f"{SERVICE_CONTAINER_USER_ID}:{SERVICE_CONTAINER_GROUP_ID}"
+THIRD_PARTY_SERVICE_UID = 999
+THIRD_PARTY_SERVICE_GID = 999
+THIRD_PARTY_SERVICE_UID_GID = f"{THIRD_PARTY_SERVICE_UID}:{THIRD_PARTY_SERVICE_GID}"
 
 logger = logging.getLogger(__name__)
 
@@ -537,9 +537,9 @@ class DockerComposeController(BaseController):
         env_dict = {
             "CLP_PACKAGE_STORAGE_ENGINE": self._clp_config.package.storage_engine,
             # User and group IDs
-            "CLP_UID_GID": DEFAULT_UID_GID,
-            "CLP_SERVICE_CONTAINER_UID_GID": (
-                SERVICE_CONTAINER_UID_GID if os.geteuid() == 0 else DEFAULT_UID_GID
+            "CLP_FIRST_PARTY_SERVICE_UID_GID": DEFAULT_UID_GID,
+            "CLP_THIRD_PARTY_SERVICE_UID_GID": (
+                THIRD_PARTY_SERVICE_UID_GID if os.geteuid() == 0 else DEFAULT_UID_GID
             ),
             # Package container
             "CLP_PACKAGE_CONTAINER": self._clp_config.container_image_ref,
@@ -607,7 +607,7 @@ def _chown_paths_if_root(*paths: pathlib.Path):
     if os.getuid() != 0:
         return
     for path in paths:
-        _chown_recursively(path, SERVICE_CONTAINER_USER_ID, SERVICE_CONTAINER_GROUP_ID)
+        _chown_recursively(path, THIRD_PARTY_SERVICE_UID, THIRD_PARTY_SERVICE_GID)
 
 
 def _chown_recursively(

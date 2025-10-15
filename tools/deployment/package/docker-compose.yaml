@@ -9,7 +9,7 @@ x-service-defaults: &service_defaults
   logging:
     driver: "local"
   stop_grace_period: "3s"
-  user: "${CLP_UID_GID:-1000:1000}"
+  user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:1000}"
 x-healthcheck-defaults: &healthcheck_defaults
   interval: "30s"
   retries: 3
