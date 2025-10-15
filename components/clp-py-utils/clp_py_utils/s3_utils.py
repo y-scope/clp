@@ -262,10 +262,10 @@ def s3_get_object_metadata(s3_input_config: S3InputConfig) -> List[FileMetadata]
 
     :param s3_input_config:
     :return: A list of `FileMetadata` containing the object's metadata on success.
+    :raise: Propagates `_create_s3_client`'s exceptions.
     :raise: Propagates `_s3_get_object_metadata_from_single_prefix`'s exceptions.
     :raise: Propagates `_s3_get_object_metadata_from_keys`'s exceptions.
     """
-
     s3_client = _create_s3_client(s3_input_config.region_code, s3_input_config.aws_authentication)
 
     if s3_input_config.keys is None:
@@ -396,9 +396,7 @@ def _s3_get_object_metadata_from_single_prefix(
     :param bucket:
     :param key_prefix:
     :return: A list of `FileMetadata` containing the object's metadata on success.
-    :raise: Propagates `boto3.client`'s exceptions.
-    :raise: Propagates `boto3.client.get_paginator`'s exceptions.
-    :raise: Propagates `boto3.paginator`'s exceptions.
+    :raise: Propagates `_iter_s3_objects`'s exceptions.
     """
     file_metadata_list: List[FileMetadata] = list()
     for object_key, object_size in _iter_s3_objects(s3_client, bucket, key_prefix):
@@ -423,8 +421,7 @@ def _s3_get_object_metadata_from_keys(
     :raise: ValueError if any key in `keys` ends with `/`.
     :raise: ValueError if any key in `keys` doesn't exist in the bucket.
     :raise: Propagates `_s3_get_object_metadata_from_key`'s exceptions.
-    :raise: Propagates `boto3.client.get_paginator`'s exceptions.
-    :raise: Propagates `boto3.paginator`'s exceptions.
+    :raise: Propagates `_iter_s3_objects`'s exceptions.
     """
     # Key validation
     if len(keys) == 0:
@@ -514,6 +511,8 @@ def _iter_s3_objects(
     :yield: The next object to iterator, presenting as a tuple that contains:
         - The key of the object.
         - The size of the object.
+    :raise: Propagates `boto3.client.get_paginator`'s exceptions.
+    :raise: Propagates `boto3.paginator`'s exceptions.
     """
     paginator = s3_client.get_paginator("list_objects_v2")
     paginator_args = {"Bucket": bucket, "Prefix": key_prefix}
