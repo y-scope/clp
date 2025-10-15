@@ -205,7 +205,9 @@ class BaseController(ABC):
             "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self._clp_config.results_cache.host),
             "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
             "CLP_RESULTS_CACHE_DB_NAME": self._clp_config.results_cache.db_name,
-            "CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME": self._clp_config.results_cache.stream_collection_name,
+            "CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME": (
+                self._clp_config.results_cache.stream_collection_name
+            ),
         }
 
     def _set_up_env_for_compression_scheduler(self) -> EnvVarsDict:
@@ -253,7 +255,6 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
-
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         return {
@@ -273,7 +274,6 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
-
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         return {
@@ -293,7 +293,6 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
-
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         return {
@@ -320,11 +319,14 @@ class BaseController(ABC):
         server_settings_json_path = (
             self._clp_home / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
         )
-
-        validate_webui_config(self._clp_config, client_settings_json_path, server_settings_json_path)
+        validate_webui_config(
+            self._clp_config, client_settings_json_path, server_settings_json_path
+        )
 
         # Read, update, and write back client's and server's settings.json
-        clp_db_connection_params = self._clp_config.database.get_clp_connection_params_and_type(True)
+        clp_db_connection_params = self._clp_config.database.get_clp_connection_params_and_type(
+            True
+        )
         table_prefix = clp_db_connection_params["table_prefix"]
         if StorageEngine.CLP_S == self._clp_config.package.storage_engine:
             archives_table_name = ""
@@ -415,7 +417,6 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
-
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         return {"CLP_GC_LOGGING_LEVEL": self._clp_config.garbage_collector.logging_level}
