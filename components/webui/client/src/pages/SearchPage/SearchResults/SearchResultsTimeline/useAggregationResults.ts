@@ -24,7 +24,7 @@ const useAggregationResults = () => {
                 `Subscribing to updates to aggregation results with job ID: ${aggregationJobId}`
             );
 
-            const collection = new MongoSocketCollection(aggregationJobId.toString());
+            const collection = new MongoSocketCollection(aggregationJobId);
             return collection.find({}, {});
         },
         [aggregationJobId]
