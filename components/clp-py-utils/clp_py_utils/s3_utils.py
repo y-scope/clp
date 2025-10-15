@@ -468,7 +468,7 @@ def _s3_get_object_metadata_from_keys(
             return file_metadata_list
 
     # If control flow reaches here, it means there are still keys left to find.
-    absent_keys = []
+    absent_keys = list()
     while next_key is not None:
         absent_keys.append(next_key)
         next_key = next(key_iterator, None)
@@ -499,7 +499,7 @@ def _s3_get_object_metadata_from_key(
         raise ValueError(
             f"Failed to read metadata of the key `{key}` from the bucket `{bucket}`"
             f" with the error: {e}."
-        )
+        ) from e
 
 
 def _iter_s3_objects(
