@@ -40,7 +40,7 @@ services:
       CLP_LOGS_DIR: "/var/log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       RESULT_BACKEND: >-
-        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
+        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_BACKEND_DB_QUERY:-0}
     volumes:
       - *volume_clp_config_readonly
       - type: "bind"
@@ -82,7 +82,7 @@ services:
       CLP_WORKER_LOG_PATH: "/var/log/query_worker/worker.log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       RESULT_BACKEND: >-
-        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_QUERY_BACKEND_DB:-0}
+        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_BACKEND_DB_QUERY:-0}
     volumes:
       - *volume_aws_config_readonly
       - *volume_clp_config_readonly

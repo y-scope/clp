@@ -174,8 +174,8 @@ class BaseController(ABC):
             "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
             "CLP_REDIS_PORT": str(self._clp_config.redis.port),
             "CLP_REDIS_PASS": self._clp_config.redis.password,
-            "CLP_REDIS_QUERY_BACKEND_DB": str(self._clp_config.redis.query_backend_database),
-            "CLP_REDIS_COMPRESSION_BACKEND_DB": str(
+            "CLP_REDIS_BACKEND_DB_QUERY": str(self._clp_config.redis.query_backend_database),
+            "CLP_REDIS_BACKEND_DB_COMPRESSION": str(
                 self._clp_config.redis.compression_backend_database
             ),
         }
