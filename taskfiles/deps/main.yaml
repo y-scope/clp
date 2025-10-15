@@ -410,6 +410,7 @@ tasks:
             - "{{.G_DEPS_CPP_DIR}}/mariadb-connector-cpp-install"
 
   mariadb-connector-cpp:
+    internal: true
     vars:
       # Cannot use dependency checksum directory because it is cleaned up in `utils:init`.
       CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/mariadb-connector-cpp.md5"
@@ -417,6 +418,12 @@ tasks:
       - "{{.TASKFILE}}"
       - "{{.CHECKSUM_FILE}}"
     platforms: ["linux"]
+    generates: ["{{.CHECKSUM_FILE}}"]
+    run: "once"
+    deps:
+      - task: "mariadb-connector-cpp-download-and-validate-checksum"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
     preconditions:
       # NOTE: The MariaDB connector is only required for building Spider, which is only supported on
       # Ubuntu. `INSTALL_LAYOUT` is currently hardcoded to "DEB". To support other Linux distros:
@@ -424,13 +431,6 @@ tasks:
       # - Make `INSTALL_LAYOUT` configurable.
       - >-
         source /etc/os-release && [[ "$ID" == "ubuntu" ]]
-    internal: true
-    generates: ["{{.CHECKSUM_FILE}}"]
-    run: "once"
-    deps:
-      - task: "mariadb-connector-cpp-download-and-validate-checksum"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
     cmds:
       # Copies extracted files so that the build won't pollute the extracted files and cause
       # unnecessary rebuilds.
