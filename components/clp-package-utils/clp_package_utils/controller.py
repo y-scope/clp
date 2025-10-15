@@ -491,7 +491,6 @@ class DockerComposeController(BaseController):
             subprocess.run(
                 cmd,
                 cwd=self._clp_home,
-                stderr=subprocess.STDOUT,
                 check=True,
             )
         except subprocess.CalledProcessError:
@@ -509,7 +508,6 @@ class DockerComposeController(BaseController):
             subprocess.run(
                 ["docker", "compose", "--project-name", self._project_name, "down"],
                 cwd=self._clp_home,
-                stderr=subprocess.STDOUT,
                 check=True,
             )
             logger.info("All CLP containers stopped.")
