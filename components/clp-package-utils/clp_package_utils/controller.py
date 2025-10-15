@@ -524,16 +524,12 @@ class DockerComposeController(BaseController):
         return multiprocessing.cpu_count() // 2
 
     def _set_up_env(self):
-        """
-        Sets up all CLP components for Docker Compose by:
-        - Generating container-specific config.
-        - Preparing environment variables for all components.
-        - Writing environment variables to `.env`.
-        """
+        # Generate container-specific config.
         container_clp_config = generate_docker_compose_container_config(self._clp_config)
         num_workers = self._get_num_workers()
         dump_shared_container_config(container_clp_config, self._clp_config)
 
+        # Prepare environment variables for all components.
         env_dict = {
             "CLP_PACKAGE_STORAGE_ENGINE": self._clp_config.package.storage_engine,
             # User and group IDs
@@ -572,6 +568,7 @@ class DockerComposeController(BaseController):
         if self._clp_config.aws_config_directory is not None:
             env_dict["CLP_AWS_CONFIG_DIR_HOST"] = str(self._clp_config.aws_config_directory)
 
+        # Write the environment variables to the `.env ` file.
         with open(f"{self._clp_home}/.env", "w") as env_file:
             for key, value in env_dict.items():
                 env_file.write(f"{key}={value}\n")
