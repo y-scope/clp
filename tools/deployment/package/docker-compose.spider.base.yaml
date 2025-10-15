@@ -105,8 +105,8 @@ services:
     container_name: "spider_scheduler"
     image: "${CLP_PACKAGE_CONTAINER}"
     depends_on:
-      database:
-        condition: "service_healthy"
+      db-table-creator:
+        condition: "service_completed_successfully"
     command: [
       "/opt/clp/bin/spider_scheduler",
       "--host", "${SPIDER_SCHEDULER_HOST}",
@@ -142,14 +142,9 @@ services:
       - type: "bind"
         source: "${CLP_DATA_DIR_HOST:-./var/data}"
         target: "/var/data"
-
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
-      queue:
-        condition: "service_healthy"
-      redis:
-        condition: "service_healthy"
     command: [
       "python3",
       "-u",
@@ -174,10 +169,13 @@ services:
       - *volume_aws_config_readonly
       - *volume_clp_config_readonly
       - *volume_root_logs_readonly
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
     command: [
       "python3",
       "-u",
-      "/opt/clp/lib/python3/site-packages/clp_py_utils/start-spider-worker.py",
+      "-m", "/opt/clp/lib/python3/site-packages/clp_py_utils/start-spider-worker.py",
       "--concurrency", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
       "--storage-url", "${SPIDER_DB_URL}",
       # NOTE: Leave host to spider scheduler's host. This only affects task placement.
