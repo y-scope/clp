@@ -1,6 +1,6 @@
 name: "clp-package"
 
-include: ["docker-compose.base.yaml"]
+include: ["docker-compose.spider.base.yaml"]
 
 # Below x-* definitions are duplicated from docker-compose.base.yaml. Refer to that file for
 # documentation.
