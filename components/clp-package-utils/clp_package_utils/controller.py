@@ -8,7 +8,7 @@ import stat
 import subprocess
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any, Dict
+from typing import Any, Optional
 
 from clp_py_utils.clp_config import (
     AwsAuthType,
@@ -50,8 +50,6 @@ from clp_package_utils.general import (
     validate_webui_config,
 )
 
-EnvVarsDict = Dict[str, str]
-
 LOG_FILE_ACCESS_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
 
 DEFAULT_UID_GID = f"{os.getuid()}:{os.getgid()}"
@@ -60,6 +58,15 @@ THIRD_PARTY_SERVICE_GID = 999
 THIRD_PARTY_SERVICE_UID_GID = f"{THIRD_PARTY_SERVICE_UID}:{THIRD_PARTY_SERVICE_GID}"
 
 logger = logging.getLogger(__name__)
+
+
+class EnvVarsDict(dict[str, Optional[str]]):
+    def __ior__(self, other: "EnvVarsDict") -> "EnvVarsDict":
+        """
+        Overloads the `|=` operator for static type checking on `other`.
+        """
+        super().__ior__(other)
+        return self
 
 
 class BaseController(ABC):
@@ -114,19 +121,32 @@ class BaseController(ABC):
         logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(data_dir, logs_dir)
 
-        return {
+        env_vars = EnvVarsDict()
+        # Connection
+        env_vars |= {
+            "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
+            "CLP_DB_NAME": self._clp_config.database.name,
+            "CLP_DB_PORT": str(self._clp_config.database.port),
+        }
+        # Credential
+        env_vars |= {
+            "CLP_DB_PASS": self._clp_config.database.password,
+            "CLP_DB_USER": self._clp_config.database.username,
+        }
+        # Path
+        env_vars |= {
             "CLP_DB_CONF_LOGGING_FILE_HOST": str(conf_logging_file),
             "CLP_DB_DATA_DIR_HOST": str(data_dir),
             "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
-            "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
-            "CLP_DB_PORT": str(self._clp_config.database.port),
-            "CLP_DB_NAME": self._clp_config.database.name,
-            "CLP_DB_USER": self._clp_config.database.username,
-            "CLP_DB_PASS": self._clp_config.database.password,
+        }
+        # Runtime
+        env_vars |= {
             "CLP_DB_IMAGE": (
-                "mysql:8.0.23" if "mysql" == self._clp_config.database.type else "mariadb:10-jammy"
+                "mysql:8.0.23" if self._clp_config.database.type == "mysql" else "mariadb:10-jammy"
             ),
         }
+
+        return env_vars
 
     def _set_up_env_for_queue(self) -> EnvVarsDict:
         """
@@ -143,13 +163,23 @@ class BaseController(ABC):
         logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(logs_dir)
 
-        return {
-            "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
+        env_vars = EnvVarsDict()
+        # Connection
+        env_vars |= {
             "CLP_QUEUE_HOST": _get_ip_from_hostname(self._clp_config.queue.host),
             "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
+        }
+        # Credential
+        env_vars |= {
             "CLP_QUEUE_USER": self._clp_config.queue.username,
             "CLP_QUEUE_PASS": self._clp_config.queue.password,
         }
+        # Path
+        env_vars |= {
+            "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
+        }
+
+        return env_vars
 
     def _set_up_env_for_redis(self) -> EnvVarsDict:
         """
@@ -169,18 +199,31 @@ class BaseController(ABC):
         logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(data_dir, logs_dir)
 
-        return {
-            "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
-            "CLP_REDIS_DATA_DIR_HOST": str(data_dir),
-            "CLP_REDIS_LOGS_DIR_HOST": str(logs_dir),
-            "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
-            "CLP_REDIS_PORT": str(self._clp_config.redis.port),
-            "CLP_REDIS_PASS": self._clp_config.redis.password,
-            "CLP_REDIS_BACKEND_DB_QUERY": str(self._clp_config.redis.query_backend_database),
+        env_vars = EnvVarsDict()
+        # Backend
+        env_vars |= {
             "CLP_REDIS_BACKEND_DB_COMPRESSION": str(
                 self._clp_config.redis.compression_backend_database
             ),
+            "CLP_REDIS_BACKEND_DB_QUERY": str(self._clp_config.redis.query_backend_database),
         }
+        # Connection
+        env_vars |= {
+            "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
+            "CLP_REDIS_PORT": str(self._clp_config.redis.port),
+        }
+        # Credential
+        env_vars |= {
+            "CLP_REDIS_PASS": self._clp_config.redis.password,
+        }
+        # Path
+        env_vars |= {
+            "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
+            "CLP_REDIS_DATA_DIR_HOST": str(data_dir),
+            "CLP_REDIS_LOGS_DIR_HOST": str(logs_dir),
+        }
+
+        return env_vars
 
     def _set_up_env_for_results_cache(self) -> EnvVarsDict:
         """
@@ -200,17 +243,27 @@ class BaseController(ABC):
         logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(data_dir, logs_dir)
 
-        return {
-            "CLP_RESULTS_CACHE_CONF_FILE_HOST": str(conf_file),
-            "CLP_RESULTS_CACHE_DATA_DIR_HOST": str(data_dir),
-            "CLP_RESULTS_CACHE_LOGS_DIR_HOST": str(logs_dir),
-            "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self._clp_config.results_cache.host),
-            "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
-            "CLP_RESULTS_CACHE_DB_NAME": self._clp_config.results_cache.db_name,
+        env_vars = EnvVarsDict()
+        # Collection
+        env_vars |= {
             "CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME": (
                 self._clp_config.results_cache.stream_collection_name
             ),
         }
+        # Connection
+        env_vars |= {
+            "CLP_RESULTS_CACHE_DB_NAME": self._clp_config.results_cache.db_name,
+            "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self._clp_config.results_cache.host),
+            "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
+        }
+        # Path
+        env_vars |= {
+            "CLP_RESULTS_CACHE_CONF_FILE_HOST": str(conf_file),
+            "CLP_RESULTS_CACHE_DATA_DIR_HOST": str(data_dir),
+            "CLP_RESULTS_CACHE_LOGS_DIR_HOST": str(logs_dir),
+        }
+
+        return env_vars
 
     def _set_up_env_for_compression_scheduler(self) -> EnvVarsDict:
         """
@@ -224,10 +277,19 @@ class BaseController(ABC):
         log_file = self._clp_config.logs_directory / f"{component_name}.log"
         log_file.touch(mode=LOG_FILE_ACCESS_MODE, exist_ok=True)
 
-        return {
-            "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL": self._clp_config.compression_scheduler.logging_level,
+        env_vars = EnvVarsDict()
+        # Logging
+        env_vars |= {
+            "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL": (
+                self._clp_config.compression_scheduler.logging_level
+            ),
+        }
+        # Path
+        env_vars |= {
             "CLP_COMPRESSION_SCHEDULER_LOG_FILE_HOST": str(log_file),
         }
+
+        return env_vars
 
     def _set_up_env_for_query_scheduler(self) -> EnvVarsDict:
         """
@@ -241,10 +303,17 @@ class BaseController(ABC):
         log_file = self._clp_config.logs_directory / f"{component_name}.log"
         log_file.touch(mode=LOG_FILE_ACCESS_MODE, exist_ok=True)
 
-        return {
+        env_vars = EnvVarsDict()
+        # Logging
+        env_vars |= {
             "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": self._clp_config.query_scheduler.logging_level,
+        }
+        # Path
+        env_vars |= {
             "CLP_QUERY_SCHEDULER_LOG_FILE_HOST": str(log_file),
         }
+
+        return env_vars
 
     def _set_up_env_for_compression_worker(self, num_workers: int) -> EnvVarsDict:
         """
@@ -259,11 +328,23 @@ class BaseController(ABC):
         logs_dir = self._clp_config.logs_directory / component_name
         logs_dir.mkdir(parents=True, exist_ok=True)
 
-        return {
-            "CLP_COMPRESSION_WORKER_CONCURRENCY": str(num_workers),
-            "CLP_COMPRESSION_WORKER_LOGGING_LEVEL": self._clp_config.compression_worker.logging_level,
+        env_vars = EnvVarsDict()
+        # Logging
+        env_vars |= {
+            "CLP_COMPRESSION_WORKER_LOGGING_LEVEL": (
+                self._clp_config.compression_worker.logging_level
+            ),
+        }
+        # Path
+        env_vars |= {
             "CLP_COMPRESSION_WORKER_LOGS_DIR_HOST": str(logs_dir),
         }
+        # Resource
+        env_vars |= {
+            "CLP_COMPRESSION_WORKER_CONCURRENCY": str(num_workers),
+        }
+
+        return env_vars
 
     def _set_up_env_for_query_worker(self, num_workers: int) -> EnvVarsDict:
         """
@@ -278,11 +359,21 @@ class BaseController(ABC):
         logs_dir = self._clp_config.logs_directory / component_name
         logs_dir.mkdir(parents=True, exist_ok=True)
 
-        return {
+        env_vars = EnvVarsDict()
+        # Logging
+        env_vars |= {
             "CLP_QUERY_WORKER_LOGGING_LEVEL": self._clp_config.query_worker.logging_level,
+        }
+        # Path
+        env_vars |= {
             "CLP_QUERY_WORKER_LOGS_DIR_HOST": str(logs_dir),
+        }
+        # Resource
+        env_vars |= {
             "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
         }
+
+        return env_vars
 
     def _set_up_env_for_reducer(self, num_workers: int) -> EnvVarsDict:
         """
@@ -297,12 +388,22 @@ class BaseController(ABC):
         logs_dir = self._clp_config.logs_directory / component_name
         logs_dir.mkdir(parents=True, exist_ok=True)
 
-        return {
+        env_vars = EnvVarsDict()
+        # Logging
+        env_vars |= {
             "CLP_REDUCER_LOGGING_LEVEL": self._clp_config.reducer.logging_level,
+        }
+        # Path
+        env_vars |= {
             "CLP_REDUCER_LOGS_DIR_HOST": str(logs_dir),
+        }
+        # Resource
+        env_vars |= {
             "CLP_REDUCER_CONCURRENCY": str(num_workers),
             "CLP_REDUCER_UPSERT_INTERVAL": str(self._clp_config.reducer.upsert_interval),
         }
+
+        return env_vars
 
     def _set_up_env_for_webui(self, container_clp_config: CLPConfig) -> EnvVarsDict:
         """
@@ -403,11 +504,18 @@ class BaseController(ABC):
         with open(server_settings_json_path, "w") as settings_json_file:
             settings_json_file.write(json.dumps(server_settings_json))
 
-        return {
+        env_vars = EnvVarsDict()
+        # Connection
+        env_vars |= {
             "CLP_WEBUI_HOST": _get_ip_from_hostname(self._clp_config.webui.host),
             "CLP_WEBUI_PORT": str(self._clp_config.webui.port),
+        }
+        # Security
+        env_vars |= {
             "CLP_WEBUI_RATE_LIMIT": str(self._clp_config.webui.rate_limit),
         }
+
+        return env_vars
 
     def _set_up_env_for_garbage_collector(self) -> EnvVarsDict:
         """
@@ -421,11 +529,16 @@ class BaseController(ABC):
         logs_dir = self._clp_config.logs_directory / component_name
         logs_dir.mkdir(parents=True, exist_ok=True)
 
-        return {"CLP_GC_LOGGING_LEVEL": self._clp_config.garbage_collector.logging_level}
+        env_vars = EnvVarsDict()
+
+        # Logging
+        env_vars |= {"CLP_GC_LOGGING_LEVEL": self._clp_config.garbage_collector.logging_level}
+
+        return env_vars
 
     def _read_and_update_settings_json(
-        self, settings_file_path: pathlib.Path, updates: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, settings_file_path: pathlib.Path, updates: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Reads and updates a settings JSON file.
 
@@ -441,8 +554,8 @@ class BaseController(ABC):
     def _update_settings_object(
         self,
         parent_key_prefix: str,
-        settings: Dict[str, Any],
-        updates: Dict[str, Any],
+        settings: dict[str, Any],
+        updates: dict[str, Any],
     ):
         """
         Recursively updates the given settings object with the values from `updates`.
@@ -531,47 +644,62 @@ class DockerComposeController(BaseController):
         dump_shared_container_config(container_clp_config, self._clp_config)
 
         # Prepare environment variables for all components.
-        env_dict = {
-            "CLP_PACKAGE_STORAGE_ENGINE": self._clp_config.package.storage_engine,
-            # User and group IDs
+        env_vars = EnvVarsDict()
+
+        # Credential
+        env_vars |= {
+            "CLP_AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID", ""),
+            "CLP_AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY", ""),
+        }
+
+        # Identity
+        env_vars |= {
             "CLP_FIRST_PARTY_SERVICE_UID_GID": DEFAULT_UID_GID,
             "CLP_THIRD_PARTY_SERVICE_UID_GID": (
                 THIRD_PARTY_SERVICE_UID_GID if os.geteuid() == 0 else DEFAULT_UID_GID
             ),
-            # Package container
-            "CLP_PACKAGE_CONTAINER": self._clp_config.container_image_ref,
-            # Runtime data directories
-            "CLP_DATA_DIR_HOST": str(self._clp_config.data_directory),
-            "CLP_LOGS_DIR_HOST": str(self._clp_config.logs_directory),
-            # Input directories
-            "CLP_LOGS_INPUT_DIR_HOST": str(self._clp_config.logs_input.directory),
-            "CLP_LOGS_INPUT_DIR_CONTAINER": str(container_clp_config.logs_input.directory),
-            # Output directories
-            "CLP_ARCHIVE_OUTPUT_DIR_HOST": str(self._clp_config.archive_output.get_directory()),
-            "CLP_STREAM_OUTPUT_DIR_HOST": str(self._clp_config.stream_output.get_directory()),
-            # AWS credentials
-            "CLP_AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID", ""),
-            "CLP_AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY", ""),
-            # Component-specific environment variables
-            **self._set_up_env_for_database(),
-            **self._set_up_env_for_queue(),
-            **self._set_up_env_for_redis(),
-            **self._set_up_env_for_results_cache(),
-            **self._set_up_env_for_compression_scheduler(),
-            **self._set_up_env_for_query_scheduler(),
-            **self._set_up_env_for_compression_worker(num_workers),
-            **self._set_up_env_for_query_worker(num_workers),
-            **self._set_up_env_for_reducer(num_workers),
-            **self._set_up_env_for_webui(container_clp_config),
-            **self._set_up_env_for_garbage_collector(),
         }
 
-        if self._clp_config.aws_config_directory is not None:
-            env_dict["CLP_AWS_CONFIG_DIR_HOST"] = str(self._clp_config.aws_config_directory)
+        # Package
+        env_vars |= {
+            "CLP_PACKAGE_CONTAINER": self._clp_config.container_image_ref,
+            "CLP_PACKAGE_STORAGE_ENGINE": self._clp_config.package.storage_engine,
+        }
+
+        # Path
+        aws_config_dir = self._clp_config.aws_config_directory
+        env_vars |= {
+            # General
+            "CLP_DATA_DIR_HOST": str(self._clp_config.data_directory),
+            "CLP_LOGS_DIR_HOST": str(self._clp_config.logs_directory),
+            # Config
+            "CLP_AWS_CONFIG_DIR_HOST": (None if aws_config_dir is None else str(aws_config_dir)),
+            # Input
+            "CLP_LOGS_INPUT_DIR_CONTAINER": str(container_clp_config.logs_input.directory),
+            "CLP_LOGS_INPUT_DIR_HOST": str(self._clp_config.logs_input.directory),
+            # Output
+            "CLP_ARCHIVE_OUTPUT_DIR_HOST": str(self._clp_config.archive_output.get_directory()),
+            "CLP_STREAM_OUTPUT_DIR_HOST": str(self._clp_config.stream_output.get_directory()),
+        }
+
+        # Component-specific
+        env_vars |= self._set_up_env_for_database()
+        env_vars |= self._set_up_env_for_queue()
+        env_vars |= self._set_up_env_for_redis()
+        env_vars |= self._set_up_env_for_results_cache()
+        env_vars |= self._set_up_env_for_compression_scheduler()
+        env_vars |= self._set_up_env_for_query_scheduler()
+        env_vars |= self._set_up_env_for_compression_worker(num_workers)
+        env_vars |= self._set_up_env_for_query_worker(num_workers)
+        env_vars |= self._set_up_env_for_reducer(num_workers)
+        env_vars |= self._set_up_env_for_webui(container_clp_config)
+        env_vars |= self._set_up_env_for_garbage_collector()
 
         # Write the environment variables to the `.env ` file.
         with open(f"{self._clp_home}/.env", "w") as env_file:
-            for key, value in env_dict.items():
+            for key, value in env_vars.items():
+                if value is None:
+                    continue
                 env_file.write(f"{key}={value}\n")
 
 
