@@ -352,6 +352,8 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
