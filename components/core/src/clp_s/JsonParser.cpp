@@ -1478,12 +1478,33 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                 break;
             }
             case static_cast<int>(log_surgeon::SymbolId::TokenFloat): {
-                // TODO clps: need to convert string to double to perform proper encoding. Store as
-                // DictionaryFloat for now.
                 int32_t node_id{};
-                m_current_parsed_message.add_unordered_value(token_view.to_string());
-                node_id = m_archive_writer
-                                  ->add_node(parent_node_id, NodeType::DictionaryFloat, token_name);
+                auto token_str{token_view.to_string()};
+                auto const float_format_result{get_float_encoding(token_str)};
+                if (false == float_format_result.has_error()
+                    && round_trip_is_identical(
+                            token_str,
+                            std::stod(token_str),
+                            float_format_result.value()
+                    ))
+                {
+                    m_current_parsed_message.add_unordered_value(
+                            std::stod(token_str),
+                            float_format_result.value()
+                    );
+                    node_id = m_archive_writer->add_node(
+                            parent_node_id,
+                            NodeType::FormattedFloat,
+                            token_name
+                    );
+                } else {
+                    m_current_parsed_message.add_unordered_value(token_str);
+                    node_id = m_archive_writer->add_node(
+                            parent_node_id,
+                            NodeType::DictionaryFloat,
+                            token_name
+                    );
+                }
                 m_current_schema.insert_unordered(node_id);
                 logtype_dict_entry.add_schema_var();
                 break;
