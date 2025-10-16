@@ -179,7 +179,9 @@ def _process_s3_input(
         paths_to_compress_buffer.add_file(object_metadata)
 
 
-def _write_failed_compression_log(status_msg: str, logs_directory: Path, job_id: Any) -> Optional[Path]:
+def _write_failed_compression_log(
+    status_msg: str, logs_directory: Path, job_id: Any
+) -> Optional[Path]:
     """
     Writes status_msg to a new log file located at
     `{logs_directory}/user/failed_compression_log_{job_id}.txt`. The /user directory will be created
@@ -464,14 +466,16 @@ def poll_running_jobs(clp_config: CLPConfig, db_conn, db_cursor):
             logger.error(f"Job {job_id} failed. See worker logs or status_msg for details.")
 
             status_msg = error_message
-            error_log_relative_path = _write_failed_compression_log(status_msg, clp_config.logs_directory, job_id)
+            error_log_relative_path = _write_failed_compression_log(
+                status_msg, clp_config.logs_directory, job_id
+            )
             if error_log_relative_path is None:
                 macro_path = "${CLP_LOGS_DIR}/compression_scheduler/compression_scheduler.log"
             else:
                 macro_path = f"${{CLP_LOGS_DIR}}/{error_log_relative_path}"
 
             error_msg = f"One or more compression tasks failed. See {macro_path} for more details."
-            
+
             update_compression_job_metadata(
                 db_cursor,
                 job_id,
