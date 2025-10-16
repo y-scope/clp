@@ -40,8 +40,6 @@ class PaginatedQueryResult:
 
     def get_page(self, page_index: int) -> Page | None:
         """
-        Returns a page from the cached query results.
-
         :param page_index: The number of page to retrieve (zero-based index; 0 is the first page).
         :return: A `Page` object for the specified page.
         :return: None if `page_index` is out of bounds.
