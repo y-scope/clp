@@ -70,7 +70,7 @@ class TestPaginatedQueryResult:
         """Validates pagination functionality."""
         results = TestConstants.create_log_messages(TestConstants.SAMPLE_RESULTS_COUNT_25)
         query_result = PaginatedQueryResult(
-            result_log_entries=results,
+            log_entries=results,
             num_items_per_page=TestConstants.ITEMS_PER_PAGE
         )
 
@@ -107,7 +107,7 @@ class TestPaginatedQueryResult:
         large_results = TestConstants.create_log_messages(constants.MAX_CACHED_RESULTS + 1)
         with pytest.raises(ValueError, match=TestConstants.EXCEEDS_MAX_CACHED_RESULTS_ERR):
             PaginatedQueryResult(
-                result_log_entries=large_results,
+                log_entries=large_results,
                 num_items_per_page=TestConstants.ITEMS_PER_PAGE
             )
 
