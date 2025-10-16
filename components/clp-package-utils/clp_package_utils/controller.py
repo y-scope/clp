@@ -441,7 +441,9 @@ class BaseController(ABC):
         client_settings_json_updates = {
             "ClpStorageEngine": self._clp_config.package.storage_engine,
             "ClpQueryEngine": self._clp_config.package.query_engine,
-            "MongoDbSearchResultsMetadataCollectionName": self._clp_config.webui.results_metadata_collection_name,
+            "MongoDbSearchResultsMetadataCollectionName": (
+                self._clp_config.webui.results_metadata_collection_name
+            ),
             "SqlDbClpArchivesTableName": archives_table_name,
             "SqlDbClpDatasetsTableName": get_datasets_table_name(table_prefix),
             "SqlDbClpFilesTableName": files_table_name,
@@ -462,8 +464,12 @@ class BaseController(ABC):
             "MongoDbHost": container_clp_config.results_cache.host,
             "MongoDbPort": container_clp_config.results_cache.port,
             "MongoDbName": self._clp_config.results_cache.db_name,
-            "MongoDbSearchResultsMetadataCollectionName": self._clp_config.webui.results_metadata_collection_name,
-            "MongoDbStreamFilesCollectionName": self._clp_config.results_cache.stream_collection_name,
+            "MongoDbSearchResultsMetadataCollectionName": (
+                self._clp_config.webui.results_metadata_collection_name
+            ),
+            "MongoDbStreamFilesCollectionName": (
+                self._clp_config.results_cache.stream_collection_name
+            ),
             "ClientDir": str(container_webui_dir / "client"),
             "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
             "StreamTargetUncompressedSize": self._clp_config.stream_output.target_uncompressed_size,
