@@ -31,8 +31,7 @@ class PaginatedQueryResult:
 
         if num_items_per_page <= 0:
             err_msg = (
-                f"Invalid num_items_per_page: {num_items_per_page}, "
-                "it must be a positive integer. "
+                f"Invalid num_items_per_page: {num_items_per_page}, it must be a positive integer."
             )
             raise ValueError(err_msg)
 
