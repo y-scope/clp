@@ -181,12 +181,9 @@ class SessionManager:
         """
         Caches query results for a session and returns the first page and the paging metadata.
 
-        :param session_id: Unique identifier for the session.
-        :param query_results: Complete log entries from previous query for caching.
-        :return: Dictionary containing the first page log entries and the paging metadata if the
-            first page can be retrieved.
-        :return: Dictionary with ``{"Error": "error message describing the failure"}`` if fails to
-            retrieve the first page.
+        :param session_id:
+        :param query_results: Log entries from the query to cache.
+        :return: Forwards `SessionState.get_page_data`'s return values.
         """
         session = self.get_or_create_session(session_id)
         if session.is_instructions_retrieved is False:
@@ -201,8 +198,8 @@ class SessionManager:
         Retrieves the n-th page of a paginated response with the paging metadata from the previous
         query.
 
-        :param session_id: Unique identifier for the session.
-        :param page_index: The number of page to retrieve (zero-based index; 0 is the first page).
+        :param session_id:
+        :param page_index: Index of the page to retrieve (zero-based, e.g., 0 is the first page).
         :return: Forwards `SessionState.get_page_data`'s return values.
         """
         session = self.get_or_create_session(session_id)
@@ -215,8 +212,8 @@ class SessionManager:
         """
         Gets an existing session or creates a new one.
 
-        :param session_id: Unique identifier for the session.
-        :return: The SessionState object for the given session_id.
+        :param session_id:
+        :return: The `SessionState` object for the given `session_id`.
         """
         if session_id in self.sessions and self.sessions[session_id].is_expired():
             del self.sessions[session_id]
