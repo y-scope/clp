@@ -18,7 +18,7 @@ def create_mcp_server() -> FastMCP:
     """
     mcp = FastMCP(name=constants.SERVER_NAME)
 
-    session_manager = SessionManager(session_ttl_minutes=constants.SESSION_TTL_MINUTES)
+    session_manager = SessionManager(_session_ttl_seconds=constants.SESSION_TTL_SECONDS)
 
     @mcp.tool
     async def get_instructions(ctx: Context) -> str:

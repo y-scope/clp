@@ -58,20 +58,16 @@ class PaginatedQueryResult:
 @dataclass
 class SessionState:
     """
-    Represents the state of a user session.
-    `SessionState` respects `FastMCP` asynchronous concurrency model that is built on Python's
-    asyncio runtime:
-    Asyncio achieves concurrency on a single thread by allowing tasks to yield control at `await`
-    points. This means when a `mcp.tool` API calls executes an await expression, it gets suspended,
-    and the event loop executes the next `mcp.tool` API calls from received requests issued by
-    clients.
-    Therefore, `SessionState` does not need thread-safe operations because a session cannot be
-    accessed from two threads at the same time.
+    Represents the state of a user session, following the same concurrency model as
+    `SessionManager`.
+
+    NOTE: All methods are intended to be executed exclusively by coroutines within the same event
+    loop in a single-threaded context.
     """
 
     _num_items_per_page: int
     _session_id: str
-    _session_ttl_seconds: int
+    _session_ttl_seconds: float
 
     _cached_query_result: PaginatedQueryResult | None = None
     _last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -160,16 +156,15 @@ class SessionState:
 
 class SessionManager:
     """
-    Session manager for concurrent user sessions.
-    `SessionManager` respects `FastMCP` asynchronous concurrency model that is built on Python's
-    asyncio runtime:
-    Asyncio achieves concurrency on a single thread by allowing tasks to yield control at `await`
-    points. This means when a `mcp.tool` API calls executes an await expression, it gets suspended,
-    and the event loop executes the next `mcp.tool` API calls from received requests issued by
-    clients.
-    The operations on `sessions` which maintains concurrent user sessions are performed by
-    asynchronous tasks. The above concurrency model guarantees that the operations of `sessions`
-    are atomic because it cannot be accessed from two threads at the same time.
+    Manages concurrent user sessions, following the same concurrency model as `FastMCP`.
+
+    All data structures managed by this class are accessed exclusively by coroutines running
+    within the same event loop in a single-thread context. This design implies:
+
+    - No thread-level concurrency control (e.g., `threading.Lock`) is necessary, since operations
+      occur in a single-threaded async context.
+    - Async synchronization primitives (e.g., `asyncio.Lock`) are only necessary when an `await`
+      occurs inside a critical section, to prevent interleaving of coroutine execution.
     """
 
     def __init__(self, session_ttl_seconds: int) -> None:
