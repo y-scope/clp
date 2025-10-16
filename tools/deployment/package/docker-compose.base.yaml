@@ -151,6 +151,11 @@ services:
       - type: "bind"
         source: "${CLP_REDIS_LOGS_DIR_HOST:-./var/log/redis}"
         target: "/var/log/redis"
+    command: [
+      "redis-server",
+      "/usr/local/etc/redis/redis.conf",
+      "--requirepass", "${CLP_REDIS_PASS:?error}"
+    ]
     healthcheck:
       <<: *healthcheck_defaults
       test: [
@@ -161,11 +166,6 @@ services:
         "-a", "${CLP_REDIS_PASS:?error}",
         "PING"
       ]
-    command: [
-      "redis-server",
-      "/usr/local/etc/redis/redis.conf",
-      "--requirepass", "${CLP_REDIS_PASS:?error}"
-    ]
 
   results-cache:
     <<: *service_defaults
@@ -187,16 +187,16 @@ services:
       - type: "bind"
         source: "${CLP_RESULTS_CACHE_LOGS_DIR_HOST:-./var/log/results_cache}"
         target: "/var/log/mongodb"
+    command: [
+      "--config", "/etc/mongo/mongod.conf",
+      "--bind_ip", "0.0.0.0",
+    ]
     healthcheck:
       <<: *healthcheck_defaults
       test: [
         "CMD-SHELL",
         "echo 'db.runCommand(\"ping\").ok' | mongosh 127.0.0.1:27017/test --quiet"
       ]
-    command: [
-      "--config", "/etc/mongo/mongod.conf",
-      "--bind_ip", "0.0.0.0",
-    ]
 
   results-cache-indices-creator:
     <<: *service_defaults
