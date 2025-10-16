@@ -205,7 +205,7 @@ public:
     void initialize_filter_with_column_map(FilterClass* filter);
 
     /**
-     * Initializes all internal data structured required to serialize records.
+     * Initializes all internal data structures required to serialize records.
      */
     void initialize_serializer();
 
