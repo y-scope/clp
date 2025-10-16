@@ -42,10 +42,15 @@ def create_mcp_server() -> FastMCP:
 
         :param page_index: Zero-based index, e.g., 0 for the first page.
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
-        :return: Dictionary containing paged log entries and the paging metadata if the
-            page `page_index` can be retrieved.
-        :return: Dictionary with ``{"Error": "error message describing the failure"}`` if fails to
-            retrieve page `page_index`.
+        :return: A dictionary containing the following key-value pairs on success:
+            - "item": A list of log entries in the requested page.
+            - "total_pages": Total number of pages available from the query as an integer.
+            - "total_items": Total number of log entries available from the query as an integer.
+            - "num_items_per_page": Number of log entries per page.
+            - "has_next": Whether a page exists after the returned one.
+            - "has_previous": Whether a page exists before the returned one.
+        :return: A dictionary with the following key-value pair on failures:
+            - "Error": An error message describing the failure.
         """
         await session_manager.start()
         return session_manager.get_nth_page(ctx.session_id, page_index)

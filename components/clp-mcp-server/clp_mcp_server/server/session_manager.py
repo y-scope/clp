@@ -15,8 +15,6 @@ class PaginatedQueryResult:
 
     def __init__(self, result_log_entries: list[str], num_items_per_page: int) -> None:
         """
-        Initializes the PaginatedQueryResult.
-
         :param result_log_entries: List of cached log entries to paginate.
         :param num_items_per_page:
         :raise: ValueError if the number of cached results or num_items_per_page is invalid.
@@ -41,8 +39,6 @@ class PaginatedQueryResult:
 
     def get_page(self, page_index: int) -> Page | None:
         """
-        Returns a page from the cached query results.
-
         :param page_index: The number of page to retrieve (zero-based index; 0 is the first page).
         :return: A `Page` object for the specified page.
         :return: None if `page_index` is out of bounds.
@@ -96,13 +92,22 @@ class SessionState:
 
     def get_page_data(self, page_index: int) -> dict[str, Any]:
         """
-        Gets page data and its metadata in a dictionary format.
+        Retrieves the n-th page of a paginated response with the paging metadata from the previous
+        query.
 
-        :param page_index: The number of page to retrieve (zero-based index; 0 is the first page).
-        :return: Dictionary containing paged log entries and the paging metadata if the
-            page `page_index` can be retrieved.
-        :return: Dictionary with ``{"Error": "error message describing the failure"}`` if fails to
-            retrieve page `page_index`.
+        NOTE: This docstring must be synchronized with `get_nth_page`'s MCP tool call.
+
+        :param page_index: Zero-based index, e.g., 0 for the first page.
+        :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
+        :return: A dictionary containing the following key-value pairs on success:
+            - "item": A list of log entries in the requested page.
+            - "total_pages": Total number of pages available from the query as an integer.
+            - "total_items": Total number of log entries available from the query as an integer.
+            - "num_items_per_page": Number of log entries per page.
+            - "has_next": Whether a page exists after the returned one.
+            - "has_previous": Whether a page exists before the returned one.
+        :return: A dictionary with the following key-value pair on failures:
+            - "Error": An error message describing the failure.
         """
         if self._cached_query_result is None:
             return {"Error": "No previous paginated response in this session."}
