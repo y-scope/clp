@@ -2,7 +2,7 @@ name: "clp-package-base"
 
 # Common service defaults.
 x-service-defaults: &service_defaults
-  image: "${CLP_PACKAGE_CONTAINER:-clp-package}"
+  image: "${CLP_PACKAGE_CONTAINER_IMAGE_REF:-clp-package}"
   logging:
     driver: "local"
   stop_grace_period: "3s"

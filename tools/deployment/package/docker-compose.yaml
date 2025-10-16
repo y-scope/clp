@@ -5,7 +5,7 @@ include: ["docker-compose.base.yaml"]
 # Below x-* definitions are duplicated from docker-compose.base.yaml. Refer to that file for
 # documentation.
 x-service-defaults: &service_defaults
-  image: "${CLP_PACKAGE_CONTAINER:-clp-package}"
+  image: "${CLP_PACKAGE_CONTAINER_IMAGE_REF:-clp-package}"
   logging:
     driver: "local"
   stop_grace_period: "3s"

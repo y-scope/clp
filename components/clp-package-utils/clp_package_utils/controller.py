@@ -648,7 +648,7 @@ class DockerComposeController(BaseController):
 
         # Package
         env_vars |= {
-            "CLP_PACKAGE_CONTAINER": self._clp_config.container_image_ref,
+            "CLP_PACKAGE_CONTAINER_IMAGE_REF": self._clp_config.container_image_ref,
             "CLP_PACKAGE_STORAGE_ENGINE": self._clp_config.package.storage_engine,
         }
 
