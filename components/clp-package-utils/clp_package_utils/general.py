@@ -493,10 +493,13 @@ def validate_and_load_redis_credentials_file(
 
 
 def validate_db_config(
-    clp_config: CLPConfig, base_config: pathlib.Path, data_dir: pathlib.Path, logs_dir: pathlib.Path
+    clp_config: CLPConfig,
+    component_config: pathlib.Path,
+    data_dir: pathlib.Path,
+    logs_dir: pathlib.Path,
 ):
-    if not base_config.exists():
-        raise ValueError(f"{DB_COMPONENT_NAME} configuration file missing: '{base_config}'.")
+    if not component_config.exists():
+        raise ValueError(f"{DB_COMPONENT_NAME} configuration file missing: '{component_config}'.")
     _validate_data_directory(data_dir, DB_COMPONENT_NAME)
     _validate_log_directory(logs_dir, DB_COMPONENT_NAME)
 
@@ -510,11 +513,14 @@ def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
 
 
 def validate_redis_config(
-    clp_config: CLPConfig, base_config: pathlib.Path, data_dir: pathlib.Path, logs_dir: pathlib.Path
+    clp_config: CLPConfig,
+    component_config: pathlib.Path,
+    data_dir: pathlib.Path,
+    logs_dir: pathlib.Path,
 ):
-    if not base_config.exists():
+    if not component_config.exists():
         raise ValueError(
-            f"{REDIS_COMPONENT_NAME} base configuration at {str(base_config)} is missing."
+            f"{REDIS_COMPONENT_NAME} base configuration at {str(component_config)} is missing."
         )
     _validate_data_directory(data_dir, REDIS_COMPONENT_NAME)
     _validate_log_directory(logs_dir, REDIS_COMPONENT_NAME)
@@ -534,11 +540,14 @@ def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_w
 
 
 def validate_results_cache_config(
-    clp_config: CLPConfig, base_config: pathlib.Path, data_dir: pathlib.Path, logs_dir: pathlib.Path
+    clp_config: CLPConfig,
+    component_config: pathlib.Path,
+    data_dir: pathlib.Path,
+    logs_dir: pathlib.Path,
 ):
-    if not base_config.exists():
+    if not component_config.exists():
         raise ValueError(
-            f"{RESULTS_CACHE_COMPONENT_NAME} configuration file missing: '{base_config}'."
+            f"{RESULTS_CACHE_COMPONENT_NAME} configuration file missing: '{component_config}'."
         )
     _validate_data_directory(data_dir, RESULTS_CACHE_COMPONENT_NAME)
     _validate_log_directory(logs_dir, RESULTS_CACHE_COMPONENT_NAME)
