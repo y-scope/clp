@@ -413,6 +413,7 @@ def _s3_get_object_metadata_from_keys(
 
     :param s3_client:
     :param bucket:
+    :param key_prefix:
     :param keys:
     :return: A list of `FileMetadata` containing the object's metadata on success.
     :raise: ValueError if `keys` is an empty list.
@@ -438,7 +439,7 @@ def _s3_get_object_metadata_from_keys(
 
     key_iterator = iter(keys)
     first_key = next(key_iterator)
-    file_metadata_list: List[FileMetadata] = list()
+    file_metadata_list: List[FileMetadata] = []
     file_metadata_list.append(_s3_get_object_metadata_from_key(s3_client, bucket, first_key))
 
     next_key = next(key_iterator, None)
@@ -460,7 +461,7 @@ def _s3_get_object_metadata_from_keys(
             return file_metadata_list
 
     # If control flow reaches here, it means there are still keys left to find.
-    absent_keys = list()
+    absent_keys = []
     while next_key is not None:
         absent_keys.append(next_key)
         next_key = next(key_iterator, None)
