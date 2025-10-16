@@ -44,7 +44,7 @@ def create_mcp_server() -> FastMCP:
         :return: Dictionary containing paged log entries and the paging metadata if the
         page `page_index` can be retrieved.
         :return: Dictionary with ``{"Error": "error message describing the failure"}`` if fails to
-        retrieve page `page_index`.
+            retrieve page `page_index`.
         """
         return session_manager.get_nth_page(ctx.session_id, page_index)
 
