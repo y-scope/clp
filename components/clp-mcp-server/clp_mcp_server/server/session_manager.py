@@ -16,8 +16,6 @@ class PaginatedQueryResult:
 
     def __init__(self, result_log_entries: list[str], num_items_per_page: int) -> None:
         """
-        Initializes the PaginatedQueryResult.
-
         :param result_log_entries: List of cached log entries to paginate.
         :param num_items_per_page:
         :raise: ValueError if the number of cached results or num_items_per_page is invalid.
