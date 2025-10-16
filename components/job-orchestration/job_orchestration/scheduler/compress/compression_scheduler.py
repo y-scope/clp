@@ -179,17 +179,46 @@ def _process_s3_input(
         paths_to_compress_buffer.add_file(object_metadata)
 
 
+def _write_failed_compression_log(status_msg: str, logs_directory: Path, job_id: Any) -> Optional[Path]:
+    """
+    Writes status_msg to a new log file located at
+    `{logs_directory}/user/failed_compression_log_{job_id}.txt`. The /user directory will be created
+    if it doesn't already exist.
+    :param status_msg:
+    :param logs_directory:
+    :param job_id:
+    :return: Path to the written log file relative to {logs_directory}, or `None` on error.
+    """
+
+    user_logs_dir = Path(logs_directory) / "user"
+    try:
+        user_logs_dir.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        return None
+
+    log_path = user_logs_dir / f"failed_compression_log_{job_id}.txt"
+    try:
+        with log_path.open("w", encoding="utf-8") as f:
+            timestamp = datetime.datetime.now().isoformat(timespec="seconds")
+            f.write(f"Failed compression job log.\nGenerated at {timestamp}.\n\n")
+            f.write(f"{status_msg.rstrip()}\n")
+    except Exception:
+        return None
+
+    return Path("user") / f"failed_compression_log_{job_id}.txt"
+
+
 def _write_failed_path_log(
     invalid_path_messages: List[str], logs_directory: Path, job_id: Any
 ) -> Optional[Path]:
     """
-    Writes the error messages in `invalid_path_messages` to a log file,
-    `{logs_directory}/user/failed_paths_{job_id}.txt`. The directory will be created if it doesn't
-    already exist.
+    Writes the error messages in `invalid_path_messages` to a new log file located at
+    `{logs_directory}/user/failed_paths_{job_id}.txt`. The /user directory will be created if it
+    doesn't already exist.
     :param invalid_path_messages:
     :param logs_directory:
     :param job_id:
-    :return: Path to the written log file or `None` if error is encountered.
+    :return: Path to the written log file relative to {logs_directory}, or `None` on error.
     """
 
     user_logs_dir = Path(logs_directory) / "user"
@@ -208,7 +237,7 @@ def _write_failed_path_log(
     except Exception:
         return None
 
-    return log_path
+    return Path("user") / f"failed_paths_{job_id}.txt"
 
 
 def search_and_schedule_new_tasks(
@@ -273,18 +302,18 @@ def search_and_schedule_new_tasks(
         if input_type == InputType.FS.value:
             invalid_path_messages = _process_fs_input_paths(input_config, paths_to_compress_buffer)
             if len(invalid_path_messages) > 0:
-                base_msg = "At least one of your input paths could not be processed."
-
-                user_log_path = _write_failed_path_log(
+                user_log_relative_path = _write_failed_path_log(
                     invalid_path_messages, clp_config.logs_directory, job_id
                 )
-                if user_log_path is None:
-                    error_msg = base_msg + (
-                        f" Check the compression scheduler logs in {clp_config.logs_directory} for"
-                        " more details."
-                    )
+                if user_log_relative_path is None:
+                    macro_path = "${CLP_LOGS_DIR}/compression_scheduler/compression_scheduler.log"
                 else:
-                    error_msg = base_msg + f" Check {user_log_path} for more details."
+                    macro_path = f"${{CLP_LOGS_DIR}}/{user_log_relative_path}"
+
+                error_msg = (
+                    "At least one of your input paths could not be processed."
+                    f" Check {macro_path} for more details."
+                )
 
                 update_compression_job_metadata(
                     db_cursor,
@@ -383,7 +412,7 @@ def search_and_schedule_new_tasks(
         scheduled_jobs[job_id] = job
 
 
-def poll_running_jobs(db_conn, db_cursor):
+def poll_running_jobs(clp_config: CLPConfig, db_conn, db_cursor):
     """
     Poll for running jobs and update their status.
     """
@@ -433,12 +462,22 @@ def poll_running_jobs(db_conn, db_cursor):
             )
         else:
             logger.error(f"Job {job_id} failed. See worker logs or status_msg for details.")
+
+            status_msg = error_message
+            error_log_relative_path = _write_failed_compression_log(status_msg, clp_config.logs_directory, job_id)
+            if error_log_relative_path is None:
+                macro_path = "${CLP_LOGS_DIR}/compression_scheduler/compression_scheduler.log"
+            else:
+                macro_path = f"${{CLP_LOGS_DIR}}/{error_log_relative_path}"
+
+            error_msg = f"One or more compression tasks failed. See {macro_path} for more details."
+            
             update_compression_job_metadata(
                 db_cursor,
                 job_id,
                 dict(
                     status=CompressionJobStatus.FAILED,
-                    status_msg=error_message,
+                    status_msg=error_msg,
                 ),
             )
         db_conn.commit()
@@ -514,7 +553,7 @@ def main(argv):
                         clp_metadata_db_connection_config,
                         task_manager,
                     )
-                poll_running_jobs(db_conn, db_cursor)
+                poll_running_jobs(clp_config, db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
                 logger.info("Forcefully shutting down")

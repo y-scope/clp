@@ -1,6 +1,7 @@
 import argparse
 import datetime
 import logging
+import os
 import pathlib
 import sys
 import time
@@ -89,7 +90,8 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
             break  # Done
         if CompressionJobStatus.FAILED == job_status:
             # One or more tasks in the job has failed
-            logger.error(f"Compression failed. {job_row['status_msg']}")
+            expanded_msg = os.path.expandvars(job_row["status_msg"])
+            logger.error(f"Compression failed. {expanded_msg}")
             break  # Done
         if CompressionJobStatus.KILLED == job_status:
             # The job is killed
@@ -242,6 +244,7 @@ def main(argv):
         clp_config.validate_logs_input_config()
         clp_config.validate_logs_dir()
         clp_config.database.load_credentials_from_env()
+        os.environ["CLP_LOGS_DIR"] = str(clp_config.logs_directory)
     except:
         logger.exception("Failed to load config.")
         return -1
