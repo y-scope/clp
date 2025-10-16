@@ -457,7 +457,7 @@ def _s3_get_object_metadata_from_keys(
         file_metadata_list.append(FileMetadata(Path(object_key), object_size))
         next_key = next(key_iterator, None)
         if next_key is None:
-            # Early exit sine all keys have been found.
+            # Early exit since all keys have been found.
             return file_metadata_list
 
     # If control flow reaches here, it means there are still keys left to find.
