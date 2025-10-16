@@ -24,7 +24,7 @@ class PaginatedQueryResult:
         """
         if len(result_log_entries) > constants.MAX_CACHED_RESULTS:
             err_msg = (
-                f"PaginatedQueryResult exceeds maximum allowed cached results:"
+                "PaginatedQueryResult exceeds maximum allowed cached results:"
                 f" {len(result_log_entries)} > {constants.MAX_CACHED_RESULTS}."
             )
             raise ValueError(err_msg)
