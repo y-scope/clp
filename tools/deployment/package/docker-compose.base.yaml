@@ -212,6 +212,7 @@ services:
   compression-scheduler:
     <<: *service_defaults
     hostname: "compression_scheduler"
+    stop_grace_period: "300s"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:?error}:${CLP_QUEUE_PASS:?error}@queue:5672"
       CLP_DB_PASS: "${CLP_DB_PASS:?error}"
@@ -243,6 +244,7 @@ services:
   compression-worker:
     <<: *service_defaults
     hostname: "compression_worker"
+    stop_grace_period: "60s"
     environment:
       AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID:-}"
       AWS_SECRET_ACCESS_KEY: "${CLP_AWS_SECRET_ACCESS_KEY:-}"
