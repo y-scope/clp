@@ -171,8 +171,8 @@ class BaseController(ABC):
         }
         # Credential
         env_vars |= {
-            "CLP_QUEUE_USER": self._clp_config.queue.username,
             "CLP_QUEUE_PASS": self._clp_config.queue.password,
+            "CLP_QUEUE_USER": self._clp_config.queue.username,
         }
         # Path
         env_vars |= {
