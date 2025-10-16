@@ -1,0 +1,42 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    run: "once"
+    deps:
+      - task: "liblzma-install"
+        vars:
+          BUILD_SHARED_LIBS: true
+      - task: "liblzma-install"
+        vars:
+          BUILD_SHARED_LIBS: false
+
+  liblzma-install:
+    internal: true
+    vars:
+      LIBLZMA_CMAKE_GEN_ARGS:
+        - "-DBUILD_TESTING=OFF"
+        - "-DCMAKE_BUILD_TYPE=Release"
+        - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+        - "-DXZ_DOC=OFF"
+        - "-DXZ_TOOL_LZMADEC=OFF"
+        - "-DXZ_TOOL_LZMAINFO=OFF"
+        - "-DXZ_TOOL_SCRIPTS=OFF"
+        - "-DXZ_TOOL_SYMLINKS_LZMA=OFF"
+        - "-DXZ_TOOL_XZ=OFF"
+        - "-DXZ_TOOL_XZDEC=OFF"
+    requires:
+      vars: ["BUILD_SHARED_LIBS"]
+    cmds:
+      - task: ":utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_SHARED_LIBS={{ if .BUILD_SHARED_LIBS }}ON{{ else }}OFF{{ end }}"
+            - >-
+              {{ join " " .LIBLZMA_CMAKE_GEN_ARGS }}
+          INSTALL_TASK_NAME: "liblzma"
+          LIB_NAME: "LibLZMA-{{ if .BUILD_SHARED_LIBS }}shared{{ else }}static{{ end }}"
+          TARBALL_SHA256: "507825b599356c10dca1cd720c9d0d0c9d5400b9de300af00e4d1ea150795543"
+          TARBALL_URL: >-
+            https://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1.tar.gz

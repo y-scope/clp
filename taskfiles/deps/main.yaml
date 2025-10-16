@@ -3,23 +3,17 @@ version: "3"
 includes:
   # Main project targets
   core: "core.yaml"
-  spider: "spider.yaml"
   log-viewer: "log-viewer.yaml"
+  spider: "spider.yaml"
+
+  # Individual library component installation tasks
+  components:
+    flatten: true
+    taskfile: "installs/all.yaml"
 
   # Utils
   utils: "utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
-
-  # Individual library component installation tasks
-  artifacts:
-    flatten: true
-    taskfile: "artifacts.yaml"
-  cmake-libs:
-    flatten: true
-    taskfile: "cmake-libs.yaml"
-  misc-libs:
-    flatten: true
-    taskfile: "misc-libs.yaml"
 
 vars:
   # Directories
@@ -37,6 +31,11 @@ vars:
   # Antlr
   G_ANTLR_VERSION: "4.13.2"
   G_ANTLR_JAR_FILE: "{{.G_DEPS_CPP_DIR}}/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
+
+  # Library names
+  G_BOOST_LIB_NAME: "Boost"
+  G_FMT_LIB_NAME: "fmt"
+  G_GSL_LIB_NAME: "Microsoft.GSL"
 
 tasks:
   default:

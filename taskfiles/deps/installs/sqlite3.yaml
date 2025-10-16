@@ -1,29 +1,7 @@
 version: "3"
 
 tasks:
-  boost:
-    internal: true
-    vars:
-      VERSION: "1.87.0"
-    run: "once"
-    cmds:
-      - task: "yscope-dev-utils:boost:download-and-install"
-        vars:
-          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
-          FILE_SHA256: "d6c69e4459eb5d6ec208250291221e7ff4a2affde9af6e49c9303b89c687461f"
-          TARGETS:
-            - "filesystem"
-            - "iostreams"
-            - "process"
-            - "program_options"
-            - "regex"
-            - "system"
-            - "url"
-          URL: "https://github.com/boostorg/boost/releases/download/boost-{{.VERSION}}/\
-          boost-{{.VERSION}}-b2-nodocs.tar.gz"
-          WORK_DIR: "{{.G_DEPS_CPP_DIR}}"
-
-  sqlite3:
+  default:
     internal: true
     vars:
       LIB_NAME: "sqlite3"
@@ -36,7 +14,7 @@ tasks:
       SRC_DIR: "{{.EXTRACTION_DIR}}/{{.ZIP_FILENAME_STEM}}"
     run: "once"
     cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-zip"
+      - task: ":yscope-dev-utils:remote:download-and-extract-zip"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
           FILE_SHA256: "999826fe4c871f18919fdb8ed7ec9dd8217180854dd1fe21eea96aed36186729"

@@ -1,0 +1,21 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    vars:
+      LIB_NAME: "zlib"
+    run: "once"
+    cmds:
+      - task: ":utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_SHARED_LIBS=ON"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
+            - "-DZLIB_BUILD_EXAMPLES=OFF"
+          INSTALL_TASK_NAME: "zlib"
+          LIB_NAME: "{{.LIB_NAME}}"
+          TARBALL_SHA256: "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23"
+          TARBALL_URL: "https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz"

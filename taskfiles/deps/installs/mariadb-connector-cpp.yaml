@@ -1,0 +1,28 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    platforms: ["linux"]
+    preconditions:
+      # NOTE: The MariaDB connector is only required for building Spider, which is only supported on
+      # Ubuntu. `INSTALL_LAYOUT` is currently hardcoded to "DEB". To support other Linux distros:
+      # - Update the precondition accordingly.
+      # - Make `INSTALL_LAYOUT` configurable.
+      - >-
+        source /etc/os-release && [[ "$ID" == "ubuntu" ]]
+    run: "once"
+    cmds:
+      - task: ":utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DINSTALL_LAYOUT=DEB"
+            - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
+            - "-DWITH_UNIT_TESTS=OFF"
+          INSTALL_TASK_NAME: "mariadb-connector-cpp"
+          LIB_NAME: "mariadb-connector-cpp"
+          TARBALL_SHA256: "0e3dfe9f2bc3f7bb6f7c159009556290064a7c23402ea08019fa8aebfc3ff2c9"
+          TARBALL_URL: "https://github.com/mariadb-corporation/mariadb-connector-cpp/archive/refs/\
+            tags/1.1.5.tar.gz"

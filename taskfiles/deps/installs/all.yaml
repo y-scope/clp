@@ -1,0 +1,31 @@
+version: "3"
+
+# NOTE: For dependencies built using CMake, we set CMP0074 to NEW whenever:
+# - a component's minimum required CMake version is less than 3.27 (where CMP0074 defaults to OLD);
+#   and
+# - the component depends on another via `<lib_name>_ROOT`.
+
+includes:
+  absl: "absl.yaml"
+  antlr-jar: "antlr-jar.yaml"
+  antlr-runtime: "antlr-runtime.yaml"
+  boost: "boost.yaml"
+  catch2: "catch2.yaml"
+  date: "date.yaml"
+  fmt: "fmt.yaml"
+  liblzma: "liblzma.yaml"
+  log-surgeon: "log-surgeon.yaml"
+  lz4: "lz4.yaml"
+  mariadb-connector-cpp: "mariadb-connector-cpp.yaml"
+  microsoft.gsl: "microsoft.gsl.yaml"
+  mongocxx: "mongocxx.yaml"
+  msgpack-cxx: "msgpack-cxx.yaml"
+  nlohmann_json: "nlohmann_json.yaml"
+  simdjson: "simdjson.yaml"
+  spdlog: "spdlog.yaml"
+  sqlite3: "sqlite3.yaml"
+  utfcpp: "utfcpp.yaml"
+  yaml-cpp: "yaml-cpp.yaml"
+  ystdlib: "ystdlib.yaml"
+  zlib: "zlib.yaml"
+  zstd: "zstd.yaml"
