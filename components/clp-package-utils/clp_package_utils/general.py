@@ -135,7 +135,7 @@ def is_docker_compose_running(project_name: str) -> bool:
     Checks if a Docker Compose project is running.
 
     :param project_name:
-    :return: True if at least one instance is running, else False.
+    :return: Whether at least one instance is running.
     :raises EnvironmentError: If Docker Compose is not installed or fails.
     """
     cmd = ["docker", "compose", "ls", "--format", "json", "--filter", f"name={project_name}"]
@@ -149,12 +149,13 @@ def is_docker_compose_running(project_name: str) -> bool:
 
 def check_docker_dependencies(should_compose_run: bool, project_name: str):
     """
-    Checks if Docker and Docker Compose are installed, and whether Docker Compose is running or not.
+    Checks if Docker and Docker Compose are installed, and whether a Docker Compose project is
+    running.
 
     :param should_compose_run:
     :param project_name: The Docker Compose project name to check.
-    :raises EnvironmentError: If any Docker dependency is not installed or Docker Compose state
-    does not match expectation.
+    :raises EnvironmentError: If any Docker dependency is not installed or the Docker Compose
+    project state doesn't match `should_compose_run`.
     """
     try:
         subprocess.run(
@@ -176,11 +177,11 @@ def check_docker_dependencies(should_compose_run: bool, project_name: str):
 
 def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
     """
-    Validate that a log directory path of a component is valid.
+    Validates that the logs directory path for a component is valid.
 
     :param logs_dir:
     :param component_name:
-    :raises ValueError: If the path is invalid or not a directory.
+    :raises ValueError: If the path is invalid or can't be a directory.
     """
     try:
         validate_path_could_be_dir(logs_dir)
@@ -311,7 +312,7 @@ def generate_docker_compose_container_config(clp_config: CLPConfig) -> CLPConfig
     Copies the given config and transforms mount paths and hosts for Docker Compose.
 
     :param clp_config:
-    :return: The container config and the mounts.
+    :return: The container config.
     """
     container_clp_config = clp_config.model_copy(deep=True)
     container_clp_config.transform_for_container()
@@ -498,7 +499,7 @@ def validate_db_config(
 ):
     if not base_config.exists():
         raise ValueError(
-            f"{DB_COMPONENT_NAME} base configuration at {str(base_config)} is missing."
+            f"{DB_COMPONENT_NAME} configuration file missing: '{base_config}'."
         )
     _validate_data_directory(data_dir, DB_COMPONENT_NAME)
     _validate_log_directory(logs_dir, DB_COMPONENT_NAME)
@@ -541,7 +542,7 @@ def validate_results_cache_config(
 ):
     if not base_config.exists():
         raise ValueError(
-            f"{RESULTS_CACHE_COMPONENT_NAME} base configuration at {str(base_config)} is missing."
+            f"{RESULTS_CACHE_COMPONENT_NAME} configuration file missing: '{base_config}'."
         )
     _validate_data_directory(data_dir, RESULTS_CACHE_COMPONENT_NAME)
     _validate_log_directory(logs_dir, RESULTS_CACHE_COMPONENT_NAME)
