@@ -71,14 +71,14 @@ class SessionState:
 
     _num_items_per_page: int
     _session_id: str
-    _session_ttl_minutes: int
+    _session_ttl_seconds: int
 
     _cached_query_result: PaginatedQueryResult | None = None
     _last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     _is_instructions_retrieved: bool = False
 
     _GET_INSTRUCTIONS_NOT_RUN_ERROR: ClassVar[dict[str, str]] = {
-        "Error": "Please call get_instructions() first to understand how to use this MCP server."
+        "Error": "Please call `get_instructions()` first to understand how to use this MCP server."
     }
 
     def cache_query_result_and_get_first_page(
@@ -151,7 +151,7 @@ class SessionState:
     def is_expired(self) -> bool:
         """:return: Whether the session has expired."""
         time_diff = datetime.now(timezone.utc) - self._last_accessed
-        return time_diff > timedelta(minutes=self._session_ttl_minutes)
+        return time_diff > timedelta(seconds=self._session_ttl_seconds)
 
     def update_access_time(self) -> None:
         """Updates the last accessed timestamp."""
@@ -172,10 +172,10 @@ class SessionManager:
     are atomic because it cannot be accessed from two threads at the same time.
     """
 
-    def __init__(self, session_ttl_minutes: int) -> None:
-        """:param session_ttl_minutes: Session time-to-live in minutes."""
+    def __init__(self, session_ttl_seconds: int) -> None:
+        """:param session_ttl_seconds: Session time-to-live in seconds."""
         self.sessions: dict[str, SessionState] = {}
-        self._session_ttl_minutes = session_ttl_minutes
+        self._session_ttl_seconds = session_ttl_seconds
         self._cleanup_task: asyncio.Task | None = None
 
     async def start(self) -> None:
@@ -233,7 +233,7 @@ class SessionManager:
 
         if session_id not in self.sessions:
             self.sessions[session_id] = SessionState(
-                constants.NUM_ITEMS_PER_PAGE, session_id, self._session_ttl_minutes
+                constants.NUM_ITEMS_PER_PAGE, session_id, self._session_ttl_seconds
             )
 
         session = self.sessions[session_id]
