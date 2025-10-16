@@ -580,7 +580,7 @@ class BaseController(ABC):
             if isinstance(value, dict):
                 self._update_settings_object(f"{parent_key_prefix}{key}.", settings[key], value)
             else:
-                settings[key] = updates[key]
+                settings[key] = value
 
 
 class DockerComposeController(BaseController):
