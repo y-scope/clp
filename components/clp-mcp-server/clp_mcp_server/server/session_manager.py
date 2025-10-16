@@ -206,12 +206,9 @@ class SessionManager:
         """
         Caches query results for a session and returns the first page and the paging metadata.
 
-        :param session_id: Unique identifier for the session.
-        :param query_results: Complete log entries from previous query for caching.
-        :return: Dictionary containing the first page log entries and the paging metadata if the
-            first page can be retrieved.
-        :return: Dictionary with ``{"Error": "error message describing the failure"}`` if fails to
-            retrieve the first page.
+        :param session_id:
+        :param query_results: Log entries from the query to cache.
+        :return: Forwards `SessionState.get_page_data`'s return values.
         """
         session = self.get_or_create_session(session_id)
         if session.is_instructions_retrieved is False:
