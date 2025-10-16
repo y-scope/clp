@@ -42,12 +42,6 @@ auto node_to_literal_type(NodeType type) -> clp_s::search::ast::LiteralType {
 int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_view const key) {
     auto node_it = m_node_map.find({parent_node_id, key, type});
     if (node_it != m_node_map.end()) {
-        std::cerr << fmt::format(
-                "[clpsls] found existing node for {} type: {} parent: {}\n",
-                key,
-                static_cast<int>(type),
-                parent_node_id
-        );
         auto node_id = node_it->second;
         m_nodes[node_id].increase_count();
         return node_id;
@@ -55,13 +49,6 @@ int32_t SchemaTree::add_node(int32_t parent_node_id, NodeType type, std::string_
 
     int32_t node_id = m_nodes.size();
     auto& node = m_nodes.emplace_back(parent_node_id, node_id, std::string{key}, type, 0);
-    std::cerr << fmt::format(
-            "[clpsls] creating new node {} for '{}' type: {} parent: {}\n",
-            node_id,
-            key,
-            static_cast<int>(type),
-            parent_node_id
-    );
     node.increase_count();
     if (constants::cRootNodeId == parent_node_id) {
         m_namespace_and_type_to_subtree_id.emplace(

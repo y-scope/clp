@@ -1460,40 +1460,30 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
             case static_cast<int>(log_surgeon::SymbolId::TokenInt): {
                 int32_t node_id{};
                 clp_s::encoded_variable_t encoded_var{};
-                if (!clp::EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                if (clp::EncodedVariableInterpreter::convert_string_to_representable_integer_var(
                             token_view.to_string(),
                             encoded_var
                     ))
                 {
                     node_id = m_archive_writer
-                                      ->add_node(parent_node_id, NodeType::VarString, token_name);
-                    m_current_parsed_message.add_unordered_value(token_view.to_string());
-
-                } else {
-                    node_id = m_archive_writer
                                       ->add_node(parent_node_id, NodeType::Integer, token_name);
                     m_current_parsed_message.add_unordered_value(encoded_var);
+                } else {
+                    node_id = m_archive_writer
+                                      ->add_node(parent_node_id, NodeType::VarString, token_name);
+                    m_current_parsed_message.add_unordered_value(token_view.to_string());
                 }
                 m_current_schema.insert_unordered(node_id);
                 logtype_dict_entry.add_schema_var();
                 break;
             }
             case static_cast<int>(log_surgeon::SymbolId::TokenFloat): {
+                // TODO clps: need to convert string to double to perform proper encoding. Store as
+                // DictionaryFloat for now.
                 int32_t node_id{};
-                encoded_variable_t encoded_var{};
-                if (!clp::EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                            token_view.to_string(),
-                            encoded_var
-                    ))
-                {
-                    node_id = m_archive_writer
-                                      ->add_node(parent_node_id, NodeType::VarString, token_name);
-                    m_current_parsed_message.add_unordered_value(token_view.to_string());
-                } else {
-                    node_id = m_archive_writer
-                                      ->add_node(parent_node_id, NodeType::Float, token_name);
-                    m_current_parsed_message.add_unordered_value(encoded_var);
-                }
+                m_current_parsed_message.add_unordered_value(token_view.to_string());
+                node_id = m_archive_writer
+                                  ->add_node(parent_node_id, NodeType::DictionaryFloat, token_name);
                 m_current_schema.insert_unordered(node_id);
                 logtype_dict_entry.add_schema_var();
                 break;
@@ -1548,6 +1538,11 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                                 // fmt::format("{}.{}", capture_name, i)
                                 capture_name
                         ));
+                        std::cerr << fmt::format(
+                                "[clpsls]\tcapture name: {} value: {}\n",
+                                capture_name,
+                                token_view.to_string_view()
+                        );
                     }
                 }
 
