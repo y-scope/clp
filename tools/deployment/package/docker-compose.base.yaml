@@ -273,8 +273,10 @@ services:
       - *volume_clp_config_readonly
       - *volume_clp_logs
       - *volume_logs_input_readonly
-      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:${CLP_ARCHIVE_OUTPUT_DIR_HOST:-/tmp}/var/data/archives"
-      - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-/tmp}/var/data/staged-archives"
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:\
+${CLP_ARCHIVE_OUTPUT_DIR_HOST:-/tmp}/var/data/archives"
+      - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:\
+${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-/tmp}/var/data/staged-archives"
       - type: "bind"
         source: "${CLP_DATA_DIR_HOST:-./var/data}"
         target: "/var/data"
