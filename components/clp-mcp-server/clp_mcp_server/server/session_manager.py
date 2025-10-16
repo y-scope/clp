@@ -32,10 +32,9 @@ class PaginatedQueryResult:
             )
             raise ValueError(err_msg)
 
-        self._num_items_per_page = num_items_per_page
-
-        self._num_pages = (len(log_entries) + num_items_per_page - 1) // num_items_per_page
-        self._log_entries = log_entries
+        self._num_items_per_page: int = num_items_per_page
+        self._num_pages: int = (len(log_entries) + num_items_per_page - 1) // num_items_per_page
+        self._log_entries: list[str] = log_entries
 
     def get_page(self, page_index: int) -> Page | None:
         """
@@ -167,10 +166,10 @@ class SessionManager:
       occurs inside a critical section, to prevent interleaving of coroutine execution.
     """
 
-    def __init__(self, session_ttl_seconds: int) -> None:
+    def __init__(self, session_ttl_seconds: float) -> None:
         """:param session_ttl_seconds: Session time-to-live in seconds."""
         self.sessions: dict[str, SessionState] = {}
-        self._session_ttl_seconds = session_ttl_seconds
+        self._session_ttl_seconds: float = session_ttl_seconds
         self._cleanup_task: asyncio.Task | None = None
 
     async def start(self) -> None:
