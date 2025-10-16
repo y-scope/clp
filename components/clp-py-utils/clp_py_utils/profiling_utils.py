@@ -99,8 +99,7 @@ def profile(
                 # Skip profiling this function to avoid conflicts
                 if "already a profiler running" in str(e):
                     logger.debug(
-                        f"Skipping nested profiling for {name} "
-                        f"(parent profiler already active)"
+                        f"Skipping nested profiling for {name} (parent profiler already active)"
                     )
                     return func(*args, **kwargs)
                 raise
