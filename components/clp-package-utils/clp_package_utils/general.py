@@ -144,7 +144,7 @@ def is_docker_compose_running(project_name: str) -> bool:
         running_instances = json.loads(output)
         return len(running_instances) >= 1
     except subprocess.CalledProcessError:
-        raise EnvironmentError("docker-compose is not installed or not functioning properly.")
+        raise EnvironmentError("Docker Compose is not installed or not functioning properly.")
 
 
 def check_docker_dependencies(should_compose_run: bool, project_name: str):
@@ -170,9 +170,9 @@ def check_docker_dependencies(should_compose_run: bool, project_name: str):
 
     is_running = is_docker_compose_running(project_name)
     if should_compose_run and not is_running:
-        raise EnvironmentError("docker-compose is not running.")
+        raise EnvironmentError(f"Docker Compose project '{project_name}' is not running.")
     if not should_compose_run and is_running:
-        raise EnvironmentError("docker-compose is already running.")
+        raise EnvironmentError("Docker Compose project '{project_name}' is already running.")
 
 
 def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
