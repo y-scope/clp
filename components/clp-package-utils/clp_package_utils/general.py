@@ -520,7 +520,7 @@ def validate_redis_config(
 ):
     if not component_config.exists():
         raise ValueError(
-            f"{REDIS_COMPONENT_NAME} base configuration at {str(component_config)} is missing."
+            f"{REDIS_COMPONENT_NAME} configuration file missing: '{component_config}'."
         )
     _validate_data_directory(data_dir, REDIS_COMPONENT_NAME)
     _validate_log_directory(logs_dir, REDIS_COMPONENT_NAME)
