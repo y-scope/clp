@@ -77,22 +77,26 @@ class SessionState:
     last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     _cached_query_result: PaginatedQueryResult | None = None
 
-    GET_INSTRUCTIONS_NOT_RUN_ERROR: ClassVar[dict[str, str]] = {
+    _GET_INSTRUCTIONS_NOT_RUN_ERROR: ClassVar[dict[str, str]] = {
         "Error": "Please call get_instructions() first to understand how to use this MCP server."
     }
 
-    def cache_query_result(
+    def cache_query_result_and_get_first_page(
         self,
         results: list[str],
     ) -> None:
         """
-        Caches the latest query result of the session.
-
-        :param results: Complete log entries from previous query for caching.
+        :param results: Log entries from the query to cache.
+        :return: Forwards `SessionState.get_page_data`'s return values.
         """
+        if self.is_instructions_retrieved is False:
+            return self._GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
+
         self._cached_query_result = PaginatedQueryResult(
             result_log_entries=results, num_items_per_page=self._num_items_per_page
         )
+
+        return self.get_page_data(0)
 
     def get_page_data(self, page_index: int) -> dict[str, Any]:
         """
@@ -112,6 +116,9 @@ class SessionState:
         :return: A dictionary with the following key-value pair on failures:
             - "Error": An error message describing the failure.
         """
+        if self.is_instructions_retrieved is False:
+            return self._GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
+
         if self._cached_query_result is None:
             return {"Error": "No previous paginated response in this session."}
 
@@ -176,21 +183,17 @@ class SessionManager:
         for sid in expired_sessions:
             del self.sessions[sid]
 
-    def cache_query_result(self, session_id: str, query_results: list[str]) -> dict[str, Any]:
+    def cache_query_result_and_get_first_page(
+        self, session_id: str, query_results: list[str]
+    ) -> dict[str, Any]:
         """
-        Caches query results for a session and returns the first page and the paging metadata.
-
         :param session_id:
         :param query_results: Log entries from the query to cache.
         :return: Forwards `SessionState.get_page_data`'s return values.
         """
         session = self.get_or_create_session(session_id)
-        if session.is_instructions_retrieved is False:
-            return session.GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
 
-        session.cache_query_result(results=query_results)
-
-        return session.get_page_data(0)
+        return session.cache_query_result_and_get_first_page(results=query_results)
 
     def get_nth_page(self, session_id: str, page_index: int) -> dict[str, Any]:
         """
@@ -202,8 +205,6 @@ class SessionManager:
         :return: Forwards `SessionState.get_page_data`'s return values.
         """
         session = self.get_or_create_session(session_id)
-        if session.is_instructions_retrieved is False:
-            return session.GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
 
         return session.get_page_data(page_index)
 

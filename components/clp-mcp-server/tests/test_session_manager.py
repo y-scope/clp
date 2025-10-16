@@ -90,13 +90,14 @@ class TestSessionState:
             _num_items_per_page=TestConstants.ITEMS_PER_PAGE,
             _session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES
         )
+        session.is_instructions_retrieved = True
         results = [f"log_{i}" for i in range(TestConstants.SAMPLE_RESULTS_COUNT_25)]
 
         # Test no cached result
         page_data = session.get_page_data(0)
         assert page_data["Error"] == "No previous paginated response in this session."
 
-        session.cache_query_result(results=results)
+        session.cache_query_result_and_get_first_page(results=results)
 
         # Test first page
         page_data = session.get_page_data(0)
@@ -176,7 +177,7 @@ class TestSessionManager:
         """Validates caching query results returns correct first page data."""
         results = [f"log_{i}" for i in range(TestConstants.SAMPLE_RESULTS_COUNT_25)]
 
-        first_page = active_session_manager.cache_query_result(
+        first_page = active_session_manager.cache_query_result_and_get_first_page(
             session_id="test_session", query_results=results
         )
 
@@ -190,7 +191,7 @@ class TestSessionManager:
         """Validates retrieving specific pages."""
         results = [f"log_{i}" for i in range(TestConstants.SAMPLE_RESULTS_COUNT_25)]
 
-        active_session_manager.cache_query_result(session_id="test_session", query_results=results)
+        active_session_manager.cache_query_result_and_get_first_page(session_id="test_session", query_results=results)
 
         # Get second page (index 1)
         page_data = active_session_manager.get_nth_page("test_session", 1)
@@ -219,7 +220,7 @@ class TestSessionManager:
         # Simulate get_instructions was NOT run
         session.is_instructions_retrieved = False
 
-        first_page = active_session_manager.cache_query_result(
+        first_page = active_session_manager.cache_query_result_and_get_first_page(
             "test_session", [f"log_{i}" for i in range(TestConstants.SAMPLE_RESULTS_COUNT_25)]
         )
         assert "Please call get_instructions()" in first_page["Error"]
