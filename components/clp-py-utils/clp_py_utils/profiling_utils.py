@@ -4,8 +4,8 @@ Profiling utilities for CLP query execution performance analysis.
 This module provides lightweight profiling decorators using pyinstrument.
 
 Profile outputs include:
-- HTML files with interactive flame graphs and call trees
-- Text summaries showing call hierarchy and timing
+- HTML files with interactive flame graphs and call trees.
+- Text summaries showing call hierarchy and timing.
 """
 
 import datetime
@@ -14,7 +14,7 @@ import inspect
 import logging
 import os
 from pathlib import Path
-from typing import Any, Callable, Optional, Tuple, TypeVar
+from typing import Any, Callable, Tuple, TypeVar
 
 from pyinstrument import Profiler
 
@@ -26,22 +26,22 @@ PROFILING_INTERVAL = 0.001
 
 
 def profile(
-    section_name: Optional[str] = None,
-    job_id_param: Optional[str] = None,
-    task_id_param: Optional[str] = None,
+    section_name: str | None = None,
+    job_id_param: str = "job_id",
+    task_id_param: str = "task_id",
 ) -> Callable[[F], F]:
     """
-    Decorator for profiling function execution with automatic context extraction.
+    Profiles function execution as decorator with automatic context extraction.
 
     Output files are written to $CLP_LOGS_DIR/profiles/ (e.g., clp-package/var/log/query_worker/
     profiles/).
 
     :param section_name: Override for profile section name. If None, uses function name.
     :param job_id_param: Parameter name to extract job_id from (default: "job_id").
-                         Can use dot notation for attributes, e.g., "job.id"
+        Can use dot notation for attributes, e.g., "job.id".
     :param task_id_param: Parameter name to extract task_id from (default: "task_id").
-                          Can use dot notation for attributes, e.g., "task.id"
-    :return: Decorated function with profiling capabilities
+        Can use dot notation for attributes, e.g., "task.id".
+    :return: Decorated function with profiling capabilities.
     """
 
     def decorator(func: F) -> F:
@@ -82,39 +82,37 @@ def profile(
 
             return async_wrapper  # type: ignore
 
-        else:
+        @functools.wraps(func)
+        def sync_wrapper(*args, **kwargs):
+            if not _is_profiling_enabled():
+                return func(*args, **kwargs)
 
-            @functools.wraps(func)
-            def sync_wrapper(*args, **kwargs):
-                if not _is_profiling_enabled():
+            # Profiling enabled: extract context and profile execution
+            job_id, task_id = _extract_context_from_args(
+                func, args, kwargs, job_id_param, task_id_param
+            )
+
+            profiler = Profiler(interval=PROFILING_INTERVAL)
+            try:
+                profiler.start()
+            except RuntimeError as e:
+                # Skip profiling this function to avoid conflicts
+                if "already a profiler running" in str(e):
+                    logger.debug(
+                        f"Skipping nested profiling for {name} "
+                        f"(parent profiler already active)"
+                    )
                     return func(*args, **kwargs)
+                raise
 
-                # Profiling enabled: extract context and profile execution
-                job_id, task_id = _extract_context_from_args(
-                    func, args, kwargs, job_id_param, task_id_param
-                )
+            try:
+                result = func(*args, **kwargs)
+                return result
+            finally:
+                profiler.stop()
+                _save_profile(profiler, name, job_id, task_id)
 
-                profiler = Profiler(interval=PROFILING_INTERVAL)
-                try:
-                    profiler.start()
-                except RuntimeError as e:
-                    # Skip profiling this function to avoid conflicts
-                    if "already a profiler running" in str(e):
-                        logger.debug(
-                            f"Skipping nested profiling for {name} "
-                            f"(parent profiler already active)"
-                        )
-                        return func(*args, **kwargs)
-                    raise
-
-                try:
-                    result = func(*args, **kwargs)
-                    return result
-                finally:
-                    profiler.stop()
-                    _save_profile(profiler, name, job_id, task_id)
-
-            return sync_wrapper  # type: ignore
+        return sync_wrapper  # type: ignore
 
     return decorator
 
@@ -123,15 +121,15 @@ def _extract_context_from_args(
     func: Callable,
     args: tuple,
     kwargs: dict,
-    job_id_param: Optional[str] = None,
-    task_id_param: Optional[str] = None,
+    job_id_param: str = "job_id",
+    task_id_param: str = "task_id",
 ) -> Tuple[str, str]:
     """
-    Extract job_id and task_id from function arguments.
+    Extracts job_id and task_id from function arguments.
 
-    :param func: The function being profiled
-    :param args: Positional arguments passed to the function
-    :param kwargs: Keyword arguments passed to the function
+    :param func: The function being profiled.
+    :param args: Positional arguments passed to the function.
+    :param kwargs: Keyword arguments passed to the function.
     :param job_id_param: Name/path of the parameter containing job_id (default: "job_id").
     :param task_id_param: Name/path of the parameter containing task_id (default: "task_id").
     :return: Tuple of (job_id, task_id) as strings. Empty strings if not found.
@@ -174,13 +172,9 @@ def _extract_context_from_args(
 
             return str(value)
 
-        # Extract job_id
-        job_id_key = job_id_param or "job_id"
-        job_id = extract_value(job_id_key)
-
-        # Extract task_id
-        task_id_key = task_id_param or "task_id"
-        task_id = extract_value(task_id_key)
+        # Extract job_id and task_id
+        job_id = extract_value(job_id_param)
+        task_id = extract_value(task_id_param)
 
     except Exception as e:
         logger.debug(f"Failed to extract context from {func.__name__}: {e}")
@@ -190,10 +184,10 @@ def _extract_context_from_args(
 
 def _is_profiling_enabled() -> bool:
     """
-    Check if profiling is enabled.
+    Checks if profiling is enabled.
     TODO: Add `CLPConfig` mechanism to enable/disable profiling for each component.
 
-    :return: False
+    :return: Whether the profiler is enabled.
     """
     return False
 
@@ -202,12 +196,12 @@ def _save_profile(
     profiler: Profiler, section_name: str, job_id: str = "", task_id: str = ""
 ) -> None:
     """
-    Save profiler output to HTML and text formats. Generates .html and .txt files.
+    Saves profiler output to HTML and text formats. Generates .html and .txt files.
 
-    :param profiler: The pyinstrument Profiler object containing profiling data
-    :param section_name: Name identifying this profiling section
-    :param job_id: Optional job identifier for filename
-    :param task_id: Optional task identifier for filename
+    :param profiler: The pyinstrument Profiler object containing profiling data.
+    :param section_name: Name identifying this profiling section.
+    :param job_id: Optional job identifier for filename.
+    :param task_id: Optional task identifier for filename.
     """
     try:
         # Get the session for logging
