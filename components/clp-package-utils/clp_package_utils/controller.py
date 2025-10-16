@@ -274,19 +274,12 @@ class BaseController(ABC):
         component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
-        log_file = self._clp_config.logs_directory / f"{component_name}.log"
-        log_file.touch(mode=LOG_FILE_ACCESS_MODE, exist_ok=True)
-
         env_vars = EnvVarsDict()
         # Logging
         env_vars |= {
             "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL": (
                 self._clp_config.compression_scheduler.logging_level
             ),
-        }
-        # Path
-        env_vars |= {
-            "CLP_COMPRESSION_SCHEDULER_LOG_FILE_HOST": str(log_file),
         }
 
         return env_vars
@@ -300,17 +293,10 @@ class BaseController(ABC):
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
-        log_file = self._clp_config.logs_directory / f"{component_name}.log"
-        log_file.touch(mode=LOG_FILE_ACCESS_MODE, exist_ok=True)
-
         env_vars = EnvVarsDict()
         # Logging
         env_vars |= {
             "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": self._clp_config.query_scheduler.logging_level,
-        }
-        # Path
-        env_vars |= {
-            "CLP_QUERY_SCHEDULER_LOG_FILE_HOST": str(log_file),
         }
 
         return env_vars
@@ -334,10 +320,6 @@ class BaseController(ABC):
             "CLP_COMPRESSION_WORKER_LOGGING_LEVEL": (
                 self._clp_config.compression_worker.logging_level
             ),
-        }
-        # Path
-        env_vars |= {
-            "CLP_COMPRESSION_WORKER_LOGS_DIR_HOST": str(logs_dir),
         }
         # Resource
         env_vars |= {
@@ -364,10 +346,6 @@ class BaseController(ABC):
         env_vars |= {
             "CLP_QUERY_WORKER_LOGGING_LEVEL": self._clp_config.query_worker.logging_level,
         }
-        # Path
-        env_vars |= {
-            "CLP_QUERY_WORKER_LOGS_DIR_HOST": str(logs_dir),
-        }
         # Resource
         env_vars |= {
             "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
@@ -392,10 +370,6 @@ class BaseController(ABC):
         # Logging
         env_vars |= {
             "CLP_REDUCER_LOGGING_LEVEL": self._clp_config.reducer.logging_level,
-        }
-        # Path
-        env_vars |= {
-            "CLP_REDUCER_LOGS_DIR_HOST": str(logs_dir),
         }
         # Resource
         env_vars |= {
