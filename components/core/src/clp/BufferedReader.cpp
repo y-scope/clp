@@ -126,7 +126,7 @@ auto BufferedReader::try_seek_from_begin(size_t pos) -> ErrorCode {
 
 auto BufferedReader::try_read(char* buf, size_t num_bytes_to_read, size_t& num_bytes_read)
         -> ErrorCode {
-    if (nullptr != buf) {
+    if (nullptr == buf) {
         return ErrorCode_BadParam;
     }
     num_bytes_read = 0;
