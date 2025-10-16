@@ -67,7 +67,7 @@ class SessionState:
 
     _num_items_per_page: int
     _session_id: str
-    _session_ttl_seconds: int
+    _session_ttl_seconds: float
 
     _cached_query_result: PaginatedQueryResult | None = None
     _last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))

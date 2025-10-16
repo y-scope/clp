@@ -21,7 +21,7 @@ class TestConstants:
 
     # Default values from constants
     ITEMS_PER_PAGE = constants.NUM_ITEMS_PER_PAGE
-    SESSION_TTL_SECONDS = constants.SESSION_TTL_MINUTES * 60
+    SESSION_TTL_SECONDS = constants.SESSION_TTL_SECONDS
     EXPIRED_SESSION_TTL_SECONDS = SESSION_TTL_SECONDS + 1
 
     # Number of logs tested in unit test and its expected page counts
@@ -29,7 +29,7 @@ class TestConstants:
     SAMPLE_RESULTS_COUNT_25 = 25
 
     # 0.5 second for fast expiration tests
-    FAST_SESSION_TTL_SECONDS: float = 0.5
+    FAST_SESSION_TTL_SECONDS = 0.5
 
     # Session names
     TEST_SESSION_ID = "test_session"
