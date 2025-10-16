@@ -13,16 +13,16 @@ from . import constants
 class PaginatedQueryResult:
     """Paginates the cached log entries returned from a query's response."""
 
-    def __init__(self, result_log_entries: list[str], num_items_per_page: int) -> None:
+    def __init__(self, log_entries: list[str], num_items_per_page: int) -> None:
         """
-        :param result_log_entries: List of cached log entries to paginate.
+        :param log_entries: Log entries to paginate.
         :param num_items_per_page:
         :raise: ValueError if the number of cached results or `num_items_per_page` is invalid.
         """
-        if len(result_log_entries) > constants.MAX_CACHED_RESULTS:
+        if len(log_entries) > constants.MAX_CACHED_RESULTS:
             err_msg = (
                 "PaginatedQueryResult exceeds maximum allowed cached results:"
-                f" {len(result_log_entries)} > {constants.MAX_CACHED_RESULTS}."
+                f" {len(log_entries)} > {constants.MAX_CACHED_RESULTS}."
             )
             raise ValueError(err_msg)
 
@@ -34,8 +34,8 @@ class PaginatedQueryResult:
 
         self._num_items_per_page = num_items_per_page
 
-        self._num_pages = (len(result_log_entries) + num_items_per_page - 1) // num_items_per_page
-        self._result_log_entries = result_log_entries
+        self._num_pages = (len(log_entries) + num_items_per_page - 1) // num_items_per_page
+        self._log_entries = log_entries
 
     def get_page(self, page_index: int) -> Page | None:
         """
@@ -49,7 +49,7 @@ class PaginatedQueryResult:
             return None
 
         return Page(
-            self._result_log_entries,
+            self._log_entries,
             page=page_number,
             items_per_page=self._num_items_per_page,
         )
@@ -95,7 +95,7 @@ class SessionState:
             return self._GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
 
         self._cached_query_result = PaginatedQueryResult(
-            result_log_entries=results, num_items_per_page=self._num_items_per_page
+            log_entries=results, num_items_per_page=self._num_items_per_page
         )
 
         return self.get_page_data(0)
