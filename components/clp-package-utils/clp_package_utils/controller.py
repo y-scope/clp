@@ -76,27 +76,27 @@ class BaseController(ABC):
     variables, directories, and configuration files for each component.
     """
 
-    def __init__(self, clp_config: CLPConfig):
+    def __init__(self, clp_config: CLPConfig) -> None:
         self._clp_config = clp_config
         self._clp_home = get_clp_home()
         self._conf_dir = self._clp_home / "etc"
 
     @abstractmethod
-    def start(self):
+    def start(self) -> None:
         """
         Starts the components.
         """
         pass
 
     @abstractmethod
-    def stop(self):
+    def stop(self) -> None:
         """
         Stops the components.
         """
         pass
 
     @abstractmethod
-    def _set_up_env(self):
+    def _set_up_env(self) -> None:
         """
         Sets up all components to run by preparing environment variables, directories, and
         configuration files.
@@ -562,7 +562,7 @@ class BaseController(ABC):
         parent_key_prefix: str,
         settings: dict[str, Any],
         updates: dict[str, Any],
-    ):
+    ) -> None:
         """
         Recursively updates the given settings object with the values from `updates`.
 
@@ -588,11 +588,11 @@ class DockerComposeController(BaseController):
     Controller for orchestrating CLP components using Docker Compose.
     """
 
-    def __init__(self, clp_config: CLPConfig, instance_id: str):
+    def __init__(self, clp_config: CLPConfig, instance_id: str) -> None:
         self._project_name = f"clp-package-{instance_id}"
         super().__init__(clp_config)
 
-    def start(self):
+    def start(self) -> None:
         """
         Starts CLP's components using Docker Compose.
 
@@ -615,7 +615,7 @@ class DockerComposeController(BaseController):
         )
         logger.info("CLP is started.")
 
-    def stop(self):
+    def stop(self) -> None:
         """
         Stops CLP components deployed via Docker Compose.
 
@@ -648,7 +648,7 @@ class DockerComposeController(BaseController):
         """
         return multiprocessing.cpu_count() // 2
 
-    def _set_up_env(self):
+    def _set_up_env(self) -> None:
         # Generate container-specific config.
         container_clp_config = generate_docker_compose_container_config(self._clp_config)
         num_workers = self._get_num_workers()
@@ -714,7 +714,7 @@ class DockerComposeController(BaseController):
                 env_file.write(f"{key}={value}\n")
 
 
-def get_or_create_instance_id(clp_config: CLPConfig):
+def get_or_create_instance_id(clp_config: CLPConfig) -> str:
     """
     Gets or creates a unique instance ID for this CLP instance.
 
@@ -734,7 +734,7 @@ def get_or_create_instance_id(clp_config: CLPConfig):
     return instance_id
 
 
-def _chown_paths_if_root(*paths: pathlib.Path):
+def _chown_paths_if_root(*paths: pathlib.Path) -> None:
     """
     Changes ownership of the given paths to the default service container user/group IDs if the
     current process is running as root.
@@ -751,7 +751,7 @@ def _chown_recursively(
     path: pathlib.Path,
     user_id: int,
     group_id: int,
-):
+) -> None:
     """
     Recursively changes the owner of the given path to the given user ID and group ID.
 
