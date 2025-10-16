@@ -156,8 +156,8 @@ class Database(BaseModel):
     auto_commit: bool = False
     compress: bool = True
 
-    username: Optional[str] = None
-    password: Optional[str] = None
+    username: Optional[NonEmptyStr] = None
+    password: Optional[NonEmptyStr] = None
 
     def ensure_credentials_loaded(self):
         if self.username is None or self.password is None:
