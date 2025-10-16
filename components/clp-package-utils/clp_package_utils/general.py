@@ -96,13 +96,6 @@ class CLPDockerMounts:
         self.generated_config_file: Optional[DockerMount] = None
 
 
-def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
-    try:
-        validate_path_could_be_dir(data_dir)
-    except ValueError as ex:
-        raise ValueError(f"{component_name} data directory is invalid: {ex}")
-
-
 def get_clp_home():
     # Determine CLP_HOME from an environment variable or this script's path
     clp_home = None
@@ -130,23 +123,6 @@ def generate_container_name(job_type: str) -> str:
     return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
 
 
-def is_docker_compose_running(project_name: str) -> bool:
-    """
-    Checks if a Docker Compose project is running.
-
-    :param project_name:
-    :return: Whether at least one instance is running.
-    :raises EnvironmentError: If Docker Compose is not installed or fails.
-    """
-    cmd = ["docker", "compose", "ls", "--format", "json", "--filter", f"name={project_name}"]
-    try:
-        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        running_instances = json.loads(output)
-        return len(running_instances) >= 1
-    except subprocess.CalledProcessError:
-        raise EnvironmentError("Docker Compose is not installed or not functioning properly.")
-
-
 def check_docker_dependencies(should_compose_run: bool, project_name: str):
     """
     Checks if Docker and Docker Compose are installed, and whether a Docker Compose project is
@@ -168,11 +144,35 @@ def check_docker_dependencies(should_compose_run: bool, project_name: str):
     except subprocess.CalledProcessError:
         raise EnvironmentError("docker is not installed or available on the path")
 
-    is_running = is_docker_compose_running(project_name)
+    is_running = _is_docker_compose_running(project_name)
     if should_compose_run and not is_running:
         raise EnvironmentError(f"Docker Compose project '{project_name}' is not running.")
     if not should_compose_run and is_running:
         raise EnvironmentError("Docker Compose project '{project_name}' is already running.")
+
+
+def _is_docker_compose_running(project_name: str) -> bool:
+    """
+    Checks if a Docker Compose project is running.
+
+    :param project_name:
+    :return: Whether at least one instance is running.
+    :raises EnvironmentError: If Docker Compose is not installed or fails.
+    """
+    cmd = ["docker", "compose", "ls", "--format", "json", "--filter", f"name={project_name}"]
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        running_instances = json.loads(output)
+        return len(running_instances) >= 1
+    except subprocess.CalledProcessError:
+        raise EnvironmentError("Docker Compose is not installed or not functioning properly.")
+
+
+def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
+    try:
+        validate_path_could_be_dir(data_dir)
+    except ValueError as ex:
+        raise ValueError(f"{component_name} data directory is invalid: {ex}")
 
 
 def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
