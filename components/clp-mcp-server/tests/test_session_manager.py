@@ -135,8 +135,8 @@ class TestSessionState:
         page_data = session.get_page_data(0)
         assert page_data is not None
         assert page_data["items"] == TestConstants.create_log_messages(TestConstants.ITEMS_PER_PAGE)
-        assert page_data["total_pages"] == TestConstants.EXPECTED_NUM_PAGES
-        assert page_data["total_items"] == TestConstants.EXPECTED_NUM_LOG_ENTRIES
+        assert page_data["num_total_pages"] == TestConstants.EXPECTED_NUM_PAGES
+        assert page_data["num_total_items"] == TestConstants.EXPECTED_NUM_LOG_ENTRIES
         assert page_data["num_items_per_page"] == TestConstants.ITEMS_PER_PAGE
         assert page_data["has_next"] is True
         assert page_data["has_previous"] is False
@@ -222,7 +222,7 @@ class TestSessionManager:
         )
 
         assert first_page["items"] == TestConstants.create_log_messages(TestConstants.ITEMS_PER_PAGE)
-        assert first_page["total_items"] == TestConstants.EXPECTED_NUM_LOG_ENTRIES
+        assert first_page["num_total_items"] == TestConstants.EXPECTED_NUM_LOG_ENTRIES
 
     def test_get_nth_page(self, active_session_manager: SessionManager) -> None:
         """Validates retrieving specific pages."""

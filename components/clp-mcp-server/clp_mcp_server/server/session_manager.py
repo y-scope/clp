@@ -115,8 +115,8 @@ class SessionState:
         :param page_index: Zero-based index, e.g., 0 for the first page.
         :return: A dictionary containing the following key-value pairs on success:
             - "items": A list of log entries in the requested page.
-            - "total_pages": Total number of pages available from the query as an integer.
-            - "total_items": Total number of log entries available from the query as an integer.
+            - "num_total_pages": Total number of pages available from the query as an integer.
+            - "num_total_items": Total number of log entries available from the query as an integer.
             - "num_items_per_page": Number of log entries per page.
             - "has_next": Whether a page exists after the returned one.
             - "has_previous": Whether a page exists before the returned one.
@@ -137,8 +137,8 @@ class SessionState:
 
         return {
             "items": list(page),
-            "total_pages": page.page_count,
-            "total_items": page.item_count,
+            "num_total_pages": page.page_count,
+            "num_total_items": page.item_count,
             "num_items_per_page": page.items_per_page,
             "has_next": page.next_page is not None,
             "has_previous": page.previous_page is not None,

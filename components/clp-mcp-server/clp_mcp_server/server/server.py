@@ -18,7 +18,7 @@ def create_mcp_server() -> FastMCP:
     """
     mcp = FastMCP(name=constants.SERVER_NAME)
 
-    session_manager = SessionManager(_session_ttl_seconds=constants.SESSION_TTL_SECONDS)
+    session_manager = SessionManager(session_ttl_seconds=constants.SESSION_TTL_SECONDS)
 
     @mcp.tool
     async def get_instructions(ctx: Context) -> str:
@@ -42,8 +42,8 @@ def create_mcp_server() -> FastMCP:
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
         :return: A dictionary containing the following key-value pairs on success:
             - "items": A list of log entries in the requested page.
-            - "total_pages": Total number of pages available from the query as an integer.
-            - "total_items": Total number of log entries available from the query as an integer.
+            - "num_total_pages": Total number of pages available from the query as an integer.
+            - "num_total_items": Total number of log entries available from the query as an integer.
             - "num_items_per_page": Number of log entries per page.
             - "has_next": Whether a page exists after the returned one.
             - "has_previous": Whether a page exists before the returned one.
