@@ -634,11 +634,17 @@ class DockerComposeController(BaseController):
 
         # Credential
         if self._clp_config.stream_output.storage.type == StorageType.S3:
-            stream_output_aws_auth = self._clp_config.stream_output.storage.s3_config.aws_authentication
+            stream_output_aws_auth = (
+                self._clp_config.stream_output.storage.s3_config.aws_authentication
+            )
             if stream_output_aws_auth.type == AwsAuthType.credentials:
                 env_vars |= {
-                    "CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID": stream_output_aws_auth.credentials.access_key_id,
-                    "CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY": stream_output_aws_auth.credentials.secret_access_key,
+                    "CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID": (
+                        stream_output_aws_auth.credentials.access_key_id
+                    ),
+                    "CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY": (
+                        stream_output_aws_auth.credentials.secret_access_key
+                    ),
                 }
 
         # Identity
