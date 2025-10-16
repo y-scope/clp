@@ -1,0 +1,56 @@
+import {querySql} from "../../../../../api/sql";
+
+
+/**
+ * Builds a SQL query string to retrieve the total uncompressed bytes and duration
+ * for a specific query job within a given dataset.
+ *
+ * @param datasetName
+ * @param jobId
+ * @return
+ */
+const buildQuerySpeedSql = (datasetName: string, jobId: string) => {
+    const tableName = "" === datasetName ?
+        "clp_archives" :
+        `clp_${datasetName}_archives`;
+
+    return `SELECT
+    CAST(totals.total_uncompressed_bytes AS double) AS bytes,
+    qj.duration AS duration
+FROM query_jobs qj
+    JOIN (SELECT qt.job_id,
+                 SUM(ca.uncompressed_size) AS total_uncompressed_bytes
+        FROM (SELECT DISTINCT job_id, archive_id
+                FROM   query_tasks
+                WHERE  archive_id IS NOT NULL) qt
+        JOIN ${tableName} ca
+        ON qt.archive_id = ca.id
+        GROUP BY qt.job_id) totals
+    ON totals.job_id = qj.id
+WHERE  qj.id = ${jobId};`;
+};
+
+interface QuerySpeedResp {
+    bytes: number;
+    duration: number;
+}
+
+/**
+ * Fetches the query speed data (bytes and duration) for a specific job ID
+ * within a given dataset by executing a SQL query.
+ *
+ * @param datasetName
+ * @param jobId
+ * @return
+ */
+const fetchQuerySpeed = async (datasetName: string, jobId: string): Promise<QuerySpeedResp> => {
+    const resp = await querySql<QuerySpeedResp[]>(buildQuerySpeedSql(datasetName, jobId));
+    const [data] = resp.data;
+    if ("undefined" === typeof data) {
+        throw new Error("Invalid query speed.");
+    }
+
+    return data;
+};
+
+export {fetchQuerySpeed};
