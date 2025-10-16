@@ -23,11 +23,11 @@ def create_mcp_server() -> FastMCP:
     @mcp.tool
     def get_instructions(ctx: Context) -> str:
         """
-        Gets a pre-defined “system prompt” that guides the LLM behavior.
+        Gets a pre-defined "system prompt" that guides the LLM behavior.
         This function must be invoked before any other `FastMCP.tool`.
 
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
-        :return: A string of “system prompt”.
+        :return: A string of "system prompt".
         """
         session = session_manager.get_or_create_session(ctx.session_id)
         session.is_instructions_retrieved = True
@@ -42,7 +42,7 @@ def create_mcp_server() -> FastMCP:
         :param page_index: Zero-based index, e.g., 0 for the first page.
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
         :return: Dictionary containing paged log entries and the paging metadata if the
-        page `page_index` can be retrieved.
+            page `page_index` can be retrieved.
         :return: Dictionary with ``{"Error": "error message describing the failure"}`` if fails to
             retrieve page `page_index`.
         """

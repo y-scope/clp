@@ -159,7 +159,8 @@ class TestSessionManager:
         """Create a SessionManager with a test session where get_instructions() has run."""
         manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
         session = manager.get_or_create_session("test_session")
-        session.is_instructions_retrieved = True # Simulate get_instructions was run
+        # Simulate get_instructions was run
+        session.is_instructions_retrieved = True
         return manager
 
     def test_get_or_create_session(self, active_session_manager: SessionManager) -> None:
@@ -213,7 +214,8 @@ class TestSessionManager:
     def test_no_get_instruction(self, active_session_manager: SessionManager) -> None:
         """Validates error handling when get_instructions() has not been called."""
         session = active_session_manager.get_or_create_session("test_session")
-        session.is_instructions_retrieved = False # Simulate get_instructions was NOT run
+        # Simulate get_instructions was NOT run
+        session.is_instructions_retrieved = False
 
         first_page = active_session_manager.cache_query_result(
             "test_session", [f"log_{i}" for i in range(TestConstants.SAMPLE_RESULTS_COUNT_25)]
@@ -255,7 +257,8 @@ class TestSessionManager:
         def cleanup_task() -> None:
             """Continuously expires some sessions and cleans up expired sessions."""
             for _ in range(10000):
-                for i in range(50): # mark half of them expired
+                # mark half of them expired
+                for i in range(50):
                     session = manager.get_or_create_session(f"session_{i}")
                     if i < 25:
                         session.last_accessed = (
@@ -277,4 +280,5 @@ class TestSessionManager:
             futures.append(executor.submit(access_task))
 
             for future in futures:
-                future.result() # ensure thread completion with no run time exceptions
+                # ensure thread completion with no run time exceptions
+                future.result()

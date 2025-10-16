@@ -101,9 +101,9 @@ class SessionState:
 
         :param page_index: The number of page to retrieve (zero-based index; 0 is the first page).
         :return: Dictionary containing paged log entries and the paging metadata if the
-        page `page_index` can be retrieved.
+            page `page_index` can be retrieved.
         :return: Dictionary with ``{"Error": "error message describing the failure"}`` if fails to
-        retrieve page `page_index`.
+            retrieve page `page_index`.
         """
         if self._cached_query_result is None:
             return {"Error": "No previous paginated response in this session."}
@@ -204,9 +204,9 @@ class SessionManager:
         :param session_id: Unique identifier for the session.
         :param query_results: Complete log entries from previous query for caching.
         :return: Dictionary containing the first page log entries and the paging metadata if the
-        first page can be retrieved.
+            first page can be retrieved.
         :return: Dictionary with ``{"Error": "error message describing the failure"}`` if fails to
-        retrieve the first page.
+            retrieve the first page.
         """
         session = self.get_or_create_session(session_id)
         if session.is_instructions_retrieved is False:
