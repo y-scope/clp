@@ -595,6 +595,8 @@ class DockerComposeController(BaseController):
     def start(self):
         """
         Starts CLP's components using Docker Compose.
+
+        :raise: Propagates `subprocess.run`'s exceptions.
         """
         check_docker_dependencies(should_compose_run=False, project_name=self._project_name)
         self._set_up_env()
@@ -606,33 +608,28 @@ class DockerComposeController(BaseController):
         if deployment_type == DeploymentType.BASE:
             cmd += ["--file", "docker-compose.base.yaml"]
         cmd += ["up", "--detach", "--wait"]
-        try:
-            subprocess.run(
-                cmd,
-                cwd=self._clp_home,
-                check=True,
-            )
-        except subprocess.CalledProcessError:
-            logger.exception("Failed to start CLP.")
-            raise
+        subprocess.run(
+            cmd,
+            cwd=self._clp_home,
+            check=True,
+        )
+        logger.info("CLP is started.")
 
     def stop(self):
         """
         Stops CLP components deployed via Docker Compose.
+
+        :raise: Propagates `subprocess.run`'s exceptions.
         """
         check_docker_dependencies(should_compose_run=True, project_name=self._project_name)
 
         logger.info("Stopping all CLP containers using Docker Compose...")
-        try:
-            subprocess.run(
-                ["docker", "compose", "--project-name", self._project_name, "down"],
-                cwd=self._clp_home,
-                check=True,
-            )
-            logger.info("All CLP containers stopped.")
-        except subprocess.CalledProcessError:
-            logger.exception("Failed to stop CLP containers using Docker Compose.")
-            raise
+        subprocess.run(
+            ["docker", "compose", "--project-name", self._project_name, "down"],
+            cwd=self._clp_home,
+            check=True,
+        )
+        logger.info("All CLP containers stopped.")
 
     @staticmethod
     def _get_num_workers() -> int:
