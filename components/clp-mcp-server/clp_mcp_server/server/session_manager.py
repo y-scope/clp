@@ -17,7 +17,7 @@ class PaginatedQueryResult:
         """
         :param result_log_entries: List of cached log entries to paginate.
         :param num_items_per_page:
-        :raise: ValueError if the number of cached results or num_items_per_page is invalid.
+        :raise: ValueError if the number of cached results or `num_items_per_page` is invalid.
         """
         if len(result_log_entries) > constants.MAX_CACHED_RESULTS:
             err_msg = (
@@ -39,7 +39,7 @@ class PaginatedQueryResult:
 
     def get_page(self, page_index: int) -> Page | None:
         """
-        :param page_index: The number of page to retrieve (zero-based index; 0 is the first page).
+        :param page_index: Zero-based index, e.g., 0 for the first page.
         :return: A `Page` object for the specified page.
         :return: None if `page_index` is out of bounds.
         """
@@ -78,7 +78,7 @@ class SessionState:
     _is_instructions_retrieved: bool = False
 
     _GET_INSTRUCTIONS_NOT_RUN_ERROR: ClassVar[dict[str, str]] = {
-        "Error": "Please call get_instructions() first to understand how to use this MCP server."
+        "Error": "Please call `get_instructions()` first to understand how to use this MCP server."
     }
 
     def cache_query_result_and_get_first_page(
