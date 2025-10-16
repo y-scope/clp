@@ -356,9 +356,7 @@ def dump_container_config(
     return config_file_path_on_container, config_file_path_on_host
 
 
-def dump_shared_container_config(
-    container_clp_config: CLPConfig, clp_config: CLPConfig
-) -> Tuple[pathlib.Path, pathlib.Path]:
+def dump_shared_container_config(container_clp_config: CLPConfig, clp_config: CLPConfig):
     """
     Dumps the given container config to `CLP_SHARED_CONFIG_FILENAME` in the logs directory, so that
     it's accessible in the container.
@@ -498,9 +496,7 @@ def validate_db_config(
     clp_config: CLPConfig, base_config: pathlib.Path, data_dir: pathlib.Path, logs_dir: pathlib.Path
 ):
     if not base_config.exists():
-        raise ValueError(
-            f"{DB_COMPONENT_NAME} configuration file missing: '{base_config}'."
-        )
+        raise ValueError(f"{DB_COMPONENT_NAME} configuration file missing: '{base_config}'.")
     _validate_data_directory(data_dir, DB_COMPONENT_NAME)
     _validate_log_directory(logs_dir, DB_COMPONENT_NAME)
 
