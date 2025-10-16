@@ -32,7 +32,7 @@ class PaginatedQueryResult:
             )
             raise ValueError(err_msg)
 
-        self.num_items_per_page = num_items_per_page
+        self._num_items_per_page = num_items_per_page
 
         self._num_pages = (len(result_log_entries) + num_items_per_page - 1) // num_items_per_page
         self._result_log_entries = result_log_entries
@@ -51,7 +51,7 @@ class PaginatedQueryResult:
         return Page(
             self._result_log_entries,
             page=page_number,
-            items_per_page=self.num_items_per_page,
+            items_per_page=self._num_items_per_page,
         )
 
 
@@ -69,26 +69,17 @@ class SessionState:
     accessed from two threads at the same time.
     """
 
-    session_id: str
     _num_items_per_page: int
+    _session_id: str
     _session_ttl_minutes: int
 
-    is_instructions_retrieved: bool = False
-    last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     _cached_query_result: PaginatedQueryResult | None = None
+    _last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    _is_instructions_retrieved: bool = False
 
     _GET_INSTRUCTIONS_NOT_RUN_ERROR: ClassVar[dict[str, str]] = {
         "Error": "Please call get_instructions() first to understand how to use this MCP server."
     }
-
-    def get_instructions(self) -> str:
-        """
-        Gets a pre-defined "system prompt" that guides the LLM behavior.
-
-        :return: A string of "system prompt".
-        """
-        self.is_instructions_retrieved = True
-        return constants.SYSTEM_PROMPT
 
     def cache_query_result_and_get_first_page(
         self,
@@ -100,7 +91,7 @@ class SessionState:
         :return: _GET_INSTRUCTIONS_NOT_RUN_ERROR if `get_instructions` has not been called in this
             session.
         """
-        if self.is_instructions_retrieved is False:
+        if self._is_instructions_retrieved is False:
             return self._GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
 
         self._cached_query_result = PaginatedQueryResult(
@@ -108,6 +99,15 @@ class SessionState:
         )
 
         return self.get_page_data(0)
+
+    def get_instructions(self) -> str:
+        """
+        Gets a pre-defined "system prompt" that guides the LLM behavior.
+
+        :return: A string of "system prompt".
+        """
+        self._is_instructions_retrieved = True
+        return constants.SYSTEM_PROMPT
 
     def get_page_data(self, page_index: int) -> dict[str, Any]:
         """
@@ -129,7 +129,7 @@ class SessionState:
         :return: _GET_INSTRUCTIONS_NOT_RUN_ERROR if `get_instructions` has not been called in this
             session.
         """
-        if self.is_instructions_retrieved is False:
+        if self._is_instructions_retrieved is False:
             return self._GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
 
         if self._cached_query_result is None:
@@ -150,12 +150,12 @@ class SessionState:
 
     def is_expired(self) -> bool:
         """:return: Whether the session has expired."""
-        time_diff = datetime.now(timezone.utc) - self.last_accessed
+        time_diff = datetime.now(timezone.utc) - self._last_accessed
         return time_diff > timedelta(minutes=self._session_ttl_minutes)
 
     def update_access_time(self) -> None:
         """Updates the last accessed timestamp."""
-        self.last_accessed = datetime.now(timezone.utc)
+        self._last_accessed = datetime.now(timezone.utc)
 
 
 class SessionManager:
@@ -233,7 +233,7 @@ class SessionManager:
 
         if session_id not in self.sessions:
             self.sessions[session_id] = SessionState(
-                session_id, constants.NUM_ITEMS_PER_PAGE, self._session_ttl_minutes
+                constants.NUM_ITEMS_PER_PAGE, session_id, self._session_ttl_minutes
             )
 
         session = self.sessions[session_id]
