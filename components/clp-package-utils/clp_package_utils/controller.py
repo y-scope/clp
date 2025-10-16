@@ -663,7 +663,9 @@ class DockerComposeController(BaseController):
         }
         # Input
         if self._clp_config.logs_input.type == StorageType.FS:
-            env_vars["CLP_LOGS_INPUT_DIR_CONTAINER"] = str(container_clp_config.logs_input.directory)
+            env_vars["CLP_LOGS_INPUT_DIR_CONTAINER"] = str(
+                container_clp_config.logs_input.directory
+            )
             env_vars["CLP_LOGS_INPUT_DIR_HOST"] = str(self._clp_config.logs_input.directory)
         # Output
         archive_output_dir_str = str(self._clp_config.archive_output.get_directory())
