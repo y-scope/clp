@@ -32,10 +32,10 @@ class PaginatedQueryResult:
             )
             raise ValueError(err_msg)
 
-        self.result_log_entries = result_log_entries
         self.num_items_per_page = num_items_per_page
 
         self._num_pages = (len(result_log_entries) + num_items_per_page - 1) // num_items_per_page
+        self._result_log_entries = result_log_entries
 
     def get_page(self, page_index: int) -> Page | None:
         """
@@ -49,7 +49,7 @@ class PaginatedQueryResult:
             return None
 
         return Page(
-            self.result_log_entries,
+            self._result_log_entries,
             page=page_number,
             items_per_page=self.num_items_per_page,
         )
@@ -76,6 +76,10 @@ class SessionState:
     is_instructions_retrieved: bool = False
     last_accessed: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     _cached_query_result: PaginatedQueryResult | None = None
+
+    GET_INSTRUCTIONS_NOT_RUN_ERROR: ClassVar[dict[str, str]] = {
+        "Error": "Please call get_instructions() first to understand how to use this MCP server."
+    }
 
     def cache_query_result(
         self,
@@ -149,10 +153,6 @@ class SessionManager:
     cannot be accessed from two threads at the same time.
     """
 
-    _GET_INSTRUCTIONS_NOT_RUN_ERROR: ClassVar[dict[str, str]] = {
-        "Error": "Please call get_instructions() first to understand how to use this MCP server."
-    }
-
     def __init__(self, session_ttl_minutes: int) -> None:
         """:param session_ttl_minutes: Session time-to-live in minutes."""
         self.sessions: dict[str, SessionState] = {}
@@ -190,7 +190,7 @@ class SessionManager:
         """
         session = self.get_or_create_session(session_id)
         if session.is_instructions_retrieved is False:
-            return self._GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
+            return session.GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
 
         session.cache_query_result(results=query_results)
 
@@ -207,7 +207,7 @@ class SessionManager:
         """
         session = self.get_or_create_session(session_id)
         if session.is_instructions_retrieved is False:
-            return self._GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
+            return session.GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
 
         return session.get_page_data(page_index)
 
