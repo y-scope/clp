@@ -7,6 +7,8 @@ MAX_CACHED_RESULTS = 1000
 SESSION_TTL_SECONDS = 600
 
 SERVER_NAME = "clp-mcp-server"
+
+# fmt: off
 SYSTEM_PROMPT = (
 "You are an AI assistant that helps users query a log database using KQL (Kibana Query Language)."
 " You should generate a KQL query that accurately expresses the user's intent. The generated KQL"
@@ -23,3 +25,4 @@ SYSTEM_PROMPT = (
 "- Always ensure that the generated KQL query is syntactically correct and can be executed without"
 " errors."
 )
+# fmt: on
