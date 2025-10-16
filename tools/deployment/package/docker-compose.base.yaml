@@ -293,6 +293,8 @@ services:
     <<: *service_defaults
     hostname: "webui"
     environment:
+      AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID:-}"
+      AWS_SECRET_ACCESS_KEY: "${CLP_AWS_SECRET_ACCESS_KEY:-}"
       CLP_DB_PASS: "${CLP_DB_PASS:?error}"
       CLP_DB_USER: "${CLP_DB_USER:?error}"
       HOST: "0.0.0.0"
