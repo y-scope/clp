@@ -447,6 +447,7 @@ class BaseController(ABC):
             "ClientDir": str(container_webui_dir / "client"),
             "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
             "StreamTargetUncompressedSize": self._clp_config.stream_output.target_uncompressed_size,
+            "ClpQueryEngine": self._clp_config.package.query_engine,
         }
 
         stream_storage = self._clp_config.stream_output.storage
