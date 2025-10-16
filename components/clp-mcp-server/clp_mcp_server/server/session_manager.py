@@ -139,8 +139,9 @@ class SessionManager:
     points. This means when a `mcp.tool` API calls executes an await expression, it gets suspended,
     and the event loop executes the next `mcp.tool` API calls from received requests issued by
     clients.
-    `sessions` uses thread-safe operations because a session may be added or deleted from two
-    threads: the main event loop thread and background cleanup threads.
+    The mutations of the shared variable `sessions` are performed by an asynchronous task. The
+    above concurrency model guarantees that the mutations of `sessions` are atomic because a session
+    cannot be accessed from two threads at the same time.
     """
 
     _GET_INSTRUCTIONS_NOT_RUN_ERROR: ClassVar[dict[str, str]] = {
@@ -148,17 +149,13 @@ class SessionManager:
     }
 
     def __init__(self, session_ttl_minutes: int) -> None:
-        """
-        Initializes the SessionManager and starts background cleanup thread.
-
-        :param session_ttl_minutes: Session time-to-live in minutes.
-        """
+        """:param session_ttl_minutes: Session time-to-live in minutes."""
         self.sessions: dict[str, SessionState] = {}
         self._session_ttl_minutes = session_ttl_minutes
         self._cleanup_task: asyncio.Task | None = None
 
     async def start(self) -> None:
-        """Starts the background cleanup task. Must be called from async context."""
+        """Starts the asynchronous cleanup task."""
         if self._cleanup_task is None:
             self._cleanup_task = asyncio.create_task(self._cleanup_loop())
 
@@ -174,26 +171,6 @@ class SessionManager:
 
         for sid in expired_sessions:
             del self.sessions[sid]
-
-    def get_or_create_session(self, session_id: str) -> SessionState:
-        """
-        Gets an existing session or creates a new one.
-
-        :param session_id: Unique identifier for the session.
-        :return: The SessionState object for the given session_id.
-        """
-        if session_id in self.sessions and self.sessions[session_id].is_expired():
-            del self.sessions[session_id]
-
-        if session_id not in self.sessions:
-            self.sessions[session_id] = SessionState(
-                session_id, constants.NUM_ITEMS_PER_PAGE, self._session_ttl_minutes
-            )
-
-        session = self.sessions[session_id]
-
-        session.update_access_time()
-        return session
 
     def cache_query_result(self, session_id: str, query_results: list[str]) -> dict[str, Any]:
         """
@@ -228,3 +205,23 @@ class SessionManager:
             return self._GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
 
         return session.get_page_data(page_index)
+
+    def get_or_create_session(self, session_id: str) -> SessionState:
+        """
+        Gets an existing session or creates a new one.
+
+        :param session_id: Unique identifier for the session.
+        :return: The SessionState object for the given session_id.
+        """
+        if session_id in self.sessions and self.sessions[session_id].is_expired():
+            del self.sessions[session_id]
+
+        if session_id not in self.sessions:
+            self.sessions[session_id] = SessionState(
+                session_id, constants.NUM_ITEMS_PER_PAGE, self._session_ttl_minutes
+            )
+
+        session = self.sessions[session_id]
+
+        session.update_access_time()
+        return session

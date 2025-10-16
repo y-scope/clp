@@ -253,7 +253,7 @@ class TestSessionManager:
 
     @pytest.mark.asyncio
     async def test_async_expiration_for_cleanup_loop(self) -> None:
-        """Verifies that _cleanup_loop runs asynchronously and deletes expired sessions."""
+        """Verifies that _cleanup_loop runs as an asynchronous task and deletes expired sessions."""
         with patch.object(constants, 'EXPIRED_SESSION_SWEEP_INTERVAL_SECONDS', 0.05):
             manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
             await manager.start()
