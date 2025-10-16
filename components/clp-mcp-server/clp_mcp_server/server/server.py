@@ -30,9 +30,7 @@ def create_mcp_server() -> FastMCP:
         :return: A string of "system prompt".
         """
         await session_manager.start()
-        session = session_manager.get_or_create_session(ctx.session_id)
-        session.is_instructions_retrieved = True
-        return constants.SYSTEM_PROMPT
+        return session_manager.get_or_create_session(ctx.session_id).get_instructions()
 
     @mcp.tool
     async def get_nth_page(page_index: int, ctx: Context) -> dict[str, Any]:

@@ -81,6 +81,15 @@ class SessionState:
         "Error": "Please call get_instructions() first to understand how to use this MCP server."
     }
 
+    def get_instructions(self) -> str:
+        """
+        Gets a pre-defined "system prompt" that guides the LLM behavior.
+
+        :return: A string of "system prompt".
+        """
+        self.is_instructions_retrieved = True
+        return constants.SYSTEM_PROMPT
+
     def cache_query_result_and_get_first_page(
         self,
         results: list[str],
@@ -88,6 +97,8 @@ class SessionState:
         """
         :param results: Log entries from the query to cache.
         :return: Forwards `SessionState.get_page_data`'s return values.
+        :return: _GET_INSTRUCTIONS_NOT_RUN_ERROR if `get_instructions` has not been called in this
+            session.
         """
         if self.is_instructions_retrieved is False:
             return self._GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
@@ -115,6 +126,8 @@ class SessionState:
             - "has_previous": Whether a page exists before the returned one.
         :return: A dictionary with the following key-value pair on failures:
             - "Error": An error message describing the failure.
+        :return: _GET_INSTRUCTIONS_NOT_RUN_ERROR if `get_instructions` has not been called in this
+            session.
         """
         if self.is_instructions_retrieved is False:
             return self._GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
