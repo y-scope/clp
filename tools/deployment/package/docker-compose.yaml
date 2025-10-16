@@ -89,15 +89,9 @@ services:
       - *volume_aws_config_readonly
       - *volume_clp_config_readonly
       - *volume_clp_logs
-      - type: "bind"
-        source: "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}"
-        target: "/var/data/archives"
-      - type: "bind"
-        source: "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/staged-streams}"
-        target: "/var/data/staged-streams"
-      - type: "bind"
-        source: "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}"
-        target: "/var/data/streams"
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
+      - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
     command: [
       "python3",
       "-u",

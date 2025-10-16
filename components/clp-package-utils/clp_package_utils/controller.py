@@ -660,13 +660,22 @@ class DockerComposeController(BaseController):
             "CLP_LOGS_DIR_HOST": str(self._clp_config.logs_directory),
             # Config
             "CLP_AWS_CONFIG_DIR_HOST": (None if aws_config_dir is None else str(aws_config_dir)),
-            # Input
-            "CLP_LOGS_INPUT_DIR_CONTAINER": str(container_clp_config.logs_input.directory),
-            "CLP_LOGS_INPUT_DIR_HOST": str(self._clp_config.logs_input.directory),
-            # Output
-            "CLP_ARCHIVE_OUTPUT_DIR_HOST": str(self._clp_config.archive_output.get_directory()),
-            "CLP_STREAM_OUTPUT_DIR_HOST": str(self._clp_config.stream_output.get_directory()),
         }
+        # Input
+        if self._clp_config.logs_input.type == StorageType.FS:
+            env_vars["CLP_LOGS_INPUT_DIR_CONTAINER"] = str(container_clp_config.logs_input.directory)
+            env_vars["CLP_LOGS_INPUT_DIR_HOST"] = str(self._clp_config.logs_input.directory)
+        # Output
+        archive_output_dir_str = str(self._clp_config.archive_output.get_directory())
+        stream_output_dir_str = str(self._clp_config.stream_output.get_directory())
+        if self._clp_config.archive_output.storage.type == StorageType.FS:
+            env_vars["CLP_ARCHIVE_OUTPUT_DIR_HOST"] = archive_output_dir_str
+        if self._clp_config.archive_output.storage.type == StorageType.S3:
+            env_vars["CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST"] = archive_output_dir_str
+        if self._clp_config.stream_output.storage.type == StorageType.FS:
+            env_vars["CLP_STREAM_OUTPUT_DIR_HOST"] = stream_output_dir_str
+        if self._clp_config.stream_output.storage.type == StorageType.S3:
+            env_vars["CLP_STAGED_STREAM_OUTPUT_DIR_HOST"] = stream_output_dir_str
 
         # Component-specific
         env_vars |= self._set_up_env_for_database()

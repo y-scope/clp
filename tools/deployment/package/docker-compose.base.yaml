@@ -50,6 +50,14 @@ x-volume-definitions:
     target: "${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
     read_only: true
 
+volumes:
+  # Dummy volume to use when a bind mount is not desired.
+  empty:
+    driver_opts:
+      device: "tmpfs"
+      type: "tmpfs"
+      size: 0
+
 services:
   database:
     <<: *service_defaults
@@ -267,12 +275,8 @@ services:
       - *volume_clp_config_readonly
       - *volume_clp_logs
       - *volume_logs_input_readonly
-      - type: "bind"
-        source: "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}"
-        target: "/var/data/archives"
-      - type: "bind"
-        source: "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/staged-archives}"
-        target: "/var/data/staged-archives"
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:${CLP_ARCHIVE_OUTPUT_DIR_HOST:-/tmp}/var/data/archives"
+      - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-/tmp}/var/data/staged-archives"
       - type: "bind"
         source: "${CLP_DATA_DIR_HOST:-./var/data}"
         target: "/var/data"
@@ -308,9 +312,7 @@ services:
         target: 4000
     volumes:
       - *volume_aws_config_readonly
-      - type: "bind"
-        source: "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}"
-        target: "/var/data/streams"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
       - type: "bind"
         source: "./var/www/webui/client/settings.json"
         target: "/opt/clp/var/www/webui/client/settings.json"
