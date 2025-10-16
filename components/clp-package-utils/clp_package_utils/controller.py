@@ -633,10 +633,13 @@ class DockerComposeController(BaseController):
         env_vars = EnvVarsDict()
 
         # Credential
-        env_vars |= {
-            "CLP_AWS_ACCESS_KEY_ID": os.getenv("AWS_ACCESS_KEY_ID", ""),
-            "CLP_AWS_SECRET_ACCESS_KEY": os.getenv("AWS_SECRET_ACCESS_KEY", ""),
-        }
+        if self._clp_config.stream_output.storage.type == StorageType.S3:
+            stream_output_aws_auth = self._clp_config.stream_output.storage.s3_config.aws_authentication
+            if stream_output_aws_auth.type == AwsAuthType.credentials:
+                env_vars |= {
+                    "CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID": stream_output_aws_auth.credentials.access_key_id,
+                    "CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY": stream_output_aws_auth.credentials.secret_access_key,
+                }
 
         # Identity
         env_vars |= {

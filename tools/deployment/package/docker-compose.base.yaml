@@ -259,8 +259,6 @@ services:
     hostname: "compression_worker"
     stop_grace_period: "60s"
     environment:
-      AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID:-}"
-      AWS_SECRET_ACCESS_KEY: "${CLP_AWS_SECRET_ACCESS_KEY:-}"
       BROKER_URL: "amqp://${CLP_QUEUE_USER:?error}:${CLP_QUEUE_PASS:?error}@queue:5672"
       CLP_CONFIG_PATH: "/etc/clp-config.yml"
       CLP_HOME: "/opt/clp"
@@ -297,8 +295,8 @@ services:
     <<: *service_defaults
     hostname: "webui"
     environment:
-      AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID:-}"
-      AWS_SECRET_ACCESS_KEY: "${CLP_AWS_SECRET_ACCESS_KEY:-}"
+      AWS_ACCESS_KEY_ID: "${CLP_STREAM_OUTPUT_AWS_ACCESS_KEY_ID:-}"
+      AWS_SECRET_ACCESS_KEY: "${CLP_STREAM_OUTPUT_AWS_SECRET_ACCESS_KEY:-}"
       CLP_DB_PASS: "${CLP_DB_PASS:?error}"
       CLP_DB_USER: "${CLP_DB_USER:?error}"
       HOST: "0.0.0.0"
