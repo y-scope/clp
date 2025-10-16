@@ -93,7 +93,7 @@ class SessionState:
     def cache_query_result_and_get_first_page(
         self,
         results: list[str],
-    ) -> None:
+    ) -> dict[str, Any]:
         """
         :param results: Log entries from the query to cache.
         :return: Forwards `SessionState.get_page_data`'s return values.
@@ -202,7 +202,7 @@ class SessionManager:
         """
         :param session_id:
         :param query_results: Log entries from the query to cache.
-        :return: Forwards `SessionState.get_page_data`'s return values.
+        :return: Forwards `SessionState.cache_query_result_and_get_first_page`'s return values.
         """
         session = self.get_or_create_session(session_id)
 
