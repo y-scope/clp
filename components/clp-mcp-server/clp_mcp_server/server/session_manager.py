@@ -102,9 +102,8 @@ class SessionState:
         NOTE: This docstring must be synchronized with `get_nth_page`'s MCP tool call.
 
         :param page_index: Zero-based index, e.g., 0 for the first page.
-        :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
         :return: A dictionary containing the following key-value pairs on success:
-            - "item": A list of log entries in the requested page.
+            - "items": A list of log entries in the requested page.
             - "total_pages": Total number of pages available from the query as an integer.
             - "total_items": Total number of log entries available from the query as an integer.
             - "num_items_per_page": Number of log entries per page.
@@ -148,9 +147,9 @@ class SessionManager:
     points. This means when a `mcp.tool` API calls executes an await expression, it gets suspended,
     and the event loop executes the next `mcp.tool` API calls from received requests issued by
     clients.
-    The mutations of the shared variable `sessions` are performed by an asynchronous task. The
-    above concurrency model guarantees that the mutations of `sessions` are atomic because a session
-    cannot be accessed from two threads at the same time.
+    The operations on `sessions` which maintains concurrent user sessions are performed by
+    asynchronous tasks. The above concurrency model guarantees that the operations of `sessions`
+    are atomic because it cannot be accessed from two threads at the same time.
     """
 
     def __init__(self, session_ttl_minutes: int) -> None:

@@ -43,7 +43,7 @@ def create_mcp_server() -> FastMCP:
         :param page_index: Zero-based index, e.g., 0 for the first page.
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
         :return: A dictionary containing the following key-value pairs on success:
-            - "item": A list of log entries in the requested page.
+            - "items": A list of log entries in the requested page.
             - "total_pages": Total number of pages available from the query as an integer.
             - "total_items": Total number of log entries available from the query as an integer.
             - "num_items_per_page": Number of log entries per page.
@@ -56,14 +56,13 @@ def create_mcp_server() -> FastMCP:
         return session_manager.get_nth_page(ctx.session_id, page_index)
 
     @mcp.tool
-    async def hello_world(name: str = "clp-mcp-server user") -> dict[str, Any]:
+    def hello_world(name: str = "clp-mcp-server user") -> dict[str, Any]:
         """
         Provides a simple hello world greeting.
 
         :param name:
         :return: A greeting message to the given `name`.
         """
-        await session_manager.start()
         return {
             "message": f"Hello World, {name.strip()}!",
             "server": constants.SERVER_NAME,
