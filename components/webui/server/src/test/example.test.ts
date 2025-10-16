@@ -1,5 +1,5 @@
 import fastify from "fastify";
-import {StatusCodes} from "http-status-codes";
+import {constants} from "http2";
 import tap, {Test} from "tap";
 
 import routes from "../routes/api/example/index.js";
@@ -14,7 +14,7 @@ tap.test("Tests the example routes", async (t: Test) => {
         url: "/example/get/Alice",
     });
 
-    t.equal(resp.statusCode, StatusCodes.OK);
+    t.equal(resp.statusCode, constants.HTTP_STATUS_OK);
     t.match(JSON.parse(resp.body), {msg: String});
 
     resp = await server.inject({
@@ -22,6 +22,6 @@ tap.test("Tests the example routes", async (t: Test) => {
         url: "/example/post",
         payload: {name: "Bob"},
     });
-    t.equal(resp.statusCode, StatusCodes.OK);
+    t.equal(resp.statusCode, constants.HTTP_STATUS_OK);
     t.match(JSON.parse(resp.body), {msg: String});
 });

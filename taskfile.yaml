@@ -297,7 +297,7 @@ tasks:
       - task: "nodejs"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          NODEJS_VERSION: "v22.4.0"
+          NODEJS_VERSION: "v22.20.0"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
 
   download-and-extract-tar:
