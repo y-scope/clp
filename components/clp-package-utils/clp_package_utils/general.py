@@ -144,14 +144,14 @@ def check_docker_dependencies(should_compose_run: bool, project_name: str):
     except subprocess.CalledProcessError:
         raise EnvironmentError("docker is not installed or available on the path")
 
-    is_running = _is_docker_compose_running(project_name)
+    is_running = _is_docker_compose_project_running(project_name)
     if should_compose_run and not is_running:
         raise EnvironmentError(f"Docker Compose project '{project_name}' is not running.")
     if not should_compose_run and is_running:
         raise EnvironmentError("Docker Compose project '{project_name}' is already running.")
 
 
-def _is_docker_compose_running(project_name: str) -> bool:
+def _is_docker_compose_project_running(project_name: str) -> bool:
     """
     Checks if a Docker Compose project is running.
 
