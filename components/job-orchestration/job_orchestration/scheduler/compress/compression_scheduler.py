@@ -195,7 +195,8 @@ def _write_failed_compression_log(
     user_logs_dir = Path(logs_directory) / "user"
     try:
         user_logs_dir.mkdir(parents=True, exist_ok=True)
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Failed to create user logs directory: {e}")
         return None
 
     log_path = user_logs_dir / f"failed_compression_log_{job_id}.txt"
@@ -204,7 +205,8 @@ def _write_failed_compression_log(
             timestamp = datetime.datetime.now().isoformat(timespec="seconds")
             f.write(f"Failed compression job log.\nGenerated at {timestamp}.\n\n")
             f.write(f"{status_msg.rstrip()}\n")
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Failed to write compression failure log: {e}")
         return None
 
     return Path("user") / f"failed_compression_log_{job_id}.txt"
@@ -226,7 +228,8 @@ def _write_failed_path_log(
     user_logs_dir = Path(logs_directory) / "user"
     try:
         user_logs_dir.mkdir(parents=True, exist_ok=True)
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Failed to create user logs directory: {e}")
         return None
 
     log_path = user_logs_dir / f"failed_paths_{job_id}.txt"
@@ -236,7 +239,8 @@ def _write_failed_path_log(
             f.write(f"Failed input paths log.\nGenerated at {timestamp}.\n\n")
             for msg in invalid_path_messages:
                 f.write(f"{msg.rstrip()}\n")
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Failed to write invalid path log: {e}")
         return None
 
     return Path("user") / f"failed_paths_{job_id}.txt"
