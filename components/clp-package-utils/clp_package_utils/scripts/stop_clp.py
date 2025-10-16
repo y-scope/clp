@@ -22,8 +22,8 @@ def main():
         logger.exception("Failed to load config.")
         return -1
 
-    instance_id = get_or_create_instance_id(clp_config)
     try:
+        instance_id = get_or_create_instance_id(clp_config)
         controller = DockerComposeController(clp_config, instance_id)
         controller.stop()
     except:
