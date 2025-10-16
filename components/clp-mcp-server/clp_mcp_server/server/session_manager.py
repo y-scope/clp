@@ -185,8 +185,8 @@ class SessionManager:
         """
         Gets an existing session or creates a new one.
 
-        :param session_id: Unique identifier for the session.
-        :return: The SessionState object for the given session_id.
+        :param session_id:
+        :return: The `SessionState` object for the given `session_id`.
         """
         with self._sessions_lock:
             if session_id in self.sessions and self.sessions[session_id].is_expired():
