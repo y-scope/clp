@@ -49,7 +49,8 @@ class PaginatedQueryResult:
         :return: A `Page` object for the specified page.
         :return: None if `page_index` is out of bounds.
         """
-        page_number = page_index + 1  # Convert zero-based to one-based
+        # Convert zero-based to one-based
+        page_number = page_index + 1
         if page_number <= 0 or self._num_pages < page_number:
             return None
 
