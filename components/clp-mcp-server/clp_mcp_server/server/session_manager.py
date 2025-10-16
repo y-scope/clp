@@ -1,7 +1,6 @@
 """Session management for CLP MCP Server."""
 
-import threading
-import time
+import asyncio
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from typing import Any, ClassVar
@@ -156,25 +155,25 @@ class SessionManager:
         """
         self.sessions: dict[str, SessionState] = {}
         self._session_ttl_minutes = session_ttl_minutes
-        self._sessions_lock = threading.Lock()
-        self._cleanup_thread = threading.Thread(target=self._cleanup_loop, daemon=True)
-        self._cleanup_thread.start()
+        self._cleanup_task: asyncio.Task | None = None
 
-    def _cleanup_loop(self) -> None:
-        """Cleans up all expired sessions periodically in a separate cleanup thread."""
+    async def start(self) -> None:
+        """Starts the background cleanup task. Must be called from async context."""
+        if self._cleanup_task is None:
+            self._cleanup_task = asyncio.create_task(self._cleanup_loop())
+
+    async def _cleanup_loop(self) -> None:
+        """Cleans up all expired sessions periodically as an async task."""
         while True:
-            time.sleep(constants.EXPIRED_SESSION_SWEEP_INTERVAL_SECONDS)
+            await asyncio.sleep(constants.EXPIRED_SESSION_SWEEP_INTERVAL_SECONDS)
             self.cleanup_expired_sessions()
 
     def cleanup_expired_sessions(self) -> None:
         """Cleans up all expired sessions."""
-        with self._sessions_lock:
-            expired_sessions = [
-                sid for sid, session in self.sessions.items() if session.is_expired()
-            ]
+        expired_sessions = [sid for sid, session in self.sessions.items() if session.is_expired()]
 
-            for sid in expired_sessions:
-                del self.sessions[sid]
+        for sid in expired_sessions:
+            del self.sessions[sid]
 
     def get_or_create_session(self, session_id: str) -> SessionState:
         """
@@ -183,19 +182,18 @@ class SessionManager:
         :param session_id: Unique identifier for the session.
         :return: The SessionState object for the given session_id.
         """
-        with self._sessions_lock:
-            if session_id in self.sessions and self.sessions[session_id].is_expired():
-                del self.sessions[session_id]
+        if session_id in self.sessions and self.sessions[session_id].is_expired():
+            del self.sessions[session_id]
 
-            if session_id not in self.sessions:
-                self.sessions[session_id] = SessionState(
-                    session_id, constants.NUM_ITEMS_PER_PAGE, self._session_ttl_minutes
-                )
+        if session_id not in self.sessions:
+            self.sessions[session_id] = SessionState(
+                session_id, constants.NUM_ITEMS_PER_PAGE, self._session_ttl_minutes
+            )
 
-            session = self.sessions[session_id]
+        session = self.sessions[session_id]
 
-            session.update_access_time()
-            return session
+        session.update_access_time()
+        return session
 
     def cache_query_result(self, session_id: str, query_results: list[str]) -> dict[str, Any]:
         """

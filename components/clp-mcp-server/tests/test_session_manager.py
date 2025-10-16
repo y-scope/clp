@@ -2,7 +2,9 @@
 
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
+import asyncio
 import pytest
 
 from clp_mcp_server.server import constants
@@ -249,36 +251,35 @@ class TestSessionManager:
         assert "session2" not in manager.sessions
         assert "session3" in manager.sessions
 
-    @pytest.mark.repeat(10)
-    def test_thread_safety_cleanup_and_get_or_create_session(self) -> None:
-        """Validates thread safety of cleanup_expired_sessions and get_or_create_session."""
-        manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
+    @pytest.mark.asyncio
+    async def test_async_expiration_for_cleanup_loop(self) -> None:
+        """Verifies that _cleanup_loop runs asynchronously and deletes expired sessions."""
+        with patch.object(constants, 'EXPIRED_SESSION_SWEEP_INTERVAL_SECONDS', 0.05):
+            manager = SessionManager(session_ttl_minutes=TestConstants.SESSION_TTL_MINUTES)
+            await manager.start()
 
-        def cleanup_task() -> None:
-            """Continuously expires some sessions and cleans up expired sessions."""
-            for _ in range(10000):
-                # mark half of them expired
-                for i in range(50):
-                    session = manager.get_or_create_session(f"session_{i}")
-                    if i < 25:
-                        session.last_accessed = (
-                            datetime.now(timezone.utc) -
-                            timedelta(minutes=TestConstants.EXPIRED_SESSION_TTL_MINUTES)
-                        )
-                manager.cleanup_expired_sessions()
-
-        def access_task() -> None:
-            """Continuously creates and accesses sessions."""
-            for i in range(10000):
-                session_id = f"session_{i % 50}"
-                manager.get_or_create_session(session_id)
-
-        # Run cleanup and access operations concurrently
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = []
-            futures.append(executor.submit(cleanup_task))
-            futures.append(executor.submit(access_task))
-
-            for future in futures:
-                # ensure thread completion with no run time exceptions
-                future.result()
+            # Create sessions that we will expire and NOT access again
+            expired_session_ids = [f"expired_{i}" for i in range(20)]
+            for sid in expired_session_ids:
+                session = manager.get_or_create_session(sid)
+                session.last_accessed = (
+                    datetime.now(timezone.utc) -
+                    timedelta(minutes=TestConstants.EXPIRED_SESSION_TTL_MINUTES)
+                )
+            
+            # Create active sessions that we WILL keep accessing
+            active_session_ids = [f"active_{i}" for i in range(20)]
+            for _ in range(100):
+                for sid in active_session_ids:
+                    manager.get_or_create_session(sid)
+            
+            # Wait for at least one cleanup cycle
+            await asyncio.sleep(0.1)
+            
+            # Verify: expired sessions deleted by cleanup asynchronously
+            for sid in expired_session_ids:
+                assert sid not in manager.sessions
+            
+            # Verify: active sessions still exist
+            for sid in active_session_ids:
+                assert sid in manager.sessions

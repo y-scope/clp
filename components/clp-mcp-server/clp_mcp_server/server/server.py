@@ -18,10 +18,10 @@ def create_mcp_server() -> FastMCP:
     """
     mcp = FastMCP(name=constants.SERVER_NAME)
 
-    session_manager = SessionManager(constants.SESSION_TTL_MINUTES)
+    session_manager = SessionManager(session_ttl_minutes=constants.SESSION_TTL_MINUTES)
 
     @mcp.tool
-    def get_instructions(ctx: Context) -> str:
+    async def get_instructions(ctx: Context) -> str:
         """
         Gets a pre-defined "system prompt" that guides the LLM behavior.
         This function must be invoked before any other `FastMCP.tool`.
@@ -29,12 +29,13 @@ def create_mcp_server() -> FastMCP:
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
         :return: A string of "system prompt".
         """
+        await session_manager.start()
         session = session_manager.get_or_create_session(ctx.session_id)
         session.is_instructions_retrieved = True
         return constants.SYSTEM_PROMPT
 
     @mcp.tool
-    def get_nth_page(page_index: int, ctx: Context) -> dict[str, Any]:
+    async def get_nth_page(page_index: int, ctx: Context) -> dict[str, Any]:
         """
         Retrieves the n-th page of a paginated response with the paging metadata from the previous
         query.
@@ -46,16 +47,18 @@ def create_mcp_server() -> FastMCP:
         :return: Dictionary with ``{"Error": "error message describing the failure"}`` if fails to
             retrieve page `page_index`.
         """
+        await session_manager.start()
         return session_manager.get_nth_page(ctx.session_id, page_index)
 
     @mcp.tool
-    def hello_world(name: str = "clp-mcp-server user") -> dict[str, Any]:
+    async def hello_world(name: str = "clp-mcp-server user") -> dict[str, Any]:
         """
         Provides a simple hello world greeting.
 
         :param name:
         :return: A greeting message to the given `name`.
         """
+        await session_manager.start()
         return {
             "message": f"Hello World, {name.strip()}!",
             "server": constants.SERVER_NAME,
