@@ -45,8 +45,7 @@ FROM ${settings.SqlDbClpTablePrefix}${datasetName}_${SqlTableSuffix.ARCHIVES}`;
  * @param selectDataset
  * @return
  */
-const fetchAllTimeRange = async (selectDataset: Nullable<string>)
-: Promise<[Dayjs, Dayjs]> => {
+const fetchAllTimeRange = async (selectDataset: Nullable<string>): Promise<[Dayjs, Dayjs]> => {
     let sql: string;
     if (CLP_STORAGE_ENGINES.CLP === SETTINGS_STORAGE_ENGINE) {
         sql = buildClpTimeRangeSql();
