@@ -281,7 +281,7 @@ auto could_be_logtext(char const* peek_buf, size_t peek_size) -> bool {
             mark_last_legal_character(3ULL);
         } else if ((clp::cThreeByteUtf8CharHeaderMask & c) == clp::cThreeByteUtf8CharHeader) {
             mark_last_legal_character(2ULL);
-        } else if ((clp::cTwoByteUtf8CharHeaderMask & c) == clp::cThreeByteUtf8CharHeader) {
+        } else if ((clp::cTwoByteUtf8CharHeaderMask & c) == clp::cTwoByteUtf8CharHeader) {
             mark_last_legal_character(1ULL);
         } else if (clp::utf8_utils_internal::is_ascii_char(c)) {
             mark_last_legal_character(0ULL);
