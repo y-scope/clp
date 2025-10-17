@@ -18,6 +18,7 @@ if(CLP_BUILD_EXECUTABLES)
         clp_s::io
         log_surgeon::log_surgeon
         spdlog::spdlog
+        ystdlib::containers
     )
     set_target_properties(
         log-converter
