@@ -5,9 +5,11 @@ from typing import Any
 
 from fastmcp import Context, FastMCP
 
+from clp_mcp_server.clp_connector import ClpConnector
+
 from . import constants
 from .session_manager import SessionManager
-
+from .utils import clean_query_results
 
 
 def create_mcp_server() -> FastMCP:
@@ -101,6 +103,6 @@ def create_mcp_server() -> FastMCP:
                 ctx.session_id, cleaned_results
             )
         except Exception as e:
-            return {"Error" : str(e)}
+            return {"Error": str(e)}
 
     return mcp

@@ -1,6 +1,4 @@
-""" """
-import json
-from datetime import datetime, timezone
+"""Utility functions for CLP MCP server."""
 
 from datetime import datetime, timezone
 
@@ -14,10 +12,12 @@ def _convert_epoch_to_date_string(epoch_ts: int) -> str:
     :raise OSError: If the timestamp cannot be converted (platform-specific limits)
     """
     if epoch_ts is None:
-        raise TypeError("Timestamp cannot be None")
+        err_msg = "Timestamp cannot be None"
+        raise TypeError(err_msg)
 
     if not isinstance(epoch_ts, int):
-        raise TypeError(f"Timestamp must be int, got {type(epoch_ts).__name__}")
+        err_msg = f"Timestamp must be int, got {type(epoch_ts).__name__}"
+        raise TypeError(err_msg)
 
     try:
         epoch_seconds = epoch_ts / 1000.0
@@ -37,14 +37,14 @@ def clean_query_results(results: list[dict]) -> list[str]:
     :raise ValueError: If timestamp is out of valid range
     """
     cleaned = []
-    for obj in results:
-        try:
+    try:
+        for obj in results:
             timestamp_str = _convert_epoch_to_date_string(obj.get("timestamp"))
             message = obj.get("message", "")
             cleaned.append(f"timestamp: {timestamp_str}, message: {message}")
-        except (TypeError, ValueError) as e:
-            # Re-raise with context about which entry failed
-            raise type(e)(f"Failed to clean result entry: {e}") from e
+    except (TypeError, ValueError) as e:
+        # Re-raise with context about which entry failed
+        raise type(e)(f"Failed to clean result entry: {e}") from e
 
     return cleaned
 
