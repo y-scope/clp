@@ -1,0 +1,27 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    vars:
+      DEPS: ["fmt", "microsoft.gsl"]
+    run: "once"
+    deps:
+      - for:
+          var: "DEPS"
+        task: ":{{.ITEM}}"
+    cmds:
+      - task: ":utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_GSL_LIB_NAME}}.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-Dlog_surgeon_BUILD_TESTING=OFF"
+          DEPS:
+            ref: ".DEPS"
+          INSTALL_TASK_NAME: "log-surgeon"
+          LIB_NAME: "log_surgeon"
+          TARBALL_SHA256: "69a99e0804a52c6b6397c5e7eabecc9bb4915d0145632c66fc63ad13678ff56a"
+          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/a722d07.tar.gz"

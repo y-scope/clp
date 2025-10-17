@@ -1,0 +1,21 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    run: "once"
+    cmds:
+      - task: ":utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCATCH_BUILD_TESTING=OFF"
+            - "-DCATCH_INSTALL_DOCS=OFF"
+            - "-DCATCH_INSTALL_EXTRAS=OFF"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_CXX_STANDARD=20"
+            - "-DCMAKE_CXX_STANDARD_REQUIRED=ON"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          INSTALL_TASK_NAME: "catch2"
+          LIB_NAME: "Catch2"
+          TARBALL_SHA256: "1ab2de20460d4641553addfdfe6acd4109d871d5531f8f519a52ea4926303087"
+          TARBALL_URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v3.8.0.tar.gz"
