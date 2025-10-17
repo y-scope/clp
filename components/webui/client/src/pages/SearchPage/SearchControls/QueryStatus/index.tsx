@@ -1,7 +1,12 @@
 import {Typography} from "antd";
 
+import {
+    CLP_QUERY_ENGINES,
+    SETTINGS_QUERY_ENGINE,
+} from "../../../../config";
 import useSearchStore from "../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
+import QuerySpeed from "./QuerySpeed";
 import Results from "./Results";
 
 
@@ -32,7 +37,13 @@ const QueryStatus = () => {
                 </Text>
             )}
             <Results/>
-            <Text type={"secondary"}> results</Text>
+            <Text type={"secondary"}> results.</Text>
+            {searchUiState === SEARCH_UI_STATE.DONE &&
+                CLP_QUERY_ENGINES.PRESTO !== SETTINGS_QUERY_ENGINE &&
+                <>
+                    {" "}
+                    <QuerySpeed/>
+                </>}
         </div>
     );
 };
