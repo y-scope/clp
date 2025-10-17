@@ -37,7 +37,9 @@ class ClpConnector:
             "db": clp_config.database.name,
         }
 
-    async def submit_query(self, query: str, begin_ts: int, end_ts: int) -> str:
+    async def submit_query(
+        self, query: str, begin_ts: int | None = None, end_ts: int | None = None
+    ) -> str:
         """
         Submits a query to the CLP database and returns the ID of the query.
 
@@ -50,14 +52,14 @@ class ClpConnector:
         :raise pymongo.errors.PyMongoError: If there is an error interacting with MongoDB.
         :raise Exception: For any other unexpected errors.
         """
-        if end_ts < begin_ts:
+        if begin_ts is not None and end_ts is not None and end_ts < begin_ts:
             err_msg = f"end_ts {end_ts} is smaller than begin_ts {begin_ts}."
             raise ValueError(err_msg)
 
         job_config = msgpack.packb(
             {
                 "begin_timestamp": begin_ts,
-                "dataset": None,
+                "dataset": "default",
                 "end_timestamp": end_ts,
                 "ignore_case": True,
                 "max_num_results": SEARCH_MAX_NUM_RESULTS,
@@ -132,7 +134,7 @@ class ClpConnector:
             if status == QueryJobStatus.SUCCEEDED:
                 break
             if status in error_states:
-                err_msg = f"Query job with ID {query_id} ended in status {status.name}."
+                err_msg = f"Query job with ID {query_id} ended in status {status}."
                 raise RuntimeError(err_msg)
             if status not in waiting_states:
                 err_msg = f"Query job with ID {query_id} has unknown status {status}."
