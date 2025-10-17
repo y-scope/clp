@@ -433,8 +433,10 @@ def load_config_file(
 
     # Make data and logs directories node-specific
     hostname = socket.gethostname()
-    clp_config.data_directory /= hostname
-    clp_config.logs_directory /= hostname
+    if clp_config.data_directory.name != hostname:
+        clp_config.data_directory /= hostname
+    if clp_config.logs_directory.name != hostname:
+        clp_config.logs_directory /= hostname
 
     return clp_config
 
