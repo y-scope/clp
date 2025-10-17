@@ -1,0 +1,445 @@
+version: "3"
+
+vars:
+  # Library names
+  G_BOOST_LIB_NAME: "Boost"
+  G_FMT_LIB_NAME: "fmt"
+  G_GSL_LIB_NAME: "Microsoft.GSL"
+
+# NOTE: For dependencies built using CMake, we set CMP0074 to NEW whenever:
+# - a component's minimum required CMake version is less than 3.27 (where CMP0074 defaults to OLD);
+#   and
+# - the component depends on another via `<lib_name>_ROOT`.
+tasks:
+  absl:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_CXX_STANDARD=20"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "absl"
+          TARBALL_SHA256: "7262daa7c1711406248c10f41026d685e88223bc92817d16fb93c19adb57f669"
+          TARBALL_URL: "https://github.com/abseil/abseil-cpp/releases/download/20250512.0/\
+                        abseil-cpp-20250512.0.tar.gz"
+
+  antlr-runtime:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DANTLR4_INSTALL=ON"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+
+            # Set CMP0135 so that extracted files use the current timestamp as their modification
+            # timestamp, which ensures the library gets rebuilt if the extracted files change.
+            - "-DCMAKE_POLICY_DEFAULT_CMP0135=NEW"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          CMAKE_SOURCE_DIR: "runtime/Cpp"
+          LIB_NAME: "antlr4-runtime"
+          TARBALL_SHA256: "9f18272a9b32b622835a3365f850dd1063d60f5045fb1e12ce475ae6e18a35bb"
+          TARBALL_URL: "https://github.com/antlr/antlr4/archive/refs/tags/\
+                        {{.G_ANTLR_VERSION}}.tar.gz"
+
+  catch2:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_TESTING=OFF"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_CXX_STANDARD=20"
+            - "-DCMAKE_CXX_STANDARD_REQUIRED=ON"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "Catch2"
+          TARBALL_SHA256: "1ab2de20460d4641553addfdfe6acd4109d871d5531f8f519a52ea4926303087"
+          TARBALL_URL: "https://github.com/catchorg/Catch2/archive/refs/tags/v3.8.0.tar.gz"
+
+  date:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "date"
+          TARBALL_SHA256: "7a390f200f0ccd207e8cff6757e04817c1a0aec3e327b006b7eb451c57ee3538"
+          TARBALL_URL: "https://github.com/HowardHinnant/date/archive/refs/tags/v3.0.1.tar.gz"
+
+  fmt:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DFMT_DOC=OFF"
+            - "-DFMT_TEST=OFF"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "{{.G_FMT_LIB_NAME}}"
+          TARBALL_SHA256: "bc23066d87ab3168f27cef3e97d545fa63314f5c79df5ea444d41d56f962c6af"
+          TARBALL_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/11.2.0.tar.gz"
+
+  liblzma:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    vars:
+      COMMON_CMAKE_GEN_ARGS:
+        - "-DBUILD_TESTING=OFF"
+        - "-DCMAKE_BUILD_TYPE=Release"
+        - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+        - "-DXZ_DOC=OFF"
+        - "-DXZ_TOOL_LZMADEC=OFF"
+        - "-DXZ_TOOL_LZMAINFO=OFF"
+        - "-DXZ_TOOL_SCRIPTS=OFF"
+        - "-DXZ_TOOL_SYMLINKS_LZMA=OFF"
+        - "-DXZ_TOOL_XZ=OFF"
+        - "-DXZ_TOOL_XZDEC=OFF"
+      TARBALL_SHA256: "507825b599356c10dca1cd720c9d0d0c9d5400b9de300af00e4d1ea150795543"
+      TARBALL_URL: "https://github.com/tukaani-project/xz/releases/download/v5.8.1/xz-5.8.1.tar.gz"
+    deps:
+      - task: "liblzma-install"
+        vars:
+          BUILD_SHARED_LIBS: true
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          COMMON_CMAKE_GEN_ARGS:
+            ref: ".COMMON_CMAKE_GEN_ARGS"
+          TARBALL_SHA256: "{{.TARBALL_SHA256}}"
+          TARBALL_URL: "{{.TARBALL_URL}}"
+      - task: "liblzma-install"
+        vars:
+          BUILD_SHARED_LIBS: false
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          COMMON_CMAKE_GEN_ARGS:
+            ref: ".COMMON_CMAKE_GEN_ARGS"
+          TARBALL_SHA256: "{{.TARBALL_SHA256}}"
+          TARBALL_URL: "{{.TARBALL_URL}}"
+
+  liblzma-install:
+    internal: true
+    requires:
+      vars:
+        - "BUILD_SHARED_LIBS"
+        - "CMAKE_SETTINGS_DIR"
+        - "COMMON_CMAKE_GEN_ARGS"
+        - "TARBALL_SHA256"
+        - "TARBALL_URL"
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_SHARED_LIBS={{ if .BUILD_SHARED_LIBS }}ON{{ else }}OFF{{ end }}"
+            - >-
+              {{ join " " .COMMON_CMAKE_GEN_ARGS }}
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "LibLZMA-{{ if .BUILD_SHARED_LIBS }}shared{{ else }}static{{ end }}"
+          TARBALL_SHA256: "{{.TARBALL_SHA256}}"
+          TARBALL_URL: "{{.TARBALL_URL}}"
+
+  log-surgeon:
+    internal: true
+    vars:
+      DEPS:
+        - "fmt"
+        - "microsoft.gsl"
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    deps:
+      - for:
+          var: "DEPS"
+        task: "{{.ITEM}}"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-C {{.CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
+            - "-C {{.CMAKE_SETTINGS_DIR}}/{{.G_GSL_LIB_NAME}}.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-Dlog_surgeon_BUILD_TESTING=OFF"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "log_surgeon"
+          TARBALL_SHA256: "69a99e0804a52c6b6397c5e7eabecc9bb4915d0145632c66fc63ad13678ff56a"
+          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/a722d07.tar.gz"
+
+  lz4:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_SHARED_LIBS=ON"
+            - "-DBUILD_STATIC_LIBS=ON"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DLZ4_BUILD_CLI=OFF"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          CMAKE_SOURCE_DIR: "build/cmake"
+          LIB_NAME: "lz4"
+          TARBALL_SHA256: "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b"
+          TARBALL_URL: "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz"
+
+  mariadb-connector-cpp:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    platforms: ["linux"]
+    preconditions:
+      # NOTE: The MariaDB connector is only required for building Spider, which is only supported on
+      # Ubuntu. `INSTALL_LAYOUT` is currently hardcoded to "DEB". To support other Linux distros:
+      # - Update the precondition accordingly.
+      # - Make `INSTALL_LAYOUT` configurable.
+      - >-
+        source /etc/os-release && [[ "$ID" == "ubuntu" ]]
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
+            - "-DINSTALL_LAYOUT=DEB"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "mariadb-connector-cpp"
+          TARBALL_SHA256: "0e3dfe9f2bc3f7bb6f7c159009556290064a7c23402ea08019fa8aebfc3ff2c9"
+          TARBALL_URL: "https://github.com/mariadb-corporation/mariadb-connector-cpp/archive/refs/\
+            tags/1.1.5.tar.gz"
+
+  microsoft.gsl:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DGSL_TEST=OFF"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "{{.G_GSL_LIB_NAME}}"
+          TARBALL_SHA256: "f0e32cb10654fea91ad56bde89170d78cfbf4363ee0b01d8f097de2ba49f6ce9"
+          TARBALL_URL: "https://github.com/microsoft/GSL/archive/refs/tags/v4.0.0.tar.gz"
+
+  mongocxx:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    vars:
+      VERSION: "r4.1.1"
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_SHARED_AND_STATIC_LIBS=ON"
+            - "-DBUILD_SHARED_LIBS_WITH_STATIC_MONGOC=ON"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DENABLE_UNINSTALL=OFF"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "mongocxx"
+          TARBALL_SHA256: "19dff3cf834a3e09229260f22a0325820a7e30c78b294db91794dd934776b33a"
+          TARBALL_URL: "https://github.com/mongodb/mongo-cxx-driver/releases/download/{{.VERSION}}\
+          /mongo-cxx-driver-{{.VERSION}}.tar.gz"
+
+  msgpack-cxx:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    vars:
+      VERSION: "7.0.0"
+    deps:
+      - task: "boost"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-C {{.CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
+            - "-DMSGPACK_BUILD_DOCS=OFF"
+            - "-DMSGPACK_CXX20=ON"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "msgpack-cxx"
+          TARBALL_SHA256: "7504b7af7e7b9002ce529d4f941e1b7fb1fb435768780ce7da4abaac79bb156f"
+          TARBALL_URL: "https://github.com/msgpack/msgpack-c/releases/download/cpp-{{.VERSION}}\
+          /msgpack-cxx-{{.VERSION}}.tar.gz"
+
+  nlohmann_json:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DJSON_BuildTests=OFF"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "nlohmann_json"
+          TARBALL_SHA256: "0d8ef5af7f9794e3263480193c491549b2ba6cc74bb018906202ada498a79406"
+
+          # NOTE: We use the GitHub-generated source tarball for this version rather than the
+          # release tarball, since the latter is served from githubusercontent.com which is blocked
+          # by some developers' firewalls. The contents of the former are a superset of the latter.
+          TARBALL_URL: "https://github.com/nlohmann/json/archive/refs/tags/v3.11.3.tar.gz"
+
+  simdjson:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "simdjson"
+          TARBALL_SHA256: "07a1bb3587aac18fd6a10a83fe4ab09f1100ab39f0cb73baea1317826b9f9e0d"
+          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.13.0.tar.gz"
+
+  spdlog:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    deps:
+      - task: "fmt"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-C {{.CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
+            - "-DSPDLOG_BUILD_EXAMPLE=OFF"
+            - "-DSPDLOG_BUILD_EXAMPLE_HO=OFF"
+            - "-DSPDLOG_FMT_EXTERNAL=ON"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "spdlog"
+          TARBALL_SHA256: "15a04e69c222eb6c01094b5c7ff8a249b36bb22788d72519646fb85feb267e67"
+
+          # NOTE: Since spdlog depends on fmt, we need to choose a version of spdlog that's
+          # compatible with the version of fmt we use.
+          TARBALL_URL: "https://github.com/gabime/spdlog/archive/refs/tags/v1.15.3.tar.gz"
+
+  utfcpp:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "utfcpp"
+          TARBALL_SHA256: "6920a6a5d6a04b9a89b2a89af7132f8acefd46e0c2a7b190350539e9213816c0"
+          TARBALL_URL: "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.0.6.tar.gz"
+
+  yaml-cpp:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_TESTING=OFF"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "yaml-cpp"
+          TARBALL_SHA256: "43e6a9fcb146ad871515f0d0873947e5d497a1c9c60c58cb102a97b47208b7c3"
+          TARBALL_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.tar.gz"
+
+  ystdlib:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    deps:
+      - task: "boost"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-C {{.CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+            - "-Dystdlib_BUILD_TESTING=OFF"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "ystdlib"
+          TARBALL_SHA256: "65990dc2bcc4a355c2181bfe31a7800f492309d1bcd340f52a34e85047e61bc8"
+          TARBALL_URL: "https://github.com/y-scope/ystdlib-cpp/archive/9ed78cd.tar.gz"
+
+  zlib:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    vars:
+      LIB_NAME: "zlib"
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_SHARED_LIBS=ON"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
+            - "-DZLIB_BUILD_EXAMPLES=OFF"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          LIB_NAME: "{{.LIB_NAME}}"
+          TARBALL_SHA256: "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23"
+          TARBALL_URL: "https://github.com/madler/zlib/releases/download/v1.3.1/zlib-1.3.1.tar.gz"
+
+  zstd:
+    internal: true
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    cmds:
+      - task: "utils:install-remote-cmake-lib-and-generate-settings"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DZSTD_BUILD_CONTRIB=OFF"
+            - "-DZSTD_BUILD_PROGRAMS=OFF"
+            - "-DZSTD_BUILD_SHARED=ON"
+            - "-DZSTD_BUILD_STATIC=ON"
+            - "-DZSTD_BUILD_TESTS=OFF"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          CMAKE_SOURCE_DIR: "build/cmake"
+          LIB_NAME: "zstd"
+          TARBALL_SHA256: "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
+          TARBALL_URL: "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz"
