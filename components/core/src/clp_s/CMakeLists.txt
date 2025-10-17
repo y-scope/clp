@@ -214,6 +214,7 @@ if(CLP_BUILD_CLP_S_IO)
                 Boost::iostreams Boost::url
                 clp_s::clp_dependencies
                 fmt::fmt
+                simdjson::simdjson
                 spdlog::spdlog
                 ${zstd_TARGET}
         )

@@ -270,6 +270,7 @@ function(set_clp_s_io_dependencies)
     set_clp_need_flags(
         CLP_NEED_BOOST
         CLP_NEED_FMT
+        CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
         CLP_NEED_ZSTD
     )

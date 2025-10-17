@@ -637,6 +637,13 @@ bool JsonParser::ingest() {
             case FileType::KeyValueIr:
                 ingestion_successful = ingest_kvir(nested_readers.back(), path, archive_creator_id);
                 break;
+            case FileType::LogText:
+                SPDLOG_ERROR(
+                        "Direct ingestion of unstructured logtext is not supported from input {}",
+                        path.path
+                );
+                std::ignore = m_archive_writer->close();
+                return false;
             case FileType::Zstd:
             case FileType::Unknown:
             default: {
