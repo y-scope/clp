@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 FROM ubuntu:jammy AS base
 
 # Install runtime dependencies

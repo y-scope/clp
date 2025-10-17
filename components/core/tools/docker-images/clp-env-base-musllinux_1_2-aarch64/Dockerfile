@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 FROM quay.io/pypa/musllinux_1_2_aarch64
 
 WORKDIR /root

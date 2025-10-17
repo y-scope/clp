@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1
+
 FROM dokken/centos-stream-9 AS base
 
 WORKDIR /root
