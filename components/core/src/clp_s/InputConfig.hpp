@@ -23,6 +23,7 @@ constexpr char cAwsSessionTokenEnvVar[] = "AWS_SESSION_TOKEN";
 enum class FileType : uint8_t {
     Json = 0,
     KeyValueIr,
+    LogText,
     Zstd,
     Unknown
 };
