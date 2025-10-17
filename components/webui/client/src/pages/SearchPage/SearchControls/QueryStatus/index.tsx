@@ -31,37 +31,95 @@ const QueryStatus = () => {
         sqlInterface === PRESTO_SQL_INTERFACE.GUIDED;
 
     return (
-        <div>
-            {(
-                searchUiState === SEARCH_UI_STATE.QUERYING ||
-                searchUiState === SEARCH_UI_STATE.DONE
-            ) && (
-                <Text type={"secondary"}>
-                    Search job
-                    {" "}
-                    {searchJobId}
-                    {" "}
-                    {isPrestoGuided && <OpenQueryDrawerButton/>}
-                    {" "}
-                    found
-                    {" "}
-                </Text>
+        <>
+            {searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING && (
+                <>
+                    {isPrestoGuided && (
+                        <>
+                            <OpenQueryDrawerButton/>
+                            {" "}
+                        </>
+                    )}
+                    <Text
+                        strong={true}
+                        type={"warning"}
+                    >
+                        Running
+                    </Text>
+                </>
             )}
-            {(searchUiState === SEARCH_UI_STATE.FAILED) && (
-                <Text type={"secondary"}>
-                    Failure in search job
+            {searchUiState === SEARCH_UI_STATE.QUERYING && (
+                <>
+                    {isPrestoGuided && (
+                        <>
+                            <OpenQueryDrawerButton/>
+                            {" "}
+                        </>
+                    )}
+                    <Text
+                        strong={true}
+                        type={"warning"}
+                    >
+                        Running
+                    </Text>
+                    <Text type={"secondary"}>
+                        {` - search job ${searchJobId} found `}
+                    </Text>
+                    <Results/>
                     {" "}
-                    {searchJobId}
-                    {" "}
-                    {isPrestoGuided && <OpenQueryDrawerButton/>}
-                    {" "}
-                </Text>
+                    <Text type={"secondary"}>results</Text>
+                </>
             )}
-            <Results/>
-            <Text type={"secondary"}> results</Text>
-
+            {searchUiState === SEARCH_UI_STATE.DONE && (
+                <>
+                    {isPrestoGuided && (
+                        <>
+                            <OpenQueryDrawerButton/>
+                            {" "}
+                        </>
+                    )}
+                    <Text
+                        strong={true}
+                        type={"success"}
+                    >
+                        Success
+                    </Text>
+                    <Text type={"secondary"}>
+                        {` - search job ${searchJobId} found `}
+                    </Text>
+                    <Results/>
+                    {" "}
+                    <Text type={"secondary"}>results</Text>
+                </>
+            )}
+            {searchUiState === SEARCH_UI_STATE.FAILED && (
+                <>
+                    {isPrestoGuided && (
+                        <>
+                            <OpenQueryDrawerButton/>
+                            {" "}
+                        </>
+                    )}
+                    <Text
+                        strong={true}
+                        type={"danger"}
+                    >
+                        Failure
+                    </Text>
+                    <Text type={"secondary"}>
+                        {` - search job ${searchJobId}`}
+                    </Text>
+                </>
+            )}
+            {(searchUiState === SEARCH_UI_STATE.DEFAULT) && (
+                <>
+                    <Results/>
+                    {" "}
+                    <Text type={"secondary"}>results</Text>
+                </>
+            )}
             {isPrestoGuided && <QueryDrawer/>}
-        </div>
+        </>
     );
 };
 
