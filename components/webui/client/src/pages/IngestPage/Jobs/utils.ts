@@ -11,47 +11,58 @@ import {formatSizeInBytes} from "./units";
 /**
  * Convert a QueryJobsItem to JobData
  *
- * @param job
+ * @param props
+ * @param props._id
+ * @param props.compressed_size
+ * @param props.duration
+ * @param props.start_time
+ * @param props.status
+ * @param props.uncompressed_size
  * @return
  */
-const convertQueryJobsItemToJobData = (job: QueryJobsItem): JobData => {
+const convertQueryJobsItemToJobData = ({
+    _id: id,
+    compressed_size: compressedSize,
+    duration,
+    start_time: startTime,
+    status,
+    uncompressed_size: uncompressedSize,
+}: QueryJobsItem): JobData => {
     let uncompressedSizeText = "";
     let compressedSizeText = "";
     let speedText = "";
 
-    if (null === job.duration) {
-        if (null !== job.start_time) {
-            job.duration = dayjs().unix() - dayjs(job.start_time).unix();
+    if (null === duration) {
+        if (null !== startTime) {
+            duration = dayjs().unix() - dayjs(startTime).unix();
         } else {
             speedText = "N/A";
         }
     }
 
-    const uncompressedSize = Number(job.uncompressed_size);
     if (false === isNaN(uncompressedSize) && 0 !== uncompressedSize) {
         uncompressedSizeText = formatSizeInBytes(uncompressedSize, false);
     }
 
-    const compressedSize = Number(job.compressed_size);
     if (false === isNaN(compressedSize) && 0 !== compressedSize) {
         compressedSizeText = formatSizeInBytes(compressedSize, false);
     }
 
     if (false === isNaN(uncompressedSize) &&
         0 !== uncompressedSize &&
-        null !== job.duration &&
-        0 < job.duration
+        null !== duration &&
+        0 < duration
     ) {
-        speedText = `${formatSizeInBytes(uncompressedSize / job.duration, false)}/s`;
+        speedText = `${formatSizeInBytes(uncompressedSize / duration, false)}/s`;
     }
 
     return {
         compressedSize: compressedSizeText,
         dataIngested: uncompressedSizeText,
-        jobId: String(job._id),
-        key: String(job._id),
+        jobId: String(id),
+        key: String(id),
         speed: speedText,
-        status: job.status as CompressionJobStatus,
+        status: status as CompressionJobStatus,
     };
 };
 
