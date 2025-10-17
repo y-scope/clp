@@ -38,4 +38,9 @@ def main() -> None:
         processes.append(process)
 
     for process in processes:
-        process.wait()
+        exit_code = process.wait()
+        print(f"Spider worker exited with code {exit_code}")
+
+
+if __name__ == "__main__":
+    main()
