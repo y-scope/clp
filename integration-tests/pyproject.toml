@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "YScope Inc.", email = "dev@yscope.com" }
 ]
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 
 [project.scripts]
 integration-tests = "integration_tests:main"
@@ -21,6 +21,8 @@ dev = [
     "ruff>=0.11.12",
     "pytest>=8.4.1",
     "pytest-env>=1.1.5",
+    "PyYAML>=6.0",
+    "types-PyYAML>=6.0.12.20240808",
 ]
 
 [tool.mypy]
@@ -46,8 +48,10 @@ ignore = [
     "D400",  # First line of docstrings may not end in period
     "D401",  # Docstrings should be written in present tense (not imperative)
     "D415",  # First line of docstrings may not end in a period, question mark, or exclamation point
+    "EM102",  # Exception must not use an f-string literal, assign to variable first
     "FBT",  # Allow bool positional parameters since other value positions are allowed
     "FIX002",  # Allow todo statements
+    "G004",  # Logging statement uses f-string
     "PERF401",  # Allow for loops when creating lists
     "PERF403",  # Allow for loops when creating dicts
     "S311",  # Allow usage of `random` package
@@ -56,6 +60,7 @@ ignore = [
     "SIM300",  # Skip Yoda-condition format fixes
     "TD002",  # Author unnecessary for todo statement
     "TD003",  # Issue link unnecessary for todo statement
+    "TRY003",  # Avoid specifying long messages outside the exception class
     "UP015",  # Explicit open modes are helpful
 ]
 isort.order-by-type = false

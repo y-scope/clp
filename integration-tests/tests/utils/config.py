@@ -2,12 +2,18 @@
 
 from __future__ import annotations
 
+import re
+import socket
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
+from typing import Any, Literal
+
+import yaml
 
 from tests.utils.utils import (
     unlink,
     validate_dir_exists,
+    validate_file_exists,
 )
 
 
@@ -49,13 +55,19 @@ class CoreConfig:
 
 @dataclass(frozen=True)
 class PackageConfig:
-    """The configuration for the clp package subject to testing."""
+    """The configuration for the clp package being tested."""
 
     #:
     clp_package_dir: Path
 
+    clp_config_file_path: Path = field(init=False, repr=True)
+
+    #: Hostname of the machine running the test.
+    hostname: str = field(init=False, repr=True)
+
     def __post_init__(self) -> None:
-        """Validates that the CLP package directory exists and contains all required directories."""
+        """Validates the values specified at init, and initialises attributes."""
+        # Validate that the CLP package directory exists and contains all required directories.
         clp_package_dir = self.clp_package_dir
         validate_dir_exists(clp_package_dir)
 
@@ -68,6 +80,131 @@ class PackageConfig:
                 f" Missing directories: {', '.join(missing_dirs)}"
             )
             raise ValueError(err_msg)
+
+        # Set clp_config_file_path and validate it.
+        object.__setattr__(
+            self, "clp_config_file_path", self.clp_package_dir / "etc" / "clp-config.yml"
+        )
+        validate_file_exists(self.clp_config_file_path)
+
+        # Set hostname.
+        object.__setattr__(self, "hostname", socket.gethostname())
+
+
+@dataclass(frozen=True)
+class PackageRun:
+    """Metadata for the running CLP package."""
+
+    #:
+    package_config: PackageConfig
+
+    #:
+    mode: Literal["clp-text", "clp-json"]
+
+    #:
+    clp_log_dir: Path = field(init=False, repr=True)
+
+    clp_run_config_file_path: Path = field(init=False, repr=True)
+
+    #:
+    clp_instance_id: str = field(init=False, repr=True)
+
+    def __post_init__(self) -> None:
+        """Validates the values specified at init, and initialises attributes."""
+        # Set clp_log_dir after validating it.
+        clp_log_dir = self.package_config.clp_package_dir / "var" / "log"
+        validate_dir_exists(clp_log_dir)
+        object.__setattr__(self, "clp_log_dir", clp_log_dir)
+
+        # Set clp_run_config_file_path after validating it.
+        clp_run_config_file_path = (
+            self.clp_log_dir / self.package_config.hostname / ".clp-config.yml"
+        )
+        validate_file_exists(clp_run_config_file_path)
+        object.__setattr__(self, "clp_run_config_file_path", clp_run_config_file_path)
+
+        # Set clp_instance_id.
+        clp_instance_id_file_path = self.clp_log_dir / self.package_config.hostname / "instance-id"
+        validate_file_exists(clp_instance_id_file_path)
+        clp_instance_id = self._get_clp_instance_id(clp_instance_id_file_path)
+        object.__setattr__(self, "clp_instance_id", clp_instance_id)
+
+        # Validate mode.
+        self._assert_mode_matches_run_config()
+
+    def _assert_mode_matches_run_config(self) -> None:
+        """Validates that self.mode matches the package values in the run config file."""
+        config_dict = self._load_run_config(self.clp_run_config_file_path)
+        config_mode = self._extract_mode_from_config(config_dict, self.clp_run_config_file_path)
+
+        if config_mode != self.mode:
+            error_msg = (
+                f"Mode mismatch: the mode specified to the PackageRun object was {self.mode},"
+                f" but the package is running in {config_mode} mode."
+            )
+            raise ValueError(error_msg)
+
+    @staticmethod
+    def _load_run_config(path: Path) -> dict[str, Any]:
+        """Load the run config file into a dictionary."""
+        try:
+            with path.open("r", encoding="utf-8") as file:
+                config_dict = yaml.safe_load(file)
+        except yaml.YAMLError as err:
+            raise ValueError(f"Invalid YAML in run config {path}: {err}") from err
+        except OSError as err:
+            raise ValueError(f"Cannot read run config {path}: {err}") from err
+
+        if not isinstance(config_dict, dict):
+            raise TypeError(f"Run config {path} must be a mapping at the top level")
+
+        return config_dict
+
+    @staticmethod
+    def _extract_mode_from_config(
+        config_dict: dict[str, Any],
+        path: Path,
+    ) -> Literal["clp-text", "clp-json"]:
+        """Determine the package mode from the contents of the run-config dictionary."""
+        package = config_dict.get("package")
+        if not isinstance(package, dict):
+            raise TypeError(f"Run config {path} is missing the 'package' mapping.")
+
+        query_engine = package.get("query_engine")
+        storage_engine = package.get("storage_engine")
+        if query_engine is None or storage_engine is None:
+            raise ValueError(
+                f"Run config {path} must specify both 'package.query_engine' and"
+                " 'package.storage_engine'."
+            )
+
+        if query_engine == "clp" and storage_engine == "clp":
+            return "clp-text"
+        if query_engine == "clp-s" and storage_engine == "clp-s":
+            return "clp-json"
+
+        raise ValueError(
+            f"Run config {path} specifies running conditions for which integration testing is not"
+            f"supported: query_engine={query_engine}, storage_engine={storage_engine}."
+        )
+
+    @staticmethod
+    def _get_clp_instance_id(clp_instance_id_file_path: Path) -> str:
+        """Return the 4-digit hexadecimal CLP instance-id stored at clp_instance_id_file_path."""
+        try:
+            contents = clp_instance_id_file_path.read_text(encoding="utf-8").strip()
+        except OSError as err:
+            raise ValueError(
+                f"Cannot read instance-id file {clp_instance_id_file_path}: {err}"
+            ) from err
+
+        if not re.fullmatch(r"[0-9a-fA-F]{4}", contents):
+            raise ValueError(
+                f"Invalid instance ID in {clp_instance_id_file_path}: expected a 4-character"
+                f" hexadecimal string, but read {contents}."
+            )
+
+        return contents
 
 
 @dataclass(frozen=True)

@@ -85,6 +85,16 @@ def validate_dir_exists(dir_path: Path) -> None:
         raise ValueError(err_msg)
 
 
+def validate_file_exists(file_path: Path) -> None:
+    """
+    :param file_path:
+    :raise: ValueError if the path does not exist or is not a file.
+    """
+    if not file_path.is_file():
+        err_msg = f"Path does not exist or is not a file: {file_path}"
+        raise ValueError(err_msg)
+
+
 def _sort_json_keys_and_rows(json_fp: Path) -> IO[str]:
     """
     Normalize a JSON file to a stable, deterministically ordered form for comparison.
