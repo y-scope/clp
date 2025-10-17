@@ -107,6 +107,10 @@ services:
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
+    ports:
+      - host_ip: "${SPIDER_SCHEDULER_HOST}"
+        published: "${SPIDER_SCHEDULER_PORT}"
+        target: "${SPIDER_SCHEDULER_PORT}"
     command: [
       "/opt/clp/bin/spider_scheduler",
       "--host", "${SPIDER_SCHEDULER_HOST}",
@@ -131,17 +135,9 @@ services:
       - *volume_clp_config_readonly
       - *volume_root_logs_readonly
       - type: "bind"
-        source: "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}"
-        target: "/var/data/archives"
+        source: "${CLP_COMPRESSION_SCHEDULER_LOG_FILE_HOST:-./var/log/compression_scheduler.log}"
+        target: "/var/log/compression_scheduler.log"
       - type: "bind"
-        source: "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/staged-archives}"
-        target: "/var/data/staged-archives"
-      - type: "bind"
-        source: "${CLP_COMPRESSION_WORKER_LOGS_DIR_HOST:-./var/log/compression_worker}"
-        target: "/var/log/compression_worker"
-      - type: "bind"
-        source: "${CLP_DATA_DIR_HOST:-./var/data}"
-        target: "/var/data"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -165,17 +161,30 @@ services:
       CLP_LOGS_DIR: "/var/log/compression_worker"
       CLP_WORKER_LOG_PATH: "/var/log/compression_worker/worker.log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      PATH: "/opt/clp/lib/python3/site-packages/bin:${PATH}"
     volumes:
       - *volume_aws_config_readonly
       - *volume_clp_config_readonly
       - *volume_root_logs_readonly
+      - type: "bind"
+        source: "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}"
+        target: "/var/data/archives"
+      - type: "bind"
+        source: "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/staged-archives}"
+        target: "/var/data/staged-archives"
+      - type: "bind"
+        source: "${CLP_COMPRESSION_WORKER_LOGS_DIR_HOST:-./var/log/compression_worker}"
+        target: "/var/log/compression_worker"
+      - type: "bind"
+        source: "${CLP_DATA_DIR_HOST:-./var/data}"
+        target: "/var/data"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
     command: [
       "python3",
       "-u",
-      "-m", "/opt/clp/lib/python3/site-packages/clp_py_utils/start-spider-worker.py",
+      "/opt/clp/lib/python3/site-packages/clp_py_utils/start-spider-worker.py",
       "--concurrency", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
       "--storage-url", "${SPIDER_DB_URL}",
       # NOTE: Leave host to spider scheduler's host. This only affects task placement.
