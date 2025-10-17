@@ -120,6 +120,19 @@ set(
 )
 
 if(CLP_BUILD_EXECUTABLES)
+        clp_find_absl()
+        clp_find_boost()
+        clp_find_curl()
+        clp_find_date()
+        clp_find_mariadb_client()
+        clp_find_msgpack()
+        clp_find_nlohmann_json()
+        clp_find_open_ssl()
+        clp_find_simdjson()
+        clp_find_spdlog()
+        clp_find_ystdlib()
+        clp_find_zstd()
+
         add_executable(indexer ${INDEXER_SOURCES})
         target_compile_features(indexer PRIVATE cxx_std_20)
         target_link_libraries(indexer

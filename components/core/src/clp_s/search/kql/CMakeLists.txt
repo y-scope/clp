@@ -12,6 +12,9 @@ set(ANTLR_GENERATED_SOURCES
 )
 
 if(CLP_BUILD_CLP_S_SEARCH_KQL)
+        clp_find_antlr4_runtime()
+        clp_find_spdlog()
+
         add_library(
                 clp_s_search_kql
                 ${ANTLR_GENERATED_SOURCES}
