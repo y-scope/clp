@@ -110,8 +110,8 @@ PositiveInt = Annotated[int, Field(gt=0)]
 # TODO: Replace this with pydantic_extra_types.domain.DomainStr.
 DomainStr = NonEmptyStr
 Port = Annotated[int, Field(gt=0, lt=2**16)]
-ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
 SerializablePath = Annotated[pathlib.Path, PlainSerializer(serialize_path)]
+ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
 
 
 class StorageEngine(KebabCaseStrEnum):
