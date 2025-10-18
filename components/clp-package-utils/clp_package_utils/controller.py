@@ -573,7 +573,9 @@ class DockerComposeController(BaseController):
 
         :raise: Propagates `subprocess.run`'s exceptions.
         """
-        check_docker_dependencies(should_compose_run=False, project_name=self._project_name)
+        check_docker_dependencies(
+            should_compose_project_be_running=False, project_name=self._project_name
+        )
         self._set_up_env()
 
         deployment_type = self._clp_config.get_deployment_type()
@@ -597,7 +599,9 @@ class DockerComposeController(BaseController):
         :raise: Propagates `subprocess.run`'s exceptions.
         """
         try:
-            check_docker_dependencies(should_compose_run=True, project_name=self._project_name)
+            check_docker_dependencies(
+                should_compose_project_be_running=True, project_name=self._project_name
+            )
         except EnvironmentError as e:
             logger.warning(
                 'Docker dependencies check failed: "%s". Attempting to stop CLP containers '

@@ -123,12 +123,12 @@ def generate_container_name(job_type: str) -> str:
     return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
 
 
-def check_docker_dependencies(should_compose_run: bool, project_name: str):
+def check_docker_dependencies(should_compose_project_be_running: bool, project_name: str):
     """
     Checks if Docker and Docker Compose are installed, and whether a Docker Compose project is
     running.
 
-    :param should_compose_run:
+    :param should_compose_project_be_running:
     :param project_name: The Docker Compose project name to check.
     :raises EnvironmentError: If any Docker dependency is not installed or the Docker Compose
     project state doesn't match `should_compose_run`.
@@ -145,9 +145,9 @@ def check_docker_dependencies(should_compose_run: bool, project_name: str):
         raise EnvironmentError("docker is not installed or available on the path")
 
     is_running = _is_docker_compose_project_running(project_name)
-    if should_compose_run and not is_running:
+    if should_compose_project_be_running and not is_running:
         raise EnvironmentError(f"Docker Compose project '{project_name}' is not running.")
-    if not should_compose_run and is_running:
+    if not should_compose_project_be_running and is_running:
         raise EnvironmentError("Docker Compose project '{project_name}' is already running.")
 
 
