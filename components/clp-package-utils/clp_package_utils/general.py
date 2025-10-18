@@ -1,5 +1,6 @@
 import enum
 import errno
+import json
 import os
 import pathlib
 import re
@@ -15,6 +16,9 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLP_SHARED_CONFIG_FILENAME,
     CLPConfig,
+    CONTAINER_AWS_CONFIG_DIRECTORY,
+    CONTAINER_CLP_HOME,
+    CONTAINER_INPUT_LOGS_ROOT_DIR,
     DB_COMPONENT_NAME,
     QueryEngine,
     QUEUE_COMPONENT_NAME,
@@ -41,12 +45,6 @@ from strenum import KebabCaseStrEnum
 EXTRACT_FILE_CMD = "x"
 EXTRACT_IR_CMD = "i"
 EXTRACT_JSON_CMD = "j"
-
-# Paths
-CONTAINER_AWS_CONFIG_DIRECTORY = pathlib.Path("/") / ".aws"
-CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
-CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
-CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yml"
 
 DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
 
@@ -98,13 +96,6 @@ class CLPDockerMounts:
         self.generated_config_file: Optional[DockerMount] = None
 
 
-def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
-    try:
-        validate_path_could_be_dir(data_dir)
-    except ValueError as ex:
-        raise ValueError(f"{component_name} data directory is invalid: {ex}")
-
-
 def get_clp_home():
     # Determine CLP_HOME from an environment variable or this script's path
     clp_home = None
@@ -132,63 +123,35 @@ def generate_container_name(job_type: str) -> str:
     return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
 
 
-def check_dependencies():
+def check_docker_dependencies(should_compose_project_be_running: bool, project_name: str):
+    """
+    Checks if Docker and Docker Compose are installed, and whether a Docker Compose project is
+    running.
+
+    :param should_compose_project_be_running:
+    :param project_name: The Docker Compose project name to check.
+    :raise OSError: If any Docker dependency is not installed or the Docker Compose project state
+    doesn't match `should_compose_run`.
+    """
     try:
         subprocess.run(
             "command -v docker",
             shell=True,
-            stdout=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
             stderr=subprocess.STDOUT,
             check=True,
         )
-    except subprocess.CalledProcessError:
-        raise EnvironmentError("docker is not installed or available on the path")
-    try:
-        subprocess.run(
-            ["docker", "ps"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
-        )
-    except subprocess.CalledProcessError:
-        raise EnvironmentError("docker cannot run without superuser privileges (sudo).")
+    except subprocess.CalledProcessError as e:
+        err_msg = "docker is not installed or available on the path"
+        raise OSError(err_msg) from e
 
-
-def is_container_running(container_name):
-    # fmt: off
-    cmd = [
-        "docker", "ps",
-        # Only return container IDs
-        "--quiet",
-        "--filter", f"name={container_name}"
-    ]
-    # fmt: on
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE)
-    if proc.stdout.decode("utf-8"):
-        return True
-
-    return False
-
-
-def is_container_exited(container_name):
-    # fmt: off
-    cmd = [
-        "docker", "ps",
-        # Only return container IDs
-        "--quiet",
-        "--filter", f"name={container_name}",
-        "--filter", "status=exited"
-    ]
-    # fmt: on
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE)
-    if proc.stdout.decode("utf-8"):
-        return True
-
-    return False
-
-
-def validate_log_directory(logs_dir: pathlib.Path, component_name: str) -> None:
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{component_name} logs directory is invalid: {ex}")
+    is_running = _is_docker_compose_project_running(project_name)
+    if should_compose_project_be_running and not is_running:
+        err_msg = f"Docker Compose project '{project_name}' is not running."
+        raise OSError(err_msg)
+    if not should_compose_project_be_running and is_running:
+        err_msg = f"Docker Compose project '{project_name}' is already running."
+        raise OSError(err_msg)
 
 
 def validate_port(port_name: str, hostname: str, port: int):
@@ -309,6 +272,19 @@ def generate_container_config(
     return container_clp_config, docker_mounts
 
 
+def generate_docker_compose_container_config(clp_config: CLPConfig) -> CLPConfig:
+    """
+    Copies the given config and transforms mount paths and hosts for Docker Compose.
+
+    :param clp_config:
+    :return: The container config.
+    """
+    container_clp_config = clp_config.model_copy(deep=True)
+    container_clp_config.transform_for_container()
+
+    return container_clp_config
+
+
 def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
     worker_config = WorkerConfig()
     worker_config.package = clp_config.package.model_copy(deep=True)
@@ -345,9 +321,7 @@ def dump_container_config(
     return config_file_path_on_container, config_file_path_on_host
 
 
-def dump_shared_container_config(
-    container_clp_config: CLPConfig, clp_config: CLPConfig
-) -> Tuple[pathlib.Path, pathlib.Path]:
+def dump_shared_container_config(container_clp_config: CLPConfig, clp_config: CLPConfig):
     """
     Dumps the given container config to `CLP_SHARED_CONFIG_FILENAME` in the logs directory, so that
     it's accessible in the container.
@@ -355,7 +329,7 @@ def dump_shared_container_config(
     :param container_clp_config:
     :param clp_config:
     """
-    return dump_container_config(container_clp_config, clp_config, CLP_SHARED_CONFIG_FILENAME)
+    dump_container_config(container_clp_config, clp_config, CLP_SHARED_CONFIG_FILENAME)
 
 
 def generate_container_start_cmd(
@@ -431,11 +405,6 @@ def load_config_file(
     validate_path_for_container_mount(clp_config.data_directory)
     validate_path_for_container_mount(clp_config.logs_directory)
 
-    # Make data and logs directories node-specific
-    hostname = socket.gethostname()
-    clp_config.data_directory /= hostname
-    clp_config.logs_directory /= hostname
-
     return clp_config
 
 
@@ -488,35 +457,44 @@ def validate_and_load_redis_credentials_file(
     clp_config.redis.load_credentials_from_file(clp_config.credentials_file_path)
 
 
-def validate_db_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):
+def validate_db_config(
+    clp_config: CLPConfig,
+    component_config: pathlib.Path,
+    data_dir: pathlib.Path,
+    logs_dir: pathlib.Path,
+):
+    if not component_config.exists():
+        raise ValueError(f"{DB_COMPONENT_NAME} configuration file missing: '{component_config}'.")
     _validate_data_directory(data_dir, DB_COMPONENT_NAME)
-    validate_log_directory(logs_dir, DB_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, DB_COMPONENT_NAME)
 
     validate_port(f"{DB_COMPONENT_NAME}.port", clp_config.database.host, clp_config.database.port)
 
 
 def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
-    validate_log_directory(logs_dir, QUEUE_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, QUEUE_COMPONENT_NAME)
 
     validate_port(f"{QUEUE_COMPONENT_NAME}.port", clp_config.queue.host, clp_config.queue.port)
 
 
 def validate_redis_config(
-    clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path, base_config: pathlib.Path
+    clp_config: CLPConfig,
+    component_config: pathlib.Path,
+    data_dir: pathlib.Path,
+    logs_dir: pathlib.Path,
 ):
-    _validate_data_directory(data_dir, REDIS_COMPONENT_NAME)
-    validate_log_directory(logs_dir, REDIS_COMPONENT_NAME)
-
-    if not base_config.exists():
+    if not component_config.exists():
         raise ValueError(
-            f"{REDIS_COMPONENT_NAME} base configuration at {str(base_config)} is missing."
+            f"{REDIS_COMPONENT_NAME} configuration file missing: '{component_config}'."
         )
+    _validate_data_directory(data_dir, REDIS_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, REDIS_COMPONENT_NAME)
 
     validate_port(f"{REDIS_COMPONENT_NAME}.port", clp_config.redis.host, clp_config.redis.port)
 
 
 def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_workers: int):
-    validate_log_directory(logs_dir, REDUCER_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, REDUCER_COMPONENT_NAME)
 
     for i in range(0, num_workers):
         validate_port(
@@ -527,10 +505,17 @@ def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_w
 
 
 def validate_results_cache_config(
-    clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path
+    clp_config: CLPConfig,
+    component_config: pathlib.Path,
+    data_dir: pathlib.Path,
+    logs_dir: pathlib.Path,
 ):
+    if not component_config.exists():
+        raise ValueError(
+            f"{RESULTS_CACHE_COMPONENT_NAME} configuration file missing: '{component_config}'."
+        )
     _validate_data_directory(data_dir, RESULTS_CACHE_COMPONENT_NAME)
-    validate_log_directory(logs_dir, RESULTS_CACHE_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, RESULTS_CACHE_COMPONENT_NAME)
 
     validate_port(
         f"{RESULTS_CACHE_COMPONENT_NAME}.port",
@@ -707,3 +692,42 @@ def get_celery_connection_env_vars_list(container_clp_config: CLPConfig) -> List
     ]
 
     return env_vars
+
+
+def _is_docker_compose_project_running(project_name: str) -> bool:
+    """
+    Checks if a Docker Compose project is running.
+
+    :param project_name:
+    :return: Whether at least one instance is running.
+    :raise OSError: If Docker Compose is not installed or fails.
+    """
+    cmd = ["docker", "compose", "ls", "--format", "json", "--filter", f"name={project_name}"]
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        running_instances = json.loads(output)
+        return len(running_instances) >= 1
+    except subprocess.CalledProcessError as e:
+        err_msg = "Docker Compose is not installed or not functioning properly."
+        raise OSError(err_msg) from e
+
+
+def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
+    try:
+        validate_path_could_be_dir(data_dir)
+    except ValueError as ex:
+        raise ValueError(f"{component_name} data directory is invalid: {ex}")
+
+
+def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
+    """
+    Validates that the logs directory path for a component is valid.
+
+    :param logs_dir:
+    :param component_name:
+    :raise ValueError: If the path is invalid or can't be a directory.
+    """
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{component_name} logs directory is invalid: {ex}")
