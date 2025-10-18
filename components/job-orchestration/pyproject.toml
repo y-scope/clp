@@ -14,7 +14,7 @@ dependencies = [
     "msgpack>=1.1.2",
     "mysql-connector-python>=9.4.0",
     "pika>=1.3.2",
-    "pydantic>=2.12.0",
+    "pydantic>=2.12.3",
     "pymongo>=4.15.3",
     "PyYAML>=6.0.3",
     "yscope-spider-py==0.1.0",
