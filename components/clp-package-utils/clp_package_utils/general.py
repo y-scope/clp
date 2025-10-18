@@ -150,7 +150,7 @@ def check_docker_dependencies(should_compose_project_be_running: bool, project_n
         err_msg = f"Docker Compose project '{project_name}' is not running."
         raise OSError(err_msg)
     if not should_compose_project_be_running and is_running:
-        err_msg = "Docker Compose project '{project_name}' is already running."
+        err_msg = f"Docker Compose project '{project_name}' is already running."
         raise OSError(err_msg)
 
 
