@@ -743,7 +743,7 @@ class CLPConfig(BaseModel):
 class WorkerConfig(BaseModel):
     package: Package = Package()
     archive_output: ArchiveOutput = ArchiveOutput()
-    data_directory: pathlib.Path = CLPConfig().data_directory
+    data_directory: SerializablePath = CLPConfig().data_directory
 
     # Only needed by query workers.
     stream_output: StreamOutput = StreamOutput()
