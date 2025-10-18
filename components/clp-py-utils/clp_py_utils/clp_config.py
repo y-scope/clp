@@ -6,6 +6,7 @@ from typing import Annotated, Any, Literal, Optional, Set, Union
 from dotenv import dotenv_values
 from pydantic import (
     BaseModel,
+    BeforeValidator,
     ConfigDict,
     Field,
     field_validator,
@@ -113,6 +114,29 @@ ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
 StrEnumSerializer = PlainSerializer(serialize_enum)
 
 PathStr = Annotated[pathlib.Path, PlainSerializer(serialize_path)]
+
+
+def _validate_directory(value: Any):
+    """
+    Validates that the given value represents a directory path.
+
+    :param value:
+    :return: `value`
+    :raise ValueError: if the value is not of type str.
+    :raise ValueError: if the value is an empty string.
+    """
+    if not isinstance(value, str):
+        raise ValueError("must be a string.")
+
+    if "" == value.strip():
+        raise ValueError("cannot be empty")
+
+    return value
+
+
+ValidatedPathStr = Annotated[
+    pathlib.Path, BeforeValidator(_validate_directory), PlainSerializer(serialize_path)
+]
 
 
 class StorageEngine(KebabCaseStrEnum):
@@ -417,13 +441,7 @@ class S3IngestionConfig(BaseModel):
 
 class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
-    directory: PathStr
-
-    @field_validator("directory", mode="before")
-    @classmethod
-    def validate_directory(cls, value):
-        _validate_directory(value)
-        return value
+    directory: ValidatedPathStr
 
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.directory = make_config_path_absolute(clp_home, self.directory)
@@ -432,13 +450,7 @@ class FsStorage(BaseModel):
 class S3Storage(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     s3_config: S3Config
-    staging_directory: PathStr
-
-    @field_validator("staging_directory", mode="before")
-    @classmethod
-    def validate_staging_directory(cls, value):
-        _validate_directory(value)
-        return value
+    staging_directory: ValidatedPathStr
 
     @field_validator("s3_config")
     @classmethod
@@ -760,18 +772,3 @@ def get_components_for_target(target: str) -> Set[str]:
         return {target}
     else:
         return set()
-
-
-def _validate_directory(value: Any):
-    """
-    Validates that the given value represents a directory path.
-
-    :param value:
-    :raise ValueError: if the value is not of type str.
-    :raise ValueError: if the value is an empty string.
-    """
-    if not isinstance(value, str):
-        raise ValueError("must be a string.")
-
-    if "" == value.strip():
-        raise ValueError("cannot be empty")
