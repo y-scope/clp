@@ -1,9 +1,11 @@
+# syntax=docker/dockerfile:1
+
 FROM ubuntu:jammy AS base
 
 WORKDIR /root
 
 RUN mkdir -p ./tools/scripts/lib_install
-ADD ./tools/scripts/lib_install ./tools/scripts/lib_install
+COPY --link ./tools/scripts/lib_install ./tools/scripts/lib_install
 
 # Set pipx environment vars so that the pipx scripts install into the global locations without
 # passing the `--global` flag.
@@ -18,4 +20,4 @@ RUN apt-get clean \
 
 # Flatten the image
 FROM scratch
-COPY --from=base / /
+COPY --link --from=base / /
