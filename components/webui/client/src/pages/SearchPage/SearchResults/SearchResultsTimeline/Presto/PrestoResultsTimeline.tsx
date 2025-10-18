@@ -13,6 +13,7 @@ import {
 } from "../../../SearchControls/Presto/presto-guided-search-requests";
 import {TIME_RANGE_OPTION} from "../../../SearchControls/TimeRangeInput/utils";
 import useSearchStore from "../../../SearchState/index";
+import usePrestoSearchState from "../../../SearchState/Presto";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import {computeTimelineConfig} from "../utils";
 import {usePrestoAggregationResults} from "./usePrestoAggregationResults";
@@ -37,12 +38,15 @@ const PrestoResultsTimeline = () => {
             updateTimelineConfig,
         } = useSearchStore.getState();
 
+        const {updateCachedGuidedSearchQueryString} = usePrestoSearchState.getState();
+
         // Update range picker selection to match zoomed range.
         updateTimeRange(newTimeRange);
         updateTimeRangeOption(TIME_RANGE_OPTION.CUSTOM);
         updateTimelineConfig(newTimelineConfig);
 
         const {searchQueryString, timelineQueryString} = buildPrestoGuidedQueries(newTimeRange);
+        updateCachedGuidedSearchQueryString(searchQueryString);
         handlePrestoGuidedQuerySubmit(searchQueryString, timelineQueryString);
     }, []);
 
