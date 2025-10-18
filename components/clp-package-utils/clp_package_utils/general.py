@@ -130,8 +130,8 @@ def check_docker_dependencies(should_compose_project_be_running: bool, project_n
 
     :param should_compose_project_be_running:
     :param project_name: The Docker Compose project name to check.
-    :raises EnvironmentError: If any Docker dependency is not installed or the Docker Compose
-    project state doesn't match `should_compose_run`.
+    :raises OSError: If any Docker dependency is not installed or the Docker Compose project state
+    doesn't match `should_compose_run`.
     """
     try:
         subprocess.run(
@@ -142,13 +142,13 @@ def check_docker_dependencies(should_compose_project_be_running: bool, project_n
             check=True,
         )
     except subprocess.CalledProcessError:
-        raise EnvironmentError("docker is not installed or available on the path")
+        raise OSError("docker is not installed or available on the path")
 
     is_running = _is_docker_compose_project_running(project_name)
     if should_compose_project_be_running and not is_running:
-        raise EnvironmentError(f"Docker Compose project '{project_name}' is not running.")
+        raise OSError(f"Docker Compose project '{project_name}' is not running.")
     if not should_compose_project_be_running and is_running:
-        raise EnvironmentError("Docker Compose project '{project_name}' is already running.")
+        raise OSError("Docker Compose project '{project_name}' is already running.")
 
 
 def validate_port(port_name: str, hostname: str, port: int):
@@ -697,7 +697,7 @@ def _is_docker_compose_project_running(project_name: str) -> bool:
 
     :param project_name:
     :return: Whether at least one instance is running.
-    :raises EnvironmentError: If Docker Compose is not installed or fails.
+    :raises OSError: If Docker Compose is not installed or fails.
     """
     cmd = ["docker", "compose", "ls", "--format", "json", "--filter", f"name={project_name}"]
     try:
@@ -705,7 +705,7 @@ def _is_docker_compose_project_running(project_name: str) -> bool:
         running_instances = json.loads(output)
         return len(running_instances) >= 1
     except subprocess.CalledProcessError:
-        raise EnvironmentError("Docker Compose is not installed or not functioning properly.")
+        raise OSError("Docker Compose is not installed or not functioning properly.")
 
 
 def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:

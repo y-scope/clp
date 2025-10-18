@@ -602,7 +602,7 @@ class DockerComposeController(BaseController):
             check_docker_dependencies(
                 should_compose_project_be_running=True, project_name=self._project_name
             )
-        except EnvironmentError as e:
+        except OSError as e:
             logger.warning(
                 'Docker dependencies check failed: "%s". Attempting to stop CLP containers '
                 "anyway...",
