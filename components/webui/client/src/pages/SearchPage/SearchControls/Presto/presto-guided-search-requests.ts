@@ -119,6 +119,10 @@ const handlePrestoGuidedQuerySubmit = (searchQueryString: string, timelineQueryS
         searchUiState,
     } = useSearchStore.getState();
 
+    const {
+        updateErrorMsg, updateErrorName,
+    } = usePrestoSearchState.getState();
+
     // User should NOT be able to submit a new query while an existing query is in progress.
     if (
         searchUiState !== SEARCH_UI_STATE.DEFAULT &&
@@ -136,6 +140,9 @@ const handlePrestoGuidedQuerySubmit = (searchQueryString: string, timelineQueryS
     updateNumSearchResultsTimeline(SEARCH_STATE_DEFAULT.numSearchResultsTimeline);
     updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
     updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
+
+    updateErrorMsg(null);
+    updateErrorName(null);
 
     submitQuery({queryString: searchQueryString})
         .then((result) => {
