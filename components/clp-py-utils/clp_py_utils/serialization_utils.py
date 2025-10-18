@@ -1,4 +1,5 @@
 import pathlib
+
 from strenum import StrEnum
 
 
