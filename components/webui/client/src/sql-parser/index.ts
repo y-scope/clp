@@ -110,10 +110,10 @@ WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp.unix()} AND ${endTim
         queryString += ` AND (${booleanExpression})`;
     }
     if ("undefined" !== typeof sortItemList) {
-        queryString += ` ORDER BY ${sortItemList}`;
+        queryString += `\nORDER BY ${sortItemList}`;
     }
     if ("undefined" !== typeof limitValue) {
-        queryString += ` LIMIT ${limitValue}`;
+        queryString += `\nLIMIT ${limitValue}`;
     }
 
     try {
