@@ -3,7 +3,7 @@ import pathlib
 from strenum import StrEnum
 
 
-def serialize_enum(member: StrEnum) -> str:
+def serialize_str_enum(member: StrEnum) -> str:
     """
     Serializes a `strenum.StrEnum` member to its underlying value.
 

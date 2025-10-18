@@ -22,7 +22,7 @@ from .core import (
     read_yaml_config_file,
     validate_path_could_be_dir,
 )
-from .serialization_utils import serialize_enum, serialize_path
+from .serialization_utils import serialize_path, serialize_str_enum
 
 # Constants
 # Component names
@@ -100,8 +100,8 @@ CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 
-#Serializer
-StrEnumSerializer = PlainSerializer(serialize_enum)
+# Serializer
+StrEnumSerializer = PlainSerializer(serialize_str_enum)
 # Generic types
 NonEmptyStr = Annotated[str, Field(min_length=1)]
 PositiveFloat = Annotated[float, Field(gt=0)]
@@ -582,7 +582,9 @@ class CLPConfig(BaseModel):
     logs_directory: SerializablePath = pathlib.Path("var") / "log"
     aws_config_directory: Optional[SerializablePath] = None
 
-    _container_image_id_path: SerializablePath = PrivateAttr(default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH)
+    _container_image_id_path: SerializablePath = PrivateAttr(
+        default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH
+    )
     _version_file_path: SerializablePath = PrivateAttr(default=CLP_VERSION_FILE_PATH)
 
     @field_validator("aws_config_directory")
