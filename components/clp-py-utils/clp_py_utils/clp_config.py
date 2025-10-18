@@ -589,7 +589,9 @@ class CLPConfig(BaseModel):
 
     @field_validator("aws_config_directory")
     @classmethod
-    def expand_profile_user_home(cls, value: Optional[SerializablePath]):
+    def expand_profile_user_home(
+        cls, value: Optional[SerializablePath]
+    ) -> Optional[SerializablePath]:
         if value is not None:
             value = value.expanduser()
         return value
