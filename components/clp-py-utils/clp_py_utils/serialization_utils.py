@@ -1,5 +1,5 @@
 import pathlib
-from enum import StrEnum
+from strenum import StrEnum
 
 
 def serialize_enum(enum_value: StrEnum) -> str:
