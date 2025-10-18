@@ -9,7 +9,7 @@ def serialize_enum(enum_value: StrEnum) -> str:
     :param enum_value: A StrEnum instance.
     :return: The underlying string value of the StrEnum.
     """
-    return enum_value.value()
+    return enum_value.value
 
 
 def serialize_path(path: pathlib.Path) -> str:
