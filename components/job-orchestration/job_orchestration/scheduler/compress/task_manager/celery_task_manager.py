@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 import celery
+
 from job_orchestration.executor.compress.celery_compress import compress
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.task_result import CompressionTaskResult
