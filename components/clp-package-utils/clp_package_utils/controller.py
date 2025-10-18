@@ -544,7 +544,7 @@ class BaseController(ABC):
         :param parent_key_prefix: The prefix for keys at this level in the settings dictionary.
         :param settings: The settings to update.
         :param updates: The updates.
-        :raises ValueError: If a key in `updates` doesn't exist in `settings`.
+        :raise ValueError: If a key in `updates` doesn't exist in `settings`.
         """
         for key, value in updates.items():
             if key not in settings:

@@ -130,7 +130,7 @@ def check_docker_dependencies(should_compose_project_be_running: bool, project_n
 
     :param should_compose_project_be_running:
     :param project_name: The Docker Compose project name to check.
-    :raises OSError: If any Docker dependency is not installed or the Docker Compose project state
+    :raise OSError: If any Docker dependency is not installed or the Docker Compose project state
     doesn't match `should_compose_run`.
     """
     try:
@@ -700,7 +700,7 @@ def _is_docker_compose_project_running(project_name: str) -> bool:
 
     :param project_name:
     :return: Whether at least one instance is running.
-    :raises OSError: If Docker Compose is not installed or fails.
+    :raise OSError: If Docker Compose is not installed or fails.
     """
     cmd = ["docker", "compose", "ls", "--format", "json", "--filter", f"name={project_name}"]
     try:
@@ -725,7 +725,7 @@ def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
 
     :param logs_dir:
     :param component_name:
-    :raises ValueError: If the path is invalid or can't be a directory.
+    :raise ValueError: If the path is invalid or can't be a directory.
     """
     try:
         validate_path_could_be_dir(logs_dir)
