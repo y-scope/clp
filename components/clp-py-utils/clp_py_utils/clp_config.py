@@ -100,6 +100,8 @@ CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 
+#Serializer
+StrEnumSerializer = PlainSerializer(serialize_enum)
 # Generic types
 NonEmptyStr = Annotated[str, Field(min_length=1)]
 PositiveFloat = Annotated[float, Field(gt=0)]
@@ -109,10 +111,7 @@ PositiveInt = Annotated[int, Field(gt=0)]
 DomainStr = NonEmptyStr
 Port = Annotated[int, Field(gt=0, lt=2**16)]
 ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
-
-StrEnumSerializer = PlainSerializer(serialize_enum)
-
-PathStr = Annotated[pathlib.Path, PlainSerializer(serialize_path)]
+SerializablePath = Annotated[pathlib.Path, PlainSerializer(serialize_path)]
 
 
 class StorageEngine(KebabCaseStrEnum):
@@ -417,7 +416,7 @@ class S3IngestionConfig(BaseModel):
 
 class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
-    directory: PathStr
+    directory: SerializablePath
 
     @field_validator("directory", mode="before")
     @classmethod
@@ -432,7 +431,7 @@ class FsStorage(BaseModel):
 class S3Storage(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     s3_config: S3Config
-    staging_directory: PathStr
+    staging_directory: SerializablePath
 
     @field_validator("staging_directory", mode="before")
     @classmethod
@@ -455,23 +454,23 @@ class S3Storage(BaseModel):
 
 
 class FsIngestionConfig(FsStorage):
-    directory: PathStr = pathlib.Path("/")
+    directory: SerializablePath = pathlib.Path("/")
 
 
 class ArchiveFsStorage(FsStorage):
-    directory: PathStr = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
+    directory: SerializablePath = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
 
 
 class StreamFsStorage(FsStorage):
-    directory: PathStr = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
+    directory: SerializablePath = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
 
 
 class ArchiveS3Storage(S3Storage):
-    staging_directory: PathStr = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
+    staging_directory: SerializablePath = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
 
 
 class StreamS3Storage(S3Storage):
-    staging_directory: PathStr = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
+    staging_directory: SerializablePath = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
 
 
 def _get_directory_from_storage_config(
@@ -573,18 +572,18 @@ class CLPConfig(BaseModel):
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
-    credentials_file_path: PathStr = CLP_DEFAULT_CREDENTIALS_FILE_PATH
+    credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     presto: Optional[Presto] = None
 
     archive_output: ArchiveOutput = ArchiveOutput()
     stream_output: StreamOutput = StreamOutput()
-    data_directory: PathStr = pathlib.Path("var") / "data"
-    logs_directory: PathStr = pathlib.Path("var") / "log"
+    data_directory: SerializablePath = pathlib.Path("var") / "data"
+    logs_directory: SerializablePath = pathlib.Path("var") / "log"
     aws_config_directory: Optional[pathlib.Path] = None
 
-    _container_image_id_path: PathStr = PrivateAttr(default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH)
-    _version_file_path: PathStr = PrivateAttr(default=CLP_VERSION_FILE_PATH)
+    _container_image_id_path: SerializablePath = PrivateAttr(default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH)
+    _version_file_path: SerializablePath = PrivateAttr(default=CLP_VERSION_FILE_PATH)
 
     @field_validator("aws_config_directory")
     @classmethod
