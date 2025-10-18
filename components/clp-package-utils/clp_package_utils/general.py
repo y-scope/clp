@@ -329,7 +329,7 @@ def dump_shared_container_config(container_clp_config: CLPConfig, clp_config: CL
     :param container_clp_config:
     :param clp_config:
     """
-    return dump_container_config(container_clp_config, clp_config, CLP_SHARED_CONFIG_FILENAME)
+    dump_container_config(container_clp_config, clp_config, CLP_SHARED_CONFIG_FILENAME)
 
 
 def generate_container_start_cmd(
