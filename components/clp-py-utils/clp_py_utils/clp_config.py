@@ -589,7 +589,7 @@ class CLPConfig(BaseModel):
 
     @field_validator("aws_config_directory")
     @classmethod
-    def expand_profile_user_home(cls, value: Optional[pathlib.Path]):
+    def expand_profile_user_home(cls, value: Optional[SerializablePath]):
         if value is not None:
             value = value.expanduser()
         return value
@@ -724,12 +724,6 @@ class CLPConfig(BaseModel):
         d = self.model_dump(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
             d[key] = getattr(self, key).dump_to_primitive_dict()
-
-        # Turn paths into primitive strings
-        if self.aws_config_directory is not None:
-            d["aws_config_directory"] = str(self.aws_config_directory)
-        else:
-            d["aws_config_directory"] = None
 
         return d
 
