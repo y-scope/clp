@@ -581,7 +581,7 @@ class CLPConfig(BaseModel):
     stream_output: StreamOutput = StreamOutput()
     data_directory: PathStr = pathlib.Path("var") / "data"
     logs_directory: PathStr = pathlib.Path("var") / "log"
-    aws_config_directory: Optional[pathlib.Path] = None
+    aws_config_directory: Optional[SerializablePath] = None
 
     _container_image_id_path: PathStr = PrivateAttr(default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH)
     _version_file_path: PathStr = PrivateAttr(default=CLP_VERSION_FILE_PATH)

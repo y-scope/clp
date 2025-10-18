@@ -5,19 +5,19 @@ from strenum import StrEnum
 
 def serialize_enum(enum_value: StrEnum) -> str:
     """
-    Serializes a StrEnum to its underlying value.
+    Serializes a `strenum.StrEnum` member to its underlying value.
 
-    :param enum_value: A StrEnum instance.
-    :return: The underlying string value of the StrEnum.
+    :param member:
+    :return: The underlying string value of the enum member.
     """
     return enum_value.value
 
 
 def serialize_path(path: pathlib.Path) -> str:
     """
-    Serializes a pathlib.Path to its string representation.
+    Serializes a `pathlib.Path` to its string representation.
 
-    :param path: A pathlib.Path instance.
+    :param path:
     :return: The string representation of the path.
     """
     return str(path)
