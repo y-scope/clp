@@ -10,6 +10,7 @@ from pydantic import (
     Field,
     field_validator,
     model_validator,
+    PlainSerializer,
     PrivateAttr,
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
@@ -21,7 +22,7 @@ from .core import (
     read_yaml_config_file,
     validate_path_could_be_dir,
 )
-from .pydantic_serialization_utils import PathStr, StrEnumSerializer
+from .serialization_utils import serialize_enum, serialize_path
 
 # Constants
 # Component names
@@ -108,6 +109,10 @@ PositiveInt = Annotated[int, Field(gt=0)]
 DomainStr = NonEmptyStr
 Port = Annotated[int, Field(gt=0, lt=2**16)]
 ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
+
+StrEnumSerializer = PlainSerializer(serialize_enum)
+
+PathStr = Annotated[pathlib.Path, PlainSerializer(serialize_path)]
 
 
 class StorageEngine(KebabCaseStrEnum):
