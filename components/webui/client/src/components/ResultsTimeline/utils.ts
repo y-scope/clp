@@ -7,8 +7,9 @@ import {TimelineBucket} from "./typings";
  * @param timelineBuckets
  * @return
  */
-const adaptTimelineBucketsForChartJs = (timelineBuckets: TimelineBucket[])
-: {x: number; y: number}[] => (
+const adaptTimelineBucketsForChartJs = (
+    timelineBuckets: TimelineBucket[]
+): {x: number; y: number}[] => (
     timelineBuckets.map(
         ({
             timestamp,
