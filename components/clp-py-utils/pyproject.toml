@@ -14,9 +14,9 @@ dependencies = [
     "pydantic>=2.12.0",
     "python-dotenv>=1.1.1",
     "python-Levenshtein>=0.27.1",
-    "sqlalchemy>=2.0.44",
     "PyYAML>=6.0.3",
     "result>=0.17.0",
+    "sqlalchemy>=2.0.44",
     "StrEnum>=0.4.15",
 ]
 
