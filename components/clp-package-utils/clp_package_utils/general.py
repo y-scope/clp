@@ -141,14 +141,17 @@ def check_docker_dependencies(should_compose_project_be_running: bool, project_n
             stderr=subprocess.STDOUT,
             check=True,
         )
-    except subprocess.CalledProcessError:
-        raise OSError("docker is not installed or available on the path")
+    except subprocess.CalledProcessError as e:
+        err_msg = "docker is not installed or available on the path"
+        raise OSError(err_msg) from e
 
     is_running = _is_docker_compose_project_running(project_name)
     if should_compose_project_be_running and not is_running:
-        raise OSError(f"Docker Compose project '{project_name}' is not running.")
+        err_msg = f"Docker Compose project '{project_name}' is not running."
+        raise OSError(err_msg)
     if not should_compose_project_be_running and is_running:
-        raise OSError("Docker Compose project '{project_name}' is already running.")
+        err_msg = "Docker Compose project '{project_name}' is already running."
+        raise OSError(err_msg)
 
 
 def validate_port(port_name: str, hostname: str, port: int):
@@ -704,8 +707,9 @@ def _is_docker_compose_project_running(project_name: str) -> bool:
         output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
         running_instances = json.loads(output)
         return len(running_instances) >= 1
-    except subprocess.CalledProcessError:
-        raise OSError("Docker Compose is not installed or not functioning properly.")
+    except subprocess.CalledProcessError as e:
+        err_msg = "Docker Compose is not installed or not functioning properly."
+        raise OSError(err_msg) from e
 
 
 def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
