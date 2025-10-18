@@ -151,44 +151,6 @@ def check_docker_dependencies(should_compose_project_be_running: bool, project_n
         raise EnvironmentError("Docker Compose project '{project_name}' is already running.")
 
 
-def _is_docker_compose_project_running(project_name: str) -> bool:
-    """
-    Checks if a Docker Compose project is running.
-
-    :param project_name:
-    :return: Whether at least one instance is running.
-    :raises EnvironmentError: If Docker Compose is not installed or fails.
-    """
-    cmd = ["docker", "compose", "ls", "--format", "json", "--filter", f"name={project_name}"]
-    try:
-        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
-        running_instances = json.loads(output)
-        return len(running_instances) >= 1
-    except subprocess.CalledProcessError:
-        raise EnvironmentError("Docker Compose is not installed or not functioning properly.")
-
-
-def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
-    try:
-        validate_path_could_be_dir(data_dir)
-    except ValueError as ex:
-        raise ValueError(f"{component_name} data directory is invalid: {ex}")
-
-
-def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
-    """
-    Validates that the logs directory path for a component is valid.
-
-    :param logs_dir:
-    :param component_name:
-    :raises ValueError: If the path is invalid or can't be a directory.
-    """
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{component_name} logs directory is invalid: {ex}")
-
-
 def validate_port(port_name: str, hostname: str, port: int):
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -727,3 +689,41 @@ def get_celery_connection_env_vars_list(container_clp_config: CLPConfig) -> List
     ]
 
     return env_vars
+
+
+def _is_docker_compose_project_running(project_name: str) -> bool:
+    """
+    Checks if a Docker Compose project is running.
+
+    :param project_name:
+    :return: Whether at least one instance is running.
+    :raises EnvironmentError: If Docker Compose is not installed or fails.
+    """
+    cmd = ["docker", "compose", "ls", "--format", "json", "--filter", f"name={project_name}"]
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        running_instances = json.loads(output)
+        return len(running_instances) >= 1
+    except subprocess.CalledProcessError:
+        raise EnvironmentError("Docker Compose is not installed or not functioning properly.")
+
+
+def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
+    try:
+        validate_path_could_be_dir(data_dir)
+    except ValueError as ex:
+        raise ValueError(f"{component_name} data directory is invalid: {ex}")
+
+
+def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
+    """
+    Validates that the logs directory path for a component is valid.
+
+    :param logs_dir:
+    :param component_name:
+    :raises ValueError: If the path is invalid or can't be a directory.
+    """
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{component_name} logs directory is invalid: {ex}")
