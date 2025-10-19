@@ -9,6 +9,7 @@ from pydantic import (
     Field,
     field_validator,
     model_validator,
+    PlainSerializer,
     PrivateAttr,
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
@@ -20,7 +21,7 @@ from .core import (
     read_yaml_config_file,
     validate_path_could_be_dir,
 )
-from .pydantic_serialization_utils import PathStr, StrEnumSerializer
+from .serialization_utils import serialize_path, serialize_str_enum
 
 # Constants
 # Component names
@@ -70,6 +71,8 @@ CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 
+# Serializer
+StrEnumSerializer = PlainSerializer(serialize_str_enum)
 # Generic types
 NonEmptyStr = Annotated[str, Field(min_length=1)]
 PositiveFloat = Annotated[float, Field(gt=0)]
@@ -78,6 +81,7 @@ PositiveInt = Annotated[int, Field(gt=0)]
 # TODO: Replace this with pydantic_extra_types.domain.DomainStr.
 DomainStr = NonEmptyStr
 Port = Annotated[int, Field(gt=0, lt=2**16)]
+SerializablePath = Annotated[pathlib.Path, PlainSerializer(serialize_path)]
 ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
 
 
@@ -453,7 +457,7 @@ class S3IngestionConfig(BaseModel):
 
 class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
-    directory: PathStr
+    directory: SerializablePath
 
     @field_validator("directory", mode="before")
     @classmethod
@@ -468,7 +472,7 @@ class FsStorage(BaseModel):
 class S3Storage(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     s3_config: S3Config
-    staging_directory: PathStr
+    staging_directory: SerializablePath
 
     @field_validator("staging_directory", mode="before")
     @classmethod
@@ -491,7 +495,7 @@ class S3Storage(BaseModel):
 
 
 class FsIngestionConfig(FsStorage):
-    directory: PathStr = pathlib.Path("/")
+    directory: SerializablePath = pathlib.Path("/")
 
     def transform_for_container(self):
         input_logs_dir = self.directory.resolve()
@@ -501,28 +505,28 @@ class FsIngestionConfig(FsStorage):
 
 
 class ArchiveFsStorage(FsStorage):
-    directory: PathStr = CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH
+    directory: SerializablePath = CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH
 
     def transform_for_container(self):
         self.directory = pathlib.Path("/") / CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH
 
 
 class StreamFsStorage(FsStorage):
-    directory: PathStr = CLP_DEFAULT_STREAMS_DIRECTORY_PATH
+    directory: SerializablePath = CLP_DEFAULT_STREAMS_DIRECTORY_PATH
 
     def transform_for_container(self):
         self.directory = pathlib.Path("/") / CLP_DEFAULT_STREAMS_DIRECTORY_PATH
 
 
 class ArchiveS3Storage(S3Storage):
-    staging_directory: PathStr = CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH
+    staging_directory: SerializablePath = CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH
 
     def transform_for_container(self):
         self.staging_directory = pathlib.Path("/") / CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH
 
 
 class StreamS3Storage(S3Storage):
-    staging_directory: PathStr = CLP_DEFAULT_STREAMS_STAGING_DIRECTORY_PATH
+    staging_directory: SerializablePath = CLP_DEFAULT_STREAMS_STAGING_DIRECTORY_PATH
 
     def transform_for_container(self):
         self.staging_directory = pathlib.Path("/") / CLP_DEFAULT_STREAMS_STAGING_DIRECTORY_PATH
@@ -632,22 +636,26 @@ class CLPConfig(BaseModel):
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
-    credentials_file_path: PathStr = CLP_DEFAULT_CREDENTIALS_FILE_PATH
+    credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     presto: Optional[Presto] = None
 
     archive_output: ArchiveOutput = ArchiveOutput()
     stream_output: StreamOutput = StreamOutput()
-    data_directory: PathStr = CLP_DEFAULT_DATA_DIRECTORY_PATH
-    logs_directory: PathStr = CLP_DEFAULT_LOG_DIRECTORY_PATH
-    aws_config_directory: Optional[pathlib.Path] = None
+    data_directory: SerializablePath = CLP_DEFAULT_DATA_DIRECTORY_PATH
+    logs_directory: SerializablePath = CLP_DEFAULT_LOG_DIRECTORY_PATH
+    aws_config_directory: Optional[SerializablePath] = None
 
-    _container_image_id_path: PathStr = PrivateAttr(default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH)
-    _version_file_path: PathStr = PrivateAttr(default=CLP_VERSION_FILE_PATH)
+    _container_image_id_path: SerializablePath = PrivateAttr(
+        default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH
+    )
+    _version_file_path: SerializablePath = PrivateAttr(default=CLP_VERSION_FILE_PATH)
 
     @field_validator("aws_config_directory")
     @classmethod
-    def expand_profile_user_home(cls, value: Optional[pathlib.Path]):
+    def expand_profile_user_home(
+        cls, value: Optional[SerializablePath]
+    ) -> Optional[SerializablePath]:
         if value is not None:
             value = value.expanduser()
         return value
@@ -783,12 +791,6 @@ class CLPConfig(BaseModel):
         for key in custom_serialized_fields:
             d[key] = getattr(self, key).dump_to_primitive_dict()
 
-        # Turn paths into primitive strings
-        if self.aws_config_directory is not None:
-            d["aws_config_directory"] = str(self.aws_config_directory)
-        else:
-            d["aws_config_directory"] = None
-
         return d
 
     @model_validator(mode="after")
@@ -849,7 +851,7 @@ class CLPConfig(BaseModel):
 class WorkerConfig(BaseModel):
     package: Package = Package()
     archive_output: ArchiveOutput = ArchiveOutput()
-    data_directory: pathlib.Path = CLPConfig().data_directory
+    data_directory: SerializablePath = CLPConfig().data_directory
 
     # Only needed by query workers.
     stream_output: StreamOutput = StreamOutput()

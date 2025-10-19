@@ -754,7 +754,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_queue()
         env_vars |= self._set_up_env_for_redis()
         env_vars |= self._set_up_env_for_spider_db()
-        env_vars |= self._set_up_env_for_spider_scheduler(),
+        env_vars |= self._set_up_env_for_spider_scheduler()
         env_vars |= self._set_up_env_for_results_cache()
         env_vars |= self._set_up_env_for_compression_scheduler()
         env_vars |= self._set_up_env_for_query_scheduler()
