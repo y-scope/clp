@@ -7,7 +7,13 @@ use secrecy::{ExposeSecret, SecretString};
 
 /// Creates a new S3 client.
 ///
+/// # Notes
+///
+/// * The client is configured using the latest AWS SDK behavior version.
+/// * The client enforces path-style addressing.
+///
 /// # Returns
+///
 /// A newly created S3 client.
 #[must_use]
 pub async fn create_new_client(
