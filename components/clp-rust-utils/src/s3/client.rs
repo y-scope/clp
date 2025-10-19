@@ -1,3 +1,4 @@
+use aws_config::BehaviorVersion;
 use aws_sdk_s3::{
     Client,
     config::{Builder, Credentials, Region},
@@ -9,7 +10,7 @@ use secrecy::{ExposeSecret, SecretString};
 /// # Returns
 /// A newly created S3 client.
 #[must_use]
-pub fn create_new_client(
+pub async fn create_new_client(
     endpoint: &str,
     region_id: &str,
     access_key_id: &str,
@@ -23,7 +24,8 @@ pub fn create_new_client(
         "clp-user",
     );
     let region = Region::new(region_id.to_owned());
-    let config = Builder::new()
+    let base_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
+    let config = Builder::from(&base_config)
         .endpoint_url(endpoint)
         .region(region)
         .credentials_provider(credential)
