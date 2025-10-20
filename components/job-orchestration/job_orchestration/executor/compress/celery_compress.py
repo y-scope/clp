@@ -1,3 +1,5 @@
+from typing import List
+
 from celery import signals
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
@@ -19,7 +21,7 @@ def compress(
     self: Task,
     job_id: int,
     task_id: int,
-    tag_ids,
+    tag_ids: List[int],
     clp_io_config_json: str,
     paths_to_compress_json: str,
     clp_metadata_db_connection_config,
