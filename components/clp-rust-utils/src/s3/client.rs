@@ -27,7 +27,7 @@ pub async fn create_new_client(
         secret_access_key.expose_secret(),
         None,
         None,
-        "clp-user",
+        "clp-credential-provider",
     );
     let region = Region::new(region_id.to_owned());
     let base_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
