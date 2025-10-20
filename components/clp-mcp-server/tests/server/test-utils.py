@@ -1,14 +1,15 @@
 """Unit tests for CLP MCP server's utility functions."""
 
-from clp_mcp_server.server.utils import filter_query_results
+from clp_mcp_server.server.utils import filter_query_results, sort_query_results
 
-class TestFilterQueryResults:
-    """Test suite for filter_query_results function."""
-
+class TestUtils:
+    """Test suite for utility functions."""
+    
+    # Testing basic functionality
     RAW_LOG_ENTRIES = [
         {
             "_id": "test001",
-            "timestamp": 0,  # Epoch zero (milliseconds)
+            "timestamp": 0,
             "message": '{"ts":0,"pid":null,"tid":null,"message":"Log at epoch zero"}\n',
             "orig_file_path": "/var/log/app.log",
             "archive_id": "abc123",
@@ -17,7 +18,10 @@ class TestFilterQueryResults:
         {
             "_id": "test002",
             "timestamp": 1729267200000,  # Oct 18, 2024 16:00:00.000 (milliseconds)
-            "message": '{"ts":1729267200000,"pid":1234,"tid":5678,"message":"Log with zero milliseconds"}\n',
+            "message": (
+                '{"ts":1729267200000,"pid":1234,"tid":5678,'
+                '"message":"Log with zero milliseconds"}\n'
+            ),
             "orig_file_path": "/var/log/app.log",
             "archive_id": "abc124",
             "log_event_ix": 101,
@@ -25,7 +29,10 @@ class TestFilterQueryResults:
         {
             "_id": "test003",
             "timestamp": 1729267200123,  # Oct 18, 2024 16:00:00.123 (milliseconds)
-            "message": '{"ts":1729267200123,"pid":1234,"tid":5678,"message":"Log with millisecond precision"}\n',
+            "message": (
+                '{"ts":1729267200123,"pid":1234,"tid":5678,'
+                '"message":"Log with millisecond precision"}\n'
+            ),
             "orig_file_path": "/var/log/app.log",
             "archive_id": "abc125",
             "log_event_ix": 102,
@@ -33,9 +40,21 @@ class TestFilterQueryResults:
     ]
 
     EXPECTED_RESULTS = [
-        'timestamp: 1970-01-01T00:00:00.000Z, message: {"ts":0,"pid":null,"tid":null,"message":"Log at epoch zero"}\n',
-        'timestamp: 2024-10-18T16:00:00.000Z, message: {"ts":1729267200000,"pid":1234,"tid":5678,"message":"Log with zero milliseconds"}\n',
-        'timestamp: 2024-10-18T16:00:00.123Z, message: {"ts":1729267200123,"pid":1234,"tid":5678,"message":"Log with millisecond precision"}\n',
+        (
+            'timestamp: 2024-10-18T16:00:00.123Z, message: '
+            '{"ts":1729267200123,"pid":1234,"tid":5678,'
+            '"message":"Log with millisecond precision"}\n'
+        ),
+        (
+            'timestamp: 2024-10-18T16:00:00.000Z, message: '
+            '{"ts":1729267200000,"pid":1234,"tid":5678,'
+            '"message":"Log with zero milliseconds"}\n'
+        ),
+        (
+            'timestamp: 1970-01-01T00:00:00.000Z, message: '
+            '{"ts":0,"pid":null,"tid":null,'
+            '"message":"Log at epoch zero"}\n'
+        ),
     ]
 
     # Test case: missing timestamp and message fields
@@ -72,11 +91,11 @@ class TestFilterQueryResults:
     # Test case: invalid timestamp values
     INVALID_VALUE_ENTRIES = [
         {
-            "timestamp": 9999999999999999,  # Overflow (ValueError/OSError)
+            "timestamp": 9999999999999999,
             "message": '{"message":"Log with overflow timestamp"}\n',
         },
         {
-            "timestamp": -9999999999999999,  # Negative overflow (ValueError/OSError)
+            "timestamp": -9999999999999999,
             "message": '{"message":"Log with negative overflow timestamp"}\n',
         },
     ]
@@ -85,26 +104,27 @@ class TestFilterQueryResults:
         'timestamp: N/A, message: {"message":"Log with negative overflow timestamp"}\n',
     ]
 
-    def test_filter_query_results(self):
-        """Test query result from MongoDB is filtered correctly."""
-        result = filter_query_results(self.RAW_LOG_ENTRIES)
+    def test_sort_and_filter_query_results(self):
+        """Validates the functionality of post-processing for the query response."""
+        sorted_result = sort_query_results(self.RAW_LOG_ENTRIES)
+        filtered_result = filter_query_results(sorted_result)
 
-        assert result == self.EXPECTED_RESULTS
+        assert filtered_result == self.EXPECTED_RESULTS
 
     def test_missing_timestamp_and_message(self):
-        """Test handling of log entries without timestamp and message field."""
+        """Validates the handling of log entries without timestamp and message field."""
         result = filter_query_results(self.MISSING_TIMESTAMP_AND_MESSAGE_ENTRY)
 
         assert result == self.MISSING_TIMESTAMP_AND_MESSAGE_EXPECTED
 
     def test_invalid_timestamp_type(self):
-        """Test handling of non-string timestamp types."""
+        """Validates the handling of non integer timestamp types."""
         result = filter_query_results(self.INVALID_TYPE_ENTRIES)
 
         assert result == self.INVALID_TYPE_EXPECTED
 
     def test_invalid_timestamp_value(self):
-        """Test handling of invalid timestamp values."""
+        """Validates the handling of invalid timestamp values."""
         result = filter_query_results(self.INVALID_VALUE_ENTRIES)
 
         assert result == self.INVALID_VALUE_EXPECTED

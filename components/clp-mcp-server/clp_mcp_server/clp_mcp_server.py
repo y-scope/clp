@@ -8,13 +8,10 @@ from pathlib import Path
 
 import click
 from clp_py_utils.clp_config import CLPConfig
-from clp_py_utils.clp_logging import get_logger
 from clp_py_utils.core import read_yaml_config_file
 from pydantic import ValidationError
 
 from .server import create_mcp_server
-
-logger = get_logger("clp-mcp-server")
 
 
 @click.command()
@@ -34,6 +31,7 @@ def main(host: str, port: int, config: Path) -> None:
 
     :param host: The server's host address (IP address or hostname).
     :param port: The server's port number (1-65535).
+    :param config: The path to server's configuration file.
     """
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
