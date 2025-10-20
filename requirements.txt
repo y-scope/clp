@@ -1,3 +1,2 @@
 pip~=23.3
-poetry~=1.7
 setuptools~=75.2.0

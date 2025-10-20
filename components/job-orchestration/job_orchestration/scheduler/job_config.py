@@ -30,8 +30,16 @@ class FsInputConfig(BaseModel):
 
 class S3InputConfig(S3Config):
     type: Literal[InputType.S3.value] = InputType.S3.value
+    keys: Optional[List[str]] = None
     dataset: Optional[str] = None
     timestamp_key: Optional[str] = None
+
+    @field_validator("keys")
+    @classmethod
+    def validate_keys(cls, value):
+        if value is not None and len(value) == 0:
+            raise ValueError("Keys cannot be an empty list")
+        return value
 
 
 class OutputConfig(BaseModel):
