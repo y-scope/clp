@@ -3,9 +3,9 @@
 #include <cstring>
 #include <exception>
 #include <filesystem>
-#include <iostream>
 #include <optional>
 #include <string_view>
+#include <system_error>
 
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
@@ -124,8 +124,8 @@ auto LogSerializer::create(std::string_view output_dir, std::string_view origina
     }
 
     boost::uuids::random_generator uuid_generator;
-    std::string uuid{boost::uuids::to_string(uuid_generator())};
-    auto const converted_path{std::filesystem::path{output_dir} / uuid};
+    std::string file_name{boost::uuids::to_string(uuid_generator()) + ".clp"};
+    auto const converted_path{std::filesystem::path{output_dir} / file_name};
     clp_s::FileWriter writer;
     try {
         writer.open(converted_path, clp_s::FileWriter::OpenMode::CreateForWriting);
@@ -169,8 +169,11 @@ class LogConverter {
 public:
     LogConverter() : m_buffer(cDefaultBufferSize) {}
 
-    auto convert_file(clp_s::Path const& path, std::shared_ptr<clp::ReaderInterface>& reader)
-            -> bool;
+    auto convert_file(
+            clp_s::Path const& path,
+            std::shared_ptr<clp::ReaderInterface>& reader,
+            std::string_view output_dir
+    ) -> bool;
 
 private:
     // Constants
@@ -223,15 +226,17 @@ auto LogConverter::refill_buffer(std::shared_ptr<clp::ReaderInterface>& reader)
     return num_bytes_read;
 }
 
-auto
-LogConverter::convert_file(clp_s::Path const& path, std::shared_ptr<clp::ReaderInterface>& reader)
-        -> bool {
+auto LogConverter::convert_file(
+        clp_s::Path const& path,
+        std::shared_ptr<clp::ReaderInterface>& reader,
+        std::string_view output_dir
+) -> bool {
     log_surgeon::Schema schema;
     schema.add_delimiters(cDelimeters);
     schema.add_variable(cTimestampSchema, -1);
     log_surgeon::BufferParser parser{std::move(schema.release_schema_ast_ptr())};
 
-    auto serializer_option{LogSerializer::create("tmp", path.path)};
+    auto serializer_option{LogSerializer::create(output_dir, path.path)};
     if (false == serializer_option.has_value()) {
         return false;
     }
@@ -288,6 +293,18 @@ LogConverter::convert_file(clp_s::Path const& path, std::shared_ptr<clp::ReaderI
 auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
     LogConverter log_converter;
 
+    std::error_code ec{};
+    if (false == std::filesystem::create_directory(command_line_arguments.get_output_dir(), ec)
+        && ec)
+    {
+        SPDLOG_ERROR(
+                "Can not create output directory {} - {}",
+                command_line_arguments.get_output_dir(),
+                ec.message()
+        );
+        return false;
+    }
+
     for (auto const& path : command_line_arguments.get_input_paths()) {
         auto reader{clp_s::try_create_reader(path, command_line_arguments.get_network_auth())};
         if (nullptr == reader) {
@@ -310,7 +327,13 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
             }
         }
 
-        if (false == log_converter.convert_file(path, nested_readers.back())) {
+        if (false
+            == log_converter.convert_file(
+                    path,
+                    nested_readers.back(),
+                    command_line_arguments.get_output_dir()
+            ))
+        {
             SPDLOG_ERROR("Failed to convert input {} to structured representation.", path.path);
             return false;
         }

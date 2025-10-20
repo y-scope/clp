@@ -39,7 +39,7 @@ private:
     // Compression and decompression variables
     std::vector<Path> m_input_paths;
     NetworkAuthOption m_network_auth{};
-    std::string m_output_dir;
+    std::string m_output_dir{"./"};
 };
 }  // namespace clp_s::log_converter
 
