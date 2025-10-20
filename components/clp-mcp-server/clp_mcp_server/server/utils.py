@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 logger = logging.getLogger(__name__)
 
 
-def convert_epoch_to_date_string(epoch_ts: str) -> str:
+def convert_epoch_to_date_string(epoch_ts: int) -> str:
     """
     :param epoch_ts: Unix epoch timestamp in milliseconds.
     :return: ISO 8601 formatted date string with millisecond precision (YYYY-MM-DDTHH:mm:ss.fffZ).
@@ -17,15 +17,9 @@ def convert_epoch_to_date_string(epoch_ts: str) -> str:
         err_msg = "Epoch timestamp cannot be None."
         raise TypeError(err_msg)
 
-    if not isinstance(epoch_ts, str):
-        err_msg = f"Object {type(epoch_ts).__name__} is not of type str."
+    if not isinstance(epoch_ts, int):
+        err_msg = f"Object {type(epoch_ts).__name__} is not of type int."
         raise TypeError(err_msg)
-
-    try:
-        epoch_ts = int(epoch_ts)
-    except ValueError as e:
-        err_msg = f"Epch timestamp '{epoch_ts}' cannot be converted to an int: {e}."
-        raise ValueError(err_msg) from e
 
     try:
         epoch_seconds = epoch_ts / 1000.0

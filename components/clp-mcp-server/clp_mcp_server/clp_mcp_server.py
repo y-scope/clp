@@ -4,10 +4,17 @@ import ipaddress
 import logging
 import socket
 import sys
+from pathlib import Path
 
 import click
+from clp_py_utils.clp_config import CLPConfig
+from clp_py_utils.clp_logging import get_logger
+from clp_py_utils.core import read_yaml_config_file
+from pydantic import ValidationError
 
 from .server import create_mcp_server
+
+logger = get_logger("clp-mcp-server")
 
 
 @click.command()
@@ -15,7 +22,13 @@ from .server import create_mcp_server
     "--host", type=str, default="127.0.0.1", help="The server's host address (default: 127.0.0.1)."
 )
 @click.option("--port", type=int, default=8000, help="The server's port number (default: 8000).")
-def main(host: str, port: int) -> None:
+@click.option(
+    "--config",
+    type=click.Path(exists=True),
+    default="/etc/clp-config.yml",
+    help="The path to server's configuration file (default: /etc/clp-config.yml).",
+)
+def main(host: str, port: int, config: Path) -> None:
     """
     Runs the CLP MCP server with HTTP transport.
 
@@ -52,7 +65,16 @@ def main(host: str, port: int) -> None:
         sys.exit(1)
 
     try:
-        mcp = create_mcp_server()
+        clp_config = CLPConfig.model_validate(read_yaml_config_file(config))
+    except ValidationError:
+        logger.exception("Configuration validation failed.")
+        sys.exit(1)
+    except Exception:
+        logger.exception("Failed to load configuration.")
+        sys.exit(1)
+
+    try:
+        mcp = create_mcp_server(clp_config)
         logger.info("Starting CLP MCP Server on %s:%d.", host, port)
         mcp.run(transport="streamable-http", host=host, port=port)
     except Exception:
