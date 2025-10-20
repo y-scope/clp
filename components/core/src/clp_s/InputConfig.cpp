@@ -253,9 +253,28 @@ auto could_be_json(char const* peek_buf, size_t peek_size) -> bool {
     return false;
 }
 
+/**
+ * This function decides whether the buffer could be logtext based on whether it contains valid, but
+ * potentially truncated, UTF-8 data.
+ *
+ * To check for valid UTF-8 while accounting for truncation we need to:
+ *   1. Find the last complete UTF-8 codepoint in the buffer
+ *   2. Validate that all of the data in the buffer including the last complete codepoint is valid
+ *      UTF-8.
+ *
+ * For the first step we can always find the last complete codepoint by scanning the last 7 bytes of
+ * the buffer. This is because in the worst case, the stream terminates with a 4-byte codepoint
+ * followed by another 4-byte codepoint with its last byte truncated. The approach, then, is to
+ * scan the last 7 bytes of the buffer to locate the last complete codepoint. Since we use full
+ * UTF-8 validation in the second step, this scan only needs to look for UTF-8 header bytes without
+ * validating continuation bytes. If no complete codepoint can be found, we know that the input is
+ * not valid UTF-8, otherwise we continue on to validating the entire buffer through the end of the
+ * last complete codepoint.
+ *
+ * For the second step, we simply use an off-the-shelf fast UTF-8 validator.
+ */
 auto could_be_logtext(char const* peek_buf, size_t peek_size) -> bool {
     constexpr size_t cMaxUtf8CodepointBytes = 4ULL;
-    // Full 4-byte character followed by truncated 3-bytes of 4-byte character.
     constexpr size_t cMaxRunWithoutFullUtf8Codepoint = 2 * cMaxUtf8CodepointBytes - 1ULL;
 
     size_t cur_byte{
@@ -273,8 +292,6 @@ auto could_be_logtext(char const* peek_buf, size_t peek_size) -> bool {
         cur_byte = last_byte_in_char;
     };
 
-    // Find the last complete UTF-8 character if it exists. We don't bother validating continuation
-    // bytes, since they will be checked in the final validation step anyway.
     for (; cur_byte < peek_size; ++cur_byte) {
         uint8_t const c{static_cast<uint8_t>(peek_buf[cur_byte])};
         if ((clp::cFourByteUtf8CharHeaderMask & c) == clp::cFourByteUtf8CharHeader) {
@@ -288,7 +305,6 @@ auto could_be_logtext(char const* peek_buf, size_t peek_size) -> bool {
         }
     }
 
-    // We were not able to find a complete UTF-8 character, so the input is definitely not UTF-8.
     if (false == legal_last_byte_index.has_value()) {
         return false;
     }
