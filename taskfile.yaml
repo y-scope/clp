@@ -59,6 +59,9 @@ tasks:
       - "rm -rf '{{.G_BUILD_DIR}}'"
       - task: "clean-python-component"
         vars:
+          COMPONENT: "clp-mcp-server"
+      - task: "clean-python-component"
+        vars:
           COMPONENT: "clp-package-utils"
       - task: "clean-python-component"
         vars:
@@ -112,7 +115,10 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
+      - "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_scheduler"
+      - "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_worker"
       - "{{.TASKFILE}}"
+      - "components/clp-mcp-server/dist/*.whl"
       - "components/clp-package-utils/dist/*.whl"
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
@@ -120,6 +126,7 @@ tasks:
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "core"
+      - "clp-mcp-server"
       - "clp-package-utils"
       - "clp-py-utils"
       - "deps:spider"
@@ -138,6 +145,7 @@ tasks:
       - |-
         . "{{.G_PACKAGE_VENV_DIR}}/bin/activate"
         pip3 install --upgrade \
+          components/clp-mcp-server/dist/*.whl \
           components/clp-package-utils/dist/*.whl \
           components/clp-py-utils/dist/*.whl \
           components/job-orchestration/dist/*.whl \
@@ -213,18 +221,23 @@ tasks:
           JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
 
+  clp-mcp-server:
+    - task: "uv-component"
+      vars:
+        COMPONENT: "{{.TASK}}"
+
   clp-package-utils:
-    - task: "python-component"
+    - task: "uv-component"
       vars:
         COMPONENT: "{{.TASK}}"
 
   clp-py-utils:
-    - task: "python-component"
+    - task: "uv-component"
       vars:
         COMPONENT: "{{.TASK}}"
 
   job-orchestration:
-    - task: "python-component"
+    - task: "uv-component"
       vars:
         COMPONENT: "{{.TASK}}"
 
@@ -284,7 +297,7 @@ tasks:
       - task: "nodejs"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          NODEJS_VERSION: "v22.4.0"
+          NODEJS_VERSION: "v22.20.0"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
 
   download-and-extract-tar:
@@ -510,16 +523,12 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
-  python-component:
+  uv-component:
     internal: true
     label: "{{.COMPONENT}}"
-    vars:
-      VENV_DIR: "{{.G_BUILD_DIR}}/{{.COMPONENT}}/venv"
     requires:
       vars: ["COMPONENT"]
     sources:
-      - "{{.G_BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
-      - "{{.ROOT_DIR}}/requirements.txt"
       - "{{.TASKFILE}}"
       - "/etc/os-release"
       - "**/*"
@@ -527,50 +536,11 @@ tasks:
     dir: "components/{{.COMPONENT}}"
     generates:
       - "dist/*.whl"
-    deps:
-      - task: "component-venv"
-        vars:
-          COMPONENT: "{{.COMPONENT}}"
-          OUTPUT_DIR: "{{.VENV_DIR}}"
     cmds:
       - task: "clean-python-component"
         vars:
           COMPONENT: "{{.COMPONENT}}"
-      - |-
-        . "{{.VENV_DIR}}/bin/activate"
-        poetry build --format wheel
-
-  component-venv:
-    internal: true
-    label: "{{.COMPONENT}}-venv"
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
-    requires:
-      vars: ["COMPONENT", "OUTPUT_DIR"]
-    sources:
-      - "{{.ROOT_DIR}}/requirements.txt"
-      - "{{.TASKFILE}}"
-      - "/etc/os-release"
-      - "pyproject.toml"
-    dir: "components/{{.COMPONENT}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "init"
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-    cmds:
-      - task: "utils:misc:create-venv"
-        vars:
-          LABEL: "{{.COMPONENT}}"
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          REQUIREMENTS_FILE: "{{.ROOT_DIR}}/requirements.txt"
-      # This command must be last
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+      - "uv build --wheel --no-cache -o dist"
 
   clean-python-component:
     internal: true

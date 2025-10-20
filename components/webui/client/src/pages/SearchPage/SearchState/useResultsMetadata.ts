@@ -30,7 +30,7 @@ const useResultsMetadata = () => {
                 `Subscribing to updates for results metadata for search job ID: ${searchJobId}`
             );
 
-            return collection.find({_id: searchJobId.toString()}, {limit: 1});
+            return collection.find({_id: searchJobId}, {limit: 1});
         },
         [searchJobId]
     );
