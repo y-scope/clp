@@ -17,7 +17,7 @@ FROM scratch
 COPY --link --from=base / /
 
 ENV CLP_HOME="/opt/clp"
-COPY ./build/clp-package ${CLP_HOME}
+COPY --link ./build/clp-package ${CLP_HOME}
 
 ENV PATH="${CLP_HOME}/bin:${PATH}"
 ENV PATH="${CLP_HOME}/sbin:${PATH}" \
