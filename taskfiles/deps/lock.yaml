@@ -1,0 +1,24 @@
+version: "3"
+
+tasks:
+  check-rust:
+    cmds:
+      - task: "rust-workspace-update"
+        vars:
+          RUST_UPDATE_FLAGS: "--locked"
+
+  update-rust:
+    cmds:
+      - task: "rust-workspace-update"
+        vars:
+            RUST_UPDATE_FLAGS: ""
+
+  rust-workspace-update:
+    internal: true
+    deps: ["::toolchains:rust"]
+    dir: "{{.ROOT_DIR}}"
+    requires:
+      vars: ["RUST_UPDATE_FLAGS"]
+    cmd: |-
+      . "$HOME/.cargo/env"
+      cargo update {{.RUST_UPDATE_FLAGS}}
