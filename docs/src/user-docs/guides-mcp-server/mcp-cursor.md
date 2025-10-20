@@ -1,0 +1,1 @@
+# Connecting Cursor to CLP MCP server

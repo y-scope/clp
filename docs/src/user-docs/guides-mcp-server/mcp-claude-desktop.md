@@ -1,0 +1,1 @@
+# Connecting Claude Desktop to CLP MCP server
