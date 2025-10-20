@@ -119,7 +119,7 @@ WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp.unix()} AND ${endTim
     try {
         validate(queryString);
     } catch (err: unknown) {
-        throw new Error(`The constructed SQL is not valid: ${queryString}`, {cause: err});
+        console.error(`The constructed SQL is not valid: ${queryString}`, err);
     }
 
     return queryString;
@@ -185,7 +185,7 @@ ORDER BY timestamps.idx
     try {
         validate(queryString);
     } catch (err: unknown) {
-        throw new Error(`The constructed SQL is not valid: ${queryString}`, {cause: err});
+        console.error(`The constructed SQL is not valid: ${queryString}`, err);
     }
 
     return queryString;
