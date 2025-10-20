@@ -118,7 +118,7 @@ class TestUtils:
         assert result == self.MISSING_TIMESTAMP_AND_MESSAGE_EXPECTED
 
     def test_invalid_timestamp_type(self):
-        """Validates the handling of non integer timestamp types."""
+        """Validates the handling of noninteger timestamp types."""
         result = filter_query_results(self.INVALID_TYPE_ENTRIES)
 
         assert result == self.INVALID_TYPE_EXPECTED

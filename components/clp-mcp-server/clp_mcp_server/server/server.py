@@ -77,13 +77,13 @@ def create_mcp_server(clp_config: Any) -> FastMCP:
         """
         Searches the logs for the specified KQL query and returns the first page of the matching
         result. The paginated results are ordered from latest to oldest, with each page containing
-        the pagination metadata and 10 log messages along with their date string timestamps.
+        the paging metadata and 10 log messages along with their date string timestamps.
 
         :param kql_query:
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
         :return: Forwards `FastMCP.tool`''s `get_nth_page`'s return values on success:
         :return: A dictionary with the following key-value pair on failures:
-            - "Error": An error status describing the reason for the query failure.
+            - "Error": An error message describing the failure.
         """
         await session_manager.start()
 

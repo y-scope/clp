@@ -32,16 +32,19 @@ def convert_epoch_to_date_string(epoch_ts: int) -> str:
 
 def sort_query_results(query_results: list[dict]) -> list[dict]:
     """
-    :param query_results: A list of log entries with its metadata read from MongoDB.
-    :return: A sorted list of log entries with its metadata, ordered by epoch from latest to oldest.
+    :param query_results: A list of dictionary containing log entries with its metadata read from
+    MongoDB.
+    :return: A sorted list of dictionary containing log entries with its metadata, ordered by epoch
+    from latest to oldest.
     """
     return sorted(query_results, key=lambda log_entry: log_entry.get("timestamp", 0), reverse=True)
 
 
 def filter_query_results(query_results: list[dict]) -> list[str]:
     """
-    :param query_results: A list of log entries with its metadata.
-    :return: A list of strings encoded with date string timestamp and log entry message.
+    :param query_results: A list of dictionary containing log entries with its metadata.
+    :return: A list of strings containing only the `timestamp` (as a date string) and `message` of
+    a log entry.
     """
     filtered = []
     for obj in query_results:
