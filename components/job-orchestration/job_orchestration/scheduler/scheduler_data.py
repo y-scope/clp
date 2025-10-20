@@ -4,6 +4,8 @@ from abc import ABC, abstractmethod
 from enum import auto, Enum
 from typing import Any, Dict, List, Optional
 
+from pydantic import BaseModel, ConfigDict
+
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.constants import (
     QueryJobType,
@@ -16,7 +18,6 @@ from job_orchestration.scheduler.job_config import (
     SearchJobConfig,
 )
 from job_orchestration.scheduler.query.reducer_handler import ReducerHandlerMessageQueues
-from pydantic import BaseModel, ConfigDict, field_validator
 
 
 class CompressionJob(BaseModel):
