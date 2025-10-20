@@ -11,7 +11,7 @@ tasks:
     cmds:
       - task: "rust-workspace-update"
         vars:
-            RUST_UPDATE_FLAGS: ""
+          RUST_UPDATE_FLAGS: ""
 
   rust-workspace-update:
     internal: true
