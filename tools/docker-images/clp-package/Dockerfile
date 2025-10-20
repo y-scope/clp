@@ -16,13 +16,18 @@ RUN apt-get clean \
 FROM scratch
 COPY --link --from=base / /
 
+ARG UID=1000
 ENV CLP_HOME="/opt/clp"
 ENV LD_LIBRARY_PATH="${CLP_HOME}/lib" \
     PATH="${CLP_HOME}/bin:${PATH}" \
-    PYTHONPATH="${CLP_HOME}/lib/python3/site-packages"
+    PYTHONPATH="${CLP_HOME}/lib/python3/site-packages" \
+    USER="clp-user"
 ENV PATH="${CLP_HOME}/sbin:${PATH}"
 
-USER 1000:1000
+RUN useradd --uid ${UID} --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
+USER ${USER}
+WORKDIR ${CLP_HOME}
 
-COPY --link ./build/clp-package ${CLP_HOME}
-COPY --link ./build/deps/cpp/mariadb-connector-cpp-install/lib/*/libmariadbcpp.so* ${CLP_HOME}/lib/
+COPY --link --chown=${UID} ./build/clp-package ${CLP_HOME}
+COPY --link --chown=${UID} ./build/deps/cpp/mariadb-connector-cpp-install/lib/*/libmariadbcpp.so* \
+    ${CLP_HOME}/lib/
