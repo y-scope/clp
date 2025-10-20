@@ -457,6 +457,7 @@ class S3IngestionConfig(BaseModel):
     def transform_for_container(self):
         pass
 
+
 class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
     directory: SerializablePath
