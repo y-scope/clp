@@ -5,7 +5,7 @@ from clp_mcp_server.server.utils import filter_query_results, sort_query_results
 class TestUtils:
     """Test suite for utility functions."""
     
-    # Testing basic functionality
+    # Testing basic functionality.
     RAW_LOG_ENTRIES = [
         {
             "_id": "test001",
@@ -57,7 +57,7 @@ class TestUtils:
         ),
     ]
 
-    # Test case: missing timestamp and message fields
+    # Test case: missing timestamp and message fields.
     MISSING_TIMESTAMP_AND_MESSAGE_ENTRY = [
         {
             "_id": "test001",
@@ -67,7 +67,7 @@ class TestUtils:
         "timestamp: N/A, message: "
     ]
 
-    # Test case: invalid timestamp types
+    # Test case: invalid timestamp types.
     INVALID_TYPE_ENTRIES = [
         {
             "timestamp": None,
@@ -75,7 +75,7 @@ class TestUtils:
         },
         {
             "timestamp": "1729267200000",  # str instead of int
-            "message": '{"message":"Log with int timestamp"}\n',
+            "message": '{"message":"Log with str timestamp"}\n',
         },
         {
             "timestamp": 1729267200000.0,  # float instead of int
@@ -84,11 +84,11 @@ class TestUtils:
     ]
     INVALID_TYPE_EXPECTED = [
         'timestamp: N/A, message: {"message":"Log with None timestamp"}\n',
-        'timestamp: N/A, message: {"message":"Log with int timestamp"}\n',
+        'timestamp: N/A, message: {"message":"Log with str timestamp"}\n',
         'timestamp: N/A, message: {"message":"Log with float timestamp"}\n',
     ]
 
-    # Test case: invalid timestamp values
+    # Test case: invalid timestamp values.
     INVALID_VALUE_ENTRIES = [
         {
             "timestamp": 9999999999999999,
