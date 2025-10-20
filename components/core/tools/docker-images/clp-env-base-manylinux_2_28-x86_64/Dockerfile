@@ -1,9 +1,11 @@
+# syntax=docker/dockerfile:1
+
 FROM quay.io/pypa/manylinux_2_28_x86_64
 
 WORKDIR /root
 
 RUN mkdir -p ./tools/scripts/lib_install
-COPY ./tools/scripts/lib_install ./tools/scripts/lib_install
+COPY --link ./tools/scripts/lib_install ./tools/scripts/lib_install
 
 RUN pipx uninstall cmake
 RUN pipx uninstall uv

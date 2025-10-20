@@ -1,6 +1,10 @@
+# syntax=docker/dockerfile:1
+
 FROM ubuntu:jammy AS base
 
-COPY ./tools/docker-images/clp-package/setup-scripts ./setup-scripts
+WORKDIR /root
+
+COPY --link ./tools/docker-images/clp-package/setup-scripts ./setup-scripts
 RUN ./setup-scripts/install-prebuilt-packages.sh \
     && rm -rf ./setup-scripts/
 
@@ -10,7 +14,7 @@ RUN apt-get clean \
 
 # Flatten the image
 FROM scratch
-COPY --from=base / /
+COPY --link --from=base / /
 
 ENV CLP_HOME="/opt/clp"
 COPY ./build/clp-package ${CLP_HOME}

@@ -227,17 +227,17 @@ tasks:
         COMPONENT: "{{.TASK}}"
 
   clp-package-utils:
-    - task: "python-component"
+    - task: "uv-component"
       vars:
         COMPONENT: "{{.TASK}}"
 
   clp-py-utils:
-    - task: "python-component"
+    - task: "uv-component"
       vars:
         COMPONENT: "{{.TASK}}"
 
   job-orchestration:
-    - task: "python-component"
+    - task: "uv-component"
       vars:
         COMPONENT: "{{.TASK}}"
 
@@ -297,7 +297,7 @@ tasks:
       - task: "nodejs"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          NODEJS_VERSION: "v22.4.0"
+          NODEJS_VERSION: "v22.20.0"
           OUTPUT_DIR: "{{.OUTPUT_DIR}}"
 
   download-and-extract-tar:
@@ -523,36 +523,6 @@ tasks:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
-  python-component:
-    internal: true
-    label: "{{.COMPONENT}}"
-    vars:
-      VENV_DIR: "{{.G_BUILD_DIR}}/{{.COMPONENT}}/venv"
-    requires:
-      vars: ["COMPONENT"]
-    sources:
-      - "{{.G_BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
-      - "{{.ROOT_DIR}}/requirements.txt"
-      - "{{.TASKFILE}}"
-      - "/etc/os-release"
-      - "**/*"
-      - exclude: "dist/**/*"
-    dir: "components/{{.COMPONENT}}"
-    generates:
-      - "dist/*.whl"
-    deps:
-      - task: "component-venv"
-        vars:
-          COMPONENT: "{{.COMPONENT}}"
-          OUTPUT_DIR: "{{.VENV_DIR}}"
-    cmds:
-      - task: "clean-python-component"
-        vars:
-          COMPONENT: "{{.COMPONENT}}"
-      - |-
-        . "{{.VENV_DIR}}/bin/activate"
-        poetry build --format wheel
-
   uv-component:
     internal: true
     label: "{{.COMPONENT}}"
@@ -571,38 +541,6 @@ tasks:
         vars:
           COMPONENT: "{{.COMPONENT}}"
       - "uv build --wheel --no-cache -o dist"
-
-  component-venv:
-    internal: true
-    label: "{{.COMPONENT}}-venv"
-    vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.COMPONENT}}-venv.md5"
-    requires:
-      vars: ["COMPONENT", "OUTPUT_DIR"]
-    sources:
-      - "{{.ROOT_DIR}}/requirements.txt"
-      - "{{.TASKFILE}}"
-      - "/etc/os-release"
-      - "pyproject.toml"
-    dir: "components/{{.COMPONENT}}"
-    generates: ["{{.CHECKSUM_FILE}}"]
-    deps:
-      - "init"
-      - task: "utils:checksum:validate"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-    cmds:
-      - task: "utils:misc:create-venv"
-        vars:
-          LABEL: "{{.COMPONENT}}"
-          OUTPUT_DIR: "{{.OUTPUT_DIR}}"
-          REQUIREMENTS_FILE: "{{.ROOT_DIR}}/requirements.txt"
-      # This command must be last
-      - task: "utils:checksum:compute"
-        vars:
-          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   clean-python-component:
     internal: true

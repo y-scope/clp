@@ -40,7 +40,7 @@ const useSearchResults = () => {
                 limit: SEARCH_MAX_NUM_RESULTS,
             };
 
-            const collection = new MongoSocketCollection(searchJobId.toString());
+            const collection = new MongoSocketCollection(searchJobId);
             return collection.find({}, options);
         },
         [searchJobId]

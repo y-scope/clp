@@ -15,7 +15,7 @@
 const unquoteString = (
     str: string,
     quoteChar: string,
-    escapeChar:string,
+    escapeChar: string,
 ) => {
     if (0 === str.length) {
         return str;
