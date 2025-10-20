@@ -17,7 +17,8 @@ tasks:
           CARGO_UPDATE_FLAGS: ""
 
   # Runs `cargo update` in the root Rust workspace directory with the specified flags.
-  # @param {string[]} CARGO_UPDATE_FLAGS The flags to pass to `cargo update`.
+  #
+  # @param {string} CARGO_UPDATE_FLAGS The flags to pass to the `cargo update` command.
   cargo-workspace-update:
     internal: true
     requires:
