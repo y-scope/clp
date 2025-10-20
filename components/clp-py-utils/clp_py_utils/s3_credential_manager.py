@@ -1,24 +1,25 @@
-"""
-Manages AWS S3 credentials in the CLP database.
-
-This module provides the S3CredentialManager class for CRUD operations on AWS credentials stored
-securely in the database, along with helper functions for reading credentials from various sources.
-"""
-
 import logging
+import os
 import re
 from contextlib import closing
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 from pydantic import SecretStr
 from sql_adapter import SQL_Adapter
 
-from clp_py_utils.clp_config import AwsCredential, Database, S3Credentials, TemporaryCredential
+from clp_py_utils.clp_config import (
+    AwsCredential,
+    CLP_METADATA_TABLE_PREFIX,
+    Database,
+    S3Credentials,
+    TemporaryCredential,
+)
 from clp_py_utils.clp_metadata_db_utils import (
     get_aws_credentials_table_name,
     get_aws_temporary_credentials_table_name,
 )
+from clp_py_utils.s3_utils import _get_session_credentials
 
 logger = logging.getLogger(__name__)
 
@@ -34,20 +35,17 @@ class S3CredentialManager:
         """
         self.sql_adapter = SQL_Adapter(database_config)
         conn_params = database_config.get_clp_connection_params_and_type()
-        self.table_prefix = conn_params.get("table_prefix", "clp_")
+        self.table_prefix = conn_params.get("table_prefix", CLP_METADATA_TABLE_PREFIX)
 
     def create_credential(
         self,
         name: str,
         access_key_id: str,
         secret_access_key: str,
-        role_arn: Optional[str] = None,
+        role_arn: str | None = None,
     ) -> int:
         """
         Creates a new AWS long-term credential entry.
-
-        Note: This stores static/long-term credentials only. Session tokens are stored separately
-        in the aws_temporary_credentials table via cache_session_token().
 
         :param name: Unique name for the credential.
         :param access_key_id: AWS access key ID.
@@ -88,7 +86,7 @@ class S3CredentialManager:
 
     def list_credentials(self) -> List[Tuple[int, str, datetime]]:
         """
-        Lists all credentials (metadata only, no secrets).
+        Lists all credential entries (metadata only, no secrets).
 
         :return: List of tuples (id, name, created_at).
         """
@@ -108,12 +106,9 @@ class S3CredentialManager:
             rows = cursor.fetchall()
             return [(row["id"], row["name"], row["created_at"]) for row in rows]
 
-    def get_credential_by_id(self, credential_id: int) -> Optional[AwsCredential]:
+    def get_credential_by_id(self, credential_id: int) -> AwsCredential | None:
         """
         Retrieves a long-term credential by ID (includes secrets).
-
-        Note: This returns static credentials only. Session tokens must be retrieved via
-        get_cached_session_token_by_source().
 
         :param credential_id: The credential ID.
         :return: AwsCredential object or None if not found.
@@ -148,12 +143,9 @@ class S3CredentialManager:
                 updated_at=row["updated_at"],
             )
 
-    def get_credential_by_name(self, name: str) -> Optional[AwsCredential]:
+    def get_credential_by_name(self, name: str) -> AwsCredential | None:
         """
         Retrieves a long-term credential by name (includes secrets).
-
-        Note: This returns static credentials only. Session tokens must be retrieved via
-        get_cached_session_token_by_source().
 
         :param name: The credential name.
         :return: AwsCredential object or None if not found.
@@ -191,16 +183,13 @@ class S3CredentialManager:
     def update_credential(
         self,
         credential_id: int,
-        name: Optional[str] = None,
-        access_key_id: Optional[str] = None,
-        secret_access_key: Optional[str] = None,
-        role_arn: Optional[str] = None,
+        name: str | None = None,
+        access_key_id: str | None = None,
+        secret_access_key: str | None = None,
+        role_arn: str | None = None,
     ) -> bool:
         """
         Updates an existing long-term credential. Only provided fields are updated.
-
-        Note: Session tokens cannot be updated here - they are managed separately via
-        cache_session_token() in the aws_temporary_credentials table.
 
         :param credential_id: The credential ID to update.
         :param name: New name (must be unique).
@@ -313,9 +302,6 @@ class S3CredentialManager:
         """
         Caches a session token in the temporary credentials table.
 
-        This stores user-provided session tokens or tokens obtained via role assumption.
-        The source field tracks the origin (role ARN or S3 resource ARN) for efficient lookup.
-
         :param long_term_key_id: ID of the associated long-term credential.
         :param access_key_id: Temporary access key ID.
         :param secret_access_key: Temporary secret access key.
@@ -364,8 +350,8 @@ class S3CredentialManager:
             return credential_id
 
     def get_cached_session_token_by_source(
-        self, source: str, long_term_key_id: Optional[int] = None
-    ) -> Optional[TemporaryCredential]:
+        self, source: str, long_term_key_id: int | None = None
+    ) -> TemporaryCredential | None:
         """
         Retrieves a valid (non-expired) cached session token by source.
 
@@ -417,9 +403,6 @@ class S3CredentialManager:
     def cleanup_expired_session_tokens(self) -> int:
         """
         Deletes expired session tokens from the cache.
-
-        This should be called periodically by a garbage collector or MySQL EVENT
-        to clean up expired credentials and free database space.
 
         :return: Count of deleted credentials.
         """
@@ -479,10 +462,6 @@ class S3CredentialManager:
         if not access_key_id or not access_key_id.strip():
             raise ValueError("Access key ID cannot be empty")
 
-        # AWS access keys are typically 20 characters, starting with 'AKIA' or 'ASIA'
-        if len(access_key_id) < 16 or len(access_key_id) > 128:
-            logger.warning(f"Access key ID has unusual length: {len(access_key_id)}")
-
     def _validate_secret_access_key(self, secret_access_key: str) -> None:
         """
         Validates AWS secret access key.
@@ -492,10 +471,6 @@ class S3CredentialManager:
         """
         if not secret_access_key or not secret_access_key.strip():
             raise ValueError("Secret access key cannot be empty")
-
-        # AWS secret keys are typically 40 characters
-        if len(secret_access_key) < 16:
-            raise ValueError("Secret access key seems too short")
 
 
 # Credential source helper functions
@@ -508,8 +483,6 @@ def get_credentials_from_env() -> S3Credentials:
     :return: S3Credentials object.
     :raises ValueError: If required env vars not set.
     """
-    import os
-
     access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
     secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
     session_token = os.getenv("AWS_SESSION_TOKEN")
@@ -532,29 +505,8 @@ def get_credentials_from_profile(profile_name: str) -> S3Credentials:
     :return: S3Credentials object.
     :raises ValueError: If profile not found or invalid.
     """
-    # Reuse existing logic from s3_utils
-    from clp_py_utils.s3_utils import _get_session_credentials
-
     credentials = _get_session_credentials(profile_name)
     if credentials is None:
         raise ValueError(f"Failed to authenticate with profile '{profile_name}'")
 
     return credentials
-
-
-def get_credentials_from_args(
-    access_key_id: str, secret_access_key: str, session_token: Optional[str] = None
-) -> S3Credentials:
-    """
-    Creates credentials from provided arguments.
-
-    :param access_key_id: AWS access key ID.
-    :param secret_access_key: AWS secret access key.
-    :param session_token: Optional session token.
-    :return: S3Credentials object.
-    """
-    return S3Credentials(
-        access_key_id=access_key_id,
-        secret_access_key=secret_access_key,
-        session_token=session_token,
-    )

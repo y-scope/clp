@@ -426,7 +426,7 @@ class AwsCredential(BaseModel):
 
     access_key_id: SecretStr
     secret_access_key: SecretStr
-    role_arn: Optional[str] = None
+    role_arn: str | None = None
 
     created_at: datetime = datetime.now()
     updated_at: datetime = datetime.now()
