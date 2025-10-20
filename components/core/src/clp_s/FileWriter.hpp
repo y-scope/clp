@@ -29,6 +29,25 @@ public:
     // Constructors
     FileWriter() : m_file(nullptr), m_fd(-1) {}
 
+    // Disable copy constructor/assignment operator
+    FileWriter(FileWriter const&) = delete;
+    auto operator=(FileWriter const&) -> FileWriter& = delete;
+
+    // Define custom move constructor/assignment operator
+    FileWriter(FileWriter&& writer) {
+        m_file = writer.m_file;
+        m_fd = writer.m_fd;
+        writer.m_file = nullptr;
+        writer.m_fd = -1;
+    }
+    auto operator=(FileWriter&& writer) -> FileWriter& {
+        m_file = writer.m_file;
+        m_fd = writer.m_fd;
+        writer.m_file = nullptr;
+        writer.m_fd = -1;
+        return *this;
+    }
+
     // Destructor
     ~FileWriter();
 
