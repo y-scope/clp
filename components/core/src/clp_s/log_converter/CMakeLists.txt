@@ -17,6 +17,8 @@ if(CLP_BUILD_EXECUTABLES)
         Boost::program_options
         clp_s::io
         log_surgeon::log_surgeon
+        msgpack-cxx
+        nlohmann_json::nlohmann_json
         spdlog::spdlog
         ystdlib::containers
     )

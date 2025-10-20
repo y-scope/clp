@@ -1,18 +1,29 @@
+#include <array>
+#include <cstdint>
 #include <cstring>
+#include <exception>
+#include <filesystem>
 #include <iostream>
 #include <optional>
 #include <string_view>
 
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <curl/curl.h>
 #include <log_surgeon/BufferParser.hpp>
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/Schema.hpp>
+#include <msgpack.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
 #include <ystdlib/containers/Array.hpp>
 
+#include "../../clp/ffi/ir_stream/protocol_constants.hpp"
+#include "../../clp/ffi/ir_stream/Serializer.hpp"
+#include "../../clp/ir/types.hpp"
 #include "../../clp/NetworkReader.hpp"
 #include "../../clp/ReaderInterface.hpp"
+#include "../FileWriter.hpp"
 #include "CommandLineArguments.hpp"
 
 using clp_s::log_converter::CommandLineArguments;
@@ -28,7 +39,6 @@ constexpr std::string_view cTimestampSchema{
         R"(timestamp:\d{2,4}[ /\-]{0,1}[ 0-9]{2}[ /\-][ 0-9]{2}[ T:][ 0-9]{2}:[ 0-9]{2}:[ 0-9]{2})"
         R"(([,\.:]\d{1,9}){0,1}([ ]{0,1}(UTC){0,1}[\+\-]\d{2}(:{0,1}\d{2}){0,1}Z{0,1}){0,1})"
 };
-
 constexpr std::string_view cDelimeters{R"(delimiters: \t\r\n\[\(:)"};
 
 auto check_and_log_curl_error(clp_s::Path const& path, std::shared_ptr<clp::ReaderInterface> reader)
@@ -50,6 +60,109 @@ auto check_and_log_curl_error(clp_s::Path const& path, std::shared_ptr<clp::Read
         }
     }
     return false;
+}
+
+class LogSerializer {
+public:
+    // Disable copy constructor/assignment operator
+    LogSerializer(LogSerializer const&) = delete;
+    auto operator=(LogSerializer const&) -> LogSerializer& = delete;
+
+    // Define default move constructor/assignment operator
+    LogSerializer(LogSerializer&&) = default;
+    auto operator=(LogSerializer&&) -> LogSerializer& = default;
+
+    // Destructor
+    ~LogSerializer() = default;
+
+    static auto create(std::string_view output_dir, std::string_view original_file_path)
+            -> std::optional<LogSerializer>;
+
+    auto add_message(std::string_view timestamp, std::string_view message) -> bool;
+
+    auto add_message(std::string_view message) -> bool;
+
+    void close() {
+        flush_buffer();
+        m_writer.write_numeric_value(clp::ffi::ir_stream::cProtocol::Eof);
+        m_writer.close();
+    }
+
+private:
+    static constexpr std::string_view cOriginalFileMetadataKey{"original_file"};
+    static constexpr std::string_view cTimestampKey{"timestamp"};
+    static constexpr std::string_view cMessageKey{"message"};
+    static constexpr size_t cMaxIrBufSize{64 * 1024};  // 64 KiB
+
+    explicit LogSerializer(
+            clp::ffi::ir_stream::Serializer<clp::ir::eight_byte_encoded_variable_t>&& serializer,
+            clp_s::FileWriter&& writer
+    )
+            : m_serializer{std::move(serializer)},
+              m_writer{std::move(writer)} {}
+
+    void flush_buffer() {
+        auto const buffer{m_serializer.get_ir_buf_view()};
+        m_writer.write(reinterpret_cast<char const*>(buffer.data()), buffer.size_bytes());
+        m_serializer.clear_ir_buf();
+    }
+
+    clp::ffi::ir_stream::Serializer<clp::ir::eight_byte_encoded_variable_t> m_serializer;
+    clp_s::FileWriter m_writer;
+};
+
+auto LogSerializer::create(std::string_view output_dir, std::string_view original_file_path)
+        -> std::optional<LogSerializer> {
+    nlohmann::json metadata{{cOriginalFileMetadataKey, original_file_path}};
+    auto serializer_result{
+            clp::ffi::ir_stream::Serializer<clp::ir::eight_byte_encoded_variable_t>::create(
+                    metadata
+            )
+    };
+    if (serializer_result.has_error()) {
+        return std::nullopt;
+    }
+
+    boost::uuids::random_generator uuid_generator;
+    std::string uuid{boost::uuids::to_string(uuid_generator())};
+    auto const converted_path{std::filesystem::path{output_dir} / uuid};
+    clp_s::FileWriter writer;
+    try {
+        writer.open(converted_path, clp_s::FileWriter::OpenMode::CreateForWriting);
+    } catch (std::exception const&) {
+        return std::nullopt;
+    }
+
+    return LogSerializer{std::move(serializer_result.value()), std::move(writer)};
+}
+
+auto LogSerializer::add_message(std::string_view timestamp, std::string_view message) -> bool {
+    msgpack::object_map empty{0ULL, nullptr};
+    std::array<msgpack::object_kv, 2ULL> fields{
+            msgpack::object_kv{msgpack::object{cTimestampKey}, msgpack::object{timestamp}},
+            msgpack::object_kv{msgpack::object{cMessageKey}, msgpack::object{message}}
+    };
+    msgpack::object_map record{static_cast<uint32_t>(fields.size()), fields.data()};
+    if (false == m_serializer.serialize_msgpack_map(empty, record)) {
+        return false;
+    }
+    if (m_serializer.get_ir_buf_view().size() > cMaxIrBufSize) {
+        flush_buffer();
+    }
+    return true;
+}
+
+auto LogSerializer::add_message(std::string_view message) -> bool {
+    msgpack::object_map empty{0ULL, nullptr};
+    msgpack::object_kv message_field{msgpack::object{cMessageKey}, msgpack::object{message}};
+    msgpack::object_map record{1U, &message_field};
+    if (false == m_serializer.serialize_msgpack_map(empty, record)) {
+        return false;
+    }
+    if (m_serializer.get_ir_buf_view().size() > cMaxIrBufSize) {
+        flush_buffer();
+    }
+    return true;
 }
 
 class LogConverter {
@@ -118,6 +231,12 @@ LogConverter::convert_file(clp_s::Path const& path, std::shared_ptr<clp::ReaderI
     schema.add_variable(cTimestampSchema, -1);
     log_surgeon::BufferParser parser{std::move(schema.release_schema_ast_ptr())};
 
+    auto serializer_option{LogSerializer::create("tmp", path.path)};
+    if (false == serializer_option.has_value()) {
+        return false;
+    }
+    auto& serializer{serializer_option.value()};
+
     bool reached_end_of_stream{false};
     while (false == reached_end_of_stream) {
         auto const num_bytes_read_option{refill_buffer(reader)};
@@ -144,18 +263,26 @@ LogConverter::convert_file(clp_s::Path const& path, std::shared_ptr<clp::ReaderI
             }
 
             auto& event{parser.get_log_parser().get_log_event_view()};
+            auto const message{event.to_string()};
             if (nullptr != event.get_timestamp()) {
-                auto whole_event{event.to_string()};
                 auto timestamp{event.get_timestamp()->to_string_view()};
-                std::cout << timestamp;
-                std::cout << std::string_view{whole_event}.substr(timestamp.length());
+                auto message_without_timestamp{
+                        std::string_view{message}.substr(timestamp.length())
+                };
+
+                if (false == serializer.add_message(timestamp, message_without_timestamp)) {
+                    return false;
+                }
             } else {
-                std::cout << event.to_string();
+                if (false == serializer.add_message(message)) {
+                    return false;
+                }
             }
-            std::cout << std::flush;
         }
     }
-    return m_cur_offset == m_bytes_occupied;
+
+    serializer.close();
+    return true;
 }
 
 auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
@@ -164,6 +291,7 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
     for (auto const& path : command_line_arguments.get_input_paths()) {
         auto reader{clp_s::try_create_reader(path, command_line_arguments.get_network_auth())};
         if (nullptr == reader) {
+            SPDLOG_ERROR("Failed to open input {} for reading.", path.path);
             return false;
         }
 
@@ -177,12 +305,13 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
             case clp_s::FileType::Unknown:
             default: {
                 std::ignore = check_and_log_curl_error(path, reader);
-                SPDLOG_ERROR("Received input that was not unstructured logtext from {}", path.path);
+                SPDLOG_ERROR("Received input that was not unstructured logtext: {}.", path.path);
                 return false;
             }
         }
 
         if (false == log_converter.convert_file(path, nested_readers.back())) {
+            SPDLOG_ERROR("Failed to convert input {} to structured representation.", path.path);
             return false;
         }
     }
