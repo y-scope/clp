@@ -123,6 +123,7 @@ class ClpConnector:
         :raise aiomysql.Error: If there is an error connecting to or querying MariaDB.
         :raise ValueError: When the query is not found.
         :raise RuntimeError: When the query fails or is cancelled.
+        :raise TimeoutError: When the timeout is reached before the query completes.
         """
         waiting_states = {QueryJobStatus.PENDING, QueryJobStatus.RUNNING, QueryJobStatus.CANCELLING}
         error_states = {QueryJobStatus.FAILED, QueryJobStatus.CANCELLED, QueryJobStatus.KILLED}
@@ -134,7 +135,9 @@ class ClpConnector:
             if status == QueryJobStatus.SUCCEEDED:
                 break
             if status in error_states:
-                err_msg = f"Query job with ID {query_id} ended in status {status}."
+                err_msg = (
+                    f"Query job with ID {query_id} ended in status {QueryJobStatus(status).name}."
+                )
                 raise RuntimeError(err_msg)
             if status not in waiting_states:
                 err_msg = f"Query job with ID {query_id} has unknown status {status}."

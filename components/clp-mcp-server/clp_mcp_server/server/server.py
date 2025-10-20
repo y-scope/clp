@@ -3,13 +3,15 @@
 from types import SimpleNamespace
 from typing import Any
 
+import aiomysql
+import pymongo
 from fastmcp import Context, FastMCP
 
 from clp_mcp_server.clp_connector import ClpConnector
 
 from . import constants
 from .session_manager import SessionManager
-from .utils import clean_query_results
+from .utils import filter_query_results
 
 
 def create_mcp_server() -> FastMCP:
@@ -82,14 +84,15 @@ def create_mcp_server() -> FastMCP:
     @mcp.tool
     async def search_kql_query(kql_query: str, ctx: Context) -> dict[str, object]:
         """
-        Searches the logs for the specified query and returns the latest 10 log messages matching
-        the query, i.e. the first page of the complete results.
+        Searches the logs for the specified KQL query and returns the first page of the matching
+        result, each page contains the latest 10 log messages (with data string timestamp)
+        and the pagination metadata.
 
         :param kql_query:
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
         :return: Forwards `FastMCP.tool`''s `get_nth_page`'s return values on success:
         :return: A dictionary with the following key-value pair on failures:
-            - "Error": An error status indicating the reason of the query failure.
+            - "Error": An error status describing the reason for the query failure.
         """
         await session_manager.start()
 
@@ -97,12 +100,12 @@ def create_mcp_server() -> FastMCP:
             query_id = await connector.submit_query(kql_query)
             await connector.wait_query_completion(query_id)
             results = await connector.read_results(query_id)
-
-            cleaned_results = clean_query_results(results)
-            return session_manager.cache_query_result_and_get_first_page(
-                ctx.session_id, cleaned_results
-            )
-        except Exception as e:
+        except (ValueError, RuntimeError, TimeoutError) as e:
             return {"Error": str(e)}
+
+        filtered_results = filter_query_results(results)
+        return session_manager.cache_query_result_and_get_first_page(
+            ctx.session_id, filtered_results
+        )
 
     return mcp

@@ -1,64 +1,56 @@
 """Utility functions for CLP MCP server."""
 
+import logging
 from datetime import datetime, timezone
 
+logger = logging.getLogger(__name__)
 
-def _convert_epoch_to_date_string(epoch_ts: int) -> str:
+
+def convert_epoch_to_date_string(epoch_ts: str) -> str:
     """
-    :param epoch_ts: Unix epoch timestamp in milliseconds
-    :return: ISO 8601 formatted date string with millisecond precision (YYYY-MM-DDTHH:mm:ss.fffZ)
-    :raise TypeError: If epoch_ts is None or not an integer
-    :raise ValueError: If epoch_ts is out of valid range
-    :raise OSError: If the timestamp cannot be converted (platform-specific limits)
+    :param epoch_ts: Unix epoch timestamp in milliseconds.
+    :return: ISO 8601 formatted date string with millisecond precision (YYYY-MM-DDTHH:mm:ss.fffZ).
+    :raise TypeError if `epoch_ts` is None or not convertible to an int.
+    :raise ValueError if `epoch_ts` cannot be converted to a valid date string.
     """
     if epoch_ts is None:
-        err_msg = "Timestamp cannot be None"
+        err_msg = "Epoch timestamp cannot be None."
         raise TypeError(err_msg)
 
-    if not isinstance(epoch_ts, int):
-        err_msg = f"Timestamp must be int, got {type(epoch_ts).__name__}"
+    if not isinstance(epoch_ts, str):
+        err_msg = f"Object {type(epoch_ts).__name__} is not of type str."
         raise TypeError(err_msg)
+
+    try:
+        epoch_ts = int(epoch_ts)
+    except ValueError as e:
+        err_msg = f"Epch timestamp '{epoch_ts}' cannot be converted to an int: {e}."
+        raise ValueError(err_msg) from e
 
     try:
         epoch_seconds = epoch_ts / 1000.0
         dt = datetime.fromtimestamp(epoch_seconds, tz=timezone.utc)
         return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
     except (ValueError, OSError, OverflowError) as e:
-        raise ValueError(f"Invalid timestamp {epoch_ts}: {e}") from e
+        err_msg = f"Invalid timestamp {epoch_ts}: {e}."
+        raise ValueError(err_msg) from e
 
 
-def clean_query_results(results: list[dict]) -> list[str]:
+def filter_query_results(query_results: list[dict]) -> list[str]:
     """
-    Clean query results by keeping only timestamp and message fields.
-
-    :param results: List of result dictionaries from the database
-    :return: List of formatted strings with only timestamp and message
-    :raise TypeError: If timestamp is invalid type
-    :raise ValueError: If timestamp is out of valid range
+    :param query_results: A list of log entries with metadata read from MongoDB.
+    :return: A list of strings encoded with date string timestamp and log entry message.
     """
-    cleaned = []
-    try:
-        for obj in results:
-            timestamp_str = _convert_epoch_to_date_string(obj.get("timestamp"))
-            message = obj.get("message", "")
-            cleaned.append(f"timestamp: {timestamp_str}, message: {message}")
-    except (TypeError, ValueError) as e:
-        # Re-raise with context about which entry failed
-        raise type(e)(f"Failed to clean result entry: {e}") from e
+    filtered = []
+    for obj in query_results:
+        epoch = obj.get("timestamp")
+        try:
+            timestamp_str = convert_epoch_to_date_string(epoch)
+        except (TypeError, ValueError) as e:
+            logger.warning("Failed to convert epoch timestamp=%s to date string: %s", epoch, e)
+            timestamp_str = "N/A"
 
-    return cleaned
+        message = obj.get("message", "")
+        filtered.append(f"timestamp: {timestamp_str}, message: {message}")
 
-
-def validate_date_string(date_string: str) -> bool:
-    """
-    Validates if a string is in ISO 8601 format (YYYY-MM-DDTHH:mm:ss.fffZ)
-
-    :param date_string: Date string to validate
-    :return: True if valid ISO 8601 format, False otherwise
-    """
-    try:
-        # Try parsing the date string with milliseconds
-        datetime.strptime(date_string, "%Y-%m-%dT%H:%M:%S.%fZ")
-        return True
-    except ValueError:
-        return False
+    return filtered

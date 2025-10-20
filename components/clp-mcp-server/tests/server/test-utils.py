@@ -1,4 +1,3 @@
-import pytest
 from clp_mcp_server.server.utils import clean_query_results
 
 
@@ -39,7 +38,6 @@ class TestConstants:
         'timestamp: 2024-10-18T16:00:00.000Z, message: {"ts":1729267200000,"pid":1234,"tid":5678,"verbosity":"INFO","logger":"app.service","message":"Log with zero milliseconds"}\n',
         'timestamp: 2024-10-18T16:00:00.123Z, message: {"ts":1729267200123,"pid":1234,"tid":5678,"verbosity":"DEBUG","logger":"app.handler","message":"Log with millisecond precision"}\n',
     ]
-
 
 class TestCleanQueryResults:
     """Test suite for clean_query_results function."""
