@@ -9,6 +9,7 @@ from clp_py_utils.compression import (
     group_files_by_similar_filenames,
 )
 from clp_py_utils.core import FileMetadata
+
 from job_orchestration.scheduler.job_config import ClpIoConfig, PathsToCompress
 
 
