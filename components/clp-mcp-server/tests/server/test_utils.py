@@ -5,6 +5,54 @@ from clp_mcp_server.server.utils import filter_query_results, sort_query_results
 class TestUtils:
     """Test suite for utility functions."""
     
+
+    # Test case: invalid timestamp types.
+    INVALID_TYPE_ENTRIES = [
+        {
+            "timestamp": None,
+            "message": '{"message":"Log with None timestamp"}\n',
+        },
+        {
+            "timestamp": "1729267200000",  # str instead of int
+            "message": '{"message":"Log with str timestamp"}\n',
+        },
+        {
+            "timestamp": 1729267200000.0,  # float instead of int
+            "message": '{"message":"Log with float timestamp"}\n',
+        },
+    ]
+    INVALID_TYPE_EXPECTED = [
+        'timestamp: N/A, message: {"message":"Log with None timestamp"}\n',
+        'timestamp: N/A, message: {"message":"Log with str timestamp"}\n',
+        'timestamp: N/A, message: {"message":"Log with float timestamp"}\n',
+    ]
+
+    # Test case: invalid timestamp values.
+    INVALID_VALUE_ENTRIES = [
+        {
+            "timestamp": 9999999999999999,
+            "message": '{"message":"Log with overflow timestamp"}\n',
+        },
+        {
+            "timestamp": -9999999999999999,
+            "message": '{"message":"Log with negative overflow timestamp"}\n',
+        },
+    ]
+    INVALID_VALUE_EXPECTED = [
+        'timestamp: N/A, message: {"message":"Log with overflow timestamp"}\n',
+        'timestamp: N/A, message: {"message":"Log with negative overflow timestamp"}\n',
+    ]
+
+    # Test case: missing timestamp and message fields.
+    MISSING_TIMESTAMP_AND_MESSAGE_ENTRY = [
+        {
+            "_id": "test001",
+        }
+    ]
+    MISSING_TIMESTAMP_AND_MESSAGE_EXPECTED = [
+        "timestamp: N/A, message: "
+    ]
+
     # Testing basic functionality.
     RAW_LOG_ENTRIES = [
         {
@@ -57,66 +105,6 @@ class TestUtils:
         ),
     ]
 
-    # Test case: missing timestamp and message fields.
-    MISSING_TIMESTAMP_AND_MESSAGE_ENTRY = [
-        {
-            "_id": "test001",
-        }
-    ]
-    MISSING_TIMESTAMP_AND_MESSAGE_EXPECTED = [
-        "timestamp: N/A, message: "
-    ]
-
-    # Test case: invalid timestamp types.
-    INVALID_TYPE_ENTRIES = [
-        {
-            "timestamp": None,
-            "message": '{"message":"Log with None timestamp"}\n',
-        },
-        {
-            "timestamp": "1729267200000",  # str instead of int
-            "message": '{"message":"Log with str timestamp"}\n',
-        },
-        {
-            "timestamp": 1729267200000.0,  # float instead of int
-            "message": '{"message":"Log with float timestamp"}\n',
-        },
-    ]
-    INVALID_TYPE_EXPECTED = [
-        'timestamp: N/A, message: {"message":"Log with None timestamp"}\n',
-        'timestamp: N/A, message: {"message":"Log with str timestamp"}\n',
-        'timestamp: N/A, message: {"message":"Log with float timestamp"}\n',
-    ]
-
-    # Test case: invalid timestamp values.
-    INVALID_VALUE_ENTRIES = [
-        {
-            "timestamp": 9999999999999999,
-            "message": '{"message":"Log with overflow timestamp"}\n',
-        },
-        {
-            "timestamp": -9999999999999999,
-            "message": '{"message":"Log with negative overflow timestamp"}\n',
-        },
-    ]
-    INVALID_VALUE_EXPECTED = [
-        'timestamp: N/A, message: {"message":"Log with overflow timestamp"}\n',
-        'timestamp: N/A, message: {"message":"Log with negative overflow timestamp"}\n',
-    ]
-
-    def test_sort_and_filter_query_results(self):
-        """Validates the functionality of post-processing for the query response."""
-        sorted_result = sort_query_results(self.RAW_LOG_ENTRIES)
-        filtered_result = filter_query_results(sorted_result)
-
-        assert filtered_result == self.EXPECTED_RESULTS
-
-    def test_missing_timestamp_and_message(self):
-        """Validates the handling of log entries without timestamp and message field."""
-        result = filter_query_results(self.MISSING_TIMESTAMP_AND_MESSAGE_ENTRY)
-
-        assert result == self.MISSING_TIMESTAMP_AND_MESSAGE_EXPECTED
-
     def test_invalid_timestamp_type(self):
         """Validates the handling of noninteger timestamp types."""
         result = filter_query_results(self.INVALID_TYPE_ENTRIES)
@@ -128,3 +116,16 @@ class TestUtils:
         result = filter_query_results(self.INVALID_VALUE_ENTRIES)
 
         assert result == self.INVALID_VALUE_EXPECTED
+    
+    def test_missing_timestamp_and_message(self):
+        """Validates the handling of log entries without timestamp and message field."""
+        result = filter_query_results(self.MISSING_TIMESTAMP_AND_MESSAGE_ENTRY)
+
+        assert result == self.MISSING_TIMESTAMP_AND_MESSAGE_EXPECTED
+
+    def test_sort_and_filter_query_results(self):
+        """Validates the functionality of post-processing for the query response."""
+        sorted_result = sort_query_results(self.RAW_LOG_ENTRIES)
+        filtered_result = filter_query_results(sorted_result)
+
+        assert filtered_result == self.EXPECTED_RESULTS

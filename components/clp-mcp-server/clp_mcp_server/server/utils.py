@@ -30,16 +30,6 @@ def convert_epoch_to_date_string(epoch_ts: int) -> str:
         raise ValueError(err_msg) from e
 
 
-def sort_query_results(query_results: list[dict]) -> list[dict]:
-    """
-    :param query_results: A list of dictionary containing log entries with its metadata read from
-    MongoDB.
-    :return: A sorted list of dictionary containing log entries with its metadata, ordered by epoch
-    from latest to oldest.
-    """
-    return sorted(query_results, key=lambda log_entry: log_entry.get("timestamp", 0), reverse=True)
-
-
 def filter_query_results(query_results: list[dict]) -> list[str]:
     """
     :param query_results: A list of dictionary containing log entries with its metadata.
@@ -59,3 +49,13 @@ def filter_query_results(query_results: list[dict]) -> list[str]:
         filtered.append(f"timestamp: {timestamp_str}, message: {message}")
 
     return filtered
+
+
+def sort_query_results(query_results: list[dict]) -> list[dict]:
+    """
+    :param query_results: A list of dictionary containing log entries with its metadata read from
+    MongoDB.
+    :return: A sorted list of dictionary containing log entries with its metadata, ordered by epoch
+    from latest to oldest.
+    """
+    return sorted(query_results, key=lambda log_entry: log_entry.get("timestamp", 0), reverse=True)
