@@ -414,8 +414,8 @@ class AwsCredential(BaseModel):
         Field(
             min_length=1,
             max_length=255,
-            pattern=r"^\S+$",
-            description="Credential name (no spaces, 1-255 characters)",
+            pattern=r"^[a-zA-Z0-9_-]+$",
+            description="Credential name (alphanumeric, hyphens, underscores only; 1-255 characters)",
         ),
     ]
 
