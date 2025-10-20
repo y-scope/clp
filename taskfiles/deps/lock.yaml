@@ -1,24 +1,29 @@
 version: "3"
 
+includes:
+  toolchains: "../toolchains.yaml"
+
 tasks:
   check-rust:
     cmds:
-      - task: "rust-workspace-update"
+      - task: "cargo-workspace-update"
         vars:
-          RUST_UPDATE_FLAGS: "--locked"
+          CARGO_UPDATE_FLAGS: "--locked"
 
   update-rust:
     cmds:
-      - task: "rust-workspace-update"
+      - task: "cargo-workspace-update"
         vars:
-          RUST_UPDATE_FLAGS: ""
+          CARGO_UPDATE_FLAGS: ""
 
-  rust-workspace-update:
+  # Runs `cargo update` in the root Rust workspace directory with the specified flags.
+  # @param {string[]} CARGO_UPDATE_FLAGS The flags to pass to `cargo update`.
+  cargo-workspace-update:
     internal: true
-    deps: ["::toolchains:rust"]
-    dir: "{{.ROOT_DIR}}"
     requires:
-      vars: ["RUST_UPDATE_FLAGS"]
+      vars: ["CARGO_UPDATE_FLAGS"]
+    dir: "{{.ROOT_DIR}}"
+    deps: ["toolchains:rust"]
     cmd: |-
       . "$HOME/.cargo/env"
-      cargo update {{.RUST_UPDATE_FLAGS}}
+      cargo update {{.CARGO_UPDATE_FLAGS}}
