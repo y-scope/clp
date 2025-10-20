@@ -31,6 +31,10 @@ jobs:
         shell: "bash"
         run: "npm install -g @go-task/cli@3.44.0"
 
+      - name: "Deps"
+        shell: "bash"
+        run: "task deps:lock:check-rust"
+
       - name: "Lint"
         shell: "bash"
         run: "task lint:check-rust"
