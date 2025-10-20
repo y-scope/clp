@@ -16,14 +16,15 @@ RUN apt-get clean \
 FROM scratch
 COPY --link --from=base / /
 
+ARG UID=1000
 ENV CLP_HOME="/opt/clp"
 ENV PATH="${CLP_HOME}/bin:${PATH}"
 ENV PATH="${CLP_HOME}/sbin:${PATH}" \
     PYTHONPATH="${CLP_HOME}/lib/python3/site-packages" \
     USER="clp-user"
 
-COPY --link ./build/clp-package ${CLP_HOME}
-
-RUN useradd --uid 1000 --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
+RUN useradd --uid ${UID} --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
 USER ${USER}
 WORKDIR ${CLP_HOME}
+
+COPY --link --chown=${UID} ./build/clp-package ${CLP_HOME}
