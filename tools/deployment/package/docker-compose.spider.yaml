@@ -5,7 +5,7 @@ include: ["docker-compose.spider.base.yaml"]
 # Below x-* definitions are duplicated from docker-compose.base.yaml. Refer to that file for
 # documentation.
 x-service-defaults: &service_defaults
-  image: "${CLP_PACKAGE_CONTAINER:-clp-package}"
+  image: "${CLP_PACKAGE_CONTAINER_IMAGE_REF:-clp-package}"
   logging:
     driver: "local"
   stop_grace_period: "3s"
@@ -27,6 +27,10 @@ x-volume-definitions:
     source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml"
     target: "/etc/clp-config.yml"
     read_only: true
+  clp-logs: &volume_clp_logs
+    type: "bind"
+    source: "${CLP_LOGS_DIR_HOST:-./var/log}"
+    target: "/var/log"
 
 
 services:
@@ -36,8 +40,8 @@ services:
     hostname: "queue"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     environment:
-      RABBITMQ_DEFAULT_PASS: "${CLP_QUEUE_PASS}"
-      RABBITMQ_DEFAULT_USER: "${CLP_QUEUE_USER}"
+      RABBITMQ_DEFAULT_PASS: "${CLP_QUEUE_PASS:?error}"
+      RABBITMQ_DEFAULT_USER: "${CLP_QUEUE_USER:?error}"
       RABBITMQ_LOGS: "/var/log/rabbitmq/rabbitmq.log"
     ports:
       - host_ip: "${CLP_QUEUE_HOST:-127.0.0.1}"
@@ -74,6 +78,11 @@ services:
       - type: "bind"
         source: "${CLP_REDIS_LOGS_DIR_HOST:-./var/log/redis}"
         target: "/var/log/redis"
+    command: [
+      "redis-server",
+      "/usr/local/etc/redis/redis.conf",
+      "--requirepass", "${CLP_REDIS_PASS:?error}"
+    ]
     healthcheck:
       <<: *healthcheck_defaults
       test: [
@@ -81,14 +90,9 @@ services:
         "redis-cli",
         "-h", "127.0.0.1",
         "-p", "6379",
-        "-a", "${CLP_REDIS_PASS}",
+        "-a", "${CLP_REDIS_PASS:?error}",
         "PING"
       ]
-    command: [
-      "redis-server",
-      "/usr/local/etc/redis/redis.conf",
-      "--requirepass", "${CLP_REDIS_PASS}"
-    ]
 
   results-cache:
     <<: *service_defaults
@@ -110,16 +114,16 @@ services:
       - type: "bind"
         source: "${CLP_RESULTS_CACHE_LOGS_DIR_HOST:-./var/log/results_cache}"
         target: "/var/log/mongodb"
+    command: [
+      "--config", "/etc/mongo/mongod.conf",
+      "--bind_ip", "0.0.0.0",
+    ]
     healthcheck:
       <<: *healthcheck_defaults
       test: [
         "CMD-SHELL",
         "echo 'db.runCommand(\"ping\").ok' | mongosh 127.0.0.1:27017/test --quiet"
       ]
-    command: [
-      "--config", "/etc/mongo/mongod.conf",
-      "--bind_ip", "0.0.0.0",
-    ]
 
   results-cache-indices-creator:
     <<: *service_defaults
@@ -137,23 +141,22 @@ services:
       "--stream-collection", "${CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME:-stream-files}",
     ]
 
+
   query-scheduler:
     <<: *service_defaults
     hostname: "query_scheduler"
     environment:
-      BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
-      CLP_DB_PASS: "${CLP_DB_PASS}"
-      CLP_DB_USER: "${CLP_DB_USER}"
+      BROKER_URL: "amqp://${CLP_QUEUE_USER:?error}:${CLP_QUEUE_PASS:?error}@queue:5672"
+      CLP_DB_PASS: "${CLP_DB_PASS:?error}"
+      CLP_DB_USER: "${CLP_DB_USER:?error}"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_SCHEDULER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       RESULT_BACKEND: >-
-        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_BACKEND_DB_QUERY:-0}
+        redis://default:${CLP_REDIS_PASS:?error}@redis:6379/${CLP_REDIS_BACKEND_DB_QUERY:-0}
     volumes:
       - *volume_clp_config_readonly
-      - type: "bind"
-        source: "${CLP_QUERY_SCHEDULER_LOG_FILE_HOST:-./var/log/query_scheduler.log}"
-        target: "/var/log/query_scheduler.log"
+      - *volume_clp_logs
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -180,9 +183,7 @@ services:
     <<: *service_defaults
     hostname: "query_worker"
     environment:
-      AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID}"
-      AWS_SECRET_ACCESS_KEY: "${CLP_AWS_SECRET_ACCESS_KEY}"
-      BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
+      BROKER_URL: "amqp://${CLP_QUEUE_USER:?error}:${CLP_QUEUE_PASS:?error}@queue:5672"
       CLP_CONFIG_PATH: "/etc/clp-config.yml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_WORKER_LOGGING_LEVEL:-INFO}"
@@ -190,22 +191,14 @@ services:
       CLP_WORKER_LOG_PATH: "/var/log/query_worker/worker.log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
       RESULT_BACKEND: >-
-        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_BACKEND_DB_QUERY:-0}
+        redis://default:${CLP_REDIS_PASS:?error}@redis:6379/${CLP_REDIS_BACKEND_DB_QUERY:-0}
     volumes:
       - *volume_aws_config_readonly
       - *volume_clp_config_readonly
-      - type: "bind"
-        source: "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}"
-        target: "/var/data/archives"
-      - type: "bind"
-        source: "${CLP_QUERY_WORKER_LOGS_DIR_HOST:-./var/log/query_worker}"
-        target: "/var/log/query_worker"
-      - type: "bind"
-        source: "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/staged-streams}"
-        target: "/var/data/staged-streams"
-      - type: "bind"
-        source: "${CLP_STREAM_OUTPUT_DIR_HOST:-./var/data/streams}"
-        target: "/var/data/streams"
+      - *volume_clp_logs
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
+      - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
     command: [
       "python3",
       "-u",
@@ -229,9 +222,7 @@ services:
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
       - *volume_clp_config_readonly
-      - type: "bind"
-        source: "${CLP_REDUCER_LOGS_DIR_HOST:-./var/log/reducer}"
-        target: "/var/log/reducer"
+      - *volume_clp_logs
     depends_on:
       query-scheduler:
         condition: "service_healthy"

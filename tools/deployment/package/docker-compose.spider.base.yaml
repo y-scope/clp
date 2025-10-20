@@ -2,7 +2,7 @@ name: "clp-package-base"
 
 # Common service defaults.
 x-service-defaults: &service_defaults
-  image: "${CLP_PACKAGE_CONTAINER:-clp-package}"
+  image: "${CLP_PACKAGE_CONTAINER_IMAGE_REF:-clp-package}"
   logging:
     driver: "local"
   stop_grace_period: "3s"
@@ -12,14 +12,19 @@ x-service-defaults: &service_defaults
 x-healthcheck-defaults: &healthcheck_defaults
   # Avoid lowering to prevent excessive resource usage.
   interval: "30s"
+
   # Mark unhealthy after 3 failed probes.
   # - In steady state, (<interval> + <timeout>) × 3 = ~90s before the service is marked unhealthy.
   # - From startup, <start_period> (60s) + ~90s = ~150s before the service is marked unhealthy.
   retries: 3
+
   # Frequent checks during startup allow fast transition to healthy.
   start_interval: "2s"
-  # Ignore failures for ~15 frequent checks before counting retries.
+
+  # Ignore failures for <start_period> / (<start_interval> + <timeout>) = ~15 frequent checks before
+  # counting retries.
   start_period: "60s"
+
   # Short timeout since no remote communication is expected.
   timeout: "2s"
 
@@ -35,24 +40,36 @@ x-volume-definitions:
     source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml"
     target: "/etc/clp-config.yml"
     read_only: true
-  logs-input-readonly: &volume_root_logs_readonly
+  clp-logs: &volume_clp_logs
+    type: "bind"
+    source: "${CLP_LOGS_DIR_HOST:-./var/log}"
+    target: "/var/log"
+  logs-input-readonly: &volume_logs_input_readonly
     type: "bind"
     source: "${CLP_LOGS_INPUT_DIR_HOST:-/}"
     target: "${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
     read_only: true
 
+volumes:
+  # Dummy volume to use when a bind mount is not desired.
+  empty:
+    driver_opts:
+      device: "tmpfs"
+      type: "tmpfs"
+      size: 0
+
 
 services:
   database:
     <<: *service_defaults
-    image: "${CLP_DB_IMAGE:-mysql:8.0.23}"
+    image: "${CLP_DB_IMAGE:-mariadb:10-jammy}"
     hostname: "database"
     user: "${CLP_THIRD_PARTY_SERVICE_UID_GID:-1000:1000}"
     environment:
-      MYSQL_DATABASE: "${CLP_DB_NAME}"
-      MYSQL_PASSWORD: "${CLP_DB_PASS}"
-      MYSQL_ROOT_PASSWORD: "${CLP_DB_PASS}"
-      MYSQL_USER: "${CLP_DB_USER}"
+      MYSQL_DATABASE: "${CLP_DB_NAME:-clp-db}"
+      MYSQL_PASSWORD: "${CLP_DB_PASS:?error}"
+      MYSQL_ROOT_PASSWORD: "${CLP_DB_PASS:?error}"
+      MYSQL_USER: "${CLP_DB_USER:?error}"
     ports:
       - host_ip: "${CLP_DB_HOST:-127.0.0.1}"
         published: "${CLP_DB_PORT:-3306}"
@@ -75,16 +92,16 @@ services:
         "mysqladmin", "ping",
         "--silent",
         "-h", "127.0.0.1",
-        "-u", "${CLP_DB_USER}",
-        "--password=${CLP_DB_PASS}"
+        "-u", "${CLP_DB_USER:?error}",
+        "--password=${CLP_DB_PASS:?error}"
       ]
 
   db-table-creator:
     <<: *service_defaults
     hostname: "db_table_creator"
     environment:
-      CLP_DB_PASS: "${CLP_DB_PASS}"
-      CLP_DB_USER: "${CLP_DB_USER}"
+      CLP_DB_PASS: "${CLP_DB_PASS:?error}"
+      CLP_DB_USER: "${CLP_DB_USER:?error}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
       - *volume_clp_config_readonly
@@ -103,7 +120,6 @@ services:
   spider-scheduler:
     <<: *service_defaults
     container_name: "spider_scheduler"
-    image: "${CLP_PACKAGE_CONTAINER}"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -122,22 +138,16 @@ services:
     <<: *service_defaults
     hostname: "compression_scheduler"
     environment:
-      BROKER_URL: "amqp://${CLP_QUEUE_USER}:${CLP_QUEUE_PASS}@queue:5672"
       CLP_DB_PASS: "${CLP_DB_PASS}"
       CLP_DB_USER: "${CLP_DB_USER}"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
-      RESULT_BACKEND: >-
-        redis://default:${CLP_REDIS_PASS}@redis:6379/${CLP_REDIS_BACKEND_DB_COMPRESSION:-1}
     volumes:
       - *volume_aws_config_readonly
       - *volume_clp_config_readonly
-      - *volume_root_logs_readonly
-      - type: "bind"
-        source: "${CLP_COMPRESSION_SCHEDULER_LOG_FILE_HOST:-./var/log/compression_scheduler.log}"
-        target: "/var/log/compression_scheduler.log"
-      - type: "bind"
+      - *volume_clp_logs
+      - *volume_logs_input_readonly
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -151,10 +161,7 @@ services:
   compression-worker:
     <<: *service_defaults
     container_name: "compression_worker"
-    image: "${CLP_PACKAGE_CONTAINER}"
     environment:
-      AWS_ACCESS_KEY_ID: "${CLP_AWS_ACCESS_KEY_ID}"
-      AWS_SECRET_ACCESS_KEY: "${CLP_AWS_SECRET_ACCESS_KEY}"
       CLP_CONFIG_PATH: "/etc/clp-config.yml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
@@ -165,16 +172,12 @@ services:
     volumes:
       - *volume_aws_config_readonly
       - *volume_clp_config_readonly
-      - *volume_root_logs_readonly
-      - type: "bind"
-        source: "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/archives}"
-        target: "/var/data/archives"
-      - type: "bind"
-        source: "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-./var/data/staged-archives}"
-        target: "/var/data/staged-archives"
-      - type: "bind"
-        source: "${CLP_COMPRESSION_WORKER_LOGS_DIR_HOST:-./var/log/compression_worker}"
-        target: "/var/log/compression_worker"
+      - *volume_clp_logs
+      - *volume_logs_input_readonly
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:\
+${CLP_ARCHIVE_OUTPUT_DIR_HOST:-/tmp}/var/data/archives"
+      - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:\
+${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-/tmp}/var/data/staged-archives"
       - type: "bind"
         source: "${CLP_DATA_DIR_HOST:-./var/data}"
         target: "/var/data"
