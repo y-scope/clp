@@ -90,7 +90,7 @@ def update_job_metadata_and_tags(
     tag_ids: List[int],
     archive_stats: Dict[str, Any],
 ) -> None:
-    if tag_ids is not None:
+    if not len(tag_ids) == 0:
         update_tags(db_cursor, table_prefix, dataset, archive_stats["id"], tag_ids)
     increment_compression_job_metadata(
         db_cursor,
