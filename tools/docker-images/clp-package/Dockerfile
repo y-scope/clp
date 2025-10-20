@@ -1,8 +1,10 @@
+# syntax=docker/dockerfile:1
+
 FROM ubuntu:jammy AS base
 
 WORKDIR /root
 
-COPY ./tools/docker-images/clp-package/setup-scripts ./setup-scripts
+COPY --link ./tools/docker-images/clp-package/setup-scripts ./setup-scripts
 RUN ./setup-scripts/install-prebuilt-packages.sh \
     && rm -rf ./setup-scripts/
 
@@ -10,12 +12,9 @@ RUN ./setup-scripts/install-prebuilt-packages.sh \
 RUN apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY ./build/clp-package /opt/clp
-COPY --link ./build/deps/cpp/mariadb-connector-cpp-install/lib/*/libmariadbcpp.so* /opt/clp/lib/
-
 # Flatten the image
 FROM scratch
-COPY --from=base / /
+COPY --link --from=base / /
 
 ENV CLP_HOME="/opt/clp"
 ENV LD_LIBRARY_PATH="${CLP_HOME}/lib" \
@@ -24,3 +23,6 @@ ENV LD_LIBRARY_PATH="${CLP_HOME}/lib" \
 ENV PATH="${CLP_HOME}/sbin:${PATH}"
 
 USER 1000:1000
+
+COPY --link ./build/clp-package ${CLP_HOME}
+COPY --link ./build/deps/cpp/mariadb-connector-cpp-install/lib/*/libmariadbcpp.so* ${CLP_HOME}/lib/
