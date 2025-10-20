@@ -40,6 +40,7 @@ public:
         writer.m_file = nullptr;
         writer.m_fd = -1;
     }
+
     auto operator=(FileWriter&& writer) -> FileWriter& {
         m_file = writer.m_file;
         m_fd = writer.m_fd;
