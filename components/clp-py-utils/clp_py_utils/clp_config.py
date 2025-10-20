@@ -1,5 +1,6 @@
 import os
 import pathlib
+from datetime import datetime
 from enum import auto
 from typing import Annotated, Any, Literal, Optional, Set, Union
 
@@ -11,6 +12,7 @@ from pydantic import (
     field_validator,
     model_validator,
     PrivateAttr,
+    SecretStr,
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
@@ -395,6 +397,96 @@ class AwsAuthentication(BaseModel):
         if auth_enum in [AwsAuthType.ec2, AwsAuthType.env_vars] and (profile or credentials):
             raise ValueError(f"profile and credentials must not be set when type is '{auth_enum}.'")
         return data
+
+
+class AwsCredential(BaseModel):
+    """
+    Represents a stored AWS credential retrieved from the database.
+
+    This model is used for credentials that are persisted in the aws_credentials table.
+    Credentials can be either static (access key + secret key) or configured for role
+    assumption (with role_arn set for Phase 2).
+    """
+
+    id: int
+    name: Annotated[
+        str,
+        Field(
+            min_length=1,
+            max_length=255,
+            pattern=r"^\S+$",
+            description="Credential name (no spaces, 1-255 characters)",
+        ),
+    ]
+
+    access_key_id: SecretStr
+    secret_access_key: SecretStr
+    role_arn: Optional[str] = None
+
+    created_at: datetime = datetime.now()
+    updated_at: datetime = datetime.now()
+
+    def to_s3_credentials(self) -> S3Credentials:
+        """
+        Converts to S3Credentials for use with boto3.
+
+        Note: This only works for static credentials. For temporary credentials
+        with session tokens, use the TemporaryCredential model instead.
+
+        :return: S3Credentials object with secrets revealed.
+        """
+        return S3Credentials(
+            access_key_id=self.access_key_id.get_secret_value(),
+            secret_access_key=self.secret_access_key.get_secret_value(),
+            session_token=None,
+        )
+
+
+class TemporaryCredential(BaseModel):
+    """
+    Represents cached temporary credentials (session tokens).
+
+    This model is used for credentials cached in the aws_temporary_credentials table.
+    These credentials can come from various sources:
+    - STS AssumeRole operations
+    - Resource-specific session tokens
+
+    The 'source' field tracks the origin of the session token, which can be:
+    - A role ARN: "arn:aws:iam::123456789012:role/MyRole"
+    - An S3 resource ARN: "arn:aws:s3:::bucket/path/*"
+    """
+
+    id: int
+    long_term_key_id: int  # Foreign key to aws_credentials table
+    access_key_id: SecretStr
+    secret_access_key: SecretStr
+    session_token: SecretStr
+    source: str  # Role ARN or S3 resource ARN
+    expires_at: datetime
+    created_at: datetime
+
+    def to_s3_credentials(self) -> S3Credentials:
+        """
+        Converts to S3Credentials for use with boto3.
+
+        :return: S3Credentials object with secrets revealed.
+        """
+        return S3Credentials(
+            access_key_id=self.access_key_id.get_secret_value(),
+            secret_access_key=self.secret_access_key.get_secret_value(),
+            session_token=self.session_token.get_secret_value(),
+        )
+
+    def is_expired(self, buffer_minutes: int = 5) -> bool:
+        """
+        Checks if credential is expired or expiring soon.
+
+        :param buffer_minutes: Minutes of buffer before expiration to consider credential expired.
+        :return: True if expired or expiring within buffer_minutes.
+        """
+        from datetime import timedelta
+
+        return datetime.now() >= self.expires_at - timedelta(minutes=buffer_minutes)
 
 
 class S3Config(BaseModel):
