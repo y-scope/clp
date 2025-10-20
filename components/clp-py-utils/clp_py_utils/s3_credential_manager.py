@@ -299,51 +299,151 @@ class S3CredentialManager:
 
             return deleted
 
-    # Phase 2: Temporary credential cache methods (not yet implemented)
+    # Temporary credential cache methods
 
-    def get_cached_temporary_credential(
-        self, source_credential_id: int
-    ) -> Optional[TemporaryCredential]:
-        """
-        Gets valid cached temporary credential (Phase 2).
-
-        :param source_credential_id: ID of the source credential.
-        :return: TemporaryCredential object or None if not found/expired.
-        :raises NotImplementedError: This feature is not yet implemented.
-        """
-        raise NotImplementedError("Temporary credential caching not yet implemented (Phase 2)")
-
-    def cache_temporary_credential(
+    def cache_session_token(
         self,
-        source_credential_id: int,
+        long_term_key_id: int,
         access_key_id: str,
         secret_access_key: str,
         session_token: str,
-        expiration: datetime,
-        role_arn: str,
+        source: str,
+        expires_at: datetime,
     ) -> int:
         """
-        Stores temporary credentials in cache (Phase 2).
+        Caches a session token in the temporary credentials table.
 
-        :param source_credential_id: ID of the source credential.
+        This stores user-provided session tokens or tokens obtained via role assumption.
+        The source field tracks the origin (role ARN or S3 resource ARN) for efficient lookup.
+
+        :param long_term_key_id: ID of the associated long-term credential.
         :param access_key_id: Temporary access key ID.
         :param secret_access_key: Temporary secret access key.
         :param session_token: Temporary session token.
-        :param expiration: When the credentials expire.
-        :param role_arn: ARN of the assumed role.
+        :param source: Origin identifier (role ARN or S3 resource ARN).
+        :param expires_at: When the session token expires.
         :return: The ID of the cached credential.
-        :raises NotImplementedError: This feature is not yet implemented.
+        :raises ValueError: If validation fails.
         """
-        raise NotImplementedError("Temporary credential caching not yet implemented (Phase 2)")
+        if not access_key_id or not secret_access_key or not session_token:
+            raise ValueError("Temporary credentials cannot have empty fields")
 
-    def cleanup_expired_temporary_credentials(self) -> int:
+        if not source:
+            raise ValueError("Source cannot be empty")
+
+        if len(source) > 2048:
+            raise ValueError("Source cannot exceed 2048 characters")
+
+        table_name = get_aws_temporary_credentials_table_name(self.table_prefix)
+
+        with (
+            closing(self.sql_adapter.create_connection(True)) as db_conn,
+            closing(db_conn.cursor(dictionary=True)) as cursor,
+        ):
+            cursor.execute(
+                f"""
+                INSERT INTO `{table_name}`
+                (long_term_key_id, access_key_id, secret_access_key, session_token, source, expires_at)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    long_term_key_id,
+                    access_key_id,
+                    secret_access_key,
+                    session_token,
+                    source,
+                    expires_at,
+                ),
+            )
+            db_conn.commit()
+
+            credential_id = cursor.lastrowid
+            logger.info(
+                f"Cached session token for source '{source}' with ID {credential_id}, expires at {expires_at}"
+            )
+            return credential_id
+
+    def get_cached_session_token_by_source(
+        self, source: str, long_term_key_id: Optional[int] = None
+    ) -> Optional[TemporaryCredential]:
         """
-        Deletes expired temporary credentials (Phase 2).
+        Retrieves a valid (non-expired) cached session token by source.
+
+        Looks up session tokens by source ARN (role or S3 resource). Optionally filters
+        by long_term_key_id for more specific lookups.
+
+        :param source: Source identifier (role ARN or S3 resource ARN).
+        :param long_term_key_id: Optional filter by associated long-term credential ID.
+        :return: TemporaryCredential object or None if not found or expired.
+        """
+        table_name = get_aws_temporary_credentials_table_name(self.table_prefix)
+
+        with (
+            closing(self.sql_adapter.create_connection(True)) as db_conn,
+            closing(db_conn.cursor(dictionary=True)) as cursor,
+        ):
+            # Build query with optional long_term_key_id filter
+            query = f"""
+                SELECT id, long_term_key_id, access_key_id, secret_access_key,
+                       session_token, source, expires_at, created_at
+                FROM `{table_name}`
+                WHERE source = %s AND expires_at > NOW()
+            """
+            params = [source]
+
+            if long_term_key_id is not None:
+                query += " AND long_term_key_id = %s"
+                params.append(long_term_key_id)
+
+            query += " ORDER BY expires_at DESC LIMIT 1"
+
+            cursor.execute(query, params)
+            row = cursor.fetchone()
+
+            if not row:
+                return None
+
+            return TemporaryCredential(
+                id=row["id"],
+                long_term_key_id=row["long_term_key_id"],
+                access_key_id=SecretStr(row["access_key_id"]),
+                secret_access_key=SecretStr(row["secret_access_key"]),
+                session_token=SecretStr(row["session_token"]),
+                source=row["source"],
+                expires_at=row["expires_at"],
+                created_at=row["created_at"],
+            )
+
+    def cleanup_expired_session_tokens(self) -> int:
+        """
+        Deletes expired session tokens from the cache.
+
+        This should be called periodically by a garbage collector or MySQL EVENT
+        to clean up expired credentials and free database space.
 
         :return: Count of deleted credentials.
-        :raises NotImplementedError: This feature is not yet implemented.
         """
-        raise NotImplementedError("Temporary credential cleanup not yet implemented (Phase 2)")
+        table_name = get_aws_temporary_credentials_table_name(self.table_prefix)
+
+        with (
+            closing(self.sql_adapter.create_connection(True)) as db_conn,
+            closing(db_conn.cursor(dictionary=True)) as cursor,
+        ):
+            cursor.execute(
+                f"""
+                DELETE FROM `{table_name}`
+                WHERE expires_at < NOW()
+                """
+            )
+            deleted_count = cursor.rowcount
+            db_conn.commit()
+
+            if deleted_count > 0:
+                logger.info(f"Cleaned up {deleted_count} expired session token(s)")
+            else:
+                logger.debug("No expired session tokens to clean up")
+
+            return deleted_count
 
     # Validation helper methods
 
