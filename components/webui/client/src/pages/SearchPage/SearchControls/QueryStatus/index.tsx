@@ -8,9 +8,9 @@ import useSearchStore from "../../SearchState/index";
 import usePrestoSearchState from "../../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
-import QuerySpeed from "./QuerySpeed";
 import OpenQueryDrawerButton from "./OpenQueryDrawerButton";
 import QueryDrawer from "./QueryDrawer";
+import QuerySpeed from "./QuerySpeed";
 import Results from "./Results";
 
 

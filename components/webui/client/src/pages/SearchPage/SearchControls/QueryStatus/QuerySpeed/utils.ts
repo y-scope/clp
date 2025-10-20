@@ -1,4 +1,5 @@
 import {querySql} from "../../../../../api/sql";
+import {settings} from "../../../../../settings";
 
 
 /**
@@ -11,23 +12,30 @@ import {querySql} from "../../../../../api/sql";
  */
 const buildQuerySpeedSql = (datasetName: string, jobId: string) => {
     const tableName = "" === datasetName ?
-        "clp_archives" :
-        `clp_${datasetName}_archives`;
+        settings.SqlDbClpArchivesTableName :
+        `${settings.SqlDbClpTablePrefix}${datasetName}_archives`;
 
-    return `SELECT
+    return `WITH qt AS (
+    SELECT job_id, archive_id
+    FROM query_tasks
+    WHERE archive_id IS NOT NULL
+),
+totals AS (
+    SELECT
+        qt.job_id,
+        SUM(ca.uncompressed_size) AS total_uncompressed_bytes
+    FROM qt
+    JOIN ${tableName} ca
+    ON qt.archive_id = ca.id
+    GROUP BY qt.job_id
+)
+SELECT
     CAST(totals.total_uncompressed_bytes AS double) AS bytes,
     qj.duration AS duration
 FROM query_jobs qj
-    JOIN (SELECT qt.job_id,
-                 SUM(ca.uncompressed_size) AS total_uncompressed_bytes
-        FROM (SELECT DISTINCT job_id, archive_id
-                FROM   query_tasks
-                WHERE  archive_id IS NOT NULL) qt
-        JOIN ${tableName} ca
-        ON qt.archive_id = ca.id
-        GROUP BY qt.job_id) totals
-    ON totals.job_id = qj.id
-WHERE  qj.id = ${jobId};`;
+JOIN totals
+ON totals.job_id = qj.id
+WHERE  qj.id = ${jobId}`;
 };
 
 interface QuerySpeedResp {

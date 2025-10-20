@@ -1,18 +1,14 @@
-import {
-    useEffect,
-    useState,
-} from "react";
-
+import {useQuery} from "@tanstack/react-query";
 import {Typography} from "antd";
 
+import {formatSizeInBytes} from "../../../../IngestPage/Jobs/units";
 import useSearchStore from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import {fetchQuerySpeed} from "./utils";
 
 
 const {Text} = Typography;
-
-const MEGABYTES_IN_BYTES = 1_000_000;
+const SPEED_DEFAULT = {latency: 0, speed: 0};
 
 /**
  * Displays the query latency and speed.
@@ -21,23 +17,25 @@ const MEGABYTES_IN_BYTES = 1_000_000;
  */
 const QuerySpeed = () => {
     const searchUiState = useSearchStore((state) => state.searchUiState);
-    const [latency, setLatency] = useState<number>(0);
-    const [speed, setSpeed] = useState<number>(0);
-    useEffect(() => {
-        if (searchUiState !== SEARCH_UI_STATE.DONE) {
-            return;
-        }
-        (async () => {
-            const {cachedDataset, searchJobId} = useSearchStore.getState();
-            const {bytes, duration} = await fetchQuerySpeed(cachedDataset ?? "", searchJobId ?? "");
-            setLatency(duration);
-            setSpeed(bytes / MEGABYTES_IN_BYTES / duration);
-        })().catch(console.error);
-    }, [searchUiState]);
+    const searchJobId = useSearchStore((state) => state.searchJobId);
+    const cachedDataset = useSearchStore((state) => state.cachedDataset);
 
+    const {data = SPEED_DEFAULT} = useQuery({
+        queryKey: [
+            "speed",
+            searchJobId,
+            cachedDataset,
+        ],
+        queryFn: async () => {
+            const {bytes, duration} = await fetchQuerySpeed(cachedDataset ?? "", searchJobId ?? "");
+            return {latency: duration, speed: bytes / duration};
+        },
+        enabled: SEARCH_UI_STATE.DONE === searchUiState,
+    });
+    const {latency, speed} = data;
     return (
         <Text type={"secondary"}>
-            {`Query took ${latency.toFixed(3)} seconds (${speed.toFixed(3)} MB/s).`}
+            {`Query took ${latency.toFixed(3)} seconds (${formatSizeInBytes(speed)}/s).`}
         </Text>
     );
 };
