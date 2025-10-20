@@ -267,4 +267,3 @@ ${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-/tmp}/var/data/staged-archives"
       "-m", "job_orchestration.garbage_collector.garbage_collector",
       "--config", "/etc/clp-config.yml",
     ]
-
