@@ -37,7 +37,10 @@ class SpiderTaskManager(TaskManager):
         for task_param in task_params:
             job_args.append(spider_py.Int64(task_param["job_id"]))
             job_args.append(spider_py.Int64(task_param["task_id"]))
-            job_args.append([spider_py.Int64(tag_id) for tag_id in task_param["tag_ids"]])
+            if "tag_ids" in task_param and task_param["tag_ids"] is not None:
+                job_args.append([spider_py.Int64(tag_id) for tag_id in task_param["tag_ids"]])
+            else:
+                job_args.append([])
             job_args.append(utf8_str_to_int8_list(task_param["clp_io_config_json"]))
             job_args.append(utf8_str_to_int8_list(task_param["paths_to_compress_json"]))
             job_args.append(
