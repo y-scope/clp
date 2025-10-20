@@ -8,7 +8,7 @@ from clp_mcp_server.clp_connector import ClpConnector
 
 from . import constants
 from .session_manager import SessionManager
-from .utils import filter_query_results, sort_query_results
+from .utils import convert_date_string_to_epoch, filter_query_results, sort_query_results
 
 
 def create_mcp_server(clp_config: Any) -> FastMCP:
@@ -89,6 +89,40 @@ def create_mcp_server(clp_config: Any) -> FastMCP:
 
         try:
             query_id = await connector.submit_query(kql_query)
+            await connector.wait_query_completion(query_id)
+            results = await connector.read_results(query_id)
+        except (ValueError, RuntimeError, TimeoutError) as e:
+            return {"Error": str(e)}
+
+        sorted_results = sort_query_results(results)
+        filtered_results = filter_query_results(sorted_results)
+        return session_manager.cache_query_result_and_get_first_page(
+            ctx.session_id, filtered_results
+        )
+
+    @mcp.tool
+    async def search_kql_query_with_timestamp(
+        kql_query: str, begin_timestamp: str, end_timestamp: str, ctx: Context
+    ) -> dict[str, object]:
+        """
+        Search the logs for the specified query and returns the latest 10 log messages
+        matching the query (first page of results) and the total number of pages available
+
+        :param kql_query:
+        :param begin_timestamp:
+        :param end_timestamp:
+        :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
+        :return: Forwards `FastMCP.tool`''s `get_nth_page`'s return values on success:
+        :return: A dictionary with the following key-value pair on failures:
+            - "Error": An error message describing the failure.
+        """
+        await session_manager.start()
+
+        try:
+            begin_epoch = convert_date_string_to_epoch(begin_timestamp)
+            end_epoch = convert_date_string_to_epoch(end_timestamp)
+
+            query_id = await connector.submit_query(kql_query, begin_epoch, end_epoch)
             await connector.wait_query_completion(query_id)
             results = await connector.read_results(query_id)
         except (ValueError, RuntimeError, TimeoutError) as e:
