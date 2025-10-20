@@ -1,4 +1,5 @@
 #include <cstring>
+#include <iostream>
 #include <optional>
 #include <string_view>
 
@@ -94,7 +95,7 @@ auto LogConverter::refill_buffer(std::shared_ptr<clp::ReaderInterface>& reader)
 
     size_t num_bytes_read{};
     auto const rc{reader->try_read(
-            m_buffer.data() + m_cur_offset,
+            m_buffer.data() + m_bytes_occupied,
             m_buffer.size() - m_bytes_occupied,
             num_bytes_read
     )};
@@ -128,6 +129,7 @@ LogConverter::convert_file(clp_s::Path const& path, std::shared_ptr<clp::ReaderI
         }
 
         while (m_cur_offset < m_bytes_occupied) {
+            size_t event_start_offset{m_cur_offset};
             auto const err{parser.parse_next_event(
                     m_buffer.data(),
                     m_bytes_occupied,
@@ -141,10 +143,16 @@ LogConverter::convert_file(clp_s::Path const& path, std::shared_ptr<clp::ReaderI
                 return false;
             }
 
-            auto const& event{parser.get_log_parser().get_log_event_view()};
+            auto& event{parser.get_log_parser().get_log_event_view()};
             if (nullptr != event.get_timestamp()) {
-                SPDLOG_INFO("ts: {}", event.get_timestamp()->to_string_view());
+                auto whole_event{event.to_string()};
+                auto timestamp{event.get_timestamp()->to_string_view()};
+                std::cout << timestamp;
+                std::cout << std::string_view{whole_event}.substr(timestamp.length());
+            } else {
+                std::cout << event.to_string();
             }
+            std::cout << std::flush;
         }
     }
     return m_cur_offset == m_bytes_occupied;
