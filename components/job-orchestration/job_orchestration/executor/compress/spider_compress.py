@@ -39,7 +39,7 @@ def compress(
         compression_entry_point(
             int(job_id),
             int(task_id),
-            [int(tag_id) for tag_id in tag_ids] if len(tag_ids) > 0 else None,
+            [int(tag_id) for tag_id in tag_ids],
             int8_list_to_utf8_str(clp_io_config_json),
             int8_list_to_utf8_str(paths_to_compress_json),
             json.loads(int8_list_to_utf8_str(clp_metadata_db_connection_config_json)),
