@@ -13,9 +13,9 @@ import functools
 import inspect
 import logging
 import os
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar
-from collections.abc import Callable
 
 from pyinstrument import Profiler
 
