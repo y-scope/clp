@@ -4,10 +4,12 @@
 #include <cstddef>
 #include <optional>
 #include <string_view>
+#include <utility>
 
 #include "../../clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../../clp/ffi/ir_stream/Serializer.hpp"
 #include "../../clp/ir/types.hpp"
+#include "../../clp/type_utils.hpp"
 #include "../FileWriter.hpp"
 
 namespace clp_s::log_converter {
@@ -22,7 +24,7 @@ public:
     auto operator=(LogSerializer const&) -> LogSerializer& = delete;
 
     // Define default move constructor/assignment operator
-    LogSerializer(LogSerializer&&) = default;
+    LogSerializer(LogSerializer&&) noexcept = default;
     auto operator=(LogSerializer&&) -> LogSerializer& = default;
 
     // Destructor
@@ -67,7 +69,7 @@ private:
     static constexpr std::string_view cOriginalFileMetadataKey{"original_file"};
     static constexpr std::string_view cTimestampKey{"timestamp"};
     static constexpr std::string_view cMessageKey{"message"};
-    static constexpr size_t cMaxIrBufSize{64 * 1024};  // 64 KiB
+    static constexpr size_t cMaxIrBufSize{64ULL * 1024ULL};  // 64 KiB
 
     // Constructors
     explicit LogSerializer(
@@ -83,7 +85,10 @@ private:
      */
     void flush_buffer() {
         auto const buffer{m_serializer.get_ir_buf_view()};
-        m_writer.write(reinterpret_cast<char const*>(buffer.data()), buffer.size_bytes());
+        m_writer.write(
+                clp::size_checked_pointer_cast<char const>(buffer.data()),
+                buffer.size_bytes()
+        );
         m_serializer.clear_ir_buf();
     }
 

@@ -3,11 +3,16 @@
 #include <array>
 #include <cstdint>
 #include <exception>
+#include <optional>
+#include <string>
 #include <string_view>
+#include <utility>
 
 #include <boost/uuid/random_generator.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <msgpack.hpp>
+#include <nlohmann/json.hpp>
+#include <nlohmann/json_fwd.hpp>
 
 #include "../../clp/ffi/ir_stream/Serializer.hpp"
 #include "../../clp/ir/types.hpp"
@@ -27,7 +32,7 @@ auto LogSerializer::create(std::string_view output_dir, std::string_view origina
     }
 
     boost::uuids::random_generator uuid_generator;
-    std::string file_name{boost::uuids::to_string(uuid_generator()) + ".clp"};
+    std::string const file_name{boost::uuids::to_string(uuid_generator()) + ".clp"};
     auto const converted_path{std::filesystem::path{output_dir} / file_name};
     clp_s::FileWriter writer;
     try {
@@ -40,12 +45,18 @@ auto LogSerializer::create(std::string_view output_dir, std::string_view origina
 }
 
 auto LogSerializer::add_message(std::string_view timestamp, std::string_view message) -> bool {
-    msgpack::object_map empty{0ULL, nullptr};
+    msgpack::object_map const empty{.size = 0U, .ptr = nullptr};
     std::array<msgpack::object_kv, 2ULL> fields{
-            msgpack::object_kv{msgpack::object{cTimestampKey}, msgpack::object{timestamp}},
-            msgpack::object_kv{msgpack::object{cMessageKey}, msgpack::object{message}}
+            msgpack::object_kv{
+                    .key = msgpack::object{cTimestampKey},
+                    .val = msgpack::object{timestamp}
+            },
+            msgpack::object_kv{.key = msgpack::object{cMessageKey}, .val = msgpack::object{message}}
     };
-    msgpack::object_map record{static_cast<uint32_t>(fields.size()), fields.data()};
+    msgpack::object_map const record{
+            .size = static_cast<uint32_t>(fields.size()),
+            .ptr = fields.data()
+    };
     if (false == m_serializer.serialize_msgpack_map(empty, record)) {
         return false;
     }
@@ -56,9 +67,12 @@ auto LogSerializer::add_message(std::string_view timestamp, std::string_view mes
 }
 
 auto LogSerializer::add_message(std::string_view message) -> bool {
-    msgpack::object_map empty{0ULL, nullptr};
-    msgpack::object_kv message_field{msgpack::object{cMessageKey}, msgpack::object{message}};
-    msgpack::object_map record{1U, &message_field};
+    msgpack::object_map const empty{.size = 0U, .ptr = nullptr};
+    msgpack::object_kv message_field{
+            .key = msgpack::object{cMessageKey},
+            .val = msgpack::object{message}
+    };
+    msgpack::object_map const record{.size = 1U, .ptr = &message_field};
     if (false == m_serializer.serialize_msgpack_map(empty, record)) {
         return false;
     }
