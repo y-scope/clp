@@ -126,6 +126,12 @@ class TestUtils:
         result = convert_date_string_to_epoch("2024-10-18T16:00:00Z")
         assert result == 1729267200000
 
+        result = convert_date_string_to_epoch("2024-10-18T16:00")
+        assert result == 1729267200000
+
+        result = convert_date_string_to_epoch("2024-10-18T16")
+        assert result == 1729267200000
+
 
     def test_convert_date_string_to_epoch_invalid_type(self):
         """Validates the handling of invalid date string types."""

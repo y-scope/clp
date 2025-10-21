@@ -105,8 +105,9 @@ def create_mcp_server(clp_config: Any) -> FastMCP:
         kql_query: str, begin_timestamp: str, end_timestamp: str, ctx: Context
     ) -> dict[str, object]:
         """
-        Search the logs for the specified query and returns the latest 10 log messages
-        matching the query (first page of results) and the total number of pages available
+        Performs `FastMCP.tool.search_kql_query`'s search query with a given timestamp range. The
+        timestamps must be ISO 8601 formatted date strings with up to millisecond precision
+        (YYYY-MM-DDTHH:mm:ss.fffZ).
 
         :param kql_query:
         :param begin_timestamp:
