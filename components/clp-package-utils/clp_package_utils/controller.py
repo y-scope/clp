@@ -608,7 +608,7 @@ class DockerComposeController(BaseController):
             cwd=self._clp_home,
             check=True,
         )
-        logger.info("CLP is started.")
+        logger.info("CLP started.")
 
     def stop(self) -> None:
         """
