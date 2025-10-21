@@ -10,8 +10,8 @@ def convert_epoch_to_date_string(epoch_ts: int) -> str:
     """
     :param epoch_ts: Unix epoch timestamp in milliseconds.
     :return: ISO 8601 formatted date string with millisecond precision (YYYY-MM-DDTHH:mm:ss.fffZ).
-    :raise TypeError if `epoch_ts` is None or not an int type.
-    :raise ValueError if `epoch_ts` cannot be converted to a valid date string.
+    :raise: TypeError if `epoch_ts` is None or not an int type.
+    :raise: ValueError if `epoch_ts` cannot be converted to a valid date string.
     """
     if epoch_ts is None:
         err_msg = "Epoch timestamp cannot be None."
