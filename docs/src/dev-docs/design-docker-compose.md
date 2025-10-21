@@ -184,7 +184,7 @@ their functions.
 | query_worker          | Worker processes for search/aggregation jobs                    |
 | reducer               | Reducers for performing the final stages of aggregation jobs    |
 | webui                 | Web server for the UI                                           |
-| mcp_server            | MCP server for AI agent to access CLP functionalities                |
+| mcp_server            | MCP server for AI agent to access CLP functionalities           |
 | garbage_collector     | Background process for retention control                        |
 :::
 
