@@ -49,6 +49,47 @@ EXTRACT_JSON_CMD = "j"
 DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
 
 
+class DockerDependencyError(OSError):
+    """Base class for errors related to Docker dependencies."""
+
+
+class DockerNotAvailableError(DockerDependencyError):
+    """Raised when Docker or Docker Compose is unavailable."""
+
+    def __init__(self, base_message: str, process_error: subprocess.CalledProcessError) -> None:
+        message = base_message
+        output_chunks: list[str] = []
+        for stream in (process_error.output, process_error.stderr):
+            if stream is None:
+                continue
+            if isinstance(stream, bytes):
+                text = stream.decode(errors="replace")
+            else:
+                text = str(stream)
+            text = text.strip()
+            if text:
+                output_chunks.append(text)
+        if len(output_chunks) > 0:
+            message = f"{base_message}\n" + "\n".join(output_chunks)
+        super().__init__(errno.ENOENT, message)
+
+
+class DockerComposeProjectNotRunningError(DockerDependencyError):
+    """Raised when an expected Docker Compose project is not running."""
+
+    def __init__(self, project_name: str) -> None:
+        super().__init__(errno.ESRCH, f"Docker Compose project '{project_name}' is not running.")
+
+
+class DockerComposeProjectAlreadyRunningError(DockerDependencyError):
+    """Raised when a Docker Compose project is already running but should not be."""
+
+    def __init__(self, project_name: str) -> None:
+        super().__init__(
+            errno.EEXIST, f"Docker Compose project '{project_name}' is already running."
+        )
+
+
 class DockerMountType(enum.IntEnum):
     BIND = 0
 
@@ -130,28 +171,24 @@ def check_docker_dependencies(should_compose_project_be_running: bool, project_n
 
     :param should_compose_project_be_running:
     :param project_name: The Docker Compose project name to check.
-    :raise OSError: If any Docker dependency is not installed or the Docker Compose project state
-    doesn't match `should_compose_run`.
+    :raise DockerNotAvailableError: If any Docker dependency is not installed.
+    :raise DockerComposeProjectNotRunningError: If the project isn't running when it should be.
+    :raise DockerComposeProjectAlreadyRunningError: If the project is running when it shouldn't be.
     """
     try:
-        subprocess.run(
-            "command -v docker",
-            shell=True,
-            stdout=subprocess.DEVNULL,
+        subprocess.check_output(
+            ["docker", "--version"],
             stderr=subprocess.STDOUT,
-            check=True,
         )
     except subprocess.CalledProcessError as e:
-        err_msg = "docker is not installed or available on the path"
-        raise OSError(err_msg) from e
+        raise DockerNotAvailableError("docker is not installed or available on the path", e) from e
 
     is_running = _is_docker_compose_project_running(project_name)
+
     if should_compose_project_be_running and not is_running:
-        err_msg = f"Docker Compose project '{project_name}' is not running."
-        raise OSError(err_msg)
+        raise DockerComposeProjectNotRunningError(project_name)
     if not should_compose_project_be_running and is_running:
-        err_msg = f"Docker Compose project '{project_name}' is already running."
-        raise OSError(err_msg)
+        raise DockerComposeProjectAlreadyRunningError(project_name)
 
 
 def validate_port(port_name: str, hostname: str, port: int):
@@ -707,7 +744,8 @@ def _is_docker_compose_project_running(project_name: str) -> bool:
 
     :param project_name:
     :return: Whether at least one instance is running.
-    :raise OSError: If Docker Compose is not installed or fails.
+    :raise DockerNotAvailableError: If Docker Compose is not installed or fails. The error message
+    includes Docker's command output when available.
     """
     cmd = ["docker", "compose", "ls", "--format", "json", "--filter", f"name={project_name}"]
     try:
@@ -715,8 +753,9 @@ def _is_docker_compose_project_running(project_name: str) -> bool:
         running_instances = json.loads(output)
         return len(running_instances) >= 1
     except subprocess.CalledProcessError as e:
-        err_msg = "Docker Compose is not installed or not functioning properly."
-        raise OSError(err_msg) from e
+        raise DockerNotAvailableError(
+            "Docker Compose is not installed or not functioning properly.", e
+        ) from e
 
 
 def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:

@@ -42,6 +42,8 @@ from clp_py_utils.clp_metadata_db_utils import (
 from clp_package_utils.general import (
     check_docker_dependencies,
     CONTAINER_CLP_HOME,
+    DockerComposeProjectNotRunningError,
+    DockerDependencyError,
     dump_shared_container_config,
     generate_docker_compose_container_config,
     get_clp_home,
@@ -89,14 +91,12 @@ class BaseController(ABC):
         """
         Starts the components.
         """
-        pass
 
     @abstractmethod
     def stop(self) -> None:
         """
         Stops the components.
         """
-        pass
 
     @abstractmethod
     def _set_up_env(self) -> None:
@@ -104,7 +104,6 @@ class BaseController(ABC):
         Sets up all components to run by preparing environment variables, directories, and
         configuration files.
         """
-        pass
 
     def _set_up_env_for_database(self) -> EnvVarsDict:
         """
@@ -125,24 +124,25 @@ class BaseController(ABC):
         _chown_paths_if_root(data_dir, logs_dir)
 
         env_vars = EnvVarsDict()
-        # Connection
+
+        # Connection params
         env_vars |= {
             "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
             "CLP_DB_NAME": self._clp_config.database.name,
             "CLP_DB_PORT": str(self._clp_config.database.port),
         }
-        # Credential
+        # Credentials
         env_vars |= {
             "CLP_DB_PASS": self._clp_config.database.password,
             "CLP_DB_USER": self._clp_config.database.username,
         }
-        # Path
+        # Paths
         env_vars |= {
             "CLP_DB_CONF_LOGGING_FILE_HOST": str(conf_logging_file),
             "CLP_DB_DATA_DIR_HOST": str(data_dir),
             "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
         }
-        # Runtime
+        # Runtime params
         env_vars |= {
             "CLP_DB_IMAGE": (
                 "mysql:8.0.23" if self._clp_config.database.type == "mysql" else "mariadb:10-jammy"
@@ -171,17 +171,18 @@ class BaseController(ABC):
         _chown_paths_if_root(logs_dir)
 
         env_vars = EnvVarsDict()
-        # Connection
+
+        # Connection params
         env_vars |= {
             "CLP_QUEUE_HOST": _get_ip_from_hostname(self._clp_config.queue.host),
             "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
         }
-        # Credential
+        # Credentials
         env_vars |= {
             "CLP_QUEUE_PASS": self._clp_config.queue.password,
             "CLP_QUEUE_USER": self._clp_config.queue.username,
         }
-        # Path
+        # Paths
         env_vars |= {
             "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
         }
@@ -211,23 +212,24 @@ class BaseController(ABC):
         _chown_paths_if_root(data_dir, logs_dir)
 
         env_vars = EnvVarsDict()
-        # Backend
+
+        # Backend databases
         env_vars |= {
             "CLP_REDIS_BACKEND_DB_COMPRESSION": str(
                 self._clp_config.redis.compression_backend_database
             ),
             "CLP_REDIS_BACKEND_DB_QUERY": str(self._clp_config.redis.query_backend_database),
         }
-        # Connection
+        # Connection params
         env_vars |= {
             "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
             "CLP_REDIS_PORT": str(self._clp_config.redis.port),
         }
-        # Credential
+        # Credentials
         env_vars |= {
             "CLP_REDIS_PASS": self._clp_config.redis.password,
         }
-        # Path
+        # Paths
         env_vars |= {
             "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
             "CLP_REDIS_DATA_DIR_HOST": str(data_dir),
@@ -292,19 +294,20 @@ class BaseController(ABC):
         _chown_paths_if_root(data_dir, logs_dir)
 
         env_vars = EnvVarsDict()
-        # Collection
+
+        # Collections
         env_vars |= {
             "CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME": (
                 self._clp_config.results_cache.stream_collection_name
             ),
         }
-        # Connection
+        # Connection params
         env_vars |= {
             "CLP_RESULTS_CACHE_DB_NAME": self._clp_config.results_cache.db_name,
             "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self._clp_config.results_cache.host),
             "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
         }
-        # Path
+        # Paths
         env_vars |= {
             "CLP_RESULTS_CACHE_CONF_FILE_HOST": str(conf_file),
             "CLP_RESULTS_CACHE_DATA_DIR_HOST": str(data_dir),
@@ -323,7 +326,8 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         env_vars = EnvVarsDict()
-        # Logging
+
+        # Logging params
         env_vars |= {
             "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL": (
                 self._clp_config.compression_scheduler.logging_level
@@ -342,7 +346,8 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         env_vars = EnvVarsDict()
-        # Logging
+
+        # Logging params
         env_vars |= {
             "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": self._clp_config.query_scheduler.logging_level,
         }
@@ -363,13 +368,14 @@ class BaseController(ABC):
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
-        # Logging
+
+        # Logging params
         env_vars |= {
             "CLP_COMPRESSION_WORKER_LOGGING_LEVEL": (
                 self._clp_config.compression_worker.logging_level
             ),
         }
-        # Resource
+        # Resources
         env_vars |= {
             "CLP_COMPRESSION_WORKER_CONCURRENCY": str(num_workers),
         }
@@ -390,11 +396,12 @@ class BaseController(ABC):
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
-        # Logging
+
+        # Logging params
         env_vars |= {
             "CLP_QUERY_WORKER_LOGGING_LEVEL": self._clp_config.query_worker.logging_level,
         }
-        # Resource
+        # Resources
         env_vars |= {
             "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
         }
@@ -415,11 +422,12 @@ class BaseController(ABC):
         logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
-        # Logging
+
+        # Logging params
         env_vars |= {
             "CLP_REDUCER_LOGGING_LEVEL": self._clp_config.reducer.logging_level,
         }
-        # Resource
+        # Resources
         env_vars |= {
             "CLP_REDUCER_CONCURRENCY": str(num_workers),
             "CLP_REDUCER_UPSERT_INTERVAL": str(self._clp_config.reducer.upsert_interval),
@@ -534,12 +542,13 @@ class BaseController(ABC):
             settings_json_file.write(json.dumps(server_settings_json))
 
         env_vars = EnvVarsDict()
-        # Connection
+
+        # Connection params
         env_vars |= {
             "CLP_WEBUI_HOST": _get_ip_from_hostname(self._clp_config.webui.host),
             "CLP_WEBUI_PORT": str(self._clp_config.webui.port),
         }
-        # Security
+        # Security params
         env_vars |= {
             "CLP_WEBUI_RATE_LIMIT": str(self._clp_config.webui.rate_limit),
         }
@@ -570,7 +579,7 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging
+        # Logging params
         env_vars |= {"CLP_GC_LOGGING_LEVEL": self._clp_config.garbage_collector.logging_level}
 
         return env_vars
@@ -629,6 +638,7 @@ class DockerComposeController(BaseController):
         """
         Starts CLP's components using Docker Compose.
 
+        :raise: Propagates `check_docker_dependencies`'s exceptions.
         :raise: Propagates `subprocess.run`'s exceptions.
         """
         check_docker_dependencies(
@@ -648,17 +658,12 @@ class DockerComposeController(BaseController):
         if self._clp_config.compression_scheduler.type == OrchestrationType.spider:
             cmd += ["--file", "docker-compose.spider.yaml"]
         cmd += ["up", "--detach", "--wait"]
-        try:
-            subprocess.run(
-                cmd,
-                cwd=self._clp_home,
-                stderr=subprocess.STDOUT,
-                check=True,
-            )
-        except subprocess.CalledProcessError:
-            logger.exception("Failed to start CLP.")
-            raise
-        logger.info("CLP is started.")
+        subprocess.run(
+            cmd,
+            cwd=self._clp_home,
+            check=True,
+        )
+        logger.info("CLP started.")
 
     def stop(self) -> None:
         """
@@ -670,7 +675,13 @@ class DockerComposeController(BaseController):
             check_docker_dependencies(
                 should_compose_project_be_running=True, project_name=self._project_name
             )
-        except OSError as e:
+        except DockerComposeProjectNotRunningError:
+            logger.info(
+                "Docker Compose project '%s' is not running. Nothing to stop.",
+                self._project_name,
+            )
+            return
+        except DockerDependencyError as e:
             logger.warning(
                 'Docker dependencies check failed: "%s". Attempting to stop CLP containers '
                 "anyway...",
@@ -689,10 +700,9 @@ class DockerComposeController(BaseController):
     @staticmethod
     def _get_num_workers() -> int:
         """
-        TODO: Revisit after moving from single-container to multi-container workers. See issue
-        @y-scope/clp#1424 for details.
         :return: Number of worker processes to run.
         """
+        # This will change when we move from single to multi-container workers. See y-scope/clp#1424
         return multiprocessing.cpu_count() // 2
 
     def _set_up_env(self) -> None:
@@ -701,10 +711,9 @@ class DockerComposeController(BaseController):
         num_workers = self._get_num_workers()
         dump_shared_container_config(container_clp_config, self._clp_config)
 
-        # Prepare environment variables for all components.
         env_vars = EnvVarsDict()
 
-        # Credential
+        # Credentials
         if self._clp_config.stream_output.storage.type == StorageType.S3:
             stream_output_aws_auth = (
                 self._clp_config.stream_output.storage.s3_config.aws_authentication
@@ -719,7 +728,7 @@ class DockerComposeController(BaseController):
                     ),
                 }
 
-        # Identity
+        # Identity config
         env_vars |= {
             "CLP_FIRST_PARTY_SERVICE_UID_GID": DEFAULT_UID_GID,
             "CLP_THIRD_PARTY_SERVICE_UID_GID": (
@@ -727,28 +736,28 @@ class DockerComposeController(BaseController):
             ),
         }
 
-        # Package
+        # Package config
         env_vars |= {
             "CLP_PACKAGE_CONTAINER_IMAGE_REF": self._clp_config.container_image_ref,
             "CLP_PACKAGE_STORAGE_ENGINE": self._clp_config.package.storage_engine,
         }
 
-        # Path
+        # Paths
         aws_config_dir = self._clp_config.aws_config_directory
         env_vars |= {
-            # General
+            "CLP_AWS_CONFIG_DIR_HOST": (None if aws_config_dir is None else str(aws_config_dir)),
             "CLP_DATA_DIR_HOST": str(self._clp_config.data_directory),
             "CLP_LOGS_DIR_HOST": str(self._clp_config.logs_directory),
-            # Config
-            "CLP_AWS_CONFIG_DIR_HOST": (None if aws_config_dir is None else str(aws_config_dir)),
         }
-        # Input
+
+        # Input config
         if self._clp_config.logs_input.type == StorageType.FS:
             env_vars["CLP_LOGS_INPUT_DIR_CONTAINER"] = str(
                 container_clp_config.logs_input.directory
             )
             env_vars["CLP_LOGS_INPUT_DIR_HOST"] = str(self._clp_config.logs_input.directory)
-        # Output
+
+        # Output config
         archive_output_dir_str = str(self._clp_config.archive_output.get_directory())
         stream_output_dir_str = str(self._clp_config.stream_output.get_directory())
         if self._clp_config.archive_output.storage.type == StorageType.FS:
@@ -760,7 +769,7 @@ class DockerComposeController(BaseController):
         if self._clp_config.stream_output.storage.type == StorageType.S3:
             env_vars["CLP_STAGED_STREAM_OUTPUT_DIR_HOST"] = stream_output_dir_str
 
-        # Component-specific
+        # Component-specific config
         env_vars |= self._set_up_env_for_database()
         env_vars |= self._set_up_env_for_queue()
         env_vars |= self._set_up_env_for_redis()
@@ -775,7 +784,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_webui(container_clp_config)
         env_vars |= self._set_up_env_for_garbage_collector()
 
-        # Write the environment variables to the `.env ` file.
+        # Write the environment variables to the `.env` file.
         with open(f"{self._clp_home}/.env", "w") as env_file:
             for key, value in env_vars.items():
                 if value is None:
