@@ -21,7 +21,8 @@ This guide explains how to connect Claude Desktop to the CLP MCP server over HTT
 :::
 
 3. Add the MCP server: Add an entry to the `mcpServers` object. If the `mcpServers` object does not exist, create one.
-```
+
+```json
 {
   "mcpServers": {
     "clp-mcp-server": {

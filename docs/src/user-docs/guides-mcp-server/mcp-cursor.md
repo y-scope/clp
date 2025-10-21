@@ -6,7 +6,8 @@ This guide explains how to connect Cursor to the CLP MCP server over HTTP.
 
 1. Follow the [official Cursor guide](https://cursor.com/docs/context/mcp) to add a Remote MCP Server using `mcp.json`.
 2. Add the following `clp-mcp-server` config to the `mcpServers` object and save the file.
-```
+
+```json
 {
    "mcpServers": {
     "clp-mcp-server": {
