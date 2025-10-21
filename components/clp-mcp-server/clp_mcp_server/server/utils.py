@@ -58,4 +58,9 @@ def sort_query_results(query_results: list[dict]) -> list[dict]:
     :return: A sorted list of dictionary containing log entries with its metadata, ordered by epoch
     from latest to oldest.
     """
-    return sorted(query_results, key=lambda log_entry: log_entry.get("timestamp", 0), reverse=True)
+
+    def _key(log_entry: dict) -> int:
+        ts = log_entry.get("timestamp")
+        return ts if isinstance(ts, int) else -1
+
+    return sorted(query_results, key=_key, reverse=True)

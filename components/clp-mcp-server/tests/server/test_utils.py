@@ -2,9 +2,9 @@
 
 from clp_mcp_server.server.utils import filter_query_results, sort_query_results
 
+
 class TestUtils:
     """Test suite for utility functions."""
-    
 
     # Test case: invalid timestamp types.
     INVALID_TYPE_ENTRIES = [
@@ -56,6 +56,14 @@ class TestUtils:
     # Testing basic functionality.
     RAW_LOG_ENTRIES = [
         {
+            "_id": "test000",
+            "timestamp": None,
+            "message": '{"pid":null,"tid":null,"message":"Log at epoch none"}\n',
+            "orig_file_path": "/var/log/app.log",
+            "archive_id": "abc123",
+            "log_event_ix": 99,
+        },
+        {
             "_id": "test001",
             "timestamp": 0,
             "message": '{"ts":0,"pid":null,"tid":null,"message":"Log at epoch zero"}\n',
@@ -103,6 +111,11 @@ class TestUtils:
             '{"ts":0,"pid":null,"tid":null,'
             '"message":"Log at epoch zero"}\n'
         ),
+        (
+            'timestamp: N/A, message: '
+            '{"pid":null,"tid":null,'
+            '"message":"Log at epoch none"}\n'
+        ),
     ]
 
     def test_invalid_timestamp_type(self):
@@ -124,7 +137,12 @@ class TestUtils:
         assert result == self.MISSING_TIMESTAMP_AND_MESSAGE_EXPECTED
 
     def test_sort_and_filter_query_results(self):
-        """Validates the functionality of post-processing for the query response."""
+        """
+        Validates the post-processing functionality. We expect:
+        - Logs are sorted by timestamp from latest to oldest, with logs having invalid timestamps
+        appear at last.
+        - `timestamp` and `message` fields are correct filtered.
+        """
         sorted_result = sort_query_results(self.RAW_LOG_ENTRIES)
         filtered_result = filter_query_results(sorted_result)
 
