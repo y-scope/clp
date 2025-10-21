@@ -32,14 +32,14 @@ public:
 
     // Disable copy constructor/assignment operator
     FileWriter(FileWriter const&) = delete;
-    auto operator=(FileWriter const&) -> FileWriter& = delete;
+    [[nodiscard]] auto operator=(FileWriter const&) -> FileWriter& = delete;
 
     // Define custom move constructor/assignment operator
     FileWriter(FileWriter&& writer)
             : m_file{std::exchange(writer.m_file, nullptr)},
               m_fd{std::exchange(writer.m_fd, -1)} {}
 
-    auto operator=(FileWriter&& writer) -> FileWriter& {
+    [[nodiscard]] auto operator=(FileWriter&& writer) -> FileWriter& {
         if (this == &writer) {
             return *this;
         }

@@ -21,11 +21,11 @@ public:
     // Constructors
     // Disable copy constructor/assignment operator
     LogSerializer(LogSerializer const&) = delete;
-    auto operator=(LogSerializer const&) -> LogSerializer& = delete;
+    [[nodiscard]] auto operator=(LogSerializer const&) -> LogSerializer& = delete;
 
-    // Define default move constructor/assignment operator
+    // Default move constructor/assignment operator
     LogSerializer(LogSerializer&&) noexcept = default;
-    auto operator=(LogSerializer&&) -> LogSerializer& = default;
+    [[nodiscard]] auto operator=(LogSerializer&&) -> LogSerializer& = default;
 
     // Destructor
     ~LogSerializer() = default;

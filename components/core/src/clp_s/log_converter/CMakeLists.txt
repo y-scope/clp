@@ -1,5 +1,5 @@
 set(
-    CLP_S_CONVERTER_SOURCES
+    CLP_S_LOG_CONVERTER_SOURCES
     CommandLineArguments.cpp
     CommandLineArguments.hpp
     LogConverter.cpp
@@ -12,7 +12,7 @@ if(CLP_BUILD_EXECUTABLES)
     add_executable(
         log-converter
         log_converter.cpp
-        ${CLP_S_CONVERTER_SOURCES}
+        ${CLP_S_LOG_CONVERTER_SOURCES}
     )
     target_compile_features(log-converter PRIVATE cxx_std_20)
     target_link_libraries(
