@@ -3,10 +3,12 @@
 This guide explains how to connect Claude Desktop to the CLP MCP server over HTTP.
 
 ## Prerequisites
+
 1. Install Node.js >= 16 
 2. Install the [mcp-remote] package 
 
 ## Steps
+
 1. Open Claude Desktop settings.
 
 :::{image} ./claude-settings.png
@@ -38,7 +40,7 @@ This guide explains how to connect Claude Desktop to the CLP MCP server over HTT
 ```
 The `host` and `port` values should match the hostname and port number where the MCP server is running, as specified during [configuration](../guides-mcp-server/index.md#starting-mcp-server). Check [mcp-remote]'s package description for additional arguments that can be specified.
 
-4. Save the configuration. Save changes to the `claude_desktop_config.json` file
+4. Save the configuration: Save changes to the `claude_desktop_config.json` file
 5. Restart Claude Desktop: Close and reopen the application for the new configuration to take effect.
 6. You should now see the MCP server and its available tools under the “Search and Tools” icon in Claude Desktop’s Prompt window.
 

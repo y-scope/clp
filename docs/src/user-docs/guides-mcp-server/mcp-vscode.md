@@ -3,6 +3,7 @@
 This guide explains how to connect Visual Studio Code (VSCode) to the CLP MCP server over HTTP.
 
 ## Steps
+
 1. Follow the [official VSCode guide](https://code.visualstudio.com/docs/copilot/customization/mcp-servers) to add an MCP server to VSCode.
 2. The json configuration for CLP's MCP should be added to the `servers` object:
 ```
