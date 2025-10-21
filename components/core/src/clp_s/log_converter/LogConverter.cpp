@@ -87,6 +87,7 @@ auto LogConverter::convert_file(
     schema.add_delimiters(cDelimeters);
     schema.add_variable(cTimestampSchema, -1);
     log_surgeon::BufferParser parser{std::move(schema.release_schema_ast_ptr())};
+    parser.reset();
 
     auto serializer_option{LogSerializer::create(output_dir, path.path)};
     if (false == serializer_option.has_value()) {
