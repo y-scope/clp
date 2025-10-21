@@ -639,10 +639,9 @@ class DockerComposeController(BaseController):
     @staticmethod
     def _get_num_workers() -> int:
         """
-        TODO: Revisit after moving from single-container to multi-container workers. See issue
-        @y-scope/clp#1424 for details.
         :return: Number of worker processes to run.
         """
+        # This will change when we move from single to multi-container workers. See y-scope/clp#1424
         return multiprocessing.cpu_count() // 2
 
     def _set_up_env(self) -> None:
