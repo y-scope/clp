@@ -1,12 +1,12 @@
 // Reference: https://github.com/vikyd/vue-monaco-singleline
 import {useCallback} from "react";
 
+import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
+
 import SqlEditor, {
     SqlEditorProps,
     SqlEditorType,
 } from "../SqlEditor";
-
-import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 
 
 /**
