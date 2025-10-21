@@ -3,7 +3,6 @@ import pathlib
 from enum import auto
 from typing import Annotated, Any, Literal, Optional, Set, Union
 
-from dotenv import dotenv_values
 from pydantic import (
     BaseModel,
     ConfigDict,
