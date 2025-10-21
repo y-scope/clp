@@ -508,6 +508,8 @@ class DockerComposeController(BaseController):
         cmd = ["docker", "compose", "--project-name", self._project_name]
         if deployment_type == DeploymentType.BASE:
             cmd += ["--file", "docker-compose.base.yaml"]
+        if len(self.clp_config.mcp_server.model_fields_set) > 0:
+            cmd += ["--profile", "mcp"]
         cmd += ["up", "--detach"]
         try:
             subprocess.run(
