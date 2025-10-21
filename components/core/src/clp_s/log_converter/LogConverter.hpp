@@ -33,7 +33,7 @@ public:
      * - Error codes forwarded from `refill_buffer()` on buffer refill failure.
      * - Error codes forwarded from `LogSerializer::add_message()` on message serialization failure.
      */
-    auto convert_file(
+    [[nodiscard]] auto convert_file(
             clp_s::Path const& path,
             std::shared_ptr<clp::ReaderInterface>& reader,
             std::string_view output_dir
@@ -52,7 +52,7 @@ private:
      * @return A result containing the number of new bytes consumed from `reader`, or
      * `std::errc::not_enough_memory` on faiulre.
      */
-    auto refill_buffer(std::shared_ptr<clp::ReaderInterface>& reader)
+    [[nodiscard]] auto refill_buffer(std::shared_ptr<clp::ReaderInterface>& reader)
             -> ystdlib::error_handling::Result<size_t>;
 
     /**

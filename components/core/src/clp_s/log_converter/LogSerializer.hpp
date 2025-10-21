@@ -43,7 +43,8 @@ public:
      * - Error codes forwarded from `clp::ffi::ir_stream::Serializer<>::create()`.
      *
      */
-    static auto create(std::string_view output_dir, std::string_view original_file_path)
+    [[nodiscard]] static auto
+    create(std::string_view output_dir, std::string_view original_file_path)
             -> ystdlib::error_handling::Result<LogSerializer>;
 
     /**
@@ -52,7 +53,7 @@ public:
      * @param message
      * @return A void result on success, or `std::errc::invalid_argument` on error.
      */
-    auto add_message(std::string_view timestamp, std::string_view message)
+    [[nodiscard]] auto add_message(std::string_view timestamp, std::string_view message)
             -> ystdlib::error_handling::Result<void>;
 
     /**
@@ -60,7 +61,8 @@ public:
      * @param message
      * @return A void result on success, or `std::errc::invalid_argument` on error.
      */
-    auto add_message(std::string_view message) -> ystdlib::error_handling::Result<void>;
+    [[nodiscard]] auto add_message(std::string_view message)
+            -> ystdlib::error_handling::Result<void>;
 
 private:
     // Constants
