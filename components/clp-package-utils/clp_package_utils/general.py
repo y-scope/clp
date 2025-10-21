@@ -176,12 +176,9 @@ def check_docker_dependencies(should_compose_project_be_running: bool, project_n
     :raise DockerComposeProjectAlreadyRunningError: If the project is running when it shouldn't be.
     """
     try:
-        subprocess.run(
-            "command -v docker",
-            shell=True,
-            stdout=subprocess.DEVNULL,
+        subprocess.check_output(
+            ["docker", "--version"],
             stderr=subprocess.STDOUT,
-            check=True,
         )
     except subprocess.CalledProcessError as e:
         raise DockerNotAvailableError(
