@@ -27,15 +27,19 @@ const QuerySpeed = () => {
             cachedDataset,
         ],
         queryFn: async () => {
-            const {bytes, duration} = await fetchQuerySpeed(cachedDataset ?? "", searchJobId ?? "");
+            if (null === searchJobId) {
+                return SPEED_DEFAULT;
+            }
+            const {bytes, duration} = await fetchQuerySpeed(cachedDataset ?? "", searchJobId);
             return {latency: duration, speed: bytes / duration};
         },
         enabled: SEARCH_UI_STATE.DONE === searchUiState,
+        refetchInterval: false,
     });
     const {latency, speed} = data;
     return (
         <Text type={"secondary"}>
-            {`Query took ${latency.toFixed(3)} seconds (${formatSizeInBytes(speed)}/s).`}
+            {` in ${latency.toFixed(3)} seconds (${formatSizeInBytes(speed)}/s)`}
         </Text>
     );
 };

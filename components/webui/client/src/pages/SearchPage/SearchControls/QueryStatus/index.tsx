@@ -68,7 +68,7 @@ const QueryStatus = () => {
                     </Text>
                     <Results/>
                     {" "}
-                    <Text type={"secondary"}>results.</Text>
+                    <Text type={"secondary"}>results</Text>
                 </>
             )}
             {searchUiState === SEARCH_UI_STATE.DONE && (
@@ -90,7 +90,8 @@ const QueryStatus = () => {
                     </Text>
                     <Results/>
                     {" "}
-                    <Text type={"secondary"}>results.</Text>
+                    <Text type={"secondary"}>results</Text>
+                    {CLP_QUERY_ENGINES.PRESTO !== SETTINGS_QUERY_ENGINE && <QuerySpeed/>}
                 </>
             )}
             {searchUiState === SEARCH_UI_STATE.FAILED && (
@@ -116,16 +117,10 @@ const QueryStatus = () => {
                 <>
                     <Results/>
                     {" "}
-                    <Text type={"secondary"}>results.</Text>
+                    <Text type={"secondary"}>results</Text>
                 </>
             )}
             {isPrestoGuided && <QueryDrawer/>}
-            {searchUiState === SEARCH_UI_STATE.DONE &&
-                CLP_QUERY_ENGINES.PRESTO !== SETTINGS_QUERY_ENGINE &&
-                <>
-                    {" "}
-                    <QuerySpeed/>
-                </>}
         </>
     );
 };
