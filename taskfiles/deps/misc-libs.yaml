@@ -1,0 +1,65 @@
+version: "3"
+
+tasks:
+  boost:
+    internal: true
+    vars:
+      LIB_NAME: "Boost"
+      VERSION: "1.87.0"
+      INSTALL_PREFIX: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    cmds:
+      - task: "yscope-dev-utils:boost:download-and-install"
+        vars:
+          FILE_SHA256: "d6c69e4459eb5d6ec208250291221e7ff4a2affde9af6e49c9303b89c687461f"
+          INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+          TARGETS:
+            - "filesystem"
+            - "iostreams"
+            - "process"
+            - "program_options"
+            - "regex"
+            - "system"
+            - "url"
+          URL: "https://github.com/boostorg/boost/releases/download/boost-{{.VERSION}}/\
+          boost-{{.VERSION}}-b2-nodocs.tar.gz"
+          WORK_DIR: "{{.G_DEPS_CPP_DIR}}"
+      - task: "yscope-dev-utils:cmake:generate-cmake-settings"
+        vars:
+          CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
+          CMAKE_SETTINGS_DIR: "{{.CMAKE_SETTINGS_DIR}}"
+          PACKAGE_INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
+
+
+  sqlite3:
+    internal: true
+    vars:
+      LIB_NAME: "sqlite3"
+
+      # Paths
+      EXTRACTION_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+      INSTALL_INCLUDE_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install/include"
+      INSTALL_SYMLINK: "{{.INSTALL_INCLUDE_DIR}}/{{.LIB_NAME}}"
+      ZIP_FILENAME_STEM: "sqlite-amalgamation-3360000"
+      SRC_DIR: "{{.EXTRACTION_DIR}}/{{.ZIP_FILENAME_STEM}}"
+    requires:
+      vars: ["CMAKE_SETTINGS_DIR"]
+    # TODO: use checksums to properly decide if this task is up-to-date once more than one main deps
+    # target depends on this library.
+    run: "once"
+    cmds:
+      - task: "yscope-dev-utils:remote:download-and-extract-zip"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          FILE_SHA256: "999826fe4c871f18919fdb8ed7ec9dd8217180854dd1fe21eea96aed36186729"
+          OUTPUT_DIR: "{{.EXTRACTION_DIR}}"
+          URL: "https://www.sqlite.org/2021/{{.ZIP_FILENAME_STEM}}.zip"
+      - "mkdir -p '{{.INSTALL_INCLUDE_DIR}}'"
+      - "rm -f '{{.INSTALL_SYMLINK}}'"
+      - "ln -s '{{.SRC_DIR}}' '{{.INSTALL_SYMLINK}}'"
+      - |-
+        echo "set(CLP_SQLITE3_SOURCE_DIRECTORY \"{{.SRC_DIR}}\")" \
+        > "{{.CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        echo "set(CLP_SQLITE3_INCLUDE_DIRECTORY \"{{.INSTALL_INCLUDE_DIR}}\")" \
+        >> "{{.CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
