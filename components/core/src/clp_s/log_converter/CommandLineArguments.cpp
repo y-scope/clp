@@ -1,17 +1,23 @@
 #include "CommandLineArguments.hpp"
 
-#include <filesystem>
+#include <exception>
 #include <iostream>
+#include <stdexcept>
+#include <string>
 #include <string_view>
+#include <vector>
 
-#include <boost/program_options.hpp>
-#include <boost/program_options/option.hpp>
 #include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/positional_options.hpp>
+#include <boost/program_options/value_semantic.hpp>
 #include <boost/program_options/variables_map.hpp>
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
+#include "../ErrorCode.hpp"
 #include "../FileReader.hpp"
+#include "../InputConfig.hpp"
 
 namespace po = boost::program_options;
 
@@ -22,17 +28,15 @@ constexpr std::string_view cNoAuth{"none"};
 constexpr std::string_view cS3Auth{"s3"};
 
 /**
- * Read a list of newline-delimited paths from a file and put them into a vector passed by reference
- * TODO: deduplicate this code with the version in clp
- * @param input_path_list_file_path path to the file containing the list of paths
- * @param path_destination the vector that the paths are pushed into
- * @return true on success
- * @return false on error
+ * Reads and returns a list of paths from a file containing newline-delimited paths.
+ * @param input_path_list_file_path Path to the file containing the list of paths.
+ * @param path_destination The vector that the paths are pushed into.
+ * @return Whether paths were read successfully or not.
  */
-bool read_paths_from_file(
+[[nodiscard]] auto read_paths_from_file(
         std::string const& input_path_list_file_path,
         std::vector<std::string>& path_destination
-) {
+) -> bool {
     FileReader reader;
     auto error_code = reader.try_open(input_path_list_file_path);
     if (ErrorCodeFileNotFound == error_code) {
@@ -41,7 +45,8 @@ bool read_paths_from_file(
                 input_path_list_file_path
         );
         return false;
-    } else if (ErrorCodeSuccess != error_code) {
+    }
+    if (ErrorCodeSuccess != error_code) {
         SPDLOG_ERROR("Error opening input path list file {}", input_path_list_file_path);
         return false;
     }
@@ -78,8 +83,8 @@ void validate_network_auth(std::string_view auth_method, NetworkAuthOption& auth
 }
 }  // namespace
 
-CommandLineArguments::ParsingResult
-CommandLineArguments::parse_arguments(int argc, char const** argv) {
+auto CommandLineArguments::parse_arguments(int argc, char const** argv)
+        -> CommandLineArguments::ParsingResult {
     if (1 == argc) {
         print_basic_usage();
         return ParsingResult::Failure;
@@ -145,7 +150,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
         );
         po::notify(parsed_command_line_options);
 
-        if (parsed_command_line_options.count("help") != 0) {
+        if (parsed_command_line_options.contains("help")) {
             if (argc > 2) {
                 SPDLOG_WARN("Ignoring all options besides --help.");
             }
@@ -176,8 +181,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     } catch (std::exception& e) {
         SPDLOG_ERROR("{}", e.what());
         print_basic_usage();
-        std::cerr << "Try " << get_program_name() << " --help for detailed usage instructions"
-                  << std::endl;
+        std::cerr << "Try " << get_program_name() << " --help for detailed usage instructions\n";
         return ParsingResult::Failure;
     }
 
@@ -185,6 +189,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 }
 
 void CommandLineArguments::print_basic_usage() const {
-    std::cerr << "Usage: " << get_program_name() << " [INPUT_PATHS] [OPTIONS]" << std::endl;
+    std::cerr << "Usage: " << get_program_name() << " [INPUT_PATHS] [OPTIONS]\n";
 }
 }  // namespace clp_s::log_converter
