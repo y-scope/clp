@@ -31,7 +31,7 @@ jobs:
         shell: "bash"
         run: "npm install -g @go-task/cli@3.44.0"
 
-      - name: "Verify Locks"
+      - name: "Validate lock files"
         shell: "bash"
         run: "task deps:lock:check-rust"
 
