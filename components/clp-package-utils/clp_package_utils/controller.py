@@ -87,14 +87,12 @@ class BaseController(ABC):
         """
         Starts the components.
         """
-        pass
 
     @abstractmethod
     def stop(self) -> None:
         """
         Stops the components.
         """
-        pass
 
     @abstractmethod
     def _set_up_env(self) -> None:
@@ -102,7 +100,6 @@ class BaseController(ABC):
         Sets up all components to run by preparing environment variables, directories, and
         configuration files.
         """
-        pass
 
     def _set_up_env_for_database(self) -> EnvVarsDict:
         """
