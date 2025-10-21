@@ -17,11 +17,6 @@ x-healthcheck-defaults: &healthcheck_defaults
   start_period: "60s"
   timeout: "2s"
 x-volume-definitions:
-  aws-config-readonly: &volume_aws_config_readonly
-    type: "bind"
-    source: "${CLP_AWS_CONFIG_DIR_HOST:-~/.aws}"
-    target: "/.aws"
-    read_only: true
   clp-config-readonly: &volume_clp_config_readonly
     type: "bind"
     source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml"
@@ -84,10 +79,10 @@ services:
       RESULT_BACKEND: >-
         redis://default:${CLP_REDIS_PASS:?Please set a value.}@redis:6379/${CLP_REDIS_BACKEND_DB_QUERY:-0}
     volumes:
-      - *volume_aws_config_readonly
       - *volume_clp_config_readonly
       - *volume_clp_logs
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
+      - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/.aws:ro"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
       - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
     command: [
