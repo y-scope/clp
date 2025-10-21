@@ -110,6 +110,8 @@ services:
   spider-scheduler:
     <<: *service_defaults
     hostname: "spider_scheduler"
+    environment:
+      SPIDER_LOG_FILE: "/var/log/compression_scheduler.log"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -131,7 +133,7 @@ services:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL:-INFO}"
-      SPIDER_LOG_FILE: "/var/log/compression_scheduler.log"
+      CLP_LOGS_DIR: "/var/log"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:
       - *volume_clp_config_readonly
