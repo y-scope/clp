@@ -18,6 +18,22 @@ using clp_s::log_converter::CommandLineArguments;
 using clp_s::log_converter::LogConverter;
 
 namespace {
+/**
+ * Checks for and logs CURl errors on a reader.
+ * @param path The path that the reader has opened.
+ * @param reader The open reader which may have experienced a CURL error.
+ * @return Whether a CURL error has occurred on the reader.
+ */
+auto check_and_log_curl_error(clp_s::Path const& path, std::shared_ptr<clp::ReaderInterface> reader)
+        -> bool;
+
+/**
+ * Converts all files according to the command line arguments.
+ * @param command_line_arguments
+ * @return Whether conversion was successful.
+ */
+auto convert_files(CommandLineArguments const& command_line_arguments) -> bool;
+
 auto check_and_log_curl_error(clp_s::Path const& path, std::shared_ptr<clp::ReaderInterface> reader)
         -> bool {
     if (auto network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
