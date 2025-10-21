@@ -2,7 +2,7 @@ name: "clp-package"
 
 include: ["docker-compose.base.yaml"]
 
-# Below x-* definitions are duplicated from docker-compose.base.yaml. Refer to that file for
+# The `x-*` definitions below are duplicated from docker-compose.base.yaml. Refer to that file for
 # documentation.
 x-service-defaults: &service_defaults
   image: "${CLP_PACKAGE_CONTAINER_IMAGE_REF:-clp-package}"
