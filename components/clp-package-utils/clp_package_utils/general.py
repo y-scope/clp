@@ -56,7 +56,7 @@ class DockerDependencyError(OSError):
 class DockerNotAvailableError(DockerDependencyError):
     """Raised when Docker or Docker Compose is unavailable."""
 
-    def __init__(self, base_message: str, process_error: subprocess.CalledProcessError):
+    def __init__(self, base_message: str, process_error: subprocess.CalledProcessError) -> None:
         message = base_message
         output_chunks: list[str] = []
         for stream in (process_error.output, process_error.stderr):
@@ -77,14 +77,14 @@ class DockerNotAvailableError(DockerDependencyError):
 class DockerComposeProjectNotRunningError(DockerDependencyError):
     """Raised when an expected Docker Compose project is not running."""
 
-    def __init__(self, project_name: str):
+    def __init__(self, project_name: str) -> None:
         super().__init__(errno.ESRCH, f"Docker Compose project '{project_name}' is not running.")
 
 
 class DockerComposeProjectAlreadyRunningError(DockerDependencyError):
     """Raised when a Docker Compose project is already running but should not be."""
 
-    def __init__(self, project_name: str):
+    def __init__(self, project_name: str) -> None:
         super().__init__(
             errno.EEXIST, f"Docker Compose project '{project_name}' is already running."
         )
