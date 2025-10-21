@@ -1,16 +1,24 @@
 # MCP Server
-CLP now supports an MCP server that allows users to query compressed logs using AI agents like Claude Desktop, Cursor etc. 
+CLP supports an MCP server that allows AI agents like Claude Desktop, Cursor and Visual Studio Code (VSCode) to query compressed logs.
 
-This guide explains how to configure and use CLP's MCP server. It will also show how to connect popular agents to the MCP server.
+This guide explains how to configure and run CLP's MCP server. It will also show you how to connect an AI agent to the MCP server.
 
-## Pre-requisites
+## Prerequisites
 This guide assumes:
-1. The user is able to configure, start, stop, and use CLP as described in the
+1. You are able to configure, start, stop, and use CLP as described in the
    [clp-json quick-start guide](../quick-start/clp-json.md).
-2. The user has an Agent installed that supports connecting to MCP servers over HTTP.
+2. You have an Agent installed that supports connections to MCP servers over HTTP.
 
 ## Starting MCP Server:
-TODO
+1. Configure CLP package to run the MCP server by specifying the host and port number in `etc/clp-config.yml` as follows:
+```
+mcp_server:
+   host: "<host-ip>"
+   port: <port-number>
+```
+The default `<host-ip>` and `<port-number>` are `localhost` and `8000` respectively.
+
+2. Start clp-json as explained in [clp-json quick-start](../quick-start/clp-json.md). This will run the CLP MCP server on the specified `host` and `port`.
 
 ## Connecting to MCP Server:
 The following subsections explain how to connect CLP's MCP server to each of the Agents:
@@ -20,16 +28,23 @@ The following subsections explain how to connect CLP's MCP server to each of the
 
 :::{grid-item-card}
 :link: mcp-claude-desktop
-Connecting to Claude Desktop
+Connecting Claude Desktop
 ^^^
 Configuring Claude Desktop to connect to CLP MCP server
 :::
 
 :::{grid-item-card}
 :link: mcp-cursor
-Connecting to Cursor
+Connecting Cursor
 ^^^
 Configuring Cursor to connect to CLP MCP server
+:::
+
+:::{grid-item-card}
+:link: mcp-vscode
+Connecting VSCode
+^^^
+Configuring VSCode to connect to CLP MCP server
 :::
 ::::
 
@@ -38,4 +53,5 @@ Configuring Cursor to connect to CLP MCP server
 
 mcp-claude-desktop
 mcp-cursor
+mcp-vscode
 :::
