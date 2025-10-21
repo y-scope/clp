@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 import msgpack
 from clp_py_utils.clp_logging import get_logger
+
 from job_orchestration.scheduler.job_config import AggregationConfig
 
 # Setup logging

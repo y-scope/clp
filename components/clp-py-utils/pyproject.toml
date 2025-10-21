@@ -1,11 +1,8 @@
 [project]
-requires-python = ">= 3.9"
-
-[tool.poetry]
 name = "clp-py-utils"
 version = "0.5.2-dev"
 description = "Utilities for other Python packages in CLP."
-authors = ["YScope Inc. <dev@yscope.com>"]
+authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
 
 [tool.poetry.dependencies]
@@ -25,5 +22,5 @@ result = "^0.17.0"
 StrEnum = "^0.4.15"
 
 [build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"

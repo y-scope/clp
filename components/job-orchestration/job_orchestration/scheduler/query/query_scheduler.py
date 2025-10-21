@@ -48,6 +48,8 @@ from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.profiling_utils import profile
 from clp_py_utils.sql_adapter import SQL_Adapter
+from pydantic import ValidationError
+
 from job_orchestration.executor.query.extract_stream_task import extract_stream
 from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.garbage_collector.constants import MIN_TO_SECONDS, SECOND_TO_MILLISECOND
@@ -78,7 +80,6 @@ from job_orchestration.scheduler.scheduler_data import (
     SearchJob,
 )
 from job_orchestration.scheduler.utils import kill_hanging_jobs
-from pydantic import ValidationError
 
 # Setup logging
 logger = get_logger("search-job-handler")
