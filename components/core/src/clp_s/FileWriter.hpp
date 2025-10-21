@@ -5,6 +5,7 @@
 
 #include <cstdio>
 #include <string>
+#include <utility>
 
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
@@ -34,18 +35,16 @@ public:
     auto operator=(FileWriter const&) -> FileWriter& = delete;
 
     // Define custom move constructor/assignment operator
-    FileWriter(FileWriter&& writer) {
-        m_file = writer.m_file;
-        m_fd = writer.m_fd;
-        writer.m_file = nullptr;
-        writer.m_fd = -1;
-    }
+    FileWriter(FileWriter&& writer)
+            : m_file{std::exchange(writer.m_file, nullptr)},
+              m_fd{std::exchange(writer.m_fd, -1)} {}
 
     auto operator=(FileWriter&& writer) -> FileWriter& {
-        m_file = writer.m_file;
-        m_fd = writer.m_fd;
-        writer.m_file = nullptr;
-        writer.m_fd = -1;
+        if (this == &writer) {
+            return *this;
+        }
+        m_file = std::exchange(writer.m_file, nullptr);
+        m_fd = std::exchange(writer.m_fd, -1);
         return *this;
     }
 

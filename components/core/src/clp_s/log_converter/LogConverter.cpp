@@ -32,7 +32,7 @@ constexpr std::string_view cTimestampSchema{
         R"((Dec(ember){0,1}))[ /\-]\d{2,4})[ T:][ 0-9]{2}:[ 0-9]{2}:[ 0-9]{2})"
         R"(([,\.:]\d{1,9}){0,1}([ ]{0,1}(UTC){0,1}[\+\-]\d{2}(:{0,1}\d{2}){0,1}Z{0,1}){0,1})"
 };
-constexpr std::string_view cDelimeters{R"(delimiters: \t\r\n\[\(:)"};
+constexpr std::string_view cDelimiters{R"(delimiters: \t\r\n\[\(:)"};
 }  // namespace
 
 auto LogConverter::refill_buffer(std::shared_ptr<clp::ReaderInterface>& reader)
@@ -84,7 +84,7 @@ auto LogConverter::convert_file(
         std::string_view output_dir
 ) -> bool {
     log_surgeon::Schema schema;
-    schema.add_delimiters(cDelimeters);
+    schema.add_delimiters(cDelimiters);
     schema.add_variable(cTimestampSchema, -1);
     log_surgeon::BufferParser parser{std::move(schema.release_schema_ast_ptr())};
     parser.reset();

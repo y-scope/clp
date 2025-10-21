@@ -21,7 +21,7 @@ using clp_s::log_converter::LogConverter;
 
 namespace {
 /**
- * Checks for and logs CURl errors on a reader.
+ * Checks for and logs CURL errors on a reader.
  * @param path The path that the reader has opened.
  * @param reader The open reader which may have experienced a CURL error.
  * @return Whether a CURL error has occurred on the reader.

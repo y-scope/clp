@@ -1,7 +1,7 @@
 set(
     CLP_S_CONVERTER_SOURCES
     CommandLineArguments.cpp
-    CommandLineArguments.cpp
+    CommandLineArguments.hpp
     LogConverter.cpp
     LogConverter.hpp
     LogSerializer.cpp
@@ -19,7 +19,9 @@ if(CLP_BUILD_EXECUTABLES)
         log-converter
         PRIVATE
         Boost::program_options
+        clp_s::clp_dependencies
         clp_s::io
+        fmt::fmt
         log_surgeon::log_surgeon
         msgpack-cxx
         nlohmann_json::nlohmann_json
