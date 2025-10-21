@@ -40,6 +40,7 @@ from clp_py_utils.clp_metadata_db_utils import (
 from clp_package_utils.general import (
     check_docker_dependencies,
     CONTAINER_CLP_HOME,
+    DockerComposeProjectNotRunningError,
     dump_shared_container_config,
     generate_docker_compose_container_config,
     get_clp_home,
@@ -49,6 +50,7 @@ from clp_package_utils.general import (
     validate_redis_config,
     validate_results_cache_config,
     validate_webui_config,
+    DockerDependencyError,
 )
 
 LOG_FILE_ACCESS_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
@@ -589,6 +591,7 @@ class DockerComposeController(BaseController):
         """
         Starts CLP's components using Docker Compose.
 
+        :raise: Propagates `check_docker_dependencies`'s exceptions.
         :raise: Propagates `subprocess.run`'s exceptions.
         """
         check_docker_dependencies(
@@ -620,7 +623,13 @@ class DockerComposeController(BaseController):
             check_docker_dependencies(
                 should_compose_project_be_running=True, project_name=self._project_name
             )
-        except OSError as e:
+        except DockerComposeProjectNotRunningError:
+            logger.info(
+                "Docker Compose project '%s' is not running. Nothing to stop.",
+                self._project_name,
+            )
+            return
+        except DockerDependencyError as e:
             logger.warning(
                 'Docker dependencies check failed: "%s". Attempting to stop CLP containers '
                 "anyway...",
