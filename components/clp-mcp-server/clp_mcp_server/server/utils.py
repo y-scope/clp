@@ -42,7 +42,7 @@ def filter_query_results(query_results: list[dict]) -> list[str]:
         try:
             timestamp_str = convert_epoch_to_date_string(epoch)
         except (TypeError, ValueError) as e:
-            logger.warning("Failed to convert epoch timestamp=%s to date string: %s", epoch, e)
+            logger.warning("Failed to convert epoch timestamp=%s to date string: %s.", epoch, e)
             timestamp_str = "N/A"
 
         message = obj.get("message", "")
