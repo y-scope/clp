@@ -145,7 +145,7 @@ services:
     <<: *service_defaults
     hostname: "mcp_server"
     profiles:
-    - mcp
+    - "mcp"
     environment:
       CLP_LOGS_DIR: "/var/log/mcp-server"
       CLP_DB_USER: "${CLP_DB_USER}"
