@@ -1,4 +1,4 @@
-# Connecting Cursor to CLP MCP server
+# Connecting Cursor
 This guide explains how a user can connect Cursor to CLP MCP server over HTTP using a JSON configuration file.
 
 ## Steps

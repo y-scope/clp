@@ -1,4 +1,4 @@
-# Connecting Visual Studio Code to CLP MCP server
+# Connecting Visual Studio Code
 
 This guide explains how a user can connect Visual Studio Code (VSCode) to CLP MCP server over HTTP using a JSON configuration file.
 

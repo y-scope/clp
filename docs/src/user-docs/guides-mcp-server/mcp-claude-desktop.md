@@ -1,4 +1,4 @@
-# Connecting Claude Desktop to CLP MCP server
+# Connecting Claude Desktop
 
 This guide explains how a user can connect Claude Desktop to CLP MCP server over HTTP using a JSON configuration file.
 
@@ -7,9 +7,17 @@ This guide explains how a user can connect Claude Desktop to CLP MCP server over
 2. Install the [mcp-remote] package 
 
 ## Steps
-1. Open Claude Desktop settings: Navigate to the "Developer" tab in the sidebar.
-TODO: add images
-2. Click on "Edit Config" to edit `claude_desktop_config.json` file.
+1. Open Claude Desktop settings: 
+
+:::{image} ./claude-settings.png
+:alt: Open settings
+:::
+
+2. Navigate to the "Developer" tab in the sidebar and click on "Edit Config" to edit `claude_desktop_config.json` file.
+:::{image} ./claude-developer-menu.png
+:alt: Navigate to the Developer tab
+:::
+
 3. Add the server: Add an entry to the `mcpServers` object. If the `mcpServers` object does not exist, create one.
 ```
 {
