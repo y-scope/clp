@@ -14,7 +14,8 @@ import inspect
 import logging
 import os
 from pathlib import Path
-from typing import Any, Callable, Tuple, TypeVar
+from typing import Any, TypeVar
+from collections.abc import Callable
 
 from pyinstrument import Profiler
 
@@ -122,7 +123,7 @@ def _extract_context_from_args(
     kwargs: dict,
     job_id_param: str = "job_id",
     task_id_param: str = "task_id",
-) -> Tuple[str, str]:
+) -> tuple[str, str]:
     """
     Extracts job_id and task_id from function arguments.
 
@@ -131,7 +132,7 @@ def _extract_context_from_args(
     :param kwargs: Keyword arguments passed to the function.
     :param job_id_param: Name/path of the parameter containing job_id (default: "job_id").
     :param task_id_param: Name/path of the parameter containing task_id (default: "task_id").
-    :return: Tuple of (job_id, task_id) as strings. Empty strings if not found.
+    :return: tuple of (job_id, task_id) as strings. Empty strings if not found.
     """
     job_id = ""
     task_id = ""
