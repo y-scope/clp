@@ -89,9 +89,11 @@ const GuidedRunButton = () => {
             <Button
                 className={styles["runButton"] || ""}
                 color={"green"}
+                htmlType={"submit"}
                 icon={<CaretRightOutlined/>}
                 size={"middle"}
                 variant={"solid"}
+                type="primary"
                 disabled={!isQueryReady ||
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
                 onClick={() => {

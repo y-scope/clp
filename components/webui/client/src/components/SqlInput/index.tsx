@@ -6,6 +6,8 @@ import SqlEditor, {
     SqlEditorType,
 } from "../SqlEditor";
 
+import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
+
 
 /**
  * Single-line SQL input.
@@ -26,6 +28,28 @@ const SqlInput = (props: SqlEditorProps) => {
                 });
             }
         });
+
+        let formEl = editor.getDomNode()?.closest("form") as HTMLFormElement | null;
+
+
+                // Helper that behaves like a real submit
+        const submit = () => {
+            console.log(formEl)
+            if(formEl) {
+                formEl.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+            }
+        };
+
+        // 2) Register a Monaco Action (shows in context menu & supports keybindings)
+            editor.addAction({
+              id: "run-query",
+              label: "Run Query",
+              // Use Cmd/Ctrl+Enter; avoids clobbering plain Enter/newlines
+              keybindings: [monaco.KeyCode.Enter],
+              run: () => submit(),
+        });
+
+
     }, []);
 
     return (

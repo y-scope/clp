@@ -9,6 +9,7 @@ import OrderBy from "./OrderBy";
 import Select from "./Select";
 import TimestampKey from "./TimestampKey";
 import Where from "./Where";
+import { Input } from "antd";
 
 
 /**
@@ -24,6 +25,11 @@ const GuidedControls = () => (
             <TimestampKey/>
             <Where/>
             <OrderBy/>
+            {/* Added: simple AntD input for testing / debug */}
+            <div>
+                <Input placeholder="Random input" />
+            </div>
+
         </div>
         <div className={searchStyles["statusAndButtonsRow"]}>
             <div className={searchStyles["status"]}>

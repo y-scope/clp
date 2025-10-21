@@ -37,6 +37,7 @@ const FreeformRunButton = () => {
                 color={"green"}
                 icon={<CaretRightOutlined/>}
                 size={"middle"}
+                htmlType={"submit"}
                 variant={"solid"}
                 disabled={isQueryStringEmpty ||
                     searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
