@@ -109,9 +109,7 @@ services:
 
   spider-scheduler:
     <<: *service_defaults
-    container_name: "spider_scheduler"
-    environment:
-      LD_LIBRARY_PATH: "/opt/clp/lib"
+    hostname: "spider_scheduler"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
