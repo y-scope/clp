@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <string_view>
+#include <utility>
 
 #include <log_surgeon/BufferParser.hpp>
 #include <log_surgeon/Constants.hpp>
@@ -12,6 +13,7 @@
 #include <ystdlib/containers/Array.hpp>
 
 #include "../../clp/ErrorCode.hpp"
+#include "../../clp/ReaderInterface.hpp"
 #include "../InputConfig.hpp"
 #include "LogSerializer.hpp"
 
@@ -36,17 +38,19 @@ constexpr std::string_view cDelimeters{R"(delimiters: \t\r\n\[\(:)"};
 auto LogConverter::refill_buffer(std::shared_ptr<clp::ReaderInterface>& reader)
         -> std::optional<size_t> {
     if (m_cur_offset > 0) {
+        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         std::memmove(
                 m_buffer.data(),
                 m_buffer.data() + m_cur_offset,
                 m_bytes_occupied - m_cur_offset
         );
+        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
         m_bytes_occupied -= m_cur_offset;
         m_cur_offset = 0;
     }
 
     if (m_buffer.size() == m_bytes_occupied) {
-        size_t new_size{2 * m_buffer.size()};
+        size_t const new_size{2 * m_buffer.size()};
         if (new_size > cMaxBufferSize) {
             return std::nullopt;
         }
@@ -56,11 +60,13 @@ auto LogConverter::refill_buffer(std::shared_ptr<clp::ReaderInterface>& reader)
     }
 
     size_t num_bytes_read{};
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     auto const rc{reader->try_read(
             m_buffer.data() + m_bytes_occupied,
             m_buffer.size() - m_bytes_occupied,
             num_bytes_read
     )};
+    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     m_bytes_occupied += num_bytes_read;
     if (clp::ErrorCode_EndOfFile == rc) {
         return num_bytes_read;
@@ -99,7 +105,6 @@ auto LogConverter::convert_file(
         }
 
         while (m_cur_offset < m_bytes_occupied) {
-            size_t event_start_offset{m_cur_offset};
             auto const err{parser.parse_next_event(
                     m_buffer.data(),
                     m_bytes_occupied,
@@ -113,21 +118,23 @@ auto LogConverter::convert_file(
                 return false;
             }
 
-            auto& event{parser.get_log_parser().get_log_event_view()};
+            auto const& event{parser.get_log_parser().get_log_event_view()};
             auto const message{event.to_string()};
+            bool message_serialized_successfully{};
             if (nullptr != event.get_timestamp()) {
                 auto timestamp{event.get_timestamp()->to_string_view()};
                 auto message_without_timestamp{
                         std::string_view{message}.substr(timestamp.length())
                 };
 
-                if (false == serializer.add_message(timestamp, message_without_timestamp)) {
-                    return false;
-                }
+                message_serialized_successfully
+                        = serializer.add_message(timestamp, message_without_timestamp);
             } else {
-                if (false == serializer.add_message(message)) {
-                    return false;
-                }
+                message_serialized_successfully = serializer.add_message(message);
+            }
+
+            if (false == message_serialized_successfully) {
+                return false;
             }
         }
     }
