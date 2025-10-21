@@ -8,7 +8,7 @@ This guide explains how to connect Cursor to the CLP MCP server over HTTP.
 {
    "mcpServers": {
     "clp-mcp-server": {
-	   "url": "http://<host>:<port/mcp",
+	   "url": "http://<host>:<port>/mcp",
 	   "type": "http"
 	   }
    }
