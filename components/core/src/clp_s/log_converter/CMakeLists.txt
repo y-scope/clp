@@ -27,6 +27,7 @@ if(CLP_BUILD_EXECUTABLES)
         nlohmann_json::nlohmann_json
         spdlog::spdlog
         ystdlib::containers
+        ystdlib::error_handling
     )
     set_target_properties(
         log-converter

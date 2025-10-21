@@ -6,6 +6,8 @@
 #include <string_view>
 #include <utility>
 
+#include <ystdlib/error_handling/Result.hpp>
+
 #include "../../clp/ffi/ir_stream/protocol_constants.hpp"
 #include "../../clp/ffi/ir_stream/Serializer.hpp"
 #include "../../clp/ir/types.hpp"
@@ -28,41 +30,37 @@ public:
     [[nodiscard]] auto operator=(LogSerializer&&) -> LogSerializer& = default;
 
     // Destructor
-    ~LogSerializer() = default;
+    ~LogSerializer() { close(); }
 
     // Methods
     /**
      * Creates an instance of LogSerializer.
      * @param output_dir The destination directory for generated KV-IR.
      * @param original_file_path The original path for the file being converted to KV-IR.
-     * @return An instance of LogSerializer on success, or std::nullopt on failure.
+     * @return A result containing a LogSerializer on success, or an error code indicating the
+     * failure:
+     * - `std::errc::no_such_file_or_directory` if a `clp_s::FileWriter` can not be opened.
+     * - Error codes forwarded from `clp::ffi::ir_stream::Serializer<>::create()`.
+     *
      */
     static auto create(std::string_view output_dir, std::string_view original_file_path)
-            -> std::optional<LogSerializer>;
+            -> ystdlib::error_handling::Result<LogSerializer>;
 
     /**
      * Adds a message with a timestamp to the serialized output.
      * @param timestamp
      * @param message
-     * @return Whether adding the message was successful.
+     * @return A void result on success, or `std::errc::invalid_argument` on error.
      */
-    auto add_message(std::string_view timestamp, std::string_view message) -> bool;
+    auto add_message(std::string_view timestamp, std::string_view message)
+            -> ystdlib::error_handling::Result<void>;
 
     /**
      * Adds a message without a timestamp to the serialized output.
      * @param message
-     * @return Whether adding the message was successful.
+     * @return A void result on success, or `std::errc::invalid_argument` on error.
      */
-    auto add_message(std::string_view message) -> bool;
-
-    /**
-     * Closes and flushes the serialized output.
-     */
-    void close() {
-        flush_buffer();
-        m_writer.write_numeric_value(clp::ffi::ir_stream::cProtocol::Eof);
-        m_writer.close();
-    }
+    auto add_message(std::string_view message) -> ystdlib::error_handling::Result<void>;
 
 private:
     // Constants
@@ -90,6 +88,15 @@ private:
                 buffer.size_bytes()
         );
         m_serializer.clear_ir_buf();
+    }
+
+    /**
+     * Closes and flushes the serialized output.
+     */
+    void close() {
+        flush_buffer();
+        m_writer.write_numeric_value(clp::ffi::ir_stream::cProtocol::Eof);
+        m_writer.close();
     }
 
     clp::ffi::ir_stream::Serializer<clp::ir::eight_byte_encoded_variable_t> m_serializer;

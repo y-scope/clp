@@ -98,13 +98,12 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
             }
         }
 
-        if (false
-            == log_converter.convert_file(
-                    path,
-                    nested_readers.back(),
-                    command_line_arguments.get_output_dir()
-            ))
-        {
+        auto const convert_result{log_converter.convert_file(
+                path,
+                nested_readers.back(),
+                command_line_arguments.get_output_dir()
+        )};
+        if (convert_result.has_error()) {
             SPDLOG_ERROR("Failed to convert input {} to structured representation.", path.path);
             return false;
         }
