@@ -81,6 +81,3 @@ const SqlInput = (props: SqlEditorProps) => {
 };
 
 export default SqlInput;
-};
-
-export default SqlInput;
