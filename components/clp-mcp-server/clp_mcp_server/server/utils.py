@@ -18,7 +18,7 @@ def convert_epoch_to_date_string(epoch_ts: int) -> str:
         raise TypeError(err_msg)
 
     if not isinstance(epoch_ts, int):
-        err_msg = f"Object {type(epoch_ts).__name__} is not of type int."
+        err_msg = f"Object `{type(epoch_ts).__name__}` is not of type `int`."
         raise TypeError(err_msg)
 
     try:
