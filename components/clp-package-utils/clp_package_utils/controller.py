@@ -725,7 +725,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_webui(container_clp_config)
         env_vars |= self._set_up_env_for_garbage_collector()
 
-        # Write the environment variables to the `.env ` file.
+        # Write the environment variables to the `.env` file.
         with open(f"{self._clp_home}/.env", "w") as env_file:
             for key, value in env_vars.items():
                 if value is None:
