@@ -686,11 +686,9 @@ class DockerComposeController(BaseController):
         # Paths
         aws_config_dir = self._clp_config.aws_config_directory
         env_vars |= {
-            # General
+            "CLP_AWS_CONFIG_DIR_HOST": (None if aws_config_dir is None else str(aws_config_dir)),
             "CLP_DATA_DIR_HOST": str(self._clp_config.data_directory),
             "CLP_LOGS_DIR_HOST": str(self._clp_config.logs_directory),
-            # Config
-            "CLP_AWS_CONFIG_DIR_HOST": (None if aws_config_dir is None else str(aws_config_dir)),
         }
 
         # Input config
