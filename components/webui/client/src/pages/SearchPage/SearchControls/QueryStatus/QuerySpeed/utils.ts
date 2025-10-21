@@ -18,7 +18,9 @@ const buildQuerySpeedSql = (datasetName: string, jobId: string) => {
     return `WITH qt AS (
     SELECT job_id, archive_id
     FROM query_tasks
-    WHERE archive_id IS NOT NULL
+    WHERE
+        archive_id IS NOT NULL
+        AND job_id = ${jobId}
 ),
 totals AS (
     SELECT
@@ -27,15 +29,13 @@ totals AS (
     FROM qt
     JOIN ${tableName} ca
     ON qt.archive_id = ca.id
-    GROUP BY qt.job_id
 )
 SELECT
     CAST(totals.total_uncompressed_bytes AS double) AS bytes,
     qj.duration AS duration
 FROM query_jobs qj
 JOIN totals
-ON totals.job_id = qj.id
-WHERE  qj.id = ${jobId}`;
+ON totals.job_id = qj.id`;
 };
 
 interface QuerySpeedResp {
