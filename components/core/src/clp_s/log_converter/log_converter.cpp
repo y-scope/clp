@@ -4,6 +4,7 @@
 #include <memory>
 #include <string_view>
 #include <system_error>
+#include <utility>
 
 #include <curl/curl.h>
 #include <spdlog/sinks/stdout_sinks.h>
@@ -11,6 +12,7 @@
 
 #include "../../clp/NetworkReader.hpp"
 #include "../../clp/ReaderInterface.hpp"
+#include "../InputConfig.hpp"
 #include "CommandLineArguments.hpp"
 #include "LogConverter.hpp"
 
@@ -24,8 +26,10 @@ namespace {
  * @param reader The open reader which may have experienced a CURL error.
  * @return Whether a CURL error has occurred on the reader.
  */
-auto check_and_log_curl_error(clp_s::Path const& path, std::shared_ptr<clp::ReaderInterface> reader)
-        -> bool;
+auto check_and_log_curl_error(
+        clp_s::Path const& path,
+        std::shared_ptr<clp::ReaderInterface> const& reader
+) -> bool;
 
 /**
  * Converts all files according to the command line arguments.
@@ -34,8 +38,10 @@ auto check_and_log_curl_error(clp_s::Path const& path, std::shared_ptr<clp::Read
  */
 auto convert_files(CommandLineArguments const& command_line_arguments) -> bool;
 
-auto check_and_log_curl_error(clp_s::Path const& path, std::shared_ptr<clp::ReaderInterface> reader)
-        -> bool {
+auto check_and_log_curl_error(
+        clp_s::Path const& path,
+        std::shared_ptr<clp::ReaderInterface> const& reader
+) -> bool {
     if (auto network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
         nullptr != network_reader)
     {
@@ -108,7 +114,7 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
 }
 }  // namespace
 
-int main(int argc, char const* argv[]) {
+auto main(int argc, char const** argv) -> int {
     try {
         auto stderr_logger = spdlog::stderr_logger_st("stderr");
         spdlog::set_default_logger(stderr_logger);
