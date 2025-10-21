@@ -71,7 +71,7 @@ def update_tags(
     table_prefix: str,
     dataset: Optional[str],
     archive_id: str,
-    tag_ids: List[int],
+    tag_ids: list[int],
 ) -> None:
     db_cursor.executemany(
         f"""
@@ -87,7 +87,7 @@ def update_job_metadata_and_tags(
     job_id: int,
     table_prefix: str,
     dataset: Optional[str],
-    tag_ids: List[int],
+    tag_ids: list[int],
     archive_stats: Dict[str, Any],
 ) -> None:
     if len(tag_ids) > 0:
@@ -312,7 +312,7 @@ def run_clp(
     logs_dir: pathlib.Path,
     job_id: int,
     task_id: int,
-    tag_ids: List[int],
+    tag_ids: list[int],
     paths_to_compress: PathsToCompress,
     sql_adapter: SQL_Adapter,
     clp_metadata_db_connection_config,
@@ -522,7 +522,7 @@ def run_clp(
 def compression_entry_point(
     job_id: int,
     task_id: int,
-    tag_ids: List[int],
+    tag_ids: list[int],
     clp_io_config_json: str,
     paths_to_compress_json: str,
     clp_metadata_db_connection_config: Dict[str, Any],
