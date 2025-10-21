@@ -83,8 +83,8 @@ services:
       - *volume_clp_logs
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/.aws:ro"
-      - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
       - "${CLP_STAGED_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/staged-streams"
+      - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
     command: [
       "python3",
       "-u",
