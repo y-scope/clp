@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 F = TypeVar("F", bound=Callable[..., Any])
 
-PROFILING_INTERVAL = 0.001
+PROFILING_INTERVAL_SECONDS = 0.001
 
 
 def profile(
@@ -60,7 +60,7 @@ def profile(
                     func, args, kwargs, job_id_param, task_id_param
                 )
 
-                profiler = Profiler(interval=PROFILING_INTERVAL)
+                profiler = Profiler(interval=PROFILING_INTERVAL_SECONDS)
                 try:
                     profiler.start()
                 except RuntimeError as e:
@@ -92,7 +92,7 @@ def profile(
                 func, args, kwargs, job_id_param, task_id_param
             )
 
-            profiler = Profiler(interval=PROFILING_INTERVAL)
+            profiler = Profiler(interval=PROFILING_INTERVAL_SECONDS)
             try:
                 profiler.start()
             except RuntimeError as e:
