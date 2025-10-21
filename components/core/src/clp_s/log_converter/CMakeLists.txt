@@ -2,6 +2,10 @@ set(
     CLP_S_CONVERTER_SOURCES
     CommandLineArguments.cpp
     CommandLineArguments.cpp
+    LogConverter.cpp
+    LogConverter.hpp
+    LogSerializer.cpp
+    LogSerializer.hpp
 )
 
 if(CLP_BUILD_EXECUTABLES)
