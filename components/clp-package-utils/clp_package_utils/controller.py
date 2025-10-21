@@ -138,7 +138,7 @@ class BaseController(ABC):
             "CLP_DB_DATA_DIR_HOST": str(data_dir),
             "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
         }
-        # Runtime
+        # Runtime params
         env_vars |= {
             "CLP_DB_IMAGE": (
                 "mysql:8.0.23" if self._clp_config.database.type == "mysql" else "mariadb:10-jammy"
@@ -278,7 +278,7 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging
+        # Logging params
         env_vars |= {
             "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL": (
                 self._clp_config.compression_scheduler.logging_level
@@ -298,7 +298,7 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging
+        # Logging params
         env_vars |= {
             "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": self._clp_config.query_scheduler.logging_level,
         }
@@ -320,7 +320,7 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging
+        # Logging params
         env_vars |= {
             "CLP_COMPRESSION_WORKER_LOGGING_LEVEL": (
                 self._clp_config.compression_worker.logging_level
@@ -348,7 +348,7 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging
+        # Logging params
         env_vars |= {
             "CLP_QUERY_WORKER_LOGGING_LEVEL": self._clp_config.query_worker.logging_level,
         }
@@ -374,7 +374,7 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging
+        # Logging params
         env_vars |= {
             "CLP_REDUCER_LOGGING_LEVEL": self._clp_config.reducer.logging_level,
         }
@@ -499,7 +499,7 @@ class BaseController(ABC):
             "CLP_WEBUI_HOST": _get_ip_from_hostname(self._clp_config.webui.host),
             "CLP_WEBUI_PORT": str(self._clp_config.webui.port),
         }
-        # Security
+        # Security params
         env_vars |= {
             "CLP_WEBUI_RATE_LIMIT": str(self._clp_config.webui.rate_limit),
         }
@@ -530,7 +530,7 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging
+        # Logging params
         env_vars |= {"CLP_GC_LOGGING_LEVEL": self._clp_config.garbage_collector.logging_level}
 
         return env_vars
