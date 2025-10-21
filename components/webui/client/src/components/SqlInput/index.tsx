@@ -29,27 +29,17 @@ const SqlInput = (props: SqlEditorProps) => {
             }
         });
 
-        let formEl = editor.getDomNode()?.closest("form") as HTMLFormElement | null;
-
-
-                // Helper that behaves like a real submit
-        const submit = () => {
-            console.log(formEl)
-            if(formEl) {
-                formEl.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-            }
-        };
-
-        // 2) Register a Monaco Action (shows in context menu & supports keybindings)
-            editor.addAction({
-              id: "run-query",
-              label: "Run Query",
-              // Use Cmd/Ctrl+Enter; avoids clobbering plain Enter/newlines
-              keybindings: [monaco.KeyCode.Enter],
-              run: () => submit(),
+        // Add action to simulate form submission on Enter key
+        editor.addAction({
+            id: "run-query",
+            label: "Run Query",
+            keybindings: [monaco.KeyCode.Enter],
+            run: () => {
+                const formEl = editor.getDomNode()?.closest("form");
+                const submitBtn = formEl?.querySelector<HTMLButtonElement>('button[type="submit"]');
+                submitBtn?.click();
+            },
         });
-
-
     }, []);
 
     return (
@@ -88,6 +78,9 @@ const SqlInput = (props: SqlEditorProps) => {
             onEditorReady={handleEditorReady}
             {...props}/>
     );
+};
+
+export default SqlInput;
 };
 
 export default SqlInput;
