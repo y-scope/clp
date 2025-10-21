@@ -778,7 +778,7 @@ class CLPConfig(BaseModel):
 
     def transform_for_container(self):
         """
-        Converts all relevant directories to absolute paths inside the container and updates
+        Converts all relevant directories to absolute paths inside the container, and updates
         component hostnames and ports to their container service names and default ports.
         """
         self.data_directory = pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH
