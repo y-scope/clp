@@ -34,7 +34,7 @@ def filter_query_results(query_results: list[dict]) -> list[str]:
     """
     :param query_results: A list of dictionary containing log entries with its metadata.
     :return: A list of strings containing only the `timestamp` (as a date string) and `message` of
-    a log entry.
+        a log event.
     """
     filtered = []
     for obj in query_results:
