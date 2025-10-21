@@ -651,7 +651,6 @@ class DockerComposeController(BaseController):
         num_workers = self._get_num_workers()
         dump_shared_container_config(container_clp_config, self._clp_config)
 
-        # Prepare environment variables for all components.
         env_vars = EnvVarsDict()
 
         # Credentials
