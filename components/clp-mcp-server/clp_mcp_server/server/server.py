@@ -81,7 +81,7 @@ def create_mcp_server(clp_config: Any) -> FastMCP:
 
         :param kql_query:
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
-        :return: Forwards `FastMCP.tool`''s `get_nth_page`'s return values on success:
+        :return: Forwards `FastMCP.tool`'s `get_nth_page`'s return values on success:
         :return: A dictionary with the following key-value pair on failures:
             - "Error": An error message describing the failure.
         """
