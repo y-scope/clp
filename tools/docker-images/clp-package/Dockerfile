@@ -12,19 +12,19 @@ RUN ./setup-scripts/install-prebuilt-packages.sh \
 RUN apt-get clean \
     && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 
-COPY ./build/clp-package /opt/clp
-COPY --link ./build/deps/cpp/mariadb-connector-cpp-install/lib/*/libmariadbcpp.so* /opt/clp/lib/
-
-ENV CLP_HOME="/opt/clp"
-ENV LD_LIBRARY_PATH="${CLP_HOME}/lib"
-ENV PATH="${CLP_HOME}/bin:${PATH}"
-ENV PATH="${CLP_HOME}/sbin:${PATH}"
-ENV PYTHONPATH="${CLP_HOME}/lib/python3/site-packages"
-
-USER 1000:1000
-
-COPY --link ./build/clp-package /opt/clp
-
 # Flatten the image
 FROM scratch
 COPY --link --from=base / /
+
+ARG UID=1000
+ENV CLP_HOME="/opt/clp"
+ENV PATH="${CLP_HOME}/bin:${PATH}"
+ENV PATH="${CLP_HOME}/sbin:${PATH}" \
+    PYTHONPATH="${CLP_HOME}/lib/python3/site-packages" \
+    USER="clp-user"
+
+RUN useradd --uid ${UID} --shell /bin/bash --home-dir ${CLP_HOME} ${USER}
+USER ${USER}
+WORKDIR ${CLP_HOME}
+
+COPY --link --chown=${UID} ./build/clp-package ${CLP_HOME}
