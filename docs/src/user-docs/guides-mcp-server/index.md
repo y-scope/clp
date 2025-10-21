@@ -17,6 +17,7 @@ mcp_server:
    host: "<host-ip>"
    port: <port-number>
 ```
+
 By default, `<host-ip>` and `<port-number>` are `localhost` and `8000`, respectively.
 
 2. Start *clp-json* and compress the logs you want to query by following the [clp-json quick-start](../quick-start/clp-json.md) guide. This will run the CLP MCP server on the specified `host` and `port`.

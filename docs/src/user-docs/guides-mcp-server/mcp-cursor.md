@@ -10,13 +10,14 @@ This guide explains how to connect Cursor to the CLP MCP server over HTTP.
 ```json
 {
    "mcpServers": {
-    "clp-mcp-server": {
-	   "url": "http://<host>:<port>/mcp",
-	   "type": "http"
-	   }
+      "clp-mcp-server": {
+         "url": "http://<host>:<port>/mcp",
+         "type": "http"
+      }
    }
 }
 ```
+
 The `host` and `port` values should match the hostname and port number where the MCP server is running, as specified during [configuration](../guides-mcp-server/index.md#starting-mcp-server).
 
 3. Restart Cursor. This applies the new configuration.

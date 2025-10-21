@@ -39,6 +39,7 @@ This guide explains how to connect Claude Desktop to the CLP MCP server over HTT
   }
 }
 ```
+
 The `host` and `port` values should match the hostname and port number where the MCP server is running, as specified during [configuration](../guides-mcp-server/index.md#starting-mcp-server). Check [mcp-remote]'s package description for additional arguments that can be specified.
 
 4. Save the configuration: Save changes to the `claude_desktop_config.json` file
