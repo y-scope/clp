@@ -181,9 +181,7 @@ def check_docker_dependencies(should_compose_project_be_running: bool, project_n
             stderr=subprocess.STDOUT,
         )
     except subprocess.CalledProcessError as e:
-        raise DockerNotAvailableError(
-            "docker is not installed or available on the path", e
-        ) from e
+        raise DockerNotAvailableError("docker is not installed or available on the path", e) from e
 
     is_running = _is_docker_compose_project_running(project_name)
 

@@ -41,6 +41,7 @@ from clp_package_utils.general import (
     check_docker_dependencies,
     CONTAINER_CLP_HOME,
     DockerComposeProjectNotRunningError,
+    DockerDependencyError,
     dump_shared_container_config,
     generate_docker_compose_container_config,
     get_clp_home,
@@ -50,7 +51,6 @@ from clp_package_utils.general import (
     validate_redis_config,
     validate_results_cache_config,
     validate_webui_config,
-    DockerDependencyError,
 )
 
 LOG_FILE_ACCESS_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
