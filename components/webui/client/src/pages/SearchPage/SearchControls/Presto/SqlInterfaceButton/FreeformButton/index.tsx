@@ -5,6 +5,7 @@ import useSearchStore from "../../../../SearchState/index";
 import usePrestoSearchState from "../../../../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../../../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
+import {handleSwitchToFreeform} from "../../presto-guided-search-requests";
 
 
 /**
@@ -19,6 +20,7 @@ const FreeformButton = () => {
         searchUiState === SEARCH_UI_STATE.QUERYING;
 
     const handleClick = () => {
+        handleSwitchToFreeform();
         setSqlInterface(PRESTO_SQL_INTERFACE.FREEFORM);
     };
 

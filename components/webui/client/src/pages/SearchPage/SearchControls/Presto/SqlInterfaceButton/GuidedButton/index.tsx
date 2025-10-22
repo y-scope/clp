@@ -5,6 +5,7 @@ import useSearchStore from "../../../../SearchState/index";
 import usePrestoSearchState from "../../../../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../../../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
+import {handleSwitchToGuided} from "../../presto-search-requests";
 
 
 /**
@@ -19,6 +20,7 @@ const GuidedButton = () => {
         searchUiState === SEARCH_UI_STATE.QUERYING;
 
     const handleClick = () => {
+        handleSwitchToGuided();
         setSqlInterface(PRESTO_SQL_INTERFACE.GUIDED);
     };
 
