@@ -183,9 +183,7 @@ def main(argv):
         "s3-key-prefix", help="Compress all objects under S3 key prefix"
     )
     prefix_parser.add_argument("inputs", metavar="URL", nargs="*", help="S3 prefix URL")
-    prefix_parser.add_argument(
-        "--inputs-from", type=str, help="File containing S3 prefix URL"
-    )
+    prefix_parser.add_argument("--inputs-from", type=str, help="File containing S3 prefix URL")
 
     parsed_args = args_parser.parse_args(argv[1:])
     if parsed_args.verbose:

@@ -300,9 +300,7 @@ def _get_aws_authentication_from_config(clp_config: CLPConfig) -> AwsAuthenticat
         if StorageType.S3 == clp_config.logs_input.type:
             return clp_config.logs_input.aws_authentication
 
-    raise ValueError(
-        "No AWS authentication configured for logs_input."
-    )
+    raise ValueError("No AWS authentication configured for logs_input.")
 
 
 def main(argv):
