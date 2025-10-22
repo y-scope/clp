@@ -13,7 +13,6 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_DATASET_NAME,
     StorageEngine,
 )
-from job_orchestration.scheduler.job_config import InputType
 
 from clp_package_utils.general import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
@@ -34,39 +33,36 @@ logger = logging.getLogger(__file__)
 
 
 def _generate_logs_list(
-    input_type: InputType,
     container_logs_list_path: pathlib.Path,
     parsed_args: argparse.Namespace,
 ) -> None:
-    if InputType.FS == input_type:
-        host_logs_list_path = parsed_args.path_list
-        with open(container_logs_list_path, "w") as container_logs_list_file:
-            if host_logs_list_path is not None:
-                with open(host_logs_list_path, "r") as host_logs_list_file:
-                    for line in host_logs_list_file:
-                        stripped_path_str = line.rstrip()
-                        if "" == stripped_path_str:
-                            # Skip empty paths
-                            continue
-                        resolved_path = pathlib.Path(stripped_path_str).resolve()
-                        mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
-                            resolved_path.anchor
-                        )
-                        container_logs_list_file.write(f"{mounted_path}\n")
+    """
+    Generates logs list file for filesystem input.
 
-            for path in parsed_args.paths:
-                resolved_path = pathlib.Path(path).resolve()
-                mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
-                    resolved_path.anchor
-                )
-                container_logs_list_file.write(f"{mounted_path}\n")
+    :param container_logs_list_path: Path to write logs list
+    :param parsed_args: Parsed command-line arguments
+    """
+    host_logs_list_path = parsed_args.path_list
+    with open(container_logs_list_path, "w") as container_logs_list_file:
+        if host_logs_list_path is not None:
+            with open(host_logs_list_path, "r") as host_logs_list_file:
+                for line in host_logs_list_file:
+                    stripped_path_str = line.rstrip()
+                    if "" == stripped_path_str:
+                        # Skip empty paths
+                        continue
+                    resolved_path = pathlib.Path(stripped_path_str).resolve()
+                    mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
+                        resolved_path.anchor
+                    )
+                    container_logs_list_file.write(f"{mounted_path}\n")
 
-    elif InputType.S3 == input_type:
-        with open(container_logs_list_path, "w") as container_logs_list_file:
-            container_logs_list_file.write(f"{parsed_args.paths[0]}\n")
-
-    else:
-        raise ValueError(f"Unsupported input type: {input_type}.")
+        for path in parsed_args.paths:
+            resolved_path = pathlib.Path(path).resolve()
+            mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
+                resolved_path.anchor
+            )
+            container_logs_list_file.write(f"{mounted_path}\n")
 
 
 def _generate_compress_cmd(
@@ -117,22 +113,6 @@ def _validate_fs_input_args(
         args_parser.error("Paths cannot be specified on the command line AND through a file.")
 
 
-def _validate_s3_input_args(
-    parsed_args: argparse.Namespace,
-    args_parser: argparse.ArgumentParser,
-    storage_engine: StorageEngine,
-) -> None:
-    if StorageEngine.CLP_S != storage_engine:
-        args_parser.error(
-            f"Input type {InputType.S3} is only supported for the storage engine"
-            f" {StorageEngine.CLP_S}."
-        )
-    if len(parsed_args.paths) != 1:
-        args_parser.error(f"Only one URL can be specified for input type {InputType.S3}.")
-    if parsed_args.path_list is not None:
-        args_parser.error(f"Path list file is unsupported for input type {InputType.S3}.")
-
-
 def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
@@ -169,7 +149,7 @@ def main(argv):
         "--no-progress-reporting", action="store_true", help="Disables progress reporting."
     )
     args_parser.add_argument(
-        "paths", metavar="PATH", nargs="*", help="Paths or an S3 URL to compress."
+        "paths", metavar="PATH", nargs="*", help="Paths to compress."
     )
     args_parser.add_argument(
         "-f", "--path-list", dest="path_list", help="A file listing all paths to compress."
@@ -213,13 +193,8 @@ def main(argv):
         logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
         return -1
 
-    input_type = clp_config.logs_input.type
-    if InputType.FS == input_type:
-        _validate_fs_input_args(parsed_args, args_parser)
-    elif InputType.S3 == input_type:
-        _validate_s3_input_args(parsed_args, args_parser, storage_engine)
-    else:
-        raise ValueError(f"Unsupported input type: {input_type}.")
+    # Validate filesystem input arguments
+    _validate_fs_input_args(parsed_args, args_parser)
 
     container_name = generate_container_name(str(JobType.COMPRESSION))
 
@@ -228,9 +203,7 @@ def main(argv):
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
-    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
-    if InputType.FS == input_type:
-        necessary_mounts.append(mounts.input_logs_dir)
+    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir, mounts.input_logs_dir]
 
     # Write compression logs to a file
     while True:
@@ -243,7 +216,7 @@ def main(argv):
         if not container_logs_list_path.exists():
             break
 
-    _generate_logs_list(clp_config.logs_input.type, container_logs_list_path, parsed_args)
+    _generate_logs_list(container_logs_list_path, parsed_args)
 
     extra_env_vars = {
         CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
