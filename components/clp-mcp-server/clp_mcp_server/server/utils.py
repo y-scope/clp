@@ -26,9 +26,15 @@ def convert_epoch_to_date_string(epoch_ts: int) -> str:
 
 def format_query_results(query_results: list[dict[str, Any]]) -> list[str]:
     """
+    Formats the query results. For a log event to be formatted, it must contain the following
+    kv-pairs:
+    - "timestamp": An integer representing the epoch timestamp in milliseconds.
+    - "message": A string representing the log message.
+
+    The message will be formatted as `timestamp: <date string>, message: <message>`:
+
     :param query_results: A list of dictionaries representing kv-pair log events.
-    :return: A list of strings only containing the formatted `timestamp` (as a date string) and
-        `message` of a log event.
+    :return: A list of strings representing formatted log events.
     """
     filtered = []
     for obj in query_results:
