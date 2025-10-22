@@ -112,6 +112,7 @@ class SessionState:
         NOTE: This docstring must be synchronized with MCP tool calls: `get_nth_page`,
         `search_by_kql`, and `search_by_kql_with_timestamp`.
 
+
         :param page_index: Zero-based index, e.g., 0 for the first page.
         :return: A dictionary containing the following key-value pairs on success:
             - "items": A list of log entries in the requested page.

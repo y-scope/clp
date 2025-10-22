@@ -12,6 +12,7 @@ from .session_manager import SessionManager
 from .utils import format_query_results, parse_timestamp_range, sort_by_timestamp
 
 
+
 def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
     """
     Creates and defines API tool calls for the CLP MCP server.
@@ -147,5 +148,6 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
         return session_manager.cache_query_result_and_get_first_page(
             ctx.session_id, filtered_results
         )
+
 
     return mcp

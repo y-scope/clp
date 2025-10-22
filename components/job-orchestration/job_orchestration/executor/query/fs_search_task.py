@@ -14,6 +14,7 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url, get_credential_env_vars
 from clp_py_utils.sql_adapter import SQL_Adapter
+
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
     report_task_failure,

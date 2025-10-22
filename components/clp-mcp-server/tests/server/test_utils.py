@@ -9,6 +9,7 @@ from clp_mcp_server.server.utils import (
     sort_by_timestamp
 )
 
+
 class TestUtils:
     """Test suite for utility functions."""
 
@@ -17,6 +18,7 @@ class TestUtils:
     INVALID_DATE_STRING_TYPE = "is not of type `str`."
     INVALID_DATE_STRING_VALUE= "is earlier than `begin_timestamp`"
     
+
     # Test case: invalid timestamp types.
     INVALID_TYPE_ENTRIES = [
         {
@@ -137,6 +139,7 @@ class TestUtils:
         ),
     ]
 
+<<<<<<< HEAD
     def test_convert_date_string_to_epoch(self):
         """Validates converting ISO 8601 format to a Unix epoch."""
         result = convert_date_string_to_epoch("2024-10-18T16:00:00.123Z")
