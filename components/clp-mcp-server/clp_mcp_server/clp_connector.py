@@ -1,10 +1,11 @@
 """ClpConnector: A class to interact with the CLP database and results cache."""
 
 import asyncio
+from typing import Any
 
 import aiomysql
 import msgpack
-from clp_py_utils.clp_config import CLP_DEFAULT_DATASET_NAME, CLPConfig
+from clp_py_utils.clp_config import CLP_DEFAULT_DATASET_NAME
 from pymongo import AsyncMongoClient
 
 from .constants import (
@@ -22,7 +23,7 @@ from .settings import (
 class ClpConnector:
     """A connector class to interact with the CLP database and results cache."""
 
-    def __init__(self, clp_config: CLPConfig) -> None:
+    def __init__(self, clp_config: Any) -> None:
         """Initializes the ClpConnector with MongoDB and MariaDB configurations."""
         mongo_url = f"mongodb://{clp_config.results_cache.host}:{clp_config.results_cache.port}/"
         mongo_client = AsyncMongoClient(mongo_url)
