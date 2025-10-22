@@ -1,9 +1,9 @@
 import InputLabel from "../../../../../components/InputLabel";
 import SqlInput from "../../../../../components/SqlInput";
-import usePrestoSearchState from "../../../SearchState/Presto";
-import guidedGrid from "./index.module.css";
 import useSearchStore from "../../../SearchState/index";
-import { SEARCH_UI_STATE } from "../../../SearchState/typings";
+import usePrestoSearchState from "../../../SearchState/Presto";
+import {SEARCH_UI_STATE} from "../../../SearchState/typings";
+import guidedGrid from "./index.module.css";
 
 
 /**

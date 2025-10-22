@@ -1,9 +1,9 @@
 import {EditOutlined} from "@ant-design/icons";
 import {Button} from "antd";
 
+import useSearchStore from "../../../../SearchState/index";
 import usePrestoSearchState from "../../../../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../../../../SearchState/Presto/typings";
-import useSearchStore from "../../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
 
 
@@ -26,10 +26,10 @@ const FreeformButton = () => {
         <Button
             block={true}
             color={"default"}
+            disabled={disabled}
             icon={<EditOutlined/>}
             size={"middle"}
             variant={"filled"}
-            disabled={disabled}
             onClick={handleClick}
         >
             Freeform
