@@ -77,8 +77,9 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
     @mcp.tool
     async def search_by_kql(kql_query: str, ctx: Context) -> dict[str, Any]:
         """
-        Searches the logs for the specified Kibana Query Language (KQL) query and returns the first
-        page of the matching result, the paginated log events are ordered from latest to oldest.
+        Searches log events that match the given Kibana Query Language (KQL) query. The resulting
+        events are ordered by timestamp in descending order (latest to oldest), cached for
+        subsequent pagination, and returned with the first page of results.
 
         :param kql_query:
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
