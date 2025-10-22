@@ -109,7 +109,8 @@ class SessionState:
         Retrieves the n-th page of a paginated response with the paging metadata from the previous
         query.
 
-        NOTE: This docstring must be synchronized with `get_nth_page`'s MCP tool call.
+        NOTE: This docstring must be synchronized with MCP tool calls: `get_nth_page` and
+        `search_by_kql`.
 
         :param page_index: Zero-based index, e.g., 0 for the first page.
         :return: A dictionary containing the following key-value pairs on success:
