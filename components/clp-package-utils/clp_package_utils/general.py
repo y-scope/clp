@@ -184,7 +184,6 @@ def check_docker_dependencies(should_compose_project_be_running: bool, project_n
         raise DockerNotAvailableError("docker is not installed or available on the path", e) from e
 
     is_running = _is_docker_compose_project_running(project_name)
-
     if should_compose_project_be_running and not is_running:
         raise DockerComposeProjectNotRunningError(project_name)
     if not should_compose_project_be_running and is_running:
@@ -738,7 +737,7 @@ def _is_docker_compose_project_running(project_name: str) -> bool:
     :param project_name:
     :return: Whether at least one instance is running.
     :raise DockerNotAvailableError: If Docker Compose is not installed or fails. The error message
-    includes Docker's command output when available.
+    includes the Docker command's output when available.
     """
     cmd = ["docker", "compose", "ls", "--format", "json", "--filter", f"name={project_name}"]
     try:
