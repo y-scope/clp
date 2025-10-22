@@ -19,7 +19,8 @@ def mock_clp_config() -> Any:
             port=27017,
             db_name="clp-query-results"
         ),
-        database=SimpleNamespace(host="db", port=3306, name="clp-db"),
+        database=SimpleNamespace(host="database", port=3306, name="clp-db"),
+        webui=SimpleNamespace(host="localhost", port=4000),
     )
 
 
@@ -119,6 +120,30 @@ async def test_read_results_returns_docs(mock_clp_config: Any) -> None:
         results = await connector.read_results("12")
 
     assert results == mock_docs
+
+
+@pytest.mark.asyncio
+async def test_read_results_adds_link_field(mock_clp_config: Any) -> None:
+    """Ensures read_results adds a 'link' field."""
+    connector = ClpConnector(mock_clp_config)
+    mock_docs = [
+        {"_id": "1", "archive_id": "archA", "log_event_ix": 10},
+        {"_id": "2", "archive_id": "archB", "log_event_ix": 20},
+    ]
+    mock_collection = AsyncMock()
+    mock_collection.find = MagicMock(return_value=_aiter(mock_docs))
+
+    with patch.object(connector, "_results_cache", {"12": mock_collection}):
+        results = await connector.read_results("12")
+
+    assert len(results) == len(mock_docs)
+    for original, result in zip(mock_docs, results, strict=True):
+        expected_link = (
+            f'http://{mock_clp_config.webui.host}:{mock_clp_config.webui.port}'
+            f'/streamFile?type=json&streamId={original["archive_id"]}'
+            f'&dataset=default&logEventIdx={original["log_event_ix"]}'
+        )
+        assert result["link"] == expected_link
 
 
 T = TypeVar("T")
