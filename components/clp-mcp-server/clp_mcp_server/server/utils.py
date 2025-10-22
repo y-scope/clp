@@ -30,7 +30,7 @@ def format_query_results(query_results: list[dict[str, Any]]) -> list[str]:
     :return: A list of strings only containing the formatted `timestamp` (as a date string) and
         `message` of a log event.
     """
-    filtered = []
+    formatted_log_events = []
     for obj in query_results:
         epoch = obj.get("timestamp")
         timestamp_str = TIMESTAMP_NOT_AVAILABLE
@@ -42,9 +42,13 @@ def format_query_results(query_results: list[dict[str, Any]]) -> list[str]:
                 logger.warning("Failed to convert epoch timestamp=%s to date string: %s.", epoch, e)
 
         message = obj.get("message", "")
-        filtered.append(f"timestamp: {timestamp_str}, message: {message}")
+        if not message:
+            logger.warning("Empty message attached to a log event.")
+            continue
 
-    return filtered
+        formatted_log_events.append(f"timestamp: {timestamp_str}, message: {message}")
+
+    return formatted_log_events
 
 
 def sort_by_timestamp(query_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
