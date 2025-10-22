@@ -139,7 +139,6 @@ class TestUtils:
         ),
     ]
 
-<<<<<<< HEAD
     def test_convert_date_string_to_epoch(self):
         """Validates converting ISO 8601 format to a Unix epoch."""
         result = convert_date_string_to_epoch("2024-10-18T16:00:00.123Z")
