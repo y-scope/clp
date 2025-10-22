@@ -25,7 +25,7 @@ def convert_epoch_to_date_string(epoch_ts: int) -> str:
     try:
         epoch_seconds = epoch_ts / 1000.0
         dt = datetime.fromtimestamp(epoch_seconds, tz=timezone.utc)
-        return dt.isoformat(timespec='milliseconds').replace('+00:00', 'Z')
+        return dt.isoformat(timespec="milliseconds").replace("+00:00", "Z")
     except (ValueError, OSError, OverflowError) as e:
         err_msg = f"Invalid timestamp {epoch_ts}: {e}."
         raise ValueError(err_msg) from e
