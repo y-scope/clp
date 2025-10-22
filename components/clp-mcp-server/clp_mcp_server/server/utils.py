@@ -50,8 +50,7 @@ def filter_query_results(query_results: list[dict[str, Any]]) -> list[str]:
 def sort_by_timestamp(query_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
     :param query_results: A list of dictionary representing kv-pair log events.
-    :return: A sorted list of dictionary of kv-pair log events, ordered by epoch from latest to
-    oldest.
+    :return: The same list, sorted in-place by epoch from latest to oldest.
     """
 
     def _key(log_entry: dict) -> int:
