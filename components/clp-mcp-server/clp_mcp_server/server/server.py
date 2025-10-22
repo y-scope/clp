@@ -108,7 +108,6 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
             ctx.session_id, formatted_results
         )
 
-
     @mcp.tool
     async def search_by_kql_with_timestamp(
         kql_query: str, begin_timestamp: str, end_timestamp: str, ctx: Context
