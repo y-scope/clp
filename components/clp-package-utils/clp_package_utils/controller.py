@@ -142,7 +142,7 @@ class BaseController(ABC):
         }
         # Runtime params
         env_vars |= {
-            "CLP_DB_IMAGE": (
+            "CLP_DB_CONTAINER_IMAGE_REF": (
                 "mysql:8.0.23" if self._clp_config.database.type == "mysql" else "mariadb:10-jammy"
             ),
         }
