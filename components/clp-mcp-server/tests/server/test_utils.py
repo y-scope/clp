@@ -47,10 +47,18 @@ class TestUtils:
     MISSING_TIMESTAMP_AND_MESSAGE_ENTRY = [
         {
             "_id": "test001",
+        },
+        {
+            "_id": "test002",
+            "message": '{"message":"Log with no timestamp"}\n',
+        },
+        {
+            "_id": "test003",
+            "timestamp": 0,
         }
     ]
     EXPECTED_MISSING_TIMESTAMP_AND_MESSAGE = [
-        "timestamp: N/A, message: "
+        'timestamp: N/A, message: {"message":"Log with no timestamp"}\n',
     ]
 
     # Testing basic functionality.
