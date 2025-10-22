@@ -1,11 +1,10 @@
 """ClpConnector: A class to interact with the CLP database and results cache."""
 
 import asyncio
-from typing import Any
 
 import aiomysql
 import msgpack
-from clp_py_utils.clp_config import CLP_DEFAULT_DATASET_NAME
+from clp_py_utils.clp_config import CLP_DEFAULT_DATASET_NAME, CLPConfig
 from pymongo import AsyncMongoClient
 
 from .constants import (
@@ -23,7 +22,7 @@ from .settings import (
 class ClpConnector:
     """A connector class to interact with the CLP database and results cache."""
 
-    def __init__(self, clp_config: Any) -> None:
+    def __init__(self, clp_config: CLPConfig) -> None:
         """Initializes the ClpConnector with MongoDB and MariaDB configurations."""
         mongo_url = f"mongodb://{clp_config.results_cache.host}:{clp_config.results_cache.port}/"
         mongo_client = AsyncMongoClient(mongo_url)
@@ -50,10 +49,11 @@ class ClpConnector:
         :param begin_ts: The beginning timestamp of the query range.
         :param end_ts: The end timestamp of the query range.
         :return: The ID assigned to the query.
-        :raise ValueError: If `end_ts` is smaller than `begin_ts`.
-        :raise aiomysql.Error: If there is an error connecting to or querying MariaDB.
-        :raise pymongo.errors.PyMongoError: If there is an error interacting with MongoDB.
-        :raise Exception: For any other unexpected errors.
+        :raise ValueError if `end_ts` is smaller than `begin_ts`.
+        :raise RuntimeError fails to retrieve the ID of the submitted query.
+        :raise aiomysql.Error if there is an error connecting to or querying MariaDB.
+        :raise pymongo.errors.PyMongoError if there is an error interacting with MongoDB.
+        :raise Exception for any other unexpected errors.
         """
         if begin_ts is not None and end_ts is not None and end_ts < begin_ts:
             err_msg = f"end_ts {end_ts} is smaller than begin_ts {begin_ts}."

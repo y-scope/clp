@@ -2,6 +2,7 @@
 
 from typing import Any
 
+from clp_py_utils.clp_config import CLPConfig
 from fastmcp import Context, FastMCP
 
 from clp_mcp_server.clp_connector import ClpConnector
@@ -11,7 +12,7 @@ from .session_manager import SessionManager
 from .utils import filter_query_results, sort_by_timestamp
 
 
-def create_mcp_server(config_path: Any) -> FastMCP:
+def create_mcp_server(config_path: CLPConfig) -> FastMCP:
     """
     Creates and defines API tool calls for the CLP MCP server.
 
