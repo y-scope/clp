@@ -9,7 +9,7 @@ from clp_mcp_server.clp_connector import ClpConnector
 
 from . import constants
 from .session_manager import SessionManager
-from .utils import filter_query_results, sort_by_timestamp
+from .utils import format, sort_by_timestamp
 
 
 def create_mcp_server(config_path: CLPConfig) -> FastMCP:
@@ -104,9 +104,9 @@ def create_mcp_server(config_path: CLPConfig) -> FastMCP:
             return {"Error": str(e)}
 
         sorted_results = sort_by_timestamp(results)
-        filtered_results = filter_query_results(sorted_results)
+        formatted_results = format(sorted_results)
         return session_manager.cache_query_result_and_get_first_page(
-            ctx.session_id, filtered_results
+            ctx.session_id, formatted_results
         )
 
     return mcp
