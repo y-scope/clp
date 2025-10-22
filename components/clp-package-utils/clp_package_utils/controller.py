@@ -123,24 +123,27 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Connection params
+        # Connection config
         env_vars |= {
             "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
             "CLP_DB_NAME": self._clp_config.database.name,
             "CLP_DB_PORT": str(self._clp_config.database.port),
         }
+
         # Credentials
         env_vars |= {
             "CLP_DB_PASS": self._clp_config.database.password,
             "CLP_DB_USER": self._clp_config.database.username,
         }
+
         # Paths
         env_vars |= {
             "CLP_DB_CONF_LOGGING_FILE_HOST": str(conf_logging_file),
             "CLP_DB_DATA_DIR_HOST": str(data_dir),
             "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
         }
-        # Runtime params
+
+        # Runtime config
         env_vars |= {
             "CLP_DB_CONTAINER_IMAGE_REF": (
                 "mysql:8.0.23" if self._clp_config.database.type == "mysql" else "mariadb:10-jammy"
@@ -166,16 +169,18 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Connection params
+        # Connection config
         env_vars |= {
             "CLP_QUEUE_HOST": _get_ip_from_hostname(self._clp_config.queue.host),
             "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
         }
+
         # Credentials
         env_vars |= {
             "CLP_QUEUE_PASS": self._clp_config.queue.password,
             "CLP_QUEUE_USER": self._clp_config.queue.username,
         }
+
         # Paths
         env_vars |= {
             "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
@@ -210,15 +215,18 @@ class BaseController(ABC):
             ),
             "CLP_REDIS_BACKEND_DB_QUERY": str(self._clp_config.redis.query_backend_database),
         }
-        # Connection params
+
+        # Connection config
         env_vars |= {
             "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
             "CLP_REDIS_PORT": str(self._clp_config.redis.port),
         }
+
         # Credentials
         env_vars |= {
             "CLP_REDIS_PASS": self._clp_config.redis.password,
         }
+
         # Paths
         env_vars |= {
             "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
@@ -254,12 +262,14 @@ class BaseController(ABC):
                 self._clp_config.results_cache.stream_collection_name
             ),
         }
-        # Connection params
+
+        # Connection config
         env_vars |= {
             "CLP_RESULTS_CACHE_DB_NAME": self._clp_config.results_cache.db_name,
             "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self._clp_config.results_cache.host),
             "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
         }
+
         # Paths
         env_vars |= {
             "CLP_RESULTS_CACHE_CONF_FILE_HOST": str(conf_file),
@@ -280,7 +290,7 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging params
+        # Logging config
         env_vars |= {
             "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL": (
                 self._clp_config.compression_scheduler.logging_level
@@ -300,7 +310,7 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging params
+        # Logging config
         env_vars |= {
             "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": self._clp_config.query_scheduler.logging_level,
         }
@@ -322,12 +332,13 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging params
+        # Logging config
         env_vars |= {
             "CLP_COMPRESSION_WORKER_LOGGING_LEVEL": (
                 self._clp_config.compression_worker.logging_level
             ),
         }
+
         # Resources
         env_vars |= {
             "CLP_COMPRESSION_WORKER_CONCURRENCY": str(num_workers),
@@ -350,10 +361,11 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging params
+        # Logging config
         env_vars |= {
             "CLP_QUERY_WORKER_LOGGING_LEVEL": self._clp_config.query_worker.logging_level,
         }
+
         # Resources
         env_vars |= {
             "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
@@ -376,10 +388,11 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging params
+        # Logging config
         env_vars |= {
             "CLP_REDUCER_LOGGING_LEVEL": self._clp_config.reducer.logging_level,
         }
+
         # Resources
         env_vars |= {
             "CLP_REDUCER_CONCURRENCY": str(num_workers),
@@ -496,12 +509,13 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Connection params
+        # Connection config
         env_vars |= {
             "CLP_WEBUI_HOST": _get_ip_from_hostname(self._clp_config.webui.host),
             "CLP_WEBUI_PORT": str(self._clp_config.webui.port),
         }
-        # Security params
+
+        # Security config
         env_vars |= {
             "CLP_WEBUI_RATE_LIMIT": str(self._clp_config.webui.rate_limit),
         }
@@ -532,7 +546,7 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging params
+        # Logging config
         env_vars |= {
             "CLP_GARBAGE_COLLECTOR_LOGGING_LEVEL": self._clp_config.garbage_collector.logging_level
         }
