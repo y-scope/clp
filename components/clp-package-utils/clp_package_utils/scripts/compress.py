@@ -148,9 +148,7 @@ def main(argv):
     args_parser.add_argument(
         "--no-progress-reporting", action="store_true", help="Disables progress reporting."
     )
-    args_parser.add_argument(
-        "paths", metavar="PATH", nargs="*", help="Paths to compress."
-    )
+    args_parser.add_argument("paths", metavar="PATH", nargs="*", help="Paths to compress.")
     args_parser.add_argument(
         "-f", "--path-list", dest="path_list", help="A file listing all paths to compress."
     )
