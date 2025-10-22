@@ -55,8 +55,15 @@ def format_query_results(query_results: list[dict[str, Any]]) -> list[str]:
 
 def sort_by_timestamp(query_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
+    Sorts the query results in-place by timestamp in descending order (latest to oldest).
+
+    NOTE:
+    - Timestamp is expected to be an integer representing the epoch timestamp in milliseconds,
+      stored under the `timestamp` key.
+    - If `timestamp` is missing or not an integer, it is treated as the oldest possible timestamp.
+
     :param query_results: A list of dictionaries representing kv-pair log events.
-    :return: The same list, sorted in-place by epoch from latest to oldest.
+    :return: The input list sorted in-place.
     """
 
     def _key(log_entry: dict[str, Any]) -> int:
