@@ -15,7 +15,7 @@ def create_mcp_server(config_path: Any) -> FastMCP:
     """
     Creates and defines API tool calls for the CLP MCP server.
 
-    :param config_path: The path to server's configuration file.
+    :param config_path:
     :return: A configured `FastMCP` instance.
     :raise: Propagates `FastMCP.__init__`'s exceptions.
     :raise: Propagates `FastMCP.tool`'s exceptions.
