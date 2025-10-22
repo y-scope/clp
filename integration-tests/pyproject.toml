@@ -21,6 +21,7 @@ dev = [
     "ruff>=0.11.12",
     "pytest>=8.4.1",
     "pytest-env>=1.1.5",
+    "fastmcp>=2.12.4",
 ]
 
 [tool.mypy]
