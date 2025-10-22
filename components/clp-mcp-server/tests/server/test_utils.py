@@ -11,6 +11,11 @@ from clp_mcp_server.server.utils import (
 
 class TestUtils:
     """Test suite for utility functions."""
+
+    # Error Messages:
+    INVALID_DATE_STRING = "Invalid date string"
+    INVALID_DATE_STRING_TYPE = "is not of type `str`."
+    INVALID_DATE_STRING_VALUE= "is earlier than `begin_timestamp`"
     
     # Test case: invalid timestamp types.
     INVALID_TYPE_ENTRIES = [
