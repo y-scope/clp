@@ -12,11 +12,11 @@ from .session_manager import SessionManager
 from .utils import format_query_results, sort_by_timestamp
 
 
-def create_mcp_server(config_path: CLPConfig) -> FastMCP:
+def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
     """
     Creates and defines API tool calls for the CLP MCP server.
 
-    :param config_path:
+    :param clp_config:
     :return: A configured `FastMCP` instance.
     :raise: Propagates `FastMCP.__init__`'s exceptions.
     :raise: Propagates `FastMCP.tool`'s exceptions.
@@ -25,7 +25,7 @@ def create_mcp_server(config_path: CLPConfig) -> FastMCP:
 
     session_manager = SessionManager(session_ttl_seconds=constants.SESSION_TTL_SECONDS)
 
-    connector = ClpConnector(config_path)
+    connector = ClpConnector(clp_config)
 
     @mcp.tool
     async def get_instructions(ctx: Context) -> str:

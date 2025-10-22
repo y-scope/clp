@@ -53,7 +53,7 @@ def sort_by_timestamp(query_results: list[dict[str, Any]]) -> list[dict[str, Any
     :return: The same list, sorted in-place by epoch from latest to oldest.
     """
 
-    def _key(log_entry: dict) -> int:
+    def _key(log_entry: dict[str, Any]) -> int:
         ts = log_entry.get("timestamp")
         return ts if isinstance(ts, int) else -1
 
