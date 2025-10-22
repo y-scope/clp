@@ -141,7 +141,7 @@ class TestUtils:
         Validates the post-processing functionality. We expect:
         - Logs are sorted by timestamp from latest to oldest, with logs having invalid timestamps
         appear at last.
-        - `timestamp` and `message` fields are correct filtered.
+        - `timestamp` and `message` fields are correctly filtered.
         """
         sorted_result = sort_by_timestamp(self.RAW_LOG_ENTRIES)
         filtered_result = filter_query_results(sorted_result)
