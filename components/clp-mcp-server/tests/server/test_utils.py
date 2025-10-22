@@ -21,7 +21,7 @@ class TestUtils:
             "message": '{"message":"Log with float timestamp"}\n',
         },
     ]
-    INVALID_TYPE_EXPECTED = [
+    EXPECTED_INVALID_TYPE = [
         'timestamp: N/A, message: {"message":"Log with None timestamp"}\n',
         'timestamp: N/A, message: {"message":"Log with str timestamp"}\n',
         'timestamp: N/A, message: {"message":"Log with float timestamp"}\n',
@@ -38,7 +38,7 @@ class TestUtils:
             "message": '{"message":"Log with negative overflow timestamp"}\n',
         },
     ]
-    INVALID_VALUE_EXPECTED = [
+    EXPECTED_INVALID_VALUE = [
         'timestamp: N/A, message: {"message":"Log with overflow timestamp"}\n',
         'timestamp: N/A, message: {"message":"Log with negative overflow timestamp"}\n',
     ]
@@ -49,7 +49,7 @@ class TestUtils:
             "_id": "test001",
         }
     ]
-    MISSING_TIMESTAMP_AND_MESSAGE_EXPECTED = [
+    EXPECTED_MISSING_TIMESTAMP_AND_MESSAGE = [
         "timestamp: N/A, message: "
     ]
 
@@ -122,27 +122,22 @@ class TestUtils:
         """Validates the handling of noninteger timestamp types."""
         result = format_query_results(self.INVALID_TYPE_ENTRIES)
 
-        assert result == self.INVALID_TYPE_EXPECTED
+        assert result == self.EXPECTED_INVALID_TYPE
 
     def test_invalid_timestamp_value(self):
         """Validates the handling of invalid timestamp values."""
         result = format_query_results(self.INVALID_VALUE_ENTRIES)
 
-        assert result == self.INVALID_VALUE_EXPECTED
+        assert result == self.EXPECTED_INVALID_VALUE
     
     def test_missing_timestamp_and_message(self):
         """Validates the handling of log entries without timestamp and message field."""
         result = format_query_results(self.MISSING_TIMESTAMP_AND_MESSAGE_ENTRY)
 
-        assert result == self.MISSING_TIMESTAMP_AND_MESSAGE_EXPECTED
+        assert result == self.EXPECTED_MISSING_TIMESTAMP_AND_MESSAGE
 
-    def test_sort_and_filter_query_results(self):
-        """
-        Validates the post-processing functionality. We expect:
-        - Logs are sorted by timestamp from latest to oldest, with logs having invalid timestamps
-        appear at last.
-        - `timestamp` and `message` fields are correctly filtered.
-        """
+    def test_sort_and_format_query_results(self):
+        """Validates the post-processing functionality."""
         sorted_result = sort_by_timestamp(self.RAW_LOG_ENTRIES)
         formatted_results = format_query_results(sorted_result)
 
