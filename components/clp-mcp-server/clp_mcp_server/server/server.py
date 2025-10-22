@@ -2,19 +2,21 @@
 
 from typing import Any
 
+from clp_py_utils.clp_config import CLPConfig
 from fastmcp import Context, FastMCP
 
 from clp_mcp_server.clp_connector import ClpConnector
 
 from . import constants
 from .session_manager import SessionManager
-from .utils import filter_query_results, parse_timestamp_range, sort_query_results
+from .utils import format_query_results, sort_by_timestamp
 
 
-def create_mcp_server(clp_config: Any) -> FastMCP:
+def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
     """
     Creates and defines API tool calls for the CLP MCP server.
 
+    :param clp_config:
     :return: A configured `FastMCP` instance.
     :raise: Propagates `FastMCP.__init__`'s exceptions.
     :raise: Propagates `FastMCP.tool`'s exceptions.
@@ -73,15 +75,21 @@ def create_mcp_server(clp_config: Any) -> FastMCP:
         }
 
     @mcp.tool
-    async def search_kql_query(kql_query: str, ctx: Context) -> dict[str, object]:
+    async def search_by_kql(kql_query: str, ctx: Context) -> dict[str, Any]:
         """
-        Searches the logs for the specified KQL query and returns the first page of the matching
-        result. The paginated results are ordered from latest to oldest, with each page containing
-        the paging metadata and 10 log messages along with their date string timestamps.
+        Searches log events that match the given Kibana Query Language (KQL) query. The resulting
+        events are ordered by timestamp in descending order (latest to oldest), cached for
+        subsequent pagination, and returned with the first page of results.
 
         :param kql_query:
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
-        :return: Forwards `FastMCP.tool`''s `get_nth_page`'s return values on success:
+        :return: A dictionary containing the following key-value pairs on success:
+            - "items": A list of log entries in the requested page.
+            - "num_total_pages": Total number of pages available from the query as an integer.
+            - "num_total_items": Total number of log entries available from the query as an integer.
+            - "num_items_per_page": Number of log entries per page.
+            - "has_next": Whether a page exists after the returned one.
+            - "has_previous": Whether a page exists before the returned one.
         :return: A dictionary with the following key-value pair on failures:
             - "Error": An error message describing the failure.
         """
@@ -94,11 +102,12 @@ def create_mcp_server(clp_config: Any) -> FastMCP:
         except (ValueError, RuntimeError, TimeoutError) as e:
             return {"Error": str(e)}
 
-        sorted_results = sort_query_results(results)
-        filtered_results = filter_query_results(sorted_results)
+        sorted_results = sort_by_timestamp(results)
+        formatted_results = format_query_results(sorted_results)
         return session_manager.cache_query_result_and_get_first_page(
-            ctx.session_id, filtered_results
+            ctx.session_id, formatted_results
         )
+
 
     @mcp.tool
     async def search_by_kql_with_timestamp(

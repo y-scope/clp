@@ -12,11 +12,6 @@ from clp_mcp_server.server.utils import (
 class TestUtils:
     """Test suite for utility functions."""
     
-    # Error Messages:
-    INVALID_DATE_STRING = "Invalid date string"
-    INVALID_DATE_STRING_TYPE = "is not of type `str`."
-    INVALID_DATE_STRING_VALUE= "is earlier than `begin_timestamp`"
-
     # Test case: invalid timestamp types.
     INVALID_TYPE_ENTRIES = [
         {
@@ -32,7 +27,7 @@ class TestUtils:
             "message": '{"message":"Log with float timestamp"}\n',
         },
     ]
-    INVALID_TYPE_EXPECTED = [
+    EXPECTED_INVALID_TYPE = [
         'timestamp: N/A, message: {"message":"Log with None timestamp"}\n',
         'timestamp: N/A, message: {"message":"Log with str timestamp"}\n',
         'timestamp: N/A, message: {"message":"Log with float timestamp"}\n',
@@ -49,7 +44,7 @@ class TestUtils:
             "message": '{"message":"Log with negative overflow timestamp"}\n',
         },
     ]
-    INVALID_VALUE_EXPECTED = [
+    EXPECTED_INVALID_VALUE = [
         'timestamp: N/A, message: {"message":"Log with overflow timestamp"}\n',
         'timestamp: N/A, message: {"message":"Log with negative overflow timestamp"}\n',
     ]
@@ -58,14 +53,30 @@ class TestUtils:
     MISSING_TIMESTAMP_AND_MESSAGE_ENTRY = [
         {
             "_id": "test001",
+        },
+        {
+            "_id": "test002",
+            "message": '{"message":"Log with no timestamp"}\n',
+        },
+        {
+            "_id": "test003",
+            "timestamp": 0,
         }
     ]
-    MISSING_TIMESTAMP_AND_MESSAGE_EXPECTED = [
-        "timestamp: N/A, message: "
+    EXPECTED_MISSING_TIMESTAMP_AND_MESSAGE = [
+        'timestamp: N/A, message: {"message":"Log with no timestamp"}\n',
     ]
 
     # Testing basic functionality.
     RAW_LOG_ENTRIES = [
+        {
+            "_id": "test000",
+            "timestamp": None,
+            "message": '{"pid":null,"tid":null,"message":"Log at epoch none"}\n',
+            "orig_file_path": "/var/log/app.log",
+            "archive_id": "abc123",
+            "log_event_ix": 99,
+        },
         {
             "_id": "test001",
             "timestamp": 0,
@@ -113,6 +124,11 @@ class TestUtils:
             'timestamp: 1970-01-01T00:00:00.000Z, message: '
             '{"ts":0,"pid":null,"tid":null,'
             '"message":"Log at epoch zero"}\n'
+        ),
+        (
+            'timestamp: N/A, message: '
+            '{"pid":null,"tid":null,'
+            '"message":"Log at epoch none"}\n'
         ),
     ]
 
@@ -174,25 +190,25 @@ class TestUtils:
 
     def test_invalid_timestamp_type(self):
         """Validates the handling of noninteger timestamp types."""
-        result = filter_query_results(self.INVALID_TYPE_ENTRIES)
+        result = format_query_results(self.INVALID_TYPE_ENTRIES)
 
-        assert result == self.INVALID_TYPE_EXPECTED
+        assert result == self.EXPECTED_INVALID_TYPE
 
     def test_invalid_timestamp_value(self):
         """Validates the handling of invalid timestamp values."""
-        result = filter_query_results(self.INVALID_VALUE_ENTRIES)
+        result = format_query_results(self.INVALID_VALUE_ENTRIES)
 
-        assert result == self.INVALID_VALUE_EXPECTED
+        assert result == self.EXPECTED_INVALID_VALUE
     
     def test_missing_timestamp_and_message(self):
         """Validates the handling of log entries without timestamp and message field."""
-        result = filter_query_results(self.MISSING_TIMESTAMP_AND_MESSAGE_ENTRY)
+        result = format_query_results(self.MISSING_TIMESTAMP_AND_MESSAGE_ENTRY)
 
-        assert result == self.MISSING_TIMESTAMP_AND_MESSAGE_EXPECTED
+        assert result == self.EXPECTED_MISSING_TIMESTAMP_AND_MESSAGE
 
-    def test_sort_and_filter_query_results(self):
-        """Validates the functionality of post-processing for the query response."""
-        sorted_result = sort_query_results(self.RAW_LOG_ENTRIES)
-        filtered_result = filter_query_results(sorted_result)
+    def test_sort_and_format_query_results(self):
+        """Validates the post-processing functionality."""
+        sorted_result = sort_by_timestamp(self.RAW_LOG_ENTRIES)
+        formatted_results = format_query_results(sorted_result)
 
-        assert filtered_result == self.EXPECTED_RESULTS
+        assert formatted_results == self.EXPECTED_RESULTS

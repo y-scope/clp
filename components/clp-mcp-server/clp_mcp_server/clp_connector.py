@@ -5,6 +5,7 @@ from typing import Any
 
 import aiomysql
 import msgpack
+from clp_py_utils.clp_config import CLP_DEFAULT_DATASET_NAME
 from pymongo import AsyncMongoClient
 
 from .constants import (
@@ -37,6 +38,8 @@ class ClpConnector:
             "db": clp_config.database.name,
         }
 
+        self._webui_addr = f"http://{clp_config.webui.host}:{clp_config.webui.port}"
+
     async def submit_query(
         self, query: str, begin_ts: int | None = None, end_ts: int | None = None
     ) -> str:
@@ -47,10 +50,11 @@ class ClpConnector:
         :param begin_ts: The beginning timestamp of the query range.
         :param end_ts: The end timestamp of the query range.
         :return: The ID assigned to the query.
-        :raise ValueError: If ``end_ts`` is smaller than ``begin_ts``.
-        :raise aiomysql.Error: If there is an error connecting to or querying MariaDB.
-        :raise pymongo.errors.PyMongoError: If there is an error interacting with MongoDB.
-        :raise Exception: For any other unexpected errors.
+        :raise: ValueError if `end_ts` is smaller than `begin_ts`.
+        :raise: RuntimeError if it fails to retrieve the ID of the submitted query.
+        :raise: aiomysql.Error if there is an error connecting to or querying MariaDB.
+        :raise: pymongo.errors.PyMongoError if there is an error interacting with MongoDB.
+        :raise: Exception for any other unexpected errors.
         """
         if begin_ts is not None and end_ts is not None and end_ts < begin_ts:
             err_msg = f"end_ts {end_ts} is smaller than begin_ts {begin_ts}."
@@ -59,7 +63,7 @@ class ClpConnector:
         job_config = msgpack.packb(
             {
                 "begin_timestamp": begin_ts,
-                "dataset": "default",
+                "dataset": CLP_DEFAULT_DATASET_NAME,
                 "end_timestamp": end_ts,
                 "ignore_case": True,
                 "max_num_results": SEARCH_MAX_NUM_RESULTS,
@@ -120,10 +124,10 @@ class ClpConnector:
 
         :param query_id: The ID of the query.
         :param timeout: Maximum time to wait in seconds, or None for no timeout.
-        :raise aiomysql.Error: If there is an error connecting to or querying MariaDB.
-        :raise ValueError: When the query is not found.
-        :raise RuntimeError: When the query fails or is cancelled.
-        :raise TimeoutError: When the timeout is reached before the query completes.
+        :raise: aiomysql.Error if there is an error connecting to or querying MariaDB.
+        :raise: ValueError if the query is not found.
+        :raise: RuntimeError if the query fails or is cancelled.
+        :raise: TimeoutError if the timeout is reached before the query completes.
         """
         waiting_states = {QueryJobStatus.PENDING, QueryJobStatus.RUNNING, QueryJobStatus.CANCELLING}
         error_states = {QueryJobStatus.FAILED, QueryJobStatus.CANCELLED, QueryJobStatus.KILLED}
@@ -136,7 +140,8 @@ class ClpConnector:
                 break
             if status in error_states:
                 err_msg = (
-                    f"Query job with ID {query_id} ended in status {QueryJobStatus(status).name}."
+                    f"Query job with ID {query_id} ended in "
+                    f"status {QueryJobStatus(status).name}."
                 )
                 raise RuntimeError(err_msg)
             if status not in waiting_states:
@@ -160,6 +165,13 @@ class ClpConnector:
         results = []
 
         async for doc in collection.find({}, limit=SEARCH_MAX_NUM_RESULTS):
+            doc["link"] = (
+                f"{self._webui_addr}/streamFile?type=json"
+                f'&streamId={doc["archive_id"]}'
+                f"&dataset={CLP_DEFAULT_DATASET_NAME}"
+                f'&logEventIdx={doc["log_event_ix"]}'
+            )
+            doc["_id"] = None
             results.append(doc)
 
         return results

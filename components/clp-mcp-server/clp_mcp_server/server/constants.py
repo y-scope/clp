@@ -6,6 +6,8 @@ MAX_CACHED_RESULTS = 1000
 # 10 minutes
 SESSION_TTL_SECONDS = 600
 
+TIMESTAMP_NOT_AVAILABLE = "N/A"
+
 SERVER_NAME = "clp-mcp-server"
 
 # fmt: off
