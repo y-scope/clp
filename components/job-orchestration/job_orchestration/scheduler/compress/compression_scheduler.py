@@ -29,6 +29,8 @@ from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
+from pydantic import ValidationError
+
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.compress.task_manager.celery_task_manager import CeleryTaskManager
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
@@ -47,7 +49,6 @@ from job_orchestration.scheduler.scheduler_data import (
     CompressionJob,
 )
 from job_orchestration.scheduler.utils import kill_hanging_jobs
-from pydantic import ValidationError
 
 # Setup logging
 logger = get_logger("compression_scheduler")
@@ -341,7 +342,7 @@ def search_and_schedule_new_tasks(
         )
         db_conn.commit()
 
-        tag_ids = None
+        tag_ids = []
         if clp_io_config.output.tags:
             tags_table_name = get_tags_table_name(table_prefix, dataset)
             db_cursor.executemany(

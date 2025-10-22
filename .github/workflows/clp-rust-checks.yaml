@@ -2,7 +2,17 @@ name: "clp-rust-checks"
 
 on:
   pull_request:
+    paths: &monitored_paths
+      - ".cargo/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - ".github/workflows/clp-rust-checks.yaml"
+      - "components/clp-rust-utils/**"
+      - "components/log-ingestor/**"
+      - "taskfile.yaml"
+      - "taskfiles/**"
   push:
+    paths: *monitored_paths
   schedule:
     # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
     - cron: "15 0 * * *"
@@ -30,6 +40,10 @@ jobs:
       - name: "Install task"
         shell: "bash"
         run: "npm install -g @go-task/cli@3.44.0"
+
+      - name: "Validate lock files"
+        shell: "bash"
+        run: "task deps:lock:check-rust"
 
       - name: "Lint"
         shell: "bash"
