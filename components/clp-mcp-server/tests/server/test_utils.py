@@ -1,6 +1,6 @@
 """Unit tests for CLP MCP server's utility functions."""
 
-from clp_mcp_server.server.utils import format, sort_by_timestamp
+from clp_mcp_server.server.utils import format_query_results, sort_by_timestamp
 
 
 class TestUtils:
@@ -120,19 +120,19 @@ class TestUtils:
 
     def test_invalid_timestamp_type(self):
         """Validates the handling of noninteger timestamp types."""
-        result = format(self.INVALID_TYPE_ENTRIES)
+        result = format_query_results(self.INVALID_TYPE_ENTRIES)
 
         assert result == self.INVALID_TYPE_EXPECTED
 
     def test_invalid_timestamp_value(self):
         """Validates the handling of invalid timestamp values."""
-        result = format(self.INVALID_VALUE_ENTRIES)
+        result = format_query_results(self.INVALID_VALUE_ENTRIES)
 
         assert result == self.INVALID_VALUE_EXPECTED
     
     def test_missing_timestamp_and_message(self):
         """Validates the handling of log entries without timestamp and message field."""
-        result = format(self.MISSING_TIMESTAMP_AND_MESSAGE_ENTRY)
+        result = format_query_results(self.MISSING_TIMESTAMP_AND_MESSAGE_ENTRY)
 
         assert result == self.MISSING_TIMESTAMP_AND_MESSAGE_EXPECTED
 
@@ -144,6 +144,6 @@ class TestUtils:
         - `timestamp` and `message` fields are correctly filtered.
         """
         sorted_result = sort_by_timestamp(self.RAW_LOG_ENTRIES)
-        formatted_results = format(sorted_result)
+        formatted_results = format_query_results(sorted_result)
 
         assert formatted_results == self.EXPECTED_RESULTS
