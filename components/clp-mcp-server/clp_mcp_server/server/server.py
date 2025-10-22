@@ -113,9 +113,9 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
         kql_query: str, begin_timestamp: str, end_timestamp: str, ctx: Context
     ) -> dict[str, object]:
         """
-        Performs `FastMCP.tool.search_by_kql`'s kql search query with a given timestamp range. The
-        timestamps must be ISO 8601 formatted date strings, with support up to millisecond
-        precision, (e.g. YYYY-MM-DDTHH:mm:ss.fffZ).
+        Performs `FastMCP.tool.search_by_kql`'s query with a given timestamp range. The timestamps
+        must be ISO 8601 formatted date strings, with support up to millisecond precision, 
+        (e.g. YYYY-MM-DDTHH:mm:ss.fffZ).
 
         :param kql_query:
         :param begin_timestamp:
