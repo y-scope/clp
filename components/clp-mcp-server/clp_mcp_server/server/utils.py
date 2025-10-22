@@ -50,7 +50,7 @@ def parse_timestamp_range(begin_timestamp: str, end_timestamp: str) -> tuple[int
 
     if end_epoch < begin_epoch:
         err_msg = (
-            f"end_timestamp {end_timestamp} is earlier than begin_timestamp {begin_timestamp}."
+            f"`end_timestamp` {end_timestamp} is earlier than `begin_timestamp` {begin_timestamp}."
         )
         raise ValueError(err_msg)
 
