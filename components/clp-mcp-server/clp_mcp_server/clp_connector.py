@@ -123,10 +123,10 @@ class ClpConnector:
 
         :param query_id: The ID of the query.
         :param timeout: Maximum time to wait in seconds, or None for no timeout.
-        :raise aiomysql.Error: If there is an error connecting to or querying MariaDB.
-        :raise ValueError: if the query is not found.
-        :raise RuntimeError: if the query fails or is cancelled.
-        :raise TimeoutError: if the timeout is reached before the query completes.
+        :raise aiomysql.Error if there is an error connecting to or querying MariaDB.
+        :raise ValueError if the query is not found.
+        :raise RuntimeError if the query fails or is cancelled.
+        :raise TimeoutError if the timeout is reached before the query completes.
         """
         waiting_states = {QueryJobStatus.PENDING, QueryJobStatus.RUNNING, QueryJobStatus.CANCELLING}
         error_states = {QueryJobStatus.FAILED, QueryJobStatus.CANCELLED, QueryJobStatus.KILLED}
