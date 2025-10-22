@@ -341,7 +341,7 @@ services:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       CLP_HOME: "/opt/clp"
-      CLP_LOGGING_LEVEL: "${CLP_GC_LOGGING_LEVEL:-INFO}"
+      CLP_LOGGING_LEVEL: "${CLP_GARBAGE_COLLECTOR_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/garbage_collector"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:

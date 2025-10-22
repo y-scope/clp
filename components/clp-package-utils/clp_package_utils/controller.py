@@ -533,7 +533,9 @@ class BaseController(ABC):
         env_vars = EnvVarsDict()
 
         # Logging params
-        env_vars |= {"CLP_GC_LOGGING_LEVEL": self._clp_config.garbage_collector.logging_level}
+        env_vars |= {
+            "CLP_GARBAGE_COLLECTOR_LOGGING_LEVEL": self._clp_config.garbage_collector.logging_level
+        }
 
         return env_vars
 
