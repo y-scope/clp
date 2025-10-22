@@ -8,7 +8,7 @@ from clp_mcp_server.clp_connector import ClpConnector
 
 from . import constants
 from .session_manager import SessionManager
-from .utils import convert_date_string_to_epoch, filter_query_results, sort_query_results
+from .utils import filter_query_results, parse_timestamp_range, sort_query_results
 
 
 def create_mcp_server(clp_config: Any) -> FastMCP:
@@ -101,7 +101,7 @@ def create_mcp_server(clp_config: Any) -> FastMCP:
         )
 
     @mcp.tool
-    async def search_kql_query_with_timestamp(
+    async def search_by_kql_with_timestamp(
         kql_query: str, begin_timestamp: str, end_timestamp: str, ctx: Context
     ) -> dict[str, object]:
         """
@@ -113,15 +113,20 @@ def create_mcp_server(clp_config: Any) -> FastMCP:
         :param begin_timestamp:
         :param end_timestamp:
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
-        :return: Forwards `FastMCP.tool`''s `get_nth_page`'s return values on success:
+        :return: A dictionary containing the following key-value pairs on success:
+            - "items": A list of log entries in the requested page.
+            - "num_total_pages": Total number of pages available from the query as an integer.
+            - "num_total_items": Total number of log entries available from the query as an integer.
+            - "num_items_per_page": Number of log entries per page.
+            - "has_next": Whether a page exists after the returned one.
+            - "has_previous": Whether a page exists before the returned one.
         :return: A dictionary with the following key-value pair on failures:
             - "Error": An error message describing the failure.
         """
         await session_manager.start()
 
         try:
-            begin_epoch = convert_date_string_to_epoch(begin_timestamp)
-            end_epoch = convert_date_string_to_epoch(end_timestamp)
+            begin_epoch, end_epoch = parse_timestamp_range(begin_timestamp, end_timestamp)
 
             query_id = await connector.submit_query(kql_query, begin_epoch, end_epoch)
             await connector.wait_query_completion(query_id)
