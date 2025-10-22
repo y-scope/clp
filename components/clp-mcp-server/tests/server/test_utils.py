@@ -4,9 +4,9 @@ import pytest
 
 from clp_mcp_server.server.utils import (
     convert_date_string_to_epoch,
-    filter_query_results,
+    format_query_results,
     parse_timestamp_range,
-    sort_query_results
+    sort_by_timestamp
 )
 
 class TestUtils:

@@ -2,6 +2,9 @@
 
 import logging
 from datetime import datetime, timezone
+from typing import Any
+
+from .constants import TIMESTAMP_NOT_AVAILABLE
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +14,7 @@ def convert_date_string_to_epoch(date_string: str) -> int:
     :param date_string: ISO 8601 formatted date string with millisecond precision
         (YYYY-MM-DDTHH:mm:ss.fffZ).
     :return: Unix epoch timestamp in milliseconds.
-    :raise ValueError if date_string cannot be parsed or be converted to a valid Unix epoch.
+    :raise: ValueError if `date_string` cannot be parsed or converted to a valid Unix epoch.
     """
     try:
         cleaned_string = date_string.rstrip("Z")
@@ -33,9 +36,9 @@ def parse_timestamp_range(begin_timestamp: str, end_timestamp: str) -> tuple[int
     :param begin_timestamp:
     :param end_timestamp:
     :return: begin and end timestamp in Unix epoch timestamp with milliseconds precision.
-    :raise Propagates `convert_date_string_to_epoch`'s exceptions.
-    :raise ValueError if `end_timestamp` is earlier than `begin_timestamp`.
-    :raise TypeError if `begin_timestamp` or `end_timestamp` is not a `str` type.
+    :raise: Propagates `convert_date_string_to_epoch`'s exceptions.
+    :raise: ValueError if `end_timestamp` is earlier than `begin_timestamp`.
+    :raise: TypeError if `begin_timestamp` or `end_timestamp` is not a `str` type.
     """
     if not isinstance(begin_timestamp, str):
         err_msg = f"Object `{type(begin_timestamp).__name__}` is not of type `str`."
