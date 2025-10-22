@@ -81,6 +81,7 @@ def _generate_compress_cmd(
         "python3",
         "-m", "clp_package_utils.scripts.native.compress",
         "--config", str(config_path),
+        "--source", "fs",
     ]
     # fmt: on
     if parsed_args.verbose:
