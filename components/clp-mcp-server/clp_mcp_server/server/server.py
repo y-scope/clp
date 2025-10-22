@@ -109,7 +109,7 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
         )
 
     @mcp.tool
-    async def search_by_kql_with_timestamp(
+    async def search_by_kql_with_timestamp_range(
         kql_query: str, begin_timestamp: str, end_timestamp: str, ctx: Context
     ) -> dict[str, object]:
         """
