@@ -59,7 +59,7 @@ class DockerNotAvailableError(DockerDependencyError):
     def __init__(self, base_message: str, process_error: subprocess.CalledProcessError) -> None:
         message = base_message
         output_chunks: list[str] = []
-        for stream in (process_error.output, process_error.stderr):
+        for stream in (process_error.stdout, process_error.stderr):
             if stream is None:
                 continue
             if isinstance(stream, bytes):
@@ -70,12 +70,12 @@ class DockerNotAvailableError(DockerDependencyError):
             if text:
                 output_chunks.append(text)
         if len(output_chunks) > 0:
-            message = f"{base_message}\n" + "\n".join(output_chunks)
+            message = "\n".join([base_message, *output_chunks])
         super().__init__(errno.ENOENT, message)
 
 
 class DockerComposeProjectNotRunningError(DockerDependencyError):
-    """Raised when an expected Docker Compose project is not running."""
+    """Raised when a Docker Compose project is not running but should be."""
 
     def __init__(self, project_name: str) -> None:
         super().__init__(errno.ESRCH, f"Docker Compose project '{project_name}' is not running.")
