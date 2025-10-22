@@ -26,7 +26,7 @@ def convert_epoch_to_date_string(epoch_ts: int) -> str:
 
 def filter_query_results(query_results: list[dict[str, Any]]) -> list[str]:
     """
-    :param query_results: A list of dictionary representing kv-pair log events.
+    :param query_results: A list of dictionaries representing kv-pair log events.
     :return: A list of strings containing only the `timestamp` (as a date string) and `message` of
         a log event.
     """
@@ -49,7 +49,7 @@ def filter_query_results(query_results: list[dict[str, Any]]) -> list[str]:
 
 def sort_by_timestamp(query_results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """
-    :param query_results: A list of dictionary representing kv-pair log events.
+    :param query_results: A list of dictionaries representing kv-pair log events.
     :return: The same list, sorted in-place by epoch from latest to oldest.
     """
 
