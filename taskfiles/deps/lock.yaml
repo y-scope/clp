@@ -40,4 +40,4 @@ tasks:
     deps: ["toolchains:rust"]
     cmd: |-
       . "$HOME/.cargo/env"
-      cargo fetch {{.CARGO_UPDATE_FLAGS}}
+      cargo fetch {{.CARGO_FETCH_FLAGS}}
