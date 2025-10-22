@@ -5,7 +5,7 @@ x-service-defaults: &service_defaults
   image: "${CLP_PACKAGE_CONTAINER_IMAGE_REF:-clp-package}"
   logging:
     driver: "local"
-  stop_grace_period: "3s"
+  stop_grace_period: "60s"
   user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:1000}"
 
 # Common healthcheck defaults.
@@ -248,7 +248,6 @@ services:
   compression-worker:
     <<: *service_defaults
     hostname: "compression_worker"
-    stop_grace_period: "60s"
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
         :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
@@ -334,6 +333,7 @@ services:
   garbage-collector:
     <<: *service_defaults
     hostname: "garbage_collector"
+    stop_grace_period: "10s"
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the garbage collector.
       replicas: "${CLP_GARBAGE_COLLECTOR_ENABLED:-1}"
