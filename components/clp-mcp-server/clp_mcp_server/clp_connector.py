@@ -51,7 +51,7 @@ class ClpConnector:
         :param end_ts: The end timestamp of the query range.
         :return: The ID assigned to the query.
         :raise ValueError if `end_ts` is smaller than `begin_ts`.
-        :raise RuntimeError fails to retrieve the ID of the submitted query.
+        :raise RuntimeError if it fails to retrieve the ID of the submitted query.
         :raise aiomysql.Error if there is an error connecting to or querying MariaDB.
         :raise pymongo.errors.PyMongoError if there is an error interacting with MongoDB.
         :raise Exception for any other unexpected errors.
