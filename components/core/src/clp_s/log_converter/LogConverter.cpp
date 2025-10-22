@@ -135,6 +135,7 @@ auto LogConverter::convert_file(
             }
         }
     }
+    serializer.close();
     return ystdlib::error_handling::success();
 }
 }  // namespace clp_s::log_converter

@@ -30,7 +30,7 @@ public:
     [[nodiscard]] auto operator=(LogSerializer&&) -> LogSerializer& = default;
 
     // Destructor
-    ~LogSerializer() { close(); }
+    ~LogSerializer() = default;
 
     // Methods
     /**
@@ -64,6 +64,15 @@ public:
     [[nodiscard]] auto add_message(std::string_view message)
             -> ystdlib::error_handling::Result<void>;
 
+    /**
+     * Closes and flushes the serialized output.
+     */
+    void close() {
+        flush_buffer();
+        m_writer.write_numeric_value(clp::ffi::ir_stream::cProtocol::Eof);
+        m_writer.close();
+    }
+
 private:
     // Constants
     static constexpr std::string_view cOriginalFileMetadataKey{"original_file"};
@@ -90,15 +99,6 @@ private:
                 buffer.size_bytes()
         );
         m_serializer.clear_ir_buf();
-    }
-
-    /**
-     * Closes and flushes the serialized output.
-     */
-    void close() {
-        flush_buffer();
-        m_writer.write_numeric_value(clp::ffi::ir_stream::cProtocol::Eof);
-        m_writer.close();
     }
 
     clp::ffi::ir_stream::Serializer<clp::ir::eight_byte_encoded_variable_t> m_serializer;
