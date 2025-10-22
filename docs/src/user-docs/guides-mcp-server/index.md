@@ -9,20 +9,20 @@ This guide assumes:
    [clp-json quick-start guide](../quick-start/clp-json.md).
 2. You have an Agent installed that supports connections to MCP servers over HTTP.
 
-## Starting MCP Server:
+## Starting MCP Server
 1. Configure CLP package to run the MCP server by specifying the host and port number in etc/clp-config.yml as follows:
 
-```yaml
-mcp_server:
-   host: "<host-ip>"
-   port: <port-number>
-```
+    ```yaml
+    mcp_server:
+       host: "<host-ip>"
+       port: <port-number>
+    ```
 
-By default, `<host-ip>` and `<port-number>` are `localhost` and `8000`, respectively.
+    By default, `<host-ip>` and `<port-number>` are `localhost` and `8000`, respectively.
 
 2. Start *clp-json* and compress the logs you want to query by following the [clp-json quick-start](../quick-start/clp-json.md) guide. This will run the CLP MCP server on the specified `host` and `port`.
 
-## Connecting to MCP Server:
+## Connecting to MCP Server
 The following subsections explain how to connect CLP's MCP server to each of the Agents:
 
 ::::{grid} 1 1 1 1
