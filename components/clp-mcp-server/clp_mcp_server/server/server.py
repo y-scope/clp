@@ -12,7 +12,6 @@ from .session_manager import SessionManager
 from .utils import format_query_results, parse_timestamp_range, sort_by_timestamp
 
 
-
 def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
     """
     Creates and defines API tool calls for the CLP MCP server.
@@ -115,8 +114,8 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
     ) -> dict[str, object]:
         """
         Performs `FastMCP.tool.search_by_kql`'s kql search query with a given timestamp range. The
-        timestamps must be ISO 8601 formatted date strings with up to millisecond precision
-        (YYYY-MM-DDTHH:mm:ss.fffZ).
+        timestamps must be ISO 8601 formatted date strings, with support up to millisecond
+        precision, (e.g. YYYY-MM-DDTHH:mm:ss.fffZ).
 
         :param kql_query:
         :param begin_timestamp:
@@ -144,10 +143,9 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
             return {"Error": str(e)}
 
         sorted_results = sort_by_timestamp(results)
-        filtered_results = format_query_results(sorted_results)
+        formatted_results = format_query_results(sorted_results)
         return session_manager.cache_query_result_and_get_first_page(
-            ctx.session_id, filtered_results
+            ctx.session_id, formatted_results
         )
-
 
     return mcp
