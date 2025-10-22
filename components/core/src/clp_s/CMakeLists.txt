@@ -273,6 +273,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 clp_s_archive_writer
                 PUBLIC
                 absl::flat_hash_map
+                clp_s::clp_dependencies
                 clp_s::io
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
@@ -280,7 +281,6 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 ystdlib::error_handling
                 PRIVATE
                 Boost::url
-                clp_s::clp_dependencies
                 clp_s::timestamp_pattern
                 ${CURL_LIBRARIES}
                 fmt::fmt
