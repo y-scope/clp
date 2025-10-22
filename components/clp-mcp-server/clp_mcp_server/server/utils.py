@@ -38,10 +38,10 @@ def parse_timestamp_range(begin_timestamp: str, end_timestamp: str) -> tuple[int
     :raise: ValueError if `end_timestamp` is earlier than `begin_timestamp`.
     :raise: ValueError if `begin_timestamp` or `end_timestamp` doesn't indicate UTC time.
     """
-    if not begin_timestamp.endswith("Z") or not begin_timestamp.endswith("Z"):
+    if not begin_timestamp.endswith("Z") or not end_timestamp.endswith("Z"):
         err_msg = (
             "Timestamp must end with 'Z' to indicate UTC."
-            f" Got: {begin_timestamp} and {begin_timestamp} instead."
+            f" Got: {begin_timestamp} and {end_timestamp} instead."
         )
         raise ValueError(err_msg)
 
