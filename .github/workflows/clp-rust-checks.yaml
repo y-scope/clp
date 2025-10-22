@@ -2,7 +2,7 @@ name: "clp-rust-checks"
 
 on:
   pull_request:
-    paths:
+    paths: &monitored_paths
       - ".cargo/**"
       - "Cargo.lock"
       - "Cargo.toml"
@@ -12,15 +12,7 @@ on:
       - "taskfile.yaml"
       - "taskfiles/**"
   push:
-    paths:
-      - ".cargo/**"
-      - "Cargo.lock"
-      - "Cargo.toml"
-      - ".github/workflows/clp-rust-checks.yaml"
-      - "components/clp-rust-utils/**"
-      - "components/log-ingestor/**"
-      - "taskfile.yaml"
-      - "taskfiles/**"
+    paths: *monitored_paths
   schedule:
     # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
     - cron: "15 0 * * *"
