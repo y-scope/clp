@@ -1,0 +1,152 @@
+"""Unit tests for CLP MCP server's utility functions."""
+
+from clp_mcp_server.server.utils import format_query_results, sort_by_timestamp
+
+
+class TestUtils:
+    """Test suite for utility functions."""
+
+    # Test case: invalid timestamp types.
+    INVALID_TYPE_ENTRIES = [
+        {
+            "timestamp": None,
+            "message": '{"message":"Log with None timestamp"}\n',
+        },
+        {
+            "timestamp": "1729267200000",  # str instead of int
+            "message": '{"message":"Log with str timestamp"}\n',
+        },
+        {
+            "timestamp": 1729267200000.0,  # float instead of int
+            "message": '{"message":"Log with float timestamp"}\n',
+        },
+    ]
+    EXPECTED_INVALID_TYPE = [
+        'timestamp: N/A, message: {"message":"Log with None timestamp"}\n',
+        'timestamp: N/A, message: {"message":"Log with str timestamp"}\n',
+        'timestamp: N/A, message: {"message":"Log with float timestamp"}\n',
+    ]
+
+    # Test case: invalid timestamp values.
+    INVALID_VALUE_ENTRIES = [
+        {
+            "timestamp": 9999999999999999,
+            "message": '{"message":"Log with overflow timestamp"}\n',
+        },
+        {
+            "timestamp": -9999999999999999,
+            "message": '{"message":"Log with negative overflow timestamp"}\n',
+        },
+    ]
+    EXPECTED_INVALID_VALUE = [
+        'timestamp: N/A, message: {"message":"Log with overflow timestamp"}\n',
+        'timestamp: N/A, message: {"message":"Log with negative overflow timestamp"}\n',
+    ]
+
+    # Test case: missing timestamp and message fields.
+    MISSING_TIMESTAMP_AND_MESSAGE_ENTRY = [
+        {
+            "_id": "test001",
+        },
+        {
+            "_id": "test002",
+            "message": '{"message":"Log with no timestamp"}\n',
+        },
+        {
+            "_id": "test003",
+            "timestamp": 0,
+        }
+    ]
+    EXPECTED_MISSING_TIMESTAMP_AND_MESSAGE = [
+        'timestamp: N/A, message: {"message":"Log with no timestamp"}\n',
+    ]
+
+    # Testing basic functionality.
+    RAW_LOG_ENTRIES = [
+        {
+            "_id": "test000",
+            "timestamp": None,
+            "message": '{"pid":null,"tid":null,"message":"Log at epoch none"}\n',
+            "orig_file_path": "/var/log/app.log",
+            "archive_id": "abc123",
+            "log_event_ix": 99,
+        },
+        {
+            "_id": "test001",
+            "timestamp": 0,
+            "message": '{"ts":0,"pid":null,"tid":null,"message":"Log at epoch zero"}\n',
+            "orig_file_path": "/var/log/app.log",
+            "archive_id": "abc123",
+            "log_event_ix": 100,
+        },
+        {
+            "_id": "test002",
+            "timestamp": 1729267200000,  # Oct 18, 2024 16:00:00.000 (milliseconds)
+            "message": (
+                '{"ts":1729267200000,"pid":1234,"tid":5678,'
+                '"message":"Log with zero milliseconds"}\n'
+            ),
+            "orig_file_path": "/var/log/app.log",
+            "archive_id": "abc124",
+            "log_event_ix": 101,
+        },
+        {
+            "_id": "test003",
+            "timestamp": 1729267200123,  # Oct 18, 2024 16:00:00.123 (milliseconds)
+            "message": (
+                '{"ts":1729267200123,"pid":1234,"tid":5678,'
+                '"message":"Log with millisecond precision"}\n'
+            ),
+            "orig_file_path": "/var/log/app.log",
+            "archive_id": "abc125",
+            "log_event_ix": 102,
+        },
+    ]
+
+    EXPECTED_RESULTS = [
+        (
+            'timestamp: 2024-10-18T16:00:00.123Z, message: '
+            '{"ts":1729267200123,"pid":1234,"tid":5678,'
+            '"message":"Log with millisecond precision"}\n'
+        ),
+        (
+            'timestamp: 2024-10-18T16:00:00.000Z, message: '
+            '{"ts":1729267200000,"pid":1234,"tid":5678,'
+            '"message":"Log with zero milliseconds"}\n'
+        ),
+        (
+            'timestamp: 1970-01-01T00:00:00.000Z, message: '
+            '{"ts":0,"pid":null,"tid":null,'
+            '"message":"Log at epoch zero"}\n'
+        ),
+        (
+            'timestamp: N/A, message: '
+            '{"pid":null,"tid":null,'
+            '"message":"Log at epoch none"}\n'
+        ),
+    ]
+
+    def test_invalid_timestamp_type(self):
+        """Validates the handling of noninteger timestamp types."""
+        result = format_query_results(self.INVALID_TYPE_ENTRIES)
+
+        assert result == self.EXPECTED_INVALID_TYPE
+
+    def test_invalid_timestamp_value(self):
+        """Validates the handling of invalid timestamp values."""
+        result = format_query_results(self.INVALID_VALUE_ENTRIES)
+
+        assert result == self.EXPECTED_INVALID_VALUE
+    
+    def test_missing_timestamp_and_message(self):
+        """Validates the handling of log entries without timestamp and message field."""
+        result = format_query_results(self.MISSING_TIMESTAMP_AND_MESSAGE_ENTRY)
+
+        assert result == self.EXPECTED_MISSING_TIMESTAMP_AND_MESSAGE
+
+    def test_sort_and_format_query_results(self):
+        """Validates the post-processing functionality."""
+        sorted_result = sort_by_timestamp(self.RAW_LOG_ENTRIES)
+        formatted_results = format_query_results(sorted_result)
+
+        assert formatted_results == self.EXPECTED_RESULTS
