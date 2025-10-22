@@ -15,7 +15,7 @@ class TestUtils:
 
     # Error Messages:
     INVALID_DATE_STRING = "Invalid date string"
-    INVALID_DATE_STRING_TYPE = "is not of type `str`."
+    INVALID_DATE_STRING_FORMAT = "Timestamp must end with 'Z' to indicate UTC."
     INVALID_DATE_STRING_VALUE= "is earlier than `begin_timestamp`"
     
 
@@ -144,16 +144,10 @@ class TestUtils:
         result = convert_date_string_to_epoch("2024-10-18T16:00:00.123Z")
         assert result == 1729267200123
 
-        result = convert_date_string_to_epoch("2024-10-18T16:00:00.123")
-        assert result == 1729267200123
-
         result = convert_date_string_to_epoch("2024-10-18T16:00:00Z")
         assert result == 1729267200000
 
-        result = convert_date_string_to_epoch("2024-10-18T16:00")
-        assert result == 1729267200000
-
-        result = convert_date_string_to_epoch("2024-10-18T16")
+        result = convert_date_string_to_epoch("2024-10-18T16:00Z")
         assert result == 1729267200000
 
 
@@ -180,15 +174,12 @@ class TestUtils:
         assert self.INVALID_DATE_STRING in str(exc_info.value)
     
 
-    def test_parse_timestamp_range_invalid_types_and_values(self):
+    def test_parse_timestamp_range_invalid_values(self):
         """Validates the handling of invalid date string types and values."""
-        with pytest.raises(TypeError) as exc_info:
-            parse_timestamp_range(None, None)
-        assert self.INVALID_DATE_STRING_TYPE in str(exc_info.value)
+        with pytest.raises(ValueError) as exc_info:
+            parse_timestamp_range("2024-10-18T16:00:00.123", "2025-10-18T16:00:00.123")
+        assert self.INVALID_DATE_STRING_FORMAT in str(exc_info.value)
 
-        with pytest.raises(TypeError) as exc_info:
-            parse_timestamp_range(12345, 6789.123)
-        assert self.INVALID_DATE_STRING_TYPE in str(exc_info.value)
 
         with pytest.raises(ValueError) as exc_info:
             parse_timestamp_range("2024-10-18T16:00:00.123Z", "2000-10-18T16:00:00.123Z")

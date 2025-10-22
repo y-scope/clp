@@ -18,11 +18,9 @@ def convert_date_string_to_epoch(date_string: str) -> int:
     """
     try:
         cleaned_string = date_string.rstrip("Z")
-        dt = datetime.fromisoformat(cleaned_string)
-        if dt.tzinfo is None:
-            dt = dt.replace(tzinfo=timezone.utc)
+        dt = datetime.fromisoformat(cleaned_string).replace(tzinfo=timezone.utc)
 
-        # Convert to milliseconds
+        # Convert to epoch with milliseconds precision.
         epoch_seconds = dt.timestamp()
         return int(epoch_seconds * 1000)
 
@@ -38,15 +36,14 @@ def parse_timestamp_range(begin_timestamp: str, end_timestamp: str) -> tuple[int
     :return: begin and end timestamp in Unix epoch timestamp with milliseconds precision.
     :raise: Propagates `convert_date_string_to_epoch`'s exceptions.
     :raise: ValueError if `end_timestamp` is earlier than `begin_timestamp`.
-    :raise: TypeError if `begin_timestamp` or `end_timestamp` is not a `str` type.
+    :raise: ValueError if `begin_timestamp` or `end_timestamp` doesn't indicate UTC time.
     """
-    if not isinstance(begin_timestamp, str):
-        err_msg = f"Object `{type(begin_timestamp).__name__}` is not of type `str`."
-        raise TypeError(err_msg)
-
-    if not isinstance(end_timestamp, str):
-        err_msg = f"Object `{type(end_timestamp).__name__}` is not of type `str`."
-        raise TypeError(err_msg)
+    if not begin_timestamp.endswith("Z") or not begin_timestamp.endswith("Z"):
+        err_msg = (
+            "Timestamp must end with 'Z' to indicate UTC."
+            f" Got: {begin_timestamp} and {begin_timestamp} instead."
+        )
+        raise ValueError(err_msg)
 
     begin_epoch = convert_date_string_to_epoch(begin_timestamp)
     end_epoch = convert_date_string_to_epoch(end_timestamp)

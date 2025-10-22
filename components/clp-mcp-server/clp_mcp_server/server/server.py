@@ -110,12 +110,15 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
 
     @mcp.tool
     async def search_by_kql_with_timestamp_range(
-        kql_query: str, begin_timestamp: str, end_timestamp: str, ctx: Context
+        kql_query: str, formatted_begin_timestamp: str, formatted_end_timestamp: str, ctx: Context
     ) -> dict[str, Any]:
         """
         Performs `FastMCP.tool.search_by_kql`'s query with a given timestamp range. The timestamps
-        must be ISO 8601 formatted date strings, with support up to millisecond precision,
-        (e.g. YYYY-MM-DDTHH:mm:ss.fffZ).
+        must be ISO 8601 formatted date strings, with support up to millisecond precision.
+
+        Note: CLP doesn't store any timezone information, all timestamps are assumed to be in UTC
+        and must end with 'Z', (e.g. YYYY-MM-DDTHH:mm:ss.fffZ). Timestamps without 'Z' will be
+        rejected.
 
         :param kql_query:
         :param begin_timestamp:
@@ -134,12 +137,14 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
         await session_manager.start()
 
         try:
-            begin_epoch, end_epoch = parse_timestamp_range(begin_timestamp, end_timestamp)
+            begin_epoch, end_epoch = parse_timestamp_range(
+                formatted_begin_timestamp, formatted_end_timestamp
+            )
 
             query_id = await connector.submit_query(kql_query, begin_epoch, end_epoch)
             await connector.wait_query_completion(query_id)
             results = await connector.read_results(query_id)
-        except (RuntimeError, TimeoutError, TypeError, ValueError) as e:
+        except (RuntimeError, TimeoutError, ValueError) as e:
             return {"Error": str(e)}
 
         sorted_results = sort_by_timestamp(results)
