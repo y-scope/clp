@@ -12,6 +12,7 @@ from clp_py_utils.clp_config import (
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_DATASET_NAME,
     StorageEngine,
+    StorageType,
 )
 
 from clp_package_utils.general import (
@@ -169,6 +170,15 @@ def main(argv):
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
     except:
         logger.exception("Failed to load config.")
+        return -1
+
+    # Validate logs_input type is FS
+    if clp_config.logs_input.type != StorageType.FS:
+        logger.error(
+            f"Filesystem compression requires logs_input.type to be '{StorageType.FS}', "
+            f"but configured type is '{clp_config.logs_input.type}'. "
+            f"For S3 compression, use compress-from-s3.sh instead."
+        )
         return -1
 
     storage_engine: StorageEngine = clp_config.package.storage_engine

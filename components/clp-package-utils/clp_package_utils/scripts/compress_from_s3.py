@@ -12,6 +12,7 @@ from clp_py_utils.clp_config import (
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_DATASET_NAME,
     StorageEngine,
+    StorageType,
 )
 
 from clp_package_utils.general import (
@@ -199,6 +200,15 @@ def main(argv):
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
     except Exception:
         logger.exception("Failed to load config.")
+        return -1
+
+    # Validate logs_input type is S3
+    if clp_config.logs_input.type != StorageType.S3:
+        logger.error(
+            f"S3 compression requires logs_input.type to be '{StorageType.S3}', "
+            f"but configured type is '{clp_config.logs_input.type}'. "
+            f"Please update your clp-config.yml."
+        )
         return -1
 
     storage_engine: StorageEngine = clp_config.package.storage_engine
