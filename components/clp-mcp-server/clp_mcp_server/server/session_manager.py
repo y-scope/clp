@@ -110,7 +110,7 @@ class SessionState:
         query.
 
         NOTE: This docstring must be synchronized with MCP tool calls: `get_nth_page`,
-        `search_by_kql`, and `search_by_kql_with_timestamp`.
+        `search_by_kql`, and `search_by_kql_with_timestamp_ranges`.
 
 
         :param page_index: Zero-based index, e.g., 0 for the first page.
