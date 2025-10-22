@@ -1223,14 +1223,14 @@ void JsonParser::parse_kv_log_event_subtree(
                     if (uses_eight_byte_encoding) {
                         m_current_parsed_message.add_value(
                                 node_id,
-                                pair.second.value()
-                                        .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
+                                &pair.second.value()
+                                         .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
                         );
                     } else {
                         m_current_parsed_message.add_value(
                                 node_id,
-                                pair.second.value()
-                                        .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
+                                &pair.second.value()
+                                         .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
                         );
                     }
                     break;
@@ -1262,14 +1262,14 @@ void JsonParser::parse_kv_log_event_subtree(
                 if (pair.second.value().is<clp::ir::EightByteEncodedTextAst>()) {
                     m_current_parsed_message.add_value(
                             node_id,
-                            pair.second.value()
-                                    .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
+                            &pair.second.value()
+                                     .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
                     );
                 } else {
                     m_current_parsed_message.add_value(
                             node_id,
-                            pair.second.value()
-                                    .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
+                            &pair.second.value()
+                                     .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
                     );
                 }
                 break;

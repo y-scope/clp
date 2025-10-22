@@ -99,9 +99,9 @@ size_t ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
                 m_encoded_vars,
                 temp_var_dict_ids
         );
-    } else if (std::holds_alternative<clp::ir::EightByteEncodedTextAst>(value)) {
+    } else if (std::holds_alternative<clp::ir::EightByteEncodedTextAst const*>(value)) {
         clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
-                std::get<clp::ir::EightByteEncodedTextAst>(value),
+                *std::get<clp::ir::EightByteEncodedTextAst const*>(value),
                 m_logtype_entry,
                 *m_var_dict,
                 m_encoded_vars,
@@ -110,7 +110,7 @@ size_t ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
         );
     } else {
         clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
-                std::get<clp::ir::FourByteEncodedTextAst>(value),
+                *std::get<clp::ir::FourByteEncodedTextAst const*>(value),
                 m_logtype_entry,
                 *m_var_dict,
                 m_encoded_vars,

@@ -20,8 +20,8 @@ public:
             variant<int64_t,
                     double,
                     std::string,
-                    clp::ir::EightByteEncodedTextAst,
-                    clp::ir::FourByteEncodedTextAst,
+                    clp::ir::EightByteEncodedTextAst const*,
+                    clp::ir::FourByteEncodedTextAst const*,
                     bool,
                     std::pair<uint64_t, epochtime_t>,
                     std::pair<double, float_format_t>>;
