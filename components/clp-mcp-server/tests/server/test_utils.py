@@ -1,6 +1,6 @@
 """Unit tests for CLP MCP server's utility functions."""
 
-from clp_mcp_server.server.utils import filter_query_results, sort_query_results
+from clp_mcp_server.server.utils import filter_query_results, sort_by_timestamp
 
 
 class TestUtils:
@@ -143,7 +143,7 @@ class TestUtils:
         appear at last.
         - `timestamp` and `message` fields are correct filtered.
         """
-        sorted_result = sort_query_results(self.RAW_LOG_ENTRIES)
+        sorted_result = sort_by_timestamp(self.RAW_LOG_ENTRIES)
         filtered_result = filter_query_results(sorted_result)
 
         assert filtered_result == self.EXPECTED_RESULTS

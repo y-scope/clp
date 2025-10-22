@@ -8,13 +8,14 @@ from clp_mcp_server.clp_connector import ClpConnector
 
 from . import constants
 from .session_manager import SessionManager
-from .utils import filter_query_results, sort_query_results
+from .utils import filter_query_results, sort_by_timestamp
 
 
-def create_mcp_server(clp_config: Any) -> FastMCP:
+def create_mcp_server(config_path: Any) -> FastMCP:
     """
     Creates and defines API tool calls for the CLP MCP server.
 
+    :param config_path: The path to server's configuration file.
     :return: A configured `FastMCP` instance.
     :raise: Propagates `FastMCP.__init__`'s exceptions.
     :raise: Propagates `FastMCP.tool`'s exceptions.
@@ -23,7 +24,7 @@ def create_mcp_server(clp_config: Any) -> FastMCP:
 
     session_manager = SessionManager(session_ttl_seconds=constants.SESSION_TTL_SECONDS)
 
-    connector = ClpConnector(clp_config)
+    connector = ClpConnector(config_path)
 
     @mcp.tool
     async def get_instructions(ctx: Context) -> str:
@@ -73,7 +74,7 @@ def create_mcp_server(clp_config: Any) -> FastMCP:
         }
 
     @mcp.tool
-    async def search_kql_query(kql_query: str, ctx: Context) -> dict[str, object]:
+    async def search_by_kql(kql_query: str, ctx: Context) -> dict[str, Any]:
         """
         Searches the logs for the specified KQL query and returns the first page of the matching
         result. The paginated results are ordered from latest to oldest, with each page containing
@@ -81,7 +82,13 @@ def create_mcp_server(clp_config: Any) -> FastMCP:
 
         :param kql_query:
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
-        :return: Forwards `FastMCP.tool.get_nth_page`'s return values on success:
+        :return: A dictionary containing the following key-value pairs on success:
+            - "items": A list of log entries in the requested page.
+            - "num_total_pages": Total number of pages available from the query as an integer.
+            - "num_total_items": Total number of log entries available from the query as an integer.
+            - "num_items_per_page": Number of log entries per page.
+            - "has_next": Whether a page exists after the returned one.
+            - "has_previous": Whether a page exists before the returned one.
         :return: A dictionary with the following key-value pair on failures:
             - "Error": An error message describing the failure.
         """
@@ -94,7 +101,7 @@ def create_mcp_server(clp_config: Any) -> FastMCP:
         except (ValueError, RuntimeError, TimeoutError) as e:
             return {"Error": str(e)}
 
-        sorted_results = sort_query_results(results)
+        sorted_results = sort_by_timestamp(results)
         filtered_results = filter_query_results(sorted_results)
         return session_manager.cache_query_result_and_get_first_page(
             ctx.session_id, filtered_results

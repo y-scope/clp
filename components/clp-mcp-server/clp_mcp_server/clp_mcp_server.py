@@ -20,18 +20,18 @@ from .server import create_mcp_server
 )
 @click.option("--port", type=int, default=8000, help="The server's port number (default: 8000).")
 @click.option(
-    "--config",
+    "--config-path",
     type=click.Path(exists=True),
     default="/etc/clp-config.yml",
     help="The path to server's configuration file (default: /etc/clp-config.yml).",
 )
-def main(host: str, port: int, config: Path) -> None:
+def main(host: str, port: int, config_path: Path) -> None:
     """
     Runs the CLP MCP server with HTTP transport.
 
     :param host: The server's host address (IP address or hostname).
     :param port: The server's port number (1-65535).
-    :param config: The path to server's configuration file.
+    :param config_path: The path to server's configuration file.
     """
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -63,7 +63,7 @@ def main(host: str, port: int, config: Path) -> None:
         sys.exit(1)
 
     try:
-        clp_config = CLPConfig.model_validate(read_yaml_config_file(config))
+        clp_config = CLPConfig.model_validate(read_yaml_config_file(config_path))
     except ValidationError:
         logger.exception("Configuration validation failed.")
         sys.exit(1)

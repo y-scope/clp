@@ -2,6 +2,7 @@
 
 import logging
 from datetime import datetime, timezone
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -24,13 +25,13 @@ def convert_epoch_to_date_string(epoch_ts: int) -> str:
     try:
         epoch_seconds = epoch_ts / 1000.0
         dt = datetime.fromtimestamp(epoch_seconds, tz=timezone.utc)
-        return dt.strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
+        return dt.isoformat(timespec='milliseconds').replace('+00:00', 'Z')
     except (ValueError, OSError, OverflowError) as e:
         err_msg = f"Invalid timestamp {epoch_ts}: {e}."
         raise ValueError(err_msg) from e
 
 
-def filter_query_results(query_results: list[dict]) -> list[str]:
+def filter_query_results(query_results: list[dict[str, Any]]) -> list[str]:
     """
     :param query_results: A list of dictionary containing log entries with its metadata.
     :return: A list of strings containing only the `timestamp` (as a date string) and `message` of
@@ -51,7 +52,7 @@ def filter_query_results(query_results: list[dict]) -> list[str]:
     return filtered
 
 
-def sort_query_results(query_results: list[dict]) -> list[dict]:
+def sort_by_timestamp(query_results: list[dict]) -> list[dict]:
     """
     :param query_results: A list of dictionary containing log entries with its metadata read from
     MongoDB.

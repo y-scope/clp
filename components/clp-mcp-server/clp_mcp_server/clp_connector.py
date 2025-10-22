@@ -47,7 +47,7 @@ class ClpConnector:
         :param begin_ts: The beginning timestamp of the query range.
         :param end_ts: The end timestamp of the query range.
         :return: The ID assigned to the query.
-        :raise ValueError: If ``end_ts`` is smaller than ``begin_ts``.
+        :raise ValueError: If `end_ts` is smaller than `begin_ts`.
         :raise aiomysql.Error: If there is an error connecting to or querying MariaDB.
         :raise pymongo.errors.PyMongoError: If there is an error interacting with MongoDB.
         :raise Exception: For any other unexpected errors.
@@ -121,9 +121,9 @@ class ClpConnector:
         :param query_id: The ID of the query.
         :param timeout: Maximum time to wait in seconds, or None for no timeout.
         :raise aiomysql.Error: If there is an error connecting to or querying MariaDB.
-        :raise ValueError: When the query is not found.
-        :raise RuntimeError: When the query fails or is cancelled.
-        :raise TimeoutError: When the timeout is reached before the query completes.
+        :raise ValueError: if the query is not found.
+        :raise RuntimeError: if the query fails or is cancelled.
+        :raise TimeoutError: if the timeout is reached before the query completes.
         """
         waiting_states = {QueryJobStatus.PENDING, QueryJobStatus.RUNNING, QueryJobStatus.CANCELLING}
         error_states = {QueryJobStatus.FAILED, QueryJobStatus.CANCELLED, QueryJobStatus.KILLED}
