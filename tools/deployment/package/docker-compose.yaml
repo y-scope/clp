@@ -32,8 +32,8 @@ services:
     <<: *service_defaults
     hostname: "query_scheduler"
     environment:
-      BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}:\
-        ${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
+      BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
+        :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_SCHEDULER_LOGGING_LEVEL:-INFO}"
@@ -70,8 +70,8 @@ services:
     <<: *service_defaults
     hostname: "query_worker"
     environment:
-      BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}:\
-        ${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
+      BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
+        :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
       CLP_CONFIG_PATH: "/etc/clp-config.yml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_WORKER_LOGGING_LEVEL:-INFO}"
