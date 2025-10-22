@@ -1,6 +1,7 @@
 version: "3"
 
 includes:
+  lock: "./lock.yaml"
   utils: "./utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 

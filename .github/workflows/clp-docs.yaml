@@ -2,7 +2,29 @@ name: "clp-docs"
 
 on:
   pull_request:
+    paths:
+      - ".cargo/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - ".github/workflows/clp-rust-checks.yaml"
+      - ".gitmodules"
+      - "components/clp-rust-utils/**"
+      - "components/log-ingestor/**"
+      - "taskfile.yaml"
+      - "taskfiles/**"
+      - "tools/scripts/deps-download/**"
   push:
+    paths:
+      - ".cargo/**"
+      - "Cargo.lock"
+      - "Cargo.toml"
+      - ".github/workflows/clp-rust-checks.yaml"
+      - ".gitmodules"
+      - "components/clp-rust-utils/**"
+      - "components/log-ingestor/**"
+      - "taskfile.yaml"
+      - "taskfiles/**"
+      - "tools/scripts/deps-download/**"
   schedule:
     # Run daily at 00:15 UTC (the 15 is to avoid periods of high load)
     - cron: "15 0 * * *"
