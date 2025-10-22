@@ -611,7 +611,7 @@ class DockerComposeController(BaseController):
             cwd=self._clp_home,
             check=True,
         )
-        logger.info("CLP started.")
+        logger.info("Started CLP.")
 
     def stop(self) -> None:
         """
@@ -643,7 +643,7 @@ class DockerComposeController(BaseController):
             cwd=self._clp_home,
             check=True,
         )
-        logger.info("All CLP containers stopped.")
+        logger.info("Stopped CLP.")
 
     @staticmethod
     def _get_num_workers() -> int:
