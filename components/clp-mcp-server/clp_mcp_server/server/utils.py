@@ -49,7 +49,7 @@ def format_query_results(query_results: list[dict[str, Any]]) -> list[str]:
 
         message = obj.get("message", "")
         if not message:
-            logger.warning("Empty message attached to a log event.")
+            logger.warning("Empty message attached to a log event: %s.", obj)
             continue
 
         formatted_log_events.append(f"timestamp: {timestamp_str}, message: {message}")
