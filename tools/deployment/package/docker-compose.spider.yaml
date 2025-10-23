@@ -8,7 +8,7 @@ x-service-defaults: &service_defaults
   image: "${CLP_PACKAGE_CONTAINER_IMAGE_REF:-clp-package}"
   logging:
     driver: "local"
-  stop_grace_period: "3s"
+  stop_grace_period: "60s"
   user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:1000}"
 x-healthcheck-defaults: &healthcheck_defaults
   interval: "30s"
@@ -136,13 +136,13 @@ services:
       "--stream-collection", "${CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME:-stream-files}",
     ]
 
-
   query-scheduler:
     <<: *service_defaults
     hostname: "query_scheduler"
+    stop_grace_period: "10s"
     environment:
-      BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}:\
-        ${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
+      BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
+        :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_SCHEDULER_LOGGING_LEVEL:-INFO}"
@@ -179,8 +179,8 @@ services:
     <<: *service_defaults
     hostname: "query_worker"
     environment:
-      BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}:\
-        ${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
+      BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
+        :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
       CLP_CONFIG_PATH: "/etc/clp-config.yml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_WORKER_LOGGING_LEVEL:-INFO}"
