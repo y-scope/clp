@@ -21,11 +21,11 @@ namespace clp_s::log_converter {
 class LogSerializer {
 public:
     // Constructors
-    // Disable copy constructor/assignment operator
+    // Delete copy constructor and assignment operator
     LogSerializer(LogSerializer const&) = delete;
     [[nodiscard]] auto operator=(LogSerializer const&) -> LogSerializer& = delete;
 
-    // Default move constructor/assignment operator
+    // Default move constructor and assignment operator
     LogSerializer(LogSerializer&&) noexcept = default;
     [[nodiscard]] auto operator=(LogSerializer&&) -> LogSerializer& = default;
 
@@ -33,15 +33,15 @@ public:
     ~LogSerializer() = default;
 
     // Methods
+    // Factory function
     /**
-     * Creates an instance of LogSerializer.
+     * Creates an instance of `LogSerializer`.
      * @param output_dir The destination directory for generated KV-IR.
      * @param original_file_path The original path for the file being converted to KV-IR.
-     * @return A result containing a LogSerializer on success, or an error code indicating the
+     * @return A result containing a `LogSerializer` on success, or an error code indicating the
      * failure:
-     * - `std::errc::no_such_file_or_directory` if a `clp_s::FileWriter` can not be opened.
-     * - Error codes forwarded from `clp::ffi::ir_stream::Serializer<>::create()`.
-     *
+     * - std::errc::no_such_file_or_directory if a `clp_s::FileWriter` fails to open an output file.
+     * @return Forwards `clp::ffi::ir_stream::Serializer<>::create()`'s return values on failure.
      */
     [[nodiscard]] static auto
     create(std::string_view output_dir, std::string_view original_file_path)
@@ -51,7 +51,9 @@ public:
      * Adds a message with a timestamp to the serialized output.
      * @param timestamp
      * @param message
-     * @return A void result on success, or `std::errc::invalid_argument` on error.
+     * @return A void result on success, or an error code indicating the failure:
+     * - std::errc::invalid_argument if `clp::ffi::ir_stream::Serializer<>::serialize_msgpack_map`
+     *   returns on failure.
      */
     [[nodiscard]] auto add_message(std::string_view timestamp, std::string_view message)
             -> ystdlib::error_handling::Result<void>;
@@ -59,7 +61,9 @@ public:
     /**
      * Adds a message without a timestamp to the serialized output.
      * @param message
-     * @return A void result on success, or `std::errc::invalid_argument` on error.
+     * @return A void result on success, or an error code indicating the failure:
+     * - std::errc::invalid_argument if `clp::ffi::ir_stream::Serializer<>::serialize_msgpack_map`
+     *   returns on failure.
      */
     [[nodiscard]] auto add_message(std::string_view message)
             -> ystdlib::error_handling::Result<void>;

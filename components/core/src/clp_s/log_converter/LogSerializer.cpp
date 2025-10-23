@@ -24,7 +24,7 @@ namespace clp_s::log_converter {
 auto LogSerializer::create(std::string_view output_dir, std::string_view original_file_path)
         -> ystdlib::error_handling::Result<LogSerializer> {
     nlohmann::json metadata;
-    metadata[cOriginalFileMetadataKey] = original_file_path;
+    metadata.emplace(cOriginalFileMetadataKey, original_file_path);
     auto serializer{YSTDLIB_ERROR_HANDLING_TRYX(
             clp::ffi::ir_stream::Serializer<clp::ir::eight_byte_encoded_variable_t>::create(
                     metadata
