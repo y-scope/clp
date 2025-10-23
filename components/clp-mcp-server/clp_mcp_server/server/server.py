@@ -27,6 +27,40 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
 
     connector = ClpConnector(clp_config)
 
+    async def _execute_kql_query(
+        session_id: str,
+        kql_query: str,
+        begin_ts: int | None = None,
+        end_ts: int | None = None,
+    ) -> dict[str, Any]:
+        """
+        Executes a KQL query search with optional timestamp range and returns paginated results.
+
+        :param kql_query:
+        :param formatted_begin_timestamp: The beginning of the time range (inclusive).
+        :param formatted_end_timestamp: The end of the time range (inclusive).
+        :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
+        :return: A dictionary containing the following key-value pairs on success:
+            - "items": A list of log entries in the requested page.
+            - "num_total_pages": Total number of pages available from the query as an integer.
+            - "num_total_items": Total number of log entries available from the query as an integer.
+            - "num_items_per_page": Number of log entries per page.
+            - "has_next": Whether a page exists after the returned one.
+            - "has_previous": Whether a page exists before the returned one.
+        :return: A dictionary with the following key-value pair on failures:
+            - "Error": An error message describing the failure.
+        """
+        try:
+            query_id = await connector.submit_query(kql_query, begin_ts, end_ts)
+            await connector.wait_query_completion(query_id)
+            results = await connector.read_results(query_id)
+        except (ValueError, RuntimeError, TimeoutError) as e:
+            return {"Error": str(e)}
+
+        sorted_results = sort_by_timestamp(results)
+        formatted_results = format_query_results(sorted_results)
+        return session_manager.cache_query_result_and_get_first_page(session_id, formatted_results)
+
     @mcp.tool
     async def get_instructions(ctx: Context) -> str:
         """
@@ -83,30 +117,11 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
 
         :param kql_query:
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
-        :return: A dictionary containing the following key-value pairs on success:
-            - "items": A list of log entries in the requested page.
-            - "num_total_pages": Total number of pages available from the query as an integer.
-            - "num_total_items": Total number of log entries available from the query as an integer.
-            - "num_items_per_page": Number of log entries per page.
-            - "has_next": Whether a page exists after the returned one.
-            - "has_previous": Whether a page exists before the returned one.
-        :return: A dictionary with the following key-value pair on failures:
-            - "Error": An error message describing the failure.
+        :return: Forwards `_execute_kql_query`'s return values.
         """
         await session_manager.start()
 
-        try:
-            query_id = await connector.submit_query(kql_query)
-            await connector.wait_query_completion(query_id)
-            results = await connector.read_results(query_id)
-        except (ValueError, RuntimeError, TimeoutError) as e:
-            return {"Error": str(e)}
-
-        sorted_results = sort_by_timestamp(results)
-        formatted_results = format_query_results(sorted_results)
-        return session_manager.cache_query_result_and_get_first_page(
-            ctx.session_id, formatted_results
-        )
+        return await _execute_kql_query(ctx.session_id, kql_query)
 
     @mcp.tool
     async def search_by_kql_with_timestamp_range(
@@ -122,33 +137,17 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
         :param formatted_begin_timestamp: The beginning of the time range (inclusive).
         :param formatted_end_timestamp: The end of the time range (inclusive).
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
-        :return: A dictionary containing the following key-value pairs on success:
-            - "items": A list of log entries in the requested page.
-            - "num_total_pages": Total number of pages available from the query as an integer.
-            - "num_total_items": Total number of log entries available from the query as an integer.
-            - "num_items_per_page": Number of log entries per page.
-            - "has_next": Whether a page exists after the returned one.
-            - "has_previous": Whether a page exists before the returned one.
-        :return: A dictionary with the following key-value pair on failures:
-            - "Error": An error message describing the failure.
+        :return: Forwards `_execute_kql_query`'s return values.
         """
         await session_manager.start()
 
         try:
-            begin_epoch, end_epoch = parse_timestamp_range(
+            begin_ts, end_ts = parse_timestamp_range(
                 formatted_begin_timestamp, formatted_end_timestamp
             )
-
-            query_id = await connector.submit_query(kql_query, begin_epoch, end_epoch)
-            await connector.wait_query_completion(query_id)
-            results = await connector.read_results(query_id)
-        except (RuntimeError, TimeoutError, ValueError) as e:
+        except ValueError as e:
             return {"Error": str(e)}
 
-        sorted_results = sort_by_timestamp(results)
-        formatted_results = format_query_results(sorted_results)
-        return session_manager.cache_query_result_and_get_first_page(
-            ctx.session_id, formatted_results
-        )
+        return await _execute_kql_query(ctx.session_id, kql_query, begin_ts, end_ts)
 
     return mcp

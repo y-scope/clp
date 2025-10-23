@@ -20,7 +20,6 @@ def convert_date_string_to_epoch(date_string: str) -> int:
         cleaned_string = date_string.rstrip("Z")
         dt = datetime.fromisoformat(cleaned_string).replace(tzinfo=timezone.utc)
 
-        # Convert to epoch with milliseconds precision.
         epoch_seconds = dt.timestamp()
         return int(epoch_seconds * 1000)
 
@@ -29,7 +28,9 @@ def convert_date_string_to_epoch(date_string: str) -> int:
         raise ValueError(err_msg) from e
 
 
-def parse_timestamp_range(begin_timestamp: str, end_timestamp: str) -> tuple[int, int]:
+def parse_timestamp_range(
+    formatted_begin_timestamp: str, formatted_end_timestamp: str
+) -> tuple[int, int]:
     """
     :param begin_timestamp:
     :param end_timestamp:
@@ -38,23 +39,24 @@ def parse_timestamp_range(begin_timestamp: str, end_timestamp: str) -> tuple[int
     :raise: ValueError if `end_timestamp` is earlier than `begin_timestamp`.
     :raise: ValueError if `begin_timestamp` or `end_timestamp` doesn't indicate UTC time.
     """
-    if not begin_timestamp.endswith("Z") or not end_timestamp.endswith("Z"):
+    if not formatted_begin_timestamp.endswith("Z") or not formatted_end_timestamp.endswith("Z"):
         err_msg = (
-            "Timestamp must end with 'Z' to indicate UTC."
-            f" Got: {begin_timestamp} and {end_timestamp} instead."
+            f"Timestamp must end with 'Z' to indicate UTC. Got: {formatted_begin_timestamp} and"
+            f"{formatted_end_timestamp} instead."
         )
         raise ValueError(err_msg)
 
-    begin_epoch = convert_date_string_to_epoch(begin_timestamp)
-    end_epoch = convert_date_string_to_epoch(end_timestamp)
+    begin_ts = convert_date_string_to_epoch(formatted_begin_timestamp)
+    end_ts = convert_date_string_to_epoch(formatted_end_timestamp)
 
-    if end_epoch < begin_epoch:
+    if end_ts < begin_ts:
         err_msg = (
-            f"`end_timestamp` {end_timestamp} is earlier than `begin_timestamp` {begin_timestamp}."
+            f"`end_timestamp` {formatted_end_timestamp} is earlier than `begin_timestamp`"
+            f" {formatted_begin_timestamp}."
         )
         raise ValueError(err_msg)
 
-    return begin_epoch, end_epoch
+    return begin_ts, end_ts
 
 
 def convert_epoch_to_date_string(epoch_ts: int) -> str:
