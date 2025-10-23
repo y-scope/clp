@@ -67,7 +67,7 @@ graph LR
   db_table_creator -->|completed_successfully| garbage_collector
   results_cache_indices_creator -->|completed_successfully| garbage_collector
 
-  subgraph Shared data stores
+  subgraph Databases
     database
     queue
     redis
