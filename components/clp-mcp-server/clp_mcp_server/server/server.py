@@ -30,16 +30,16 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
     async def _execute_kql_query(
         session_id: str,
         kql_query: str,
-        formatted_begin_timestamp: int | None = None,
-        formatted_end_timestamp: int | None = None,
+        begin_ts: int | None = None,
+        end_ts: int | None = None,
     ) -> dict[str, Any]:
         """
         Executes a KQL query search with optional timestamp range and returns paginated results.
 
         :param session_id:
         :param kql_query:
-        :param formatted_begin_timestamp: The beginning of the time range (inclusive).
-        :param formatted_end_timestamp: The end of the time range (inclusive).
+        :param begin_ts: The beginning of the time range (inclusive).
+        :param end_ts: The end of the time range (inclusive).
         :return: A dictionary containing the following key-value pairs on success:
             - "items": A list of log entries in the requested page.
             - "num_total_pages": Total number of pages available from the query as an integer.
@@ -52,7 +52,7 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
         """
         try:
             query_id = await connector.submit_query(
-                kql_query, formatted_begin_timestamp, formatted_end_timestamp
+                kql_query, begin_ts, end_ts
             )
             await connector.wait_query_completion(query_id)
             results = await connector.read_results(query_id)
