@@ -11,15 +11,15 @@ Profile outputs include:
 import datetime
 import functools
 import inspect
-import logging
 import os
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar
 
+from clp_py_utils.clp_logging import get_logger
 from pyinstrument import Profiler
 
-logger = logging.getLogger(__name__)
+logger = get_logger("profiler")
 
 F = TypeVar("F", bound=Callable[..., Any])
 
@@ -52,7 +52,7 @@ def profile(
         if is_async:
 
             @functools.wraps(func)
-            async def async_wrapper(*args, **kwargs):
+            async def async_wrapper(*args: Any, **kwargs: Any) -> Any:
                 if not _is_profiling_enabled():
                     return await func(*args, **kwargs)
 
@@ -84,7 +84,7 @@ def profile(
             return async_wrapper  # type: ignore
 
         @functools.wraps(func)
-        def sync_wrapper(*args, **kwargs):
+        def sync_wrapper(*args: Any, **kwargs: Any) -> Any:
             if not _is_profiling_enabled():
                 return func(*args, **kwargs)
 
