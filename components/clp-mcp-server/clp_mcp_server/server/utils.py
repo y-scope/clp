@@ -33,7 +33,9 @@ def parse_timestamp_range(begin_timestamp: str, end_timestamp: str) -> tuple[int
     """
     :param begin_timestamp:
     :param end_timestamp:
-    :return: begin and end timestamp in Unix epoch timestamp with milliseconds precision.
+    :return: A tuple containing:
+        - The begin timestamp in Unix epoch milliseconds.
+        - The end timestamp in Unix epoch milliseconds.
     :raise: Propagates `convert_date_string_to_epoch`'s exceptions.
     :raise: ValueError if `end_timestamp` is earlier than `begin_timestamp`.
     :raise: ValueError if `begin_timestamp` or `end_timestamp` doesn't indicate UTC time.
