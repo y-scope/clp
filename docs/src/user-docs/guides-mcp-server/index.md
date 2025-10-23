@@ -1,16 +1,25 @@
 # MCP Server
-CLP supports an MCP server that allows AI agents—such as Claude Desktop, Cursor, and Visual Studio Code’s (VSCode) Copilot—to query compressed logs.
 
-This guide explains how to configure and run CLP’s MCP server. It also describes how to connect an AI agent to the MCP server.
+CLP supports an [MCP server](https://modelcontextprotocol.io/docs/getting-started/intro)
+that allows AI agents—such as
+[Claude Desktop](https://claude.com/product/overview), [Cursor](https://cursor.com/), and
+[Visual Studio Code(VSCode)](https://code.visualstudio.com/)—to query compressed logs.
+
+This guide explains how to configure and run CLP’s MCP server. It also describes how
+to connect an AI agent to the MCP server.
 
 ## Prerequisites
+
 This guide assumes:
+
 1. You can configure, start, stop, and use CLP as described in the
    [clp-json quick-start guide](../quick-start/clp-json.md).
 2. You have an Agent installed that supports connections to MCP servers over HTTP.
 
 ## Starting MCP Server
-1. Configure CLP package to run the MCP server by specifying the host and port number in etc/clp-config.yml as follows:
+
+1. Configure CLP package to run the MCP server by specifying the host and port 
+number in etc/clp-config.yml as follows:
 
     ```yaml
     mcp_server:
@@ -20,9 +29,12 @@ This guide assumes:
 
     By default, `<host-ip>` and `<port-number>` are `localhost` and `8000`, respectively.
 
-2. Start *clp-json* and compress the logs you want to query by following the [clp-json quick-start](../quick-start/clp-json.md) guide. This will run the CLP MCP server on the specified `host` and `port`.
+2. Start *clp-json* and compress the logs you want to query by 
+following the [clp-json quick-start](../quick-start/clp-json.md) guide. 
+This will run the CLP MCP server on the specified `host` and `port`.
 
 ## Connecting to MCP Server
+
 The following subsections explain how to connect CLP's MCP server to each of the Agents:
 
 ::::{grid} 1 1 1 1
@@ -51,8 +63,11 @@ Configuring VSCode to connect to CLP MCP server
 ::::
 
 :::{caution}
-CLP currently doesn't store timezone information in the compressed logs. All timestamps in the logs being compressed are assumed to be in UTC. So you should specify the timezone of the compressed logs to the agent if they are not UTC.
-Support for encoding timezone information in the compressed logs will be available in a future release.
+CLP currently doesn't store timezone information in the compressed logs.
+All timestamps in the logs being compressed are assumed to be in UTC.
+So you should specify the timezone of the compressed logs to the agent if they are not UTC.
+Support for encoding timezone information in the compressed logs will be
+available in a future release.
 :::
 
 :::{toctree}
