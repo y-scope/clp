@@ -1,8 +1,6 @@
-import os
 import re
 from contextlib import closing
 from datetime import datetime
-from typing import List, Tuple
 
 from pydantic import SecretStr
 from sql_adapter import SQL_Adapter
@@ -32,6 +30,7 @@ class S3CredentialManager:
         :param database_config: Database configuration for connecting to CLP metadata database.
         """
         self.sql_adapter = SQL_Adapter(database_config)
+        database_config.ensure_credentials_loaded()
         conn_params = database_config.get_clp_connection_params_and_type()
         self.table_prefix = conn_params.get("table_prefix", CLP_METADATA_TABLE_PREFIX)
 
@@ -79,10 +78,10 @@ class S3CredentialManager:
             db_conn.commit()
 
             credential_id = cursor.lastrowid
-            logger.info(f"Created credential '{name}' with ID {credential_id}")
+            logger.info("Created credential '%s' with ID %s", name, credential_id)
             return credential_id
 
-    def list_credentials(self) -> List[Tuple[int, str, datetime]]:
+    def list_credentials(self) -> list[tuple[int, str, datetime]]:
         """
         Lists all credential entries (metadata only, no secrets).
 
@@ -256,7 +255,7 @@ class S3CredentialManager:
             )
             db_conn.commit()
 
-            logger.info(f"Updated credential ID {credential_id}")
+            logger.info("Updated credential ID %s", credential_id)
             return True
 
     def delete_credential(self, credential_id: int) -> bool:
@@ -280,7 +279,7 @@ class S3CredentialManager:
             db_conn.commit()
 
             if deleted:
-                logger.info(f"Deleted credential ID {credential_id}")
+                logger.info("Deleted credential ID %s", credential_id)
             else:
                 logger.warning(f"Credential ID {credential_id} not found for deletion")
 
@@ -343,7 +342,8 @@ class S3CredentialManager:
 
             credential_id = cursor.lastrowid
             logger.info(
-                f"Cached session token for source '{source}' with ID {credential_id}, expires at {expires_at}"
+                "Cached session token for source '%s' with ID '%s', expires at %s",
+                source, credential_id, expires_at
             )
             return credential_id
 
@@ -420,7 +420,7 @@ class S3CredentialManager:
             db_conn.commit()
 
             if deleted_count > 0:
-                logger.info(f"Cleaned up {deleted_count} expired session token(s)")
+                logger.info("Cleaned up %s expired session token(s)", deleted_count)
             else:
                 logger.debug("No expired session tokens to clean up")
 

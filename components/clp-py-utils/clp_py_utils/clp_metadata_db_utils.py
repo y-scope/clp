@@ -125,8 +125,7 @@ def _create_aws_credentials_table(db_cursor, aws_credentials_table_name: str) ->
             `role_arn` VARCHAR(2048),
             `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-            PRIMARY KEY (`id`),
-            UNIQUE KEY `name_unique` (`name`)
+            PRIMARY KEY (`id`)
         ) ROW_FORMAT=DYNAMIC
         """
     )
@@ -142,13 +141,13 @@ def _create_aws_temporary_credentials_table(
             `long_term_key_id` INT NOT NULL,
             `access_key_id` VARCHAR(255) NOT NULL,
             `secret_access_key` VARCHAR(255) NOT NULL,
-            `session_token` VARCHAR(512) NOT NULL,
+            `session_token` VARCHAR(2048) NOT NULL,
             `source` VARCHAR(2048) NOT NULL,
             `expires_at` DATETIME NOT NULL,
             `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
             KEY `long_term_key_expires` (`long_term_key_id`, `expires_at`),
-            KEY `source_expires` (`source`, `expires_at`),
+            KEY `source_expires` (`source`(768), `expires_at`),
             FOREIGN KEY (`long_term_key_id`) REFERENCES `{aws_credentials_table_name}` (`id`)
                 ON DELETE CASCADE
         ) ROW_FORMAT=DYNAMIC

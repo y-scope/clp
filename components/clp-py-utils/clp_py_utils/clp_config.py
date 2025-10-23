@@ -1,6 +1,6 @@
 import os
 import pathlib
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from enum import auto
 from typing import Annotated, Any, ClassVar, Literal, Optional, Union
 
@@ -439,8 +439,8 @@ class AwsCredential(BaseModel):
     secret_access_key: SecretStr
     role_arn: str | None = None
 
-    created_at: datetime = datetime.now()
-    updated_at: datetime = datetime.now()
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     def to_s3_credentials(self) -> S3Credentials:
         """
@@ -500,9 +500,13 @@ class TemporaryCredential(BaseModel):
         :param buffer_minutes: Minutes of buffer before expiration to consider credential expired.
         :return: True if expired or expiring within buffer_minutes.
         """
-        from datetime import timedelta
 
-        return datetime.now() >= self.expires_at - timedelta(minutes=buffer_minutes)
+        now = datetime.now(timezone.utc)
+        exp = self.expires_at
+        if exp.tzinfo is None:
+            # Assume DB stores UTC; attach UTC tzinfo to compare safely.
+            exp = exp.replace(tzinfo=timezone.utc)
+        return now >= exp - timedelta(minutes=buffer_minutes)
 
 
 class S3Config(BaseModel):
