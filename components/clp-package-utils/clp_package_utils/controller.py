@@ -546,15 +546,15 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging config
-        env_vars |= {
-            "CLP_MCP_LOGGING_LEVEL": self._clp_config.mcp_server.logging_level,
-        }
-
         # Connection config
         env_vars |= {
             "CLP_MCP_HOST": _get_ip_from_hostname(self._clp_config.mcp_server.host),
             "CLP_MCP_PORT": str(self._clp_config.mcp_server.port),
+        }
+
+        # Logging config
+        env_vars |= {
+            "CLP_MCP_LOGGING_LEVEL": self._clp_config.mcp_server.logging_level,
         }
 
         return env_vars
