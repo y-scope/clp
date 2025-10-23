@@ -669,7 +669,7 @@ class DockerComposeController(BaseController):
                 cmd += ["--file", "docker-compose.spider.base.yaml"]
             else:
                 cmd += ["--file", "docker-compose.base.yaml"]
-        if self._clp_config.compression_scheduler.type == OrchestrationType.spider:
+        elif self._clp_config.compression_scheduler.type == OrchestrationType.spider:
             cmd += ["--file", "docker-compose.spider.yaml"]
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(
