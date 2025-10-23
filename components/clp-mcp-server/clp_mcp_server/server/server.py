@@ -113,11 +113,9 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
         kql_query: str, formatted_begin_timestamp: str, formatted_end_timestamp: str, ctx: Context
     ) -> dict[str, Any]:
         """
-        Performs `FastMCP.tool.search_by_kql`'s query with a given timestamp range. The timestamps
-        must be ISO 8601 formatted date strings, with support up to millisecond precision.
-
-        Note: CLP doesn't store any timezone information, all timestamps are assumed to be in UTC
-        and must end with 'Z', (e.g. YYYY-MM-DDTHH:mm:ss.fffZ). Timestamps without 'Z' will be
+        Searches log events that match the given Kibana Query Language (KQL) query within the given
+        time range. Timestamps must follow the ISO 8601 UTC format (`YYYY-MM-DDTHH:mm:ss.fffZ`),
+        where the trailing `Z` indicates UTC. Timestamps that do not follow this format will be
         rejected.
 
         :param kql_query:
