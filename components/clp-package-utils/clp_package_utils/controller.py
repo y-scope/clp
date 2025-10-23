@@ -532,7 +532,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_mcp_server(self) -> EnvVarsDict:
         """
-        Sets up environment variables for the MCP server component.
+        Sets up environment variables and directories for the MCP server component.
 
         :return: Dictionary of environment variables necessary to launch the component.
         """
