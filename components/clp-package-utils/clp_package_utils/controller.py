@@ -372,6 +372,13 @@ class BaseController(ABC):
             "CLP_QUERY_WORKER_LOGGING_LEVEL": self._clp_config.query_worker.logging_level,
         }
 
+        # Profiling config
+        env_vars |= {
+            "CLP_QUERY_WORKER_ENABLE_PROFILING": str(
+                self._clp_config.query_worker.enable_profiling
+            ).lower(),
+        }
+
         # Resources
         env_vars |= {
             "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),

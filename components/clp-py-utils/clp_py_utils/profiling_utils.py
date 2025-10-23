@@ -186,10 +186,12 @@ def _extract_context_from_args(
 def _is_profiling_enabled() -> bool:
     """
     Checks if profiling is enabled.
-    TODO: Add `CLPConfig` mechanism to enable/disable profiling for each component.
 
-    :return: Whether the profiler is enabled.
+    :return: If `CLP_ENABLE_PROFILING` environment variable is set to `true`.
     """
+    profile_enabled = os.getenv("CLP_ENABLE_PROFILING")
+    if profile_enabled is not None and profile_enabled.lower() == "true":
+        return True
     return False
 
 
