@@ -24,6 +24,5 @@ to add a Remote MCP Server using `mcp.json`.
     where the MCP server is running, as specified 
     during [configuration](../guides-mcp-server/index.md#starting-mcp-server).
 
-3. Restart Cursor. This applies the new configuration.
-4. Enable and use the MCP server's tools as described in 
+3. Enable and use the MCP server's tools as described in 
 the [official Cursor documentation](https://cursor.com/docs/context/mcp#using-mcp-in-chat).
