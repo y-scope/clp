@@ -83,6 +83,8 @@ class TestUtils:
             "orig_file_path": "/var/log/app.log",
             "archive_id": "abc123",
             "log_event_ix": 99,
+            "link": ("http://localhost:4000/streamFile?dataset=default&"
+                     "type=json&streamId=abc123&logEventIdx=99"),
         },
         {
             "_id": "test001",
@@ -135,7 +137,9 @@ class TestUtils:
         (
             'timestamp: N/A, message: '
             '{"pid":null,"tid":null,'
-            '"message":"Log at epoch none"}\n'
+            '"message":"Log at epoch none"}\n, '
+            'link: http://localhost:4000/streamFile?dataset=default&'
+            'type=json&streamId=abc123&logEventIdx=99'
         ),
     ]
 
