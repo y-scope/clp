@@ -334,7 +334,7 @@ tasks:
           TARBALL_URL: "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz"
 
   mariadb-connector-cpp:
-	internal: true
+    internal: true
     platforms: ["linux"]
     preconditions:
       # NOTE: The MariaDB connector is only required for building Spider, which is only supported on
@@ -342,7 +342,7 @@ tasks:
       # - Update the precondition accordingly.
       # - Make `INSTALL_LAYOUT` configurable.
       - >-
-		. /etc/os-release && [ "$ID" = "ubuntu" ]
+        . /etc/os-release && [ "$ID" = "ubuntu" ]
     run: "once"
     cmds:
       - task: "utils:install-remote-cmake-lib"
