@@ -534,16 +534,25 @@ class BaseController(ABC):
         component_name = MCP_SERVER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
-        logs_dir = self.clp_config.logs_directory / component_name
+        logs_dir = self._clp_config.logs_directory / component_name
         logs_dir.mkdir(parents=True, exist_ok=True)
 
-        validate_mcp_server_config(self.clp_config, logs_dir)
+        validate_mcp_server_config(self._clp_config, logs_dir)
 
-        return {
-            "CLP_MCP_LOGS_DIR_HOST": str(logs_dir),
-            "CLP_MCP_HOST": _get_ip_from_hostname(self.clp_config.mcp_server.host),
-            "CLP_MCP_PORT": str(self.clp_config.mcp_server.port),
+        env_vars = EnvVarsDict()
+
+        # Logging config
+        env_vars |= {
+            "CLP_REDUCER_LOGGING_LEVEL": self._clp_config.mcp_server.logging_level,
         }
+
+        # Connection config
+        env_vars |= {
+            "CLP_MCP_HOST": _get_ip_from_hostname(self._clp_config.mcp_server.host),
+            "CLP_MCP_PORT": str(self._clp_config.mcp_server.port),
+        }
+
+        return env_vars
 
 
     def _set_up_env_for_garbage_collector(self) -> EnvVarsDict:
@@ -645,7 +654,7 @@ class DockerComposeController(BaseController):
         cmd = ["docker", "compose", "--project-name", self._project_name]
         if deployment_type == DeploymentType.BASE:
             cmd += ["--file", "docker-compose.base.yaml"]
-        if len(self.clp_config.mcp_server.model_fields_set) > 0:
+        if len(self._clp_config.mcp_server.model_fields_set) > 0:
             cmd += ["--profile", "mcp"]
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(

@@ -132,7 +132,8 @@ services:
     profiles:
     - "mcp"
     environment:
-      CLP_LOGS_DIR: "/var/log/mcp-server"
+      CLP_LOGGING_LEVEL: "${CLP_MCP_LOGGING_LEVEL:-INFO}"
+      CLP_LOGS_DIR: "/var/log/mcp_server"
       CLP_DB_USER: "${CLP_DB_USER}"
       CLP_DB_PASS: "${CLP_DB_PASS}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
@@ -142,9 +143,7 @@ services:
         target: 8000
     volumes:
       - *volume_clp_config_readonly
-      - type: "bind"
-        source: "${CLP_MCP_LOGS_DIR_HOST:-./var/log/mcp-server}"
-        target: "/var/log/mcp-server"
+      - *volume_clp_logs
     healthcheck:
       <<: *healthcheck_defaults
       test: [
@@ -163,5 +162,5 @@ services:
       "-m", "clp_mcp_server.clp_mcp_server",
       "--host", "mcp_server",
       "--port", "8000",
-      "--config", "/etc/clp-config.yml",
+      "--config-path", "/etc/clp-config.yml",
     ]

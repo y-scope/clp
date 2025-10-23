@@ -579,20 +579,9 @@ class SweepInterval(BaseModel):
 class McpServer(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 8000
 
-    host: str = "localhost"
-    port: int = DEFAULT_PORT
-
-    @field_validator("host")
-    @classmethod
-    def validate_host(cls, value):
-        _validate_host(cls, value)
-        return value
-
-    @field_validator("port")
-    @classmethod
-    def validate_port(cls, value):
-        _validate_port(cls, value)
-        return value
+    host: DomainStr = "localhost"
+    port: Port = DEFAULT_PORT
+    logging_level: LoggingLevel = "INFO"
 
 
 class GarbageCollector(BaseModel):
