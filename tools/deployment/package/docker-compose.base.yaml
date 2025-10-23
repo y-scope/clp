@@ -281,13 +281,11 @@ services:
       # The hack to avoid this is if one of `CLP_ARCHIVE_OUTPUT_DIR_HOST` or
       # `CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST` is unset, we set the target for the corresponding mount
       # to a path that's not under `/var/data` in the container.
-      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}\
-        :${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:+/tmp}/var/data/archives"
-      - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}\
-        :${CLP_ARCHIVE_OUTPUT_DIR_HOST:+/tmp}/var/data/staged-archives"
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
+      - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
       - type: "bind"
-        source: "${CLP_DATA_DIR_HOST:-./var/data}"
-        target: "/var/data"
+        source: "${CLP_TMP_DIR_HOST:-./var/tmp}"
+        target: "/var/tmp"
     command: [
       "python3",
       "-u",

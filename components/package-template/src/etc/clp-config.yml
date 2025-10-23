@@ -130,5 +130,11 @@
 ## will be raised if so.
 #logs_directory: "var/log"
 #
+## Location where temporary runtime data are stored. It will be created if
+## it doesn't exist.
+## NOTE: This directory must not overlap with any path used in CLP's execution container. An error
+## will be raised if so.
+#tmp_directory: "var/tmp"
+#
 ## Location of the AWS tools' config files (e.g., `~/.aws`)
 #aws_config_directory: null
