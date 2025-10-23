@@ -46,6 +46,7 @@ graph LR
   reducer["reducer"]
   webui["webui"]
   mcp_server["mcp-server"]
+
   garbage_collector["garbage-collector"]
 
   %% One-time jobs
@@ -70,7 +71,7 @@ graph LR
   db_table_creator -->|completed_successfully| garbage_collector
   results_cache_indices_creator -->|completed_successfully| garbage_collector
 
-  subgraph Shared data stores
+  subgraph Databases
     database
     queue
     redis
@@ -101,6 +102,7 @@ graph LR
   subgraph AI
     mcp_server
   end
+
 
 +++
 **Figure 1**: Orchestration architecture of the services in the CLP package.

@@ -19,7 +19,10 @@ from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
+<<<<<<< HEAD
     MCP_SERVER_COMPONENT_NAME,
+=======
+>>>>>>> origin
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -48,7 +51,10 @@ from clp_package_utils.general import (
     get_clp_home,
     is_retention_period_configured,
     validate_db_config,
+<<<<<<< HEAD
     validate_mcp_server_config,
+=======
+>>>>>>> origin
     validate_queue_config,
     validate_redis_config,
     validate_results_cache_config,
@@ -656,6 +662,7 @@ class DockerComposeController(BaseController):
             cmd += ["--file", "docker-compose.base.yaml"]
         if len(self._clp_config.mcp_server.model_fields_set) > 0:
             cmd += ["--profile", "mcp"]
+
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(
             cmd,
