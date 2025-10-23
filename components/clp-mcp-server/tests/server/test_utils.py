@@ -16,7 +16,7 @@ class TestUtils:
     # Error Messages:
     INVALID_DATE_STRING = "Invalid date string"
     INVALID_DATE_STRING_FORMAT = "Timestamp must end with 'Z' to indicate UTC."
-    INVALID_DATE_STRING_VALUE= "is earlier than `begin_timestamp`"
+    INVALID_DATE_STRING_VALUE= "is earlier than `formatted_begin_timestamp`"
     
 
     # Test case: invalid timestamp types.
