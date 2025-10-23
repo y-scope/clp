@@ -144,14 +144,6 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
-    healthcheck:
-      <<: *healthcheck_defaults
-      test: [
-        "CMD",
-        "curl",
-        "-f",
-        "http://mcp_server:8000/health"
-      ]
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
@@ -164,3 +156,11 @@ services:
       "--port", "8000",
       "--config-path", "/etc/clp-config.yml",
     ]
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: [
+        "CMD",
+        "curl",
+        "-f",
+        "http://mcp_server:8000/health"
+      ]
