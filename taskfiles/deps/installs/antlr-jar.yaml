@@ -4,6 +4,8 @@ tasks:
   default:
     internal: true
     run: "once"
+    deps:
+      - task: ":init"
     cmds:
       - task: ":yscope-dev-utils:remote:curl"
         vars:

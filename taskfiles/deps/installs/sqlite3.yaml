@@ -7,12 +7,14 @@ tasks:
       LIB_NAME: "sqlite3"
 
       # Paths
-      EXTRACTION_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+      EXTRACTION_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-extracted"
       INSTALL_INCLUDE_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install/include"
       INSTALL_SYMLINK: "{{.INSTALL_INCLUDE_DIR}}/{{.LIB_NAME}}"
       ZIP_FILENAME_STEM: "sqlite-amalgamation-3360000"
       SRC_DIR: "{{.EXTRACTION_DIR}}/{{.ZIP_FILENAME_STEM}}"
     run: "once"
+    deps:
+      - task: ":init"
     cmds:
       - task: ":yscope-dev-utils:remote:download-and-extract-zip"
         vars:
@@ -20,10 +22,9 @@ tasks:
           FILE_SHA256: "999826fe4c871f18919fdb8ed7ec9dd8217180854dd1fe21eea96aed36186729"
           OUTPUT_DIR: "{{.EXTRACTION_DIR}}"
           URL: "https://www.sqlite.org/2021/{{.ZIP_FILENAME_STEM}}.zip"
-      - "mkdir -p '{{.INSTALL_INCLUDE_DIR}}'"
-      - "ln -sfn '{{.SRC_DIR}}' '{{.INSTALL_SYMLINK}}'"
-      - "mkdir -p '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
       - |-
+        mkdir -p "{{.INSTALL_INCLUDE_DIR}}"
+        ln -sfn "{{.SRC_DIR}}" "{{.INSTALL_SYMLINK}}"
         cat > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake" <<EOF
         set(CLP_SQLITE3_SOURCE_DIRECTORY "{{.SRC_DIR}}")
         set(CLP_SQLITE3_INCLUDE_DIRECTORY "{{.INSTALL_INCLUDE_DIR}}")

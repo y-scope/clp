@@ -6,6 +6,8 @@ tasks:
     vars:
       VERSION: "1.87.0"
     run: "once"
+    deps:
+      - task: ":init"
     cmds:
       - task: ":yscope-dev-utils:boost:download-and-install"
         vars:
