@@ -16,7 +16,7 @@ class TestUtils:
     # Error Messages:
     INVALID_DATE_STRING_ERROR = "Invalid date string"
     INVALID_DATE_STRING_FORMAT_ERROR = "Timestamp must end with 'Z' to indicate UTC."
-    INVALID_DATE_STRING_VALUE_ERROR= "is earlier than `formatted_begin_timestamp`"
+    INVALID_DATE_STRING_VALUE_ERROR = "is earlier than `formatted_begin_timestamp`"
     
 
     # Test case: invalid timestamp types.
@@ -176,14 +176,11 @@ class TestUtils:
 
     def test_parse_timestamp_range_invalid_values(self):
         """Validates the handling of invalid date string types and values."""
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match=self.INVALID_DATE_STRING_FORMAT_ERROR):
             parse_timestamp_range("2024-10-18T16:00:00.123", "2025-10-18T16:00:00.123")
-        assert self.INVALID_DATE_STRING_FORMAT_ERROR in str(exc_info.value)
 
-
-        with pytest.raises(ValueError) as exc_info:
+        with pytest.raises(ValueError, match=self.INVALID_DATE_STRING_VALUE_ERROR):
             parse_timestamp_range("2024-10-18T16:00:00.123Z", "2000-10-18T16:00:00.123Z")
-        assert self.INVALID_DATE_STRING_VALUE_ERROR in str(exc_info.value)
 
 
     def test_invalid_timestamp_type(self):
