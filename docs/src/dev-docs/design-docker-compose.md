@@ -1,83 +1,38 @@
-# Docker Compose design
+# Deployment orchestration
 
-This document explains the technical details of CLP's Docker Compose implementation.
-
-## Overview
-
-The Docker Compose implementation follows a controller architecture with a `BaseController` abstract
-class and a `DockerComposeController` implementation.
+The CLP package is composed of several components that are currently designed to be deployed in a
+set of containers that are orchestrated using a framework like [Docker Compose][docker-compose].
+This document explains the architecture of that orchestration and any associated nuances.
 
 ## Architecture
 
-### Controller Pattern
+[Figure 1](#figure-1) shows the components (_services_ in orchestrator terminology) in the CLP
+package as well as their dependencies. The CLP package consists of several long-running services
+(e.g., `database`) and some one-time initialization jobs (e.g., `db-table-creator`). Some of the
+long-running services depend on the successful completion of the one-time jobs (e.g., `webui`
+depends on `results-cache-indices-creator`), while others depend on the health of other long-running
+services (e.g., `compression-scheduler` depends on `queue`).
 
-The orchestration uses a controller pattern:
+[Table 1](#table-1) below lists the services their functions, while [Table 2](#table-2) lists the
+one-time initialization jobs and their functions.
 
-* `BaseController` (abstract): Defines the interface for provisioning and managing CLP components.
-* `DockerComposeController`: Implements Docker Compose-specific logic.
-
-## Initialization
-
-The controller performs these initialization steps:
-
-1. **Provisioning**: Provisions all components and generates component specific configuration
-   variables.
-2. **Configuration Transformation**: The `transform_for_container()` method in `CLPConfig` adapts
-   configurations for containerized environments
-3. **Environment Generation**: Creates a `.env` file with necessary Docker Compose variables  
-
-### Configuration Transformation
-
-The `transform_for_container()` method in the `CLPConfig` class and related component classes
-adapts the configuration for containerized environments by:
-
-1. Converting host paths to container paths
-2. Updating service hostnames to match Docker Compose service names
-3. Setting appropriate ports for container communication
-
-### Environment Variables
-
-The controller generates a comprehensive set of environment variables that are written to a `.env`
-file, including:
-
-* Component-specific settings (ports, logging levels, concurrency)
-* Credentials for database, queue, and Redis services
-* Paths for data, logs, archives, and streams
-* AWS credentials when needed
-
-## Deployment Process
-
-The `start-clp.sh` script executes the `start_clp.py` Python script to orchestrate the deployment.
-
-### Deployment Types
-
-CLP supports two deployment types determined by the `package.query_engine` configuration setting:
-
-1. **BASE**: For deployments using [Presto][presto-integration] as the query engine. Uses only
-   `docker-compose.base.yaml`.
-2. **FULL**: For deployments using CLP's native query engine. Uses both compose files.
-
-## Docker Compose Files
-
-The Docker Compose setup uses two files:
-
-* `docker-compose.base.yaml`: Defines base services for all deployment types, excluding Celery
-  scheduler and worker components to allow separate Presto [integration][presto-integration].
-* `docker-compose.yaml`: Extends the base file with additional services for complete deployments
-
-Each file defines services with:
-
-* Service dependencies via `depends_on`
-* Health checks for critical services
-* Volume binding mounts for persistent data
-* Network configuration
-* User permissions
-
-## Service architecture
-
-The Docker Compose setup includes the following services:
+(figure-1)=
+::::{card}
 
 :::{mermaid}
+%%{
+    init: {
+        "theme": "base",
+        "themeVariables": {
+            "primaryColor": "#0066cc",
+            "primaryTextColor": "#fff",
+            "primaryBorderColor": "transparent",
+            "lineColor": "#007fff",
+            "secondaryColor": "#007fff",
+            "tertiaryColor": "#fff"
+        }
+    }
+}%%
 graph LR
   %% Services
   database["database (MySQL)"]
@@ -119,7 +74,7 @@ graph LR
     results_cache
   end
 
-  subgraph DB Migration Jobs
+  subgraph Initialization jobs
     db_table_creator
     results_cache_indices_creator
   end
@@ -141,12 +96,14 @@ graph LR
   end
 :::
 
-### Services overview
++++
+**Figure 1**: Orchestration architecture of the services in the CLP package.
+::::
 
-The CLP package is composed of several service components. The tables below list the services and
-their functions.
+(table-1)=
+::::{card}
 
-:::{table} Services
+:::{table}
 :align: left
 
 | Service               | Description                                                     |
@@ -161,39 +118,122 @@ their functions.
 | query_worker          | Worker processes for search/aggregation jobs                    |
 | reducer               | Reducers for performing the final stages of aggregation jobs    |
 | webui                 | Web server for the UI                                           |
-| garbage_collector     | Background process for retention control                        |
+| garbage_collector     | Process to manage data retention                                |
 :::
 
-### One-time initialization jobs
++++
+**Table 1**: Long-running services in the CLP package.
+::::
 
-We also set up short-lived run-once "services" to initialize some services listed above.
+(table-2)=
+::::{card}
 
-:::{table} Initialization jobs
+:::{table}
 :align: left
 
-| Job                           | Description                                             |
-|-------------------------------|---------------------------------------------------------|
-| db-table-creator              | Initializes database tables                             |
-| results-cache-indices-creator | Initializes single-node replica set and sets up indices |
+| Job                           | Description                                           |
+|-------------------------------|-------------------------------------------------------|
+| db-table-creator              | Creates and initializes database tables               |
+| results-cache-indices-creator | Creates a single-node replica set and sets up indices |
 :::
 
-## Troubleshooting
++++
+**Table 2**: One-time initialization jobs in the CLP package.
+::::
+
+## Code structure
+
+The orchestration code is split up into:
+
+* `BaseController` that defines:
+  * common logic for preparing the environment variables, configuration files, and directories
+    necessary for each service.
+  * abstract methods that orchestrator-specific derived classes must implement in order to
+    orchestrate a deployment.
+* `<Orchestrator>Controller` that implements (and/or overrides) any of the methods in
+  `BaseController` (`<Orchestrator>` is a placeholder for the specific orchestrator for which the
+  class is being implemented).
+
+## Docker Compose orchestration
+
+This section explains how we use Docker Compose to orchestrate the CLP package and is broken into
+the following subsections:
+
+* [Setting up the Docker Compose project's environment](#setting-up-the-environment)
+* [Starting and stoping the Docker Compose project](#starting-and-stopping-the-project)
+* [Deployment types](#deployment-types)
+* [Implementation details](#implementation-details)
+* [Troubleshooting](#troubleshooting)
+
+### Setting up the environment
+
+Several services require configuration values to be passed in through the CLP package's config file,
+environment variables, and/or command line arguments. Since the services are running in containers,
+some of these configuration values need to be modified for the orchestration environment.
+Specifically:
+
+1. Paths on the host must be converted to appropriate paths in the container.
+2. Component hostnames must be converted to service names.
+3. Component ports must be converted to the component's default ports.
+    * This is necessary so that in the Docker Compose project file, we can network services together
+      using the default port rather than a variable for the configured port.
+
+To achieve this, before starting the deployment, `DockerComposeController.start` generates:
+
+* a CLP configuration file (`<clp-package>/var/log/.clp-config.yml` on the host) specific to the
+  Docker Compose project environment.
+* an environment variable file (`<clp-package>/.env`) for any other configuration values.
+* any necessary directories (e.g., data output directories).
+
+The Docker Compose project then passes those environment variables to the relevant services, either
+as environment variables or command line arguments, as necessary.
+
+### Starting and stopping the project
+
+To start and stop the project, `DockerComposeController` simply invokes `docker compose up` or
+`docker compose down` as appropriate. However, to allow multiple CLP packages to be run on the same
+host, we explicitly specify a project name for the project, where the name is based on the package's
+instance ID.
+
+### Deployment Types
+
+CLP supports two deployment types determined by the `package.query_engine` configuration setting.
+
+1. **BASE**: For deployments using [Presto][presto-integration] as the query engine. This deployment
+   only uses `docker-compose.base.yaml`.
+2. **FULL**: For deployments using one of CLP's native query engines. This uses both
+   `docker-compose.base.yaml` and `docker-compose.yaml`.
+
+### Implementation details
+
+One notable implementation detail is in how we handle mounts that are only necessary under certain
+configurations. For instance, the input logs mount is only necessary when the `logs_input.type` is
+`fs`. If `logs_input.type` is `s3`, we shouldn't mount some random directory from the user's
+host filesystem into the container. However, Docker doesn't provide a mechanism to perform
+conditional mounts. Instead, we use Docker's variable interpolation to conditionally mount an empty
+tmpfs mount into the container. This strategy is used wherever we need a conditional mount.
+
+### Troubleshooting
 
 If you encounter issues with the Docker Compose deployment:
 
 1. Check service status:
+
    ```bash
-   docker compose ps
+   docker compose --project-name clp-package-<instance-id> ps
    ```
 
 2. View service logs:
+
    ```bash
-   docker compose logs <service-name>
+   docker compose --project-name clp-package-<instance-id> logs <service-name>
    ```
 
 3. Validate configuration:
+
    ```bash
    docker compose config
    ```
 
+[docker-compose]: https://docs.docker.com/compose/
 [presto-integration]: ../user-docs/guides-using-presto.md
