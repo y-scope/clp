@@ -343,7 +343,9 @@ class S3CredentialManager:
             credential_id = cursor.lastrowid
             logger.info(
                 "Cached session token for source '%s' with ID '%s', expires at %s",
-                source, credential_id, expires_at
+                source,
+                credential_id,
+                expires_at,
             )
             return credential_id
 
