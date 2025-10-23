@@ -14,11 +14,11 @@ from clp_py_utils.clp_config import (
     S3Credentials,
     TemporaryCredential,
 )
+from clp_py_utils.clp_logging import get_logger
 from clp_py_utils.clp_metadata_db_utils import (
     get_aws_credentials_table_name,
     get_aws_temporary_credentials_table_name,
 )
-from clp_py_utils.clp_logging import get_logger
 from clp_py_utils.s3_utils import _get_session_credentials
 
 logger = get_logger(__name__)
