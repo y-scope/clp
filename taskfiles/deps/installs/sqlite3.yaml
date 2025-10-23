@@ -21,10 +21,10 @@ tasks:
           OUTPUT_DIR: "{{.EXTRACTION_DIR}}"
           URL: "https://www.sqlite.org/2021/{{.ZIP_FILENAME_STEM}}.zip"
       - "mkdir -p '{{.INSTALL_INCLUDE_DIR}}'"
-      - "rm -f '{{.INSTALL_SYMLINK}}'"
-      - "ln -s '{{.SRC_DIR}}' '{{.INSTALL_SYMLINK}}'"
+      - "ln -sfn '{{.SRC_DIR}}' '{{.INSTALL_SYMLINK}}'"
+      - "mkdir -p '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
       - |-
-        echo "set(CLP_SQLITE3_SOURCE_DIRECTORY \"{{.SRC_DIR}}\")" \
-        > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
-        echo "set(CLP_SQLITE3_INCLUDE_DIRECTORY \"{{.INSTALL_INCLUDE_DIR}}\")" \
-        >> "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        cat > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake" <<EOF
+        set(CLP_SQLITE3_SOURCE_DIRECTORY "{{.SRC_DIR}}")
+        set(CLP_SQLITE3_INCLUDE_DIRECTORY "{{.INSTALL_INCLUDE_DIR}}")
+        EOF
