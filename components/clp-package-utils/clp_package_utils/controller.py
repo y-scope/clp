@@ -540,9 +540,8 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
-        logs_dir.mkdir(parents=True, exist_ok=True)
-
         validate_mcp_server_config(self._clp_config, logs_dir)
+        logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
 
