@@ -264,6 +264,7 @@ services:
       - *volume_clp_logs
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/.aws:ro"
       - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
+
       # NOTE: Only one of `CLP_ARCHIVE_OUTPUT_DIR_HOST` and `CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST` are
       # set at a time, but since `./var/data` on the host is mounted into the container and both
       # `CLP_ARCHIVE_OUTPUT_DIR_HOST` and `CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST` default to
