@@ -12,6 +12,7 @@ includes:
     taskfile: "installs/all.yaml"
 
   # Utils
+  lock: "lock.yaml"
   utils: "utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
