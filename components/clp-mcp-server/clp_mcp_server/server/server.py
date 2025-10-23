@@ -119,7 +119,15 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
 
         :param kql_query:
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
-        :return: Forwards `_execute_kql_query`'s return values.
+        :return: A dictionary containing the following key-value pairs on success:
+            - "items": A list of log entries in the requested page.
+            - "num_total_pages": Total number of pages available from the query as an integer.
+            - "num_total_items": Total number of log entries available from the query as an integer.
+            - "num_items_per_page": Number of log entries per page.
+            - "has_next": Whether a page exists after the returned one.
+            - "has_previous": Whether a page exists before the returned one.
+        :return: A dictionary with the following key-value pair on failures:
+            - "Error": An error message describing the failure.
         """
         await session_manager.start()
 
@@ -139,7 +147,15 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
         :param formatted_begin_timestamp: The beginning of the time range (inclusive).
         :param formatted_end_timestamp: The end of the time range (inclusive).
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
-        :return: Forwards `_execute_kql_query`'s return values.
+        :return: A dictionary containing the following key-value pairs on success:
+            - "items": A list of log entries in the requested page.
+            - "num_total_pages": Total number of pages available from the query as an integer.
+            - "num_total_items": Total number of log entries available from the query as an integer.
+            - "num_items_per_page": Number of log entries per page.
+            - "has_next": Whether a page exists after the returned one.
+            - "has_previous": Whether a page exists before the returned one.
+        :return: A dictionary with the following key-value pair on failures:
+            - "Error": An error message describing the failure.
         """
         await session_manager.start()
 
