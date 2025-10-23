@@ -51,9 +51,7 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
             - "Error": An error message describing the failure.
         """
         try:
-            query_id = await connector.submit_query(
-                kql_query, begin_ts, end_ts
-            )
+            query_id = await connector.submit_query(kql_query, begin_ts, end_ts)
             await connector.wait_query_completion(query_id)
             results = await connector.read_results(query_id)
         except (ValueError, RuntimeError, TimeoutError) as e:
