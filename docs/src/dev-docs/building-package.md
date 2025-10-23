@@ -62,9 +62,10 @@ Docker image named `clp-package:dev-<user>-<unique-id>` will also be created.
 :::
 
 :::{note}
-The package includes a `docker-compose.yaml` file that can be used to deploy CLP using Docker
-Compose. If you want to manually deploy with Docker Compose instead of using the package scripts,
-see the [Docker Compose design][docker-compose-design] for more information.
+The package includes a `docker-compose.yaml` file that can be used to deploy CLP using [Docker
+Compose][docker-compose]. If you want to manually deploy with Docker Compose instead of using the
+package scripts, see the [Deployment orchestration][design-deployment-orchestration] design doc for
+more information.
 :::
 
 To build a releasable tar of either flavour, run:
@@ -87,7 +88,8 @@ task clean
 ```
 
 [Docker]: https://docs.docker.com/engine/install/
-[docker-compose-design]: design-deployment-orchestration.md
+[docker-compose]: https://docs.docker.com/compose/
+[design-deployment-orchestration]: design-deployment-orchestration.md
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
 [y-scope/clp#1352]: https://github.com/y-scope/clp/issues/1352
