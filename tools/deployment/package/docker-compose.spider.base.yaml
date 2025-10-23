@@ -188,6 +188,9 @@ services:
       - type: "bind"
         source: "${CLP_DATA_DIR_HOST:-./var/data}"
         target: "/var/data"
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
     command: [
       "python3",
       "-u",
