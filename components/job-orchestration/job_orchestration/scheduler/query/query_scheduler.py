@@ -46,6 +46,7 @@ from clp_py_utils.clp_metadata_db_utils import (
 )
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
+from clp_py_utils.profiling_utils import profile
 from clp_py_utils.sql_adapter import SQL_Adapter
 from pydantic import ValidationError
 
@@ -544,6 +545,7 @@ def get_task_group_for_job(
         raise NotImplementedError(error_msg)
 
 
+@profile(section_name="scheduler_dispatch_job", job_id_param="job.id")
 def dispatch_query_job(
     db_conn,
     job: QueryJob,
@@ -565,6 +567,7 @@ def dispatch_query_job(
     job.state = InternalJobState.RUNNING
 
 
+@profile(section_name="scheduler_acquire_reducer", job_id_param="job.id")
 async def acquire_reducer_for_job(job: SearchJob):
     reducer_host: Optional[str] = None
     reducer_port: Optional[int] = None
@@ -893,6 +896,7 @@ def found_max_num_latest_results(
         return max_timestamp_in_remaining_archives <= min_timestamp_in_top_results
 
 
+@profile(section_name="scheduler_handle_finished_search", job_id_param="job.id")
 async def handle_finished_search_job(
     db_conn, job: SearchJob, task_results: Optional[Any], results_cache_uri: str
 ) -> None:
