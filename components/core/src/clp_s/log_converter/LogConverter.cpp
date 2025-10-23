@@ -3,7 +3,6 @@
 #include <cstddef>
 #include <cstring>
 #include <memory>
-#include <optional>
 #include <string_view>
 #include <system_error>
 #include <utility>

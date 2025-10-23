@@ -3,7 +3,6 @@
 
 #include <cstddef>
 #include <memory>
-#include <optional>
 #include <string_view>
 
 #include <ystdlib/containers/Array.hpp>
