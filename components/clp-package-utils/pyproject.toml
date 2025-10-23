@@ -4,7 +4,7 @@ version = "0.5.2-dev"
 description = "Utilities for the CLP package."
 authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 dependencies = [
     "Brotli>=1.1.0",
     "msgpack>=1.1.2",
