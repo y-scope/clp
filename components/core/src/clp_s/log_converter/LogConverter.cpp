@@ -46,6 +46,10 @@ auto LogConverter::convert_file(
     log_surgeon::BufferParser parser{std::move(schema.release_schema_ast_ptr())};
     parser.reset();
 
+    // Reset internal buffer state.
+    m_parser_offset = 0ULL;
+    m_num_bytes_buffered = 0ULL;
+
     auto serializer{YSTDLIB_ERROR_HANDLING_TRYX(LogSerializer::create(output_dir, path.path))};
 
     bool reached_end_of_stream{false};
