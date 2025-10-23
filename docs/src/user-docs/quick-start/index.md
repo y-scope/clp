@@ -44,7 +44,7 @@ To check whether Python is installed on your system, run:
 python3 --version
 ```
 
-CLP requires Python 3.9 or higher. If Python isn't installed, or if the version isn't high enough,
+CLP requires Python 3.10 or higher. If Python isn't installed, or if the version isn't high enough,
 install or upgrade it by following the instructions for your OS.
 
 ---

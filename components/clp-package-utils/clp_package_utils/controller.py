@@ -125,26 +125,29 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Connection params
+        # Connection config
         env_vars |= {
             "CLP_DB_HOST": _get_ip_from_hostname(self._clp_config.database.host),
             "CLP_DB_NAME": self._clp_config.database.name,
             "CLP_DB_PORT": str(self._clp_config.database.port),
         }
+
         # Credentials
         env_vars |= {
             "CLP_DB_PASS": self._clp_config.database.password,
             "CLP_DB_USER": self._clp_config.database.username,
         }
+
         # Paths
         env_vars |= {
             "CLP_DB_CONF_LOGGING_FILE_HOST": str(conf_logging_file),
             "CLP_DB_DATA_DIR_HOST": str(data_dir),
             "CLP_DB_LOGS_DIR_HOST": str(logs_dir),
         }
-        # Runtime params
+
+        # Runtime config
         env_vars |= {
-            "CLP_DB_IMAGE": (
+            "CLP_DB_CONTAINER_IMAGE_REF": (
                 "mysql:8.0.23" if self._clp_config.database.type == "mysql" else "mariadb:10-jammy"
             ),
         }
@@ -155,13 +158,9 @@ class BaseController(ABC):
         """
         Sets up environment variables and directories for the message queue component.
 
-        :return: Dictionary of environment variables necessary to launch the component. Empty if
-        queue is not configured.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUEUE_COMPONENT_NAME
-        if self._clp_config.queue is None:
-            logger.info(f"{component_name} is not configured, skipping setup.")
-            return {}
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
@@ -172,16 +171,18 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Connection params
+        # Connection config
         env_vars |= {
             "CLP_QUEUE_HOST": _get_ip_from_hostname(self._clp_config.queue.host),
             "CLP_QUEUE_PORT": str(self._clp_config.queue.port),
         }
+
         # Credentials
         env_vars |= {
             "CLP_QUEUE_PASS": self._clp_config.queue.password,
             "CLP_QUEUE_USER": self._clp_config.queue.username,
         }
+
         # Paths
         env_vars |= {
             "CLP_QUEUE_LOGS_DIR_HOST": str(logs_dir),
@@ -193,13 +194,9 @@ class BaseController(ABC):
         """
         Sets up environment variables and directories for the Redis component.
 
-        :return: Dictionary of environment variables necessary to launch the component. Empty if
-        Redis is not configured.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = REDIS_COMPONENT_NAME
-        if self._clp_config.redis is None:
-            logger.info(f"{component_name} is not configured, skipping setup.")
-            return {}
         logger.info(f"Setting up environment for {component_name}...")
 
         conf_file = self._conf_dir / "redis" / "redis.conf"
@@ -220,15 +217,18 @@ class BaseController(ABC):
             ),
             "CLP_REDIS_BACKEND_DB_QUERY": str(self._clp_config.redis.query_backend_database),
         }
-        # Connection params
+
+        # Connection config
         env_vars |= {
             "CLP_REDIS_HOST": _get_ip_from_hostname(self._clp_config.redis.host),
             "CLP_REDIS_PORT": str(self._clp_config.redis.port),
         }
+
         # Credentials
         env_vars |= {
             "CLP_REDIS_PASS": self._clp_config.redis.password,
         }
+
         # Paths
         env_vars |= {
             "CLP_REDIS_CONF_FILE_HOST": str(conf_file),
@@ -240,40 +240,46 @@ class BaseController(ABC):
 
     def _set_up_env_for_spider_db(self) -> EnvVarsDict:
         """
-        Prepares environment variables and directories for the spider database component.
+        Sets up environment variables for the Spider database component.
 
-        :return: Dictionary of component-related environment variables. Empty if spider DB is not
-        configured.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = "spider_db"
-        if self._clp_config.spider_db is None:
-            logger.info(f"{component_name} is not configured, skipping setup.")
-            return {}
         logger.info(f"Setting up environment for {component_name}...")
 
-        return {
-            "SPIDER_DB_USER": self._clp_config.spider_db.username,
-            "SPIDER_DB_PASS": self._clp_config.spider_db.password,
+        env_vars = EnvVarsDict()
+
+        # Database
+        env_vars |= {
             "SPIDER_DB_URL": self._clp_config.spider_db.get_url(),
         }
 
+        # Credentials
+        env_vars |= {
+            "SPIDER_DB_USER": self._clp_config.spider_db.username,
+            "SPIDER_DB_PASS": self._clp_config.spider_db.password,
+        }
+
+        return env_vars
+
     def _set_up_env_for_spider_scheduler(self) -> EnvVarsDict:
         """
-        Prepares environment variables and files for the spider scheduler component.
+        Sets up environment variables for the Spider database component.
 
-        :return: Dictionary of component-related environment variables. Empty if spider scheduler
-        is not configured.
+        :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = SPIDER_SCHEDULER_COMPONENT_NAME
-        if self._clp_config.spider_scheduler is None:
-            logger.info(f"{component_name} is not configured, skipping setup.")
-            return {}
         logger.info(f"Setting up environment for {component_name}...")
 
-        return {
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
             "SPIDER_SCHEDULER_HOST": _get_ip_from_hostname(self._clp_config.spider_scheduler.host),
             "SPIDER_SCHEDULER_PORT": str(self._clp_config.spider_scheduler.port),
         }
+
+        return env_vars
 
     def _set_up_env_for_results_cache(self) -> EnvVarsDict:
         """
@@ -301,12 +307,14 @@ class BaseController(ABC):
                 self._clp_config.results_cache.stream_collection_name
             ),
         }
-        # Connection params
+
+        # Connection config
         env_vars |= {
             "CLP_RESULTS_CACHE_DB_NAME": self._clp_config.results_cache.db_name,
             "CLP_RESULTS_CACHE_HOST": _get_ip_from_hostname(self._clp_config.results_cache.host),
             "CLP_RESULTS_CACHE_PORT": str(self._clp_config.results_cache.port),
         }
+
         # Paths
         env_vars |= {
             "CLP_RESULTS_CACHE_CONF_FILE_HOST": str(conf_file),
@@ -327,7 +335,7 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging params
+        # Logging config
         env_vars |= {
             "CLP_COMPRESSION_SCHEDULER_LOGGING_LEVEL": (
                 self._clp_config.compression_scheduler.logging_level
@@ -347,7 +355,7 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging params
+        # Logging config
         env_vars |= {
             "CLP_QUERY_SCHEDULER_LOGGING_LEVEL": self._clp_config.query_scheduler.logging_level,
         }
@@ -369,12 +377,13 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging params
+        # Logging config
         env_vars |= {
             "CLP_COMPRESSION_WORKER_LOGGING_LEVEL": (
                 self._clp_config.compression_worker.logging_level
             ),
         }
+
         # Resources
         env_vars |= {
             "CLP_COMPRESSION_WORKER_CONCURRENCY": str(num_workers),
@@ -397,10 +406,11 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging params
+        # Logging config
         env_vars |= {
             "CLP_QUERY_WORKER_LOGGING_LEVEL": self._clp_config.query_worker.logging_level,
         }
+
         # Resources
         env_vars |= {
             "CLP_QUERY_WORKER_CONCURRENCY": str(num_workers),
@@ -423,10 +433,11 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging params
+        # Logging config
         env_vars |= {
             "CLP_REDUCER_LOGGING_LEVEL": self._clp_config.reducer.logging_level,
         }
+
         # Resources
         env_vars |= {
             "CLP_REDUCER_CONCURRENCY": str(num_workers),
@@ -543,12 +554,13 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Connection params
+        # Connection config
         env_vars |= {
             "CLP_WEBUI_HOST": _get_ip_from_hostname(self._clp_config.webui.host),
             "CLP_WEBUI_PORT": str(self._clp_config.webui.port),
         }
-        # Security params
+
+        # Security config
         env_vars |= {
             "CLP_WEBUI_RATE_LIMIT": str(self._clp_config.webui.rate_limit),
         }
@@ -579,8 +591,10 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
-        # Logging params
-        env_vars |= {"CLP_GC_LOGGING_LEVEL": self._clp_config.garbage_collector.logging_level}
+        # Logging config
+        env_vars |= {
+            "CLP_GARBAGE_COLLECTOR_LOGGING_LEVEL": self._clp_config.garbage_collector.logging_level
+        }
 
         return env_vars
 
@@ -663,7 +677,7 @@ class DockerComposeController(BaseController):
             cwd=self._clp_home,
             check=True,
         )
-        logger.info("CLP started.")
+        logger.info("Started CLP.")
 
     def stop(self) -> None:
         """
@@ -695,7 +709,7 @@ class DockerComposeController(BaseController):
             cwd=self._clp_home,
             check=True,
         )
-        logger.info("All CLP containers stopped.")
+        logger.info("Stopped CLP.")
 
     @staticmethod
     def _get_num_workers() -> int:
