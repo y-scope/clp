@@ -1,10 +1,23 @@
 """Unit tests for CLP MCP server's utility functions."""
 
-from clp_mcp_server.server.utils import format_query_results, sort_by_timestamp
+import pytest
+
+from clp_mcp_server.server.utils import (
+    convert_date_string_to_epoch,
+    format_query_results,
+    parse_timestamp_range,
+    sort_by_timestamp
+)
 
 
 class TestUtils:
     """Test suite for utility functions."""
+
+    # Error Messages:
+    INVALID_DATE_STRING_ERROR = "Invalid date string"
+    INVALID_DATE_STRING_FORMAT_ERROR = "Timestamp must end with 'Z' to indicate UTC."
+    INVALID_DATE_STRING_VALUE_ERROR = "is earlier than `formatted_begin_timestamp`"
+    
 
     # Test case: invalid timestamp types.
     INVALID_TYPE_ENTRIES = [
@@ -125,6 +138,50 @@ class TestUtils:
             '"message":"Log at epoch none"}\n'
         ),
     ]
+
+    def test_convert_date_string_to_epoch(self):
+        """Validates converting ISO 8601 format to a Unix epoch."""
+        result = convert_date_string_to_epoch("2024-10-18T16:00:00.123Z")
+        assert result == 1729267200123
+
+        result = convert_date_string_to_epoch("2024-10-18T16:00:00Z")
+        assert result == 1729267200000
+
+        result = convert_date_string_to_epoch("2024-10-18T16:00Z")
+        assert result == 1729267200000
+
+
+    def test_convert_date_string_to_epoch_invalid_date_string(self):
+        """Validates the handling of invalid date string."""
+        with pytest.raises(ValueError) as exc_info:
+            convert_date_string_to_epoch("not-a-date")
+        assert self.INVALID_DATE_STRING_ERROR in str(exc_info.value)
+
+        with pytest.raises(ValueError) as exc_info:
+            convert_date_string_to_epoch("2024-13-45T25:99:99Z")
+        assert self.INVALID_DATE_STRING_ERROR in str(exc_info.value)
+
+        with pytest.raises(ValueError) as exc_info:
+            convert_date_string_to_epoch("")
+        assert self.INVALID_DATE_STRING_ERROR in str(exc_info.value)
+
+        with pytest.raises(ValueError) as exc_info:
+            print(convert_date_string_to_epoch("2024.10.18T16:00:00.123"))
+        assert self.INVALID_DATE_STRING_ERROR in str(exc_info.value)
+
+        with pytest.raises(ValueError) as exc_info:
+            print(convert_date_string_to_epoch("2024-10-18T16-00-00-123"))
+        assert self.INVALID_DATE_STRING_ERROR in str(exc_info.value)
+    
+
+    def test_parse_timestamp_range_invalid_values(self):
+        """Validates the handling of invalid date string types and values."""
+        with pytest.raises(ValueError, match=self.INVALID_DATE_STRING_FORMAT_ERROR):
+            parse_timestamp_range("2024-10-18T16:00:00.123", "2025-10-18T16:00:00.123")
+
+        with pytest.raises(ValueError, match=self.INVALID_DATE_STRING_VALUE_ERROR):
+            parse_timestamp_range("2024-10-18T16:00:00.123Z", "2000-10-18T16:00:00.123Z")
+
 
     def test_invalid_timestamp_type(self):
         """Validates the handling of noninteger timestamp types."""
