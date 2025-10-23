@@ -118,7 +118,7 @@ class TestSessionState:
     """Unit tests for SessionState class."""
 
     def test_error_handling(self) -> None:
-        """Validates error handling of the `SessionState`."""
+        """Validates error handling of `SessionState`."""
         session = SessionState(
             _num_items_per_page=TestConstants.ITEMS_PER_PAGE,
             _session_id=TestConstants.TEST_SESSION_ID,
