@@ -290,6 +290,9 @@ class BaseController(ABC):
         component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
+        logs_dir = self._clp_config.logs_directory / component_name
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
         env_vars = EnvVarsDict()
 
         # Logging config
@@ -309,6 +312,9 @@ class BaseController(ABC):
         """
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
 
@@ -526,7 +532,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_mcp_server(self) -> EnvVarsDict:
         """
-        Sets up environment variables for the MCP server component.
+        Sets up environment variables and directories for the MCP server component.
 
         :return: Dictionary of environment variables necessary to launch the component.
         """
@@ -534,21 +540,20 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
+        validate_mcp_server_config(self._clp_config, logs_dir)
         logs_dir.mkdir(parents=True, exist_ok=True)
 
-        validate_mcp_server_config(self._clp_config, logs_dir)
-
         env_vars = EnvVarsDict()
-
-        # Logging config
-        env_vars |= {
-            "CLP_MCP_LOGGING_LEVEL": self._clp_config.mcp_server.logging_level,
-        }
 
         # Connection config
         env_vars |= {
             "CLP_MCP_HOST": _get_ip_from_hostname(self._clp_config.mcp_server.host),
             "CLP_MCP_PORT": str(self._clp_config.mcp_server.port),
+        }
+
+        # Logging config
+        env_vars |= {
+            "CLP_MCP_LOGGING_LEVEL": self._clp_config.mcp_server.logging_level,
         }
 
         return env_vars

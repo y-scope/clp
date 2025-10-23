@@ -15,7 +15,7 @@ from pydantic import ValidationError
 
 from .server import create_mcp_server
 
-logger = get_logger("mcp_server")
+logger = get_logger(MCP_SERVER_COMPONENT_NAME)
 
 
 @click.command()

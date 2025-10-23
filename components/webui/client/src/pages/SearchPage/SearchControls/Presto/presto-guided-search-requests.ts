@@ -66,7 +66,8 @@ const handlePrestoGuidedClearResults = () => {
  */
 const buildPrestoGuidedQueries = (timeRange: [Dayjs, Dayjs]) => {
     const [startTimestamp, endTimestamp] = timeRange;
-    const {select, from, where, orderBy, timestampKey} = usePrestoSearchState.getState();
+    const {select, where, orderBy, timestampKey} = usePrestoSearchState.getState();
+    const {selectDataset: from} = useSearchStore.getState();
 
     if (null === from) {
         throw new Error("Cannot build guided query: from input is missing");
