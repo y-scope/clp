@@ -32,20 +32,20 @@ def parse_timestamp_range(
     formatted_begin_timestamp: str, formatted_end_timestamp: str
 ) -> tuple[int, int]:
     """
-    :param begin_timestamp:
-    :param end_timestamp:
+    :param formatted_begin_timestamp:
+    :param formatted_end_timestamp:
     :return: A tuple containing:
         - The begin timestamp in Unix epoch milliseconds.
         - The end timestamp in Unix epoch milliseconds.
-    :raise: ValueError if `end_timestamp` is earlier than `begin_timestamp`.
-    :raise: ValueError if `begin_timestamp` or `end_timestamp` doesn't indicate UTC (missing
-        trailing `Z`).
+    :raise: ValueError if `formatted_end_timestamp` is earlier than `formatted_begin_timestamp`.
+    :raise: ValueError if `formatted_begin_timestamp` or `formatted_end_timestamp` doesn't indicate
+        UTC (missing trailing `Z`).
     :raise: Propagates `convert_date_string_to_epoch`'s exceptions.
     """
     if not formatted_begin_timestamp.endswith("Z") or not formatted_end_timestamp.endswith("Z"):
         err_msg = (
             f"Timestamp must end with 'Z' to indicate UTC. Got: {formatted_begin_timestamp} and"
-            f"{formatted_end_timestamp} instead."
+            f" {formatted_end_timestamp} instead."
         )
         raise ValueError(err_msg)
 
@@ -54,8 +54,8 @@ def parse_timestamp_range(
 
     if end_ts < begin_ts:
         err_msg = (
-            f"`end_timestamp` {formatted_end_timestamp} is earlier than `begin_timestamp`"
-            f" {formatted_begin_timestamp}."
+            f"`formatted_end_timestamp` {formatted_end_timestamp} is earlier than"
+            f" `formatted_begin_timestamp` {formatted_begin_timestamp}."
         )
         raise ValueError(err_msg)
 

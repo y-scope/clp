@@ -36,10 +36,10 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
         """
         Executes a KQL query search with optional timestamp range and returns paginated results.
 
+        :param session_id:
         :param kql_query:
         :param formatted_begin_timestamp: The beginning of the time range (inclusive).
         :param formatted_end_timestamp: The end of the time range (inclusive).
-        :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
         :return: A dictionary containing the following key-value pairs on success:
             - "items": A list of log entries in the requested page.
             - "num_total_pages": Total number of pages available from the query as an integer.
