@@ -2,7 +2,6 @@
 
 from typing import Any
 
-
 from clp_py_utils.clp_config import CLPConfig
 from fastmcp import Context, FastMCP
 from starlette.requests import Request
