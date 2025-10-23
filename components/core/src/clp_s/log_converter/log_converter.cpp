@@ -100,7 +100,7 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
 
         auto const convert_result{log_converter.convert_file(
                 path,
-                nested_readers.back(),
+                nested_readers.back().get(),
                 command_line_arguments.get_output_dir()
         )};
         if (convert_result.has_error()) {

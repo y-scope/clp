@@ -2,7 +2,6 @@
 
 #include <cstddef>
 #include <cstring>
-#include <memory>
 #include <string_view>
 #include <system_error>
 #include <utility>
@@ -36,7 +35,58 @@ constexpr std::string_view cTimestampSchema{
 constexpr std::string_view cDelimiters{R"(delimiters: \t\r\n\[\(:)"};
 }  // namespace
 
-auto LogConverter::refill_buffer(std::shared_ptr<clp::ReaderInterface>& reader)
+auto LogConverter::convert_file(
+        clp_s::Path const& path,
+        clp::ReaderInterface* reader,
+        std::string_view output_dir
+) -> ystdlib::error_handling::Result<void> {
+    log_surgeon::Schema schema;
+    schema.add_delimiters(cDelimiters);
+    schema.add_variable(cTimestampSchema, -1);
+    log_surgeon::BufferParser parser{std::move(schema.release_schema_ast_ptr())};
+    parser.reset();
+
+    auto serializer{YSTDLIB_ERROR_HANDLING_TRYX(LogSerializer::create(output_dir, path.path))};
+
+    bool reached_end_of_stream{false};
+    while (false == reached_end_of_stream) {
+        auto const num_bytes_read{YSTDLIB_ERROR_HANDLING_TRYX(refill_buffer(reader))};
+        reached_end_of_stream = 0ULL == num_bytes_read;
+
+        while (m_parser_offset < m_num_bytes_buffered) {
+            auto const err{parser.parse_next_event(
+                    m_buffer.data(),
+                    m_num_bytes_buffered,
+                    m_parser_offset,
+                    reached_end_of_stream
+            )};
+            if (log_surgeon::ErrorCode::BufferOutOfBounds == err) {
+                break;
+            }
+            if (log_surgeon::ErrorCode::Success != err) {
+                return std::errc::no_message;
+            }
+
+            auto const& event{parser.get_log_parser().get_log_event_view()};
+            auto const message{event.to_string()};
+            if (nullptr != event.get_timestamp()) {
+                auto const timestamp{event.get_timestamp()->to_string_view()};
+                auto const message_without_timestamp{
+                        std::string_view{message}.substr(timestamp.length())
+                };
+                YSTDLIB_ERROR_HANDLING_TRYV(
+                        serializer.add_message(timestamp, message_without_timestamp)
+                );
+            } else {
+                YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(message));
+            }
+        }
+    }
+    serializer.close();
+    return ystdlib::error_handling::success();
+}
+
+auto LogConverter::refill_buffer(clp::ReaderInterface* reader)
         -> ystdlib::error_handling::Result<size_t> {
     compact_buffer();
     YSTDLIB_ERROR_HANDLING_TRYV(grow_buffer_if_full());
@@ -66,11 +116,7 @@ void LogConverter::compact_buffer() {
     }
 
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    std::memmove(
-            m_buffer.data(),
-            m_buffer.data() + m_cur_offset,
-            m_bytes_occupied - m_cur_offset
-    );
+    std::memmove(m_buffer.data(), m_buffer.data() + m_cur_offset, m_bytes_occupied - m_cur_offset);
     // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     m_bytes_occupied -= m_cur_offset;
     m_cur_offset = 0;
@@ -88,57 +134,6 @@ auto LogConverter::grow_buffer_if_full() -> ystdlib::error_handling::Result<void
     ystdlib::containers::Array<char> new_buffer(new_size);
     std::memcpy(new_buffer.data(), m_buffer.data(), m_bytes_occupied);
     m_buffer = std::move(new_buffer);
-    return ystdlib::error_handling::success();
-}
-
-auto LogConverter::convert_file(
-        clp_s::Path const& path,
-        std::shared_ptr<clp::ReaderInterface>& reader,
-        std::string_view output_dir
-) -> ystdlib::error_handling::Result<void> {
-    log_surgeon::Schema schema;
-    schema.add_delimiters(cDelimiters);
-    schema.add_variable(cTimestampSchema, -1);
-    log_surgeon::BufferParser parser{std::move(schema.release_schema_ast_ptr())};
-    parser.reset();
-
-    auto serializer{YSTDLIB_ERROR_HANDLING_TRYX(LogSerializer::create(output_dir, path.path))};
-
-    bool reached_end_of_stream{false};
-    while (false == reached_end_of_stream) {
-        auto const num_bytes_read{YSTDLIB_ERROR_HANDLING_TRYX(refill_buffer(reader))};
-        reached_end_of_stream = 0ULL == num_bytes_read;
-
-        while (m_cur_offset < m_bytes_occupied) {
-            auto const err{parser.parse_next_event(
-                    m_buffer.data(),
-                    m_bytes_occupied,
-                    m_cur_offset,
-                    reached_end_of_stream
-            )};
-            if (log_surgeon::ErrorCode::BufferOutOfBounds == err) {
-                break;
-            }
-            if (log_surgeon::ErrorCode::Success != err) {
-                return std::errc::no_message;
-            }
-
-            auto const& event{parser.get_log_parser().get_log_event_view()};
-            auto const message{event.to_string()};
-            if (nullptr != event.get_timestamp()) {
-                auto const timestamp{event.get_timestamp()->to_string_view()};
-                auto const message_without_timestamp{
-                        std::string_view{message}.substr(timestamp.length())
-                };
-                YSTDLIB_ERROR_HANDLING_TRYV(
-                        serializer.add_message(timestamp, message_without_timestamp)
-                );
-            } else {
-                YSTDLIB_ERROR_HANDLING_TRYV(serializer.add_message(message));
-            }
-        }
-    }
-    serializer.close();
     return ystdlib::error_handling::success();
 }
 }  // namespace clp_s::log_converter

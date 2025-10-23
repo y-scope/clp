@@ -2,7 +2,6 @@
 #define CLP_S_LOG_CONVERTER_LOGCONVERTER_HPP
 
 #include <cstddef>
-#include <memory>
 #include <string_view>
 
 #include <ystdlib/containers/Array.hpp>
@@ -24,7 +23,7 @@ public:
     /**
      * Converts a file into KV-IR and outputs the generated file to a given directory.
      * @param path The input path for the unstructured text file.
-     * @param reader A reader open to the start of the unstructured text input.
+     * @param reader A reader positioned at the start of the input stream.
      * @param output_dir The output directory for generated KV-IR files.
      * @return A void result on success, or an error code indicating the failure:
      * - std::errc::no_message if `log_surgeon::BufferParser::parse_next_event` returns an error.
@@ -32,11 +31,9 @@ public:
      * - Forwards `refill_buffer()`'s return values.
      * - Forwards `LogSerializer::add_message()`'s return values.
      */
-    [[nodiscard]] auto convert_file(
-            clp_s::Path const& path,
-            std::shared_ptr<clp::ReaderInterface>& reader,
-            std::string_view output_dir
-    ) -> ystdlib::error_handling::Result<void>;
+    [[nodiscard]] auto
+    convert_file(clp_s::Path const& path, clp::ReaderInterface* reader, std::string_view output_dir)
+            -> ystdlib::error_handling::Result<void>;
 
 private:
     // Constants
@@ -53,7 +50,7 @@ private:
      * - std::errc::not_enough_memory if `clp::ReaderInterface::try_read()` returns an error.
      * - Forwards `grow_buffer_if_full()`'s return values.
      */
-    [[nodiscard]] auto refill_buffer(std::shared_ptr<clp::ReaderInterface>& reader)
+    [[nodiscard]] auto refill_buffer(clp::ReaderInterface* reader)
             -> ystdlib::error_handling::Result<size_t>;
 
     /**
@@ -69,8 +66,8 @@ private:
     [[nodiscard]] auto grow_buffer_if_full() -> ystdlib::error_handling::Result<void>;
 
     ystdlib::containers::Array<char> m_buffer;
-    size_t m_bytes_occupied{};
-    size_t m_cur_offset{};
+    size_t m_num_bytes_buffered{};
+    size_t m_parser_offset{};
 };
 }  // namespace clp_s::log_converter
 #endif  // CLP_S_LOG_CONVERTER_LOGCONVERTER_HPP
