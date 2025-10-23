@@ -21,6 +21,10 @@
 #include "../FileWriter.hpp"
 
 namespace clp_s::log_converter {
+namespace {
+constexpr msgpack::object_map cEmptyMap{.size = 0U, .ptr = nullptr};
+}  // namespace
+
 auto LogSerializer::create(std::string_view output_dir, std::string_view original_file_path)
         -> ystdlib::error_handling::Result<LogSerializer> {
     nlohmann::json metadata;
@@ -46,7 +50,6 @@ auto LogSerializer::create(std::string_view output_dir, std::string_view origina
 
 auto LogSerializer::add_message(std::string_view timestamp, std::string_view message)
         -> ystdlib::error_handling::Result<void> {
-    msgpack::object_map const empty{.size = 0U, .ptr = nullptr};
     std::array<msgpack::object_kv, 2ULL> fields{
             msgpack::object_kv{
                     .key = msgpack::object{cTimestampKey},
@@ -58,7 +61,7 @@ auto LogSerializer::add_message(std::string_view timestamp, std::string_view mes
             .size = static_cast<uint32_t>(fields.size()),
             .ptr = fields.data()
     };
-    if (false == m_serializer.serialize_msgpack_map(empty, record)) {
+    if (false == m_serializer.serialize_msgpack_map(cEmptyMap, record)) {
         return std::errc::invalid_argument;
     }
     if (m_serializer.get_ir_buf_view().size() > cMaxIrBufSize) {
@@ -68,13 +71,12 @@ auto LogSerializer::add_message(std::string_view timestamp, std::string_view mes
 }
 
 auto LogSerializer::add_message(std::string_view message) -> ystdlib::error_handling::Result<void> {
-    msgpack::object_map const empty{.size = 0U, .ptr = nullptr};
     msgpack::object_kv message_field{
             .key = msgpack::object{cMessageKey},
             .val = msgpack::object{message}
     };
     msgpack::object_map const record{.size = 1U, .ptr = &message_field};
-    if (false == m_serializer.serialize_msgpack_map(empty, record)) {
+    if (false == m_serializer.serialize_msgpack_map(cEmptyMap, record)) {
         return std::errc::invalid_argument;
     }
     if (m_serializer.get_ir_buf_view().size() > cMaxIrBufSize) {

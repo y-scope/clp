@@ -2,7 +2,6 @@
 #define CLP_S_LOG_CONVERTER_LOGSERIALIZER_HPP
 
 #include <cstddef>
-#include <optional>
 #include <string_view>
 #include <utility>
 
@@ -20,19 +19,6 @@ namespace clp_s::log_converter {
  */
 class LogSerializer {
 public:
-    // Constructors
-    // Delete copy constructor and assignment operator
-    LogSerializer(LogSerializer const&) = delete;
-    [[nodiscard]] auto operator=(LogSerializer const&) -> LogSerializer& = delete;
-
-    // Default move constructor and assignment operator
-    LogSerializer(LogSerializer&&) noexcept = default;
-    [[nodiscard]] auto operator=(LogSerializer&&) -> LogSerializer& = default;
-
-    // Destructor
-    ~LogSerializer() = default;
-
-    // Methods
     // Factory function
     /**
      * Creates an instance of `LogSerializer`.
@@ -47,6 +33,19 @@ public:
     create(std::string_view output_dir, std::string_view original_file_path)
             -> ystdlib::error_handling::Result<LogSerializer>;
 
+    // Constructors
+    // Delete copy constructor and assignment operator
+    LogSerializer(LogSerializer const&) = delete;
+    [[nodiscard]] auto operator=(LogSerializer const&) -> LogSerializer& = delete;
+
+    // Default move constructor and assignment operator
+    LogSerializer(LogSerializer&&) noexcept = default;
+    [[nodiscard]] auto operator=(LogSerializer&&) -> LogSerializer& = default;
+
+    // Destructor
+    ~LogSerializer() = default;
+
+    // Methods
     /**
      * Adds a message with a timestamp to the serialized output.
      * @param timestamp
