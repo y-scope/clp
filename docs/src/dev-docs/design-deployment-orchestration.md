@@ -217,7 +217,9 @@ tmpfs mount into the container. This strategy is used wherever we need a conditi
 
 ### Troubleshooting
 
-If you encounter issues with the Docker Compose deployment:
+If you encounter issues with the Docker Compose deployment, first determine the instance ID for your
+deployment by checking the content of `<clp-package>/var/log/instance-id`. Then run one of the
+commands below as necessary.
 
 1. Check service status:
 
