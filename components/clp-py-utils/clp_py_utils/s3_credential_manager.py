@@ -11,7 +11,6 @@ from clp_py_utils.clp_config import (
     AwsCredential,
     CLP_METADATA_TABLE_PREFIX,
     Database,
-    S3Credentials,
     TemporaryCredential,
 )
 from clp_py_utils.clp_logging import get_logger
