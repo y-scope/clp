@@ -6,7 +6,7 @@ This document explains the architecture of that orchestration and any associated
 
 ## Architecture
 
-[Figure 1](#figure-1) shows the components (_services_ in orchestrator terminology) in the CLP
+[Figure 1](#figure-1) shows the components (*services* in orchestrator terminology) in the CLP
 package as well as their dependencies. The CLP package consists of several long-running services
 (e.g., `database`) and some one-time initialization jobs (e.g., `db-table-creator`). Some of the
 long-running services depend on the successful completion of the one-time jobs (e.g., `webui`
@@ -119,6 +119,7 @@ graph LR
 | reducer               | Reducers for performing the final stages of aggregation jobs    |
 | webui                 | Web server for the UI                                           |
 | garbage_collector     | Process to manage data retention                                |
+
 :::
 
 +++
@@ -135,6 +136,7 @@ graph LR
 |-------------------------------|-------------------------------------------------------|
 | db-table-creator              | Creates and initializes database tables               |
 | results-cache-indices-creator | Creates a single-node replica set and sets up indices |
+
 :::
 
 +++
