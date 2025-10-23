@@ -169,7 +169,7 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
         Health check endpoint.
 
         :param _request: An HTTP request object.
-        :return: A JSON response indicating server is healthy.
+        :return: A plain text response indicating server is healthy.
         """
         return PlainTextResponse("OK")
 
