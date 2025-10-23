@@ -10,6 +10,7 @@ import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import OpenQueryDrawerButton from "./OpenQueryDrawerButton";
 import QueryDrawer from "./QueryDrawer";
+import QuerySpeed from "./QuerySpeed";
 import Results from "./Results";
 
 
@@ -90,6 +91,7 @@ const QueryStatus = () => {
                     <Results/>
                     {" "}
                     <Text type={"secondary"}>results</Text>
+                    {CLP_QUERY_ENGINES.PRESTO !== SETTINGS_QUERY_ENGINE && <QuerySpeed/>}
                 </>
             )}
             {searchUiState === SEARCH_UI_STATE.FAILED && (
