@@ -1,5 +1,8 @@
 version: "3"
 
+vars:
+  G_DEPS_CPP_SPIDER_CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-spider.cmake"
+
 tasks:
   default:
     deps:
@@ -22,7 +25,7 @@ tasks:
           WORK_DIR: "{{.G_SPIDER_BUILD_DIR}}"
           CMAKE_JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-spider.cmake"
+            - "-C {{.G_DEPS_CPP_SPIDER_CMAKE_SETTINGS_FILE}}"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DSPIDER_BUILD_TESTING=OFF"
@@ -35,7 +38,7 @@ tasks:
       - task: ":yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
-          CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-spider.cmake"
+          CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_SPIDER_CMAKE_SETTINGS_FILE}}"
           DEP_TASK: "spider:spider-all-parallel"
       - task: ":utils:combine-cpp-checksum-files"
 
