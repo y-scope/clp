@@ -342,7 +342,7 @@ def search_and_schedule_new_tasks(
         )
         db_conn.commit()
 
-        tag_ids = None
+        tag_ids = []
         if clp_io_config.output.tags:
             tags_table_name = get_tags_table_name(table_prefix, dataset)
             db_cursor.executemany(

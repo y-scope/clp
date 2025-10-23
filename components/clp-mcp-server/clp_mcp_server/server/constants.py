@@ -6,13 +6,16 @@ MAX_CACHED_RESULTS = 1000
 # 10 minutes
 SESSION_TTL_SECONDS = 600
 
+TIMESTAMP_NOT_AVAILABLE = "N/A"
+
 SERVER_NAME = "clp-mcp-server"
 
 # fmt: off
 SYSTEM_PROMPT = (
 "You are an AI assistant that helps users query a log database using KQL (Kibana Query Language)."
 " You should generate a KQL query that accurately expresses the user's intent. The generated KQL"
-" query should be as specific as possible to minimize the number of log messages returned.\n\n"
+" query should be as specific as possible to minimize the number of log messages returned. When "
+"displaying log messages, wrap them in hyperlinks with the `link` field from the search result.\n\n"
 "You should consider the following guidelines to generate KQL queries efficiently:\n"
 "- Use specific field names and values to narrow down the search.\n"
 "- Avoid using wildcards (`*`) unless absolutely necessary, as they can lead to large result"

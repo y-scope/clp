@@ -89,6 +89,7 @@ const GuidedRunButton = () => {
             <Button
                 className={styles["runButton"] || ""}
                 color={"green"}
+                htmlType={"submit"}
                 icon={<CaretRightOutlined/>}
                 size={"middle"}
                 variant={"solid"}
