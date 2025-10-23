@@ -119,8 +119,8 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
         rejected.
 
         :param kql_query:
-        :param formatted_begin_timestamp:
-        :param formatted_end_timestamp:
+        :param formatted_begin_timestamp: The beginning of the time range (inclusive).
+        :param formatted_end_timestamp: The end of the time range (inclusive).
         :param ctx: The `FastMCP` context containing the metadata of the underlying MCP session.
         :return: A dictionary containing the following key-value pairs on success:
             - "items": A list of log entries in the requested page.
