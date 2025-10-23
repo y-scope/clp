@@ -175,10 +175,8 @@ some of these configuration values need to be modified for the orchestration env
 Specifically:
 
 1. Paths on the host must be converted to appropriate paths in the container.
-2. Component hostnames must be converted to service names.
-3. Component ports must be converted to the component's default ports.
-    * This is necessary so that in the Docker Compose project file, we can network services together
-      using the default port rather than a variable for the configured port.
+2. Component hostnames must be converted to service names, and component ports must be converted to the component's default ports.
+    * This ensures that in the Docker Compose configuration, services can communicate over fixed, predictable hostnames and ports rather than relying on configurable variables.
 
 To achieve this, before starting the deployment, `DockerComposeController.start` generates:
 
