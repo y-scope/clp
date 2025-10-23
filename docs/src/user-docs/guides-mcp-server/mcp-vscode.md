@@ -22,7 +22,7 @@ to add an MCP server to VSCode.
 
     The `host` and `port` values should match the hostname and 
     port number where the MCP server is running, as 
-    specified during [configuration](../guides-mcp-server/index.md#starting-mcp-server).
+    specified during [configuration](../guides-mcp-server/index.md#starting-the-mcp-server).
 
 3. Once you have added the MCP server, you can 
 follow 
