@@ -59,7 +59,9 @@ The build will be in `build/clp-package` and defaults to using the storage engin
 :::{note}
 The `task` command runs `task docker-images:package` under the hood. In addition to the build, a
 Docker image named `clp-package:dev-<user>-<unique-id>` will also be created.
+:::
 
+:::{note}
 The package includes a `docker-compose.yaml` file that can be used to deploy CLP using Docker
 Compose. If you want to manually deploy with Docker Compose instead of using the package scripts,
 see the [Docker Compose design][docker-compose-design] for more information.
@@ -85,7 +87,7 @@ task clean
 ```
 
 [Docker]: https://docs.docker.com/engine/install/
-[docker-compose-design]: ../dev-docs/design-docker-compose.md
+[docker-compose-design]: design-deployment-orchestration.md
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
 [y-scope/clp#1352]: https://github.com/y-scope/clp/issues/1352
