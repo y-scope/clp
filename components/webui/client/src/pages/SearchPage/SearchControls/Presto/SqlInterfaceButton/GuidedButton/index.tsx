@@ -21,6 +21,7 @@ const GuidedButton = () => {
 
     const handleClick = () => {
         handleSwitchToGuided();
+        console.log(`this is ${searchUiState}`);
         setSqlInterface(PRESTO_SQL_INTERFACE.GUIDED);
     };
 

@@ -112,7 +112,13 @@ const handlePrestoQueryCancel = (payload: PrestoQueryJob) => {
  * Handles switching to guided SQL interface by clearing results and resetting states.
  */
 const handleSwitchToGuided = () => {
-    const {searchUiState, updateSearchUiState, updateSearchJobId, updateNumSearchResultsTable, updateNumSearchResultsMetadata} = useSearchStore.getState();
+    const {
+        searchUiState,
+        updateSearchUiState,
+        updateSearchJobId,
+        updateNumSearchResultsTable,
+        updateNumSearchResultsMetadata
+    } = useSearchStore.getState();
     if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
         return;
     }
@@ -122,7 +128,7 @@ const handleSwitchToGuided = () => {
     updateSearchJobId(SEARCH_STATE_DEFAULT.searchJobId);
     updateNumSearchResultsTable(SEARCH_STATE_DEFAULT.numSearchResultsTable);
     updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
-    
+
     updateSearchUiState(SEARCH_UI_STATE.DEFAULT);
 };
 

@@ -16,12 +16,14 @@ import {handleSwitchToFreeform} from "../../presto-guided-search-requests";
 const FreeformButton = () => {
     const setSqlInterface = usePrestoSearchState((state) => state.setSqlInterface);
     const searchUiState = useSearchStore((state) => state.searchUiState);
+    const updateSearchUiState = useSearchStore((state) => state.updateSearchUiState);
     const disabled = searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
         searchUiState === SEARCH_UI_STATE.QUERYING;
 
     const handleClick = () => {
         handleSwitchToFreeform();
         setSqlInterface(PRESTO_SQL_INTERFACE.FREEFORM);
+        console.log(`this is ${searchUiState}`);
     };
 
     return (

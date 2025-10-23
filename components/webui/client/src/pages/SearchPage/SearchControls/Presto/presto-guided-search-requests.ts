@@ -213,8 +213,21 @@ const handlePrestoGuidedQueryCancel = (searchJobId: string, aggregationJobId: st
  * Handles switching to freeform SQL interface by clearing results and resetting states.
  */
 const handleSwitchToFreeform = () => {
-    const {searchUiState, updateSearchUiState, updateSearchJobId, updateAggregationJobId, updateNumSearchResultsTable, updateNumSearchResultsTimeline, updateNumSearchResultsMetadata} = useSearchStore.getState();
-    const {updateErrorMsg, updateErrorName, updateCachedGuidedSearchQueryString, updateQueryDrawerOpen} = usePrestoSearchState.getState();
+    const {
+        searchUiState,
+        updateSearchUiState,
+        updateSearchJobId,
+        updateAggregationJobId,
+        updateNumSearchResultsTable,
+        updateNumSearchResultsTimeline,
+        updateNumSearchResultsMetadata
+    } = useSearchStore.getState();
+    const {
+        updateErrorMsg,
+        updateErrorName,
+        updateCachedGuidedSearchQueryString,
+        updateQueryDrawerOpen
+    } = usePrestoSearchState.getState();
 
     // If already in default state, nothing to clear
     if (searchUiState === SEARCH_UI_STATE.DEFAULT) {

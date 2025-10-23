@@ -29,12 +29,17 @@ const useUpdateStateWithMetadata = () => {
     const {
         updateNumSearchResultsMetadata,
         updateSearchUiState,
+        searchUiState
     } = useSearchStore();
     const {updateErrorMsg, updateErrorName, sqlInterface} = usePrestoSearchState();
     const resultsMetadata = useResultsMetadata();
 
     useEffect(() => {
         if (null === resultsMetadata) {
+            return;
+        }
+
+        if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
             return;
         }
 
