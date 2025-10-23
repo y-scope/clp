@@ -1,6 +1,8 @@
 // Reference: https://github.com/vikyd/vue-monaco-singleline
 import {useCallback} from "react";
 
+import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
+
 import SqlEditor, {
     SqlEditorProps,
     SqlEditorType,
@@ -25,6 +27,18 @@ const SqlInput = (props: SqlEditorProps) => {
                     column: Infinity,
                 });
             }
+        });
+
+        // Add action to simulate form submission on Enter key
+        editor.addAction({
+            id: "run-query",
+            label: "Run Query",
+            keybindings: [monaco.KeyCode.Enter],
+            run: () => {
+                const formEl = editor.getDomNode()?.closest("form");
+                const submitBtn = formEl?.querySelector<HTMLButtonElement>('button[type="submit"]');
+                submitBtn?.click();
+            },
         });
     }, []);
 
