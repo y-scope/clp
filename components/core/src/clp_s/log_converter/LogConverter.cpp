@@ -94,12 +94,12 @@ auto LogConverter::refill_buffer(clp::ReaderInterface* reader)
     size_t num_bytes_read{};
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
     auto const rc{reader->try_read(
-            m_buffer.data() + m_bytes_occupied,
-            m_buffer.size() - m_bytes_occupied,
+            m_buffer.data() + m_num_bytes_buffered,
+            m_buffer.size() - m_num_bytes_buffered,
             num_bytes_read
     )};
     // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    m_bytes_occupied += num_bytes_read;
+    m_num_bytes_buffered += num_bytes_read;
     if (clp::ErrorCode_EndOfFile == rc) {
         return num_bytes_read;
     }
@@ -111,19 +111,23 @@ auto LogConverter::refill_buffer(clp::ReaderInterface* reader)
 }
 
 void LogConverter::compact_buffer() {
-    if (0 == m_cur_offset) {
+    if (0 == m_parser_offset) {
         return;
     }
 
     // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    std::memmove(m_buffer.data(), m_buffer.data() + m_cur_offset, m_bytes_occupied - m_cur_offset);
+    std::memmove(
+            m_buffer.data(),
+            m_buffer.data() + m_parser_offset,
+            m_num_bytes_buffered - m_parser_offset
+    );
     // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-    m_bytes_occupied -= m_cur_offset;
-    m_cur_offset = 0;
+    m_num_bytes_buffered -= m_parser_offset;
+    m_parser_offset = 0;
 }
 
 auto LogConverter::grow_buffer_if_full() -> ystdlib::error_handling::Result<void> {
-    if (m_buffer.size() != m_bytes_occupied) {
+    if (m_buffer.size() != m_num_bytes_buffered) {
         return ystdlib::error_handling::success();
     }
 
@@ -132,7 +136,7 @@ auto LogConverter::grow_buffer_if_full() -> ystdlib::error_handling::Result<void
         return std::errc::result_out_of_range;
     }
     ystdlib::containers::Array<char> new_buffer(new_size);
-    std::memcpy(new_buffer.data(), m_buffer.data(), m_bytes_occupied);
+    std::memcpy(new_buffer.data(), m_buffer.data(), m_num_bytes_buffered);
     m_buffer = std::move(new_buffer);
     return ystdlib::error_handling::success();
 }
