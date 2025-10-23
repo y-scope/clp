@@ -30,8 +30,8 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
     async def _execute_kql_query(
         session_id: str,
         kql_query: str,
-        begin_ts: int | None = None,
-        end_ts: int | None = None,
+        formatted_begin_timestamp: int | None = None,
+        formatted_end_timestamp: int | None = None,
     ) -> dict[str, Any]:
         """
         Executes a KQL query search with optional timestamp range and returns paginated results.
@@ -51,7 +51,9 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
             - "Error": An error message describing the failure.
         """
         try:
-            query_id = await connector.submit_query(kql_query, begin_ts, end_ts)
+            query_id = await connector.submit_query(
+                kql_query, formatted_begin_timestamp, formatted_end_timestamp
+            )
             await connector.wait_query_completion(query_id)
             results = await connector.read_results(query_id)
         except (ValueError, RuntimeError, TimeoutError) as e:
