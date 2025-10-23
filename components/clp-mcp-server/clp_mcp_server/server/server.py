@@ -40,7 +40,8 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
         :param kql_query:
         :param begin_ts: The beginning of the time range (inclusive).
         :param end_ts: The end of the time range (inclusive).
-        :return: Forwards `SessionManager.cache_query_result_and_get_first_page`'s return values on success.
+        :return: Forwards `SessionManager.cache_query_result_and_get_first_page`'s return values on
+            success.
         :return: A dictionary with the following key-value pair on failures:
             - "Error": An error message describing the failure.
         """
