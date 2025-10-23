@@ -587,7 +587,7 @@ def validate_webui_config(
 
 def validate_mcp_server_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
     if not logs_dir.exists():
-        error_msg = f"{MCP_SERVER_COMPONENT_NAME} logs directory at {str(logs_dir)} is missing."
+        error_msg = f"{MCP_SERVER_COMPONENT_NAME} logs directory at {logs_dir!s} is missing."
         raise ValueError(error_msg)
 
     validate_port(

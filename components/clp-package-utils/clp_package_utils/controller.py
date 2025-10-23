@@ -542,7 +542,7 @@ class BaseController(ABC):
 
         # Logging config
         env_vars |= {
-            "CLP_REDUCER_LOGGING_LEVEL": self._clp_config.mcp_server.logging_level,
+            "CLP_MCP_LOGGING_LEVEL": self._clp_config.mcp_server.logging_level,
         }
 
         # Connection config
@@ -776,8 +776,9 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_compression_worker(num_workers)
         env_vars |= self._set_up_env_for_query_worker(num_workers)
         env_vars |= self._set_up_env_for_reducer(num_workers)
-        env_vars |= self._set_up_env_for_mcp_server()
         env_vars |= self._set_up_env_for_webui(container_clp_config)
+        if len(self._clp_config.mcp_server.model_fields_set) > 0:
+            env_vars |= self._set_up_env_for_mcp_server()
         env_vars |= self._set_up_env_for_garbage_collector()
 
         # Write the environment variables to the `.env` file.
