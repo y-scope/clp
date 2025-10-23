@@ -29,7 +29,7 @@ from clp_package_utils.general import (
     validate_dataset_name,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def _generate_url_list(
@@ -61,7 +61,7 @@ def _generate_url_list(
 
 def _generate_compress_cmd(
     parsed_args: argparse.Namespace,
-    dataset: str,
+    dataset: str | None,
     config_path: pathlib.Path,
     url_list_path: pathlib.Path,
 ) -> List[str]:
@@ -110,11 +110,11 @@ def _validate_s3_object_args(
     Validates s3-object subcommand arguments.
     """
     if len(parsed_args.inputs) == 0 and parsed_args.inputs_from is None:
-        args_parser.error("No paths specified.")
+        args_parser.error("No URLs specified.")
 
-    # Validate paths were specified using only one method
+    # Validate URLs were specified using only one method
     if len(parsed_args.inputs) > 0 and parsed_args.inputs_from is not None:
-        args_parser.error("Paths cannot be specified on the command line AND through a file.")
+        args_parser.error("URLs cannot be specified on the command line AND through a file.")
 
 
 def _validate_s3_key_prefix_args(
@@ -205,9 +205,10 @@ def main(argv):
     # Validate logs_input type is S3
     if clp_config.logs_input.type != StorageType.S3:
         logger.error(
-            f"S3 compression requires logs_input.type to be '{StorageType.S3}', "
-            f"but configured type is '{clp_config.logs_input.type}'. "
-            f"Please update your clp-config.yml."
+            "S3 compression requires logs_input.type to be '%s', but configured type is '%s'. "
+            "Please update your clp-config.yml.",
+            StorageType.S3,
+            clp_config.logs_input.type,
         )
         return -1
 
@@ -273,15 +274,25 @@ def main(argv):
 
     cmd = container_start_cmd + compress_cmd
 
-    proc = subprocess.run(cmd)
-    ret_code = proc.returncode
-    if 0 != ret_code:
-        logger.error("Compression failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+    try:
+        proc = subprocess.run(cmd)
+        ret_code = proc.returncode
+        if ret_code != 0:
+            logger.error("Compression failed.")
+            logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
-    generated_config_path_on_host.unlink()
-
-    return ret_code
+        return ret_code
+    finally:
+        try:
+            generated_config_path_on_host.unlink()
+        except Exception:
+            logger.debug(
+                "Failed to remove generated config file: %s", generated_config_path_on_host
+            )
+        try:
+            container_url_list_path.unlink()
+        except Exception:
+            logger.debug("Failed to remove URL list file: %s", container_url_list_path)
 
 
 if "__main__" == __name__:

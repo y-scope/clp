@@ -30,7 +30,7 @@ from clp_package_utils.general import (
     validate_dataset_name,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def _generate_logs_list(
@@ -168,16 +168,17 @@ def main(argv):
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
         return -1
 
     # Validate logs_input type is FS
     if clp_config.logs_input.type != StorageType.FS:
         logger.error(
-            f"Filesystem compression requires logs_input.type to be '{StorageType.FS}', "
-            f"but configured type is '{clp_config.logs_input.type}'. "
-            f"For S3 compression, use compress-from-s3.sh instead."
+            "Filesystem compression requires logs_input.type to be '%s', but configured type is '%s'. "
+            "For S3 compression, use compress-from-s3.sh instead.",
+            StorageType.FS,
+            clp_config.logs_input.type,
         )
         return -1
 
@@ -239,16 +240,25 @@ def main(argv):
 
     cmd = container_start_cmd + compress_cmd
 
-    proc = subprocess.run(cmd)
-    ret_code = proc.returncode
-    if 0 != ret_code:
-        logger.error("Compression failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+    try:
+        proc = subprocess.run(cmd)
+        ret_code = proc.returncode
+        if ret_code != 0:
+            logger.error("Compression failed.")
+            logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
-    # Remove generated files
-    generated_config_path_on_host.unlink()
-
-    return ret_code
+        return ret_code
+    finally:
+        try:
+            generated_config_path_on_host.unlink()
+        except Exception:
+            logger.debug(
+                "Failed to remove generated config file: %s", generated_config_path_on_host
+            )
+        try:
+            container_logs_list_path.unlink()
+        except Exception:
+            logger.debug("Failed to remove logs list file: %s", container_logs_list_path)
 
 
 if "__main__" == __name__:

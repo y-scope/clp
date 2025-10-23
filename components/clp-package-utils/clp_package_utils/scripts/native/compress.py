@@ -26,7 +26,6 @@ from job_orchestration.scheduler.constants import (
 from job_orchestration.scheduler.job_config import (
     ClpIoConfig,
     FsInputConfig,
-    InputType,
     OutputConfig,
     S3InputConfig,
 )
@@ -374,8 +373,8 @@ def main(argv):
     try:
         logs_to_compress = _get_logs_to_compress(pathlib.Path(parsed_args.logs_list).resolve())
         clp_input_config = _generate_clp_io_config(clp_config, logs_to_compress, parsed_args)
-    except Exception as e:
-        logger.exception(f"Failed to process input: {e}")
+    except Exception:
+        logger.exception(f"Failed to process input.")
         return -1
 
     clp_output_config = OutputConfig.model_validate(clp_config.archive_output.model_dump())
