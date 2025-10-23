@@ -6,8 +6,12 @@ authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "aiomysql>=0.2.0",
     "click>=8.3.0",
     "fastmcp>=2.12.4",
+    "msgpack>=1.1.2",
+    "paginate>=0.5.7",
+    "pymongo>=4.15.3",
 ]
 
 [project.scripts]
@@ -20,10 +24,15 @@ build-backend = "hatchling.build"
 [dependency-groups]
 dev = [
     "mypy>=1.16.0",
-    "ruff>=0.11.12",
     "pytest>=8.4.1",
+    "pytest-asyncio>=1.2.0",
     "pytest-env>=1.1.5",
+    "pytest-repeat>=0.9.4",
+    "ruff>=0.11.12",
 ]
+
+[tool.hatch.metadata]
+allow-direct-references = true
 
 [tool.mypy]
 strict = true
@@ -61,6 +70,12 @@ ignore = [
     "UP015",  # Explicit open modes are helpful
 ]
 isort.order-by-type = false
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",  # Allow usage of pytest `assert`
+    "TC003",  # Ignore performance overhead of imports only used for type checking
+]
 
 [tool.ruff.format]
 docstring-code-format = true

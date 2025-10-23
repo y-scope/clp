@@ -36,7 +36,6 @@ const handlePrestoClearResults = () => {
     });
 };
 
-
 /**
  * Submits a new Presto query to server.
  *
@@ -83,6 +82,7 @@ const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreation) => {
             console.error("Failed to submit query:", err);
         });
 };
+
 
 /**
  * Cancels an ongoing Presto search query on server.

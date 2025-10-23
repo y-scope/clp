@@ -74,6 +74,7 @@ const DatasetSelect = (selectProps: SelectProps) => {
             <Select
                 loading={isPending}
                 options={(data || []).map((option) => ({label: option, value: option}))}
+                popupMatchSelectWidth={false}
                 size={"middle"}
                 value={dataset}
                 disabled={
