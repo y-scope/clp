@@ -15,7 +15,6 @@ tasks:
             - "-DZSTD_BUILD_STATIC=ON"
             - "-DZSTD_BUILD_TESTS=OFF"
           CMAKE_SOURCE_DIR: "build/cmake"
-          INSTALL_TASK_NAME: "zstd"
           LIB_NAME: "zstd"
           TARBALL_SHA256: "eb33e51f49a15e023950cd7825ca74a4a2b43db8354825ac24fc1b7ee09e6fa3"
           TARBALL_URL: "https://github.com/facebook/zstd/releases/download/v1.5.7/zstd-1.5.7.tar.gz"

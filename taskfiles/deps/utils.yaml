@@ -29,7 +29,6 @@ tasks:
   # Installs a CMake-based library from a remote tarball, generates a corresponding settings file,
   # and computes a checksum for the installation directory.
   #
-  # @param {string} INSTALL_TASK_NAME
   # @param {string} LIB_NAME
   # @param {string} TARBALL_SHA256
   # @param {string} TARBALL_URL
@@ -39,38 +38,15 @@ tasks:
   # containing the project's top level CMakeLists.txt.
   install-remote-cmake-lib:
     internal: true
-    label: "{{.TASK}}:{{.INSTALL_TASK_NAME}}"
     vars:
       CMAKE_GEN_ARGS:
         ref: "default (list) .CMAKE_GEN_ARGS"
       CMAKE_SOURCE_DIR: >-
         {{default "." .CMAKE_SOURCE_DIR}}
-      DEPS:
-        ref: "default (list) .DEPS"
-
-      INSTALL_DIR_CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
       INSTALL_PREFIX: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
-
-      INSTALL_SOURCE_GLOB: >-
-        {{- if eq (len .DEPS) 0 -}}
-          {{ printf "%s.yaml" .INSTALL_TASK_NAME }}
-        {{- else -}}
-          {{"{"}}
-          {{- printf "%s.yaml" .INSTALL_TASK_NAME -}}
-          {{- range ($.DEPS) -}}
-          {{- printf ",%s.yaml" . -}}
-          {{- end -}}
-          {{- "}"}}
-        {{- end -}}
-    requires:
-      vars: ["INSTALL_TASK_NAME", "LIB_NAME", "TARBALL_SHA256", "TARBALL_URL"]
-    sources:
-      - "{{.ROOT_DIR}}/Taskfile.yaml"
-      - "{{.ROOT_DIR}}/taskfiles/deps/*.yaml"
-      - "{{.ROOT_DIR}}/taskfiles/deps/installs/{{.INSTALL_SOURCE_GLOB}}"
-      - "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/**/*.yaml"
-    generates: ["{{.INSTALL_DIR_CHECKSUM_FILE}}"]
+      INSTALL_DIR_CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
     deps:
+      - task: ":init"
       - task: ":yscope-dev-utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.INSTALL_DIR_CHECKSUM_FILE}}"

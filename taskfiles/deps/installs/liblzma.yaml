@@ -35,7 +35,6 @@ tasks:
             - "-DBUILD_SHARED_LIBS={{ if .BUILD_SHARED_LIBS }}ON{{ else }}OFF{{ end }}"
             - >-
               {{ join " " .LIBLZMA_CMAKE_GEN_ARGS }}
-          INSTALL_TASK_NAME: "liblzma"
           LIB_NAME: "LibLZMA-{{ if .BUILD_SHARED_LIBS }}shared{{ else }}static{{ end }}"
           TARBALL_SHA256: "507825b599356c10dca1cd720c9d0d0c9d5400b9de300af00e4d1ea150795543"
           TARBALL_URL: >-

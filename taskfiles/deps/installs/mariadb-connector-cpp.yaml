@@ -21,7 +21,6 @@ tasks:
             - "-DINSTALL_LAYOUT=DEB"
             - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
             - "-DWITH_UNIT_TESTS=OFF"
-          INSTALL_TASK_NAME: "mariadb-connector-cpp"
           LIB_NAME: "mariadb-connector-cpp"
           TARBALL_SHA256: "0e3dfe9f2bc3f7bb6f7c159009556290064a7c23402ea08019fa8aebfc3ff2c9"
           TARBALL_URL: "https://github.com/mariadb-corporation/mariadb-connector-cpp/archive/refs/\

@@ -17,7 +17,6 @@ tasks:
             # timestamp, which ensures the library gets rebuilt if the extracted files change.
             - "-DCMAKE_POLICY_DEFAULT_CMP0135=NEW"
           CMAKE_SOURCE_DIR: "runtime/Cpp"
-          INSTALL_TASK_NAME: "antlr-runtime"
           LIB_NAME: "antlr4-runtime"
           TARBALL_SHA256: "9f18272a9b32b622835a3365f850dd1063d60f5045fb1e12ce475ae6e18a35bb"
           TARBALL_URL: "https://github.com/antlr/antlr4/archive/refs/tags/\
