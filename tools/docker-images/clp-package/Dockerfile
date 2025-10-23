@@ -18,8 +18,7 @@ COPY --link --from=base / /
 
 ARG UID=1000
 ENV CLP_HOME="/opt/clp"
-ENV PATH="${CLP_HOME}/bin:${PATH}"
-ENV PATH="${CLP_HOME}/sbin:${PATH}" \
+ENV PATH="${CLP_HOME}/sbin:${CLP_HOME}/bin:${PATH}" \
     PYTHONPATH="${CLP_HOME}/lib/python3/site-packages" \
     USER="clp-user"
 
