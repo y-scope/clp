@@ -16,6 +16,12 @@ import {SEARCH_UI_STATE} from "../../SearchState/typings";
 
 
 /**
+ * Default limit for presto search query
+ */
+const DEFAULT_SEARCH_LIMIT = 1000;
+
+
+/**
  * Clears current presto guided query results on server.
  */
 const handlePrestoGuidedClearResults = () => {
@@ -60,7 +66,8 @@ const handlePrestoGuidedClearResults = () => {
  */
 const buildPrestoGuidedQueries = (timeRange: [Dayjs, Dayjs]) => {
     const [startTimestamp, endTimestamp] = timeRange;
-    const {select, from, where, orderBy, limit, timestampKey} = usePrestoSearchState.getState();
+    const {select, where, orderBy, timestampKey} = usePrestoSearchState.getState();
+    const {selectDataset: from} = useSearchStore.getState();
 
     if (null === from) {
         throw new Error("Cannot build guided query: from input is missing");
@@ -72,15 +79,14 @@ const buildPrestoGuidedQueries = (timeRange: [Dayjs, Dayjs]) => {
 
     const trimmedWhere = where.trim();
     const trimmedOrderBy = orderBy.trim();
-    const limitString = String(limit);
 
     const searchQueryString = buildSearchQuery({
         ...(trimmedWhere && {booleanExpression: trimmedWhere}),
         databaseName: from,
         endTimestamp: endTimestamp,
-        ...(limitString && {limitValue: limitString}),
         selectItemList: select.trim(),
         ...(trimmedOrderBy && {sortItemList: trimmedOrderBy}),
+        limitValue: String(DEFAULT_SEARCH_LIMIT),
         startTimestamp: startTimestamp,
         timestampKey: timestampKey,
     });
@@ -114,6 +120,10 @@ const handlePrestoGuidedQuerySubmit = (searchQueryString: string, timelineQueryS
         searchUiState,
     } = useSearchStore.getState();
 
+    const {
+        updateErrorMsg, updateErrorName,
+    } = usePrestoSearchState.getState();
+
     // User should NOT be able to submit a new query while an existing query is in progress.
     if (
         searchUiState !== SEARCH_UI_STATE.DEFAULT &&
@@ -131,6 +141,9 @@ const handlePrestoGuidedQuerySubmit = (searchQueryString: string, timelineQueryS
     updateNumSearchResultsTimeline(SEARCH_STATE_DEFAULT.numSearchResultsTimeline);
     updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
     updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
+
+    updateErrorMsg(null);
+    updateErrorName(null);
 
     submitQuery({queryString: searchQueryString})
         .then((result) => {

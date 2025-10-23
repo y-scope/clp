@@ -1,0 +1,43 @@
+version: "3"
+
+includes:
+  toolchains: "../toolchains.yaml"
+
+tasks:
+  check-rust:
+    cmds:
+      - task: "cargo-workspace-fetch"
+        vars:
+          CARGO_FETCH_FLAGS: "--locked"
+
+  update-rust:
+    cmds:
+      - task: "cargo-workspace-update"
+        vars:
+          CARGO_UPDATE_FLAGS: ""
+
+  # Runs `cargo fetch` in the root Rust workspace directory with the specified flags.
+  #
+  # @param {string} CARGO_FETCH_FLAGS The flags to pass to the `cargo fetch` command.
+  cargo-workspace-fetch:
+    internal: true
+    requires:
+      vars: ["CARGO_FETCH_FLAGS"]
+    dir: "{{.ROOT_DIR}}"
+    deps: ["toolchains:rust"]
+    cmd: |-
+      . "$HOME/.cargo/env"
+      cargo fetch {{.CARGO_FETCH_FLAGS}}
+
+  # Runs `cargo update` in the root Rust workspace directory with the specified flags.
+  #
+  # @param {string} CARGO_UPDATE_FLAGS The flags to pass to the `cargo update` command.
+  cargo-workspace-update:
+    internal: true
+    requires:
+      vars: ["CARGO_UPDATE_FLAGS"]
+    dir: "{{.ROOT_DIR}}"
+    deps: ["toolchains:rust"]
+    cmd: |-
+      . "$HOME/.cargo/env"
+      cargo update {{.CARGO_UPDATE_FLAGS}}

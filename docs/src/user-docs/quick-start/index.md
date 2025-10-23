@@ -13,6 +13,10 @@ This guide describes the following:
 To run a CLP release, you'll need:
 
 * [Docker](#docker)
+  * `containerd.io` >= 1.7.18
+  * `docker-ce` >= 27.0.3
+  * `docker-ce-cli` >= 27.0.3
+  * `docker-compose-plugin` >= 2.28.1
 * [Python](#python)
 
 ### Docker
@@ -40,7 +44,7 @@ To check whether Python is installed on your system, run:
 python3 --version
 ```
 
-CLP requires Python 3.9 or higher. If Python isn't installed, or if the version isn't high enough,
+CLP requires Python 3.10 or higher. If Python isn't installed, or if the version isn't high enough,
 install or upgrade it by following the instructions for your OS.
 
 ---
