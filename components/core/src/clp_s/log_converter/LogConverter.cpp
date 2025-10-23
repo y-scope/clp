@@ -61,29 +61,33 @@ auto LogConverter::refill_buffer(std::shared_ptr<clp::ReaderInterface>& reader)
 }
 
 void LogConverter::compact_buffer() {
-    if (m_cur_offset > 0) {
-        // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        std::memmove(
-                m_buffer.data(),
-                m_buffer.data() + m_cur_offset,
-                m_bytes_occupied - m_cur_offset
-        );
-        // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
-        m_bytes_occupied -= m_cur_offset;
-        m_cur_offset = 0;
+    if (0 == m_cur_offset) {
+        return;
     }
+
+    // NOLINTBEGIN(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    std::memmove(
+            m_buffer.data(),
+            m_buffer.data() + m_cur_offset,
+            m_bytes_occupied - m_cur_offset
+    );
+    // NOLINTEND(cppcoreguidelines-pro-bounds-pointer-arithmetic)
+    m_bytes_occupied -= m_cur_offset;
+    m_cur_offset = 0;
 }
 
 auto LogConverter::grow_buffer_if_full() -> ystdlib::error_handling::Result<void> {
-    if (m_buffer.size() == m_bytes_occupied) {
-        size_t const new_size{2 * m_buffer.size()};
-        if (new_size > cMaxBufferSize) {
-            return std::errc::result_out_of_range;
-        }
-        ystdlib::containers::Array<char> new_buffer(new_size);
-        std::memcpy(new_buffer.data(), m_buffer.data(), m_bytes_occupied);
-        m_buffer = std::move(new_buffer);
+    if (m_buffer.size() != m_bytes_occupied) {
+        return ystdlib::error_handling::success();
     }
+
+    size_t const new_size{2 * m_buffer.size()};
+    if (new_size > cMaxBufferSize) {
+        return std::errc::result_out_of_range;
+    }
+    ystdlib::containers::Array<char> new_buffer(new_size);
+    std::memcpy(new_buffer.data(), m_buffer.data(), m_bytes_occupied);
+    m_buffer = std::move(new_buffer);
     return ystdlib::error_handling::success();
 }
 
@@ -122,8 +126,8 @@ auto LogConverter::convert_file(
             auto const& event{parser.get_log_parser().get_log_event_view()};
             auto const message{event.to_string()};
             if (nullptr != event.get_timestamp()) {
-                auto timestamp{event.get_timestamp()->to_string_view()};
-                auto message_without_timestamp{
+                auto const timestamp{event.get_timestamp()->to_string_view()};
+                auto const message_without_timestamp{
                         std::string_view{message}.substr(timestamp.length())
                 };
                 YSTDLIB_ERROR_HANDLING_TRYV(

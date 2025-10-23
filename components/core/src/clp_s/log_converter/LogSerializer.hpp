@@ -27,7 +27,7 @@ public:
      * @return A result containing a `LogSerializer` on success, or an error code indicating the
      * failure:
      * - std::errc::no_such_file_or_directory if a `clp_s::FileWriter` fails to open an output file.
-     * @return Forwards `clp::ffi::ir_stream::Serializer<>::create()`'s return values on failure.
+     * - Forwards `clp::ffi::ir_stream::Serializer<>::create()`'s return values.
      */
     [[nodiscard]] static auto
     create(std::string_view output_dir, std::string_view original_file_path)

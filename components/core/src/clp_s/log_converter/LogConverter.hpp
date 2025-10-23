@@ -27,10 +27,10 @@ public:
      * @param reader A reader open to the start of the unstructured text input.
      * @param output_dir The output directory for generated KV-IR files.
      * @return A void result on success, or an error code indicating the failure:
-     * - `std::errc::no_message` on any error from log-surgeon's parsing.
-     * - Error codes forwarded from `LogSerializer::create()` on serializer creation failure.
-     * - Error codes forwarded from `refill_buffer()` on buffer refill failure.
-     * - Error codes forwarded from `LogSerializer::add_message()` on message serialization failure.
+     * - std::errc::no_message if `log_surgeon::BufferParser::parse_next_event` returns an error.
+     * - Forwards `LogSerializer::create()`'s return values.
+     * - Forwards `refill_buffer()`'s return values.
+     * - Forwards `LogSerializer::add_message()`'s return values.
      */
     [[nodiscard]] auto convert_file(
             clp_s::Path const& path,
@@ -48,8 +48,10 @@ private:
      * Refills the internal buffer by consuming bytes from a reader, growing the buffer if it is
      * already full.
      * @param reader
-     * @return A result containing the number of new bytes consumed from `reader`, or
-     * `std::errc::not_enough_memory` on faiulre.
+     * @return A result containing the number of new bytes consumed from `reader`, or an error code
+     * indicating the failure:
+     * - std::errc::not_enough_memory if `clp::ReaderInterface::try_read()` returns an error.
+     * - Forwards `grow_buffer_if_full()`'s return values.
      */
     [[nodiscard]] auto refill_buffer(std::shared_ptr<clp::ReaderInterface>& reader)
             -> ystdlib::error_handling::Result<size_t>;
@@ -61,7 +63,8 @@ private:
 
     /**
      * Grows the buffer if it is full.
-     * @return A void result on success, or `std::errc::result_out_of_range` on failure.
+     * @return A void result on success, or an error code indicating the failure:
+     * - std::errc::result_out_of_range if the grown buffer size exceeds the maximum allowed size.
      */
     [[nodiscard]] auto grow_buffer_if_full() -> ystdlib::error_handling::Result<void>;
 
