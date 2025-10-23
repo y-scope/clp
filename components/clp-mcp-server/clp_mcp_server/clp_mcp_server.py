@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 import click
-from clp_py_utils.clp_config import CLPConfig
+from clp_py_utils.clp_config import CLPConfig, MCP_SERVER_COMPONENT_NAME
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
 from pydantic import ValidationError
