@@ -333,6 +333,9 @@ class BaseController(ABC):
         component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
+        logs_dir = self._clp_config.logs_directory / component_name
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
         env_vars = EnvVarsDict()
 
         # Logging config
@@ -352,6 +355,9 @@ class BaseController(ABC):
         """
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
 
