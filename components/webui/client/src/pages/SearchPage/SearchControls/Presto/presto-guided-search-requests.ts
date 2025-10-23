@@ -220,13 +220,13 @@ const handleSwitchToFreeform = () => {
         updateAggregationJobId,
         updateNumSearchResultsTable,
         updateNumSearchResultsTimeline,
-        updateNumSearchResultsMetadata
+        updateNumSearchResultsMetadata,
     } = useSearchStore.getState();
     const {
         updateErrorMsg,
         updateErrorName,
         updateCachedGuidedSearchQueryString,
-        updateQueryDrawerOpen
+        updateQueryDrawerOpen,
     } = usePrestoSearchState.getState();
 
     // If already in default state, nothing to clear

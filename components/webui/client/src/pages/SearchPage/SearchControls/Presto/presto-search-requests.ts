@@ -9,7 +9,6 @@ import {
     submitQuery,
 } from "../../../../api/presto-search";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState";
-import usePrestoSearchState, {PRESTO_SEARCH_STATE_DEFAULT} from "../../SearchState/Presto";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 
 
@@ -117,8 +116,9 @@ const handleSwitchToGuided = () => {
         updateSearchUiState,
         updateSearchJobId,
         updateNumSearchResultsTable,
-        updateNumSearchResultsMetadata
+        updateNumSearchResultsMetadata,
     } = useSearchStore.getState();
+
     if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
         return;
     }

@@ -19,7 +19,6 @@ const useResultsMetadata = () => {
             // If there is no active search job, there is no metadata to fetch.
             if (searchJobId === SEARCH_STATE_DEFAULT.searchJobId
             ) {
-                console.log('no search job id');
                 return null;
             }
 

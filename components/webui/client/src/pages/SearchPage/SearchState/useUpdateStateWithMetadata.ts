@@ -29,7 +29,7 @@ const useUpdateStateWithMetadata = () => {
     const {
         updateNumSearchResultsMetadata,
         updateSearchUiState,
-        searchUiState
+        searchUiState,
     } = useSearchStore();
     const {updateErrorMsg, updateErrorName, sqlInterface} = usePrestoSearchState();
     const resultsMetadata = useResultsMetadata();
@@ -89,6 +89,7 @@ const useUpdateStateWithMetadata = () => {
         updateNumSearchResultsMetadata,
         updateErrorMsg,
         updateErrorName,
+        searchUiState,
         updateSearchUiState,
         sqlInterface,
     ]);
