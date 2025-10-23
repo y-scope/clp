@@ -5,6 +5,7 @@ from typing import Any, Optional
 
 import msgpack
 from clp_py_utils.clp_logging import get_logger
+
 from job_orchestration.scheduler.job_config import AggregationConfig
 
 # Setup logging
@@ -78,15 +79,23 @@ async def _handle_unexpected_msg_from_listener(
     await msg_queues.put_to_listeners(msg)
 
 
-async def _recv_msg_from_reducer(reader: asyncio.StreamReader) -> bytes:
+async def _recv_msg_from_reducer(reader: asyncio.StreamReader) -> Optional[bytes]:
     """
     Receives and deserializes a message from the connected reducer
     :param reader: StreamReader connected to a reducer
-    :return: The received message
+    :return: The received message, or None if the connection was closed without sending any data.
+    :raise: asyncio.IncompleteReadError if the connection is closed mid-message.
     """
-    msg_size_bytes = await reader.readexactly(8)
-    msg_size = int.from_bytes(msg_size_bytes, byteorder="little")
-    return await reader.readexactly(msg_size)
+    try:
+        msg_size_bytes = await reader.readexactly(8)
+        msg_size = int.from_bytes(msg_size_bytes, byteorder="little")
+        return await reader.readexactly(msg_size)
+    except asyncio.IncompleteReadError as e:
+        if len(e.partial) == 0:
+            # Connection was opened but no data was sent; treat as benign noise.
+            logger.debug("Reducer connection closed without sending handshake bytes.")
+            return None
+        raise
 
 
 async def _send_msg_to_reducer(msg: bytes, writer: asyncio.StreamWriter):
@@ -108,6 +117,8 @@ async def handle_reducer_connection(
 ):
     try:
         message_bytes = await _recv_msg_from_reducer(reader)
+        if message_bytes is None:
+            return
         reducer_addr_info = msgpack.unpackb(message_bytes)
 
         msg_queues = ReducerHandlerMessageQueues()

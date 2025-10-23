@@ -8,9 +8,12 @@ import {PRESTO_SQL_INTERFACE} from "./typings";
  * Default values of the Presto search state.
  */
 const PRESTO_SEARCH_STATE_DEFAULT = Object.freeze({
+    cachedGuidedSearchQueryString: "",
+    errorMsg: null,
+    errorName: null,
     from: null,
-    limit: 10,
     orderBy: "",
+    queryDrawerOpen: false,
     select: "*",
     sqlInterface: PRESTO_SQL_INTERFACE.FREEFORM,
     timestampKey: null,
@@ -19,19 +22,34 @@ const PRESTO_SEARCH_STATE_DEFAULT = Object.freeze({
 
 interface PrestoSearchState {
     /**
+     * Last submitted guided search query string.
+     */
+    cachedGuidedSearchQueryString: string;
+
+    /**
+     * Presto error message if query failed.
+     */
+    errorMsg: Nullable<string>;
+
+    /**
+     * Presto error name if query failed.
+     */
+    errorName: Nullable<string>;
+
+    /**
      * FROM input.
      */
     from: Nullable<string>;
 
     /**
-     * LIMIT input.
-     */
-    limit: number;
-
-    /**
      * ORDER BY input.
      */
     orderBy: string;
+
+    /**
+     * Whether the query preview drawer is open.
+     */
+    queryDrawerOpen: boolean;
 
     /**
      * SELECT input.
@@ -54,9 +72,12 @@ interface PrestoSearchState {
     where: string;
 
     setSqlInterface: (iface: PRESTO_SQL_INTERFACE) => void;
+    updateCachedGuidedSearchQueryString: (query: string) => void;
+    updateErrorMsg: (msg: Nullable<string>) => void;
+    updateErrorName: (name: Nullable<string>) => void;
     updateFrom: (database: Nullable<string>) => void;
-    updateLimit: (value: number) => void;
     updateOrderBy: (items: string) => void;
+    updateQueryDrawerOpen: (open: boolean) => void;
     updateSelect: (items: string) => void;
     updateTimestampKey: (key: Nullable<string>) => void;
     updateWhere: (expression: string) => void;
@@ -67,14 +88,23 @@ const usePrestoSearchState = create<PrestoSearchState>((set) => ({
     setSqlInterface: (iface) => {
         set({sqlInterface: iface});
     },
+    updateCachedGuidedSearchQueryString: (query) => {
+        set({cachedGuidedSearchQueryString: query});
+    },
+    updateErrorMsg: (msg) => {
+        set({errorMsg: msg});
+    },
+    updateErrorName: (name) => {
+        set({errorName: name});
+    },
     updateFrom: (database) => {
         set({from: database});
     },
-    updateLimit: (value) => {
-        set({limit: value});
-    },
     updateOrderBy: (items) => {
         set({orderBy: items});
+    },
+    updateQueryDrawerOpen: (open) => {
+        set({queryDrawerOpen: open});
     },
     updateSelect: (items) => {
         set({select: items});
