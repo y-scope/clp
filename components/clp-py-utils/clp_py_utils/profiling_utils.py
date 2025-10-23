@@ -16,8 +16,9 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar
 
-from clp_py_utils.clp_logging import get_logger
 from pyinstrument import Profiler
+
+from clp_py_utils.clp_logging import get_logger
 
 logger = get_logger("profiler")
 
