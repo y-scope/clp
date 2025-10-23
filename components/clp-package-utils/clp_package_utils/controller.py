@@ -657,7 +657,7 @@ class DockerComposeController(BaseController):
         cmd = ["docker", "compose", "--project-name", self._project_name]
         if deployment_type == DeploymentType.BASE:
             cmd += ["--file", "docker-compose.base.yaml"]
-        if len(self._clp_config.mcp_server.model_fields_set) > 0:
+        if self._clp_config.mcp_server is not None:
             cmd += ["--profile", "mcp"]
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(
@@ -782,7 +782,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_query_worker(num_workers)
         env_vars |= self._set_up_env_for_reducer(num_workers)
         env_vars |= self._set_up_env_for_webui(container_clp_config)
-        if len(self._clp_config.mcp_server.model_fields_set) > 0:
+        if self._clp_config.mcp_server is not None:
             env_vars |= self._set_up_env_for_mcp_server()
         env_vars |= self._set_up_env_for_garbage_collector()
 
