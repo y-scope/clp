@@ -5,19 +5,18 @@ import shlex
 import subprocess
 import sys
 import uuid
-from typing import List, Optional
+from typing import List
 
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
     StorageEngine,
     StorageType,
 )
 
 from clp_package_utils.general import (
-    CONTAINER_INPUT_LOGS_ROOT_DIR,
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     dump_container_config,
     generate_container_config,
     generate_container_name,
@@ -33,53 +32,54 @@ from clp_package_utils.general import (
 logger = logging.getLogger(__name__)
 
 
-def _generate_logs_list(
-    container_logs_list_path: pathlib.Path,
+def _generate_url_list(
+    subcommand: str,
+    container_url_list_path: pathlib.Path,
     parsed_args: argparse.Namespace,
 ) -> None:
     """
-    Generates logs list file for filesystem input.
+    Generates URL list file for native script.
 
-    :param container_logs_list_path: Path to write logs list.
+    :param subcommand: 's3-object' or 's3-key-prefix'.
+    :param container_url_list_path: Path to write URL list.
     :param parsed_args: Parsed command-line arguments.
     """
-    host_logs_list_path = parsed_args.path_list
-    with open(container_logs_list_path, "w") as container_logs_list_file:
-        if host_logs_list_path is None:
-            for path in parsed_args.paths:
-                resolved_path = pathlib.Path(path).resolve()
-                mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
-                    resolved_path.anchor
-                )
-                container_logs_list_file.write(f"{mounted_path}\n")
-            return
+    with open(container_url_list_path, "w") as url_list_file:
+        url_list_file.write(f"{subcommand}\n")
 
-        with open(host_logs_list_path, "r") as host_logs_list_file:
-            for line in host_logs_list_file:
-                stripped_path_str = line.rstrip()
-                if "" == stripped_path_str:
-                    # Skip empty paths
-                    continue
-                resolved_path = pathlib.Path(stripped_path_str).resolve()
-                mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
-                    resolved_path.anchor
-                )
-                container_logs_list_file.write(f"{mounted_path}\n")
+        if parsed_args.inputs_from is not None:
+            with open(parsed_args.inputs_from, "r") as input_file:
+                for line in input_file:
+                    stripped_url = line.strip()
+                    if "" == stripped_url:
+                        continue
+                    url_list_file.write(f"{stripped_url}\n")
+        else:
+            for url in parsed_args.inputs:
+                url_list_file.write(f"{url}\n")
 
 
 def _generate_compress_cmd(
     parsed_args: argparse.Namespace,
-    dataset: Optional[str],
+    dataset: str | None,
     config_path: pathlib.Path,
-    logs_list_path: pathlib.Path,
+    url_list_path: pathlib.Path,
 ) -> List[str]:
+    """
+    Generates command to run native compress script.
 
+    :param parsed_args: Parsed arguments.
+    :param dataset: Dataset name.
+    :param config_path: Path to config file (in container).
+    :param url_list_path: Path to URL list file (in container).
+    :return: Command list.
+    """
     # fmt: off
     compress_cmd = [
         "python3",
         "-m", "clp_package_utils.scripts.native.compress",
         "--config", str(config_path),
-        "--source", "fs",
+        "--source", "s3",
     ]
     # fmt: on
     if parsed_args.verbose:
@@ -97,31 +97,52 @@ def _generate_compress_cmd(
         compress_cmd.append("--no-progress-reporting")
 
     compress_cmd.append("--logs-list")
-    compress_cmd.append(str(logs_list_path))
+    compress_cmd.append(str(url_list_path))
 
     return compress_cmd
 
 
-def _validate_fs_input_args(
+def _validate_s3_object_args(
     parsed_args: argparse.Namespace,
     args_parser: argparse.ArgumentParser,
 ) -> None:
-    # Validate some input paths were specified
-    if len(parsed_args.paths) == 0 and parsed_args.path_list is None:
-        args_parser.error("No paths specified.")
+    """
+    Validates s3-object subcommand arguments.
+    """
+    if len(parsed_args.inputs) == 0 and parsed_args.inputs_from is None:
+        args_parser.error("No URLs specified.")
 
-    # Validate paths were specified using only one method
-    if len(parsed_args.paths) > 0 and parsed_args.path_list is not None:
-        args_parser.error("Paths cannot be specified on the command line AND through a file.")
+    # Validate URLs were specified using only one method
+    if len(parsed_args.inputs) > 0 and parsed_args.inputs_from is not None:
+        args_parser.error("URLs cannot be specified on the command line AND through a file.")
+
+
+def _validate_s3_key_prefix_args(
+    parsed_args: argparse.Namespace,
+    args_parser: argparse.ArgumentParser,
+) -> None:
+    """
+    Validates s3-key-prefix subcommand arguments.
+    """
+
+    if parsed_args.inputs_from is None:
+        if len(parsed_args.inputs) == 0:
+            args_parser.error("No URL specified.")
+        if len(parsed_args.inputs) != 1:
+            args_parser.error(
+                f"s3-key-prefix accepts exactly one URL, got {len(parsed_args.inputs)}."
+            )
+
+    if len(parsed_args.inputs) > 0 and parsed_args.inputs_from is not None:
+        args_parser.error("URL cannot be specified on the command line AND through a file.")
 
 
 def main(argv):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
-    args_parser = argparse.ArgumentParser(description="Compresses logs")
+    args_parser = argparse.ArgumentParser(description="Compresses logs from S3")
 
-    # Package-level config option
     args_parser.add_argument(
         "--config",
         "-c",
@@ -150,10 +171,20 @@ def main(argv):
     args_parser.add_argument(
         "--no-progress-reporting", action="store_true", help="Disables progress reporting."
     )
-    args_parser.add_argument("paths", metavar="PATH", nargs="*", help="Paths to compress.")
-    args_parser.add_argument(
-        "-f", "--path-list", dest="path_list", help="A file listing all paths to compress."
+
+    subparsers = args_parser.add_subparsers(dest="subcommand", required=True)
+
+    object_parser = subparsers.add_parser("s3-object", help="Compress specific S3 objects")
+    object_parser.add_argument("inputs", metavar="URL", nargs="*", help="S3 object URLs")
+    object_parser.add_argument(
+        "--inputs-from", type=str, help="File containing S3 object URLs (one per line)"
     )
+
+    prefix_parser = subparsers.add_parser(
+        "s3-key-prefix", help="Compress all objects under S3 key prefix"
+    )
+    prefix_parser.add_argument("inputs", metavar="URL", nargs="*", help="S3 prefix URL")
+    prefix_parser.add_argument("--inputs-from", type=str, help="File containing S3 prefix URL")
 
     parsed_args = args_parser.parse_args(argv[1:])
     if parsed_args.verbose:
@@ -161,30 +192,29 @@ def main(argv):
     else:
         logger.setLevel(logging.INFO)
 
-    # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_logs_dir()
 
-        # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
     except Exception:
         logger.exception("Failed to load config.")
         return -1
 
-    # Validate logs_input type is FS
-    if clp_config.logs_input.type != StorageType.FS:
+    # Validate logs_input type is S3
+    if clp_config.logs_input.type != StorageType.S3:
         logger.error(
-            "Filesystem compression requires logs_input.type to be `%s`, but read `%s`. For S3"
-            " compression, use compress-from-s3.sh instead.",
-            StorageType.FS,
+            "S3 compression requires logs_input.type to be `%s`, but configured type is `%s`. "
+            "Please update your clp-config.yml.",
+            StorageType.S3,
             clp_config.logs_input.type,
         )
         return -1
 
     storage_engine: StorageEngine = clp_config.package.storage_engine
     dataset = parsed_args.dataset
+
     if StorageEngine.CLP_S == storage_engine:
         dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
         try:
@@ -199,12 +229,17 @@ def main(argv):
                 "`--timestamp-key` not specified. Events will not have assigned timestamps and can "
                 "only be searched from the command line without a timestamp filter."
             )
-    elif dataset is not None:
-        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+    else:
+        logger.error(
+            f"S3 compression requires storage engine {StorageEngine.CLP_S}, "
+            f"but configured engine is {storage_engine}."
+        )
         return -1
 
-    # Validate filesystem input arguments
-    _validate_fs_input_args(parsed_args, args_parser)
+    if parsed_args.subcommand == "s3-object":
+        _validate_s3_object_args(parsed_args, args_parser)
+    else:
+        _validate_s3_key_prefix_args(parsed_args, args_parser)
 
     container_name = generate_container_name(str(JobType.COMPRESSION))
 
@@ -213,20 +248,18 @@ def main(argv):
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
-    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir, mounts.input_logs_dir]
+    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
 
-    # Write compression logs to a file
     while True:
-        # Get unused output path
-        container_logs_list_filename = f"{uuid.uuid4()}.txt"
-        container_logs_list_path = clp_config.logs_directory / container_logs_list_filename
-        logs_list_path_on_container = (
-            container_clp_config.logs_directory / container_logs_list_filename
+        container_url_list_filename = f"{uuid.uuid4()}.txt"
+        container_url_list_path = clp_config.logs_directory / container_url_list_filename
+        url_list_path_on_container = (
+            container_clp_config.logs_directory / container_url_list_filename
         )
-        if not container_logs_list_path.exists():
+        if not container_url_list_path.exists():
             break
 
-    _generate_logs_list(container_logs_list_path, parsed_args)
+    _generate_url_list(parsed_args.subcommand, container_url_list_path, parsed_args)
 
     extra_env_vars = {
         CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
@@ -236,28 +269,30 @@ def main(argv):
         container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
     )
     compress_cmd = _generate_compress_cmd(
-        parsed_args, dataset, generated_config_path_on_container, logs_list_path_on_container
+        parsed_args, dataset, generated_config_path_on_container, url_list_path_on_container
     )
 
     cmd = container_start_cmd + compress_cmd
 
-    proc = subprocess.run(cmd)
-    ret_code = proc.returncode
-    if ret_code != 0:
-        logger.error("Compression failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
-    else:
-        try:
-            container_logs_list_path.unlink()
-        except Exception:
-            logger.debug("Failed to remove logs list file: %s", container_logs_list_path)
-
     try:
-        generated_config_path_on_host.unlink()
-    except Exception:
-        logger.debug("Failed to remove generated config file: %s", generated_config_path_on_host)
+        proc = subprocess.run(cmd)
+        ret_code = proc.returncode
+        if ret_code != 0:
+            logger.error("Compression failed.")
+            logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
-    return ret_code
+        return ret_code
+    finally:
+        try:
+            generated_config_path_on_host.unlink()
+        except Exception:
+            logger.debug(
+                "Failed to remove generated config file: %s", generated_config_path_on_host
+            )
+        try:
+            container_url_list_path.unlink()
+        except Exception:
+            logger.debug("Failed to remove URL list file: %s", container_url_list_path)
 
 
 if "__main__" == __name__:
