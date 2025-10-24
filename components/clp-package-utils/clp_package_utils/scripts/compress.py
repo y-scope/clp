@@ -40,30 +40,31 @@ def _generate_logs_list(
     """
     Generates logs list file for filesystem input.
 
-    :param container_logs_list_path: Path to write logs list
-    :param parsed_args: Parsed command-line arguments
+    :param container_logs_list_path: Path to write logs list.
+    :param parsed_args: Parsed command-line arguments.
     """
     host_logs_list_path = parsed_args.path_list
     with open(container_logs_list_path, "w") as container_logs_list_file:
-        if host_logs_list_path is not None:
-            with open(host_logs_list_path, "r") as host_logs_list_file:
-                for line in host_logs_list_file:
-                    stripped_path_str = line.rstrip()
-                    if "" == stripped_path_str:
-                        # Skip empty paths
-                        continue
-                    resolved_path = pathlib.Path(stripped_path_str).resolve()
-                    mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
-                        resolved_path.anchor
-                    )
-                    container_logs_list_file.write(f"{mounted_path}\n")
+        if host_logs_list_path is None:
+            for path in parsed_args.paths:
+                resolved_path = pathlib.Path(path).resolve()
+                mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
+                    resolved_path.anchor
+                )
+                container_logs_list_file.write(f"{mounted_path}\n")
+            return
 
-        for path in parsed_args.paths:
-            resolved_path = pathlib.Path(path).resolve()
-            mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
-                resolved_path.anchor
-            )
-            container_logs_list_file.write(f"{mounted_path}\n")
+        with open(host_logs_list_path, "r") as host_logs_list_file:
+            for line in host_logs_list_file:
+                stripped_path_str = line.rstrip()
+                if "" == stripped_path_str:
+                    # Skip empty paths
+                    continue
+                resolved_path = pathlib.Path(stripped_path_str).resolve()
+                mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
+                    resolved_path.anchor
+                )
+                container_logs_list_file.write(f"{mounted_path}\n")
 
 
 def _generate_compress_cmd(
@@ -175,8 +176,8 @@ def main(argv):
     # Validate logs_input type is FS
     if clp_config.logs_input.type != StorageType.FS:
         logger.error(
-            "Filesystem compression requires logs_input.type to be '%s', but configured type is '%s'. "
-            "For S3 compression, use compress-from-s3.sh instead.",
+            "Filesystem compression requires logs_input.type to be `%s`, but read `%s`. For S3"
+            " compression, use compress-from-s3.sh instead.",
             StorageType.FS,
             clp_config.logs_input.type,
         )
@@ -240,25 +241,23 @@ def main(argv):
 
     cmd = container_start_cmd + compress_cmd
 
-    try:
-        proc = subprocess.run(cmd)
-        ret_code = proc.returncode
-        if ret_code != 0:
-            logger.error("Compression failed.")
-            logger.debug(f"Docker command failed: {shlex.join(cmd)}")
-
-        return ret_code
-    finally:
-        try:
-            generated_config_path_on_host.unlink()
-        except Exception:
-            logger.debug(
-                "Failed to remove generated config file: %s", generated_config_path_on_host
-            )
+    proc = subprocess.run(cmd)
+    ret_code = proc.returncode
+    if ret_code != 0:
+        logger.error("Compression failed.")
+        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+    else:
         try:
             container_logs_list_path.unlink()
         except Exception:
             logger.debug("Failed to remove logs list file: %s", container_logs_list_path)
+
+    try:
+        generated_config_path_on_host.unlink()
+    except Exception:
+        logger.debug("Failed to remove generated config file: %s", generated_config_path_on_host)
+
+    return ret_code
 
 
 if "__main__" == __name__:

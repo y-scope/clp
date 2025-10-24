@@ -199,8 +199,8 @@ def _get_logs_to_compress(logs_list_path: pathlib.Path) -> List[str]:
     """
     Read logs or URLs from the input file.
 
-    :param logs_list_path: Path to the list file
-    :return: List of paths/URLs
+    :param logs_list_path: Path to the list file.
+    :return: List of paths/URLs.
     """
     logs_to_compress = []
     with open(logs_list_path, "r") as f:
@@ -221,15 +221,15 @@ def _parse_and_validate_s3_object_urls(
     Parse and validate S3 object URLs.
 
     Validates:
-    - All URLs have same region and bucket
-    - No duplicate keys
-    - For multiple URLs: non-empty common prefix exists
+    - All URLs have same region and bucket.
+    - No duplicate keys.
+    - For multiple URLs: non-empty common prefix exists.
 
     :param urls: List of S3 URLs
-    :return: Tuple of (region_code, bucket, key_prefix, keys)
-             - For single URL: key_prefix is the full key, keys is None (more efficient)
-             - For multiple URLs: key_prefix is the common prefix, keys are full keys
-    :raises ValueError: If validation fails
+    :return: Tuple of (region_code, bucket, key_prefix, keys).
+             - For single URL: key_prefix is the full key, keys is None (more efficient).
+             - For multiple URLs: key_prefix is the common prefix, keys are full keys.
+    :raises ValueError: If validation fails.
     """
     if len(urls) == 0:
         raise ValueError("No URLs provided")
@@ -275,9 +275,9 @@ def _parse_s3_key_prefix_url(url: str) -> Tuple[str, str, str]:
     """
     Parse single S3 URL for key-prefix mode.
 
-    :param url: S3 URL
-    :return: Tuple of (region_code, bucket, key_prefix)
-    :raise ValueError: If parsing fails
+    :param url: S3 URL.
+    :return: Tuple of (region_code, bucket, key_prefix).
+    :raise ValueError: If parsing fails.
     """
     try:
         region_code, bucket, key_prefix = parse_s3_url(url)
@@ -291,9 +291,9 @@ def _get_aws_authentication_from_config(clp_config: CLPConfig) -> AwsAuthenticat
     """
     Get AWS authentication configuration.
 
-    :param clp_config: CLPConfig object
-    :return: AwsAuthentication object
-    :raise ValueError: If no authentication configured
+    :param clp_config: CLPConfig object.
+    :return: AwsAuthentication object.
+    :raise ValueError: If no authentication configured.
     """
     if hasattr(clp_config, "logs_input") and hasattr(clp_config.logs_input, "type"):
         if StorageType.S3 == clp_config.logs_input.type:

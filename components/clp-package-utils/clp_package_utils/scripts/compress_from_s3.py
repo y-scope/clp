@@ -40,9 +40,9 @@ def _generate_url_list(
     """
     Generates URL list file for native script.
 
-    :param subcommand: 's3-object' or 's3-key-prefix'
-    :param container_url_list_path: Path to write URL list
-    :param parsed_args: Parsed command-line arguments
+    :param subcommand: 's3-object' or 's3-key-prefix'.
+    :param container_url_list_path: Path to write URL list.
+    :param parsed_args: Parsed command-line arguments.
     """
     with open(container_url_list_path, "w") as url_list_file:
         url_list_file.write(f"{subcommand}\n")
@@ -68,11 +68,11 @@ def _generate_compress_cmd(
     """
     Generates command to run native compress script.
 
-    :param parsed_args: Parsed arguments
-    :param dataset: Dataset name
-    :param config_path: Path to config file (in container)
-    :param url_list_path: Path to URL list file (in container)
-    :return: Command list
+    :param parsed_args: Parsed arguments.
+    :param dataset: Dataset name.
+    :param config_path: Path to config file (in container).
+    :param url_list_path: Path to URL list file (in container).
+    :return: Command list.
     """
     # fmt: off
     compress_cmd = [
@@ -205,7 +205,7 @@ def main(argv):
     # Validate logs_input type is S3
     if clp_config.logs_input.type != StorageType.S3:
         logger.error(
-            "S3 compression requires logs_input.type to be '%s', but configured type is '%s'. "
+            "S3 compression requires logs_input.type to be `%s`, but configured type is `%s`. "
             "Please update your clp-config.yml.",
             StorageType.S3,
             clp_config.logs_input.type,
