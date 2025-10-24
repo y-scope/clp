@@ -26,7 +26,7 @@ namespace {
  * @param reader The open reader which may have experienced a CURL error.
  * @return Whether a CURL error has occurred on the reader.
  */
-auto check_and_log_curl_error(
+[[nodiscard]] auto check_and_log_curl_error(
         clp_s::Path const& path,
         std::shared_ptr<clp::ReaderInterface> const& reader
 ) -> bool;
@@ -36,27 +36,27 @@ auto check_and_log_curl_error(
  * @param command_line_arguments
  * @return Whether conversion was successful.
  */
-auto convert_files(CommandLineArguments const& command_line_arguments) -> bool;
+[[nodiscard]] auto convert_files(CommandLineArguments const& command_line_arguments) -> bool;
 
 auto check_and_log_curl_error(
         clp_s::Path const& path,
         std::shared_ptr<clp::ReaderInterface> const& reader
 ) -> bool {
-    if (auto network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
-        nullptr != network_reader)
+    auto const network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
+    if (nullptr == network_reader) {
+        return false;
+    }
+    if (auto const rc = network_reader->get_curl_ret_code();
+        rc.has_value() && CURLcode::CURLE_OK != rc.value())
     {
-        if (auto const rc = network_reader->get_curl_ret_code();
-            rc.has_value() && CURLcode::CURLE_OK != rc.value())
-        {
-            auto const curl_error_message = network_reader->get_curl_error_msg();
-            SPDLOG_ERROR(
-                    "Encountered curl error while converting {} - Code: {} - Message: {}",
-                    path.path,
-                    static_cast<int64_t>(rc.value()),
-                    curl_error_message.value_or("Unknown error.")
-            );
-            return true;
-        }
+        auto const curl_error_message = network_reader->get_curl_error_msg();
+        SPDLOG_ERROR(
+                "Encountered curl error while converting {} - Code: {} - Message: {}",
+                path.path,
+                static_cast<int64_t>(rc.value()),
+                curl_error_message.value_or("Unknown error.")
+        );
+        return true;
     }
     return false;
 }
