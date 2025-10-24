@@ -109,7 +109,7 @@ def format_query_results(query_results: list[dict[str, Any]]) -> list[str]:
 
         link = obj.get("link", "")
         if not link:
-            logger.warning("Empty link attached to a log event: %s.", obj)
+            logger.warning("No valid link provided in log event: %s.", obj)
             formatted_log_events.append(f"timestamp: {timestamp_str}, message: {message}")
             continue
 
