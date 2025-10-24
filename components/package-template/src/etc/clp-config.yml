@@ -71,6 +71,7 @@
 #mcp_server:
 #  host: "localhost"
 #  port: 8000
+#  logging_level: "INFO"
 #
 ## Where archives should be output to
 #archive_output:
