@@ -1,0 +1,38 @@
+# Dependency Taskfiles
+
+Follow the guidelines below when writing or updating dependency installation taskfiles.
+
+- Use `deps:utils:install-remote-cmake-lib` and thus `yscope-dev-utils:cmake:install-remote-tar`
+  whenever applicable.
+
+- For ones that don't apply:
+  - Include `deps:utils:init` in the `deps:` section of the task.
+  - Briefly explain why if the library is installable via CMake.
+  - Verify that each library has proper checksum validation to check if it is up-to-date.
+  - Use `<lib>-extracted` as the directory name for tarball extractions.
+
+- Avoid parsing version numbers from download URLs unless the version is used elsewhere.
+  - URL formats can change over time, so it’s more maintainable to store and use the full URL
+    directly as plain text.
+
+## CMake Generate Arguments
+
+Apply the following guidelines to the `CMAKE_GEN_ARGS` section of tasks that call
+`deps:utils:install-remote-cmake-lib`:
+
+- Set `CMP0074` to `NEW` whenever:
+  - The component's minimum required CMake version is less than 3.27 (where `CMP0074` defaults to
+    `OLD`)
+  - The component depends on another via `<lib_name>_ROOT`.
+
+- Build both shared and static libraries when possible.
+
+- Skip unit tests, examples, docs or unused binaries to speed up the install process.
+
+- Prefer disabling lib-specific testing flags (e.g., `CATCH_BUILD_TESTING=OFF`) rather than setting
+  the generic `BUILD_TESTING` to `OFF`.
+
+- **Lastly**, while satisfying the above requirements, remove redundant flags that merely restate
+  default values found in `CMakeLists.txt` and others source CMake files, with two exceptions:
+    - Set `CMAKE_BUILD_TYPE` to `Release` unless another build type is explicitly required.
+    - Set `CMAKE_INSTALL_MESSAGE` to `LAZY` to reduce log verbosity during installation.
