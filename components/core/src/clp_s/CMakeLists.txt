@@ -1,5 +1,6 @@
 add_subdirectory(indexer)
 add_subdirectory(search)
+add_subdirectory(timestamp_parser)
 
 set(
         CLP_S_CLP_SOURCES
