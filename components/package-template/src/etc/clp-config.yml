@@ -68,9 +68,9 @@
 #  results_metadata_collection_name: "results-metadata"
 #  rate_limit: 1000
 #
-# mcp_server:
-#   host: "localhost"
-#   port: 8000
+#mcp_server:
+#  host: "localhost"
+#  port: 8000
 #
 ## Where archives should be output to
 #archive_output:
