@@ -12,6 +12,7 @@ import {
 } from "../../../../sql-parser";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState";
 import usePrestoSearchState, {PRESTO_SEARCH_STATE_DEFAULT} from "../../SearchState/Presto";
+import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 
 
@@ -223,6 +224,7 @@ const handleSwitchToFreeform = () => {
         updateNumSearchResultsMetadata,
     } = useSearchStore.getState();
     const {
+        setSqlInterface,
         updateErrorMsg,
         updateErrorName,
         updateCachedGuidedSearchQueryString,
@@ -248,6 +250,8 @@ const handleSwitchToFreeform = () => {
     updateErrorName(PRESTO_SEARCH_STATE_DEFAULT.errorName);
     updateCachedGuidedSearchQueryString(PRESTO_SEARCH_STATE_DEFAULT.cachedGuidedSearchQueryString);
     updateQueryDrawerOpen(PRESTO_SEARCH_STATE_DEFAULT.queryDrawerOpen);
+
+    setSqlInterface(PRESTO_SQL_INTERFACE.FREEFORM);
 };
 
 export {

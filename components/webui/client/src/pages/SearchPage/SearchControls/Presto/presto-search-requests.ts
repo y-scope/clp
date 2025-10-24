@@ -9,6 +9,8 @@ import {
     submitQuery,
 } from "../../../../api/presto-search";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState";
+import usePrestoSearchState from "../../SearchState/Presto";
+import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 
 
@@ -118,6 +120,7 @@ const handleSwitchToGuided = () => {
         updateNumSearchResultsTable,
         updateNumSearchResultsMetadata,
     } = useSearchStore.getState();
+    const {setSqlInterface} = usePrestoSearchState.getState();
 
     if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
         return;
@@ -130,6 +133,8 @@ const handleSwitchToGuided = () => {
     updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
 
     updateSearchUiState(SEARCH_UI_STATE.DEFAULT);
+
+    setSqlInterface(PRESTO_SQL_INTERFACE.GUIDED);
 };
 
 export {
