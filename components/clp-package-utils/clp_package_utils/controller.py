@@ -782,8 +782,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_query_worker(num_workers)
         env_vars |= self._set_up_env_for_reducer(num_workers)
         env_vars |= self._set_up_env_for_webui(container_clp_config)
-        if self._clp_config.mcp_server is not None:
-            env_vars |= self._set_up_env_for_mcp_server()
+        env_vars |= self._set_up_env_for_mcp_server()
         env_vars |= self._set_up_env_for_garbage_collector()
 
         # Write the environment variables to the `.env` file.
