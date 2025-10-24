@@ -38,6 +38,14 @@ constexpr std::string_view cS3Auth{"s3"};
         std::vector<std::string>& path_destination
 ) -> bool;
 
+/**
+ * Validates and populates network authorization options.
+ * @param auth_method
+ * @param auth
+ * @throws std::invalid_argument if the authorization option is invalid
+ */
+void validate_network_auth(std::string_view auth_method, NetworkAuthOption& auth);
+
 auto read_paths_from_file(
         std::string const& input_path_list_file_path,
         std::vector<std::string>& path_destination
@@ -73,12 +81,6 @@ auto read_paths_from_file(
     return true;
 }
 
-/**
- * Validates and populates network authorization options.
- * @param auth_method
- * @param network_auth
- * @throws std::invalid_argument if the authorization option is invalid
- */
 void validate_network_auth(std::string_view auth_method, NetworkAuthOption& auth) {
     if (cS3Auth == auth_method) {
         auth.method = AuthMethod::S3PresignedUrlV4;
