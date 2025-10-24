@@ -617,10 +617,10 @@ class CLPConfig(BaseModel):
     compression_worker: CompressionWorker = CompressionWorker()
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
-    mcp_server: Optional[McpServer] = None
     garbage_collector: GarbageCollector = GarbageCollector()
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
+    mcp_server: Optional[McpServer] = None
     presto: Optional[Presto] = None
 
     archive_output: ArchiveOutput = ArchiveOutput()
