@@ -5,6 +5,7 @@
 
 #include <cstdio>
 #include <string>
+#include <utility>
 
 #include "ErrorCode.hpp"
 #include "TraceableException.hpp"
@@ -28,6 +29,24 @@ public:
 
     // Constructors
     FileWriter() : m_file(nullptr), m_fd(-1) {}
+
+    // Delete copy constructor and assignment operator
+    FileWriter(FileWriter const&) = delete;
+    auto operator=(FileWriter const&) -> FileWriter& = delete;
+
+    // Define custom move constructor and assignment operator
+    FileWriter(FileWriter&& writer)
+            : m_file{std::exchange(writer.m_file, nullptr)},
+              m_fd{std::exchange(writer.m_fd, -1)} {}
+
+    auto operator=(FileWriter&& writer) -> FileWriter& {
+        if (this == &writer) {
+            return *this;
+        }
+        m_file = std::exchange(writer.m_file, nullptr);
+        m_fd = std::exchange(writer.m_fd, -1);
+        return *this;
+    }
 
     // Destructor
     ~FileWriter();
