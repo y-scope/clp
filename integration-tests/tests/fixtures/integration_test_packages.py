@@ -1,84 +1,77 @@
 """Define test packages fixtures."""
 
 import logging
-import subprocess
 from collections.abc import Iterator
-from typing import Literal
 
 import pytest
 
 from tests.utils.config import (
-    PackageConfig,
-    PackageRun,
+    PackageInstance,
+    PackageInstanceConfigFile,
+)
+from tests.utils.package_utils import (
+    start_clp_package,
+    stop_clp_package,
 )
 
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture(scope="session")
-def clp_package(
-    package_config: PackageConfig,
-) -> Iterator[PackageRun]:
-    """Fixture that starts up an instance of clp, and stops the package after yield."""
-    mode: Literal["clp-text", "clp-json"] = "clp-text"
-    instance = _start_clp_package(package_config, mode)
+@pytest.fixture
+def clp_text_package(
+    clp_text_config: PackageInstanceConfigFile,
+) -> Iterator[PackageInstance]:
+    """Fixture that launches a clp-text instance, and gracefully stops it after its scope ends."""
+    log_msg = f"Starting up the {clp_text_config.mode} package..."
+    logger.info(log_msg)
+
+    start_clp_package(clp_text_config)
+    instance = PackageInstance(package_instance_config_file=clp_text_config)
+
+    mode = instance.package_instance_config_file.mode
+    instance_id = instance.clp_instance_id
+    log_msg = (
+        f"An instance of the {mode} package was started successfully."
+        f" Its instance ID is '{instance_id}'"
+    )
+    logger.info(log_msg)
 
     yield instance
-    _stop_clp_package(instance)
+
+    log_msg = f"Now stopping the {mode} package with instance ID '{instance_id}'..."
+    logger.info(log_msg)
+
+    stop_clp_package(instance)
+
+    log_msg = f"The {mode} package with instance ID '{instance_id}' was stopped successfully."
+    logger.info(log_msg)
 
 
-def _start_clp_package(
-    package_config: PackageConfig,
-    mode: Literal["clp-text", "clp-json"],
-) -> PackageRun:
-    """Starts up an instance of clp."""
-    logger.info(f"Starting up the {mode} package...")
+@pytest.fixture
+def clp_json_package(
+    clp_json_config: PackageInstanceConfigFile,
+) -> Iterator[PackageInstance]:
+    """Fixture that launches a clp-json instance, and gracefully stops it after its scope ends."""
+    log_msg = f"Starting up the {clp_json_config.mode} package..."
+    logger.info(log_msg)
 
-    start_script_path = package_config.clp_package_dir / "sbin" / "start-clp.sh"
+    start_clp_package(clp_json_config)
+    instance = PackageInstance(package_instance_config_file=clp_json_config)
 
-    try:
-        # fmt: off
-        start_cmd = [
-            start_script_path
-        ]
-        # fmt: on
-        subprocess.run(start_cmd, check=True)
-    except Exception as e:
-        err_msg = f"Failed to start an instance of the {mode} package."
-        raise RuntimeError(err_msg) from e
-
-    package_run = PackageRun(
-        package_config=package_config,
-        mode=mode,
-    )
-
-    logger.info(
-        f"An instance of the {package_run.mode} package was started successfully."
-        f" Its instance ID is '{package_run.clp_instance_id}'"
-    )
-
-    return package_run
-
-
-def _stop_clp_package(
-    instance: PackageRun,
-) -> None:
-    """Stops an instance of clp."""
-    mode = instance.mode
+    mode = instance.package_instance_config_file.mode
     instance_id = instance.clp_instance_id
-    logger.info(f"Now stopping the {mode} package with instance ID '{instance_id}'...")
+    log_msg = (
+        f"An instance of the {mode} package was started successfully."
+        f" Its instance ID is '{instance_id}'"
+    )
+    logger.info(log_msg)
 
-    stop_script_path = instance.package_config.clp_package_dir / "sbin" / "stop-clp.sh"
+    yield instance
 
-    try:
-        # fmt: off
-        stop_cmd = [
-            stop_script_path
-        ]
-        # fmt: on
-        subprocess.run(stop_cmd, check=True)
-    except Exception as e:
-        err_msg = f"Failed to stop an instance of the {mode} package."
-        raise RuntimeError(err_msg) from e
+    log_msg = f"Now stopping the {mode} package with instance ID '{instance_id}'..."
+    logger.info(log_msg)
 
-    logger.info(f"The {mode} package with instance ID '{instance_id}' was stopped successfully.")
+    stop_clp_package(instance)
+
+    log_msg = f"The {mode} package with instance ID '{instance_id}' was stopped successfully."
+    logger.info(log_msg)
