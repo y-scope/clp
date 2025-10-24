@@ -1,0 +1,29 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    vars:
+      DEPS: ["fmt"]
+    run: "once"
+    deps:
+      - for:
+          var: "DEPS"
+        task: ":{{.ITEM}}"
+    cmds:
+      - task: ":utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
+            - "-DSPDLOG_BUILD_EXAMPLE=OFF"
+            - "-DSPDLOG_BUILD_SHARED=ON"
+            - "-DSPDLOG_FMT_EXTERNAL=ON"
+          LIB_NAME: "spdlog"
+          TARBALL_SHA256: "15a04e69c222eb6c01094b5c7ff8a249b36bb22788d72519646fb85feb267e67"
+
+          # NOTE: Since spdlog depends on fmt, we need to choose a version of spdlog that's
+          # compatible with the version of fmt we use.
+          TARBALL_URL: "https://github.com/gabime/spdlog/archive/refs/tags/v1.15.3.tar.gz"

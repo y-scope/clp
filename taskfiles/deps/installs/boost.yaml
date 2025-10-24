@@ -1,0 +1,26 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    vars:
+      VERSION: "1.87.0"
+    run: "once"
+    deps:
+      - task: ":init"
+    cmds:
+      - task: ":yscope-dev-utils:boost:download-and-install"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
+          FILE_SHA256: "d6c69e4459eb5d6ec208250291221e7ff4a2affde9af6e49c9303b89c687461f"
+          TARGETS:
+            - "filesystem"
+            - "iostreams"
+            - "process"
+            - "program_options"
+            - "regex"
+            - "system"
+            - "url"
+          URL: "https://github.com/boostorg/boost/releases/download/boost-{{.VERSION}}/\
+          boost-{{.VERSION}}-b2-nodocs.tar.gz"
+          WORK_DIR: "{{.G_DEPS_CPP_DIR}}"

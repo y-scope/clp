@@ -1,0 +1,15 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    run: "once"
+    cmds:
+      - task: ":utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+          LIB_NAME: "date"
+          TARBALL_SHA256: "7a390f200f0ccd207e8cff6757e04817c1a0aec3e327b006b7eb451c57ee3538"
+          TARBALL_URL: "https://github.com/HowardHinnant/date/archive/refs/tags/v3.0.1.tar.gz"

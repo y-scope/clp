@@ -1,0 +1,27 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    vars:
+      DEPS: ["boost"]
+      VERSION: "7.0.0"
+    run: "once"
+    deps:
+      - for:
+          var: "DEPS"
+        task: ":{{.ITEM}}"
+    cmds:
+      - task: ":utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
+            - "-DMSGPACK_BUILD_DOCS=OFF"
+            - "-DMSGPACK_CXX20=ON"
+          LIB_NAME: "msgpack-cxx"
+          TARBALL_SHA256: "7504b7af7e7b9002ce529d4f941e1b7fb1fb435768780ce7da4abaac79bb156f"
+          TARBALL_URL: "https://github.com/msgpack/msgpack-c/releases/download/cpp-{{.VERSION}}\
+          /msgpack-cxx-{{.VERSION}}.tar.gz"

@@ -1,0 +1,22 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    vars:
+      DEPS: ["boost"]
+    run: "once"
+    deps:
+      - for:
+          var: "DEPS"
+        task: ":{{.ITEM}}"
+    cmds:
+      - task: ":utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+            - "-Dystdlib_BUILD_TESTING=OFF"
+          LIB_NAME: "ystdlib"
+          TARBALL_SHA256: "65990dc2bcc4a355c2181bfe31a7800f492309d1bcd340f52a34e85047e61bc8"
+          TARBALL_URL: "https://github.com/y-scope/ystdlib-cpp/archive/9ed78cd.tar.gz"

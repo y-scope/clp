@@ -1,0 +1,16 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    run: "once"
+    cmds:
+      - task: ":utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DYAML_CPP_BUILD_TESTS=OFF"
+          LIB_NAME: "yaml-cpp"
+          TARBALL_SHA256: "43e6a9fcb146ad871515f0d0873947e5d497a1c9c60c58cb102a97b47208b7c3"
+          TARBALL_URL: "https://github.com/jbeder/yaml-cpp/archive/refs/tags/yaml-cpp-0.7.0.tar.gz"

@@ -1,0 +1,17 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    run: "once"
+    cmds:
+      - task: ":utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DBUILD_SHARED_LIBS=ON"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DSIMDJSON_BUILD_STATIC_LIB=ON"
+          LIB_NAME: "simdjson"
+          TARBALL_SHA256: "07a1bb3587aac18fd6a10a83fe4ab09f1100ab39f0cb73baea1317826b9f9e0d"
+          TARBALL_URL: "https://github.com/simdjson/simdjson/archive/refs/tags/v3.13.0.tar.gz"

@@ -1,0 +1,24 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    vars:
+      LIB_NAME: "utfcpp"
+      UTFCPP_OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-extracted"
+    run: "once"
+    deps:
+      - task: ":init"
+    cmds:
+      # Directly use the source project instead of installing it.
+      # See also: https://github.com/nemtrif/utfcpp/tree/v4.0.6?tab=readme-ov-file#installation
+      - task: ":yscope-dev-utils:remote:download-and-extract-tar"
+        vars:
+          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          FILE_SHA256: "6920a6a5d6a04b9a89b2a89af7132f8acefd46e0c2a7b190350539e9213816c0"
+          OUTPUT_DIR: "{{.UTFCPP_OUTPUT_DIR}}"
+          URL: "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.0.6.tar.gz"
+      - |-
+        cat > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake" <<EOF
+        set(CLP_UTFCPP_INCLUDE_DIRECTORY "{{.UTFCPP_OUTPUT_DIR}}")
+        EOF

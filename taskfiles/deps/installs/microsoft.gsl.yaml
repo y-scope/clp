@@ -1,0 +1,16 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    run: "once"
+    cmds:
+      - task: ":utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DGSL_TEST=OFF"
+          LIB_NAME: "{{.G_GSL_LIB_NAME}}"
+          TARBALL_SHA256: "f0e32cb10654fea91ad56bde89170d78cfbf4363ee0b01d8f097de2ba49f6ce9"
+          TARBALL_URL: "https://github.com/microsoft/GSL/archive/refs/tags/v4.0.0.tar.gz"

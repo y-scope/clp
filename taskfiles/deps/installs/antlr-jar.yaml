@@ -1,0 +1,14 @@
+version: "3"
+
+tasks:
+  default:
+    internal: true
+    run: "once"
+    deps:
+      - task: ":init"
+    cmds:
+      - task: ":yscope-dev-utils:remote:curl"
+        vars:
+          FILE_SHA256: "eae2dfa119a64327444672aff63e9ec35a20180dc5b8090b7a6ab85125df4d76"
+          OUTPUT_FILE: "{{.G_ANTLR_JAR_FILE}}"
+          URL: "https://www.antlr.org/download/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
