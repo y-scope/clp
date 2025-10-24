@@ -113,6 +113,10 @@ class TestUtils:
             "orig_file_path": "/var/log/app.log",
             "archive_id": "abc125",
             "log_event_ix": 102,
+            "link": (
+                'http://localhost:4000/streamFile?dataset=default&'
+                'type=json&streamId=abc125&logEventIdx=102'
+            ),
         },
     ]
 
@@ -120,7 +124,9 @@ class TestUtils:
         (
             'timestamp: 2024-10-18T16:00:00.123Z, message: '
             '{"ts":1729267200123,"pid":1234,"tid":5678,'
-            '"message":"Log with millisecond precision"}\n'
+            '"message":"Log with millisecond precision"}\n, '
+            'link: http://localhost:4000/streamFile?dataset=default&'
+            'type=json&streamId=abc125&logEventIdx=102'
         ),
         (
             'timestamp: 2024-10-18T16:00:00.000Z, message: '
