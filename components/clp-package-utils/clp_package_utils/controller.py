@@ -753,6 +753,7 @@ class DockerComposeController(BaseController):
             "CLP_AWS_CONFIG_DIR_HOST": (None if aws_config_dir is None else str(aws_config_dir)),
             "CLP_DATA_DIR_HOST": str(self._clp_config.data_directory),
             "CLP_LOGS_DIR_HOST": str(self._clp_config.logs_directory),
+            "CLP_TMP_DIR_HOST": str(self._clp_config.tmp_directory),
         }
 
         # Input config

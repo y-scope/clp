@@ -326,7 +326,7 @@ def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
     worker_config = WorkerConfig()
     worker_config.package = clp_config.package.model_copy(deep=True)
     worker_config.archive_output = clp_config.archive_output.model_copy(deep=True)
-    worker_config.data_directory = clp_config.data_directory
+    worker_config.tmp_directory = clp_config.tmp_directory
 
     worker_config.stream_output = clp_config.stream_output
     worker_config.stream_collection_name = clp_config.results_cache.stream_collection_name
@@ -441,6 +441,7 @@ def load_config_file(
 
     validate_path_for_container_mount(clp_config.data_directory)
     validate_path_for_container_mount(clp_config.logs_directory)
+    validate_path_for_container_mount(clp_config.tmp_directory)
 
     return clp_config
 
