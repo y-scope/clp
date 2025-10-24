@@ -23,7 +23,7 @@ SYSTEM_PROMPT = (
 " - When searching a specific substring keyword, ensure to append the beginning and end of the"
 " keyword with wildcard (*). Otherwise, CLP searches for exact matches only.\n"
 "- To search for a key or value with multiple words, you must quote the key/value with"
-" double-quotes (\"): e.g. \"multi-word key\": \"multi-word value\".\n"
+' double-quotes ("): e.g. "multi-word key": "multi-word value".\n'
 "- Use specific field names and values to narrow down the search.\n"
 "- Use logical operators (`AND`, `OR`, `NOT`) to combine one or more key-value searches.\n"
 "- Consider specifying a time range to narrow down the search. Use"
