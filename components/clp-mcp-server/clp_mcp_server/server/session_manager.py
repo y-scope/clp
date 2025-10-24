@@ -90,10 +90,7 @@ class SessionState:
             return self._GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
 
         if len(results) == 0:
-            return {
-                "Error": "No log events found matching the KQL query. Try broadening your search"
-                " criteria."
-            }
+            return {"Error": "No log events found matching the KQL query."}
 
         self._cached_query_result = PaginatedQueryResult(
             log_entries=results, num_items_per_page=self._num_items_per_page

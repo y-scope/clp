@@ -42,7 +42,7 @@ class TestConstants:
     EXCEEDS_MAX_CACHED_RESULTS_ERR = "exceeds maximum allowed cached results"
     INVALID_NUM_ITEMS_PER_PAGE_ERR = "must be a positive integer"
     GET_INSTRUCTIONS_NOT_CALLED_ERR = "Please call `get_instructions()`"
-    NO_RESULTS_FOUND_IN_KQL_QUERY = "No log events found matching the KQL query."
+    NO_RESULTS_FOUND_IN_KQL_QUERY_ERR = "No log events found matching the KQL query."
     NO_PREVIOUS_PAGINATED_RESPONSE_ERR = "No previous paginated response in this session."
     PAGE_INDEX_OUT_OF_BOUNDS_ERR = "Page index is out of bounds."
 
@@ -137,7 +137,7 @@ class TestSessionState:
         first_page = session.cache_query_result_and_get_first_page(
             TestConstants.create_log_messages(TestConstants.EMPTY_LOG_ENTRIES)
         )
-        assert TestConstants.NO_RESULTS_FOUND_IN_KQL_QUERY in first_page["Error"]
+        assert TestConstants.NO_RESULTS_FOUND_IN_KQL_QUERY_ERR in first_page["Error"]
 
     def test_get_page_data(self) -> None:
         """Validates pagination functionality is respecting the defined dictionary format."""
