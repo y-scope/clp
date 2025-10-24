@@ -262,32 +262,13 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/.aws:ro"
       - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
-
-      # NOTE: Only one of `CLP_ARCHIVE_OUTPUT_DIR_HOST` and `CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST` are
-      # set at a time, but since `./var/data` on the host is mounted into the container and both
-      # `CLP_ARCHIVE_OUTPUT_DIR_HOST` and `CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST` default to
-      # directories under `./var/data`, we need to use a hack to avoid having Docker create the
-      # unset directory on the host (as root).
-      #
-      # For example, let's say we use the following as the mount for staged archives:
-      # "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives". If
-      # `CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST` is unset, Docker will create
-      # `/var/data/staged-archives` in the container, but it will also create
-      # `./var/data/staged-archives` on the host as root; this is because `/var/data` in the
-      # container is bind mounted to `./var/data` on the host.
-      #
-      # The hack to avoid this is if one of `CLP_ARCHIVE_OUTPUT_DIR_HOST` or
-      # `CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST` is unset, we set the target for the corresponding mount
-      # to a path that's not under `/var/data` in the container.
-      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}\
-        :${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:+/tmp}/var/data/archives"
-      - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}\
-        :${CLP_ARCHIVE_OUTPUT_DIR_HOST:+/tmp}/var/data/staged-archives"
+      - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
       - type: "bind"
-        source: "${CLP_DATA_DIR_HOST:-./var/data}"
-        target: "/var/data"
+        source: "${CLP_TMP_DIR_HOST:-./var/tmp}"
+        target: "/var/tmp"
     command: [
       "python3",
       "-u",
