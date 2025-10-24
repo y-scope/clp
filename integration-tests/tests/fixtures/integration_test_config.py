@@ -24,7 +24,9 @@ def core_config() -> CoreConfig:
 def package_config() -> PackageConfig:
     """Fixture that provides a PackageConfig shared across tests."""
     return PackageConfig(
-        clp_package_dir=Path(get_env_var("CLP_PACKAGE_DIR")).expanduser().resolve()
+        clp_package_dir=Path(get_env_var("CLP_PACKAGE_DIR")).expanduser().resolve(),
+        test_root_dir=Path(get_env_var("CLP_BUILD_DIR")).expanduser().resolve()
+        / "integration-tests",
     )
 
 
