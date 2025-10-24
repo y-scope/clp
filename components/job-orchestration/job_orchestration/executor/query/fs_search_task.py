@@ -12,6 +12,7 @@ from clp_py_utils.clp_config import (
     WorkerConfig,
 )
 from clp_py_utils.clp_logging import set_logging_level
+from clp_py_utils.profiling_utils import profile
 from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url, get_credential_env_vars
 from clp_py_utils.sql_adapter import SQL_Adapter
 
@@ -166,6 +167,7 @@ def _make_command_and_env_vars(
 
 
 @app.task(bind=True)
+@profile(section_name="search_task")
 def search(
     self: Task,
     job_id: str,
