@@ -35,6 +35,7 @@ QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
+MCP_SERVER_COMPONENT_NAME = "mcp_server"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
 
 # Action names
@@ -575,6 +576,14 @@ class SweepInterval(BaseModel):
     search_result: PositiveInt = 30
 
 
+class McpServer(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 8000
+
+    host: DomainStr = "localhost"
+    port: Port = DEFAULT_PORT
+    logging_level: LoggingLevel = "INFO"
+
+
 class GarbageCollector(BaseModel):
     logging_level: LoggingLevel = "INFO"
     sweep_interval: SweepInterval = SweepInterval()
@@ -611,6 +620,7 @@ class CLPConfig(BaseModel):
     garbage_collector: GarbageCollector = GarbageCollector()
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
+    mcp_server: Optional[McpServer] = None
     presto: Optional[Presto] = None
 
     archive_output: ArchiveOutput = ArchiveOutput()

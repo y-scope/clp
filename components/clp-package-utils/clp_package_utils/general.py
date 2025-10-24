@@ -20,6 +20,7 @@ from clp_py_utils.clp_config import (
     CONTAINER_CLP_HOME,
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     DB_COMPONENT_NAME,
+    MCP_SERVER_COMPONENT_NAME,
     QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
@@ -582,6 +583,14 @@ def validate_webui_config(
             raise ValueError(f"{WEBUI_COMPONENT_NAME} {path} is not a valid path to settings.json")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
+
+
+def validate_mcp_server_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
+    _validate_log_directory(logs_dir, MCP_SERVER_COMPONENT_NAME)
+
+    validate_port(
+        f"{MCP_SERVER_COMPONENT_NAME}.port", clp_config.mcp_server.host, clp_config.mcp_server.port
+    )
 
 
 def validate_path_for_container_mount(path: pathlib.Path) -> None:
