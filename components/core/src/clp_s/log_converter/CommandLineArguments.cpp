@@ -118,17 +118,17 @@ auto CommandLineArguments::parse_arguments(int argc, char const** argv)
         std::string auth{cNoAuth};
         // clang-format off
         conversion_options.add_options()(
-                "files-from,f",
+                "inputs-from,f",
                 po::value<std::string>(&input_path_list_file_path)
-                        ->value_name("FILE")
+                        ->value_name("INPUTS_FILE")
                         ->default_value(input_path_list_file_path),
-                "Convert files specified in FILE."
+                "Convert inputs specified in INPUTS_FILE."
         )(
                 "output-dir",
                 po::value<std::string>(&m_output_dir)
                     ->value_name("OUTPUT_DIR")
                     ->default_value(m_output_dir),
-                "Output directory for converted files."
+                "Output directory for converted inputs."
         )(
                 "auth",
                 po::value<std::string>(&auth)
