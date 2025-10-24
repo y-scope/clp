@@ -86,7 +86,7 @@ def format_query_results(query_results: list[dict[str, Any]]) -> list[str]:
     - "link": (Optional) A string representing the link to open the log viewer displaying the
         message.
 
-    The message will be formatted as `timestamp: <date string>, message: <message>, link: <link>`.
+    The message will be formatted as `timestamp: <date string>, message: <message>[, link: <link>]`.
 
     :param query_results: A list of dictionaries representing kv-pair log events.
     :return: A list of strings representing formatted log events.
