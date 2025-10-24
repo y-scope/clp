@@ -537,6 +537,9 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = MCP_SERVER_COMPONENT_NAME
+        if self._clp_config.mcp_server is None:
+            logger.info(f"The MCP Server is not configured, skipping {component_name} creation...")
+            return EnvVarsDict()
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
