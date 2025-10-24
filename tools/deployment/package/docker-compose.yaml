@@ -124,3 +124,41 @@ services:
       "--concurrency", "${CLP_REDUCER_CONCURRENCY:-1}",
       "--upsert-interval", "${CLP_REDUCER_UPSERT_INTERVAL:-100}"
     ]
+
+  mcp-server:
+    <<: *service_defaults
+    hostname: "mcp_server"
+    profiles: ["mcp"]
+    environment:
+      CLP_LOGGING_LEVEL: "${CLP_MCP_LOGGING_LEVEL:-INFO}"
+      CLP_LOGS_DIR: "/var/log/mcp_server"
+      CLP_DB_USER: "${CLP_DB_USER}"
+      CLP_DB_PASS: "${CLP_DB_PASS}"
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+    ports:
+      - host_ip: "${CLP_MCP_HOST:-127.0.0.1}"
+        published: "${CLP_MCP_PORT:-8000}"
+        target: 8000
+    volumes:
+      - *volume_clp_config_readonly
+      - *volume_clp_logs
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
+      results-cache-indices-creator:
+        condition: "service_completed_successfully"
+    command: [
+      "python3", "-u",
+      "-m", "clp_mcp_server.clp_mcp_server",
+      "--host", "mcp_server",
+      "--port", "8000",
+      "--config-path", "/etc/clp-config.yml",
+    ]
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: [
+        "CMD",
+        "curl",
+        "-f",
+        "http://mcp_server:8000/health"
+      ]
