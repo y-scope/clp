@@ -456,7 +456,7 @@ void Archive::write_log_event_ir(ir::LogEvent<encoded_variable_t> const& log_eve
     vector<variable_dictionary_id_t> var_ids;
     size_t original_num_bytes{0};
     EncodedVariableInterpreter::encode_and_add_to_dictionary(
-            log_event,
+            log_event.get_message(),
             m_logtype_dict_entry,
             m_var_dict,
             encoded_vars,
