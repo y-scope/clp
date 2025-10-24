@@ -36,6 +36,11 @@ constexpr std::string_view cS3Auth{"s3"};
 [[nodiscard]] auto read_paths_from_file(
         std::string const& input_path_list_file_path,
         std::vector<std::string>& path_destination
+) -> bool;
+
+auto read_paths_from_file(
+        std::string const& input_path_list_file_path,
+        std::vector<std::string>& path_destination
 ) -> bool {
     FileReader reader;
     auto error_code = reader.try_open(input_path_list_file_path);
@@ -156,7 +161,10 @@ auto CommandLineArguments::parse_arguments(int argc, char const** argv)
             }
 
             print_basic_usage();
-            std::cerr << all_conversion_options << '\n';
+            po::options_description visible_options;
+            visible_options.add(general_options);
+            visible_options.add(conversion_options);
+            std::cerr << visible_options << '\n';
             return ParsingResult::InfoCommand;
         }
 

@@ -1,7 +1,6 @@
 #include <cstdint>
 #include <exception>
 #include <filesystem>
-#include <memory>
 #include <string_view>
 #include <system_error>
 #include <utility>
@@ -26,10 +25,8 @@ namespace {
  * @param reader The open reader which may have experienced a CURL error.
  * @return Whether a CURL error has occurred on the reader.
  */
-[[nodiscard]] auto check_and_log_curl_error(
-        clp_s::Path const& path,
-        std::shared_ptr<clp::ReaderInterface> const& reader
-) -> bool;
+[[nodiscard]] auto
+check_and_log_curl_error(clp_s::Path const& path, clp::ReaderInterface const* reader) -> bool;
 
 /**
  * Converts all files according to the command line arguments.
@@ -38,11 +35,8 @@ namespace {
  */
 [[nodiscard]] auto convert_files(CommandLineArguments const& command_line_arguments) -> bool;
 
-auto check_and_log_curl_error(
-        clp_s::Path const& path,
-        std::shared_ptr<clp::ReaderInterface> const& reader
-) -> bool {
-    auto const network_reader = std::dynamic_pointer_cast<clp::NetworkReader>(reader);
+auto check_and_log_curl_error(clp_s::Path const& path, clp::ReaderInterface const* reader) -> bool {
+    auto const network_reader{dynamic_cast<clp::NetworkReader const*>(reader)};
     if (nullptr == network_reader) {
         return false;
     }
@@ -92,7 +86,7 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
             case clp_s::FileType::Zstd:
             case clp_s::FileType::Unknown:
             default: {
-                std::ignore = check_and_log_curl_error(path, reader);
+                std::ignore = check_and_log_curl_error(path, reader.get());
                 SPDLOG_ERROR("Received input that was not unstructured logtext: {}.", path.path);
                 return false;
             }
@@ -104,7 +98,13 @@ auto convert_files(CommandLineArguments const& command_line_arguments) -> bool {
                 command_line_arguments.get_output_dir()
         )};
         if (convert_result.has_error()) {
-            SPDLOG_ERROR("Failed to convert input {} to structured representation.", path.path);
+            auto const& error{convert_result.error()};
+            SPDLOG_ERROR(
+                    "Failed to convert input {} to structured representation: {} - {}",
+                    path.path,
+                    error.category().name(),
+                    error.message()
+            );
             return false;
         }
     }
