@@ -1,6 +1,6 @@
 # Connecting Claude Desktop
 
-This guide explains how to connect [Claude Desktop](https://claude.com/product/overview)
+This guide explains how to connect [Claude Desktop][claude-desktop]
 to the CLP MCP server over HTTP.
 
 ## Prerequisites
@@ -55,4 +55,5 @@ new configuration to take effect.
 6. You should now see the MCP server and its available tools under the 
 "Search and Tools" icon in Claude Desktop's Prompt window.
 
+[claude-desktop]: https://claude.com/product/overview
 [mcp-remote]: https://www.npmjs.com/package/mcp-remote

@@ -31,6 +31,10 @@ This guide assumes:
     ```
 
     Replace the default host and port shown above if necessary.
+    :::{note}
+    Setting `mcp_server: null` or leaving the `mcp_server` section commented will
+    start `clp-json` without the MCP server.
+    :::
 
 2. Start `clp-json` and compress the logs you want to query by following the [clp-json
    quick-start](../quick-start/clp-json.md) guide. This will run the CLP MCP server on the
