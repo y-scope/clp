@@ -406,6 +406,7 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
             - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
             - "-DINSTALL_LAYOUT=DEB"
           LIB_NAME: "mariadb-connector-cpp"
