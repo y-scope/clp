@@ -8,6 +8,7 @@ import stat
 import subprocess
 import uuid
 from abc import ABC, abstractmethod
+from enum import auto
 from typing import Any, Optional
 
 from clp_py_utils.clp_config import (
@@ -17,7 +18,6 @@ from clp_py_utils.clp_config import (
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     DB_COMPONENT_NAME,
-    DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
     MCP_SERVER_COMPONENT_NAME,
     QUERY_JOBS_TABLE_NAME,
@@ -37,11 +37,13 @@ from clp_py_utils.clp_metadata_db_utils import (
     get_datasets_table_name,
     get_files_table_name,
 )
+from strenum import KebabCaseStrEnum
 
 from clp_package_utils.general import (
     check_docker_dependencies,
     CONTAINER_CLP_HOME,
     DockerComposeProjectNotRunningError,
+    DockerComposeProjectAlreadyRunningError,
     DockerDependencyError,
     dump_shared_container_config,
     generate_docker_compose_container_config,
@@ -72,6 +74,16 @@ class EnvVarsDict(dict[str, Optional[str]]):
         """
         super().__ior__(other)
         return self
+
+
+class DeploymentTarget(KebabCaseStrEnum):
+    ALL = auto()
+    CONTROLLER = auto()
+    COMPRESSION_WORKER = auto()
+    QUERY_WORKER = auto()
+    REDUCER = auto()
+    WEBUI = auto()
+    MCP = auto()
 
 
 class BaseController(ABC):
@@ -638,8 +650,74 @@ class DockerComposeController(BaseController):
     Controller for orchestrating CLP components using Docker Compose.
     """
 
-    def __init__(self, clp_config: CLPConfig, instance_id: str) -> None:
+    def __init__(
+        self,
+        clp_config: CLPConfig,
+        instance_id: str,
+        target: DeploymentTarget,
+        num_workers: Optional[int]
+    ) -> None:
         self._project_name = f"clp-package-{instance_id}"
+
+        self._target = target
+        self._is_existing_project_allowed = target != DeploymentTarget.ALL
+        self._num_workers = num_workers or self._get_num_workers()
+
+        self._is_mcp_enabled = clp_config.mcp_server is not None
+        self._is_legacy_search_enabled = clp_config.package.query_engine != QueryEngine.PRESTO
+
+        if target in (
+                DeploymentTarget.QUERY_WORKER,
+                DeploymentTarget.REDUCER,
+        ) and not self._is_legacy_search_enabled:
+            raise ValueError(
+                "Legacy search components (query-worker/reducer) cannot be launched when the "
+                "query engine is set to Presto."
+            )
+        if target == DeploymentTarget.MCP and not self._is_mcp_enabled:
+            raise ValueError(
+                "The MCP server is not configured in the CLP package configuration, so it cannot "
+                "be launched."
+            )
+
+        # Controllers
+        self._launch_database = target in (DeploymentTarget.ALL, DeploymentTarget.CONTROLLER)
+        self._launch_redis = target in (DeploymentTarget.ALL, DeploymentTarget.CONTROLLER)
+        self._launch_queue = target in (DeploymentTarget.ALL, DeploymentTarget.CONTROLLER)
+        self._launch_results_cache = target in (DeploymentTarget.ALL, DeploymentTarget.CONTROLLER)
+        self._launch_compression_scheduler = target in (DeploymentTarget.ALL, DeploymentTarget.CONTROLLER)
+        self._launch_query_scheduler = target in (DeploymentTarget.ALL, DeploymentTarget.CONTROLLER)
+        self._launch_garbage_collector = target in (DeploymentTarget.ALL,
+                                                    DeploymentTarget.CONTROLLER) and is_retention_period_configured(clp_config)
+
+        # Workers
+        self._launch_compression_worker = target in (DeploymentTarget.ALL, DeploymentTarget.COMPRESSION_WORKER)
+        self._launch_query_worker = target in (DeploymentTarget.ALL, DeploymentTarget.QUERY_WORKER)
+        self._launch_reducer = target in (DeploymentTarget.ALL, DeploymentTarget.REDUCER)
+
+        # Clients
+        self._launch_webui = target in (DeploymentTarget.ALL, DeploymentTarget.WEBUI)
+        self._launch_mcp = (target in (DeploymentTarget.ALL,DeploymentTarget.MCP) and self._is_mcp_enabled)
+
+        self._compose_profile: Optional[str] = None
+        self._launch_only_service: Optional[str] = None
+        if target == DeploymentTarget.CONTROLLER:
+            self._compose_profile = "controller"
+        elif target == DeploymentTarget.WEBUI:
+            self._launch_only_service = "webui"
+        elif target == DeploymentTarget.MCP:
+            self._launch_only_service = "mcp-server"
+        elif target == DeploymentTarget.COMPRESSION_WORKER:
+            self._launch_only_service = "compression-worker"
+        elif target == DeploymentTarget.QUERY_WORKER:
+            self._launch_only_service = "query-worker"
+        elif target == DeploymentTarget.REDUCER:
+            self._launch_only_service = "reducer"
+
+        self._compose_file_override = (
+             "docker-compose.base.yaml" if target == DeploymentTarget.CONTROLLER else None
+        )
+
         super().__init__(clp_config)
 
     def start(self) -> None:
@@ -649,20 +727,32 @@ class DockerComposeController(BaseController):
         :raise: Propagates `check_docker_dependencies`'s exceptions.
         :raise: Propagates `subprocess.run`'s exceptions.
         """
-        check_docker_dependencies(
-            should_compose_project_be_running=False, project_name=self._project_name
-        )
+        try:
+            check_docker_dependencies(
+                should_compose_project_be_running=False, project_name=self._project_name
+            )
+        except DockerComposeProjectAlreadyRunningError:
+            if self._is_existing_project_allowed:
+                logger.info(
+                    "Docker Compose project '%s' is already running. Adding requested services.",
+                    self._project_name,
+                )
+            else:
+                raise
         self._set_up_env()
 
-        deployment_type = self._clp_config.get_deployment_type()
-        logger.info(f"Starting CLP using Docker Compose ({deployment_type} deployment)...")
-
+        logger.info(
+            "Starting CLP using Docker Compose (target=%s)...",
+            self._target,
+        )
         cmd = ["docker", "compose", "--project-name", self._project_name]
-        if deployment_type == DeploymentType.BASE:
-            cmd += ["--file", "docker-compose.base.yaml"]
-        if self._clp_config.mcp_server is not None:
-            cmd += ["--profile", "mcp"]
+        if self._compose_file_override is not None:
+            cmd += ["--file", self._compose_file_override]
+        if self._compose_profile is not None:
+            cmd += ["--profile", self._compose_profile]
         cmd += ["up", "--detach", "--wait"]
+        if self._launch_only_service is not None:
+            cmd += ["--no-deps", self._launch_only_service]
         subprocess.run(
             cmd,
             cwd=self._clp_home,
@@ -713,7 +803,6 @@ class DockerComposeController(BaseController):
     def _set_up_env(self) -> None:
         # Generate container-specific config.
         container_clp_config = generate_docker_compose_container_config(self._clp_config)
-        num_workers = self._get_num_workers()
         dump_shared_container_config(container_clp_config, self._clp_config)
 
         env_vars = EnvVarsDict()
@@ -782,12 +871,16 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_results_cache()
         env_vars |= self._set_up_env_for_compression_scheduler()
         env_vars |= self._set_up_env_for_query_scheduler()
-        env_vars |= self._set_up_env_for_compression_worker(num_workers)
-        env_vars |= self._set_up_env_for_query_worker(num_workers)
-        env_vars |= self._set_up_env_for_reducer(num_workers)
+        env_vars |= self._set_up_env_for_garbage_collector()
+        env_vars |= self._set_up_env_for_compression_worker(self._num_workers)
+        env_vars |= self._set_up_env_for_query_worker(self._num_workers)
+        env_vars |= self._set_up_env_for_reducer(self._num_workers)
         env_vars |= self._set_up_env_for_webui(container_clp_config)
         env_vars |= self._set_up_env_for_mcp_server()
-        env_vars |= self._set_up_env_for_garbage_collector()
+
+        if not self._launch_garbage_collector:
+            env_vars["CLP_GARBAGE_COLLECTOR_ENABLED"] = "0"
+        env_vars["CLP_LEGACY_SEARCH_ENABLED"] = "1" if self._is_legacy_search_enabled else "0"
 
         # Write the environment variables to the `.env` file.
         with open(f"{self._clp_home}/.env", "w") as env_file:

@@ -171,8 +171,8 @@ This section explains how we use Docker Compose to orchestrate the CLP package a
 the following subsections:
 
 * [Setting up the Docker Compose project's environment](#setting-up-the-environment)
-* [Starting and stoping the Docker Compose project](#starting-and-stopping-the-project)
-* [Deployment types](#deployment-types)
+* [Starting and stopping the Docker Compose project](#starting-and-stopping-the-project)
+* [Targets and profiles](#targets-and-profiles)
 * [Implementation details](#implementation-details)
 * [Troubleshooting](#troubleshooting)
 
@@ -199,19 +199,41 @@ as environment variables or command line arguments, as necessary.
 
 ### Starting and stopping the project
 
-To start and stop the project, `DockerComposeController` simply invokes `docker compose up` or
+To start and stop the project, `DockerComposeController` invokes `docker compose up` or
 `docker compose down` as appropriate. However, to allow multiple CLP packages to be run on the same
 host, we explicitly specify a project name for the project, where the name is based on the package's
 instance ID.
 
-### Deployment Types
+### Targets and profiles
 
-CLP supports two deployment types determined by the `package.query_engine` configuration setting.
+`start-clp.py` exposes a `--target` flag that determines which services are launched on the current
+host. If no target is specified, the controller starts the full stack (`docker compose up` using
+`docker-compose.yaml`) and, when MCP is configured, enables the `mcp` profile so the MCP server is
+included.
 
-1. **BASE**: For deployments using [Presto][presto-integration] as the query engine. This deployment
-   only uses `docker-compose.base.yaml`.
-2. **FULL**: For deployments using one of CLP's native query engines. This uses both
-   `docker-compose.base.yaml` and `docker-compose.yaml`.
+For targeted launches, the controller switches to `docker-compose.base.yaml`, activates the relevant
+profile, and, for single-service targets, specifies the service name with `--no-deps`. This allows
+operators to run CLP across multiple hosts without bringing down existing containers:
+
+| Target               | Profile(s) | Services started                                   |
+|----------------------|------------|----------------------------------------------------|
+| `controller`         | `controller` | Core databases, schedulers, garbage collector    |
+| `ui`                 | `ui`        | `webui` (no dependencies)                         |
+| `mcp`                | `mcp`       | `mcp-server` (no dependencies)                    |
+| `compression-worker` | `worker`    | `compression-worker` (no dependencies)            |
+| `query-worker`       | `worker`    | `query-worker` (no dependencies)                  |
+| `reducer`            | `worker`    | `reducer` (no dependencies)                       |
+
+`--num-workers` can be supplied with the worker and reducer targets to override the default process
+count inside those containers. The CLI can be invoked repeatedly to scale the deployment: each call
+adds the requested services to the existing Compose project without interrupting running containers.
+`stop-clp.py` continues to tear down the entire project regardless of the target that was used to
+start individual services.
+
+When the package's query engine is set to [Presto][presto-integration], legacy search components are
+disabled automatically via the `CLP_ENABLE_LEGACY_SEARCH` environment variable. This prevents the
+query scheduler, query workers, and reducer from starting unless they are explicitly requested when
+legacy search is enabled.
 
 ### Implementation details
 

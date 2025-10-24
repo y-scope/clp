@@ -5,7 +5,11 @@ import sys
 
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
-from clp_package_utils.controller import DockerComposeController, get_or_create_instance_id
+from clp_package_utils.controller import (
+    DeploymentTarget,
+    DockerComposeController,
+    get_or_create_instance_id,
+)
 from clp_package_utils.general import (
     get_clp_home,
     load_config_file,
@@ -38,12 +42,28 @@ def main(argv):
         help="Enable debug logging.",
     )
 
-    parsed_args = args_parser.parse_args(argv[1:])
+    subparsers = args_parser.add_subparsers(dest="target", help="Deployment target to start.")
+    for target in DeploymentTarget:
+        sub = subparsers.add_parser(target.value)
 
+        if target in {
+            DeploymentTarget.COMPRESSION_WORKER,
+            DeploymentTarget.QUERY_WORKER,
+            DeploymentTarget.REDUCER,
+        }:
+            sub.add_argument(
+                "--num-workers",
+                type=int,
+                help="Set worker concurrency for this target.",
+            )
+
+    parsed_args = args_parser.parse_args(argv[1:])
     if parsed_args.verbose:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
+    target = parsed_args.target or DeploymentTarget.ALL
+    num_workers = getattr(parsed_args, "num_workers", None)
 
     try:
         # Validate and load config file.
@@ -78,7 +98,12 @@ def main(argv):
 
     try:
         instance_id = get_or_create_instance_id(clp_config)
-        controller = DockerComposeController(clp_config, instance_id)
+        controller = DockerComposeController(
+            clp_config,
+            instance_id,
+            target,
+            num_workers,
+        )
         controller.start()
     except Exception as ex:
         if type(ex) == ValueError:
