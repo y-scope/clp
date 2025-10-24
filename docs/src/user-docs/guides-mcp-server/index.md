@@ -28,6 +28,7 @@ This guide assumes:
     mcp_server:
        host: "localhost"
        port: 8000
+       # other settings
     ```
 
     Replace the default host and port shown above if necessary.
