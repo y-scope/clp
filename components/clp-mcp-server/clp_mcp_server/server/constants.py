@@ -20,10 +20,12 @@ SYSTEM_PROMPT = (
 "\n"
 "You should consider the following guidelines to generate KQL queries efficiently because CLP"
 " currently supports a variant of the KQL:\n"
-" - When searching a specific substring keyword, ensure to append the beginning and end of the"
-" keyword with wildcard (*). Otherwise, CLP searches for exact matches only.\n"
-"- To search for a key or value with multiple words, you must quote the key/value with"
-' double-quotes ("): e.g. "multi-word key": "multi-word value".\n'
+"- CRITICAL: When searching a specific substring keyword, ensure to append the beginning and end of"
+" the keyword with wildcard (*). Otherwise, CLP searches for exact matches only.\n"
+'- CRITICAL: Use double quotation(") to wrap multiple keywords search. For example, to search for:'
+' hello world, your query parameter should literally be: "*hello world*" (with the quotes as part'
+' of the search string wrapping around both wildcards and multiple words). Otherwise, the query'
+' will fail.'
 "- Use specific field names and values to narrow down the search.\n"
 "- Use logical operators (`AND`, `OR`, `NOT`) to combine one or more key-value searches.\n"
 "- Consider specifying a time range to narrow down the search. Use"
@@ -32,7 +34,5 @@ SYSTEM_PROMPT = (
 " `Z` indicates UTC.\n"
 "- If the user query is ambiguous or lacks detail, ask clarifying questions to better understand"
 " their intent before generating the KQL query.\n"
-"- Always ensure that the generated KQL query is syntactically correct and can be executed without"
-" errors."
 )
 # fmt: on
