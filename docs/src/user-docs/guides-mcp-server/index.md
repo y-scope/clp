@@ -75,7 +75,6 @@ CLP currently doesn't store timezone information in the compressed logs. This me
 logs you compressed were *not* in the UTC timezone, you will need to tell your agent what timezone
 the logs were in originally. Support for encoding timezone information in the compressed logs will
 be available in a future release.
-:::
 
 :::{toctree}
 :hidden:
