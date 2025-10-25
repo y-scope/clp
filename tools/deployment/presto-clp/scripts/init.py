@@ -177,7 +177,13 @@ def _add_clp_env_vars(
 def _get_clp_package_instance_id(
     clp_config: Dict[str, Any], clp_package_dir: Path
 ) -> Optional[str]:
-    """Retrieves the CLP package instance ID from the logs directory."""
+    """
+    Retrieves the CLP package instance ID from the logs directory.
+
+    :param clp_config:
+    :param clp_package_dir:
+    :return: The instance ID if it could be read, otherwise ``None``.
+    """
 
     logs_directory = _get_path_clp_config_value(
         clp_config, "logs_directory", Path("var") / "log", clp_package_dir
