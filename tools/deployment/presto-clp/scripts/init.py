@@ -7,7 +7,6 @@ from typing import Any, Dict, Optional
 import yaml
 from dotenv import dotenv_values
 
-
 DATABASE_COMPONENT_NAME = "database"
 
 # Set up console logging
