@@ -7,6 +7,9 @@ from typing import Any, Dict, Optional
 import yaml
 from dotenv import dotenv_values
 
+
+DATABASE_COMPONENT_NAME = "database"
+
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter(
@@ -101,12 +104,10 @@ def _add_clp_env_vars(
         )
         return False
 
-    database_host = _get_config_value(clp_config, "database.host", "localhost")
-    container_database_host = _get_container_database_host(database_host)
     database_port = _get_config_value(clp_config, "database.port", 3306)
     database_name = _get_config_value(clp_config, "database.name", "clp-db")
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_URL"] = (
-        f"jdbc:mysql://{container_database_host}:{database_port}"
+        f"jdbc:mysql://{DATABASE_COMPONENT_NAME}:{database_port}"
     )
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_NAME"] = database_name
 
@@ -164,6 +165,20 @@ def _add_clp_env_vars(
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_USER"] = database_user
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_PASSWORD"] = database_password
 
+    instance_id = _get_clp_package_instance_id(clp_config, clp_package_dir)
+    if instance_id is None:
+        return False
+
+    env_vars["CLP_PACKAGE_NETWORK_NAME"] = f"clp-package-{instance_id}_default"
+
+    return True
+
+
+def _get_clp_package_instance_id(
+    clp_config: Dict[str, Any], clp_package_dir: Path
+) -> Optional[str]:
+    """Retrieves the CLP package instance ID from the logs directory."""
+
     logs_directory = _get_path_clp_config_value(
         clp_config, "logs_directory", Path("var") / "log", clp_package_dir
     )
@@ -174,7 +189,7 @@ def _add_clp_env_vars(
             "Start the CLP package at least once before configuring Presto.",
             instance_id_path,
         )
-        return False
+        return None
 
     try:
         instance_id = instance_id_path.read_text(encoding="utf-8").strip()
@@ -182,28 +197,16 @@ def _add_clp_env_vars(
         logger.error(
             "Failed to read the CLP package instance ID from '%s': %s", instance_id_path, exc
         )
-        return False
+        return None
 
     if not instance_id:
         logger.error(
             "Instance ID file '%s' is empty. Restart the CLP package to regenerate the instance ID.",
             instance_id_path,
         )
-        return False
+        return None
 
-    env_vars["CLP_PACKAGE_NETWORK_NAME"] = f"clp-package-{instance_id}_default"
-
-    return True
-
-
-def _get_container_database_host(database_host: str) -> str:
-    """Normalizes the database hostname for use inside the CLP package network."""
-
-    stripped_host = database_host.strip()
-    lowercase_host = stripped_host.lower()
-    if lowercase_host == "localhost" or stripped_host in {"127.0.0.1", "::1"}:
-        return "database"
-    return stripped_host
+    return instance_id
 
 
 def _add_clp_s3_env_vars(
