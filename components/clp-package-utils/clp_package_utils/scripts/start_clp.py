@@ -84,8 +84,8 @@ def main(argv):
     try:
         instance_id = get_or_create_instance_id(clp_config)
         controller = DockerComposeController(clp_config, instance_id)
+        controller.set_up_env()
         if parsed_args.setup_only:
-            controller.set_up_env()
             logger.info(
                 "Completed setup. Services are not started because --setup-only was provided."
             )
