@@ -11,6 +11,13 @@ TIMESTAMP_NOT_AVAILABLE = "N/A"
 SERVER_NAME = "clp-mcp-server"
 
 # fmt: off
+# Guidelines for Writing Effective System Prompts For LLM
+#
+# System prompts should be AI-friendly; while LLMs may not strictly enforce all rules, we
+# empirically found the following practices effective for LLM to understand the listed rules:
+# 1. Provide concrete examples to explain the rule.
+# 2. Place critical rules at the beginning and mark them as "CRITICAL".
+# 3. Use action-first sentence structure (e.g., "Use X format" instead of "To do Y, use X format").
 SYSTEM_PROMPT = (
 "You are an AI assistant that helps users query a log database called CLP using KQL"
 " (Kibana Query Language).\n"
