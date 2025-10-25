@@ -10,11 +10,35 @@ tasks:
         vars:
           CARGO_FETCH_FLAGS: "--locked"
 
+  check-uv:
+    cmds:
+      - for: &uv-component-projects
+          - "clp-mcp-server"
+          - "clp-package-utils"
+          - "clp-py-utils"
+          - "job-orchestration"
+        cmd: |-
+          uv lock --directory "{{default (cat .ROOT_DIR "/components") .G_COMPONENTS_DIR}}/{{.ITEM}}" --check
+      - for: &uv-root-projects
+          - "integration-tests"
+          - "tools/yscope-dev-utils/exports/ystdlib-py"
+        cmd: |-
+          uv lock --directory "{{.ROOT_DIR}}/{{.ITEM}}" --check
+
   update-rust:
     cmds:
       - task: "cargo-workspace-update"
         vars:
           CARGO_UPDATE_FLAGS: ""
+
+  update-uv:
+    cmds:
+      - for: *uv-component-projects
+        cmd: |-
+          uv lock --directory "{{default (cat .ROOT_DIR "/components") .G_COMPONENTS_DIR}}/{{.ITEM}}"
+      - for: *uv-root-projects
+        cmd: |-
+          uv lock --directory "{{.ROOT_DIR}}/{{.ITEM}}"
 
   # Runs `cargo fetch` in the root Rust workspace directory with the specified flags.
   #
