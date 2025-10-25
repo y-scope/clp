@@ -36,7 +36,7 @@ check_and_log_curl_error(clp_s::Path const& path, clp::ReaderInterface const* re
 [[nodiscard]] auto convert_files(CommandLineArguments const& command_line_arguments) -> bool;
 
 auto check_and_log_curl_error(clp_s::Path const& path, clp::ReaderInterface const* reader) -> bool {
-    auto const network_reader{dynamic_cast<clp::NetworkReader const*>(reader)};
+    auto const* network_reader{dynamic_cast<clp::NetworkReader const*>(reader)};
     if (nullptr == network_reader) {
         return false;
     }
