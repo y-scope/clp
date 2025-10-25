@@ -37,6 +37,11 @@ def main(argv):
         action="store_true",
         help="Enable debug logging.",
     )
+    args_parser.add_argument(
+        "--setup-only",
+        action="store_true",
+        help="Validate configuration and prepare directories without starting services.",
+    )
 
     parsed_args = args_parser.parse_args(argv[1:])
 
@@ -79,6 +84,12 @@ def main(argv):
     try:
         instance_id = get_or_create_instance_id(clp_config)
         controller = DockerComposeController(clp_config, instance_id)
+        if parsed_args.setup_only:
+            controller.set_up_env()
+            logger.info(
+                "Completed setup. Services are not started because --setup-only was provided."
+            )
+            return 0
         controller.start()
     except Exception as ex:
         if type(ex) == ValueError:
