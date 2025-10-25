@@ -167,7 +167,6 @@ def _add_clp_env_vars(
     instance_id = _get_clp_package_instance_id(clp_config, clp_package_dir)
     if instance_id is None:
         return False
-
     env_vars["CLP_PACKAGE_NETWORK_NAME"] = f"clp-package-{instance_id}_default"
 
     return True
