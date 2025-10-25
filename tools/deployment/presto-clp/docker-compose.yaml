@@ -47,5 +47,5 @@ volumes:
 
 networks:
   clp-package:
-    name: "${CLP_PACKAGE_NETWORK_NAME:?Set by scripts/set-up-config.sh after starting CLP.}"
+    name: "${CLP_PACKAGE_NETWORK_NAME:-clp-package_default}"
     external: true
