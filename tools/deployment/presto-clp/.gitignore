@@ -1,1 +1,5 @@
+# Dotenv file
+.env
+
+# CLP config
 /worker/config-template/clp.properties
