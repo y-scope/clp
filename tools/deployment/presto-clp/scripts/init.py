@@ -172,47 +172,6 @@ def _add_clp_env_vars(
     return True
 
 
-def _get_clp_package_instance_id(
-    clp_config: Dict[str, Any], clp_package_dir: Path
-) -> Optional[str]:
-    """
-    Retrieves the CLP package instance ID from the logs directory.
-
-    :param clp_config:
-    :param clp_package_dir:
-    :return: The instance ID if it could be read, otherwise ``None``.
-    """
-
-    logs_directory = _get_path_clp_config_value(
-        clp_config, "logs_directory", Path("var") / "log", clp_package_dir
-    )
-    instance_id_path = logs_directory / "instance-id"
-    if not instance_id_path.exists():
-        logger.error(
-            "Cannot determine the CLP package Docker network because '%s' does not exist. "
-            "Start the CLP package at least once before configuring Presto.",
-            instance_id_path,
-        )
-        return None
-
-    try:
-        instance_id = instance_id_path.read_text(encoding="utf-8").strip()
-    except OSError as exc:
-        logger.error(
-            "Failed to read the CLP package instance ID from '%s': %s", instance_id_path, exc
-        )
-        return None
-
-    if not instance_id:
-        logger.error(
-            "Instance ID file '%s' is empty. Restart the CLP package to regenerate the instance ID.",
-            instance_id_path,
-        )
-        return None
-
-    return instance_id
-
-
 def _add_clp_s3_env_vars(
     clp_config: Dict[str, Any], clp_config_file_path: Path, env_vars: Dict[str, str]
 ) -> bool:
@@ -319,6 +278,47 @@ def _generate_worker_clp_properties(
         f.write("\n".join(properties) + "\n")
 
     return True
+
+
+def _get_clp_package_instance_id(
+    clp_config: Dict[str, Any], clp_package_dir: Path
+) -> Optional[str]:
+    """
+    Retrieves the CLP package instance ID from the logs directory.
+
+    :param clp_config:
+    :param clp_package_dir:
+    :return: The instance ID if it could be read, otherwise ``None``.
+    """
+
+    logs_directory = _get_path_clp_config_value(
+        clp_config, "logs_directory", Path("var") / "log", clp_package_dir
+    )
+    instance_id_path = logs_directory / "instance-id"
+    if not instance_id_path.exists():
+        logger.error(
+            "Cannot determine the CLP package Docker network because '%s' does not exist. "
+            "Start the CLP package at least once before configuring Presto.",
+            instance_id_path,
+        )
+        return None
+
+    try:
+        instance_id = instance_id_path.read_text(encoding="utf-8").strip()
+    except OSError as exc:
+        logger.error(
+            "Failed to read the CLP package instance ID from '%s': %s", instance_id_path, exc
+        )
+        return None
+
+    if not instance_id:
+        logger.error(
+            "Instance ID file '%s' is empty. Restart the CLP package to regenerate the instance ID.",
+            instance_id_path,
+        )
+        return None
+
+    return instance_id
 
 
 def _get_path_clp_config_value(
