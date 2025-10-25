@@ -83,8 +83,7 @@ def format_query_results(query_results: list[dict[str, Any]]) -> list[str]:
     kv-pairs:
     - "timestamp": An integer representing the epoch timestamp in milliseconds.
     - "message": A string representing the log message.
-    - "link": A string representing the link to open the log viewer displaying the
-        message.
+    - "link": A string representing the link to open the log viewer displaying the message.
 
     The message will be formatted as `timestamp: <date string>, message: <message>, link: <link>`.
 
