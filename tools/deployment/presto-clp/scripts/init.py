@@ -8,6 +8,7 @@ import yaml
 from dotenv import dotenv_values
 
 DATABASE_COMPONENT_NAME = "database"
+DATABASE_DEFAULT_PORT = 3306
 
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
@@ -103,10 +104,9 @@ def _add_clp_env_vars(
         )
         return False
 
-    database_port = _get_config_value(clp_config, "database.port", 3306)
     database_name = _get_config_value(clp_config, "database.name", "clp-db")
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_URL"] = (
-        f"jdbc:mysql://{DATABASE_COMPONENT_NAME}:{database_port}"
+        f"jdbc:mysql://{DATABASE_COMPONENT_NAME}:{DATABASE_DEFAULT_PORT}"
     )
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_NAME"] = database_name
 
