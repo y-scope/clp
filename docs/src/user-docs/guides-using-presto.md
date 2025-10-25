@@ -43,23 +43,6 @@ Using Presto with CLP requires:
         query_engine: "presto"
       ```
 
-    * Set the `database.host` key to a non-localhost hostname/IP.
-
-      ```yaml
-        database:
-        #  type: "mariadb"
-          host: "<non-local-ip-address>"
-        #  port: 3306
-        #  name: "clp-db"
-      ```
-
-      :::{note}
-      This change is necessary because the Presto containers run on a Docker network, and CLP's
-      database runs on the host network. `localhost` will refer to a different entity in each of
-      those contexts. This limitation will be addressed in the future when we unify Presto and CLP's
-      deployment infrastructure.
-      :::
-
     * Set the `results_cache.retention_period` key to `null` since the CLP + Presto integration
       doesn't yet support garbage collection.
 

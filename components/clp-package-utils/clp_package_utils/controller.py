@@ -503,8 +503,8 @@ class BaseController(ABC):
 
         query_engine = self._clp_config.package.query_engine
         if QueryEngine.PRESTO == query_engine:
-            server_settings_json_updates["PrestoHost"] = self._clp_config.presto.host
-            server_settings_json_updates["PrestoPort"] = self._clp_config.presto.port
+            server_settings_json_updates["PrestoHost"] = container_clp_config.presto.host
+            server_settings_json_updates["PrestoPort"] = container_clp_config.presto.port
         else:
             server_settings_json_updates["PrestoHost"] = None
             server_settings_json_updates["PrestoPort"] = None
