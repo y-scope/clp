@@ -6,7 +6,7 @@ import pathlib
 import sys
 import time
 from contextlib import closing
-from typing import List, Tuple, Union
+from typing import Union
 
 import brotli
 import msgpack
@@ -35,6 +35,8 @@ from clp_package_utils.general import (
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     get_clp_home,
     load_config_file,
+    S3_KEY_PREFIX_COMPRESSION,
+    S3_OBJECT_COMPRESSION,
 )
 
 logger = logging.getLogger(__file__)
@@ -142,12 +144,12 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
 
 def _generate_clp_io_config(
     clp_config: CLPConfig,
-    logs_to_compress: List[str],
+    logs_to_compress: list[str],
     parsed_args: argparse.Namespace,
 ) -> Union[S3InputConfig, FsInputConfig]:
-    source = parsed_args.source
+    input_type = parsed_args.input_type
 
-    if source == "fs":
+    if input_type == "fs":
         if len(logs_to_compress) == 0:
             raise ValueError("No input paths given.")
         return FsInputConfig(
@@ -156,50 +158,51 @@ def _generate_clp_io_config(
             timestamp_key=parsed_args.timestamp_key,
             path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
         )
-    elif source == "s3":
-        if len(logs_to_compress) == 0:
-            raise ValueError("No URLs given.")
+    elif input_type != "s3":
+        raise ValueError(f"Unsupported input type: `{input_type}`.")
 
-        aws_authentication = _get_aws_authentication_from_config(clp_config)
+    # Handle S3 inputs
+    if len(logs_to_compress) < 2:
+        raise ValueError("No URLs given.")
 
-        first_item = logs_to_compress[0]
-        if first_item in ("s3-object", "s3-key-prefix"):
-            subcommand = first_item
-            urls = logs_to_compress[1:]
+    aws_authentication = _get_aws_authentication_from_config(clp_config)
 
-            if subcommand == "s3-object":
-                region_code, bucket, key_prefix, keys = _parse_and_validate_s3_object_urls(urls)
-                return S3InputConfig(
-                    dataset=parsed_args.dataset,
-                    region_code=region_code,
-                    bucket=bucket,
-                    key_prefix=key_prefix,
-                    keys=keys,
-                    aws_authentication=aws_authentication,
-                    timestamp_key=parsed_args.timestamp_key,
-                )
-            elif subcommand == "s3-key-prefix":
-                if len(urls) != 1:
-                    raise ValueError(f"s3-key-prefix requires exactly one URL, got {len(urls)}")
-                region_code, bucket, key_prefix = _parse_s3_key_prefix_url(urls[0])
-                return S3InputConfig(
-                    dataset=parsed_args.dataset,
-                    region_code=region_code,
-                    bucket=bucket,
-                    key_prefix=key_prefix,
-                    keys=None,
-                    aws_authentication=aws_authentication,
-                    timestamp_key=parsed_args.timestamp_key,
-                )
+    s3_compress_subcommand = logs_to_compress[0]
+    urls = logs_to_compress[1:]
+
+    if s3_compress_subcommand == S3_OBJECT_COMPRESSION:
+        region_code, bucket, key_prefix, keys = _parse_and_validate_s3_object_urls(urls)
+        return S3InputConfig(
+            dataset=parsed_args.dataset,
+            region_code=region_code,
+            bucket=bucket,
+            key_prefix=key_prefix,
+            keys=keys,
+            aws_authentication=aws_authentication,
+            timestamp_key=parsed_args.timestamp_key,
+        )
+    elif s3_compress_subcommand == S3_KEY_PREFIX_COMPRESSION:
+        if len(urls) != 1:
+            raise ValueError(f"s3-key-prefix requires exactly one URL, got {len(urls)}")
+        region_code, bucket, key_prefix = parse_s3_url(urls[0])
+        return S3InputConfig(
+            dataset=parsed_args.dataset,
+            region_code=region_code,
+            bucket=bucket,
+            key_prefix=key_prefix,
+            keys=None,
+            aws_authentication=aws_authentication,
+            timestamp_key=parsed_args.timestamp_key,
+        )
     else:
-        raise ValueError(f"Unsupported source type: {source}")
+        raise ValueError(f"Unsupported S3 compress subcommand: `{s3_compress_subcommand}`.")
 
 
-def _get_logs_to_compress(logs_list_path: pathlib.Path) -> List[str]:
+def _get_logs_to_compress(logs_list_path: pathlib.Path) -> list[str]:
     """
-    Read logs or URLs from the input file.
+    Reads logs or URLs from the input file.
 
-    :param logs_list_path: Path to the list file.
+    :param logs_list_path:
     :return: List of paths/URLs.
     """
     logs_to_compress = []
@@ -215,89 +218,72 @@ def _get_logs_to_compress(logs_list_path: pathlib.Path) -> List[str]:
 
 
 def _parse_and_validate_s3_object_urls(
-    urls: List[str],
-) -> Tuple[str, str, str, Union[List[str], None]]:
+    urls: list[str],
+) -> tuple[str, str, str, list[str]]:
     """
-    Parse and validate S3 object URLs.
-
-    Validates:
-    - All URLs have same region and bucket.
-    - No duplicate keys.
-    - For multiple URLs: non-empty common prefix exists.
-
-    :param urls: List of S3 URLs
-    :return: Tuple of (region_code, bucket, key_prefix, keys).
-             - For single URL: key_prefix is the full key, keys is None (more efficient).
-             - For multiple URLs: key_prefix is the common prefix, keys are full keys.
-    :raises ValueError: If validation fails.
+    Parses and validates S3 object URLs.
+    The validation will ensure:
+    - All URLs have the same region and bucket.
+    - No duplicate keys among the URLs.
+    - The URLs share a non-empty common prefix.
+    :param urls: list of S3 URLs
+    :return: A tuple containing:
+        - The region code.
+        - The bucket.
+        - The common key prefix.
+        - The list of keys.
+    :raises ValueError: If the validation fails.
     """
     if len(urls) == 0:
-        raise ValueError("No URLs provided")
+        raise ValueError("No URLs provided.")
 
-    parsed_urls = []
+    # Validate all the given URLs
+    region_code: str | None = None
+    bucket_name: str | None = None
+    keys = set()
+
     for url in urls:
-        try:
-            region_code, bucket, key = parse_s3_url(url)
-            parsed_urls.append((region_code, bucket, key))
-        except ValueError as e:
-            raise ValueError(f"Failed to parse URL '{url}': {e}")
+        parsed_region_code, parsed_bucket_name, key = parse_s3_url(url)
 
-    first_region, first_bucket, _ = parsed_urls[0]
-    for region, bucket, _ in parsed_urls:
-        if region != first_region:
+        if region_code is None:
+            region_code = parsed_region_code
+        elif region_code != parsed_region_code:
             raise ValueError(
-                f"All URLs must have same region code. Found '{first_region}' and '{region}'"
-            )
-        if bucket != first_bucket:
-            raise ValueError(
-                f"All URLs must have same bucket. Found '{first_bucket}' and '{bucket}'"
+                "All S3 URLs must be in the same region."
+                f" Found {region_code} and {parsed_region_code}."
             )
 
-    keys = [key for _, _, key in parsed_urls]
+        if bucket_name is None:
+            bucket_name = parsed_bucket_name
+        elif bucket_name != parsed_bucket_name:
+            raise ValueError(
+                "All S3 URLs must be in the same bucket."
+                f" Found {bucket_name} and {parsed_bucket_name}."
+            )
 
-    if len(keys) != len(set(keys)):
-        raise ValueError("Duplicate keys found in URLs")
+        if key in keys:
+            raise ValueError(f"Duplicate S3 key found: {key}.")
+        keys.add(key)
 
-    # For a single key, use the full key as prefix with keys=None
-    # For multiple keys, find common prefix and provide explicit keys list
-    if len(keys) == 1:
-        key_prefix = keys[0]
-        keys = None
-    else:
-        key_prefix = os.path.commonprefix(keys)
-        if not key_prefix:
-            raise ValueError("No common prefix found among object keys")
+    key_list: list[str] = list(keys)
+    key_prefix = os.path.commonprefix(key_list)
 
-    return first_region, first_bucket, key_prefix, keys
+    if len(key_prefix) == 0:
+        raise ValueError("The given S3 URLs have no common prefix.")
 
-
-def _parse_s3_key_prefix_url(url: str) -> Tuple[str, str, str]:
-    """
-    Parse single S3 URL for key-prefix mode.
-
-    :param url: S3 URL.
-    :return: Tuple of (region_code, bucket, key_prefix).
-    :raise ValueError: If parsing fails.
-    """
-    try:
-        region_code, bucket, key_prefix = parse_s3_url(url)
-    except ValueError as e:
-        raise ValueError(f"Failed to parse S3 URL: {e}")
-
-    return region_code, bucket, key_prefix
+    return region_code, bucket_name, key_prefix, key_list
 
 
 def _get_aws_authentication_from_config(clp_config: CLPConfig) -> AwsAuthentication:
     """
-    Get AWS authentication configuration.
+    Gets AWS authentication configuration.
 
-    :param clp_config: CLPConfig object.
-    :return: AwsAuthentication object.
-    :raise ValueError: If no authentication configured.
+    :param clp_config:
+    :return: The AWS authentication configuration extracted from the CLP config.
+    :raise ValueError: If no authentication provided in `clp_config`.
     """
-    if hasattr(clp_config, "logs_input") and hasattr(clp_config.logs_input, "type"):
-        if StorageType.S3 == clp_config.logs_input.type:
-            return clp_config.logs_input.aws_authentication
+    if StorageType.S3 == clp_config.logs_input.type:
+        return clp_config.logs_input.aws_authentication
 
     raise ValueError("No AWS authentication configured for logs_input.")
 
@@ -327,11 +313,12 @@ def main(argv):
         help="The dataset that the archives belong to.",
     )
     args_parser.add_argument(
-        "--source",
+        "--input-type",
+        dest="input_type",
         type=str,
         choices=["fs", "s3"],
         default="fs",
-        help="Source type: 'fs' for filesystem paths, 's3' for S3 URLs.",
+        help="Input type: 'fs' for filesystem paths, 's3' for S3 URLs.",
     )
     args_parser.add_argument(
         "-f",

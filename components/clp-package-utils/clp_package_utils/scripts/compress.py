@@ -38,7 +38,7 @@ def _generate_logs_list(
     parsed_args: argparse.Namespace,
 ) -> None:
     """
-    Generates logs list file for filesystem input.
+    Generates logs list file for the native compression script.
 
     :param container_logs_list_path: Path to write logs list.
     :param parsed_args: Parsed command-line arguments.
