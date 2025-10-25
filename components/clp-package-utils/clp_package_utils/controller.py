@@ -503,9 +503,6 @@ class BaseController(ABC):
 
         query_engine = self._clp_config.package.query_engine
         if QueryEngine.PRESTO == query_engine:
-            if container_clp_config.presto is None:
-                raise ValueError("Container CLP config is missing Presto settings.")
-
             server_settings_json_updates["PrestoHost"] = container_clp_config.presto.host
             server_settings_json_updates["PrestoPort"] = container_clp_config.presto.port
         else:
