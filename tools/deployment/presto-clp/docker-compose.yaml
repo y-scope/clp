@@ -11,7 +11,7 @@ services:
       - "./coordinator/scripts:/scripts:ro"
       - "coordinator-config:/opt/presto-server/etc"
     networks:
-      - "presto"
+      - "clp-package"
     ports:
       - "8889:8080"
     healthcheck:
@@ -39,12 +39,13 @@ services:
       - "${CLP_ARCHIVES_DIR}:${CLP_ARCHIVES_DIR}"
       - "worker-config:/opt/presto-server/etc"
     networks:
-      - "presto"
+      - "clp-package"
 
 volumes:
   coordinator-config:
   worker-config:
 
 networks:
-  presto:
-    driver: "bridge"
+  clp-package:
+    name: "${CLP_PACKAGE_NETWORK_NAME:?Set by scripts/set-up-config.sh after starting CLP.}"
+    external: true
