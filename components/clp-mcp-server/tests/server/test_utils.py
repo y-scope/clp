@@ -13,6 +13,8 @@ from clp_mcp_server.server.utils import (
 class TestUtils:
     """Test suite for utility functions."""
 
+    LINK = "http://localhost:4000/"
+
     # Error Messages:
     INVALID_DATE_STRING_ERROR = "Invalid date string"
     INVALID_DATE_STRING_FORMAT_ERROR = "Timestamp must end with 'Z' to indicate UTC."
@@ -24,20 +26,23 @@ class TestUtils:
         {
             "timestamp": None,
             "message": '{"message":"Log with None timestamp"}\n',
+            "link": LINK
         },
         {
             "timestamp": "1729267200000",  # str instead of int
             "message": '{"message":"Log with str timestamp"}\n',
+            "link": LINK
         },
         {
             "timestamp": 1729267200000.0,  # float instead of int
             "message": '{"message":"Log with float timestamp"}\n',
+            "link": LINK
         },
     ]
     EXPECTED_INVALID_TYPE = [
-        'timestamp: N/A, message: {"message":"Log with None timestamp"}\n',
-        'timestamp: N/A, message: {"message":"Log with str timestamp"}\n',
-        'timestamp: N/A, message: {"message":"Log with float timestamp"}\n',
+        f'timestamp: N/A, message: {{"message":"Log with None timestamp"}}\n, link: {LINK}',
+        f'timestamp: N/A, message: {{"message":"Log with str timestamp"}}\n, link: {LINK}',
+        f'timestamp: N/A, message: {{"message":"Log with float timestamp"}}\n, link: {LINK}'
     ]
 
     # Test case: invalid timestamp values.
@@ -45,33 +50,44 @@ class TestUtils:
         {
             "timestamp": 9999999999999999,
             "message": '{"message":"Log with overflow timestamp"}\n',
+            "link": LINK
         },
         {
             "timestamp": -9999999999999999,
             "message": '{"message":"Log with negative overflow timestamp"}\n',
+            "link": LINK
         },
     ]
     EXPECTED_INVALID_VALUE = [
-        'timestamp: N/A, message: {"message":"Log with overflow timestamp"}\n',
-        'timestamp: N/A, message: {"message":"Log with negative overflow timestamp"}\n',
+        (
+            f'timestamp: N/A, message: {{"message":"Log with overflow timestamp"}}\n,'
+            f' link: {LINK}'
+        ),
+        (
+            f'timestamp: N/A, message: {{"message":"Log with negative overflow timestamp"}}\n,'
+            f' link: {LINK}'
+        )
     ]
 
     # Test case: missing timestamp and message fields.
     MISSING_TIMESTAMP_AND_MESSAGE_ENTRY = [
         {
             "_id": "test001",
+            "link": LINK
         },
         {
             "_id": "test002",
             "message": '{"message":"Log with no timestamp"}\n',
+            "link": LINK
         },
         {
             "_id": "test003",
             "timestamp": 0,
+            "link": LINK
         }
     ]
     EXPECTED_MISSING_TIMESTAMP_AND_MESSAGE = [
-        'timestamp: N/A, message: {"message":"Log with no timestamp"}\n',
+        f'timestamp: N/A, message: {{"message":"Log with no timestamp"}}\n, link: {LINK}',
     ]
 
     # Testing basic functionality.
@@ -83,6 +99,7 @@ class TestUtils:
             "orig_file_path": "/var/log/app.log",
             "archive_id": "abc123",
             "log_event_ix": 99,
+            "link": LINK
         },
         {
             "_id": "test001",
@@ -91,6 +108,7 @@ class TestUtils:
             "orig_file_path": "/var/log/app.log",
             "archive_id": "abc123",
             "log_event_ix": 100,
+            "link": LINK
         },
         {
             "_id": "test002",
@@ -102,6 +120,7 @@ class TestUtils:
             "orig_file_path": "/var/log/app.log",
             "archive_id": "abc124",
             "log_event_ix": 101,
+            "link": LINK
         },
         {
             "_id": "test003",
@@ -113,6 +132,13 @@ class TestUtils:
             "orig_file_path": "/var/log/app.log",
             "archive_id": "abc125",
             "log_event_ix": 102,
+            "link": (
+                "http://localhost:4000/streamFile"
+                "?dataset=default"
+                '&type=json'
+                "&streamId=abc125"
+                "&logEventIdx=102"
+            ),
         },
     ]
 
@@ -120,22 +146,28 @@ class TestUtils:
         (
             'timestamp: 2024-10-18T16:00:00.123Z, message: '
             '{"ts":1729267200123,"pid":1234,"tid":5678,'
-            '"message":"Log with millisecond precision"}\n'
+            '"message":"Log with millisecond precision"}\n, '
+            "link: http://localhost:4000/streamFile"
+            "?dataset=default"
+            '&type=json'
+            "&streamId=abc125"
+            "&logEventIdx=102"
+            
         ),
         (
-            'timestamp: 2024-10-18T16:00:00.000Z, message: '
-            '{"ts":1729267200000,"pid":1234,"tid":5678,'
-            '"message":"Log with zero milliseconds"}\n'
+            f'timestamp: 2024-10-18T16:00:00.000Z, message: '
+            f'{{"ts":1729267200000,"pid":1234,"tid":5678,'
+            f'"message":"Log with zero milliseconds"}}\n, link: {LINK}'
         ),
         (
-            'timestamp: 1970-01-01T00:00:00.000Z, message: '
-            '{"ts":0,"pid":null,"tid":null,'
-            '"message":"Log at epoch zero"}\n'
+            f'timestamp: 1970-01-01T00:00:00.000Z, message: '
+            f'{{"ts":0,"pid":null,"tid":null,'
+            f'"message":"Log at epoch zero"}}\n, link: {LINK}'
         ),
         (
-            'timestamp: N/A, message: '
-            '{"pid":null,"tid":null,'
-            '"message":"Log at epoch none"}\n'
+            f'timestamp: N/A, message: '
+            f'{{"pid":null,"tid":null,'
+            f'"message":"Log at epoch none"}}\n, link: {LINK}'
         ),
     ]
 
