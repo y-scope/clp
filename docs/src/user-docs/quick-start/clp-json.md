@@ -17,6 +17,11 @@ To start CLP, run:
 sbin/start-clp.sh
 ```
 
+:::{tip}
+To validate configuration and prepare directories without launching services, add the
+`--setup-only` flag (e.g., `sbin/start-clp.sh --setup-only`).
+:::
+
 :::{note}
 If CLP fails to start (e.g., due to a port conflict), try adjusting the settings in
 `etc/clp-config.yml` and then run the start command again.
