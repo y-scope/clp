@@ -50,7 +50,7 @@ public:
      * Adds a message with a timestamp to the serialized output.
      *
      * The timestamp is serialized as a string so that the original timestamp format can be
-     * be preserved during ingestion into clp-s.
+     * preserved during clp-s ingestion.
      *
      * @param timestamp
      * @param message
