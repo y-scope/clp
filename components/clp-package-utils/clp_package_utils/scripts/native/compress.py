@@ -183,7 +183,9 @@ def _generate_clp_io_config(
         )
     elif s3_compress_subcommand == S3_KEY_PREFIX_COMPRESSION:
         if len(urls) != 1:
-            raise ValueError(f"s3-key-prefix requires exactly one URL, got {len(urls)}")
+            raise ValueError(
+                f"`{S3_KEY_PREFIX_COMPRESSION}` requires exactly one URL, got {len(urls)}"
+            )
         region_code, bucket, key_prefix = parse_s3_url(urls[0])
         return S3InputConfig(
             dataset=parsed_args.dataset,
@@ -222,11 +224,13 @@ def _parse_and_validate_s3_object_urls(
 ) -> tuple[str, str, str, list[str]]:
     """
     Parses and validates S3 object URLs.
+
     The validation will ensure:
     - All URLs have the same region and bucket.
     - No duplicate keys among the URLs.
     - The URLs share a non-empty common prefix.
-    :param urls: list of S3 URLs
+
+    :param urls:
     :return: A tuple containing:
         - The region code.
         - The bucket.
@@ -237,7 +241,6 @@ def _parse_and_validate_s3_object_urls(
     if len(urls) == 0:
         raise ValueError("No URLs provided.")
 
-    # Validate all the given URLs
     region_code: str | None = None
     bucket_name: str | None = None
     keys = set()
@@ -285,7 +288,7 @@ def _get_aws_authentication_from_config(clp_config: CLPConfig) -> AwsAuthenticat
     if StorageType.S3 == clp_config.logs_input.type:
         return clp_config.logs_input.aws_authentication
 
-    raise ValueError("No AWS authentication configured for logs_input.")
+    raise ValueError("No AWS authentication provided in `logs_input`.")
 
 
 def main(argv):

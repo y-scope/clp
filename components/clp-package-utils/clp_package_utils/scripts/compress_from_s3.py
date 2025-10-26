@@ -41,7 +41,8 @@ def _generate_url_list(
     """
     Generates URL list file for the native compression script.
 
-    :param subcommand: S3_OBJECT_COMPRESSION or S3_KEY_PREFIX_COMPRESSION.
+    :param subcommand: S3 compression subcommand. Must be `S3_OBJECT_COMPRESSION` or
+        `S3_KEY_PREFIX_COMPRESSION`.
     :param container_url_list_path: Path to write URL list.
     :param parsed_args: Parsed command-line arguments.
     """
@@ -70,8 +71,8 @@ def _generate_compress_cmd(
     """
     Generates command to run the native compression script.
 
-    :param parsed_args: Parsed arguments.
-    :param dataset: Dataset name.
+    :param parsed_args:
+    :param dataset:
     :param config_path: Path to the config file (in the container).
     :param url_list_path: Path to the URL list file (in the container).
     :return: The generated command.
@@ -81,7 +82,7 @@ def _generate_compress_cmd(
         "python3",
         "-m", "clp_package_utils.scripts.native.compress",
         "--config", str(config_path),
-        "--source", "s3",
+        "--input-type", "s3",
     ]
     # fmt: on
     if parsed_args.verbose:
@@ -109,7 +110,7 @@ def _validate_s3_object_args(
     args_parser: argparse.ArgumentParser,
 ) -> None:
     """
-    Validates S3_OBJECT_COMPRESSION subcommand arguments.
+    Validates `S3_OBJECT_COMPRESSION` subcommand arguments.
 
     :param parsed_args:
     :param args_parser:
@@ -127,7 +128,7 @@ def _validate_s3_key_prefix_args(
     args_parser: argparse.ArgumentParser,
 ) -> None:
     """
-    Validates S3_KEY_PREFIX_COMPRESSION subcommand arguments.
+    Validates `S3_KEY_PREFIX_COMPRESSION` subcommand arguments.
 
     :param parsed_args:
     :param args_parser:
@@ -182,19 +183,23 @@ def main(argv):
 
     subparsers = args_parser.add_subparsers(dest="subcommand", required=True)
 
-    object_parser = subparsers.add_parser(
+    object_compression_option_parser = subparsers.add_parser(
         S3_OBJECT_COMPRESSION, help="Compress specific S3 objects identified by their full URLs."
     )
-    object_parser.add_argument("inputs", metavar="URL", nargs="*", help="S3 object URLs.")
-    object_parser.add_argument(
+    object_compression_option_parser.add_argument(
+        "inputs", metavar="URL", nargs="*", help="S3 object URLs."
+    )
+    object_compression_option_parser.add_argument(
         "--inputs-from", type=str, help="A file containing all S3 object URLs to compress."
     )
 
-    prefix_parser = subparsers.add_parser(
+    prefix_compression_option_parser = subparsers.add_parser(
         S3_KEY_PREFIX_COMPRESSION, help="Compress all S3 objects under the key prefix."
     )
-    prefix_parser.add_argument("inputs", metavar="URL", nargs="*", help="S3 prefix URL.")
-    prefix_parser.add_argument(
+    prefix_compression_option_parser.add_argument(
+        "inputs", metavar="URL", nargs="*", help="S3 prefix URL."
+    )
+    prefix_compression_option_parser.add_argument(
         "--inputs-from", type=str, help="A file containing S3 key prefix to compress."
     )
 
@@ -217,8 +222,8 @@ def main(argv):
     # Validate logs_input type is S3
     if clp_config.logs_input.type != StorageType.S3:
         logger.error(
-            "S3 compression requires logs_input.type to be `%s`, but configured type is `%s`. "
-            "Please update your clp-config.yml.",
+            "S3 compression expects `logs_input.type` to be `%s`, but `%s` is found. Please update"
+            " `clp-config.yml`.",
             StorageType.S3,
             clp_config.logs_input.type,
         )
@@ -233,6 +238,7 @@ def main(argv):
             f" is {storage_engine}."
         )
         return -1
+
     # TODO: The following dataset validation is duplicated in `compress.py`. We should extract it
     # into a common utility function.
     dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
@@ -242,10 +248,11 @@ def main(argv):
     except Exception as e:
         logger.error(e)
         return -1
+
     if parsed_args.timestamp_key is None:
         logger.warning(
-            "`--timestamp-key` not specified. Events will not have assigned timestamps and can "
-            "only be searched from the command line without a timestamp filter."
+            "`--timestamp-key` not specified. Events will not have assigned timestamps and can"
+            " only be searched from the command line without a timestamp filter."
         )
 
     if parsed_args.subcommand == S3_OBJECT_COMPRESSION:
@@ -288,25 +295,16 @@ def main(argv):
 
     cmd = container_start_cmd + compress_cmd
 
-    try:
-        proc = subprocess.run(cmd)
-        ret_code = proc.returncode
-        if ret_code != 0:
-            logger.error("Compression failed.")
-            logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+    proc = subprocess.run(cmd)
+    ret_code = proc.returncode
+    if ret_code != 0:
+        logger.error("Compression failed.")
+        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+    else:
+        container_url_list_path.unlink()
 
-        return ret_code
-    finally:
-        try:
-            generated_config_path_on_host.unlink()
-        except Exception:
-            logger.debug(
-                "Failed to remove generated config file: %s", generated_config_path_on_host
-            )
-        try:
-            container_url_list_path.unlink()
-        except Exception:
-            logger.debug("Failed to remove URL list file: %s", container_url_list_path)
+    generated_config_path_on_host.unlink()
+    return ret_code
 
 
 if "__main__" == __name__:

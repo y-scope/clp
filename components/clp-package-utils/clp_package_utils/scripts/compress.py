@@ -79,7 +79,7 @@ def _generate_compress_cmd(
         "python3",
         "-m", "clp_package_utils.scripts.native.compress",
         "--config", str(config_path),
-        "--source", "fs",
+        "--input-type", "fs",
     ]
     # fmt: on
     if parsed_args.verbose:
@@ -176,8 +176,8 @@ def main(argv):
     # Validate logs_input type is FS
     if clp_config.logs_input.type != StorageType.FS:
         logger.error(
-            "Filesystem compression requires logs_input.type to be `%s`, but read `%s`. For S3"
-            " compression, use compress-from-s3.sh instead.",
+            "Filesystem compression expects `logs_input.type` to be `%s`, but `%s` is found. For S3"
+            " compression, use `compress-from-s3.sh` instead.",
             StorageType.FS,
             clp_config.logs_input.type,
         )
@@ -247,16 +247,9 @@ def main(argv):
         logger.error("Compression failed.")
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
     else:
-        try:
-            container_logs_list_path.unlink()
-        except Exception:
-            logger.debug("Failed to remove logs list file: %s", container_logs_list_path)
+        container_logs_list_path.unlink()
 
-    try:
-        generated_config_path_on_host.unlink()
-    except Exception:
-        logger.debug("Failed to remove generated config file: %s", generated_config_path_on_host)
-
+    generated_config_path_on_host.unlink()
     return ret_code
 
 
