@@ -26,6 +26,7 @@ class FsInputConfig(BaseModel):
     paths_to_compress: List[str]
     path_prefix_to_remove: str = None
     timestamp_key: Optional[str] = None
+    unstructured: bool = False
 
 
 class S3InputConfig(S3Config):
@@ -33,6 +34,7 @@ class S3InputConfig(S3Config):
     keys: Optional[List[str]] = None
     dataset: Optional[str] = None
     timestamp_key: Optional[str] = None
+    unstructured: bool = False
 
     @field_validator("keys")
     @classmethod
