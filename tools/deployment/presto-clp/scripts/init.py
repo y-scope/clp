@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+import psutil
 import yaml
 from dotenv import dotenv_values
 
@@ -58,6 +59,8 @@ def main(argv=None) -> int:
     env_vars: Dict[str, str] = {}
     if not _add_clp_env_vars(clp_config, clp_config_file_path, clp_package_dir, env_vars):
         return 1
+
+    _add_memory_env_vars(env_vars)
 
     script_dir = Path(__file__).parent.resolve()
     if not _add_worker_env_vars(script_dir.parent / "coordinator-common.env", env_vars):
@@ -213,6 +216,23 @@ def _add_clp_s3_env_vars(
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY"] = s3_secret_access_key
 
     return True
+
+
+def _add_memory_env_vars(env_vars: Dict[str, str]) -> None:
+    """
+    Adds memory-related environment variables based on Presto guidelines.
+
+    :param env_vars: Dictionary to populate with environment variables.
+    """
+    total_memory_gb = psutil.virtual_memory().total / (1024**3)
+
+    query_memory_gb = max(1, int(total_memory_gb * 0.6))
+    system_memory_gb = max(query_memory_gb, int(total_memory_gb * 0.9))
+    system_mem_limit_gb = max(system_memory_gb, int(total_memory_gb * 0.95))
+
+    env_vars["PRESTO_WORKER_CONFIGPROPERTIES_QUERY_MEMORY_GB"] = str(query_memory_gb)
+    env_vars["PRESTO_WORKER_CONFIGPROPERTIES_SYSTEM_MEMORY_GB"] = str(system_memory_gb)
+    env_vars["PRESTO_WORKER_CONFIGPROPERTIES_SYSTEM_MEM_LIMIT_GB"] = str(system_mem_limit_gb)
 
 
 def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: Dict[str, str]) -> bool:
