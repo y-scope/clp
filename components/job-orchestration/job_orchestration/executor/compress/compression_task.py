@@ -389,6 +389,8 @@ def run_clp(
         logger.error(error_msg)
         return False, {"error_message": error_msg}
 
+    conversion_cmd = None
+    converted_inputs_path = None
     if StorageEngine.CLP_S == clp_storage_engine and clp_config.input.unstructured:
         converted_inputs_path = tmp_dir / f"{instance_id_str}-converted-tmp"
         converted_inputs_path.mkdir()
@@ -414,6 +416,7 @@ def run_clp(
     stderr_log_path = logs_dir / f"{instance_id_str}-stderr.log"
     stderr_log_file = open(stderr_log_path, "w")
 
+    conversion_return_code = 0
     if conversion_cmd is not None:
         logger.debug("Converting...")
         conversion_proc = subprocess.Popen(
@@ -421,7 +424,7 @@ def run_clp(
         )
         conversion_return_code = conversion_proc.wait()
 
-    if conversion_return_code is not None and 0 != conversion_return_code:
+    if conversion_return_code != 0:
         cleanup_temporary_files()
         logger.error(
             f"Failed to convert unstructured log text, return_code={str(conversion_return_code)}"

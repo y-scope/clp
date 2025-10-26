@@ -152,6 +152,7 @@ def _generate_clp_io_config(
             paths_to_compress=logs_to_compress,
             timestamp_key=parsed_args.timestamp_key,
             path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
+            unstructured=parsed_args.unstructured,
         )
     elif InputType.S3 == input_type:
         if len(logs_to_compress) == 0:
@@ -169,6 +170,7 @@ def _generate_clp_io_config(
             key_prefix=key_prefix,
             aws_authentication=aws_authentication,
             timestamp_key=parsed_args.timestamp_key,
+            unstructured=parsed_args.unstructured,
         )
     else:
         raise ValueError(f"Unsupported input type: {input_type}")
