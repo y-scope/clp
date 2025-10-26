@@ -44,6 +44,7 @@ services:
 
 volumes:
   coordinator-config:
+  # Dummy volume to use when a bind mount is not desired.
   empty:
   worker-config:
 
