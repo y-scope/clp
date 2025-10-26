@@ -407,9 +407,9 @@ def run_clp(
         compression_cmd.append(str(logs_list_path))
 
     def cleanup_temporary_files():
-        if logs_list_path:
+        if logs_list_path is not None:
             logs_list_path.unlink()
-        if converted_inputs_path:
+        if converted_inputs_path is not None:
             shutil.rmtree(converted_inputs_path)
 
     # Open stderr log file

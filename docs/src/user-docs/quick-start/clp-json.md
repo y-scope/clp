@@ -3,7 +3,7 @@
 This page will walk you through how to start CLP and use it to compress and search JSON logs.
 
 :::{caution}
-If you're using a `clp-json` release, we only support ingesting unstructured text logs by 
+If you're using a `clp-json` release, we only support ingesting unstructured text logs by
 converting them to JSON. This limitation will be addressed in a future version of CLP.
 :::
 
@@ -59,7 +59,7 @@ To compress logs from object storage, see
 [Using object storage](../guides-using-object-storage/index).
 :::
 
-### Compression unstructured text logs
+### Compressing unstructured text logs
 
 To compress some unstructured text logs, run:
 
