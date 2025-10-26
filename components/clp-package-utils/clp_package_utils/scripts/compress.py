@@ -36,12 +36,13 @@ logger = logging.getLogger(__name__)
 def _generate_logs_list(
     container_logs_list_path: pathlib.Path,
     parsed_args: argparse.Namespace,
-) -> None:
+) -> bool:
     """
     Generates logs list file for the native compression script.
 
     :param container_logs_list_path: Path to write logs list.
     :param parsed_args: Parsed command-line arguments.
+    :return: Whether any paths were written to the logs list.
     """
     host_logs_list_path = parsed_args.path_list
     with open(container_logs_list_path, "w") as container_logs_list_file:
@@ -52,19 +53,22 @@ def _generate_logs_list(
                     resolved_path.anchor
                 )
                 container_logs_list_file.write(f"{mounted_path}\n")
-            return
+            return len(parsed_args.paths) != 0
 
+        no_path_found = True
         with open(host_logs_list_path, "r") as host_logs_list_file:
             for line in host_logs_list_file:
                 stripped_path_str = line.rstrip()
                 if "" == stripped_path_str:
                     # Skip empty paths
                     continue
+                no_path_found = False
                 resolved_path = pathlib.Path(stripped_path_str).resolve()
                 mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
                     resolved_path.anchor
                 )
                 container_logs_list_file.write(f"{mounted_path}\n")
+        return not no_path_found
 
 
 def _generate_compress_cmd(
@@ -226,7 +230,9 @@ def main(argv):
         if not container_logs_list_path.exists():
             break
 
-    _generate_logs_list(container_logs_list_path, parsed_args)
+    if not _generate_logs_list(container_logs_list_path, parsed_args):
+        logger.error("No filesystem paths given for compression.")
+        return -1
 
     extra_env_vars = {
         CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,

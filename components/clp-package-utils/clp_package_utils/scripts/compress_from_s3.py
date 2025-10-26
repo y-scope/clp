@@ -37,7 +37,7 @@ def _generate_url_list(
     subcommand: str,
     container_url_list_path: pathlib.Path,
     parsed_args: argparse.Namespace,
-) -> None:
+) -> bool:
     """
     Generates URL list file for the native compression script.
 
@@ -45,6 +45,7 @@ def _generate_url_list(
         `S3_KEY_PREFIX_COMPRESSION`.
     :param container_url_list_path: Path to write URL list.
     :param parsed_args: Parsed command-line arguments.
+    :return: Whether any URLs were written to the file.
     """
     with open(container_url_list_path, "w") as url_list_file:
         url_list_file.write(f"{subcommand}\n")
@@ -52,14 +53,17 @@ def _generate_url_list(
         if parsed_args.inputs_from is None:
             for url in parsed_args.inputs:
                 url_list_file.write(f"{url}\n")
-            return
+            return len(parsed_args.inputs) != 0
 
+        no_url_found = True
         with open(parsed_args.inputs_from, "r") as input_file:
             for line in input_file:
                 stripped_url = line.strip()
                 if "" == stripped_url:
                     continue
+                no_url_found = False
                 url_list_file.write(f"{stripped_url}\n")
+        return not no_url_found
 
 
 def _generate_compress_cmd(
@@ -280,7 +284,9 @@ def main(argv):
         if not container_url_list_path.exists():
             break
 
-    _generate_url_list(parsed_args.subcommand, container_url_list_path, parsed_args)
+    if not _generate_url_list(parsed_args.subcommand, container_url_list_path, parsed_args):
+        logger.error("No S3 URLs given for compression.")
+        return -1
 
     extra_env_vars = {
         CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
