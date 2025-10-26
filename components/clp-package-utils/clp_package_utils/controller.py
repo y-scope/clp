@@ -19,6 +19,7 @@ from clp_py_utils.clp_config import (
     DB_COMPONENT_NAME,
     DeploymentType,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
+    MCP_SERVER_COMPONENT_NAME,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_WORKER_COMPONENT_NAME,
@@ -47,6 +48,7 @@ from clp_package_utils.general import (
     get_clp_home,
     is_retention_period_configured,
     validate_db_config,
+    validate_mcp_server_config,
     validate_queue_config,
     validate_redis_config,
     validate_results_cache_config,
@@ -288,6 +290,9 @@ class BaseController(ABC):
         component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
+        logs_dir = self._clp_config.logs_directory / component_name
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
         env_vars = EnvVarsDict()
 
         # Logging config
@@ -307,6 +312,9 @@ class BaseController(ABC):
         """
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
 
@@ -522,6 +530,37 @@ class BaseController(ABC):
 
         return env_vars
 
+    def _set_up_env_for_mcp_server(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for the MCP server component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = MCP_SERVER_COMPONENT_NAME
+        if self._clp_config.mcp_server is None:
+            logger.info(f"The MCP Server is not configured, skipping {component_name} creation...")
+            return EnvVarsDict()
+        logger.info(f"Setting up environment for {component_name}...")
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        validate_mcp_server_config(self._clp_config, logs_dir)
+        logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_MCP_HOST": _get_ip_from_hostname(self._clp_config.mcp_server.host),
+            "CLP_MCP_PORT": str(self._clp_config.mcp_server.port),
+        }
+
+        # Logging config
+        env_vars |= {
+            "CLP_MCP_LOGGING_LEVEL": self._clp_config.mcp_server.logging_level,
+        }
+
+        return env_vars
+
     def _set_up_env_for_garbage_collector(self) -> EnvVarsDict:
         """
         Sets up environment variables for the garbage collector component.
@@ -621,6 +660,8 @@ class DockerComposeController(BaseController):
         cmd = ["docker", "compose", "--project-name", self._project_name]
         if deployment_type == DeploymentType.BASE:
             cmd += ["--file", "docker-compose.base.yaml"]
+        if self._clp_config.mcp_server is not None:
+            cmd += ["--profile", "mcp"]
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(
             cmd,
@@ -712,6 +753,7 @@ class DockerComposeController(BaseController):
             "CLP_AWS_CONFIG_DIR_HOST": (None if aws_config_dir is None else str(aws_config_dir)),
             "CLP_DATA_DIR_HOST": str(self._clp_config.data_directory),
             "CLP_LOGS_DIR_HOST": str(self._clp_config.logs_directory),
+            "CLP_TMP_DIR_HOST": str(self._clp_config.tmp_directory),
         }
 
         # Input config
@@ -744,6 +786,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_query_worker(num_workers)
         env_vars |= self._set_up_env_for_reducer(num_workers)
         env_vars |= self._set_up_env_for_webui(container_clp_config)
+        env_vars |= self._set_up_env_for_mcp_server()
         env_vars |= self._set_up_env_for_garbage_collector()
 
         # Write the environment variables to the `.env` file.

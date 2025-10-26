@@ -27,7 +27,15 @@ class CoreConfig:
         validate_dir_exists(clp_core_bins_dir)
 
         # Check for required CLP core binaries
-        required_binaries = ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
+        required_binaries = [
+            "clg",
+            "clo",
+            "clp",
+            "clp-s",
+            "indexer",
+            "log-converter",
+            "reducer-server",
+        ]
         missing_binaries = [b for b in required_binaries if not (clp_core_bins_dir / b).is_file()]
         if len(missing_binaries) > 0:
             err_msg = (
