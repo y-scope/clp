@@ -7,7 +7,7 @@ from contextlib import closing
 from pathlib import Path
 from typing import Any, List, Optional
 
-from clp_py_utils.clp_config import Database
+from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, Database
 from clp_py_utils.clp_metadata_db_utils import (
     delete_archives_from_metadata_db,
     get_archives_table_name,
@@ -15,7 +15,6 @@ from clp_py_utils.clp_metadata_db_utils import (
 from clp_py_utils.sql_adapter import SQL_Adapter
 
 from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLPConfig,
     get_clp_home,
     load_config_file,
