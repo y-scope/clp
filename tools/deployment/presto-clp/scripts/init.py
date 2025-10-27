@@ -248,6 +248,15 @@ def _add_memory_env_vars(env_vars: Dict[str, str]) -> bool:
         system_memory_gb, int(total_memory_gb * PRESTO_SYSTEM_MEM_LIMIT_RATIO)
     )
 
+    logger.info(
+        "Computed Presto worker memory settings from %.2f GB total RAM: "
+        "query-memory-gb=%d, system-memory-gb=%d, system-mem-limit-db=%d",
+        total_memory_gb,
+        query_memory_gb,
+        system_memory_gb,
+        system_mem_limit_gb,
+    )
+
     env_vars["PRESTO_WORKER_CONFIGPROPERTIES_QUERY_MEMORY_GB"] = str(query_memory_gb)
     env_vars["PRESTO_WORKER_CONFIGPROPERTIES_SYSTEM_MEMORY_GB"] = str(system_memory_gb)
     env_vars["PRESTO_WORKER_CONFIGPROPERTIES_SYSTEM_MEM_LIMIT_GB"] = str(system_mem_limit_gb)
