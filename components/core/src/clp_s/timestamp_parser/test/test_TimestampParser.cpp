@@ -1,7 +1,10 @@
+#include <cstddef>
 #include <string>
 #include <vector>
 
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
+#include <fmt/base.h>
 #include <fmt/core.h>
 #include <fmt/format.h>
 
@@ -106,7 +109,7 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
 
         // The parser asserts that the day of the week in the timestamp is actually correct, so we
         // need to include some extra date information to have days of the week line up.
-        std::vector<std::string> abbreviated_day_in_week_timestamps{
+        std::vector<std::string> const abbreviated_day_in_week_timestamps{
                 "04 Sun",
                 "05 Mon",
                 "06 Tue",
