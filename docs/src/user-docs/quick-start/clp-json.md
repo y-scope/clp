@@ -3,8 +3,8 @@
 This page will walk you through how to start CLP and use it to compress and search JSON logs.
 
 :::{note}
-If you're using a `clp-json` release, you can only compress unstructured text logs by converting
-them to JSON. This limitation will be addressed in a future version of CLP.
+clp-json doesn't support directly ingesting unstructured text logs. For ingesting unstructured
+text logs, refer to [this section below](#compressing-unstructured-text-logs).
 :::
 
 ---
