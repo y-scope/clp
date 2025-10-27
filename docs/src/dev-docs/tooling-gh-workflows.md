@@ -91,3 +91,8 @@ This workflow builds CLP-core on macOS and runs its unit tests.
 ## clp-lint
 
 This workflow runs linting checks on the codebase.
+
+## clp-uv-checks
+
+This workflow checks whether each UV Python project's `uv.lock` is up to date with its
+`pyproject.toml`.
