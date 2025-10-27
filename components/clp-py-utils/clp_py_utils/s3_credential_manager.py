@@ -47,7 +47,7 @@ class S3CredentialManager:
         :param name: Unique name for the credential.
         :param access_key_id: AWS access key ID.
         :param secret_access_key: AWS secret access key.
-        :param role_arn: Optional ARN of IAM role to assume (Phase 2).
+        :param role_arn: Optional ARN of IAM role to assume.
         :return: The ID of the created credential.
         :raises ValueError: If name already exists or validation fails.
         """
