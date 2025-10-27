@@ -71,7 +71,7 @@ def update_tags(
     table_prefix: str,
     dataset: Optional[str],
     archive_id: str,
-    tag_ids: List[int],
+    tag_ids: list[int],
 ) -> None:
     db_cursor.executemany(
         f"""
@@ -87,10 +87,10 @@ def update_job_metadata_and_tags(
     job_id: int,
     table_prefix: str,
     dataset: Optional[str],
-    tag_ids: List[int],
+    tag_ids: list[int],
     archive_stats: Dict[str, Any],
 ) -> None:
-    if tag_ids is not None:
+    if len(tag_ids) > 0:
         update_tags(db_cursor, table_prefix, dataset, archive_stats["id"], tag_ids)
     increment_compression_job_metadata(
         db_cursor,
@@ -312,7 +312,7 @@ def run_clp(
     logs_dir: pathlib.Path,
     job_id: int,
     task_id: int,
-    tag_ids,
+    tag_ids: list[int],
     paths_to_compress: PathsToCompress,
     sql_adapter: SQL_Adapter,
     clp_metadata_db_connection_config,
@@ -337,7 +337,7 @@ def run_clp(
     instance_id_str = f"compression-job-{job_id}-task-{task_id}"
 
     clp_storage_engine = worker_config.package.storage_engine
-    data_dir = worker_config.data_directory
+    tmp_dir = worker_config.tmp_directory
     archive_output_dir = worker_config.archive_output.get_directory()
 
     # Get S3 config
@@ -375,7 +375,7 @@ def run_clp(
 
     # Generate list of logs to compress
     input_type = clp_config.input.type
-    logs_list_path = data_dir / f"{instance_id_str}-log-paths.txt"
+    logs_list_path = tmp_dir / f"{instance_id_str}-log-paths.txt"
     if InputType.FS == input_type:
         _generate_fs_logs_list(logs_list_path, paths_to_compress)
     elif InputType.S3 == input_type:
@@ -522,7 +522,7 @@ def run_clp(
 def compression_entry_point(
     job_id: int,
     task_id: int,
-    tag_ids,
+    tag_ids: list[int],
     clp_io_config_json: str,
     paths_to_compress_json: str,
     clp_metadata_db_connection_config: Dict[str, Any],

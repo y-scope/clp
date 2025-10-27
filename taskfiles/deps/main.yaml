@@ -1,6 +1,7 @@
 version: "3"
 
 includes:
+  lock: "./lock.yaml"
   utils: "./utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
@@ -370,8 +371,8 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-Dlog_surgeon_BUILD_TESTING=OFF"
           LIB_NAME: "log_surgeon"
-          TARBALL_SHA256: "69a99e0804a52c6b6397c5e7eabecc9bb4915d0145632c66fc63ad13678ff56a"
-          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/a722d07.tar.gz"
+          TARBALL_SHA256: "4551ea50cd22e8423770fd66a167e1c86053b1f4957f72c582a2da93e7820210"
+          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/840f262.tar.gz"
 
   lz4:
     internal: true

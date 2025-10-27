@@ -114,6 +114,7 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/log-converter"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
       - "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_scheduler"
       - "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_worker"
@@ -123,6 +124,7 @@ tasks:
       - "components/clp-py-utils/dist/*.whl"
       - "components/job-orchestration/dist/*.whl"
       - "components/package-template/src/**/*"
+      - "tools/deployment/package/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
       - "core"
@@ -158,6 +160,7 @@ tasks:
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
+        "{{.G_CORE_COMPONENT_BUILD_DIR}}/log-converter"
         "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
         "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_scheduler"
         "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_worker"
@@ -174,6 +177,10 @@ tasks:
       - |-
         cd "{{.OUTPUT_DIR}}/var/www/webui"
         PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm ci --omit=dev
+      - >-
+        rsync -a
+        "tools/deployment/package/"
+        "{{.OUTPUT_DIR}}"
       - "echo '{{.G_PACKAGE_VERSION}}' > '{{.OUTPUT_DIR}}/VERSION'"
       # This command must be last
       - task: "utils:checksum:compute"
@@ -213,13 +220,14 @@ tasks:
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
+      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/log-converter"
       - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
     cmds:
       - task: "utils:cmake:build"
         vars:
           BUILD_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
           JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
-          TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
+          TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "log-converter", "reducer-server"]
 
   clp-mcp-server:
     - task: "uv-component"

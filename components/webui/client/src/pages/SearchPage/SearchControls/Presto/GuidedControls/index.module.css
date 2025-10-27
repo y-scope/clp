@@ -31,7 +31,8 @@
 }
 
 .widthSelect {
-    width: 100%;
+    width: 0;
+    flex-grow: 1;
 }
 
 .noLeftBorderRadiusSelect :global(.ant-select-selector) {
