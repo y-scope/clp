@@ -39,7 +39,7 @@ const QuerySpeed = () => {
     const {latency, speed} = data;
     return (
         <Text type={"secondary"}>
-            {` in ${latency.toFixed(3)} seconds (${formatSizeInBytes(speed)}/s)`}
+            {` in ${latency?.toFixed(3)} seconds (${formatSizeInBytes(speed)}/s)`}
         </Text>
     );
 };
