@@ -92,7 +92,7 @@ constexpr std::array cAbbreviatedMonthNames
  */
 [[nodiscard]] auto
 find_first_matching_prefix(std::string_view str, std::span<std::string_view const> candidates)
-        -> ystdlib::error_handling::Result<size_t, ErrorCode>;
+        -> ystdlib::error_handling::Result<size_t>;
 
 auto convert_padded_string_to_number(std::string_view str, char padding_character)
         -> std::optional<int> {
@@ -112,14 +112,14 @@ auto convert_padded_string_to_number(std::string_view str, char padding_characte
 }
 
 auto find_first_matching_prefix(std::string_view str, std::span<std::string_view const> candidates)
-        -> ystdlib::error_handling::Result<size_t, ErrorCode> {
+        -> ystdlib::error_handling::Result<size_t> {
     for (size_t candidate_idx{0ULL}; candidate_idx < candidates.size(); ++candidate_idx) {
         auto const& candidate{candidates[candidate_idx]};
         if (candidate == str.substr(0ULL, candidate.size())) {
             return candidate_idx;
         }
     }
-    return ErrorCodeEnum::IncompatibleTimestampPattern;
+    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
 }
 }  // namespace
 
@@ -128,7 +128,7 @@ auto parse_timestamp(
         std::string_view timestamp,
         std::string_view pattern,
         [[maybe_unused]] std::string& generated_pattern
-) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>, ErrorCode> {
+) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>> {
     size_t pattern_idx{};
     size_t timestamp_idx{};
 
@@ -151,7 +151,7 @@ auto parse_timestamp(
                 ++timestamp_idx;
                 continue;
             }
-            return ErrorCodeEnum::IncompatibleTimestampPattern;
+            return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
         }
 
         escaped = false;
@@ -159,7 +159,7 @@ auto parse_timestamp(
             case 'y': {  // Zero-padded 2-digit year in century.
                 constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 auto const optional_two_digit_year{convert_padded_string_to_number(
@@ -167,12 +167,12 @@ auto parse_timestamp(
                         '0'
                 )};
                 if (false == optional_two_digit_year.has_value()) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 auto const two_digit_year{optional_two_digit_year.value()};
                 if (two_digit_year < cMinTwoDigitYear || two_digit_year > cMaxTwoDigitYear) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 if (two_digit_year >= cTwoDigitYearOffsetBoundary) {
@@ -187,7 +187,7 @@ auto parse_timestamp(
             case 'Y': {  // Zero-padded 4-digit year.
                 constexpr size_t cFieldLength{4};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 auto const optional_parsed_year{convert_padded_string_to_number(
@@ -195,12 +195,12 @@ auto parse_timestamp(
                         '0'
                 )};
                 if (false == optional_parsed_year.has_value()) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 parsed_year = optional_parsed_year.value();
                 if (parsed_year < cMinParsedYear || parsed_year > cMaxParsedYear) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 timestamp_idx += cFieldLength;
@@ -229,7 +229,7 @@ auto parse_timestamp(
             case 'm': {  // Zero-padded month.
                 constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 auto const optional_parsed_month{convert_padded_string_to_number(
@@ -237,12 +237,12 @@ auto parse_timestamp(
                         '0'
                 )};
                 if (false == optional_parsed_month.has_value()) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 parsed_month = optional_parsed_month.value();
                 if (parsed_month < cMinParsedMonth || parsed_month > cMaxParsedMonth) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 timestamp_idx += cFieldLength;
@@ -252,7 +252,7 @@ auto parse_timestamp(
             case 'd': {  // Zero-padded day in month.
                 constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 auto const optional_parsed_day{convert_padded_string_to_number(
@@ -260,12 +260,12 @@ auto parse_timestamp(
                         '0'
                 )};
                 if (false == optional_parsed_day.has_value()) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 parsed_day = optional_parsed_day.value();
                 if (parsed_day < cMinParsedDay || parsed_day > cMaxParsedDay) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 timestamp_idx += cFieldLength;
@@ -275,7 +275,7 @@ auto parse_timestamp(
             case 'e': {  // Space-padded day in month.
                 constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 auto const optional_parsed_day{convert_padded_string_to_number(
@@ -283,12 +283,12 @@ auto parse_timestamp(
                         ' '
                 )};
                 if (false == optional_parsed_day.has_value()) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 parsed_day = optional_parsed_day.value();
                 if (parsed_day < cMinParsedDay || parsed_day > cMaxParsedDay) {
-                    return ErrorCodeEnum::IncompatibleTimestampPattern;
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 timestamp_idx += cFieldLength;
@@ -324,39 +324,39 @@ auto parse_timestamp(
             case 'Z':
             case '?':
             case 'P':
-                return ErrorCodeEnum::FormatSpecifierNotImplemented;
+                return ErrorCode{ErrorCodeEnum::FormatSpecifierNotImplemented};
             case '\\': {
                 if ('\\' == timestamp[timestamp_idx]) {
                     ++timestamp_idx;
                     continue;
                 }
-                return ErrorCodeEnum::IncompatibleTimestampPattern;
+                return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
             }
             default:
-                return ErrorCodeEnum::InvalidTimestampPattern;
+                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
         }
     }
 
     // Do not allow trailing unmatched content.
     if (pattern_idx != pattern.size() || timestamp_idx != timestamp.size()) {
         {
-            return ErrorCodeEnum::IncompatibleTimestampPattern;
+            return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
         }
     }
 
     // Do not allow mixing format specifiers for date-and-time type timestamps and epoch-number type
     // timestamps.
     if (date_type_representation && number_type_representation) {
-        return ErrorCodeEnum::InvalidTimestampPattern;
+        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
     }
 
     if (number_type_representation) {
-        return ErrorCodeEnum::FormatSpecifierNotImplemented;
+        return ErrorCode{ErrorCodeEnum::FormatSpecifierNotImplemented};
     }
 
     auto const year_month_day{date::year(parsed_year) / parsed_month / parsed_day};
     if (false == year_month_day.ok()) {
-        return ErrorCodeEnum::InvalidDate;
+        return ErrorCode{ErrorCodeEnum::InvalidDate};
     }
 
     auto const time_point = date::sys_days(year_month_day) + std::chrono::hours(0)
@@ -370,7 +370,7 @@ auto parse_timestamp(
                                            - date::Sunday)
                                                   .count()};
         if (actual_day_of_week_idx != optional_day_of_week_idx.value()) {
-            return ErrorCodeEnum::InvalidDate;
+            return ErrorCode{ErrorCodeEnum::InvalidDate};
         }
     }
 

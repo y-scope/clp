@@ -8,7 +8,6 @@
 #include <ystdlib/error_handling/Result.hpp>
 
 #include "../Defs.hpp"
-#include "ErrorCode.hpp"
 
 namespace clp_s::timestamp_parser {
 /**
@@ -87,7 +86,7 @@ namespace clp_s::timestamp_parser {
         std::string_view timestamp,
         std::string_view pattern,
         std::string& generated_pattern
-) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>, ErrorCode>;
+) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>>;
 }  // namespace clp_s::timestamp_parser
 
 #endif  // CLP_S_TIMESTAMP_PARSER_TIMESTAMPPARSER_HPP
