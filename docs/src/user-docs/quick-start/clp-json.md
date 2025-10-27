@@ -64,7 +64,7 @@ To compress logs from object storage, see
 [Using object storage](../guides-using-object-storage/index).
 :::
 
-### Compressing unstructured text logs
+## Compressing unstructured text logs
 
 clp-json supports compressing unstructured text logs by converting them into JSON. To enable this
 conversion, run the compression script with the `--unstructured` flag:
