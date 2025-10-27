@@ -83,11 +83,14 @@ class SessionState:
         """
         :param results: Log entries from the query to cache.
         :return: Forwards `SessionState.get_page_data`'s return values.
-        :return: _GET_INSTRUCTIONS_NOT_RUN_ERROR if `get_instructions` has not been called in this
-            session.
+        :return: A dictionary with the following key-value pair on failures:
+            - "Error": An error message describing the failure.
         """
         if self._is_instructions_retrieved is False:
             return self._GET_INSTRUCTIONS_NOT_RUN_ERROR.copy()
+
+        if len(results) == 0:
+            return {"Error": "No log events found matching the KQL query."}
 
         self._cached_query_result = PaginatedQueryResult(
             log_entries=results, num_items_per_page=self._num_items_per_page
