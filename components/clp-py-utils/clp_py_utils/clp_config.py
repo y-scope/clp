@@ -86,11 +86,6 @@ SerializablePath = Annotated[pathlib.Path, PlainSerializer(serialize_path)]
 ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
 
 
-class DeploymentType(KebabCaseStrEnum):
-    BASE = auto()
-    FULL = auto()
-
-
 class StorageEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
@@ -766,12 +761,6 @@ class CLPConfig(BaseModel):
 
     def get_shared_config_file_path(self) -> pathlib.Path:
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
-
-    def get_deployment_type(self) -> DeploymentType:
-        if QueryEngine.PRESTO == self.package.query_engine:
-            return DeploymentType.BASE
-        else:
-            return DeploymentType.FULL
 
     def dump_to_primitive_dict(self):
         custom_serialized_fields = {
