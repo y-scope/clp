@@ -311,13 +311,16 @@ def _make_log_converter_command_and_env(
     clp_home: pathlib.Path,
     conversion_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
-) -> Tuple[List[str], Optional[Dict[str, str]]]:
+) -> Tuple[List[str], Dict[str, str]]:
     """
     Generates the command and environment variables for unstructured text log conversion.
+
     :param clp_home:
     :param conversion_output_dir:
     :param clp_config:
-    :return: Tuple of (conversion_command, conversion_env_vars)
+    :return: A tuple containing:
+        - The conversion command.
+        - The conversion environment variables.
     """
 
     # fmt: off
@@ -444,7 +447,7 @@ def run_clp(
 
     conversion_return_code = 0
     if conversion_cmd is not None:
-        logger.debug("Converting...")
+        logger.debug("Execute log-converter with command: %s", conversion_cmd)
         conversion_proc = subprocess.Popen(
             conversion_cmd, stdout=subprocess.DEVNULL, stderr=stderr_log_file, env=conversion_env
         )
@@ -453,12 +456,12 @@ def run_clp(
     if conversion_return_code != 0:
         cleanup_temporary_files()
         logger.error(
-            f"Failed to convert unstructured log text, return_code={str(conversion_return_code)}"
+            f"Failed to convert unstructured log text, return_code={conversion_return_code}"
         )
         worker_output = {
             "total_uncompressed_size": 0,
             "total_compressed_size": 0,
-            "error_message": f"See logs {stderr_log_path}",
+            "error_message": f"Check logs in {stderr_log_path}",
         }
         return CompressionTaskStatus.FAILED, worker_output
 
