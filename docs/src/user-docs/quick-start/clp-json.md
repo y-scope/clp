@@ -3,8 +3,8 @@
 This page will walk you through how to start CLP and use it to compress and search JSON logs.
 
 :::{note}
-If you're using a `clp-json` release, we only support ingesting unstructured text logs by
-converting them to JSON. This limitation will be addressed in a future version of CLP.
+If you're using a `clp-json` release, you can only compress unstructured text logs by converting
+them to JSON. This limitation will be addressed in a future version of CLP.
 :::
 
 ---
@@ -66,8 +66,8 @@ To compress logs from object storage, see
 
 ### Compressing unstructured text logs
 
-clp-json supports compressing unstructured text logs by converting them into JSON. To enable
-this conversion, run the compression script with the `--unstructured` flag:
+clp-json supports compressing unstructured text logs by converting them into JSON. To enable this
+conversion, run the compression script with the `--unstructured` flag:
 
 ```bash
 sbin/compress.sh --unstructured <path1> [<path2> ...]
@@ -98,8 +98,7 @@ will be converted into:
 ```
 
 :::{note}
-When the `--unstructured` flag is used, clp-json will always use `"timestamp"` as the timestamp
-key.
+When the `--unstructured` flag is used, clp-json will always use `"timestamp"` as the timestamp key.
 :::
 
 ### Sample logs
