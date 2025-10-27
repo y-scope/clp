@@ -27,7 +27,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  rust-checks:
+  uv-checks:
     strategy:
       matrix:
         os:
