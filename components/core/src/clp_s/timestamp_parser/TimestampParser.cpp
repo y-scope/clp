@@ -115,7 +115,7 @@ auto find_first_matching_prefix(std::string_view str, std::span<std::string_view
         -> ystdlib::error_handling::Result<size_t> {
     for (size_t candidate_idx{0ULL}; candidate_idx < candidates.size(); ++candidate_idx) {
         auto const& candidate{candidates[candidate_idx]};
-        if (candidate == str.substr(0ULL, candidate.size())) {
+        if (str.starts_with(candidate)) {
             return candidate_idx;
         }
     }
