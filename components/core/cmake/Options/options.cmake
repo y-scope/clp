@@ -166,6 +166,7 @@ function(validate_clp_tests_dependencies)
         CLP_BUILD_CLP_S_SEARCH_KQL
         CLP_BUILD_CLP_S_SEARCH_SQL
         CLP_BUILD_CLP_S_TIMESTAMPPATTERN
+        CLP_BUILD_CLP_S_TIMESTAMP_PARSER
     )
 endfunction()
 
