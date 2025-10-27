@@ -18,7 +18,8 @@ COPY --link --from=base / /
 
 ARG UID=1000
 ENV CLP_HOME="/opt/clp"
-ENV PATH="${CLP_HOME}/sbin:${CLP_HOME}/bin:${PATH}" \
+ENV LD_LIBRARY_PATH="${CLP_HOME}/lib" \
+    PATH="${CLP_HOME}/sbin:${CLP_HOME}/bin:${PATH}" \
     PYTHONPATH="${CLP_HOME}/lib/python3/site-packages" \
     USER="clp-user"
 
@@ -27,3 +28,5 @@ USER ${USER}
 WORKDIR ${CLP_HOME}
 
 COPY --link --chown=${UID} ./build/clp-package ${CLP_HOME}
+COPY --link --chown=${UID} ./build/deps/cpp/mariadb-connector-cpp-install/lib/*/libmariadbcpp.so* \
+    ${CLP_HOME}/lib/

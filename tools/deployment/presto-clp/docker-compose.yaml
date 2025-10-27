@@ -11,7 +11,7 @@ services:
       - "./coordinator/scripts:/scripts:ro"
       - "coordinator-config:/opt/presto-server/etc"
     networks:
-      - "presto"
+      - "clp-package"
     ports:
       - "8889:8080"
     healthcheck:
@@ -40,7 +40,7 @@ services:
       - "./worker/scripts:/scripts:ro"
       - "worker-config:/opt/presto-server/etc"
     networks:
-      - "presto"
+      - "clp-package"
 
 volumes:
   # Dummy volume to use when a bind mount is not desired.
@@ -50,5 +50,6 @@ volumes:
   worker-config:
 
 networks:
-  presto:
-    driver: "bridge"
+  clp-package:
+    name: "${CLP_PACKAGE_NETWORK_NAME:-clp-package_default}"
+    external: true
