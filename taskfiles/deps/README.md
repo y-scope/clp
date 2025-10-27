@@ -2,16 +2,18 @@
 
 Follow the guidelines below when writing or updating dependency installation taskfiles.
 
-- Use `deps:utils:install-remote-cmake-lib` and thus `yscope-dev-utils:cmake:install-remote-tar`
-  whenever applicable.
+- Use one of the following tasks for installation, in descending order of preference:
+  - `deps:utils:install-remote-cmake-lib`
+  - `yscope-dev-utils:cmake:install-remote-tar`
 
-- For ones that don't apply:
+- For special tasks that don't apply to the rule above:
   - Include `deps:utils:init` in the `deps:` section of the task.
   - Briefly explain why if the library is installable via CMake.
-  - Verify that each library has proper checksum validation to check if it is up-to-date.
+  - Ensure each library installation includes checksum validation using best effort.
+    - Use of `yscope-dev-utils` tasks is encouraged, as most of them include proper checksum checks.
   - Use `<lib>-extracted` as the directory name for tarball extractions.
 
-- Avoid parsing version numbers from download URLs unless the version is used elsewhere.
+- Avoid parsing version numbers in download URLs unless the version is used elsewhere.
   - URL formats can change over time, so it’s more maintainable to store and use the full URL
     directly as plain text.
 

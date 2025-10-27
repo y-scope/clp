@@ -93,7 +93,7 @@ tasks:
     preconditions:
       # NOTE: Spider is only supported on Ubuntu at present.
       - >-
-        source /etc/os-release && [[ "$ID" == "ubuntu" ]]
+        . /etc/os-release && [ "$ID" == "ubuntu" ]
     cmds:
       - task: "yscope-dev-utils:cmake:install-remote-tar"
         vars:
