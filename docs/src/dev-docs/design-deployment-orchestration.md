@@ -45,6 +45,8 @@ graph LR
   query_worker["query-worker"]
   reducer["reducer"]
   webui["webui"]
+  mcp_server["mcp-server"]
+
   garbage_collector["garbage-collector"]
 
   %% One-time jobs
@@ -64,6 +66,8 @@ graph LR
   results_cache_indices_creator -->|completed_successfully| reducer
   db_table_creator -->|completed_successfully| webui
   results_cache_indices_creator -->|completed_successfully| webui
+  db_table_creator -->|completed_successfully| mcp_server
+  results_cache_indices_creator -->|completed_successfully| mcp_server
   db_table_creator -->|completed_successfully| garbage_collector
   results_cache_indices_creator -->|completed_successfully| garbage_collector
 
@@ -94,7 +98,11 @@ graph LR
     webui
     garbage_collector
   end
-:::
+
+  subgraph AI
+    mcp_server
+  end
+
 
 +++
 **Figure 1**: Orchestration architecture of the services in the CLP package.
@@ -118,6 +126,7 @@ graph LR
 | query_worker          | Worker processes for search/aggregation jobs                    |
 | reducer               | Reducers for performing the final stages of aggregation jobs    |
 | webui                 | Web server for the UI                                           |
+| mcp_server            | MCP server for AI agent to access CLP functionalities           |
 | garbage_collector     | Process to manage data retention                                |
 
 :::
