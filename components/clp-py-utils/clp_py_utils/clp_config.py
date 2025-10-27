@@ -1,15 +1,15 @@
 import os
 import pathlib
 from enum import auto
-from typing import Annotated, Any, Literal, Optional, Set, Union
+from typing import Annotated, Any, ClassVar, Literal, Optional, Union
 
-from dotenv import dotenv_values
 from pydantic import (
     BaseModel,
     ConfigDict,
     Field,
     field_validator,
     model_validator,
+    PlainSerializer,
     PrivateAttr,
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
@@ -21,6 +21,7 @@ from .core import (
     read_yaml_config_file,
     validate_path_could_be_dir,
 )
+from .serialization_utils import serialize_path, serialize_str_enum
 
 # Constants
 # Component names
@@ -31,49 +32,12 @@ REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
 QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
+PRESTO_COORDINATOR_COMPONENT_NAME = "presto-coordinator"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
+MCP_SERVER_COMPONENT_NAME = "mcp_server"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
-
-# Component groups
-GENERAL_SCHEDULING_COMPONENTS = {
-    QUEUE_COMPONENT_NAME,
-    REDIS_COMPONENT_NAME,
-}
-COMPRESSION_COMPONENTS = GENERAL_SCHEDULING_COMPONENTS | {
-    DB_COMPONENT_NAME,
-    COMPRESSION_SCHEDULER_COMPONENT_NAME,
-    COMPRESSION_WORKER_COMPONENT_NAME,
-}
-QUERY_COMPONENTS = GENERAL_SCHEDULING_COMPONENTS | {
-    DB_COMPONENT_NAME,
-    QUERY_SCHEDULER_COMPONENT_NAME,
-    QUERY_WORKER_COMPONENT_NAME,
-    REDUCER_COMPONENT_NAME,
-}
-UI_COMPONENTS = {
-    RESULTS_CACHE_COMPONENT_NAME,
-    WEBUI_COMPONENT_NAME,
-}
-STORAGE_MANAGEMENT_COMPONENTS = {GARBAGE_COLLECTOR_COMPONENT_NAME}
-ALL_COMPONENTS = (
-    COMPRESSION_COMPONENTS | QUERY_COMPONENTS | UI_COMPONENTS | STORAGE_MANAGEMENT_COMPONENTS
-)
-
-# Target names
-ALL_TARGET_NAME = ""
-CONTROLLER_TARGET_NAME = "controller"
-
-TARGET_TO_COMPONENTS = {
-    ALL_TARGET_NAME: ALL_COMPONENTS,
-    CONTROLLER_TARGET_NAME: GENERAL_SCHEDULING_COMPONENTS
-    | {
-        COMPRESSION_SCHEDULER_COMPONENT_NAME,
-        QUERY_SCHEDULER_COMPONENT_NAME,
-    }
-    | STORAGE_MANAGEMENT_COMPONENTS,
-}
 
 # Action names
 ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
@@ -83,8 +47,19 @@ QUERY_TASKS_TABLE_NAME = "query_tasks"
 COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 
+# Paths
+CONTAINER_AWS_CONFIG_DIRECTORY = pathlib.Path("/") / ".aws"
+CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
+CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
+CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yml"
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
 CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
+CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
+CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
+CLP_DEFAULT_STREAMS_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
+CLP_DEFAULT_STREAMS_STAGING_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
+CLP_DEFAULT_LOG_DIRECTORY_PATH = pathlib.Path("var") / "log"
+CLP_DEFAULT_TMP_DIRECTORY_PATH = pathlib.Path("var") / "tmp"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
 CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH = pathlib.Path("clp-package-image.id")
@@ -98,6 +73,8 @@ CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
 
+# Serializer
+StrEnumSerializer = PlainSerializer(serialize_str_enum)
 # Generic types
 NonEmptyStr = Annotated[str, Field(min_length=1)]
 PositiveFloat = Annotated[float, Field(gt=0)]
@@ -106,7 +83,13 @@ PositiveInt = Annotated[int, Field(gt=0)]
 # TODO: Replace this with pydantic_extra_types.domain.DomainStr.
 DomainStr = NonEmptyStr
 Port = Annotated[int, Field(gt=0, lt=2**16)]
+SerializablePath = Annotated[pathlib.Path, PlainSerializer(serialize_path)]
 ZstdCompressionLevel = Annotated[int, Field(ge=1, le=19)]
+
+
+class DeploymentType(KebabCaseStrEnum):
+    BASE = auto()
+    FULL = auto()
 
 
 class StorageEngine(KebabCaseStrEnum):
@@ -114,15 +97,24 @@ class StorageEngine(KebabCaseStrEnum):
     CLP_S = auto()
 
 
+StorageEngineStr = Annotated[StorageEngine, StrEnumSerializer]
+
+
 class DatabaseEngine(KebabCaseStrEnum):
     MARIADB = auto()
     MYSQL = auto()
+
+
+DatabaseEngineStr = Annotated[DatabaseEngine, StrEnumSerializer]
 
 
 class QueryEngine(KebabCaseStrEnum):
     CLP = auto()
     CLP_S = auto()
     PRESTO = auto()
+
+
+QueryEngineStr = Annotated[QueryEngine, StrEnumSerializer]
 
 
 class StorageType(LowercaseStrEnum):
@@ -137,9 +129,12 @@ class AwsAuthType(LowercaseStrEnum):
     ec2 = auto()
 
 
+AwsAuthTypeStr = Annotated[AwsAuthType, StrEnumSerializer]
+
+
 class Package(BaseModel):
-    storage_engine: StorageEngine = StorageEngine.CLP
-    query_engine: QueryEngine = QueryEngine.CLP
+    storage_engine: StorageEngineStr = StorageEngine.CLP
+    query_engine: QueryEngineStr = QueryEngine.CLP
 
     @model_validator(mode="after")
     def validate_query_engine_package_compatibility(self):
@@ -163,24 +158,20 @@ class Package(BaseModel):
 
         return self
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["storage_engine"] = d["storage_engine"].value
-        d["query_engine"] = d["query_engine"].value
-        return d
-
 
 class Database(BaseModel):
-    type: DatabaseEngine = DatabaseEngine.MARIADB
+    DEFAULT_PORT: ClassVar[int] = 3306
+
+    type: DatabaseEngineStr = DatabaseEngine.MARIADB
     host: DomainStr = "localhost"
-    port: Port = 3306
+    port: Port = DEFAULT_PORT
     name: NonEmptyStr = "clp-db"
     ssl_cert: Optional[NonEmptyStr] = None
     auto_commit: bool = False
     compress: bool = True
 
-    username: Optional[str] = None
-    password: Optional[str] = None
+    username: Optional[NonEmptyStr] = None
+    password: Optional[NonEmptyStr] = None
 
     def ensure_credentials_loaded(self):
         if self.username is None or self.password is None:
@@ -232,7 +223,6 @@ class Database(BaseModel):
 
     def dump_to_primitive_dict(self):
         d = self.model_dump(exclude={"username", "password"})
-        d["type"] = d["type"].value
         return d
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
@@ -254,6 +244,10 @@ class Database(BaseModel):
         self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
 
+    def transform_for_container(self):
+        self.host = DB_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
+
 
 class CompressionScheduler(BaseModel):
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
@@ -261,11 +255,17 @@ class CompressionScheduler(BaseModel):
 
 
 class QueryScheduler(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 7000
+
     host: DomainStr = "localhost"
-    port: Port = 7000
+    port: Port = DEFAULT_PORT
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
     num_archives_to_search_per_sub_job: PositiveInt = 16
     logging_level: LoggingLevel = "INFO"
+
+    def transform_for_container(self):
+        self.host = QUERY_SCHEDULER_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 class CompressionWorker(BaseModel):
@@ -277,8 +277,10 @@ class QueryWorker(BaseModel):
 
 
 class Redis(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 6379
+
     host: DomainStr = "localhost"
-    port: Port = 6379
+    port: Port = DEFAULT_PORT
     query_backend_database: int = 0
     compression_backend_database: int = 1
     # redis can perform authentication without a username
@@ -304,17 +306,29 @@ class Redis(BaseModel):
         """
         self.password = _get_env_var(CLP_REDIS_PASS_ENV_VAR_NAME)
 
+    def transform_for_container(self):
+        self.host = REDIS_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
+
 
 class Reducer(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 14009
+
     host: DomainStr = "localhost"
-    base_port: Port = 14009
+    base_port: Port = DEFAULT_PORT
     logging_level: LoggingLevel = "INFO"
     upsert_interval: PositiveInt = 100  # milliseconds
 
+    def transform_for_container(self):
+        self.host = REDUCER_COMPONENT_NAME
+        self.base_port = self.DEFAULT_PORT
+
 
 class ResultsCache(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 27017
+
     host: DomainStr = "localhost"
-    port: Port = 27017
+    port: Port = DEFAULT_PORT
     db_name: NonEmptyStr = "clp-query-results"
     stream_collection_name: NonEmptyStr = "stream-files"
     retention_period: Optional[PositiveInt] = 60
@@ -322,10 +336,16 @@ class ResultsCache(BaseModel):
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
 
+    def transform_for_container(self):
+        self.host = RESULTS_CACHE_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
+
 
 class Queue(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 5672
+
     host: DomainStr = "localhost"
-    port: Port = 5672
+    port: Port = DEFAULT_PORT
 
     username: Optional[NonEmptyStr] = None
     password: Optional[str] = None
@@ -352,6 +372,10 @@ class Queue(BaseModel):
         self.username = _get_env_var(CLP_QUEUE_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_QUEUE_PASS_ENV_VAR_NAME)
 
+    def transform_for_container(self):
+        self.host = QUEUE_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
+
 
 class S3Credentials(BaseModel):
     access_key_id: NonEmptyStr
@@ -360,12 +384,7 @@ class S3Credentials(BaseModel):
 
 
 class AwsAuthentication(BaseModel):
-    type: Literal[
-        AwsAuthType.credentials.value,
-        AwsAuthType.profile.value,
-        AwsAuthType.env_vars.value,
-        AwsAuthType.ec2.value,
-    ]
+    type: AwsAuthTypeStr
     profile: Optional[NonEmptyStr] = None
     credentials: Optional[S3Credentials] = None
 
@@ -411,10 +430,13 @@ class S3IngestionConfig(BaseModel):
     def dump_to_primitive_dict(self):
         return self.model_dump()
 
+    def transform_for_container(self):
+        pass
+
 
 class FsStorage(BaseModel):
     type: Literal[StorageType.FS.value] = StorageType.FS.value
-    directory: pathlib.Path
+    directory: SerializablePath
 
     @field_validator("directory", mode="before")
     @classmethod
@@ -425,16 +447,11 @@ class FsStorage(BaseModel):
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.directory = make_config_path_absolute(clp_home, self.directory)
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["directory"] = str(d["directory"])
-        return d
-
 
 class S3Storage(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     s3_config: S3Config
-    staging_directory: pathlib.Path
+    staging_directory: SerializablePath
 
     @field_validator("staging_directory", mode="before")
     @classmethod
@@ -455,30 +472,43 @@ class S3Storage(BaseModel):
     def make_config_paths_absolute(self, clp_home: pathlib.Path):
         self.staging_directory = make_config_path_absolute(clp_home, self.staging_directory)
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["staging_directory"] = str(d["staging_directory"])
-        return d
-
 
 class FsIngestionConfig(FsStorage):
-    directory: pathlib.Path = pathlib.Path("/")
+    directory: SerializablePath = pathlib.Path("/")
+
+    def transform_for_container(self):
+        input_logs_dir = self.directory.resolve()
+        self.directory = CONTAINER_INPUT_LOGS_ROOT_DIR / input_logs_dir.relative_to(
+            input_logs_dir.anchor
+        )
 
 
 class ArchiveFsStorage(FsStorage):
-    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
+    directory: SerializablePath = CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH
+
+    def transform_for_container(self):
+        self.directory = pathlib.Path("/") / CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH
 
 
 class StreamFsStorage(FsStorage):
-    directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
+    directory: SerializablePath = CLP_DEFAULT_STREAMS_DIRECTORY_PATH
+
+    def transform_for_container(self):
+        self.directory = pathlib.Path("/") / CLP_DEFAULT_STREAMS_DIRECTORY_PATH
 
 
 class ArchiveS3Storage(S3Storage):
-    staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
+    staging_directory: SerializablePath = CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH
+
+    def transform_for_container(self):
+        self.staging_directory = pathlib.Path("/") / CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH
 
 
 class StreamS3Storage(S3Storage):
-    staging_directory: pathlib.Path = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
+    staging_directory: SerializablePath = CLP_DEFAULT_STREAMS_STAGING_DIRECTORY_PATH
+
+    def transform_for_container(self):
+        self.staging_directory = pathlib.Path("/") / CLP_DEFAULT_STREAMS_STAGING_DIRECTORY_PATH
 
 
 def _get_directory_from_storage_config(
@@ -520,11 +550,6 @@ class ArchiveOutput(BaseModel):
     def get_directory(self) -> pathlib.Path:
         return _get_directory_from_storage_config(self.storage)
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["storage"] = self.storage.dump_to_primitive_dict()
-        return d
-
 
 class StreamOutput(BaseModel):
     storage: Union[StreamFsStorage, StreamS3Storage] = StreamFsStorage()
@@ -536,15 +561,12 @@ class StreamOutput(BaseModel):
     def get_directory(self) -> pathlib.Path:
         return _get_directory_from_storage_config(self.storage)
 
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["storage"] = self.storage.dump_to_primitive_dict()
-        return d
-
 
 class WebUi(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 4000
+
     host: DomainStr = "localhost"
-    port: Port = 4000
+    port: Port = DEFAULT_PORT
     results_metadata_collection_name: NonEmptyStr = "results-metadata"
     rate_limit: PositiveInt = 1000
 
@@ -556,14 +578,28 @@ class SweepInterval(BaseModel):
     search_result: PositiveInt = 30
 
 
+class McpServer(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 8000
+
+    host: DomainStr = "localhost"
+    port: Port = DEFAULT_PORT
+    logging_level: LoggingLevel = "INFO"
+
+
 class GarbageCollector(BaseModel):
     logging_level: LoggingLevel = "INFO"
     sweep_interval: SweepInterval = SweepInterval()
 
 
 class Presto(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 8080
+
     host: DomainStr
     port: Port
+
+    def transform_for_container(self):
+        self.host = PRESTO_COORDINATOR_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 def _get_env_var(name: str) -> str:
@@ -590,24 +626,28 @@ class CLPConfig(BaseModel):
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
-    credentials_file_path: pathlib.Path = CLP_DEFAULT_CREDENTIALS_FILE_PATH
+    credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
+    mcp_server: Optional[McpServer] = None
     presto: Optional[Presto] = None
 
     archive_output: ArchiveOutput = ArchiveOutput()
     stream_output: StreamOutput = StreamOutput()
-    data_directory: pathlib.Path = pathlib.Path("var") / "data"
-    logs_directory: pathlib.Path = pathlib.Path("var") / "log"
-    aws_config_directory: Optional[pathlib.Path] = None
+    data_directory: SerializablePath = CLP_DEFAULT_DATA_DIRECTORY_PATH
+    logs_directory: SerializablePath = CLP_DEFAULT_LOG_DIRECTORY_PATH
+    tmp_directory: SerializablePath = CLP_DEFAULT_TMP_DIRECTORY_PATH
+    aws_config_directory: Optional[SerializablePath] = None
 
-    _container_image_id_path: pathlib.Path = PrivateAttr(
+    _container_image_id_path: SerializablePath = PrivateAttr(
         default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH
     )
-    _version_file_path: pathlib.Path = PrivateAttr(default=CLP_VERSION_FILE_PATH)
+    _version_file_path: SerializablePath = PrivateAttr(default=CLP_VERSION_FILE_PATH)
 
     @field_validator("aws_config_directory")
     @classmethod
-    def expand_profile_user_home(cls, value: Optional[pathlib.Path]):
+    def expand_profile_user_home(
+        cls, value: Optional[SerializablePath]
+    ) -> Optional[SerializablePath]:
         if value is not None:
             value = value.expanduser()
         return value
@@ -620,6 +660,7 @@ class CLPConfig(BaseModel):
         self.stream_output.storage.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
+        self.tmp_directory = make_config_path_absolute(clp_home, self.tmp_directory)
         self._container_image_id_path = make_config_path_absolute(
             clp_home, self._container_image_id_path
         )
@@ -681,6 +722,12 @@ class CLPConfig(BaseModel):
         except ValueError as ex:
             raise ValueError(f"logs_directory is invalid: {ex}")
 
+    def validate_tmp_dir(self):
+        try:
+            validate_path_could_be_dir(self.tmp_directory)
+        except ValueError as ex:
+            raise ValueError(f"tmp_directory is invalid: {ex}")
+
     def validate_aws_config_dir(self):
         profile_auth_used = False
         auth_configs = []
@@ -693,7 +740,7 @@ class CLPConfig(BaseModel):
             auth_configs.append(self.stream_output.storage.s3_config.aws_authentication)
 
         for auth in auth_configs:
-            if AwsAuthType.profile.value == auth.type:
+            if AwsAuthType.profile == auth.type:
                 profile_auth_used = True
                 break
 
@@ -727,34 +774,21 @@ class CLPConfig(BaseModel):
     def get_shared_config_file_path(self) -> pathlib.Path:
         return self.logs_directory / CLP_SHARED_CONFIG_FILENAME
 
-    def get_runnable_components(self) -> Set[str]:
+    def get_deployment_type(self) -> DeploymentType:
         if QueryEngine.PRESTO == self.package.query_engine:
-            return COMPRESSION_COMPONENTS | UI_COMPONENTS
+            return DeploymentType.BASE
         else:
-            return ALL_COMPONENTS
+            return DeploymentType.FULL
 
     def dump_to_primitive_dict(self):
         custom_serialized_fields = {
-            "package",
             "database",
             "queue",
             "redis",
-            "logs_input",
-            "archive_output",
-            "stream_output",
         }
         d = self.model_dump(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
             d[key] = getattr(self, key).dump_to_primitive_dict()
-
-        # Turn paths into primitive strings
-        d["credentials_file_path"] = str(self.credentials_file_path)
-        d["data_directory"] = str(self.data_directory)
-        d["logs_directory"] = str(self.logs_directory)
-        if self.aws_config_directory is not None:
-            d["aws_config_directory"] = str(self.aws_config_directory)
-        else:
-            d["aws_config_directory"] = None
 
         return d
 
@@ -768,34 +802,38 @@ class CLPConfig(BaseModel):
             )
         return self
 
+    def transform_for_container(self):
+        """
+        Converts all relevant directories to absolute paths inside the container, and updates
+        component hostnames and ports to their container service names and default ports.
+        """
+        self.data_directory = pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH
+        self.logs_directory = pathlib.Path("/") / CLP_DEFAULT_LOG_DIRECTORY_PATH
+        self.tmp_directory = pathlib.Path("/") / CLP_DEFAULT_TMP_DIRECTORY_PATH
+        if self.aws_config_directory is not None:
+            self.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
+        self.logs_input.transform_for_container()
+        self.archive_output.storage.transform_for_container()
+        self.stream_output.storage.transform_for_container()
+
+        self.database.transform_for_container()
+        self.queue.transform_for_container()
+        self.redis.transform_for_container()
+        self.results_cache.transform_for_container()
+        self.query_scheduler.transform_for_container()
+        self.reducer.transform_for_container()
+        if self.package.query_engine == QueryEngine.PRESTO and self.presto is not None:
+            self.presto.transform_for_container()
+
 
 class WorkerConfig(BaseModel):
     package: Package = Package()
     archive_output: ArchiveOutput = ArchiveOutput()
-    data_directory: pathlib.Path = CLPConfig().data_directory
+    tmp_directory: SerializablePath = CLPConfig().tmp_directory
 
     # Only needed by query workers.
     stream_output: StreamOutput = StreamOutput()
     stream_collection_name: str = ResultsCache().stream_collection_name
-
-    def dump_to_primitive_dict(self):
-        d = self.model_dump()
-        d["archive_output"] = self.archive_output.dump_to_primitive_dict()
-
-        # Turn paths into primitive strings
-        d["data_directory"] = str(self.data_directory)
-        d["stream_output"] = self.stream_output.dump_to_primitive_dict()
-
-        return d
-
-
-def get_components_for_target(target: str) -> Set[str]:
-    if target in TARGET_TO_COMPONENTS:
-        return TARGET_TO_COMPONENTS[target]
-    elif target in ALL_COMPONENTS:
-        return {target}
-    else:
-        return set()
 
 
 def _validate_directory(value: Any):

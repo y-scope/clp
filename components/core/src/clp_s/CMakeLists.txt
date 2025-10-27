@@ -1,4 +1,5 @@
 add_subdirectory(indexer)
+add_subdirectory(log_converter)
 add_subdirectory(search)
 add_subdirectory(timestamp_parser)
 
@@ -215,6 +216,7 @@ if(CLP_BUILD_CLP_S_IO)
                 Boost::iostreams Boost::url
                 clp_s::clp_dependencies
                 fmt::fmt
+                simdjson::simdjson
                 spdlog::spdlog
                 ${zstd_TARGET}
         )

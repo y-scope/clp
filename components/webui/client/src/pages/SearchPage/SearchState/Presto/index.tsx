@@ -8,24 +8,42 @@ import {PRESTO_SQL_INTERFACE} from "./typings";
  * Default values of the Presto search state.
  */
 const PRESTO_SEARCH_STATE_DEFAULT = Object.freeze({
-    from: null,
+    cachedGuidedSearchQueryString: "",
+    errorMsg: null,
+    errorName: null,
     orderBy: "",
+    queryDrawerOpen: false,
     select: "*",
-    sqlInterface: PRESTO_SQL_INTERFACE.FREEFORM,
+    sqlInterface: PRESTO_SQL_INTERFACE.GUIDED,
     timestampKey: null,
     where: "",
 });
 
 interface PrestoSearchState {
     /**
-     * FROM input.
+     * Last submitted guided search query string.
      */
-    from: Nullable<string>;
+    cachedGuidedSearchQueryString: string;
+
+    /**
+     * Presto error message if query failed.
+     */
+    errorMsg: Nullable<string>;
+
+    /**
+     * Presto error name if query failed.
+     */
+    errorName: Nullable<string>;
 
     /**
      * ORDER BY input.
      */
     orderBy: string;
+
+    /**
+     * Whether the query preview drawer is open.
+     */
+    queryDrawerOpen: boolean;
 
     /**
      * SELECT input.
@@ -48,8 +66,11 @@ interface PrestoSearchState {
     where: string;
 
     setSqlInterface: (iface: PRESTO_SQL_INTERFACE) => void;
-    updateFrom: (database: Nullable<string>) => void;
+    updateCachedGuidedSearchQueryString: (query: string) => void;
+    updateErrorMsg: (msg: Nullable<string>) => void;
+    updateErrorName: (name: Nullable<string>) => void;
     updateOrderBy: (items: string) => void;
+    updateQueryDrawerOpen: (open: boolean) => void;
     updateSelect: (items: string) => void;
     updateTimestampKey: (key: Nullable<string>) => void;
     updateWhere: (expression: string) => void;
@@ -60,11 +81,20 @@ const usePrestoSearchState = create<PrestoSearchState>((set) => ({
     setSqlInterface: (iface) => {
         set({sqlInterface: iface});
     },
-    updateFrom: (database) => {
-        set({from: database});
+    updateCachedGuidedSearchQueryString: (query) => {
+        set({cachedGuidedSearchQueryString: query});
+    },
+    updateErrorMsg: (msg) => {
+        set({errorMsg: msg});
+    },
+    updateErrorName: (name) => {
+        set({errorName: name});
     },
     updateOrderBy: (items) => {
         set({orderBy: items});
+    },
+    updateQueryDrawerOpen: (open) => {
+        set({queryDrawerOpen: open});
     },
     updateSelect: (items) => {
         set({select: items});
