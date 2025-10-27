@@ -267,7 +267,7 @@ def _make_clp_s_command_and_env(
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
     use_single_file_archive: bool,
-) -> Tuple[List[str], Optional[Dict[str, str]]]:
+) -> Tuple[List[str], Dict[str, str]]:
     """
     Generates the command and environment variables for a clp_s compression job.
     :param clp_home:
@@ -421,16 +421,16 @@ def run_clp(
         return False, {"error_message": error_msg}
 
     conversion_cmd = None
-    converted_inputs_path = None
+    converted_inputs_dir = None
     if StorageEngine.CLP_S == clp_storage_engine and clp_config.input.unstructured:
-        converted_inputs_path = tmp_dir / f"{instance_id_str}-converted-tmp"
-        converted_inputs_path.mkdir()
+        converted_inputs_dir = tmp_dir / f"{instance_id_str}-converted-tmp"
+        converted_inputs_dir.mkdir()
         conversion_cmd, conversion_env = _make_log_converter_command_and_env(
-            clp_home=clp_home, conversion_output_dir=converted_inputs_path, clp_config=clp_config
+            clp_home=clp_home, conversion_output_dir=converted_inputs_dir, clp_config=clp_config
         )
         conversion_cmd.append("--inputs-from")
         conversion_cmd.append(str(logs_list_path))
-        compression_cmd.append(str(converted_inputs_path))
+        compression_cmd.append(str(converted_inputs_dir))
     else:
         compression_cmd.append("--files-from")
         compression_cmd.append(str(logs_list_path))
@@ -438,8 +438,8 @@ def run_clp(
     def cleanup_temporary_files():
         if logs_list_path is not None:
             logs_list_path.unlink()
-        if converted_inputs_path is not None:
-            shutil.rmtree(converted_inputs_path)
+        if converted_inputs_dir is not None:
+            shutil.rmtree(converted_inputs_dir)
 
     # Open stderr log file
     stderr_log_path = logs_dir / f"{instance_id_str}-stderr.log"
@@ -563,11 +563,11 @@ def run_clp(
     # Wait for compression to finish
     return_code = proc.wait()
 
-    cleanup_temporary_files()
     if 0 != return_code:
         logger.error(f"Failed to compress, return_code={str(return_code)}")
     else:
         compression_successful = True
+        cleanup_temporary_files()
 
     logger.debug("Compressed.")
 
