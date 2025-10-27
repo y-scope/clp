@@ -297,8 +297,8 @@ def _get_clp_package_instance_id(
     instance_id_path = logs_directory / "instance-id"
     if not instance_id_path.exists():
         logger.error(
-            "Cannot determine the CLP package Docker network because '%s' does not exist. "
-            "Start the CLP package at least once before configuring Presto.",
+            "Cannot determine the CLP package Docker network because '%s' does not exist."
+            " Start the CLP package at least once before configuring Presto.",
             instance_id_path,
         )
         return None
