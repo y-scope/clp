@@ -75,7 +75,7 @@ sbin/compress.sh --unstructured <path1> [<path2> ...]
 
 When `--unstructured` is specified, clp-json will parse the unstructured text and convert each log
 event into a JSON object. During this conversion, it attempts to extract the timestamp and log
-message from each log event and store them as a separate key-value pairs. The resulting JSON object
+message from each log event and store them as separate key-value pairs. The resulting JSON object
 includes:
 
 * `"timestamp"`: The extracted timestamp, stored as its original string representation to preserve
