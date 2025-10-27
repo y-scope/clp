@@ -45,6 +45,10 @@ jobs:
         shell: "bash"
         run: "npm install -g @go-task/cli@3.44.0"
 
+      - name: "Install uv"
+        shell: "bash"
+        run: "curl --fail --location --silent --show-error https://astral.sh/uv/install.sh | sh"
+
       - name: "Validate lock files"
         shell: "bash"
         run: "task deps:lock:check-uv"
