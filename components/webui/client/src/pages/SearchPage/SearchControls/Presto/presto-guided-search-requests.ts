@@ -231,6 +231,8 @@ const handleSwitchToFreeform = () => {
         updateQueryDrawerOpen,
     } = usePrestoSearchState.getState();
 
+    setSqlInterface(PRESTO_SQL_INTERFACE.FREEFORM);
+
     // If already in default state, nothing to clear
     if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
         return;
@@ -250,8 +252,6 @@ const handleSwitchToFreeform = () => {
     updateErrorName(PRESTO_SEARCH_STATE_DEFAULT.errorName);
     updateCachedGuidedSearchQueryString(PRESTO_SEARCH_STATE_DEFAULT.cachedGuidedSearchQueryString);
     updateQueryDrawerOpen(PRESTO_SEARCH_STATE_DEFAULT.queryDrawerOpen);
-
-    setSqlInterface(PRESTO_SQL_INTERFACE.FREEFORM);
 };
 
 export {

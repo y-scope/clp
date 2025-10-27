@@ -122,6 +122,8 @@ const handleSwitchToGuided = () => {
     } = useSearchStore.getState();
     const {setSqlInterface} = usePrestoSearchState.getState();
 
+    setSqlInterface(PRESTO_SQL_INTERFACE.GUIDED);
+
     if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
         return;
     }
@@ -133,8 +135,6 @@ const handleSwitchToGuided = () => {
     updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
 
     updateSearchUiState(SEARCH_UI_STATE.DEFAULT);
-
-    setSqlInterface(PRESTO_SQL_INTERFACE.GUIDED);
 };
 
 export {
