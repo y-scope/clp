@@ -308,12 +308,13 @@ def _get_clp_package_instance_id(
     try:
         instance_id = instance_id_path.read_text(encoding="utf-8").strip()
     except OSError:
-        logger.exception("Failed to read the CLP package instance ID from '%s'", instance_id_path)
+        logger.exception("Failed to read the CLP package instance ID from '%s'.", instance_id_path)
         return None
 
     if not instance_id:
         logger.error(
-            "Instance ID file '%s' is empty. Restart the CLP package to regenerate the instance ID.",
+            "Instance ID file '%s' is empty. Restart the CLP package to regenerate the instance"
+            " ID.",
             instance_id_path,
         )
         return None
