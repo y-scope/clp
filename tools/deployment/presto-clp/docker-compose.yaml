@@ -34,14 +34,18 @@ services:
       - "coordinator-common.env"
       - "worker.env"
     volumes:
+      - "${CLP_ARCHIVES_DIR:-empty}:/var/data/archives:ro"
+      - "${CLP_STAGED_ARCHIVES_DIR:-empty}:/var/data/staged-archives:ro"
       - "./worker/config-template:/configs:ro"
       - "./worker/scripts:/scripts:ro"
-      - "${CLP_ARCHIVES_DIR}:${CLP_ARCHIVES_DIR}"
       - "worker-config:/opt/presto-server/etc"
     networks:
       - "presto"
 
 volumes:
+  # Dummy volume to use when a bind mount is not desired.
+  empty:
+
   coordinator-config:
   worker-config:
 
