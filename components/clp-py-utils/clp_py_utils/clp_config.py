@@ -32,6 +32,7 @@ REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
 QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
+PRESTO_COORDINATOR_COMPONENT_NAME = "presto-coordinator"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
@@ -591,8 +592,14 @@ class GarbageCollector(BaseModel):
 
 
 class Presto(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 8080
+
     host: DomainStr
     port: Port
+
+    def transform_for_container(self):
+        self.host = PRESTO_COORDINATOR_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 def _get_env_var(name: str) -> str:
@@ -815,6 +822,8 @@ class CLPConfig(BaseModel):
         self.results_cache.transform_for_container()
         self.query_scheduler.transform_for_container()
         self.reducer.transform_for_container()
+        if self.package.query_engine == QueryEngine.PRESTO and self.presto is not None:
+            self.presto.transform_for_container()
 
 
 class WorkerConfig(BaseModel):
