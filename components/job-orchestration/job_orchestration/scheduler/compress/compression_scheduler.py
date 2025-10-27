@@ -7,7 +7,7 @@ import sys
 import time
 from contextlib import closing
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set, Union
 
 import brotli
 import msgpack
@@ -180,71 +180,48 @@ def _process_s3_input(
         paths_to_compress_buffer.add_file(object_metadata)
 
 
-def _write_failed_compression_log(
-    status_msg: str, logs_directory: Path, job_id: Any
+def _write_user_failure_log(
+    content: Union[str, List[str]],
+    logs_directory: Path,
+    job_id: Any,
+    filename_prefix: str,
+    header_title: str,
 ) -> Optional[Path]:
     """
-    Writes status_msg to a new log file located at
-    `{logs_directory}/user/failed_compression_log_{job_id}.txt`. The /user directory will be created
-    if it doesn't already exist.
-    :param status_msg:
+    Writes a user-visible failure log to `{logs_directory}/user/{filename_prefix}_{job_id}.txt`. The
+    /user directory will be created if it doesn't already exist. `content` may be either a single
+    string or a List of strings.
+
+    :param content:
     :param logs_directory:
     :param job_id:
-    :return: Path to the written log file relative to {logs_directory}, or `None` on error.
+    :param filename_prefix:
+    :param header_title:
+    :return: Path to the written log file relative to `logs_directory`, or None on error.
     """
-
-    user_logs_dir = Path(logs_directory) / "user"
+    relative_log_path = Path("user") / f"{filename_prefix}_{job_id}.txt"
+    user_logs_dir = Path(logs_directory) / relative_log_path.parent
     try:
         user_logs_dir.mkdir(parents=True, exist_ok=True)
     except Exception as e:
-        logger.warning(f"Failed to create user logs directory: {e}")
+        logger.error("Failed to create user logs directory: '%s' - %s", user_logs_dir, e)
         return None
 
-    log_path = user_logs_dir / f"failed_compression_log_{job_id}.txt"
+    log_path = Path(logs_directory) / relative_log_path
     try:
         with log_path.open("w", encoding="utf-8") as f:
             timestamp = datetime.datetime.now().isoformat(timespec="seconds")
-            f.write(f"Failed compression job log.\nGenerated at {timestamp}.\n\n")
-            f.write(f"{status_msg.rstrip()}\n")
+            f.write(f"{header_title}\nGenerated at {timestamp}.\n\n")
+            if isinstance(content, str):
+                f.write(f"{content.rstrip()}\n")
+            else:
+                for item in content:
+                    f.write(f"{str(item).rstrip()}\n")
     except Exception as e:
-        logger.warning(f"Failed to write compression failure log: {e}")
+        logger.error("Failed to write compression failure user log: '%s' - %s", log_path, e)
         return None
 
-    return Path("user") / f"failed_compression_log_{job_id}.txt"
-
-
-def _write_failed_path_log(
-    invalid_path_messages: List[str], logs_directory: Path, job_id: Any
-) -> Optional[Path]:
-    """
-    Writes the error messages in `invalid_path_messages` to a new log file located at
-    `{logs_directory}/user/failed_paths_{job_id}.txt`. The /user directory will be created if it
-    doesn't already exist.
-    :param invalid_path_messages:
-    :param logs_directory:
-    :param job_id:
-    :return: Path to the written log file relative to {logs_directory}, or `None` on error.
-    """
-
-    user_logs_dir = Path(logs_directory) / "user"
-    try:
-        user_logs_dir.mkdir(parents=True, exist_ok=True)
-    except Exception as e:
-        logger.warning(f"Failed to create user logs directory: {e}")
-        return None
-
-    log_path = user_logs_dir / f"failed_paths_{job_id}.txt"
-    try:
-        with log_path.open("w", encoding="utf-8") as f:
-            timestamp = datetime.datetime.now().isoformat(timespec="seconds")
-            f.write(f"Failed input paths log.\nGenerated at {timestamp}.\n\n")
-            for msg in invalid_path_messages:
-                f.write(f"{msg.rstrip()}\n")
-    except Exception as e:
-        logger.warning(f"Failed to write invalid path log: {e}")
-        return None
-
-    return Path("user") / f"failed_paths_{job_id}.txt"
+    return relative_log_path
 
 
 def search_and_schedule_new_tasks(
@@ -309,14 +286,18 @@ def search_and_schedule_new_tasks(
         if input_type == InputType.FS.value:
             invalid_path_messages = _process_fs_input_paths(input_config, paths_to_compress_buffer)
             if len(invalid_path_messages) > 0:
-                user_log_relative_path = _write_failed_path_log(
-                    invalid_path_messages, clp_config.logs_directory, job_id
+                user_log_relative_path = _write_user_failure_log(
+                    invalid_path_messages,
+                    clp_config.logs_directory,
+                    job_id,
+                    filename_prefix="failed_paths",
+                    header_title="Failed input paths log.",
                 )
                 if user_log_relative_path is None:
-                    macro_path = "${CLP_LOGS_DIR}/compression_scheduler/compression_scheduler.log"
-                else:
-                    macro_path = f"${{CLP_LOGS_DIR}}/{user_log_relative_path}"
+                    err_msg = "Failed to write user log for invalid input paths."
+                    raise RuntimeError(err_msg)
 
+                macro_path = f"${{CLP_LOGS_DIR}}/{user_log_relative_path}"
                 error_msg = (
                     "At least one of your input paths could not be processed."
                     f" Check {macro_path} for more details."
@@ -419,7 +400,7 @@ def search_and_schedule_new_tasks(
         scheduled_jobs[job_id] = job
 
 
-def poll_running_jobs(clp_config: CLPConfig, db_conn, db_cursor):
+def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
     """
     Poll for running jobs and update their status.
     """
@@ -471,14 +452,18 @@ def poll_running_jobs(clp_config: CLPConfig, db_conn, db_cursor):
             logger.error(f"Job {job_id} failed. See worker logs or status_msg for details.")
 
             status_msg = error_message
-            error_log_relative_path = _write_failed_compression_log(
-                status_msg, clp_config.logs_directory, job_id
+            error_log_relative_path = _write_user_failure_log(
+                status_msg,
+                logs_directory,
+                job_id,
+                filename_prefix="failed_compression_log",
+                header_title="Failed compression job log.",
             )
             if error_log_relative_path is None:
-                macro_path = "${CLP_LOGS_DIR}/compression_scheduler/compression_scheduler.log"
-            else:
-                macro_path = f"${{CLP_LOGS_DIR}}/{error_log_relative_path}"
+                err_msg = "Failed to write user log for failed compression job."
+                raise RuntimeError(err_msg)
 
+            macro_path = f"${{CLP_LOGS_DIR}}/{error_log_relative_path}"
             error_msg = f"One or more compression tasks failed. See {macro_path} for more details."
 
             update_compression_job_metadata(
@@ -562,7 +547,7 @@ def main(argv):
                         clp_metadata_db_connection_config,
                         task_manager,
                     )
-                poll_running_jobs(clp_config, db_conn, db_cursor)
+                poll_running_jobs(clp_config.logs_directory, db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
                 logger.info("Forcefully shutting down")
