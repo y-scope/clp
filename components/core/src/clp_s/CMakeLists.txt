@@ -1,4 +1,5 @@
 add_subdirectory(indexer)
+add_subdirectory(log_converter)
 add_subdirectory(search)
 
 set(

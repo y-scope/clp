@@ -13,6 +13,10 @@ This guide describes the following:
 To run a CLP release, you'll need:
 
 * [Docker](#docker)
+  * `containerd.io` >= 1.7.18
+  * `docker-ce` >= 27.0.3
+  * `docker-ce-cli` >= 27.0.3
+  * `docker-compose-plugin` >= 2.28.1
 * [Python](#python)
 
 ### Docker
