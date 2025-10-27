@@ -44,12 +44,12 @@ class S3CredentialManager:
         """
         Creates a new AWS long-term credential entry.
 
-        :param name: Unique name for the credential.
-        :param access_key_id: AWS access key ID.
-        :param secret_access_key: AWS secret access key.
-        :param role_arn: Optional ARN of IAM role to assume.
+        :param name:
+        :param access_key_id:
+        :param secret_access_key:
+        :param role_arn:
         :return: The ID of the created credential.
-        :raises ValueError: If name already exists or validation fails.
+        :raises ValueError: If validation fails or if a credential with `name` already exists.
         """
         # Validate inputs
         self._validate_credential_name(name)
@@ -85,7 +85,10 @@ class S3CredentialManager:
         """
         Lists all credential entries (metadata only, no secrets).
 
-        :return: List of tuples (id, name, created_at).
+        :return: List of tuples containing:
+            - The credential id.
+            - The credential name.
+            - The time the credential was created at.
         """
         table_name = get_aws_credentials_table_name(self.table_prefix)
 
@@ -107,8 +110,8 @@ class S3CredentialManager:
         """
         Retrieves a long-term credential by ID (includes secrets).
 
-        :param credential_id: The credential ID.
-        :return: AwsCredential object or None if not found.
+        :param credential_id:
+        :return: `AwsCredential` object or None if not found.
         """
         table_name = get_aws_credentials_table_name(self.table_prefix)
 
@@ -144,8 +147,8 @@ class S3CredentialManager:
         """
         Retrieves a long-term credential by name (includes secrets).
 
-        :param name: The credential name.
-        :return: AwsCredential object or None if not found.
+        :param name:
+        :return: `AwsCredential` object or None if not found.
         """
         table_name = get_aws_credentials_table_name(self.table_prefix)
 
@@ -188,13 +191,13 @@ class S3CredentialManager:
         """
         Updates an existing long-term credential. Only provided fields are updated.
 
-        :param credential_id: The credential ID to update.
-        :param name: New name (must be unique).
-        :param access_key_id: New access key ID.
-        :param secret_access_key: New secret access key.
-        :param role_arn: New role ARN (use '' to clear).
+        :param credential_id:
+        :param name:
+        :param access_key_id:
+        :param secret_access_key:
+        :param role_arn: Use empty string to clear.
         :return: True if updated, False if credential not found.
-        :raises ValueError: If name conflicts or validation fails.
+        :raises ValueError: If `name` conflicts or if validation fails.
         """
         if all(v is None for v in [name, access_key_id, secret_access_key, role_arn]):
             raise ValueError("At least one field must be specified for update")
@@ -262,10 +265,10 @@ class S3CredentialManager:
         """
         Deletes a credential by ID.
 
-        The foreign key constraint with ON DELETE CASCADE will automatically delete any cached
+        The foreign key constraint with `ON DELETE CASCADE` will automatically delete any cached
         temporary credentials associated with this credential.
 
-        :param credential_id: The credential ID to delete.
+        :param credential_id:
         :return: True if deleted, False if not found.
         """
         table_name = get_aws_credentials_table_name(self.table_prefix)
@@ -299,13 +302,13 @@ class S3CredentialManager:
         """
         Caches a session token in the temporary credentials table.
 
-        :param long_term_key_id: ID of the associated long-term credential.
-        :param access_key_id: Temporary access key ID.
-        :param secret_access_key: Temporary secret access key.
-        :param session_token: Temporary session token.
-        :param source: Origin identifier (role ARN or S3 resource ARN).
-        :param expires_at: When the session token expires.
-        :return: The ID of the cached credential.
+        :param long_term_key_id:
+        :param access_key_id:
+        :param secret_access_key:
+        :param session_token:
+        :param source:
+        :param expires_at:
+        :return:
         :raises ValueError: If validation fails.
         """
         if not access_key_id or not secret_access_key or not session_token:
@@ -356,11 +359,11 @@ class S3CredentialManager:
         Retrieves a valid (non-expired) cached session token by source.
 
         Looks up session tokens by source ARN (role or S3 resource). Optionally filters
-        by long_term_key_id for more specific lookups.
+        by `long_term_key_id` for more specific lookups.
 
         :param source: Source identifier (role ARN or S3 resource ARN).
         :param long_term_key_id: Optional filter by associated long-term credential ID.
-        :return: TemporaryCredential object or None if not found or expired.
+        :return: `TemporaryCredential` object or None if not found or expired.
         """
         table_name = get_aws_temporary_credentials_table_name(self.table_prefix)
 
@@ -428,14 +431,12 @@ class S3CredentialManager:
 
             return deleted_count
 
-    # Validation helper methods
-
     def _validate_credential_name(self, name: str) -> None:
         """
         Validates credential name.
 
-        :param name: Name to validate.
-        :raises ValueError: If name is invalid.
+        :param name:
+        :raises ValueError: If `name` is invalid.
         """
         if not name or not name.strip():
             raise ValueError("Credential name cannot be empty")
@@ -456,8 +457,8 @@ class S3CredentialManager:
         """
         Validates AWS access key ID format.
 
-        :param access_key_id: Access key to validate.
-        :raises ValueError: If invalid.
+        :param access_key_id:
+        :raises ValueError: If `access_key_id` is invalid.
         """
         if not access_key_id or not access_key_id.strip():
             raise ValueError("Access key ID cannot be empty")
@@ -466,8 +467,8 @@ class S3CredentialManager:
         """
         Validates AWS secret access key.
 
-        :param secret_access_key: Secret key to validate.
-        :raises ValueError: If invalid.
+        :param secret_access_key:
+        :raises ValueError: If `secret_access_key` is invalid.
         """
         if not secret_access_key or not secret_access_key.strip():
             raise ValueError("Secret access key cannot be empty")
