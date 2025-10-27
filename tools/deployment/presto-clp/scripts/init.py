@@ -7,6 +7,8 @@ from typing import Any, Dict, Optional
 import yaml
 from dotenv import dotenv_values
 
+# Database endpoint inside the CLP Package Docker network. Must match the constants defined in
+# `components/clp-py-utils/clp_py_utils/clp_config.py`.
 DATABASE_COMPONENT_NAME = "database"
 DATABASE_DEFAULT_PORT = 3306
 
