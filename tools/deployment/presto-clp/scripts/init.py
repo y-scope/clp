@@ -7,6 +7,11 @@ from typing import Any, Dict, Optional
 import yaml
 from dotenv import dotenv_values
 
+# Database endpoint inside the CLP Package Docker network. Must match the constants defined in
+# `components/clp-py-utils/clp_py_utils/clp_config.py`.
+DATABASE_COMPONENT_NAME = "database"
+DATABASE_DEFAULT_PORT = 3306
+
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter(
@@ -101,11 +106,9 @@ def _add_clp_env_vars(
         )
         return False
 
-    database_host = _get_config_value(clp_config, "database.host", "localhost")
-    database_port = _get_config_value(clp_config, "database.port", 3306)
     database_name = _get_config_value(clp_config, "database.name", "clp-db")
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_URL"] = (
-        f"jdbc:mysql://{database_host}:{database_port}"
+        f"jdbc:mysql://{DATABASE_COMPONENT_NAME}:{DATABASE_DEFAULT_PORT}"
     )
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_NAME"] = database_name
 
@@ -124,7 +127,7 @@ def _add_clp_env_vars(
             )
         )
     elif "s3" == clp_archive_output_storage_type:
-        env_vars["CLP_ARCHIVES_DIR"] = str(
+        env_vars["CLP_STAGED_ARCHIVES_DIR"] = str(
             _get_path_clp_config_value(
                 clp_config,
                 f"{archive_output_storage_key}.staging_directory",
@@ -162,6 +165,11 @@ def _add_clp_env_vars(
         return False
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_USER"] = database_user
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_PASSWORD"] = database_password
+
+    instance_id = _get_clp_package_instance_id(clp_config, clp_package_dir)
+    if instance_id is None:
+        return False
+    env_vars["CLP_PACKAGE_NETWORK_NAME"] = f"clp-package-{instance_id}_default"
 
     return True
 
@@ -272,6 +280,46 @@ def _generate_worker_clp_properties(
         f.write("\n".join(properties) + "\n")
 
     return True
+
+
+def _get_clp_package_instance_id(
+    clp_config: Dict[str, Any], clp_package_dir: Path
+) -> Optional[str]:
+    """
+    Retrieves the CLP package instance ID from the logs directory.
+
+    :param clp_config:
+    :param clp_package_dir:
+    :return: The instance ID if it could be read, otherwise `None`.
+    """
+
+    logs_directory = _get_path_clp_config_value(
+        clp_config, "logs_directory", Path("var") / "log", clp_package_dir
+    )
+    instance_id_path = logs_directory / "instance-id"
+    if not instance_id_path.exists():
+        logger.error(
+            "Cannot determine the CLP package Docker network because '%s' does not exist."
+            " Start the CLP package at least once before configuring Presto.",
+            instance_id_path,
+        )
+        return None
+
+    try:
+        instance_id = instance_id_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        logger.exception("Failed to read the CLP package instance ID from '%s'.", instance_id_path)
+        return None
+
+    if not instance_id:
+        logger.error(
+            "Instance ID file '%s' is empty. Restart the CLP package to regenerate the instance"
+            " ID.",
+            instance_id_path,
+        )
+        return None
+
+    return instance_id
 
 
 def _get_path_clp_config_value(
