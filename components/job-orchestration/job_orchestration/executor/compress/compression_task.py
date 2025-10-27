@@ -463,6 +463,7 @@ def run_clp(
             "total_compressed_size": 0,
             "error_message": f"Check logs in {stderr_log_path}",
         }
+        stderr_log_file.close()
         return CompressionTaskStatus.FAILED, worker_output
 
     # Start compression
