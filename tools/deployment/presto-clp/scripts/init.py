@@ -288,7 +288,7 @@ def _get_clp_package_instance_id(
 
     :param clp_config:
     :param clp_package_dir:
-    :return: The instance ID if it could be read, otherwise ``None``.
+    :return: The instance ID if it could be read, otherwise `None`.
     """
 
     logs_directory = _get_path_clp_config_value(
