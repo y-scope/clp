@@ -218,11 +218,12 @@ def _add_clp_s3_env_vars(
     return True
 
 
-def _add_memory_env_vars(env_vars: Dict[str, str]) -> None:
+def _add_memory_env_vars(env_vars: Dict[str, str]) -> bool:
     """
     Adds memory-related environment variables based on Presto guidelines.
 
     :param env_vars: Dictionary to populate with environment variables.
+    :return: Whether the environment variables were successfully added.
     """
     total_memory_gb = psutil.virtual_memory().total / (1024**3)
 
@@ -233,6 +234,8 @@ def _add_memory_env_vars(env_vars: Dict[str, str]) -> None:
     env_vars["PRESTO_WORKER_CONFIGPROPERTIES_QUERY_MEMORY_GB"] = str(query_memory_gb)
     env_vars["PRESTO_WORKER_CONFIGPROPERTIES_SYSTEM_MEMORY_GB"] = str(system_memory_gb)
     env_vars["PRESTO_WORKER_CONFIGPROPERTIES_SYSTEM_MEM_LIMIT_GB"] = str(system_mem_limit_gb)
+
+    return True
 
 
 def _add_worker_env_vars(coordinator_common_env_file_path: Path, env_vars: Dict[str, str]) -> bool:
