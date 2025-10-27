@@ -127,7 +127,7 @@ def _add_clp_env_vars(
             )
         )
     elif "s3" == clp_archive_output_storage_type:
-        env_vars["CLP_ARCHIVES_DIR"] = str(
+        env_vars["CLP_STAGED_ARCHIVES_DIR"] = str(
             _get_path_clp_config_value(
                 clp_config,
                 f"{archive_output_storage_key}.staging_directory",
