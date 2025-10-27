@@ -12,18 +12,16 @@ tasks:
 
   check-uv:
     cmds:
-      - for: &uv-component-projects
-          - "clp-mcp-server"
-          - "clp-package-utils"
-          - "clp-py-utils"
-          - "job-orchestration"
-        cmd: |-
-          uv lock --directory "{{default (cat .ROOT_DIR "/components") .G_COMPONENTS_DIR}}/{{.ITEM}}" --check
-      - for: &uv-root-projects
-          - "integration-tests"
-          - "tools/yscope-dev-utils/exports/ystdlib-py"
-        cmd: |-
-          uv lock --directory "{{.ROOT_DIR}}/{{.ITEM}}" --check
+      - for: &uv-projects
+          - "{{.G_COMPONENTS_DIR}}/clp-mcp-server"
+          - "{{.G_COMPONENTS_DIR}}/clp-package-utils"
+          - "{{.G_COMPONENTS_DIR}}/clp-py-utils"
+          - "{{.G_COMPONENTS_DIR}}/job-orchestration"
+          - "{{.G_INTEGRATION_TESTS_DIR}}"
+        task: "uv-lock"
+        vars:
+          PROJECT_DIR: "{{.ITEM}}"
+          UV_LOCK_FLAGS: "--check"
 
   update-rust:
     cmds:
@@ -33,12 +31,11 @@ tasks:
 
   update-uv:
     cmds:
-      - for: *uv-component-projects
-        cmd: |-
-          uv lock --directory "{{default (cat .ROOT_DIR "/components") .G_COMPONENTS_DIR}}/{{.ITEM}}"
-      - for: *uv-root-projects
-        cmd: |-
-          uv lock --directory "{{.ROOT_DIR}}/{{.ITEM}}"
+      - for: *uv-projects
+        task: "uv-lock"
+        vars:
+          PROJECT_DIR: "{{.ITEM}}"
+          UV_LOCK_FLAGS: ""
 
   # Runs `cargo fetch` in the root Rust workspace directory with the specified flags.
   #
@@ -65,3 +62,15 @@ tasks:
     cmd: |-
       . "$HOME/.cargo/env"
       cargo update {{.CARGO_UPDATE_FLAGS}}
+
+  # Runs `uv lock` in the UV project directory with the specified flags.
+  #
+  # @param {string} PROJECT_DIR
+  # @param {string} UV_LOCK_FLAGS The flags to pass to the `uv lock` command.
+  uv-lock:
+    internal: true
+    requires:
+      vars: ["PROJECT_DIR", "UV_LOCK_FLAGS"]
+    dir: "{{.PROJECT_DIR}}"
+    cmd: |-
+      uv lock {{.UV_LOCK_FLAGS}}
