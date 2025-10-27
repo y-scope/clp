@@ -422,9 +422,9 @@ class AwsCredential(BaseModel):
     """
     Represents a stored AWS credential retrieved from the database.
 
-    This model is used for credentials that are persisted in the aws_credentials table.
+    This model is used for credentials that are persisted in the `aws_credentials` table.
     Credentials can be either static (access key + secret key) or configured for role
-    assumption (with role_arn set for Phase 2).
+    assumption.
     """
 
     id: int
@@ -447,12 +447,12 @@ class AwsCredential(BaseModel):
 
     def to_s3_credentials(self) -> S3Credentials:
         """
-        Converts to S3Credentials for use with boto3.
+        Converts to `S3Credentials` for use with boto3.
 
         Note: This only works for static credentials. For temporary credentials
-        with session tokens, use the TemporaryCredential model instead.
+        with session tokens, use the `TemporaryCredential` model instead.
 
-        :return: S3Credentials object with secrets revealed.
+        :return: `S3Credentials` object with secrets revealed.
         """
         return S3Credentials(
             access_key_id=self.access_key_id.get_secret_value(),
@@ -465,12 +465,12 @@ class TemporaryCredential(BaseModel):
     """
     Represents cached temporary credentials (session tokens).
 
-    This model is used for credentials cached in the aws_temporary_credentials table.
+    This model is used for credentials cached in the `aws_temporary_credentials` table.
     These credentials can come from various sources:
     - STS AssumeRole operations
     - Resource-specific session tokens
 
-    The 'source' field tracks the origin of the session token, which can be:
+    The `source` field tracks the origin of the session token, which can be:
     - A role ARN: "arn:aws:iam::123456789012:role/MyRole"
     - An S3 resource ARN: "arn:aws:s3:::bucket/path/*"
     """
@@ -486,9 +486,9 @@ class TemporaryCredential(BaseModel):
 
     def to_s3_credentials(self) -> S3Credentials:
         """
-        Converts to S3Credentials for use with boto3.
+        Converts to `S3Credentials` for use with boto3.
 
-        :return: S3Credentials object with secrets revealed.
+        :return: `S3Credentials` object with secrets revealed.
         """
         return S3Credentials(
             access_key_id=self.access_key_id.get_secret_value(),
@@ -501,7 +501,7 @@ class TemporaryCredential(BaseModel):
         Checks if credential is expired or expiring soon.
 
         :param buffer_minutes: Minutes of buffer before expiration to consider credential expired.
-        :return: True if expired or expiring within buffer_minutes.
+        :return: True if expired or expiring within `buffer_minutes`.
         """
 
         now = datetime.now(timezone.utc)
