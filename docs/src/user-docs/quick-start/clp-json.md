@@ -74,7 +74,7 @@ sbin/compress.sh --unstructured <path1> [<path2> ...]
 
 The `--unstructured` flag will make clp-json treat your logs as unstructured text, and convert them
 into JSON. The conversion process will attempt to extract the timestamp from the log message, and
-store them in separate fields.
+store the timestamp and message in separate fields.
 * E.g., if your log event looks like
   `2024-01-01 00:01:02.345 ERROR...`, it will be converted to
   `{"timestamp": "2024-01-01 00:01:02.345", "message": " ERROR..."}`
