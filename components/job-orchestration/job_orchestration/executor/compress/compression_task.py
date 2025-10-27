@@ -288,13 +288,12 @@ def _make_clp_s_command_and_env(
     ]
     # fmt: on
 
-    if InputType.S3 == clp_config.input.type:
+    compression_env_vars = None
+    if InputType.S3 == clp_config.input.type and not clp_config.input.unstructured:
         compression_env_vars = dict(os.environ)
         compression_env_vars.update(get_credential_env_vars(clp_config.input.aws_authentication))
         compression_cmd.append("--auth")
         compression_cmd.append("s3")
-    else:
-        compression_env_vars = None
 
     if use_single_file_archive:
         compression_cmd.append("--single-file-archive")
@@ -307,6 +306,37 @@ def _make_clp_s_command_and_env(
         compression_cmd.append(clp_config.input.timestamp_key)
 
     return compression_cmd, compression_env_vars
+
+
+def _make_log_converter_command_and_env(
+    clp_home: pathlib.Path,
+    conversion_output_dir: pathlib.Path,
+    clp_config: ClpIoConfig,
+) -> Tuple[List[str], Optional[Dict[str, str]]]:
+    """
+    Generates the command and environment variables for unstructured text log conversion.
+    :param clp_home:
+    :param conversion_output_dir:
+    :param clp_config:
+    :return: Tuple of (conversion_command, conversion_env_vars)
+    """
+
+    # fmt: off
+    conversion_cmd = [
+        str(clp_home / "bin" / "log-converter"),
+        "--output-dir",
+        str(converted_inputs_path),
+    ]
+    # fmt: on
+
+    conversion_env_vars = None
+    if InputType.S3 == clp_config.input.type:
+        conversion_env_vars = dict(os.environ)
+        conversion_env_vars.update(get_credential_env_vars(clp_config.input.aws_authentication))
+        conversion_cmd.append("--auth")
+        conversion_cmd.append("s3")
+
+    return conversion_cmd, conversion_env_vars
 
 
 def run_clp(
@@ -394,13 +424,11 @@ def run_clp(
     if StorageEngine.CLP_S == clp_storage_engine and clp_config.input.unstructured:
         converted_inputs_path = tmp_dir / f"{instance_id_str}-converted-tmp"
         converted_inputs_path.mkdir()
-        conversion_cmd = [
-            str(clp_home / "bin" / "log-converter"),
-            "--inputs-from",
-            str(logs_list_path),
-            "--output-dir",
-            str(converted_inputs_path),
-        ]
+        conversion_cmd, conversion_env = _make_log_converter_command_and_env(
+            clp_home=clp_home, conversion_output_dir=converted_inputs_path, clp_config=clp_config
+        )
+        conversion_cmd.append("--inputs-from")
+        conversion_cmd.append(str(logs_list_path))
         compression_cmd.append(str(converted_inputs_path))
     else:
         compression_cmd.append("--files-from")
@@ -420,7 +448,7 @@ def run_clp(
     if conversion_cmd is not None:
         logger.debug("Converting...")
         conversion_proc = subprocess.Popen(
-            conversion_cmd, stdout=subprocess.DEVNULL, stderr=stderr_log_file, env=compression_env
+            conversion_cmd, stdout=subprocess.DEVNULL, stderr=stderr_log_file, env=conversion_env
         )
         conversion_return_code = conversion_proc.wait()
 
