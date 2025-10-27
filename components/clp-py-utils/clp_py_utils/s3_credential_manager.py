@@ -45,8 +45,8 @@ class S3CredentialManager:
         Creates a new AWS long-term credential entry.
 
         :param name: Unique name for the credential.
-        :param access_key_id: AWS access key ID.
-        :param secret_access_key: AWS secret access key.
+        :param access_key_id:
+        :param secret_access_key:
         :param role_arn: Optional ARN of IAM role to assume.
         :return: The ID of the created credential.
         :raises ValueError: If name already exists or validation fails.
@@ -85,7 +85,10 @@ class S3CredentialManager:
         """
         Lists all credential entries (metadata only, no secrets).
 
-        :return: List of tuples (id, name, created_at).
+        :return: List of tuples containing:
+            - The credential id.
+            - The credential name.
+            - The time the credential was created at.
         """
         table_name = get_aws_credentials_table_name(self.table_prefix)
 
@@ -107,8 +110,8 @@ class S3CredentialManager:
         """
         Retrieves a long-term credential by ID (includes secrets).
 
-        :param credential_id: The credential ID.
-        :return: AwsCredential object or None if not found.
+        :param credential_id:
+        :return: The AwsCredential object representing the database entry or None if not found.
         """
         table_name = get_aws_credentials_table_name(self.table_prefix)
 
@@ -144,8 +147,8 @@ class S3CredentialManager:
         """
         Retrieves a long-term credential by name (includes secrets).
 
-        :param name: The credential name.
-        :return: AwsCredential object or None if not found.
+        :param name:
+        :return: The AwsCredential object representing the database entry or None if not found.
         """
         table_name = get_aws_credentials_table_name(self.table_prefix)
 
@@ -265,7 +268,7 @@ class S3CredentialManager:
         The foreign key constraint with ON DELETE CASCADE will automatically delete any cached
         temporary credentials associated with this credential.
 
-        :param credential_id: The credential ID to delete.
+        :param credential_id:
         :return: True if deleted, False if not found.
         """
         table_name = get_aws_credentials_table_name(self.table_prefix)
@@ -300,9 +303,9 @@ class S3CredentialManager:
         Caches a session token in the temporary credentials table.
 
         :param long_term_key_id: ID of the associated long-term credential.
-        :param access_key_id: Temporary access key ID.
-        :param secret_access_key: Temporary secret access key.
-        :param session_token: Temporary session token.
+        :param access_key_id:
+        :param secret_access_key:
+        :param session_token:
         :param source: Origin identifier (role ARN or S3 resource ARN).
         :param expires_at: When the session token expires.
         :return: The ID of the cached credential.
@@ -427,8 +430,6 @@ class S3CredentialManager:
                 logger.debug("No expired session tokens to clean up")
 
             return deleted_count
-
-    # Validation helper methods
 
     def _validate_credential_name(self, name: str) -> None:
         """
