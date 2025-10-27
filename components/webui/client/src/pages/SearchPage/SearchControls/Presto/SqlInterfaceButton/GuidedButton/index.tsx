@@ -2,9 +2,8 @@ import {AppstoreOutlined} from "@ant-design/icons";
 import {Button} from "antd";
 
 import useSearchStore from "../../../../SearchState/index";
-import usePrestoSearchState from "../../../../SearchState/Presto";
-import {PRESTO_SQL_INTERFACE} from "../../../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
+import {handleSwitchToGuided} from "../../presto-search-requests";
 
 
 /**
@@ -13,13 +12,12 @@ import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
  * @return
  */
 const GuidedButton = () => {
-    const setSqlInterface = usePrestoSearchState((state) => state.setSqlInterface);
     const searchUiState = useSearchStore((state) => state.searchUiState);
     const disabled = searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
         searchUiState === SEARCH_UI_STATE.QUERYING;
 
     const handleClick = () => {
-        setSqlInterface(PRESTO_SQL_INTERFACE.GUIDED);
+        handleSwitchToGuided();
     };
 
     return (

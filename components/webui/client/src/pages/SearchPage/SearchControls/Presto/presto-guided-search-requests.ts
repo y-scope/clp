@@ -11,7 +11,8 @@ import {
     buildTimelineQuery,
 } from "../../../../sql-parser";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState";
-import usePrestoSearchState from "../../SearchState/Presto";
+import usePrestoSearchState, {PRESTO_SEARCH_STATE_DEFAULT} from "../../SearchState/Presto";
+import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 
 
@@ -209,8 +210,53 @@ const handlePrestoGuidedQueryCancel = (searchJobId: string, aggregationJobId: st
         });
 };
 
+/**
+ * Handles switching to freeform SQL interface by clearing results and resetting states.
+ */
+const handleSwitchToFreeform = () => {
+    const {
+        searchUiState,
+        updateSearchUiState,
+        updateSearchJobId,
+        updateAggregationJobId,
+        updateNumSearchResultsTable,
+        updateNumSearchResultsTimeline,
+        updateNumSearchResultsMetadata,
+    } = useSearchStore.getState();
+    const {
+        setSqlInterface,
+        updateErrorMsg,
+        updateErrorName,
+        updateCachedGuidedSearchQueryString,
+        updateQueryDrawerOpen,
+    } = usePrestoSearchState.getState();
+
+    setSqlInterface(PRESTO_SQL_INTERFACE.FREEFORM);
+
+    // If already in default state, nothing to clear
+    if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
+        return;
+    }
+
+    handlePrestoGuidedClearResults();
+
+    updateSearchJobId(SEARCH_STATE_DEFAULT.searchJobId);
+    updateAggregationJobId(SEARCH_STATE_DEFAULT.aggregationJobId);
+    updateNumSearchResultsTable(SEARCH_STATE_DEFAULT.numSearchResultsTable);
+    updateNumSearchResultsTimeline(SEARCH_STATE_DEFAULT.numSearchResultsTimeline);
+    updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
+
+    updateSearchUiState(SEARCH_UI_STATE.DEFAULT);
+
+    updateErrorMsg(PRESTO_SEARCH_STATE_DEFAULT.errorMsg);
+    updateErrorName(PRESTO_SEARCH_STATE_DEFAULT.errorName);
+    updateCachedGuidedSearchQueryString(PRESTO_SEARCH_STATE_DEFAULT.cachedGuidedSearchQueryString);
+    updateQueryDrawerOpen(PRESTO_SEARCH_STATE_DEFAULT.queryDrawerOpen);
+};
+
 export {
     buildPrestoGuidedQueries,
     handlePrestoGuidedQueryCancel,
     handlePrestoGuidedQuerySubmit,
+    handleSwitchToFreeform,
 };
