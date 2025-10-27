@@ -288,9 +288,8 @@ def _make_clp_s_command_and_env(
     ]
     # fmt: on
 
-    compression_env_vars = None
+    compression_env_vars = dict(os.environ)
     if InputType.S3 == clp_config.input.type and not clp_config.input.unstructured:
-        compression_env_vars = dict(os.environ)
         compression_env_vars.update(get_credential_env_vars(clp_config.input.aws_authentication))
         compression_cmd.append("--auth")
         compression_cmd.append("s3")
@@ -325,13 +324,12 @@ def _make_log_converter_command_and_env(
     conversion_cmd = [
         str(clp_home / "bin" / "log-converter"),
         "--output-dir",
-        str(converted_inputs_path),
+        str(conversion_output_dir),
     ]
     # fmt: on
 
-    conversion_env_vars = None
+    conversion_env_vars = dict(os.environ)
     if InputType.S3 == clp_config.input.type:
-        conversion_env_vars = dict(os.environ)
         conversion_env_vars.update(get_credential_env_vars(clp_config.input.aws_authentication))
         conversion_cmd.append("--auth")
         conversion_cmd.append("s3")
