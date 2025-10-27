@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstddef>
 #include <optional>
+#include <span>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -89,9 +90,8 @@ constexpr std::array cAbbreviatedMonthNames
  * code indicating the failure:
  * - ErrorCodeEnum::IncompatibleTimestampPattern if no candidates match the prefix of `str`.
  */
-template <typename CandidateArrayType>
 [[nodiscard]] auto
-find_first_matching_prefix(std::string_view str, CandidateArrayType const& candidates)
+find_first_matching_prefix(std::string_view str, std::span<std::string_view const> candidates)
         -> ystdlib::error_handling::Result<size_t, ErrorCode>;
 
 auto convert_padded_string_to_number(std::string_view str, char padding_character)
@@ -102,7 +102,7 @@ auto convert_padded_string_to_number(std::string_view str, char padding_characte
 
     // Leave at least one character for parsing to ensure we actually parse number content.
     size_t i{};
-    for (; i < (str.size() - 1) && padding_character == str[i]; ++i) {}
+    for (; i < (str.size() - 1) && padding_character == str.at(i); ++i) {}
 
     int value{};
     if (clp::string_utils::convert_string_to_int(str.substr(i), value)) {
@@ -111,11 +111,10 @@ auto convert_padded_string_to_number(std::string_view str, char padding_characte
     return std::nullopt;
 }
 
-template <typename CandidateArrayType>
-auto find_first_matching_prefix(std::string_view str, CandidateArrayType const& candidates)
+auto find_first_matching_prefix(std::string_view str, std::span<std::string_view const> candidates)
         -> ystdlib::error_handling::Result<size_t, ErrorCode> {
     for (size_t candidate_idx{0ULL}; candidate_idx < candidates.size(); ++candidate_idx) {
-        auto const& candidate{candidates.at(candidate_idx)};
+        auto const& candidate{candidates[candidate_idx]};
         if (candidate == str.substr(0ULL, candidate.size())) {
             return candidate_idx;
         }
@@ -136,7 +135,7 @@ auto parse_timestamp(
     int parsed_year{cDefaultYear};
     int parsed_month{cDefaultMonth};
     int parsed_day{cDefaultDay};
-    std::optional<int> day_of_week_idx;
+    std::optional<int> optional_day_of_week_idx;
 
     bool date_type_representation{false};
     bool const number_type_representation{false};
@@ -163,15 +162,15 @@ auto parse_timestamp(
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                auto const two_digit_year_option{convert_padded_string_to_number(
+                auto const optional_two_digit_year{convert_padded_string_to_number(
                         timestamp.substr(timestamp_idx, cFieldLength),
                         '0'
                 )};
-                if (false == two_digit_year_option.has_value()) {
+                if (false == optional_two_digit_year.has_value()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                auto const two_digit_year{two_digit_year_option.value()};
+                auto const two_digit_year{optional_two_digit_year.value()};
                 if (two_digit_year < cMinTwoDigitYear || two_digit_year > cMaxTwoDigitYear) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
@@ -191,15 +190,15 @@ auto parse_timestamp(
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                auto const parsed_year_option{convert_padded_string_to_number(
+                auto const optional_parsed_year{convert_padded_string_to_number(
                         timestamp.substr(timestamp_idx, cFieldLength),
                         '0'
                 )};
-                if (false == parsed_year_option.has_value()) {
+                if (false == optional_parsed_year.has_value()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                parsed_year = parsed_year_option.value();
+                parsed_year = optional_parsed_year.value();
                 if (parsed_year < cMinParsedYear || parsed_year > cMaxParsedYear) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
@@ -233,15 +232,15 @@ auto parse_timestamp(
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                auto const parsed_month_option{convert_padded_string_to_number(
+                auto const optional_parsed_month{convert_padded_string_to_number(
                         timestamp.substr(timestamp_idx, cFieldLength),
                         '0'
                 )};
-                if (false == parsed_month_option.has_value()) {
+                if (false == optional_parsed_month.has_value()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                parsed_month = parsed_month_option.value();
+                parsed_month = optional_parsed_month.value();
                 if (parsed_month < cMinParsedMonth || parsed_month > cMaxParsedMonth) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
@@ -256,15 +255,15 @@ auto parse_timestamp(
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                auto const parsed_day_option{convert_padded_string_to_number(
+                auto const optional_parsed_day{convert_padded_string_to_number(
                         timestamp.substr(timestamp_idx, cFieldLength),
                         '0'
                 )};
-                if (false == parsed_day_option.has_value()) {
+                if (false == optional_parsed_day.has_value()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                parsed_day = parsed_day_option.value();
+                parsed_day = optional_parsed_day.value();
                 if (parsed_day < cMinParsedDay || parsed_day > cMaxParsedDay) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
@@ -279,15 +278,15 @@ auto parse_timestamp(
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                auto const parsed_day_option{convert_padded_string_to_number(
+                auto const optional_parsed_day{convert_padded_string_to_number(
                         timestamp.substr(timestamp_idx, cFieldLength),
                         ' '
                 )};
-                if (false == parsed_day_option.has_value()) {
+                if (false == optional_parsed_day.has_value()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
 
-                parsed_day = parsed_day_option.value();
+                parsed_day = optional_parsed_day.value();
                 if (parsed_day < cMinParsedDay || parsed_day > cMaxParsedDay) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
@@ -302,7 +301,7 @@ auto parse_timestamp(
                         cAbbreviatedDaysOfWeek
                 ))};
                 timestamp_idx += cAbbreviatedDaysOfWeek.at(day_idx).length();
-                day_of_week_idx = static_cast<int>(day_idx);
+                optional_day_of_week_idx = static_cast<int>(day_idx);
                 date_type_representation = true;
                 break;
             }
@@ -339,8 +338,10 @@ auto parse_timestamp(
     }
 
     // Do not allow trailing unmatched content.
-    if (pattern_idx != pattern.size() || timestamp_idx != timestamp.size())) {
-        return ErrorCodeEnum::IncompatibleTimestampPattern;
+    if (pattern_idx != pattern.size() || timestamp_idx != timestamp.size()) {
+        {
+            return ErrorCodeEnum::IncompatibleTimestampPattern;
+        }
     }
 
     // Do not allow mixing format specifiers for date-and-time type timestamps and epoch-number type
@@ -359,16 +360,16 @@ auto parse_timestamp(
     }
 
     auto const time_point = date::sys_days(year_month_day) + std::chrono::hours(0)
-                      + std::chrono::minutes(0) + std::chrono::seconds(0)
-                      + std::chrono::nanoseconds(0);
+                            + std::chrono::minutes(0) + std::chrono::seconds(0)
+                            + std::chrono::nanoseconds(0);
 
-    if (day_of_week_idx.has_value()) {
+    if (optional_day_of_week_idx.has_value()) {
         auto const actual_day_of_week_idx{(date::year_month_weekday(date::sys_days(year_month_day))
                                                    .weekday_indexed()
                                                    .weekday()
                                            - date::Sunday)
                                                   .count()};
-        if (actual_day_of_week_idx != day_of_week_idx.value()) {
+        if (actual_day_of_week_idx != optional_day_of_week_idx.value()) {
             return ErrorCodeEnum::InvalidDate;
         }
     }
