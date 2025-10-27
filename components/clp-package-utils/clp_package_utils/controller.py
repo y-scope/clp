@@ -87,16 +87,16 @@ class BaseController(ABC):
         self._conf_dir = self._clp_home / "etc"
 
     @abstractmethod
-    def start(self) -> None:
-        """
-        Starts the components.
-        """
-
-    @abstractmethod
     def set_up_env(self) -> None:
         """
         Sets up all components to run by preparing environment variables, directories, and
         configuration files.
+        """
+
+    @abstractmethod
+    def start(self) -> None:
+        """
+        Starts the components.
         """
 
     @abstractmethod
