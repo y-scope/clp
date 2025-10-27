@@ -153,7 +153,7 @@ def main(argv):
     args_parser.add_argument(
         "--unstructured",
         action="store_true",
-        help="Indicates that the input files are unstructured text logs.",
+        help="Treat all inputs as unstructured text logs.",
     )
     args_parser.add_argument(
         "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
