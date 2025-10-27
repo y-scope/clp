@@ -27,6 +27,7 @@ class TestConstants:
     # Number of logs tested in unit test and its expected page counts
     EXPECTED_NUM_LOG_ENTRIES = 25
     EXPECTED_NUM_PAGES = 3
+    EMPTY_LOG_ENTRIES = 0
 
     # 0.5 second for fast expiration tests
     FAST_SESSION_TTL_SECONDS = 0.5
@@ -41,6 +42,7 @@ class TestConstants:
     EXCEEDS_MAX_CACHED_RESULTS_ERR = "exceeds maximum allowed cached results"
     INVALID_NUM_ITEMS_PER_PAGE_ERR = "must be a positive integer"
     GET_INSTRUCTIONS_NOT_CALLED_ERR = "Please call `get_instructions()`"
+    NO_RESULTS_FOUND_IN_KQL_QUERY_ERR = "No log events found matching the KQL query."
     NO_PREVIOUS_PAGINATED_RESPONSE_ERR = "No previous paginated response in this session."
     PAGE_INDEX_OUT_OF_BOUNDS_ERR = "Page index is out of bounds."
 
@@ -115,6 +117,28 @@ class TestPaginatedQueryResult:
 class TestSessionState:
     """Unit tests for SessionState class."""
 
+    def test_error_handling(self) -> None:
+        """Validates error handling of `SessionState`."""
+        session = SessionState(
+            _num_items_per_page=TestConstants.ITEMS_PER_PAGE,
+            _session_id=TestConstants.TEST_SESSION_ID,
+            _session_ttl_seconds=TestConstants.SESSION_TTL_SECONDS
+        )
+
+        first_page = session.cache_query_result_and_get_first_page(
+            TestConstants.create_log_messages(TestConstants.EXPECTED_NUM_LOG_ENTRIES)
+        )
+
+        assert TestConstants.GET_INSTRUCTIONS_NOT_CALLED_ERR in first_page["Error"]
+        page_data = session.get_page_data(1)
+        assert TestConstants.GET_INSTRUCTIONS_NOT_CALLED_ERR in page_data["Error"]
+
+        _ = session.get_instructions()
+        first_page = session.cache_query_result_and_get_first_page(
+            TestConstants.create_log_messages(TestConstants.EMPTY_LOG_ENTRIES)
+        )
+        assert TestConstants.NO_RESULTS_FOUND_IN_KQL_QUERY_ERR in first_page["Error"]
+
     def test_get_page_data(self) -> None:
         """Validates pagination functionality is respecting the defined dictionary format."""
         session = SessionState(
@@ -161,22 +185,6 @@ class TestSessionState:
         # Test invalid page
         page_data = session.get_page_data(3)
         assert page_data["Error"] == TestConstants.PAGE_INDEX_OUT_OF_BOUNDS_ERR
-
-    def test_no_get_instruction(self) -> None:
-        """Validates error handling when `get_instructions()` has not been called."""
-        session = SessionState(
-            _num_items_per_page=TestConstants.ITEMS_PER_PAGE,
-            _session_id=TestConstants.TEST_SESSION_ID,
-            _session_ttl_seconds=TestConstants.SESSION_TTL_SECONDS
-        )
-
-        first_page = session.cache_query_result_and_get_first_page(
-            TestConstants.create_log_messages(TestConstants.EXPECTED_NUM_LOG_ENTRIES)
-        )
-
-        assert TestConstants.GET_INSTRUCTIONS_NOT_CALLED_ERR in first_page["Error"]
-        page_data = session.get_page_data(1)
-        assert TestConstants.GET_INSTRUCTIONS_NOT_CALLED_ERR in page_data["Error"]
 
     def test_session_expiration(self) -> None:
         """Validates session expiration check."""

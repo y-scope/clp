@@ -4,6 +4,8 @@ from typing import Any
 
 from clp_py_utils.clp_config import CLPConfig
 from fastmcp import Context, FastMCP
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse
 
 from clp_mcp_server.clp_connector import ClpConnector
 
@@ -160,5 +162,15 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
             return {"Error": str(e)}
 
         return await _execute_kql_query(ctx.session_id, kql_query, begin_ts, end_ts)
+
+    @mcp.custom_route("/health", methods=["GET"])
+    async def health_check(_request: Request) -> PlainTextResponse:
+        """
+        Health check endpoint.
+
+        :param _request: An HTTP request object.
+        :return: A plain text response indicating server is healthy.
+        """
+        return PlainTextResponse("OK")
 
     return mcp
