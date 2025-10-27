@@ -87,7 +87,7 @@ def main(argv):
         controller.set_up_env()
         if parsed_args.setup_only:
             logger.info(
-                "Completed setup. Services are not started because --setup-only was provided."
+                "Completed setup. Services not started because `--setup-only` was specified."
             )
             return 0
         controller.start()
