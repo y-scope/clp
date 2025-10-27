@@ -49,6 +49,9 @@ EXTRACT_JSON_CMD = "j"
 
 DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
 
+S3_KEY_PREFIX_COMPRESSION = "s3-key-prefix"
+S3_OBJECT_COMPRESSION = "s3-object"
+
 
 class DockerDependencyError(OSError):
     """Base class for errors related to Docker dependencies."""

@@ -89,6 +89,13 @@ class BaseController(ABC):
         self._conf_dir = self._clp_home / "etc"
 
     @abstractmethod
+    def set_up_env(self) -> None:
+        """
+        Sets up all components to run by preparing environment variables, directories, and
+        configuration files.
+        """
+
+    @abstractmethod
     def start(self) -> None:
         """
         Starts the components.
@@ -98,13 +105,6 @@ class BaseController(ABC):
     def stop(self) -> None:
         """
         Stops the components.
-        """
-
-    @abstractmethod
-    def _set_up_env(self) -> None:
-        """
-        Sets up all components to run by preparing environment variables, directories, and
-        configuration files.
         """
 
     def _set_up_env_for_database(self) -> EnvVarsDict:
@@ -548,8 +548,8 @@ class BaseController(ABC):
 
         query_engine = self._clp_config.package.query_engine
         if QueryEngine.PRESTO == query_engine:
-            server_settings_json_updates["PrestoHost"] = self._clp_config.presto.host
-            server_settings_json_updates["PrestoPort"] = self._clp_config.presto.port
+            server_settings_json_updates["PrestoHost"] = container_clp_config.presto.host
+            server_settings_json_updates["PrestoPort"] = container_clp_config.presto.port
         else:
             server_settings_json_updates["PrestoHost"] = None
             server_settings_json_updates["PrestoPort"] = None
@@ -687,78 +687,7 @@ class DockerComposeController(BaseController):
         self._project_name = f"clp-package-{instance_id}"
         super().__init__(clp_config)
 
-    def start(self) -> None:
-        """
-        Starts CLP's components using Docker Compose.
-
-        :raise: Propagates `check_docker_dependencies`'s exceptions.
-        :raise: Propagates `subprocess.run`'s exceptions.
-        """
-        check_docker_dependencies(
-            should_compose_project_be_running=False, project_name=self._project_name
-        )
-        self._set_up_env()
-
-        deployment_type = self._clp_config.get_deployment_type()
-        logger.info(f"Starting CLP using Docker Compose ({deployment_type} deployment)...")
-
-        cmd = ["docker", "compose", "--project-name", self._project_name]
-        if deployment_type == DeploymentType.BASE:
-            if self._clp_config.compression_scheduler.type == OrchestrationType.spider:
-                cmd += ["--file", "docker-compose.spider.base.yaml"]
-            else:
-                cmd += ["--file", "docker-compose.base.yaml"]
-        elif self._clp_config.compression_scheduler.type == OrchestrationType.spider:
-            cmd += ["--file", "docker-compose.spider.yaml"]
-        cmd += ["up", "--detach", "--wait"]
-        subprocess.run(
-            cmd,
-            cwd=self._clp_home,
-            check=True,
-        )
-        logger.info("Started CLP.")
-
-    def stop(self) -> None:
-        """
-        Stops CLP components deployed via Docker Compose.
-
-        :raise: Propagates `subprocess.run`'s exceptions.
-        """
-        try:
-            check_docker_dependencies(
-                should_compose_project_be_running=True, project_name=self._project_name
-            )
-        except DockerComposeProjectNotRunningError:
-            logger.info(
-                "Docker Compose project '%s' is not running. Nothing to stop.",
-                self._project_name,
-            )
-            return
-        except DockerDependencyError as e:
-            logger.warning(
-                'Docker dependencies check failed: "%s". Attempting to stop CLP containers '
-                "anyway...",
-                e,
-            )
-        else:
-            logger.info("Stopping all CLP containers using Docker Compose...")
-
-        subprocess.run(
-            ["docker", "compose", "--project-name", self._project_name, "down"],
-            cwd=self._clp_home,
-            check=True,
-        )
-        logger.info("Stopped CLP.")
-
-    @staticmethod
-    def _get_num_workers() -> int:
-        """
-        :return: Number of worker processes to run.
-        """
-        # This will change when we move from single to multi-container workers. See y-scope/clp#1424
-        return multiprocessing.cpu_count() // 2
-
-    def _set_up_env(self) -> None:
+    def set_up_env(self) -> None:
         # Generate container-specific config.
         container_clp_config = generate_docker_compose_container_config(self._clp_config)
         num_workers = self._get_num_workers()
@@ -846,6 +775,80 @@ class DockerComposeController(BaseController):
                 if value is None:
                     continue
                 env_file.write(f"{key}={value}\n")
+
+    def start(self) -> None:
+        """
+        Starts CLP's components using Docker Compose.
+
+        :raise: Propagates `check_docker_dependencies`'s exceptions.
+        :raise: Propagates `subprocess.run`'s exceptions.
+        """
+        check_docker_dependencies(
+            should_compose_project_be_running=False, project_name=self._project_name
+        )
+
+        deployment_type = self._clp_config.get_deployment_type()
+        logger.info(f"Starting CLP using Docker Compose ({deployment_type} deployment)...")
+
+        cmd = ["docker", "compose", "--project-name", self._project_name]
+        if deployment_type == DeploymentType.BASE:
+            if self._clp_config.compression_scheduler.type == OrchestrationType.spider:
+                cmd += ["--file", "docker-compose.spider.base.yaml"]
+            else:
+                cmd += ["--file", "docker-compose.base.yaml"]
+        elif self._clp_config.compression_scheduler.type == OrchestrationType.spider:
+            cmd += ["--file", "docker-compose.spider.yaml"]
+        cmd += ["up", "--detach", "--wait"]
+
+        if self._clp_config.mcp_server is not None:
+            cmd += ["--profile", "mcp"]
+        cmd += ["up", "--detach", "--wait"]
+        subprocess.run(
+            cmd,
+            cwd=self._clp_home,
+            check=True,
+        )
+        logger.info("Started CLP.")
+
+    def stop(self) -> None:
+        """
+        Stops CLP components deployed via Docker Compose.
+
+        :raise: Propagates `subprocess.run`'s exceptions.
+        """
+        try:
+            check_docker_dependencies(
+                should_compose_project_be_running=True, project_name=self._project_name
+            )
+        except DockerComposeProjectNotRunningError:
+            logger.info(
+                "Docker Compose project '%s' is not running. Nothing to stop.",
+                self._project_name,
+            )
+            return
+        except DockerDependencyError as e:
+            logger.warning(
+                'Docker dependencies check failed: "%s". Attempting to stop CLP containers '
+                "anyway...",
+                e,
+            )
+        else:
+            logger.info("Stopping all CLP containers using Docker Compose...")
+
+        subprocess.run(
+            ["docker", "compose", "--project-name", self._project_name, "down"],
+            cwd=self._clp_home,
+            check=True,
+        )
+        logger.info("Stopped CLP.")
+
+    @staticmethod
+    def _get_num_workers() -> int:
+        """
+        :return: Number of worker processes to run.
+        """
+        # This will change when we move from single to multi-container workers. See y-scope/clp#1424
+        return multiprocessing.cpu_count() // 2
 
 
 def get_or_create_instance_id(clp_config: CLPConfig) -> str:
