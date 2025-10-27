@@ -17,21 +17,21 @@
 
 namespace clp_s::timestamp_parser {
 namespace {
-constexpr int cMinParsedDay = 1;
-constexpr int cMaxParsedDay = 31;
-constexpr int cMinParsedMonth = 1;
-constexpr int cMaxParsedMonth = 12;
-constexpr int cMinParsedYear = 0;
-constexpr int cMaxParsedYear = 9999;
-constexpr int cMinTwoDigitYear = 0;
-constexpr int cTwoDigitYearOffsetBoundary = 69;
-constexpr int cMaxTwoDigitYear = 99;
-constexpr int cTwoDigitYearLowOffset = 1900;
-constexpr int cTwoDigitYearHighOffset = 2000;
+constexpr int cMinParsedDay{1};
+constexpr int cMaxParsedDay{31};
+constexpr int cMinParsedMonth{1};
+constexpr int cMaxParsedMonth{12};
+constexpr int cMinParsedYear{0};
+constexpr int cMaxParsedYear{9999};
+constexpr int cMinTwoDigitYear{0};
+constexpr int cTwoDigitYearOffsetBoundary{69};
+constexpr int cMaxTwoDigitYear{99};
+constexpr int cTwoDigitYearLowOffset{1900};
+constexpr int cTwoDigitYearHighOffset{2000};
 
-constexpr int cDefaultYear = 1970;
-constexpr int cDefaultMonth = 1;
-constexpr int cDefaultDay = 1;
+constexpr int cDefaultYear{1970};
+constexpr int cDefaultMonth{1};
+constexpr int cDefaultDay{1};
 
 constexpr std::array cAbbreviatedDaysOfWeek
         = {std::string_view{"Sun"},
@@ -72,9 +72,10 @@ constexpr std::array cAbbreviatedMonthNames
 
 /**
  * Converts a padded decimal integer string to an integer.
- * @param str Substring containg the padded decimal integer string.
+ * @param str Substring containing the padded decimal integer string.
  * @param padding_character Padding character which may prefix the integer.
- * @return The integer value on success, or `std::nullopt` on failure.
+ * @return The integer value on success
+ * @return std::nullopt otherwise.
  */
 [[nodiscard]] auto convert_padded_string_to_number(std::string_view str, char padding_character)
         -> std::optional<int>;
@@ -84,8 +85,9 @@ constexpr std::array cAbbreviatedMonthNames
  * @tparam CandidateArrayType
  * @param str Substring with a prefix potentially matching one of the candidates.
  * @param candidates Candidate prefixes that will be matched against `str`.
- * @return A result containing the index of the matching prefix in the candidates array, or
- * `clp_s::timestamp_parser::ErrorCodeEnum::IncompatibleTimestampPattern` on failure.
+ * @return A result containing the index of the matching prefix in the candidates array, or an error
+ * code indicating the failure:
+ * - ErrorCodeEnum::IncompatibleTimestampPattern if no candidates match the prefix of `str`.
  */
 template <typename CandidateArrayType>
 [[nodiscard]] auto
@@ -141,11 +143,11 @@ auto parse_timestamp(
 
     bool escaped{false};
     for (; pattern_idx < pattern.size() && timestamp_idx < timestamp.size(); ++pattern_idx) {
-        if (false == escaped && '\\' == pattern[pattern_idx]) {
-            escaped = true;
-            continue;
-        }
         if (false == escaped) {
+            if ('\\' == pattern[pattern_idx]) {
+                escaped = true;
+                continue;
+            }
             if (pattern[pattern_idx] == timestamp[timestamp_idx]) {
                 ++timestamp_idx;
                 continue;
@@ -156,7 +158,7 @@ auto parse_timestamp(
         escaped = false;
         switch (pattern[pattern_idx]) {
             case 'y': {  // Zero-padded 2-digit year in century.
-                constexpr size_t cFieldLength = 2;
+                constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
@@ -184,7 +186,7 @@ auto parse_timestamp(
                 break;
             }
             case 'Y': {  // Zero-padded 4-digit year.
-                constexpr size_t cFieldLength = 4;
+                constexpr size_t cFieldLength{4};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
@@ -226,7 +228,7 @@ auto parse_timestamp(
                 break;
             }
             case 'm': {  // Zero-padded month.
-                constexpr size_t cFieldLength = 2;
+                constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
@@ -249,7 +251,7 @@ auto parse_timestamp(
                 break;
             }
             case 'd': {  // Zero-padded day in month.
-                constexpr size_t cFieldLength = 2;
+                constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
@@ -272,7 +274,7 @@ auto parse_timestamp(
                 break;
             }
             case 'e': {  // Space-padded day in month.
-                constexpr size_t cFieldLength = 2;
+                constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
                     return ErrorCodeEnum::IncompatibleTimestampPattern;
                 }
@@ -337,7 +339,7 @@ auto parse_timestamp(
     }
 
     // Do not allow trailing unmatched content.
-    if (false == (pattern_idx == pattern.size() && timestamp_idx == timestamp.size())) {
+    if (pattern_idx != pattern.size() || timestamp_idx != timestamp.size())) {
         return ErrorCodeEnum::IncompatibleTimestampPattern;
     }
 
@@ -351,12 +353,12 @@ auto parse_timestamp(
         return ErrorCodeEnum::FormatSpecifierNotImplemented;
     }
 
-    auto year_month_day{date::year(parsed_year) / parsed_month / parsed_day};
+    auto const year_month_day{date::year(parsed_year) / parsed_month / parsed_day};
     if (false == year_month_day.ok()) {
         return ErrorCodeEnum::InvalidDate;
     }
 
-    auto time_point = date::sys_days(year_month_day) + std::chrono::hours(0)
+    auto const time_point = date::sys_days(year_month_day) + std::chrono::hours(0)
                       + std::chrono::minutes(0) + std::chrono::seconds(0)
                       + std::chrono::nanoseconds(0);
 
@@ -371,7 +373,7 @@ auto parse_timestamp(
         }
     }
 
-    epochtime_t epoch_nanoseconds{
+    epochtime_t const epoch_nanoseconds{
             std::chrono::duration_cast<std::chrono::nanoseconds>(time_point.time_since_epoch())
                     .count()
     };

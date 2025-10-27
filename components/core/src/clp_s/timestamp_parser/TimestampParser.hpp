@@ -65,22 +65,23 @@ namespace clp_s::timestamp_parser {
  *
  * @param timestamp
  * @param pattern A timestamp pattern made up of literals, format specifiers, and potentially CAT
- *                sequences.
+ * sequences.
  * @param generated_pattern A buffer where a newly-generated timestamp pattern can be written, if
- *                          necessary.
+ * necessary.
  * @return A result containing a pair, or an error code indicating the failure:
  * - The pair:
  *   - The timestamp in epoch nanoseconds.
  *   - An `std::string_view` of the timestamp pattern that corresponds to the timestamp.
  *     - The lifetime of the `std::string_view` is the least of `pattern` and `generated_pattern`.
- * - The possible error codes from `clp_s::timestamp_parser::ErrorCodeEnum`:
- *   - `InvalidTimestampPattern` if the pattern is illegal, per the specification.
- *   - `IncompatibleTimestampPattern` if the pattern is not able to exactly consume the timestamp.
- *   - `InvalidDate` if parsing was successful, but some components of the timestamp offer
- *     conflicting information about the actual date (e.g., if the parsed day of the week doesn't
- *     match up with the rest of the timestamp information).
- *   - `FormatSpecifierNotImplemented` if the pattern contains format specifiers that have not been
- *     implemented yet.
+ * - The possible error codes:
+ *   - ErrorCodeEnum::InvalidTimestampPattern if the pattern is illegal, per the specification.
+ *   - ErrorCodeEnum::IncompatibleTimestampPattern if the pattern is not able to exactly consume the
+ *     timestamp.
+ *   - ErrorCodeEnum::InvalidDate if parsing was successful, but some components of the timestamp
+ *     offer conflicting information about the actual date (e.g., if the parsed day of the week
+ *     doesn't match up with the rest of the timestamp information).
+ *   - ErrorCodeEnum::FormatSpecifierNotImplemented if the pattern contains format specifiers that
+ *     have not been implemented yet.
  */
 [[nodiscard]] auto parse_timestamp(
         std::string_view timestamp,
