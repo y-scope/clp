@@ -822,7 +822,7 @@ class CLPConfig(BaseModel):
         self.results_cache.transform_for_container()
         self.query_scheduler.transform_for_container()
         self.reducer.transform_for_container()
-        if self.presto is not None:
+        if self.package.query_engine == QueryEngine.PRESTO and self.presto is not None:
             self.presto.transform_for_container()
 
 
