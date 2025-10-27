@@ -60,7 +60,8 @@ def main(argv=None) -> int:
     if not _add_clp_env_vars(clp_config, clp_config_file_path, clp_package_dir, env_vars):
         return 1
 
-    _add_memory_env_vars(env_vars)
+    if not _add_memory_env_vars(env_vars):
+        return 1
 
     script_dir = Path(__file__).parent.resolve()
     if not _add_worker_env_vars(script_dir.parent / "coordinator-common.env", env_vars):
