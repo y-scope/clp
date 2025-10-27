@@ -13,6 +13,12 @@ from dotenv import dotenv_values
 DATABASE_COMPONENT_NAME = "database"
 DATABASE_DEFAULT_PORT = 3306
 
+# Presto worker memory configuration ratios
+# Based on: https://prestodb.io/docs/current/presto_cpp/properties.html
+PRESTO_QUERY_MEMORY_RATIO = 0.6
+PRESTO_SYSTEM_MEMORY_RATIO = 0.9
+PRESTO_SYSTEM_MEM_LIMIT_RATIO = 0.95
+
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
 logging_formatter = logging.Formatter(
@@ -236,9 +242,11 @@ def _add_memory_env_vars(env_vars: Dict[str, str]) -> bool:
     """
     total_memory_gb = psutil.virtual_memory().total / (1024**3)
 
-    query_memory_gb = max(1, int(total_memory_gb * 0.6))
-    system_memory_gb = max(query_memory_gb, int(total_memory_gb * 0.9))
-    system_mem_limit_gb = max(system_memory_gb, int(total_memory_gb * 0.95))
+    query_memory_gb = max(1, int(total_memory_gb * PRESTO_QUERY_MEMORY_RATIO))
+    system_memory_gb = max(query_memory_gb, int(total_memory_gb * PRESTO_SYSTEM_MEMORY_RATIO))
+    system_mem_limit_gb = max(
+        system_memory_gb, int(total_memory_gb * PRESTO_SYSTEM_MEM_LIMIT_RATIO)
+    )
 
     env_vars["PRESTO_WORKER_CONFIGPROPERTIES_QUERY_MEMORY_GB"] = str(query_memory_gb)
     env_vars["PRESTO_WORKER_CONFIGPROPERTIES_SYSTEM_MEMORY_GB"] = str(system_memory_gb)
