@@ -13,9 +13,9 @@ Follow the guidelines below when writing or updating dependency installation tas
     - Use of `yscope-dev-utils` tasks is encouraged, as most of them include proper checksum checks.
   - Use `<lib>-extracted` as the directory name for tarball extractions.
 
-- Avoid parsing version numbers in download URLs unless the version is used elsewhere.
-  - URL formats can change over time, so it’s more maintainable to store and use the full URL
-    directly as plain text.
+- Avoid parsing version numbers in download URLs unless the version is used elsewhere, as URL
+  formats can change over time, making it more maintainable to store and use the full URL directly
+  as plain text.
 
 ## CMake Generate Arguments
 
@@ -36,5 +36,5 @@ Apply the following guidelines to the `CMAKE_GEN_ARGS` section of tasks that cal
 
 - **Lastly**, while satisfying the above requirements, remove redundant flags that merely restate
   default values found in `CMakeLists.txt` and others source CMake files, with two exceptions:
-    - Set `CMAKE_BUILD_TYPE` to `Release` unless another build type is explicitly required.
-    - Set `CMAKE_INSTALL_MESSAGE` to `LAZY` to reduce log verbosity during installation.
+  - Set `CMAKE_BUILD_TYPE` to `Release` unless another build type is explicitly required.
+  - Set `CMAKE_INSTALL_MESSAGE` to `LAZY` to reduce log verbosity during installation.
