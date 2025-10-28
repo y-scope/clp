@@ -8,6 +8,7 @@
 #include <utility>
 #include <variant>
 
+#include "../clp/ir/EncodedTextAst.hpp"
 #include "Defs.hpp"
 #include "FloatFormatEncoding.hpp"
 
@@ -19,6 +20,8 @@ public:
             variant<int64_t,
                     double,
                     std::string,
+                    clp::ir::EightByteEncodedTextAst,
+                    clp::ir::FourByteEncodedTextAst,
                     bool,
                     std::pair<uint64_t, epochtime_t>,
                     std::pair<double, float_format_t>>;
