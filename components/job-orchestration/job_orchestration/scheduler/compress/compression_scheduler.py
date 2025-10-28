@@ -297,10 +297,10 @@ def search_and_schedule_new_tasks(
                     err_msg = "Failed to write user log for invalid input paths."
                     raise RuntimeError(err_msg)
 
-                macro_path = f"${{CLP_LOGS_DIR}}/{user_log_relative_path}"
                 error_msg = (
                     "At least one of your input paths could not be processed."
-                    f" Check {macro_path} for more details."
+                    f" See the error log at {user_log_relative_path} inside your configured logs"
+                    " directory (`logs_directory`) for more details."
                 )
 
                 update_compression_job_metadata(
@@ -463,8 +463,11 @@ def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
                 err_msg = "Failed to write user log for failed compression job."
                 raise RuntimeError(err_msg)
 
-            macro_path = f"${{CLP_LOGS_DIR}}/{error_log_relative_path}"
-            error_msg = f"One or more compression tasks failed. See {macro_path} for more details."
+            error_msg = (
+                "One or more compression tasks failed."
+                f" See the error log at {error_log_relative_path} inside your configured logs"
+                " directory (`logs_directory`) for more details."
+            )
 
             update_compression_job_metadata(
                 db_cursor,
