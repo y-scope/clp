@@ -10,11 +10,32 @@ tasks:
         vars:
           CARGO_FETCH_FLAGS: "--locked"
 
+  check-uv:
+    cmds:
+      - for: &uv-projects
+          - "{{.G_COMPONENTS_DIR}}/clp-mcp-server"
+          - "{{.G_COMPONENTS_DIR}}/clp-package-utils"
+          - "{{.G_COMPONENTS_DIR}}/clp-py-utils"
+          - "{{.G_COMPONENTS_DIR}}/job-orchestration"
+          - "{{.G_INTEGRATION_TESTS_DIR}}"
+        task: "uv-lock"
+        vars:
+          PROJECT_DIR: "{{.ITEM}}"
+          UV_LOCK_FLAGS: "--check"
+
   update-rust:
     cmds:
       - task: "cargo-workspace-update"
         vars:
           CARGO_UPDATE_FLAGS: ""
+
+  update-uv:
+    cmds:
+      - for: *uv-projects
+        task: "uv-lock"
+        vars:
+          PROJECT_DIR: "{{.ITEM}}"
+          UV_LOCK_FLAGS: ""
 
   # Runs `cargo fetch` in the root Rust workspace directory with the specified flags.
   #
@@ -41,3 +62,15 @@ tasks:
     cmd: |-
       . "$HOME/.cargo/env"
       cargo update {{.CARGO_UPDATE_FLAGS}}
+
+  # Runs `uv lock` in the UV project directory with the specified flags.
+  #
+  # @param {string} PROJECT_DIR
+  # @param {string} UV_LOCK_FLAGS The flags to pass to the `uv lock` command.
+  uv-lock:
+    internal: true
+    requires:
+      vars: ["PROJECT_DIR", "UV_LOCK_FLAGS"]
+    dir: "{{.PROJECT_DIR}}"
+    cmd: |-
+      uv lock {{.UV_LOCK_FLAGS}}
