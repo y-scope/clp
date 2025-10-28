@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 import pathlib
+import shutil
 import subprocess
 from contextlib import closing
 from typing import Any, Dict, List, Optional, Tuple
@@ -266,7 +267,7 @@ def _make_clp_s_command_and_env(
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
     use_single_file_archive: bool,
-) -> Tuple[List[str], Optional[Dict[str, str]]]:
+) -> Tuple[List[str], Dict[str, str]]:
     """
     Generates the command and environment variables for a clp_s compression job.
     :param clp_home:
@@ -287,22 +288,56 @@ def _make_clp_s_command_and_env(
     ]
     # fmt: on
 
-    if InputType.S3 == clp_config.input.type:
-        compression_env_vars = dict(os.environ)
+    compression_env_vars = dict(os.environ)
+    if InputType.S3 == clp_config.input.type and not clp_config.input.unstructured:
         compression_env_vars.update(get_credential_env_vars(clp_config.input.aws_authentication))
         compression_cmd.append("--auth")
         compression_cmd.append("s3")
-    else:
-        compression_env_vars = None
 
     if use_single_file_archive:
         compression_cmd.append("--single-file-archive")
 
-    if clp_config.input.timestamp_key is not None:
+    if clp_config.input.unstructured:
+        compression_cmd.append("--timestamp-key")
+        compression_cmd.append("timestamp")
+    elif clp_config.input.timestamp_key is not None:
         compression_cmd.append("--timestamp-key")
         compression_cmd.append(clp_config.input.timestamp_key)
 
     return compression_cmd, compression_env_vars
+
+
+def _make_log_converter_command_and_env(
+    clp_home: pathlib.Path,
+    conversion_output_dir: pathlib.Path,
+    clp_config: ClpIoConfig,
+) -> Tuple[List[str], Dict[str, str]]:
+    """
+    Generates the command and environment variables for unstructured text log conversion.
+
+    :param clp_home:
+    :param conversion_output_dir:
+    :param clp_config:
+    :return: A tuple containing:
+        - The conversion command.
+        - The conversion environment variables.
+    """
+
+    # fmt: off
+    conversion_cmd = [
+        str(clp_home / "bin" / "log-converter"),
+        "--output-dir",
+        str(conversion_output_dir),
+    ]
+    # fmt: on
+
+    conversion_env_vars = dict(os.environ)
+    if InputType.S3 == clp_config.input.type:
+        conversion_env_vars.update(get_credential_env_vars(clp_config.input.aws_authentication))
+        conversion_cmd.append("--auth")
+        conversion_cmd.append("s3")
+
+    return conversion_cmd, conversion_env_vars
 
 
 def run_clp(
@@ -385,12 +420,51 @@ def run_clp(
         logger.error(error_msg)
         return False, {"error_message": error_msg}
 
-    compression_cmd.append("--files-from")
-    compression_cmd.append(str(logs_list_path))
+    conversion_cmd = None
+    converted_inputs_dir = None
+    if StorageEngine.CLP_S == clp_storage_engine and clp_config.input.unstructured:
+        converted_inputs_dir = tmp_dir / f"{instance_id_str}-converted-tmp"
+        converted_inputs_dir.mkdir()
+        conversion_cmd, conversion_env = _make_log_converter_command_and_env(
+            clp_home=clp_home, conversion_output_dir=converted_inputs_dir, clp_config=clp_config
+        )
+        conversion_cmd.append("--inputs-from")
+        conversion_cmd.append(str(logs_list_path))
+        compression_cmd.append(str(converted_inputs_dir))
+    else:
+        compression_cmd.append("--files-from")
+        compression_cmd.append(str(logs_list_path))
+
+    def cleanup_temporary_files():
+        if logs_list_path is not None:
+            logs_list_path.unlink()
+        if converted_inputs_dir is not None:
+            shutil.rmtree(converted_inputs_dir)
 
     # Open stderr log file
     stderr_log_path = logs_dir / f"{instance_id_str}-stderr.log"
     stderr_log_file = open(stderr_log_path, "w")
+
+    conversion_return_code = 0
+    if conversion_cmd is not None:
+        logger.debug("Execute log-converter with command: %s", conversion_cmd)
+        conversion_proc = subprocess.Popen(
+            conversion_cmd, stdout=subprocess.DEVNULL, stderr=stderr_log_file, env=conversion_env
+        )
+        conversion_return_code = conversion_proc.wait()
+
+    if conversion_return_code != 0:
+        cleanup_temporary_files()
+        logger.error(
+            f"Failed to convert unstructured log text, return_code={conversion_return_code}"
+        )
+        worker_output = {
+            "total_uncompressed_size": 0,
+            "total_compressed_size": 0,
+            "error_message": f"Check logs in {stderr_log_path}",
+        }
+        stderr_log_file.close()
+        return CompressionTaskStatus.FAILED, worker_output
 
     # Start compression
     logger.debug("Compressing...")
@@ -489,14 +563,13 @@ def run_clp(
 
     # Wait for compression to finish
     return_code = proc.wait()
+
     if 0 != return_code:
         logger.error(f"Failed to compress, return_code={str(return_code)}")
     else:
         compression_successful = True
+        cleanup_temporary_files()
 
-        # Remove generated temporary files
-        if logs_list_path:
-            logs_list_path.unlink()
     logger.debug("Compressed.")
 
     # Close stderr log file
