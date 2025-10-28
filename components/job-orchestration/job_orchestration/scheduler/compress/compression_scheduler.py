@@ -181,22 +181,23 @@ def _process_s3_input(
 
 
 def _write_user_failure_log(
+    title: str,
     content: List[str],
     logs_directory: Path,
     job_id: Any,
     filename_suffix: str,
-    title: str,
 ) -> Optional[Path]:
     """
     Writes a user-oriented failure log to
     `{logs_directory}/user/job_{job_id}_{filename_suffix}.txt`. The `{logs_directory}/user`
     directory will be created if it does not already exist.
 
+    :param title:
     :param content:
     :param logs_directory:
     :param job_id:
     :param filename_suffix:
-    :param title:
+        
     :return: Path to the written log file relative to `logs_directory`, or `None` on error.
     """
     relative_log_path = Path("user") / f"job_{job_id}_{filename_suffix}.txt"
@@ -284,11 +285,11 @@ def search_and_schedule_new_tasks(
             invalid_path_messages = _process_fs_input_paths(input_config, paths_to_compress_buffer)
             if len(invalid_path_messages) > 0:
                 user_log_relative_path = _write_user_failure_log(
-                    invalid_path_messages,
-                    clp_config.logs_directory,
-                    job_id,
-                    filename_suffix="failed_paths",
                     title="Failed input paths log.",
+                    content=invalid_path_messages,
+                    logs_directory=clp_config.logs_directory,
+                    job_id=job_id,
+                    filename_suffix="failed_paths",
                 )
                 if user_log_relative_path is None:
                     err_msg = "Failed to write user log for invalid input paths."
@@ -449,11 +450,11 @@ def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
             logger.error(f"Job {job_id} failed. See worker logs or status_msg for details.")
 
             error_log_relative_path = _write_user_failure_log(
-                error_message,
-                logs_directory,
-                job_id,
-                filename_suffix="task_errors",
                 title="Compression task errors.",
+                content=error_message,
+                logs_directory=logs_directory,
+                job_id=job_id,
+                filename_suffix="task_errors",
             )
             if error_log_relative_path is None:
                 err_msg = "Failed to write user log for failed compression job."
