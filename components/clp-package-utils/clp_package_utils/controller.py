@@ -798,7 +798,6 @@ class DockerComposeController(BaseController):
                 cmd += ["--file", "docker-compose.base.yaml"]
         elif self._clp_config.compression_scheduler.type == OrchestrationType.spider:
             cmd += ["--file", "docker-compose.spider.yaml"]
-        cmd += ["up", "--detach", "--wait"]
 
         if self._clp_config.mcp_server is not None:
             cmd += ["--profile", "mcp"]
