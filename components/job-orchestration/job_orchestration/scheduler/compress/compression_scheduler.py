@@ -408,7 +408,7 @@ def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
     for job_id, job in scheduled_jobs.items():
         job_success = True
         duration = 0.0
-        error_message: List[str] = []
+        error_messages: List[str] = []
 
         try:
             returned_results = job.result_handle.get_result()
@@ -425,7 +425,7 @@ def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
                     )
                 else:
                     job_success = False
-                    error_message.append(f"task {task_result.task_id}: {task_result.error_message}")
+                    error_messages.append(f"task {task_result.task_id}: {task_result.error_message}")
                     logger.error(
                         f"Compression task job-{job_id}-task-{task_result.task_id} failed with"
                         f" error: {task_result.error_message}."
@@ -450,7 +450,7 @@ def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
 
             error_log_relative_path = _write_user_failure_log(
                 title="Compression task errors.",
-                content=error_message,
+                content=error_messages,
                 logs_directory=logs_directory,
                 job_id=job_id,
                 filename_suffix="task_errors",
