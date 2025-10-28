@@ -27,6 +27,7 @@ vars:
   G_NODEJS_22_BIN_DIR: "{{.G_NODEJS_22_BUILD_DIR}}/bin"
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
+  G_PYTHON_LIBS_DIR: "{{.G_BUILD_DIR}}/python-libs"
   G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
   G_SPIDER_BUILD_DIR: "{{.G_BUILD_DIR}}/spider"
 
@@ -43,6 +44,8 @@ vars:
 
   # Checksum files
   G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
+  G_PYTHON_LIBS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/python-libs.md5"
+  G_WEBUI_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui.md5"
   G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-client-node-modules.md5"
   G_WEBUI_COMMON_NODE_MODULES_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/webui-common-node-modules.md5"
   G_WEBUI_LOG_VIEWER_NODE_MODULES_CHECKSUM_FILE:
@@ -52,7 +55,7 @@ vars:
 
 tasks:
   default:
-    deps: ["docker-images:package"]
+    deps: ["package"]
 
   clean:
     cmds:
@@ -107,79 +110,39 @@ tasks:
       CHECKSUM_FILE: "{{.G_PACKAGE_CHECKSUM_FILE}}"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
     sources:
-      - "{{.G_BUILD_DIR}}/package-venv.md5"
-      - "{{.G_BUILD_DIR}}/webui.md5"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/log-converter"
-      - "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-      - "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_scheduler"
-      - "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_worker"
+      - "{{.G_BUILD_DIR}}/clp-package-image.id"
+      - "{{.G_WEBUI_BUILD_DIR}}/client/settings.json"
+      - "{{.G_WEBUI_BUILD_DIR}}/server/dist/settings.json"
       - "{{.TASKFILE}}"
-      - "components/clp-mcp-server/dist/*.whl"
-      - "components/clp-package-utils/dist/*.whl"
-      - "components/clp-py-utils/dist/*.whl"
-      - "components/job-orchestration/dist/*.whl"
-      - "components/package-template/src/**/*"
       - "tools/deployment/package/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
-      - "core"
-      - "clp-mcp-server"
-      - "clp-package-utils"
-      - "clp-py-utils"
-      - "deps:spider"
-      - "init"
-      - "job-orchestration"
-      - "package-venv"
+      - "docker-images:package"
       - task: "utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
-      - "webui"
     cmds:
       - "rm -rf '{{.OUTPUT_DIR}}'"
-      - "rsync -a components/package-template/src/ '{{.OUTPUT_DIR}}'"
-      - "mkdir -p '{{.OUTPUT_DIR}}/lib/python3/site-packages'"
-      - |-
-        . "{{.G_PACKAGE_VENV_DIR}}/bin/activate"
-        pip3 install --upgrade \
-          components/clp-mcp-server/dist/*.whl \
-          components/clp-package-utils/dist/*.whl \
-          components/clp-py-utils/dist/*.whl \
-          components/job-orchestration/dist/*.whl \
-          -t "{{.OUTPUT_DIR}}/lib/python3/site-packages"
-      - "mkdir -p '{{.OUTPUT_DIR}}/bin'"
       - >-
-        rsync -a
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clg"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clo"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/clp-s"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/indexer"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/log-converter"
-        "{{.G_CORE_COMPONENT_BUILD_DIR}}/reducer-server"
-        "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_scheduler"
-        "{{.G_SPIDER_BUILD_DIR}}/spider-build/src/spider/spider_worker"
-        "{{.OUTPUT_DIR}}/bin/"
+        rsync --archive
+        "components/package-template/src/"
+        "{{.OUTPUT_DIR}}"
       - >-
-        rsync -a
-        "{{.G_NODEJS_22_BIN_DIR}}/node"
-        "{{.OUTPUT_DIR}}/bin/node-22"
-      - "mkdir -p '{{.OUTPUT_DIR}}/var/www/'"
+        rsync --archive --mkpath
+        "{{.G_WEBUI_BUILD_DIR}}/client/settings.json"
+        "{{.OUTPUT_DIR}}/var/www/webui/client/"
       - >-
-        rsync -a
-        "{{.G_WEBUI_BUILD_DIR}}/"
-        "{{.OUTPUT_DIR}}/var/www/webui"
-      - |-
-        cd "{{.OUTPUT_DIR}}/var/www/webui"
-        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm ci --omit=dev
+        rsync --archive --mkpath
+        "{{.G_WEBUI_BUILD_DIR}}/server/dist/settings.json"
+        "{{.OUTPUT_DIR}}/var/www/webui/server/dist/"
       - >-
-        rsync -a
+        rsync --archive
         "tools/deployment/package/"
+        "{{.OUTPUT_DIR}}"
+      - >-
+        rsync --archive
+        "{{.G_BUILD_DIR}}/clp-package-image.id"
         "{{.OUTPUT_DIR}}"
       - "echo '{{.G_PACKAGE_VERSION}}' > '{{.OUTPUT_DIR}}/VERSION'"
       # This command must be last
@@ -290,6 +253,9 @@ tasks:
         rsync -a package.json "{{.OUTPUT_DIR}}/server/"
       - |-
         rsync -a package.json package-lock.json "{{.OUTPUT_DIR}}/"
+      - |-
+        cd "{{.OUTPUT_DIR}}"
+        PATH="{{.G_NODEJS_22_BIN_DIR}}":$PATH npm ci --omit=dev
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
@@ -502,6 +468,46 @@ tasks:
         tar czf '{{.OUTPUT_FILE}}'
         --directory '{{.G_BUILD_DIR}}'
         --dereference '{{.VERSIONED_PACKAGE_NAME}}'
+
+  python-libs:
+    internal: true
+    vars:
+      CHECKSUM_FILE: "{{.G_PYTHON_LIBS_CHECKSUM_FILE}}"
+      OUTPUT_DIR: "{{.G_PYTHON_LIBS_DIR}}"
+    sources:
+      - "{{.G_BUILD_DIR}}/package-venv.md5"
+      - "{{.TASKFILE}}"
+      - "components/clp-mcp-server/dist/*.whl"
+      - "components/clp-package-utils/dist/*.whl"
+      - "components/clp-py-utils/dist/*.whl"
+      - "components/job-orchestration/dist/*.whl"
+    generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - "init"
+      - "clp-mcp-server"
+      - "clp-package-utils"
+      - "clp-py-utils"
+      - "job-orchestration"
+      - "package-venv"
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - "mkdir -p '{{.OUTPUT_DIR}}'"
+      - |-
+        . "{{.G_PACKAGE_VENV_DIR}}/bin/activate"
+        pip3 install --upgrade \
+          components/clp-mcp-server/dist/*.whl \
+          components/clp-package-utils/dist/*.whl \
+          components/clp-py-utils/dist/*.whl \
+          components/job-orchestration/dist/*.whl \
+          -t "{{.OUTPUT_DIR}}"
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
 
   package-venv:
     internal: true
