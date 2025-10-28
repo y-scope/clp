@@ -220,7 +220,6 @@ def main(argv: List[str]) -> int:
     )
 
     necessary_mounts: List[Optional[DockerMount]] = [
-        mounts.clp_home,
         mounts.logs_dir,
         mounts.archives_output_dir,
     ]

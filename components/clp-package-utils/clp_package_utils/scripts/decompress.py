@@ -1,5 +1,6 @@
 import argparse
 import logging
+import os
 import pathlib
 import shlex
 import subprocess
@@ -110,7 +111,6 @@ def handle_extract_file_cmd(
     extraction_dir.mkdir(exist_ok=True)
     container_extraction_dir = pathlib.Path("/") / "mnt" / "extraction-dir"
     necessary_mounts = [
-        mounts.clp_home,
         mounts.data_dir,
         mounts.logs_dir,
         mounts.archives_output_dir,
@@ -205,7 +205,7 @@ def handle_extract_stream_cmd(
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
-    necessary_mounts = [mounts.clp_home, mounts.logs_dir]
+    necessary_mounts = [mounts.logs_dir]
     extra_env_vars = {
         CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
         CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
@@ -298,8 +298,9 @@ def main(argv):
     file_extraction_parser.add_argument(
         "-f", "--files-from", help="A file listing all files to extract."
     )
+    default_extraction_dir = pathlib.Path(os.environ.get("CLP_PWD_HOST", "."))
     file_extraction_parser.add_argument(
-        "-d", "--extraction-dir", metavar="DIR", default=".", help="Extract files into DIR."
+        "-d", "--extraction-dir", metavar="DIR", default=default_extraction_dir, help="Extract files into DIR."
     )
 
     # IR extraction command parser

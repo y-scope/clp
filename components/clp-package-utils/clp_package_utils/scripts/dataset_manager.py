@@ -131,10 +131,7 @@ def main(argv: List[str]) -> int:
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
-    necessary_mounts = [
-        mounts.clp_home,
-        mounts.logs_dir,
-    ]
+    necessary_mounts = [mounts.logs_dir]
     if clp_config.archive_output.storage.type == StorageType.FS:
         necessary_mounts.append(mounts.archives_output_dir)
 

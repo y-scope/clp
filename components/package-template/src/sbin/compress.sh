@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
-package_root="$script_dir/.."
+common_env_path="$script_dir/.common-env.sh"
+source "$common_env_path"
 
-PYTHONPATH=$(readlink -f "$package_root/lib/python3/site-packages") \
+docker compose -f "$CLP_HOME/docker-compose.runtime.yaml" run --rm clp-runtime \
     python3 \
     -m clp_package_utils.scripts.compress \
     "$@"

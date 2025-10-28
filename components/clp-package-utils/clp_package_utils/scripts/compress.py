@@ -230,7 +230,7 @@ def main(argv):
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
-    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir, mounts.input_logs_dir]
+    necessary_mounts = [mounts.data_dir, mounts.logs_dir, mounts.input_logs_dir]
 
     # Write compression logs to a file
     while True:
