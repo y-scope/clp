@@ -97,6 +97,8 @@ def _generate_compress_cmd(
     if parsed_args.timestamp_key is not None:
         compress_cmd.append("--timestamp-key")
         compress_cmd.append(parsed_args.timestamp_key)
+    if parsed_args.unstructured:
+        compress_cmd.append("--unstructured")
     if parsed_args.tags is not None:
         compress_cmd.append("--tags")
         compress_cmd.append(parsed_args.tags)
@@ -179,6 +181,11 @@ def main(argv):
         help="The path (e.g. x.y) for the field containing the log event's timestamp.",
     )
     args_parser.add_argument(
+        "--unstructured",
+        action="store_true",
+        help="Treat all inputs as unstructured text logs.",
+    )
+    args_parser.add_argument(
         "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
     )
     args_parser.add_argument(
@@ -253,10 +260,16 @@ def main(argv):
         logger.error(e)
         return -1
 
-    if parsed_args.timestamp_key is None:
+    if parsed_args.timestamp_key is None and not parsed_args.unstructured:
         logger.warning(
             "`--timestamp-key` not specified. Events will not have assigned timestamps and can"
             " only be searched from the command line without a timestamp filter."
+        )
+    if parsed_args.timestamp_key is not None and parsed_args.unstructured:
+        parsed_args.timestamp_key = None
+        logger.warning(
+            "`--timestamp-key` and `--unstructured` are not compatible. The input logs will be "
+            "treated as unstructured, and the argument to `--timestamp-key` will be ignored."
         )
 
     if parsed_args.subcommand == S3_OBJECT_COMPRESSION:
