@@ -25,10 +25,7 @@ pub async fn create_new_client(
         "clp-credential-provider",
     );
     let region = Region::new(region_id.to_owned());
-    let base_config = aws_config::defaults(BehaviorVersion::latest())
-        .region(region.clone())
-        .load()
-        .await;
+    let base_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
     let config = Builder::from(&base_config)
         .credentials_provider(credential)
         .region(region)
