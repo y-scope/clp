@@ -17,7 +17,7 @@ pub async fn create_new_client(
     access_key_id: &str,
     secret_access_key: &SecretString,
 ) -> Client {
-    let credentials = Credentials::new(
+    let credential = Credentials::new(
         access_key_id,
         secret_access_key.expose_secret(),
         None,
@@ -30,7 +30,7 @@ pub async fn create_new_client(
         .load()
         .await;
     let config = Builder::from(&base_config)
-        .credentials_provider(credentials)
+        .credentials_provider(credential)
         .region(region)
         .build();
     Client::from_conf(config)
