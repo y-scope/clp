@@ -1216,11 +1216,11 @@ void JsonParser::parse_kv_log_event_subtree(
                 }
             } break;
             case NodeType::ClpString: {
-                bool uses_eight_byte_encoding{
+                bool const is_eight_byte_encoding{
                         pair.second.value().is<clp::ir::EightByteEncodedTextAst>()
                 };
                 if (false == matches_timestamp) {
-                    if (uses_eight_byte_encoding) {
+                    if (is_eight_byte_encoding) {
                         m_current_parsed_message.add_value(
                                 node_id,
                                 pair.second.value()
@@ -1237,7 +1237,7 @@ void JsonParser::parse_kv_log_event_subtree(
                 }
 
                 std::string decoded_value;
-                if (uses_eight_byte_encoding) {
+                if (is_eight_byte_encoding) {
                     decoded_value = pair.second.value()
                                             .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
                                             .decode_and_unparse()
