@@ -181,42 +181,39 @@ def _process_s3_input(
 
 
 def _write_user_failure_log(
-    content: Union[str, List[str]],
+    content: List[str],
     logs_directory: Path,
     job_id: Any,
-    filename_prefix: str,
-    header_title: str,
+    filename_suffix: str,
+    title: str,
 ) -> Optional[Path]:
     """
-    Writes a user-visible failure log to `{logs_directory}/user/{filename_prefix}_{job_id}.txt`. The
-    /user directory will be created if it doesn't already exist. `content` may be either a single
-    string or a List of strings.
+    Writes a user-oriented failure log to
+    `{logs_directory}/user/job_{job_id}_{filename_suffix}.txt`. The `{logs_directory}/user`
+    directory will be created if it does not already exist.
 
     :param content:
     :param logs_directory:
     :param job_id:
-    :param filename_prefix:
-    :param header_title:
-    :return: Path to the written log file relative to `logs_directory`, or None on error.
+    :param filename_suffix:
+    :param title:
+    :return: Path to the written log file relative to `logs_directory`, or `None` on error.
     """
-    relative_log_path = Path("user") / f"{filename_prefix}_{job_id}.txt"
-    user_logs_dir = Path(logs_directory) / relative_log_path.parent
+    relative_log_path = Path("user") / f"job_{job_id}_{filename_suffix}.txt"
+    user_logs_dir = logs_directory / relative_log_path.parent
     try:
         user_logs_dir.mkdir(parents=True, exist_ok=True)
     except Exception as e:
         logger.error("Failed to create user logs directory: '%s' - %s", user_logs_dir, e)
         return None
 
-    log_path = Path(logs_directory) / relative_log_path
+    log_path = logs_directory / relative_log_path
     try:
         with log_path.open("w", encoding="utf-8") as f:
             timestamp = datetime.datetime.now().isoformat(timespec="seconds")
-            f.write(f"{header_title}\nGenerated at {timestamp}.\n\n")
-            if isinstance(content, str):
-                f.write(f"{content.rstrip()}\n")
-            else:
-                for item in content:
-                    f.write(f"{str(item).rstrip()}\n")
+            f.write(f"{title}\nGenerated at {timestamp}.\n\n")
+            for item in content:
+                f.write(f"{item.rstrip()}\n")
     except Exception as e:
         logger.error("Failed to write compression failure user log: '%s' - %s", log_path, e)
         return None
@@ -290,8 +287,8 @@ def search_and_schedule_new_tasks(
                     invalid_path_messages,
                     clp_config.logs_directory,
                     job_id,
-                    filename_prefix="failed_paths",
-                    header_title="Failed input paths log.",
+                    filename_suffix="failed_paths",
+                    title="Failed input paths log.",
                 )
                 if user_log_relative_path is None:
                     err_msg = "Failed to write user log for invalid input paths."
@@ -299,7 +296,7 @@ def search_and_schedule_new_tasks(
 
                 error_msg = (
                     "At least one of your input paths could not be processed."
-                    f" See the error log at {user_log_relative_path} inside your configured logs"
+                    f" See the error log at '{user_log_relative_path}' inside your configured logs"
                     " directory (`logs_directory`) for more details."
                 )
 
@@ -411,7 +408,7 @@ def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
     for job_id, job in scheduled_jobs.items():
         job_success = True
         duration = 0.0
-        error_message = ""
+        error_message: List[str] = []
 
         try:
             returned_results = job.result_handle.get_result()
@@ -428,7 +425,7 @@ def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
                     )
                 else:
                     job_success = False
-                    error_message += f"task {task_result.task_id}: {task_result.error_message}\n"
+                    error_message.append(f"task {task_result.task_id}: {task_result.error_message}")
                     logger.error(
                         f"Compression task job-{job_id}-task-{task_result.task_id} failed with"
                         f" error: {task_result.error_message}."
@@ -451,13 +448,12 @@ def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
         else:
             logger.error(f"Job {job_id} failed. See worker logs or status_msg for details.")
 
-            status_msg = error_message
             error_log_relative_path = _write_user_failure_log(
-                status_msg,
+                error_message,
                 logs_directory,
                 job_id,
-                filename_prefix="failed_compression_log",
-                header_title="Failed compression job log.",
+                filename_suffix="task_errors",
+                title="Compression task errors.",
             )
             if error_log_relative_path is None:
                 err_msg = "Failed to write user log for failed compression job."
@@ -465,7 +461,7 @@ def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
 
             error_msg = (
                 "One or more compression tasks failed."
-                f" See the error log at {error_log_relative_path} inside your configured logs"
+                f" See the error log at '{error_log_relative_path}' inside your configured logs"
                 " directory (`logs_directory`) for more details."
             )
 
