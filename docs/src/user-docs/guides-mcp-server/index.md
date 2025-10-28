@@ -21,8 +21,14 @@ This guide assumes:
 
 ## Starting the MCP Server
 
-1. Configure `clp-json` to run the MCP server by uncommenting `mcp_server` section in
-   `etc/clp-config.yml` and then specifying a host and port number:
+1. Configure `clp-json` to run the MCP server by uncommenting the `mcp_server` section in
+   `etc/clp-config.yml`
+
+    ```yaml
+    #mcp_server: null
+    ```
+
+   and then specifying a host and port number:
 
     ```yaml
     mcp_server:
