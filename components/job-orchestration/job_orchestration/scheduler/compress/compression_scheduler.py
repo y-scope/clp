@@ -197,7 +197,6 @@ def _write_user_failure_log(
     :param logs_directory:
     :param job_id:
     :param filename_suffix:
-
     :return: Path to the written log file relative to `logs_directory`, or `None` on error.
     """
     relative_log_path = Path("user") / f"job_{job_id}_{filename_suffix}.txt"
