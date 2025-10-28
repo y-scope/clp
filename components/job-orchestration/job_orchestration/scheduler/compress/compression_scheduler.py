@@ -425,7 +425,9 @@ def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
                     )
                 else:
                     job_success = False
-                    error_messages.append(f"task {task_result.task_id}: {task_result.error_message}")
+                    error_messages.append(
+                        f"task {task_result.task_id}: {task_result.error_message}"
+                    )
                     logger.error(
                         f"Compression task job-{job_id}-task-{task_result.task_id} failed with"
                         f" error: {task_result.error_message}."
