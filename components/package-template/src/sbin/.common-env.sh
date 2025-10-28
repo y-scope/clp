@@ -17,7 +17,7 @@ if [[ -f "$image_id_file" ]]; then
     export CLP_PACKAGE_CONTAINER_IMAGE_REF="$image_id"
 elif [[ -f "$version_file" ]]; then
     version="$(tr -d '[:space:]' < "$version_file")"
-    export CLP_PACKAGE_CONTAINER_IMAGE_REF="clp-package:$version"
+    export CLP_PACKAGE_CONTAINER_IMAGE_REF="ghcr.io/y-scope/clp/clp-package:v$version"
 else
     echo "Error: Neither clp-package-image.id nor VERSION file exists." >&2
     return 1 2>/dev/null || exit 1
