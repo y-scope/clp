@@ -1216,8 +1216,28 @@ void JsonParser::parse_kv_log_event_subtree(
                 }
             } break;
             case NodeType::ClpString: {
+                bool const is_eight_byte_encoding{
+                        pair.second.value().is<clp::ir::EightByteEncodedTextAst>()
+                };
+                if (false == matches_timestamp) {
+                    if (is_eight_byte_encoding) {
+                        m_current_parsed_message.add_value(
+                                node_id,
+                                pair.second.value()
+                                        .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
+                        );
+                    } else {
+                        m_current_parsed_message.add_value(
+                                node_id,
+                                pair.second.value()
+                                        .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
+                        );
+                    }
+                    break;
+                }
+
                 std::string decoded_value;
-                if (pair.second.value().is<clp::ir::EightByteEncodedTextAst>()) {
+                if (is_eight_byte_encoding) {
                     decoded_value = pair.second.value()
                                             .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
                                             .decode_and_unparse()
@@ -1229,33 +1249,29 @@ void JsonParser::parse_kv_log_event_subtree(
                                             .decode_and_unparse()
                                             .value();
                 }
-                if (matches_timestamp) {
-                    uint64_t encoding_id{};
-                    auto const timestamp = m_archive_writer->ingest_timestamp_entry(
-                            m_timestamp_key,
-                            node_id,
-                            decoded_value,
-                            encoding_id
-                    );
-                    m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
-                } else {
-                    m_current_parsed_message.add_value(node_id, decoded_value);
-                }
+                uint64_t encoding_id{};
+                auto const timestamp = m_archive_writer->ingest_timestamp_entry(
+                        m_timestamp_key,
+                        node_id,
+                        decoded_value,
+                        encoding_id
+                );
+                m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
             } break;
             case NodeType::UnstructuredArray: {
-                std::string array_str;
                 if (pair.second.value().is<clp::ir::EightByteEncodedTextAst>()) {
-                    array_str = pair.second.value()
-                                        .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
-                                        .decode_and_unparse()
-                                        .value();
+                    m_current_parsed_message.add_value(
+                            node_id,
+                            pair.second.value()
+                                    .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
+                    );
                 } else {
-                    array_str = pair.second.value()
-                                        .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
-                                        .decode_and_unparse()
-                                        .value();
+                    m_current_parsed_message.add_value(
+                            node_id,
+                            pair.second.value()
+                                    .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
+                    );
                 }
-                m_current_parsed_message.add_value(node_id, array_str);
                 break;
             }
             default:
