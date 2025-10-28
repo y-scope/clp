@@ -1,13 +1,11 @@
-x-service-defaults: &service_defaults
-  image: "${CLP_PACKAGE_CONTAINER_IMAGE_REF:-clp-package}"
-  logging:
-    driver: "local"
-  stop_grace_period: "60s"
-
 services:
   clp-runtime:
-    <<: *service_defaults
     hostname: "clp_runtime"
+    image: "${CLP_PACKAGE_CONTAINER_IMAGE_REF:-clp-package}"
+    logging:
+      driver: "local"
+    stdin_open: true
+    tty: true
     user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:999}"
     environment:
       CLP_HOME: "${CLP_HOME}"
@@ -17,5 +15,3 @@ services:
       - "${CLP_DOCKER_SOCK_PATH}:/var/run/docker.sock"
       - "${CLP_HOME}:${CLP_HOME}"
       - "/usr/bin/docker:/usr/bin/docker:ro"
-    stdin_open: true
-    tty: true
