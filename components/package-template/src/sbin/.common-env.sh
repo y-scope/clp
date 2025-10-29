@@ -27,7 +27,8 @@ uid="$(id --user 2>/dev/null || echo "1000")"
 gid="$(getent group docker | cut -d: -f3 2>/dev/null || echo "999")"
 export CLP_FIRST_PARTY_SERVICE_UID_GID="$uid:$gid"
 
-export CLP_PWD_HOST="$(pwd)"
+CLP_PWD_HOST="$(pwd 2>/dev/null || echo "")"
+export CLP_PWD_HOST
 
 if [[ -z "${CLP_DOCKER_PLUGIN_DIR:-}" ]]; then
     for dir in \
