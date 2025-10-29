@@ -9,9 +9,9 @@ To compress logs from S3, use the `sbin/compress-from-s3.sh` script. The script 
 modes of operation; select which one you'd like to use by using the corresponding argument in the
 command:
 
-* [**`s3-object` mode**](#s3-object-compression-mode): Compress S3 objects specified by their full
+* [**s3-object** mode](#s3-object-compression-mode): Compress S3 objects specified by their full
   S3 URLs.
-* [**`s3-key-prefix` mode**](#s3-key-prefix-compression-mode): Compress all S3 objects under a given
+* [**s3-key-prefix** mode](#s3-key-prefix-compression-mode): Compress all S3 objects under a given
   S3 key prefix.
 
 ### `s3-object` compression mode
@@ -78,19 +78,18 @@ sbin/compress-from-s3.sh \
   one of two formats:
   * `https://<bucket-name>.s3.<region-code>.amazonaws.com/<key-prefix>`
   * `https://s3.<region-code>.amazonaws.com/<bucket-name>/<key-prefix>`
-  * The fields in `<key-prefix-url>` are as follows:
-    * `<bucket-name>` is the name of the S3 bucket containing your logs.
-    * `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your
-      logs.
-    * `<key-prefix>` is the prefix of all logs you wish to compress and must begin with the
-      `<all-logs-prefix>` value from the [compression IAM policy][compression-iam-policy].
+* The fields in `<key-prefix-url>` are as follows:
+  * `<bucket-name>` is the name of the S3 bucket containing your logs.
+  * `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your
+    logs.
+  * `<key-prefix>` is the prefix of all logs you wish to compress and must begin with the
+    `<all-logs-prefix>` value from the [compression IAM policy][compression-iam-policy].
 
 :::{note}
 `s3-key-prefix` mode only accepts a single `<key-prefix-url>` argument. This limitation will be
 addressed in a future release.
 :::
 
-[add-iam-policy]: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html#embed-inline-policy-console
 [aws-s3-object-key]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
 [compression-iam-policy]: ./object-storage-config.md#configuration-for-compression
