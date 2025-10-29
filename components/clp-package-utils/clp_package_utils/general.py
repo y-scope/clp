@@ -570,6 +570,7 @@ def validate_results_cache_config(
         clp_config.results_cache.port,
     )
 
+
 def validate_output_storage_config(clp_config: CLPConfig) -> None:
     clp_config.validate_archive_output_config(True)
     clp_config.validate_stream_output_config(True)
