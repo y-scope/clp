@@ -694,7 +694,7 @@ class CLPConfig(BaseModel):
                 f" = '{StorageEngine.CLP_S}'"
             )
         try:
-            validate_path_could_be_dir(self.archive_output.get_directory(), True)
+            validate_path_could_be_dir(resolve_host_path(self.archive_output.get_directory()))
         except ValueError as ex:
             raise ValueError(f"archive_output.storage's directory is invalid: {ex}")
 
@@ -708,25 +708,25 @@ class CLPConfig(BaseModel):
                 f" = '{StorageEngine.CLP_S}'"
             )
         try:
-            validate_path_could_be_dir(self.stream_output.get_directory(), True)
+            validate_path_could_be_dir(resolve_host_path(self.stream_output.get_directory()))
         except ValueError as ex:
             raise ValueError(f"stream_output.storage's directory is invalid: {ex}")
 
     def validate_data_dir(self):
         try:
-            validate_path_could_be_dir(self.data_directory, True)
+            validate_path_could_be_dir(resolve_host_path(self.data_directory))
         except ValueError as ex:
             raise ValueError(f"data_directory is invalid: {ex}")
 
     def validate_logs_dir(self):
         try:
-            validate_path_could_be_dir(self.logs_directory, True)
+            validate_path_could_be_dir(resolve_host_path(self.logs_directory))
         except ValueError as ex:
             raise ValueError(f"logs_directory is invalid: {ex}")
 
     def validate_tmp_dir(self):
         try:
-            validate_path_could_be_dir(self.tmp_directory, True)
+            validate_path_could_be_dir(resolve_host_path(self.tmp_directory))
         except ValueError as ex:
             raise ValueError(f"tmp_directory is invalid: {ex}")
 

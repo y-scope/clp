@@ -85,8 +85,8 @@ def resolve_host_path(path: pathlib.Path) -> pathlib.Path:
     return resolved
 
 
-def validate_path_could_be_dir(path: pathlib.Path, use_host_mount: bool):
-    part = resolve_host_path(path) if use_host_mount else path
+def validate_path_could_be_dir(path: pathlib.Path):
+    part = path
     while True:
         if part.exists():
             if not part.is_dir():

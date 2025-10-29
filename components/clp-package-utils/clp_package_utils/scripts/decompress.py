@@ -80,8 +80,9 @@ def handle_extract_file_cmd(
 
     # Validate extraction directory
     extraction_dir = pathlib.Path(parsed_args.extraction_dir).resolve()
+    resolved_extraction_dir = resolve_host_path(extraction_dir)
     try:
-        validate_path_could_be_dir(extraction_dir, True)
+        validate_path_could_be_dir(resolved_extraction_dir)
     except ValueError as ex:
         logger.error(f"extraction-dir is invalid: {ex}")
         return -1
@@ -109,7 +110,6 @@ def handle_extract_file_cmd(
     )
 
     # Set up mounts
-    resolved_extraction_dir = resolve_host_path(extraction_dir)
     resolved_extraction_dir.mkdir(exist_ok=True)
     container_extraction_dir = pathlib.Path("/") / "mnt" / "extraction-dir"
     necessary_mounts = [

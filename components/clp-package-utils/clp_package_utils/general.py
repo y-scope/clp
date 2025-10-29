@@ -773,7 +773,7 @@ def _is_docker_compose_project_running(project_name: str) -> bool:
 
 def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
     try:
-        validate_path_could_be_dir(data_dir, True)
+        validate_path_could_be_dir(resolve_host_path(data_dir))
     except ValueError as ex:
         raise ValueError(f"{component_name} data directory is invalid: {ex}")
 
@@ -787,6 +787,6 @@ def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
     :raise ValueError: If the path is invalid or can't be a directory.
     """
     try:
-        validate_path_could_be_dir(logs_dir, True)
+        validate_path_could_be_dir(resolve_host_path(logs_dir))
     except ValueError as ex:
         raise ValueError(f"{component_name} logs directory is invalid: {ex}")
