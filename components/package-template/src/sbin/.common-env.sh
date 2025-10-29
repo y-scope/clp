@@ -20,7 +20,7 @@ elif [[ -f "$version_file" ]]; then
     export CLP_PACKAGE_CONTAINER_IMAGE_REF="ghcr.io/y-scope/clp/clp-package:v$version"
 else
     echo "Error: Neither clp-package-image.id nor VERSION file exists." >&2
-    return 1 2>/dev/null || exit 1
+    return 1
 fi
 
 uid="$(id --user 2>/dev/null || echo "1000")"
