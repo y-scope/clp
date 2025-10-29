@@ -4,10 +4,6 @@ tasks:
   package:
     dir: "{{.ROOT_DIR}}/tools/docker-images/clp-package"
     deps:
-      - ":init"
-      - ":core"
-      - ":deps:spider"
-      - ":python-libs"
-      - ":webui"
+      - ":package-build-deps"
     cmds:
       - "./build.sh"
