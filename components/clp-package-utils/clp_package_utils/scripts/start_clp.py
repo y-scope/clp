@@ -13,7 +13,6 @@ from clp_package_utils.general import (
     validate_and_load_db_credentials_file,
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
-    validate_logs_input_config,
     validate_output_storage_config,
     validate_retention_config,
 )
@@ -63,14 +62,14 @@ def main(argv):
         validate_and_load_db_credentials_file(clp_config, clp_home, True)
         validate_and_load_queue_credentials_file(clp_config, clp_home, True)
         validate_and_load_redis_credentials_file(clp_config, clp_home, True)
-        validate_logs_input_config(clp_config)
+        clp_config.validate_logs_input_config(True)
         validate_output_storage_config(clp_config)
         validate_retention_config(clp_config)
 
-        clp_config.validate_aws_config_dir()
-        clp_config.validate_data_dir()
-        clp_config.validate_logs_dir()
-        clp_config.validate_tmp_dir()
+        clp_config.validate_aws_config_dir(True)
+        clp_config.validate_data_dir(True)
+        clp_config.validate_logs_dir(True)
+        clp_config.validate_tmp_dir(True)
     except:
         logger.exception("Failed to load config.")
         return -1

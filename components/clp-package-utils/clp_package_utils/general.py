@@ -570,14 +570,9 @@ def validate_results_cache_config(
         clp_config.results_cache.port,
     )
 
-
-def validate_logs_input_config(clp_config: CLPConfig) -> None:
-    clp_config.validate_logs_input_config()
-
-
 def validate_output_storage_config(clp_config: CLPConfig) -> None:
-    clp_config.validate_archive_output_config()
-    clp_config.validate_stream_output_config()
+    clp_config.validate_archive_output_config(True)
+    clp_config.validate_stream_output_config(True)
 
     validate_path_for_container_mount(clp_config.archive_output.get_directory())
     validate_path_for_container_mount(clp_config.stream_output.get_directory())
