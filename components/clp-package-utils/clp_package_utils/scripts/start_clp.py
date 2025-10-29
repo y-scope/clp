@@ -16,6 +16,7 @@ from clp_package_utils.general import (
     validate_output_storage_config,
     validate_retention_config,
 )
+from clp_py_utils.core import resolve_host_path
 
 logger = logging.getLogger(__file__)
 
@@ -72,11 +73,13 @@ def main(argv):
 
     try:
         # Create necessary directories.
-        clp_config.data_directory.mkdir(parents=True, exist_ok=True)
-        clp_config.logs_directory.mkdir(parents=True, exist_ok=True)
-        clp_config.tmp_directory.mkdir(parents=True, exist_ok=True)
-        clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
-        clp_config.stream_output.get_directory().mkdir(parents=True, exist_ok=True)
+        resolve_host_path(clp_config.data_directory).mkdir(parents=True, exist_ok=True)
+        resolve_host_path(clp_config.logs_directory).mkdir(parents=True, exist_ok=True)
+        resolve_host_path(clp_config.tmp_directory).mkdir(parents=True, exist_ok=True)
+        resolve_host_path(clp_config.archive_output.get_directory()).mkdir(parents=True,
+                                                                           exist_ok=True)
+        resolve_host_path(clp_config.stream_output.get_directory()).mkdir(parents=True,
+                                                                          exist_ok=True)
     except:
         logger.exception("Failed to create necessary directories.")
         return -1

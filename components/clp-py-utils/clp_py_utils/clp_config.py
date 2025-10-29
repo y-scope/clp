@@ -19,6 +19,7 @@ from .core import (
     get_config_value,
     make_config_path_absolute,
     read_yaml_config_file,
+    resolve_host_path,
     validate_path_could_be_dir,
 )
 from .serialization_utils import serialize_path, serialize_str_enum
@@ -672,9 +673,10 @@ class CLPConfig(BaseModel):
             # NOTE: This can't be a pydantic validator since input_logs_dir might be a
             # package-relative path that will only be resolved after pydantic validation
             input_logs_dir = self.logs_input.directory
-            if not input_logs_dir.exists():
+            resolved_input_logs_dir = resolve_host_path(input_logs_dir)
+            if not resolved_input_logs_dir.exists():
                 raise ValueError(f"logs_input.directory '{input_logs_dir}' doesn't exist.")
-            if not input_logs_dir.is_dir():
+            if not resolved_input_logs_dir.is_dir():
                 raise ValueError(f"logs_input.directory '{input_logs_dir}' is not a directory.")
         if StorageType.S3 == logs_input_type and StorageEngine.CLP_S != self.package.storage_engine:
             raise ValueError(
@@ -692,7 +694,7 @@ class CLPConfig(BaseModel):
                 f" = '{StorageEngine.CLP_S}'"
             )
         try:
-            validate_path_could_be_dir(self.archive_output.get_directory())
+            validate_path_could_be_dir(self.archive_output.get_directory(), True)
         except ValueError as ex:
             raise ValueError(f"archive_output.storage's directory is invalid: {ex}")
 
@@ -706,25 +708,25 @@ class CLPConfig(BaseModel):
                 f" = '{StorageEngine.CLP_S}'"
             )
         try:
-            validate_path_could_be_dir(self.stream_output.get_directory())
+            validate_path_could_be_dir(self.stream_output.get_directory(), True)
         except ValueError as ex:
             raise ValueError(f"stream_output.storage's directory is invalid: {ex}")
 
     def validate_data_dir(self):
         try:
-            validate_path_could_be_dir(self.data_directory)
+            validate_path_could_be_dir(self.data_directory, True)
         except ValueError as ex:
             raise ValueError(f"data_directory is invalid: {ex}")
 
     def validate_logs_dir(self):
         try:
-            validate_path_could_be_dir(self.logs_directory)
+            validate_path_could_be_dir(self.logs_directory, True)
         except ValueError as ex:
             raise ValueError(f"logs_directory is invalid: {ex}")
 
     def validate_tmp_dir(self):
         try:
-            validate_path_could_be_dir(self.tmp_directory)
+            validate_path_could_be_dir(self.tmp_directory, True)
         except ValueError as ex:
             raise ValueError(f"tmp_directory is invalid: {ex}")
 
@@ -749,7 +751,8 @@ class CLPConfig(BaseModel):
                 raise ValueError(
                     "aws_config_directory must be set when using profile authentication"
                 )
-            if not self.aws_config_directory.exists():
+            if not resolve_host_path(self.aws_config_directory).exists():
+                print(resolve_host_path(self.aws_config_directory))
                 raise ValueError(
                     f"aws_config_directory does not exist: '{self.aws_config_directory}'"
                 )

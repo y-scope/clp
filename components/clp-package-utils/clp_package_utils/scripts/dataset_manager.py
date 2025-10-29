@@ -14,6 +14,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
+from clp_py_utils.core import resolve_host_path
 from clp_py_utils.s3_utils import generate_container_auth_options
 
 from clp_package_utils.general import (
@@ -184,7 +185,8 @@ def main(argv: List[str]) -> int:
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    generated_config_path_on_host.unlink()
+    resolved_generated_config_path_on_host = resolve_host_path(generated_config_path_on_host)
+    resolved_generated_config_path_on_host.unlink()
 
     return ret_code
 

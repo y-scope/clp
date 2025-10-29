@@ -30,6 +30,7 @@ from clp_py_utils.clp_config import (
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
 )
+from clp_py_utils.core import resolve_host_path
 from clp_py_utils.clp_metadata_db_utils import (
     MYSQL_TABLE_NAME_MAX_LEN,
     TABLE_SUFFIX_MAX_LEN,
@@ -355,7 +356,8 @@ def dump_container_config(
     """
     config_file_path_on_host = clp_config.logs_directory / config_filename
     config_file_path_on_container = container_clp_config.logs_directory / config_filename
-    with open(config_file_path_on_host, "w") as f:
+    resolved_config_file_path_on_host = resolve_host_path(config_file_path_on_host)
+    with open(resolved_config_file_path_on_host, "w") as f:
         yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
 
     return config_file_path_on_container, config_file_path_on_host
@@ -427,8 +429,9 @@ def validate_config_key_existence(config, key):
 def load_config_file(
     config_file_path: pathlib.Path, default_config_file_path: pathlib.Path, clp_home: pathlib.Path
 ):
-    if config_file_path.exists():
-        raw_clp_config = read_yaml_config_file(config_file_path)
+    resolved_config_file_path = resolve_host_path(config_file_path)
+    if resolved_config_file_path.exists():
+        raw_clp_config = read_yaml_config_file(resolved_config_file_path)
         if raw_clp_config is None:
             clp_config = CLPConfig()
         else:
@@ -464,16 +467,17 @@ def validate_credentials_file_path(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
 ):
     credentials_file_path = clp_config.credentials_file_path
-    if not credentials_file_path.exists():
+    resolved_credentials_file_path = resolve_host_path(credentials_file_path)
+    if not resolved_credentials_file_path.exists():
         if (
             make_config_path_absolute(clp_home, CLP_DEFAULT_CREDENTIALS_FILE_PATH)
             == credentials_file_path
             and generate_default_file
         ):
-            generate_credentials_file(credentials_file_path)
+            generate_credentials_file(resolved_credentials_file_path)
         else:
             raise ValueError(f"Credentials file path '{credentials_file_path}' does not exist.")
-    elif not credentials_file_path.is_file():
+    elif not resolved_credentials_file_path.is_file():
         raise ValueError(f"Credentials file path '{credentials_file_path}' is not a file.")
 
 
@@ -504,7 +508,8 @@ def validate_db_config(
     data_dir: pathlib.Path,
     logs_dir: pathlib.Path,
 ):
-    if not component_config.exists():
+    resolved_component_config = resolve_host_path(component_config)
+    if not resolved_component_config.exists():
         raise ValueError(f"{DB_COMPONENT_NAME} configuration file missing: '{component_config}'.")
     _validate_data_directory(data_dir, DB_COMPONENT_NAME)
     _validate_log_directory(logs_dir, DB_COMPONENT_NAME)
@@ -524,7 +529,8 @@ def validate_redis_config(
     data_dir: pathlib.Path,
     logs_dir: pathlib.Path,
 ):
-    if not component_config.exists():
+    resolved_component_config = resolve_host_path(component_config)
+    if not resolved_component_config.exists():
         raise ValueError(
             f"{REDIS_COMPONENT_NAME} configuration file missing: '{component_config}'."
         )
@@ -551,7 +557,8 @@ def validate_results_cache_config(
     data_dir: pathlib.Path,
     logs_dir: pathlib.Path,
 ):
-    if not component_config.exists():
+    resolved_component_config = resolve_host_path(component_config)
+    if not resolved_component_config.exists():
         raise ValueError(
             f"{RESULTS_CACHE_COMPONENT_NAME} configuration file missing: '{component_config}'."
         )
@@ -583,7 +590,8 @@ def validate_webui_config(
     server_settings_json_path: pathlib.Path,
 ):
     for path in [client_settings_json_path, server_settings_json_path]:
-        if not path.exists():
+        resolved_path = resolve_host_path(path)
+        if not resolved_path.exists():
             raise ValueError(f"{WEBUI_COMPONENT_NAME} {path} is not a valid path to settings.json")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
@@ -765,7 +773,7 @@ def _is_docker_compose_project_running(project_name: str) -> bool:
 
 def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
     try:
-        validate_path_could_be_dir(data_dir)
+        validate_path_could_be_dir(data_dir, True)
     except ValueError as ex:
         raise ValueError(f"{component_name} data directory is invalid: {ex}")
 
@@ -779,6 +787,6 @@ def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
     :raise ValueError: If the path is invalid or can't be a directory.
     """
     try:
-        validate_path_could_be_dir(logs_dir)
+        validate_path_could_be_dir(logs_dir, True)
     except ValueError as ex:
         raise ValueError(f"{component_name} logs directory is invalid: {ex}")

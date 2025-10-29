@@ -1,7 +1,10 @@
+import os
 import pathlib
 
 import yaml
 from yaml.parser import ParserError
+
+CONTAINER_HOST_ROOT_DIR = pathlib.Path("/") / "mnt" / "host"
 
 
 class FileMetadata:
@@ -62,8 +65,28 @@ def read_yaml_config_file(yaml_config_file_path: pathlib.Path):
     return config
 
 
-def validate_path_could_be_dir(path: pathlib.Path):
-    part = path
+def resolve_host_path(path: pathlib.Path) -> pathlib.Path:
+    """
+    Translates a host path to its container-mount equivalent.
+
+    :param path: The host path.
+    :return: The translated container path.
+    """
+    path = path.absolute()
+    resolved = CONTAINER_HOST_ROOT_DIR / path.relative_to("/")
+
+    try:
+        if resolved.is_symlink():
+            target_path = (resolved.parent / resolved.readlink()).resolve()
+            resolved = CONTAINER_HOST_ROOT_DIR / target_path.relative_to("/")
+    except OSError:
+        pass
+
+    return resolved
+
+
+def validate_path_could_be_dir(path: pathlib.Path, use_host_mount: bool):
+    part = resolve_host_path(path) if use_host_mount else path
     while True:
         if part.exists():
             if not part.is_dir():

@@ -8,10 +8,12 @@ services:
     tty: true
     user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:999}"
     environment:
+      HOME: "${HOME}"
       CLP_HOME: "${CLP_HOME}"
       CLP_PWD_HOST: "${CLP_PWD_HOST:-${PWD}}"
     volumes:
       - "${CLP_DOCKER_PLUGIN_DIR}:/usr/local/lib/docker/cli-plugins:ro"
       - "${CLP_DOCKER_SOCK_PATH}:/var/run/docker.sock"
       - "${CLP_HOME}:${CLP_HOME}"
+      - "/:/mnt/host"
       - "/usr/bin/docker:/usr/bin/docker:ro"

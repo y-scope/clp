@@ -35,6 +35,7 @@ from clp_package_utils.general import (
     validate_dataset_name,
     validate_path_could_be_dir,
 )
+from clp_py_utils.core import resolve_host_path
 
 logger = logging.getLogger(__file__)
 
@@ -80,7 +81,7 @@ def handle_extract_file_cmd(
     # Validate extraction directory
     extraction_dir = pathlib.Path(parsed_args.extraction_dir).resolve()
     try:
-        validate_path_could_be_dir(extraction_dir)
+        validate_path_could_be_dir(extraction_dir, True)
     except ValueError as ex:
         logger.error(f"extraction-dir is invalid: {ex}")
         return -1
@@ -108,7 +109,8 @@ def handle_extract_file_cmd(
     )
 
     # Set up mounts
-    extraction_dir.mkdir(exist_ok=True)
+    resolved_extraction_dir = resolve_host_path(extraction_dir)
+    resolved_extraction_dir.mkdir(exist_ok=True)
     container_extraction_dir = pathlib.Path("/") / "mnt" / "extraction-dir"
     necessary_mounts = [
         mounts.data_dir,
@@ -161,7 +163,10 @@ def handle_extract_file_cmd(
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    generated_config_path_on_host.unlink()
+    resolved_generated_config_path_on_host = resolve_host_path(
+        generated_config_path_on_host
+    )
+    resolved_generated_config_path_on_host.unlink()
 
     return ret_code
 
@@ -266,7 +271,10 @@ def handle_extract_stream_cmd(
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    generated_config_path_on_host.unlink()
+    resolved_generated_config_path_on_host = resolve_host_path(
+        generated_config_path_on_host
+    )
+    resolved_generated_config_path_on_host.unlink()
 
     return ret_code
 
