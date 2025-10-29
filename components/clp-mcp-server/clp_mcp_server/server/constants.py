@@ -18,6 +18,12 @@ SERVER_NAME = "clp-mcp-server"
 # 1. Provide concrete examples to explain the rule.
 # 2. Place critical rules at the beginning and mark them as "CRITICAL".
 # 3. Use action-first sentence structure (e.g., "Use X format" instead of "To do Y, use X format").
+# 4. Tell AI about any functional behaviour (like showing logs using LogViewer) very early
+#    in the prompt as the "job" of the agent.
+# 5. Use terse language and bullet points; avoid complex (or complete) sentence structures.
+#    AI can fill in the gaps
+# 6. Let some instructions and details be implicit to avoid overwhelming AI.
+# 5. Use the same example across different rules to maintain consistency.
 SYSTEM_PROMPT = """You are an AI assistant for querying the CLP log database
  using CLP-KQL (CKQL).\n
 
