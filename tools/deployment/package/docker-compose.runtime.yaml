@@ -8,20 +8,20 @@ services:
     tty: true
     user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:999}"
     environment:
-      HOME: "${HOME}"
-      CLP_HOME: "${CLP_HOME}"
+      HOME: "${HOME:?Please set a value.}"
+      CLP_HOME: "${CLP_HOME:?Please set a value.}"
       CLP_PWD_HOST: "${CLP_PWD_HOST:-${PWD}}"
     volumes:
       - type: "bind"
-        source: "${CLP_DOCKER_PLUGIN_DIR}"
+        source: "${CLP_DOCKER_PLUGIN_DIR:-/usr/local/lib/docker/cli-plugins}"
         target: "/usr/local/lib/docker/cli-plugins"
         read_only: true
       - type: "bind"
-        source: "${CLP_DOCKER_SOCK_PATH}"
+        source: "${CLP_DOCKER_SOCK_PATH:-/var/run/docker.sock}"
         target: "/var/run/docker.sock"
       - type: "bind"
-        source: "${CLP_HOME}"
-        target: "${CLP_HOME}"
+        source: "${CLP_HOME:?Please set a value.}"
+        target: "${CLP_HOME:?Please set a value.}"
       - type: "bind"
         source: "/"
         target: "/mnt/host"
