@@ -752,7 +752,6 @@ class CLPConfig(BaseModel):
                     "aws_config_directory must be set when using profile authentication"
                 )
             if not resolve_host_path(self.aws_config_directory).exists():
-                print(resolve_host_path(self.aws_config_directory))
                 raise ValueError(
                     f"aws_config_directory does not exist: '{self.aws_config_directory}'"
                 )
