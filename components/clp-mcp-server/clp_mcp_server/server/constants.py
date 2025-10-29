@@ -23,7 +23,7 @@ SERVER_NAME = "clp-mcp-server"
 # 5. Use terse language and bullet points; avoid complex sentence structures.
 #    AI can fill in the gaps
 # 6. Let some instructions and details be implicit to avoid overwhelming AI.
-# 5. Use the same example across different rules to maintain consistency.
+# 7. Use the same example across different rules to maintain consistency.
 SYSTEM_PROMPT = """You are an AI assistant for querying the CLP log database
  using CLP-KQL (CKQL).\n
 
