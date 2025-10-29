@@ -4,6 +4,7 @@ import pathlib
 import sys
 
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+from clp_py_utils.core import resolve_host_path
 
 from clp_package_utils.controller import DockerComposeController, get_or_create_instance_id
 from clp_package_utils.general import (
@@ -16,7 +17,6 @@ from clp_package_utils.general import (
     validate_output_storage_config,
     validate_retention_config,
 )
-from clp_py_utils.core import resolve_host_path
 
 logger = logging.getLogger(__file__)
 
@@ -76,10 +76,12 @@ def main(argv):
         resolve_host_path(clp_config.data_directory).mkdir(parents=True, exist_ok=True)
         resolve_host_path(clp_config.logs_directory).mkdir(parents=True, exist_ok=True)
         resolve_host_path(clp_config.tmp_directory).mkdir(parents=True, exist_ok=True)
-        resolve_host_path(clp_config.archive_output.get_directory()).mkdir(parents=True,
-                                                                           exist_ok=True)
-        resolve_host_path(clp_config.stream_output.get_directory()).mkdir(parents=True,
-                                                                          exist_ok=True)
+        resolve_host_path(clp_config.archive_output.get_directory()).mkdir(
+            parents=True, exist_ok=True
+        )
+        resolve_host_path(clp_config.stream_output.get_directory()).mkdir(
+            parents=True, exist_ok=True
+        )
     except:
         logger.exception("Failed to create necessary directories.")
         return -1

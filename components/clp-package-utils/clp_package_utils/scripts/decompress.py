@@ -16,6 +16,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
+from clp_py_utils.core import resolve_host_path
 
 from clp_package_utils.general import (
     DockerMount,
@@ -35,7 +36,6 @@ from clp_package_utils.general import (
     validate_dataset_name,
     validate_path_could_be_dir,
 )
-from clp_py_utils.core import resolve_host_path
 
 logger = logging.getLogger(__file__)
 
@@ -163,9 +163,7 @@ def handle_extract_file_cmd(
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    resolved_generated_config_path_on_host = resolve_host_path(
-        generated_config_path_on_host
-    )
+    resolved_generated_config_path_on_host = resolve_host_path(generated_config_path_on_host)
     resolved_generated_config_path_on_host.unlink()
 
     return ret_code
@@ -271,9 +269,7 @@ def handle_extract_stream_cmd(
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    resolved_generated_config_path_on_host = resolve_host_path(
-        generated_config_path_on_host
-    )
+    resolved_generated_config_path_on_host = resolve_host_path(generated_config_path_on_host)
     resolved_generated_config_path_on_host.unlink()
 
     return ret_code
@@ -308,7 +304,11 @@ def main(argv):
     )
     default_extraction_dir = pathlib.Path(os.environ.get("CLP_PWD_HOST", "."))
     file_extraction_parser.add_argument(
-        "-d", "--extraction-dir", metavar="DIR", default=default_extraction_dir, help="Extract files into DIR."
+        "-d",
+        "--extraction-dir",
+        metavar="DIR",
+        default=default_extraction_dir,
+        help="Extract files into DIR.",
     )
 
     # IR extraction command parser

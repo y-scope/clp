@@ -14,6 +14,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
+from clp_py_utils.core import resolve_host_path
 
 from clp_package_utils.general import (
     CLPConfig,
@@ -28,7 +29,6 @@ from clp_package_utils.general import (
     validate_and_load_db_credentials_file,
     validate_dataset_name,
 )
-from clp_py_utils.core import resolve_host_path
 
 # Command/Argument Constants
 FIND_COMMAND: Final[str] = "find"

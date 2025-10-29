@@ -37,6 +37,7 @@ from clp_py_utils.clp_metadata_db_utils import (
     get_datasets_table_name,
     get_files_table_name,
 )
+from clp_py_utils.core import resolve_host_path
 
 from clp_package_utils.general import (
     check_docker_dependencies,
@@ -54,7 +55,6 @@ from clp_package_utils.general import (
     validate_results_cache_config,
     validate_webui_config,
 )
-from clp_py_utils.core import resolve_host_path
 
 LOG_FILE_ACCESS_MODE = stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH
 

@@ -15,6 +15,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
+from clp_py_utils.core import resolve_host_path
 
 from clp_package_utils.general import (
     CONTAINER_INPUT_LOGS_ROOT_DIR,
@@ -29,7 +30,6 @@ from clp_package_utils.general import (
     validate_and_load_db_credentials_file,
     validate_dataset_name,
 )
-from clp_py_utils.core import resolve_host_path
 
 logger = logging.getLogger(__name__)
 
@@ -57,9 +57,7 @@ def _generate_logs_list(
             return len(parsed_args.paths) != 0
 
         no_path_found = True
-        resolved_host_logs_list_path = resolve_host_path(
-            pathlib.Path(host_logs_list_path)
-        )
+        resolved_host_logs_list_path = resolve_host_path(pathlib.Path(host_logs_list_path))
         with open(resolved_host_logs_list_path, "r") as host_logs_list_file:
             for line in host_logs_list_file:
                 stripped_path_str = line.rstrip()
@@ -242,9 +240,7 @@ def main(argv):
         logs_list_filename = f"{uuid.uuid4()}.txt"
         logs_list_path_on_host = clp_config.logs_directory / logs_list_filename
         resolved_logs_list_path_on_host = resolve_host_path(logs_list_path_on_host)
-        logs_list_path_on_container = (
-            container_clp_config.logs_directory / logs_list_filename
-        )
+        logs_list_path_on_container = container_clp_config.logs_directory / logs_list_filename
         if not resolved_logs_list_path_on_host.exists():
             break
 

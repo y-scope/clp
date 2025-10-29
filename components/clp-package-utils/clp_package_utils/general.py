@@ -30,7 +30,6 @@ from clp_py_utils.clp_config import (
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
 )
-from clp_py_utils.core import resolve_host_path
 from clp_py_utils.clp_metadata_db_utils import (
     MYSQL_TABLE_NAME_MAX_LEN,
     TABLE_SUFFIX_MAX_LEN,
@@ -39,6 +38,7 @@ from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
     read_yaml_config_file,
+    resolve_host_path,
     validate_path_could_be_dir,
 )
 from strenum import KebabCaseStrEnum
