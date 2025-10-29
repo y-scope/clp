@@ -44,13 +44,17 @@ if [[ -z "${CLP_DOCKER_PLUGIN_DIR:-}" ]]; then
         fi
     done
     if [[ -z "${CLP_DOCKER_PLUGIN_DIR:-}" ]]; then
-        echo "Warning: Docker plugin directory not found; Docker Compose may not work inside container." >&2
+        echo "Warning: Docker plugin directory not found;" \
+             "Docker Compose may not work inside container." >&2
     fi
 fi
 
 if [[ -z "${CLP_DOCKER_SOCK_PATH:-}" ]]; then
-  socket="$(docker context inspect --format '{{.Endpoints.docker.Host}}' 2>/dev/null | sed -E 's|^unix://||')"
-  if [[ -S "$socket" ]]; then
-      export CLP_DOCKER_SOCK_PATH="$socket"
-  fi
+    socket="$(docker context inspect \
+        --format '{{.Endpoints.docker.Host}}' 2>/dev/null \
+        | sed -E 's|^unix://||')"
+
+    if [[ -S "$socket" ]]; then
+        export CLP_DOCKER_SOCK_PATH="$socket"
+    fi
 fi
