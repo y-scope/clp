@@ -39,8 +39,8 @@ ON totals.job_id = qj.id`;
 };
 
 interface QuerySpeedResp {
-    bytes: number;
-    duration: number;
+    bytes: number | null;
+    duration: number | null;
 }
 
 /**
