@@ -5,16 +5,20 @@ should be able to use CLP as described in the [clp-json quick-start guide](../qu
 
 ## Compressing logs from S3
 
-You can use `sbin/compress-from-s3.sh` to compress logs from S3. It has two modes of operation:
+To compress logs from S3, use the `sbin/compress-from-s3.sh` script. The script runs in one of two
+modes of operation; select which one you'd like to use by using the corresponding argument in the
+command:
 
-* `s3-object` : Compress S3 objects specified by their full S3 URLs.
-* `s3-key-prefix` : Compress all S3 objects under a given S3 key prefix.
+* [**`s3-object` mode**](#s3-object-compression-mode): Compress S3 objects specified by their full
+  S3 URLs.
+* [**`s3-key-prefix` mode**](#s3-key-prefix-compression-mode): Compress all S3 objects under a given
+  S3 key prefix.
 
 ### `s3-object` compression mode
 
 `s3-object` mode allows you to specify individual S3 objects to compress by their full URLs. To
-use this mode, call the `sbin/compress-from-s3.sh` script as follows, replacing the fields in angle
-brackets (`<>`) with the appropriate values:
+use this mode, call the `sbin/compress-from-s3.sh` script as follows, and replace the fields in
+angle brackets (`<>`) with the appropriate values:
 
 ```bash
 sbin/compress-from-s3.sh \
@@ -24,7 +28,8 @@ sbin/compress-from-s3.sh \
   <object-url> [<object-url> ...]
 ```
 
-* `<object-url>` is a URL identifying the S3 object to compress. It can have one of two formats:
+* `<object-url>` is a URL identifying the S3 object to compress. It can be written in either one of
+  two formats:
   * `https://<bucket-name>.s3.<region-code>.amazonaws.com/<object-key>`
   * `https://s3.<region-code>.amazonaws.com/<bucket-name>/<object-key>`
 * The fields in `<object-url>` are as follows:
@@ -34,8 +39,8 @@ sbin/compress-from-s3.sh \
   * `<object-key>` is the [object key][aws-s3-object-key] of the log file object you wish to
     compress. There must be no duplicate object keys across all `<object-url>` arguments.
 
-Optionally, you can specify the input object URLs through a text file by using the `--inputs-from`
-option as follows:
+Instead of typing the input object URLs explicitly in the command, you may specify them in a text
+file and then pass the file into the command using the `--inputs-from` flag, like so:
 
 ```bash
 sbin/compress-from-s3.sh \
@@ -52,14 +57,14 @@ sbin/compress-from-s3.sh \
 :::{note}
 `s3-object` mode requires the input object keys to share a non-empty common prefix. If the input
 object keys do not share a common prefix, they will be rejected and no compression job will be
-created. This limitation will be relaxed in a future release.
+created. This limitation will be addressed in a future release.
 :::
 
 ### `s3-key-prefix` compression mode
 
-`s3-key-prefix` mode allows you to compress all objects under a given S3 key-prefix. To use this
-mode, call the `sbin/compress-from-s3.sh` script as follows, replacing the fields in angle brackets
-(`<>`) with the appropriate values:
+`s3-key-prefix` mode allows you to compress all objects under a given S3 key prefix. To use this
+mode, call the `sbin/compress-from-s3.sh` script as follows, and replace the fields in angle
+brackets (`<>`) with the appropriate values:
 
 ```bash
 sbin/compress-from-s3.sh \
@@ -69,20 +74,20 @@ sbin/compress-from-s3.sh \
   <key-prefix-url>
 ```
 
-* `<key-prefix-url>` is a URL identifying the S3 key-prefix to compress. It can have one of two
-  formats:
+* `<key-prefix-url>` is a URL identifying the S3 key prefix to compress. It can be written in either
+  one of two formats:
   * `https://<bucket-name>.s3.<region-code>.amazonaws.com/<key-prefix>`
   * `https://s3.<region-code>.amazonaws.com/<bucket-name>/<key-prefix>`
-* The fields in `<key-prefix-url>` are as follows:
-  * `<bucket-name>` is the name of the S3 bucket containing your logs.
-  * `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your
-    logs.
-  * `<key-prefix>` is the prefix of all logs you wish to compress and must begin with the
-    `<all-logs-prefix>` value from the [compression IAM policy][compression-iam-policy].
+  * The fields in `<key-prefix-url>` are as follows:
+    * `<bucket-name>` is the name of the S3 bucket containing your logs.
+    * `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your
+      logs.
+    * `<key-prefix>` is the prefix of all logs you wish to compress and must begin with the
+      `<all-logs-prefix>` value from the [compression IAM policy][compression-iam-policy].
 
 :::{note}
 `s3-key-prefix` mode only accepts a single `<key-prefix-url>` argument. This limitation will be
-relaxed in a future release.
+addressed in a future release.
 :::
 
 [add-iam-policy]: https://docs.aws.amazon.com/IAM/latest/UserGuide/access_policies_manage-attach-detach.html#embed-inline-policy-console
