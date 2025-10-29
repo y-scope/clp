@@ -29,7 +29,6 @@ const useUpdateStateWithMetadata = () => {
     const {
         updateNumSearchResultsMetadata,
         updateSearchUiState,
-        searchUiState,
     } = useSearchStore();
     const {updateErrorMsg, updateErrorName, sqlInterface} = usePrestoSearchState();
     const resultsMetadata = useResultsMetadata();
@@ -38,6 +37,8 @@ const useUpdateStateWithMetadata = () => {
         if (null === resultsMetadata) {
             return;
         }
+
+        const {searchUiState} = useSearchStore.getState();
 
         if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
             return;
@@ -89,7 +90,6 @@ const useUpdateStateWithMetadata = () => {
         updateNumSearchResultsMetadata,
         updateErrorMsg,
         updateErrorName,
-        searchUiState,
         updateSearchUiState,
         sqlInterface,
     ]);
