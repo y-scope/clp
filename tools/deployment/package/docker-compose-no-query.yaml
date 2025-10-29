@@ -45,23 +45,3 @@ services:
     extends:
       file: "./docker-compose.base.yaml"
       service: "garbage-collector"
-
-  query-scheduler:
-    extends:
-      file: "./docker-compose.base.yaml"
-      service: "query-scheduler"
-
-  query-worker:
-    extends:
-      file: "./docker-compose.base.yaml"
-      service: "query-worker"
-
-  reducer:
-    extends:
-      file: "./docker-compose.base.yaml"
-      service: "reducer"
-
-  mcp-server:
-    extends:
-      file: "./docker-compose.base.yaml"
-      service: "mcp-server"
