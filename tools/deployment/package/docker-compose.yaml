@@ -1,4 +1,4 @@
-name: "clp-package-presto"
+name: "clp-package"
 
 volumes:
   # Dummy volume to use when a bind mount is not desired.

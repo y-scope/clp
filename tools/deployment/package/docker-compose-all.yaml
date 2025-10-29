@@ -1,4 +1,4 @@
-name: "clp-package-base"
+name: "clp-package-all"
 
 # Common service defaults.
 x-service-defaults: &service_defaults
