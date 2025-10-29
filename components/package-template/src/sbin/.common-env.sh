@@ -3,10 +3,10 @@
 script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
 package_root=$(readlink -f "$script_dir/..")
 
-if [[ -n "${CLP_HOME:-}" ]]; then
-    export CLP_HOME="$CLP_HOME"
-else
+if [[ -z "${CLP_HOME:-}" ]]; then
     export CLP_HOME="$package_root"
+else
+    export CLP_HOME="$CLP_HOME"
 fi
 
 image_id_file="$CLP_HOME/clp-package-image.id"
