@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use anyhow::Result;
 use brotli::CompressorWriter;
 use serde::Serialize;
@@ -23,12 +25,12 @@ impl ClpIoConfig {
     /// Returns an error if:
     ///
     /// * Forwards [`rmp_serde::to_vec_named`]'s errors on failure.
-    /// * Forwards [`std::io::copy`]'s errors on failure.
+    /// * Forwards [`std::io::Write::write_all`]'s errors on failure.
     pub fn to_brotli_compressed_msgpack(&self) -> Result<Vec<u8>> {
         let msgpack_data = rmp_serde::to_vec_named(self)?;
-        let mut encoder = CompressorWriter::new(Vec::new(), 4096, 5, 22);
-        std::io::copy(&mut &msgpack_data[..], &mut encoder)?;
-        Ok(encoder.into_inner())
+        let mut brotli_compressor = CompressorWriter::new(Vec::new(), 4096, 5, 22);
+        brotli_compressor.write_all(&msgpack_data)?;
+        Ok(brotli_compressor.into_inner())
     }
 }
 
@@ -46,13 +48,13 @@ mod tests {
     fn test_serialization() {
         let s3_config = S3Config {
             bucket: "yscope".into(),
-            region: "us-east-2".into(),
-            prefix: "sample-logs/cockroachdb.clp.zst".into(),
+            region_code: "us-east-2".into(),
+            key_prefix: "sample-logs/cockroachdb.clp.zst".into(),
             aws_authentication: AwsAuthentication::Credentials {
-                credentials: Some(AwsCredentials {
+                credentials: AwsCredentials {
                     access_key_id: "ACCESS_KEY_ID".into(),
                     secret_access_key: "SECRET_ACCESS_KEY".into(),
-                }),
+                },
             },
         };
         let config = ClpIoConfig {
@@ -62,6 +64,7 @@ mod tests {
                     keys: None,
                     dataset: Some("test-dataset".into()),
                     timestamp_key: Some("timestamp".into()),
+                    unstructured: false,
                 },
             },
             output: OutputConfig {
@@ -77,12 +80,13 @@ mod tests {
         let brotli_compressed_msgpack_result = config.to_brotli_compressed_msgpack();
         assert!(brotli_compressed_msgpack_result.is_ok());
         let brotli_compressed_msgpack = brotli_compressed_msgpack_result.unwrap();
-        let expected = "1b890100e4f8fbb90019c91aa8c2a2e87ef6bd25ae8523c236a04dde621d4ef9ff68a30d2c\
-                ff30d32cef02e9726ef277566e856e7449b9bf04e6e9c2f2f238c3e88a69b22a4f565d0acc2ac7d836d\
-                17fb3ee8fac28335f51167ecd1431d80e1f1d9366258e09b09a15e821b9d16d04ba495a2332abaeee9f\
-                92f7acd9e8c22032ade1bcf48f2cfd0495ef82cc1d638944aa548242aa01b9e495ae13c06eaea554a29\
-                82a03542d8a2cffd6be9c35f2e4407824fe057fec0614eeb7c3ac444ce34599d5dffd97110b6cbe01ca\
-                3dfeef73b95c9fcd83f7a3cb3c22600f7dbf3458430ef12c31ad59605e59531774caa601ca282f";
+        let expected = "1ba00100e4ffdf9f43284b650e496850ba5f1eeefb53844a05d074faa66eb23ebef2dc45638\
+                275e9c24cb3bccba29c9bfc9d95db42175d52eecc81793cb3bc3c4ed0bf604c56e5c9a24581d9e65080\
+                1fd7263a8fb774fa362adf02eecc5b9d99532b8be8be173f6b659a9538c6c56a15571bc9856e20d0267\
+                b1591599975a75cdeb2aea30b83c8b486f3a2b3a74b419d6f99db0742a1482603a9480912e1336f2780\
+                dd9c3391503a9205a89a755bfe2c0d3a6be4c98ef0489c0b7e7f2d50b85f8f6e671a54d5dc6fa16d1ac\
+                cbaaffc5c3f1fb140f21ba0dce6ff0e8bc5f2da3c58426a9947046ca3cf9a06c7c8219e25a6ad0c4c67\
+                b6aceb8c88c782293b";
         assert_eq!(expected, hex::encode(brotli_compressed_msgpack));
 
         let json_serialized_result = serde_json::to_string_pretty(&config);
@@ -92,8 +96,8 @@ mod tests {
   "input": {
     "type": "s3",
     "bucket": "yscope",
-    "region": "us-east-2",
-    "prefix": "sample-logs/cockroachdb.clp.zst",
+    "region_code": "us-east-2",
+    "key_prefix": "sample-logs/cockroachdb.clp.zst",
     "aws_authentication": {
       "type": "credentials",
       "credentials": {
@@ -103,7 +107,8 @@ mod tests {
     },
     "keys": null,
     "dataset": "test-dataset",
-    "timestamp_key": "timestamp"
+    "timestamp_key": "timestamp",
+    "unstructured": false
   },
   "output": {
     "tags": null,

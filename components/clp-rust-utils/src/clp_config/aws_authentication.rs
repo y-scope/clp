@@ -5,7 +5,7 @@ use serde::Serialize;
 #[serde(tag = "type")]
 pub enum AwsAuthentication {
     #[serde(rename = "credentials")]
-    Credentials { credentials: Option<AwsCredentials> },
+    Credentials { credentials: AwsCredentials },
 }
 
 /// Represents AWS credentials.

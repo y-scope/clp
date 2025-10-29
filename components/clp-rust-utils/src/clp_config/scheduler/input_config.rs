@@ -22,4 +22,5 @@ pub struct S3InputConfig {
     pub keys: Option<Vec<String>>,
     pub dataset: Option<String>,
     pub timestamp_key: Option<String>,
+    pub unstructured: bool,
 }

@@ -6,7 +6,7 @@ use crate::clp_config::AwsAuthentication;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct S3Config {
     pub bucket: String,
-    pub region: String,
-    pub prefix: String,
+    pub region_code: String,
+    pub key_prefix: String,
     pub aws_authentication: AwsAuthentication,
 }
