@@ -719,10 +719,8 @@ class DockerComposeController(BaseController):
             env_vars["CLP_LOGS_INPUT_DIR_HOST"] = str(self._clp_config.logs_input.directory)
 
         # Output config
-        archive_output_dir = self._clp_config.archive_output.get_directory()
-        stream_output_dir = self._clp_config.stream_output.get_directory()
-        archive_output_dir_str = str(archive_output_dir)
-        stream_output_dir_str = str(stream_output_dir)
+        archive_output_dir_str = str(self._clp_config.archive_output.get_directory())
+        stream_output_dir_str = str(self._clp_config.stream_output.get_directory())
         if self._clp_config.archive_output.storage.type == StorageType.FS:
             env_vars["CLP_ARCHIVE_OUTPUT_DIR_HOST"] = archive_output_dir_str
         if self._clp_config.archive_output.storage.type == StorageType.S3:
