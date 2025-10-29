@@ -1,47 +1,60 @@
 name: "clp-package-presto"
 
+volumes:
+  # Dummy volume to use when a bind mount is not desired.
+  empty:
+    driver_opts:
+      device: "tmpfs"
+      type: "tmpfs"
+      size: 0
+
 services:
   database:
     extends:
-      file: "./docker-compose.base.yaml"
+      file: "docker-compose-all.yaml"
       service: "database"
+
+  db-table-creator:
+    extends:
+      file: "docker-compose-all.yaml"
+      service: "db-table-creator"
 
   queue:
     extends:
-      file: "./docker-compose.base.yaml"
+      file: "docker-compose-all.yaml"
       service: "queue"
 
   redis:
     extends:
-      file: "./docker-compose.base.yaml"
+      file: "docker-compose-all.yaml"
       service: "redis"
 
   results-cache:
     extends:
-      file: "./docker-compose.base.yaml"
+      file: "docker-compose-all.yaml"
       service: "results-cache"
 
   results-cache-indices-creator:
     extends:
-      file: "./docker-compose.base.yaml"
+      file: "docker-compose-all.yaml"
       service: "results-cache-indices-creator"
 
-  compose-scheduler:
+  compression-scheduler:
     extends:
-      file: "./docker-compose.base.yaml"
-      service: "compose-scheduler"
+      file: "docker-compose-all.yaml"
+      service: "compression-scheduler"
 
-  compose-worker:
+  compression-worker:
     extends:
-      file: "./docker-compose.base.yaml"
-      service: "compose-worker"
+      file: "docker-compose-all.yaml"
+      service: "compression-worker"
 
   webui:
     extends:
-      file: "./docker-compose.base.yaml"
+      file: "docker-compose-all.yaml"
       service: "webui"
 
   garbage-collector:
     extends:
-      file: "./docker-compose.base.yaml"
+      file: "docker-compose-all.yaml"
       service: "garbage-collector"
