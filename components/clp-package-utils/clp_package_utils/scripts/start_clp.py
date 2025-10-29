@@ -54,7 +54,11 @@ def main(argv):
     try:
         # Validate and load config file.
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config = load_config_file(
+            resolve_host_path(config_file_path),
+            resolve_host_path(default_config_file_path),
+            clp_home,
+        )
 
         validate_and_load_db_credentials_file(clp_config, clp_home, True)
         validate_and_load_queue_credentials_file(clp_config, clp_home, True)

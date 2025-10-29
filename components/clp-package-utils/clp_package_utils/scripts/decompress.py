@@ -53,7 +53,11 @@ def validate_and_load_config(
     :return: The config object on success, None otherwise.
     """
     try:
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config = load_config_file(
+            resolve_host_path(config_file_path),
+            resolve_host_path(default_config_file_path),
+            clp_home,
+        )
         clp_config.validate_logs_dir()
 
         # Validate and load necessary credentials

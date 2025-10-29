@@ -429,9 +429,8 @@ def validate_config_key_existence(config, key):
 def load_config_file(
     config_file_path: pathlib.Path, default_config_file_path: pathlib.Path, clp_home: pathlib.Path
 ):
-    resolved_config_file_path = resolve_host_path(config_file_path)
-    if resolved_config_file_path.exists():
-        raw_clp_config = read_yaml_config_file(resolved_config_file_path)
+    if config_file_path.exists():
+        raw_clp_config = read_yaml_config_file(config_file_path)
         if raw_clp_config is None:
             clp_config = CLPConfig()
         else:
