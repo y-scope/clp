@@ -147,7 +147,7 @@ def _create_aws_temporary_credentials_table(
             `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             PRIMARY KEY (`id`),
             KEY `long_term_key_expires` (`long_term_key_id`, `expires_at`),
-            KEY `source_expires` (`source`(768), `expires_at`),
+            KEY `source_expires` (`source`(512), `expires_at`),
             FOREIGN KEY (`long_term_key_id`) REFERENCES `{aws_credentials_table_name}` (`id`)
                 ON DELETE CASCADE
         ) ROW_FORMAT=DYNAMIC
