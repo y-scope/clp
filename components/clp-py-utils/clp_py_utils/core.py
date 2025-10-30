@@ -64,24 +64,24 @@ def read_yaml_config_file(yaml_config_file_path: pathlib.Path):
     return config
 
 
-def resolve_host_path_in_container(path: pathlib.Path) -> pathlib.Path:
+def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
     """
     Translates a host path to its container-mount equivalent.
 
-    :param path: The host path.
+    :param host_path: The host path.
     :return: The translated path.
     """
-    path = path.absolute()
-    resolved = CONTAINER_DIR_FOR_HOST_ROOT / path.relative_to("/")
+    host_path = host_path.absolute()
+    translated_path = CONTAINER_DIR_FOR_HOST_ROOT / host_path.relative_to("/")
 
     try:
-        if resolved.is_symlink():
-            target_path = (resolved.parent / resolved.readlink()).resolve()
-            resolved = CONTAINER_DIR_FOR_HOST_ROOT / target_path.relative_to("/")
+        if translated_path.is_symlink():
+            target_path = (translated_path.parent / translated_path.readlink()).resolve()
+            translated_path = CONTAINER_DIR_FOR_HOST_ROOT / target_path.relative_to("/")
     except OSError:
         pass
 
-    return resolved
+    return translated_path
 
 
 def validate_path_could_be_dir(path: pathlib.Path):
