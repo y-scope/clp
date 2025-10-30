@@ -538,7 +538,7 @@ jobs:
         shell: "bash"
         run: "chown $(id -u):$(id -g) -R ."
 
-      - name: "Build the package"
+      - name: "Build the package without the package image"
         uses: "./.github/actions/run-on-image"
         env:
           OS_NAME: "ubuntu-jammy"
