@@ -70,6 +70,8 @@ pub struct OutputConfig {
 
 #[cfg(test)]
 mod tests {
+    use serde_json::Value;
+
     use super::*;
     use crate::clp_config::{
         AwsAuthentication,
@@ -153,6 +155,10 @@ mod tests {
     "compression_level": 3
   }
 }"#;
-        assert_eq!(expected_json, json_serialized);
+        let actual: Value = serde_json::from_str(json_serialized.as_str())
+            .expect("The serialization result should be a valid JSON string.");
+        let expected: Value = serde_json::from_str(expected_json)
+            .expect("The expected serialization result should be a valid JSON string.");
+        assert_eq!(expected, actual);
     }
 }
