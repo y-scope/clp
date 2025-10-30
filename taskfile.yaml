@@ -112,6 +112,7 @@ tasks:
       - "{{.G_WEBUI_BUILD_DIR}}/client/settings.json"
       - "{{.G_WEBUI_BUILD_DIR}}/server/dist/settings.json"
       - "{{.TASKFILE}}"
+      - "components/package-template/src/**/*"
       - "tools/deployment/package/**/*"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
