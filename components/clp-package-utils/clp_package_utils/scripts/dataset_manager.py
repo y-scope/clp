@@ -17,6 +17,8 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.s3_utils import generate_container_auth_options
 
 from clp_package_utils.general import (
+    DockerMount,
+    DockerMountType,
     dump_container_config,
     generate_container_config,
     generate_container_name,
@@ -136,7 +138,14 @@ def main(argv: List[str]) -> int:
         mounts.logs_dir,
     ]
     if clp_config.archive_output.storage.type == StorageType.FS:
-        necessary_mounts.append(mounts.archives_output_dir)
+        container_archive_output_config = container_clp_config.archive_output.model_copy(deep=True)
+        container_archive_output_config.storage.transform_for_container()
+        archives_output_dir_mount = DockerMount(
+            DockerMountType.BIND,
+            clp_config.archive_output.get_directory(),
+            container_archive_output_config.get_directory(),
+        )
+        necessary_mounts.append(archives_output_dir_mount)
 
     aws_mount, aws_env_vars = generate_container_auth_options(
         clp_config, ARCHIVE_MANAGER_ACTION_NAME
