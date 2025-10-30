@@ -1,5 +1,3 @@
-name: "clp-package-volumes"
-
 volumes:
   # Dummy volume to use when a bind mount is not desired.
   empty:
