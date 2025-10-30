@@ -5,9 +5,8 @@ should be able to use CLP as described in the [clp-json quick-start guide](../qu
 
 ## Compressing logs from S3
 
-To compress logs from S3, use the `sbin/compress-from-s3.sh` script. The script runs in one of two
-modes of operation; select which one you'd like to use by using the corresponding argument in the
-command:
+To compress logs from S3, use the `sbin/compress-from-s3.sh` script. The script supports two modes
+of operation. Select a mode by using the corresponding argument in the command:
 
 * [**s3-object** mode](#s3-object-compression-mode): Compress S3 objects specified by their full
   S3 URLs.
@@ -28,8 +27,8 @@ sbin/compress-from-s3.sh \
   <object-url> [<object-url> ...]
 ```
 
-* `<object-url>` is a URL identifying the S3 object to compress. It can be written in either one of
-  two formats:
+* `<object-url>` is a URL identifying the S3 object to compress. It can be written in either of two
+  formats:
   * `https://<bucket-name>.s3.<region-code>.amazonaws.com/<object-key>`
   * `https://s3.<region-code>.amazonaws.com/<bucket-name>/<object-key>`
 * The fields in `<object-url>` are as follows:
@@ -75,7 +74,7 @@ sbin/compress-from-s3.sh \
 ```
 
 * `<key-prefix-url>` is a URL identifying the S3 key prefix to compress. It can be written in either
-  one of two formats:
+  of two formats:
   * `https://<bucket-name>.s3.<region-code>.amazonaws.com/<key-prefix>`
   * `https://s3.<region-code>.amazonaws.com/<bucket-name>/<key-prefix>`
 * The fields in `<key-prefix-url>` are as follows:
@@ -86,8 +85,8 @@ sbin/compress-from-s3.sh \
     `<all-logs-prefix>` value from the [compression IAM policy][compression-iam-policy].
 
 :::{note}
-`s3-key-prefix` mode only accepts a single `<key-prefix-url>` argument. This limitation will be
-addressed in a future release.
+`s3-key-prefix` mode accepts a single `<key-prefix-url>` argument. This limitation will be addressed
+in a future release.
 :::
 
 [aws-s3-object-key]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
