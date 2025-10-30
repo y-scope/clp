@@ -1,12 +1,7 @@
 name: "clp-package"
 
-volumes:
-  # Dummy volume to use when a bind mount is not desired.
-  empty:
-    driver_opts:
-      device: "tmpfs"
-      type: "tmpfs"
-      size: 0
+include:
+  - "docker-compose.volume.yaml"
 
 services:
   database:

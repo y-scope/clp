@@ -40,14 +40,6 @@ x-volume-definitions:
     source: "${CLP_LOGS_DIR_HOST:-./var/log}"
     target: "/var/log"
 
-volumes:
-  # Dummy volume to use when a bind mount is not desired.
-  empty:
-    driver_opts:
-      device: "tmpfs"
-      type: "tmpfs"
-      size: 0
-
 services:
   database:
     <<: *service_defaults

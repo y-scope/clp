@@ -1,0 +1,9 @@
+name: "clp-package-volumes"
+
+volumes:
+  # Dummy volume to use when a bind mount is not desired.
+  empty:
+    driver_opts:
+      device: "tmpfs"
+      type: "tmpfs"
+      size: 0
