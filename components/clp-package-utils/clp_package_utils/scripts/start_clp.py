@@ -4,7 +4,7 @@ import pathlib
 import sys
 
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
-from clp_py_utils.core import resolve_host_path
+from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.controller import DockerComposeController, get_or_create_instance_id
 from clp_package_utils.general import (
@@ -54,8 +54,8 @@ def main(argv):
         # Validate and load config file.
         config_file_path = pathlib.Path(parsed_args.config)
         clp_config = load_config_file(
-            resolve_host_path(config_file_path),
-            resolve_host_path(default_config_file_path),
+            resolve_host_path_in_container(config_file_path),
+            resolve_host_path_in_container(default_config_file_path),
             clp_home,
         )
 
@@ -76,13 +76,13 @@ def main(argv):
 
     try:
         # Create necessary directories.
-        resolve_host_path(clp_config.data_directory).mkdir(parents=True, exist_ok=True)
-        resolve_host_path(clp_config.logs_directory).mkdir(parents=True, exist_ok=True)
-        resolve_host_path(clp_config.tmp_directory).mkdir(parents=True, exist_ok=True)
-        resolve_host_path(clp_config.archive_output.get_directory()).mkdir(
+        resolve_host_path_in_container(clp_config.data_directory).mkdir(parents=True, exist_ok=True)
+        resolve_host_path_in_container(clp_config.logs_directory).mkdir(parents=True, exist_ok=True)
+        resolve_host_path_in_container(clp_config.tmp_directory).mkdir(parents=True, exist_ok=True)
+        resolve_host_path_in_container(clp_config.archive_output.get_directory()).mkdir(
             parents=True, exist_ok=True
         )
-        resolve_host_path(clp_config.stream_output.get_directory()).mkdir(
+        resolve_host_path_in_container(clp_config.stream_output.get_directory()).mkdir(
             parents=True, exist_ok=True
         )
     except:

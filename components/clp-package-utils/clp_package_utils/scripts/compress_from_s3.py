@@ -14,7 +14,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
-from clp_py_utils.core import resolve_host_path
+from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.general import (
     dump_container_config,
@@ -57,7 +57,9 @@ def _generate_url_list(
             return len(parsed_args.inputs) != 0
 
         no_url_found = True
-        resolved_inputs_from_path = resolve_host_path(pathlib.Path(parsed_args.inputs_from))
+        resolved_inputs_from_path = resolve_host_path_in_container(
+            pathlib.Path(parsed_args.inputs_from)
+        )
         with open(resolved_inputs_from_path, "r") as input_file:
             for line in input_file:
                 stripped_url = line.strip()
@@ -225,8 +227,8 @@ def main(argv):
     try:
         config_file_path = pathlib.Path(parsed_args.config)
         clp_config = load_config_file(
-            resolve_host_path(config_file_path),
-            resolve_host_path(default_config_file_path),
+            resolve_host_path_in_container(config_file_path),
+            resolve_host_path_in_container(default_config_file_path),
             clp_home,
         )
         clp_config.validate_logs_dir(True)
@@ -297,7 +299,7 @@ def main(argv):
     while True:
         url_list_filename = f"{uuid.uuid4()}.txt"
         url_list_path_on_host = clp_config.logs_directory / url_list_filename
-        resolved_url_list_path_on_host = resolve_host_path(url_list_path_on_host)
+        resolved_url_list_path_on_host = resolve_host_path_in_container(url_list_path_on_host)
         url_list_path_on_container = container_clp_config.logs_directory / url_list_filename
         if not resolved_url_list_path_on_host.exists():
             break
@@ -327,7 +329,9 @@ def main(argv):
     else:
         resolved_url_list_path_on_host.unlink()
 
-    resolved_generated_config_path_on_host = resolve_host_path(generated_config_path_on_host)
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
     resolved_generated_config_path_on_host.unlink()
 
     return ret_code

@@ -15,7 +15,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
-from clp_py_utils.core import resolve_host_path
+from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.general import (
     CONTAINER_INPUT_LOGS_ROOT_DIR,
@@ -57,7 +57,9 @@ def _generate_logs_list(
             return len(parsed_args.paths) != 0
 
         no_path_found = True
-        resolved_host_logs_list_path = resolve_host_path(pathlib.Path(host_logs_list_path))
+        resolved_host_logs_list_path = resolve_host_path_in_container(
+            pathlib.Path(host_logs_list_path)
+        )
         with open(resolved_host_logs_list_path, "r") as host_logs_list_file:
             for line in host_logs_list_file:
                 stripped_path_str = line.rstrip()
@@ -178,8 +180,8 @@ def main(argv):
     try:
         config_file_path = pathlib.Path(parsed_args.config)
         clp_config = load_config_file(
-            resolve_host_path(config_file_path),
-            resolve_host_path(default_config_file_path),
+            resolve_host_path_in_container(config_file_path),
+            resolve_host_path_in_container(default_config_file_path),
             clp_home,
         )
         clp_config.validate_logs_dir(True)
@@ -243,7 +245,7 @@ def main(argv):
         # Get unused output path
         logs_list_filename = f"{uuid.uuid4()}.txt"
         logs_list_path_on_host = clp_config.logs_directory / logs_list_filename
-        resolved_logs_list_path_on_host = resolve_host_path(logs_list_path_on_host)
+        resolved_logs_list_path_on_host = resolve_host_path_in_container(logs_list_path_on_host)
         logs_list_path_on_container = container_clp_config.logs_directory / logs_list_filename
         if not resolved_logs_list_path_on_host.exists():
             break
@@ -273,7 +275,9 @@ def main(argv):
     else:
         resolved_logs_list_path_on_host.unlink()
 
-    resolved_generated_config_path_on_host = resolve_host_path(generated_config_path_on_host)
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
     resolved_generated_config_path_on_host.unlink()
 
     return ret_code

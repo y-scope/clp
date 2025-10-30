@@ -19,7 +19,7 @@ from .core import (
     get_config_value,
     make_config_path_absolute,
     read_yaml_config_file,
-    resolve_host_path,
+    resolve_host_path_in_container,
     validate_path_could_be_dir,
 )
 from .serialization_utils import serialize_path, serialize_str_enum
@@ -674,7 +674,7 @@ class CLPConfig(BaseModel):
             # package-relative path that will only be resolved after pydantic validation
             input_logs_dir = self.logs_input.directory
             resolved_input_logs_dir = (
-                resolve_host_path(input_logs_dir) if use_host_mount else input_logs_dir
+                resolve_host_path_in_container(input_logs_dir) if use_host_mount else input_logs_dir
             )
             if not resolved_input_logs_dir.exists():
                 raise ValueError(f"logs_input.directory '{input_logs_dir}' doesn't exist.")
@@ -697,7 +697,9 @@ class CLPConfig(BaseModel):
             )
         archive_output_dir = self.archive_output.get_directory()
         resolved_archive_output_dir = (
-            resolve_host_path(archive_output_dir) if use_host_mount else archive_output_dir
+            resolve_host_path_in_container(archive_output_dir)
+            if use_host_mount
+            else archive_output_dir
         )
         try:
             validate_path_could_be_dir(resolved_archive_output_dir)
@@ -715,7 +717,9 @@ class CLPConfig(BaseModel):
             )
         stream_output_dir = self.stream_output.get_directory()
         resolved_stream_output_dir = (
-            resolve_host_path(stream_output_dir) if use_host_mount else stream_output_dir
+            resolve_host_path_in_container(stream_output_dir)
+            if use_host_mount
+            else stream_output_dir
         )
         try:
             validate_path_could_be_dir(resolved_stream_output_dir)
@@ -724,7 +728,7 @@ class CLPConfig(BaseModel):
 
     def validate_data_dir(self, use_host_mount: bool = False):
         data_dir = self.data_directory
-        resolved_data_dir = resolve_host_path(data_dir) if use_host_mount else data_dir
+        resolved_data_dir = resolve_host_path_in_container(data_dir) if use_host_mount else data_dir
         try:
             validate_path_could_be_dir(resolved_data_dir)
         except ValueError as ex:
@@ -732,7 +736,7 @@ class CLPConfig(BaseModel):
 
     def validate_logs_dir(self, use_host_mount: bool = False):
         logs_dir = self.logs_directory
-        resolved_logs_dir = resolve_host_path(logs_dir) if use_host_mount else logs_dir
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir) if use_host_mount else logs_dir
         try:
             validate_path_could_be_dir(resolved_logs_dir)
         except ValueError as ex:
@@ -740,7 +744,7 @@ class CLPConfig(BaseModel):
 
     def validate_tmp_dir(self, use_host_mount: bool = False):
         tmp_dir = self.tmp_directory
-        resolved_tmp_dir = resolve_host_path(tmp_dir) if use_host_mount else tmp_dir
+        resolved_tmp_dir = resolve_host_path_in_container(tmp_dir) if use_host_mount else tmp_dir
         try:
             validate_path_could_be_dir(resolved_tmp_dir)
         except ValueError as ex:
@@ -768,7 +772,7 @@ class CLPConfig(BaseModel):
                     "aws_config_directory must be set when using profile authentication"
                 )
             resolved_aws_config_dir = (
-                resolve_host_path(self.aws_config_directory)
+                resolve_host_path_in_container(self.aws_config_directory)
                 if use_host_mount
                 else self.aws_config_directory
             )

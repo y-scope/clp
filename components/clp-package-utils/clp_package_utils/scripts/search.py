@@ -13,7 +13,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
-from clp_py_utils.core import resolve_host_path
+from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.general import (
     dump_container_config,
@@ -93,8 +93,8 @@ def main(argv):
     try:
         config_file_path = pathlib.Path(parsed_args.config)
         clp_config = load_config_file(
-            resolve_host_path(config_file_path),
-            resolve_host_path(default_config_file_path),
+            resolve_host_path_in_container(config_file_path),
+            resolve_host_path_in_container(default_config_file_path),
             clp_home,
         )
         clp_config.validate_logs_dir(True)
@@ -185,7 +185,9 @@ def main(argv):
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    resolved_generated_config_path_on_host = resolve_host_path(generated_config_path_on_host)
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
     resolved_generated_config_path_on_host.unlink()
 
     return ret_code

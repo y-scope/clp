@@ -38,7 +38,7 @@ from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
     read_yaml_config_file,
-    resolve_host_path,
+    resolve_host_path_in_container,
     validate_path_could_be_dir,
 )
 from strenum import KebabCaseStrEnum
@@ -356,7 +356,7 @@ def dump_container_config(
     """
     config_file_path_on_host = clp_config.logs_directory / config_filename
     config_file_path_on_container = container_clp_config.logs_directory / config_filename
-    resolved_config_file_path_on_host = resolve_host_path(config_file_path_on_host)
+    resolved_config_file_path_on_host = resolve_host_path_in_container(config_file_path_on_host)
     with open(resolved_config_file_path_on_host, "w") as f:
         yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
 
@@ -466,7 +466,7 @@ def validate_credentials_file_path(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
 ):
     credentials_file_path = clp_config.credentials_file_path
-    resolved_credentials_file_path = resolve_host_path(credentials_file_path)
+    resolved_credentials_file_path = resolve_host_path_in_container(credentials_file_path)
     if not resolved_credentials_file_path.exists():
         if (
             make_config_path_absolute(clp_home, CLP_DEFAULT_CREDENTIALS_FILE_PATH)
@@ -507,7 +507,7 @@ def validate_db_config(
     data_dir: pathlib.Path,
     logs_dir: pathlib.Path,
 ):
-    resolved_component_config = resolve_host_path(component_config)
+    resolved_component_config = resolve_host_path_in_container(component_config)
     if not resolved_component_config.exists():
         raise ValueError(f"{DB_COMPONENT_NAME} configuration file missing: '{component_config}'.")
     _validate_data_directory(data_dir, DB_COMPONENT_NAME)
@@ -528,7 +528,7 @@ def validate_redis_config(
     data_dir: pathlib.Path,
     logs_dir: pathlib.Path,
 ):
-    resolved_component_config = resolve_host_path(component_config)
+    resolved_component_config = resolve_host_path_in_container(component_config)
     if not resolved_component_config.exists():
         raise ValueError(
             f"{REDIS_COMPONENT_NAME} configuration file missing: '{component_config}'."
@@ -556,7 +556,7 @@ def validate_results_cache_config(
     data_dir: pathlib.Path,
     logs_dir: pathlib.Path,
 ):
-    resolved_component_config = resolve_host_path(component_config)
+    resolved_component_config = resolve_host_path_in_container(component_config)
     if not resolved_component_config.exists():
         raise ValueError(
             f"{RESULTS_CACHE_COMPONENT_NAME} configuration file missing: '{component_config}'."
@@ -585,7 +585,7 @@ def validate_webui_config(
     server_settings_json_path: pathlib.Path,
 ):
     for path in [client_settings_json_path, server_settings_json_path]:
-        resolved_path = resolve_host_path(path)
+        resolved_path = resolve_host_path_in_container(path)
         if not resolved_path.exists():
             raise ValueError(f"{WEBUI_COMPONENT_NAME} {path} is not a valid path to settings.json")
 
@@ -768,7 +768,7 @@ def _is_docker_compose_project_running(project_name: str) -> bool:
 
 def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
     try:
-        validate_path_could_be_dir(resolve_host_path(data_dir))
+        validate_path_could_be_dir(resolve_host_path_in_container(data_dir))
     except ValueError as ex:
         raise ValueError(f"{component_name} data directory is invalid: {ex}")
 
@@ -782,6 +782,6 @@ def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
     :raise ValueError: If the path is invalid or can't be a directory.
     """
     try:
-        validate_path_could_be_dir(resolve_host_path(logs_dir))
+        validate_path_could_be_dir(resolve_host_path_in_container(logs_dir))
     except ValueError as ex:
         raise ValueError(f"{component_name} logs directory is invalid: {ex}")

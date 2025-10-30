@@ -64,7 +64,7 @@ def read_yaml_config_file(yaml_config_file_path: pathlib.Path):
     return config
 
 
-def resolve_host_path(path: pathlib.Path) -> pathlib.Path:
+def resolve_host_path_in_container(path: pathlib.Path) -> pathlib.Path:
     """
     Translates a host path to its container-mount equivalent.
 

@@ -16,7 +16,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
-from clp_py_utils.core import resolve_host_path
+from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.general import (
     DockerMount,
@@ -54,8 +54,8 @@ def validate_and_load_config(
     """
     try:
         clp_config = load_config_file(
-            resolve_host_path(config_file_path),
-            resolve_host_path(default_config_file_path),
+            resolve_host_path_in_container(config_file_path),
+            resolve_host_path_in_container(default_config_file_path),
             clp_home,
         )
         clp_config.validate_logs_dir(True)
@@ -84,7 +84,7 @@ def handle_extract_file_cmd(
 
     # Validate extraction directory
     extraction_dir = pathlib.Path(parsed_args.extraction_dir).resolve()
-    resolved_extraction_dir = resolve_host_path(extraction_dir)
+    resolved_extraction_dir = resolve_host_path_in_container(extraction_dir)
     try:
         validate_path_could_be_dir(resolved_extraction_dir)
     except ValueError as ex:
@@ -167,7 +167,9 @@ def handle_extract_file_cmd(
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    resolved_generated_config_path_on_host = resolve_host_path(generated_config_path_on_host)
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
     resolved_generated_config_path_on_host.unlink()
 
     return ret_code
@@ -273,7 +275,9 @@ def handle_extract_stream_cmd(
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    resolved_generated_config_path_on_host = resolve_host_path(generated_config_path_on_host)
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
     resolved_generated_config_path_on_host.unlink()
 
     return ret_code

@@ -37,7 +37,7 @@ from clp_py_utils.clp_metadata_db_utils import (
     get_datasets_table_name,
     get_files_table_name,
 )
-from clp_py_utils.core import resolve_host_path
+from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.general import (
     check_docker_dependencies,
@@ -120,8 +120,8 @@ class BaseController(ABC):
         logs_dir = self._clp_config.logs_directory / component_name
         validate_db_config(self._clp_config, conf_logging_file, data_dir, logs_dir)
 
-        resolved_data_dir = resolve_host_path(data_dir)
-        resolved_logs_dir = resolve_host_path(logs_dir)
+        resolved_data_dir = resolve_host_path_in_container(data_dir)
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
 
         resolved_data_dir.mkdir(exist_ok=True, parents=True)
         resolved_logs_dir.mkdir(exist_ok=True, parents=True)
@@ -170,7 +170,7 @@ class BaseController(ABC):
         logs_dir = self._clp_config.logs_directory / component_name
         validate_queue_config(self._clp_config, logs_dir)
 
-        resolved_logs_dir = resolve_host_path(logs_dir)
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
 
         resolved_logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(resolved_logs_dir)
@@ -210,8 +210,8 @@ class BaseController(ABC):
         logs_dir = self._clp_config.logs_directory / component_name
         validate_redis_config(self._clp_config, conf_file, data_dir, logs_dir)
 
-        resolved_data_dir = resolve_host_path(data_dir)
-        resolved_logs_dir = resolve_host_path(logs_dir)
+        resolved_data_dir = resolve_host_path_in_container(data_dir)
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
 
         resolved_data_dir.mkdir(exist_ok=True, parents=True)
         resolved_logs_dir.mkdir(exist_ok=True, parents=True)
@@ -261,8 +261,8 @@ class BaseController(ABC):
         logs_dir = self._clp_config.logs_directory / component_name
         validate_results_cache_config(self._clp_config, conf_file, data_dir, logs_dir)
 
-        resolved_data_dir = resolve_host_path(data_dir)
-        resolved_logs_dir = resolve_host_path(logs_dir)
+        resolved_data_dir = resolve_host_path_in_container(data_dir)
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
 
         resolved_data_dir.mkdir(exist_ok=True, parents=True)
         resolved_logs_dir.mkdir(exist_ok=True, parents=True)
@@ -303,7 +303,7 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
-        resolved_logs_dir = resolve_host_path(logs_dir)
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
@@ -327,7 +327,7 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
-        resolved_logs_dir = resolve_host_path(logs_dir)
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
@@ -350,7 +350,7 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
-        resolved_logs_dir = resolve_host_path(logs_dir)
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
@@ -380,7 +380,7 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
-        resolved_logs_dir = resolve_host_path(logs_dir)
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
@@ -408,7 +408,7 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
-        resolved_logs_dir = resolve_host_path(logs_dir)
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
@@ -443,8 +443,12 @@ class BaseController(ABC):
         server_settings_json_path = (
             self._clp_home / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
         )
-        resolved_client_settings_json_path = resolve_host_path(client_settings_json_path)
-        resolved_server_settings_json_path = resolve_host_path(server_settings_json_path)
+        resolved_client_settings_json_path = resolve_host_path_in_container(
+            client_settings_json_path
+        )
+        resolved_server_settings_json_path = resolve_host_path_in_container(
+            server_settings_json_path
+        )
         validate_webui_config(
             self._clp_config,
             client_settings_json_path,
@@ -565,7 +569,7 @@ class BaseController(ABC):
 
         logs_dir = self._clp_config.logs_directory / component_name
         validate_mcp_server_config(self._clp_config, logs_dir)
-        resolved_logs_dir = resolve_host_path(logs_dir)
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
@@ -603,7 +607,7 @@ class BaseController(ABC):
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
-        resolved_logs_dir = resolve_host_path(logs_dir)
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
@@ -827,7 +831,7 @@ def get_or_create_instance_id(clp_config: CLPConfig) -> str:
     :return: The instance ID.
     """
     instance_id_file_path = clp_config.logs_directory / "instance-id"
-    resolved_instance_id_file_path = resolve_host_path(instance_id_file_path)
+    resolved_instance_id_file_path = resolve_host_path_in_container(instance_id_file_path)
 
     if resolved_instance_id_file_path.exists():
         with open(resolved_instance_id_file_path, "r") as f:
