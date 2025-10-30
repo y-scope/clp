@@ -1,7 +1,7 @@
 name: "clp-package-base"
 
 include:
-  - "docker-compose.volume.yaml"
+  - "docker-compose.utils.yaml"
 
 services:
   database:
