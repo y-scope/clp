@@ -139,6 +139,20 @@ An image containing the CLP package.
   tools/docker-images/clp-package
   ```
 
+### Default Configurations
+
+While not intended for direct end-user deployment, the container includes these configurations for
+debugging purposes:
+
+| Setting         | Related Env Var   | Value                                                  | Purpose                                          |
+|-----------------|-------------------|--------------------------------------------------------|--------------------------------------------------|
+| Executable path | `PATH`            | `${CLP_HOME}/sbin`<br>`:${CLP_HOME}/bin`<br>`:${PATH}` | CLP executables in system path                   |
+| Home directory  | `CLP_HOME`        | `/opt/clp`                                             | User's home directory; shell sessions start here |
+| Library path    | `LD_LIBRARY_PATH` | `${CLP_HOME}/lib`                                      | Shared library search path                       |
+| Python path     | `PYTHONPATH`      | `${CLP_HOME}/lib/python3/site-packages`                | Python module search path                        |
+| Shell           | `SHELL`           | `/bin/bash`                                            | Default shell                                    |
+| User            | `USER`            | `clp-user` (UID: `1000`)                               | Non-root user for secure operation               |
+
 [core-deps-centos-stream-9]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos-stream-9
 [core-deps-manylinux_2_28-x86_64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-manylinux_2_28
 [core-deps-musllinux_1_2-x86_64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-musllinux_1_2
