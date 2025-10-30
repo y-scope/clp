@@ -74,6 +74,7 @@ services:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
         :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
       CLP_CONFIG_PATH: "/etc/clp-config.yml"
+      CLP_ENABLE_PROFILING: "${CLP_QUERY_WORKER_ENABLE_PROFILING:-false}"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_WORKER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/query_worker"
