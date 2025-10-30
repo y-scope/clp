@@ -222,7 +222,7 @@ tasks:
     env:
       NODE_ENV: "production"
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_WEBUI_CHECKSUM_FILE}}"
       OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
     sources:
       - "{{.G_WEBUI_CLIENT_NODE_MODULES_CHECKSUM_FILE}}"
