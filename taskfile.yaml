@@ -492,10 +492,10 @@ tasks:
       - "components/job-orchestration/dist/*.whl"
     generates: ["{{.CHECKSUM_FILE}}"]
     deps:
-      - "init"
       - "clp-mcp-server"
       - "clp-package-utils"
       - "clp-py-utils"
+      - "init"
       - "job-orchestration"
       - "package-venv"
       - task: "utils:checksum:validate"
