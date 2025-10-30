@@ -104,8 +104,6 @@ tasks:
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules'"
 
   package:
-    env:
-      NODE_ENV: "production"
     vars:
       CHECKSUM_FILE: "{{.G_PACKAGE_CHECKSUM_FILE}}"
       OUTPUT_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
@@ -221,6 +219,8 @@ tasks:
       - "webui"
 
   webui:
+    env:
+      NODE_ENV: "production"
     vars:
       CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
       OUTPUT_DIR: "{{.G_WEBUI_BUILD_DIR}}"
