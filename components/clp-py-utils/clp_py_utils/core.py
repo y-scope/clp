@@ -69,7 +69,7 @@ def resolve_host_path_in_container(path: pathlib.Path) -> pathlib.Path:
     Translates a host path to its container-mount equivalent.
 
     :param path: The host path.
-    :return: The translated container path.
+    :return: The translated path.
     """
     path = path.absolute()
     resolved = CONTAINER_DIR_FOR_HOST_ROOT / path.relative_to("/")
