@@ -78,7 +78,6 @@ mod tests {
         };
 
         let brotli_compressed_msgpack_result = config.to_brotli_compressed_msgpack();
-        assert!(brotli_compressed_msgpack_result.is_ok());
         let brotli_compressed_msgpack = brotli_compressed_msgpack_result.unwrap();
         let expected = "1ba00100e4ffdf9f43284b650e496850ba5f1eeefb53844a05d074faa66eb23ebef2dc45638\
                 275e9c24cb3bccba29c9bfc9d95db42175d52eecc81793cb3bc3c4ed0bf604c56e5c9a24581d9e65080\
