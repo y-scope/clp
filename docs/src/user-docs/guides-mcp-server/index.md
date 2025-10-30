@@ -76,6 +76,12 @@ Configuring VSCode to connect to the CLP MCP server
 :::
 ::::
 
+:::{note}
+Agents sometimes ignore MCP instructions even after making the `get_instructions` tool call.
+In your prompt, tell the agent to read the MCP instructions carefully
+before analyzing any logs.
+:::
+
 ## Limitations
 
 CLP currently doesn't store timezone information in the compressed logs. This means that if the
