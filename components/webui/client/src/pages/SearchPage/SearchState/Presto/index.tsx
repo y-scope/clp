@@ -14,7 +14,7 @@ const PRESTO_SEARCH_STATE_DEFAULT = Object.freeze({
     orderBy: "",
     queryDrawerOpen: false,
     select: "*",
-    sqlInterface: PRESTO_SQL_INTERFACE.FREEFORM,
+    sqlInterface: PRESTO_SQL_INTERFACE.GUIDED,
     timestampKey: null,
     where: "",
 });

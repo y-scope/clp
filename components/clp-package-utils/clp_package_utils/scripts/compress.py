@@ -13,8 +13,8 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
     StorageEngine,
+    StorageType,
 )
-from job_orchestration.scheduler.job_config import InputType
 
 from clp_package_utils.general import (
     CONTAINER_INPUT_LOGS_ROOT_DIR,
@@ -30,43 +30,45 @@ from clp_package_utils.general import (
     validate_dataset_name,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def _generate_logs_list(
-    input_type: InputType,
     container_logs_list_path: pathlib.Path,
     parsed_args: argparse.Namespace,
-) -> None:
-    if InputType.FS == input_type:
-        host_logs_list_path = parsed_args.path_list
-        with open(container_logs_list_path, "w") as container_logs_list_file:
-            if host_logs_list_path is not None:
-                with open(host_logs_list_path, "r") as host_logs_list_file:
-                    for line in host_logs_list_file:
-                        stripped_path_str = line.rstrip()
-                        if "" == stripped_path_str:
-                            # Skip empty paths
-                            continue
-                        resolved_path = pathlib.Path(stripped_path_str).resolve()
-                        mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
-                            resolved_path.anchor
-                        )
-                        container_logs_list_file.write(f"{mounted_path}\n")
+) -> bool:
+    """
+    Generates logs list file for the native compression script.
 
+    :param container_logs_list_path: Path to write logs list.
+    :param parsed_args: Parsed command-line arguments.
+    :return: Whether any paths were written to the logs list.
+    """
+    host_logs_list_path = parsed_args.path_list
+    with open(container_logs_list_path, "w") as container_logs_list_file:
+        if host_logs_list_path is None:
             for path in parsed_args.paths:
                 resolved_path = pathlib.Path(path).resolve()
                 mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
                     resolved_path.anchor
                 )
                 container_logs_list_file.write(f"{mounted_path}\n")
+            return len(parsed_args.paths) != 0
 
-    elif InputType.S3 == input_type:
-        with open(container_logs_list_path, "w") as container_logs_list_file:
-            container_logs_list_file.write(f"{parsed_args.paths[0]}\n")
-
-    else:
-        raise ValueError(f"Unsupported input type: {input_type}.")
+        no_path_found = True
+        with open(host_logs_list_path, "r") as host_logs_list_file:
+            for line in host_logs_list_file:
+                stripped_path_str = line.rstrip()
+                if "" == stripped_path_str:
+                    # Skip empty paths
+                    continue
+                no_path_found = False
+                resolved_path = pathlib.Path(stripped_path_str).resolve()
+                mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
+                    resolved_path.anchor
+                )
+                container_logs_list_file.write(f"{mounted_path}\n")
+        return not no_path_found
 
 
 def _generate_compress_cmd(
@@ -81,6 +83,7 @@ def _generate_compress_cmd(
         "python3",
         "-m", "clp_package_utils.scripts.native.compress",
         "--config", str(config_path),
+        "--input-type", "fs",
     ]
     # fmt: on
     if parsed_args.verbose:
@@ -91,6 +94,8 @@ def _generate_compress_cmd(
     if parsed_args.timestamp_key is not None:
         compress_cmd.append("--timestamp-key")
         compress_cmd.append(parsed_args.timestamp_key)
+    if parsed_args.unstructured:
+        compress_cmd.append("--unstructured")
     if parsed_args.tags is not None:
         compress_cmd.append("--tags")
         compress_cmd.append(parsed_args.tags)
@@ -114,22 +119,6 @@ def _validate_fs_input_args(
     # Validate paths were specified using only one method
     if len(parsed_args.paths) > 0 and parsed_args.path_list is not None:
         args_parser.error("Paths cannot be specified on the command line AND through a file.")
-
-
-def _validate_s3_input_args(
-    parsed_args: argparse.Namespace,
-    args_parser: argparse.ArgumentParser,
-    storage_engine: StorageEngine,
-) -> None:
-    if StorageEngine.CLP_S != storage_engine:
-        args_parser.error(
-            f"Input type {InputType.S3} is only supported for the storage engine"
-            f" {StorageEngine.CLP_S}."
-        )
-    if len(parsed_args.paths) != 1:
-        args_parser.error(f"Only one URL can be specified for input type {InputType.S3}.")
-    if parsed_args.path_list is not None:
-        args_parser.error(f"Path list file is unsupported for input type {InputType.S3}.")
 
 
 def main(argv):
@@ -162,14 +151,17 @@ def main(argv):
         help="The path (e.g. x.y) for the field containing the log event's timestamp.",
     )
     args_parser.add_argument(
+        "--unstructured",
+        action="store_true",
+        help="Treat all inputs as unstructured text logs.",
+    )
+    args_parser.add_argument(
         "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
     )
     args_parser.add_argument(
         "--no-progress-reporting", action="store_true", help="Disables progress reporting."
     )
-    args_parser.add_argument(
-        "paths", metavar="PATH", nargs="*", help="Paths or an S3 URL to compress."
-    )
+    args_parser.add_argument("paths", metavar="PATH", nargs="*", help="Paths to compress.")
     args_parser.add_argument(
         "-f", "--path-list", dest="path_list", help="A file listing all paths to compress."
     )
@@ -188,8 +180,18 @@ def main(argv):
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
+        return -1
+
+    # Validate logs_input type is FS
+    if clp_config.logs_input.type != StorageType.FS:
+        logger.error(
+            "Filesystem compression expects `logs_input.type` to be `%s`, but `%s` is found. For S3"
+            " compression, use `compress-from-s3.sh` instead.",
+            StorageType.FS,
+            clp_config.logs_input.type,
+        )
         return -1
 
     storage_engine: StorageEngine = clp_config.package.storage_engine
@@ -203,22 +205,23 @@ def main(argv):
             logger.error(e)
             return -1
 
-        if parsed_args.timestamp_key is None:
+        if parsed_args.timestamp_key is None and not parsed_args.unstructured:
             logger.warning(
                 "`--timestamp-key` not specified. Events will not have assigned timestamps and can "
                 "only be searched from the command line without a timestamp filter."
+            )
+        if parsed_args.timestamp_key is not None and parsed_args.unstructured:
+            parsed_args.timestamp_key = None
+            logger.warning(
+                "`--timestamp-key` and `--unstructured` are not compatible. The input logs will be "
+                "treated as unstructured, and the argument to `--timestamp-key` will be ignored."
             )
     elif dataset is not None:
         logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
         return -1
 
-    input_type = clp_config.logs_input.type
-    if InputType.FS == input_type:
-        _validate_fs_input_args(parsed_args, args_parser)
-    elif InputType.S3 == input_type:
-        _validate_s3_input_args(parsed_args, args_parser, storage_engine)
-    else:
-        raise ValueError(f"Unsupported input type: {input_type}.")
+    # Validate filesystem input arguments
+    _validate_fs_input_args(parsed_args, args_parser)
 
     container_name = generate_container_name(str(JobType.COMPRESSION))
 
@@ -227,9 +230,7 @@ def main(argv):
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
-    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir]
-    if InputType.FS == input_type:
-        necessary_mounts.append(mounts.input_logs_dir)
+    necessary_mounts = [mounts.clp_home, mounts.data_dir, mounts.logs_dir, mounts.input_logs_dir]
 
     # Write compression logs to a file
     while True:
@@ -242,7 +243,9 @@ def main(argv):
         if not container_logs_list_path.exists():
             break
 
-    _generate_logs_list(clp_config.logs_input.type, container_logs_list_path, parsed_args)
+    if not _generate_logs_list(container_logs_list_path, parsed_args):
+        logger.error("No filesystem paths given for compression.")
+        return -1
 
     extra_env_vars = {
         CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
@@ -259,13 +262,13 @@ def main(argv):
 
     proc = subprocess.run(cmd)
     ret_code = proc.returncode
-    if 0 != ret_code:
+    if ret_code != 0:
         logger.error("Compression failed.")
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+    else:
+        container_logs_list_path.unlink()
 
-    # Remove generated files
     generated_config_path_on_host.unlink()
-
     return ret_code
 
 
