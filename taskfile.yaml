@@ -212,9 +212,9 @@ tasks:
 
   package-build-deps:
     deps:
-      - "init"
       - "core"
       - "deps:spider"
+      - "init"
       - "python-libs"
       - "webui"
 
