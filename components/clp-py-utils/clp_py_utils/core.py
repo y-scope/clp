@@ -3,7 +3,7 @@ import pathlib
 import yaml
 from yaml.parser import ParserError
 
-CONTAINER_HOST_ROOT_DIR = pathlib.Path("/") / "mnt" / "host"
+CONTAINER_DIR_FOR_HOST_ROOT = pathlib.Path("/") / "mnt" / "host"
 
 
 class FileMetadata:
@@ -72,12 +72,12 @@ def resolve_host_path(path: pathlib.Path) -> pathlib.Path:
     :return: The translated container path.
     """
     path = path.absolute()
-    resolved = CONTAINER_HOST_ROOT_DIR / path.relative_to("/")
+    resolved = CONTAINER_DIR_FOR_HOST_ROOT / path.relative_to("/")
 
     try:
         if resolved.is_symlink():
             target_path = (resolved.parent / resolved.readlink()).resolve()
-            resolved = CONTAINER_HOST_ROOT_DIR / target_path.relative_to("/")
+            resolved = CONTAINER_DIR_FOR_HOST_ROOT / target_path.relative_to("/")
     except OSError:
         pass
 
