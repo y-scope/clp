@@ -2,10 +2,11 @@ version: "3"
 
 includes:
   integration: "integration.yaml"
+  toolchains: "../toolchains.yaml"
 
 tasks:
   rust-all:
-    deps: [":toolchains:rust"]
+    deps: ["toolchains:rust"]
     dir: "{{.ROOT_DIR}}"
     cmd: |-
       . "$HOME/.cargo/env"
