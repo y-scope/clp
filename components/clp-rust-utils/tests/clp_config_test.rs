@@ -57,32 +57,32 @@ fn test_clp_io_config_serialization() {
     assert!(json_serialized_result.is_ok());
     let json_serialized = json_serialized_result.unwrap();
     let expected = serde_json::json!({
-  "input": {
-    "type": "s3",
-    "bucket": "yscope",
-    "region_code": "us-east-2",
-    "key_prefix": "sample-logs/cockroachdb.clp.zst",
-    "aws_authentication": {
-      "type": "credentials",
-      "credentials": {
-        "access_key_id": "ACCESS_KEY_ID",
-        "secret_access_key": "SECRET_ACCESS_KEY"
+      "input": {
+        "type": "s3",
+        "bucket": "yscope",
+        "region_code": "us-east-2",
+        "key_prefix": "sample-logs/cockroachdb.clp.zst",
+        "aws_authentication": {
+          "type": "credentials",
+          "credentials": {
+            "access_key_id": "ACCESS_KEY_ID",
+            "secret_access_key": "SECRET_ACCESS_KEY"
+          }
+        },
+        "keys": null,
+        "dataset": "test-dataset",
+        "timestamp_key": "timestamp",
+        "unstructured": false
+      },
+      "output": {
+        "tags": null,
+        "target_archive_size": 268_435_456,
+        "target_dictionaries_size": 33_554_432,
+        "target_encoded_file_size": 268_435_456,
+        "target_segment_size": 268_435_456,
+        "compression_level": 3
       }
-    },
-    "keys": null,
-    "dataset": "test-dataset",
-    "timestamp_key": "timestamp",
-    "unstructured": false
-  },
-  "output": {
-    "tags": null,
-    "target_archive_size": 268435456,
-    "target_dictionaries_size": 33554432,
-    "target_encoded_file_size": 268435456,
-    "target_segment_size": 268435456,
-    "compression_level": 3
-  }
-});
+    });
     let actual: Value = serde_json::from_str(json_serialized.as_str())
         .expect("The serialization result should be a valid JSON string.");
     assert_eq!(expected, actual);
