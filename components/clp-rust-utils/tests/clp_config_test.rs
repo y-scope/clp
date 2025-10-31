@@ -1,11 +1,7 @@
 use clp_rust_utils::{
-    clp_config::{
-        AwsAuthentication,
-        AwsCredentials,
-        S3Config,
-        scheduler::{ClpIoConfig, InputConfig, OutputConfig, S3InputConfig},
-    },
-    utils::BrotliMsgpack,
+    clp_config::{AwsAuthentication, AwsCredentials, S3Config},
+    job_config::{ClpIoConfig, InputConfig, OutputConfig, S3InputConfig},
+    serde::BrotliMsgpack,
 };
 use serde_json::Value;
 
