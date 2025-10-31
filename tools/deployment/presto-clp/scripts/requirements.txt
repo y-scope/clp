@@ -1,2 +1,3 @@
+psutil
 python-dotenv
 PyYAML
