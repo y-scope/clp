@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 package_root=$(readlink -f "$script_dir/..")
 
 if [[ -z "${CLP_HOME:-}" ]]; then
@@ -13,10 +13,10 @@ image_id_file="$CLP_HOME/clp-package-image.id"
 version_file="$CLP_HOME/VERSION"
 
 if [[ -f "$image_id_file" ]]; then
-    image_id="$(tr -d '[:space:]' < "$image_id_file")"
+    image_id="$(tr -d '[:space:]' <"$image_id_file")"
     export CLP_PACKAGE_CONTAINER_IMAGE_REF="$image_id"
 elif [[ -f "$version_file" ]]; then
-    version="$(tr -d '[:space:]' < "$version_file")"
+    version="$(tr -d '[:space:]' <"$version_file")"
     export CLP_PACKAGE_CONTAINER_IMAGE_REF="ghcr.io/y-scope/clp/clp-package:v$version"
 else
     >&2 echo "Error: Neither clp-package-image.id nor VERSION file exists."
@@ -45,7 +45,7 @@ if [[ -z "${CLP_DOCKER_PLUGIN_DIR:-}" ]]; then
     done
     if [[ -z "${CLP_DOCKER_PLUGIN_DIR:-}" ]]; then
         >&2 echo "Warning: Docker plugin directory not found;" \
-             "Docker Compose may not work inside container."
+            "Docker Compose may not work inside container."
     fi
 fi
 
