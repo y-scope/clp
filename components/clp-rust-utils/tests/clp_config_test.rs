@@ -56,7 +56,7 @@ fn test_clp_io_config_serialization() {
     let json_serialized_result = serde_json::to_string_pretty(&config);
     assert!(json_serialized_result.is_ok());
     let json_serialized = json_serialized_result.unwrap();
-    let expected_json = r#"{
+    let expected = serde_json::json!({
   "input": {
     "type": "s3",
     "bucket": "yscope",
@@ -82,10 +82,8 @@ fn test_clp_io_config_serialization() {
     "target_segment_size": 268435456,
     "compression_level": 3
   }
-}"#;
+});
     let actual: Value = serde_json::from_str(json_serialized.as_str())
         .expect("The serialization result should be a valid JSON string.");
-    let expected: Value = serde_json::from_str(expected_json)
-        .expect("The expected serialization result should be a valid JSON string.");
     assert_eq!(expected, actual);
 }
