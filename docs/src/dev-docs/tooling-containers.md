@@ -151,7 +151,7 @@ debugging purposes:
 | Library path    | `LD_LIBRARY_PATH` | `${CLP_HOME}/lib`                                      | Shared library search path                       |
 | Python path     | `PYTHONPATH`      | `${CLP_HOME}/lib/python3/site-packages`                | Python module search path                        |
 | Shell           | `SHELL`           | `/bin/bash`                                            | Default shell                                    |
-| User            | `USER`            | `clp-user` (UID: `1000`)                               | Non-root user for secure operation               |
+| User            | `USER`            | `clp-user` (UID: `1000`)                               | Non-root user for secure operations              |
 
 [core-deps-centos-stream-9]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-centos-stream-9
 [core-deps-manylinux_2_28-x86_64]: https://github.com/y-scope/clp/pkgs/container/clp%2Fclp-core-dependencies-x86-manylinux_2_28
