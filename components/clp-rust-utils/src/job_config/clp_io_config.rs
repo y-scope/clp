@@ -9,7 +9,7 @@ pub struct ClpIoConfig {
     pub output: OutputConfig,
 }
 
-// An enum representing CLP input config.
+/// An enum representing CLP input config.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 #[serde(tag = "type")]
 pub enum InputConfig {
