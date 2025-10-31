@@ -2,14 +2,8 @@ version: "3"
 
 tasks:
   package:
-    vars:
-      SRC_DIR: "{{.ROOT_DIR}}/tools/docker-images/clp-package"
-    dir: "{{.SRC_DIR}}"
-    sources:
-      - "{{.G_PACKAGE_CHECKSUM_FILE}}"
-      - "{{.SRC_DIR}}/**/*"
+    dir: "{{.ROOT_DIR}}/tools/docker-images/clp-package"
     deps:
-      - ":package"
+      - ":package-build-deps"
     cmds:
       - "./build.sh"
-      - "rsync --archive '{{.G_BUILD_DIR}}/clp-package-image.id' '{{.G_PACKAGE_BUILD_DIR}}'"

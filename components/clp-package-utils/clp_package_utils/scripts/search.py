@@ -13,6 +13,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
+from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.general import (
     dump_container_config,
@@ -91,8 +92,12 @@ def main(argv):
     # Validate and load config file
     try:
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
-        clp_config.validate_logs_dir()
+        clp_config = load_config_file(
+            resolve_host_path_in_container(config_file_path),
+            resolve_host_path_in_container(default_config_file_path),
+            clp_home,
+        )
+        clp_config.validate_logs_dir(True)
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
@@ -128,7 +133,7 @@ def main(argv):
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
-    necessary_mounts = [mounts.clp_home, mounts.logs_dir]
+    necessary_mounts = [mounts.logs_dir]
     extra_env_vars = {
         CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
         CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
@@ -180,7 +185,10 @@ def main(argv):
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    generated_config_path_on_host.unlink()
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
+    resolved_generated_config_path_on_host.unlink()
 
     return ret_code
 
