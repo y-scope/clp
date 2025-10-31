@@ -3,6 +3,7 @@ import SqlInput from "../../../../../components/SqlInput";
 import useSearchStore from "../../../SearchState/index";
 import usePrestoSearchState from "../../../SearchState/Presto";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
+import {validateSelectItemList} from "../../../../../sql-parser";
 import guidedGrid from "./index.module.css";
 
 
@@ -24,6 +25,7 @@ const Select = () => {
             <SqlInput
                 className={guidedGrid["noLeftBorderRadius"] || ""}
                 disabled={disabled}
+                validateFn={validateSelectItemList}
                 value={select}
                 onChange={(value) => {
                     updateSelect(value || "");
