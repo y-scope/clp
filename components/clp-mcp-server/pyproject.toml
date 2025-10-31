@@ -12,7 +12,11 @@ dependencies = [
     "msgpack>=1.1.2",
     "paginate>=0.5.7",
     "pymongo>=4.15.3",
+    "clp-py-utils",
 ]
+
+[tool.uv.sources]
+clp-py-utils = { path = "../clp-py-utils", editable = true }
 
 [project.scripts]
 clp-mcp-server = "clp_mcp_server.clp_mcp_server:main"
