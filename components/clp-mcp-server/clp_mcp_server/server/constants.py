@@ -11,9 +11,7 @@ TIMESTAMP_NOT_AVAILABLE = "N/A"
 SERVER_NAME = "clp-mcp-server"
 
 # fmt: off
-# Guidelines for Writing Effective System Prompts For LLM
-#
-# System prompts should be AI-friendly; while LLMs may not strictly enforce all rules, we
+# System prompts should be LLM-friendly; while LLMs may not strictly enforce all rules, we
 # empirically found the following practices effective for LLM to understand the listed rules:
 # 1. Provide concrete examples to explain the rule.
 # 2. Place critical rules at the beginning and mark them as "CRITICAL".
