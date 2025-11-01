@@ -1,4 +1,5 @@
 pub mod clp_config;
+pub mod database;
 mod error;
 pub mod job_config;
 pub mod package_config;
