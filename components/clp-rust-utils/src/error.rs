@@ -7,4 +7,7 @@ pub enum Error {
 
     #[error("`std::io::Error`: {0}")]
     IoError(#[from] std::io::Error),
+
+    #[error("`sqlx::Error`: {0}")]
+    SqlxError(#[from] sqlx::Error),
 }
