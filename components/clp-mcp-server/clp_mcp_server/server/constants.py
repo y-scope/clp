@@ -48,11 +48,9 @@ CKQL rules (read carefully; items marked CRITICAL will fail if violated):
   (quotes and wildcards are required).
 
 - Escaping characters:
-  - In keys, use backslash to escape searching for any
-   of the literal characters: \\, ", ., *, @, $, !, #.
-  - In values, use backslash to escape
-   searching for any of the literal characters: \\, ", ?, *.
-  \n
+  - In keys, use backslash to escape searching for any of the literal characters: \\, ", ., *, @, $,
+    !, #.
+  - In values, use backslash to escape searching for any of the literal characters: \\, ", ?, *.
 
 - Time range: use search_by_kql_with_timestamp_range
  to constrain by time.\n
