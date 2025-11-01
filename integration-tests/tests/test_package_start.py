@@ -2,8 +2,11 @@
 
 import logging
 import shutil
+from pathlib import Path
+from typing import Any
 
 import pytest
+import yaml
 
 from tests.utils.config import (
     PackageInstance,
@@ -14,6 +17,7 @@ from tests.utils.docker_utils import (
 )
 from tests.utils.package_utils import (
     CLP_COMPONENT_BASENAMES,
+    get_mode_from_dict,
 )
 
 package_configurations = pytest.mark.parametrize(
@@ -35,18 +39,19 @@ def test_clp_package(
 ) -> None:
     """
     Validate that all of the components of the clp package start up successfully. The package is
-    started up in whatever configuration is currently described in clp-config.yml; default is
-    clp-text.
+    started up in whatever configuration is currently described in clp-config.yml.
 
     :param request:
     :param test_package_fixture:
     """
-    assert _is_package_running(request.getfixturevalue(test_package_fixture))
+    package_instance = request.getfixturevalue(test_package_fixture)
+    assert _is_package_running(package_instance)
+    assert _is_running_mode_correct(package_instance)
 
 
 def _is_package_running(package_instance: PackageInstance) -> bool:
-    """Checks that the package specified in package_instance is running correctly."""
-    mode = package_instance.package_instance_config_file.mode
+    """Ensures the components of `package_instance` are running correctly."""
+    mode = package_instance.package_instance_config.mode
     instance_id = package_instance.clp_instance_id
 
     logger.info(
@@ -85,3 +90,60 @@ def _is_package_running(package_instance: PackageInstance) -> bool:
         instance_id,
     )
     return True
+
+
+def _is_running_mode_correct(package_instance: PackageInstance) -> bool:
+    """
+    Ensures that the mode intended for the package specified in package_instance matches the mode of
+    operation described by the package's shared config file.
+    """
+    mode = package_instance.package_instance_config.mode
+    instance_id = package_instance.clp_instance_id
+
+    logger.info(
+        "Checking that the %s package with instance ID '%s' is running in the correct mode...",
+        mode,
+        instance_id,
+    )
+
+    running_mode = _get_running_mode(package_instance)
+    intended_mode = package_instance.package_instance_config.mode
+    if running_mode != intended_mode:
+        err_msg = (
+            f"Mode mismatch: the package is running in {running_mode},"
+            f" but it should be running in {intended_mode}."
+        )
+        raise ValueError(err_msg)
+
+    logger.info(
+        "The %s package with instance ID '%s' is running in the correct mode.",
+        mode,
+        instance_id,
+    )
+
+    return True
+
+
+def _get_running_mode(package_instance: PackageInstance) -> str:
+    """Gets the current running mode of the clp package."""
+    shared_config_dict = _load_shared_config(package_instance.shared_config_file_path)
+    return get_mode_from_dict(shared_config_dict)
+
+
+def _load_shared_config(path: Path) -> dict[str, Any]:
+    """Load the content of the shared config file into a dictionary."""
+    try:
+        with path.open("r", encoding="utf-8") as file:
+            shared_config_dict = yaml.safe_load(file)
+    except yaml.YAMLError as err:
+        err_msg = f"Invalid YAML in shared config {path}: {err}"
+        raise ValueError(err_msg) from err
+    except OSError as err:
+        err_msg = f"Cannot read shared config {path}: {err}"
+        raise ValueError(err_msg) from err
+
+    if not isinstance(shared_config_dict, dict):
+        err_msg = f"Shared config {path} must be a mapping at the top level."
+        raise TypeError(err_msg)
+
+    return shared_config_dict

@@ -7,7 +7,7 @@ import pytest
 
 from tests.utils.config import (
     PackageInstance,
-    PackageInstanceConfigFile,
+    PackageInstanceConfig,
 )
 from tests.utils.package_utils import (
     start_clp_package,
@@ -19,16 +19,16 @@ logger = logging.getLogger(__name__)
 
 @pytest.fixture
 def clp_text_package(
-    clp_text_config: PackageInstanceConfigFile,
+    clp_text_config: PackageInstanceConfig,
 ) -> Iterator[PackageInstance]:
     """Fixture that launches a clp-text instance, and gracefully stops it after its scope ends."""
     log_msg = f"Starting up the {clp_text_config.mode} package..."
     logger.info(log_msg)
 
     start_clp_package(clp_text_config)
-    instance = PackageInstance(package_instance_config_file=clp_text_config)
+    instance = PackageInstance(package_instance_config=clp_text_config)
 
-    mode = instance.package_instance_config_file.mode
+    mode = instance.package_instance_config.mode
     instance_id = instance.clp_instance_id
     log_msg = (
         f"An instance of the {mode} package was started successfully."
@@ -49,16 +49,16 @@ def clp_text_package(
 
 @pytest.fixture
 def clp_json_package(
-    clp_json_config: PackageInstanceConfigFile,
+    clp_json_config: PackageInstanceConfig,
 ) -> Iterator[PackageInstance]:
     """Fixture that launches a clp-json instance, and gracefully stops it after its scope ends."""
     log_msg = f"Starting up the {clp_json_config.mode} package..."
     logger.info(log_msg)
 
     start_clp_package(clp_json_config)
-    instance = PackageInstance(package_instance_config_file=clp_json_config)
+    instance = PackageInstance(package_instance_config=clp_json_config)
 
-    mode = instance.package_instance_config_file.mode
+    mode = instance.package_instance_config.mode
     instance_id = instance.clp_instance_id
     log_msg = (
         f"An instance of the {mode} package was started successfully."
