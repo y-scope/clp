@@ -54,7 +54,6 @@ CKQL rules (read carefully; items marked CRITICAL will fail if violated):
 
 - Time range: use search_by_kql_with_timestamp_range to constrain by time.
 
-- Unsupported: no fuzzy matches; no less/greater-than
- comparisons on strings, IPs, or timestamps.\n
+- Unsupported: no fuzzy matches; no less/greater-than comparisons on strings, IPs, or timestamps.
 """
 # fmt: on
