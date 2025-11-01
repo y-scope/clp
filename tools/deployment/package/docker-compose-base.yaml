@@ -1,4 +1,4 @@
-name: "clp-package"
+name: "clp-package-base"
 
 include:
   - "docker-compose.utils.yaml"
@@ -53,23 +53,3 @@ services:
     extends:
       file: "docker-compose-all.yaml"
       service: "garbage-collector"
-
-  query-scheduler:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "query-scheduler"
-
-  query-worker:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "query-worker"
-
-  reducer:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "reducer"
-
-  mcp-server:
-    extends:
-      file: "docker-compose-all.yaml"
-      service: "mcp-server"
