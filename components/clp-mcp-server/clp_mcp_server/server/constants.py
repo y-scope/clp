@@ -42,8 +42,7 @@ CKQL rules (read carefully; items marked CRITICAL will fail if violated):
   Example:
   request: GET AND response: 400
 
-- CRITICAL --  Multi-word text must be quoted: wrap multi-word
- searches in double quotes.
+- CRITICAL --  Multi-word text must be quoted: wrap multi-word searches in double quotes.
   Example:
   request: "*GET wp-admin*"
   (quotes and wildcards are required).
