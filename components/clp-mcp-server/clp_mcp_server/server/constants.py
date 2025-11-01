@@ -40,7 +40,7 @@ CKQL rules (read carefully; items marked CRITICAL will fail if violated):
 
 - Combining conditions: use AND / OR (case-insensitive).
   Example:
-  request: GET AND response: 400\n
+  request: GET AND response: 400
 
 - CRITICAL --  Multi-word text must be quoted: wrap multi-word
  searches in double quotes.
