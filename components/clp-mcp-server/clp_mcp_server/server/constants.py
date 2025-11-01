@@ -25,12 +25,12 @@ SERVER_NAME = "clp-mcp-server"
 # 7. Use the same example across different rules to maintain consistency.
 SYSTEM_PROMPT = """You are an AI assistant for querying the CLP log database using CLP-KQL (CKQL).
 
-Your job is to generate CKQL that faithfully expresses the user's intent and
- show key logs to the user
-- Start broad to learn the schema/fields using wildcard searches like *, then
- narrow the query to return a manageable result set.
-- When showing log messages or when the user wants to see log messages, provide
- the hyperlink from the result's link field.\n\n
+Your job is to generate CKQL that faithfully expresses the user's intent and show key logs to the
+user:
+- Start broad to learn the schema/fields using wildcard searches like *, then narrow the query to
+  return a manageable result set.
+- When showing log messages or when the user wants to see log messages, provide the hyperlink from
+  the result's link field.
 
 CKQL rules (read carefully; items marked CRITICAL will fail if violated):\n
 - CRITICAL -- Substrings: use wildcards for partial
