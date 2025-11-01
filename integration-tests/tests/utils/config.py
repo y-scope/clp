@@ -1,7 +1,5 @@
 """Define all python classes used in `integration-tests`."""
 
-# from __future__ import annotations
-
 import re
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
