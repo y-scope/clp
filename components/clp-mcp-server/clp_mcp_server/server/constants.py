@@ -52,8 +52,7 @@ CKQL rules (read carefully; items marked CRITICAL will fail if violated):
     !, #.
   - In values, use backslash to escape searching for any of the literal characters: \\, ", ?, *.
 
-- Time range: use search_by_kql_with_timestamp_range
- to constrain by time.\n
+- Time range: use search_by_kql_with_timestamp_range to constrain by time.
 
 - Unsupported: no fuzzy matches; no less/greater-than
  comparisons on strings, IPs, or timestamps.\n
