@@ -6,7 +6,7 @@ should be able to use CLP as described in the [clp-json quick-start guide](../qu
 ## Compressing logs from S3
 
 To compress logs from S3, use the `sbin/compress-from-s3.sh` script. The script supports two modes
-of operation. Select a mode by using the corresponding argument in the command:
+of operation:
 
 * [**s3-object** mode](#s3-object-compression-mode): Compress S3 objects specified by their full
   S3 URLs.
@@ -36,9 +36,17 @@ sbin/compress-from-s3.sh \
   * `<region-code>` is the AWS region [code][aws-region-codes] for the S3 bucket containing your
     logs.
   * `<object-key>` is the [object key][aws-s3-object-key] of the log file object you wish to
-    compress. There must be no duplicate object keys across all `<object-url>` arguments.
+    compress.
 
-Instead of typing the input object URLs explicitly in the command, you may specify them in a text
+    :::{warning}
+    There must be no duplicate object keys across all `<object-url>` arguments.
+    :::
+
+
+* For a description of other fields, see the [clp-json quick-start
+  guide](../quick-start/clp-json.md#compressing-json-logs).
+
+Instead of specifying input object URLs explicitly in the command, you may specify them in a text
 file and then pass the file into the command using the `--inputs-from` flag, like so:
 
 ```bash
@@ -52,9 +60,8 @@ sbin/compress-from-s3.sh \
 * `<input-file>` is a path to a text file containing one S3 object URL **per line**. The URLs must
   follow the same format as described above for `<object-url>`.
 
-
 :::{note}
-`s3-object` mode requires the input object keys to share a non-empty common prefix. If the input
+The `s3-object` mode requires the input object keys to share a non-empty common prefix. If the input
 object keys do not share a common prefix, they will be rejected and no compression job will be
 created. This limitation will be addressed in a future release.
 :::
@@ -85,10 +92,10 @@ sbin/compress-from-s3.sh \
     `<all-logs-prefix>` value from the [compression IAM policy][compression-iam-policy].
 
 :::{note}
-`s3-key-prefix` mode accepts a single `<key-prefix-url>` argument. This limitation will be addressed
-in a future release.
+`s3-key-prefix` mode only accepts a single `<key-prefix-url>` argument. This limitation will be
+addressed in a future release.
 :::
 
-[aws-s3-object-key]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
 [aws-region-codes]: https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.RegionsAndAvailabilityZones.html#Concepts.RegionsAndAvailabilityZones.Availability
+[aws-s3-object-key]: https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
 [compression-iam-policy]: ./object-storage-config.md#configuration-for-compression
