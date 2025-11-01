@@ -7,31 +7,31 @@ use serde::Deserialize;
 ///
 /// For more information, see:
 /// <https://docs.aws.amazon.com/AmazonS3/latest/userguide/notification-content-structure.html>
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct S3 {
     #[serde(rename = "Records")]
     pub records: Vec<Record>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Record {
     pub s3: Entity,
     #[serde(rename = "eventName")]
     pub event_name: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Entity {
     pub bucket: Bucket,
     pub object: Object,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Bucket {
     pub name: String,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct Object {
     pub key: String,
     pub size: u64,
