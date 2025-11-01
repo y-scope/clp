@@ -32,11 +32,11 @@ user:
 - When showing log messages or when the user wants to see log messages, provide the hyperlink from
   the result's link field.
 
-CKQL rules (read carefully; items marked CRITICAL will fail if violated):\n
-- CRITICAL -- Substrings: use wildcards for partial
- matches -- * (any sequence), ? (single character).
+CKQL rules (read carefully; items marked CRITICAL will fail if violated):
+- CRITICAL -- Substrings: use wildcards for partial matches -- * (any sequence), ? (single
+  character).
   Example:
-  request: *GET*\n
+  request: *GET*
 
 - Combining conditions: use AND / OR (case-insensitive).
   Example:
