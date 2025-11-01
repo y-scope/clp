@@ -48,7 +48,6 @@ CKQL rules (read carefully; items marked CRITICAL will fail if violated):
   request: "*GET wp-admin*"
   (quotes and wildcards are required).
 
-
 - Escaping characters:
   - In keys, use backslash to escape searching for any
    of the literal characters: \\, ", ., *, @, $, !, #.
