@@ -57,6 +57,4 @@ CKQL rules (read carefully; items marked CRITICAL will fail if violated):
 - Unsupported: no fuzzy matches; no less/greater-than
  comparisons on strings, IPs, or timestamps.\n
 """
-
-
 # fmt: on
