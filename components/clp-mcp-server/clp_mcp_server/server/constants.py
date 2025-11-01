@@ -13,6 +13,7 @@ SERVER_NAME = "clp-mcp-server"
 # fmt: off
 # System prompts should be LLM-friendly; while LLMs may not strictly enforce all rules, we
 # empirically found the following practices effective for LLM to understand the listed rules:
+#
 # 1. Provide concrete examples to explain the rule.
 # 2. Place critical rules at the beginning and mark them as "CRITICAL".
 # 3. Use action-first sentence structure (e.g., "Use X format" instead of "To do Y, use X format").
