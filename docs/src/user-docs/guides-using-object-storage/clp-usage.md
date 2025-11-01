@@ -15,9 +15,9 @@ of operation:
 
 ### `s3-object` compression mode
 
-`s3-object` mode allows you to specify individual S3 objects to compress by their full URLs. To
-use this mode, call the `sbin/compress-from-s3.sh` script as follows, and replace the fields in
-angle brackets (`<>`) with the appropriate values:
+The `s3-object` mode allows you to specify individual S3 objects to compress by using their full
+URLs. To use this mode, call the `sbin/compress-from-s3.sh` script as follows, and replace the
+fields in angle brackets (`<>`) with the appropriate values:
 
 ```bash
 sbin/compress-from-s3.sh \
@@ -68,7 +68,7 @@ created. This limitation will be addressed in a future release.
 
 ### `s3-key-prefix` compression mode
 
-`s3-key-prefix` mode allows you to compress all objects under a given S3 key prefix. To use this
+The `s3-key-prefix` mode allows you to compress all objects under a given S3 key prefix. To use this
 mode, call the `sbin/compress-from-s3.sh` script as follows, and replace the fields in angle
 brackets (`<>`) with the appropriate values:
 
