@@ -126,8 +126,8 @@ class PackageInstanceConfig:
     #: The PackageConfig object corresponding to this package run.
     package_config: PackageConfig
 
-    #: The mode name of this config file's configuration.
-    mode: str
+    #: The PackageModeConfig object describing this config file's configuration.
+    mode_config: PackageModeConfig
 
     #: The location of the configfile used during this package run.
     temp_config_file_path: Path = field(init=False, repr=True)

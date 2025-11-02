@@ -1,5 +1,6 @@
 """Provides utility functions related to the clp-package used across `integration-tests`."""
 
+import shutil
 import subprocess
 from pathlib import Path
 from typing import Any
@@ -27,6 +28,10 @@ from tests.utils.config import (
     PackageInstanceConfig,
     PackageModeConfig,
 )
+from tests.utils.docker_utils import (
+    inspect_container_state,
+    list_prefixed_containers,
+)
 
 
 def _to_container_basename(name: str) -> str:
@@ -47,7 +52,7 @@ CLP_COMPONENT_BASENAMES = [
     _to_container_basename(GARBAGE_COLLECTOR_COMPONENT_NAME),
 ]
 
-CLP_MODES: dict[str, PackageModeConfig] = {
+CLP_MODE_CONFIGS: dict[str, PackageModeConfig] = {
     "clp-text": PackageModeConfig(
         name="clp-text",
         storage_engine=StorageEngine.CLP,
@@ -59,6 +64,94 @@ CLP_MODES: dict[str, PackageModeConfig] = {
         query_engine=QueryEngine.CLP_S,
     ),
 }
+
+
+def get_dict_from_mode_name(mode_name: str) -> dict[str, Any]:
+    """Returns the dictionary that describes the operation of `mode_name`."""
+    mode_config = CLP_MODE_CONFIGS.get(mode_name)
+    if mode_config is None:
+        err_msg = f"Unsupported mode: {mode_name}"
+        raise ValueError(err_msg)
+
+    return _build_dict_from_config(mode_config)
+
+
+def get_mode_name_from_dict(dictionary: dict[str, Any]) -> str:
+    """Returns the name of the mode of operation described by the contents of `dictionary`."""
+    package_dict = dictionary.get("package")
+    if not isinstance(package_dict, dict):
+        err_msg = "`dictionary` does not carry any mapping for 'package'."
+        raise TypeError(err_msg)
+
+    dict_query_engine = package_dict.get("query_engine")
+    dict_storage_engine = package_dict.get("storage_engine")
+    if dict_query_engine is None or dict_storage_engine is None:
+        err_msg = (
+            "`dictionary` must specify both 'package.query_engine' and 'package.storage_engine'."
+        )
+        raise ValueError(err_msg)
+
+    for mode_name, mode_config in CLP_MODE_CONFIGS.items():
+        if str(mode_config.query_engine.value) == str(dict_query_engine) and str(
+            mode_config.storage_engine.value
+        ) == str(dict_storage_engine):
+            return mode_name
+
+    err_msg = (
+        "The set of kv-pairs described in `dictionary` does not correspond to any mode of operation"
+        " for which integration testing is supported."
+    )
+    raise ValueError(err_msg)
+
+
+def write_temp_config_file(
+    mode_kv_dict: dict[str, Any],
+    temp_config_dir: Path,
+    mode_name: str,
+) -> Path:
+    """
+    Writes a temporary config file to `temp_config_dir`. Returns the path to the temporary file on
+    success.
+    """
+    if not isinstance(mode_kv_dict, dict):
+        err_msg = "`mode_kv_dict` must be a mapping."
+        raise TypeError(err_msg)
+
+    temp_config_dir.mkdir(parents=True, exist_ok=True)
+    temp_config_filename = f"clp-config-{mode_name}.yml"
+    temp_config_file_path = temp_config_dir / temp_config_filename
+
+    tmp_path = temp_config_file_path.with_suffix(temp_config_file_path.suffix + ".tmp")
+    with tmp_path.open("w", encoding="utf-8") as f:
+        yaml.safe_dump(mode_kv_dict, f, sort_keys=False)
+    tmp_path.replace(temp_config_file_path)
+
+    return temp_config_file_path
+
+
+def _build_dict_from_config(mode_config: PackageModeConfig) -> dict[str, Any]:
+    storage_engine = mode_config.storage_engine
+    query_engine = mode_config.query_engine
+    package_model = Package(storage_engine=storage_engine, query_engine=query_engine)
+    return {"package": package_model.model_dump()}
+
+
+def _load_shared_config(path: Path) -> dict[str, Any]:
+    try:
+        with path.open("r", encoding="utf-8") as file:
+            shared_config_dict = yaml.safe_load(file)
+    except yaml.YAMLError as err:
+        err_msg = f"Invalid YAML in shared config {path}: {err}"
+        raise ValueError(err_msg) from err
+    except OSError as err:
+        err_msg = f"Cannot read shared config {path}: {err}"
+        raise ValueError(err_msg) from err
+
+    if not isinstance(shared_config_dict, dict):
+        err_msg = f"Shared config {path} must be a mapping at the top level."
+        raise TypeError(err_msg)
+
+    return shared_config_dict
 
 
 def start_clp_package(run_config: PackageInstanceConfig) -> None:
@@ -74,7 +167,7 @@ def start_clp_package(run_config: PackageInstanceConfig) -> None:
         # fmt: on
         subprocess.run(start_cmd, check=True)
     except Exception as e:
-        err_msg = f"Failed to start an instance of the {run_config.mode} package."
+        err_msg = f"Failed to start an instance of the {run_config.mode_config.name} package."
         raise RuntimeError(err_msg) from e
 
 
@@ -92,80 +185,64 @@ def stop_clp_package(
         # fmt: on
         subprocess.run(stop_cmd, check=True)
     except Exception as e:
-        err_msg = f"Failed to start an instance of the {run_config.mode} package."
+        err_msg = f"Failed to stop an instance of the {run_config.mode_config.name} package."
         raise RuntimeError(err_msg) from e
 
 
-def write_temp_config_file(
-    mode_kv_dict: dict[str, Any],
-    temp_config_dir: Path,
-    mode: str,
-) -> Path:
+def is_package_running(package_instance: PackageInstance) -> tuple[bool, str | None]:
     """
-    Writes the set of key-value pairs in `mode_kv_dict` to a new yaml config file called
-    "clp-config-`{mode}`.yml" located in `temp_config_dir`. Returns the path to the temp config
-    file.
+    Checks that the `package_instance` is running properly by examining each of its component
+    containers. Records which containers are not found or not running.
     """
-    if not isinstance(mode_kv_dict, dict):
-        err_msg = "`mode_kv_dict` must be a mapping."
-        raise TypeError(err_msg)
+    docker_bin = shutil.which("docker")
+    if docker_bin is None:
+        err_msg = "docker not found in PATH"
+        raise RuntimeError(err_msg)
 
-    temp_config_dir.mkdir(parents=True, exist_ok=True)
-    temp_config_filename = f"clp-config-{mode}.yml"
-    temp_config_file_path = temp_config_dir / temp_config_filename
+    instance_id = package_instance.clp_instance_id
+    problems: list[str] = []
 
-    tmp_path = temp_config_file_path.with_suffix(temp_config_file_path.suffix + ".tmp")
-    with tmp_path.open("w", encoding="utf-8") as f:
-        yaml.safe_dump(mode_kv_dict, f, sort_keys=False)
-    tmp_path.replace(temp_config_file_path)
+    for component in CLP_COMPONENT_BASENAMES:
+        prefix = f"clp-package-{instance_id}-{component}-"
 
-    return temp_config_file_path
+        candidates = list_prefixed_containers(docker_bin, prefix)
+        if not candidates:
+            problems.append(f"No component container was found with the prefix '{prefix}'")
+            continue
+
+        not_running: list[str] = []
+        for name in candidates:
+            if not inspect_container_state(docker_bin, name, "running"):
+                not_running.append(name)
+
+        if not_running:
+            details = ", ".join(not_running)
+            problems.append(f"Component containers not running: {details}")
+
+    if problems:
+        return False, "; ".join(problems)
+
+    return True, None
 
 
-def build_dict_from_config(mode_config: PackageModeConfig) -> dict[str, Any]:
+def is_running_mode_correct(package_instance: PackageInstance) -> tuple[bool, str | None]:
     """
-    Return {"package": {...}} where the inner mapping is produced from clp_config.Package
-    with proper enum serialization.
+    Checks if the mode described in the shared config file matches the mode described in
+    `mode_config` of `package_instance`. Returns `True` if correct, `False` with message on
+    mismatch.
     """
-    storage_engine = mode_config.storage_engine
-    query_engine = mode_config.query_engine
-    package_model = Package(storage_engine=storage_engine, query_engine=query_engine)
-    return {"package": package_model.model_dump()}
-
-
-def get_dict_from_mode(mode: str) -> dict[str, Any]:
-    """Returns the dict that corresponds to the mode."""
-    mode_config = CLP_MODES.get(mode)
-    if mode_config is None:
-        err_msg = f"Unsupported mode: {mode}"
-        raise ValueError(err_msg)
-
-    return build_dict_from_config(mode_config)
-
-
-def get_mode_from_dict(dictionary: dict[str, Any]) -> str:
-    """Returns the mode that corresponds to dict."""
-    package_dict = dictionary.get("package")
-    if not isinstance(package_dict, dict):
-        err_msg = "`dictionary` does not carry any mapping for 'package'."
-        raise TypeError(err_msg)
-
-    dict_query_engine = package_dict.get("query_engine")
-    dict_storage_engine = package_dict.get("storage_engine")
-    if dict_query_engine is None or dict_storage_engine is None:
-        err_msg = (
-            "`dictionary` must specify both 'package.query_engine' and 'package.storage_engine'."
+    running_mode = _get_running_mode(package_instance)
+    intended_mode = package_instance.package_instance_config.mode_config.name
+    if running_mode != intended_mode:
+        return (
+            False,
+            f"Mode mismatch: the package is running in {running_mode}, but it should be running in"
+            f" {intended_mode}.",
         )
-        raise ValueError(err_msg)
 
-    for mode_name, mode_config in CLP_MODES.items():
-        if str(mode_config.query_engine.value) == str(dict_query_engine) and str(
-            mode_config.storage_engine.value
-        ) == str(dict_storage_engine):
-            return mode_name
+    return True, None
 
-    err_msg = (
-        "The set of kv-pairs described in `dictionary` does not correspond to any mode of operation"
-        " for which integration testing is supported."
-    )
-    raise ValueError(err_msg)
+
+def _get_running_mode(package_instance: PackageInstance) -> str:
+    shared_config_dict = _load_shared_config(package_instance.shared_config_file_path)
+    return get_mode_name_from_dict(shared_config_dict)
