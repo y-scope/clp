@@ -54,7 +54,7 @@ See one of the following guides for how to connect CLP's MCP server to the agent
 
 :::{note}
 Agents sometimes ignore MCP instructions even after making the `get_instructions` tool call. To
-reduce erroneous queries from the agent, in your prompt you can tell the agent to read the MCP
+reduce erroneous queries from the agent, in your prompt, you can tell the agent to read the MCP
 instructions carefully before analyzing any logs.
 :::
 
