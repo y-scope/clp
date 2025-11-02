@@ -85,10 +85,10 @@ Configuring VSCode to connect to the CLP MCP server
 
 ## Limitations
 
-CLP currently doesn't store timezone information in the compressed logs. This means that if the logs
-you compressed were *not* in the UTC timezone, you will need to tell your agent what timezone the
-logs were in originally. Support for encoding timezone information in the compressed logs will be
-available in a future release.
+CLP currently doesn't store time zone information in the compressed logs. This means that if the
+logs you compressed were *not* in the UTC time zone, you will need to tell your agent what time zone
+the logs were in originally. Support for encoding time zone information in the compressed logs will
+be available in a future release.
 
 :::{toctree}
 :hidden:
