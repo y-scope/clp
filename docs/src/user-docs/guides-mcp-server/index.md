@@ -21,14 +21,14 @@ This guide assumes:
 
 ## Starting the MCP Server
 
-1. Configure `clp-json` to run the MCP server by uncommenting the `mcp_server` section in
+1. Configure `clp-json` to run the MCP server by locating the `mcp_server` section in
    `etc/clp-config.yml`
 
     ```yaml
     #mcp_server: null
     ```
 
-   and then specifying a host and port number:
+   then uncommenting it and specifying a `host` and `port`:
 
     ```yaml
     mcp_server:
@@ -37,15 +37,16 @@ This guide assumes:
        # other settings
     ```
 
-    Replace the default host and port shown above if necessary.
+    Replace the default `host` and `port` shown above if necessary.
+
     :::{note}
-    Setting `mcp_server: null` or leaving the `mcp_server` section commented will
-    start `clp-json` without the MCP server.
+    If you set `mcp_server: null` or leave the `mcp_server` section commented, the MCP server won't
+    be started with the rest of `clp-json`.
     :::
 
 2. Start `clp-json` and compress the logs you want to query by following the [clp-json
-   quick-start](../quick-start/clp-json.md) guide. This will run the CLP MCP server on the
-   `host` and `port` you specified in step (1).
+   quick-start](../quick-start/clp-json.md) guide. This will run the CLP MCP server on the `host`
+   and `port` you specified in step (1).
 
 ## Connecting to the MCP Server
 
@@ -77,17 +78,17 @@ Configuring VSCode to connect to the CLP MCP server
 ::::
 
 :::{note}
-Agents sometimes ignore MCP instructions even after making the `get_instructions` tool call.
-In your prompt, tell the agent to read the MCP instructions carefully
-before analyzing any logs.
+Agents sometimes ignore MCP instructions even after making the `get_instructions` tool call. To
+reduce erroneous queries from the agent, in your prompt you can tell the agent to read the MCP
+instructions carefully before analyzing any logs.
 :::
 
 ## Limitations
 
-CLP currently doesn't store timezone information in the compressed logs. This means that if the
-logs you compressed were *not* in the UTC timezone, you will need to tell your agent what timezone
-the logs were in originally. Support for encoding timezone information in the compressed logs will
-be available in a future release.
+CLP currently doesn't store timezone information in the compressed logs. This means that if the logs
+you compressed were *not* in the UTC timezone, you will need to tell your agent what timezone the
+logs were in originally. Support for encoding timezone information in the compressed logs will be
+available in a future release.
 
 :::{toctree}
 :hidden:
