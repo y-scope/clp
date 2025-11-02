@@ -10,7 +10,6 @@ TIMESTAMP_NOT_AVAILABLE = "N/A"
 
 SERVER_NAME = "clp-mcp-server"
 
-# fmt: off
 # System prompts should be LLM-friendly; while LLMs may not strictly enforce all rules, we
 # empirically found the following practices effective for LLMs to understand the listed rules:
 #
@@ -24,6 +23,7 @@ SERVER_NAME = "clp-mcp-server"
 # 6. Let some instructions and details be implicit to avoid overwhelming the LLM.
 # 7. Use the same example across different rules to maintain consistency.
 # 8. Don't wrap text since the extra line breaks may influence the LLM's understanding.
+# fmt: off
 SYSTEM_PROMPT = (
 "You are an AI assistant for querying the CLP log database using CLP-KQL (CKQL). Your job is to"
 " generate CKQL that faithfully expresses the user's intent and show key logs to the user:\n"
