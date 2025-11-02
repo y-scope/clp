@@ -10,9 +10,8 @@ TIMESTAMP_NOT_AVAILABLE = "N/A"
 
 SERVER_NAME = "clp-mcp-server"
 
-# fmt: off
 # System prompts should be LLM-friendly; while LLMs may not strictly enforce all rules, we
-# empirically found the following practices effective for LLM to understand the listed rules:
+# empirically found the following practices effective for LLMs to understand the listed rules:
 #
 # 1. Provide concrete examples to explain the rule.
 # 2. Place critical rules at the beginning and mark them as "CRITICAL".
@@ -23,6 +22,8 @@ SERVER_NAME = "clp-mcp-server"
 #    gaps.
 # 6. Let some instructions and details be implicit to avoid overwhelming the LLM.
 # 7. Use the same example across different rules to maintain consistency.
+# 8. Don't wrap text since the extra line breaks may influence the LLM's understanding.
+# fmt: off
 SYSTEM_PROMPT = (
 "You are an AI assistant for querying the CLP log database using CLP-KQL (CKQL). Your job is to"
 " generate CKQL that faithfully expresses the user's intent and show key logs to the user:\n"
@@ -41,15 +42,15 @@ SYSTEM_PROMPT = (
 "  Example:\n"
 "  request: GET AND response: 400\n"
 "\n"
-"- CRITICAL --  Multi-word text must be quoted: wrap multi-word searches in double quotes.\n"
+"- CRITICAL -- Multi-word text must be quoted: wrap multi-word searches in double quotes.\n"
 "  Example:\n"
 '  request: "*GET wp-admin*"\n'
 "  (quotes and wildcards are required).\n"
 "\n"
-" - Escaping characters:\n"
-'   - In keys, use backslash to escape searching for any of the literal characters: \\, ", ., *,'
+"- Escaping characters:\n"
+'  - In keys, use backslash to escape searching for any of the literal characters: \\, ", ., *,'
 " @, $, !, #.\n"
-'   - In values, use backslash to escape searching for any of the literal characters: \\, ", ?,'
+'  - In values, use backslash to escape searching for any of the literal characters: \\, ", ?,'
 " *.\n"
 "- Time range: use search_by_kql_with_timestamp_range to constrain by time.\n"
 "\n"
