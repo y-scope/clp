@@ -21,21 +21,23 @@ from tests.utils.package_utils import (
 logger = logging.getLogger(__name__)
 
 
-@pytest.fixture
-def clp_text_config(
+def _build_package_instance_config(
+    mode_name: str,
     package_config: PackageConfig,
-) -> Iterator[PackageInstanceConfig]:
-    """Fixture that creates and maintains a config file for clp-text."""
-    mode_name = "clp-text"
-    logger.info("Creating a temporary config file for the %s package...", mode_name)
+) -> PackageInstanceConfig:
+    """Construct a PackageInstanceConfig for the given `mode_name`."""
+    if mode_name not in CLP_MODE_CONFIGS:
+        err_msg = f"Unknown CLP mode '{mode_name}'. Known modes: {list(CLP_MODE_CONFIGS.keys())}"
+        raise KeyError(err_msg)
 
+    # Find the corresponding PackageModeConfig object and instantiate PackageInstanceConfig.
     mode_config: PackageModeConfig = CLP_MODE_CONFIGS[mode_name]
     run_config = PackageInstanceConfig(
         package_config=package_config,
         mode_config=mode_config,
     )
 
-    # Create a temporary config file for the package run.
+    # Write the temporary config file that the instance will use during the test.
     mode_kv_dict: dict[str, Any] = get_dict_from_mode_name(mode_name)
     temp_config_file_path: Path = write_temp_config_file(
         mode_kv_dict=mode_kv_dict,
@@ -44,48 +46,28 @@ def clp_text_config(
     )
     object.__setattr__(run_config, "temp_config_file_path", temp_config_file_path)
 
-    logger.info("The temporary config file has been written for the %s package.", mode_name)
-
-    yield run_config
-
-    # Remove the temporary config file.
-    logger.info("Removing the temporary config file...")
-
-    temp_config_file_path.unlink()
-
-    logger.info("The temporary config file has been removed.")
+    return run_config
 
 
 @pytest.fixture
-def clp_json_config(
+def clp_config(
+    request: pytest.FixtureRequest,
     package_config: PackageConfig,
 ) -> Iterator[PackageInstanceConfig]:
-    """Fixture that creates and maintains a config file for clp-json."""
-    mode_name = "clp-json"
+    """
+    Parameterized fixture that creates and removes a temporary config file for a mode of operation.
+    The mode name arrives through request.param from the test's indirect parametrization.
+    """
+    mode_name: str = request.param
     logger.info("Creating a temporary config file for the %s package...", mode_name)
 
-    mode_config: PackageModeConfig = CLP_MODE_CONFIGS[mode_name]
-    run_config = PackageInstanceConfig(
-        package_config=package_config,
-        mode_config=mode_config,
-    )
-
-    # Create a temporary config file for the package run.
-    mode_kv_dict: dict[str, Any] = get_dict_from_mode_name(mode_name)
-    temp_config_file_path: Path = write_temp_config_file(
-        mode_kv_dict=mode_kv_dict,
-        temp_config_dir=package_config.temp_config_dir,
-        mode_name=mode_name,
-    )
-    object.__setattr__(run_config, "temp_config_file_path", temp_config_file_path)
+    run_config = _build_package_instance_config(mode_name, package_config)
 
     logger.info("The temporary config file has been written for the %s package.", mode_name)
 
-    yield run_config
-
-    # Remove the temporary config file.
-    logger.info("Removing the temporary config file...")
-
-    temp_config_file_path.unlink()
-
-    logger.info("The temporary config file has been removed.")
+    try:
+        yield run_config
+    finally:
+        logger.info("Removing the temporary config file...")
+        run_config.temp_config_file_path.unlink()
+        logger.info("The temporary config file has been removed.")

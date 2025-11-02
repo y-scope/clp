@@ -4,36 +4,27 @@ import logging
 
 import pytest
 
+from tests.utils.config import PackageInstance
 from tests.utils.package_utils import (
+    CLP_MODE_CONFIGS,
     is_package_running,
     is_running_mode_correct,
 )
 
-package_configurations = pytest.mark.parametrize(
-    "test_package_fixture",
-    [
-        "clp_text_package",
-        "clp_json_package",
-    ],
-)
+TEST_MODES = CLP_MODE_CONFIGS.keys()
 
 logger = logging.getLogger(__name__)
 
 
 @pytest.mark.package
-@package_configurations
-def test_clp_package(
-    request: pytest.FixtureRequest,
-    test_package_fixture: str,
-) -> None:
+@pytest.mark.parametrize("clp_config", TEST_MODES, indirect=True)
+def test_clp_package(clp_package: PackageInstance) -> None:
     """
-    Validate that all of the components of the clp package start up successfully. The package is
-    tested in each of the configurations described in `test_package_fixture`.
-
-    :param request:
-    :param test_package_fixture:
+    Validate that all of the components of the CLP package start up successfully for the selected
+    mode of operation.
     """
-    package_instance = request.getfixturevalue(test_package_fixture)
+    # Spin up the package by getting the PackageInstance fixture.
+    package_instance = clp_package
     mode_name = package_instance.package_instance_config.mode_config.name
     instance_id = package_instance.clp_instance_id
 
