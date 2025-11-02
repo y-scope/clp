@@ -52,6 +52,12 @@ This guide assumes:
 
 See one of the following guides for how to connect CLP's MCP server to the agent of your choice.
 
+:::{note}
+Agents sometimes ignore MCP instructions even after making the `get_instructions` tool call. To
+reduce erroneous queries from the agent, in your prompt you can tell the agent to read the MCP
+instructions carefully before analyzing any logs.
+:::
+
 ::::{grid} 1 1 1 1
 :gutter: 2
 
@@ -76,12 +82,6 @@ Connecting VSCode
 Configuring VSCode to connect to the CLP MCP server
 :::
 ::::
-
-:::{note}
-Agents sometimes ignore MCP instructions even after making the `get_instructions` tool call. To
-reduce erroneous queries from the agent, in your prompt you can tell the agent to read the MCP
-instructions carefully before analyzing any logs.
-:::
 
 ## Limitations
 
