@@ -26,7 +26,7 @@ def pytest_configure(config: Config) -> None:  # noqa: ARG001
         )
         raise RuntimeError(err_msg)
 
-    # Construct and validate path to site_packages
+    # Construct and validate path to site_packages.
     site_packages = Path(clp_package_dir) / "lib" / "python3" / "site-packages"
     if not site_packages.is_dir():
         err_msg = (

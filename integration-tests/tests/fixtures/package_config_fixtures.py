@@ -27,8 +27,7 @@ def clp_text_config(
 ) -> Iterator[PackageInstanceConfig]:
     """Fixture that creates and maintains a config file for clp-text."""
     mode_name = "clp-text"
-    log_msg = f"Creating a temporary config file for the {mode_name} package..."
-    logger.info(log_msg)
+    logger.info("Creating a temporary config file for the %s package...", mode_name)
 
     mode_config: PackageModeConfig = CLP_MODE_CONFIGS[mode_name]
     run_config = PackageInstanceConfig(
@@ -45,8 +44,7 @@ def clp_text_config(
     )
     object.__setattr__(run_config, "temp_config_file_path", temp_config_file_path)
 
-    log_msg = f"The temporary config file has been written for the {mode_name} package."
-    logger.info(log_msg)
+    logger.info("The temporary config file has been written for the %s package.", mode_name)
 
     yield run_config
 
@@ -64,8 +62,7 @@ def clp_json_config(
 ) -> Iterator[PackageInstanceConfig]:
     """Fixture that creates and maintains a config file for clp-json."""
     mode_name = "clp-json"
-    log_msg = f"Creating a temporary config file for the {mode_name} package..."
-    logger.info(log_msg)
+    logger.info("Creating a temporary config file for the %s package...", mode_name)
 
     mode_config: PackageModeConfig = CLP_MODE_CONFIGS[mode_name]
     run_config = PackageInstanceConfig(
@@ -82,8 +79,7 @@ def clp_json_config(
     )
     object.__setattr__(run_config, "temp_config_file_path", temp_config_file_path)
 
-    log_msg = f"The temporary config file has been written for the {mode_name} package."
-    logger.info(log_msg)
+    logger.info("The temporary config file has been written for the %s package.", mode_name)
 
     yield run_config
 
