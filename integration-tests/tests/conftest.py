@@ -16,10 +16,8 @@ pytest_plugins = [
 
 
 def pytest_configure(config: Config) -> None:  # noqa: ARG001
-    """
-    Returns the <CLP_PACKAGE_DIR>/lib/python3/site-packages path.
-    Raises a clear error if the directory is not usable.
-    """
+    """Adds <CLP_PACKAGE_DIR>/lib/python3/site-packages to the path."""
+    # Retrieve and validate path to package directory.
     clp_package_dir = Path(get_env_var("CLP_PACKAGE_DIR")).expanduser().resolve()
     if not clp_package_dir:
         err_msg = (
@@ -28,6 +26,7 @@ def pytest_configure(config: Config) -> None:  # noqa: ARG001
         )
         raise RuntimeError(err_msg)
 
+    # Construct and validate path to site_packages
     site_packages = Path(clp_package_dir) / "lib" / "python3" / "site-packages"
     if not site_packages.is_dir():
         err_msg = (
@@ -36,7 +35,7 @@ def pytest_configure(config: Config) -> None:  # noqa: ARG001
         )
         raise RuntimeError(err_msg)
 
-    # Sanity check: ensure clp_py_utils exists.
+    # Sanity check: ensure clp_py_utils exists within site_packages.
     if not (site_packages / "clp_py_utils").exists():
         err_msg = (
             f"'clp_py_utils' not found under: '{site_packages}'. These integration tests expect the"

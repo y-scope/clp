@@ -50,7 +50,7 @@ def clp_text_config(
 
     yield run_config
 
-    # Delete the temporary config file.
+    # Remove the temporary config file.
     logger.info("Removing the temporary config file...")
 
     temp_config_file_path.unlink()
@@ -87,7 +87,7 @@ def clp_json_config(
 
     yield run_config
 
-    # Delete the temporary config file.
+    # Remove the temporary config file.
     logger.info("Removing the temporary config file...")
 
     temp_config_file_path.unlink()

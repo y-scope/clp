@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def clp_text_package(
     clp_text_config: PackageInstanceConfig,
 ) -> Iterator[PackageInstance]:
-    """Fixture that launches a clp-text instance, and gracefully stops it at scope."""
+    """Fixture that launches a clp-text instance, and gracefully stops it at scope boundary."""
     mode_name = clp_text_config.mode_config.name
     log_msg = f"Starting up the {mode_name} package..."
     logger.info(log_msg)
@@ -51,7 +51,7 @@ def clp_text_package(
 def clp_json_package(
     clp_json_config: PackageInstanceConfig,
 ) -> Iterator[PackageInstance]:
-    """Fixture that launches a clp-json instance, and gracefully stops it at scope."""
+    """Fixture that launches a clp-json instance, and gracefully stops it at scope boundary."""
     mode_name = clp_json_config.mode_config.name
     log_msg = f"Starting up the {mode_name} package..."
     logger.info(log_msg)
