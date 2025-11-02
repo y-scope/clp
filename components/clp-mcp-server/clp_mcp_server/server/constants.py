@@ -47,10 +47,10 @@ SYSTEM_PROMPT = (
 '  request: "*GET wp-admin*"\n'
 "  (quotes and wildcards are required).\n"
 "\n"
-" - Escaping characters:\n"
-'   - In keys, use backslash to escape searching for any of the literal characters: \\, ", ., *,'
+"- Escaping characters:\n"
+'  - In keys, use backslash to escape searching for any of the literal characters: \\, ", ., *,'
 " @, $, !, #.\n"
-'   - In values, use backslash to escape searching for any of the literal characters: \\, ", ?,'
+'  - In values, use backslash to escape searching for any of the literal characters: \\, ", ?,'
 " *.\n"
 "- Time range: use search_by_kql_with_timestamp_range to constrain by time.\n"
 "\n"
