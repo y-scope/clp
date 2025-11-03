@@ -2,10 +2,11 @@
 
 A multi-node deployment allows you to run CLP across a distributed set of hosts.
 
-:::{note}
-Multi-node deployment requires manual orchestration of Docker Compose services across your
-cluster. This guide explains how to use the `--setup-only` flag and Docker Compose to deploy
-CLP components across multiple hosts.
+:::{warning}
+The instructions below provide a temporary solution for multi-node deployment using manual Docker
+Compose orchestration and may change as we actively work to improve ease of deployment. Stay tuned
+for future updates on Kubernetes Helm support, which will simplify multi-node deployments
+significantly.
 :::
 
 ## Requirements
@@ -23,14 +24,15 @@ The CLP package is composed of several services that can be categorized as infra
 schedulers, workers, and supporting services. For a detailed overview of all services and their
 dependencies, see the [deployment orchestration design doc][design-orchestration].
 
+:::{note}
+Multi-node deployment currently requires manual orchestration of Docker Compose services across your
+cluster. This guide explains how to use the `--setup-only` flag and Docker Compose to deploy CLP
+components across multiple hosts.
+:::
+
 In a multi-node cluster:
 * **Infrastructure services** and **schedulers** should be run once per cluster (singleton services)
 * **Workers** can be run on multiple hosts to increase parallelism
-
-:::{note}
-Running additional worker instances on different hosts increases the parallelism of compression and
-search/aggregation jobs.
-:::
 
 ## Configuring CLP
 
@@ -38,32 +40,16 @@ search/aggregation jobs.
    configuration.
 
 2. **Configure credentials**:
-   1. Copy `etc/credentials.template.yml` to `etc/credentials.yml`.
-   2. Edit `etc/credentials.yml`:
-      1. Uncomment the file.
-      2. Choose appropriate usernames and passwords for database, queue, and Redis.
-         * Note that these are *new* credentials that will be used by the components.
+   * Copy `etc/credentials.template.yml` to `etc/credentials.yml`.
+   * Edit `etc/credentials.yml` to set usernames and passwords.
 
 3. **Configure CLP settings**:
-   1. Edit `etc/clp-config.yml`:
-      1. Uncomment the file.
-      2. Set the `host` config for each controller component to the hostname/IP where you plan to
-         run them:
-         * `database.host` - Host for the database service
-         * `queue.host` - Host for the message queue service
-         * `redis.host` - Host for the Redis service
-         * `results_cache.host` - Host for the results cache (MongoDB) service
-         * `query_scheduler.host` - Host for the query scheduler service
-         * `webui.host` - Host for the Web UI service
-         * You can run all controller components on a single host or distribute them across
-           multiple hosts.
-      3. Change any controller component ports that will conflict with services you already have
-         running.
-      4. Set `archive_output.storage.directory` to a directory on the shared filesystem.
-         * Ideally, the directory should be empty or should not yet exist (CLP will create it)
-           since CLP will write several files and directories directly to the given directory.
-      5. If you want to enable the MCP server, configure `mcp_server` settings; otherwise, leave
-         it as `null`.
+   * Edit `etc/clp-config.yml`.
+   * Set the `host` and `port` fields for each service to the actual hostname/IP and port where you
+     plan to run them.
+   * If using non-s3 storage (i.e., local filesystem storage), set `logs_input.storage.directory`
+     and  `archive_output.storage.directory` and `stream_output.storage.directory` to directories on
+     the shared filesystem.
 
 4. **Initialize the package environment**:
 
@@ -75,15 +61,15 @@ search/aggregation jobs.
 
    This will:
    * Validate your configuration
-   * Create necessary directories
+   * Create the necessary directories
    * Generate the `.env` file with all environment variables
    * Create `var/log/.clp-config.yml` (the container-specific config)
 
 5. **Customize the generated configuration for multi-node deployment**:
 
-   After running `--setup-only`, the generated `var/log/.clp-config.yml` file will have hostnames
-   converted to Docker Compose service names (e.g., `database`, `queue`) and ports reset to
-   defaults. For multi-node deployment, you **must** update this file to use actual network-reachable
+   After running `--setup-only`, the generated configuration files will have hostnames converted to
+   Docker Compose service names (e.g., `database`, `queue`) and ports reset to defaults. For
+   multi-node deployment, you **must** update these files to use actual network-reachable
    hostnames/IPs:
 
    1. **Edit `var/log/.clp-config.yml`**:
@@ -93,7 +79,13 @@ search/aggregation jobs.
       * For example, if your database runs on `192.168.1.10:3306`, ensure `database.host` is set to
         `192.168.1.10` and `database.port` is `3306`.
 
-   2. **Edit `.env` file** (if needed):
+   2. **Edit `var/www/webui/server/dist/settings.json`**:
+      * Update `SqlDbHost` to the actual hostname or IP address of your database service.
+      * Update `SqlDbPort` if you changed the database port.
+      * Update `MongoDbHost` to the actual hostname or IP address of your results cache service.
+      * Update `MongoDbPort` if you changed the results cache port.
+
+   3. **Edit `.env` file** (if needed):
       * Update any host-specific paths or settings.
 
    :::{important}
@@ -102,78 +94,105 @@ search/aggregation jobs.
    addresses, not Docker service names.
    :::
 
-6. **Determine the instance ID**:
+6. **Distribute the package** to all hosts where you want to run CLP components:
 
-   The instance ID is automatically generated and stored in `var/log/instance-id`. You'll need
-   this for the Docker Compose project name. Read it with:
+   Copy the entire CLP package directory (including the generated `.env`,
+   `var/log/.clp-config.yml`, and `var/log/instance-id` files) to all hosts in your cluster.
 
-   ```bash
-   cat var/log/instance-id
-   ```
+7. **Configure worker concurrency** (optional):
 
-7. **Distribute the package** to all hosts where you want to run CLP components:
+   On each worker host, edit the `.env` file to adjust worker concurrency settings as needed:
+   * `CLP_COMPRESSION_WORKER_CONCURRENCY` - Number of compression tasks to run in parallel
+   * `CLP_QUERY_WORKER_CONCURRENCY` - Number of query tasks to run in parallel
+   * `CLP_REDUCER_CONCURRENCY` - Number of reducer tasks to run in parallel
 
-   Copy the entire CLP package directory (including the generated `.env`, `var/log/.clp-config.yml`,
-   and `var/log/instance-id` files) to all hosts in your cluster.
+   Recommended settings:
+   * If workers are started on separate hosts, set each concurrency value to match the CPU count on
+     that host.
+   * If compression and query/reducer workers are started on the same host, set each concurrency
+     value to half the CPU count (e.g., for a 16-core host: set all three to 8).
 
 ## Starting CLP
 
-Before starting each CLP component, note that some components must be started before others due to
-dependencies. We organize the components into startup groups below, where components in a group can
-be started in any order, but all components in a group must be started (and healthy/completed)
-before starting components in the next group.
-
-**Startup Group 1** (infrastructure databases):
-
-* `database`
-* `queue`
-* `redis`
-* `results-cache`
-
-**Startup Group 2** (one-time initialization jobs):
-
-* `db-table-creator` (run after `database` is healthy)
-* `results-cache-indices-creator` (run after `results-cache` is healthy)
+Start the services using the commands below. The comments indicate the startup order and dependencies.
 
 :::{note}
-These initialization jobs run once and exit. Wait for them to complete successfully before
-proceeding to the next group.
+For **clp-json** base deployments (storage engine: `clp-s` without query engine), omit the
+query-scheduler, query-worker, and reducer services.
 :::
 
-**Startup Group 3** (schedulers and UI):
-
-* `compression-scheduler`
-* `query-scheduler`
-* `webui`
-* `garbage-collector` (optional, only if retention is configured)
-* `mcp-server` (optional, only if MCP server is configured)
-
-**Startup Group 4** (workers):
-
-* `compression-worker`
-* `query-worker`
-* `reducer`
-
-### Starting a service
-
-For each component, on the host where you want to run it, use the following command format:
+All commands below assume you are running them from the root of the CLP package directory.
 
 ```bash
-docker compose --project-name clp-package-<instance-id> \
-  --file docker-compose.yaml \
-  up <service-name> --no-deps --detach --wait
-```
-
-Replace:
-* `<instance-id>` with the instance ID from `var/log/instance-id`
-* `<service-name>` with one of the service names from the startup groups above
-
-**Example**: To start the database service with instance ID `a1b2`:
-
-```bash
-docker compose --project-name clp-package-a1b2 \
-  --file docker-compose.yaml \
+# Start database
+docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
+  --file docker-compose-all.yaml \
   up database --no-deps --detach --wait
+
+# Initialize database
+docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
+  --file docker-compose-all.yaml \
+  up db-table-creator --no-deps
+
+# Start queue
+docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
+  --file docker-compose-all.yaml \
+  up queue --no-deps --detach --wait
+
+# Start redis
+docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
+  --file docker-compose-all.yaml \
+  up redis --no-deps --detach --wait
+
+# Start results cache
+docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
+  --file docker-compose-all.yaml \
+  up results-cache --no-deps --detach --wait
+
+# Initialize results cache
+docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
+  --file docker-compose-all.yaml \
+  up results-cache-indices-creator --no-deps
+
+# Start compression scheduler
+docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
+  --file docker-compose-all.yaml \
+  up compression-scheduler --no-deps --detach
+
+# Start query scheduler
+docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
+  --file docker-compose-all.yaml \
+  up query-scheduler --no-deps --detach --wait
+
+# Start webui
+docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
+  --file docker-compose-all.yaml \
+  up webui --no-deps --detach
+
+# Start garbage collector (optional, only if retention is configured)
+docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
+  --file docker-compose-all.yaml \
+  up garbage-collector --no-deps --detach
+
+# Start MCP server (optional, only if configured)
+docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
+  --file docker-compose-all.yaml \
+  up mcp-server --no-deps --detach
+
+# Start compression worker
+docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
+  --file docker-compose-all.yaml \
+  up compression-worker --no-deps --detach
+
+# Start query worker
+docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
+  --file docker-compose-all.yaml \
+  up query-worker --no-deps --detach
+
+# Start reducer
+docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
+  --file docker-compose-all.yaml \
+  up reducer --no-deps --detach
 ```
 
 :::{tip}
@@ -183,54 +202,11 @@ other hosts. The `--wait` flag ensures the command waits for the service to be h
 returning.
 :::
 
-:::{important}
-For initialization jobs (`db-table-creator` and `results-cache-indices-creator`), omit the
-`--detach` flag to run them in the foreground and wait for completion:
-
-```bash
-docker compose --project-name clp-package-a1b2 \
-  --file docker-compose.yaml \
-  up db-table-creator --no-deps
-
-docker compose --project-name clp-package-a1b2 \
-  --file docker-compose.yaml \
-  up results-cache-indices-creator --no-deps
-```
-:::
-
 :::{note}
-For **clp-text** deployments (storage engine: `clp`), use `docker-compose.yaml`. For **clp-json**
-base deployments (storage engine: `clp-s` without query engine), use `docker-compose-base.yaml`
-instead.
+To increase parallelism, start worker services (`compression-worker`, `query-worker`, `reducer`) on
+multiple hosts. Ensure the shared filesystem is mounted at the same path on all worker hosts, then
+run the worker commands on each host.
 :::
-
-### Starting workers on multiple hosts
-
-You can start worker components (`compression-worker`, `query-worker`, `reducer`) on multiple hosts
-to increase parallelism:
-
-1. Copy the package to each worker host
-2. Ensure the shared filesystem is mounted at the same path on all worker hosts
-3. Run the appropriate `docker compose up` command on each worker host
-
-**Example**: Starting a compression worker on three different hosts:
-
-```bash
-# On worker-host-1
-docker compose --project-name clp-package-a1b2 \
-  --file docker-compose.yaml \
-  up compression-worker --no-deps --detach
-
-# On worker-host-2
-docker compose --project-name clp-package-a1b2 \
-  --file docker-compose.yaml \
-  up compression-worker --no-deps --detach
-
-# On worker-host-3
-docker compose --project-name clp-package-a1b2 \
-  --file docker-compose.yaml \
-  up compression-worker --no-deps --detach
-```
 
 ## Using CLP
 
@@ -257,23 +233,13 @@ How to compress and search unstructured text logs.
 
 ## Stopping CLP
 
-To stop a service on a host, run:
+To stop CLP, run:
 
 ```bash
-docker compose --project-name clp-package-<instance-id> down <service-name>
+sbin/stop-clp.sh
 ```
 
-To stop all services on a host, run:
-
-```bash
-docker compose --project-name clp-package-<instance-id> down
-```
-
-**Example**:
-
-```bash
-docker compose --project-name clp-package-a1b2 down compression-worker
-```
+This will stop all CLP services managed by Docker Compose on the current host.
 
 ## Monitoring services
 
