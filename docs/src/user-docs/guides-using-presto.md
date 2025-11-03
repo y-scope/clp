@@ -198,6 +198,41 @@ SELECT foo.bar FROM default LIMIT 1;
 CLP's UI should be available at [http://localhost:4000](http://localhost:4000) (if you changed
 `webui.host` or `webui.port` in `etc/clp-config.yml`, use the new values).
 
+[Figure 1](#figure-1) shows the search page after applying a filter.
+
+(figure-1)=
+:::{card}
+
+:::{image} clp-presto-ui.png
+
++++
+**Figure 1**: The search page in CLP's Presto UI.
+:::
+
+The numbered circles in [Figure 1](#figure-1) correspond to the following elements:
+
+1. **The filter input boxes**. Fill in the boxes to construct your filter. The state of the query
+   boxes shown in the image correspond to the following Presto command:
+
+   ```SQL
+   SELECT timestamp, error_severity, message
+   FROM postgresql
+   WHERE error_severity LIKE '%DEBUG%'
+   ORDER BY timestamp ASC
+   ```
+
+2. **The time range selector**. CLP will filter for log events that are in the specified time range.
+   You can select a preset filter (e.g., `Last 15 minutes`; `Yesterday`) from the dropdown, or
+   choose `Custom` and set the start time and end time directly.
+3. **The "Freeform" selector**. Click this button if you'd like to construct a filter from scratch,
+   without the aid of the filter input boxes.
+4. **The filter results timeline**. After you apply a filter, the timeline will show the
+   distribution of results across your chosen time range.
+   * You can click and drag to zoom into a time range.
+   * When you mouse over a bar in the timeline, a popup will display the range and the number of
+     search results in that range.
+5. **The results table**. The table will display the log events that match your filter.
+
 :::{note}
 The UI can only run one query at a time, and queries must not end with a `;`.
 :::
