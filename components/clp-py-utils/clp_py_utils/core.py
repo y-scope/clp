@@ -82,8 +82,10 @@ def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
         if link_target.is_absolute():
             return CONTAINER_DIR_FOR_HOST_ROOT / link_target.relative_to("/")
         else:
+            # If the symlink points to a relative path, resolve it relative to the symlink's parent.
             return (translated_path.parent / link_target).resolve()
     except OSError:
+        # Ignore if reading the symlink fails (e.g., broken link or permission error).
         pass
 
     return translated_path
