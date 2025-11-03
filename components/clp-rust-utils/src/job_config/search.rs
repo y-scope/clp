@@ -3,9 +3,11 @@ use serde::{Deserialize, Serialize};
 
 pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
 
-// TODO: Add definition.
-pub type AggregationConfig = ();
-
+/// Mirror of `job_orchestration.scheduler.job_config.SearchJobConfig`. Must be kept in sync.
+///
+/// # NOTE
+///
+/// `aggregation_config` is currently unused and thus uses a placeholder unit type.
 #[derive(Default, Serialize, Deserialize)]
 #[serde(default)]
 pub struct SearchJobConfig {
@@ -18,9 +20,10 @@ pub struct SearchJobConfig {
     pub ignore_case: bool,
     pub path_filter: Option<String>,
     pub network_address: Option<(String, u16)>,
-    pub aggregation_config: Option<AggregationConfig>,
+    pub aggregation_config: Option<()>,
 }
 
+/// Mirror of `job_orchestration.scheduler.constants.QueryJobStatus`. Must be kept in sync.
 #[derive(Debug, Serialize, Deserialize, IntoPrimitive, TryFromPrimitive)]
 #[repr(i32)]
 pub enum QueryJobStatus {
@@ -33,6 +36,7 @@ pub enum QueryJobStatus {
     Killed = 6,
 }
 
+/// Mirror of `job_orchestration.scheduler.constants.QueryJobType`. Must be kept in sync.
 #[derive(Debug, Serialize, Deserialize, IntoPrimitive, TryFromPrimitive)]
 #[repr(i32)]
 pub enum QueryJobType {

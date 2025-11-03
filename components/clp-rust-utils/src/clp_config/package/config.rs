@@ -1,5 +1,12 @@
 use serde::Deserialize;
 
+/// Mirror of `clp_py_utils.clp_config.CLPConfig`.
+///
+/// # NOTE
+///
+/// * This type is partially defined: unused fields are omitted and discarded through
+///   deserialization.
+/// * The default values must be kept in sync with the Python definition.
 #[derive(Deserialize, Clone)]
 pub struct Config {
     #[serde(default)]
@@ -12,6 +19,13 @@ pub struct Config {
     pub api_server: ApiServer,
 }
 
+/// Mirror of `clp_py_utils.clp_config.Database`.
+///
+/// # NOTE
+///
+/// * This type is partially defined: unused fields are omitted and discarded through
+///   deserialization.
+/// * The default values must be kept in sync with the Python definition.
 #[derive(Deserialize, Clone)]
 #[serde(default)]
 pub struct Database {
@@ -46,6 +60,13 @@ impl Default for ApiServer {
     }
 }
 
+/// Mirror of `clp_py_utils.clp_config.Package`.
+///
+/// # NOTE
+///
+/// * This type is partially defined: unused fields are omitted and discarded through
+///   deserialization.
+/// * The default values must be kept in sync with the Python definition.
 #[derive(Deserialize, Clone)]
 #[serde(default)]
 pub struct Package {
@@ -60,6 +81,7 @@ impl Default for Package {
     }
 }
 
+/// Mirror of `clp_py_utils.clp_config.StorageEngine`.
 #[derive(Deserialize, Clone)]
 pub enum StorageEngine {
     #[serde(rename = "clp")]
@@ -68,6 +90,13 @@ pub enum StorageEngine {
     ClpS,
 }
 
+/// Mirror of `clp_py_utils.clp_config.ResultsCache`.
+///
+/// # NOTE
+///
+/// * This type is partially defined: unused fields are omitted and discarded through
+///   deserialization.
+/// * The default values must be kept in sync with the Python definition.
 #[derive(Deserialize, Clone)]
 #[serde(default)]
 pub struct ResultsCache {
