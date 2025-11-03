@@ -791,14 +791,7 @@ class DockerComposeController(BaseController):
         logger.info(f"Starting CLP using Docker Compose ({deployment_type} deployment)...")
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
-        if deployment_type == DeploymentType.BASE:
-            if self._clp_config.compression_scheduler.type == OrchestrationType.spider:
-                cmd += ["--file", "docker-compose.spider.base.yaml"]
-            else:
-                cmd += ["--file", "docker-compose.base.yaml"]
-        elif self._clp_config.compression_scheduler.type == OrchestrationType.spider:
-            cmd += ["--file", "docker-compose.spider.yaml"]
-
+        cmd += ["--file", self._get_docker_file_name()]
         if self._clp_config.mcp_server is not None:
             cmd += ["--profile", "mcp"]
         cmd += ["up", "--detach", "--wait"]
@@ -848,6 +841,21 @@ class DockerComposeController(BaseController):
         """
         # This will change when we move from single to multi-container workers. See y-scope/clp#1424
         return multiprocessing.cpu_count() // 2
+
+    def _get_docker_file_name(self) -> str:
+        """
+        :return: The Docker Compose file name to use based on the config.
+        """
+        deployment_type = self._clp_config.get_deployment_type()
+        compression_scheduler_type = self._clp_config.compression_scheduler.type
+        if deployment_type == DeploymentType.BASE:
+            if compression_scheduler_type == OrchestrationType.spider:
+                return "docker-compose-spider-base.yaml"
+            else:
+                return "docker-compose.base.yaml"
+        if compression_scheduler_type == OrchestrationType.spider:
+            return "docker-compose-spider.yaml"
+        return "docker-compose.yaml"
 
 
 def get_or_create_instance_id(clp_config: CLPConfig) -> str:
