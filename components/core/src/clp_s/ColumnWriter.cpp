@@ -8,6 +8,7 @@
 
 #include "../clp/Defs.h"
 #include "../clp/EncodedVariableInterpreter.hpp"
+#include "../clp/ir/EncodedTextAst.hpp"
 #include "ParsedMessage.hpp"
 #include "ZstdCompressor.hpp"
 
@@ -88,14 +89,36 @@ void BooleanColumnWriter::store(ZstdCompressor& compressor) {
 
 size_t ClpStringColumnWriter::add_value(ParsedMessage::variable_t& value) {
     uint64_t offset{m_encoded_vars.size()};
+    [[maybe_unused]] size_t estimated_raw_size{};
     std::vector<clp::variable_dictionary_id_t> temp_var_dict_ids;
-    clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
-            std::get<std::string>(value),
-            m_logtype_entry,
-            *m_var_dict,
-            m_encoded_vars,
-            temp_var_dict_ids
-    );
+    if (std::holds_alternative<std::string>(value)) {
+        clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
+                std::get<std::string>(value),
+                m_logtype_entry,
+                *m_var_dict,
+                m_encoded_vars,
+                temp_var_dict_ids
+        );
+    } else if (std::holds_alternative<clp::ir::EightByteEncodedTextAst>(value)) {
+        clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
+                std::get<clp::ir::EightByteEncodedTextAst>(value),
+                m_logtype_entry,
+                *m_var_dict,
+                m_encoded_vars,
+                temp_var_dict_ids,
+                estimated_raw_size
+        );
+    } else {
+        clp::EncodedVariableInterpreter::encode_and_add_to_dictionary(
+                std::get<clp::ir::FourByteEncodedTextAst>(value),
+                m_logtype_entry,
+                *m_var_dict,
+                m_encoded_vars,
+                temp_var_dict_ids,
+                estimated_raw_size
+        );
+    }
+
     clp::logtype_dictionary_id_t id{};
     m_log_dict->add_entry(m_logtype_entry, id);
     auto encoded_id = encode_log_dict_id(id, offset);
