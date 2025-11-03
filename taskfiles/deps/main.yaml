@@ -324,8 +324,8 @@ tasks:
             - "-DENABLE_EXPAT=OFF"
             - "-DENABLE_OPENSSL=OFF"
           LIB_NAME: "LibArchive"
-          TARBALL_SHA256: "9015d109ec00bb9ae1a384b172bf2fc1dff41e2c66e5a9eeddf933af9db37f5a"
-          TARBALL_URL: "https://github.com/libarchive/libarchive/releases/download/v3.5.1/libarchive-3.5.1.tar.gz"
+          TARBALL_SHA256: "191b5b24811499d5c2e5efa3248975fa6daa5e6a227700cc7b8e54d6d7c06eef"
+          TARBALL_URL: "https://github.com/libarchive/libarchive/releases/download/v3.8.0/libarchive-3.8.0.tar.gz"
 
   liblzma:
     internal: true
