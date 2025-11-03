@@ -120,7 +120,15 @@ public:
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
 
-    std::string const& get_log_surgeon_schema_file_path() const { return m_log_surgeon_schema_file_path; }
+    [[nodiscard]] auto experimental_enabled() const -> bool { return m_experimental_enabled; }
+
+    [[nodiscard]] auto get_log_surgeon_schema_file_path() const -> std::string const& {
+        return m_log_surgeon_schema_file_path;
+    }
+
+    [[nodiscard]] auto print_logtype_stats() const -> bool { return m_print_logtype_stats; }
+
+    [[nodiscard]] auto print_variable_stats() const -> bool { return m_print_variable_stats; }
 
 private:
     // Methods
@@ -162,6 +170,13 @@ private:
             std::vector<boost::program_options::option> const& options,
             boost::program_options::variables_map& parsed_options
     );
+
+    /**
+     * Validate the use of experimental features. Requires the program options to have been parsed.
+     * @throws std::invalid_argument if any experimental feature is used without setting the
+     * experimetnal flag.
+     */
+    auto validate_experimental() const -> void;
 
     void print_basic_usage() const;
 
@@ -221,8 +236,11 @@ private:
 
     OutputHandlerType m_output_handler_type{OutputHandlerType::Stdout};
 
-    // Log surgeon
+    // clpsls Prototype
+    bool m_experimental_enabled{false};
     std::string m_log_surgeon_schema_file_path;
+    bool m_print_logtype_stats{false};
+    bool m_print_variable_stats{false};
 };
 }  // namespace clp_s
 

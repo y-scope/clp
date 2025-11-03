@@ -124,7 +124,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     }
 
     po::options_description general_options("General options");
-    general_options.add_options()("help,h", "Print help");
+    general_options.add_options()("help,h", "Print help")(
+            "experimental",
+            po::bool_switch(&m_experimental_enabled),
+            "Enable experimental features to be used."
+    );
 
     char command_input;
     po::options_description general_positional_options("General positional options");
@@ -270,7 +274,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Type of authentication required for network requests (s3 | none). Authentication"
                     " with s3 requires the AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment"
                     " variables, and optionally the AWS_SESSION_TOKEN environment variable."
-            )(
+            );
+            // clang-format on
+
+            po::options_description experimental_options("Experimental Options");
+            experimental_options.add_options()(
                     "schema-path",
                     po::value<std::string>(&m_log_surgeon_schema_file_path)
                             ->value_name("FILE")
@@ -278,7 +286,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "Path to a log surgeon schema file. If not specified, heuristics are used to"
                     " determine dictionary variables. See README-Schema.md for details."
             );
-            // clang-format on
 
             po::positional_options_description positional_options;
             positional_options.add("archives-dir", 1);
@@ -286,6 +293,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             po::options_description all_compression_options;
             all_compression_options.add(compression_options);
+            all_compression_options.add(experimental_options);
             all_compression_options.add(compression_positional_options);
 
             std::vector<std::string> unrecognized_options
@@ -337,6 +345,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             }
 
             validate_network_auth(auth, m_network_auth);
+
+            validate_experimental();
 
             if (false == m_log_surgeon_schema_file_path.empty()) {
                 if (false == boost::filesystem::exists(m_log_surgeon_schema_file_path)) {
@@ -570,6 +580,20 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
             search_options.add(aggregation_options);
 
+            po::options_description experimental_options("Experimental Options");
+            experimental_options.add_options()(
+                    "print-logtype-stats",
+                    po::bool_switch(&m_print_logtype_stats),
+                    "Print out the logtypes and their count for each archive."
+            );
+            experimental_options.add_options()(
+                    "print-variable-stats",
+                    po::bool_switch(&m_print_variable_stats),
+                    "Print out the unstructured variables, their type, and their count for each "
+                    "archive."
+            );
+            search_options.add(experimental_options);
+
             po::options_description network_output_handler_options(
                     "Network Output Handler Options"
             );
@@ -708,6 +732,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             validate_archive_paths(archive_path, archive_id, m_input_paths);
 
             validate_network_auth(auth, m_network_auth);
+
+            validate_experimental();
 
             if (m_query.empty()) {
                 throw std::invalid_argument("No query specified");
@@ -917,5 +943,26 @@ void CommandLineArguments::print_search_usage() const {
               << " s [OPTIONS] ARCHIVES_DIR KQL_QUERY"
                  " [OUTPUT_HANDLER [OUTPUT_HANDLER_OPTIONS]]"
               << std::endl;
+}
+
+auto CommandLineArguments::validate_experimental() const -> void {
+    if (m_experimental_enabled) {
+        return;
+    }
+    if (false == m_log_surgeon_schema_file_path.empty()) {
+        throw std::invalid_argument(
+                "Must set --experimental to parse unstructured logs with log-surgeon."
+        );
+    }
+    if (m_print_logtype_stats) {
+        throw std::invalid_argument(
+                "Must set --experimental to print the logtype stats."
+        );
+    }
+    if (m_print_variable_stats) {
+        throw std::invalid_argument(
+                "Must set --experimental to print the variable stats."
+        );
+    }
 }
 }  // namespace clp_s
