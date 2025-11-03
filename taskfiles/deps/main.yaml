@@ -600,8 +600,8 @@ tasks:
             - "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
             - "-Dystdlib_BUILD_TESTING=OFF"
           LIB_NAME: "ystdlib"
-          TARBALL_SHA256: "65990dc2bcc4a355c2181bfe31a7800f492309d1bcd340f52a34e85047e61bc8"
-          TARBALL_URL: "https://github.com/y-scope/ystdlib-cpp/archive/9ed78cd.tar.gz"
+          TARBALL_SHA256: "379c04c86715f39cffa09bb3ebc22b4c45af9a63ea3efa2081d210289fcd2af6"
+          TARBALL_URL: "https://github.com/y-scope/ystdlib-cpp/archive/c03806a.tar.gz"
 
   zlib:
     internal: true
