@@ -78,6 +78,8 @@ const validate = (sqlString: string) => {
     buildParser(sqlString).singleStatement();
 };
 
+const MILLISECONDS_PER_SECOND = 1000;
+
 /**
  * Constructs a SQL search query string from a set of structured components.
  *
@@ -104,7 +106,9 @@ const buildSearchQuery = ({
     timestampKey,
 }: BuildSearchQueryProps): string => {
     let queryString = `SELECT ${selectItemList} FROM ${databaseName}
-WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp.unix()} AND ${endTimestamp.unix()}`;
+WHERE to_unixtime(${timestampKey}) BETWEEN
+${startTimestamp.valueOf() / MILLISECONDS_PER_SECOND}
+AND ${endTimestamp.valueOf() / MILLISECONDS_PER_SECOND}`;
 
     if ("undefined" !== typeof booleanExpression) {
         queryString += ` AND (${booleanExpression})`;
@@ -125,7 +129,6 @@ WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp.unix()} AND ${endTim
     return queryString;
 };
 
-const MILLISECONDS_PER_SECOND = 1000;
 
 /**
  * Constructs a bucketed timeline query.
