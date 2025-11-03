@@ -75,11 +75,12 @@ constexpr std::array cAbbreviatedMonthNames
  * Converts a padded decimal integer string to an integer.
  * @param str Substring containing the padded decimal integer string.
  * @param padding_character Padding character which may prefix the integer.
- * @return The integer value on success
- * @return std::nullopt otherwise.
+ * @return A result containing the integer value, or an error code indicating the failure:
+ * - ErrorCodeEnum::IncompatibleTimestampPattern if the substring can not be converted to an
+ *   integer.
  */
 [[nodiscard]] auto convert_padded_string_to_number(std::string_view str, char padding_character)
-        -> std::optional<int>;
+        -> ystdlib::error_handling::Result<int>;
 
 /**
  * Finds the first matching prefix from a list of candidates.
@@ -95,9 +96,9 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
         -> ystdlib::error_handling::Result<size_t>;
 
 auto convert_padded_string_to_number(std::string_view str, char padding_character)
-        -> std::optional<int> {
+        -> ystdlib::error_handling::Result<int> {
     if (str.empty()) {
-        return std::nullopt;
+        return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
     }
 
     // Leave at least one character for parsing to ensure we actually parse number content.
@@ -108,7 +109,7 @@ auto convert_padded_string_to_number(std::string_view str, char padding_characte
     if (clp::string_utils::convert_string_to_int(str.substr(i), value)) {
         return value;
     }
-    return std::nullopt;
+    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
 }
 
 auto find_first_matching_prefix(std::string_view str, std::span<std::string_view const> candidates)
@@ -162,18 +163,12 @@ auto parse_timestamp(
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
-                auto const optional_two_digit_year{convert_padded_string_to_number(
-                        timestamp.substr(timestamp_idx, cFieldLength),
-                        '0'
-                )};
-                if (false == optional_two_digit_year.has_value()) {
-                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
-                }
-
-                auto const two_digit_year{optional_two_digit_year.value()};
-                if (two_digit_year < cMinTwoDigitYear || two_digit_year > cMaxTwoDigitYear) {
-                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
-                }
+                auto const two_digit_year{
+                        YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
+                                timestamp.substr(timestamp_idx, cFieldLength),
+                                '0'
+                        ))
+                };
 
                 if (two_digit_year >= cTwoDigitYearOffsetBoundary) {
                     parsed_year = two_digit_year + cTwoDigitYearLowOffset;
@@ -190,15 +185,11 @@ auto parse_timestamp(
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
-                auto const optional_parsed_year{convert_padded_string_to_number(
+                parsed_year = YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
                         timestamp.substr(timestamp_idx, cFieldLength),
                         '0'
-                )};
-                if (false == optional_parsed_year.has_value()) {
-                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
-                }
+                ));
 
-                parsed_year = optional_parsed_year.value();
                 if (parsed_year < cMinParsedYear || parsed_year > cMaxParsedYear) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
@@ -232,15 +223,11 @@ auto parse_timestamp(
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
-                auto const optional_parsed_month{convert_padded_string_to_number(
+                parsed_month = YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
                         timestamp.substr(timestamp_idx, cFieldLength),
                         '0'
-                )};
-                if (false == optional_parsed_month.has_value()) {
-                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
-                }
+                ));
 
-                parsed_month = optional_parsed_month.value();
                 if (parsed_month < cMinParsedMonth || parsed_month > cMaxParsedMonth) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
@@ -255,15 +242,11 @@ auto parse_timestamp(
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
-                auto const optional_parsed_day{convert_padded_string_to_number(
+                parsed_day = YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
                         timestamp.substr(timestamp_idx, cFieldLength),
                         '0'
-                )};
-                if (false == optional_parsed_day.has_value()) {
-                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
-                }
+                ));
 
-                parsed_day = optional_parsed_day.value();
                 if (parsed_day < cMinParsedDay || parsed_day > cMaxParsedDay) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
@@ -278,15 +261,11 @@ auto parse_timestamp(
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
-                auto const optional_parsed_day{convert_padded_string_to_number(
+                parsed_day = YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
                         timestamp.substr(timestamp_idx, cFieldLength),
                         ' '
-                )};
-                if (false == optional_parsed_day.has_value()) {
-                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
-                }
+                ));
 
-                parsed_day = optional_parsed_day.value();
                 if (parsed_day < cMinParsedDay || parsed_day > cMaxParsedDay) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
