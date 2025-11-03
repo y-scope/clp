@@ -157,6 +157,7 @@ def _generate_clp_io_config(
             paths_to_compress=logs_to_compress,
             timestamp_key=parsed_args.timestamp_key,
             path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
+            unstructured=parsed_args.unstructured,
         )
     elif input_type != "s3":
         raise ValueError(f"Unsupported input type: `{input_type}`.")
@@ -180,6 +181,7 @@ def _generate_clp_io_config(
             keys=keys,
             aws_authentication=aws_authentication,
             timestamp_key=parsed_args.timestamp_key,
+            unstructured=parsed_args.unstructured,
         )
     elif s3_compress_subcommand == S3_KEY_PREFIX_COMPRESSION:
         if len(urls) != 1:
@@ -195,6 +197,7 @@ def _generate_clp_io_config(
             keys=None,
             aws_authentication=aws_authentication,
             timestamp_key=parsed_args.timestamp_key,
+            unstructured=parsed_args.unstructured,
         )
     else:
         raise ValueError(f"Unsupported S3 compress subcommand: `{s3_compress_subcommand}`.")
@@ -336,6 +339,11 @@ def main(argv):
     args_parser.add_argument(
         "--timestamp-key",
         help="The path (e.g. x.y) for the field containing the log event's timestamp.",
+    )
+    args_parser.add_argument(
+        "--unstructured",
+        action="store_true",
+        help="Treat all inputs as unstructured text logs.",
     )
     args_parser.add_argument(
         "-t", "--tags", help="A comma-separated list of tags to apply to the compressed archives."
