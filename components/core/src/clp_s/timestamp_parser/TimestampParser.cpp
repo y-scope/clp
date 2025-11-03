@@ -84,7 +84,6 @@ constexpr std::array cAbbreviatedMonthNames
 
 /**
  * Finds the first matching prefix from a list of candidates.
- * @tparam CandidateArrayType
  * @param str Substring with a prefix potentially matching one of the candidates.
  * @param candidates Candidate prefixes that will be matched against `str`.
  * @return A result containing the index of the matching prefix in the candidates array, or an error
