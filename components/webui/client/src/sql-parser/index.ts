@@ -21,6 +21,8 @@ interface ValidationError {
     line: number;
     column: number;
     message: string;
+    startColumn: number;
+    endColumn: number;
 }
 
 class SyntaxErrorListener<TSymbol> extends ErrorListener<TSymbol> {
@@ -29,12 +31,22 @@ class SyntaxErrorListener<TSymbol> extends ErrorListener<TSymbol> {
     // eslint-disable-next-line max-params
     override syntaxError (
         _recognizer: Recognizer<TSymbol>,
-        _offendingSymbol: TSymbol,
+        offendingSymbol: TSymbol,
         line: number,
         column: number,
         msg: string,
     ) {
-        this.errors.push({line, column, message: msg});
+        const token = offendingSymbol as any;
+        const startPos = token?.getStartIndex?.() ?? column;
+        const stopPos = token?.getStopIndex?.() ?? column;
+
+        this.errors.push({
+            line,
+            column,
+            message: msg,
+            startColumn: startPos + 1, // Monaco is 1-indexed
+            endColumn: stopPos + 2, // +2 because stopIndex is inclusive and Monaco is 1-indexed
+        });
     }
 }
 

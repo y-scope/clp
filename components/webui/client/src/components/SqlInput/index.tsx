@@ -81,28 +81,14 @@ const SqlInput = (props: SqlInputProps) => {
         }
 
         const errors = validateFn(value);
-        const markers: monaco.editor.IMarkerData[] = errors.map((error) => {
-            const line = model.getLineContent(error.line);
-            const startColumn = error.column + 1;
-            // Try to find the end of the token by looking for whitespace or end of line
-            let endColumn = startColumn + 1;
-            for (let i = error.column; i < line.length; i++) {
-                const char = line[i];
-                if ("undefined" === typeof char || /\s/.test(char)) {
-                    break;
-                }
-                endColumn = i + 2; // +2 because Monaco columns are 1-indexed
-            }
-
-            return {
-                severity: monaco.MarkerSeverity.Error,
-                startLineNumber: error.line,
-                startColumn: startColumn,
-                endLineNumber: error.line,
-                endColumn: endColumn,
-                message: error.message,
-            };
-        });
+        const markers: monaco.editor.IMarkerData[] = errors.map((error) => ({
+            severity: monaco.MarkerSeverity.Error,
+            startLineNumber: error.line,
+            startColumn: error.startColumn,
+            endLineNumber: error.line,
+            endColumn: error.endColumn,
+            message: error.message,
+        }));
 
         monaco.editor.setModelMarkers(model, "sql-parser", markers);
     }, [editorProps.value, validateFn]);
