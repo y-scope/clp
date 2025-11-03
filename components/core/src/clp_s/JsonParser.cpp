@@ -1444,7 +1444,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
     auto starting_token_idx{log_buf->has_timestamp() ? 0 : 1};
     for (auto token_idx{starting_token_idx}; token_idx < log_buf->pos(); token_idx++) {
         auto token_view{log_buf->get_token(token_idx)};
-        auto const token_type{token_view.m_type_ids_ptr->at(0)};
+        auto const token_type{token_view.get_type_ids()->at(0)};
         // TODO clpsls: if we've seen the token_name already we either need to append to it or store
         // as an array...
         auto const token_name{log_parser.get_id_symbol(token_type)};
@@ -1455,18 +1455,14 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
             && token_type != static_cast<int>(log_surgeon::SymbolId::TokenNewline))
         {
             logtype_dict_entry.encode_constant(token_view.get_delimiter());
-            if (token_view.m_start_pos == token_view.m_buffer_size - 1) {
-                token_view.m_start_pos = 0;
-            } else {
-                token_view.m_start_pos++;
-            }
+            token_view.increment_start_pos();
         }
 
         std::cerr << fmt::format(
                 "[clpsls] token name: {} ({}) value: {}\n",
                 token_name,
                 token_type,
-                token_view.to_string_view()
+                token_view.to_string()
         );
         switch (token_type) {
             case static_cast<int>(log_surgeon::SymbolId::TokenNewline):
@@ -1565,11 +1561,15 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
 
                     // TODO clpsls: change to store as an array?
                     auto capture_name{lexer.m_id_symbol.at(capture_id)};
-                    for (auto i{0}; i < start_positions.size(); i++) {
-                        token_view.m_start_pos = start_positions.at(start_positions.size() - 1 - i);
-                        token_view.m_end_pos = end_positions.at(i);
+                    if (false == start_positions.empty() && -1 < start_positions[0]
+                        && false == end_positions.empty() && -1 < end_positions[0])
+                    {
+                        auto capture_view{token_view};
+                        capture_view.set_start_pos(start_positions[0]);
+                        capture_view.set_end_pos(end_positions[0]);
+
                         logtype_dict_entry.add_schema_var();
-                        m_current_parsed_message.add_unordered_value(token_view.to_string());
+                        m_current_parsed_message.add_unordered_value(capture_view.to_string());
                         m_current_schema.insert_unordered(m_archive_writer->add_node(
                                 capture_node_id,
                                 NodeType::VarString,
@@ -1579,7 +1579,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                         std::cerr << fmt::format(
                                 "[clpsls]\tcapture name: {} value: {}\n",
                                 capture_name,
-                                token_view.to_string_view()
+                                capture_view.to_string()
                         );
                     }
                 }
