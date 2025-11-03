@@ -3,10 +3,12 @@ use serde::{Deserialize, Serialize};
 
 pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
 
-// TODO: Add definition.
-pub type AggregationConfig = ();
-
-#[derive(Default, Serialize, Deserialize)]
+/// Mirror of `job_orchestration.scheduler.job_config.SearchJobConfig`. Must be kept in sync.
+///
+/// # NOTE
+///
+/// `aggregation_config` is currently unused and thus uses a placeholder unit type.
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct SearchJobConfig {
     pub dataset: Option<String>,
@@ -18,10 +20,11 @@ pub struct SearchJobConfig {
     pub ignore_case: bool,
     pub path_filter: Option<String>,
     pub network_address: Option<(String, u16)>,
-    pub aggregation_config: Option<AggregationConfig>,
+    pub aggregation_config: Option<()>,
 }
 
-#[derive(Debug, Serialize, Deserialize, IntoPrimitive, TryFromPrimitive)]
+/// Mirror of `job_orchestration.scheduler.constants.QueryJobStatus`. Must be kept in sync.
+#[derive(Clone, Debug, Deserialize, Eq, IntoPrimitive, PartialEq, Serialize, TryFromPrimitive)]
 #[repr(i32)]
 pub enum QueryJobStatus {
     Pending = 0,
@@ -33,7 +36,8 @@ pub enum QueryJobStatus {
     Killed = 6,
 }
 
-#[derive(Debug, Serialize, Deserialize, IntoPrimitive, TryFromPrimitive)]
+/// Mirror of `job_orchestration.scheduler.constants.QueryJobType`. Must be kept in sync.
+#[derive(Clone, Debug, Deserialize, Eq, IntoPrimitive, PartialEq, Serialize, TryFromPrimitive)]
 #[repr(i32)]
 pub enum QueryJobType {
     SearchOrAggregation = 0,
