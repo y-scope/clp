@@ -51,8 +51,8 @@ fi
 
 if [[ -z "${CLP_DOCKER_SOCK_PATH:-}" ]]; then
     socket="$(docker context inspect \
-        --format '{{.Endpoints.docker.Host}}' 2>/dev/null \
-        | sed -E 's|^unix://||')"
+        --format '{{.Endpoints.docker.Host}}' 2>/dev/null |
+        sed -E 's|^unix://||')"
 
     if [[ -S "$socket" ]]; then
         export CLP_DOCKER_SOCK_PATH="$socket"
