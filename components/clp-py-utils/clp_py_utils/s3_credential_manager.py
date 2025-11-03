@@ -47,7 +47,7 @@ class S3CredentialManager:
         :param name:
         :param access_key_id:
         :param secret_access_key:
-        :param role_arn:
+        :param role_arn: IAM role to assume when using this credential, if any.
         :return: The ID of the created credential.
         :raises ValueError: If validation fails or if a credential with `name` already exists.
         """
@@ -195,7 +195,7 @@ class S3CredentialManager:
         :param name:
         :param access_key_id:
         :param secret_access_key:
-        :param role_arn: Use empty string to clear.
+        :param role_arn: Replacement IAM role to associate; use empty string to clear.
         :return: True if updated, False if credential not found.
         :raises ValueError: If `name` conflicts or if validation fails.
         """
@@ -306,7 +306,7 @@ class S3CredentialManager:
         :param access_key_id:
         :param secret_access_key:
         :param session_token:
-        :param source:
+        :param source: Origin marker describing how the token was generated, such as a role ARN.
         :param expires_at:
         :return:
         :raises ValueError: If validation fails.
