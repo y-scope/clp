@@ -1,13 +1,13 @@
+#include <cstddef>
 #include <string>
 #include <string_view>
 #include <vector>
-#include <cstddef>
 
 #include <catch2/catch_test_macros.hpp>
 
-#include "../StringBlob.hpp"
 #include "../../BufferReader.hpp"
 #include "../../ErrorCode.hpp"
+#include "../StringBlob.hpp"
 
 TEST_CASE("StringBlob basic functionality", "[StringBlob]") {
     clp::ffi::StringBlob string_blob;

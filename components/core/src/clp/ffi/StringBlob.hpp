@@ -61,6 +61,6 @@ private:
     std::string m_data;
     std::vector<size_t> m_offsets{0};
 };
-}  // namespace clp::string_utils
+}  // namespace clp::ffi
 
 #endif  // CLP_FFI_STRINGBLOB_HPP
