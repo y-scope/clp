@@ -3,6 +3,7 @@
 #include <array>
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <span>
 #include <string>
@@ -29,6 +30,20 @@ constexpr int cTwoDigitYearOffsetBoundary{69};
 constexpr int cMaxTwoDigitYear{99};
 constexpr int cTwoDigitYearLowOffset{1900};
 constexpr int cTwoDigitYearHighOffset{2000};
+constexpr int cMinParsedHour24HourClock{0};
+constexpr int cMaxParsedHour24HourClock{23};
+constexpr int cMinParsedHour12HourClock{1};
+constexpr int cMaxParsedHour12HourClock{12};
+constexpr int cMinParsedMinute{0};
+constexpr int cMaxParsedMinute{59};
+constexpr int cMinParsedSecond{0};
+constexpr int cMaxParsedSecond{60};
+constexpr int cMinParsedSubsecondNanoseconds{0};
+
+constexpr size_t cNumNanosecondPrecisionSubsecondDigits{9ULL};
+constexpr size_t cNumMicrosecondPrecisionSubsecondDigits{6ULL};
+constexpr size_t cNumMillisecondPrecisionSubsecondDigits{3ULL};
+constexpr size_t cNumSecondPrecisionSubsecondDigits{0ULL};
 
 constexpr int cDefaultYear{1970};
 constexpr int cDefaultMonth{1};
@@ -71,6 +86,11 @@ constexpr std::array cAbbreviatedMonthNames
            std::string_view{"Nov"},
            std::string_view{"Dec"}};
 
+constexpr std::array cPartsOfDay = {std::string_view{"AM"}, std::string_view{"PM"}};
+
+constexpr std::array cPowersOfTen
+        = {1, 10, 100, 1000, 10'000, 100'000, 1'000'000, 10'000'000, 100'000'000, 1'000'000'000};
+
 /**
  * Converts a padded decimal integer string to an integer.
  * @param str Substring containing the padded decimal integer string.
@@ -93,6 +113,32 @@ constexpr std::array cAbbreviatedMonthNames
 [[nodiscard]] auto
 find_first_matching_prefix(std::string_view str, std::span<std::string_view const> candidates)
         -> ystdlib::error_handling::Result<size_t>;
+
+/**
+ * Converts the prefix of a string to a positive number up to a maximum number of digits.
+ * @param str Substring with a prefix potentially corresponding to a number.
+ * @param max_num_digits The maximum number of digits to convert to a number.
+ * @return A result containing a pair holding the integer value and number of digits consumed, or an
+ * error code indicating the failure:
+ * - ErrorCodeEnum::InvalidTimestampPattern if `max_num_digits` is zero.
+ * - ErrorCodeEnum::IncompatibleTimestampPattern if the prefix of the string is negative or doesn't
+ *   correspond to a number.
+ */
+[[nodiscard]] auto convert_positive_bounded_variable_length_string_prefix_to_number(
+        std::string_view str,
+        size_t max_num_digits
+) -> ystdlib::error_handling::Result<std::pair<int, size_t>>;
+
+/**
+ * Converts the prefix of a string to a number.
+ * @param str Substring with a prefix potentially corresponding to a number.
+ * @return A result containing a pair holding the integer value and number of digits consumed, or an
+ * error code indicating the failure:
+ * - ErrorCodeEnum::IncompatibleTimestampPattern if the prefix of the string doesn't correspond to a
+ *   number.
+ */
+[[nodiscard]] auto convert_variable_length_string_prefix_to_number(std::string_view str)
+        -> ystdlib::error_handling::Result<std::pair<int64_t, size_t>>;
 
 auto convert_padded_string_to_number(std::string_view str, char padding_character)
         -> ystdlib::error_handling::Result<int> {
@@ -121,6 +167,72 @@ auto find_first_matching_prefix(std::string_view str, std::span<std::string_view
     }
     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
 }
+
+auto convert_positive_bounded_variable_length_string_prefix_to_number(
+        std::string_view str,
+        size_t max_num_digits
+) -> ystdlib::error_handling::Result<std::pair<int, size_t>> {
+    constexpr int cTen{10};
+    if (0ULL == max_num_digits) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+    }
+    if (str.empty() || '-' == str.at(0ULL)
+        || false == clp::string_utils::is_decimal_digit(str.at(0ULL)))
+    {
+        return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+    }
+
+    int converted_value{};
+    size_t num_decimal_digits{};
+    while (true) {
+        char const cur_digit{str.at(num_decimal_digits)};
+        converted_value += static_cast<int>(cur_digit - '0');
+        ++num_decimal_digits;
+
+        if (num_decimal_digits >= str.length() || num_decimal_digits >= max_num_digits
+            || false == clp::string_utils::is_decimal_digit(str.at(num_decimal_digits)))
+        {
+            break;
+        }
+        converted_value *= cTen;
+    }
+    return std::make_pair(converted_value, num_decimal_digits);
+}
+
+auto convert_variable_length_string_prefix_to_number(std::string_view str)
+        -> ystdlib::error_handling::Result<std::pair<int64_t, size_t>> {
+    constexpr int64_t cTen{10};
+    if (str.empty()) {
+        return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+    }
+
+    bool const is_negative{'-' == str.at(0ULL)};
+    size_t num_decimal_digits{is_negative ? 1ULL : 0ULL};
+    if (num_decimal_digits >= str.length()
+        || false == clp::string_utils::is_decimal_digit(str.at(num_decimal_digits)))
+    {
+        return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+    }
+
+    int64_t converted_value{};
+    while (true) {
+        char const cur_digit{str.at(num_decimal_digits)};
+        converted_value += static_cast<int64_t>(cur_digit - '0');
+        ++num_decimal_digits;
+
+        if (num_decimal_digits >= str.length()
+            || false == clp::string_utils::is_decimal_digit(str.at(num_decimal_digits)))
+        {
+            break;
+        }
+        converted_value *= cTen;
+    }
+
+    if (is_negative) {
+        converted_value *= -1;
+    }
+    return std::make_pair(converted_value, num_decimal_digits);
+}
 }  // namespace
 
 // NOLINTBEGIN(readability-function-cognitive-complexity)
@@ -135,10 +247,18 @@ auto parse_timestamp(
     int parsed_year{cDefaultYear};
     int parsed_month{cDefaultMonth};
     int parsed_day{cDefaultDay};
+    int parsed_hour{};
+    int parsed_minute{};
+    int parsed_second{};
+    int parsed_subsecond_nanoseconds{};
     std::optional<int> optional_day_of_week_idx;
+    std::optional<int> optional_part_of_day_idx;
+
+    int64_t parsed_epoch_nanoseconds{};
 
     bool date_type_representation{false};
-    bool const number_type_representation{false};
+    bool number_type_representation{false};
+    bool uses_12_hour_clock{false};
 
     bool escaped{false};
     for (; pattern_idx < pattern.size() && timestamp_idx < timestamp.size(); ++pattern_idx) {
@@ -283,21 +403,260 @@ auto parse_timestamp(
                 date_type_representation = true;
                 break;
             }
-            case 'p':
-            case 'H':
-            case 'k':
-            case 'I':
-            case 'l':
-            case 'M':
-            case 'S':
-            case '3':
-            case '6':
-            case '9':
-            case 'T':
-            case 'E':
-            case 'L':
-            case 'C':
-            case 'N':
+            case 'p': {
+                auto const part_of_day_idx{YSTDLIB_ERROR_HANDLING_TRYX(
+                        find_first_matching_prefix(timestamp.substr(timestamp_idx), cPartsOfDay)
+                )};
+                timestamp_idx += cPartsOfDay.at(part_of_day_idx).length();
+                optional_part_of_day_idx = static_cast<int>(part_of_day_idx);
+                date_type_representation = true;
+                break;
+            }
+            case 'H': {
+                constexpr size_t cFieldLength{2};
+                if (timestamp_idx + cFieldLength > timestamp.size()) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                parsed_hour = YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
+                        timestamp.substr(timestamp_idx, cFieldLength),
+                        '0'
+                ));
+
+                if (parsed_hour < cMinParsedHour24HourClock
+                    || parsed_hour > cMaxParsedHour24HourClock)
+                {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                timestamp_idx += cFieldLength;
+                date_type_representation = true;
+                break;
+            }
+            case 'k': {
+                constexpr size_t cFieldLength{2};
+                if (timestamp_idx + cFieldLength > timestamp.size()) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                parsed_hour = YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
+                        timestamp.substr(timestamp_idx, cFieldLength),
+                        ' '
+                ));
+
+                if (parsed_hour < cMinParsedHour24HourClock
+                    || parsed_hour > cMaxParsedHour24HourClock)
+                {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                timestamp_idx += cFieldLength;
+                date_type_representation = true;
+                break;
+            }
+            case 'I': {
+                constexpr size_t cFieldLength{2};
+                if (timestamp_idx + cFieldLength > timestamp.size()) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                parsed_hour = YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
+                        timestamp.substr(timestamp_idx, cFieldLength),
+                        '0'
+                ));
+
+                if (parsed_hour < cMinParsedHour12HourClock
+                    || parsed_hour > cMaxParsedHour12HourClock)
+                {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                timestamp_idx += cFieldLength;
+                uses_12_hour_clock = true;
+                date_type_representation = true;
+                break;
+            }
+            case 'l': {
+                constexpr size_t cFieldLength{2};
+                if (timestamp_idx + cFieldLength > timestamp.size()) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                parsed_hour = YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
+                        timestamp.substr(timestamp_idx, cFieldLength),
+                        ' '
+                ));
+
+                if (parsed_hour < cMinParsedHour12HourClock
+                    || parsed_hour > cMaxParsedHour12HourClock)
+                {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                timestamp_idx += cFieldLength;
+                uses_12_hour_clock = true;
+                date_type_representation = true;
+                break;
+            }
+            case 'M': {
+                constexpr size_t cFieldLength{2};
+                if (timestamp_idx + cFieldLength > timestamp.size()) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                parsed_minute = YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
+                        timestamp.substr(timestamp_idx, cFieldLength),
+                        '0'
+                ));
+
+                if (parsed_minute < cMinParsedMinute || parsed_minute > cMaxParsedMinute) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                timestamp_idx += cFieldLength;
+                date_type_representation = true;
+                break;
+            }
+            case 'S': {
+                constexpr size_t cFieldLength{2};
+                if (timestamp_idx + cFieldLength > timestamp.size()) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                parsed_second = YSTDLIB_ERROR_HANDLING_TRYX(convert_padded_string_to_number(
+                        timestamp.substr(timestamp_idx, cFieldLength),
+                        '0'
+                ));
+
+                if (parsed_second < cMinParsedSecond || parsed_second > cMaxParsedSecond) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                timestamp_idx += cFieldLength;
+                date_type_representation = true;
+                break;
+            }
+            case '3': {
+                constexpr size_t cFieldLength{3};
+                if (false
+                    == clp::string_utils::convert_string_to_int(
+                            timestamp.substr(timestamp_idx, cFieldLength),
+                            parsed_subsecond_nanoseconds
+                    ))
+                {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+                if (parsed_subsecond_nanoseconds < cMinParsedSubsecondNanoseconds) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+                timestamp_idx += cFieldLength;
+                break;
+            }
+            case '6': {
+                constexpr size_t cFieldLength{6};
+                if (false
+                    == clp::string_utils::convert_string_to_int(
+                            timestamp.substr(timestamp_idx, cFieldLength),
+                            parsed_subsecond_nanoseconds
+                    ))
+                {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+                if (parsed_subsecond_nanoseconds < cMinParsedSubsecondNanoseconds) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+                timestamp_idx += cFieldLength;
+                break;
+            }
+            case '9': {
+                constexpr size_t cFieldLength{9};
+                if (false
+                    == clp::string_utils::convert_string_to_int(
+                            timestamp.substr(timestamp_idx, cFieldLength),
+                            parsed_subsecond_nanoseconds
+                    ))
+                {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+                if (parsed_subsecond_nanoseconds < cMinParsedSubsecondNanoseconds) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+                timestamp_idx += cFieldLength;
+                break;
+            }
+            case 'T': {
+                constexpr size_t cMaxFieldLength{9};
+                auto const remaining_unparsed_content{timestamp.substr(timestamp_idx)};
+                auto const [number, num_digits] = YSTDLIB_ERROR_HANDLING_TRYX(
+                        convert_positive_bounded_variable_length_string_prefix_to_number(
+                                remaining_unparsed_content,
+                                cMaxFieldLength
+                        )
+                );
+                if ('0' == remaining_unparsed_content.at(num_digits - 1ULL)) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+                timestamp_idx += num_digits;
+                parsed_subsecond_nanoseconds
+                        = number * cPowersOfTen.at(cMaxFieldLength - num_digits);
+                break;
+            }
+            case 'E': {
+                auto const [number, num_digits] = YSTDLIB_ERROR_HANDLING_TRYX(
+                        convert_variable_length_string_prefix_to_number(
+                                timestamp.substr(timestamp_idx)
+                        )
+                );
+                timestamp_idx += num_digits;
+                parsed_epoch_nanoseconds = number
+                                           * cPowersOfTen.at(
+                                                   cNumNanosecondPrecisionSubsecondDigits
+                                                   - cNumSecondPrecisionSubsecondDigits
+                                           );
+                number_type_representation = true;
+                break;
+            }
+            case 'L': {
+                auto const [number, num_digits] = YSTDLIB_ERROR_HANDLING_TRYX(
+                        convert_variable_length_string_prefix_to_number(
+                                timestamp.substr(timestamp_idx)
+                        )
+                );
+                timestamp_idx += num_digits;
+                parsed_epoch_nanoseconds = number
+                                           * cPowersOfTen.at(
+                                                   cNumNanosecondPrecisionSubsecondDigits
+                                                   - cNumMillisecondPrecisionSubsecondDigits
+                                           );
+                number_type_representation = true;
+                break;
+            }
+            case 'C': {
+                auto const [number, num_digits] = YSTDLIB_ERROR_HANDLING_TRYX(
+                        convert_variable_length_string_prefix_to_number(
+                                timestamp.substr(timestamp_idx)
+                        )
+                );
+                timestamp_idx += num_digits;
+                parsed_epoch_nanoseconds = number
+                                           * cPowersOfTen.at(
+                                                   cNumNanosecondPrecisionSubsecondDigits
+                                                   - cNumMicrosecondPrecisionSubsecondDigits
+                                           );
+                number_type_representation = true;
+                break;
+            }
+            case 'N': {
+                auto const [number, num_digits] = YSTDLIB_ERROR_HANDLING_TRYX(
+                        convert_variable_length_string_prefix_to_number(
+                                timestamp.substr(timestamp_idx)
+                        )
+                );
+                timestamp_idx += num_digits;
+                parsed_epoch_nanoseconds = number;
+                number_type_representation = true;
+                break;
+            }
             case 'z':
             case 'Z':
             case '?':
@@ -325,13 +684,30 @@ auto parse_timestamp(
         return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
     }
 
+    if ((uses_12_hour_clock && false == optional_part_of_day_idx.has_value())
+        || (false == uses_12_hour_clock && optional_part_of_day_idx.has_value()))
+    {
+        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+    }
+
     // Do not allow trailing unmatched content.
     if (pattern_idx != pattern.size() || timestamp_idx != timestamp.size()) {
         return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
     }
 
     if (number_type_representation) {
-        return ErrorCode{ErrorCodeEnum::FormatSpecifierNotImplemented};
+        epochtime_t epoch_nanoseconds{parsed_epoch_nanoseconds};
+        if (epoch_nanoseconds < 0) {
+            epoch_nanoseconds -= static_cast<epochtime_t>(parsed_subsecond_nanoseconds);
+        } else {
+            epoch_nanoseconds += static_cast<epochtime_t>(parsed_subsecond_nanoseconds);
+        }
+        return {epoch_nanoseconds, pattern};
+    }
+
+    if (uses_12_hour_clock) {
+        parsed_hour = (parsed_hour % cMaxParsedHour12HourClock)
+                      + optional_part_of_day_idx.value() * cMaxParsedHour12HourClock;
     }
 
     auto const year_month_day{date::year(parsed_year) / parsed_month / parsed_day};
@@ -339,9 +715,10 @@ auto parse_timestamp(
         return ErrorCode{ErrorCodeEnum::InvalidDate};
     }
 
-    auto const time_point = date::sys_days(year_month_day) + std::chrono::hours(0)
-                            + std::chrono::minutes(0) + std::chrono::seconds(0)
-                            + std::chrono::nanoseconds(0);
+    auto const time_point = date::sys_days(year_month_day) + std::chrono::hours(parsed_hour)
+                            + std::chrono::minutes(parsed_minute)
+                            + std::chrono::seconds(parsed_second)
+                            + std::chrono::nanoseconds(parsed_subsecond_nanoseconds);
 
     if (optional_day_of_week_idx.has_value()) {
         auto const actual_day_of_week_idx{(date::year_month_weekday(date::sys_days(year_month_day))
