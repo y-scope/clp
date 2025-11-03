@@ -327,9 +327,7 @@ auto parse_timestamp(
 
     // Do not allow trailing unmatched content.
     if (pattern_idx != pattern.size() || timestamp_idx != timestamp.size()) {
-        {
-            return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
-        }
+        return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
     }
 
     if (number_type_representation) {
