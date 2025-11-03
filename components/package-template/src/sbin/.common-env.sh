@@ -31,15 +31,15 @@ CLP_PWD_HOST="$(pwd 2>/dev/null || echo "")"
 export CLP_PWD_HOST
 
 if [[ -z "${CLP_DOCKER_PLUGIN_DIR:-}" ]]; then
-    for dir in \
+    for compose_plugin_dir in \
         "$HOME/.docker/cli-plugins" \
         "/mnt/wsl/docker-desktop/cli-tools/usr/local/lib/docker/cli-plugins" \
         "/usr/local/lib/docker/cli-plugins" \
         "/usr/libexec/docker/cli-plugins"; do
 
-        compose_plugin_path="$dir/docker-compose"
+        compose_plugin_path="$compose_plugin_dir/docker-compose"
         if [[ -f "$compose_plugin_path" ]]; then
-            export CLP_DOCKER_PLUGIN_DIR="$dir"
+            export CLP_DOCKER_PLUGIN_DIR="$compose_plugin_dir"
             break
         fi
     done
