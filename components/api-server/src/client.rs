@@ -1,11 +1,13 @@
 use clp_rust_utils::{
-    clp_config::package::config::{Config, StorageEngine},
-    clp_config::package::credentials::Credentials,
+    clp_config::package::{
+        config::{Config, StorageEngine},
+        credentials::Credentials,
+    },
+    database::mysql::create_mysql_pool,
     job_config::{QUERY_JOBS_TABLE_NAME, QueryJobStatus, QueryJobType, SearchJobConfig},
 };
 use futures::{Stream, StreamExt};
 use num_enum::TryFromPrimitive;
-use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use thiserror::Error;
@@ -38,15 +40,7 @@ impl Client {
     /// A `Result` which is `Ok(Self)` (the connected `Client` instance) on success,
     /// or `Err(ClientError)` on failure.
     pub async fn connect(config: &Config, credentials: &Credentials) -> Result<Self, ClientError> {
-        let connect_options = sqlx::mysql::MySqlConnectOptions::new()
-            .host(&config.database.host)
-            .port(config.database.port)
-            .username(&credentials.database.user)
-            .password(credentials.database.password.expose_secret())
-            .database(&config.database.name);
-        let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
-            .connect_with(connect_options)
-            .await?;
+        let sql_pool = create_mysql_pool(&config.database, &credentials.database, 10).await?;
 
         let mongo_uri = format!(
             "mongodb://{}:{}/{}?directConnection=true",
@@ -242,6 +236,9 @@ pub enum ClientError {
     #[error("Query is not succeeded")]
     QueryNotSucceeded,
 
+    #[error("IO error")]
+    Io(#[from] std::io::Error),
+
     #[error("Malformed database")]
     MalformedData,
 }
@@ -254,5 +251,15 @@ impl<Enum: TryFromPrimitive> IsMalformedData for num_enum::TryFromPrimitiveError
 impl<T: IsMalformedData> From<T> for ClientError {
     fn from(_value: T) -> Self {
         Self::MalformedData
+    }
+}
+
+impl From<clp_rust_utils::Error> for ClientError {
+    fn from(value: clp_rust_utils::Error) -> Self {
+        match value {
+            clp_rust_utils::Error::MsgpackEncode(_) => Self::MalformedData,
+            clp_rust_utils::Error::Io(error) => error.into(),
+            clp_rust_utils::Error::Sqlx(error) => error.into(),
+        }
     }
 }

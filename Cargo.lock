@@ -122,7 +122,6 @@ dependencies = [
  "mongodb",
  "num_enum",
  "rmp-serde",
- "secrecy",
  "serde",
  "serde_json",
  "serde_yaml",
@@ -257,9 +256,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-s3"
-version = "1.109.0"
+version = "1.110.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c6d81b75f8ff78882e70c5909804b44553d56136899fb4015a0a68ecc870e0e"
+checksum = "7a811ec867f77c01aa0f0abfaa9fedef647cc83608ad8e67949f95d30d04a7fd"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",
@@ -291,9 +290,9 @@ dependencies = [
 
 [[package]]
 name = "aws-sdk-sqs"
-version = "1.87.0"
+version = "1.88.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "88e1038d1f0d82ff48b5f592e075294dcb3896237c25083c08eb520772480ce8"
+checksum = "3eb4ecdef63c5075260eabea36fcd4eaeb320a6437368f403b45701763b2eebb"
 dependencies = [
  "aws-credential-types",
  "aws-runtime",

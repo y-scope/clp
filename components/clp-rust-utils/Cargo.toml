@@ -4,9 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-aws-config = "1.8.8"
-aws-sdk-s3 = "1.106.0"
-aws-sdk-sqs = "1.86.0"
+aws-config = "1.8.10"
+aws-sdk-s3 = "1.110.0"
+aws-sdk-sqs = "1.88.0"
 brotli = "8.0.2"
 num_enum = "0.7.5"
 rmp-serde = "1.3.0"
