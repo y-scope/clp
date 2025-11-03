@@ -1,6 +1,6 @@
 use secrecy::ExposeSecret;
 
-use crate::package_config::{
+use crate::clp_config::package::{
     config::Database as DatabaseConfig,
     credentials::Database as DatabaseCredentials,
 };

@@ -3,11 +3,11 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum Error {
     #[error("`rmp_serde::encode::Error`: {0}")]
-    MsgpackEncodeError(#[from] rmp_serde::encode::Error),
+    MsgpackEncode(#[from] rmp_serde::encode::Error),
 
     #[error("`std::io::Error`: {0}")]
-    IoError(#[from] std::io::Error),
+    Io(#[from] std::io::Error),
 
     #[error("`sqlx::Error`: {0}")]
-    SqlxError(#[from] sqlx::Error),
+    Sqlx(#[from] sqlx::Error),
 }
