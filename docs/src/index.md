@@ -102,6 +102,7 @@ You can use GitHub issues to [report a bug][bug-report] or [request a feature][f
 Need help? Join us on one of our community servers:
 
 * [![Discord][badge-discord]][yscope-community-discord]
+* [![Slack][badge-slack]][yscope-community-slack]
 * [![CLP on Zulip][badge-zulip]][yscope-community-zulip]
 
 :::{toctree}
@@ -112,6 +113,7 @@ dev-docs/index
 :::
 
 [badge-discord]: https://img.shields.io/discord/1377353873068392580?style=flat&logo=discord&logoColor=white&label=Discord&labelColor=%235561f5
+[badge-slack]: https://img.shields.io/badge/Slack-yscope--community-1e724f?style=flat&logo=slack&logoColor=white&labelColor=4A154B
 [badge-zulip]: https://img.shields.io/badge/Zulip-yscope--clp-1888FA?logo=zulip
 [bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml
 [clp-ffi-go]: https://github.com/y-scope/clp-ffi-go
@@ -129,4 +131,5 @@ dev-docs/index
 [uber-blog]: https://www.uber.com/en-US/blog/reducing-logging-cost-by-two-orders-of-magnitude-using-clp
 [webui]: https://github.com/y-scope/clp/blob/main/components/webui
 [yscope-community-discord]: https://discord.gg/7kZA2m5G87
+[yscope-community-slack]: https://communityinviter.com/apps/yscopecommunity/yscope-community
 [yscope-community-zulip]: https://yscope-clp.zulipchat.com
