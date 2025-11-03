@@ -15,7 +15,8 @@ significantly.
   * If you're not running as root, ensure Docker can be run
     [without superuser privileges][docker-non-root].
 * One or more hosts networked together
-* A shared filesystem accessible by all worker hosts (e.g., NFS, [SeaweedFS])
+* When not using S3 storage, a shared filesystem accessible by all worker hosts (e.g., NFS,
+  [SeaweedFS])
   * See [below](#setting-up-seaweedfs) for how to set up a simple SeaweedFS cluster.
 
 ## Cluster overview
@@ -47,9 +48,9 @@ In a multi-node cluster:
    * Edit `etc/clp-config.yml`.
    * Set the `host` and `port` fields for each service to the actual hostname/IP and port where you
      plan to run them.
-   * If using non-s3 storage (i.e., local filesystem storage), set `logs_input.storage.directory`
-     and  `archive_output.storage.directory` and `stream_output.storage.directory` to directories on
-     the shared filesystem.
+   * When not using S3 storage (i.e., local filesystem storage), set `logs_input.storage.directory`,
+     `archive_output.storage.directory` and `stream_output.storage.directory` to directories on the
+     shared filesystem.
 
 4. **Initialize the package environment**:
 
@@ -89,8 +90,8 @@ In a multi-node cluster:
       * Update any host-specific paths or settings.
 
    :::{important}
-   The transformation to service names is intended for single-node Docker Compose deployments.
-   For multi-node deployments, services on different hosts need to communicate via actual network
+   The transformation to service names is intended for single-node Docker Compose deployments. For
+   multi-node deployments, services on different hosts need to communicate via actual network
    addresses, not Docker service names.
    :::
 
@@ -102,9 +103,9 @@ In a multi-node cluster:
 7. **Configure worker concurrency** (optional):
 
    On each worker host, edit the `.env` file to adjust worker concurrency settings as needed:
-   * `CLP_COMPRESSION_WORKER_CONCURRENCY` - Number of compression tasks to run in parallel
-   * `CLP_QUERY_WORKER_CONCURRENCY` - Number of query tasks to run in parallel
-   * `CLP_REDUCER_CONCURRENCY` - Number of reducer tasks to run in parallel
+   * `CLP_COMPRESSION_WORKER_CONCURRENCY`
+   * `CLP_QUERY_WORKER_CONCURRENCY`
+   * `CLP_REDUCER_CONCURRENCY`
 
    Recommended settings:
    * If workers are started on separate hosts, set each concurrency value to match the CPU count on
