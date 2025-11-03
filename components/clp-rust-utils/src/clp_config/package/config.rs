@@ -7,15 +7,12 @@ use serde::Deserialize;
 /// * This type is partially defined: unused fields are omitted and discarded through
 ///   deserialization.
 /// * The default values must be kept in sync with the Python definition.
-#[derive(Deserialize, Clone)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[serde(default)]
 pub struct Config {
-    #[serde(default)]
     pub package: Package,
-    #[serde(default)]
     pub database: Database,
-    #[serde(default)]
     pub results_cache: ResultsCache,
-    #[serde(default)]
     pub api_server: ApiServer,
 }
 
@@ -26,7 +23,7 @@ pub struct Config {
 /// * This type is partially defined: unused fields are omitted and discarded through
 ///   deserialization.
 /// * The default values must be kept in sync with the Python definition.
-#[derive(Deserialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct Database {
     pub host: String,
@@ -44,7 +41,7 @@ impl Default for Database {
     }
 }
 
-#[derive(Deserialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct ApiServer {
     pub host: String,
@@ -67,7 +64,7 @@ impl Default for ApiServer {
 /// * This type is partially defined: unused fields are omitted and discarded through
 ///   deserialization.
 /// * The default values must be kept in sync with the Python definition.
-#[derive(Deserialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct Package {
     pub storage_engine: StorageEngine,
@@ -82,7 +79,7 @@ impl Default for Package {
 }
 
 /// Mirror of `clp_py_utils.clp_config.StorageEngine`.
-#[derive(Deserialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub enum StorageEngine {
     #[serde(rename = "clp")]
     Clp,
@@ -97,7 +94,7 @@ pub enum StorageEngine {
 /// * This type is partially defined: unused fields are omitted and discarded through
 ///   deserialization.
 /// * The default values must be kept in sync with the Python definition.
-#[derive(Deserialize, Clone)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct ResultsCache {
     pub host: String,

@@ -8,7 +8,7 @@ pub const QUERY_JOBS_TABLE_NAME: &str = "query_jobs";
 /// # NOTE
 ///
 /// `aggregation_config` is currently unused and thus uses a placeholder unit type.
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
 #[serde(default)]
 pub struct SearchJobConfig {
     pub dataset: Option<String>,
@@ -24,7 +24,7 @@ pub struct SearchJobConfig {
 }
 
 /// Mirror of `job_orchestration.scheduler.constants.QueryJobStatus`. Must be kept in sync.
-#[derive(Debug, Serialize, Deserialize, IntoPrimitive, TryFromPrimitive)]
+#[derive(Clone, Debug, Deserialize, Eq, IntoPrimitive, PartialEq, Serialize, TryFromPrimitive)]
 #[repr(i32)]
 pub enum QueryJobStatus {
     Pending = 0,
@@ -37,7 +37,7 @@ pub enum QueryJobStatus {
 }
 
 /// Mirror of `job_orchestration.scheduler.constants.QueryJobType`. Must be kept in sync.
-#[derive(Debug, Serialize, Deserialize, IntoPrimitive, TryFromPrimitive)]
+#[derive(Clone, Debug, Deserialize, Eq, IntoPrimitive, PartialEq, Serialize, TryFromPrimitive)]
 #[repr(i32)]
 pub enum QueryJobType {
     SearchOrAggregation = 0,
