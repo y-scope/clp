@@ -1,12 +1,12 @@
 import enum
 import errno
+import json
 import os
 import pathlib
 import re
 import secrets
 import socket
 import subprocess
-import typing
 import uuid
 from enum import auto
 from typing import Dict, List, Optional, Tuple
@@ -16,7 +16,11 @@ from clp_py_utils.clp_config import (
     CLP_DEFAULT_CREDENTIALS_FILE_PATH,
     CLP_SHARED_CONFIG_FILENAME,
     CLPConfig,
+    CONTAINER_AWS_CONFIG_DIRECTORY,
+    CONTAINER_CLP_HOME,
+    CONTAINER_INPUT_LOGS_ROOT_DIR,
     DB_COMPONENT_NAME,
+    MCP_SERVER_COMPONENT_NAME,
     QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
@@ -43,13 +47,51 @@ EXTRACT_FILE_CMD = "x"
 EXTRACT_IR_CMD = "i"
 EXTRACT_JSON_CMD = "j"
 
-# Paths
-CONTAINER_AWS_CONFIG_DIRECTORY = pathlib.Path("/") / ".aws"
-CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
-CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
-CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yml"
-
 DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
+
+S3_KEY_PREFIX_COMPRESSION = "s3-key-prefix"
+S3_OBJECT_COMPRESSION = "s3-object"
+
+
+class DockerDependencyError(OSError):
+    """Base class for errors related to Docker dependencies."""
+
+
+class DockerNotAvailableError(DockerDependencyError):
+    """Raised when Docker or Docker Compose is unavailable."""
+
+    def __init__(self, base_message: str, process_error: subprocess.CalledProcessError) -> None:
+        message = base_message
+        output_chunks: list[str] = []
+        for stream in (process_error.stdout, process_error.stderr):
+            if stream is None:
+                continue
+            if isinstance(stream, bytes):
+                text = stream.decode(errors="replace")
+            else:
+                text = str(stream)
+            text = text.strip()
+            if text:
+                output_chunks.append(text)
+        if len(output_chunks) > 0:
+            message = "\n".join([base_message, *output_chunks])
+        super().__init__(errno.ENOENT, message)
+
+
+class DockerComposeProjectNotRunningError(DockerDependencyError):
+    """Raised when a Docker Compose project is not running but should be."""
+
+    def __init__(self, project_name: str) -> None:
+        super().__init__(errno.ESRCH, f"Docker Compose project '{project_name}' is not running.")
+
+
+class DockerComposeProjectAlreadyRunningError(DockerDependencyError):
+    """Raised when a Docker Compose project is already running but should not be."""
+
+    def __init__(self, project_name: str) -> None:
+        super().__init__(
+            errno.EEXIST, f"Docker Compose project '{project_name}' is already running."
+        )
 
 
 class DockerMountType(enum.IntEnum):
@@ -87,23 +129,16 @@ class DockerMount:
 
 class CLPDockerMounts:
     def __init__(self, clp_home: pathlib.Path, docker_clp_home: pathlib.Path):
-        self.input_logs_dir: typing.Optional[DockerMount] = None
-        self.clp_home: typing.Optional[DockerMount] = DockerMount(
+        self.input_logs_dir: Optional[DockerMount] = None
+        self.clp_home: Optional[DockerMount] = DockerMount(
             DockerMountType.BIND, clp_home, docker_clp_home
         )
-        self.data_dir: typing.Optional[DockerMount] = None
-        self.logs_dir: typing.Optional[DockerMount] = None
-        self.archives_output_dir: typing.Optional[DockerMount] = None
-        self.stream_output_dir: typing.Optional[DockerMount] = None
-        self.aws_config_dir: typing.Optional[DockerMount] = None
-        self.generated_config_file: typing.Optional[DockerMount] = None
-
-
-def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
-    try:
-        validate_path_could_be_dir(data_dir)
-    except ValueError as ex:
-        raise ValueError(f"{component_name} data directory is invalid: {ex}")
+        self.data_dir: Optional[DockerMount] = None
+        self.logs_dir: Optional[DockerMount] = None
+        self.archives_output_dir: Optional[DockerMount] = None
+        self.stream_output_dir: Optional[DockerMount] = None
+        self.aws_config_dir: Optional[DockerMount] = None
+        self.generated_config_file: Optional[DockerMount] = None
 
 
 def get_clp_home():
@@ -133,63 +168,30 @@ def generate_container_name(job_type: str) -> str:
     return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
 
 
-def check_dependencies():
+def check_docker_dependencies(should_compose_project_be_running: bool, project_name: str):
+    """
+    Checks if Docker and Docker Compose are installed, and whether a Docker Compose project is
+    running.
+
+    :param should_compose_project_be_running:
+    :param project_name: The Docker Compose project name to check.
+    :raise DockerNotAvailableError: If any Docker dependency is not installed.
+    :raise DockerComposeProjectNotRunningError: If the project isn't running when it should be.
+    :raise DockerComposeProjectAlreadyRunningError: If the project is running when it shouldn't be.
+    """
     try:
-        subprocess.run(
-            "command -v docker",
-            shell=True,
-            stdout=subprocess.PIPE,
+        subprocess.check_output(
+            ["docker", "--version"],
             stderr=subprocess.STDOUT,
-            check=True,
         )
-    except subprocess.CalledProcessError:
-        raise EnvironmentError("docker is not installed or available on the path")
-    try:
-        subprocess.run(
-            ["docker", "ps"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=True
-        )
-    except subprocess.CalledProcessError:
-        raise EnvironmentError("docker cannot run without superuser privileges (sudo).")
+    except subprocess.CalledProcessError as e:
+        raise DockerNotAvailableError("docker is not installed or available on the path", e) from e
 
-
-def is_container_running(container_name):
-    # fmt: off
-    cmd = [
-        "docker", "ps",
-        # Only return container IDs
-        "--quiet",
-        "--filter", f"name={container_name}"
-    ]
-    # fmt: on
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE)
-    if proc.stdout.decode("utf-8"):
-        return True
-
-    return False
-
-
-def is_container_exited(container_name):
-    # fmt: off
-    cmd = [
-        "docker", "ps",
-        # Only return container IDs
-        "--quiet",
-        "--filter", f"name={container_name}",
-        "--filter", "status=exited"
-    ]
-    # fmt: on
-    proc = subprocess.run(cmd, stdout=subprocess.PIPE)
-    if proc.stdout.decode("utf-8"):
-        return True
-
-    return False
-
-
-def validate_log_directory(logs_dir: pathlib.Path, component_name: str) -> None:
-    try:
-        validate_path_could_be_dir(logs_dir)
-    except ValueError as ex:
-        raise ValueError(f"{component_name} logs directory is invalid: {ex}")
+    is_running = _is_docker_compose_project_running(project_name)
+    if should_compose_project_be_running and not is_running:
+        raise DockerComposeProjectNotRunningError(project_name)
+    if not should_compose_project_be_running and is_running:
+        raise DockerComposeProjectAlreadyRunningError(project_name)
 
 
 def validate_port(port_name: str, hostname: str, port: int):
@@ -236,7 +238,7 @@ def generate_container_config(
     :param clp_home:
     :return: The container config and the mounts.
     """
-    container_clp_config = clp_config.copy(deep=True)
+    container_clp_config = clp_config.model_copy(deep=True)
 
     docker_mounts = CLPDockerMounts(clp_home, CONTAINER_CLP_HOME)
 
@@ -310,11 +312,24 @@ def generate_container_config(
     return container_clp_config, docker_mounts
 
 
+def generate_docker_compose_container_config(clp_config: CLPConfig) -> CLPConfig:
+    """
+    Copies the given config and transforms mount paths and hosts for Docker Compose.
+
+    :param clp_config:
+    :return: The container config.
+    """
+    container_clp_config = clp_config.model_copy(deep=True)
+    container_clp_config.transform_for_container()
+
+    return container_clp_config
+
+
 def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
     worker_config = WorkerConfig()
-    worker_config.package = clp_config.package.copy(deep=True)
-    worker_config.archive_output = clp_config.archive_output.copy(deep=True)
-    worker_config.data_directory = clp_config.data_directory
+    worker_config.package = clp_config.package.model_copy(deep=True)
+    worker_config.archive_output = clp_config.archive_output.model_copy(deep=True)
+    worker_config.tmp_directory = clp_config.tmp_directory
 
     worker_config.stream_output = clp_config.stream_output
     worker_config.stream_collection_name = clp_config.results_cache.stream_collection_name
@@ -346,9 +361,7 @@ def dump_container_config(
     return config_file_path_on_container, config_file_path_on_host
 
 
-def dump_shared_container_config(
-    container_clp_config: CLPConfig, clp_config: CLPConfig
-) -> Tuple[pathlib.Path, pathlib.Path]:
+def dump_shared_container_config(container_clp_config: CLPConfig, clp_config: CLPConfig):
     """
     Dumps the given container config to `CLP_SHARED_CONFIG_FILENAME` in the logs directory, so that
     it's accessible in the container.
@@ -356,7 +369,7 @@ def dump_shared_container_config(
     :param container_clp_config:
     :param clp_config:
     """
-    return dump_container_config(container_clp_config, clp_config, CLP_SHARED_CONFIG_FILENAME)
+    dump_container_config(container_clp_config, clp_config, CLP_SHARED_CONFIG_FILENAME)
 
 
 def generate_container_start_cmd(
@@ -419,7 +432,7 @@ def load_config_file(
         if raw_clp_config is None:
             clp_config = CLPConfig()
         else:
-            clp_config = CLPConfig.parse_obj(raw_clp_config)
+            clp_config = CLPConfig.model_validate(raw_clp_config)
     else:
         if config_file_path != default_config_file_path:
             raise ValueError(f"Config file '{config_file_path}' does not exist.")
@@ -427,15 +440,11 @@ def load_config_file(
         clp_config = CLPConfig()
 
     clp_config.make_config_paths_absolute(clp_home)
-    clp_config.load_execution_container_name()
+    clp_config.load_container_image_ref()
 
     validate_path_for_container_mount(clp_config.data_directory)
     validate_path_for_container_mount(clp_config.logs_directory)
-
-    # Make data and logs directories node-specific
-    hostname = socket.gethostname()
-    clp_config.data_directory /= hostname
-    clp_config.logs_directory /= hostname
+    validate_path_for_container_mount(clp_config.tmp_directory)
 
     return clp_config
 
@@ -489,35 +498,44 @@ def validate_and_load_redis_credentials_file(
     clp_config.redis.load_credentials_from_file(clp_config.credentials_file_path)
 
 
-def validate_db_config(clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path):
+def validate_db_config(
+    clp_config: CLPConfig,
+    component_config: pathlib.Path,
+    data_dir: pathlib.Path,
+    logs_dir: pathlib.Path,
+):
+    if not component_config.exists():
+        raise ValueError(f"{DB_COMPONENT_NAME} configuration file missing: '{component_config}'.")
     _validate_data_directory(data_dir, DB_COMPONENT_NAME)
-    validate_log_directory(logs_dir, DB_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, DB_COMPONENT_NAME)
 
     validate_port(f"{DB_COMPONENT_NAME}.port", clp_config.database.host, clp_config.database.port)
 
 
 def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
-    validate_log_directory(logs_dir, QUEUE_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, QUEUE_COMPONENT_NAME)
 
     validate_port(f"{QUEUE_COMPONENT_NAME}.port", clp_config.queue.host, clp_config.queue.port)
 
 
 def validate_redis_config(
-    clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path, base_config: pathlib.Path
+    clp_config: CLPConfig,
+    component_config: pathlib.Path,
+    data_dir: pathlib.Path,
+    logs_dir: pathlib.Path,
 ):
-    _validate_data_directory(data_dir, REDIS_COMPONENT_NAME)
-    validate_log_directory(logs_dir, REDIS_COMPONENT_NAME)
-
-    if not base_config.exists():
+    if not component_config.exists():
         raise ValueError(
-            f"{REDIS_COMPONENT_NAME} base configuration at {str(base_config)} is missing."
+            f"{REDIS_COMPONENT_NAME} configuration file missing: '{component_config}'."
         )
+    _validate_data_directory(data_dir, REDIS_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, REDIS_COMPONENT_NAME)
 
     validate_port(f"{REDIS_COMPONENT_NAME}.port", clp_config.redis.host, clp_config.redis.port)
 
 
 def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_workers: int):
-    validate_log_directory(logs_dir, REDUCER_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, REDUCER_COMPONENT_NAME)
 
     for i in range(0, num_workers):
         validate_port(
@@ -528,10 +546,17 @@ def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_w
 
 
 def validate_results_cache_config(
-    clp_config: CLPConfig, data_dir: pathlib.Path, logs_dir: pathlib.Path
+    clp_config: CLPConfig,
+    component_config: pathlib.Path,
+    data_dir: pathlib.Path,
+    logs_dir: pathlib.Path,
 ):
+    if not component_config.exists():
+        raise ValueError(
+            f"{RESULTS_CACHE_COMPONENT_NAME} configuration file missing: '{component_config}'."
+        )
     _validate_data_directory(data_dir, RESULTS_CACHE_COMPONENT_NAME)
-    validate_log_directory(logs_dir, RESULTS_CACHE_COMPONENT_NAME)
+    _validate_log_directory(logs_dir, RESULTS_CACHE_COMPONENT_NAME)
 
     validate_port(
         f"{RESULTS_CACHE_COMPONENT_NAME}.port",
@@ -562,6 +587,14 @@ def validate_webui_config(
             raise ValueError(f"{WEBUI_COMPONENT_NAME} {path} is not a valid path to settings.json")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
+
+
+def validate_mcp_server_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
+    _validate_log_directory(logs_dir, MCP_SERVER_COMPONENT_NAME)
+
+    validate_port(
+        f"{MCP_SERVER_COMPONENT_NAME}.port", clp_config.mcp_server.host, clp_config.mcp_server.port
+    )
 
 
 def validate_path_for_container_mount(path: pathlib.Path) -> None:
@@ -708,3 +741,44 @@ def get_celery_connection_env_vars_list(container_clp_config: CLPConfig) -> List
     ]
 
     return env_vars
+
+
+def _is_docker_compose_project_running(project_name: str) -> bool:
+    """
+    Checks if a Docker Compose project is running.
+
+    :param project_name:
+    :return: Whether at least one instance is running.
+    :raise DockerNotAvailableError: If Docker Compose is not installed or fails. The error message
+    includes the Docker command's output when available.
+    """
+    cmd = ["docker", "compose", "ls", "--format", "json", "--filter", f"name={project_name}"]
+    try:
+        output = subprocess.check_output(cmd, stderr=subprocess.STDOUT)
+        running_instances = json.loads(output)
+        return len(running_instances) >= 1
+    except subprocess.CalledProcessError as e:
+        raise DockerNotAvailableError(
+            "Docker Compose is not installed or not functioning properly.", e
+        ) from e
+
+
+def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
+    try:
+        validate_path_could_be_dir(data_dir)
+    except ValueError as ex:
+        raise ValueError(f"{component_name} data directory is invalid: {ex}")
+
+
+def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
+    """
+    Validates that the logs directory path for a component is valid.
+
+    :param logs_dir:
+    :param component_name:
+    :raise ValueError: If the path is invalid or can't be a directory.
+    """
+    try:
+        validate_path_could_be_dir(logs_dir)
+    except ValueError as ex:
+        raise ValueError(f"{component_name} logs directory is invalid: {ex}")

@@ -9,13 +9,13 @@ from typing import Final, List, Optional
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
     StorageEngine,
     StorageType,
 )
 
 from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLPConfig,
     DockerMount,
     dump_container_config,
@@ -181,12 +181,12 @@ def main(argv: List[str]) -> int:
         logger.exception("Failed to load config.")
         return -1
 
-    storage_type: StorageType = clp_config.archive_output.storage.type
+    storage_type = StorageType(clp_config.archive_output.storage.type)
     if StorageType.FS != storage_type:
         logger.error(f"Archive manager is not supported for storage type: {storage_type}.")
         return -1
 
-    storage_engine: StorageEngine = clp_config.package.storage_engine
+    storage_engine = StorageEngine(clp_config.package.storage_engine)
     dataset = parsed_args.dataset
     if StorageEngine.CLP_S == storage_engine:
         dataset = CLP_DEFAULT_DATASET_NAME if dataset is None else dataset
@@ -229,7 +229,7 @@ def main(argv: List[str]) -> int:
         CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
     }
     container_start_cmd: List[str] = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
+        container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
     )
 
     # fmt: off

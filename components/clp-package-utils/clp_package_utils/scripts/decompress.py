@@ -9,6 +9,7 @@ from typing import Optional
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     StorageEngine,
@@ -16,7 +17,6 @@ from clp_py_utils.clp_config import (
 )
 
 from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     DockerMount,
     DockerMountType,
     dump_container_config,
@@ -132,7 +132,7 @@ def handle_extract_file_cmd(
         CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
     }
     container_start_cmd = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
+        container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
     )
 
     # fmt: off
@@ -150,7 +150,7 @@ def handle_extract_file_cmd(
         extract_cmd.append(path)
     if container_paths_to_extract_file_path:
         extract_cmd.append("--input-list")
-        extract_cmd.append(container_paths_to_extract_file_path)
+        extract_cmd.append(str(container_paths_to_extract_file_path))
 
     cmd = container_start_cmd + extract_cmd
 
@@ -211,7 +211,7 @@ def handle_extract_stream_cmd(
         CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
     }
     container_start_cmd = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
+        container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
     )
 
     # fmt: off

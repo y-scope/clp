@@ -47,6 +47,8 @@ from clp_py_utils.clp_metadata_db_utils import (
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
 from clp_py_utils.sql_adapter import SQL_Adapter
+from pydantic import ValidationError
+
 from job_orchestration.executor.query.extract_stream_task import extract_stream
 from job_orchestration.executor.query.fs_search_task import search
 from job_orchestration.garbage_collector.constants import MIN_TO_SECONDS, SECOND_TO_MILLISECOND
@@ -77,7 +79,6 @@ from job_orchestration.scheduler.scheduler_data import (
     SearchJob,
 )
 from job_orchestration.scheduler.utils import kill_hanging_jobs
-from pydantic import ValidationError
 
 # Setup logging
 logger = get_logger("search-job-handler")
@@ -127,7 +128,7 @@ class IrExtractionHandle(StreamExtractionHandle):
         table_prefix: str,
     ):
         super().__init__(job_id)
-        self.__job_config = ExtractIrJobConfig.parse_obj(job_config)
+        self.__job_config = ExtractIrJobConfig.model_validate(job_config)
         self._archive_id, self.__file_split_id = get_archive_and_file_split_ids_for_ir_extraction(
             db_conn, table_prefix, self.__job_config
         )
@@ -174,7 +175,7 @@ class JsonExtractionHandle(StreamExtractionHandle):
         table_prefix: str,
     ):
         super().__init__(job_id)
-        self.__job_config = ExtractJsonJobConfig.parse_obj(job_config)
+        self.__job_config = ExtractJsonJobConfig.model_validate(job_config)
         self._archive_id = self.__job_config.archive_id
         if not archive_exists(db_conn, table_prefix, self.__job_config.dataset, self._archive_id):
             raise ValueError(f"Archive {self._archive_id} doesn't exist")
@@ -511,7 +512,7 @@ def get_task_group_for_job(
     clp_metadata_db_conn_params: Dict[str, any],
     results_cache_uri: str,
 ):
-    job_config = job.get_config().dict()
+    job_config = job.get_config().model_dump()
     job_type = job.get_type()
     if QueryJobType.SEARCH_OR_AGGREGATION == job_type:
         return celery.group(
@@ -662,7 +663,7 @@ def handle_pending_query_jobs(
             job_creation_time = job["creation_time"].timestamp()
 
             table_prefix = clp_metadata_db_conn_params["table_prefix"]
-            dataset = QueryJobConfig.parse_obj(job_config).dataset
+            dataset = QueryJobConfig.model_validate(job_config).dataset
             if dataset is not None and dataset not in existing_datasets:
                 # NOTE: This assumes we never delete a dataset.
                 existing_datasets.update(fetch_existing_datasets(db_cursor, table_prefix))
@@ -685,7 +686,7 @@ def handle_pending_query_jobs(
                 if job_id in active_jobs:
                     continue
 
-                search_config = SearchJobConfig.parse_obj(job_config)
+                search_config = SearchJobConfig.model_validate(job_config)
                 archive_end_ts_lower_bound: Optional[int] = None
                 if archive_retention_period is not None:
                     archive_end_ts_lower_bound = SECOND_TO_MILLISECOND * (
@@ -901,7 +902,7 @@ async def handle_finished_search_job(
     is_reducer_job = job.reducer_handler_msg_queues is not None
     new_job_status = QueryJobStatus.RUNNING
     for task_result_obj in task_results:
-        task_result = QueryTaskResult.parse_obj(task_result_obj)
+        task_result = QueryTaskResult.model_validate(task_result_obj)
         task_id = task_result.task_id
         task_status = task_result.status
         if not task_status == QueryTaskStatus.SUCCEEDED:
@@ -996,7 +997,7 @@ async def handle_finished_stream_extraction_job(
         )
         new_job_status = QueryJobStatus.FAILED
     else:
-        task_result = QueryTaskResult.parse_obj(task_results[0])
+        task_result = QueryTaskResult.model_validate(task_results[0])
         task_id = task_result.task_id
         if not QueryJobStatus.SUCCEEDED == task_result.status:
             logger.error(
@@ -1159,7 +1160,7 @@ async def main(argv: List[str]) -> int:
     # Load configuration
     config_path = pathlib.Path(parsed_args.config)
     try:
-        clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
+        clp_config = CLPConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
         logger.error(err)

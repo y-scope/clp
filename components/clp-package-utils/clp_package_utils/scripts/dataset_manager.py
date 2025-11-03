@@ -10,13 +10,13 @@ from clp_py_utils.clp_config import (
     ARCHIVE_MANAGER_ACTION_NAME,
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     StorageEngine,
     StorageType,
 )
 from clp_py_utils.s3_utils import generate_container_auth_options
 
 from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     dump_container_config,
     generate_container_config,
     generate_container_name,
@@ -149,7 +149,7 @@ def main(argv: List[str]) -> int:
         CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
     }
     container_start_cmd = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
+        container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
     )
 
     if len(aws_env_vars) != 0:

@@ -25,13 +25,13 @@ using value_bool_t = bool;
 /**
  * Tuple of all primitive value types.
  */
-using PrimitiveValueTypes = std::tuple<
-        value_int_t,
-        value_float_t,
-        value_bool_t,
-        std::string,
-        clp::ir::EightByteEncodedTextAst,
-        clp::ir::FourByteEncodedTextAst>;
+using PrimitiveValueTypes = std::
+        tuple<value_int_t,
+              value_float_t,
+              value_bool_t,
+              std::string,
+              clp::ir::EightByteEncodedTextAst,
+              clp::ir::FourByteEncodedTextAst>;
 
 /**
  * Variant for all primitive value types.

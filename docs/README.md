@@ -14,7 +14,7 @@ this project:
 * [Node.js] >= 16 to be able to [view the output](#viewing-the-output)
 * Python 3.10 or later
 * [Task] 3.44.0
-  * We pin the version to 3.44.0 due to [y-scope/clp-ffi-js#110].
+  * We pin the version to 3.44.0 due to [y-scope/clp#1352].
 
 ## Build Commands
 
@@ -45,4 +45,4 @@ the address it binds to (usually http://localhost:8080).
 [http-server]: https://www.npmjs.com/package/http-server
 [Node.js]: https://nodejs.org/en/download/current
 [Task]: https://taskfile.dev/
-[y-scope/clp-ffi-js#110]: https://github.com/y-scope/clp-ffi-js/issues/110
+[y-scope/clp#1352]: https://github.com/y-scope/clp/issues/1352
