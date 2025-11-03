@@ -65,10 +65,6 @@ fn test_s3_event_deserialization() {
     assert_eq!(record.s3.object.key, "HappyFace.jpg");
     assert_eq!(record.s3.object.size, 1024);
 
-    let s3_test_event_result: Result<S3, serde_json::Error> =
-        serde_json::from_str(EXAMPLE_S3_TEST_MESSAGE);
-    assert!(
-        s3_test_event_result.is_err(),
-        "S3 Test event should fail deserialization"
-    );
+    serde_json::from_str::<S3>(EXAMPLE_S3_TEST_MESSAGE)
+        .expect_err("S3 Test event should fail deserialization");
 }
