@@ -125,6 +125,8 @@ WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp.unix()} AND ${endTim
     return queryString;
 };
 
+const MILLISECONDS_PER_SECOND = 1000;
+
 /**
  * Constructs a bucketed timeline query.
  *
@@ -160,12 +162,14 @@ const buildTimelineQuery = ({
     SELECT
         width_bucket(
             to_unixtime(${timestampKey}),
-            ${startTimestamp.unix()},
-            ${endTimestamp.unix()},
+            ${startTimestamp.valueOf() / MILLISECONDS_PER_SECOND},
+            ${endTimestamp.valueOf() / MILLISECONDS_PER_SECOND},
             ${bucketCount}) AS idx,
         COUNT(*) AS cnt
     FROM ${databaseName}
-    WHERE to_unixtime(${timestampKey}) BETWEEN ${startTimestamp.unix()} AND ${endTimestamp.unix()}
+    WHERE to_unixtime(${timestampKey}) BETWEEN
+        ${startTimestamp.valueOf() / MILLISECONDS_PER_SECOND}
+        AND ${endTimestamp.valueOf() / MILLISECONDS_PER_SECOND}
         ${booleanExpressionQuery}
     GROUP BY 1
     ORDER BY 1
