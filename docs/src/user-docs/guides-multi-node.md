@@ -132,6 +132,10 @@ services below.
 All commands below assume you are running them from the root of the CLP package directory.
 
 ```bash
+################################################################################
+# Infrastructure services
+################################################################################
+
 # Start database (skip if using external database)
 docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
   --file docker-compose-all.yaml \
@@ -162,6 +166,10 @@ docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
   --file docker-compose-all.yaml \
   up results-cache-indices-creator --no-deps
 
+################################################################################
+# Controller services (schedulers, UI, and supporting services)
+################################################################################
+
 # Start compression scheduler
 docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
   --file docker-compose-all.yaml \
@@ -187,6 +195,10 @@ docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
   --file docker-compose-all.yaml \
   up mcp-server --no-deps --detach
 
+################################################################################
+# Worker services (can be started on multiple hosts)
+################################################################################
+
 # Start compression worker
 docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
   --file docker-compose-all.yaml \
@@ -202,13 +214,6 @@ docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
   --file docker-compose-all.yaml \
   up reducer --no-deps --detach
 ```
-
-:::{tip}
-The `--no-deps` flag tells Docker Compose to start only the specified service without starting its
-dependencies. This is important for multi-node deployments where dependencies may be running on
-other hosts. The `--wait` flag ensures the command waits for the service to be healthy before
-returning.
-:::
 
 :::{note}
 To increase parallelism, start worker services (`compression-worker`, `query-worker`, `reducer`) on
