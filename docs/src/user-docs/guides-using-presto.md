@@ -232,6 +232,8 @@ The numbered circles in [Figure 1](#figure-1) correspond to the following elemen
    * When you mouse over a bar in the timeline, a popup will display the range and the number of
      search results in that range.
 5. **The results table**. The table will display the log events that match your filter.
+6. **The query inspector**. Click this button if you'd like to see the full Presto filter generated
+   by the information you've entered into the filter input boxes.
 
 :::{note}
 The UI can only run one query at a time, and queries must not end with a `;`.
