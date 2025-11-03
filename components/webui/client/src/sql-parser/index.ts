@@ -4,6 +4,7 @@ import {
     CommonTokenStream,
     ErrorListener,
     Recognizer,
+    Token,
 } from "antlr4";
 
 import SqlLexer from "./generated/SqlLexer";
@@ -36,16 +37,17 @@ class SyntaxErrorListener<TSymbol> extends ErrorListener<TSymbol> {
         column: number,
         msg: string,
     ) {
-        const token = offendingSymbol as any;
-        const startPos = token?.getStartIndex?.() ?? column;
-        const stopPos = token?.getStopIndex?.() ?? column;
+        const token = offendingSymbol as unknown as Token;
+        const startPos = token?.start ?? column;
+        const stopPos = token?.stop ?? column;
 
+        console.log(token);
         this.errors.push({
             line,
             column,
             message: msg,
-            startColumn: startPos + 1, // Monaco is 1-indexed
-            endColumn: stopPos + 2, // +2 because stopIndex is inclusive and Monaco is 1-indexed
+            startColumn: startPos + 1,
+            endColumn: stopPos + 2,
         });
     }
 }
