@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-script_dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 common_env_path="$script_dir/.common-env.sh"
 
 # shellcheck source=.common-env.sh
