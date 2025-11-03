@@ -39,7 +39,7 @@ public:
      * @param reader
      * @param length The exact length of the string to read.
      * @return std::nullopt on success.
-     * @return Forwards `ReaderInterface::try_read_string`'s error code on failure.
+     * @return Forwards `ReaderInterface::try_read_exact_length`'s error code on failure.
      */
     [[nodiscard]] auto read_from(ReaderInterface& reader, size_t length)
             -> std::optional<ErrorCode> {
