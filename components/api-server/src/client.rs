@@ -1,9 +1,11 @@
 use clp_rust_utils::{
+    clp_config::package::config::{Config, StorageEngine},
+    clp_config::package::credentials::Credentials,
     job_config::{QUERY_JOBS_TABLE_NAME, QueryJobStatus, QueryJobType, SearchJobConfig},
-    package_config::{Config, Credentials, config::StorageEngine},
 };
 use futures::{Stream, StreamExt};
 use num_enum::TryFromPrimitive;
+use secrecy::ExposeSecret;
 use serde::{Deserialize, Serialize};
 use sqlx::Row;
 use thiserror::Error;
@@ -40,7 +42,7 @@ impl Client {
             .host(&config.database.host)
             .port(config.database.port)
             .username(&credentials.database.user)
-            .password(&credentials.database.password)
+            .password(credentials.database.password.expose_secret())
             .database(&config.database.name);
         let sql_pool = sqlx::mysql::MySqlPoolOptions::new()
             .connect_with(connect_options)

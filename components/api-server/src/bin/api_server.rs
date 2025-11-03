@@ -1,17 +1,15 @@
 use axum::{
-    Json,
-    Router,
+    Json, Router,
     extract::{Path, State},
     http::StatusCode,
     response::{
-        IntoResponse,
-        Sse,
+        IntoResponse, Sse,
         sse::{Event, KeepAlive},
     },
     routing::{get, post},
 };
 use clap::Parser;
-use clp_rust_utils::package_config;
+use clp_rust_utils::clp_config::package;
 use futures::{Stream, StreamExt};
 use thiserror::Error;
 use tracing_subscriber::{self, prelude::*};
@@ -33,13 +31,13 @@ async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
     let package_root = std::path::Path::new(&args.package_root);
 
-    let config_path = package_root.join(package_config::DEFAULT_CONFIG_FILE_PATH);
+    let config_path = package_root.join(package::DEFAULT_CONFIG_FILE_PATH);
     let config_string = std::fs::read_to_string(config_path)?;
-    let config: package_config::Config = serde_yaml::from_str(&config_string)?;
+    let config: package::config::Config = serde_yaml::from_str(&config_string)?;
 
-    let credentials_path = package_root.join(package_config::DEFAULT_CREDENTIALS_FILE_PATH);
+    let credentials_path = package_root.join(package::DEFAULT_CREDENTIALS_FILE_PATH);
     let credentials_string = std::fs::read_to_string(credentials_path)?;
-    let credentials: package_config::Credentials = serde_yaml::from_str(&credentials_string)?;
+    let credentials: package::credentials::Credentials = serde_yaml::from_str(&credentials_string)?;
 
     let client = clp_client::Client::connect(&config, &credentials).await?;
 
