@@ -337,17 +337,21 @@ auto parse_timestamp(
         }
     }
 
-    // Do not allow trailing unmatched content.
-    if (pattern_idx != pattern.size() || timestamp_idx != timestamp.size()) {
-        {
-            return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
-        }
+    if (escaped) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
     }
 
     // Do not allow mixing format specifiers for date-and-time type timestamps and epoch-number type
     // timestamps.
     if (date_type_representation && number_type_representation) {
         return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+    }
+
+    // Do not allow trailing unmatched content.
+    if (pattern_idx != pattern.size() || timestamp_idx != timestamp.size()) {
+        {
+            return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+        }
     }
 
     if (number_type_representation) {
