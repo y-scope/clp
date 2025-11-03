@@ -19,7 +19,7 @@ elif [[ -f "$version_file" ]]; then
     version="$(tr -d '[:space:]' <"$version_file")"
     export CLP_PACKAGE_CONTAINER_IMAGE_REF="ghcr.io/y-scope/clp/clp-package:v$version"
 else
-    >&2 echo "Error: Neither '${image_id_file}' nor '${version_file}' exist."
+    echo >&2 "Error: Neither '${image_id_file}' nor '${version_file}' exist."
     return 1
 fi
 
@@ -44,7 +44,7 @@ if [[ -z "${CLP_DOCKER_PLUGIN_DIR:-}" ]]; then
         fi
     done
     if [[ -z "${CLP_DOCKER_PLUGIN_DIR:-}" ]]; then
-        >&2 echo "Warning: Docker plugin directory not found;" \
+        echo >&2 "Warning: Docker plugin directory not found;" \
             "Docker Compose may not work inside container."
     fi
 fi
