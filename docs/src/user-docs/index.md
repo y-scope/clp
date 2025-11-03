@@ -93,4 +93,5 @@ reference-json-search-syntax
 reference-text-search-syntax
 reference-admin-tools
 reference-unstructured-schema-file
+reference-external-database
 :::

@@ -114,17 +114,25 @@ In a multi-node cluster:
 
 ## Starting CLP
 
-Start the services using the commands below. The comments indicate the startup order and dependencies.
+Start the services using the commands below. The comments indicate the startup order and
+dependencies.
 
 :::{note}
-For **clp-json** base deployments (storage engine: `clp-s` without query engine), omit the
-query-scheduler, query-worker, and reducer services.
+For **clp-json + Presto** deployments (storage engine: `clp-s` with query engine: `presto`), omit
+the `query-scheduler`, `query-worker`, and `reducer` services.
+:::
+
+:::{tip}
+If you want to use your own MariaDB/MySQL or MongoDB servers instead of the Docker Compose managed
+databases, see the [external database setup reference](reference-external-database.md) for
+instructions. When using external databases, skip starting the `database` and `results-cache`
+services below.
 :::
 
 All commands below assume you are running them from the root of the CLP package directory.
 
 ```bash
-# Start database
+# Start database (skip if using external database)
 docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
   --file docker-compose-all.yaml \
   up database --no-deps --detach --wait
@@ -144,7 +152,7 @@ docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
   --file docker-compose-all.yaml \
   up redis --no-deps --detach --wait
 
-# Start results cache
+# Start results cache (skip if using external MongoDB)
 docker compose --project-name "clp-package-$(cat var/log/instance-id)" \
   --file docker-compose-all.yaml \
   up results-cache --no-deps --detach --wait

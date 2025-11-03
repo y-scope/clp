@@ -33,4 +33,11 @@ Schema file syntax
 ^^^
 Syntax reference for clp's schema file for parsing unstructured text logs.
 :::
+
+:::{grid-item-card}
+:link: reference-external-database
+External database setup
+^^^
+Guide for setting up external databases for CLP package components.
+:::
 ::::
