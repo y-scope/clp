@@ -249,6 +249,7 @@ def _add_memory_env_vars(env_vars: Dict[str, str]) -> bool:
         "query-memory-gb=%d, system-memory-gb=%d",
         total_memory_gb,
         query_memory_gb,
+        system_memory_gb
     )
 
     env_vars["PRESTO_WORKER_CONFIGPROPERTIES_QUERY_MEMORY_GB"] = str(query_memory_gb)
