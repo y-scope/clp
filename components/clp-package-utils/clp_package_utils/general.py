@@ -398,7 +398,6 @@ def generate_container_start_cmd(
         "--rm",
         "--network", "host",
         "-w", str(CONTAINER_CLP_HOME),
-        "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-u", f"{os.getuid()}:{os.getgid()}",
         "--name", container_name,
         "--log-driver", "local"

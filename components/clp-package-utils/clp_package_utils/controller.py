@@ -770,8 +770,7 @@ class DockerComposeController(BaseController):
         logger.info(f"Starting CLP using Docker Compose ({deployment_type} deployment)...")
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
-        if deployment_type == DeploymentType.BASE:
-            cmd += ["--file", "docker-compose.base.yaml"]
+        cmd += ["--file", self._get_docker_file_name()]
         if self._clp_config.mcp_server is not None:
             cmd += ["--profile", "mcp"]
         cmd += ["up", "--detach", "--wait"]
@@ -821,6 +820,15 @@ class DockerComposeController(BaseController):
         """
         # This will change when we move from single to multi-container workers. See y-scope/clp#1424
         return multiprocessing.cpu_count() // 2
+
+    def _get_docker_file_name(self) -> str:
+        """
+        :return: The Docker Compose file name to use based on the config.
+        """
+        deployment_type = self._clp_config.get_deployment_type()
+        if deployment_type == DeploymentType.BASE:
+            return "docker-compose-base.yaml"
+        return "docker-compose.yaml"
 
 
 def get_or_create_instance_id(clp_config: CLPConfig) -> str:
