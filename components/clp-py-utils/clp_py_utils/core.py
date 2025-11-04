@@ -78,6 +78,7 @@ def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
     try:
         if not translated_path.is_symlink():
             return translated_path
+
         link_target = translated_path.readlink()
         if link_target.is_absolute():
             return CONTAINER_DIR_FOR_HOST_ROOT / link_target.relative_to("/")
