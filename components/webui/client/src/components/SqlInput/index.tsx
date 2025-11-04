@@ -7,11 +7,11 @@ import {
 
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 
+import {ValidationError} from "../../sql-parser";
 import SqlEditor, {
     SqlEditorProps,
     SqlEditorType,
 } from "../SqlEditor";
-import {ValidationError} from "../../sql-parser";
 
 
 type SqlInputProps = SqlEditorProps & {
@@ -71,7 +71,9 @@ const SqlInput = (props: SqlInputProps) => {
             return;
         }
 
-        const value = typeof editorProps.value === "string" ? editorProps.value : "";
+        const value = "string" === typeof editorProps.value ?
+            editorProps.value :
+            "";
 
         // Clear markers if no validation function or empty/whitespace-only input
         if (!validateFn || !value.trim()) {
@@ -82,16 +84,17 @@ const SqlInput = (props: SqlInputProps) => {
 
         const errors = validateFn(value);
         const markers: monaco.editor.IMarkerData[] = errors.map((error) => ({
-            severity: monaco.MarkerSeverity.Error,
-            startLineNumber: error.line,
-            startColumn: error.startColumn,
-            endLineNumber: error.line,
             endColumn: error.endColumn,
+            endLineNumber: error.line,
             message: error.message,
+            severity: monaco.MarkerSeverity.Error,
+            startColumn: error.startColumn,
+            startLineNumber: error.line,
         }));
 
         monaco.editor.setModelMarkers(model, "sql-parser", markers);
-    }, [editorProps.value, validateFn]);
+    }, [editorProps.value,
+        validateFn]);
 
     return (
         <SqlEditor

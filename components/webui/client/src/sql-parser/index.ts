@@ -3,6 +3,7 @@ import {
     CharStream,
     CommonTokenStream,
     ErrorListener,
+    RecognitionException,
     Recognizer,
 } from "antlr4";
 
@@ -31,21 +32,26 @@ class SyntaxErrorListener<TSymbol> extends ErrorListener<TSymbol> {
     // eslint-disable-next-line max-params
     override syntaxError (
         _recognizer: Recognizer<TSymbol>,
-        offendingSymbol: TSymbol,
+        _offendingSymbol: TSymbol,
         line: number,
         column: number,
         msg: string,
+        e: RecognitionException | undefined,
     ) {
-        const token = offendingSymbol as any;
-        const startPos = token?.getStartIndex?.() ?? column;
-        const stopPos = token?.getStopIndex?.() ?? column;
+        let startColumn = column + 1;
+        let endColumn = column + 2;
+
+        if (e?.offendingToken) {
+            startColumn = e.offendingToken.start + 1;
+            endColumn = e.offendingToken.stop + 2;
+        }
 
         this.errors.push({
-            line,
-            column,
+            column: column,
+            endColumn: endColumn,
+            line: line,
             message: msg,
-            startColumn: startPos + 1, // Monaco is 1-indexed
-            endColumn: stopPos + 2, // +2 because stopIndex is inclusive and Monaco is 1-indexed
+            startColumn: startColumn,
         });
     }
 }
