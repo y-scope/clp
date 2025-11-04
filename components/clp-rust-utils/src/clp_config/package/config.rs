@@ -46,6 +46,9 @@ impl Default for Database {
 pub struct ApiServer {
     pub host: String,
     pub port: u16,
+    pub query_job_pool_initial_delay_ms: u64,
+    pub query_job_pool_max_delay_ms: u64,
+    pub default_max_num_results: u32,
 }
 
 impl Default for ApiServer {
@@ -53,6 +56,9 @@ impl Default for ApiServer {
         Self {
             host: "localhost".to_owned(),
             port: 3001,
+            query_job_pool_initial_delay_ms: 100,
+            query_job_pool_max_delay_ms: 5000,
+            default_max_num_results: 1000,
         }
     }
 }

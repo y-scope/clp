@@ -124,7 +124,6 @@ dependencies = [
  "rmp-serde",
  "serde",
  "serde_json",
- "serde_yaml",
  "sqlx",
  "thiserror 2.0.17",
  "tokio",
@@ -941,6 +940,7 @@ dependencies = [
  "secrecy",
  "serde",
  "serde_json",
+ "serde_yaml",
  "sqlx",
  "thiserror 2.0.17",
 ]

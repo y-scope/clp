@@ -10,4 +10,7 @@ pub enum Error {
 
     #[error("`sqlx::Error`: {0}")]
     Sqlx(#[from] sqlx::Error),
+
+    #[error("`serde_yaml::Error`: {0}")]
+    SerdeYaml(#[from] serde_yaml::Error),
 }

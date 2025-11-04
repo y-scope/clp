@@ -12,6 +12,7 @@ num_enum = "0.7.5"
 rmp-serde = "1.3.0"
 secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0.228", features = ["derive"] }
+serde_yaml = "0.9.34"
 sqlx = { version = "0.8.6", features = ["runtime-tokio", "mysql"] }
 thiserror = "2.0.17"
 

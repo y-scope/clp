@@ -1,3 +1,4 @@
+use anyhow::Context;
 use axum::{
     Json,
     Router,
@@ -11,17 +12,14 @@ use axum::{
     routing::{get, post},
 };
 use clap::Parser;
-use clp_rust_utils::clp_config::package;
+use clp_rust_utils::{clp_config::package, serde::yaml_file};
 use futures::{Stream, StreamExt};
 use thiserror::Error;
 use tracing_subscriber::{self, prelude::*};
 
 #[derive(Parser)]
-#[command(version, about)]
-struct Args {
-    #[arg(long)]
-    package_root: String,
-}
+#[command(version, about = "API Server for CLP.")]
+struct Args {}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
@@ -30,33 +28,51 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::EnvFilter::from_default_env())
         .init();
 
-    let args = Args::parse();
-    let package_root = std::path::Path::new(&args.package_root);
+    let _ = Args::parse();
+    let home = std::env::var("CLP_HOME").context("Expect a CLP_HOME env variable")?;
+    let home = std::path::Path::new(&home);
 
-    let config_path = package_root.join(package::DEFAULT_CONFIG_FILE_PATH);
-    let config_string = std::fs::read_to_string(config_path)?;
-    let config: package::config::Config = serde_yaml::from_str(&config_string)?;
+    let config_path = home.join(package::DEFAULT_CONFIG_FILE_PATH);
+    let config: package::config::Config = yaml_file::from_path(&config_path).context(format!(
+        "Config file {} does not exist",
+        config_path.display()
+    ))?;
 
-    let credentials_path = package_root.join(package::DEFAULT_CREDENTIALS_FILE_PATH);
-    let credentials_string = std::fs::read_to_string(credentials_path)?;
-    let credentials: package::credentials::Credentials = serde_yaml::from_str(&credentials_string)?;
-
-    let client = clp_client::Client::connect(&config, &credentials).await?;
+    let credentials_path = home.join(package::DEFAULT_CREDENTIALS_FILE_PATH);
+    let credentials: package::credentials::Credentials = yaml_file::from_path(&credentials_path)
+        .context(format!(
+            "Credentials file {} does not exist",
+            credentials_path.display()
+        ))?;
 
     let addr = format!("{}:{}", &config.api_server.host, &config.api_server.port);
-    let listener = tokio::net::TcpListener::bind(&addr).await?;
-    tracing::event!(tracing::Level::INFO, "Server started at {addr}");
+    let listener = tokio::net::TcpListener::bind(&addr)
+        .await
+        .context(format!("Cannot listen to {addr}"))?;
+
+    let client = clp_client::Client::connect(&config, &credentials)
+        .await
+        .context("Cannot connect to CLP")?;
 
     let app = Router::new()
-        .route("/", get(root))
+        .route("/", get(health))
+        .route("/health", get(health))
         .route("/query", post(query))
         .route("/query_results/{search_job_id}", get(query_results))
         .with_state(client);
-    axum::serve(listener, app).await?;
+
+    tracing::event!(tracing::Level::INFO, "Server started at {addr}");
+    axum::serve(listener, app)
+        .with_graceful_shutdown(async {
+            tokio::signal::ctrl_c()
+                .await
+                .expect("failed to listen for event");
+        })
+        .await?;
     Ok(())
 }
 
-async fn root() -> String {
+async fn health() -> String {
     "API server is running".to_owned()
 }
 
@@ -73,11 +89,9 @@ async fn query_results(
     State(client): State<clp_client::Client>,
     Path(search_job_id): Path<u64>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
-    let stream = client.fetch_results(search_job_id).await?;
-    Ok(
-        Sse::new(stream.map(|res| Ok(Event::default().json_data(res?)?)))
-            .keep_alive(KeepAlive::default()),
-    )
+    let results_stream = client.fetch_results(search_job_id).await?;
+    let event_stream = results_stream.map(|res| Ok(Event::default().json_data(res?)?));
+    Ok(Sse::new(event_stream).keep_alive(KeepAlive::default()))
 }
 
 #[derive(Error, Debug)]
@@ -85,14 +99,19 @@ enum HandlerError {
     #[error("Internal server error")]
     InternalServer,
 }
+
 trait IntoHandlerError {}
+
 impl IntoHandlerError for axum::Error {}
+
 impl IntoHandlerError for clp_client::ClientError {}
+
 impl<T: IntoHandlerError> From<T> for HandlerError {
     fn from(_: T) -> Self {
         Self::InternalServer
     }
 }
+
 impl IntoResponse for HandlerError {
     fn into_response(self) -> axum::response::Response {
         StatusCode::INTERNAL_SERVER_ERROR.into_response()
