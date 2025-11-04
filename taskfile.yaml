@@ -19,6 +19,7 @@ vars:
   G_CORE_COMPONENT_DIR: "{{.G_COMPONENTS_DIR}}/core"
   G_CORE_COMPONENT_SUBMODULES_DIR: "{{.G_CORE_COMPONENT_DIR}}/submodules"
   G_WEBUI_SRC_DIR: "{{.G_COMPONENTS_DIR}}/webui"
+  G_MCP_COMPONENT_DIR: "{{.G_COMPONENTS_DIR}}/clp-mcp-server"
 
   # Build paths
   G_BUILD_DIR: "{{.ROOT_DIR}}/build"

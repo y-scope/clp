@@ -8,13 +8,14 @@ from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 
 from clp_mcp_server.clp_connector import ClpConnector
+from clp_mcp_server.validator import validate_query
 
 from . import constants
 from .session_manager import SessionManager
 from .utils import format_query_results, parse_timestamp_range, sort_by_timestamp
 
 
-def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
+def create_mcp_server(clp_config: CLPConfig) -> FastMCP:  # noqa: C901
     """
     Creates and defines API tool calls for the CLP MCP server.
 
@@ -47,6 +48,10 @@ def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
         :return: A dictionary with the following key-value pair on failures:
             - "Error": An error message describing the failure.
         """
+        valid, err_msg = validate_query(kql_query)
+        if not valid:
+            return {"Error": f"Error parsing query: {err_msg}"}
+
         try:
             query_id = await connector.submit_query(kql_query, begin_ts, end_ts)
             await connector.wait_query_completion(query_id)
