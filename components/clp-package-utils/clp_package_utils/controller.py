@@ -792,7 +792,7 @@ class DockerComposeController(BaseController):
         :return: Number of worker processes to run.
         """
         # This will change when we move from single to multi-container workers. See y-scope/clp#1424
-        return multiprocessing.cpu_count() // 2
+        return max(1, multiprocessing.cpu_count() // 2)
 
     def _get_docker_file_name(self) -> str:
         """
