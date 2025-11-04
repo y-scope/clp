@@ -442,12 +442,6 @@ class BaseController(ABC):
         server_settings_json_path = (
             self._clp_home / "var" / "www" / "webui" / "server" / "dist" / "settings.json"
         )
-        resolved_client_settings_json_path = resolve_host_path_in_container(
-            client_settings_json_path
-        )
-        resolved_server_settings_json_path = resolve_host_path_in_container(
-            server_settings_json_path
-        )
         validate_webui_config(
             self._clp_config,
             client_settings_json_path,
@@ -478,6 +472,9 @@ class BaseController(ABC):
             "SqlDbClpTablePrefix": table_prefix,
             "SqlDbCompressionJobsTableName": COMPRESSION_JOBS_TABLE_NAME,
         }
+        resolved_client_settings_json_path = resolve_host_path_in_container(
+            client_settings_json_path
+        )
         client_settings_json = self._read_and_update_settings_json(
             resolved_client_settings_json_path, client_settings_json_updates
         )
@@ -533,6 +530,9 @@ class BaseController(ABC):
             server_settings_json_updates["PrestoHost"] = None
             server_settings_json_updates["PrestoPort"] = None
 
+        resolved_server_settings_json_path = resolve_host_path_in_container(
+            server_settings_json_path
+        )
         server_settings_json = self._read_and_update_settings_json(
             resolved_server_settings_json_path, server_settings_json_updates
         )
