@@ -5,6 +5,7 @@ import {
     ErrorListener,
     RecognitionException,
     Recognizer,
+    Token,
 } from "antlr4";
 
 import SqlLexer from "./generated/SqlLexer";
@@ -46,6 +47,7 @@ class SyntaxErrorListener<TSymbol> extends ErrorListener<TSymbol> {
             endColumn = e.offendingToken.stop + 2;
         }
 
+        console.log(token);
         this.errors.push({
             column: column,
             endColumn: endColumn,
