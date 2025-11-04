@@ -283,7 +283,9 @@ def main(argv: List[str]) -> int:
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    resolved_generated_config_path_on_host = resolve_host_path_in_container(generated_config_path_on_host)
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
     resolved_generated_config_path_on_host.unlink()
 
     return ret_code

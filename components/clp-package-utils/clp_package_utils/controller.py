@@ -171,7 +171,6 @@ class BaseController(ABC):
         validate_queue_config(self._clp_config, logs_dir)
 
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
-
         resolved_logs_dir.mkdir(exist_ok=True, parents=True)
         _chown_paths_if_root(resolved_logs_dir)
 
@@ -569,6 +568,7 @@ class BaseController(ABC):
 
         logs_dir = self._clp_config.logs_directory / component_name
         validate_mcp_server_config(self._clp_config, logs_dir)
+
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
