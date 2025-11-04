@@ -11,7 +11,7 @@
 #include "../ReaderInterface.hpp"
 
 namespace clp::ffi {
-// Stores a blob of string data with indexing capabilities.
+// Stores a list of strings as an indexable blob.
 class StringBlob {
 public:
     // Constructors
