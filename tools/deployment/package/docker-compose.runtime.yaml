@@ -12,6 +12,7 @@ services:
       CLP_HOME: "${CLP_HOME:?Please set a value.}"
       CLP_PWD_HOST: "${CLP_PWD_HOST:-${PWD}}"
     volumes:
+      # Docker daemon bridge
       - type: "bind"
         source: "${CLP_DOCKER_PLUGIN_DIR:-/usr/local/lib/docker/cli-plugins}"
         target: "/usr/local/lib/docker/cli-plugins"
@@ -20,12 +21,14 @@ services:
         source: "${CLP_DOCKER_SOCK_PATH:-/var/run/docker.sock}"
         target: "/var/run/docker.sock"
       - type: "bind"
+        source: "/usr/bin/docker"
+        target: "/usr/bin/docker"
+        read_only: true
+
+      # Host filesystem
+      - type: "bind"
         source: "${CLP_HOME:?Please set a value.}"
         target: "${CLP_HOME:?Please set a value.}"
       - type: "bind"
         source: "/"
         target: "/mnt/host"
-      - type: "bind"
-        source: "/usr/bin/docker"
-        target: "/usr/bin/docker"
-        read_only: true
