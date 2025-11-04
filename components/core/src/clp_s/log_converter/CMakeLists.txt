@@ -9,6 +9,14 @@ set(
 )
 
 if(CLP_BUILD_EXECUTABLES)
+    clp_find_boost()
+    clp_find_fmt()
+    clp_find_log_surgeon()
+    clp_find_msgpack()
+    clp_find_nlohmann_json()
+    clp_find_spdlog()
+    clp_find_ystdlib()
+
     add_executable(
         log-converter
         log_converter.cpp

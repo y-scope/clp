@@ -27,6 +27,11 @@ set(
 )
 
 if(CLP_BUILD_CLP_S_SEARCH)
+        clp_find_absl()
+        clp_find_log_surgeon()
+        clp_find_simdjson()
+        clp_find_spdlog()
+
         add_library(
                 clp_s_search
                 ${CLP_S_SEARCH_SOURCES}

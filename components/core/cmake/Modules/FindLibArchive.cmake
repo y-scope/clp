@@ -14,7 +14,7 @@
 
 set(libarchive_LIBNAME "archive")
 
-include(cmake/Modules/FindLibraryDependencies.cmake)
+include("${PROJECT_SOURCE_DIR}/cmake/Modules/FindLibraryDependencies.cmake")
 
 # On macOS, libarchive installed through brew is not linked into prefix by default.
 # So it cannot be found by pkg-config and we need to manually find it.

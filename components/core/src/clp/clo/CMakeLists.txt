@@ -161,6 +161,19 @@ set(
 )
 
 if(CLP_BUILD_EXECUTABLES)
+        clp_find_absl()
+        clp_find_boost()
+        clp_find_date()
+        clp_find_fmt()
+        clp_find_log_surgeon()
+        clp_find_mongocxx()
+        clp_find_msgpack()
+        clp_find_nlohmann_json()
+        clp_find_spdlog()
+        clp_find_sqlite()
+        clp_find_ystdlib()
+        clp_find_zstd()
+
         add_executable(clo ${CLO_SOURCES} ${REDUCER_SOURCES})
         target_compile_features(clo PRIVATE cxx_std_20)
         target_include_directories(clo
