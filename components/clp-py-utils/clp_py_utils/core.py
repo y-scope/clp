@@ -3,6 +3,8 @@ import pathlib
 import yaml
 from yaml.parser import ParserError
 
+CONTAINER_DIR_FOR_HOST_ROOT = pathlib.Path("/") / "mnt" / "host"
+
 
 class FileMetadata:
     __slots__ = ("path", "size", "estimated_uncompressed_size")
@@ -60,6 +62,34 @@ def read_yaml_config_file(yaml_config_file_path: pathlib.Path):
         except ParserError as ex:
             raise ValueError(f"Unable to parse configuration from {yaml_config_file_path}: {ex}")
     return config
+
+
+def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
+    """
+    Translates a host path to its container-mount equivalent. It also resolves a single level of
+    symbolic link if the host path itself is a symlink.
+
+    :param host_path: The host path.
+    :return: The translated path.
+    """
+    host_path = host_path.absolute()
+    translated_path = CONTAINER_DIR_FOR_HOST_ROOT / host_path.relative_to("/")
+
+    try:
+        if not translated_path.is_symlink():
+            return translated_path
+
+        link_target = translated_path.readlink()
+        if link_target.is_absolute():
+            return CONTAINER_DIR_FOR_HOST_ROOT / link_target.relative_to("/")
+        else:
+            # If the symlink points to a relative path, resolve it relative to the symlink's parent.
+            return (translated_path.parent / link_target).resolve()
+    except OSError:
+        # Ignore if reading the symlink fails (e.g., broken link or permission error).
+        pass
+
+    return translated_path
 
 
 def validate_path_could_be_dir(path: pathlib.Path):
