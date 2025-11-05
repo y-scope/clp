@@ -761,7 +761,7 @@ tasks:
         - "{{.G_INTEGRATION_TESTS_DIR}}"
     requires:
       vars: ["BLACK_FLAGS", "RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
-    deps: ["venv"]
+    deps: ["venv", ":deps:mariadb-connector-cpp"]
     cmds:
       - for:
           - "components/clp-mcp-server/clp_mcp_server"
