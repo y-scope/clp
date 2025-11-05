@@ -16,7 +16,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
-from clp_py_utils.core import resolve_host_path_in_container
+from clp_py_utils.core import resolve_host_path_in_container, resolve_host_path
 
 from clp_package_utils.general import (
     DockerMount,
@@ -84,6 +84,7 @@ def handle_extract_file_cmd(
 
     # Validate extraction directory
     extraction_dir = pathlib.Path(parsed_args.extraction_dir)
+    extraction_dir = resolve_host_path(extraction_dir)
     resolved_extraction_dir = resolve_host_path_in_container(extraction_dir)
     try:
         validate_path_could_be_dir(resolved_extraction_dir)
