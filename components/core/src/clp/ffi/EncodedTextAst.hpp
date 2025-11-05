@@ -122,7 +122,7 @@ public:
     ) const -> ystdlib::error_handling::Result<void>;
 
     /**
-     * Decodes the encoded text AST into its string form.
+     * Decodes and un-parses the encoded text AST into its string form.
      * @return A result containing the decoded string on success, or an error code indicating the
      * failure:
      * - Forwards `decode`'s return values on failure.
