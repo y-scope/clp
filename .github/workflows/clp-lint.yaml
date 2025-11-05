@@ -43,16 +43,27 @@ jobs:
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
 
-      - if: "matrix.os == 'ubuntu-24.04'"
-        name: "Install mariadb-connecter-c on ubuntu (for py lint)"
-        run: "sudo apt-get install -y libmariadb-dev"
-
-      - if: "matrix.os == 'macos-15'"
-        name: "Install mariadb-connecter-c on macos (for py lint)"
-        run: |
-          brew install mariadb-connector-c
-          PREFIX="$(brew --prefix mariadb-connector-c)"
-          echo "MARIADB_CONFIG=$PREFIX/bin/mariadb_config" >> "$GITHUB_ENV"
+      - name: "Install MariaDB Connector/C (for Python mariadb install in lint:py-check)"
+        shell: "bash"
+        run: |-
+          case "${{ matrix.os }}" in
+            ubuntu-24.04)
+              sudo apt-get update
+              sudo apt-get install -y libmariadb-dev
+              MARIADB_CONFIG_PATH="$(command -v mariadb_config)"
+              ;;
+            macos-15)
+              brew update
+              brew install mariadb-connector-c
+              PREFIX="$(brew --prefix mariadb-connector-c)"
+              MARIADB_CONFIG_PATH="$PREFIX/bin/mariadb_config"
+              ;;
+            *)
+              # Control flow should not reach here
+              exit 1
+              ;;
+          esac
+          echo "MARIADB_CONFIG=$MARIADB_CONFIG_PATH" >> "$GITHUB_ENV"
 
       - name: "Lint .js files"
         shell: "bash"
