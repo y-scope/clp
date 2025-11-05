@@ -3,16 +3,16 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum ClientError {
-    #[error("SQL error: {0}")]
+    #[error("`sqlx::Error`: {0}")]
     Sql(#[from] sqlx::Error),
 
-    #[error("MongoDB error: {0}")]
+    #[error("`mongodb::error::Error`: {0}")]
     Mongo(#[from] mongodb::error::Error),
 
     #[error("Query is not succeeded")]
     QueryNotSucceeded,
 
-    #[error("IO error: {0}")]
+    #[error("`std::io::Error`: {0}")]
     Io(#[from] std::io::Error),
 
     #[error("Malformed data")]

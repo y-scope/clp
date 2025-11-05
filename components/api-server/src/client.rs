@@ -145,8 +145,7 @@ impl Client {
     pub async fn fetch_results(
         &self,
         search_job_id: u64,
-    ) -> Result<impl Stream<Item = Result<serde_json::Value, ClientError>> + use<>, ClientError>
-    {
+    ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
         let mut delay_ms = self.config.api_server.query_job_pool_initial_delay_ms;
         let max_delay_ms = self.config.api_server.query_job_pool_max_delay_ms;
         loop {
@@ -179,8 +178,7 @@ impl Client {
             let mongodb::bson::Bson::String(message) = msg else {
                 return Err(ClientError::MalformedData);
             };
-            let value: serde_json::Value = serde_json::from_str(message)?;
-            Ok(value)
+            Ok(message.clone())
         });
 
         Ok(mapped)

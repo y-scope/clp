@@ -12,7 +12,7 @@ use axum::{
     routing::{get, post},
 };
 use clap::Parser;
-use clp_rust_utils::{clp_config::package, serde::yaml_file};
+use clp_rust_utils::{clp_config::package, serde::yaml};
 use futures::{Stream, StreamExt};
 use thiserror::Error;
 use tracing_subscriber::{self, prelude::*};
@@ -33,13 +33,13 @@ async fn main() -> anyhow::Result<()> {
     let home = std::path::Path::new(&home);
 
     let config_path = home.join(package::DEFAULT_CONFIG_FILE_PATH);
-    let config: package::config::Config = yaml_file::from_path(&config_path).context(format!(
+    let config: package::config::Config = yaml::from_path(&config_path).context(format!(
         "Config file {} does not exist",
         config_path.display()
     ))?;
 
     let credentials_path = home.join(package::DEFAULT_CREDENTIALS_FILE_PATH);
-    let credentials: package::credentials::Credentials = yaml_file::from_path(&credentials_path)
+    let credentials: package::credentials::Credentials = yaml::from_path(&credentials_path)
         .context(format!(
             "Credentials file {} does not exist",
             credentials_path.display()
@@ -90,7 +90,14 @@ async fn query_results(
     Path(search_job_id): Path<u64>,
 ) -> Result<Sse<impl Stream<Item = Result<Event, HandlerError>>>, HandlerError> {
     let results_stream = client.fetch_results(search_job_id).await?;
-    let event_stream = results_stream.map(|res| Ok(Event::default().json_data(res?)?));
+    let event_stream = results_stream.map(|res| {
+        let message = res?;
+        let trimmed_message = message.trim();
+        if trimmed_message.lines().count() != 1 {
+            return Err(HandlerError::InternalServer);
+        }
+        Ok(Event::default().data(trimmed_message))
+    });
     Ok(Sse::new(event_stream).keep_alive(KeepAlive::default()))
 }
 
