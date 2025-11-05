@@ -1,7 +1,4 @@
-"""
-Smoke test ensuring CLP native Python packages import without errors and enums convert values as
-expected.
-"""
+"""Smoke test ensuring CLP native Python projects import without errors."""
 
 from clp_mcp_server.constants import QueryJobType
 from clp_package_utils.general import JobType
