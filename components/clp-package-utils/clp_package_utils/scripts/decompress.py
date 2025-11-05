@@ -310,12 +310,11 @@ def main(argv):
     file_extraction_parser.add_argument(
         "-f", "--files-from", help="A file listing all files to extract."
     )
-    default_extraction_dir = pathlib.Path(os.environ.get("CLP_PWD_HOST", "."))
     file_extraction_parser.add_argument(
         "-d",
         "--extraction-dir",
         metavar="DIR",
-        default=default_extraction_dir,
+        default=".",
         help="Extract files into DIR.",
     )
 
