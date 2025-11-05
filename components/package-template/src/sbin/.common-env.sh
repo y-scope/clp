@@ -40,8 +40,14 @@ if [[ -z "${CLP_DOCKER_PLUGIN_DIR:-}" ]]; then
         return 1
     fi
 
-    plugin_dir="$(dirname "$(readlink -f "$compose_plugin_path" 2>/dev/null)" 2>/dev/null)"
-    if [[ -z "$plugin_dir" || ! -d "$plugin_dir" ]]; then
+    resolved_plugin_path="$(readlink -f "$compose_plugin_path" 2>/dev/null || true)"
+    if [[ -z "$resolved_plugin_path" ]]; then
+        echo >&2 "Error: Failed to resolve Docker Compose plugin real path."
+        return 1
+    fi
+
+    plugin_dir="$(dirname "$resolved_plugin_path")"
+    if [[ -z "$plugin_dir" || "$plugin_dir" == "." || ! -d "$plugin_dir" ]]; then
         echo >&2 "Error: Failed to resolve Docker Compose plugin directory."
         return 1
     fi
