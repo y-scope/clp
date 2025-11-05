@@ -29,7 +29,7 @@ type SqlInputProps = SqlEditorProps & {
  */
 const SqlInput = (props: SqlInputProps) => {
     const {validateFn, ...editorProps} = props;
-    const editorRef = useRef<SqlEditorType | null>(null);
+    const editorRef = useRef<Nullable<SqlEditorType>>(null);
 
     const handleEditorReady = useCallback((editor: SqlEditorType) => {
         editorRef.current = editor;
@@ -62,21 +62,19 @@ const SqlInput = (props: SqlInputProps) => {
     // Validate SQL and update markers whenever value changes
     useEffect(() => {
         const editor = editorRef.current;
-        if (!editor) {
+        if (null === editor) {
             return;
         }
 
         const model = editor.getModel();
-        if (!model) {
+        if (null === model) {
             return;
         }
 
-        const value = "string" === typeof editorProps.value ?
-            editorProps.value :
-            "";
+        const value = editorProps.value ?? "";
 
         // Clear markers if no validation function or empty/whitespace-only input
-        if (!validateFn || !value.trim()) {
+        if ("undefined" === typeof validateFn || "" === value.trim()) {
             monaco.editor.setModelMarkers(model, "sql-parser", []);
 
             return;
