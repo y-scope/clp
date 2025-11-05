@@ -1,10 +1,8 @@
 #!/usr/bin/env bash
 
-# Exit on any error
-set -e
-
-# Error on undefined variable
-set -u
+set -o errexit
+set -o nounset
+set -o pipefail
 
 # Dependencies:
 # - curl
