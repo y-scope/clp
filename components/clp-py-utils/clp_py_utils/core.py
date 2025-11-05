@@ -75,9 +75,10 @@ def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
     :return: The translated path (with /mnt/host prefix).
     """
     if not host_path.is_absolute():
-        pwd_host = os.environ.get("CLP_PWD_HOST")
-        if pwd_host is not None:
-            host_path = pathlib.Path(pwd_host) / host_path
+        pwd_host = os.getenv("CLP_PWD_HOST")
+        if pwd_host is None:
+            raise ValueError("Relative host path provided but CLP_PWD_HOST is not set.")
+        host_path = pathlib.Path(pwd_host) / host_path
 
     host_path = host_path.absolute()
     translated_path = CONTAINER_DIR_FOR_HOST_ROOT / host_path.relative_to("/")
