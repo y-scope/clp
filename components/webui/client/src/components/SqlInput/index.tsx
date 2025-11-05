@@ -5,8 +5,7 @@ import {
     useRef,
 } from "react";
 
-import { Nullable } from "@webui/common/utility-types";
-
+import {Nullable} from "@webui/common/utility-types";
 import * as monaco from "monaco-editor/esm/vs/editor/editor.api.js";
 
 import {ValidationError} from "../../sql-parser";
