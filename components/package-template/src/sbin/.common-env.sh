@@ -31,22 +31,22 @@ CLP_PWD_HOST="$(pwd 2>/dev/null || echo "")"
 export CLP_PWD_HOST
 
 if [[ -z "${CLP_DOCKER_PLUGIN_DIR:-}" ]]; then
-    for compose_plugin_dir in \
-        "$HOME/.docker/cli-plugins" \
-        "/mnt/wsl/docker-desktop/cli-tools/usr/local/lib/docker/cli-plugins" \
-        "/usr/local/lib/docker/cli-plugins" \
-        "/usr/libexec/docker/cli-plugins"; do
+    compose_plugin_path="$(docker info \
+        --format '{{range .ClientInfo.Plugins}}{{if eq .Name "compose"}}{{.Path}}{{end}}{{end}}' \
+        2>/dev/null)"
 
-        compose_plugin_path="$compose_plugin_dir/docker-compose"
-        if [[ -f "$compose_plugin_path" ]]; then
-            export CLP_DOCKER_PLUGIN_DIR="$compose_plugin_dir"
-            break
-        fi
-    done
-    if [[ -z "${CLP_DOCKER_PLUGIN_DIR:-}" ]]; then
-        echo >&2 "Warning: Docker plugin directory not found;" \
-            "Docker Compose may not work inside container."
+    if [[ -z "$compose_plugin_path" || ! -f "$compose_plugin_path" ]]; then
+        echo >&2 "Error: Docker Compose plugin not found via 'docker info'."
+        return 1
     fi
+
+    plugin_dir="$(dirname "$(readlink -f "$compose_plugin_path" 2>/dev/null)" 2>/dev/null)"
+    if [[ -z "$plugin_dir" || ! -d "$plugin_dir" ]]; then
+        echo >&2 "Error: Failed to resolve Docker Compose plugin directory."
+        return 1
+    fi
+
+    export CLP_DOCKER_PLUGIN_DIR="$plugin_dir"
 fi
 
 if [[ -z "${CLP_DOCKER_SOCK_PATH:-}" ]]; then
