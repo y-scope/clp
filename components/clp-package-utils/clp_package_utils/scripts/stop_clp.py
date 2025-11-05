@@ -4,6 +4,7 @@ import pathlib
 import sys
 
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
+from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.controller import DockerComposeController, get_or_create_instance_id
 from clp_package_utils.general import (
@@ -30,7 +31,11 @@ def main(argv):
 
     try:
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config = load_config_file(
+            resolve_host_path_in_container(config_file_path),
+            resolve_host_path_in_container(default_config_file_path),
+            clp_home,
+        )
     except:
         logger.exception("Failed to load config.")
         return -1
