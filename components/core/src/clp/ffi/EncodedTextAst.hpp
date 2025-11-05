@@ -1,21 +1,21 @@
 #ifndef CLP_FFI_ENCODEDTEXTAST_HPP
 #define CLP_FFI_ENCODEDTEXTAST_HPP
 
+#include <concepts>
 #include <cstddef>
 #include <string>
 #include <string_view>
 #include <utility>
 #include <vector>
-#include <concepts>
 
 #include <ystdlib/error_handling/Result.hpp>
 
 #include "../ir/types.hpp"
+#include "../type_utils.hpp"
 #include "EncodedTextAstError.hpp"
 #include "encoding_methods.hpp"
 #include "StringBlob.hpp"
 #include "type_utils.hpp"
-#include "../type_utils.hpp"
 
 namespace clp::ffi {
 /**

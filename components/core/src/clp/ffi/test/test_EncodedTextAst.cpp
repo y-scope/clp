@@ -11,11 +11,11 @@
 
 #include "../../BufferReader.hpp"
 #include "../../ir/types.hpp"
+#include "../../type_utils.hpp"
 #include "../EncodedTextAst.hpp"
 #include "../EncodedTextAstError.hpp"
 #include "../encoding_methods.hpp"
 #include "../StringBlob.hpp"
-#include "../../type_utils.hpp"
 
 namespace clp::ffi::test {
 namespace {
