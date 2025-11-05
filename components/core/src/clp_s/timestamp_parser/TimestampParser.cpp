@@ -214,6 +214,11 @@ auto convert_variable_length_string_prefix_to_number(std::string_view str)
         return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
     }
 
+    bool first_digit_zero{'0' == str.at(num_decimal_digits)};
+    if (first_digit_zero && is_negative) {
+        return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+    }
+
     int64_t converted_value{};
     while (true) {
         char const cur_digit{str.at(num_decimal_digits)};
@@ -226,6 +231,10 @@ auto convert_variable_length_string_prefix_to_number(std::string_view str)
             break;
         }
         converted_value *= cTen;
+    }
+
+    if (first_digit_zero && num_decimal_digits > 1) {
+        return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
     }
 
     if (is_negative) {
