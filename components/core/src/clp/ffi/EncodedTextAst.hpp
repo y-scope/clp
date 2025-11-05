@@ -6,16 +6,16 @@
 #include <string_view>
 #include <utility>
 #include <vector>
+#include <concepts>
 
 #include <ystdlib/error_handling/Result.hpp>
 
 #include "../ir/types.hpp"
-#include "clp_s/log_converter/LogSerializer.hpp"
 #include "EncodedTextAstError.hpp"
 #include "encoding_methods.hpp"
-#include "ir_stream/protocol_constants.hpp"
 #include "StringBlob.hpp"
 #include "type_utils.hpp"
+#include "../type_utils.hpp"
 
 namespace clp::ffi {
 /**
@@ -69,7 +69,6 @@ class EncodedTextAst {
 public:
     // Factory function
     /**
-     *
      * @param encoded_vars
      * @param string_blob
      * @return A result containing the newly created `EncodedTextAst` instance on success, or an
@@ -120,7 +119,7 @@ public:
             EncodedTextAstIntVarHandlerReq<encoded_variable_t> auto&& int_var_handler,
             EncodedTextAstFloatVarHandlerReq<encoded_variable_t> auto&& float_var_handler,
             EncodedTextAstDictVarHandlerReq auto&& dict_var_handler
-    ) -> ystdlib::error_handling::Result<void>;
+    ) const -> ystdlib::error_handling::Result<void>;
 
     /**
      * Decodes the encoded text AST into its string form.
@@ -165,7 +164,7 @@ template <bool unescape_logtype>
         EncodedTextAstIntVarHandlerReq<encoded_variable_t> auto&& int_var_handler,
         EncodedTextAstFloatVarHandlerReq<encoded_variable_t> auto&& float_var_handler,
         EncodedTextAstDictVarHandlerReq auto&& dict_var_handler
-) -> ystdlib::error_handling::Result<void> {
+) const -> ystdlib::error_handling::Result<void> {
     auto const logtype{get_logtype()};
     auto const logtype_length = logtype.length();
     auto const num_encoded_vars{m_encoded_vars.size()};
@@ -252,11 +251,10 @@ template <bool unescape_logtype>
 
     // Add remainder
     if (next_static_text_begin_pos < logtype_length) {
-        constant_handler(
-                logtype,
+        constant_handler(logtype.substr(
                 next_static_text_begin_pos,
                 logtype_length - next_static_text_begin_pos
-        );
+        ));
     }
 
     return ystdlib::error_handling::success();

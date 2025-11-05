@@ -22,7 +22,7 @@ auto EncodedTextAstErrorCategory::message(EncodedTextAstErrEnum error_enum) cons
         case EncodedTextAstErrEnum::MissingLogtype:
             return "The logtype is missing from the `EncodedTextAst`";
         case EncodedTextAstErrEnum::UnexpectedTrailingEscapeCharacter:
-            "Unexpected escape character without escaped value at the end of the logtype";
+            return "Unexpected escape character without escaped value at the end of the logtype";
         default:
             return "Unknown error code enum.";
     }

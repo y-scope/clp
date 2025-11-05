@@ -9,8 +9,9 @@
 #include "../../ErrorCode.hpp"
 #include "../StringBlob.hpp"
 
+namespace clp::ffi::test {
 TEST_CASE("StringBlob basic functionality", "[StringBlob]") {
-    clp::ffi::StringBlob string_blob;
+    StringBlob string_blob;
 
     std::vector<std::string> const test_strings{
             "Hello, World!",
@@ -22,7 +23,7 @@ TEST_CASE("StringBlob basic functionality", "[StringBlob]") {
     for (auto const& str : test_strings) {
         buffer += str;
     }
-    clp::BufferReader reader{buffer.data(), buffer.size()};
+    BufferReader reader{buffer.data(), buffer.size()};
 
     size_t expected_num_strings{0};
     for (auto const& expected_str : test_strings) {
@@ -43,3 +44,4 @@ TEST_CASE("StringBlob basic functionality", "[StringBlob]") {
     // NOLINTNEXTLINE(bugprone-unchecked-optional-access)
     REQUIRE((clp::ErrorCode::ErrorCode_EndOfFile == read_from_eof.value()));
 }
+}  // namespace clp::ffi::test

@@ -7,7 +7,7 @@
 
 namespace clp::ffi {
 /**
- * Error enums for `EncodedTextAst`
+ * Error enums for `EncodedTextAst`.
  */
 enum class EncodedTextAstErrEnum : uint8_t {
     MissingDictVar = 1,
