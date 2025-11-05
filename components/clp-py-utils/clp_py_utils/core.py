@@ -1,4 +1,5 @@
 import pathlib
+import os
 
 import yaml
 from yaml.parser import ParserError
@@ -66,12 +67,18 @@ def read_yaml_config_file(yaml_config_file_path: pathlib.Path):
 
 def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
     """
-    Translates a host path to its container-mount equivalent. It also resolves symlinks recursively
-    until a non-symlink path is reached or a cycle is detected.
+    Translates a host path to its container-mount equivalent. It also handles relative paths by
+    resolving them relative to `CLP_PWD_HOST` the user's working directory on the host and resolves
+    symlinks recursively until a non-symlink path is reached or a cycle is detected.
 
     :param host_path: The host path.
-    :return: The translated path.
+    :return: The translated path (with /mnt/host prefix).
     """
+    if not host_path.is_absolute():
+        pwd_host = os.environ.get("CLP_PWD_HOST")
+        if pwd_host is not None:
+            host_path = pathlib.Path(pwd_host) / host_path
+
     host_path = host_path.absolute()
     translated_path = CONTAINER_DIR_FOR_HOST_ROOT / host_path.relative_to("/")
 
@@ -103,7 +110,7 @@ def resolve_host_path(host_path: pathlib.Path) -> pathlib.Path:
     Resolves a host path that may be relative or may contain symlinks, in the host path space.
 
     :param host_path: The host path.
-    :return: The resolved host path.
+    :return: The resolved host path (without /mnt/host prefix).
     """
     resolved_container_path = resolve_host_path_in_container(host_path)
     return pathlib.Path("/") / resolved_container_path.relative_to(CONTAINER_DIR_FOR_HOST_ROOT)
