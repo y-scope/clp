@@ -43,14 +43,19 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
 
         loop {
             select! {
+                // Cancellation requested.
                 () = cancel_token.cancelled() => {
                     // TODO: Log the cancellation event when the logger has been integrated.
                     self.buffer.submit().await?;
                     return Ok(());
                 }
+
+                // New object metadata received.
                 Some(object_metadata) = self.receiver.recv() => {
                     self.buffer.add(object_metadata).await?;
                 }
+
+                // Timer fired.
                 () = &mut timer => {
                     self.buffer.submit().await?;
                 }
