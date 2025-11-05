@@ -50,7 +50,7 @@ jobs:
       - if: "matrix.os == 'macos-15'"
         name: "Install mariadb-connecter-c on macos (for py lint)"
         run: |
-          brew install mariadb-connector-c"
+          brew install mariadb-connector-c
           PREFIX="$(brew --prefix mariadb-connector-c)"
           echo "MARIADB_CONFIG=$PREFIX/bin/mariadb_config" >> "$GITHUB_ENV"
 
