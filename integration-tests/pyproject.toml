@@ -21,8 +21,6 @@ clp = [
     "clp-package-utils",
     "clp-py-utils",
     "job-orchestration",
-    # `job-orchestration` pins `mariadb` version
-    "mariadb>=1.0.11,<1.1.dev0",
 ]
 dev = [
     "mypy>=1.16.0",
