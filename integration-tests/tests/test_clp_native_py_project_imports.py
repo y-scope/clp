@@ -3,11 +3,11 @@ Smoke test ensuring CLP native Python packages import without errors and enums c
 expected.
 """
 
-import pytest
 from clp_mcp_server.constants import QueryJobType
 from clp_package_utils.general import JobType
 from clp_py_utils.clp_config import StorageEngine
 from job_orchestration.scheduler.constants import CompressionJobStatus
+
 
 def test_clp_native_py_project_enum_classes() -> None:
     """
