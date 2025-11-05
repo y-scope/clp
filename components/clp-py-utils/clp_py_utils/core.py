@@ -1,5 +1,5 @@
-import pathlib
 import os
+import pathlib
 
 import yaml
 from yaml.parser import ParserError
