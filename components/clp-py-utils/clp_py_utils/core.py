@@ -67,20 +67,23 @@ def read_yaml_config_file(yaml_config_file_path: pathlib.Path):
 
 def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
     """
-    Translates a host path to its container-mount equivalent. It also handles relative paths by
-    resolving them relative to `CLP_PWD_HOST` the user's working directory on the host and resolves
-    symlinks recursively until a non-symlink path is reached or a cycle is detected.
+    Translates a host path to its container-mount equivalent. Tilde (~) paths are expanded to the
+    user's home directory before processing. It also handles relative paths by resolving them
+    relative to `CLP_PWD_HOST` the user's working directory on the host and resolves symlinks
+    recursively until a non-symlink path is reached or a cycle is detected.
 
     :param host_path: The host path.
     :return: The translated path (with /mnt/host prefix).
     """
+    host_path = host_path.expanduser()
+
     if not host_path.is_absolute():
         pwd_host = os.getenv("CLP_PWD_HOST")
         if pwd_host is None:
             raise ValueError("Relative host path provided but CLP_PWD_HOST is not set.")
         host_path = pathlib.Path(pwd_host) / host_path
+        host_path = host_path.absolute()
 
-    host_path = host_path.absolute()
     translated_path = CONTAINER_DIR_FOR_HOST_ROOT / host_path.relative_to("/")
 
     visited = set()
