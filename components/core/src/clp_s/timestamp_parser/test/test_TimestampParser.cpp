@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <catch2/catch_message.hpp>
@@ -8,10 +9,26 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 
+#include "../../Defs.hpp"
 #include "../TimestampParser.hpp"
 
 namespace clp_s::timestamp_parser::test {
 namespace {
+struct ExpectedParsingResult {
+    ExpectedParsingResult(
+            std::string_view timestamp,
+            std::string_view pattern,
+            epochtime_t epoch_timestamp
+    )
+            : timestamp(timestamp),
+              pattern(pattern),
+              epoch_timestamp(epoch_timestamp) {}
+
+    std::string timestamp;
+    std::string pattern;
+    epochtime_t epoch_timestamp;
+};
+
 /**
  * Asserts that a format specifier is able to parse a variety of valid content.
  * @param specifier The format specifier.
@@ -227,6 +244,29 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
         assert_specifier_accepts_valid_content('C', negative_epoch_timestamps);
         assert_specifier_accepts_valid_content('N', epoch_timestamps);
         assert_specifier_accepts_valid_content('N', negative_epoch_timestamps);
+    }
+
+    std::vector<ExpectedParsingResult> const expected_parsing_results{
+            {"2015-02-01T01:02:03.004", "\\Y-\\m-\\dT\\H:\\M:\\S.\\3", 1'422'752'523'004'000'000},
+            {"2015-02-01T01:02:03.004005",
+             "\\Y-\\m-\\dT\\H:\\M:\\S.\\6",
+             1'422'752'523'004'005'000},
+            {"2015-02-01T01:02:03.004005006",
+             "\\Y-\\m-\\dT\\H:\\M:\\S.\\9",
+             1'422'752'523'004'005'006}
+    };
+    SECTION("Timestamps are parsed accurately") {
+        std::string generated_pattern;
+        for (auto const& expected_result : expected_parsing_results) {
+            auto const result{parse_timestamp(
+                    expected_result.timestamp,
+                    expected_result.pattern,
+                    generated_pattern
+            )};
+            REQUIRE(false == result.has_error());
+            REQUIRE(expected_result.epoch_timestamp == result.value().first);
+            REQUIRE(expected_result.pattern == result.value().second);
+        }
     }
 }
 }  // namespace clp_s::timestamp_parser::test

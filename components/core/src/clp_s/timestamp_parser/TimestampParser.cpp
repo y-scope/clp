@@ -558,6 +558,10 @@ auto parse_timestamp(
                 if (parsed_subsecond_nanoseconds < cMinParsedSubsecondNanoseconds) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
+                parsed_subsecond_nanoseconds *= cPowersOfTen.at(
+                        cNumNanosecondPrecisionSubsecondDigits
+                        - cNumMillisecondPrecisionSubsecondDigits
+                );
                 timestamp_idx += cFieldLength;
                 break;
             }
@@ -574,6 +578,10 @@ auto parse_timestamp(
                 if (parsed_subsecond_nanoseconds < cMinParsedSubsecondNanoseconds) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
+                parsed_subsecond_nanoseconds *= cPowersOfTen.at(
+                        cNumNanosecondPrecisionSubsecondDigits
+                        - cNumMicrosecondPrecisionSubsecondDigits
+                );
                 timestamp_idx += cFieldLength;
                 break;
             }
