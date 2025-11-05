@@ -44,12 +44,15 @@ jobs:
         run: "brew install coreutils"
 
       - if: "matrix.os == 'ubuntu-24.04'"
-        name: "Install mariadb-connecter-c (for py lint)"
+        name: "Install mariadb-connecter-c on ubuntu (for py lint)"
         run: "sudo apt-get install -y libmariadb-dev"
 
       - if: "matrix.os == 'macos-15'"
-        name: "Install mariadb-connecter-c (for py lint)"
-        run: "brew install mariadb-connector-c"
+        name: "Install mariadb-connecter-c on macos (for py lint)"
+        run: |
+          brew install mariadb-connector-c"
+          PREFIX="$(brew --prefix mariadb-connector-c)"
+          echo "MARIADB_CONFIG=$PREFIX/bin/mariadb_config" >> "$GITHUB_ENV"
 
       - name: "Lint .js files"
         shell: "bash"
