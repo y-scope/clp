@@ -13,7 +13,6 @@
 #include "../ir/EncodedTextAst.hpp"
 #include "../TraceableException.hpp"
 #include "../type_utils.hpp"
-#include "EncodedTextAst.hpp"
 
 // NOTE: In this file, "primitive" doesn't refer to a C++ fundamental type (e.g. int) but instead
 // refers to a value in a kv-pair that has no children (i.e. not an object/array).
@@ -32,9 +31,7 @@ using PrimitiveValueTypes = std::
               value_bool_t,
               std::string,
               clp::ir::EightByteEncodedTextAst,
-              clp::ir::FourByteEncodedTextAst,
-              EncodedTextAst<clp::ir::eight_byte_encoded_variable_t>,
-              EncodedTextAst<clp::ir::four_byte_encoded_variable_t>>;
+              clp::ir::FourByteEncodedTextAst>;
 
 /**
  * Variant for all primitive value types.

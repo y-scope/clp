@@ -28,8 +28,8 @@ void generic_decode_message(
         DictVarHandler dict_var_handler
 ) {
     auto const logtype_length = logtype.length();
-    auto const num_encoded_vars = encoded_vars.size();
-    auto const m_num_dict_vars = dict_vars.size();
+    auto const encoded_vars_length = encoded_vars.size();
+    auto const dict_vars_length = dict_vars.size();
     size_t next_static_text_begin_pos = 0;
 
     size_t dictionary_vars_ix = 0;
@@ -44,7 +44,7 @@ void generic_decode_message(
                         cur_pos - next_static_text_begin_pos
                 );
                 next_static_text_begin_pos = cur_pos + 1;
-                if (encoded_vars_ix >= num_encoded_vars) {
+                if (encoded_vars_ix >= encoded_vars_length) {
                     throw DecodingException(
                             ErrorCode_Corrupt,
                             __FILENAME__,
@@ -65,7 +65,7 @@ void generic_decode_message(
                         cur_pos - next_static_text_begin_pos
                 );
                 next_static_text_begin_pos = cur_pos + 1;
-                if (encoded_vars_ix >= num_encoded_vars) {
+                if (encoded_vars_ix >= encoded_vars_length) {
                     throw DecodingException(
                             ErrorCode_Corrupt,
                             __FILENAME__,
@@ -86,7 +86,7 @@ void generic_decode_message(
                         cur_pos - next_static_text_begin_pos
                 );
                 next_static_text_begin_pos = cur_pos + 1;
-                if (dictionary_vars_ix >= m_num_dict_vars) {
+                if (dictionary_vars_ix >= dict_vars_length) {
                     throw DecodingException(
                             ErrorCode_Corrupt,
                             __FILENAME__,
