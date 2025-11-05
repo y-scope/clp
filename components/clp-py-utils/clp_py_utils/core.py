@@ -86,9 +86,10 @@ def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
     current_path = translated_path
     try:
         while current_path.is_symlink():
-            if current_path in visited:
+            stat = current_path.lstat()
+            if stat.st_ino in visited:
                 break
-            visited.add(current_path)
+            visited.add(stat.st_ino)
 
             link_target = current_path.readlink()
             if link_target.is_absolute():
