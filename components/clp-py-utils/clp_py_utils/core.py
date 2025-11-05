@@ -67,10 +67,11 @@ def read_yaml_config_file(yaml_config_file_path: pathlib.Path):
 
 def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
     """
-    Translates a host path to its container-mount equivalent. Tilde (~) paths are expanded to the
-    user's home directory before processing. It also handles relative paths by resolving them
-    relative to `CLP_PWD_HOST` the user's working directory on the host and resolves symlinks
-    recursively until a non-symlink path is reached or a cycle is detected.
+    Translates a host path to its container-mount equivalent absolute path.
+        - Tilde (~) paths are expanded to the user's home directory before processing.
+        - Relative paths are resolved relative to the user's working directory on the host.
+        - Symlinks are resolved recursively until a non-symlink path is reached or a cycle is
+          detected.
 
     :param host_path: The host path.
     :return: The translated path (with /mnt/host prefix).
@@ -87,20 +88,25 @@ def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
     translated_path = CONTAINER_DIR_FOR_HOST_ROOT / host_path.relative_to("/")
 
     visited = set()
-    current_path = translated_path
-    try:
-        while current_path.is_symlink():
-            stat = current_path.lstat()
-            if stat.st_ino in visited:
-                break
-            visited.add(stat.st_ino)
+    current_path = CONTAINER_DIR_FOR_HOST_ROOT
 
-            link_target = current_path.readlink()
-            if link_target.is_absolute():
-                current_path = CONTAINER_DIR_FOR_HOST_ROOT / link_target.relative_to("/")
-            else:
-                # If the symlink points to a relative path, resolve it relative to the symlink's parent.
-                current_path = (current_path.parent / link_target).resolve()
+    try:
+        for part in host_path.relative_to("/").parts:
+            current_path = current_path / part
+
+            while current_path.is_symlink():
+                stat = current_path.lstat()
+                if stat.st_ino in visited:
+                    break
+                visited.add(stat.st_ino)
+
+                link_target = current_path.readlink()
+                if link_target.is_absolute():
+                    current_path = CONTAINER_DIR_FOR_HOST_ROOT / link_target.relative_to("/")
+                else:
+                    # If the symlink points to a relative path, resolve it relative to the symlink's
+                    # parent.
+                    current_path = (current_path.parent / link_target).resolve()
 
         return current_path
     except OSError:
