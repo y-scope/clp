@@ -15,7 +15,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
-from clp_py_utils.core import resolve_host_path_in_container
+from clp_py_utils.core import resolve_host_path, resolve_host_path_in_container
 
 from clp_package_utils.general import (
     CONTAINER_INPUT_LOGS_ROOT_DIR,
@@ -49,7 +49,7 @@ def _generate_logs_list(
     with open(container_logs_list_path, "w") as container_logs_list_file:
         if host_logs_list_path is None:
             for path in parsed_args.paths:
-                resolved_path = pathlib.Path(path).resolve()
+                resolved_path = resolve_host_path(pathlib.Path(path))
                 mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
                     resolved_path.anchor
                 )
@@ -67,7 +67,7 @@ def _generate_logs_list(
                     # Skip empty paths
                     continue
                 no_path_found = False
-                resolved_path = pathlib.Path(stripped_path_str).resolve()
+                resolved_path = resolve_host_path(pathlib.Path(stripped_path_str))
                 mounted_path = CONTAINER_INPUT_LOGS_ROOT_DIR / resolved_path.relative_to(
                     resolved_path.anchor
                 )

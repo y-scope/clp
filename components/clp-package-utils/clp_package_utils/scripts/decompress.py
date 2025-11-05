@@ -83,7 +83,7 @@ def handle_extract_file_cmd(
         paths_to_extract_file_path = pathlib.Path(parsed_args.files_from)
 
     # Validate extraction directory
-    extraction_dir = pathlib.Path(parsed_args.extraction_dir).resolve()
+    extraction_dir = pathlib.Path(parsed_args.extraction_dir)
     resolved_extraction_dir = resolve_host_path_in_container(extraction_dir)
     try:
         validate_path_could_be_dir(resolved_extraction_dir)

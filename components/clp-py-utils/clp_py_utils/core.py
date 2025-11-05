@@ -66,8 +66,8 @@ def read_yaml_config_file(yaml_config_file_path: pathlib.Path):
 
 def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
     """
-    Translates a host path to its container-mount equivalent. It also resolves a single level of
-    symbolic link if the host path itself is a symlink.
+    Translates a host path to its container-mount equivalent. It also resolves symlinks recursively
+    until a non-symlink path is reached or a cycle is detected.
 
     :param host_path: The host path.
     :return: The translated path.
@@ -75,21 +75,38 @@ def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
     host_path = host_path.absolute()
     translated_path = CONTAINER_DIR_FOR_HOST_ROOT / host_path.relative_to("/")
 
+    visited = set()
+    current_path = translated_path
     try:
-        if not translated_path.is_symlink():
-            return translated_path
+        while current_path.is_symlink():
+            if current_path in visited:
+                break
+            visited.add(current_path)
 
-        link_target = translated_path.readlink()
-        if link_target.is_absolute():
-            return CONTAINER_DIR_FOR_HOST_ROOT / link_target.relative_to("/")
-        else:
-            # If the symlink points to a relative path, resolve it relative to the symlink's parent.
-            return (translated_path.parent / link_target).resolve()
+            link_target = current_path.readlink()
+            if link_target.is_absolute():
+                current_path = CONTAINER_DIR_FOR_HOST_ROOT / link_target.relative_to("/")
+            else:
+                # If the symlink points to a relative path, resolve it relative to the symlink's parent.
+                current_path = (current_path.parent / link_target).resolve()
+
+        return current_path
     except OSError:
         # Ignore if reading the symlink fails (e.g., broken link or permission error).
         pass
 
     return translated_path
+
+
+def resolve_host_path(host_path: pathlib.Path) -> pathlib.Path:
+    """
+    Resolves a host path that may be relative or may contain symlinks, in the host path space.
+
+    :param host_path: The host path.
+    :return: The resolved host path.
+    """
+    resolved_container_path = resolve_host_path_in_container(host_path)
+    return pathlib.Path("/") / resolved_container_path.relative_to(CONTAINER_DIR_FOR_HOST_ROOT)
 
 
 def validate_path_could_be_dir(path: pathlib.Path):
