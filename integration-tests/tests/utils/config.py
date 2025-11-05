@@ -1,13 +1,15 @@
 """Define all python classes used in `integration-tests`."""
 
+from __future__ import annotations
+
 import re
+from collections.abc import Callable
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from clp_py_utils.clp_config import (
-    QueryEngine,
-    StorageEngine,
-)
+if TYPE_CHECKING:
+    from clp_py_utils.clp_config import CLPConfig
 
 from tests.utils.utils import (
     unlink,
@@ -81,7 +83,7 @@ class PackageConfig:
         validate_dir_exists(clp_package_dir)
 
         # Check for required package script directories
-        required_dirs = ["bin", "etc", "lib", "sbin"]
+        required_dirs = ["etc", "sbin"]
         missing_dirs = [d for d in required_dirs if not (clp_package_dir / d).is_dir()]
         if len(missing_dirs) > 0:
             err_msg = (
@@ -112,11 +114,10 @@ class PackageConfig:
 
 @dataclass(frozen=True)
 class PackageModeConfig:
-    """Defines details related to a package instance's mode of operation."""
+    """Builds a fully formed CLPConfig for a named mode."""
 
     name: str
-    storage_engine: StorageEngine
-    query_engine: QueryEngine
+    build_config: Callable[[], CLPConfig]
 
 
 @dataclass(frozen=True)

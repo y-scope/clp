@@ -7,6 +7,7 @@ from typing import Any
 
 import yaml
 from clp_py_utils.clp_config import (
+    CLPConfig,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     DB_COMPONENT_NAME,
@@ -55,13 +56,21 @@ CLP_COMPONENT_BASENAMES = [
 CLP_MODE_CONFIGS: dict[str, PackageModeConfig] = {
     "clp-text": PackageModeConfig(
         name="clp-text",
-        storage_engine=StorageEngine.CLP,
-        query_engine=QueryEngine.CLP,
+        build_config=lambda: CLPConfig(
+            package=Package(
+                storage_engine=StorageEngine.CLP,
+                query_engine=QueryEngine.CLP,
+            ),
+        ),
     ),
     "clp-json": PackageModeConfig(
         name="clp-json",
-        storage_engine=StorageEngine.CLP_S,
-        query_engine=QueryEngine.CLP_S,
+        build_config=lambda: CLPConfig(
+            package=Package(
+                storage_engine=StorageEngine.CLP_S,
+                query_engine=QueryEngine.CLP_S,
+            ),
+        ),
     ),
 }
 
@@ -77,31 +86,23 @@ def get_dict_from_mode_name(mode_name: str) -> dict[str, Any]:
 
 
 def get_mode_name_from_dict(dictionary: dict[str, Any]) -> str:
-    """Returns the name of the mode of operation described by the contents of `dictionary`."""
-    package_dict = dictionary.get("package")
-    if not isinstance(package_dict, dict):
-        err_msg = "`dictionary` does not carry any mapping for 'package'."
-        raise TypeError(err_msg)
+    """Returns the mode name for a parsed CLPConfig."""
+    try:
+        cfg = CLPConfig.model_validate(dictionary)
+    except Exception as err:
+        err_msg = f"Shared config failed validation: {err}"
+        raise ValueError(err_msg) from err
 
-    dict_query_engine = package_dict.get("query_engine")
-    dict_storage_engine = package_dict.get("storage_engine")
-    if dict_query_engine is None or dict_storage_engine is None:
-        err_msg = (
-            "`dictionary` must specify both 'package.query_engine' and 'package.storage_engine'."
-        )
-        raise ValueError(err_msg)
-
-    for mode_name, mode_config in CLP_MODE_CONFIGS.items():
-        if str(mode_config.query_engine.value) == str(dict_query_engine) and str(
-            mode_config.storage_engine.value
-        ) == str(dict_storage_engine):
-            return mode_name
-
-    err_msg = (
-        "The set of kv-pairs described in `dictionary` does not correspond to any mode of operation"
-        " for which integration testing is supported."
-    )
-    raise ValueError(err_msg)
+    key = (cfg.package.storage_engine, cfg.package.query_engine)
+    mode_lookup: dict[tuple[StorageEngine, QueryEngine], str] = {
+        (StorageEngine.CLP, QueryEngine.CLP): "clp-text",
+        (StorageEngine.CLP_S, QueryEngine.CLP_S): "clp-json",
+    }
+    try:
+        return mode_lookup[key]
+    except KeyError:
+        err_msg = f"Unsupported storage/query engine pair: {key[0].value}, {key[1].value}"
+        raise ValueError(err_msg) from None
 
 
 def write_temp_config_file(
@@ -130,10 +131,10 @@ def write_temp_config_file(
 
 
 def _build_dict_from_config(mode_config: PackageModeConfig) -> dict[str, Any]:
-    storage_engine = mode_config.storage_engine
-    query_engine = mode_config.query_engine
-    package_model = Package(storage_engine=storage_engine, query_engine=query_engine)
-    return {"package": package_model.model_dump()}
+    """Build a validated config dict using clp_config.CLPCconfig."""
+    clp_config = mode_config.build_config()
+    config_dict: dict[str, Any] = clp_config.dump_to_primitive_dict()
+    return config_dict
 
 
 def _load_shared_config(path: Path) -> dict[str, Any]:
