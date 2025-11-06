@@ -29,7 +29,7 @@ async fn main() -> anyhow::Result<()> {
         .init();
 
     let _ = Args::parse();
-    let home = std::env::var("CLP_HOME").context("Expect a CLP_HOME env variable")?;
+    let home = std::env::var("CLP_HOME").context("Expect `CLP_HOME` env variable")?;
     let home = std::path::Path::new(&home);
 
     let config_path = home.join(package::DEFAULT_CONFIG_FILE_PATH);
