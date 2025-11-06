@@ -51,8 +51,18 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
                 }
 
                 // New object metadata received.
-                Some(object_metadata) = self.receiver.recv() => {
-                    self.buffer.add(object_metadata).await?;
+                optional_object_metadata = self.receiver.recv() => {
+                    match optional_object_metadata {
+                        None => {
+                            self.buffer.submit().await?;
+                            return Err(
+                                anyhow::anyhow!("Listener channel has been closed unexpectedly")
+                            );
+                        }
+                        Some(object_metadata) => {
+                            self.buffer.add(object_metadata).await?;
+                        }
+                    }
                 }
 
                 // Timer fired.
@@ -60,6 +70,7 @@ impl<Submitter: BufferSubmitter + Send + 'static> ListenerTask<Submitter> {
                     self.buffer.submit().await?;
                 }
             }
+
             timer.as_mut().reset(Instant::now() + self.timeout);
         }
     }
@@ -100,7 +111,8 @@ impl Listener {
             receiver,
         };
         let cancel_token = CancellationToken::new();
-        let handle = tokio::spawn(async move { task.run(cancel_token.clone()).await });
+        let child_cancel_token = cancel_token.child_token();
+        let handle = tokio::spawn(async move { task.run(child_cancel_token).await });
 
         Self {
             sender,
