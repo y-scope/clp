@@ -120,6 +120,7 @@ impl<T: IntoHandlerError> From<T> for HandlerError {
     }
 }
 
+/// Converts [`HandlerError`] into an HTTP response.
 impl IntoResponse for HandlerError {
     fn into_response(self) -> axum::response::Response {
         StatusCode::INTERNAL_SERVER_ERROR.into_response()
