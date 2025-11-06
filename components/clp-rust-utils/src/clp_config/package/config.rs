@@ -76,7 +76,7 @@ impl Default for ApiServer {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 pub struct QueryJobPollingConfig {
-    #[serde(rename = "inital_backoff")]
+    #[serde(rename = "initial_backoff")]
     pub initial_backoff_ms: u64,
 
     #[serde(rename = "max_backoff")]
