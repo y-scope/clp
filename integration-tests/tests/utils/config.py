@@ -72,9 +72,18 @@ class PackageConfig:
     #: Root directory for package tests output.
     test_root_dir: Path
 
-    temp_config_dir_init: InitVar[Path | None] = None
+    #: Name of the mode of operation represented in this config.
+    mode_name: str
+
+    #: The CLPConfig object corresponding to this mode of operation.
+    build_config: Callable[[], CLPConfig]
+
     #: Directory to store any cached package config files.
+    temp_config_dir_init: InitVar[Path | None] = None
     temp_config_dir: Path = field(init=False, repr=True)
+
+    #: The location of the constructed temporary config file for this package.
+    temp_config_file_path: Path = field(init=False, repr=True)
 
     def __post_init__(self, temp_config_dir_init: Path | None) -> None:
         """Validates the values specified at init, and initialises attributes."""
@@ -101,6 +110,13 @@ class PackageConfig:
         self.test_root_dir.mkdir(parents=True, exist_ok=True)
         self.temp_config_dir.mkdir(parents=True, exist_ok=True)
 
+        # Initialize temp_config_file_path placeholder. The file will be written by the fixture.
+        object.__setattr__(
+            self,
+            "temp_config_file_path",
+            self.temp_config_dir / f"clp-config-{self.mode_name}.yml",
+        )
+
     @property
     def start_script_path(self) -> Path:
         """:return: The absolute path to the package start script."""
@@ -113,38 +129,16 @@ class PackageConfig:
 
 
 @dataclass(frozen=True)
-class PackageModeConfig:
-    """Builds a fully formed CLPConfig for a named mode."""
-
-    name: str
-    build_config: Callable[[], CLPConfig]
-
-
-@dataclass(frozen=True)
-class PackageInstanceConfig:
-    """Metadata for the clp-config.yml file used to configure a clp package instance."""
-
-    #: The PackageConfig object corresponding to this package run.
-    package_config: PackageConfig
-
-    #: The PackageModeConfig object describing this config file's configuration.
-    mode_config: PackageModeConfig
-
-    #: The location of the configfile used during this package run.
-    temp_config_file_path: Path = field(init=False, repr=True)
-
-
-@dataclass(frozen=True)
 class PackageInstance:
     """Metadata for a run of the clp package."""
 
     #:
-    package_instance_config: PackageInstanceConfig
+    package_config: PackageConfig
 
-    #:
+    #: The location of the logging directory within the running package.
     clp_log_dir: Path = field(init=False, repr=True)
 
-    #:
+    #: The instance ID of the running package.
     clp_instance_id: str = field(init=False, repr=True)
 
     #: The path to the .clp-config.yml file constructed by the package during spin-up.
@@ -153,7 +147,7 @@ class PackageInstance:
     def __post_init__(self) -> None:
         """Validates the values specified at init, and initialises attributes."""
         # Set clp_log_dir and validate that it exists.
-        clp_log_dir = self.package_instance_config.package_config.clp_package_dir / "var" / "log"
+        clp_log_dir = self.package_config.clp_package_dir / "var" / "log"
         validate_dir_exists(clp_log_dir)
         object.__setattr__(self, "clp_log_dir", clp_log_dir)
 

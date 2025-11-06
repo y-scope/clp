@@ -2,6 +2,7 @@
 
 import shutil
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -25,9 +26,8 @@ from clp_py_utils.clp_config import (
 )
 
 from tests.utils.config import (
+    PackageConfig,
     PackageInstance,
-    PackageInstanceConfig,
-    PackageModeConfig,
 )
 from tests.utils.docker_utils import (
     inspect_container_state,
@@ -53,23 +53,17 @@ CLP_COMPONENT_BASENAMES = [
     _to_container_basename(GARBAGE_COLLECTOR_COMPONENT_NAME),
 ]
 
-CLP_MODE_CONFIGS: dict[str, PackageModeConfig] = {
-    "clp-text": PackageModeConfig(
-        name="clp-text",
-        build_config=lambda: CLPConfig(
-            package=Package(
-                storage_engine=StorageEngine.CLP,
-                query_engine=QueryEngine.CLP,
-            ),
+CLP_MODE_CONFIGS: dict[str, Callable[[], CLPConfig]] = {
+    "clp-text": lambda: CLPConfig(
+        package=Package(
+            storage_engine=StorageEngine.CLP,
+            query_engine=QueryEngine.CLP,
         ),
     ),
-    "clp-json": PackageModeConfig(
-        name="clp-json",
-        build_config=lambda: CLPConfig(
-            package=Package(
-                storage_engine=StorageEngine.CLP_S,
-                query_engine=QueryEngine.CLP_S,
-            ),
+    "clp-json": lambda: CLPConfig(
+        package=Package(
+            storage_engine=StorageEngine.CLP_S,
+            query_engine=QueryEngine.CLP_S,
         ),
     ),
 }
@@ -82,7 +76,9 @@ def get_dict_from_mode_name(mode_name: str) -> dict[str, Any]:
         err_msg = f"Unsupported mode: {mode_name}"
         raise ValueError(err_msg)
 
-    return _build_dict_from_config(mode_config)
+    clp_config = mode_config()
+    ret_dict: dict[str, Any] = clp_config.dump_to_primitive_dict()
+    return ret_dict
 
 
 def get_mode_name_from_dict(dictionary: dict[str, Any]) -> str:
@@ -130,13 +126,6 @@ def write_temp_config_file(
     return temp_config_file_path
 
 
-def _build_dict_from_config(mode_config: PackageModeConfig) -> dict[str, Any]:
-    """Build a validated config dict using clp_config.CLPCconfig."""
-    clp_config = mode_config.build_config()
-    config_dict: dict[str, Any] = clp_config.dump_to_primitive_dict()
-    return config_dict
-
-
 def _load_shared_config(path: Path) -> dict[str, Any]:
     try:
         with path.open("r", encoding="utf-8") as file:
@@ -155,29 +144,27 @@ def _load_shared_config(path: Path) -> dict[str, Any]:
     return shared_config_dict
 
 
-def start_clp_package(run_config: PackageInstanceConfig) -> None:
-    """Starts an instance of the clp package."""
-    start_script_path = run_config.package_config.start_script_path
+def start_clp_package(cfg: PackageConfig) -> None:
+    """Start an instance of the CLP package."""
+    start_script_path = cfg.start_script_path
     try:
         # fmt: off
         start_cmd = [
             str(start_script_path),
             "--config",
-            str(run_config.temp_config_file_path)
+            str(cfg.temp_config_file_path)
         ]
         # fmt: on
         subprocess.run(start_cmd, check=True)
     except Exception as e:
-        err_msg = f"Failed to start an instance of the {run_config.mode_config.name} package."
+        err_msg = f"Failed to start an instance of the {cfg.mode_name} package."
         raise RuntimeError(err_msg) from e
 
 
-def stop_clp_package(
-    instance: PackageInstance,
-) -> None:
-    """Stops an instance of the clp package."""
-    run_config = instance.package_instance_config
-    stop_script_path = run_config.package_config.stop_script_path
+def stop_clp_package(instance: PackageInstance) -> None:
+    """Stop an instance of the CLP package."""
+    cfg = instance.package_config
+    stop_script_path = cfg.stop_script_path
     try:
         # fmt: off
         stop_cmd = [
@@ -186,7 +173,7 @@ def stop_clp_package(
         # fmt: on
         subprocess.run(stop_cmd, check=True)
     except Exception as e:
-        err_msg = f"Failed to stop an instance of the {run_config.mode_config.name} package."
+        err_msg = f"Failed to stop an instance of the {cfg.mode_name} package."
         raise RuntimeError(err_msg) from e
 
 
@@ -233,7 +220,7 @@ def is_running_mode_correct(package_instance: PackageInstance) -> tuple[bool, st
     mismatch.
     """
     running_mode = _get_running_mode(package_instance)
-    intended_mode = package_instance.package_instance_config.mode_config.name
+    intended_mode = package_instance.package_config.mode_name
     if running_mode != intended_mode:
         return (
             False,

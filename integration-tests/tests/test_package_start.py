@@ -25,7 +25,7 @@ def test_clp_package(clp_package: PackageInstance) -> None:
     """
     # Spin up the package by getting the PackageInstance fixture.
     package_instance = clp_package
-    mode_name = package_instance.package_instance_config.mode_config.name
+    mode_name = package_instance.package_config.mode_name
     instance_id = package_instance.clp_instance_id
 
     # Ensure that all package components are running.
