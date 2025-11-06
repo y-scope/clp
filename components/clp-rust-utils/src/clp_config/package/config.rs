@@ -56,13 +56,22 @@ impl Default for Database {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
-#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
-#[serde(default)]
 pub struct ApiServer {
     pub host: String,
     pub port: u16,
     pub query_job_polling: QueryJobPollingConfig,
     pub default_max_num_query_results: u32,
+}
+
+impl Default for ApiServer {
+    fn default() -> Self {
+        Self {
+            host: "localhost".to_owned(),
+            port: 3001,
+            query_job_polling: QueryJobPollingConfig::default(),
+            default_max_num_query_results: 1000,
+        }
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
@@ -74,14 +83,11 @@ pub struct QueryJobPollingConfig {
     pub max_backoff_ms: u64,
 }
 
-impl Default for ApiServer {
+impl Default for QueryJobPollingConfig {
     fn default() -> Self {
         Self {
-            host: "localhost".to_owned(),
-            port: 3001,
-            query_job_pool_initial_delay_ms: 100,
-            query_job_pool_max_delay_ms: 5000,
-            default_max_num_results: 1000,
+            initial_backoff_ms: 100,
+            max_backoff_ms: 5000,
         }
     }
 }

@@ -101,7 +101,8 @@ impl Client {
             }
         }
         if search_job_config.max_num_results == 0 {
-            search_job_config.max_num_results = self.config.api_server.default_max_num_results;
+            search_job_config.max_num_results =
+                self.config.api_server.default_max_num_query_results;
         }
 
         let query_job_type_i32: i32 = QueryJobType::SearchOrAggregation.into();
@@ -146,8 +147,8 @@ impl Client {
         &self,
         search_job_id: u64,
     ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
-        let mut delay_ms = self.config.api_server.query_job_pool_initial_delay_ms;
-        let max_delay_ms = self.config.api_server.query_job_pool_max_delay_ms;
+        let mut delay_ms = self.config.api_server.query_job_polling.initial_backoff_ms;
+        let max_delay_ms = self.config.api_server.query_job_polling.max_backoff_ms;
         loop {
             match self.get_status(search_job_id).await? {
                 QueryJobStatus::Succeeded => {
