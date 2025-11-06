@@ -65,6 +65,21 @@ def read_yaml_config_file(yaml_config_file_path: pathlib.Path):
     return config
 
 
+def resolve_host_path(host_path: pathlib.Path) -> pathlib.Path:
+    """
+    Resolves a host path:
+
+    - Tilde (~) paths are expanded before processing.
+    - Relative paths are resolved relative to the current working directory on the host.
+    - Symlinks are resolved recursively until a non-symlink path is reached or a cycle is detected.
+
+    :param host_path: The host path.
+    :return: The resolved host path.
+    """
+    resolved_container_path = resolve_host_path_in_container(host_path)
+    return pathlib.Path("/") / resolved_container_path.relative_to(CONTAINER_DIR_FOR_HOST_ROOT)
+
+
 def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
     """
     Resolves a host path and translates it into its container-mount equivalent absolute path. See
@@ -82,8 +97,30 @@ def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
         host_path = pathlib.Path(pwd_host) / host_path
         host_path = host_path.absolute()
 
-    translated_path = CONTAINER_DIR_FOR_HOST_ROOT / host_path.relative_to("/")
+    resolved_path = _resolve_symlinks_in_path(host_path)
+    if resolved_path is not None:
+        return resolved_path
 
+    return CONTAINER_DIR_FOR_HOST_ROOT / host_path.relative_to("/")
+
+
+def validate_path_could_be_dir(path: pathlib.Path):
+    part = path
+    while True:
+        if part.exists():
+            if not part.is_dir():
+                raise ValueError(f"{part} is not a directory.")
+            return
+        part = part.parent
+
+
+def _resolve_symlinks_in_path(host_path: pathlib.Path) -> pathlib.Path | None:
+    """
+    Resolves symlinks in a path by walking through each component and following symlinks.
+
+    :param host_path: The host path.
+    :return: The resolved path with all symlinks followed, or None on error.
+    """
     try:
         visited_symlink_inodes = set()
         current_path = CONTAINER_DIR_FOR_HOST_ROOT
@@ -107,31 +144,4 @@ def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
         return current_path
     except OSError:
         # Ignore if reading the symlink fails (e.g., broken link or permission error).
-        pass
-
-    return translated_path
-
-
-def resolve_host_path(host_path: pathlib.Path) -> pathlib.Path:
-    """
-    Resolves a host path:
-
-    - Tilde (~) paths are expanded before processing.
-    - Relative paths are resolved relative to the current working directory on the host.
-    - Symlinks are resolved recursively until a non-symlink path is reached or a cycle is detected.
-
-    :param host_path: The host path.
-    :return: The resolved host path.
-    """
-    resolved_container_path = resolve_host_path_in_container(host_path)
-    return pathlib.Path("/") / resolved_container_path.relative_to(CONTAINER_DIR_FOR_HOST_ROOT)
-
-
-def validate_path_could_be_dir(path: pathlib.Path):
-    part = path
-    while True:
-        if part.exists():
-            if not part.is_dir():
-                raise ValueError(f"{part} is not a directory.")
-            return
-        part = part.parent
+        return None
