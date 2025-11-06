@@ -84,7 +84,7 @@ def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
 
     translated_path = CONTAINER_DIR_FOR_HOST_ROOT / host_path.relative_to("/")
 
-    visited = set()
+    visited_symlink_inodes = set()
     current_path = CONTAINER_DIR_FOR_HOST_ROOT
 
     try:
@@ -93,9 +93,9 @@ def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
 
             while current_path.is_symlink():
                 stat = current_path.lstat()
-                if stat.st_ino in visited:
+                if stat.st_ino in visited_symlink_inodes:
                     break
-                visited.add(stat.st_ino)
+                visited_symlink_inodes.add(stat.st_ino)
 
                 link_target = current_path.readlink()
                 if link_target.is_absolute():
