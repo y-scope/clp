@@ -61,6 +61,7 @@ quick-start/clp-text
 
 guides-overview
 guides-using-object-storage/index
+guides-mcp-server/index
 guides-external-database
 guides-retention
 guides-multi-host

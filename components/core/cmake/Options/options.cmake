@@ -84,6 +84,12 @@ option(
 )
 
 option(
+    CLP_BUILD_CLP_S_TIMESTAMP_PARSER
+    "Build clp_s::timestamp_parser"
+    ON
+)
+
+option(
     CLP_BUILD_CLP_S_TIMESTAMPPATTERN
     "Build clp_s::timestamp_pattern."
     ON
@@ -160,6 +166,7 @@ function(validate_clp_tests_dependencies)
         CLP_BUILD_CLP_S_SEARCH_KQL
         CLP_BUILD_CLP_S_SEARCH_SQL
         CLP_BUILD_CLP_S_TIMESTAMPPATTERN
+        CLP_BUILD_CLP_S_TIMESTAMP_PARSER
     )
 endfunction()
 
@@ -360,6 +367,19 @@ function(set_clp_s_search_sql_dependencies)
     )
 endfunction()
 
+function(validate_clp_s_timestamp_parser_dependencies)
+    validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_TIMESTAMP_PARSER
+        CLP_BUILD_CLP_STRING_UTILS
+    )
+endfunction()
+
+function(set_clp_s_timestamp_parser_dependencies)
+    set_clp_need_flags(
+        CLP_NEED_DATE
+        CLP_NEED_YSTDLIB
+    )
+endfunction()
+
 function(validate_clp_s_timestamppattern_dependencies)
     validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_TIMESTAMPPATTERN
         CLP_BUILD_CLP_STRING_UTILS
@@ -442,6 +462,11 @@ function(validate_and_setup_all_clp_dependency_flags)
     if (CLP_BUILD_CLP_S_SEARCH_SQL)
         validate_clp_s_search_sql_dependencies()
         set_clp_s_search_sql_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_TIMESTAMP_PARSER)
+        validate_clp_s_timestamp_parser_dependencies()
+        set_clp_s_timestamp_parser_dependencies()
     endif()
 
     if (CLP_BUILD_CLP_S_TIMESTAMPPATTERN)
