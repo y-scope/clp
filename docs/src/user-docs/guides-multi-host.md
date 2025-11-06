@@ -151,42 +151,36 @@ All commands below assume you are running them from the root of the CLP package 
 # Start database (skip if using external database)
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  --file docker-compose-all.yaml \
   up database \
     --no-deps --wait
 
 # Initialize database
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  --file docker-compose-all.yaml \
   up db-table-creator \
     --no-deps
 
 # Start queue
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  --file docker-compose-all.yaml \
   up queue \
     --no-deps --wait
 
 # Start redis
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  --file docker-compose-all.yaml \
   up redis \
     --no-deps --wait
 
 # Start results cache (skip if using external MongoDB)
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  --file docker-compose-all.yaml \
   up results-cache \
     --no-deps --wait
 
 # Initialize results cache
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  --file docker-compose-all.yaml \
   up results-cache-indices-creator \
     --no-deps
 
@@ -197,37 +191,32 @@ docker compose \
 # Start compression scheduler
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  --file docker-compose-all.yaml \
   up compression-scheduler \
-    --no-deps --detach
+    --no-deps --wait
 
 # Start query scheduler
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  --file docker-compose-all.yaml \
   up query-scheduler \
     --no-deps --wait
 
 # Start webui
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  --file docker-compose-all.yaml \
   up webui \
-    --no-deps --detach
+    --no-deps --wait
 
 # Start garbage collector (optional, only if retention is configured)
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  --file docker-compose-all.yaml \
   up garbage-collector \
-    --no-deps --detach
+    --no-deps --wait
 
 # Start MCP server (optional, only if configured)
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  --file docker-compose-all.yaml \
   up mcp-server \
-    --no-deps --detach
+    --no-deps --wait
 
 ################################################################################
 # Worker services (can be started on multiple hosts)
@@ -236,23 +225,20 @@ docker compose \
 # Start compression worker
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  --file docker-compose-all.yaml \
   up compression-worker \
-    --no-deps --detach
+    --no-deps --wait
 
 # Start query worker
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  --file docker-compose-all.yaml \
   up query-worker \
-    --no-deps --detach
+    --no-deps --wait
 
 # Start reducer
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  --file docker-compose-all.yaml \
   up reducer \
-    --no-deps --detach
+    --no-deps --wait
 ```
 
 :::{note}
