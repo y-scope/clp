@@ -100,8 +100,7 @@ impl Listener {
             receiver,
         };
         let cancel_token = CancellationToken::new();
-        let child_cancel_token = cancel_token.child_token();
-        let handle = tokio::spawn(async move { task.run(child_cancel_token).await });
+        let handle = tokio::spawn(async move { task.run(cancel_token.clone()).await });
 
         Self {
             sender,
