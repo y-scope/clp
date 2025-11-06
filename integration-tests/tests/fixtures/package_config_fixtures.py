@@ -9,7 +9,6 @@ import pytest
 from tests.utils.config import PackageConfig
 from tests.utils.package_utils import (
     CLP_MODE_CONFIGS,
-    get_clp_config_from_mode,
     write_temp_config_file,
 )
 from tests.utils.utils import get_env_var
@@ -26,16 +25,18 @@ def _build_package_config_for_mode(mode_name: str) -> PackageConfig:
     clp_package_dir = Path(get_env_var("CLP_PACKAGE_DIR")).expanduser().resolve()
     test_root_dir = Path(get_env_var("CLP_BUILD_DIR")).expanduser().resolve() / "integration-tests"
 
-    build_config = CLP_MODE_CONFIGS[mode_name]
+    build_config = CLP_MODE_CONFIGS[mode_name][0]
+    required_components = CLP_MODE_CONFIGS[mode_name][1]
     package_config = PackageConfig(
         clp_package_dir=clp_package_dir,
         test_root_dir=test_root_dir,
         mode_name=mode_name,
         build_config=build_config,
+        component_list=required_components,
     )
 
     # Write the temporary config file that the package will use.
-    clp_config_obj = get_clp_config_from_mode(mode_name)
+    clp_config_obj = build_config()
     temp_config_file_path: Path = write_temp_config_file(
         clp_config=clp_config_obj,
         temp_config_dir=package_config.temp_config_dir,

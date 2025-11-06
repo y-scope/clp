@@ -40,32 +40,48 @@ def _to_container_basename(name: str) -> str:
     return name.replace("_", "-")
 
 
-CLP_COMPONENT_BASENAMES = [
-    _to_container_basename(DB_COMPONENT_NAME),
-    _to_container_basename(QUEUE_COMPONENT_NAME),
-    _to_container_basename(REDIS_COMPONENT_NAME),
-    _to_container_basename(RESULTS_CACHE_COMPONENT_NAME),
-    _to_container_basename(COMPRESSION_SCHEDULER_COMPONENT_NAME),
-    _to_container_basename(QUERY_SCHEDULER_COMPONENT_NAME),
-    _to_container_basename(COMPRESSION_WORKER_COMPONENT_NAME),
-    _to_container_basename(QUERY_WORKER_COMPONENT_NAME),
-    _to_container_basename(REDUCER_COMPONENT_NAME),
-    _to_container_basename(WEBUI_COMPONENT_NAME),
-    _to_container_basename(GARBAGE_COLLECTOR_COMPONENT_NAME),
-]
-
-CLP_MODE_CONFIGS: dict[str, Callable[[], CLPConfig]] = {
-    "clp-text": lambda: CLPConfig(
-        package=Package(
-            storage_engine=StorageEngine.CLP,
-            query_engine=QueryEngine.CLP,
+CLP_MODE_CONFIGS: dict[str, tuple[Callable[[], CLPConfig], list[str]]] = {
+    "clp-text": (
+        lambda: CLPConfig(
+            package=Package(
+                storage_engine=StorageEngine.CLP,
+                query_engine=QueryEngine.CLP,
+            ),
         ),
+        [
+            _to_container_basename(DB_COMPONENT_NAME),
+            _to_container_basename(QUEUE_COMPONENT_NAME),
+            _to_container_basename(REDIS_COMPONENT_NAME),
+            _to_container_basename(REDUCER_COMPONENT_NAME),
+            _to_container_basename(RESULTS_CACHE_COMPONENT_NAME),
+            _to_container_basename(COMPRESSION_SCHEDULER_COMPONENT_NAME),
+            _to_container_basename(QUERY_SCHEDULER_COMPONENT_NAME),
+            _to_container_basename(COMPRESSION_WORKER_COMPONENT_NAME),
+            _to_container_basename(QUERY_WORKER_COMPONENT_NAME),
+            _to_container_basename(WEBUI_COMPONENT_NAME),
+            _to_container_basename(GARBAGE_COLLECTOR_COMPONENT_NAME),
+        ],
     ),
-    "clp-json": lambda: CLPConfig(
-        package=Package(
-            storage_engine=StorageEngine.CLP_S,
-            query_engine=QueryEngine.CLP_S,
+    "clp-json": (
+        lambda: CLPConfig(
+            package=Package(
+                storage_engine=StorageEngine.CLP_S,
+                query_engine=QueryEngine.CLP_S,
+            ),
         ),
+        [
+            _to_container_basename(DB_COMPONENT_NAME),
+            _to_container_basename(QUEUE_COMPONENT_NAME),
+            _to_container_basename(REDIS_COMPONENT_NAME),
+            _to_container_basename(REDUCER_COMPONENT_NAME),
+            _to_container_basename(RESULTS_CACHE_COMPONENT_NAME),
+            _to_container_basename(COMPRESSION_SCHEDULER_COMPONENT_NAME),
+            _to_container_basename(QUERY_SCHEDULER_COMPONENT_NAME),
+            _to_container_basename(COMPRESSION_WORKER_COMPONENT_NAME),
+            _to_container_basename(QUERY_WORKER_COMPONENT_NAME),
+            _to_container_basename(WEBUI_COMPONENT_NAME),
+            _to_container_basename(GARBAGE_COLLECTOR_COMPONENT_NAME),
+        ],
     ),
 }
 
@@ -73,7 +89,7 @@ CLP_MODE_CONFIGS: dict[str, Callable[[], CLPConfig]] = {
 def get_clp_config_from_mode(mode_name: str) -> CLPConfig:
     """Return a CLPConfig object corresponding to the given `mode_name`."""
     try:
-        config = CLP_MODE_CONFIGS[mode_name]
+        config = CLP_MODE_CONFIGS[mode_name][0]
     except KeyError as err:
         err_msg = f"Unsupported mode: {mode_name}"
         raise ValueError(err_msg) from err
@@ -167,7 +183,8 @@ def is_package_running(package_instance: PackageInstance) -> tuple[bool, str | N
     instance_id = package_instance.clp_instance_id
     problems: list[str] = []
 
-    for component in CLP_COMPONENT_BASENAMES:
+    required_components = package_instance.package_config.component_list
+    for component in required_components:
         prefix = f"clp-package-{instance_id}-{component}-"
 
         candidates = list_prefixed_containers(docker_bin, prefix)

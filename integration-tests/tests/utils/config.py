@@ -83,6 +83,9 @@ class PackageConfig:
     #: The CLPConfig object corresponding to this mode of operation.
     build_config: Callable[[], CLPConfig]
 
+    #: The list of containerized CLP components that this package needs.
+    component_list: list[str]
+
     #: Directory to store any cached package config files.
     temp_config_dir_init: InitVar[Path | None] = None
     temp_config_dir: Path = field(init=False, repr=True)
