@@ -61,8 +61,9 @@ quick-start/clp-text
 
 guides-overview
 guides-using-object-storage/index
+guides-external-database
 guides-retention
-guides-multi-node
+guides-multi-host
 guides-using-presto
 :::
 
@@ -93,5 +94,4 @@ reference-json-search-syntax
 reference-text-search-syntax
 reference-admin-tools
 reference-unstructured-schema-file
-reference-external-database
 :::

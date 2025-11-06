@@ -137,8 +137,8 @@ can omit starting the `query-scheduler`, `query-worker`, and `reducer` services.
 
 :::{tip}
 If you want to use your own MariaDB/MySQL or MongoDB servers instead of the Docker Compose managed
-databases, see the [external database setup reference](reference-external-database.md). When using
-external databases, skip starting the `database` and `results-cache` services below.
+databases, see the [external database setup guide](guides-external-database.md). When using external
+databases, skip starting the `database` and `results-cache` services below.
 :::
 
 All commands below assume you are running them from the root of the CLP package directory.

@@ -1,7 +1,7 @@
 # External database setup
 
-This reference guide explains how to set up external databases for CLP instead of using the
-Docker Compose managed databases.
+This guide explains how to set up external databases for CLP instead of using the Docker Compose
+managed databases.
 
 :::{warning}
 The [CLP Docker Compose project][docker-compose-orchestration] includes MariaDB/MongoDB databases by
@@ -194,13 +194,13 @@ database:
 ```
 
 :::{note}
-When using external databases in a multi-node deployment, you do **not** need to start the
+When using external databases in a multi-host deployment, you do **not** need to start the
 `database` and `results-cache` Docker Compose services. Skip those services when following the
-[multi-node deployment guide][multi-node-guide]. However, you still need to run the database
+[multi-host deployment guide][multi-host-guide]. However, you still need to run the database
 initialization jobs (`db-table-creator` and `results-cache-indices-creator`).
 :::
 
 [docker-compose-orchestration]: ../dev-docs/design-deployment-orchestration.md#docker-compose-orchestration
 [mongodb-install]: https://www.mongodb.com/docs/manual/installation/
 [mongodb-security]: https://docs.mongodb.com/manual/security/
-[multi-node-guide]: guides-multi-host.md#starting-clp
+[multi-host-guide]: guides-multi-host.md#starting-clp
