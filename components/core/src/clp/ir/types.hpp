@@ -2,6 +2,7 @@
 #define CLP_IR_TYPES_HPP
 
 #include <cstdint>
+#include <type_traits>
 
 namespace clp::ir {
 using epoch_time_ms_t = int64_t;
