@@ -61,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
         .route("/query_results/{search_job_id}", get(query_results))
         .with_state(client);
 
-    tracing::event!(tracing::Level::INFO, "Server started at {addr}");
+    tracing::info!("Server started at {addr}");
     axum::serve(listener, app)
         .with_graceful_shutdown(async {
             tokio::signal::ctrl_c()
