@@ -20,24 +20,7 @@ from tests.utils.docker_utils import (
     inspect_container_state,
     list_prefixed_containers,
 )
-
-
-def _load_shared_config(path: Path) -> dict[str, Any]:
-    try:
-        with path.open("r", encoding="utf-8") as file:
-            shared_config_dict = yaml.safe_load(file)
-    except yaml.YAMLError as err:
-        err_msg = f"Invalid YAML in shared config {path}: {err}"
-        raise ValueError(err_msg) from err
-    except OSError as err:
-        err_msg = f"Cannot read shared config {path}: {err}"
-        raise ValueError(err_msg) from err
-
-    if not isinstance(shared_config_dict, dict):
-        err_msg = f"Shared config {path} must be a mapping at the top level."
-        raise TypeError(err_msg)
-
-    return shared_config_dict
+from tests.utils.utils import load_yaml_to_dict
 
 
 def write_temp_config_file(
@@ -138,7 +121,7 @@ def is_running_mode_correct(package_instance: PackageInstance) -> tuple[bool, st
     Checks if the mode described in the shared config file of `package_instance` is accurate with
     respect to its `mode_name`. Returns `True` if correct, `False` with message on mismatch.
     """
-    shared_config_dict = _load_shared_config(package_instance.shared_config_file_path)
+    shared_config_dict = load_yaml_to_dict(package_instance.shared_config_file_path)
     try:
         running_config = CLPConfig.model_validate(shared_config_dict)
     except ValidationError as err:
