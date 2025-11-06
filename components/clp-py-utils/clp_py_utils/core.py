@@ -84,10 +84,9 @@ def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
 
     translated_path = CONTAINER_DIR_FOR_HOST_ROOT / host_path.relative_to("/")
 
-    visited_symlink_inodes = set()
-    current_path = CONTAINER_DIR_FOR_HOST_ROOT
-
     try:
+        visited_symlink_inodes = set()
+        current_path = CONTAINER_DIR_FOR_HOST_ROOT
         for part in host_path.relative_to("/").parts:
             current_path = current_path / part
 
