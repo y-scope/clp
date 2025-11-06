@@ -214,7 +214,7 @@ auto convert_variable_length_string_prefix_to_number(std::string_view str)
         return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
     }
 
-    bool first_digit_zero{'0' == str.at(num_decimal_digits)};
+    bool const first_digit_zero{'0' == str.at(num_decimal_digits)};
     if (first_digit_zero && is_negative) {
         return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
     }
