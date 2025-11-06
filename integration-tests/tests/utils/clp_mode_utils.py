@@ -77,7 +77,7 @@ def compute_mode_signature(config: CLPConfig) -> tuple[Any, ...]:
     return (
         config.logs_input.type,
         config.package.storage_engine.value,
-        config.package.storage_engine.value,
+        config.package.query_engine.value,
         config.mcp_server is not None,
         config.presto is not None,
         config.archive_output.storage.type,
