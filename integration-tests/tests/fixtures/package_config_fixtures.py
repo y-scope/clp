@@ -6,11 +6,9 @@ from pathlib import Path
 
 import pytest
 
+from tests.utils.clp_mode_utils import CLP_MODE_CONFIGS
 from tests.utils.config import PackageConfig
-from tests.utils.package_utils import (
-    CLP_MODE_CONFIGS,
-    write_temp_config_file,
-)
+from tests.utils.package_utils import write_temp_config_file
 from tests.utils.utils import get_env_var
 
 logger = logging.getLogger(__name__)

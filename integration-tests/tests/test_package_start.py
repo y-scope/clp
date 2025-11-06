@@ -4,9 +4,9 @@ import logging
 
 import pytest
 
+from tests.utils.clp_mode_utils import CLP_MODE_CONFIGS
 from tests.utils.config import PackageInstance
 from tests.utils.package_utils import (
-    CLP_MODE_CONFIGS,
     is_package_running,
     is_running_mode_correct,
 )
