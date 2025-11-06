@@ -24,6 +24,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     WEBUI_COMPONENT_NAME,
 )
+from pydantic import ValidationError
 
 from tests.utils.config import (
     PackageConfig,
@@ -69,61 +70,14 @@ CLP_MODE_CONFIGS: dict[str, Callable[[], CLPConfig]] = {
 }
 
 
-def get_dict_from_mode_name(mode_name: str) -> dict[str, Any]:
-    """Returns the dictionary that describes the operation of `mode_name`."""
-    mode_config = CLP_MODE_CONFIGS.get(mode_name)
-    if mode_config is None:
+def get_clp_config_from_mode(mode_name: str) -> CLPConfig:
+    """Return a CLPConfig object corresponding to the given `mode_name`."""
+    try:
+        config = CLP_MODE_CONFIGS[mode_name]
+    except KeyError as err:
         err_msg = f"Unsupported mode: {mode_name}"
-        raise ValueError(err_msg)
-
-    clp_config = mode_config()
-    ret_dict: dict[str, Any] = clp_config.dump_to_primitive_dict()
-    return ret_dict
-
-
-def get_mode_name_from_dict(dictionary: dict[str, Any]) -> str:
-    """Returns the mode name for a parsed CLPConfig."""
-    try:
-        cfg = CLPConfig.model_validate(dictionary)
-    except Exception as err:
-        err_msg = f"Shared config failed validation: {err}"
         raise ValueError(err_msg) from err
-
-    key = (cfg.package.storage_engine, cfg.package.query_engine)
-    mode_lookup: dict[tuple[StorageEngine, QueryEngine], str] = {
-        (StorageEngine.CLP, QueryEngine.CLP): "clp-text",
-        (StorageEngine.CLP_S, QueryEngine.CLP_S): "clp-json",
-    }
-    try:
-        return mode_lookup[key]
-    except KeyError:
-        err_msg = f"Unsupported storage/query engine pair: {key[0].value}, {key[1].value}"
-        raise ValueError(err_msg) from None
-
-
-def write_temp_config_file(
-    mode_kv_dict: dict[str, Any],
-    temp_config_dir: Path,
-    mode_name: str,
-) -> Path:
-    """
-    Writes a temporary config file to `temp_config_dir`. Returns the path to the temporary file on
-    success.
-    """
-    if not isinstance(mode_kv_dict, dict):
-        err_msg = "`mode_kv_dict` must be a mapping."
-        raise TypeError(err_msg)
-
-    temp_config_dir.mkdir(parents=True, exist_ok=True)
-    temp_config_filename = f"clp-config-{mode_name}.yml"
-    temp_config_file_path = temp_config_dir / temp_config_filename
-
-    tmp_path = temp_config_file_path.with_suffix(temp_config_file_path.suffix + ".tmp")
-    with tmp_path.open("w", encoding="utf-8") as f:
-        yaml.safe_dump(mode_kv_dict, f, sort_keys=False)
-    tmp_path.replace(temp_config_file_path)
-
-    return temp_config_file_path
+    return config()
 
 
 def _load_shared_config(path: Path) -> dict[str, Any]:
@@ -144,27 +98,50 @@ def _load_shared_config(path: Path) -> dict[str, Any]:
     return shared_config_dict
 
 
-def start_clp_package(cfg: PackageConfig) -> None:
+def write_temp_config_file(
+    clp_config: CLPConfig,
+    temp_config_dir: Path,
+    mode_name: str,
+) -> Path:
+    """
+    Writes a temporary config file to `temp_config_dir` for a CLPCongig object. Returns the path to
+    the temporary file on success.
+    """
+    temp_config_dir.mkdir(parents=True, exist_ok=True)
+    temp_config_filename = f"clp-config-{mode_name}.yml"
+    temp_config_file_path = temp_config_dir / temp_config_filename
+
+    payload: dict[str, Any] = clp_config.dump_to_primitive_dict()
+
+    tmp_path = temp_config_file_path.with_suffix(temp_config_file_path.suffix + ".tmp")
+    with tmp_path.open("w", encoding="utf-8") as f:
+        yaml.safe_dump(payload, f, sort_keys=False)
+    tmp_path.replace(temp_config_file_path)
+
+    return temp_config_file_path
+
+
+def start_clp_package(package_config: PackageConfig) -> None:
     """Start an instance of the CLP package."""
-    start_script_path = cfg.start_script_path
+    start_script_path = package_config.start_script_path
     try:
         # fmt: off
         start_cmd = [
             str(start_script_path),
             "--config",
-            str(cfg.temp_config_file_path)
+            str(package_config.temp_config_file_path)
         ]
         # fmt: on
         subprocess.run(start_cmd, check=True)
     except Exception as e:
-        err_msg = f"Failed to start an instance of the {cfg.mode_name} package."
+        err_msg = f"Failed to start an instance of the {package_config.mode_name} package."
         raise RuntimeError(err_msg) from e
 
 
 def stop_clp_package(instance: PackageInstance) -> None:
     """Stop an instance of the CLP package."""
-    cfg = instance.package_config
-    stop_script_path = cfg.stop_script_path
+    package_config = instance.package_config
+    stop_script_path = package_config.stop_script_path
     try:
         # fmt: off
         stop_cmd = [
@@ -173,7 +150,7 @@ def stop_clp_package(instance: PackageInstance) -> None:
         # fmt: on
         subprocess.run(stop_cmd, check=True)
     except Exception as e:
-        err_msg = f"Failed to stop an instance of the {cfg.mode_name} package."
+        err_msg = f"Failed to stop an instance of the {package_config.mode_name} package."
         raise RuntimeError(err_msg) from e
 
 
@@ -215,22 +192,27 @@ def is_package_running(package_instance: PackageInstance) -> tuple[bool, str | N
 
 def is_running_mode_correct(package_instance: PackageInstance) -> tuple[bool, str | None]:
     """
-    Checks if the mode described in the shared config file matches the mode described in
-    `mode_config` of `package_instance`. Returns `True` if correct, `False` with message on
-    mismatch.
+    Checks if the mode described in the shared config file of `package_instance` is accurate with
+    respect to its `mode_name`. Returns `True` if correct, `False` with message on mismatch.
     """
-    running_mode = _get_running_mode(package_instance)
-    intended_mode = package_instance.package_config.mode_name
-    if running_mode != intended_mode:
+    shared_config_dict = _load_shared_config(package_instance.shared_config_file_path)
+    try:
+        running_config = CLPConfig.model_validate(shared_config_dict)
+    except ValidationError as err:
+        err_msg = f"Shared config failed validation: {err}"
+        raise ValueError(err_msg) from err
+
+    intended_config = get_clp_config_from_mode(package_instance.package_config.mode_name)
+
+    # TODO: when there are more modes, the following two lines should be reassessed, as checking the
+    # engines may not be enough.
+    running = (running_config.package.storage_engine, running_config.package.query_engine)
+    intended = (intended_config.package.storage_engine, intended_config.package.query_engine)
+
+    if running != intended:
         return (
             False,
-            f"Mode mismatch: the package is running in {running_mode}, but it should be running in"
-            f" {intended_mode}.",
+            f"Mode mismatch: the package is running in {running[0].value}, {running[1].value},"
+            f" but it should be running in {intended[0].value}, {intended[1].value}.",
         )
-
     return True, None
-
-
-def _get_running_mode(package_instance: PackageInstance) -> str:
-    shared_config_dict = _load_shared_config(package_instance.shared_config_file_path)
-    return get_mode_name_from_dict(shared_config_dict)

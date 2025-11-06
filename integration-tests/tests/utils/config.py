@@ -11,6 +11,11 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from clp_py_utils.clp_config import CLPConfig
 
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_LOG_DIRECTORY_PATH,
+    CLP_SHARED_CONFIG_FILENAME,
+)
+
 from tests.utils.utils import (
     unlink,
     validate_dir_exists,
@@ -158,7 +163,11 @@ class PackageInstance:
         object.__setattr__(self, "clp_instance_id", clp_instance_id)
 
         # Set shared_config_file_path after validating it.
-        shared_config_file_path = self.clp_log_dir / ".clp-config.yml"
+        shared_config_file_path = (
+            self.package_config.clp_package_dir
+            / CLP_DEFAULT_LOG_DIRECTORY_PATH
+            / CLP_SHARED_CONFIG_FILENAME
+        )
         validate_file_exists(shared_config_file_path)
         object.__setattr__(self, "shared_config_file_path", shared_config_file_path)
 

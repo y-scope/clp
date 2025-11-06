@@ -3,14 +3,13 @@
 import logging
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any
 
 import pytest
 
 from tests.utils.config import PackageConfig
 from tests.utils.package_utils import (
     CLP_MODE_CONFIGS,
-    get_dict_from_mode_name,
+    get_clp_config_from_mode,
     write_temp_config_file,
 )
 from tests.utils.utils import get_env_var
@@ -36,9 +35,9 @@ def _build_package_config_for_mode(mode_name: str) -> PackageConfig:
     )
 
     # Write the temporary config file that the package will use.
-    mode_kv_dict: dict[str, Any] = get_dict_from_mode_name(mode_name)
+    clp_config_obj = get_clp_config_from_mode(mode_name)
     temp_config_file_path: Path = write_temp_config_file(
-        mode_kv_dict=mode_kv_dict,
+        clp_config=clp_config_obj,
         temp_config_dir=package_config.temp_config_dir,
         mode_name=mode_name,
     )

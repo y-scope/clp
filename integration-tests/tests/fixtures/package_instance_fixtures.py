@@ -1,6 +1,7 @@
 """Fixtures that start and stop CLP package instances for integration tests."""
 
 import logging
+import subprocess
 from collections.abc import Iterator
 
 import pytest
@@ -41,5 +42,9 @@ def clp_package(
         yield instance
     finally:
         logger.info("Now stopping the %s package...", mode_name)
-        stop_clp_package(instance)
+        if instance is not None:
+            stop_clp_package(instance)
+        else:
+            # This means setup failed after start; fall back to calling stop script directly
+            subprocess.run([str(clp_config.stop_script_path)], check=True)
         logger.info("The %s package was stopped successfully.", mode_name)
