@@ -101,6 +101,7 @@ async fn query_results(
     Ok(Sse::new(event_stream).keep_alive(KeepAlive::default()))
 }
 
+/// Generic errors for request handlers.
 #[derive(Error, Debug)]
 enum HandlerError {
     #[error("Internal server error")]
