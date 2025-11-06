@@ -67,11 +67,8 @@ def read_yaml_config_file(yaml_config_file_path: pathlib.Path):
 
 def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
     """
-    Translates a host path to its container-mount equivalent absolute path.
-        - Tilde (~) paths are expanded to the user's home directory before processing.
-        - Relative paths are resolved relative to the user's working directory on the host.
-        - Symlinks are resolved recursively until a non-symlink path is reached or a cycle is
-          detected.
+    Resolves a host path and translates it into its container-mount equivalent absolute path. See
+    `resolve_host_path` for details about the resolution.
 
     :param host_path: The host path.
     :return: The translated path (with /mnt/host prefix).
@@ -118,10 +115,14 @@ def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
 
 def resolve_host_path(host_path: pathlib.Path) -> pathlib.Path:
     """
-    Resolves a host path that may be relative or may contain symlinks, in the host path space.
+    Resolves a host path:
+
+    - Tilde (~) paths are expanded before processing.
+    - Relative paths are resolved relative to the current working directory on the host.
+    - Symlinks are resolved recursively until a non-symlink path is reached or a cycle is detected.
 
     :param host_path: The host path.
-    :return: The resolved host path (without /mnt/host prefix).
+    :return: The resolved host path.
     """
     resolved_container_path = resolve_host_path_in_container(host_path)
     return pathlib.Path("/") / resolved_container_path.relative_to(CONTAINER_DIR_FOR_HOST_ROOT)
