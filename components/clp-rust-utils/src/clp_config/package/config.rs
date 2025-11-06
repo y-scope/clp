@@ -56,12 +56,22 @@ impl Default for Database {
 
 #[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+#[serde(default)]
 pub struct ApiServer {
     pub host: String,
     pub port: u16,
-    pub query_job_pool_initial_delay_ms: u64,
-    pub query_job_pool_max_delay_ms: u64,
-    pub default_max_num_results: u32,
+    pub query_job_polling: QueryJobPollingConfig,
+    pub default_max_num_query_results: u32,
+}
+
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
+pub struct QueryJobPollingConfig {
+    #[serde(rename = "inital_backoff")]
+    pub initial_backoff_ms: u64,
+
+    #[serde(rename = "max_backoff")]
+    pub max_backoff_ms: u64,
 }
 
 impl Default for ApiServer {
