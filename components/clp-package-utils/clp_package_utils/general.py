@@ -38,6 +38,7 @@ from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
     read_yaml_config_file,
+    resolve_host_path,
     resolve_host_path_in_container,
     validate_path_could_be_dir,
 )
@@ -244,7 +245,7 @@ def generate_container_config(
     docker_mounts = CLPDockerMounts(clp_home, CONTAINER_CLP_HOME)
 
     if StorageType.FS == clp_config.logs_input.type:
-        input_logs_dir = clp_config.logs_input.directory.resolve()
+        input_logs_dir = resolve_host_path(clp_config.logs_input.directory)
         container_clp_config.logs_input.directory = (
             CONTAINER_INPUT_LOGS_ROOT_DIR / input_logs_dir.relative_to(input_logs_dir.anchor)
         )
