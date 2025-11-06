@@ -4,14 +4,15 @@ This reference guide explains how to set up external databases for CLP instead o
 Docker Compose managed databases.
 
 :::{warning}
-The [CLP Docker Compose project][docker-compose-orchestration] includes MariaDB and MongoDB
-databases by default. This guide is only for users who want to customize their deployment by
-using their own database servers or cloud-managed databases (e.g., AWS RDS, Azure Database).
+The [CLP Docker Compose project][docker-compose-orchestration] includes MariaDB/MongoDB databases by
+default. This guide is only for users who want to customize their deployment by using their own
+database servers or cloud-managed databases (e.g., AWS RDS, Azure Database).
 :::
 
 CLP requires two databases:
-* **MariaDB/MySQL** - For storing metadata about archives, files, and jobs
-* **MongoDB** - For storing query results cache
+
+* **MariaDB/MySQL** - for storing metadata about archives, files, and jobs.
+* **MongoDB** - for caching query results.
 
 ## MariaDB/MySQL setup
 
@@ -99,7 +100,7 @@ mysql -h <mariadb-hostname-or-ip> -u clp-user -p clp-db
 When using AWS RDS:
 
 1. Create a MariaDB or MySQL RDS instance in the AWS Console.
-2. Note the endpoint hostname and port (default is 3306).
+2. Note the endpoint hostname and port (the default is `3306`).
 3. Create the database and user using a MySQL client:
 
    ```bash
