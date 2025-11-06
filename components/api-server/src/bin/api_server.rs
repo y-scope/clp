@@ -15,7 +15,8 @@ use clap::Parser;
 use clp_rust_utils::{clp_config::package, serde::yaml};
 use futures::{Stream, StreamExt};
 use thiserror::Error;
-use tracing_subscriber::{self, prelude::*};
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_subscriber::{self};
 
 #[derive(Parser)]
 #[command(version, about = "API Server for CLP.")]
@@ -23,11 +24,6 @@ struct Args {}
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer())
-        .with(tracing_subscriber::EnvFilter::from_default_env())
-        .init();
-
     let _ = Args::parse();
     let home = std::env::var("CLP_HOME").context("Expect `CLP_HOME` env variable")?;
     let home = std::path::Path::new(&home);
@@ -37,6 +33,18 @@ async fn main() -> anyhow::Result<()> {
         "Config file {} does not exist",
         config_path.display()
     ))?;
+
+    let file_appender = RollingFileAppender::new(
+        Rotation::HOURLY,
+        home.join(&config.logs_directory).join("api_server"),
+        "api_server.log",
+    );
+    let (non_blocking_writer, _guard) = tracing_appender::non_blocking(file_appender);
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_ansi(false)
+        .with_writer(non_blocking_writer)
+        .init();
 
     let credentials_path = home.join(package::DEFAULT_CREDENTIALS_FILE_PATH);
     let credentials: package::credentials::Credentials = yaml::from_path(&credentials_path)

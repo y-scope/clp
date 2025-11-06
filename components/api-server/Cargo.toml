@@ -26,4 +26,5 @@ sqlx = { version = "0.8.6", features = ["runtime-tokio", "mysql"] }
 thiserror = "2.0.17"
 tokio = { version = "1.48.0", features = ["full"] }
 tracing = "0.1.41"
+tracing-appender = "0.2.3"
 tracing-subscriber = { version = "0.3.20", features = ["json", "env-filter"] }

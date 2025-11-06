@@ -7,13 +7,26 @@ use serde::Deserialize;
 /// * This type is partially defined: unused fields are omitted and discarded through
 ///   deserialization.
 /// * The default values must be kept in sync with the Python definition.
-#[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]
 pub struct Config {
     pub package: Package,
     pub database: Database,
     pub results_cache: ResultsCache,
     pub api_server: ApiServer,
+    pub logs_directory: String,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            package: Package::default(),
+            database: Database::default(),
+            results_cache: ResultsCache::default(),
+            api_server: ApiServer::default(),
+            logs_directory: "var/log".to_owned(),
+        }
+    }
 }
 
 /// Mirror of `clp_py_utils.clp_config.Database`.
