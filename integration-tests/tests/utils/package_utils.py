@@ -120,7 +120,7 @@ def write_temp_config_file(
     mode_name: str,
 ) -> Path:
     """
-    Writes a temporary config file to `temp_config_dir` for a CLPCongig object. Returns the path to
+    Writes a temporary config file to `temp_config_dir` for a CLPConfig object. Returns the path to
     the temporary file on success.
     """
     temp_config_dir.mkdir(parents=True, exist_ok=True)
@@ -207,6 +207,21 @@ def is_package_running(package_instance: PackageInstance) -> tuple[bool, str | N
     return True, None
 
 
+def _compute_mode_signature(config: CLPConfig) -> tuple[Any, ...]:
+    """Constructs a signature that captures the mode-defining aspects of a CLPConfig object."""
+    return (
+        config.logs_input.type,
+        config.package.storage_engine.value,
+        config.package.storage_engine.value,
+        config.mcp_server is not None,
+        config.presto is not None,
+        config.archive_output.storage.type,
+        config.stream_output.storage.type,
+        config.aws_config_directory is not None,
+        config.get_deployment_type(),
+    )
+
+
 def is_running_mode_correct(package_instance: PackageInstance) -> tuple[bool, str | None]:
     """
     Checks if the mode described in the shared config file of `package_instance` is accurate with
@@ -221,15 +236,13 @@ def is_running_mode_correct(package_instance: PackageInstance) -> tuple[bool, st
 
     intended_config = get_clp_config_from_mode(package_instance.package_config.mode_name)
 
-    # TODO: when there are more modes, the following two lines should be reassessed, as checking the
-    # engines may not be enough.
-    running = (running_config.package.storage_engine, running_config.package.query_engine)
-    intended = (intended_config.package.storage_engine, intended_config.package.query_engine)
+    running_signature = _compute_mode_signature(running_config)
+    intended_signature = _compute_mode_signature(intended_config)
 
-    if running != intended:
+    if running_signature != intended_signature:
         return (
             False,
-            f"Mode mismatch: the package is running in {running[0].value}, {running[1].value},"
-            f" but it should be running in {intended[0].value}, {intended[1].value}.",
+            "Mode mismatch: running configuration does not match intended configuration.",
         )
+
     return True, None
