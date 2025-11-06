@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 
-set -o errexit
-set -o nounset
-set -o pipefail
-
 # Dependencies:
 # - curl
 # - make
 # - gcc
 # NOTE: Dependencies should be installed outside the script to allow the script to be largely distro-agnostic
+
+set -o errexit
+set -o nounset
+set -o pipefail
 
 for cmd in curl make gcc; do
     if ! $cmd --version >/dev/null 2>&1; then
