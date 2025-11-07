@@ -2,10 +2,7 @@
 
 import shutil
 import subprocess
-from pathlib import Path
-from typing import Any
 
-import yaml
 from clp_py_utils.clp_config import (
     CLPConfig,
 )
@@ -21,29 +18,6 @@ from tests.utils.docker_utils import (
     list_prefixed_containers,
 )
 from tests.utils.utils import load_yaml_to_dict
-
-
-def write_temp_config_file(
-    clp_config: CLPConfig,
-    temp_config_dir: Path,
-    mode_name: str,
-) -> Path:
-    """
-    Writes a temporary config file to `temp_config_dir` for a CLPConfig object. Returns the path to
-    the temporary file on success.
-    """
-    temp_config_dir.mkdir(parents=True, exist_ok=True)
-    temp_config_filename = f"clp-config-{mode_name}.yml"
-    temp_config_file_path = temp_config_dir / temp_config_filename
-
-    payload: dict[str, Any] = clp_config.dump_to_primitive_dict()
-
-    tmp_path = temp_config_file_path.with_suffix(temp_config_file_path.suffix + ".tmp")
-    with tmp_path.open("w", encoding="utf-8") as f:
-        yaml.safe_dump(payload, f, sort_keys=False)
-    tmp_path.replace(temp_config_file_path)
-
-    return temp_config_file_path
 
 
 def start_clp_package(package_config: PackageConfig) -> None:

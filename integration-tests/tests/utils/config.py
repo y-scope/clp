@@ -6,7 +6,9 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+
+import yaml
 
 if TYPE_CHECKING:
     from clp_py_utils.clp_config import CLPConfig
@@ -87,19 +89,16 @@ class PackageConfig:
     component_list: list[str]
 
     #: Directory to store any cached package config files.
-    temp_config_dir_init: InitVar[Path | None] = None
     temp_config_dir: Path = field(init=False, repr=True)
 
     #: The location of the constructed temporary config file for this package.
     temp_config_file_path: Path = field(init=False, repr=True)
 
-    def __post_init__(self, temp_config_dir_init: Path | None) -> None:
+    def __post_init__(self) -> None:
         """Validates the values specified at init, and initialises attributes."""
         # Validate that the CLP package directory exists and contains all required directories.
         clp_package_dir = self.clp_package_dir
         validate_dir_exists(clp_package_dir)
-
-        # Check for required package script directories
         required_dirs = ["etc", "sbin"]
         missing_dirs = [d for d in required_dirs if not (clp_package_dir / d).is_dir()]
         if len(missing_dirs) > 0:
@@ -110,20 +109,18 @@ class PackageConfig:
             raise ValueError(err_msg)
 
         # Initialize and create required cache directory for package tests.
-        if temp_config_dir_init is not None:
-            object.__setattr__(self, "temp_config_dir", temp_config_dir_init)
-        else:
-            object.__setattr__(self, "temp_config_dir", self.test_root_dir / "config-cache")
-
+        object.__setattr__(self, "temp_config_dir", self.test_root_dir / "temp_config_files")
         self.test_root_dir.mkdir(parents=True, exist_ok=True)
         self.temp_config_dir.mkdir(parents=True, exist_ok=True)
 
-        # Initialize temp_config_file_path placeholder. The file will be written by the fixture.
-        object.__setattr__(
-            self,
-            "temp_config_file_path",
-            self.temp_config_dir / f"clp-config-{self.mode_name}.yml",
+        # Write the temporary config file that the package will use.
+        clp_config_obj = self.build_config()
+        temp_config_file_path: Path = self._write_temp_config_file(
+            clp_config=clp_config_obj,
+            temp_config_dir=self.temp_config_dir,
+            mode_name=self.mode_name,
         )
+        object.__setattr__(self, "temp_config_file_path", temp_config_file_path)
 
     @property
     def start_script_path(self) -> Path:
@@ -134,6 +131,26 @@ class PackageConfig:
     def stop_script_path(self) -> Path:
         """:return: The absolute path to the package stop script."""
         return self.clp_package_dir / "sbin" / "stop-clp.sh"
+
+    @staticmethod
+    def _write_temp_config_file(
+        clp_config: CLPConfig,
+        temp_config_dir: Path,
+        mode_name: str,
+    ) -> Path:
+        """Writes a temporary config file to `temp_config_dir` for a CLPConfig object."""
+        temp_config_dir.mkdir(parents=True, exist_ok=True)
+        temp_config_filename = f"clp-config-{mode_name}.yml"
+        temp_config_file_path = temp_config_dir / temp_config_filename
+
+        payload: dict[str, Any] = clp_config.dump_to_primitive_dict()
+
+        tmp_path = temp_config_file_path.with_suffix(temp_config_file_path.suffix + ".tmp")
+        with tmp_path.open("w", encoding="utf-8") as f:
+            yaml.safe_dump(payload, f, sort_keys=False)
+        tmp_path.replace(temp_config_file_path)
+
+        return temp_config_file_path
 
 
 @dataclass(frozen=True)
