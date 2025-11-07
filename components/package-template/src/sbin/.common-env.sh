@@ -68,3 +68,8 @@ if [[ -z "${CLP_DOCKER_SOCK_PATH:-}" ]]; then
         export CLP_DOCKER_SOCK_PATH="$socket"
     fi
 fi
+
+CLP_COMPOSE_RUN_EXTRA_FLAGS=()
+if [[ $- != *i* ]]; then
+    CLP_COMPOSE_RUN_EXTRA_FLAGS+=(--interactive=false)
+fi
