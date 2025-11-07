@@ -39,19 +39,19 @@ To configure CLP for multi-host deployment, you'll need to:
 1. [configure and run CLP's environment setup scripts](#clp-environment-setup).
 2. [update CLP's *generated* configuration to support a multi-host
    deployment](#updating-clps-generated-configuration).
-3. [copy the set-up CLP package to all hosts in your cluster and update any host-specific
-   configurations](#distributing-the-set-up-package).
+3. [distribute and configure the CLP package on all hosts in your
+   cluster](#distributing-the-set-up-package).
 
 ### CLP environment setup
 
-1. **Extract the CLP package** on one host (the "setup host").
+1. Extract the CLP package on one host (the "setup host").
 
-2. **Configure credentials**:
+2. Configure credentials:
 
    * Copy `etc/credentials.template.yml` to `etc/credentials.yml`.
    * Edit `etc/credentials.yml` to set usernames and passwords.
 
-3. **Edit CLP's configuration file**:
+3. Edit CLP's configuration file:
 
    * Open `etc/clp-config.yml`.
    * For each service, set the `host` and `port` fields to the actual hostname/IP and port where you
@@ -60,7 +60,7 @@ To configure CLP for multi-host deployment, you'll need to:
      `archive_output.storage.directory`, and `stream_output.storage.directory` to directories on the
      shared filesystem.
 
-4. **Set up the CLP package's environment**:
+4. Set up the CLP package's environment:
 
    ```bash
    sbin/start-clp.sh --setup-only
@@ -72,6 +72,7 @@ To configure CLP for multi-host deployment, you'll need to:
    * Create any necessary directories
    * Generate an `.env` file with all necessary environment variables
    * Create `var/log/.clp-config.yml` (the container-specific configuration file)
+   * Create `var/www/webui/server/dist/settings.json` (the `webui` server's configuration file)
 
 ### Updating CLP's generated configuration
 
@@ -85,7 +86,7 @@ As mentioned at the beginning of this guide, this setup will be made simpler in 
 
 To update the generated configuration files for use across multiple hosts:
 
-1. **Edit `var/log/.clp-config.yml`**:
+1. Edit `var/log/.clp-config.yml`:
 
     * Update all `host` fields to use the actual hostname or IP address where each service will
       run (matching what you configured in `etc/clp-config.yml`).
@@ -93,7 +94,7 @@ To update the generated configuration files for use across multiple hosts:
     * For example, if your database runs on `192.168.1.10:3306`, ensure `database.host` is set to
       `192.168.1.10` and `database.port` is `3306`.
 
-2. **Edit `var/www/webui/server/dist/settings.json`**:
+2. Edit `var/www/webui/server/dist/settings.json`:
 
     * Update `SqlDbHost` to the actual hostname or IP address of your database service.
     * Update `SqlDbPort` if you changed the database port.
@@ -131,8 +132,9 @@ below indicate how to do so, with comments indicating the startup order and depe
 services.
 
 :::{note}
-For **clp-json + Presto** deployments (storage engine: `clp-s` with query engine: `presto`), you
-can omit starting the `query-scheduler`, `query-worker`, and `reducer` services.
+For **clp-json + Presto** deployments (`package.storage_engine`: `clp-s` with
+`package.query_engine`: `presto`), you can omit starting the `query-scheduler`, `query-worker`, and
+`reducer` services.
 :::
 
 :::{tip}
