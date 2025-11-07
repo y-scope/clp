@@ -74,7 +74,7 @@ public:
      * logtype.
      * @return A result containing the newly created `EncodedTextAst` instance on success, or an
      * error code indicating the failure:
-     * - EncodedTextAstErrEnum::MissingLogtype: if `string_blob` contains no strings.
+     * - EncodedTextAstErrorEnum::MissingLogtype: if `string_blob` contains no strings.
      */
     [[nodiscard]] static auto
     create(std::vector<encoded_variable_t> encoded_vars, StringBlob string_blob)
@@ -109,9 +109,9 @@ public:
      * @param float_var_handler
      * @param dict_var_handler
      * @return A void result on success, or an error code indicating the failure:
-     * - EncodedTextAstErrEnum::MissingEncodedVar if an encoded variable is missing.
-     * - EncodedTextAstErrEnum::MissingDictVar if a dictionary variable is missing.
-     * - EncodedTextAstErrEnum::UnexpectedTrailingEscapeCharacter if the logtype ends with an
+     * - EncodedTextAstErrorEnum::MissingEncodedVar if an encoded variable is missing.
+     * - EncodedTextAstErrorEnum::MissingDictVar if a dictionary variable is missing.
+     * - EncodedTextAstErrorEnum::UnexpectedTrailingEscapeCharacter if the logtype ends with an
      *   unexpected escape character.
      */
     template <bool unescape_logtype>
