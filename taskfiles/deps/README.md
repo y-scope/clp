@@ -35,6 +35,6 @@ Apply the following guidelines to the `CMAKE_GEN_ARGS` section of tasks that cal
   the generic `BUILD_TESTING` to `OFF`.
 
 * **Lastly**, while satisfying the above requirements, remove redundant flags that merely restate
-  default values found in `CMakeLists.txt` and others source CMake files, with two exceptions:
+  default values found in `CMakeLists.txt` and other source CMake files, with two exceptions:
   * Set `CMAKE_BUILD_TYPE` to `Release` unless another build type is explicitly required.
   * Set `CMAKE_INSTALL_MESSAGE` to `LAZY` to reduce log verbosity during installation.
