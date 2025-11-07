@@ -6,16 +6,12 @@ import re
 from collections.abc import Callable
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
-from typing import Any, TYPE_CHECKING
 
 import yaml
-
-if TYPE_CHECKING:
-    from clp_py_utils.clp_config import CLPConfig
-
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_LOG_DIRECTORY_PATH,
     CLP_SHARED_CONFIG_FILENAME,
+    CLPConfig,
 )
 
 from tests.utils.utils import (
@@ -143,7 +139,7 @@ class PackageConfig:
         temp_config_filename = f"clp-config-{mode_name}.yml"
         temp_config_file_path = temp_config_dir / temp_config_filename
 
-        payload: dict[str, Any] = clp_config.dump_to_primitive_dict()
+        payload = clp_config.dump_to_primitive_dict()  # type: ignore[no-untyped-call]
 
         tmp_path = temp_config_file_path.with_suffix(temp_config_file_path.suffix + ".tmp")
         with tmp_path.open("w", encoding="utf-8") as f:

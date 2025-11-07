@@ -879,7 +879,6 @@ clp = [
     { name = "job-orchestration" },
 ]
 dev = [
-    { name = "clp-py-utils" },
     { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-env" },
@@ -898,12 +897,12 @@ clp = [
     { name = "job-orchestration", directory = "../components/job-orchestration" },
 ]
 dev = [
-    { name = "clp-py-utils", directory = "../components/clp-py-utils" },
     { name = "mypy", specifier = ">=1.16.0" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-env", specifier = ">=1.1.5" },
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "ruff", specifier = ">=0.11.12" },
+    { name = "types-pyyaml", specifier = ">=6.0.12.20240808" },
 ]
 
 [[package]]

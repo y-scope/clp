@@ -23,7 +23,6 @@ clp = [
     "job-orchestration",
 ]
 dev = [
-    "clp-py-utils",
     "mypy>=1.16.0",
     "ruff>=0.11.12",
     "pytest>=8.4.1",
@@ -40,10 +39,6 @@ pretty = true
 show_error_code_links = true
 show_error_context = true
 show_error_end = true
-
-[[tool.mypy.overrides]]
-module = ["clp_py_utils.*"]
-ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 100
