@@ -79,7 +79,7 @@ public:
     create(std::vector<encoded_variable_t> encoded_vars, StringBlob string_blob)
             -> ystdlib::error_handling::Result<EncodedTextAst> {
         if (string_blob.get_num_strings() < 1) {
-            return EncodedTextAstErr{EncodedTextAstErrEnum::MissingLogtype};
+            return EncodedTextAstError{EncodedTextAstErrorEnum::MissingLogtype};
         }
         return EncodedTextAst{std::move(encoded_vars), std::move(string_blob)};
     }
@@ -115,10 +115,10 @@ public:
      */
     template <bool unescape_logtype>
     [[nodiscard]] auto decode(
-            EncodedTextAstConstantHandlerReq auto&& constant_handler,
-            EncodedTextAstIntVarHandlerReq<encoded_variable_t> auto&& int_var_handler,
-            EncodedTextAstFloatVarHandlerReq<encoded_variable_t> auto&& float_var_handler,
-            EncodedTextAstDictVarHandlerReq auto&& dict_var_handler
+            EncodedTextAstConstantHandlerReq auto constant_handler,
+            EncodedTextAstIntVarHandlerReq<encoded_variable_t> auto int_var_handler,
+            EncodedTextAstFloatVarHandlerReq<encoded_variable_t> auto float_var_handler,
+            EncodedTextAstDictVarHandlerReq auto dict_var_handler
     ) const -> ystdlib::error_handling::Result<void>;
 
     /**
@@ -160,10 +160,10 @@ private:
 template <ir::EncodedVariableTypeReq encoded_variable_t>
 template <bool unescape_logtype>
 [[nodiscard]] auto EncodedTextAst<encoded_variable_t>::decode(
-        EncodedTextAstConstantHandlerReq auto&& constant_handler,
-        EncodedTextAstIntVarHandlerReq<encoded_variable_t> auto&& int_var_handler,
-        EncodedTextAstFloatVarHandlerReq<encoded_variable_t> auto&& float_var_handler,
-        EncodedTextAstDictVarHandlerReq auto&& dict_var_handler
+        EncodedTextAstConstantHandlerReq auto constant_handler,
+        EncodedTextAstIntVarHandlerReq<encoded_variable_t> auto int_var_handler,
+        EncodedTextAstFloatVarHandlerReq<encoded_variable_t> auto float_var_handler,
+        EncodedTextAstDictVarHandlerReq auto dict_var_handler
 ) const -> ystdlib::error_handling::Result<void> {
     auto const logtype{get_logtype()};
     auto const logtype_length = logtype.length();
@@ -174,7 +174,7 @@ template <bool unescape_logtype>
     size_t encoded_vars_idx{0};
 
     for (size_t curr_pos{0}; curr_pos < logtype_length; ++curr_pos) {
-        auto const c{logtype[curr_pos]};
+        auto const c{logtype.at(curr_pos)};
         switch (c) {
             case enum_to_underlying_type(ir::VariablePlaceholder::Float): {
                 constant_handler(logtype.substr(
@@ -183,9 +183,9 @@ template <bool unescape_logtype>
                 ));
                 next_static_text_begin_pos = curr_pos + 1;
                 if (encoded_vars_idx >= num_encoded_vars) {
-                    return EncodedTextAstErr{EncodedTextAstErrEnum::MissingEncodedVar};
+                    return EncodedTextAstError{EncodedTextAstErrorEnum::MissingEncodedVar};
                 }
-                float_var_handler(m_encoded_vars[encoded_vars_idx]);
+                float_var_handler(m_encoded_vars.at(encoded_vars_idx));
                 ++encoded_vars_idx;
                 break;
             }
@@ -197,9 +197,9 @@ template <bool unescape_logtype>
                 ));
                 next_static_text_begin_pos = curr_pos + 1;
                 if (encoded_vars_idx >= num_encoded_vars) {
-                    return EncodedTextAstErr{EncodedTextAstErrEnum::MissingEncodedVar};
+                    return EncodedTextAstError{EncodedTextAstErrorEnum::MissingEncodedVar};
                 }
-                int_var_handler(m_encoded_vars[encoded_vars_idx]);
+                int_var_handler(m_encoded_vars.at(encoded_vars_idx));
                 ++encoded_vars_idx;
                 break;
             }
@@ -211,7 +211,7 @@ template <bool unescape_logtype>
                 ));
                 next_static_text_begin_pos = curr_pos + 1;
                 if (dictionary_vars_idx >= m_num_dict_vars) {
-                    return EncodedTextAstErr{EncodedTextAstErrEnum::MissingDictVar};
+                    return EncodedTextAstError{EncodedTextAstErrorEnum::MissingDictVar};
                 }
                 dict_var_handler(m_string_blob.get_string(dictionary_vars_idx).value());
                 ++dictionary_vars_idx;
@@ -221,8 +221,8 @@ template <bool unescape_logtype>
             case enum_to_underlying_type(ir::VariablePlaceholder::Escape): {
                 // Ensure the escape character is followed by a character that's being escaped
                 if (curr_pos == logtype_length - 1) {
-                    return EncodedTextAstErr{
-                            EncodedTextAstErrEnum::UnexpectedTrailingEscapeCharacter
+                    return EncodedTextAstError{
+                            EncodedTextAstErrorEnum::UnexpectedTrailingEscapeCharacter
                     };
                 }
 

@@ -1,5 +1,6 @@
 #include <cstddef>
 #include <cstdint>
+#include <ranges>
 #include <string>
 #include <string_view>
 #include <utility>
@@ -8,6 +9,8 @@
 #include <catch2/catch_template_test_macros.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include <fmt/format.h>
+#include <fmt/ranges.h>
 
 #include "../../BufferReader.hpp"
 #include "../../ir/types.hpp"
@@ -71,36 +74,36 @@ TEMPLATE_TEST_CASE(
         four_byte_encoded_variable_t
 ) {
     SECTION("Text with variables") {
-        std::string text;
-        std::vector<std::string> const var_strs{
-                "4938",
-                std::to_string(INT32_MAX),
-                std::to_string(INT64_MAX),
-                "0.1",
-                "-25.519686",
-                "-25.5196868642755",
-                "-00.00",
-                "bin/python2.7.3",
-                "abc123"
+        std::vector<std::pair<std::string, std::string>> const test_str_components{
+                {"Here is a string with a small int ", "2887"},
+                {"and a medium int ", std::to_string(INT32_MAX)},
+                {"and a very large int ", std::to_string(INT64_MAX)},
+                {"and a small float ", "0.1"},
+                {"and a medium float ", "-25.519686"},
+                {"and a long float ", "-25.5196868642755"},
+                {"and a weird float ", "-00.00"},
+                {"and a string with numbers ", "bin/python3.14.0"},
+                {"and another string with numbers ", "abc123"},
+                {"and a dict var=", "IamString"},
+                {"and another dict var=", "DictVarWith\\escape"},
+                {"and an int var placeholder: ",
+                 std::string(1, enum_to_underlying_type(VariablePlaceholder::Integer))},
+                {"and a float var placeholder: ",
+                 std::string(1, enum_to_underlying_type(VariablePlaceholder::Float))},
+                {"and a dict var placeholder: ",
+                 std::string(1, enum_to_underlying_type(VariablePlaceholder::Dictionary))},
+                {"and a valid trailing escape: ",
+                 std::string(2, enum_to_underlying_type(VariablePlaceholder::Escape))},
         };
-        size_t var_ix{0};
-        text = "here is a string with a small int " + var_strs[var_ix++];
-        text += " and a medium int " + var_strs[var_ix++];
-        text += " and a very large int " + var_strs[var_ix++];
-        text += " and a small float " + var_strs[var_ix++];
-        text += " and a medium float " + var_strs[var_ix++];
-        text += " and a weird float " + var_strs[var_ix++];
-        text += " and a string with numbers " + var_strs[var_ix++];
-        text += " and another string with numbers " + var_strs[var_ix++];
-        text += "\n";
-        text += "Integer var placeholder: ";
-        text += enum_to_underlying_type(VariablePlaceholder::Integer);
-        text += "\n";
-        text += "Float var placeholder: ";
-        text += enum_to_underlying_type(VariablePlaceholder::Float);
-        text += "\n";
-        text += "Dict var placeholder: ";
-        text += enum_to_underlying_type(VariablePlaceholder::Dictionary);
+        auto const text = fmt::format(
+                "{}",
+                fmt::join(
+                        test_str_components | std::views::transform([](auto const& pair) {
+                            return pair.first + pair.second;
+                        }),
+                        " "
+                )
+        );
 
         auto const encoded_text_ast{create_encoded_text_ast_from_string<TestType>(text)};
         auto const decoded_text_result{encoded_text_ast.to_string()};
@@ -125,7 +128,7 @@ TEMPLATE_TEST_CASE(
             REQUIRE(encoded_text_ast_result.has_error());
             REQUIRE(
                     (encoded_text_ast_result.error()
-                     == EncodedTextAstErr{EncodedTextAstErrEnum::MissingLogtype})
+                     == EncodedTextAstError{EncodedTextAstErrorEnum::MissingLogtype})
             );
         }
 
@@ -133,15 +136,15 @@ TEMPLATE_TEST_CASE(
             auto const [placeholder, expected_error_enum] = GENERATE(
                     std::make_pair(
                             enum_to_underlying_type(VariablePlaceholder::Integer),
-                            EncodedTextAstErrEnum::MissingEncodedVar
+                            EncodedTextAstErrorEnum::MissingEncodedVar
                     ),
                     std::make_pair(
                             enum_to_underlying_type(VariablePlaceholder::Float),
-                            EncodedTextAstErrEnum::MissingEncodedVar
+                            EncodedTextAstErrorEnum::MissingEncodedVar
                     ),
                     std::make_pair(
                             enum_to_underlying_type(VariablePlaceholder::Dictionary),
-                            EncodedTextAstErrEnum::MissingDictVar
+                            EncodedTextAstErrorEnum::MissingDictVar
                     )
             );
             std::string const logtype_with_single_int_var{placeholder};
@@ -160,7 +163,7 @@ TEMPLATE_TEST_CASE(
             REQUIRE_FALSE(encoded_text_ast_result.has_error());
             auto const decoded_result{encoded_text_ast_result.value().to_string()};
             REQUIRE(decoded_result.has_error());
-            REQUIRE((decoded_result.error() == EncodedTextAstErr{expected_error_enum}));
+            REQUIRE((decoded_result.error() == EncodedTextAstError{expected_error_enum}));
         }
 
         SECTION("Trailing escape") {
@@ -185,7 +188,9 @@ TEMPLATE_TEST_CASE(
             REQUIRE(decoded_result.has_error());
             REQUIRE(
                     (decoded_result.error()
-                     == EncodedTextAstErr{EncodedTextAstErrEnum::UnexpectedTrailingEscapeCharacter})
+                     == EncodedTextAstError{
+                             EncodedTextAstErrorEnum::UnexpectedTrailingEscapeCharacter
+                     })
             );
         }
     }

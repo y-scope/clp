@@ -9,16 +9,16 @@ namespace clp::ffi {
 /**
  * Error enums for `EncodedTextAst`.
  */
-enum class EncodedTextAstErrEnum : uint8_t {
+enum class EncodedTextAstErrorEnum : uint8_t {
     MissingDictVar = 1,
     MissingEncodedVar,
     MissingLogtype,
     UnexpectedTrailingEscapeCharacter,
 };
 
-using EncodedTextAstErr = ystdlib::error_handling::ErrorCode<EncodedTextAstErrEnum>;
+using EncodedTextAstError = ystdlib::error_handling::ErrorCode<EncodedTextAstErrorEnum>;
 }  // namespace clp::ffi
 
-YSTDLIB_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(clp::ffi::EncodedTextAstErrEnum);
+YSTDLIB_ERROR_HANDLING_MARK_AS_ERROR_CODE_ENUM(clp::ffi::EncodedTextAstErrorEnum);
 
 #endif  // CLP_FFI_ENCODEDTEXTASTERROR_HPP

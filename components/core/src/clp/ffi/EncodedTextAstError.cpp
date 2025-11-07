@@ -4,8 +4,8 @@
 
 #include <ystdlib/error_handling/ErrorCode.hpp>
 
-using clp::ffi::EncodedTextAstErrEnum;
-using EncodedTextAstErrorCategory = ystdlib::error_handling::ErrorCategory<EncodedTextAstErrEnum>;
+using clp::ffi::EncodedTextAstErrorEnum;
+using EncodedTextAstErrorCategory = ystdlib::error_handling::ErrorCategory<EncodedTextAstErrorEnum>;
 
 template <>
 auto EncodedTextAstErrorCategory::name() const noexcept -> char const* {
@@ -13,17 +13,17 @@ auto EncodedTextAstErrorCategory::name() const noexcept -> char const* {
 }
 
 template <>
-auto EncodedTextAstErrorCategory::message(EncodedTextAstErrEnum error_enum) const -> std::string {
+auto EncodedTextAstErrorCategory::message(EncodedTextAstErrorEnum error_enum) const -> std::string {
     switch (error_enum) {
-        case EncodedTextAstErrEnum::MissingEncodedVar:
+        case EncodedTextAstErrorEnum::MissingEncodedVar:
             return "An encoded variable is missing from the `EncodedTextAst`";
-        case EncodedTextAstErrEnum::MissingDictVar:
+        case EncodedTextAstErrorEnum::MissingDictVar:
             return "A dictionary variable is missing from the `EncodedTextAst`";
-        case EncodedTextAstErrEnum::MissingLogtype:
+        case EncodedTextAstErrorEnum::MissingLogtype:
             return "The logtype is missing from the `EncodedTextAst`";
-        case EncodedTextAstErrEnum::UnexpectedTrailingEscapeCharacter:
+        case EncodedTextAstErrorEnum::UnexpectedTrailingEscapeCharacter:
             return "Unexpected escape character without escaped value at the end of the logtype";
         default:
-            return "Unknown error code enum.";
+            return "Unknown error code enum";
     }
 }
