@@ -6,6 +6,7 @@ vars:
 tasks:
   default:
     deps:
+      - task: "clp-py-project-imports"
       - task: "core"
 
   cache-clear:
@@ -24,6 +25,10 @@ tasks:
       CLP_CORE_BINS_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
       CLP_PACKAGE_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
     cmd: "uv run python -m pytest -m core"
+
+  clp-py-project-imports:
+    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
+    cmd: "uv run python -m pytest tests/test_clp_native_py_project_imports.py"
 
   package:
     deps:

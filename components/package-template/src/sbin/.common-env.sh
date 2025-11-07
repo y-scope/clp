@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+set -o errexit
+set -o nounset
+set -o pipefail
+
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 package_root=$(readlink -f "$script_dir/..")
 
@@ -63,4 +67,9 @@ if [[ -z "${CLP_DOCKER_SOCK_PATH:-}" ]]; then
     if [[ -S "$socket" ]]; then
         export CLP_DOCKER_SOCK_PATH="$socket"
     fi
+fi
+
+CLP_COMPOSE_RUN_EXTRA_FLAGS=()
+if [[ $- != *i* ]]; then
+    CLP_COMPOSE_RUN_EXTRA_FLAGS+=(--interactive=false)
 fi
