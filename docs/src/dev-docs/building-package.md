@@ -54,7 +54,8 @@ To build the package, run:
 task
 ```
 
-The build will be in `build/clp-package` and defaults to using the storage engine for `clp-json`.
+The build will be in `build/clp-package` and defaults to using the storage and query engines for
+`clp-json`.
 
 :::{note}
 The `task` command runs `task package` under the hood. In addition to the build, a Docker image
