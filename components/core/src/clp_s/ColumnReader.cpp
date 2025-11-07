@@ -235,8 +235,7 @@ auto LogTypeColumnReader::extract_escaped_string_value_into_buffer(
 }
 
 auto LogTypeColumnReader::get_encoded_id(uint64_t cur_message) -> int64_t {
-    auto value = m_logtypes[cur_message];
-    return LogTypeColumnWriter::get_encoded_log_dict_id(value);
+    return LogTypeColumnWriter::get_encoded_log_dict_id(m_logtypes[cur_message]);
 }
 
 void VariableStringColumnReader::load(BufferViewReader& reader, uint64_t num_messages) {
