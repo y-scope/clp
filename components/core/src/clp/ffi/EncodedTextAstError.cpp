@@ -9,7 +9,7 @@ using EncodedTextAstErrorCategory = ystdlib::error_handling::ErrorCategory<Encod
 
 template <>
 auto EncodedTextAstErrorCategory::name() const noexcept -> char const* {
-    return "clp::ffi::ir_stream::IrErrorCode";
+    return "clp::ffi::EncodedTextAstErrorCode";
 }
 
 template <>

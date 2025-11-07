@@ -70,7 +70,7 @@ public:
     // Factory function
     /**
      * @param encoded_vars
-     * @param string_blob
+     * @param string_blob A string blob containing a list of dictionary variables followed by a logtype.
      * @return A result containing the newly created `EncodedTextAst` instance on success, or an
      * error code indicating the failure:
      * - EncodedTextAstErrEnum::MissingLogtype: if `string_blob` contains no strings.
@@ -236,7 +236,7 @@ template <bool unescape_logtype>
                 }
 
                 // The character after the escape character is static text (regardless of whether it
-                // is a variable placeholder), so increment cur_pos by 1 to ensure we don't process
+                // is a variable placeholder), so increment curr_pos by 1 to ensure we don't process
                 // the next character in any of the other cases (instead it will be added to the
                 // message).
                 ++curr_pos;
