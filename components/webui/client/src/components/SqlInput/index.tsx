@@ -13,6 +13,7 @@ import SqlEditor, {
     SqlEditorProps,
     SqlEditorType,
 } from "../SqlEditor";
+import {escapeHoverMarkdown} from "./utils";
 
 
 type SqlInputProps = SqlEditorProps & {
@@ -31,6 +32,7 @@ type SqlInputProps = SqlEditorProps & {
 const SqlInput = (props: SqlInputProps) => {
     const {validateFn, ...editorProps} = props;
     const editorRef = useRef<Nullable<SqlEditorType>>(null);
+    const decorationsRef = useRef<Nullable<monaco.editor.IEditorDecorationsCollection>>(null);
 
     const handleEditorReady = useCallback((editor: SqlEditorType) => {
         editorRef.current = editor;
@@ -67,31 +69,41 @@ const SqlInput = (props: SqlInputProps) => {
             return;
         }
 
-        const model = editor.getModel();
-        if (null === model) {
-            return;
+        if (null === decorationsRef.current) {
+            decorationsRef.current = editor.createDecorationsCollection();
         }
 
         const value = editorProps.value ?? "";
 
-        // Clear markers if no validation function or empty/whitespace-only input
         if ("undefined" === typeof validateFn || "" === value.trim()) {
-            monaco.editor.setModelMarkers(model, "sql-parser", []);
+            decorationsRef.current.clear();
 
             return;
         }
 
         const errors = validateFn(value);
-        const markers: monaco.editor.IMarkerData[] = errors.map((error) => ({
-            endColumn: error.endColumn,
-            endLineNumber: error.line,
-            message: error.message,
-            severity: monaco.MarkerSeverity.Error,
-            startColumn: error.startColumn,
-            startLineNumber: error.line,
-        }));
+        const decorations: monaco.editor.IModelDeltaDecoration[] = errors.map((error) => ({
+            range: new monaco.Range(error.line, error.startColumn, error.line, error.endColumn),
+            options: {
+                className: "squiggly-error",
+                hoverMessage: {value: escapeHoverMarkdown(error.message), isTrusted: false},
+                minimap: {
+                    color: {id: "minimap.errorHighlight"},
+                    position: monaco.editor.MinimapPosition.Inline,
+                },
 
-        monaco.editor.setModelMarkers(model, "sql-parser", markers);
+                overviewRuler: {
+                    color: {id: "editorOverviewRuler.errorForeground"},
+                    position: monaco.editor.OverviewRulerLane.Right,
+                },
+                showIfCollapsed: true,
+                stickiness: monaco.editor.TrackedRangeStickiness.NeverGrowsWhenTypingAtEdges,
+                zIndex: 30,
+            },
+        }
+        ));
+
+        decorationsRef.current.set(decorations);
     }, [editorProps.value,
         validateFn]);
 
@@ -117,6 +129,7 @@ const SqlInput = (props: SqlInputProps) => {
                     top: 6,
                     bottom: 4,
                 },
+                quickSuggestions: false,
                 renderLineHighlight: "none",
                 roundedSelection: false,
                 scrollBeyondLastColumn: 0,

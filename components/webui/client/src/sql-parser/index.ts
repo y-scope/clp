@@ -3,8 +3,8 @@ import {
     CharStream,
     CommonTokenStream,
     ErrorListener,
-    RecognitionException,
     Recognizer,
+    Token,
 } from "antlr4";
 
 import SqlLexer from "./generated/SqlLexer";
@@ -32,19 +32,14 @@ class SyntaxErrorListener<TSymbol> extends ErrorListener<TSymbol> {
     // eslint-disable-next-line max-params
     override syntaxError (
         _recognizer: Recognizer<TSymbol>,
-        _offendingSymbol: TSymbol,
+        offendingSymbol: TSymbol,
         line: number,
         column: number,
         msg: string,
-        e: RecognitionException | undefined,
     ) {
-        let startColumn = column + 1;
-        let endColumn = column + 2;
-
-        if (e?.offendingToken) {
-            startColumn = e.offendingToken.start + 1;
-            endColumn = e.offendingToken.stop + 2;
-        }
+        const token = offendingSymbol as unknown as Token;
+        const startColumn = token.start + 1;
+        const endColumn = token.stop + 2;
 
         this.errors.push({
             column: column,
