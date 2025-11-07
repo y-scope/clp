@@ -1,5 +1,6 @@
 #include "JsonParser.hpp"
 
+#include <array>
 #include <cctype>
 #include <cstddef>
 #include <cstdint>
@@ -16,13 +17,16 @@
 #include <boost/uuid/uuid_io.hpp>
 #include <curl/curl.h>
 #include <fmt/core.h>
+#include <log_surgeon/BufferParser.hpp>
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/LogEvent.hpp>
+#include <log_surgeon/SchemaParser.hpp>
 #include <log_surgeon/Token.hpp>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
 
+#include "clp_s/CommandLineArguments.hpp"
 #include "clp_s/DictionaryEntry.hpp"
 #include "clp_s/ParsedMessage.hpp"
 #include "clp_s/SchemaTree.hpp"
@@ -81,6 +85,12 @@ auto trim_trailing_whitespace(std::string_view str) -> std::string_view;
  */
 auto round_trip_is_identical(std::string_view float_str, double value, float_format_t format)
         -> bool;
+
+/**
+ * @return A log surgeon parser created from the provided schema.
+ */
+auto create_log_surgeon_parser(Path const& schema_path, NetworkAuthOption const& network_auth)
+        -> ystdlib::error_handling::Result<std::unique_ptr<log_surgeon::BufferParser>>;
 
 /**
  * Class that implements `clp::ffi::ir_stream::IrUnitHandlerReq` for Key-Value IR compression.
@@ -145,6 +155,34 @@ auto round_trip_is_identical(std::string_view float_str, double value, float_for
     auto const restore_result{restore_encoded_float(value, format)};
     return false == restore_result.has_error() && float_str == restore_result.value();
 }
+
+/*
+ * Log surgeon currently does not expose a way to create a parser using a Reader. To support any
+ * Reader and not directly take the file path we read the entire schema file into a string and
+ * create the parser from it.
+ */
+auto create_log_surgeon_parser(Path const& schema_path, NetworkAuthOption const& network_auth)
+        -> ystdlib::error_handling::Result<std::unique_ptr<log_surgeon::BufferParser>> {
+    auto schema_reader{try_create_reader(schema_path, network_auth)};
+    if (nullptr == schema_reader) {
+        return ClpsErrorCode{ClpsErrorCodeEnum::BadParam};
+    }
+    std::string schema_contents{};
+    constexpr size_t cBufSize{4096};
+    std::array<char, cBufSize> buf{};
+    size_t bytes_read{};
+    while (true) {
+        auto code{schema_reader->try_read(buf.data(), buf.size(), bytes_read)};
+        if (clp::ErrorCode_EndOfFile == code) {
+            break;
+        }
+        if (clp::ErrorCode_Success != code) {
+            return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
+        }
+        schema_contents.append(buf.data(), bytes_read);
+    }
+    return std::make_unique<log_surgeon::BufferParser>(schema_contents);
+}
 }  // namespace
 
 JsonParser::JsonParser(JsonParserOption const& option)
@@ -155,10 +193,17 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_record_log_order(option.record_log_order),
           m_retain_float_format(option.retain_float_format),
           m_input_paths(option.input_paths),
-          m_network_auth(option.network_auth),
-          // TODO clpsls the type of parser for ls depends on the file which isn't known yet
-          // probably want to move some logic outside of JsonParser
-          m_log_surgeon_parser(log_surgeon::BufferParser(option.log_surgeon_schema_file_path)) {
+          m_network_auth(option.network_auth) {
+    auto result{create_log_surgeon_parser(option.log_surgeon_schema_path, m_network_auth)};
+    if (result.has_error()) {
+        SPDLOG_ERROR(
+                "Failed to create log surgeon parser from: \"{}\" due to: \"{}\"",
+                option.log_surgeon_schema_path.path,
+                result.error().message()
+        );
+        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    }
+    m_log_surgeon_parser = std::move(result.value());
     if (false == m_timestamp_key.empty()) {
         if (false
             == clp_s::search::ast::tokenize_column_descriptor(
@@ -1423,19 +1468,19 @@ bool JsonParser::check_and_log_curl_error(
 // TODO clpsls: probably want string view API to ls
 auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view)
         -> ystdlib::error_handling::Result<void> {
-    m_log_surgeon_parser.reset();
+    m_log_surgeon_parser->reset();
     size_t offset{};
     // TODO clpsls: add string_view api to log surgeon
     std::string str{view};
     if (log_surgeon::ErrorCode::Success
-        != m_log_surgeon_parser.parse_next_event(str.data(), str.size(), offset, true))
+        != m_log_surgeon_parser->parse_next_event(str.data(), str.size(), offset, true))
     {
         return ClpsErrorCode{ClpsErrorCodeEnum::Failure};
     }
 
     auto msg_start{m_current_schema.start_unordered_object(NodeType::LogMessage)};
 
-    auto const& log_parser{m_log_surgeon_parser.get_log_parser()};
+    auto const& log_parser{m_log_surgeon_parser->get_log_parser()};
     auto const& event{log_parser.get_log_event_view()};
     auto const& log_buf = event.get_log_output_buffer();
 

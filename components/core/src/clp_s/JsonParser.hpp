@@ -47,7 +47,7 @@ struct JsonParserOption {
     bool retain_float_format{false};
     bool single_file_archive{false};
     NetworkAuthOption network_auth{};
-    std::string log_surgeon_schema_file_path;
+    Path log_surgeon_schema_path;
 };
 
 class JsonParser {
@@ -107,8 +107,8 @@ private:
     ) -> bool;
 
     /**
-     * Parses plain text input and ingests it into the current archive, splitting the archive if it grows
-     * beyond the target encoded size.
+     * Parses plain text input and ingests it into the current archive, splitting the archive if it
+     * grows beyond the target encoded size.
      * @param reader
      * @param path
      * @param archive_creator_id
@@ -276,7 +276,8 @@ private:
 
     std::vector<ArchiveStats> m_archive_stats;
 
-    log_surgeon::BufferParser m_log_surgeon_parser;
+    // clpsls
+    std::unique_ptr<log_surgeon::BufferParser> m_log_surgeon_parser;
 };
 }  // namespace clp_s
 

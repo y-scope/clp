@@ -3,6 +3,7 @@
 
 #include <optional>
 #include <string>
+#include <string_view>
 #include <vector>
 
 #include <boost/program_options/option.hpp>
@@ -34,6 +35,11 @@ public:
         Reducer,
         ResultsCache,
         Stdout,
+    };
+
+    struct ExperimentalQueries {
+        static constexpr std::string_view cLogTypeStatsQuery{"stats.logtypes"};
+        static constexpr std::string_view cVariableStatsQuery{"stats.variables"};
     };
 
     // Constructors
@@ -122,13 +128,9 @@ public:
 
     [[nodiscard]] auto experimental_enabled() const -> bool { return m_experimental_enabled; }
 
-    [[nodiscard]] auto get_log_surgeon_schema_file_path() const -> std::string const& {
-        return m_log_surgeon_schema_file_path;
+    [[nodiscard]] auto get_log_surgeon_schema_path() const -> Path {
+        return m_log_surgeon_schema_path;
     }
-
-    [[nodiscard]] auto print_logtype_stats() const -> bool { return m_print_logtype_stats; }
-
-    [[nodiscard]] auto print_variable_stats() const -> bool { return m_print_variable_stats; }
 
 private:
     // Methods
@@ -238,9 +240,7 @@ private:
 
     // clpsls Prototype
     bool m_experimental_enabled{false};
-    std::string m_log_surgeon_schema_file_path;
-    bool m_print_logtype_stats{false};
-    bool m_print_variable_stats{false};
+    Path m_log_surgeon_schema_path;
 };
 }  // namespace clp_s
 

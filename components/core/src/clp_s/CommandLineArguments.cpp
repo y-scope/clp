@@ -9,6 +9,8 @@
 #include <fmt/format.h>
 #include <spdlog/spdlog.h>
 
+#include <clp_s/InputConfig.hpp>
+
 #include "../clp/cli_utils.hpp"
 #include "../clp/type_utils.hpp"
 #include "../reducer/types.hpp"
@@ -278,13 +280,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
 
             po::options_description experimental_options("Experimental Options");
+            std::string log_surgeon_schema_path;
             experimental_options.add_options()(
                     "schema-path",
-                    po::value<std::string>(&m_log_surgeon_schema_file_path)
-                            ->value_name("FILE")
-                            ->default_value(m_log_surgeon_schema_file_path),
-                    "Path to a log surgeon schema file. If not specified, heuristics are used to"
-                    " determine dictionary variables. See README-Schema.md for details."
+                    po::value<std::string>(&log_surgeon_schema_path)->value_name("PATH"),
+                    "Path to a log surgeon schema. See README-Schema.md for details."
             );
 
             po::positional_options_description positional_options;
@@ -348,16 +348,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             validate_experimental();
 
-            if (false == m_log_surgeon_schema_file_path.empty()) {
-                if (false == boost::filesystem::exists(m_log_surgeon_schema_file_path)) {
-                    throw std::invalid_argument("Specified schema file does not exist.");
-                }
-                if (false == boost::filesystem::is_regular_file(m_log_surgeon_schema_file_path)) {
-                    throw std::invalid_argument(
-                            "Specified schema file '" + m_log_surgeon_schema_file_path
-                            + "' is not a regular file."
-                    );
-                }
+            if (false == log_surgeon_schema_path.empty()) {
+                m_log_surgeon_schema_path = get_path_object_for_raw_path(log_surgeon_schema_path);
             }
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
@@ -579,20 +571,6 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             );
             // clang-format on
             search_options.add(aggregation_options);
-
-            po::options_description experimental_options("Experimental Options");
-            experimental_options.add_options()(
-                    "print-logtype-stats",
-                    po::bool_switch(&m_print_logtype_stats),
-                    "Print out the logtypes and their count for each archive."
-            );
-            experimental_options.add_options()(
-                    "print-variable-stats",
-                    po::bool_switch(&m_print_variable_stats),
-                    "Print out the unstructured variables, their type, and their count for each "
-                    "archive."
-            );
-            search_options.add(experimental_options);
 
             po::options_description network_output_handler_options(
                     "Network Output Handler Options"
@@ -949,20 +927,14 @@ auto CommandLineArguments::validate_experimental() const -> void {
     if (m_experimental_enabled) {
         return;
     }
-    if (false == m_log_surgeon_schema_file_path.empty()) {
-        throw std::invalid_argument(
-                "Must set --experimental to parse unstructured logs with log-surgeon."
-        );
+    if (false == m_log_surgeon_schema_path.path.empty()) {
+        throw std::invalid_argument("Set --experimental to parse text with log-surgeon.");
     }
-    if (m_print_logtype_stats) {
-        throw std::invalid_argument(
-                "Must set --experimental to print the logtype stats."
-        );
+    if (ExperimentalQueries::cLogTypeStatsQuery == m_query) {
+        throw std::invalid_argument("Set --experimental to access the logtype stats.");
     }
-    if (m_print_variable_stats) {
-        throw std::invalid_argument(
-                "Must set --experimental to print the variable stats."
-        );
+    if (ExperimentalQueries::cVariableStatsQuery == m_query) {
+        throw std::invalid_argument("Set --experimental to access the variable stats.");
     }
 }
 }  // namespace clp_s

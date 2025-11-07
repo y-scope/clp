@@ -76,6 +76,11 @@ bool search_archive(
         int reducer_socket_fd
 );
 
+/**
+ * @return -1 if no experimental query found, 0 on success, >0 on failure
+ */
+auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int;
+
 bool compress(CommandLineArguments const& command_line_arguments) {
     auto archives_dir = std::filesystem::path(command_line_arguments.get_archives_dir());
 
@@ -105,7 +110,7 @@ bool compress(CommandLineArguments const& command_line_arguments) {
     option.single_file_archive = command_line_arguments.get_single_file_archive();
     option.structurize_arrays = command_line_arguments.get_structurize_arrays();
     option.record_log_order = command_line_arguments.get_record_log_order();
-    option.log_surgeon_schema_file_path = command_line_arguments.get_log_surgeon_schema_file_path();
+    option.log_surgeon_schema_path = command_line_arguments.get_log_surgeon_schema_path();
 
     clp_s::JsonParser parser(option);
     if (false == parser.ingest()) {
@@ -278,6 +283,33 @@ bool search_archive(
     );
     return output.filter();
 }
+
+auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
+    auto const& query = cli_args.get_query();
+    if (CommandLineArguments::ExperimentalQueries::cLogTypeStatsQuery != query
+        && CommandLineArguments::ExperimentalQueries::cVariableStatsQuery != query)
+    {
+        return -1;
+    }
+    auto archive_reader = std::make_shared<clp_s::ArchiveReader>();
+    for (auto const& input_path : cli_args.get_input_paths()) {
+        try {
+            archive_reader->open(input_path, cli_args.get_network_auth());
+        } catch (std::exception const& e) {
+            SPDLOG_ERROR("Failed to open archive - {}", e.what());
+            return 1;
+        }
+        if (CommandLineArguments::ExperimentalQueries::cLogTypeStatsQuery == query) {
+            for (auto const& entry : archive_reader->read_log_type_dictionary()->get_entries()) {
+            }
+        } else if (CommandLineArguments::ExperimentalQueries::cVariableStatsQuery != query) {
+            for (auto const& entry : archive_reader->read_variable_dictionary()->get_entries()) {
+            }
+        }
+        archive_reader->close();
+    }
+    return 0;
+}
 }  // namespace
 
 int main(int argc, char const* argv[]) {
@@ -339,6 +371,10 @@ int main(int argc, char const* argv[]) {
         }
     } else {
         auto const& query = command_line_arguments.get_query();
+        if (auto const result{handle_experimental_queries(command_line_arguments)}; 0 > result) {
+            return result;
+        }
+
         auto query_stream = std::istringstream(query);
         auto expr = kql::parse_kql_expression(query_stream);
         if (nullptr == expr) {
