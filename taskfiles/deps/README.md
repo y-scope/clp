@@ -29,7 +29,7 @@ Apply the following guidelines to the `CMAKE_GEN_ARGS` section of tasks that cal
 
 * Build both shared and static libraries when possible.
 
-* Skip unit tests, examples, docs or unused binaries to speed up the installation process.
+* Skip unit tests, examples, docs, or unused binaries to speed up the installation process.
 
 * Prefer disabling lib-specific testing flags (e.g., `CATCH_BUILD_TESTING=OFF`) rather than setting
   the generic `BUILD_TESTING` to `OFF`.
