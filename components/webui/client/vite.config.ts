@@ -25,11 +25,11 @@ export default defineConfig({
             // Below targets should match the server's configuration in
             // `components/webui/server/.env` (or `.env.local` if overridden)
             "/api/": {
-                target: "http://localhost:3005/",
+                target: "http://localhost:3000/",
                 changeOrigin: true,
             },
             "/socket.io/": {
-                target: "ws://localhost:3005/",
+                target: "ws://localhost:3000/",
                 changeOrigin: true,
                 ws: true,
             },
