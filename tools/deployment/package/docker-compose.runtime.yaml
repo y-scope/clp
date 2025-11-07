@@ -5,8 +5,6 @@ services:
     logging:
       driver: "local"
     network_mode: "host"
-    stdin_open: true
-    tty: true
     user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:999}"
     environment:
       # NOTE: We forward "$HOME" into the container so that if the user specified "~" anywhere in
