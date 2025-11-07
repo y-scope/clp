@@ -1,3 +1,7 @@
+package:
+  storage_engine: "clp-s"
+  query_engine: "clp-s"
+
 ## Location (e.g., directory) containing any logs you wish to compress. Must be reachable by all
 ## workers.
 #logs_input:
@@ -9,10 +13,6 @@
 #
 ## File containing credentials for services
 #credentials_file_path: "etc/credentials.yml"
-#
-#package:
-#  storage_engine: "clp"
-#  query_engine: "clp"
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
