@@ -1,11 +1,11 @@
 {
     "SqlDbHost": "localhost",
-    "SqlDbPort": 3306,
+    "SqlDbPort": 3309,
     "SqlDbName": "clp-db",
     "SqlDbQueryJobsTableName": "query_jobs",
 
     "MongoDbHost": "localhost",
-    "MongoDbPort": 27017,
+    "MongoDbPort": 27020,
     "MongoDbName": "clp-query-results",
     "MongoDbSearchResultsMetadataCollectionName": "results-metadata",
     "MongoDbStreamFilesCollectionName": "stream-files",
@@ -18,7 +18,7 @@
     "StreamFilesS3PathPrefix": null,
     "StreamFilesS3Profile": null,
 
-    "ClpQueryEngine": "clp",
+    "ClpQueryEngine": "presto",
     "PrestoHost": "localhost",
     "PrestoPort": 8889
 }

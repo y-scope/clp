@@ -1,6 +1,6 @@
 {
-    "ClpStorageEngine": "clp",
-    "ClpQueryEngine": "clp",
+    "ClpStorageEngine": "clp-s",
+    "ClpQueryEngine": "presto",
     "MongoDbSearchResultsMetadataCollectionName": "results-metadata",
     "SqlDbClpArchivesTableName": "clp_archives",
     "SqlDbClpDatasetsTableName": "clp_datasets",
