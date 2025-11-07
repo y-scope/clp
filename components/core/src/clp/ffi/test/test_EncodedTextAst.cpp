@@ -12,7 +12,6 @@
 #include <fmt/format.h>
 #include <fmt/ranges.h>
 
-#include "../../BufferReader.hpp"
 #include "../../ir/types.hpp"
 #include "../../type_utils.hpp"
 #include "../EncodedTextAst.hpp"
@@ -45,18 +44,14 @@ auto create_encoded_text_ast_from_string(std::string_view input)
     REQUIRE(encode_message(input, logtype, encoded_vars, dict_var_bounds));
 
     StringBlob string_blob;
-    // Load dict vars
     for (size_t i{0}; i < dict_var_bounds.size(); i += 2) {
         auto const begin{static_cast<size_t>(dict_var_bounds[i])};
         auto const length{static_cast<size_t>(dict_var_bounds[i + 1]) - begin};
         auto const dict_var{input.substr(begin, length)};
-        BufferReader reader{dict_var.data(), dict_var.size()};
-        REQUIRE_FALSE(string_blob.read_from(reader, length).has_value());
+        string_blob.append(dict_var);
     }
 
-    // Load logtype
-    BufferReader reader{logtype.data(), logtype.size()};
-    REQUIRE_FALSE(string_blob.read_from(reader, logtype.size()).has_value());
+    string_blob.append(logtype);
 
     auto encoded_text_ast_result{EncodedTextAst<encoded_variable_t>::create(
             std::move(encoded_vars),
@@ -149,13 +144,7 @@ TEMPLATE_TEST_CASE(
             );
             std::string const logtype_with_single_int_var{placeholder};
             StringBlob string_blob;
-            BufferReader reader{
-                    logtype_with_single_int_var.data(),
-                    logtype_with_single_int_var.size()
-            };
-            REQUIRE_FALSE(
-                    string_blob.read_from(reader, logtype_with_single_int_var.size()).has_value()
-            );
+            string_blob.append(logtype_with_single_int_var);
             auto const encoded_text_ast_result{EncodedTextAst<TestType>::create(
                     std::vector<TestType>{},
                     std::move(string_blob)
@@ -172,13 +161,7 @@ TEMPLATE_TEST_CASE(
                     + std::string(1, enum_to_underlying_type(VariablePlaceholder::Escape))
             };
             StringBlob string_blob;
-            BufferReader reader{
-                    logtype_with_trailing_escape.data(),
-                    logtype_with_trailing_escape.size()
-            };
-            REQUIRE_FALSE(
-                    string_blob.read_from(reader, logtype_with_trailing_escape.size()).has_value()
-            );
+            string_blob.append(logtype_with_trailing_escape);
             auto const encoded_text_ast_result{EncodedTextAst<TestType>::create(
                     std::vector<TestType>{},
                     std::move(string_blob)

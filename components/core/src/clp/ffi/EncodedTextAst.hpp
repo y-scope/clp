@@ -70,7 +70,8 @@ public:
     // Factory function
     /**
      * @param encoded_vars
-     * @param string_blob A string blob containing a list of dictionary variables followed by a logtype.
+     * @param string_blob A string blob containing a list of dictionary variables followed by a
+     * logtype.
      * @return A result containing the newly created `EncodedTextAst` instance on success, or an
      * error code indicating the failure:
      * - EncodedTextAstErrEnum::MissingLogtype: if `string_blob` contains no strings.
