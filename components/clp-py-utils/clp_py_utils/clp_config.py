@@ -39,6 +39,7 @@ QUERY_WORKER_COMPONENT_NAME = "query_worker"
 WEBUI_COMPONENT_NAME = "webui"
 MCP_SERVER_COMPONENT_NAME = "mcp_server"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
+API_SERVER_COMPONENT_NAME = "api_server"
 
 # Action names
 ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
@@ -592,6 +593,19 @@ class GarbageCollector(BaseModel):
     sweep_interval: SweepInterval = SweepInterval()
 
 
+class QueryJobPollingConfig(BaseModel):
+    initial_backoff_ms: int = Field(default=100, alias="initial_backoff")
+
+    max_backoff_ms: int = Field(default=5000, alias="max_backoff")
+
+
+class ApiServer(BaseModel):
+    host: str = "localhost"
+    port: int = 3001
+    query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
+    default_max_num_query_results: int = 1000
+
+
 class Presto(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 8080
 
@@ -627,6 +641,7 @@ class CLPConfig(BaseModel):
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
+    api_server: ApiServer = ApiServer()
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
     mcp_server: Optional[McpServer] = None

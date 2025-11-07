@@ -11,6 +11,7 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional
 
 from clp_py_utils.clp_config import (
+    API_SERVER_COMPONENT_NAME,
     AwsAuthType,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
@@ -619,6 +620,30 @@ class BaseController(ABC):
 
         return env_vars
 
+    def _set_up_env_for_api_server(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for the API server component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = API_SERVER_COMPONENT_NAME
+
+        logger.info(f"Setting up environment for {component_name}...")
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_API_SERVER_HOST": _get_ip_from_hostname(self._clp_config.api_server.host),
+            "CLP_API_SERVER_PORT": str(self._clp_config.api_server.port),
+        }
+
+        return env_vars
+
     def _read_and_update_settings_json(
         self, settings_file_path: pathlib.Path, updates: dict[str, Any]
     ) -> dict[str, Any]:
@@ -747,6 +772,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_webui(container_clp_config)
         env_vars |= self._set_up_env_for_mcp_server()
         env_vars |= self._set_up_env_for_garbage_collector()
+        env_vars |= self._set_up_env_for_api_server()
 
         # Write the environment variables to the `.env` file.
         with open(f"{self._clp_home}/.env", "w") as env_file:
