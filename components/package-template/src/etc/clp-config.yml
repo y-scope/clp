@@ -124,7 +124,7 @@
 #  port: 3001
 #  default_max_num_query_results: 1000
 #  query_job_polling:
-#    initial_backof_ms: 100
+#    initial_backoff_ms: 100
 #    max_backoff_ms: 5000
 #
 ## Presto client config
