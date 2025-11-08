@@ -5,7 +5,7 @@ A multi-host deployment allows you to run CLP across a distributed set of hosts.
 :::{warning}
 The instructions below provide a temporary solution for multi-host deployment and may change as we
 actively work to improve ease of deployment. The present solution uses *manual* Docker Compose
-orchestration; however, Kubernetes Helm support will available in a future release, which will
+orchestration; however, Kubernetes Helm support will be available in a future release, which will
 simplify multi-host deployments significantly.
 :::
 
@@ -37,10 +37,10 @@ In a multi-host cluster:
 To configure CLP for multi-host deployment, you'll need to:
 
 1. [configure and run CLP's environment setup scripts](#clp-environment-setup).
-2. [update CLP's *generated* configuration to support a multi-host
-   deployment](#updating-clps-generated-configuration).
-3. [distribute and configure the CLP package on all hosts in your
-   cluster](#distributing-the-set-up-package).
+2. [update CLP's *generated* configuration to support a multi-host deployment](
+   #updating-clps-generated-configuration).
+3. [distribute and configure the CLP package on all hosts in your cluster](
+   #distributing-the-set-up-package).
 
 ### CLP environment setup
 
@@ -88,8 +88,8 @@ To update the generated configuration files for use across multiple hosts:
 
 1. Edit `var/log/.clp-config.yml`:
 
-    * Update all `host` fields to use the actual hostname or IP address where each service will
-      run (matching what you configured in `etc/clp-config.yml`).
+    * Update all `host` fields to use the actual hostname or IP address where each service will run
+      (matching what you configured in `etc/clp-config.yml`).
     * Similarly, update any `port` fields.
     * For example, if your database runs on `192.168.1.10:3306`, ensure `database.host` is set to
       `192.168.1.10` and `database.port` is `3306`.

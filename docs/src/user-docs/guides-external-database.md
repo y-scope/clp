@@ -116,8 +116,8 @@ When using AWS RDS:
 
 ## MongoDB setup
 
-CLP is compatible with any MongoDB database. For installation instructions, see the
-[MongoDB installation documentation][mongodb-install].
+CLP is compatible with any MongoDB database. For installation instructions, see the [MongoDB
+installation documentation][mongodb-install].
 
 ### Creating the CLP database in MongoDB
 
