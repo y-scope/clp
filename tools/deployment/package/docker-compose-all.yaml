@@ -494,7 +494,7 @@ services:
       CLP_LOGS_DIR: "/var/log/api_server"
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
-      RUST_LOG: "TRACE"
+      RUST_LOG: "DEBUG"
     ports:
       - host_ip: "${CLP_API_SERVER_HOST:-127.0.0.1}"
         published: "${CLP_API_SERVER_PORT:-3001}"

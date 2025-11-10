@@ -600,8 +600,8 @@ class QueryJobPollingConfig(BaseModel):
 
 
 class ApiServer(BaseModel):
-    host: str = "localhost"
-    port: int = 3001
+    host: DomainStr = "localhost"
+    port: Port = 3001
     query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
     default_max_num_query_results: int = 1000
 

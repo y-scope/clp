@@ -28,9 +28,9 @@ vars:
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_PYTHON_LIBS_DIR: "{{.G_BUILD_DIR}}/python-libs"
-  G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
-  G_SPIDER_BUILD_DIR: "{{.G_BUILD_DIR}}/spider"
   G_RUST_BUILD_DIR: "{{.G_BUILD_DIR}}/rust"
+  G_SPIDER_BUILD_DIR: "{{.G_BUILD_DIR}}/spider"
+  G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
 
   # Taskfile paths
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
@@ -73,8 +73,8 @@ tasks:
       - task: "clean-python-component"
         vars:
           COMPONENT: "job-orchestration"
-      - task: "clean-webui"
       - task: "clean-rust"
+      - task: "clean-webui"
       - task: "tests:integration:cache-clear"
 
   clean-core:
@@ -97,6 +97,10 @@ tasks:
           FLAVOUR: "text"
           STORAGE_ENGINE: "clp"
 
+  clean-rust:
+    cmds:
+      - "rm -rf '{{.G_RUST_BUILD_DIR}}'"
+
   clean-webui:
     cmds:
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/client/node_modules'"
@@ -104,10 +108,6 @@ tasks:
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/server/node_modules'"
       - "rm -rf '{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer/node_modules'"
-
-  clean-rust:
-    cmds:
-      - "rm -rf '{{.G_RUST_BUILD_DIR}}'"
 
   package:
     vars:
@@ -197,15 +197,13 @@ tasks:
           JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "log-converter", "reducer-server"]
 
+  # NOTE: We rely on cargo for checksumming. It automatically rebuilds when source files change or
+  # when a binary is missing.
   rust:
     deps: ["toolchains:rust"]
     dir: "{{.ROOT_DIR}}"
     cmd: |-
-      echo $HOME
-      echo $HOME/.cargo
-      type cargo
-      type rustup
-      ls $HOME
+      . "$HOME/.cargo/env"
       cargo build --release --bins --target-dir {{.G_RUST_BUILD_DIR}}
 
   clp-mcp-server:
@@ -234,8 +232,8 @@ tasks:
       - "deps:spider"
       - "init"
       - "python-libs"
-      - "webui"
       - "rust"
+      - "webui"
 
   webui:
     env:

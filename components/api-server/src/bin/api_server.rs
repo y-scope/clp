@@ -16,7 +16,7 @@ use clp_rust_utils::{clp_config::package, serde::yaml};
 use futures::{Stream, StreamExt};
 use thiserror::Error;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
-use tracing_subscriber::{self, fmt::writer::Tee};
+use tracing_subscriber::{self, fmt::writer::MakeWriterExt};
 
 #[derive(Parser)]
 #[command(version, about = "API Server for CLP.")]
@@ -31,27 +31,14 @@ struct Args {
     port: Option<u16>,
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    let args = Args::parse();
-
+fn read_config_and_credentials(
+    args: &Args,
+) -> anyhow::Result<(package::config::Config, package::credentials::Credentials)> {
     let config_path = std::path::Path::new(args.config.as_str());
     let config: package::config::Config = yaml::from_path(config_path).context(format!(
         "Config file {} does not exist",
         config_path.display()
     ))?;
-
-    let logs_directory =
-        std::env::var("CLP_LOGS_DIR").context("Expect `CLP_LOGS_DIR` environment variable.")?;
-    let logs_directory = std::path::Path::new(logs_directory.as_str());
-    let file_appender =
-        RollingFileAppender::new(Rotation::HOURLY, logs_directory, "api_server.log");
-    let (non_blocking_writer, _guard) = tracing_appender::non_blocking(file_appender);
-    tracing_subscriber::fmt()
-        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
-        .with_ansi(false)
-        .with_writer(Tee::new(std::io::stdout, non_blocking_writer))
-        .init();
 
     let credentials = package::credentials::Credentials {
         database: package::credentials::Database {
@@ -63,6 +50,41 @@ async fn main() -> anyhow::Result<()> {
             user: std::env::var("CLP_DB_USER").context("Expect `CLP_DB_USER` env variable")?,
         },
     };
+    Ok((config, credentials))
+}
+
+fn set_up_logging() -> anyhow::Result<()> {
+    let logs_directory =
+        std::env::var("CLP_LOGS_DIR").context("Expect `CLP_LOGS_DIR` environment variable.")?;
+    let logs_directory = std::path::Path::new(logs_directory.as_str());
+    let file_appender =
+        RollingFileAppender::new(Rotation::HOURLY, logs_directory, "api_server.log");
+    let (non_blocking_writer, _guard) = tracing_appender::non_blocking(file_appender);
+    tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
+        .with_ansi(false)
+        .with_writer(std::io::stdout.and(non_blocking_writer))
+        .init();
+    Ok(())
+}
+
+async fn shutdown_signal() {
+    let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+        .expect("failed to listen for SIGTERM");
+    tokio::select! {
+        _ = sigterm.recv() => {
+        }
+        _ = tokio::signal::ctrl_c()=> {
+        }
+    }
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let args = Args::parse();
+
+    let (config, credentials) = read_config_and_credentials(&args)?;
+    set_up_logging()?;
 
     let addr = format!(
         "{}:{}",
@@ -86,17 +108,7 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("Server started at {addr}");
     axum::serve(listener, app)
-        .with_graceful_shutdown(async {
-            let mut sigterm =
-                tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-                    .expect("failed to listen for SIGTERM");
-            tokio::select! {
-                _ = sigterm.recv() => {
-                }
-                _ = tokio::signal::ctrl_c()=> {
-                }
-            }
-        })
+        .with_graceful_shutdown(shutdown_signal())
         .await?;
     Ok(())
 }
