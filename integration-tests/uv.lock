@@ -469,7 +469,7 @@ wheels = [
 
 [[package]]
 name = "clp-mcp-server"
-version = "0.5.2.dev0"
+version = "0.6.1.dev0"
 source = { directory = "../components/clp-mcp-server" }
 dependencies = [
     { name = "aiomysql" },
@@ -502,7 +502,7 @@ dev = [
 
 [[package]]
 name = "clp-package-utils"
-version = "0.5.2.dev0"
+version = "0.6.1.dev0"
 source = { directory = "../components/clp-package-utils" }
 dependencies = [
     { name = "brotli" },
@@ -525,7 +525,7 @@ requires-dist = [
 
 [[package]]
 name = "clp-py-utils"
-version = "0.5.2.dev0"
+version = "0.6.1.dev0"
 source = { directory = "../components/clp-py-utils" }
 dependencies = [
     { name = "boto3" },
@@ -957,7 +957,7 @@ wheels = [
 
 [[package]]
 name = "job-orchestration"
-version = "0.5.2.dev0"
+version = "0.6.1.dev0"
 source = { directory = "../components/job-orchestration" }
 dependencies = [
     { name = "brotli" },
