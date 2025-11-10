@@ -47,7 +47,7 @@ def _get_dataset_info(
         clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
         table_prefix = clp_db_connection_params["table_prefix"]
         db_cursor.execute(
-            f"SELECT name, archive_storage_directory FROM `{get_datasets_table_name(table_prefix)}`"
+            f"SELECT name, archive_storage_directory FROM `{get_datasets_table_name(table_prefix)}`"  # noqa: S608
         )
         rows = db_cursor.fetchall()
         return {row["name"]: row["archive_storage_directory"] for row in rows}

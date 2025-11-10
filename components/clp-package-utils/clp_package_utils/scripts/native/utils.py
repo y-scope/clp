@@ -72,7 +72,7 @@ def submit_query_job(
     ):
         # Create job
         db_cursor.execute(
-            f"INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (%s, %s)",
+            f"INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (%s, %s)",  # noqa: S608
             (msgpack.packb(job_config.model_dump()), job_type),
         )
         db_conn.commit()
@@ -113,7 +113,8 @@ def wait_for_query_job(sql_adapter: SQL_Adapter, job_id: int) -> QueryJobStatus:
         # Wait for the job to be marked complete
         while True:
             db_cursor.execute(
-                f"SELECT `status` FROM `{QUERY_JOBS_TABLE_NAME}` WHERE `id` = {job_id}"
+                f"SELECT `status` FROM `{QUERY_JOBS_TABLE_NAME}` WHERE `id` = %s",  # noqa: S608
+                (job_id,),
             )
             # There will only ever be one row since it's impossible to have more than one job with
             # the same ID

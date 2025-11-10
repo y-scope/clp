@@ -280,7 +280,7 @@ def _find_archives(
             query: str = f"""
                 SELECT id FROM `{get_archives_table_name(table_prefix, dataset)}`
                 WHERE begin_timestamp >= %s
-                """
+                """  # noqa: S608
             if end_ts is not None:
                 query += " AND end_timestamp <= %s"
                 query_params.append(end_ts)
@@ -350,7 +350,7 @@ def _delete_archives(
                 f"""
                 SELECT id FROM `{get_archives_table_name(table_prefix, dataset)}`
                 WHERE {query_criteria}
-                """,
+                """,  # noqa: S608
                 query_params,
             )
             results = db_cursor.fetchall()

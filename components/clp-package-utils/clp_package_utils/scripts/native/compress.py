@@ -65,18 +65,18 @@ def print_compression_job_status(job_row: dict[str, Any]) -> None:
 def handle_job_update(db: Any, db_cursor: Any, job_id: int, no_progress_reporting: bool) -> None:
     if no_progress_reporting:
         polling_query = (
-            f"SELECT status, status_msg FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id={job_id}"
+            f"SELECT status, status_msg FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id=%s"  # noqa: S608
         )
     else:
         polling_query = (
-            f"SELECT start_time, status, status_msg, uncompressed_size, compressed_size, duration "
-            f"FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id={job_id}"
+            f"SELECT start_time, status, status_msg, uncompressed_size, compressed_size, duration "  # noqa: S608
+            f"FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id=%s"
         )
 
     job_last_uncompressed_size = 0
 
     while True:
-        db_cursor.execute(polling_query)
+        db_cursor.execute(polling_query, (job_id,))
         results = db_cursor.fetchall()
         db.commit()
         if len(results) > 1:
@@ -131,7 +131,7 @@ def handle_job(
                 quality=4,
             )
             db_cursor.execute(
-                f"INSERT INTO {COMPRESSION_JOBS_TABLE_NAME} (clp_config) VALUES (%s)",
+                f"INSERT INTO {COMPRESSION_JOBS_TABLE_NAME} (clp_config) VALUES (%s)",  # noqa: S608
                 (compressed_clp_io_config,),
             )
             db.commit()

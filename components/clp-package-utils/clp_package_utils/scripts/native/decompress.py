@@ -58,7 +58,7 @@ def get_orig_file_id(db_config: Database, path: str) -> str | None:
     ):
         files_table_name = get_files_table_name(table_prefix, None)
         db_cursor.execute(
-            f"SELECT orig_file_id FROM `{files_table_name}` WHERE path = (%s)",
+            f"SELECT orig_file_id FROM `{files_table_name}` WHERE path = (%s)",  # noqa: S608
             (path,),
         )
         results = db_cursor.fetchall()
