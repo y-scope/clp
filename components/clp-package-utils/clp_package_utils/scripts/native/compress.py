@@ -78,7 +78,7 @@ def handle_job_update(db: Any, db_cursor: Any, job_id: int, no_progress_reportin
         results = db_cursor.fetchall()
         db.commit()
         if len(results) > 1:
-            logging.error("Duplicated job_id")
+            logger.error("Duplicated job_id")
         if len(results) == 0:
             msg = f"Job with id={job_id} not found in database"
             raise RuntimeError(msg)
