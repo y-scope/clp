@@ -134,8 +134,8 @@ AwsAuthTypeStr = Annotated[AwsAuthType, StrEnumSerializer]
 
 
 class Package(BaseModel):
-    storage_engine: StorageEngineStr = StorageEngine.CLP
-    query_engine: QueryEngineStr = QueryEngine.CLP
+    storage_engine: StorageEngineStr = StorageEngine.CLP_S
+    query_engine: QueryEngineStr = QueryEngine.CLP_S
 
     @model_validator(mode="after")
     def validate_query_engine_package_compatibility(self):
