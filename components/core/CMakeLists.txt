@@ -309,12 +309,6 @@ if(CLP_NEED_ZSTD)
 endif()
 
 if(CLP_NEED_LIBLZMA)
-    if(CLP_USE_STATIC_LIBS)
-        set(LibLZMA_ROOT ${LibLZMA-static_ROOT})
-        set(LibLZMA_USE_STATIC_LIBS ON)
-    else()
-        set(LibLZMA_ROOT ${LibLZMA-shared_ROOT})
-    endif()
     # Version 5.8.1 and above address CVE-2024-3094 and CVE-2025-31115.
     find_package(LibLZMA 5.8.1 REQUIRED)
     message(STATUS "Found LibLZMA ${LibLZMA_VERSION}")
