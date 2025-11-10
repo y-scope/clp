@@ -608,7 +608,7 @@ def validate_mcp_server_config(clp_config: CLPConfig, logs_dir: pathlib.Path) ->
 
 
 def validate_path_for_container_mount(path: pathlib.Path) -> None:
-    RESTRICTED_PREFIXES: list[pathlib.Path] = [
+    restricted_prefixes: list[pathlib.Path] = [
         CONTAINER_AWS_CONFIG_DIRECTORY,
         CONTAINER_CLP_HOME,
         CONTAINER_INPUT_LOGS_ROOT_DIR,
@@ -634,7 +634,7 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
         msg = f"Path: `{path}` must be absolute:"
         raise ValueError(msg)
 
-    for prefix in RESTRICTED_PREFIXES:
+    for prefix in restricted_prefixes:
         if path.is_relative_to(prefix):
             msg = (
                 f"Invalid path: `{path}` cannot be under '{prefix}' which may overlap with a path"
