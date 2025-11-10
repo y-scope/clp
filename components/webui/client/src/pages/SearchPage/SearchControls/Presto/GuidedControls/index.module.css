@@ -5,18 +5,25 @@
     gap: 5px;
 }
 
+.interfaceAndTimestampAndRunRow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
 .select {
     grid-column: span 2;
     display: flex;
 }
 
 .from {
-    grid-column: span 1;
+    grid-column: span 2;
     display: flex;
 }
 
 .timestampKey {
-    grid-column: span 1;
+    width: 300px;
     display: flex;
 }
 
