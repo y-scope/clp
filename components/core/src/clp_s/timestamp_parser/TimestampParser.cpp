@@ -412,7 +412,7 @@ auto parse_timestamp(
                 date_type_representation = true;
                 break;
             }
-            case 'p': {
+            case 'p': {  // Part of day (AM/PM).
                 auto const part_of_day_idx{YSTDLIB_ERROR_HANDLING_TRYX(
                         find_first_matching_prefix(timestamp.substr(timestamp_idx), cPartsOfDay)
                 )};
@@ -421,7 +421,7 @@ auto parse_timestamp(
                 date_type_representation = true;
                 break;
             }
-            case 'H': {
+            case 'H': {  // 24-hour clock, zero-padded hour.
                 constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
@@ -442,7 +442,7 @@ auto parse_timestamp(
                 date_type_representation = true;
                 break;
             }
-            case 'k': {
+            case 'k': {  // 24-hour clock, space-padded hour.
                 constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
@@ -463,7 +463,7 @@ auto parse_timestamp(
                 date_type_representation = true;
                 break;
             }
-            case 'I': {
+            case 'I': {  // 12-hour clock, zero-padded hour.
                 constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
@@ -485,7 +485,7 @@ auto parse_timestamp(
                 date_type_representation = true;
                 break;
             }
-            case 'l': {
+            case 'l': {  // 12-hour clock, space-padded hour.
                 constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
@@ -507,7 +507,7 @@ auto parse_timestamp(
                 date_type_representation = true;
                 break;
             }
-            case 'M': {
+            case 'M': {  // Zero-padded minute.
                 constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
@@ -526,7 +526,7 @@ auto parse_timestamp(
                 date_type_representation = true;
                 break;
             }
-            case 'S': {
+            case 'S': {  // Zero-padded second.
                 constexpr size_t cFieldLength{2};
                 if (timestamp_idx + cFieldLength > timestamp.size()) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
@@ -545,7 +545,7 @@ auto parse_timestamp(
                 date_type_representation = true;
                 break;
             }
-            case '3': {
+            case '3': {  // Zero-padded 3-digit milliseconds.
                 constexpr size_t cFieldLength{3};
                 if (false
                     == clp::string_utils::convert_string_to_int(
@@ -565,7 +565,7 @@ auto parse_timestamp(
                 timestamp_idx += cFieldLength;
                 break;
             }
-            case '6': {
+            case '6': {  // Zero-padded 6-digit microseconds.
                 constexpr size_t cFieldLength{6};
                 if (false
                     == clp::string_utils::convert_string_to_int(
@@ -585,7 +585,7 @@ auto parse_timestamp(
                 timestamp_idx += cFieldLength;
                 break;
             }
-            case '9': {
+            case '9': {  // Zero-padded 9-digit nanoseconds.
                 constexpr size_t cFieldLength{9};
                 if (false
                     == clp::string_utils::convert_string_to_int(
@@ -601,7 +601,7 @@ auto parse_timestamp(
                 timestamp_idx += cFieldLength;
                 break;
             }
-            case 'T': {
+            case 'T': {  // Zero-padded fractional seconds without trailing zeroes, max 9-digits.
                 constexpr size_t cMaxFieldLength{9};
                 auto const remaining_unparsed_content{timestamp.substr(timestamp_idx)};
                 auto const [number, num_digits] = YSTDLIB_ERROR_HANDLING_TRYX(
@@ -618,7 +618,7 @@ auto parse_timestamp(
                         = number * cPowersOfTen.at(cMaxFieldLength - num_digits);
                 break;
             }
-            case 'E': {
+            case 'E': {  // Epoch seconds.
                 auto const [number, num_digits] = YSTDLIB_ERROR_HANDLING_TRYX(
                         convert_variable_length_string_prefix_to_number(
                                 timestamp.substr(timestamp_idx)
@@ -632,7 +632,7 @@ auto parse_timestamp(
                 number_type_representation = true;
                 break;
             }
-            case 'L': {
+            case 'L': {  // Epoch milliseconds.
                 auto const [number, num_digits] = YSTDLIB_ERROR_HANDLING_TRYX(
                         convert_variable_length_string_prefix_to_number(
                                 timestamp.substr(timestamp_idx)
@@ -646,7 +646,7 @@ auto parse_timestamp(
                 number_type_representation = true;
                 break;
             }
-            case 'C': {
+            case 'C': {  // Epoch microseconds.
                 auto const [number, num_digits] = YSTDLIB_ERROR_HANDLING_TRYX(
                         convert_variable_length_string_prefix_to_number(
                                 timestamp.substr(timestamp_idx)
@@ -660,7 +660,7 @@ auto parse_timestamp(
                 number_type_representation = true;
                 break;
             }
-            case 'N': {
+            case 'N': {  // Epoch nanoseconds.
                 auto const [number, num_digits] = YSTDLIB_ERROR_HANDLING_TRYX(
                         convert_variable_length_string_prefix_to_number(
                                 timestamp.substr(timestamp_idx)
