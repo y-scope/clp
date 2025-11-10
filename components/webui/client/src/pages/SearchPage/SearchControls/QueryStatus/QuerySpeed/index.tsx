@@ -31,6 +31,11 @@ const QuerySpeed = () => {
                 return SPEED_DEFAULT;
             }
             const {bytes, duration} = await fetchQuerySpeed(cachedDataset ?? "", searchJobId);
+
+            if (null === bytes || null === duration) {
+                return SPEED_DEFAULT;
+            }
+
             return {latency: duration, speed: bytes / duration};
         },
         enabled: SEARCH_UI_STATE.DONE === searchUiState,

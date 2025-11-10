@@ -45,7 +45,7 @@ There are two flavours of the CLP package:
 
 :::{note}
 Both flavours contain the same binaries but are configured with different values for the
-`package.storage_engine` key.
+`package.storage_engine` and `package.query_engine` key.
 :::
 
 To build the package, run:
@@ -54,11 +54,12 @@ To build the package, run:
 task
 ```
 
-The build will be in `build/clp-package` and defaults to using the storage engine for `clp-text`.
+The build will be in `build/clp-package` and defaults to using the storage and query engines for
+`clp-json`.
 
 :::{note}
-The `task` command runs `task docker-images:package` under the hood. In addition to the build, a
-Docker image named `clp-package:dev-<user>-<unique-id>` will also be created.
+The `task` command runs `task package` under the hood. In addition to the build, a Docker image
+named `clp-package:dev-<user>-<unique-id>` will also be created.
 :::
 
 :::{note}
