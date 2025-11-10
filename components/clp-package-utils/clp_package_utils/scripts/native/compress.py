@@ -69,7 +69,7 @@ def handle_job_update(db: Any, db_cursor: Any, job_id: int, no_progress_reportin
         )
     else:
         polling_query = (
-            f"SELECT start_time, status, status_msg, uncompressed_size, compressed_size, duration " 
+            f"SELECT start_time, status, status_msg, uncompressed_size, compressed_size, duration "
             f"FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id=%s"
         )
 
