@@ -35,7 +35,7 @@ from clp_package_utils.general import (
     validate_path_could_be_dir,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def validate_and_load_config(
@@ -87,7 +87,7 @@ def handle_extract_file_cmd(
     try:
         validate_path_could_be_dir(resolved_extraction_dir)
     except ValueError as ex:
-        logger.error(f"extraction-dir is invalid: {ex}")
+        logger.exception(f"extraction-dir is invalid: {ex}")
         return -1
 
     # Validate and load config file
@@ -251,7 +251,7 @@ def handle_extract_stream_cmd(
             clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
             validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
         except Exception as e:
-            logger.error(e)
+            logger.exception(e)
             return -1
 
         extract_cmd.append(str(parsed_args.archive_id))

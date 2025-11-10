@@ -39,7 +39,7 @@ BEGIN_TS_ARG: Final[str] = "--begin-ts"
 END_TS_ARG: Final[str] = "--end-ts"
 DRY_RUN_ARG: Final[str] = "--dry-run"
 
-logger: logging.Logger = logging.getLogger(__file__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def _validate_timestamps(begin_ts: int, end_ts: int | None) -> bool:
@@ -197,7 +197,7 @@ def main(argv: list[str]) -> int:
             clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
             validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
         except Exception as e:
-            logger.error(e)
+            logger.exception(e)
             return -1
     elif dataset is not None:
         logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")

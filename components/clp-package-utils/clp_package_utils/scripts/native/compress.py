@@ -38,10 +38,10 @@ from clp_package_utils.general import (
     S3_OBJECT_COMPRESSION,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
-def print_compression_job_status(job_row):
+def print_compression_job_status(job_row) -> None:
     job_uncompressed_size = job_row["uncompressed_size"]
     job_compressed_size = job_row["compressed_size"]
     compression_ratio = float(job_uncompressed_size) / job_compressed_size
@@ -59,7 +59,7 @@ def print_compression_job_status(job_row):
     )
 
 
-def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
+def handle_job_update(db, db_cursor, job_id, no_progress_reporting) -> None:
     if no_progress_reporting:
         polling_query = (
             f"SELECT status, status_msg FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id={job_id}"
@@ -79,7 +79,8 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
         if len(results) > 1:
             logging.error("Duplicated job_id")
         if len(results) == 0:
-            raise Exception(f"Job with id={job_id} not found in database")
+            msg = f"Job with id={job_id} not found in database"
+            raise Exception(msg)
 
         job_row = results[0]
         job_status = job_row["status"]
@@ -134,7 +135,7 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
 
             handle_job_update(db, db_cursor, job_id, no_progress_reporting)
         except Exception as ex:
-            logger.error(ex)
+            logger.exception(ex)
             return CompressionJobCompletionStatus.FAILED
 
         logger.debug(f"Finished job {job_id}")
@@ -151,7 +152,8 @@ def _generate_clp_io_config(
 
     if input_type == "fs":
         if len(logs_to_compress) == 0:
-            raise ValueError("No input paths given.")
+            msg = "No input paths given."
+            raise ValueError(msg)
         return FsInputConfig(
             dataset=parsed_args.dataset,
             paths_to_compress=logs_to_compress,
@@ -160,11 +162,13 @@ def _generate_clp_io_config(
             unstructured=parsed_args.unstructured,
         )
     if input_type != "s3":
-        raise ValueError(f"Unsupported input type: `{input_type}`.")
+        msg = f"Unsupported input type: `{input_type}`."
+        raise ValueError(msg)
 
     # Handle S3 inputs
     if len(logs_to_compress) < 2:
-        raise ValueError("No URLs given.")
+        msg = "No URLs given."
+        raise ValueError(msg)
 
     aws_authentication = _get_aws_authentication_from_config(clp_config)
 
@@ -185,9 +189,8 @@ def _generate_clp_io_config(
         )
     if s3_compress_subcommand == S3_KEY_PREFIX_COMPRESSION:
         if len(urls) != 1:
-            raise ValueError(
-                f"`{S3_KEY_PREFIX_COMPRESSION}` requires exactly one URL, got {len(urls)}"
-            )
+            msg = f"`{S3_KEY_PREFIX_COMPRESSION}` requires exactly one URL, got {len(urls)}"
+            raise ValueError(msg)
         region_code, bucket, key_prefix = parse_s3_url(urls[0])
         return S3InputConfig(
             dataset=parsed_args.dataset,
@@ -199,7 +202,8 @@ def _generate_clp_io_config(
             timestamp_key=parsed_args.timestamp_key,
             unstructured=parsed_args.unstructured,
         )
-    raise ValueError(f"Unsupported S3 compress subcommand: `{s3_compress_subcommand}`.")
+    msg = f"Unsupported S3 compress subcommand: `{s3_compress_subcommand}`."
+    raise ValueError(msg)
 
 
 def _get_logs_to_compress(logs_list_path: pathlib.Path) -> list[str]:
@@ -241,7 +245,8 @@ def _parse_and_validate_s3_object_urls(
     :raises ValueError: If the validation fails.
     """
     if len(urls) == 0:
-        raise ValueError("No URLs provided.")
+        msg = "No URLs provided."
+        raise ValueError(msg)
 
     region_code: str | None = None
     bucket_name: str | None = None
@@ -253,28 +258,32 @@ def _parse_and_validate_s3_object_urls(
         if region_code is None:
             region_code = parsed_region_code
         elif region_code != parsed_region_code:
-            raise ValueError(
+            msg = (
                 "All S3 URLs must be in the same region."
                 f" Found {region_code} and {parsed_region_code}."
             )
+            raise ValueError(msg)
 
         if bucket_name is None:
             bucket_name = parsed_bucket_name
         elif bucket_name != parsed_bucket_name:
-            raise ValueError(
+            msg = (
                 "All S3 URLs must be in the same bucket."
                 f" Found {bucket_name} and {parsed_bucket_name}."
             )
+            raise ValueError(msg)
 
         if key in keys:
-            raise ValueError(f"Duplicate S3 key found: {key}.")
+            msg = f"Duplicate S3 key found: {key}."
+            raise ValueError(msg)
         keys.add(key)
 
     key_list: list[str] = list(keys)
     key_prefix = os.path.commonprefix(key_list)
 
     if len(key_prefix) == 0:
-        raise ValueError("The given S3 URLs have no common prefix.")
+        msg = "The given S3 URLs have no common prefix."
+        raise ValueError(msg)
 
     return region_code, bucket_name, key_prefix, key_list
 
@@ -290,7 +299,8 @@ def _get_aws_authentication_from_config(clp_config: CLPConfig) -> AwsAuthenticat
     if StorageType.S3 == clp_config.logs_input.type:
         return clp_config.logs_input.aws_authentication
 
-    raise ValueError("No AWS authentication provided in `logs_input`.")
+    msg = "No AWS authentication provided in `logs_input`."
+    raise ValueError(msg)
 
 
 def main(argv):

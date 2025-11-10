@@ -31,7 +31,7 @@ from clp_package_utils.scripts.native.utils import (
     wait_for_query_job,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def create_and_monitor_job_in_db(
@@ -47,7 +47,7 @@ def create_and_monitor_job_in_db(
     network_address: tuple[str, int] | None,
     do_count_aggregation: bool | None,
     count_by_time_bucket_size: int | None,
-):
+) -> None:
     search_config = SearchJobConfig(
         dataset=dataset,
         query_string=wildcard_query,
@@ -81,17 +81,19 @@ def create_and_monitor_job_in_db(
         search_results_collection = client[results_cache.db_name][str(job_id)]
         if do_count_aggregation is not None:
             for document in search_results_collection.find():
-                print(f"tags: {document['group_tags']} count: {document['records'][0]['count']}")
+                print(f"tags: {document['group_tags']} count: {document['records'][0]['count']}")  # noqa: T201
         elif count_by_time_bucket_size is not None:
             for document in search_results_collection.find():
-                print(f"timestamp: {document['timestamp']} count: {document['count']}")
+                print(f"timestamp: {document['timestamp']} count: {document['count']}")  # noqa: T201
 
     if job_status != QueryJobStatus.SUCCEEDED:
         logger.error(f"job {job_id} finished with unexpected status: {job_status}")
 
 
 def get_worker_connection_handler(raw_output: bool):
-    async def worker_connection_handler(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
+    async def worker_connection_handler(
+        reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+    ) -> None:
         try:
             unpacker = msgpack.Unpacker()
             while True:
@@ -106,9 +108,9 @@ def get_worker_connection_handler(raw_output: bool):
                 # if raw output is enabled.
                 for unpacked in unpacker:
                     if raw_output:
-                        print(f"{unpacked[1]}", end="")
+                        print(f"{unpacked[1]}", end="")  # noqa: T201
                     else:
-                        print(f"{unpacked[2]}: {unpacked[1]}", end="")
+                        print(f"{unpacked[2]}: {unpacked[1]}", end="")  # noqa: T201
         except asyncio.CancelledError:
             return
         finally:
@@ -128,7 +130,7 @@ async def do_search_without_aggregation(
     ignore_case: bool,
     path_filter: str | None,
     raw_output: bool,
-):
+) -> None:
     host = _get_ipv4_address()
     if host is None:
         logger.error("Couldn't find an IPv4 address for receiving search results.")
@@ -198,7 +200,7 @@ async def do_search(
     do_count_aggregation: bool | None,
     count_by_time_bucket_size: int | None,
     raw_output: bool,
-):
+) -> None:
     if do_count_aggregation is None and count_by_time_bucket_size is None:
         await do_search_without_aggregation(
             db_config,
@@ -230,7 +232,7 @@ async def do_search(
         )
 
 
-def main(argv):
+def main(argv) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -293,7 +295,8 @@ def main(argv):
         and parsed_args.end_time is not None
         and parsed_args.begin_time > parsed_args.end_time
     ):
-        raise ValueError("begin_time > end_time")
+        msg = "begin_time > end_time"
+        raise ValueError(msg)
 
     # Validate and load config file
     try:
@@ -311,7 +314,7 @@ def main(argv):
         try:
             validate_dataset_exists(database_config, dataset)
         except Exception as e:
-            logger.error(e)
+            logger.exception(e)
             return -1
 
     try:
@@ -332,7 +335,7 @@ def main(argv):
             )
         )
     except asyncio.CancelledError:
-        logger.error("Search cancelled.")
+        logger.exception("Search cancelled.")
         return -1
 
     return 0

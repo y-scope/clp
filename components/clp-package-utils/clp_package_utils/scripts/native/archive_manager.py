@@ -30,11 +30,11 @@ from clp_package_utils.scripts.archive_manager import (
 )
 from clp_package_utils.scripts.native.utils import validate_dataset_exists
 
-logger: logging.Logger = logging.getLogger(__file__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class DeleteHandler(ABC):
-    def __init__(self, query_params: list[str]):
+    def __init__(self, query_params: list[str]) -> None:
         self._params: list[str] = query_params
 
     def get_params(self) -> list[str]:
@@ -204,7 +204,7 @@ def main(argv: list[str]) -> int:
         try:
             validate_dataset_exists(database_config, dataset)
         except Exception as e:
-            logger.error(e)
+            logger.exception(e)
             return -1
 
     archives_dir: Path = clp_config.archive_output.get_directory()

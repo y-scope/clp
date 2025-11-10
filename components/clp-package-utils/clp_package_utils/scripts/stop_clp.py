@@ -12,10 +12,10 @@ from clp_package_utils.general import (
     load_config_file,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
-def main(argv):
+def main(argv) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 

@@ -30,10 +30,10 @@ async def run_function_in_process(function, *args, initializer=None, init_args=N
     loop = asyncio.get_event_loop()
     fut = loop.create_future()
 
-    def process_done_callback(obj):
+    def process_done_callback(obj) -> None:
         loop.call_soon_threadsafe(fut.set_result, obj)
 
-    def process_error_callback(err):
+    def process_error_callback(err) -> None:
         loop.call_soon_threadsafe(fut.set_exception, err)
 
     pool.apply_async(
@@ -88,7 +88,8 @@ def validate_dataset_exists(db_config: Database, dataset: str) -> None:
         closing(db_conn.cursor(dictionary=True)) as db_cursor,
     ):
         if dataset not in fetch_existing_datasets(db_cursor, table_prefix):
-            raise ValueError(f"Dataset `{dataset}` doesn't exist.")
+            msg = f"Dataset `{dataset}` doesn't exist."
+            raise ValueError(msg)
 
 
 def wait_for_query_job(sql_adapter: SQL_Adapter, job_id: int) -> QueryJobStatus:

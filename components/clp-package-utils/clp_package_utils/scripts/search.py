@@ -28,7 +28,7 @@ from clp_package_utils.general import (
     validate_dataset_name,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def main(argv):
@@ -121,7 +121,7 @@ def main(argv):
             clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
             validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
         except Exception as e:
-            logger.error(e)
+            logger.exception(e)
             return -1
     elif dataset is not None:
         logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")

@@ -35,7 +35,7 @@ from clp_package_utils.general import (
 LIST_COMMAND: Final[str] = "list"
 DEL_COMMAND: Final[str] = "del"
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def main(argv: list[str]) -> int:

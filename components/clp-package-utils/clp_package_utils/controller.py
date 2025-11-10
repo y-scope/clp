@@ -38,6 +38,7 @@ from clp_py_utils.clp_metadata_db_utils import (
     get_files_table_name,
 )
 from clp_py_utils.core import resolve_host_path_in_container
+from typing_extensions import Self
 
 from clp_package_utils.general import (
     check_docker_dependencies,
@@ -67,10 +68,8 @@ logger = logging.getLogger(__name__)
 
 
 class EnvVarsDict(dict[str, str | None]):
-    def __ior__(self, other: "EnvVarsDict") -> "EnvVarsDict":
-        """
-        Overloads the `|=` operator for static type checking on `other`.
-        """
+    def __ior__(self, other: "EnvVarsDict") -> Self:
+        """Overloads the `|=` operator for static type checking on `other`."""
         super().__ior__(other)
         return self
 
@@ -96,15 +95,11 @@ class BaseController(ABC):
 
     @abstractmethod
     def start(self) -> None:
-        """
-        Starts the components.
-        """
+        """Starts the components."""
 
     @abstractmethod
     def stop(self) -> None:
-        """
-        Stops the components.
-        """
+        """Stops the components."""
 
     def _set_up_env_for_database(self) -> EnvVarsDict:
         """
@@ -661,9 +656,7 @@ class BaseController(ABC):
 
 
 class DockerComposeController(BaseController):
-    """
-    Controller for orchestrating CLP components using Docker Compose.
-    """
+    """Controller for orchestrating CLP components using Docker Compose."""
 
     def __init__(self, clp_config: CLPConfig, instance_id: str) -> None:
         self._project_name = f"clp-package-{instance_id}"
@@ -815,16 +808,12 @@ class DockerComposeController(BaseController):
 
     @staticmethod
     def _get_num_workers() -> int:
-        """
-        :return: Number of worker processes to run.
-        """
+        """:return: Number of worker processes to run."""
         # This will change when we move from single to multi-container workers. See y-scope/clp#1424
         return max(1, multiprocessing.cpu_count() // 2)
 
     def _get_docker_file_name(self) -> str:
-        """
-        :return: The Docker Compose file name to use based on the config.
-        """
+        """:return: The Docker Compose file name to use based on the config."""
         deployment_type = self._clp_config.get_deployment_type()
         if deployment_type == DeploymentType.BASE:
             return "docker-compose-base.yaml"

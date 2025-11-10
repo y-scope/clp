@@ -17,10 +17,10 @@ from clp_package_utils.general import (
     validate_retention_config,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
-def main(argv):
+def main(argv) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -101,7 +101,7 @@ def main(argv):
         controller.start()
     except Exception as ex:
         if type(ex) == ValueError:
-            logger.error(f"Failed to start CLP: {ex}")
+            logger.exception(f"Failed to start CLP: {ex}")
         else:
             logger.exception("Failed to start CLP.")
         return -1

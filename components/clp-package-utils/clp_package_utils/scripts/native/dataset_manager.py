@@ -29,7 +29,7 @@ from clp_package_utils.scripts.dataset_manager import (
     LIST_COMMAND,
 )
 
-logger: logging.Logger = logging.getLogger(__file__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 def _get_dataset_info(
@@ -64,7 +64,7 @@ def _handle_del_datasets(
     clp_config: CLPConfig,
     parsed_args: argparse.Namespace,
     existing_datasets_info: dict[str, str],
-):
+) -> int:
     if len(existing_datasets_info) == 0:
         logger.warning("No datasets exist.")
         return 0
@@ -118,7 +118,8 @@ def _try_deleting_archives(
             archive_storage_config.s3_config, dataset_archive_storage_dir
         )
     else:
-        raise ValueError(f"Unsupported storage type: {storage_type}")
+        msg = f"Unsupported storage type: {storage_type}"
+        raise ValueError(msg)
 
 
 def _try_deleting_archives_from_fs(dataset_archive_storage_dir: str) -> None:

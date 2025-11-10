@@ -38,7 +38,7 @@ from clp_package_utils.scripts.native.utils import (
     wait_for_query_job,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def get_orig_file_id(db_config: Database, path: str) -> str | None:
@@ -148,7 +148,7 @@ def handle_extract_stream_cmd(
         try:
             validate_dataset_exists(clp_config.database, dataset)
         except Exception as e:
-            logger.error(e)
+            logger.exception(e)
             return -1
 
         job_type = QueryJobType.EXTRACT_JSON
@@ -171,7 +171,7 @@ def handle_extract_stream_cmd(
             )
         )
     except asyncio.CancelledError:
-        logger.error("Stream extraction cancelled.")
+        logger.exception("Stream extraction cancelled.")
         return -1
 
 

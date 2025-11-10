@@ -208,7 +208,7 @@ def main(argv):
             clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
             validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
         except Exception as e:
-            logger.error(e)
+            logger.exception(e)
             return -1
 
         if parsed_args.timestamp_key is None and not parsed_args.unstructured:
