@@ -70,7 +70,7 @@ def main(argv: list[str]) -> int:
         clp_config.validate_data_dir(True)
         clp_config.validate_logs_dir(True)
         clp_config.validate_tmp_dir(True)
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
         return -1
 
@@ -85,7 +85,7 @@ def main(argv: list[str]) -> int:
         resolve_host_path_in_container(clp_config.stream_output.get_directory()).mkdir(
             parents=True, exist_ok=True
         )
-    except:
+    except Exception:
         logger.exception("Failed to create necessary directories.")
         return -1
 

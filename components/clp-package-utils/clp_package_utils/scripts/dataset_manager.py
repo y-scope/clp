@@ -104,7 +104,7 @@ def main(argv: list[str]) -> int:
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
         return -1
 
@@ -127,7 +127,7 @@ def main(argv: list[str]) -> int:
             table_prefix = clp_db_connection_params["table_prefix"]
             for dataset in datasets:
                 validate_dataset_name(table_prefix, dataset)
-        except:
+        except Exception:
             logger.exception("Invalid dataset name.")
             return -1
 

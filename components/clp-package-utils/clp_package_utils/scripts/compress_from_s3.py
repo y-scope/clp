@@ -147,7 +147,8 @@ def _validate_s3_key_prefix_args(
             args_parser.error("No URL specified.")
         if len(parsed_args.inputs) != 1:
             args_parser.error(
-                f"{S3_KEY_PREFIX_COMPRESSION} accepts exactly one URL, got {len(parsed_args.inputs)}."
+                f"{S3_KEY_PREFIX_COMPRESSION} accepts exactly one URL, "
+                f"got {len(parsed_args.inputs)}."
             )
 
     if len(parsed_args.inputs) > 0 and parsed_args.inputs_from is not None:

@@ -61,7 +61,7 @@ def validate_and_load_config(
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
         return clp_config
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
         return None
 

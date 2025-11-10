@@ -36,7 +36,7 @@ def main(argv: list[str]) -> int:
             resolve_host_path_in_container(default_config_file_path),
             clp_home,
         )
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
         return -1
 
@@ -44,7 +44,7 @@ def main(argv: list[str]) -> int:
         instance_id = get_or_create_instance_id(clp_config)
         controller = DockerComposeController(clp_config, instance_id)
         controller.stop()
-    except:
+    except Exception:
         logger.exception("Failed to stop CLP.")
         return -1
 

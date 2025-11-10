@@ -191,7 +191,7 @@ def main(argv: list[str]) -> int:
         )
         clp_config.validate_logs_dir()
         clp_config.database.load_credentials_from_env()
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
         return -1
 

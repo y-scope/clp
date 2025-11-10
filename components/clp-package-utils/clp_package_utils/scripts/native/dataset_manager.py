@@ -92,14 +92,14 @@ def _delete_dataset(clp_config: CLPConfig, dataset: str, dataset_archive_storage
     try:
         _try_deleting_archives(clp_config.archive_output, dataset_archive_storage_dir)
         logger.info("Deleted archives of dataset `%s`.", dataset)
-    except:
+    except Exception:
         logger.exception("Failed to delete archives of dataset `%s`.", dataset)
         return False
 
     try:
         _delete_dataset_from_database(clp_config.database, dataset)
         logger.info("Deleted dataset `%s` from the metadata database.", dataset)
-    except:
+    except Exception:
         logger.exception("Failed to delete dataset `%s` from the metadata database.", dataset)
         return False
 
@@ -221,13 +221,13 @@ def main(argv: list[str]) -> int:
         clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
         clp_config.validate_logs_dir()
         clp_config.database.load_credentials_from_env()
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
         return -1
 
     try:
         existing_datasets_info = _get_dataset_info(clp_config.database)
-    except:
+    except Exception:
         logger.exception("Failed to fetch datasets from the database.")
         return -1
 
