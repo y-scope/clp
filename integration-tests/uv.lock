@@ -889,10 +889,10 @@ dev = [
 
 [package.metadata.requires-dev]
 clp = [
-    { name = "clp-mcp-server", directory = "../components/clp-mcp-server" },
-    { name = "clp-package-utils", directory = "../components/clp-package-utils" },
-    { name = "clp-py-utils", directory = "../components/clp-py-utils" },
-    { name = "job-orchestration", directory = "../components/job-orchestration" },
+    { name = "clp-mcp-server", editable = "../components/clp-mcp-server" },
+    { name = "clp-package-utils", editable = "../components/clp-package-utils" },
+    { name = "clp-py-utils", editable = "../components/clp-py-utils" },
+    { name = "job-orchestration", editable = "../components/job-orchestration" },
 ]
 dev = [
     { name = "mypy", specifier = ">=1.16.0" },
