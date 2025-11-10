@@ -35,7 +35,7 @@ vars:
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
   # Versions
-  G_PACKAGE_VERSION: "0.5.2-dev"
+  G_PACKAGE_VERSION: "0.6.1-dev"
 
   # Build parameters
   # NOTE: Defaulting to an empty string is safe since CMake ignores an empty string.
@@ -447,31 +447,28 @@ tasks:
       # `/parents/A` -> `/parents/B` rather than `/parents/A` -> `/parents/B/A`
       - "rsync --archive '{{.G_PACKAGE_BUILD_DIR}}/' '{{.OUTPUT_DIR}}'"
 
-      # Set the storage engine for the package
-      - task: "utils:misc:replace-text"
-        vars:
-          FILE_PATH: "{{.OUTPUT_DIR}}/lib/python3/site-packages/clp_py_utils/clp_config.py"
-          SED_EXP: >-
-            s/([[:space:]]*storage_engine: str = ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
+      # Uncomment the package block header
       - task: "utils:misc:replace-text"
         vars:
           FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yml"
           SED_EXP: >-
-            s/(\#[[:space:]]*storage_engine: ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
+            s/#(package:)/\1/
 
-      # Set the query engine for the package
+      # Uncomment and set the storage engine for the package
+      - task: "utils:misc:replace-text"
+        vars:
+          FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yml"
+          SED_EXP: >-
+            s/#([[:space:]]*storage_engine: ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
+
+      # Uncomment and set the query engine for the package
       # NOTE: We set `query_engine` to `STORAGE_ENGINE` intentionally since compatible CLP storage
       # and query engines have the same name.
       - task: "utils:misc:replace-text"
         vars:
-          FILE_PATH: "{{.OUTPUT_DIR}}/lib/python3/site-packages/clp_py_utils/clp_config.py"
-          SED_EXP: >-
-            s/([[:space:]]*query_engine: str = ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
-      - task: "utils:misc:replace-text"
-        vars:
           FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yml"
           SED_EXP: >-
-            s/(\#[[:space:]]*query_engine: ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
+            s/#([[:space:]]*query_engine: ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
 
       - >-
         tar czf '{{.OUTPUT_FILE}}'

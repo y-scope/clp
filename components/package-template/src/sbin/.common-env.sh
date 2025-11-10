@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+set -o errexit
+set -o nounset
+set -o pipefail
+
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 package_root=$(readlink -f "$script_dir/..")
 
@@ -17,7 +21,7 @@ if [[ -f "$image_id_file" ]]; then
     export CLP_PACKAGE_CONTAINER_IMAGE_REF="$image_id"
 elif [[ -f "$version_file" ]]; then
     version="$(tr -d '[:space:]' <"$version_file")"
-    export CLP_PACKAGE_CONTAINER_IMAGE_REF="ghcr.io/y-scope/clp/clp-package:v$version"
+    export CLP_PACKAGE_CONTAINER_IMAGE_REF="ghcr.io/y-scope/clp/clp-package:$version"
 else
     echo >&2 "Error: Neither '${image_id_file}' nor '${version_file}' exist."
     return 1
@@ -31,22 +35,28 @@ CLP_PWD_HOST="$(pwd 2>/dev/null || echo "")"
 export CLP_PWD_HOST
 
 if [[ -z "${CLP_DOCKER_PLUGIN_DIR:-}" ]]; then
-    for compose_plugin_dir in \
-        "$HOME/.docker/cli-plugins" \
-        "/mnt/wsl/docker-desktop/cli-tools/usr/local/lib/docker/cli-plugins" \
-        "/usr/local/lib/docker/cli-plugins" \
-        "/usr/libexec/docker/cli-plugins"; do
+    compose_plugin_path="$(docker info \
+        --format '{{range .ClientInfo.Plugins}}{{if eq .Name "compose"}}{{.Path}}{{end}}{{end}}' \
+        2>/dev/null)"
 
-        compose_plugin_path="$compose_plugin_dir/docker-compose"
-        if [[ -f "$compose_plugin_path" ]]; then
-            export CLP_DOCKER_PLUGIN_DIR="$compose_plugin_dir"
-            break
-        fi
-    done
-    if [[ -z "${CLP_DOCKER_PLUGIN_DIR:-}" ]]; then
-        echo >&2 "Warning: Docker plugin directory not found;" \
-            "Docker Compose may not work inside container."
+    if [[ -z "$compose_plugin_path" || ! -f "$compose_plugin_path" ]]; then
+        echo >&2 "Error: Docker Compose plugin not found via 'docker info'."
+        return 1
     fi
+
+    resolved_plugin_path="$(readlink -f "$compose_plugin_path" 2>/dev/null || true)"
+    if [[ -z "$resolved_plugin_path" ]]; then
+        echo >&2 "Error: Failed to resolve Docker Compose plugin's real path."
+        return 1
+    fi
+
+    plugin_dir="$(dirname "$resolved_plugin_path")"
+    if [[ -z "$plugin_dir" || "$plugin_dir" == "." || ! -d "$plugin_dir" ]]; then
+        echo >&2 "Error: Failed to resolve Docker Compose plugin directory."
+        return 1
+    fi
+
+    export CLP_DOCKER_PLUGIN_DIR="$plugin_dir"
 fi
 
 if [[ -z "${CLP_DOCKER_SOCK_PATH:-}" ]]; then
@@ -57,4 +67,9 @@ if [[ -z "${CLP_DOCKER_SOCK_PATH:-}" ]]; then
     if [[ -S "$socket" ]]; then
         export CLP_DOCKER_SOCK_PATH="$socket"
     fi
+fi
+
+CLP_COMPOSE_RUN_EXTRA_FLAGS=()
+if [[ $- != *i* ]]; then
+    CLP_COMPOSE_RUN_EXTRA_FLAGS+=(--interactive=false)
 fi

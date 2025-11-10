@@ -1,0 +1,211 @@
+use clp_rust_utils::{
+    clp_config::package::{
+        config::{Config, StorageEngine},
+        credentials::Credentials,
+    },
+    database::mysql::create_mysql_pool,
+    job_config::{QUERY_JOBS_TABLE_NAME, QueryJobStatus, QueryJobType, SearchJobConfig},
+};
+use futures::{Stream, StreamExt};
+use serde::{Deserialize, Serialize};
+use sqlx::Row;
+
+pub use crate::error::ClientError;
+
+/// Defines the request configuration for submitting a search query.
+#[derive(Clone, Serialize, Deserialize)]
+pub struct QueryConfig {
+    pub query_string: String,
+    #[serde(default)]
+    pub dataset: Option<String>,
+    #[serde(default)]
+    pub max_num_results: u32,
+    #[serde(default)]
+    pub begin_timestamp: Option<i64>,
+    #[serde(default)]
+    pub end_timestamp: Option<i64>,
+    #[serde(default)]
+    pub ignore_case: bool,
+}
+
+impl From<QueryConfig> for SearchJobConfig {
+    fn from(value: QueryConfig) -> Self {
+        Self {
+            dataset: value.dataset,
+            query_string: value.query_string,
+            max_num_results: value.max_num_results,
+            begin_timestamp: value.begin_timestamp,
+            end_timestamp: value.end_timestamp,
+            ignore_case: value.ignore_case,
+            ..Default::default()
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct Client {
+    #[allow(clippy::struct_field_names)]
+    mongodb_client: mongodb::Client,
+    sql_pool: sqlx::Pool<sqlx::MySql>,
+    config: Config,
+}
+
+impl Client {
+    /// Factory method to create a new client with active connections to both `MySQL` and `MongoDB`
+    /// databases.
+    ///
+    /// # Returns
+    ///
+    /// A newly created [`Client`] instance with active connections to both databases.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`create_mysql_pool`]'s errors on failure.
+    /// * Forwards [`mongodb::Client::with_uri_str`]'s errors on failure.
+    pub async fn connect(config: &Config, credentials: &Credentials) -> Result<Self, ClientError> {
+        let sql_pool = create_mysql_pool(&config.database, &credentials.database, 10).await?;
+
+        let mongo_uri = format!(
+            "mongodb://{}:{}/{}?directConnection=true",
+            config.results_cache.host, config.results_cache.port, config.results_cache.db_name,
+        );
+        let mongo_client = mongodb::Client::with_uri_str(mongo_uri).await?;
+
+        Ok(Self {
+            config: config.clone(),
+            mongodb_client: mongo_client,
+            sql_pool,
+        })
+    }
+
+    /// Submits a search or aggregation query as a job.
+    ///
+    /// # Returns
+    ///
+    /// The unique ID of the newly created query job on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`rmp_serde::to_vec_named`]'s return values on failure.
+    /// * Forwards [`sqlx::query::Query::execute`]'s return values on failure.
+    pub async fn submit_query(&self, query_config: QueryConfig) -> Result<u64, ClientError> {
+        let mut search_job_config: SearchJobConfig = query_config.into();
+        if search_job_config.dataset.is_none() {
+            search_job_config.dataset = match self.config.package.storage_engine {
+                StorageEngine::Clp => None,
+                StorageEngine::ClpS => Some("default".to_owned()),
+            }
+        }
+        if search_job_config.max_num_results == 0 {
+            search_job_config.max_num_results =
+                self.config.api_server.default_max_num_query_results;
+        }
+
+        let query_job_type_i32: i32 = QueryJobType::SearchOrAggregation.into();
+        let query_result = sqlx::query(&format!(
+            "INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (?, ?)"
+        ))
+        .bind(rmp_serde::to_vec_named(&search_job_config)?)
+        .bind(query_job_type_i32)
+        .execute(&self.sql_pool)
+        .await?;
+
+        let search_job_id = query_result.last_insert_id();
+        Ok(search_job_id)
+    }
+
+    /// Asynchronously fetches the results of a completed search job.
+    ///
+    /// # Returns
+    ///
+    /// A stream of the job's results on success. Each item in the stream is a [`Result`] that:
+    ///
+    /// ## Returns
+    ///
+    /// A parsed JSON value representing a search result on success.
+    ///
+    /// ## Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * [`ClientError::MalformedData`] if a retrieved document does not contain a "message" field,
+    ///   or if the "message" field is not a BSON string.
+    /// * Forwards [`mongodb::error::Error`] produced by the `MongoDB` cursor item access.
+    /// * Forwards [`serde_json::from_str`]'s return values on failure.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Client::get_status`]'s return values on failure.
+    /// * Forwards [`mongodb::Collection::find`]'s return values on failure.
+    pub async fn fetch_results(
+        &self,
+        search_job_id: u64,
+    ) -> Result<impl Stream<Item = Result<String, ClientError>> + use<>, ClientError> {
+        let mut delay_ms = self.config.api_server.query_job_polling.initial_backoff_ms;
+        let max_delay_ms = self.config.api_server.query_job_polling.max_backoff_ms;
+        loop {
+            match self.get_status(search_job_id).await? {
+                QueryJobStatus::Succeeded => {
+                    break;
+                }
+                QueryJobStatus::Failed | QueryJobStatus::Cancelled | QueryJobStatus::Killed => {
+                    return Err(ClientError::QueryNotSucceeded);
+                }
+                QueryJobStatus::Running | QueryJobStatus::Pending | QueryJobStatus::Cancelling => {
+                    tokio::time::sleep(tokio::time::Duration::from_millis(delay_ms)).await;
+                    delay_ms = std::cmp::min(delay_ms.saturating_mul(2), max_delay_ms);
+                }
+            }
+        }
+
+        let database = self
+            .mongodb_client
+            .database(&self.config.results_cache.db_name);
+        let collection: mongodb::Collection<mongodb::bson::Document> =
+            database.collection(&search_job_id.to_string());
+        let cursor = collection.find(mongodb::bson::doc! {}).await?;
+
+        let mapped = cursor.map(|res| {
+            let doc = res?;
+            let Some(msg) = doc.get("message") else {
+                return Err(ClientError::MalformedData);
+            };
+            let mongodb::bson::Bson::String(message) = msg else {
+                return Err(ClientError::MalformedData);
+            };
+            Ok(message.clone())
+        });
+
+        Ok(mapped)
+    }
+
+    /// Retrieves the status of a previously submitted search job.
+    ///
+    /// # Returns
+    ///
+    /// The current status of the job on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`sqlx::query::Query::fetch_one`]'s return values on failure.
+    /// * Forwards [`sqlx::Row::try_get`]'s return values on failure.
+    /// * Forwards [`QueryJobStatus::try_from`]'s return values on failure.
+    pub async fn get_status(&self, search_job_id: u64) -> Result<QueryJobStatus, ClientError> {
+        let row = sqlx::query(&format!(
+            "SELECT status FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
+        ))
+        .bind(search_job_id)
+        .fetch_one(&self.sql_pool)
+        .await?;
+        let status: i32 = row.try_get("status")?;
+        Ok(QueryJobStatus::try_from(status)?)
+    }
+}
