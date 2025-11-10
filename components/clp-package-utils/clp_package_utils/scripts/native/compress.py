@@ -1,11 +1,11 @@
 import argparse
-import datetime
 import logging
 import os
 import pathlib
 import sys
 import time
 from contextlib import closing
+from datetime import datetime, timezone
 from typing import Any
 
 import brotli
@@ -51,7 +51,7 @@ def print_compression_job_status(job_row: dict[str, Any]) -> None:
     else:
         compression_speed = (
             job_uncompressed_size
-            / (datetime.datetime.now() - job_row["start_time"]).total_seconds()
+            / (datetime.now(timezone.utc) - job_row["start_time"]).total_seconds()
         )
     logger.info(
         "Compressed %s into %s (%.2fx). Speed: %s/s.",
