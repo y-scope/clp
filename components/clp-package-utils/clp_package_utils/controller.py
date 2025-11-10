@@ -800,7 +800,7 @@ class DockerComposeController(BaseController):
             logger.info("Stopping all CLP containers using Docker Compose...")
 
         subprocess.run(
-            ["docker", "compose", "--project-name", self._project_name, "down"],  # noqa: S607
+            ["docker", "compose", "--project-name", self._project_name, "down"],
             cwd=self._clp_home,
             check=True,
         )

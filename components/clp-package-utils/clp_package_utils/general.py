@@ -182,7 +182,7 @@ def check_docker_dependencies(should_compose_project_be_running: bool, project_n
     """
     try:
         subprocess.check_output(
-            ["docker", "--version"],  # noqa: S607
+            ["docker", "--version"],
             stderr=subprocess.STDOUT,
         )
     except subprocess.CalledProcessError as e:
