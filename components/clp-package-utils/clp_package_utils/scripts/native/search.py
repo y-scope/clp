@@ -87,7 +87,7 @@ def create_and_monitor_job_in_db(
                 print(f"timestamp: {document['timestamp']} count: {document['count']}")  # noqa: T201
 
     if job_status != QueryJobStatus.SUCCEEDED:
-        logger.error(f"job {job_id} finished with unexpected status: {job_status}")
+        logger.error("job %s finished with unexpected status: %s", job_id, job_status)
 
 
 def get_worker_connection_handler(raw_output: bool):
@@ -135,7 +135,7 @@ async def do_search_without_aggregation(
     if host is None:
         logger.error("Couldn't find an IPv4 address for receiving search results.")
         return
-    logger.debug(f"Listening on {host} for search results.")
+    logger.debug("Listening on %s for search results.", host)
 
     server = await asyncio.start_server(
         client_connected_cb=get_worker_connection_handler(raw_output),

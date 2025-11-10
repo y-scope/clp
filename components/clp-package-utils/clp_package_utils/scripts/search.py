@@ -109,8 +109,9 @@ def main(argv: list[str]):
     storage_engine = clp_config.package.storage_engine
     if StorageType.S3 == storage_type and StorageEngine.CLP == storage_engine:
         logger.error(
-            f"Search is not supported for archive storage type `{storage_type}` with storage engine"
-            f" `{storage_engine}`."
+            "Search is not supported for archive storage type `%s` with storage engine `%s`.",
+            storage_type,
+            storage_engine,
         )
         return -1
 
@@ -124,7 +125,7 @@ def main(argv: list[str]):
             logger.exception(e)
             return -1
     elif dataset is not None:
-        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+        logger.error("Dataset selection is not supported for storage engine: %s.", storage_engine)
         return -1
 
     container_name = generate_container_name(str(JobType.SEARCH))
@@ -182,7 +183,7 @@ def main(argv: list[str]):
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Search failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+        logger.debug("Docker command failed: %s", shlex.join(cmd))
 
     # Remove generated files
     resolved_generated_config_path_on_host = resolve_host_path_in_container(

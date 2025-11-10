@@ -186,7 +186,7 @@ def main(argv: list[str]) -> int:
 
     storage_type = StorageType(clp_config.archive_output.storage.type)
     if StorageType.FS != storage_type:
-        logger.error(f"Archive manager is not supported for storage type: {storage_type}.")
+        logger.error("Archive manager is not supported for storage type: %s.", storage_type)
         return -1
 
     storage_engine = StorageEngine(clp_config.package.storage_engine)
@@ -200,7 +200,7 @@ def main(argv: list[str]) -> int:
             logger.exception(e)
             return -1
     elif dataset is not None:
-        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+        logger.error("Dataset selection is not supported for storage engine: %s.", storage_engine)
         return -1
 
     # Validate input depending on subcommands
@@ -263,7 +263,7 @@ def main(argv: list[str]) -> int:
                 str(end_timestamp)
             ])
         else:
-            logger.error(f"Unsupported subcommand: `{parsed_args.del_subcommand}`.")
+            logger.error("Unsupported subcommand: `%s`.", parsed_args.del_subcommand)
             return -1
     elif FIND_COMMAND == subcommand:
         assert begin_timestamp is not None, "begin_timestamp is None."
@@ -271,7 +271,7 @@ def main(argv: list[str]) -> int:
         if end_timestamp is not None:
             archive_manager_cmd.extend([END_TS_ARG, str(end_timestamp)])
     else:
-        logger.error(f"Unsupported subcommand: `{subcommand}`.")
+        logger.error("Unsupported subcommand: `%s`.", subcommand)
         return -1
 
     cmd: list[str] = container_start_cmd + archive_manager_cmd
@@ -280,7 +280,7 @@ def main(argv: list[str]) -> int:
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Archive manager failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+        logger.debug("Docker command failed: %s", shlex.join(cmd))
 
     # Remove generated files
     resolved_generated_config_path_on_host = resolve_host_path_in_container(

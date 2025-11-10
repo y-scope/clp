@@ -223,7 +223,7 @@ def main(argv: list[str]):
                 "treated as unstructured, and the argument to `--timestamp-key` will be ignored."
             )
     elif dataset is not None:
-        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+        logger.error("Dataset selection is not supported for storage engine: %s.", storage_engine)
         return -1
 
     # Validate filesystem input arguments
@@ -269,7 +269,7 @@ def main(argv: list[str]):
     ret_code = proc.returncode
     if ret_code != 0:
         logger.error("Compression failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+        logger.debug("Docker command failed: %s", shlex.join(cmd))
     else:
         resolved_logs_list_path_on_host.unlink()
 

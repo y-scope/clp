@@ -94,10 +94,10 @@ def submit_and_monitor_extraction_job_in_db(
     job_status = wait_for_query_job(sql_adapter, job_id)
 
     if QueryJobStatus.SUCCEEDED == job_status:
-        logger.info(f"Finished extraction job {job_id}.")
+        logger.info("Finished extraction job %s.", job_id)
         return 0
 
-    logger.error(f"Extraction job {job_id} finished with unexpected status: {job_status.to_str()}.")
+    logger.error("Extraction job %s finished with unexpected status: %s.", job_id, job_status.to_str())
     return -1
 
 
@@ -133,7 +133,7 @@ def handle_extract_stream_cmd(
             orig_file_path = parsed_args.orig_file_path
             orig_file_id = get_orig_file_id(clp_config.database, orig_file_path)
             if orig_file_id is None:
-                logger.error(f"Cannot find orig_file_id corresponding to '{orig_file_path}'.")
+                logger.error("Cannot find orig_file_id corresponding to '%s'.", orig_file_path)
                 return -1
         job_config = ExtractIrJobConfig(
             orig_file_id=orig_file_id,
@@ -143,7 +143,7 @@ def handle_extract_stream_cmd(
     elif EXTRACT_JSON_CMD == command:
         dataset = parsed_args.dataset
         if dataset is None:
-            logger.error(f"Dataset unspecified, but must be specified for command `{command}'.")
+            logger.error("Dataset unspecified, but must be specified for command `%s'.", command)
             return -1
         try:
             validate_dataset_exists(clp_config.database, dataset)
@@ -158,7 +158,7 @@ def handle_extract_stream_cmd(
             target_chunk_size=parsed_args.target_chunk_size,
         )
     else:
-        logger.error(f"Unsupported stream extraction command: {command}")
+        logger.error("Unsupported stream extraction command: %s", command)
         return -1
 
     try:
@@ -216,7 +216,7 @@ def handle_extract_file_cmd(
     # Validate extraction directory
     extraction_dir = pathlib.Path(parsed_args.extraction_dir)
     if not extraction_dir.is_dir():
-        logger.error(f"extraction-dir ({extraction_dir}) is not a valid directory.")
+        logger.error("extraction-dir (%s) is not a valid directory.", extraction_dir)
         return -1
 
     # Validate and load config file
@@ -267,7 +267,7 @@ def handle_extract_file_cmd(
     proc = subprocess.Popen(extract_cmd, env=extract_env)
     return_code = proc.wait()
     if 0 != return_code:
-        logger.error(f"File extraction failed, return_code={return_code}")
+        logger.error("File extraction failed, return_code=%s", return_code)
         return return_code
 
     # Remove generated files
@@ -344,7 +344,7 @@ def main(argv: list[str]):
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
     if command in (EXTRACT_IR_CMD, EXTRACT_JSON_CMD):
         return handle_extract_stream_cmd(parsed_args, clp_home, default_config_file_path)
-    logger.exception(f"Unexpected command: {command}")
+    logger.exception("Unexpected command: %s", command)
     return -1
 
 

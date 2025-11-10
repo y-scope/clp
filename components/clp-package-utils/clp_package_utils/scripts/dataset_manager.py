@@ -110,7 +110,7 @@ def main(argv: list[str]) -> int:
 
     storage_engine = clp_config.package.storage_engine
     if StorageEngine.CLP_S != storage_engine:
-        logger.error(f"Datasets aren't supported for storage engine: {storage_engine}.")
+        logger.error("Datasets aren't supported for storage engine: %s.", storage_engine)
         return -1
 
     # Validate input depending on subcommands
@@ -186,7 +186,7 @@ def main(argv: list[str]) -> int:
         else:
             dataset_manager_cmd.extend(parsed_args.datasets)
     elif LIST_COMMAND != subcommand:
-        logger.error(f"Unsupported subcommand: `{subcommand}`.")
+        logger.error("Unsupported subcommand: `%s`.", subcommand)
         return -1
 
     cmd = container_start_cmd + dataset_manager_cmd
@@ -195,7 +195,7 @@ def main(argv: list[str]) -> int:
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Dataset manager failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+        logger.debug("Docker command failed: %s", shlex.join(cmd))
 
     # Remove generated files
     resolved_generated_config_path_on_host = resolve_host_path_in_container(

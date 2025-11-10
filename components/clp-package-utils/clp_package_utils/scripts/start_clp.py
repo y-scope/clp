@@ -101,7 +101,7 @@ def main(argv: list[str]) -> int:
         controller.start()
     except Exception as ex:
         if type(ex) is ValueError:
-            logger.exception(f"Failed to start CLP: {ex}")
+            logger.exception("Failed to start CLP: %s", ex)
         else:
             logger.exception("Failed to start CLP.")
         return -1

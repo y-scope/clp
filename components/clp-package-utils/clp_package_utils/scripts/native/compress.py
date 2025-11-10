@@ -53,9 +53,11 @@ def print_compression_job_status(job_row) -> None:
             / (datetime.datetime.now() - job_row["start_time"]).total_seconds()
         )
     logger.info(
-        f"Compressed {pretty_size(job_uncompressed_size)} into "
-        f"{pretty_size(job_compressed_size)} ({compression_ratio:.2f}x). "
-        f"Speed: {pretty_size(compression_speed)}/s."
+        "Compressed %s into %s (%.2fx). Speed: %s/s.",
+        pretty_size(job_uncompressed_size),
+        pretty_size(job_compressed_size),
+        compression_ratio,
+        pretty_size(compression_speed),
     )
 
 
@@ -93,11 +95,11 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting) -> None:
             break  # Done
         if CompressionJobStatus.FAILED == job_status:
             # One or more tasks in the job has failed
-            logger.error(f"Compression failed. {job_row['status_msg']}")
+            logger.error("Compression failed. %s", job_row['status_msg'])
             break  # Done
         if CompressionJobStatus.KILLED == job_status:
             # The job is killed
-            logger.error(f"Compression killed. {job_row['status_msg']}")
+            logger.error("Compression killed. %s", job_row['status_msg'])
             break  # Done
 
         if CompressionJobStatus.RUNNING == job_status:
@@ -131,14 +133,14 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
             )
             db.commit()
             job_id = db_cursor.lastrowid
-            logger.info(f"Compression job {job_id} submitted.")
+            logger.info("Compression job %s submitted.", job_id)
 
             handle_job_update(db, db_cursor, job_id, no_progress_reporting)
         except Exception as ex:
             logger.exception(ex)
             return CompressionJobCompletionStatus.FAILED
 
-        logger.debug(f"Finished job {job_id}")
+        logger.debug("Finished job %s", job_id)
 
         return CompressionJobCompletionStatus.SUCCEEDED
 

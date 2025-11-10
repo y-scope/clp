@@ -251,8 +251,9 @@ def main(argv: list[str]):
 
     if StorageEngine.CLP_S != storage_engine:
         logger.error(
-            f"S3 compression requires storage engine {StorageEngine.CLP_S}, but configured engine"
-            f" is {storage_engine}."
+            "S3 compression requires storage engine %s, but configured engine is %s.",
+            StorageEngine.CLP_S,
+            storage_engine,
         )
         return -1
 
@@ -323,7 +324,7 @@ def main(argv: list[str]):
     ret_code = proc.returncode
     if ret_code != 0:
         logger.error("Compression failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+        logger.debug("Docker command failed: %s", shlex.join(cmd))
     else:
         resolved_url_list_path_on_host.unlink()
 

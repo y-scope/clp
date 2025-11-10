@@ -87,7 +87,7 @@ def handle_extract_file_cmd(
     try:
         validate_path_could_be_dir(resolved_extraction_dir)
     except ValueError as ex:
-        logger.exception(f"extraction-dir is invalid: {ex}")
+        logger.exception("extraction-dir is invalid: %s", ex)
         return -1
 
     # Validate and load config file
@@ -101,8 +101,10 @@ def handle_extract_file_cmd(
     storage_engine = clp_config.package.storage_engine
     if StorageType.FS != storage_type or StorageEngine.CLP != storage_engine:
         logger.error(
-            f"File extraction is not supported for archive storage type `{storage_type}` with"
-            f" storage engine `{storage_engine}`."
+            "File extraction is not supported for archive storage type `%s` with storage engine"
+            " `%s`.",
+            storage_type,
+            storage_engine,
         )
         return -1
 
@@ -163,7 +165,7 @@ def handle_extract_file_cmd(
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("file extraction failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+        logger.debug("Docker command failed: %s", shlex.join(cmd))
 
     # Remove generated files
     resolved_generated_config_path_on_host = resolve_host_path_in_container(
@@ -195,17 +197,19 @@ def handle_extract_stream_cmd(
     storage_engine = clp_config.package.storage_engine
     if StorageType.S3 == storage_type and StorageEngine.CLP == storage_engine:
         logger.error(
-            f"Stream extraction is not supported for archive storage type `{storage_type}` with"
-            f" storage engine `{storage_engine}`."
+            "Stream extraction is not supported for archive storage type `%s` with storage engine"
+            " `%s`.",
+            storage_type,
+            storage_engine,
         )
         return -1
 
     job_command = parsed_args.command
     if EXTRACT_IR_CMD == job_command and StorageEngine.CLP != storage_engine:
-        logger.error(f"IR extraction is not supported for storage engine `{storage_engine}`.")
+        logger.error("IR extraction is not supported for storage engine `%s`.", storage_engine)
         return -1
     if EXTRACT_JSON_CMD == job_command and StorageEngine.CLP_S != storage_engine:
-        logger.error(f"JSON extraction is not supported for storage engine `{storage_engine}`.")
+        logger.error("JSON extraction is not supported for storage engine `%s`.", storage_engine)
         return -1
 
     container_name = generate_container_name(str(JobType.IR_EXTRACTION))
@@ -262,7 +266,7 @@ def handle_extract_stream_cmd(
             extract_cmd.append("--target-chunk-size")
             extract_cmd.append(str(parsed_args.target_chunk_size))
     else:
-        logger.error(f"Unexpected command: {job_command}")
+        logger.error("Unexpected command: %s", job_command)
         return -1
 
     cmd = container_start_cmd + extract_cmd
@@ -271,7 +275,7 @@ def handle_extract_stream_cmd(
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("stream extraction failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+        logger.debug("Docker command failed: %s", shlex.join(cmd))
 
     # Remove generated files
     resolved_generated_config_path_on_host = resolve_host_path_in_container(
@@ -354,7 +358,7 @@ def main(argv: list[str]):
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
     if command in (EXTRACT_IR_CMD, EXTRACT_JSON_CMD):
         return handle_extract_stream_cmd(parsed_args, clp_home, default_config_file_path)
-    logger.exception(f"Unexpected command: {command}")
+    logger.exception("Unexpected command: %s", command)
     return -1
 
 

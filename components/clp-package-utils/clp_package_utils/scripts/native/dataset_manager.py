@@ -54,7 +54,7 @@ def _get_dataset_info(
 
 
 def _handle_list_datasets(datasets: dict[str, str]) -> int:
-    logger.info(f"Found {len(datasets)} datasets.")
+    logger.info("Found %s datasets.", len(datasets))
     for dataset in datasets:
         logger.info(dataset)
     return 0
@@ -76,7 +76,7 @@ def _handle_del_datasets(
         datasets = parsed_args.datasets
         for dataset in datasets:
             if dataset not in existing_datasets_info:
-                logger.error(f"Dataset `{dataset}` doesn't exist. Aborting deletion.")
+                logger.error("Dataset `%s` doesn't exist. Aborting deletion.", dataset)
                 return -1
 
         datasets_to_delete = {dataset: existing_datasets_info[dataset] for dataset in datasets}
@@ -91,16 +91,16 @@ def _handle_del_datasets(
 def _delete_dataset(clp_config: CLPConfig, dataset: str, dataset_archive_storage_dir: str) -> bool:
     try:
         _try_deleting_archives(clp_config.archive_output, dataset_archive_storage_dir)
-        logger.info(f"Deleted archives of dataset `{dataset}`.")
+        logger.info("Deleted archives of dataset `%s`.", dataset)
     except:
-        logger.exception(f"Failed to delete archives of dataset `{dataset}`.")
+        logger.exception("Failed to delete archives of dataset `%s`.", dataset)
         return False
 
     try:
         _delete_dataset_from_database(clp_config.database, dataset)
-        logger.info(f"Deleted dataset `{dataset}` from the metadata database.")
+        logger.info("Deleted dataset `%s` from the metadata database.", dataset)
     except:
-        logger.exception(f"Failed to delete dataset `{dataset}` from the metadata database.")
+        logger.exception("Failed to delete dataset `%s` from the metadata database.", dataset)
         return False
 
     return True
@@ -126,11 +126,11 @@ def _try_deleting_archives_from_fs(dataset_archive_storage_dir: str) -> None:
     dataset_archive_storage_path = Path(dataset_archive_storage_dir).resolve()
 
     if not dataset_archive_storage_path.exists():
-        logger.debug(f"'{dataset_archive_storage_path}' doesn't exist.")
+        logger.debug("'%s' doesn't exist.", dataset_archive_storage_path)
         return
 
     if not dataset_archive_storage_path.is_dir():
-        logger.debug(f"'{dataset_archive_storage_path}' isn't a directory. Skipping deletion.")
+        logger.debug("'%s' isn't a directory. Skipping deletion.", dataset_archive_storage_path)
         return
 
     shutil.rmtree(dataset_archive_storage_path)
@@ -235,7 +235,7 @@ def main(argv: list[str]) -> int:
         return _handle_list_datasets(existing_datasets_info)
     if DEL_COMMAND == parsed_args.subcommand:
         return _handle_del_datasets(clp_config, parsed_args, existing_datasets_info)
-    logger.error(f"Unsupported subcommand: `{parsed_args.subcommand}`.")
+    logger.error("Unsupported subcommand: `%s`.", parsed_args.subcommand)
     return -1
 
 
