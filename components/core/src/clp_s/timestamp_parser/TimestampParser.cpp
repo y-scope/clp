@@ -88,7 +88,7 @@ constexpr std::array cAbbreviatedMonthNames
 
 constexpr std::array cPartsOfDay = {std::string_view{"AM"}, std::string_view{"PM"}};
 
-constexpr std::array cPowersOfTen
+constexpr std::array<int64_t, 10ULL> cPowersOfTen
         = {1, 10, 100, 1000, 10'000, 100'000, 1'000'000, 10'000'000, 100'000'000, 1'000'000'000};
 
 /**
@@ -127,7 +127,7 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
 [[nodiscard]] auto convert_positive_bounded_variable_length_string_prefix_to_number(
         std::string_view str,
         size_t max_num_digits
-) -> ystdlib::error_handling::Result<std::pair<int, size_t>>;
+) -> ystdlib::error_handling::Result<std::pair<int64_t, size_t>>;
 
 /**
  * Converts the prefix of a string to a number.
@@ -171,8 +171,8 @@ auto find_first_matching_prefix(std::string_view str, std::span<std::string_view
 auto convert_positive_bounded_variable_length_string_prefix_to_number(
         std::string_view str,
         size_t max_num_digits
-) -> ystdlib::error_handling::Result<std::pair<int, size_t>> {
-    constexpr int cTen{10};
+) -> ystdlib::error_handling::Result<std::pair<int64_t, size_t>> {
+    constexpr int64_t cTen{10};
     if (0ULL == max_num_digits) {
         return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
     }
@@ -182,11 +182,11 @@ auto convert_positive_bounded_variable_length_string_prefix_to_number(
         return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
     }
 
-    int converted_value{};
+    int64_t converted_value{};
     size_t num_decimal_digits{};
     while (true) {
         char const cur_digit{str.at(num_decimal_digits)};
-        converted_value += static_cast<int>(cur_digit - '0');
+        converted_value += static_cast<int64_t>(cur_digit - '0');
         ++num_decimal_digits;
 
         if (num_decimal_digits >= str.length() || num_decimal_digits >= max_num_digits

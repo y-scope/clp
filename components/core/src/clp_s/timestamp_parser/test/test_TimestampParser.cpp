@@ -179,7 +179,7 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             std::string generated_pattern;
             auto const timestamp{fmt::format("{}a", day_in_week_timestamp)};
             auto const result{parse_timestamp(timestamp, cPattern, generated_pattern)};
-            REQUIRE(false == result.has_error());
+            REQUIRE_FALSE(result.has_error());
             REQUIRE(result.value().second == cPattern);
         }
 
