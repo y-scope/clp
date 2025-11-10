@@ -31,7 +31,7 @@ import celery
 import msgpack
 import pymongo
 from clp_py_utils.clp_config import (
-    CLPConfig,
+    ClpConfig,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_TASKS_TABLE_NAME,
@@ -1160,7 +1160,7 @@ async def main(argv: List[str]) -> int:
     # Load configuration
     config_path = pathlib.Path(parsed_args.config)
     try:
-        clp_config = CLPConfig.model_validate(read_yaml_config_file(config_path))
+        clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
         logger.error(err)

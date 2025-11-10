@@ -12,7 +12,7 @@ from clp_py_utils.clp_config import (
     ARCHIVE_MANAGER_ACTION_NAME,
     AwsAuthentication,
     AwsAuthType,
-    CLPConfig,
+    ClpConfig,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     FsStorage,
@@ -100,7 +100,7 @@ def get_credential_env_vars(auth: AwsAuthentication) -> Dict[str, str]:
 
 
 def generate_container_auth_options(
-    clp_config: CLPConfig, container_type: str
+    clp_config: ClpConfig, container_type: str
 ) -> Tuple[bool, List[str]]:
     """
     Generates Docker container authentication options for AWS S3 access based on the given type.

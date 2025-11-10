@@ -15,7 +15,7 @@ from clp_py_utils.clp_metadata_db_utils import (
 from clp_py_utils.sql_adapter import SQL_Adapter
 
 from clp_package_utils.general import (
-    CLPConfig,
+    ClpConfig,
     get_clp_home,
     load_config_file,
 )
@@ -189,7 +189,7 @@ def main(argv: List[str]) -> int:
     # Validate and load config file
     config_file_path: Path = Path(parsed_args.config)
     try:
-        clp_config: CLPConfig = load_config_file(
+        clp_config: ClpConfig = load_config_file(
             config_file_path, default_config_file_path, clp_home
         )
         clp_config.validate_logs_dir()

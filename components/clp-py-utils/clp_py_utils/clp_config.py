@@ -610,7 +610,7 @@ def _get_env_var(name: str) -> str:
     return value
 
 
-class CLPConfig(BaseModel):
+class ClpConfig(BaseModel):
     container_image_ref: Optional[NonEmptyStr] = None
 
     logs_input: Union[FsIngestionConfig, S3IngestionConfig] = FsIngestionConfig()
@@ -856,7 +856,7 @@ class CLPConfig(BaseModel):
 class WorkerConfig(BaseModel):
     package: Package = Package()
     archive_output: ArchiveOutput = ArchiveOutput()
-    tmp_directory: SerializablePath = CLPConfig().tmp_directory
+    tmp_directory: SerializablePath = ClpConfig().tmp_directory
 
     # Only needed by query workers.
     stream_output: StreamOutput = StreamOutput()

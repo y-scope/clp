@@ -13,7 +13,7 @@ import msgpack
 from clp_py_utils.clp_config import (
     AwsAuthentication,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
-    CLPConfig,
+    ClpConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     StorageType,
 )
@@ -143,7 +143,7 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
 
 
 def _generate_clp_io_config(
-    clp_config: CLPConfig,
+    clp_config: ClpConfig,
     logs_to_compress: list[str],
     parsed_args: argparse.Namespace,
 ) -> Union[S3InputConfig, FsInputConfig]:
@@ -280,7 +280,7 @@ def _parse_and_validate_s3_object_urls(
     return region_code, bucket_name, key_prefix, key_list
 
 
-def _get_aws_authentication_from_config(clp_config: CLPConfig) -> AwsAuthentication:
+def _get_aws_authentication_from_config(clp_config: ClpConfig) -> AwsAuthentication:
     """
     Gets AWS authentication configuration.
 

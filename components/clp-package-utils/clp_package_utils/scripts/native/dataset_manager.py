@@ -21,7 +21,7 @@ from clp_py_utils.s3_utils import s3_delete_by_key_prefix
 from clp_py_utils.sql_adapter import SQL_Adapter
 
 from clp_package_utils.general import (
-    CLPConfig,
+    ClpConfig,
     get_clp_home,
     load_config_file,
 )
@@ -62,7 +62,7 @@ def _handle_list_datasets(datasets: Dict[str, str]) -> int:
 
 
 def _handle_del_datasets(
-    clp_config: CLPConfig,
+    clp_config: ClpConfig,
     parsed_args: argparse.Namespace,
     existing_datasets_info: Dict[str, str],
 ):
@@ -89,7 +89,7 @@ def _handle_del_datasets(
     return 0
 
 
-def _delete_dataset(clp_config: CLPConfig, dataset: str, dataset_archive_storage_dir: str) -> bool:
+def _delete_dataset(clp_config: ClpConfig, dataset: str, dataset_archive_storage_dir: str) -> bool:
     try:
         _try_deleting_archives(clp_config.archive_output, dataset_archive_storage_dir)
         logger.info(f"Deleted archives of dataset `{dataset}`.")

@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from clp_py_utils.clp_config import (
     ArchiveOutput,
-    CLPConfig,
+    ClpConfig,
     Database,
     QUERY_JOBS_TABLE_NAME,
     StorageEngine,
@@ -192,7 +192,7 @@ def _collect_and_sweep_expired_archives(
 
 
 async def archive_garbage_collector(
-    clp_config: CLPConfig, log_directory: pathlib.Path, logging_level: str
+    clp_config: ClpConfig, log_directory: pathlib.Path, logging_level: str
 ) -> None:
     configure_logger(logger, logging_level, log_directory, ARCHIVE_GARBAGE_COLLECTOR_NAME)
 
