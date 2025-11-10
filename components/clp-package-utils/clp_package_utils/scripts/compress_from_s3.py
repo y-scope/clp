@@ -154,7 +154,7 @@ def _validate_s3_key_prefix_args(
         args_parser.error("URL cannot be specified on the command line AND through a file.")
 
 
-def main(argv):
+def main(argv: list[str]):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 

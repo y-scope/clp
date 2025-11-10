@@ -277,7 +277,7 @@ def handle_extract_file_cmd(
     return 0
 
 
-def main(argv):
+def main(argv: list[str]):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 

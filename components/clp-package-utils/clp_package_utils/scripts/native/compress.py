@@ -303,7 +303,7 @@ def _get_aws_authentication_from_config(clp_config: CLPConfig) -> AwsAuthenticat
     raise ValueError(msg)
 
 
-def main(argv):
+def main(argv: list[str]):
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
     args_parser = argparse.ArgumentParser(description="Compresses logs")

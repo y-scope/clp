@@ -232,7 +232,7 @@ async def do_search(
         )
 
 
-def main(argv) -> int:
+def main(argv: list[str]) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
