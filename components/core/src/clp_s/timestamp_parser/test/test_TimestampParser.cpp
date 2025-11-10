@@ -79,7 +79,7 @@ assert_specifier_accepts_valid_content(char specifier, std::vector<std::string> 
         auto const timestamp{fmt::format("{}a", test_case)};
         CAPTURE(timestamp);
         auto const result{parse_timestamp(timestamp, pattern, generated_pattern)};
-        REQUIRE(false == result.has_error());
+        REQUIRE_FALSE(result.has_error());
         REQUIRE(result.value().second == pattern);
     }
 }
