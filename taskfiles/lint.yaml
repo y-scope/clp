@@ -1,7 +1,7 @@
 version: "3"
 
 includes:
-  toolchains: "./toolchains.yaml"
+  toolchains: "toolchains.yaml"
 
 vars:
   # Ignore https://github.com/msgpack/msgpack-c/issues/1098
