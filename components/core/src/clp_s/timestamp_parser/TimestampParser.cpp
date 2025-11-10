@@ -547,6 +547,9 @@ auto parse_timestamp(
             }
             case '3': {  // Zero-padded 3-digit milliseconds.
                 constexpr size_t cFieldLength{3};
+                if (timestamp_idx + cFieldLength > timestamp.size()) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
                 if (false
                     == clp::string_utils::convert_string_to_int(
                             timestamp.substr(timestamp_idx, cFieldLength),
@@ -567,6 +570,9 @@ auto parse_timestamp(
             }
             case '6': {  // Zero-padded 6-digit microseconds.
                 constexpr size_t cFieldLength{6};
+                if (timestamp_idx + cFieldLength > timestamp.size()) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
                 if (false
                     == clp::string_utils::convert_string_to_int(
                             timestamp.substr(timestamp_idx, cFieldLength),
@@ -587,6 +593,9 @@ auto parse_timestamp(
             }
             case '9': {  // Zero-padded 9-digit nanoseconds.
                 constexpr size_t cFieldLength{9};
+                if (timestamp_idx + cFieldLength > timestamp.size()) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
                 if (false
                     == clp::string_utils::convert_string_to_int(
                             timestamp.substr(timestamp_idx, cFieldLength),
