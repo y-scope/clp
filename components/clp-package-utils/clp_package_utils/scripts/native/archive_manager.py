@@ -12,7 +12,7 @@ from clp_py_utils.clp_metadata_db_utils import (
     delete_archives_from_metadata_db,
     get_archives_table_name,
 )
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 
 from clp_package_utils.general import (
     ClpConfig,
@@ -271,7 +271,7 @@ def _find_archives(
     dataset_specific_message = f" of dataset `{dataset}`" if dataset is not None else ""
     logger.info(f"Starting to find archives{dataset_specific_message} from the database.")
     try:
-        sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
+        sql_adapter: SqlAdapter = SqlAdapter(database_config)
         clp_db_connection_params: dict[str, Any] = (
             database_config.get_clp_connection_params_and_type(True)
         )
@@ -336,7 +336,7 @@ def _delete_archives(
     archive_ids: List[str]
     dataset_specific_message = f" of dataset `{dataset}`" if dataset is not None else ""
     logger.info(f"Starting to delete archives{dataset_specific_message} from the database.")
-    sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
+    sql_adapter: SqlAdapter = SqlAdapter(database_config)
     clp_db_connection_params: dict[str, Any] = database_config.get_clp_connection_params_and_type(
         True
     )

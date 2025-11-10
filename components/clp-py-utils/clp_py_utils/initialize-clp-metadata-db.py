@@ -6,7 +6,7 @@ import sys
 from contextlib import closing
 
 from pydantic import ValidationError
-from sql_adapter import SQL_Adapter
+from sql_adapter import SqlAdapter
 
 from clp_py_utils.clp_config import (
     ClpConfig,
@@ -55,7 +55,7 @@ def main(argv):
         return -1
 
     try:
-        sql_adapter = SQL_Adapter(clp_config.database)
+        sql_adapter = SqlAdapter(clp_config.database)
         clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
         table_prefix = clp_db_connection_params["table_prefix"]
         with closing(sql_adapter.create_connection(True)) as metadata_db, closing(

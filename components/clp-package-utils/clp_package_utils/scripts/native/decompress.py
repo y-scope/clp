@@ -17,7 +17,7 @@ from clp_py_utils.clp_config import (
     Database,
 )
 from clp_py_utils.clp_metadata_db_utils import get_files_table_name
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
 from job_orchestration.scheduler.job_config import (
     ExtractIrJobConfig,
@@ -50,7 +50,7 @@ def get_orig_file_id(db_config: Database, path: str) -> Optional[str]:
     NOTE: Multiple original files may have the same path in which case this method returns the ID of
     only one of them.
     """
-    sql_adapter = SQL_Adapter(db_config)
+    sql_adapter = SqlAdapter(db_config)
     clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
@@ -89,7 +89,7 @@ def submit_and_monitor_extraction_job_in_db(
     :param job_config:
     :return: 0 on success, -1 otherwise.
     """
-    sql_adapter = SQL_Adapter(db_config)
+    sql_adapter = SqlAdapter(db_config)
     job_id = submit_query_job(sql_adapter, job_config, job_type)
     job_status = wait_for_query_job(sql_adapter, job_id)
 

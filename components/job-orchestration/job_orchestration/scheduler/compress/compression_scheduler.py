@@ -28,7 +28,7 @@ from clp_py_utils.clp_metadata_db_utils import (
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import s3_get_object_metadata
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 from pydantic import ValidationError
 
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
@@ -518,7 +518,7 @@ def main(argv):
         return -1
 
     logger.info(f"Starting {COMPRESSION_SCHEDULER_COMPONENT_NAME}")
-    sql_adapter = SQL_Adapter(clp_config.database)
+    sql_adapter = SqlAdapter(clp_config.database)
 
     task_manager = CeleryTaskManager()
 

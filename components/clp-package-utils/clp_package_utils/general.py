@@ -129,7 +129,7 @@ class DockerMount:
         return mount_str
 
 
-class CLPDockerMounts:
+class ClpDockerMounts:
     def __init__(self, clp_home: pathlib.Path, docker_clp_home: pathlib.Path):
         self.input_logs_dir: Optional[DockerMount] = None
         self.clp_home: Optional[DockerMount] = DockerMount(
@@ -232,7 +232,7 @@ def is_path_already_mounted(
 
 def generate_container_config(
     clp_config: ClpConfig, clp_home: pathlib.Path
-) -> Tuple[ClpConfig, CLPDockerMounts]:
+) -> Tuple[ClpConfig, ClpDockerMounts]:
     """
     Copies the given config and sets up mounts mapping the relevant host paths into the container
 
@@ -242,7 +242,7 @@ def generate_container_config(
     """
     container_clp_config = clp_config.model_copy(deep=True)
 
-    docker_mounts = CLPDockerMounts(clp_home, CONTAINER_CLP_HOME)
+    docker_mounts = ClpDockerMounts(clp_home, CONTAINER_CLP_HOME)
 
     if StorageType.FS == clp_config.logs_input.type:
         input_logs_dir = resolve_host_path(clp_config.logs_input.directory)

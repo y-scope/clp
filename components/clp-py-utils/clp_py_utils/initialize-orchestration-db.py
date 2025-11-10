@@ -12,7 +12,7 @@ from job_orchestration.scheduler.constants import (
     QueryTaskStatus,
 )
 from pydantic import ValidationError
-from sql_adapter import SQL_Adapter
+from sql_adapter import SqlAdapter
 
 from clp_py_utils.clp_config import (
     ClpConfig,
@@ -54,7 +54,7 @@ def main(argv):
         return -1
 
     try:
-        sql_adapter = SQL_Adapter(clp_config.database)
+        sql_adapter = SqlAdapter(clp_config.database)
         with closing(sql_adapter.create_connection(True)) as scheduling_db, closing(
             scheduling_db.cursor(dictionary=True)
         ) as scheduling_db_cursor:
