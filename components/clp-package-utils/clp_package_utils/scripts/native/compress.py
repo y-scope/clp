@@ -64,10 +64,12 @@ def print_compression_job_status(job_row: dict[str, Any]) -> None:
 
 def handle_job_update(db: Any, db_cursor: Any, job_id: int, no_progress_reporting: bool) -> None:
     if no_progress_reporting:
-        polling_query = f"SELECT status, status_msg FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id=%s"  # noqa: S608
+        polling_query = (
+            f"SELECT status, status_msg FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id=%s"
+        )
     else:
         polling_query = (
-            f"SELECT start_time, status, status_msg, uncompressed_size, compressed_size, duration "  # noqa: S608
+            f"SELECT start_time, status, status_msg, uncompressed_size, compressed_size, duration " 
             f"FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id=%s"
         )
 
