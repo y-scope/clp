@@ -240,7 +240,7 @@ def main(argv: list[str]) -> int:
         "-m", "clp_package_utils.scripts.native.archive_manager",
         "--config", str(generated_config_path_on_container),
     ]
-    # fmt : on
+    # fmt: on
     if parsed_args.verbose:
         archive_manager_cmd.append("--verbose")
     if dataset is not None:
