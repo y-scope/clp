@@ -202,6 +202,12 @@ docker compose \
   up query-scheduler \
     --no-deps --wait
 
+# Start API server
+docker compose \
+  --project-name "clp-package-$(cat var/log/instance-id)" \
+  up webui \
+    --no-deps --wait
+
 # Start webui
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
