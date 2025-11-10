@@ -82,7 +82,7 @@ docstring-code-line-length = 100
 default-groups = ["clp", "dev"]
 
 [tool.uv.sources]
-clp-mcp-server = { path = "../components/clp-mcp-server" }
-clp-package-utils = { path = "../components/clp-package-utils" }
-clp-py-utils = { path = "../components/clp-py-utils" }
-job-orchestration = { path = "../components/job-orchestration" }
+clp-mcp-server = { path = "../components/clp-mcp-server", editable = true }
+clp-package-utils = { path = "../components/clp-package-utils", editable = true }
+clp-py-utils = { path = "../components/clp-py-utils", editable = true }
+job-orchestration = { path = "../components/job-orchestration", editable = true }
