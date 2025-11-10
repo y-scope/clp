@@ -31,13 +31,13 @@ Ensure all commands below are run from inside the `integration-tests` directory.
 To list all available markers:
 
 ```shell
-uv run pytest --markers
+uv run python -m pytest --markers
 ```
 
 To run tests related to a specific marker (e.g., `clp_s`):
 
 ```shell
-uv run pytest -m clp_s
+uv run python -m pytest -m clp_s
 ```
 
 ### Specifying custom CLP binary paths
