@@ -196,8 +196,8 @@ def main(argv: list[str]) -> int:
         try:
             clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
             validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
-        except Exception as e:
-            logger.exception(e)
+        except Exception:
+            logger.exception("Failed to validate dataset name.")
             return -1
     elif dataset is not None:
         logger.error("Dataset selection is not supported for storage engine: %s.", storage_engine)

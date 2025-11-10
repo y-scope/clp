@@ -136,8 +136,8 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
             logger.info("Compression job %s submitted.", job_id)
 
             handle_job_update(db, db_cursor, job_id, no_progress_reporting)
-        except Exception as ex:
-            logger.exception(ex)
+        except Exception:
+            logger.exception("Failed to handle compression job.")
             return CompressionJobCompletionStatus.FAILED
 
         logger.debug("Finished job %s", job_id)

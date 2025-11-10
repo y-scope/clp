@@ -147,8 +147,8 @@ def handle_extract_stream_cmd(
             return -1
         try:
             validate_dataset_exists(clp_config.database, dataset)
-        except Exception as e:
-            logger.exception(e)
+        except Exception:
+            logger.exception("Failed to validate dataset.")
             return -1
 
         job_type = QueryJobType.EXTRACT_JSON

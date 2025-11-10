@@ -200,8 +200,8 @@ def main(argv: list[str]) -> int:
     if dataset is not None:
         try:
             validate_dataset_exists(database_config, dataset)
-        except Exception as e:
-            logger.exception(e)
+        except Exception:
+            logger.exception("Failed to validate dataset.")
             return -1
 
     archives_dir: Path = clp_config.archive_output.get_directory()
