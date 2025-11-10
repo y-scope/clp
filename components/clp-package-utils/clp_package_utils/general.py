@@ -207,9 +207,9 @@ def validate_port(port_name: str, hostname: str, port: int) -> None:
             msg = (
                 f"{port_name} {hostname}:{port} is already in use. Please choose a different port."
             )
-            raise ValueError(msg)
+            raise ValueError(msg) from e
         msg = f"{port_name} {hostname}:{port} is invalid: {e.strerror}."
-        raise ValueError(msg)
+        raise ValueError(msg) from e
 
 
 def is_path_already_mounted(
@@ -424,7 +424,7 @@ def validate_config_key_existence(config: dict[str, Any], key: str) -> Any:
         value = get_config_value(config, key)
     except KeyError:
         msg = f"{key} must be specified in CLP's configuration."
-        raise ValueError(msg)
+        raise ValueError(msg) from None
     return value
 
 
@@ -775,7 +775,7 @@ def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> Non
         validate_path_could_be_dir(resolve_host_path_in_container(data_dir))
     except ValueError as ex:
         msg = f"{component_name} data directory is invalid: {ex}"
-        raise ValueError(msg)
+        raise ValueError(msg) from ex
 
 
 def _validate_log_directory(logs_dir: pathlib.Path, component_name: str) -> None:
@@ -790,4 +790,4 @@ def _validate_log_directory(logs_dir: pathlib.Path, component_name: str) -> None
         validate_path_could_be_dir(resolve_host_path_in_container(logs_dir))
     except ValueError as ex:
         msg = f"{component_name} logs directory is invalid: {ex}"
-        raise ValueError(msg)
+        raise ValueError(msg) from ex
