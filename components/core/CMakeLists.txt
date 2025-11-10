@@ -297,7 +297,8 @@ if(CLP_NEED_ZSTD)
     # v1.4.8 is the lowest version available in the package managers of the OSes we support.
     find_package(zstd 1.4.8 REQUIRED)
     message(STATUS "Found zstd ${zstd_VERSION}")
-    set(zstd_TARGET zstd::libzstd_static)
+    # TODO: replace all occurrences of `zstd_TARGET` with `zstd::libzstd`.
+    set(zstd_TARGET zstd::libzstd)
 endif()
 
 if(CLP_NEED_LIBLZMA)

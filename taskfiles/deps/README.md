@@ -2,14 +2,15 @@
 
 Follow the guidelines below when writing or updating dependency installation taskfiles.
 
-* Use one of the following tasks for installation, in descending order of preference:
+* Use one of the following tasks for CMake library installation, in descending order of preference:
   * `deps:utils:install-remote-cmake-lib`
   * `yscope-dev-utils:cmake:install-remote-tar`
 
-* For special tasks that don't apply to the rule above:
+* For special cases where the above tasks are not applicable:
+  * If the library can be installed via CMake but a custom approach is used, briefly document the
+    reason.
   * Include `deps:utils:init` in the `deps` section of the task.
-  * Briefly explain why if the library is installable via CMake.
-  * Ensure each library installation includes checksum validation using the best effort.
+  * Ensure each library installation includes checksum validation to the best extent possible.
     * Use of `yscope-dev-utils` tasks is encouraged, as most of them include proper checksum checks.
   * Use `<lib>-extracted` as the directory name for tarball extractions.
 
@@ -24,10 +25,16 @@ Apply the following guidelines to the `CMAKE_GEN_ARGS` section of tasks that cal
 
 * Set `CMP0074` to `NEW` whenever:
   * The component's minimum required CMake version is less than 3.27 (where `CMP0074` defaults to
-    `OLD`)
+    `OLD`).
   * The component depends on another via `<lib_name>_ROOT`.
 
-* Build both shared and static libraries when possible.
+* Build static-only libraries whenever possible:
+  * If a library produces both static and shared artifacts by default, disable shared artifact
+    building to ensure consistent `find_package()` behavior.
+  * If shared artifacts cannot be disabled, explicitly link CLP targets against the static export
+    target (e.g., `mongo::mongocxx_static`).
+  * If a library cannot be statically linked (e.g., MariaDBClient due to GPL licensing), briefly
+    document the reason.
 
 * Skip unit tests, examples, docs, or unused binaries to speed up the installation process.
 
