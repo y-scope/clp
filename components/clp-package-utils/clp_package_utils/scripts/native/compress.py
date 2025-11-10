@@ -83,7 +83,7 @@ def handle_job_update(db: Any, db_cursor: Any, job_id: int, no_progress_reportin
             logging.error("Duplicated job_id")
         if len(results) == 0:
             msg = f"Job with id={job_id} not found in database"
-            raise Exception(msg)
+            raise RuntimeError(msg)
 
         job_row = results[0]
         job_status = job_row["status"]
