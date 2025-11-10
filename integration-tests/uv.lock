@@ -523,6 +523,12 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.3" },
 ]
 
+[package.metadata.requires-dev]
+dev = [
+    { name = "mypy", specifier = ">=1.18.2" },
+    { name = "ruff", specifier = ">=0.14.4" },
+]
+
 [[package]]
 name = "clp-py-utils"
 version = "0.6.1.dev0"
