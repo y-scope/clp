@@ -29,6 +29,20 @@ If CLP fails to start (e.g., due to a port conflict), try adjusting the settings
 `etc/clp-config.yml` and then run the start command again.
 :::
 
+:::{warning}
+**Do not comment out or remove the `package` block in `etc/clp-config.yml`**; otherwise, the storage
+and query engines will default to `clp-s`, which is optimized for JSON logs rather than unstructured
+text logs.
+
+To use `clp-text`, the `package` block should be configured as follows:
+
+```yaml
+package:
+  storage_engine: "clp"
+  query_engine: "clp"
+```
+:::
+
 ---
 
 ## Compressing unstructured text logs
