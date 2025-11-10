@@ -615,7 +615,7 @@ auto parse_timestamp(
                 }
                 timestamp_idx += num_digits;
                 parsed_subsecond_nanoseconds
-                        = number * cPowersOfTen.at(cMaxFieldLength - num_digits);
+                        = static_cast<int>(number * cPowersOfTen.at(cMaxFieldLength - num_digits));
                 break;
             }
             case 'E': {  // Epoch seconds.
