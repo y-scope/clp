@@ -358,7 +358,7 @@ def dump_container_config(
     config_file_path_on_host = clp_config.logs_directory / config_filename
     config_file_path_on_container = container_clp_config.logs_directory / config_filename
     resolved_config_file_path_on_host = resolve_host_path_in_container(config_file_path_on_host)
-    with open(resolved_config_file_path_on_host, "w") as f:
+    with resolved_config_file_path_on_host.open("w") as f:
         yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
 
     return config_file_path_on_container, config_file_path_on_host
@@ -460,7 +460,7 @@ def generate_credentials_file(credentials_file_path: pathlib.Path) -> None:
         REDIS_COMPONENT_NAME: {"password": secrets.token_urlsafe(16)},
     }
 
-    with open(credentials_file_path, "w") as f:
+    with credentials_file_path.open("w") as f:
         yaml.safe_dump(credentials, f)
 
 

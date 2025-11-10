@@ -45,7 +45,7 @@ def _generate_logs_list(
     :return: Whether any paths were written to the logs list.
     """
     host_logs_list_path = parsed_args.path_list
-    with open(container_logs_list_path, "w") as container_logs_list_file:
+    with container_logs_list_path.open("w") as container_logs_list_file:
         if host_logs_list_path is None:
             for path in parsed_args.paths:
                 resolved_path = resolve_host_path(pathlib.Path(path))
@@ -59,7 +59,7 @@ def _generate_logs_list(
         resolved_host_logs_list_path = resolve_host_path_in_container(
             pathlib.Path(host_logs_list_path)
         )
-        with open(resolved_host_logs_list_path, "r") as host_logs_list_file:
+        with resolved_host_logs_list_path.open("r") as host_logs_list_file:
             for line in host_logs_list_file:
                 stripped_path_str = line.rstrip()
                 if "" == stripped_path_str:

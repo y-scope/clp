@@ -216,7 +216,7 @@ def _get_logs_to_compress(logs_list_path: pathlib.Path) -> list[str]:
     :return: List of paths/URLs.
     """
     logs_to_compress = []
-    with open(logs_list_path, "r") as f:
+    with logs_list_path.open("r") as f:
         for line in f:
             stripped_line = line.strip()
             if "" == stripped_line:

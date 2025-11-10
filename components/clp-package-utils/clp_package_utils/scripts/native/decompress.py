@@ -258,7 +258,7 @@ def handle_extract_file_cmd(
     elif len(paths) > 0:
         # Write paths to file
         files_to_extract_list_path = logs_dir / f"paths-to-extract-{uuid.uuid4()}.txt"
-        with open(files_to_extract_list_path, "w") as stream:
+        with files_to_extract_list_path.open("w") as stream:
             stream.writelines(path + "\n" for path in paths)
 
         extract_cmd.append("-f")

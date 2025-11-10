@@ -473,7 +473,7 @@ class BaseController(ABC):
         client_settings_json = self._read_and_update_settings_json(
             resolved_client_settings_json_path, client_settings_json_updates
         )
-        with open(resolved_client_settings_json_path, "w") as client_settings_json_file:
+        with resolved_client_settings_json_path.open("w") as client_settings_json_file:
             client_settings_json_file.write(json.dumps(client_settings_json))
 
         server_settings_json_updates = {
@@ -531,7 +531,7 @@ class BaseController(ABC):
         server_settings_json = self._read_and_update_settings_json(
             resolved_server_settings_json_path, server_settings_json_updates
         )
-        with open(resolved_server_settings_json_path, "w") as settings_json_file:
+        with resolved_server_settings_json_path.open("w") as settings_json_file:
             settings_json_file.write(json.dumps(server_settings_json))
 
         env_vars = EnvVarsDict()
@@ -623,7 +623,7 @@ class BaseController(ABC):
         :param settings_file_path:
         :param updates:
         """
-        with open(settings_file_path, "r") as settings_json_file:
+        with settings_file_path.open("r") as settings_json_file:
             settings_object = json.loads(settings_json_file.read())
         self._update_settings_object("", settings_object, updates)
 
@@ -742,7 +742,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_garbage_collector()
 
         # Write the environment variables to the `.env` file.
-        with open(f"{self._clp_home}/.env", "w") as env_file:
+        with (self._clp_home / ".env").open("w") as env_file:
             for key, value in env_vars.items():
                 if value is None:
                     continue
@@ -831,11 +831,11 @@ def get_or_create_instance_id(clp_config: CLPConfig) -> str:
     resolved_instance_id_file_path = resolve_host_path_in_container(instance_id_file_path)
 
     if resolved_instance_id_file_path.exists():
-        with open(resolved_instance_id_file_path, "r") as f:
+        with resolved_instance_id_file_path.open("r") as f:
             instance_id = f.readline()
     else:
         instance_id = str(uuid.uuid4())[-4:]
-        with open(resolved_instance_id_file_path, "w") as f:
+        with resolved_instance_id_file_path.open("w") as f:
             f.write(instance_id)
 
     return instance_id

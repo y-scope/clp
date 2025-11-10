@@ -48,7 +48,7 @@ def _generate_url_list(
     :param parsed_args: Parsed command-line arguments.
     :return: Whether any URLs were written to the file.
     """
-    with open(container_url_list_path, "w") as url_list_file:
+    with container_url_list_path.open("w") as url_list_file:
         url_list_file.write(f"{subcommand}\n")
 
         if parsed_args.inputs_from is None:
@@ -59,7 +59,7 @@ def _generate_url_list(
         resolved_inputs_from_path = resolve_host_path_in_container(
             pathlib.Path(parsed_args.inputs_from)
         )
-        with open(resolved_inputs_from_path, "r") as input_file:
+        with resolved_inputs_from_path.open("r") as input_file:
             for line in input_file:
                 stripped_url = line.strip()
                 if "" == stripped_url:
