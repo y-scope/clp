@@ -94,7 +94,9 @@ def create_and_monitor_job_in_db(
         logger.error("job %s finished with unexpected status: %s", job_id, job_status)
 
 
-def get_worker_connection_handler(raw_output: bool) -> Callable[[asyncio.StreamReader, asyncio.StreamWriter], None]:
+def get_worker_connection_handler(
+    raw_output: bool,
+) -> Callable[[asyncio.StreamReader, asyncio.StreamWriter], None]:
     async def worker_connection_handler(
         reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:

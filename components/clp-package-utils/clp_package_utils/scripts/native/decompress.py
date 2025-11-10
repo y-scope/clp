@@ -97,7 +97,9 @@ def submit_and_monitor_extraction_job_in_db(
         logger.info("Finished extraction job %s.", job_id)
         return 0
 
-    logger.error("Extraction job %s finished with unexpected status: %s.", job_id, job_status.to_str())
+    logger.error(
+        "Extraction job %s finished with unexpected status: %s.", job_id, job_status.to_str()
+    )
     return -1
 
 
