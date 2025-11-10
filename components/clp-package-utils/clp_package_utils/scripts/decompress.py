@@ -154,8 +154,7 @@ def handle_extract_file_cmd(
     # fmt: on
     if parsed_args.verbose:
         extract_cmd.append("--verbose")
-    for path in parsed_args.paths:
-        extract_cmd.append(path)
+    extract_cmd.extend(parsed_args.paths)
     if container_paths_to_extract_file_path:
         extract_cmd.append("--input-list")
         extract_cmd.append(str(container_paths_to_extract_file_path))
