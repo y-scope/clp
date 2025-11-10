@@ -824,7 +824,7 @@ tasks:
   rust-lint-configs:
     internal: true
     run: "once"
-    cmd: |
+    cmd: |-
       cp \
         {{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/.rustfmt.toml \
         {{.ROOT_DIR}}/.rustfmt.toml
