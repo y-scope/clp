@@ -107,12 +107,12 @@ class JobType(KebabCaseStrEnum):
 class DockerMount:
     def __init__(
         self,
-        type: DockerMountType,
+        mount_type: DockerMountType,
         src: pathlib.Path,
         dst: pathlib.Path,
         is_read_only: bool = False,
     ) -> None:
-        self.__type = type
+        self.__type = mount_type
         self.__src = src
         self.__dst = dst
         self.__is_read_only = is_read_only
