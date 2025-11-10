@@ -354,7 +354,6 @@ tasks:
         vars:
           CMAKE_GEN_ARGS:
             - "-DBUILD_SHARED_AND_STATIC_LIBS=ON"
-            - "-DBUILD_SHARED_LIBS_WITH_STATIC_MONGOC=ON"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DENABLE_EXAMPLES=OFF"
@@ -550,8 +549,7 @@ tasks:
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-DZSTD_BUILD_PROGRAMS=OFF"
-            - "-DZSTD_BUILD_SHARED=ON"
-            - "-DZSTD_BUILD_STATIC=ON"
+            - "-DZSTD_BUILD_SHARED=OFF"
             - "-DZSTD_BUILD_TESTS=OFF"
           CMAKE_SOURCE_DIR: "build/cmake"
           LIB_NAME: "zstd"
