@@ -194,10 +194,11 @@ def validate_and_load_config_file(
         clp_config.validate_archive_output_config()
         clp_config.validate_logs_dir()
         clp_config.database.load_credentials_from_env()
-        return clp_config
     except Exception:
         logger.exception("Failed to load config.")
         return None
+    else:
+        return clp_config
 
 
 def handle_extract_file_cmd(
