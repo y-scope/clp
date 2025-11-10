@@ -769,10 +769,10 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_compression_worker(num_workers)
         env_vars |= self._set_up_env_for_query_worker(num_workers)
         env_vars |= self._set_up_env_for_reducer(num_workers)
+        env_vars |= self._set_up_env_for_api_server()
         env_vars |= self._set_up_env_for_webui(container_clp_config)
         env_vars |= self._set_up_env_for_mcp_server()
         env_vars |= self._set_up_env_for_garbage_collector()
-        env_vars |= self._set_up_env_for_api_server()
 
         # Write the environment variables to the `.env` file.
         with open(f"{self._clp_home}/.env", "w") as env_file:
