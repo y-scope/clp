@@ -1,14 +1,13 @@
 # Dependency Taskfiles
 
-Follow the guidelines below when writing or updating dependency installation taskfiles.
+Follow the guidelines below when writing or updating task-based dependency installation files.
 
 * Use one of the following tasks for CMake library installation, in descending order of preference:
   * `deps:utils:install-remote-cmake-lib`
   * `yscope-dev-utils:cmake:install-remote-tar`
 
 * For special cases where the above tasks are not applicable:
-  * If the library can be installed via CMake but a custom approach is used, briefly document the
-    reason.
+  * If the library can be installed via CMake but a custom approach is used, briefly document why.
   * Include `deps:utils:init` in the `deps` section of the task.
   * Ensure each library installation includes checksum validation to the best extent possible.
     * Use of `yscope-dev-utils` tasks is encouraged, as most of them include proper checksum checks.
