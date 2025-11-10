@@ -9,6 +9,7 @@ import socket
 import subprocess
 import uuid
 from enum import auto
+from typing import Any
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -139,7 +140,7 @@ class CLPDockerMounts:
         self.generated_config_file: DockerMount | None = None
 
 
-def get_clp_home():
+def get_clp_home() -> pathlib.Path:
     # Determine CLP_HOME from an environment variable or this script's path
     clp_home = None
     if "CLP_HOME" in os.environ:
@@ -216,7 +217,7 @@ def is_path_already_mounted(
     mounted_container_root: pathlib.Path,
     host_path: pathlib.Path,
     container_path: pathlib.Path,
-):
+) -> bool:
     try:
         host_path_relative_to_mounted_root = host_path.relative_to(mounted_host_root)
     except ValueError:
@@ -345,7 +346,7 @@ def get_container_config_filename(container_name: str) -> str:
 
 def dump_container_config(
     container_clp_config: CLPConfig, clp_config: CLPConfig, config_filename: str
-):
+) -> tuple[pathlib.Path, pathlib.Path]:
     """
     Writes the given container config to the logs directory, so that it's accessible in the
     container.
@@ -418,7 +419,7 @@ def generate_container_start_cmd(
     return container_start_cmd
 
 
-def validate_config_key_existence(config, key):
+def validate_config_key_existence(config, key) -> Any:
     try:
         value = get_config_value(config, key)
     except KeyError:
@@ -429,7 +430,7 @@ def validate_config_key_existence(config, key):
 
 def load_config_file(
     config_file_path: pathlib.Path, default_config_file_path: pathlib.Path, clp_home: pathlib.Path
-):
+) -> CLPConfig:
     if config_file_path.exists():
         raw_clp_config = read_yaml_config_file(config_file_path)
         if raw_clp_config is None:

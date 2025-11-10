@@ -2,6 +2,7 @@ import asyncio
 import multiprocessing
 import time
 from contextlib import closing
+from typing import Any
 
 import msgpack
 from clp_py_utils.clp_config import (
@@ -14,7 +15,7 @@ from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
 from job_orchestration.scheduler.scheduler_data import QueryJobConfig
 
 
-async def run_function_in_process(function, *args, initializer=None, init_args=None):
+async def run_function_in_process(function, *args, initializer=None, init_args=None) -> Any:
     """
     Runs the given function in a separate process wrapped in a *cancellable*
     asyncio task. This is necessary because asyncio's multiprocessing process

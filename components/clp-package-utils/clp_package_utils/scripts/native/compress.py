@@ -117,7 +117,9 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting) -> None:
         time.sleep(0.5)
 
 
-def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress_reporting: bool):
+def handle_job(
+    sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress_reporting: bool
+) -> CompressionJobCompletionStatus:
     with (
         closing(sql_adapter.create_connection(True)) as db,
         closing(db.cursor(dictionary=True)) as db_cursor,
@@ -305,7 +307,7 @@ def _get_aws_authentication_from_config(clp_config: CLPConfig) -> AwsAuthenticat
     raise ValueError(msg)
 
 
-def main(argv: list[str]):
+def main(argv: list[str]) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
     args_parser = argparse.ArgumentParser(description="Compresses logs")
@@ -394,11 +396,12 @@ def main(argv: list[str]):
     clp_io_config = ClpIoConfig(input=clp_input_config, output=clp_output_config)
 
     mysql_adapter = SQL_Adapter(clp_config.database)
-    return handle_job(
+    job_completion_status = handle_job(
         sql_adapter=mysql_adapter,
         clp_io_config=clp_io_config,
         no_progress_reporting=parsed_args.no_progress_reporting,
     )
+    return int(job_completion_status)
 
 
 if "__main__" == __name__:

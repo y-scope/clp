@@ -7,6 +7,7 @@ import logging
 import pathlib
 import socket
 import sys
+from typing import TYPE_CHECKING
 
 import msgpack
 import psutil
@@ -30,6 +31,9 @@ from clp_package_utils.scripts.native.utils import (
     validate_dataset_exists,
     wait_for_query_job,
 )
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +94,7 @@ def create_and_monitor_job_in_db(
         logger.error("job %s finished with unexpected status: %s", job_id, job_status)
 
 
-def get_worker_connection_handler(raw_output: bool):
+def get_worker_connection_handler(raw_output: bool) -> Callable[[asyncio.StreamReader, asyncio.StreamWriter], None]:
     async def worker_connection_handler(
         reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
