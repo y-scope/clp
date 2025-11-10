@@ -205,7 +205,7 @@ docker compose \
 # Start API server
 docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
-  up webui \
+  up api-server \
     --no-deps --wait
 
 # Start webui
