@@ -470,7 +470,7 @@ wheels = [
 [[package]]
 name = "clp-mcp-server"
 version = "0.5.2.dev0"
-source = { directory = "../components/clp-mcp-server" }
+source = { editable = "../components/clp-mcp-server" }
 dependencies = [
     { name = "aiomysql" },
     { name = "click" },
@@ -503,7 +503,7 @@ dev = [
 [[package]]
 name = "clp-package-utils"
 version = "0.5.2.dev0"
-source = { directory = "../components/clp-package-utils" }
+source = { editable = "../components/clp-package-utils" }
 dependencies = [
     { name = "brotli" },
     { name = "msgpack" },
@@ -526,7 +526,7 @@ requires-dist = [
 [[package]]
 name = "clp-py-utils"
 version = "0.5.2.dev0"
-source = { directory = "../components/clp-py-utils" }
+source = { editable = "../components/clp-py-utils" }
 dependencies = [
     { name = "boto3" },
     { name = "mariadb" },
@@ -889,10 +889,10 @@ dev = [
 
 [package.metadata.requires-dev]
 clp = [
-    { name = "clp-mcp-server", directory = "../components/clp-mcp-server" },
-    { name = "clp-package-utils", directory = "../components/clp-package-utils" },
-    { name = "clp-py-utils", directory = "../components/clp-py-utils" },
-    { name = "job-orchestration", directory = "../components/job-orchestration" },
+    { name = "clp-mcp-server", editable = "../components/clp-mcp-server" },
+    { name = "clp-package-utils", editable = "../components/clp-package-utils" },
+    { name = "clp-py-utils", editable = "../components/clp-py-utils" },
+    { name = "job-orchestration", editable = "../components/job-orchestration" },
 ]
 dev = [
     { name = "mypy", specifier = ">=1.16.0" },
@@ -958,7 +958,7 @@ wheels = [
 [[package]]
 name = "job-orchestration"
 version = "0.5.2.dev0"
-source = { directory = "../components/job-orchestration" }
+source = { editable = "../components/job-orchestration" }
 dependencies = [
     { name = "brotli" },
     { name = "celery", extra = ["redis"] },
