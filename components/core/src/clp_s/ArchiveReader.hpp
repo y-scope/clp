@@ -6,6 +6,9 @@
 #include <span>
 #include <string_view>
 #include <utility>
+#include <vector>
+
+#include <clp_s/ArchiveStats.hpp>
 
 #include "ArchiveReaderAdaptor.hpp"
 #include "DictionaryReader.hpp"
@@ -146,6 +149,10 @@ public:
      */
     bool has_log_order() { return m_log_event_idx_column_id >= 0; }
 
+    auto get_logtype_stats() -> ArchiveStats::LogTypeStats const& { return m_logtype_stats; }
+
+    auto get_variable_stats() -> ArchiveStats::VariableStats const& { return m_var_stats; }
+
 private:
     /**
      * Initializes a schema reader passed by reference to become a reader for a given schema.
@@ -218,6 +225,9 @@ private:
     size_t m_stream_buffer_size{0ULL};
     size_t m_cur_stream_id{0ULL};
     int32_t m_log_event_idx_column_id{-1};
+
+    ArchiveStats::LogTypeStats m_logtype_stats;
+    ArchiveStats::VariableStats m_var_stats;
 };
 }  // namespace clp_s
 

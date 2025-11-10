@@ -12,6 +12,9 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/sinks/stdout_sinks.h>
 #include <spdlog/spdlog.h>
+#include <ystdlib/error_handling/Result.hpp>
+
+#include "clp_s/ErrorCode.hpp"
 
 #include "../clp/CurlGlobalInstance.hpp"
 #include "../clp/ir/constants.hpp"
@@ -75,6 +78,12 @@ bool search_archive(
         std::shared_ptr<ast::Expression> expr,
         int reducer_socket_fd
 );
+
+/**
+ *
+ */
+auto create_output_handler(CommandLineArguments const& cli_args, int reducer_socket_fd)
+        -> ystdlib::error_handling::Result<std::unique_ptr<OutputHandler>>;
 
 /**
  * @return -1 if no experimental query found, 0 on success, >0 on failure
@@ -231,45 +240,8 @@ bool search_archive(
     projection->resolve_columns(archive_reader->get_schema_tree());
     archive_reader->set_projection(projection);
 
-    std::unique_ptr<OutputHandler> output_handler;
-    try {
-        switch (command_line_arguments.get_output_handler_type()) {
-            case CommandLineArguments::OutputHandlerType::Network:
-                output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
-                        command_line_arguments.get_network_dest_host(),
-                        command_line_arguments.get_network_dest_port()
-                );
-                break;
-            case CommandLineArguments::OutputHandlerType::Reducer:
-                if (command_line_arguments.do_count_results_aggregation()) {
-                    output_handler = std::make_unique<clp_s::CountOutputHandler>(reducer_socket_fd);
-                } else if (command_line_arguments.do_count_by_time_aggregation()) {
-                    output_handler = std::make_unique<clp_s::CountByTimeOutputHandler>(
-                            reducer_socket_fd,
-                            command_line_arguments.get_count_by_time_bucket_size()
-                    );
-                } else {
-                    SPDLOG_ERROR("Unhandled aggregation type.");
-                    return false;
-                }
-                break;
-            case CommandLineArguments::OutputHandlerType::ResultsCache:
-                output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
-                        command_line_arguments.get_mongodb_uri(),
-                        command_line_arguments.get_mongodb_collection(),
-                        command_line_arguments.get_batch_size(),
-                        command_line_arguments.get_max_num_results()
-                );
-                break;
-            case CommandLineArguments::OutputHandlerType::Stdout:
-                output_handler = std::make_unique<clp_s::StandardOutputHandler>();
-                break;
-            default:
-                SPDLOG_ERROR("Unhandled OutputHandlerType.");
-                return false;
-        }
-    } catch (std::exception const& e) {
-        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
+    auto output_handler{create_output_handler(command_line_arguments, reducer_socket_fd)};
+    if (output_handler.has_error()) {
         return false;
     }
 
@@ -278,10 +250,56 @@ bool search_archive(
             match_pass,
             expr,
             archive_reader,
-            std::move(output_handler),
+            std::move(output_handler.value()),
             command_line_arguments.get_ignore_case()
     );
     return output.filter();
+}
+
+auto create_output_handler(CommandLineArguments const& cli_args, int reducer_socket_fd)
+        -> ystdlib::error_handling::Result<std::unique_ptr<OutputHandler>> {
+    std::unique_ptr<OutputHandler> output_handler;
+    try {
+        switch (cli_args.get_output_handler_type()) {
+            case CommandLineArguments::OutputHandlerType::Network:
+                output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
+                        cli_args.get_network_dest_host(),
+                        cli_args.get_network_dest_port()
+                );
+                break;
+            case CommandLineArguments::OutputHandlerType::Reducer:
+                if (cli_args.do_count_results_aggregation()) {
+                    output_handler = std::make_unique<clp_s::CountOutputHandler>(reducer_socket_fd);
+                } else if (cli_args.do_count_by_time_aggregation()) {
+                    output_handler = std::make_unique<clp_s::CountByTimeOutputHandler>(
+                            reducer_socket_fd,
+                            cli_args.get_count_by_time_bucket_size()
+                    );
+                } else {
+                    SPDLOG_ERROR("Unhandled aggregation type.");
+                    return clp_s::ClpsErrorCode{clp_s::ClpsErrorCodeEnum::BadParam};
+                }
+                break;
+            case CommandLineArguments::OutputHandlerType::ResultsCache:
+                output_handler = std::make_unique<clp_s::ResultsCacheOutputHandler>(
+                        cli_args.get_mongodb_uri(),
+                        cli_args.get_mongodb_collection(),
+                        cli_args.get_batch_size(),
+                        cli_args.get_max_num_results()
+                );
+                break;
+            case CommandLineArguments::OutputHandlerType::Stdout:
+                output_handler = std::make_unique<clp_s::StandardOutputHandler>();
+                break;
+            default:
+                SPDLOG_ERROR("Unhandled OutputHandlerType.");
+                return clp_s::ClpsErrorCode{clp_s::ClpsErrorCodeEnum::BadParam};
+        }
+    } catch (std::exception const& e) {
+        SPDLOG_ERROR("Failed to create output handler - {}", e.what());
+        return clp_s::ClpsErrorCode{clp_s::ClpsErrorCodeEnum::Failure};
+    }
+    return output_handler;
 }
 
 auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
@@ -299,11 +317,30 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
             SPDLOG_ERROR("Failed to open archive - {}", e.what());
             return 1;
         }
+        archive_reader->read_dictionaries_and_metadata();
         if (CommandLineArguments::ExperimentalQueries::cLogTypeStatsQuery == query) {
-            for (auto const& entry : archive_reader->read_log_type_dictionary()->get_entries()) {
+            auto logtype_dict{archive_reader->get_log_type_dictionary()};
+            auto logtype_stats{archive_reader->get_logtype_stats()};
+            for (size_t i{0}; i < logtype_stats.size(); ++i) {
+                auto stat{logtype_stats.get_stat(i)};
+                SPDLOG_INFO(
+                        "id: {}, count: {}, logtype: '{}'",
+                        i,
+                        stat.m_count,
+                        logtype_dict->get_value(i)
+                );
             }
-        } else if (CommandLineArguments::ExperimentalQueries::cVariableStatsQuery != query) {
-            for (auto const& entry : archive_reader->read_variable_dictionary()->get_entries()) {
+        } else if (CommandLineArguments::ExperimentalQueries::cVariableStatsQuery == query) {
+            auto var_dict{archive_reader->get_variable_dictionary()};
+            auto var_stats{archive_reader->get_variable_stats()};
+            for (size_t i{0}; i < var_stats.size(); ++i) {
+                auto stat{var_stats.get_stat(i)};
+                SPDLOG_INFO(
+                        "id: {}, count: {}, variable: '{}'",
+                        i,
+                        stat.m_count,
+                        var_dict->get_value(i)
+                );
             }
         }
         archive_reader->close();
@@ -371,7 +408,7 @@ int main(int argc, char const* argv[]) {
         }
     } else {
         auto const& query = command_line_arguments.get_query();
-        if (auto const result{handle_experimental_queries(command_line_arguments)}; 0 > result) {
+        if (auto const result{handle_experimental_queries(command_line_arguments)}; -1 < result) {
             return result;
         }
 

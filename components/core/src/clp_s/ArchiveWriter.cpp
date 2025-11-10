@@ -2,12 +2,15 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <memory>
 #include <sstream>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
-#include "clp_s/ColumnWriter.hpp"
+#include <clp_s/ArchiveStats.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/TraceableException.hpp>
 
 #include "archive_constants.hpp"
 #include "Defs.hpp"
@@ -57,6 +60,9 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     std::string array_dict_path = m_archive_path + constants::cArchiveArrayDictFile;
     m_array_dict = std::make_shared<LogTypeDictionaryWriter>();
     m_array_dict->open(array_dict_path, m_compression_level, UINT64_MAX);
+
+    m_logtype_stats = std::make_shared<ArchiveStats::LogTypeStats>();
+    m_var_stats = std::make_shared<ArchiveStats::VariableStats>();
 }
 
 auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
@@ -328,7 +334,10 @@ void ArchiveWriter::initialize_schema_writer(SchemaWriter* writer, Schema const&
                 writer->append_column(new ClpStringColumnWriter(id, m_var_dict, m_log_dict));
                 break;
             case NodeType::LogType:
-                writer->append_column(new LogTypeColumnWriter(id, m_log_dict));
+                writer->append_column(new LogTypeColumnWriter(id, m_log_dict, m_logtype_stats));
+                break;
+            case NodeType::TypedVar:
+                writer->append_column(new TypedVariableColumnWriter(id, m_var_dict, m_var_stats));
                 break;
             case NodeType::VarString:
                 writer->append_column(new VariableStringColumnWriter(id, m_var_dict));
@@ -465,6 +474,15 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
         m_table_metadata_compressor.write_numeric_value(schema.schema_id);
         m_table_metadata_compressor.write_numeric_value(schema.num_messages);
     }
+
+    if (m_logtype_stats->compress(m_table_metadata_compressor).has_error()) {
+        throw TraceableException(ErrorCodeFailure, __FILENAME__, __LINE__);
+    }
+
+    if (m_var_stats->compress(m_table_metadata_compressor).has_error()) {
+        throw TraceableException(ErrorCodeFailure, __FILENAME__, __LINE__);
+    }
+
     m_table_metadata_compressor.close();
 
     auto table_metadata_compressed_size = m_table_metadata_file_writer.get_pos();

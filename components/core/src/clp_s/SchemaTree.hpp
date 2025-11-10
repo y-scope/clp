@@ -64,6 +64,7 @@ enum class NodeType : uint8_t {
     DictionaryFloat,
     LogMessage,
     LogType,
+    TypedVar,
     CaptureVar,
     Unknown = std::underlying_type<NodeType>::type(~0ULL)
 };

@@ -2,8 +2,13 @@
 
 #include <filesystem>
 #include <string_view>
+#include <vector>
 
 #include <fmt/core.h>
+#include <spdlog/spdlog.h>
+
+#include <clp_s/ArchiveStats.hpp>
+#include <clp_s/ErrorCode.hpp>
 
 #include "archive_constants.hpp"
 #include "ArchiveReaderAdaptor.hpp"
@@ -126,6 +131,15 @@ void ArchiveReader::read_metadata() {
             = m_stream_reader.get_uncompressed_stream_size(prev_metadata.stream_id)
               - prev_metadata.stream_offset;
     m_id_to_schema_metadata[prev_schema_id] = prev_metadata;
+
+    if (m_logtype_stats.decompress(m_table_metadata_decompressor).has_error()) {
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+    }
+
+    if (m_var_stats.decompress(m_table_metadata_decompressor).has_error()) {
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+    }
+
     m_table_metadata_decompressor.close();
 
     m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveTableMetadataFile);
@@ -207,6 +221,9 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
             break;
         case NodeType::LogType:
             column_reader = new LogTypeColumnReader(column_id, m_log_dict);
+            break;
+        case NodeType::TypedVar:
+            column_reader = new VariableStringColumnReader(column_id, m_var_dict, node.get_type());
             break;
         case NodeType::VarString:
             column_reader = new VariableStringColumnReader(column_id, m_var_dict, node.get_type());
@@ -396,6 +413,9 @@ void ArchiveReader::close() {
         throw OperationFailed(ErrorCodeNotInit, __FILENAME__, __LINE__);
     }
     m_is_open = false;
+
+    m_logtype_stats.clear();
+    m_var_stats.clear();
 
     m_var_dict->close();
     m_log_dict->close();

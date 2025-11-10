@@ -18,6 +18,13 @@
 namespace clp_s {
 class ParsedMessage {
 public:
+    struct TypedVar {
+        TypedVar(std::string type, std::string value) : m_type(std::move(type)), m_value(value) {}
+
+        std::string m_type;
+        std::string m_value;
+    };
+
     // Types
     using variable_t = std::
             variant<int64_t,
@@ -28,7 +35,8 @@ public:
                     bool,
                     std::pair<uint64_t, epochtime_t>,
                     std::pair<double, float_format_t>,
-                    clp_s::LogTypeDictionaryEntry>;
+                    clp_s::LogTypeDictionaryEntry,
+                    TypedVar>;
 
     // Constructor
     ParsedMessage() : m_schema_id(-1) {}

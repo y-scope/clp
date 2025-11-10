@@ -339,6 +339,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/ArchiveReader.hpp
     src/clp_s/ArchiveReaderAdaptor.cpp
     src/clp_s/ArchiveReaderAdaptor.hpp
+    src/clp_s/ArchiveStats.cpp
+    src/clp_s/ArchiveStats.hpp
     src/clp_s/ArchiveWriter.cpp
     src/clp_s/ArchiveWriter.hpp
     src/clp_s/ColumnReader.cpp

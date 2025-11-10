@@ -181,7 +181,9 @@ auto create_log_surgeon_parser(Path const& schema_path, NetworkAuthOption const&
         }
         schema_contents.append(buf.data(), bytes_read);
     }
-    return std::make_unique<log_surgeon::BufferParser>(schema_contents);
+    return std::make_unique<log_surgeon::BufferParser>(
+            log_surgeon::SchemaParser::try_schema_string(schema_contents)
+    );
 }
 }  // namespace
 
@@ -1468,6 +1470,9 @@ bool JsonParser::check_and_log_curl_error(
 // TODO clpsls: probably want string view API to ls
 auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view)
         -> ystdlib::error_handling::Result<void> {
+    static constexpr std::string_view cFullMatch{"FullMatch"};
+    static constexpr std::string_view cLogType{"LogType"};
+
     m_log_surgeon_parser->reset();
     size_t offset{};
     // TODO clpsls: add string_view api to log surgeon
@@ -1503,7 +1508,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
             token_view.increment_start_pos();
         }
 
-        std::cerr << fmt::format(
+        SPDLOG_INFO(
                 "[clpsls] token name: {} ({}) value: {}\n",
                 token_name,
                 token_type,
@@ -1572,10 +1577,12 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                 auto capture_ids{lexer.get_capture_ids_from_rule_id(token_type)};
                 if (false == capture_ids.has_value()) {
                     logtype_dict_entry.add_schema_var();
-                    m_current_parsed_message.add_unordered_value(token_view.to_string());
+                    m_current_parsed_message.add_unordered_value(
+                            ParsedMessage::TypedVar{token_name, token_view.to_string()}
+                    );
                     m_current_schema.insert_unordered(m_archive_writer->add_node(
                             parent_node_id,
-                            NodeType::VarString,
+                            NodeType::TypedVar,
                             token_name
                     ));
                     break;
@@ -1587,12 +1594,12 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                 auto capture_start{m_current_schema.start_unordered_object(NodeType::CaptureVar)};
 
                 logtype_dict_entry.add_schema_var();
-                m_current_parsed_message.add_unordered_value(token_view.to_string());
-                m_current_schema.insert_unordered(m_archive_writer->add_node(
-                        capture_node_id,
-                        NodeType::VarString,
-                        "FullMatch"
-                ));
+                m_current_parsed_message.add_unordered_value(
+                        ParsedMessage::TypedVar{std::string{cFullMatch}, token_view.to_string()}
+                );
+                m_current_schema.insert_unordered(
+                        m_archive_writer->add_node(capture_node_id, NodeType::TypedVar, cFullMatch)
+                );
 
                 for (auto const capture_id : capture_ids.value()) {
                     auto const register_ids{lexer.get_reg_ids_from_capture_id(capture_id)};
@@ -1614,14 +1621,16 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                         capture_view.set_end_pos(end_positions[0]);
 
                         logtype_dict_entry.add_schema_var();
-                        m_current_parsed_message.add_unordered_value(capture_view.to_string());
+                        m_current_parsed_message.add_unordered_value(
+                                ParsedMessage::TypedVar{capture_name, capture_view.to_string()}
+                        );
                         m_current_schema.insert_unordered(m_archive_writer->add_node(
                                 capture_node_id,
-                                NodeType::VarString,
+                                NodeType::TypedVar,
                                 // fmt::format("{}.{}", capture_name, i)
                                 capture_name
                         ));
-                        std::cerr << fmt::format(
+                        SPDLOG_INFO(
                                 "[clpsls]\tcapture name: {} value: {}\n",
                                 capture_name,
                                 capture_view.to_string()
@@ -1642,7 +1651,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
 
     m_current_parsed_message.add_unordered_value(logtype_dict_entry);
     m_current_schema.insert_unordered(
-            m_archive_writer->add_node(parent_node_id, NodeType::LogType, "LogType")
+            m_archive_writer->add_node(parent_node_id, NodeType::LogType, cLogType)
     );
     m_current_schema.end_unordered_object(msg_start);
     return ystdlib::error_handling::success();

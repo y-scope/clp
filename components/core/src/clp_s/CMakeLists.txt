@@ -225,6 +225,8 @@ endif()
 set(
         CLP_S_ARCHIVE_WRITER_SOURCES
         archive_constants.hpp
+        ArchiveStats.cpp
+        ArchiveStats.hpp
         ArchiveWriter.cpp
         ArchiveWriter.hpp
         ColumnWriter.cpp

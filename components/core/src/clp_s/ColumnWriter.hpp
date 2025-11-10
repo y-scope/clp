@@ -3,6 +3,9 @@
 
 #include <utility>
 #include <variant>
+#include <vector>
+
+#include <clp_s/ArchiveStats.hpp>
 
 #include "../clp/Defs.h"
 #include "DictionaryWriter.hpp"
@@ -42,6 +45,12 @@ public:
      * @return the total size of header data that will be written to the compressor in bytes
      */
     virtual size_t get_total_header_size() const { return 0; }
+
+    /**
+     *
+     * @return the total size of header data that will be written to the compressor in bytes
+     */
+    virtual auto get_stats() const -> size_t { return 0; }
 
 protected:
     int32_t m_id;
@@ -218,9 +227,14 @@ class LogTypeColumnWriter : public BaseColumnWriter {
 public:
     using encoded_log_dict_id_t = uint64_t;
 
-    LogTypeColumnWriter(int32_t id, std::shared_ptr<LogTypeDictionaryWriter> log_dict)
+    LogTypeColumnWriter(
+            int32_t id,
+            std::shared_ptr<LogTypeDictionaryWriter> log_dict,
+            std::shared_ptr<ArchiveStats::LogTypeStats> logtype_stats
+    )
             : BaseColumnWriter(id),
-              m_log_dict(std::move(log_dict)) {}
+              m_log_dict(std::move(log_dict)),
+              m_logtype_stats(std::move(logtype_stats)) {}
 
     auto add_value(ParsedMessage::variable_t& value) -> size_t override;
 
@@ -243,6 +257,29 @@ private:
     std::shared_ptr<LogTypeDictionaryWriter> m_log_dict;
 
     std::vector<encoded_log_dict_id_t> m_logtypes;
+    std::shared_ptr<ArchiveStats::LogTypeStats> m_logtype_stats;
+};
+
+class TypedVariableColumnWriter : public BaseColumnWriter {
+public:
+    // Constructor
+    TypedVariableColumnWriter(
+            int32_t id,
+            std::shared_ptr<VariableDictionaryWriter> var_dict,
+            std::shared_ptr<ArchiveStats::VariableStats> var_stats
+    )
+            : BaseColumnWriter(id),
+              m_var_dict(std::move(var_dict)),
+              m_var_stats(std::move(var_stats)) {}
+
+    auto add_value(ParsedMessage::variable_t& value) -> size_t override;
+
+    void store(ZstdCompressor& compressor) override;
+
+private:
+    std::shared_ptr<VariableDictionaryWriter> m_var_dict;
+    std::vector<clp::variable_dictionary_id_t> m_var_dict_ids;
+    std::shared_ptr<ArchiveStats::VariableStats> m_var_stats;
 };
 
 class VariableStringColumnWriter : public BaseColumnWriter {
