@@ -625,11 +625,10 @@ auto parse_timestamp(
                         )
                 );
                 timestamp_idx += num_digits;
-                parsed_epoch_nanoseconds = number
-                                           * cPowersOfTen.at(
-                                                   cNumNanosecondPrecisionSubsecondDigits
-                                                   - cNumSecondPrecisionSubsecondDigits
-                                           );
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumSecondPrecisionSubsecondDigits]};
+                parsed_epoch_nanoseconds = number * cFactor;
                 number_type_representation = true;
                 break;
             }
@@ -640,11 +639,10 @@ auto parse_timestamp(
                         )
                 );
                 timestamp_idx += num_digits;
-                parsed_epoch_nanoseconds = number
-                                           * cPowersOfTen.at(
-                                                   cNumNanosecondPrecisionSubsecondDigits
-                                                   - cNumMillisecondPrecisionSubsecondDigits
-                                           );
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumMillisecondPrecisionSubsecondDigits]};
+                parsed_epoch_nanoseconds = number * cFactor;
                 number_type_representation = true;
                 break;
             }
@@ -655,11 +653,10 @@ auto parse_timestamp(
                         )
                 );
                 timestamp_idx += num_digits;
-                parsed_epoch_nanoseconds = number
-                                           * cPowersOfTen.at(
-                                                   cNumNanosecondPrecisionSubsecondDigits
-                                                   - cNumMicrosecondPrecisionSubsecondDigits
-                                           );
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumMicrosecondPrecisionSubsecondDigits]};
+                parsed_epoch_nanoseconds = number * cFactor;
                 number_type_representation = true;
                 break;
             }
@@ -701,15 +698,15 @@ auto parse_timestamp(
         return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
     }
 
+    // Do not allow trailing unmatched content.
+    if (pattern_idx != pattern.size() || timestamp_idx != timestamp.size()) {
+        return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+    }
+
     if ((uses_12_hour_clock && false == optional_part_of_day_idx.has_value())
         || (false == uses_12_hour_clock && optional_part_of_day_idx.has_value()))
     {
         return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
-    }
-
-    // Do not allow trailing unmatched content.
-    if (pattern_idx != pattern.size() || timestamp_idx != timestamp.size()) {
-        return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
     }
 
     if (number_type_representation) {

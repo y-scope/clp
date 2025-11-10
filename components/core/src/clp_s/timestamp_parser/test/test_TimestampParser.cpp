@@ -64,7 +64,8 @@ auto generate_padded_numbers_in_range(size_t begin, size_t end, size_t field_len
 
 /**
  * @param num_digits
- * @return All of the padded numbers with `num_digits` digits having a single unique digit.
+ * @return A vector containing all single-unique-digit (0-9) padded numbers with the unique digit
+ * repeated to a length of `num_digits`.
  */
 [[nodiscard]] auto generate_padded_number_subset(size_t num_digits) -> std::vector<std::string>;
 
