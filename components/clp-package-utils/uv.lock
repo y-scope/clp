@@ -83,7 +83,7 @@ wheels = [
 
 [[package]]
 name = "clp-package-utils"
-version = "0.5.2.dev0"
+version = "0.6.1.dev0"
 source = { editable = "." }
 dependencies = [
     { name = "brotli" },
