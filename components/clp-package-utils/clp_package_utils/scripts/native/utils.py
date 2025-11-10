@@ -1,6 +1,7 @@
 import asyncio
 import multiprocessing
 import time
+from collections.abc import Callable, Sequence
 from contextlib import closing
 from typing import Any
 
@@ -15,7 +16,12 @@ from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
 from job_orchestration.scheduler.scheduler_data import QueryJobConfig
 
 
-async def run_function_in_process(function, *args, initializer=None, init_args=None) -> Any:
+async def run_function_in_process(
+    function: Callable[..., Any],
+    *args: Any,
+    initializer: Callable[..., None] | None = None,
+    init_args: Sequence[Any] | None = None,
+) -> Any:
     """
     Runs the given function in a separate process wrapped in a *cancellable*
     asyncio task. This is necessary because asyncio's multiprocessing process
@@ -31,10 +37,10 @@ async def run_function_in_process(function, *args, initializer=None, init_args=N
     loop = asyncio.get_event_loop()
     fut = loop.create_future()
 
-    def process_done_callback(obj) -> None:
+    def process_done_callback(obj: Any) -> None:
         loop.call_soon_threadsafe(fut.set_result, obj)
 
-    def process_error_callback(err) -> None:
+    def process_error_callback(err: BaseException) -> None:
         loop.call_soon_threadsafe(fut.set_exception, err)
 
     pool.apply_async(

@@ -6,6 +6,7 @@ import pathlib
 import sys
 import time
 from contextlib import closing
+from typing import Any
 
 import brotli
 import msgpack
@@ -41,7 +42,7 @@ from clp_package_utils.general import (
 logger = logging.getLogger(__name__)
 
 
-def print_compression_job_status(job_row) -> None:
+def print_compression_job_status(job_row: dict[str, Any]) -> None:
     job_uncompressed_size = job_row["uncompressed_size"]
     job_compressed_size = job_row["compressed_size"]
     compression_ratio = float(job_uncompressed_size) / job_compressed_size
@@ -61,7 +62,7 @@ def print_compression_job_status(job_row) -> None:
     )
 
 
-def handle_job_update(db, db_cursor, job_id, no_progress_reporting) -> None:
+def handle_job_update(db: Any, db_cursor: Any, job_id: int, no_progress_reporting: bool) -> None:
     if no_progress_reporting:
         polling_query = (
             f"SELECT status, status_msg FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id={job_id}"

@@ -67,7 +67,7 @@ def validate_and_load_config(
 
 
 def handle_extract_file_cmd(
-    parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
+    parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
     """
     Handles the file extraction command.
@@ -177,7 +177,7 @@ def handle_extract_file_cmd(
 
 
 def handle_extract_stream_cmd(
-    parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
+    parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
     """
     Handles the stream extraction command.

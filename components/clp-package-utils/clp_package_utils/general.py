@@ -419,7 +419,7 @@ def generate_container_start_cmd(
     return container_start_cmd
 
 
-def validate_config_key_existence(config, key) -> Any:
+def validate_config_key_existence(config: dict[str, Any], key: str) -> Any:
     try:
         value = get_config_value(config, key)
     except KeyError:
@@ -689,7 +689,7 @@ def is_retention_period_configured(clp_config: CLPConfig) -> bool:
 
 
 def get_common_env_vars_list(
-    include_clp_home_env_var=True,
+    include_clp_home_env_var: bool = True,
 ) -> list[str]:
     """
     :param include_clp_home_env_var:
@@ -707,9 +707,9 @@ def get_common_env_vars_list(
 
 def get_credential_env_vars_list(
     container_clp_config: CLPConfig,
-    include_db_credentials=False,
-    include_queue_credentials=False,
-    include_redis_credentials=False,
+    include_db_credentials: bool = False,
+    include_queue_credentials: bool = False,
+    include_redis_credentials: bool = False,
 ) -> list[str]:
     """
     :param container_clp_config:
