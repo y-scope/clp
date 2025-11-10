@@ -732,10 +732,10 @@ auto parse_timestamp(
         return ErrorCode{ErrorCodeEnum::InvalidDate};
     }
 
-    auto const time_point = date::sys_days(year_month_day) + std::chrono::hours(parsed_hour)
-                            + std::chrono::minutes(parsed_minute)
-                            + std::chrono::seconds(parsed_second)
-                            + std::chrono::nanoseconds(parsed_subsecond_nanoseconds);
+    auto const time_point = date::sys_days{year_month_day} + std::chrono::hours{parsed_hour}
+                            + std::chrono::minutes{parsed_minute}
+                            + std::chrono::seconds{parsed_second}
+                            + std::chrono::nanoseconds{parsed_subsecond_nanoseconds};
 
     if (optional_day_of_week_idx.has_value()) {
         auto const actual_day_of_week_idx{(date::year_month_weekday(date::sys_days(year_month_day))

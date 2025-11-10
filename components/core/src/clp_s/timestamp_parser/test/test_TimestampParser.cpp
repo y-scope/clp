@@ -60,13 +60,13 @@ auto generate_padded_numbers_in_range(size_t begin, size_t end, size_t field_len
  * @param max_num_digits
  * @return The elements of all of the triangles of numbers up to the maximum number of digits.
  */
-auto generate_number_triangles(size_t max_num_digits) -> std::vector<std::string>;
+[[nodiscard]] auto generate_number_triangles(size_t max_num_digits) -> std::vector<std::string>;
 
 /**
  * @param num_digits
  * @return All of the padded numbers with `num_digits` digits having a single unique digit.
  */
-auto generate_padded_number_subset(size_t num_digits) -> std::vector<std::string>;
+[[nodiscard]] auto generate_padded_number_subset(size_t num_digits) -> std::vector<std::string>;
 
 void
 assert_specifier_accepts_valid_content(char specifier, std::vector<std::string> const& content) {
@@ -188,14 +188,14 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
         auto const space_padded_hours{generate_padded_numbers_in_range(0, 23, 2, ' ')};
         assert_specifier_accepts_valid_content('k', space_padded_hours);
 
-        constexpr std::array cPartsOfDay{"AM", "PM"};
         auto const twelve_hour_clock_two_digit_hours{
                 generate_padded_numbers_in_range(1, 12, 2, '0')
         };
         auto const twelve_hour_clock_zero_padded_hours{
                 generate_padded_numbers_in_range(1, 12, 2, ' ')
         };
-        for (auto const& part_of_day : cPartsOfDay) {
+        constexpr std::array cPartsOfDay{std::string_view{"AM"}, std::string_view{"PM"}};
+        for (auto const part_of_day : cPartsOfDay) {
             std::string generated_pattern;
             auto assert_twelve_hour_clock_accepts_valid_content
                     = [&](char hour_type, std::vector<std::string> const& hours) -> void {
@@ -203,7 +203,7 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 for (auto const& hour : hours) {
                     auto const timestamp{fmt::format("{} {}a", hour, part_of_day)};
                     auto const result{parse_timestamp(timestamp, pattern, generated_pattern)};
-                    REQUIRE(false == result.has_error());
+                    REQUIRE_FALSE(result.has_error());
                     REQUIRE(result.value().second == pattern);
                 }
             };
@@ -229,10 +229,10 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
         auto const nanoseconds{generate_padded_number_subset(9)};
         assert_specifier_accepts_valid_content('9', nanoseconds);
 
-        auto const variable_length_nanoseconds(generate_number_triangles(9));
+        auto const variable_length_nanoseconds{generate_number_triangles(9)};
         assert_specifier_accepts_valid_content('T', variable_length_nanoseconds);
 
-        auto const epoch_timestamps(generate_number_triangles(15));
+        auto const epoch_timestamps{generate_number_triangles(15)};
         std::vector<std::string> negative_epoch_timestamps;
         negative_epoch_timestamps.reserve(epoch_timestamps.size());
         for (auto const& timestamp : epoch_timestamps) {
@@ -295,7 +295,7 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                     expected_result.pattern,
                     generated_pattern
             )};
-            REQUIRE(false == result.has_error());
+            REQUIRE_FALSE(result.has_error());
             REQUIRE(expected_result.epoch_timestamp == result.value().first);
             REQUIRE(expected_result.pattern == result.value().second);
         }
