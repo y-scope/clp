@@ -42,8 +42,6 @@ tasks:
       - "utils:clean-outdated-cpp-checksum-files"
       - "utils:init"
     cmds:
-      - "rm -rf '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
-      - "mkdir -p '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
@@ -119,8 +117,6 @@ tasks:
       - "utils:clean-outdated-cpp-checksum-files"
       - "utils:init"
     cmds:
-      - "rm -rf '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
-      - "mkdir -p '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"

@@ -404,6 +404,7 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/TimestampDictionaryWriter.hpp
     src/clp_s/TimestampEntry.cpp
     src/clp_s/TimestampEntry.hpp
+    src/clp_s/timestamp_parser/test/test_TimestampParser.cpp
     src/clp_s/Utils.cpp
     src/clp_s/Utils.hpp
     src/clp_s/ZstdCompressor.cpp
@@ -481,6 +482,7 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/encoding_methods.cpp
         src/clp/ffi/encoding_methods.hpp
         src/clp/ffi/encoding_methods.inc
+        src/clp/ffi/test/test_StringBlob.cpp
         src/clp/ffi/ir_stream/byteswap.hpp
         src/clp/ffi/ir_stream/Deserializer.hpp
         src/clp/ffi/ir_stream/decoding_methods.cpp
@@ -532,6 +534,7 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/search/Subquery.hpp
         src/clp/ffi/search/WildcardToken.cpp
         src/clp/ffi/search/WildcardToken.hpp
+        src/clp/ffi/StringBlob.hpp
         src/clp/ffi/utils.cpp
         src/clp/ffi/utils.hpp
         src/clp/ffi/Value.hpp
@@ -748,6 +751,7 @@ if(CLP_BUILD_TESTING)
             clp_s::search::ast
             clp_s::search::kql
             clp_s::search::sql
+            clp_s::timestamp_parser
             clp_s::timestamp_pattern
             date::date
             fmt::fmt

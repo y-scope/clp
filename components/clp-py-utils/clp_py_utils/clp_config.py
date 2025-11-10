@@ -19,6 +19,7 @@ from .core import (
     get_config_value,
     make_config_path_absolute,
     read_yaml_config_file,
+    resolve_host_path_in_container,
     validate_path_could_be_dir,
 )
 from .serialization_utils import serialize_path, serialize_str_enum
@@ -133,8 +134,8 @@ AwsAuthTypeStr = Annotated[AwsAuthType, StrEnumSerializer]
 
 
 class Package(BaseModel):
-    storage_engine: StorageEngineStr = StorageEngine.CLP
-    query_engine: QueryEngineStr = QueryEngine.CLP
+    storage_engine: StorageEngineStr = StorageEngine.CLP_S
+    query_engine: QueryEngineStr = QueryEngine.CLP_S
 
     @model_validator(mode="after")
     def validate_query_engine_package_compatibility(self):
@@ -666,15 +667,18 @@ class CLPConfig(BaseModel):
         )
         self._version_file_path = make_config_path_absolute(clp_home, self._version_file_path)
 
-    def validate_logs_input_config(self):
+    def validate_logs_input_config(self, use_host_mount: bool = False):
         logs_input_type = self.logs_input.type
         if StorageType.FS == logs_input_type:
             # NOTE: This can't be a pydantic validator since input_logs_dir might be a
             # package-relative path that will only be resolved after pydantic validation
             input_logs_dir = self.logs_input.directory
-            if not input_logs_dir.exists():
+            resolved_input_logs_dir = (
+                resolve_host_path_in_container(input_logs_dir) if use_host_mount else input_logs_dir
+            )
+            if not resolved_input_logs_dir.exists():
                 raise ValueError(f"logs_input.directory '{input_logs_dir}' doesn't exist.")
-            if not input_logs_dir.is_dir():
+            if not resolved_input_logs_dir.is_dir():
                 raise ValueError(f"logs_input.directory '{input_logs_dir}' is not a directory.")
         if StorageType.S3 == logs_input_type and StorageEngine.CLP_S != self.package.storage_engine:
             raise ValueError(
@@ -682,7 +686,7 @@ class CLPConfig(BaseModel):
                 f" = '{StorageEngine.CLP_S}'"
             )
 
-    def validate_archive_output_config(self):
+    def validate_archive_output_config(self, use_host_mount: bool = False):
         if (
             StorageType.S3 == self.archive_output.storage.type
             and StorageEngine.CLP_S != self.package.storage_engine
@@ -691,12 +695,18 @@ class CLPConfig(BaseModel):
                 f"archive_output.storage.type = 's3' is only supported with package.storage_engine"
                 f" = '{StorageEngine.CLP_S}'"
             )
+        archive_output_dir = self.archive_output.get_directory()
+        resolved_archive_output_dir = (
+            resolve_host_path_in_container(archive_output_dir)
+            if use_host_mount
+            else archive_output_dir
+        )
         try:
-            validate_path_could_be_dir(self.archive_output.get_directory())
+            validate_path_could_be_dir(resolved_archive_output_dir)
         except ValueError as ex:
             raise ValueError(f"archive_output.storage's directory is invalid: {ex}")
 
-    def validate_stream_output_config(self):
+    def validate_stream_output_config(self, use_host_mount: bool = False):
         if (
             StorageType.S3 == self.stream_output.storage.type
             and StorageEngine.CLP_S != self.package.storage_engine
@@ -705,30 +715,42 @@ class CLPConfig(BaseModel):
                 f"stream_output.storage.type = 's3' is only supported with package.storage_engine"
                 f" = '{StorageEngine.CLP_S}'"
             )
+        stream_output_dir = self.stream_output.get_directory()
+        resolved_stream_output_dir = (
+            resolve_host_path_in_container(stream_output_dir)
+            if use_host_mount
+            else stream_output_dir
+        )
         try:
-            validate_path_could_be_dir(self.stream_output.get_directory())
+            validate_path_could_be_dir(resolved_stream_output_dir)
         except ValueError as ex:
             raise ValueError(f"stream_output.storage's directory is invalid: {ex}")
 
-    def validate_data_dir(self):
+    def validate_data_dir(self, use_host_mount: bool = False):
+        data_dir = self.data_directory
+        resolved_data_dir = resolve_host_path_in_container(data_dir) if use_host_mount else data_dir
         try:
-            validate_path_could_be_dir(self.data_directory)
+            validate_path_could_be_dir(resolved_data_dir)
         except ValueError as ex:
             raise ValueError(f"data_directory is invalid: {ex}")
 
-    def validate_logs_dir(self):
+    def validate_logs_dir(self, use_host_mount: bool = False):
+        logs_dir = self.logs_directory
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir) if use_host_mount else logs_dir
         try:
-            validate_path_could_be_dir(self.logs_directory)
+            validate_path_could_be_dir(resolved_logs_dir)
         except ValueError as ex:
             raise ValueError(f"logs_directory is invalid: {ex}")
 
-    def validate_tmp_dir(self):
+    def validate_tmp_dir(self, use_host_mount: bool = False):
+        tmp_dir = self.tmp_directory
+        resolved_tmp_dir = resolve_host_path_in_container(tmp_dir) if use_host_mount else tmp_dir
         try:
-            validate_path_could_be_dir(self.tmp_directory)
+            validate_path_could_be_dir(resolved_tmp_dir)
         except ValueError as ex:
             raise ValueError(f"tmp_directory is invalid: {ex}")
 
-    def validate_aws_config_dir(self):
+    def validate_aws_config_dir(self, use_host_mount: bool = False):
         profile_auth_used = False
         auth_configs = []
 
@@ -749,7 +771,12 @@ class CLPConfig(BaseModel):
                 raise ValueError(
                     "aws_config_directory must be set when using profile authentication"
                 )
-            if not self.aws_config_directory.exists():
+            resolved_aws_config_dir = (
+                resolve_host_path_in_container(self.aws_config_directory)
+                if use_host_mount
+                else self.aws_config_directory
+            )
+            if not resolved_aws_config_dir.exists():
                 raise ValueError(
                     f"aws_config_directory does not exist: '{self.aws_config_directory}'"
                 )
