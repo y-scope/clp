@@ -14,6 +14,8 @@
 #include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
 
+#include <clp_s/ErrorCode.hpp>
+
 #include "../clp/CurlGlobalInstance.hpp"
 #include "../clp/ir/constants.hpp"
 #include "../clp/streaming_archive/ArchiveMetadata.hpp"
@@ -293,6 +295,10 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
                 )};
                 output_handler.value()->write(message);
             }
+        }
+        if (auto ec{output_handler.value()->flush()}; ErrorCode::ErrorCodeSuccess != ec) {
+            SPDLOG_ERROR("Failed to flush output handler. Error code: {}", ec);
+            return 3;
         }
         archive_reader->close();
     }
