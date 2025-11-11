@@ -524,6 +524,10 @@ requires-dist = [
 ]
 
 [package.metadata.requires-dev]
+clp = [
+    { name = "clp-py-utils", directory = "../components/clp-py-utils" },
+    { name = "job-orchestration", directory = "../components/job-orchestration" },
+]
 dev = [
     { name = "mypy", specifier = ">=1.18.2" },
     { name = "ruff", specifier = ">=0.14.4" },
