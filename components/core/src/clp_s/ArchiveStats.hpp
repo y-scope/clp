@@ -64,7 +64,7 @@ public:
 
         auto decompress(ZstdDecompressor& decompressor) -> ystdlib::error_handling::Result<void>;
 
-        auto get_stat(clp::logtype_dictionary_id_t id) -> VariableStat const& {
+        auto get_stat(clp::variable_dictionary_id_t id) -> VariableStat const& {
             return m_stats.at(id);
         }
 
