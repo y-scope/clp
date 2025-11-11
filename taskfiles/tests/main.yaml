@@ -7,6 +7,9 @@ tasks:
   rust-all:
     deps: [":toolchains:rust"]
     dir: "{{.ROOT_DIR}}"
-    cmd: |-
-      . "$HOME/.cargo/env"
-      cargo test --all --all-features --release
+    cmds:
+      - uv run tools/scripts/localstack/start.py
+      - defer: uv run tools/scripts/localstack/stop.py
+      - uv run tools/scripts/localstack/create_log_ingestor_test_resources.py
+      - . "$HOME/.cargo/env"
+      - cargo test --all --all-features --release
