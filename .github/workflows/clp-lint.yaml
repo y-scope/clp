@@ -16,7 +16,8 @@ concurrency:
 jobs:
   lint-check:
     name: "lint-check"
-    runs-on: "self-hosted"
+    runs-on:
+      group: "Default"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
