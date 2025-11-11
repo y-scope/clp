@@ -17,6 +17,7 @@ jobs:
   lint-check:
     name: "lint-check"
     strategy:
+      max-parallel: 1
       matrix:
         runner: ["self-hosted", "ubuntu-24.04"]
       fail-fast: false
