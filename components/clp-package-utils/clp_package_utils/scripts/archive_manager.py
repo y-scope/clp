@@ -257,11 +257,9 @@ def main(argv: list[str]) -> int:
             archive_manager_cmd.append(DEL_BY_IDS_SUBCOMMAND)
             archive_manager_cmd.extend(parsed_args.ids)
         elif DEL_BY_FILTER_SUBCOMMAND == parsed_args.del_subcommand:
-            archive_manager_cmd.extend([
-                DEL_BY_FILTER_SUBCOMMAND,
-                str(begin_timestamp),
-                str(end_timestamp)
-            ])
+            archive_manager_cmd.extend(
+                [DEL_BY_FILTER_SUBCOMMAND, str(begin_timestamp), str(end_timestamp)]
+            )
         else:
             logger.error("Unsupported subcommand: `%s`.", parsed_args.del_subcommand)
             return -1
