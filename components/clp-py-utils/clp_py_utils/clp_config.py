@@ -36,10 +36,10 @@ QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
 PRESTO_COORDINATOR_COMPONENT_NAME = "presto-coordinator"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
+API_SERVER_COMPONENT_NAME = "api_server"
 WEBUI_COMPONENT_NAME = "webui"
 MCP_SERVER_COMPONENT_NAME = "mcp_server"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
-API_SERVER_COMPONENT_NAME = "api_server"
 
 # Action names
 ARCHIVE_MANAGER_ACTION_NAME = "archive_manager"
@@ -595,7 +595,6 @@ class GarbageCollector(BaseModel):
 
 class QueryJobPollingConfig(BaseModel):
     initial_backoff_ms: int = Field(default=100, alias="initial_backoff")
-
     max_backoff_ms: int = Field(default=5000, alias="max_backoff")
 
 
