@@ -296,8 +296,8 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
                 output_handler.value()->write(message);
             }
         }
-        if (auto ec{output_handler.value()->flush()}; ErrorCode::ErrorCodeSuccess != ec) {
-            SPDLOG_ERROR("Failed to flush output handler. Error code: {}", ec);
+        if (auto ec{output_handler.value()->flush()}; clp_s::ErrorCode::ErrorCodeSuccess != ec) {
+            SPDLOG_ERROR("Failed to flush output handler. Error code: {}", std::to_string(ec));
             return 3;
         }
         archive_reader->close();
