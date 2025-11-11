@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+set -o errexit
+set -o nounset
+set -o pipefail
+
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" &>/dev/null && pwd)"
 package_root=$(readlink -f "$script_dir/..")
 
@@ -17,7 +21,7 @@ if [[ -f "$image_id_file" ]]; then
     export CLP_PACKAGE_CONTAINER_IMAGE_REF="$image_id"
 elif [[ -f "$version_file" ]]; then
     version="$(tr -d '[:space:]' <"$version_file")"
-    export CLP_PACKAGE_CONTAINER_IMAGE_REF="ghcr.io/y-scope/clp/clp-package:v$version"
+    export CLP_PACKAGE_CONTAINER_IMAGE_REF="ghcr.io/y-scope/clp/clp-package:$version"
 else
     echo >&2 "Error: Neither '${image_id_file}' nor '${version_file}' exist."
     return 1
@@ -63,4 +67,9 @@ if [[ -z "${CLP_DOCKER_SOCK_PATH:-}" ]]; then
     if [[ -S "$socket" ]]; then
         export CLP_DOCKER_SOCK_PATH="$socket"
     fi
+fi
+
+CLP_COMPOSE_RUN_EXTRA_FLAGS=()
+if [[ $- != *i* ]]; then
+    CLP_COMPOSE_RUN_EXTRA_FLAGS+=(--interactive=false)
 fi
