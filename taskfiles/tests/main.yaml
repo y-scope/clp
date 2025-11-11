@@ -6,11 +6,17 @@ includes:
 
 tasks:
   rust-all:
-    deps: ["toolchains:rust"]
+    vars:
+      LOG_INGESTOR_BUCKET: "clp-log-ingestor-test-bucket"
+      LOG_INGESTOR_QUEUE: "clp-log-ingestor-test-queue"
     dir: "{{.ROOT_DIR}}"
+    deps: ["toolchains:rust"]
     cmds:
       - uv run tools/scripts/localstack/start.py
       - defer: uv run tools/scripts/localstack/stop.py
-      - uv run tools/scripts/localstack/create_log_ingestor_test_resources.py
+      - |-
+        uv run tools/scripts/localstack/create-bucket.py \
+        --bucket "{{.LOG_INGESTOR_BUCKET}}" \
+        --queue "{{.LOG_INGESTOR_QUEUE}}"
       - . "$HOME/.cargo/env"
       - cargo test --all --all-features --release
