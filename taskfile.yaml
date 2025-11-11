@@ -28,8 +28,9 @@ vars:
   G_PACKAGE_BUILD_DIR: "{{.G_BUILD_DIR}}/clp-package"
   G_PACKAGE_VENV_DIR: "{{.G_BUILD_DIR}}/package-venv"
   G_PYTHON_LIBS_DIR: "{{.G_BUILD_DIR}}/python-libs"
-  G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
+  G_RUST_BUILD_DIR: "{{.G_BUILD_DIR}}/rust"
   G_SPIDER_BUILD_DIR: "{{.G_BUILD_DIR}}/spider"
+  G_WEBUI_BUILD_DIR: "{{.G_BUILD_DIR}}/webui"
 
   # Taskfile paths
   G_UTILS_TASKFILE: "{{.ROOT_DIR}}/tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
@@ -72,6 +73,7 @@ tasks:
       - task: "clean-python-component"
         vars:
           COMPONENT: "job-orchestration"
+      - task: "clean-rust"
       - task: "clean-webui"
       - task: "tests:integration:cache-clear"
 
@@ -94,6 +96,10 @@ tasks:
         vars:
           FLAVOUR: "text"
           STORAGE_ENGINE: "clp"
+
+  clean-rust:
+    cmds:
+      - "rm -rf '{{.G_RUST_BUILD_DIR}}'"
 
   clean-webui:
     cmds:
@@ -191,6 +197,15 @@ tasks:
           JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           TARGETS: ["clg", "clo", "clp", "clp-s", "indexer", "log-converter", "reducer-server"]
 
+  # NOTE: We rely on cargo for checksumming. It automatically rebuilds when source files change or
+  # when a binary is missing.
+  rust:
+    deps: ["toolchains:rust"]
+    dir: "{{.ROOT_DIR}}"
+    cmd: |-
+      . "$HOME/.cargo/env"
+      cargo build --release --bins --target-dir {{.G_RUST_BUILD_DIR}}
+
   clp-mcp-server:
     - task: "uv-component"
       vars:
@@ -217,6 +232,7 @@ tasks:
       - "deps:spider"
       - "init"
       - "python-libs"
+      - "rust"
       - "webui"
 
   webui:
