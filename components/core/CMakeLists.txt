@@ -481,9 +481,13 @@ set(SOURCE_FILES_unitTest
         src/clp/EncodedVariableInterpreter.cpp
         src/clp/EncodedVariableInterpreter.hpp
         src/clp/ErrorCode.hpp
+        src/clp/ffi/EncodedTextAst.hpp
+        src/clp/ffi/EncodedTextAstError.cpp
+        src/clp/ffi/EncodedTextAstError.hpp
         src/clp/ffi/encoding_methods.cpp
         src/clp/ffi/encoding_methods.hpp
         src/clp/ffi/encoding_methods.inc
+        src/clp/ffi/test/test_EncodedTextAst.cpp
         src/clp/ffi/test/test_StringBlob.cpp
         src/clp/ffi/ir_stream/byteswap.hpp
         src/clp/ffi/ir_stream/Deserializer.hpp
