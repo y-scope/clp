@@ -9,11 +9,18 @@ tasks:
     vars:
       LOG_INGESTOR_BUCKET: "clp-log-ingestor-test-bucket"
       LOG_INGESTOR_QUEUE: "clp-log-ingestor-test-queue"
+      LOCALSTACK_CONTAINER_NAME_PREFIX: "clp-localstack-rust"
+      LOCALSTACK_CONTAINER_UUID:
+        sh: "uuidgen"
     dir: "{{.ROOT_DIR}}"
     deps: ["toolchains:rust"]
     cmds:
-      - uv run tools/scripts/localstack/start.py
-      - defer: uv run tools/scripts/localstack/stop.py
+      - |-
+        uv run tools/scripts/localstack/start.py \
+        --name "{{.LOCALSTACK_CONTAINER_NAME_PREFIX}}-{{.LOCALSTACK_CONTAINER_UUID}}"
+      - defer: |-
+          uv run tools/scripts/localstack/stop.py \
+          --name "{{.LOCALSTACK_CONTAINER_NAME_PREFIX}}-{{.LOCALSTACK_CONTAINER_UUID}}"
       - |-
         uv run tools/scripts/localstack/create-bucket.py \
         --bucket "{{.LOG_INGESTOR_BUCKET}}" \
