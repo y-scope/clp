@@ -25,5 +25,5 @@ tasks:
         uv run tools/scripts/localstack/create-bucket.py \
         --bucket "{{.LOG_INGESTOR_BUCKET}}" \
         --queue "{{.LOG_INGESTOR_QUEUE}}"
-      - . "$HOME/.cargo/env"
-      - cargo test --all --all-features --release
+      - ". $HOME/.cargo/env"
+      - "cargo test --all --all-features --release"
