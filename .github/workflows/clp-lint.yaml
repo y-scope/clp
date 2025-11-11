@@ -13,15 +13,18 @@ concurrency:
   # Cancel in-progress jobs for efficiency
   cancel-in-progress: true
 
+x-runner-strategy: &runner-strategy
+  strategy:
+    matrix:
+      runner: ["self-hosted", "ubuntu-24.04"]
+    fail-fast: false
+  runs-on: "${{ matrix.runner }}"
+  continue-on-error: "${{ matrix.runner == 'self-hosted' }}"
+
 jobs:
   lint-check:
+    <<: *runner-strategy
     name: "lint-check"
-    strategy:
-      matrix:
-        os:
-          - "macos-15"
-          - "ubuntu-24.04"
-    runs-on: "${{matrix.os}}"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -48,23 +51,9 @@ jobs:
       - name: "Install MariaDB Connector/C"
         shell: "bash"
         run: |-
-          case "${{ matrix.os }}" in
-            ubuntu-24.04)
-              sudo apt-get update
-              sudo apt-get install -y libmariadb-dev
-              MARIADB_CONFIG_PATH="$(command -v mariadb_config)"
-              ;;
-            macos-15)
-              brew update
-              brew install mariadb-connector-c
-              PREFIX="$(brew --prefix mariadb-connector-c)"
-              MARIADB_CONFIG_PATH="$PREFIX/bin/mariadb_config"
-              ;;
-            *)
-              # Control flow should not reach here
-              exit 1
-              ;;
-          esac
+          sudo apt-get update
+          sudo apt-get install -y libmariadb-dev
+          MARIADB_CONFIG_PATH="$(command -v mariadb_config)"
           echo "MARIADB_CONFIG=$MARIADB_CONFIG_PATH" >> "$GITHUB_ENV"
 
       - name: "Lint .js files"
