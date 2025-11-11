@@ -3,5 +3,8 @@ rustflags = [
     "-Dclippy::all",
     "-Dclippy::nursery",
     "-Dclippy::pedantic",
+
+    # To allow Yoda conditions
+    "-Aclippy::bool_comparison",
 ]
 target-dir = "build/rust-targets"
