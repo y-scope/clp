@@ -57,6 +57,17 @@ public:
         return std::nullopt;
     }
 
+    /**
+     * Appends a string to the end of the blob.
+     * @param str
+     */
+    auto append(std::string_view str) -> void {
+        auto const start_offset{m_data.size()};
+        auto const end_offset{start_offset + str.length()};
+        m_data.append(str);
+        m_offsets.emplace_back(end_offset);
+    }
+
 private:
     std::string m_data;
     std::vector<size_t> m_offsets{0};

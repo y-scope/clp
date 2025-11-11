@@ -12,8 +12,7 @@ tasks:
   cache-clear:
     dir: "{{.G_INTEGRATION_TESTS_DIR}}"
     cmds:
-      - >-
-        uv run pytest --cache-clear --collect-only --override-ini addopts="" --quiet > /dev/null
+      - "rm -rf .pytest_cache"
 
   core:
     deps:
