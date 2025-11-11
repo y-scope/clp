@@ -13,18 +13,15 @@ concurrency:
   # Cancel in-progress jobs for efficiency
   cancel-in-progress: true
 
-x-runner-strategy: &runner-strategy
-  strategy:
-    matrix:
-      runner: ["self-hosted", "ubuntu-24.04"]
-    fail-fast: false
-  runs-on: "${{ matrix.runner }}"
-  continue-on-error: "${{ matrix.runner == 'self-hosted' }}"
-
 jobs:
   lint-check:
-    <<: *runner-strategy
     name: "lint-check"
+    strategy:
+      matrix:
+        runner: ["self-hosted", "ubuntu-24.04"]
+      fail-fast: false
+    runs-on: "${{ matrix.runner }}"
+    continue-on-error: "${{ matrix.runner == 'self-hosted' }}"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -41,10 +38,6 @@ jobs:
       - name: "Install uv"
         shell: "bash"
         run: "curl --fail --location --silent --show-error https://astral.sh/uv/install.sh | sh"
-
-      - if: "matrix.os == 'macos-15'"
-        name: "Install coreutils (for md5sum)"
-        run: "brew install coreutils"
 
       # This is a necessary dependency for the Python mariadb package which is a transitive
       # dependency of `lint:py-check`.
