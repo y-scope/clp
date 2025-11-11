@@ -65,11 +65,11 @@ def _queue_already_exist(sqs_client: Any, queue_name: str) -> bool:
 
 
 def _listen_to_bucket(
-        s3_client: Any,
-        sqs_client: Any,
-        bucket_name: str,
-        queue_url: str,
-        queue_arn: str,
+    s3_client: Any,
+    sqs_client: Any,
+    bucket_name: str,
+    queue_url: str,
+    queue_arn: str,
 ) -> bool:
     """
     Sets SQS queue to listen to all S3 bucket events.
@@ -103,11 +103,17 @@ def _listen_to_bucket(
 
     try:
         s3_notification_config = {
-            "QueueConfigurations": [{"QueueArn": queue_arn, "Events":
-                ["s3:ObjectCreated:*",
-                 "s3:ObjectRemoved:*",
-                 "s3:ObjectRestore:*",
-                 "s3:Replication:*"]}]
+            "QueueConfigurations": [
+                {
+                    "QueueArn": queue_arn,
+                    "Events": [
+                        "s3:ObjectCreated:*",
+                        "s3:ObjectRemoved:*",
+                        "s3:ObjectRestore:*",
+                        "s3:Replication:*",
+                    ],
+                }
+            ]
         }
         s3_client.put_bucket_notification_configuration(
             Bucket=bucket_name, NotificationConfiguration=s3_notification_config
