@@ -1,6 +1,7 @@
 #ifndef CLP_S_COMMANDLINEARGUMENTS_HPP
 #define CLP_S_COMMANDLINEARGUMENTS_HPP
 
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -9,6 +10,9 @@
 #include <boost/program_options/option.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
+#include <ystdlib/error_handling/Result.hpp>
+
+#include <clp_s/search/OutputHandler.hpp>
 
 #include "../reducer/types.hpp"
 #include "Defs.hpp"
@@ -131,6 +135,12 @@ public:
     [[nodiscard]] auto get_log_surgeon_schema_path() const -> Path {
         return m_log_surgeon_schema_path;
     }
+
+    /**
+     * Create the appropriate OutputHandler based on the cli arguments supplied.
+     */
+    [[nodiscard]] auto create_output_handler() const
+            -> ystdlib::error_handling::Result<std::unique_ptr<search::OutputHandler>>;
 
 private:
     // Methods
