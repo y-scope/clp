@@ -1509,7 +1509,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
         }
 
         SPDLOG_INFO(
-                "[clpsls] token name: {} ({}) value: {}\n",
+                "[clpsls] token name: {} ({}) value: {}",
                 token_name,
                 token_type,
                 token_view.to_string()
@@ -1631,7 +1631,7 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
                                 capture_name
                         ));
                         SPDLOG_INFO(
-                                "[clpsls]\tcapture name: {} value: {}\n",
+                                "[clpsls]\tcapture name: {} value: {}",
                                 capture_name,
                                 capture_view.to_string()
                         );
