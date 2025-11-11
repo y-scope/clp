@@ -16,13 +16,7 @@ concurrency:
 jobs:
   lint-check:
     name: "lint-check"
-    strategy:
-      max-parallel: 1
-      matrix:
-        runner: ["self-hosted", "ubuntu-24.04"]
-      fail-fast: false
-    runs-on: "${{ matrix.runner }}"
-    continue-on-error: "${{ matrix.runner == 'self-hosted' }}"
+    runs-on: "self-hosted"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
