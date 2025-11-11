@@ -1,13 +1,22 @@
 /**
- * Escapes angle brackets in text for safe display in Monaco editor hover tooltips.
- * Monaco uses Markdown for hover messages, so raw `<` and `>` characters are
- * interpreted as HTML tags and must be escaped to display literals like `<EOF>`.
+ * Escapes Markdown special characters in text for safe display in Monaco editor hover tooltips.
  *
  * @param text
  * @return Escaped text.
  */
-const escapeHoverMarkdown = (text: string) => text.replace(/[<>]/g, (ch) => ("<" === ch ?
-    "&lt;" :
-    "&gt;"));
+const escapeHoverMarkdown = (text: string) => text
+    .replace(/\\/g, "\\\\")
+    .replace(/`/g, "\\`")
+    .replace(/\*/g, "\\*")
+    .replace(/_/g, "\\_")
+    .replace(/\{/g, "\\{")
+    .replace(/\}/g, "\\}")
+    .replace(/\[/g, "\\[")
+    .replace(/\]/g, "\\]")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/#/g, "\\#");
 
 export {escapeHoverMarkdown};
