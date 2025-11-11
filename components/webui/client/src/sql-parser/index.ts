@@ -37,6 +37,8 @@ class SyntaxErrorListener<TSymbol> extends ErrorListener<TSymbol> {
         column: number,
         msg: string,
     ) {
+        // Offending symbol always returns a token
+        // https://github.com/antlr/antlr4/blob/cc82115a4e7f53d71d9d905caa2c2dfa4da58899/runtime/JavaScript/src/antlr4/Parser.js#L308
         const token = offendingSymbol as unknown as Token;
         const startColumn = token.start + 1;
         const endColumn = token.stop + 2;
