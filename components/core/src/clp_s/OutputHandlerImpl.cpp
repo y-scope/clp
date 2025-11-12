@@ -159,6 +159,15 @@ void ResultsCacheOutputHandler::write(
     }
 }
 
+FileOutputHandler::FileOutputHandler(std::string const& path, bool should_output_metadata)
+        : ::clp_s::search::OutputHandler(should_output_metadata, true),
+          file(path) {
+    if (false == file.is_open()) {
+        SPDLOG_ERROR("Failed to open file {}", path);
+        throw OperationFailed(ErrorCode::ErrorCodeFileNotFound, __FILE__, __LINE__);
+    }
+}
+
 CountOutputHandler::CountOutputHandler(int reducer_socket_fd)
         : ::clp_s::search::OutputHandler(false, false),
           m_reducer_socket_fd(reducer_socket_fd),

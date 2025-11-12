@@ -176,10 +176,16 @@ private:
  */
 class FileOutputHandler : public ::clp_s::search::OutputHandler {
 public:
+    // Types
+    class OperationFailed : public TraceableException {
+    public:
+        // Constructors
+        OperationFailed(ErrorCode error_code, char const* const filename, int line_number)
+                : TraceableException(error_code, filename, line_number) {}
+    };
+
     // Constructors
-    explicit FileOutputHandler(std::string const& path, bool should_output_metadata = false)
-            : ::clp_s::search::OutputHandler(should_output_metadata, true),
-              file(path) {}
+    explicit FileOutputHandler(std::string const& path, bool should_output_metadata = false);
 
     // Methods inherited from OutputHandler
     void write(
