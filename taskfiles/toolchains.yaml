@@ -13,7 +13,7 @@ vars:
   # Rust toolchain checksum file
   G_RUST_TOOLCHAIN_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/toolchains-rust.md5"
 
-  G_RUST_TOOLCHAIN_ENV_FILE: "{{.G_RUST_TOOLCHAIN_ROOT}}/rust.env"
+  G_RUST_TOOLCHAIN_ENV_FILE: "{{.G_RUST_TOOLCHAIN_ROOT}}/env"
 
 tasks:
   rust:
