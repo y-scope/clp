@@ -77,17 +77,17 @@ tasks:
     cmds:
       - task: "py"
         vars:
-          BLACK_FLAGS: "--check --diff"
-          RUFF_CHECK_FLAGS: ""
-          RUFF_FORMAT_FLAGS: "--diff"
+          BLACK_FLAGS: "--check --diff --exclude generated"
+          RUFF_CHECK_FLAGS: "--exclude generated"
+          RUFF_FORMAT_FLAGS: "--diff --exclude generated"
 
   fix-py:
     cmds:
       - task: "py"
         vars:
-          BLACK_FLAGS: ""
-          RUFF_CHECK_FLAGS: "--fix"
-          RUFF_FORMAT_FLAGS: ""
+          BLACK_FLAGS: "--exclude generated"
+          RUFF_CHECK_FLAGS: "--fix --exclude generated"
+          RUFF_FORMAT_FLAGS: "--exclude generated"
 
   yaml:
     aliases:

@@ -86,3 +86,37 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+
+  mcp-server-generate-parser:
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      SRC_DIR: "{{.G_MCP_COMPONENT_DIR}}/clp_mcp_server/validator"
+      OUTPUT_DIR: "{{.G_MCP_COMPONENT_DIR}}/clp_mcp_server/validator/generated"
+    deps:
+      - ":deps:antlr-jar"
+      - task: ":utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+    generates: ["{{.CHECKSUM_FILE}}"]
+    sources:
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/Kql.g4"
+      - "{{.TASKFILE}}"
+    dir: "{{.SRC_DIR}}"
+    cmds:
+      - "rm -rf '{{.OUTPUT_DIR}}'"
+      - >-
+        java -jar {{.G_ANTLR_JAR_FILE}}
+        -Dlanguage=Python3
+        -o generated
+        -Xexact-output-dir
+        {{.G_CORE_COMPONENT_DIR}}/src/clp_s/search/kql/Kql.g4
+      - >-
+        find generated
+        -type f -and -not -name "*.py"
+        -exec rm {} \;
+      - task: ":utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
