@@ -8,6 +8,8 @@
 #include <utility>
 #include <vector>
 
+#include <ystdlib/error_handling/Result.hpp>
+
 #include <clp_s/ArchiveStats.hpp>
 
 #include "ArchiveReaderAdaptor.hpp"
@@ -149,9 +151,9 @@ public:
      */
     bool has_log_order() { return m_log_event_idx_column_id >= 0; }
 
-    auto get_logtype_stats() -> ArchiveStats::LogTypeStats const& { return m_logtype_stats; }
+    auto get_logtype_stats() -> LogTypeStats const& { return m_logtype_stats; }
 
-    auto get_variable_stats() -> ArchiveStats::VariableStats const& { return m_var_stats; }
+    auto get_variable_stats() -> VariableStats const& { return m_var_stats; }
 
 private:
     /**
@@ -203,6 +205,11 @@ private:
      */
     std::shared_ptr<char[]> read_stream(size_t stream_id, bool reuse_buffer);
 
+    /**
+     * Reads the experimental statistics from the archive.
+     */
+    auto read_stats() -> ystdlib::error_handling::Result<void>;
+
     bool m_is_open;
     std::string m_archive_id;
     std::shared_ptr<VariableDictionaryReader> m_var_dict;
@@ -226,8 +233,8 @@ private:
     size_t m_cur_stream_id{0ULL};
     int32_t m_log_event_idx_column_id{-1};
 
-    ArchiveStats::LogTypeStats m_logtype_stats;
-    ArchiveStats::VariableStats m_var_stats;
+    LogTypeStats m_logtype_stats;
+    VariableStats m_var_stats;
 };
 }  // namespace clp_s
 

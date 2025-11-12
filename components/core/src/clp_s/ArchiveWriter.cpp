@@ -4,12 +4,16 @@
 #include <filesystem>
 #include <memory>
 #include <sstream>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
+#include <ystdlib/error_handling/Result.hpp>
 
+#include "clp_s/FileWriter.hpp"
 #include <clp_s/ArchiveStats.hpp>
 #include <clp_s/ErrorCode.hpp>
+#include <clp_s/SingleFileArchiveDefs.hpp>
 #include <clp_s/TraceableException.hpp>
 
 #include "archive_constants.hpp"
@@ -61,8 +65,10 @@ void ArchiveWriter::open(ArchiveWriterOption const& option) {
     m_array_dict = std::make_shared<LogTypeDictionaryWriter>();
     m_array_dict->open(array_dict_path, m_compression_level, UINT64_MAX);
 
-    m_logtype_stats = std::make_shared<ArchiveStats::LogTypeStats>();
-    m_var_stats = std::make_shared<ArchiveStats::VariableStats>();
+    if (option.experimental) {
+        m_logtype_stats = std::make_shared<LogTypeStats>();
+        m_var_stats = std::make_shared<VariableStats>();
+    }
 }
 
 auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
@@ -77,6 +83,10 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
     auto schema_tree_compressed_size = m_schema_tree.store(m_archive_path, m_compression_level);
     auto schema_map_compressed_size = m_schema_map.store(m_archive_path, m_compression_level);
     auto [table_metadata_compressed_size, table_compressed_size] = store_tables();
+    auto stats_compressed_size{store_stats()};
+    if (stats_compressed_size.has_error()) {
+        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
+    }
 
     std::vector<ArchiveFileInfo> files{
             {constants::cArchiveSchemaTreeFile, schema_tree_compressed_size},
@@ -85,7 +95,8 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
             {constants::cArchiveVarDictFile, var_dict_compressed_size},
             {constants::cArchiveLogDictFile, log_dict_compressed_size},
             {constants::cArchiveArrayDictFile, array_dict_compressed_size},
-            {constants::cArchiveTablesFile, table_compressed_size}
+            {constants::cArchiveTablesFile, table_compressed_size},
+            {std::string(constants::cArchiveStatsFile), stats_compressed_size.value()}
     };
     uint64_t offset = 0;
     for (auto& file : files) {
@@ -141,6 +152,8 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
     m_authoritative_timestamp_namespace.clear();
     m_matched_timestamp_prefix_length = 0ULL;
     m_matched_timestamp_prefix_node_id = constants::cRootNodeId;
+    m_logtype_stats->clear();
+    m_var_stats->clear();
     return archive_stats;
 }
 
@@ -474,15 +487,6 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
         m_table_metadata_compressor.write_numeric_value(schema.schema_id);
         m_table_metadata_compressor.write_numeric_value(schema.num_messages);
     }
-
-    if (m_logtype_stats->compress(m_table_metadata_compressor).has_error()) {
-        throw TraceableException(ErrorCodeFailure, __FILENAME__, __LINE__);
-    }
-
-    if (m_var_stats->compress(m_table_metadata_compressor).has_error()) {
-        throw TraceableException(ErrorCodeFailure, __FILENAME__, __LINE__);
-    }
-
     m_table_metadata_compressor.close();
 
     auto table_metadata_compressed_size = m_table_metadata_file_writer.get_pos();
@@ -492,5 +496,23 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     m_tables_file_writer.close();
 
     return {table_metadata_compressed_size, table_compressed_size};
+}
+
+auto ArchiveWriter::store_stats() -> ystdlib::error_handling::Result<size_t> {
+    FileWriter writer{};
+    writer.open(
+            m_archive_path + std::string{constants::cArchiveStatsFile},
+            FileWriter::OpenMode::CreateForWriting
+    );
+
+    ZstdCompressor compressor{};
+    compressor.open(writer, m_compression_level);
+    YSTDLIB_ERROR_HANDLING_TRYX(m_logtype_stats->compress(compressor));
+    YSTDLIB_ERROR_HANDLING_TRYX(m_var_stats->compress(compressor));
+
+    compressor.close();
+    auto compressed_size{writer.get_pos()};
+    writer.close();
+    return compressed_size;
 }
 }  // namespace clp_s

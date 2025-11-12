@@ -230,7 +230,7 @@ public:
     LogTypeColumnWriter(
             int32_t id,
             std::shared_ptr<LogTypeDictionaryWriter> log_dict,
-            std::shared_ptr<ArchiveStats::LogTypeStats> logtype_stats
+            std::shared_ptr<LogTypeStats> logtype_stats
     )
             : BaseColumnWriter(id),
               m_log_dict(std::move(log_dict)),
@@ -257,7 +257,7 @@ private:
     std::shared_ptr<LogTypeDictionaryWriter> m_log_dict;
 
     std::vector<encoded_log_dict_id_t> m_logtypes;
-    std::shared_ptr<ArchiveStats::LogTypeStats> m_logtype_stats;
+    std::shared_ptr<LogTypeStats> m_logtype_stats;
 };
 
 class TypedVariableColumnWriter : public BaseColumnWriter {
@@ -266,7 +266,7 @@ public:
     TypedVariableColumnWriter(
             int32_t id,
             std::shared_ptr<VariableDictionaryWriter> var_dict,
-            std::shared_ptr<ArchiveStats::VariableStats> var_stats
+            std::shared_ptr<VariableStats> var_stats
     )
             : BaseColumnWriter(id),
               m_var_dict(std::move(var_dict)),
@@ -279,7 +279,7 @@ public:
 private:
     std::shared_ptr<VariableDictionaryWriter> m_var_dict;
     std::vector<clp::variable_dictionary_id_t> m_var_dict_ids;
-    std::shared_ptr<ArchiveStats::VariableStats> m_var_stats;
+    std::shared_ptr<VariableStats> m_var_stats;
 };
 
 class VariableStringColumnWriter : public BaseColumnWriter {

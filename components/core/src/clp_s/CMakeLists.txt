@@ -230,6 +230,7 @@ set(
         ArchiveStats.hpp
         ArchiveWriter.cpp
         ArchiveWriter.hpp
+        Array.hpp
         ColumnWriter.cpp
         ColumnWriter.hpp
         Defs.hpp

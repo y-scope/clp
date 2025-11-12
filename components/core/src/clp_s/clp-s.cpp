@@ -274,11 +274,11 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
             auto logtype_dict{archive_reader->get_log_type_dictionary()};
             auto logtype_stats{archive_reader->get_logtype_stats()};
             for (clp::logtype_dictionary_id_t i{0}; i < logtype_stats.size(); ++i) {
-                auto stat{logtype_stats.get_stat(i)};
+                auto stat{logtype_stats.at(i)};
                 auto message{fmt::format(
                         "{{\"id\":{},\"count\":{},\"logtype\":\"{}\"}}\n",
                         i,
-                        stat.m_count,
+                        stat.get_count(),
                         logtype_dict->get_value(i)
                 )};
                 output_handler.value()->write(message);
@@ -287,11 +287,12 @@ auto handle_experimental_queries(CommandLineArguments const& cli_args) -> int {
             auto var_dict{archive_reader->get_variable_dictionary()};
             auto var_stats{archive_reader->get_variable_stats()};
             for (clp::variable_dictionary_id_t i{0}; i < var_stats.size(); ++i) {
-                auto stat{var_stats.get_stat(i)};
+                auto stat{var_stats.at(i)};
                 auto message{fmt::format(
-                        "{{\"id\":{},\"count\":{},\"variable\":\"{}\"}}\n",
+                        "{{\"id\":{},\"count\":{},\"type\":\"{}\",\"variable\":\"{}\"}}\n",
                         i,
-                        stat.m_count,
+                        stat.get_count(),
+                        stat.get_type(),
                         var_dict->get_value(i)
                 )};
                 output_handler.value()->write(message);

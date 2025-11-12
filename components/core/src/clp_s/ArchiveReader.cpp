@@ -6,6 +6,7 @@
 
 #include <fmt/core.h>
 #include <spdlog/spdlog.h>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/ArchiveStats.hpp>
 #include <clp_s/ErrorCode.hpp>
@@ -131,15 +132,6 @@ void ArchiveReader::read_metadata() {
             = m_stream_reader.get_uncompressed_stream_size(prev_metadata.stream_id)
               - prev_metadata.stream_offset;
     m_id_to_schema_metadata[prev_schema_id] = prev_metadata;
-
-    if (m_logtype_stats.decompress(m_table_metadata_decompressor).has_error()) {
-        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
-    }
-
-    if (m_var_stats.decompress(m_table_metadata_decompressor).has_error()) {
-        throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
-    }
-
     m_table_metadata_decompressor.close();
 
     m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveTableMetadataFile);
@@ -150,6 +142,7 @@ void ArchiveReader::read_dictionaries_and_metadata() {
     m_var_dict->read_entries();
     m_log_dict->read_entries();
     m_array_dict->read_entries();
+    read_stats();
 }
 
 void ArchiveReader::open_packed_streams() {
@@ -223,8 +216,6 @@ BaseColumnReader* ArchiveReader::append_reader_column(SchemaReader& reader, int3
             column_reader = new LogTypeColumnReader(column_id, m_log_dict);
             break;
         case NodeType::TypedVar:
-            column_reader = new VariableStringColumnReader(column_id, m_var_dict, node.get_type());
-            break;
         case NodeType::VarString:
             column_reader = new VariableStringColumnReader(column_id, m_var_dict, node.get_type());
             break;
@@ -304,6 +295,7 @@ void ArchiveReader::append_unordered_reader_columns(
             case NodeType::LogType:
                 column_reader = new LogTypeColumnReader(column_id, m_log_dict);
                 break;
+            case NodeType::TypedVar:
             case NodeType::VarString:
                 column_reader
                         = new VariableStringColumnReader(column_id, m_var_dict, node.get_type());
@@ -414,12 +406,11 @@ void ArchiveReader::close() {
     }
     m_is_open = false;
 
-    m_logtype_stats.clear();
-    m_var_stats.clear();
-
     m_var_dict->close();
     m_log_dict->close();
     m_array_dict->close();
+    m_logtype_stats.clear();
+    m_var_stats.clear();
 
     m_stream_reader.close();
     m_archive_reader_adaptor.reset();
@@ -445,5 +436,21 @@ std::shared_ptr<char[]> ArchiveReader::read_stream(size_t stream_id, bool reuse_
     m_stream_reader.read_stream(stream_id, m_stream_buffer, m_stream_buffer_size);
     m_cur_stream_id = stream_id;
     return m_stream_buffer;
+}
+
+auto ArchiveReader::read_stats() -> ystdlib::error_handling::Result<void> {
+    constexpr size_t cDecompressorFileReadBufferCapacity{64UL * 1024};
+    auto reader{
+            m_archive_reader_adaptor->checkout_reader_for_section(constants::cArchiveStatsFile)
+    };
+    ZstdDecompressor decompressor{};
+    decompressor.open(*reader, cDecompressorFileReadBufferCapacity);
+
+    YSTDLIB_ERROR_HANDLING_TRYX(m_logtype_stats.decompress(decompressor));
+    YSTDLIB_ERROR_HANDLING_TRYX(m_var_stats.decompress(decompressor));
+
+    decompressor.close();
+    m_archive_reader_adaptor->checkin_reader_for_section(constants::cArchiveStatsFile);
+    return ystdlib::error_handling::success();
 }
 }  // namespace clp_s

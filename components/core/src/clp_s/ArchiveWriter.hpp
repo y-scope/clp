@@ -10,6 +10,7 @@
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_io.hpp>
 #include <nlohmann/json.hpp>
+#include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/ArchiveStats.hpp>
 
@@ -34,6 +35,8 @@ struct ArchiveWriterOption {
     size_t min_table_size;
     std::vector<std::string> authoritative_timestamp;
     std::string authoritative_timestamp_namespace;
+
+    bool experimental;
 };
 
 class ArchiveWriter {
@@ -225,6 +228,12 @@ private:
     [[nodiscard]] std::pair<size_t, size_t> store_tables();
 
     /**
+     * Compresses and stores the experimental statistics.
+     * @return The size of the compressed statistics metadata in bytes.
+     */
+    [[nodiscard]] auto store_stats() -> ystdlib::error_handling::Result<size_t>;
+
+    /**
      * Writes the archive to a single file
      * @param files
      * @return The archive range index as a JSON object.
@@ -296,8 +305,8 @@ private:
     RangeIndexWriter m_range_index_writer;
     bool m_range_open{false};
 
-    std::shared_ptr<ArchiveStats::LogTypeStats> m_logtype_stats;
-    std::shared_ptr<ArchiveStats::VariableStats> m_var_stats;
+    std::shared_ptr<LogTypeStats> m_logtype_stats;
+    std::shared_ptr<VariableStats> m_var_stats;
 };
 }  // namespace clp_s
 

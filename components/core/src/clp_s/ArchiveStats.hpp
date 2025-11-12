@@ -12,6 +12,7 @@
 
 #include <clp/Defs.h>
 #include <clp/streaming_archive/Constants.hpp>
+#include <clp_s/Array.hpp>
 #include <clp_s/Defs.hpp>
 #include <clp_s/ZstdCompressor.hpp>
 #include <clp_s/ZstdDecompressor.hpp>
@@ -19,61 +20,6 @@
 namespace clp_s {
 class ArchiveStats {
 public:
-    /*
-     * Tracks the stats for the log types of an archive. Vectors are indexed by ID.
-     */
-    class LogTypeStats {
-    public:
-        struct LogTypeStat {
-            size_t m_count;
-        };
-
-        auto clear() -> void { m_stats.clear(); }
-
-        auto record(clp::logtype_dictionary_id_t id) -> void;
-
-        auto compress(ZstdCompressor& compressor) -> ystdlib::error_handling::Result<void>;
-
-        auto decompress(ZstdDecompressor& decompressor) -> ystdlib::error_handling::Result<void>;
-
-        auto get_stat(clp::logtype_dictionary_id_t id) -> LogTypeStat const& {
-            return m_stats.at(id);
-        }
-
-        auto size() -> size_t { return m_stats.size(); }
-
-    private:
-        std::vector<LogTypeStat> m_stats;
-    };
-
-    /*
-     * Tracks the stats for the dictionary variables of an archive. Vectors are indexed by ID.
-     */
-    class VariableStats {
-    public:
-        struct VariableStat {
-            size_t m_count;
-            std::string m_type;
-        };
-
-        auto clear() -> void { m_stats.clear(); }
-
-        auto record(clp::variable_dictionary_id_t id, std::string_view type) -> void;
-
-        auto compress(ZstdCompressor& compressor) -> ystdlib::error_handling::Result<void>;
-
-        auto decompress(ZstdDecompressor& decompressor) -> ystdlib::error_handling::Result<void>;
-
-        auto get_stat(clp::variable_dictionary_id_t id) -> VariableStat const& {
-            return m_stats.at(id);
-        }
-
-        auto size() -> size_t { return m_stats.size(); }
-
-    private:
-        std::vector<VariableStat> m_stats;
-    };
-
     // Constructors
     explicit ArchiveStats(
             std::string id,
@@ -135,6 +81,55 @@ private:
     nlohmann::json m_range_index;
     bool m_is_split{};
 };
+
+/*
+ * Tracks the stats for a log type in an archive.
+ */
+class LogTypeStat {
+public:
+    [[nodiscard]] auto compress(ZstdCompressor& compressor) const
+            -> ystdlib::error_handling::Result<void>;
+
+    [[nodiscard]] static auto decompress(ZstdDecompressor& decompressor)
+            -> ystdlib::error_handling::Result<LogTypeStat>;
+
+    [[nodiscard]] auto get_count() const -> size_t { return m_count; }
+
+    auto increment_count() -> void { ++m_count; }
+
+private:
+    size_t m_count{};
+};
+
+using LogTypeStats = Array<LogTypeStat, clp::logtype_dictionary_id_t>;
+
+/*
+ * Tracks the stats for a dictionary variables in an archive.
+ */
+class VariableStat {
+public:
+    VariableStat() = default;
+
+    VariableStat(std::string_view type) : m_type(type) {}
+
+    [[nodiscard]] auto compress(ZstdCompressor& compressor) const
+            -> ystdlib::error_handling::Result<void>;
+
+    [[nodiscard]] static auto decompress(ZstdDecompressor& decompressor)
+            -> ystdlib::error_handling::Result<VariableStat>;
+
+    [[nodiscard]] auto get_count() const -> size_t { return m_count; }
+
+    [[nodiscard]] auto get_type() const -> std::string_view { return m_type; }
+
+    auto increment_count() -> void { ++m_count; }
+
+private:
+    std::string m_type;
+    size_t m_count{};
+};
+
+using VariableStats = Array<VariableStat, clp::variable_dictionary_id_t>;
 }  // namespace clp_s
 
 #endif  // CLP_S_ARCHIVEWRITER_HPP

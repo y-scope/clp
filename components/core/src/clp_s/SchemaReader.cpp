@@ -4,6 +4,7 @@
 #include <string>
 
 #include <fmt/core.h>
+#include <spdlog/spdlog.h>
 #include <ystdlib/error_handling/Result.hpp>
 
 #include <clp_s/ErrorCode.hpp>
@@ -471,6 +472,7 @@ size_t SchemaReader::generate_structured_array_template(
                 }
                 case NodeType::ClpString:
                 case NodeType::LogType:
+                case NodeType::TypedVar:
                 case NodeType::VarString: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddStringValue);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
@@ -563,6 +565,7 @@ size_t SchemaReader::generate_structured_object_template(
                 }
                 case NodeType::ClpString:
                 case NodeType::LogType:
+                case NodeType::TypedVar:
                 case NodeType::VarString: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                     m_reordered_columns.push_back(m_columns[column_idx++]);
@@ -690,6 +693,7 @@ void SchemaReader::generate_json_template(int32_t id) {
             case NodeType::ClpString:
             case NodeType::DateString:
             case NodeType::LogType:
+            case NodeType::TypedVar:
             case NodeType::VarString: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                 m_reordered_columns.push_back(m_column_map[child_global_id]);
@@ -771,6 +775,7 @@ auto SchemaReader::generate_log_message_template(int32_t log_msg_id)
                     break;
                 }
                 case NodeType::LogType:
+                case NodeType::TypedVar:
                 case NodeType::VarString: {
                     m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                     m_reordered_columns.push_back(m_columns[column_idx]);
@@ -846,6 +851,7 @@ auto SchemaReader::generate_capture_var_template(int32_t capture_id)
                 break;
             }
             case NodeType::LogType:
+            case NodeType::TypedVar:
             case NodeType::VarString: {
                 m_json_serializer.add_op(JsonSerializer::Op::AddStringField);
                 m_reordered_columns.push_back(m_columns[column_idx]);
