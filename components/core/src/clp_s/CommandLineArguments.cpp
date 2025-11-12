@@ -352,11 +352,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             validate_network_auth(auth, m_network_auth);
 
-            validate_experimental();
-
             if (false == log_surgeon_schema_path.empty()) {
                 m_log_surgeon_schema_path = get_path_object_for_raw_path(log_surgeon_schema_path);
             }
+
+            validate_experimental();
         } else if ((char)Command::Extract == command_input) {
             po::options_description extraction_options;
             std::string archive_path;
