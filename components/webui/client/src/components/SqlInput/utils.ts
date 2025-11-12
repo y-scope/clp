@@ -4,18 +4,10 @@
  * @param text
  * @return Escaped text.
  */
-const escapeHoverMarkdown = (text: string) => text
-    .replace(/\\/g, "\\\\")
-    .replace(/\*/g, "\\*")
-    .replace(/#/g, "\\#")
-    .replace(/\//g, "\\/")
-    .replace(/\(/g, "\\(")
-    .replace(/\)/g, "\\)")
-    .replace(/\[/g, "\\[")
-    .replace(/\]/g, "\\]")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/_/g, "\\_")
-    .replace(/`/g, "\\`");
+const escapeHoverMarkdown = (text: string) => {
+    // eslint-disable-next-line no-useless-escape
+    return text.replace(/([\\`*_\{\}\[\]<>\(\)#\+\-\.\!])/g, "\\$1");
+};
+
 
 export {escapeHoverMarkdown};
