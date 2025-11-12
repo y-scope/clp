@@ -9,5 +9,5 @@ tasks:
     deps: ["toolchains:rust"]
     dir: "{{.ROOT_DIR}}"
     cmd: |-
-      . {{.G_RUST_ENV_FILE}}
+      . {{.G_RUST_TOOLCHAIN_ENV_FILE}}
       cargo nextest run --all --all-features --release

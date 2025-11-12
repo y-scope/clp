@@ -6,27 +6,31 @@ includes:
 vars:
   G_RUST_TOOLCHAIN_ROOT: "{{.G_BUILD_DIR}}/toolchains/rust"
 
-  # Rust toolchain paths
+  # Rust toolchain installation paths
   G_CARGO_HOME: "{{.G_RUST_TOOLCHAIN_ROOT}}/.cargo"
   G_RUSTUP_HOME: "{{.G_RUST_TOOLCHAIN_ROOT}}/.rustup"
 
-  # Rust toolchain environment
-  G_CARGO_ENV: "{{.G_CARGO_HOME}}/env"
-
   # Rust toolchain checksum file
-  G_RUST_TOOLCHAIN_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/toolchain-rust.md5"
+  G_RUST_TOOLCHAIN_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/toolchains-rust.md5"
 
-  G_RUST_ENV_FILE: "{{.G_RUST_TOOLCHAIN_ROOT}}/rust.env"
+  G_RUST_TOOLCHAIN_ENV_FILE: "{{.G_RUST_TOOLCHAIN_ROOT}}/rust.env"
 
 tasks:
   rust:
     run: "once"
     env:
-      RUSTUP_HOME: "{{.G_RUSTUP_HOME}}"
       CARGO_HOME: "{{.G_CARGO_HOME}}"
+      RUSTUP_HOME: "{{.G_RUSTUP_HOME}}"
     vars:
       CHECKSUM_FILE: "{{.G_RUST_TOOLCHAIN_CHECKSUM_FILE}}"
-      OUTPUT_DIR: "{{.G_RUST_TOOLCHAIN_ROOT}}"
+      # The checksum only tracks the environment files and settings to avoid unnecessary
+      # re-execution when CARGO_HOME/RUSTUP_HOME cache contents change (e.g., downloaded crates,
+      # toolchain auto-updates). The task will only re-run when the toolchain configuration itself
+      # changes.
+      OUTPUT_PATTERNS:
+        - "{{.G_CARGO_HOME}}/env"
+        - "{{.G_RUSTUP_HOME}}/settings.toml"
+        - "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
     sources:
       - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
@@ -35,23 +39,38 @@ tasks:
       - task: "utils:checksum:validate"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+          INCLUDE_PATTERNS:
+            ref: ".OUTPUT_PATTERNS"
     cmds:
       - |-
         curl --proto "=https" --tlsv1.2 --silent --show-error --fail https://sh.rustup.rs \
           | sh -s -- --default-toolchain none -y
-        cat > {{.G_RUST_ENV_FILE}} << 'EOF'
+
+      # Create an environment file to configure the custom Rust toolchain location.
+      # Source this file before using cargo/rustup commands to ensure they use the toolchain
+      # installed in `{{.G_RUST_TOOLCHAIN_ROOT}}`.
+      # For details, check:
+      # https://rust-lang.github.io/rustup/installation/index.html#choosing-where-to-install
+      - |-
+        cat > {{.G_RUST_TOOLCHAIN_ENV_FILE}} << 'EOF'
         #!/bin/sh
-        export RUSTUP_HOME={{.G_RUSTUP_HOME}}
         export CARGO_HOME={{.G_CARGO_HOME}}
-        source {{.G_CARGO_ENV}}
+        export RUSTUP_HOME={{.G_RUSTUP_HOME}}
+        . {{.G_CARGO_HOME}}/env
         EOF
-        chmod +x {{.G_RUST_ENV_FILE}}
-        . {{.G_RUST_ENV_FILE}}
+        chmod +x {{.G_RUST_TOOLCHAIN_ENV_FILE}}
+
+      - |-
+        . {{.G_RUST_TOOLCHAIN_ENV_FILE}}
+        rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt
+        rustup toolchain install stable
         rustup default stable
         cargo install cargo-nextest
+        rustup set auto-self-update disable
+
       # This command must be last
       - task: "utils:checksum:compute"
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
-          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
+          INCLUDE_PATTERNS:
+            ref: ".OUTPUT_PATTERNS"
