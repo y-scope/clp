@@ -9,6 +9,8 @@ import {
     submitQuery,
 } from "../../../../api/presto-search";
 import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState";
+import usePrestoSearchState from "../../SearchState/Presto";
+import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 
 
@@ -107,7 +109,36 @@ const handlePrestoQueryCancel = (payload: PrestoQueryJob) => {
         });
 };
 
+/**
+ * Handles switching to guided SQL interface by clearing results and resetting states.
+ */
+const handleSwitchToGuided = () => {
+    const {
+        searchUiState,
+        updateSearchUiState,
+        updateSearchJobId,
+        updateNumSearchResultsTable,
+        updateNumSearchResultsMetadata,
+    } = useSearchStore.getState();
+    const {setSqlInterface} = usePrestoSearchState.getState();
+
+    setSqlInterface(PRESTO_SQL_INTERFACE.GUIDED);
+
+    if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
+        return;
+    }
+
+    handlePrestoClearResults();
+
+    updateSearchJobId(SEARCH_STATE_DEFAULT.searchJobId);
+    updateNumSearchResultsTable(SEARCH_STATE_DEFAULT.numSearchResultsTable);
+    updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
+
+    updateSearchUiState(SEARCH_UI_STATE.DEFAULT);
+};
+
 export {
     handlePrestoQueryCancel,
     handlePrestoQuerySubmit,
+    handleSwitchToGuided,
 };

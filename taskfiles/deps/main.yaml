@@ -42,8 +42,6 @@ tasks:
       - "utils:clean-outdated-cpp-checksum-files"
       - "utils:init"
     cmds:
-      - "rm -rf '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
-      - "mkdir -p '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
@@ -58,10 +56,10 @@ tasks:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
-          FILE_SHA256: "f9baaae0886439862204e8062c69dd49354cb14ad4e59f7c35779d544384955e"
+          FILE_SHA256: "a6915799d6a001f704ce1963131f02f9d6afef0974403c886da56d5ec2056fbc"
           OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer"
           TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
-          URL: "https://github.com/y-scope/yscope-log-viewer/archive/3abe4cc.tar.gz"
+          URL: "https://github.com/y-scope/yscope-log-viewer/archive/cb767f4.tar.gz"
 
   core-all-parallel:
     internal: true
@@ -118,8 +116,6 @@ tasks:
       - "utils:clean-outdated-cpp-checksum-files"
       - "utils:init"
     cmds:
-      - "rm -rf '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
-      - "mkdir -p '{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}'"
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
           CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
@@ -371,8 +367,8 @@ tasks:
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-Dlog_surgeon_BUILD_TESTING=OFF"
           LIB_NAME: "log_surgeon"
-          TARBALL_SHA256: "69a99e0804a52c6b6397c5e7eabecc9bb4915d0145632c66fc63ad13678ff56a"
-          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/a722d07.tar.gz"
+          TARBALL_SHA256: "4551ea50cd22e8423770fd66a167e1c86053b1f4957f72c582a2da93e7820210"
+          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/840f262.tar.gz"
 
   lz4:
     internal: true
@@ -406,6 +402,7 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
             - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
             - "-DINSTALL_LAYOUT=DEB"
           LIB_NAME: "mariadb-connector-cpp"

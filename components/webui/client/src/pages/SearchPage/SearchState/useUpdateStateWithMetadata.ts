@@ -38,6 +38,12 @@ const useUpdateStateWithMetadata = () => {
             return;
         }
 
+        const {searchUiState} = useSearchStore.getState();
+
+        if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
+            return;
+        }
+
         if ("undefined" !== typeof resultsMetadata.numTotalResults) {
             updateNumSearchResultsMetadata(resultsMetadata.numTotalResults);
         }

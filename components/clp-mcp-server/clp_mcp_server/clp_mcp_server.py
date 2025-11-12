@@ -2,16 +2,20 @@
 
 import ipaddress
 import logging
+import os
 import socket
 import sys
 from pathlib import Path
 
 import click
-from clp_py_utils.clp_config import CLPConfig
+from clp_py_utils.clp_config import CLPConfig, MCP_SERVER_COMPONENT_NAME
+from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
 from pydantic import ValidationError
 
 from .server import create_mcp_server
+
+logger = get_logger(MCP_SERVER_COMPONENT_NAME)
 
 
 @click.command()
@@ -34,10 +38,12 @@ def main(host: str, port: int, config_path: Path) -> int:
     :param config_path: The path to server's configuration file.
     :return: Exit code (0 for success, non-zero for failure).
     """
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-    )
-    logger = logging.getLogger(__name__)
+    # Setup logging to file
+    log_file_path = Path(os.getenv("CLP_LOGS_DIR")) / "mcp_server.log"
+    logging_file_handler = logging.FileHandler(filename=log_file_path, encoding="utf-8")
+    logging_file_handler.setFormatter(get_logging_formatter())
+    logger.addHandler(logging_file_handler)
+    set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
 
     exit_code = 0
 
