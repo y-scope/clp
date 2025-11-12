@@ -247,6 +247,46 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
         assert_specifier_accepts_valid_content('C', negative_epoch_timestamps);
         assert_specifier_accepts_valid_content('N', epoch_timestamps);
         assert_specifier_accepts_valid_content('N', negative_epoch_timestamps);
+
+        constexpr std::array hours_offset_patterns
+                = {std::string_view{"+{}"}, std::string_view{"-{}"}, std::string_view{"\u2212{}"}};
+        constexpr std::array hours_minutes_offset_patterns
+                = {std::string_view{"+{}{}"},
+                   std::string_view{"-{}{}"},
+                   std::string_view{"\u2212{}{}"},
+                   std::string_view{"+{}:{}"},
+                   std::string_view{"-{}:{}"},
+                   std::string_view{"\u2212{}:{}"}};
+        for (auto const& hour : two_digit_hours) {
+            std::string generated_pattern;
+            for (auto const& hour_offset_pattern : hours_offset_patterns) {
+                auto const hour_offset{
+                        fmt::vformat(hour_offset_pattern, fmt::make_format_args(hour))
+                };
+                auto const hour_offset_specifier{fmt::format("\\z{{{}}}", hour_offset)};
+                auto const result{
+                        parse_timestamp(hour_offset, hour_offset_specifier, generated_pattern)
+                };
+                REQUIRE_FALSE(result.has_error());
+                REQUIRE(result.value().second == hour_offset_specifier);
+            }
+            for (auto const& minute : two_digit_minutes) {
+                for (auto const& hour_minute_offset_pattern : hours_minutes_offset_patterns) {
+                    auto const hour_minute_offset{fmt::vformat(
+                            hour_minute_offset_pattern,
+                            fmt::make_format_args(hour, minute)
+                    )};
+                    auto const hour_minute_specifier{fmt::format("\\z{{{}}}", hour_minute_offset)};
+                    auto const result{parse_timestamp(
+                            hour_minute_offset,
+                            hour_minute_specifier,
+                            generated_pattern
+                    )};
+                    REQUIRE_FALSE(result.has_error());
+                    REQUIRE(result.value().second == hour_minute_specifier);
+                }
+            }
+        }
     }
 
     SECTION("Timestamps are parsed accurately") {

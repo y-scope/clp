@@ -11,6 +11,17 @@
 
 namespace clp_s::timestamp_parser {
 /**
+ * A class representing a validated timestamp pattern.
+ */
+/*class TimestampPattern {
+public:
+        [[nodiscard]] auto create(std::string pattern)
+
+private:
+        ...
+}*/
+
+/**
  * Parses a timestamp, as described by a timestamp pattern.
  *
  * Timestamp patterns are composed of literal characters, as well as escape sequences which belong
