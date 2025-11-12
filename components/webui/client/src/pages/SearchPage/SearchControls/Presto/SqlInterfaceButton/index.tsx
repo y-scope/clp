@@ -49,9 +49,7 @@ const SqlInterfaceButton = () => {
                 theme={{
                     components: {
                         Segmented: {
-                            itemSelectedBg: token.colorBorder,
-                            trackBg: token.colorBorderSecondary,
-                            trackPadding: 1,
+                            trackBg: token.colorBorder,
                         },
                     },
                 }}
