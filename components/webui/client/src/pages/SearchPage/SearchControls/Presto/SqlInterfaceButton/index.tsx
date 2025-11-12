@@ -29,7 +29,7 @@ const SqlInterfaceButton = () => {
     const disabled = searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
         searchUiState === SEARCH_UI_STATE.QUERYING;
 
-    const handleChange = (value: PRESTO_SQL_INTERFACE) => {
+    const handleChange = useCallback((value: PRESTO_SQL_INTERFACE) => {
         if (value === sqlInterface) {
             return;
         }
@@ -41,7 +41,8 @@ const SqlInterfaceButton = () => {
         }
 
         handleSwitchToFreeform();
-    };
+    }, [sqlInterface]);
+
 
     return (
         <div className={styles["sqlInterfaceButton"]}>
