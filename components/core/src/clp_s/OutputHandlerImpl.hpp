@@ -194,13 +194,13 @@ public:
             std::string_view archive_id,
             int64_t log_event_idx
     ) override {
-        file << archive_id << ": " << log_event_idx << ": " << timestamp << " " << message;
+        m_file << archive_id << ": " << log_event_idx << ": " << timestamp << " " << message;
     }
 
-    void write(std::string_view message) override { file << message; }
+    void write(std::string_view message) override { m_file << message; }
 
 private:
-    std::ofstream file;
+    std::ofstream m_file;
 };
 
 /**

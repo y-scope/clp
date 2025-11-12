@@ -30,11 +30,11 @@ public:
     };
 
     enum class OutputHandlerType : uint8_t {
-        Network = 0,
+        File = 0,
+        Network,
         Reducer,
         ResultsCache,
         Stdout,
-        File,
     };
 
     // Constructors

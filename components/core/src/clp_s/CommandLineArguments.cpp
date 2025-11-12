@@ -626,11 +626,11 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
 
             po::notify(parsed_command_line_options);
 
+            constexpr char cFileOutputHandlerName[] = "file";
             constexpr char cNetworkOutputHandlerName[] = "network";
             constexpr char cReducerOutputHandlerName[] = "reducer";
             constexpr char cResultsCacheOutputHandlerName[] = "results-cache";
             constexpr char cStdoutCacheOutputHandlerName[] = "stdout";
-            constexpr char cFileOutputHandlerName[] = "file";
 
             if (parsed_command_line_options.count("help")) {
                 print_search_usage();

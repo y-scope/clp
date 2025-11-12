@@ -161,8 +161,8 @@ void ResultsCacheOutputHandler::write(
 
 FileOutputHandler::FileOutputHandler(std::string const& path, bool should_output_metadata)
         : ::clp_s::search::OutputHandler(should_output_metadata, true),
-          file(path) {
-    if (false == file.is_open()) {
+          m_file(path) {
+    if (false == m_file.is_open()) {
         SPDLOG_ERROR("Failed to open file {}", path);
         throw OperationFailed(ErrorCode::ErrorCodeFileNotFound, __FILE__, __LINE__);
     }
