@@ -83,7 +83,7 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
     auto schema_tree_compressed_size = m_schema_tree.store(m_archive_path, m_compression_level);
     auto schema_map_compressed_size = m_schema_map.store(m_archive_path, m_compression_level);
     auto [table_metadata_compressed_size, table_compressed_size] = store_tables();
-    auto stats_compressed_size{store_stats()};
+    auto stats_compressed_size{close_stats()};
     if (stats_compressed_size.has_error()) {
         throw OperationFailed(ErrorCodeFailure, __FILENAME__, __LINE__);
     }
@@ -152,8 +152,6 @@ auto ArchiveWriter::close(bool is_split) -> ArchiveStats {
     m_authoritative_timestamp_namespace.clear();
     m_matched_timestamp_prefix_length = 0ULL;
     m_matched_timestamp_prefix_node_id = constants::cRootNodeId;
-    m_logtype_stats->clear();
-    m_var_stats->clear();
     return archive_stats;
 }
 
@@ -498,7 +496,13 @@ std::pair<size_t, size_t> ArchiveWriter::store_tables() {
     return {table_metadata_compressed_size, table_compressed_size};
 }
 
-auto ArchiveWriter::store_stats() -> ystdlib::error_handling::Result<size_t> {
+auto ArchiveWriter::close_stats() -> ystdlib::error_handling::Result<size_t> {
+    if (nullptr == m_logtype_stats && nullptr == m_var_stats) {
+        return 0;
+    } else if (nullptr == m_logtype_stats || nullptr == m_var_stats) {
+        throw OperationFailed(ErrorCodeCorrupt, __FILENAME__, __LINE__);
+    }
+
     FileWriter writer{};
     writer.open(
             m_archive_path + std::string{constants::cArchiveStatsFile},
@@ -513,6 +517,9 @@ auto ArchiveWriter::store_stats() -> ystdlib::error_handling::Result<size_t> {
     compressor.close();
     auto compressed_size{writer.get_pos()};
     writer.close();
+
+    m_logtype_stats->clear();
+    m_var_stats->clear();
     return compressed_size;
 }
 }  // namespace clp_s

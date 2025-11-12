@@ -228,10 +228,11 @@ private:
     [[nodiscard]] std::pair<size_t, size_t> store_tables();
 
     /**
-     * Compresses and stores the experimental statistics.
+     * Compresses, stores, and clear the experimental statistics. The stats vectors are not cleared
+     * if the result is an error.
      * @return The size of the compressed statistics metadata in bytes.
      */
-    [[nodiscard]] auto store_stats() -> ystdlib::error_handling::Result<size_t>;
+    [[nodiscard]] auto close_stats() -> ystdlib::error_handling::Result<size_t>;
 
     /**
      * Writes the archive to a single file
