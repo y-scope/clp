@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import re
-from collections.abc import Callable
 from dataclasses import dataclass, field, InitVar
 from pathlib import Path
 
@@ -78,21 +77,12 @@ class PackageConfig:
     #: Name of the mode of operation represented in this config.
     mode_name: str
 
-    #: The CLPConfig object corresponding to this mode of operation.
-    build_config: Callable[[], CLPConfig]
-
-    #: The list of containerized CLP components that this package needs.
-    component_list: list[str]
-
     #: Directory to store any cached package config files.
     temp_config_dir: Path = field(init=False, repr=True)
 
-    #: The location of the constructed temporary config file for this package.
-    temp_config_file_path: Path = field(init=False, repr=True)
-
     def __post_init__(self) -> None:
-        """Validates the values specified at init, and initialises attributes."""
-        # Validate that the CLP package directory exists and contains all required directories.
+        """Validate values at init and initialize attributes."""
+        # Validate that the CLP package directory exists and contains required directories.
         clp_package_dir = self.clp_package_dir
         validate_dir_exists(clp_package_dir)
         required_dirs = ["etc", "sbin"]
@@ -104,19 +94,10 @@ class PackageConfig:
             )
             raise ValueError(err_msg)
 
-        # Initialize and create required cache directory for package tests.
+        # Initialize and create cache directory for package tests.
         object.__setattr__(self, "temp_config_dir", self.test_root_dir / "temp_config_files")
         self.test_root_dir.mkdir(parents=True, exist_ok=True)
         self.temp_config_dir.mkdir(parents=True, exist_ok=True)
-
-        # Write the temporary config file that the package will use.
-        clp_config_obj = self.build_config()
-        temp_config_file_path: Path = self._write_temp_config_file(
-            clp_config=clp_config_obj,
-            temp_config_dir=self.temp_config_dir,
-            mode_name=self.mode_name,
-        )
-        object.__setattr__(self, "temp_config_file_path", temp_config_file_path)
 
     @property
     def start_script_path(self) -> Path:
@@ -129,12 +110,19 @@ class PackageConfig:
         return self.clp_package_dir / "sbin" / "stop-clp.sh"
 
     @staticmethod
-    def _write_temp_config_file(
+    def write_temp_config_file(
         clp_config: CLPConfig,
         temp_config_dir: Path,
         mode_name: str,
     ) -> Path:
-        """Writes a temporary config file to `temp_config_dir` for a CLPConfig object."""
+        """
+        Writes a temporary config file for a CLPConfig object.
+
+        :param clp_config:
+        :param temp_config_dir:
+        :param mode_name:
+        :return: The path to the written config file.
+        """
         temp_config_dir.mkdir(parents=True, exist_ok=True)
         temp_config_filename = f"clp-config-{mode_name}.yml"
         temp_config_file_path = temp_config_dir / temp_config_filename
@@ -151,10 +139,13 @@ class PackageConfig:
 
 @dataclass(frozen=True)
 class PackageInstance:
-    """Metadata for a run of the clp package."""
+    """Metadata for a running instance of the clp package."""
 
     #:
     package_config: PackageConfig
+
+    #: The list of containerized CLP components that this package needs.
+    component_list: list[str]
 
     #: The location of the logging directory within the running package.
     clp_log_dir: Path = field(init=False, repr=True)
@@ -162,23 +153,33 @@ class PackageInstance:
     #: The instance ID of the running package.
     clp_instance_id: str = field(init=False, repr=True)
 
-    #: The path to the .clp-config.yml file constructed by the package during spin-up.
+    #: The location of the temporary config file for this package.
+    temp_config_file_path: Path = field(init=False, repr=True)
+
+    #: The path to the .clp-config.yml file constructed by the package during spin up.
     shared_config_file_path: Path = field(init=False, repr=True)
 
     def __post_init__(self) -> None:
-        """Validates the values specified at init, and initialises attributes."""
-        # Set clp_log_dir and validate that it exists.
+        """Validate values at init and initialize attributes."""
+        # Determine expected temp config file path and validate existence.
+        temp_config_file_path = (
+            self.package_config.temp_config_dir / f"clp-config-{self.package_config.mode_name}.yml"
+        )
+        validate_file_exists(temp_config_file_path)
+        object.__setattr__(self, "temp_config_file_path", temp_config_file_path)
+
+        # Set clp_log_dir and validate it exists.
         clp_log_dir = self.package_config.clp_package_dir / "var" / "log"
         validate_dir_exists(clp_log_dir)
         object.__setattr__(self, "clp_log_dir", clp_log_dir)
 
-        # Set clp_instance_id.
+        # Set clp_instance_id from instance-id file.
         clp_instance_id_file_path = self.clp_log_dir / "instance-id"
         validate_file_exists(clp_instance_id_file_path)
         clp_instance_id = self._get_clp_instance_id(clp_instance_id_file_path)
         object.__setattr__(self, "clp_instance_id", clp_instance_id)
 
-        # Set shared_config_file_path after validating it.
+        # Set shared_config_file_path and validate it exists.
         shared_config_file_path = (
             self.package_config.clp_package_dir
             / CLP_DEFAULT_LOG_DIRECTORY_PATH
@@ -189,11 +190,17 @@ class PackageInstance:
 
     @staticmethod
     def _get_clp_instance_id(clp_instance_id_file_path: Path) -> str:
-        """Return the 4-digit hexadecimal CLP instance-id stored at clp_instance_id_file_path."""
+        """
+        Reads the CLP instance ID from the given file and validates its format.
+
+        :param clp_instance_id_file_path:
+        :return: The 4-character hexadecimal instance ID.
+        :raise ValueError: If the file cannot be read or contents are not a 4-character hex string.
+        """
         try:
             contents = clp_instance_id_file_path.read_text(encoding="utf-8").strip()
         except OSError as err:
-            err_msg = f"Cannot read instance-id file {clp_instance_id_file_path}: {err}"
+            err_msg = f"Cannot read instance-id file '{clp_instance_id_file_path}'"
             raise ValueError(err_msg) from err
 
         if not re.fullmatch(r"[0-9a-fA-F]{4}", contents):

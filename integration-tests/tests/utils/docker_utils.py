@@ -1,73 +1,72 @@
 """Provide utility functions related to the use of Docker during integration tests."""
 
 import re
+import shutil
 import subprocess
-
-DOCKER_STATUS_FIELD_VALS = [
-    "created",
-    "restarting",
-    "running",
-    "removing",
-    "paused",
-    "exited",
-    "dead",
-]
+from enum import Enum
 
 
-def list_prefixed_containers(docker_bin: str, prefix: str) -> list[str]:
-    """Returns a list of Docker containers whose names begin with `prefix`."""
-    ps_proc = subprocess.run(
-        [
-            docker_bin,
-            "ps",
-            "-a",
-            "--format",
-            "{{.Names}}",
-            "--filter",
-            f"name={prefix}",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+class DockerStatus(str, Enum):
+    """Enum of possible Docker Statuses."""
 
-    if ps_proc.returncode != 0:
-        err_out = (ps_proc.stderr or ps_proc.stdout or "").strip()
-        err_msg = f"Error listing containers for prefix {prefix}: {err_out}"
+    created = "created"
+    restarting = "restarting"
+    running = "running"
+    removing = "removing"
+    paused = "paused"
+    exited = "exited"
+    dead = "dead"
+
+
+def get_docker_binary_path() -> str:
+    """
+    Finds the absolute path to the Docker client in the current PATH.
+
+    :return: Absolute path to the Docker binary.
+    :raise RuntimeError: docker is not found on PATH.
+    """
+    docker_bin = shutil.which("docker")
+    if docker_bin is None:
+        err_msg = "docker not found in PATH"
         raise RuntimeError(err_msg)
+    return docker_bin
 
-    candidates: list[str] = []
+
+def list_running_containers_with_prefix(prefix: str) -> list[str]:
+    """
+    Lists running Docker containers whose names begin with `prefix` and end with one or more digits.
+
+    :param prefix:
+    :return: List of running container names that match the pattern.
+    :raise RuntimeError: Error while invoking docker ps or parsing its output.
+    """
+    docker_bin = get_docker_binary_path()
+
+    try:
+        ps_proc = subprocess.run(
+            [
+                docker_bin,
+                "ps",
+                "--format",
+                "{{.Names}}",
+                "--filter",
+                f"name={prefix}",
+                "--filter",
+                "status=running",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+    except subprocess.CalledProcessError as ex:
+        err_out = (ex.stderr or ex.stdout or "").strip()
+        err_msg = f"Error listing running containers for prefix {prefix}: {err_out}"
+        raise RuntimeError(err_msg) from ex
+
+    matches: list[str] = []
     for line in (ps_proc.stdout or "").splitlines():
         name_candidate = line.strip()
         if re.fullmatch(re.escape(prefix) + r"\d+", name_candidate):
-            candidates.append(name_candidate)
+            matches.append(name_candidate)
 
-    return candidates
-
-
-def inspect_container_state(docker_bin: str, name: str, desired_state: str) -> bool:
-    """
-    Inspects the state of the container called `name`. Returns `True` if that container carries
-    `desired_state`, and `False` otherwise.
-    """
-    if desired_state not in DOCKER_STATUS_FIELD_VALS:
-        err_msg = f"Unsupported desired_state: {desired_state}"
-        raise ValueError(err_msg)
-
-    inspect_proc = subprocess.run(
-        [docker_bin, "inspect", "--format", "{{.State.Status}}", name],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-
-    if inspect_proc.returncode != 0:
-        err_out = (inspect_proc.stderr or inspect_proc.stdout or "").strip()
-        if "No such object" in err_out:
-            err_msg = f"Component container that should be present was not found: {name}"
-            raise FileNotFoundError(err_msg)
-        err_msg = f"Error inspecting container {name}: {err_out}"
-        raise RuntimeError(err_msg)
-
-    status = (inspect_proc.stdout or "").strip().lower()
-    return status == desired_state
+    return matches

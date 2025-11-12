@@ -6,6 +6,7 @@ from collections.abc import Iterator
 
 import pytest
 
+from tests.utils.clp_mode_utils import CLP_MODE_CONFIGS
 from tests.utils.config import (
     PackageConfig,
     PackageInstance,
@@ -23,16 +24,25 @@ def clp_package(
     clp_config: PackageConfig,
 ) -> Iterator[PackageInstance]:
     """
-    Parameterized fixture that starts a instance of the CLP package in the configuration described
-    in PackageConfig, and gracefully stops it at teardown.
+    Starts a CLP package instance for the given configuration and stops it during teardown.
+
+    :param clp_config:
+    :return: Iterator that yields the running package instance.
+    :raise: Propagates exceptions from start_clp_package.
+    :raise: Propagates exceptions from stop_clp_package.
+    :raise: Propagates KeyError if the mode name is not present in CLP_MODE_CONFIGS.
+    :raise: Propagates subprocess.CalledProcessError if the stop script fails.
     """
     mode_name = clp_config.mode_name
     logger.info("Starting up the %s package...", mode_name)
 
+    # Start the package using the pre-written temp config file.
     start_clp_package(clp_config)
 
+    instance: PackageInstance | None = None
     try:
-        instance = PackageInstance(package_config=clp_config)
+        required_components = CLP_MODE_CONFIGS[mode_name][1]
+        instance = PackageInstance(package_config=clp_config, component_list=required_components)
         instance_id = instance.clp_instance_id
         logger.info(
             "An instance of the %s package was started successfully. Its instance ID is '%s'",

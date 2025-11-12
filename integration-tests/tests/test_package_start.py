@@ -7,8 +7,8 @@ import pytest
 from tests.utils.clp_mode_utils import CLP_MODE_CONFIGS
 from tests.utils.config import PackageInstance
 from tests.utils.package_utils import (
-    is_package_running,
-    is_running_mode_correct,
+    validate_package_running,
+    validate_running_mode_correct,
 )
 
 TEST_MODES = CLP_MODE_CONFIGS.keys()
@@ -22,11 +22,11 @@ def test_clp_package(clp_package: PackageInstance) -> None:
     """
     Validate that all of the components of the CLP package start up successfully for the selected
     mode of operation.
+
+    :param clp_package:
     """
-    # Spin up the package by getting the PackageInstance fixture.
-    package_instance = clp_package
-    mode_name = package_instance.package_config.mode_name
-    instance_id = package_instance.clp_instance_id
+    mode_name = clp_package.package_config.mode_name
+    instance_id = clp_package.clp_instance_id
 
     # Ensure that all package components are running.
     logger.info(
@@ -35,7 +35,7 @@ def test_clp_package(clp_package: PackageInstance) -> None:
         instance_id,
     )
 
-    running, fail_msg = is_package_running(package_instance)
+    running, fail_msg = validate_package_running(clp_package)
     if not running:
         assert fail_msg is not None
         pytest.fail(fail_msg)
@@ -53,7 +53,7 @@ def test_clp_package(clp_package: PackageInstance) -> None:
         instance_id,
     )
 
-    correct, fail_msg = is_running_mode_correct(package_instance)
+    correct, fail_msg = validate_running_mode_correct(clp_package)
     if not correct:
         assert fail_msg is not None
         pytest.fail(fail_msg)
