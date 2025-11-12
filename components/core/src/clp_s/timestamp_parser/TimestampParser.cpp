@@ -39,11 +39,17 @@ constexpr int cMaxParsedMinute{59};
 constexpr int cMinParsedSecond{0};
 constexpr int cMaxParsedSecond{60};
 constexpr int cMinParsedSubsecondNanoseconds{0};
+constexpr int cMinTimezoneOffsetHour{0};
+constexpr int cMaxTimezoneOffsetHour{23};
+constexpr int cMinTimezoneOffsetMinute{0};
+constexpr int cMaxTimezoneOffsetMinute{59};
 
 constexpr size_t cNumNanosecondPrecisionSubsecondDigits{9ULL};
 constexpr size_t cNumMicrosecondPrecisionSubsecondDigits{6ULL};
 constexpr size_t cNumMillisecondPrecisionSubsecondDigits{3ULL};
 constexpr size_t cNumSecondPrecisionSubsecondDigits{0ULL};
+
+constexpr int cMinutesInHour{60};
 
 constexpr int cDefaultYear{1970};
 constexpr int cDefaultMonth{1};
@@ -90,6 +96,9 @@ constexpr std::array cPartsOfDay = {std::string_view{"AM"}, std::string_view{"PM
 
 constexpr std::array<int64_t, 10ULL> cPowersOfTen
         = {1, 10, 100, 1000, 10'000, 100'000, 1'000'000, 10'000'000, 100'000'000, 1'000'000'000};
+
+constexpr std::array cPlusMinus
+        = {std::string_view{"+"}, std::string_view{"-"}, std::string_view{"\u2212"}};
 
 /**
  * Converts a padded decimal integer string to an integer.
@@ -139,6 +148,33 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  */
 [[nodiscard]] auto convert_variable_length_string_prefix_to_number(std::string_view str)
         -> ystdlib::error_handling::Result<std::pair<int64_t, size_t>>;
+
+/**
+ * Extracts a bracket pattern delimited by `{` and `}` from the prefix of a string.
+ *
+ * For simplicity, the `\` character is not allowed to appear between brackets. Note that since we
+ * completely disallow `\` in the current implementation, it is possible to add support for escape
+ * sequences within brackets in a backwards-compatible way.
+ *
+ * @param str Substring with a prefix potentially corresponding to a bracket pattern.
+ * @return A result containing a string_view starting with the opening bracket and ending with the
+ * closing bracket, or an error code indicating the failure:
+ * - ErrorCodeEnum::InvalidTimestampPattern if there is no opening and closing bracket, if there is
+ * a `\` character between the brackets, or if there are no characters between `{` and `}`.
+ */
+[[nodiscard]] auto extract_bracket_pattern(std::string_view str)
+        -> ystdlib::error_handling::Result<std::string_view>;
+
+/**
+ * Extracts a timezone offset and determines its value in minutes from the prefix of a string.
+ * @param str Substring with a prefix potentially corresponding to a timezone offset.
+ * @return A result containing a pair holding the prefix corresponding to the extracted timezone
+ * offset and the offset in minutes, or an error code indicating the failure:
+ * - ErrorCodeEnum::InvalidTimezoneOffset if the prefix of the string doesn't correspond to a
+ * timezone offset.
+ */
+[[nodiscard]] auto extract_timezone_offset_in_minutes(std::string_view str)
+        -> ystdlib::error_handling::Result<std::pair<std::string_view, int>>;
 
 auto convert_padded_string_to_number(std::string_view str, char padding_character)
         -> ystdlib::error_handling::Result<int> {
@@ -242,6 +278,82 @@ auto convert_variable_length_string_prefix_to_number(std::string_view str)
     }
     return std::make_pair(converted_value, num_decimal_digits);
 }
+
+auto extract_bracket_pattern(std::string_view str)
+        -> ystdlib::error_handling::Result<std::string_view> {
+    if (str.empty() || '{' != str.at(0ULL)) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+    }
+
+    for (size_t pattern_idx{1ULL}; pattern_idx < str.size(); ++pattern_idx) {
+        if ('\\' == str.at(pattern_idx)) {
+            return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+        }
+        if ('}' == str.at(pattern_idx)) {
+            if (1ULL == pattern_idx) {
+                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+            }
+            return str.substr(0ULL, pattern_idx + 1ULL);
+        }
+    }
+    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+}
+
+auto extract_timezone_offset_in_minutes(std::string_view str)
+        -> ystdlib::error_handling::Result<std::pair<std::string_view, int>> {
+    auto const plus_minus_result{find_first_matching_prefix(str, cPlusMinus)};
+    if (plus_minus_result.has_error()) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimezoneOffset};
+    }
+    int const sign_factor{0 == plus_minus_result.value() ? 1 : -1};
+    size_t num_timezone_bytes{cPlusMinus.at(plus_minus_result.value()).length()};
+
+    constexpr size_t cHoursFieldLength{2ULL};
+    if (num_timezone_bytes + cHoursFieldLength > str.size()) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimezoneOffset};
+    }
+    auto const hours_result{
+            convert_padded_string_to_number(str.substr(num_timezone_bytes, cHoursFieldLength), '0')
+    };
+    if (hours_result.has_error()) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimezoneOffset};
+    }
+    num_timezone_bytes += cHoursFieldLength;
+    auto const hours_offset{hours_result.value()};
+    if (hours_offset < cMinTimezoneOffsetHour || hours_offset > cMaxTimezoneOffsetHour) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimezoneOffset};
+    }
+    int offset{hours_offset * cMinutesInHour};
+    auto const hours_only_offset{
+            std::make_pair(str.substr(0ULL, num_timezone_bytes), sign_factor * offset)
+    };
+    if (str.size() == num_timezone_bytes) {
+        return hours_only_offset;
+    }
+
+    if (':' == str.at(num_timezone_bytes)) {
+        ++num_timezone_bytes;
+    }
+
+    constexpr size_t cMinutesFieldLength{2ULL};
+    if (num_timezone_bytes + cMinutesFieldLength > str.size()) {
+        return hours_only_offset;
+    }
+    auto const minutes_result{convert_padded_string_to_number(
+            str.substr(num_timezone_bytes, cMinutesFieldLength),
+            '0'
+    )};
+    if (minutes_result.has_error()) {
+        return hours_only_offset;
+    }
+    auto const minutes_offset{minutes_result.value()};
+    if (minutes_offset < cMinTimezoneOffsetMinute || minutes_offset > cMaxTimezoneOffsetMinute) {
+        return hours_only_offset;
+    }
+    offset += minutes_offset;
+    num_timezone_bytes += cMinutesFieldLength;
+    return std::make_pair(str.substr(0ULL, num_timezone_bytes), sign_factor * offset);
+}
 }  // namespace
 
 // NOLINTBEGIN(readability-function-cognitive-complexity)
@@ -262,6 +374,7 @@ auto parse_timestamp(
     int parsed_subsecond_nanoseconds{};
     std::optional<int> optional_day_of_week_idx;
     std::optional<int> optional_part_of_day_idx;
+    std::optional<int> optional_timezone_offset_in_minutes;
 
     int64_t parsed_epoch_nanoseconds{};
 
@@ -680,7 +793,31 @@ auto parse_timestamp(
                 number_type_representation = true;
                 break;
             }
-            case 'z':
+            case 'z': {  // Timezone offset.
+                auto const timezone_bracket_pattern{YSTDLIB_ERROR_HANDLING_TRYX(
+                        extract_bracket_pattern(pattern.substr(pattern_idx + 1ULL))
+                )};
+                auto const timezone_str{timezone_bracket_pattern.substr(
+                        1ULL,
+                        timezone_bracket_pattern.size() - 2ULL
+                )};
+
+                auto const [extracted_timezone_str, extracted_timezone_offset]
+                        = YSTDLIB_ERROR_HANDLING_TRYX(
+                                extract_timezone_offset_in_minutes(timezone_str)
+                        );
+                if (extracted_timezone_str.size() != timezone_str.size()) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
+                if (false == timestamp.substr(timestamp_idx).starts_with(timezone_str)) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+
+                optional_timezone_offset_in_minutes = extracted_timezone_offset;
+                timestamp_idx += timezone_str.size();
+                pattern_idx += timezone_bracket_pattern.size();
+                break;
+            }
             case 'Z':
             case '?':
             case 'P':
@@ -719,6 +856,9 @@ auto parse_timestamp(
     }
 
     if (number_type_representation) {
+        if (optional_timezone_offset_in_minutes.has_value()) {
+            return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+        }
         epochtime_t epoch_nanoseconds{parsed_epoch_nanoseconds};
         if (epoch_nanoseconds < 0) {
             epoch_nanoseconds -= static_cast<epochtime_t>(parsed_subsecond_nanoseconds);
@@ -741,7 +881,8 @@ auto parse_timestamp(
     auto const time_point = date::sys_days{year_month_day} + std::chrono::hours{parsed_hour}
                             + std::chrono::minutes{parsed_minute}
                             + std::chrono::seconds{parsed_second}
-                            + std::chrono::nanoseconds{parsed_subsecond_nanoseconds};
+                            + std::chrono::nanoseconds{parsed_subsecond_nanoseconds}
+                            - std::chrono::minutes{optional_timezone_offset_in_minutes.value_or(0)};
 
     if (optional_day_of_week_idx.has_value()) {
         auto const actual_day_of_week_idx{(date::year_month_weekday(date::sys_days(year_month_day))
