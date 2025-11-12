@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <fstream>
 #include <iostream>
 #include <queue>
 #include <string>
@@ -168,6 +169,32 @@ private:
             QueryResultGreaterTimestampComparator
     >
             m_latest_results;
+};
+
+/**
+ * Output handler that writes to a file.
+ */
+class FileOutputHandler : public ::clp_s::search::OutputHandler {
+public:
+    // Constructors
+    explicit FileOutputHandler(std::string const& path, bool should_output_metadata = false)
+            : ::clp_s::search::OutputHandler(should_output_metadata, true),
+              file(path) {}
+
+    // Methods inherited from OutputHandler
+    void write(
+            std::string_view message,
+            epochtime_t timestamp,
+            std::string_view archive_id,
+            int64_t log_event_idx
+    ) override {
+        file << archive_id << ": " << log_event_idx << ": " << timestamp << " " << message;
+    }
+
+    void write(std::string_view message) override { file << message; }
+
+private:
+    std::ofstream file;
 };
 
 /**

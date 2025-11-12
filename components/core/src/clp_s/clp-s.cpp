@@ -258,6 +258,11 @@ bool search_archive(
             case CommandLineArguments::OutputHandlerType::Stdout:
                 output_handler = std::make_unique<clp_s::StandardOutputHandler>();
                 break;
+            case CommandLineArguments::OutputHandlerType::File:
+                output_handler = std::make_unique<clp_s::FileOutputHandler>(
+                        command_line_arguments.get_file_output_path()
+                );
+                break;
             default:
                 SPDLOG_ERROR("Unhandled OutputHandlerType.");
                 return false;

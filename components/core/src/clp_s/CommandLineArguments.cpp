@@ -607,6 +607,13 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                     "The maximum number of results to output"
             );
 
+            po::options_description file_output_handler_options("File Output Handler Options");
+            file_output_handler_options.add_options()(
+                    "path",
+                    po::value<std::string>(&m_file_output_path)->value_name("PATH"),
+                    "File output path"
+            );
+
             std::vector<std::string> unrecognized_options
                     = po::collect_unrecognized(parsed.options, po::include_positional);
             unrecognized_options.erase(unrecognized_options.begin());
@@ -623,6 +630,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             constexpr char cReducerOutputHandlerName[] = "reducer";
             constexpr char cResultsCacheOutputHandlerName[] = "results-cache";
             constexpr char cStdoutCacheOutputHandlerName[] = "stdout";
+            constexpr char cFileOutputHandlerName[] = "file";
 
             if (parsed_command_line_options.count("help")) {
                 print_search_usage();
@@ -733,6 +741,10 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                             == output_handler_name))
                 {
                     m_output_handler_type = OutputHandlerType::Stdout;
+                } else if ((static_cast<char const*>(cFileOutputHandlerName)
+                            == output_handler_name))
+                {
+                    m_output_handler_type = OutputHandlerType::File;
                 } else if (output_handler_name.empty()) {
                     throw std::invalid_argument("OUTPUT_HANDLER cannot be an empty string.");
                 } else {
@@ -755,6 +767,12 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             } else if (OutputHandlerType::ResultsCache == m_output_handler_type) {
                 parse_results_cache_output_handler_options(
                         results_cache_output_handler_options,
+                        search_parsed.options,
+                        parsed_command_line_options
+                );
+            } else if (OutputHandlerType::File == m_output_handler_type) {
+                parse_file_output_handler_options(
+                        file_output_handler_options,
                         search_parsed.options,
                         parsed_command_line_options
                 );
@@ -875,6 +893,20 @@ void CommandLineArguments::parse_results_cache_output_handler_options(
 
     if (0 == m_max_num_results) {
         throw std::invalid_argument("max-num-results cannot be 0.");
+    }
+}
+
+void CommandLineArguments::parse_file_output_handler_options(
+        po::options_description const& options_description,
+        std::vector<po::option> const& options,
+        po::variables_map& parsed_options
+) {
+    clp::parse_unrecognized_options(options_description, options, parsed_options);
+    if (parsed_options.count("path") == 0) {
+        throw std::invalid_argument("path must be specified.");
+    }
+    if (m_file_output_path.empty()) {
+        throw std::invalid_argument("path cannot be an empty string.");
     }
 }
 
