@@ -9,5 +9,5 @@ tasks:
     deps: ["toolchains:rust"]
     dir: "{{.ROOT_DIR}}"
     cmd: |-
-      . "$HOME/.cargo/env"
-      cargo test --all --all-features --release
+      . {{.G_RUST_ENV_FILE}}
+      cargo nextest run --all --all-features --release
