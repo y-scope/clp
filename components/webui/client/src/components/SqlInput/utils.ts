@@ -6,17 +6,16 @@
  */
 const escapeHoverMarkdown = (text: string) => text
     .replace(/\\/g, "\\\\")
-    .replace(/`/g, "\\`")
     .replace(/\*/g, "\\*")
-    .replace(/_/g, "\\_")
-    .replace(/\{/g, "\\{")
-    .replace(/\}/g, "\\}")
-    .replace(/\[/g, "\\[")
-    .replace(/\]/g, "\\]")
+    .replace(/#/g, "\\#")
+    .replace(/\//g, "\\/")
     .replace(/\(/g, "\\(")
     .replace(/\)/g, "\\)")
+    .replace(/\[/g, "\\[")
+    .replace(/\]/g, "\\]")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/#/g, "\\#");
+    .replace(/_/g, "\\_")
+    .replace(/`/g, "\\`");
 
 export {escapeHoverMarkdown};
