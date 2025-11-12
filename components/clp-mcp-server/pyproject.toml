@@ -5,18 +5,6 @@ description = "MCP server for CLP"
 authors = [{name = "YScope Inc.", email = "dev@yscope.com"}]
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = [
-    "aiomysql>=0.2.0",
-    "click>=8.3.0",
-    "fastmcp>=2.12.4",
-    "msgpack>=1.1.2",
-    "paginate>=0.5.7",
-    "pymongo>=4.15.3",
-    "clp-py-utils",
-]
-
-[tool.uv.sources]
-clp-py-utils = { path = "../clp-py-utils", editable = true }
 
 [project.scripts]
 clp-mcp-server = "clp_mcp_server.clp_mcp_server:main"
@@ -26,8 +14,17 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [dependency-groups]
+clp = [
+    "clp-py-utils",
+]
 dev = [
+    "aiomysql>=0.2.0",
+    "click>=8.3.0",
+    "fastmcp>=2.12.4",
+    "msgpack>=1.1.2",
     "mypy>=1.16.0",
+    "paginate>=0.5.7",
+    "pymongo>=4.15.3",
     "pytest>=8.4.1",
     "pytest-asyncio>=1.2.0",
     "pytest-env>=1.1.5",
@@ -84,3 +81,9 @@ isort.order-by-type = false
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 100
+
+[tool.uv]
+default-groups = ["clp", "dev"]
+
+[tool.uv.sources]
+clp-py-utils = { path = "../clp-py-utils", editable = true }
