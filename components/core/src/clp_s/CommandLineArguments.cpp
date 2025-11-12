@@ -643,6 +643,8 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                           << " - Output to the results cache" << std::endl;
                 std::cerr << "  " << static_cast<char const*>(cReducerOutputHandlerName)
                           << " - Output to the reducer" << std::endl;
+                std::cerr << "  " << static_cast<char const*>(cFileOutputHandlerName)
+                          << " - Output to a file" << std::endl;
                 std::cerr << std::endl;
 
                 std::cerr << "Examples:" << std::endl;
@@ -689,6 +691,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                 visible_options.add(network_output_handler_options);
                 visible_options.add(results_cache_output_handler_options);
                 visible_options.add(reducer_output_handler_options);
+                visible_options.add(file_output_handler_options);
                 std::cerr << visible_options << '\n';
                 return ParsingResult::InfoCommand;
             }
