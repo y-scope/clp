@@ -106,7 +106,7 @@ def generate_container_auth_options(
     Generates Docker container authentication options for AWS S3 access based on the given type.
     Handles authentication methods that require extra configuration (profile, env_vars).
 
-    :param clp_config: CLPConfig containing storage configurations.
+    :param clp_config: ClpConfig containing storage configurations.
     :param container_type: Type of the calling container.
     :return: Tuple of (whether aws config mount is needed, credential env_vars to set).
     :raises: ValueError if environment variables are not set correctly.
