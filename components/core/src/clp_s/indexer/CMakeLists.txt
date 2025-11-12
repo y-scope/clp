@@ -4,6 +4,10 @@ set(
         ../../clp/aws/AwsAuthenticationSigner.hpp
         ../../clp/BoundedReader.cpp
         ../../clp/BoundedReader.hpp
+        ../../clp/BufferedReader.cpp
+        ../../clp/BufferedReader.hpp
+        ../../clp/BufferReader.cpp
+        ../../clp/BufferReader.hpp
         ../../clp/CurlDownloadHandler.cpp
         ../../clp/CurlDownloadHandler.hpp
         ../../clp/CurlEasyHandle.hpp
@@ -15,7 +19,7 @@ set(
         ../../clp/database_utils.hpp
         ../../clp/Defs.h
         ../../clp/EncodedVariableInterpreter.cpp
-        ../../clp/EncodedVariableInterpreter.hpp 
+        ../../clp/EncodedVariableInterpreter.hpp
         ../../clp/ErrorCode.hpp
         ../../clp/ffi/encoding_methods.cpp
         ../../clp/ffi/encoding_methods.hpp
@@ -43,6 +47,7 @@ set(
         ../../clp/ir/parsing.hpp
         ../../clp/ir/parsing.inc
         ../../clp/ir/types.hpp
+        ../../clp/LogTypeDictionaryEntryReq.hpp
         ../../clp/MySQLDB.cpp
         ../../clp/MySQLDB.hpp
         ../../clp/MySQLParamBindings.cpp
@@ -55,11 +60,18 @@ set(
         ../../clp/Query.hpp
         ../../clp/ReaderInterface.cpp
         ../../clp/ReaderInterface.hpp
+        ../../clp/streaming_compression/Constants.hpp
+        ../../clp/streaming_compression/Decompressor.hpp
+        ../../clp/streaming_compression/zstd/Decompressor.cpp
+        ../../clp/streaming_compression/zstd/Decompressor.hpp
         ../../clp/Thread.cpp
         ../../clp/Thread.hpp
         ../../clp/time_types.hpp
         ../../clp/TraceableException.hpp
         ../../clp/type_utils.hpp
+        ../../clp/VariableDictionaryEntryReq.hpp
+        ../../clp/VariableDictionaryReaderReq.hpp
+        ../../clp/VariableDictionaryWriterReq.hpp
         ../archive_constants.hpp
         ../ArchiveReader.cpp
         ../ArchiveReader.hpp
@@ -118,6 +130,7 @@ if(CLP_BUILD_EXECUTABLES)
                 clp::string_utils
                 date::date
                 MariaDBClient::MariaDBClient
+                msgpack-cxx
                 nlohmann_json::nlohmann_json
                 OpenSSL::Crypto
                 simdjson::simdjson

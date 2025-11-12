@@ -1,6 +1,5 @@
+import type {PrestoSearchResult} from "@webui/common/presto";
 import {TableProps} from "antd";
-
-import type {PrestoSearchResult} from "../../../../../../../../common/index.js";
 
 
 /**
@@ -27,6 +26,7 @@ const getPrestoSearchResultsTableColumns = (
             ],
             key: key,
             title: key,
+            width: 100,
         }));
 };
 

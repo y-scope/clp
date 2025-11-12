@@ -1,12 +1,12 @@
-import dayjs from "dayjs";
-import {Nullable} from "src/typings/common";
+import {Nullable} from "@webui/common/utility-types";
+import {Dayjs} from "dayjs";
 import {create} from "zustand";
 
 import {TimelineConfig} from "../../../components/ResultsTimeline/typings";
 import {
     DEFAULT_TIME_RANGE,
+    DEFAULT_TIME_RANGE_OPTION,
     TIME_RANGE_OPTION,
-    TIME_RANGE_OPTION_DAYJS_MAP,
 } from "../SearchControls/TimeRangeInput/utils";
 import {computeTimelineConfig} from "../SearchResults/SearchResultsTimeline/utils";
 import {SEARCH_UI_STATE} from "./typings";
@@ -18,6 +18,7 @@ import {SEARCH_UI_STATE} from "./typings";
 const SEARCH_STATE_DEFAULT = Object.freeze({
     aggregationJobId: null,
     cachedDataset: null,
+    numSearchResultsMetadata: 0,
     numSearchResultsTable: 0,
     numSearchResultsTimeline: 0,
     queryIsCaseSensitive: false,
@@ -25,9 +26,9 @@ const SEARCH_STATE_DEFAULT = Object.freeze({
     searchJobId: null,
     searchUiState: SEARCH_UI_STATE.DEFAULT,
     selectDataset: null,
-    timeRange: TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE](),
-    timeRangeOption: DEFAULT_TIME_RANGE,
-    timelineConfig: computeTimelineConfig(TIME_RANGE_OPTION_DAYJS_MAP[DEFAULT_TIME_RANGE]()),
+    timeRange: DEFAULT_TIME_RANGE,
+    timeRangeOption: DEFAULT_TIME_RANGE_OPTION,
+    timelineConfig: computeTimelineConfig(DEFAULT_TIME_RANGE),
 });
 
 interface SearchState {
@@ -42,6 +43,11 @@ interface SearchState {
      * log viewer links.
      */
     cachedDataset: Nullable<string>;
+
+    /**
+     * The number of search results from server metadata.
+     */
+    numSearchResultsMetadata: number;
 
     /**
      * The number of search table results.
@@ -81,7 +87,7 @@ interface SearchState {
     /**
      * Time range for search query.
      */
-    timeRange: [dayjs.Dayjs, dayjs.Dayjs];
+    timeRange: [Dayjs, Dayjs];
 
     /**
      * Time range preset.
@@ -97,6 +103,7 @@ interface SearchState {
 
     updateAggregationJobId: (id: string | null) => void;
     updateCachedDataset: (dataset: string) => void;
+    updateNumSearchResultsMetadata: (num: number) => void;
     updateNumSearchResultsTable: (num: number) => void;
     updateNumSearchResultsTimeline: (num: number) => void;
     updateQueryIsCaseSensitive: (newValue: boolean) => void;
@@ -104,7 +111,7 @@ interface SearchState {
     updateSearchJobId: (id: string | null) => void;
     updateSearchUiState: (state: SEARCH_UI_STATE) => void;
     updateSelectDataset: (dataset: string | null) => void;
-    updateTimeRange: (range: [dayjs.Dayjs, dayjs.Dayjs]) => void;
+    updateTimeRange: (range: [Dayjs, Dayjs]) => void;
     updateTimeRangeOption: (option: TIME_RANGE_OPTION) => void;
     updateTimelineConfig: (config: TimelineConfig) => void;
 }
@@ -116,6 +123,9 @@ const useSearchStore = create<SearchState>((set) => ({
     },
     updateCachedDataset: (dataset) => {
         set({cachedDataset: dataset});
+    },
+    updateNumSearchResultsMetadata: (num) => {
+        set({numSearchResultsMetadata: num});
     },
     updateNumSearchResultsTable: (num) => {
         set({numSearchResultsTable: num});

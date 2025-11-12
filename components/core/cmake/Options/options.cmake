@@ -84,6 +84,12 @@ option(
 )
 
 option(
+    CLP_BUILD_CLP_S_TIMESTAMP_PARSER
+    "Build clp_s::timestamp_parser"
+    ON
+)
+
+option(
     CLP_BUILD_CLP_S_TIMESTAMPPATTERN
     "Build clp_s::timestamp_pattern."
     ON
@@ -160,6 +166,7 @@ function(validate_clp_tests_dependencies)
         CLP_BUILD_CLP_S_SEARCH_KQL
         CLP_BUILD_CLP_S_SEARCH_SQL
         CLP_BUILD_CLP_S_TIMESTAMPPATTERN
+        CLP_BUILD_CLP_S_TIMESTAMP_PARSER
     )
 endfunction()
 
@@ -213,6 +220,7 @@ function(set_clp_s_archivereader_dependencies)
         CLP_NEED_MSGPACKCXX
         CLP_NEED_NLOHMANN_JSON
         CLP_NEED_SPDLOG
+        CLP_NEED_YSTDLIB
     )
 endfunction()
 
@@ -234,6 +242,7 @@ function(set_clp_s_archivewriter_dependencies)
         CLP_NEED_NLOHMANN_JSON
         CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
+        CLP_NEED_YSTDLIB
     )
 endfunction()
 
@@ -268,6 +277,7 @@ function(set_clp_s_io_dependencies)
     set_clp_need_flags(
         CLP_NEED_BOOST
         CLP_NEED_FMT
+        CLP_NEED_SIMDJSON
         CLP_NEED_SPDLOG
         CLP_NEED_ZSTD
     )
@@ -284,6 +294,7 @@ function(set_clp_s_json_constructor_dependencies)
         CLP_NEED_FMT
         CLP_NEED_MONGOCXX
         CLP_NEED_SPDLOG
+        CLP_NEED_ZSTD
     )
 endfunction()
 
@@ -353,6 +364,19 @@ function(set_clp_s_search_sql_dependencies)
     set_clp_need_flags(
         CLP_NEED_ANTLR
         CLP_NEED_SPDLOG
+    )
+endfunction()
+
+function(validate_clp_s_timestamp_parser_dependencies)
+    validate_clp_dependencies_for_target(CLP_BUILD_CLP_S_TIMESTAMP_PARSER
+        CLP_BUILD_CLP_STRING_UTILS
+    )
+endfunction()
+
+function(set_clp_s_timestamp_parser_dependencies)
+    set_clp_need_flags(
+        CLP_NEED_DATE
+        CLP_NEED_YSTDLIB
     )
 endfunction()
 
@@ -438,6 +462,11 @@ function(validate_and_setup_all_clp_dependency_flags)
     if (CLP_BUILD_CLP_S_SEARCH_SQL)
         validate_clp_s_search_sql_dependencies()
         set_clp_s_search_sql_dependencies()
+    endif()
+
+    if (CLP_BUILD_CLP_S_TIMESTAMP_PARSER)
+        validate_clp_s_timestamp_parser_dependencies()
+        set_clp_s_timestamp_parser_dependencies()
     endif()
 
     if (CLP_BUILD_CLP_S_TIMESTAMPPATTERN)

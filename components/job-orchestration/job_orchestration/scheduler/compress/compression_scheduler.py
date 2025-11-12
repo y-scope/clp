@@ -2,18 +2,17 @@ import argparse
 import datetime
 import logging
 import os
+import signal
 import sys
 import time
 from contextlib import closing
 from pathlib import Path
-from typing import Any, Dict, Set
+from typing import Any, Dict, List, Optional, Set
 
 import brotli
-import celery
 import msgpack
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
-    ArchiveOutput,
     CLPConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -30,8 +29,11 @@ from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import s3_get_object_metadata
 from clp_py_utils.sql_adapter import SQL_Adapter
-from job_orchestration.executor.compress.compression_task import compress
+from pydantic import ValidationError
+
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
+from job_orchestration.scheduler.compress.task_manager.celery_task_manager import CeleryTaskManager
+from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.constants import (
     CompressionJobStatus,
     CompressionTaskStatus,
@@ -45,15 +47,21 @@ from job_orchestration.scheduler.job_config import (
 )
 from job_orchestration.scheduler.scheduler_data import (
     CompressionJob,
-    CompressionTaskResult,
 )
 from job_orchestration.scheduler.utils import kill_hanging_jobs
-from pydantic import ValidationError
 
 # Setup logging
 logger = get_logger("compression_scheduler")
 
 scheduled_jobs = {}
+
+received_sigterm = False
+
+
+def sigterm_handler(signal_number, frame):
+    global received_sigterm
+    received_sigterm = True
+    logger.info("Received SIGTERM.")
 
 
 def fetch_new_jobs(db_cursor):
@@ -99,14 +107,17 @@ def update_compression_job_metadata(db_cursor, job_id, kv):
 
 def _process_fs_input_paths(
     fs_input_conf: FsInputConfig, paths_to_compress_buffer: PathsToCompressBuffer
-) -> None:
+) -> List[str]:
     """
-    Iterates through all files in fs_input_conf and adds their metadata to
-    `paths_to_compress_buffer`.
-    NOTE: This method skips files that don't exist.
+    Iterates through all paths in `fs_input_conf`, validates them, and adds metadata for each valid
+    path to `paths_to_compress_buffer` as long as an invalid path hasn't yet been encountered.
     :param fs_input_conf:
     :param paths_to_compress_buffer:
+    :return: List of error messages about invalid paths.
     """
+
+    paths_ok = True
+    invalid_path_messages: List[str] = []
 
     for path_idx, path in enumerate(fs_input_conf.paths_to_compress, start=1):
         path = Path(path)
@@ -114,13 +125,17 @@ def _process_fs_input_paths(
         try:
             file, empty_directory = validate_path_and_get_info(CONTAINER_INPUT_LOGS_ROOT_DIR, path)
         except ValueError as ex:
-            logger.error(str(ex))
+            paths_ok = False
+            error_msg = str(ex)
+            logger.error(error_msg)
+            invalid_path_messages.append(error_msg)
             continue
 
-        if file:
-            paths_to_compress_buffer.add_file(file)
-        elif empty_directory:
-            paths_to_compress_buffer.add_empty_directory(empty_directory)
+        if paths_ok:
+            if file:
+                paths_to_compress_buffer.add_file(file)
+            elif empty_directory:
+                paths_to_compress_buffer.add_empty_directory(empty_directory)
 
         if path.is_dir():
             for internal_path in path.rglob("*"):
@@ -129,13 +144,19 @@ def _process_fs_input_paths(
                         CONTAINER_INPUT_LOGS_ROOT_DIR, internal_path
                     )
                 except ValueError as ex:
-                    logger.error(str(ex))
+                    paths_ok = False
+                    error_msg = str(ex)
+                    logger.error(error_msg)
+                    invalid_path_messages.append(error_msg)
                     continue
 
-                if file:
-                    paths_to_compress_buffer.add_file(file)
-                elif empty_directory:
-                    paths_to_compress_buffer.add_empty_directory(empty_directory)
+                if paths_ok:
+                    if file:
+                        paths_to_compress_buffer.add_file(file)
+                    elif empty_directory:
+                        paths_to_compress_buffer.add_empty_directory(empty_directory)
+
+    return invalid_path_messages
 
 
 def _process_s3_input(
@@ -159,11 +180,53 @@ def _process_s3_input(
         paths_to_compress_buffer.add_file(object_metadata)
 
 
+def _write_user_failure_log(
+    title: str,
+    content: List[str],
+    logs_directory: Path,
+    job_id: Any,
+    filename_suffix: str,
+) -> Optional[Path]:
+    """
+    Writes a user-oriented failure log to
+    `{logs_directory}/user/job_{job_id}_{filename_suffix}.txt`. The `{logs_directory}/user`
+    directory will be created if it does not already exist.
+
+    :param title:
+    :param content:
+    :param logs_directory:
+    :param job_id:
+    :param filename_suffix:
+    :return: Path to the written log file relative to `logs_directory`, or `None` on error.
+    """
+    relative_log_path = Path("user") / f"job_{job_id}_{filename_suffix}.txt"
+    user_logs_dir = logs_directory / relative_log_path.parent
+    try:
+        user_logs_dir.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        logger.error("Failed to create user logs directory: '%s' - %s", user_logs_dir, e)
+        return None
+
+    log_path = logs_directory / relative_log_path
+    try:
+        with log_path.open("w", encoding="utf-8") as f:
+            timestamp = datetime.datetime.now().isoformat(timespec="seconds")
+            f.write(f"{title}\nGenerated at {timestamp}.\n\n")
+            for item in content:
+                f.write(f"{item.rstrip()}\n")
+    except Exception as e:
+        logger.error("Failed to write compression failure user log: '%s' - %s", log_path, e)
+        return None
+
+    return relative_log_path
+
+
 def search_and_schedule_new_tasks(
     clp_config: CLPConfig,
     db_conn,
     db_cursor,
     clp_metadata_db_connection_config: Dict[str, Any],
+    task_manager: TaskManager,
 ):
     """
     For all jobs with PENDING status, splits the job into tasks and schedules them.
@@ -171,6 +234,7 @@ def search_and_schedule_new_tasks(
     :param db_conn:
     :param db_cursor:
     :param clp_metadata_db_connection_config:
+    :param task_manager:
     """
     global scheduled_jobs
 
@@ -187,7 +251,7 @@ def search_and_schedule_new_tasks(
     db_conn.commit()
     for job_row in jobs:
         job_id = job_row["id"]
-        clp_io_config = ClpIoConfig.parse_obj(
+        clp_io_config = ClpIoConfig.model_validate(
             msgpack.unpackb(brotli.decompress(job_row["clp_config"]))
         )
         input_config = clp_io_config.input
@@ -217,7 +281,35 @@ def search_and_schedule_new_tasks(
 
         input_type = input_config.type
         if input_type == InputType.FS.value:
-            _process_fs_input_paths(input_config, paths_to_compress_buffer)
+            invalid_path_messages = _process_fs_input_paths(input_config, paths_to_compress_buffer)
+            if len(invalid_path_messages) > 0:
+                user_log_relative_path = _write_user_failure_log(
+                    title="Failed input paths log.",
+                    content=invalid_path_messages,
+                    logs_directory=clp_config.logs_directory,
+                    job_id=job_id,
+                    filename_suffix="failed_paths",
+                )
+                if user_log_relative_path is None:
+                    err_msg = "Failed to write user log for invalid input paths."
+                    raise RuntimeError(err_msg)
+
+                error_msg = (
+                    "At least one of your input paths could not be processed."
+                    f" See the error log at '{user_log_relative_path}' inside your configured logs"
+                    " directory (`logs_directory`) for more details."
+                )
+
+                update_compression_job_metadata(
+                    db_cursor,
+                    job_id,
+                    {
+                        "status": CompressionJobStatus.FAILED,
+                        "status_msg": error_msg,
+                    },
+                )
+                db_conn.commit()
+                continue
         elif input_type == InputType.S3.value:
             try:
                 _process_s3_input(input_config, paths_to_compress_buffer)
@@ -250,19 +342,6 @@ def search_and_schedule_new_tasks(
         tasks = paths_to_compress_buffer.get_tasks()
         partition_info = paths_to_compress_buffer.get_partition_info()
 
-        if len(tasks) == 0:
-            logger.warning(f"No tasks were created for job {job_id}")
-            update_compression_job_metadata(
-                db_cursor,
-                job_id,
-                {
-                    "status": CompressionJobStatus.FAILED,
-                    "status_msg": "invalid input path",
-                },
-            )
-            db_conn.commit()
-            continue
-
         # Update job metadata
         start_time = datetime.datetime.now()
         update_compression_job_metadata(
@@ -276,7 +355,7 @@ def search_and_schedule_new_tasks(
         )
         db_conn.commit()
 
-        tag_ids = None
+        tag_ids = []
         if clp_io_config.output.tags:
             tags_table_name = get_tags_table_name(table_prefix, dataset)
             db_cursor.executemany(
@@ -292,7 +371,6 @@ def search_and_schedule_new_tasks(
             tag_ids = [tags["tag_id"] for tags in db_cursor.fetchall()]
             db_conn.commit()
 
-        task_instances = []
         for task_idx, task in enumerate(tasks):
             db_cursor.execute(
                 f"""
@@ -305,12 +383,9 @@ def search_and_schedule_new_tasks(
             db_conn.commit()
             task["task_id"] = db_cursor.lastrowid
             task["tag_ids"] = tag_ids
-            task_instances.append(compress.s(**task))
-        tasks_group = celery.group(task_instances)
+        result_handle = task_manager.submit(tasks)
 
-        job = CompressionJob(
-            id=job_id, start_time=start_time, async_task_result=tasks_group.apply_async()
-        )
+        job = CompressionJob(id=job_id, start_time=start_time, result_handle=result_handle)
         db_cursor.execute(
             f"""
             UPDATE {COMPRESSION_TASKS_TABLE_NAME}
@@ -322,14 +397,7 @@ def search_and_schedule_new_tasks(
         scheduled_jobs[job_id] = job
 
 
-def get_results_or_timeout(result):
-    try:
-        return result.get(timeout=0.1)
-    except celery.exceptions.TimeoutError:
-        return None
-
-
-def poll_running_jobs(db_conn, db_cursor):
+def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
     """
     Poll for running jobs and update their status.
     """
@@ -340,17 +408,16 @@ def poll_running_jobs(db_conn, db_cursor):
     for job_id, job in scheduled_jobs.items():
         job_success = True
         duration = 0.0
-        error_message = ""
+        error_messages: List[str] = []
 
         try:
-            returned_results = get_results_or_timeout(job.async_task_result)
+            returned_results = job.result_handle.get_result()
             if returned_results is None:
                 continue
 
             duration = (datetime.datetime.now() - job.start_time).total_seconds()
             # Check for finished jobs
             for task_result in returned_results:
-                task_result = CompressionTaskResult.parse_obj(task_result)
                 if task_result.status == CompressionTaskStatus.SUCCEEDED:
                     logger.info(
                         f"Compression task job-{job_id}-task-{task_result.task_id} completed in"
@@ -358,7 +425,9 @@ def poll_running_jobs(db_conn, db_cursor):
                     )
                 else:
                     job_success = False
-                    error_message += f"task {task_result.task_id}: {task_result.error_message}\n"
+                    error_messages.append(
+                        f"task {task_result.task_id}: {task_result.error_message}"
+                    )
                     logger.error(
                         f"Compression task job-{job_id}-task-{task_result.task_id} failed with"
                         f" error: {task_result.error_message}."
@@ -380,12 +449,30 @@ def poll_running_jobs(db_conn, db_cursor):
             )
         else:
             logger.error(f"Job {job_id} failed. See worker logs or status_msg for details.")
+
+            error_log_relative_path = _write_user_failure_log(
+                title="Compression task errors.",
+                content=error_messages,
+                logs_directory=logs_directory,
+                job_id=job_id,
+                filename_suffix="task_errors",
+            )
+            if error_log_relative_path is None:
+                err_msg = "Failed to write user log for failed compression job."
+                raise RuntimeError(err_msg)
+
+            error_msg = (
+                "One or more compression tasks failed."
+                f" See the error log at '{error_log_relative_path}' inside your configured logs"
+                " directory (`logs_directory`) for more details."
+            )
+
             update_compression_job_metadata(
                 db_cursor,
                 job_id,
                 dict(
                     status=CompressionJobStatus.FAILED,
-                    status_msg=error_message,
+                    status_msg=error_msg,
                 ),
             )
         db_conn.commit()
@@ -394,6 +481,10 @@ def poll_running_jobs(db_conn, db_cursor):
 
     for job_id in jobs_to_delete:
         del scheduled_jobs[job_id]
+
+    if received_sigterm and 0 == len(scheduled_jobs):
+        logger.info("Recieved SIGTERM and there're no more running jobs. Exiting.")
+        sys.exit(0)
 
 
 def main(argv):
@@ -410,10 +501,13 @@ def main(argv):
     # Update logging level based on config
     set_logging_level(logger, os.getenv("CLP_LOGGING_LEVEL"))
 
+    # Register the SIGTERM handler
+    signal.signal(signal.SIGTERM, sigterm_handler)
+
     # Load configuration
     config_path = Path(args.config)
     try:
-        clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
+        clp_config = CLPConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
         logger.error(err)
@@ -425,6 +519,8 @@ def main(argv):
 
     logger.info(f"Starting {COMPRESSION_SCHEDULER_COMPONENT_NAME}")
     sql_adapter = SQL_Adapter(clp_config.database)
+
+    task_manager = CeleryTaskManager()
 
     try:
         killed_jobs = kill_hanging_jobs(sql_adapter, SchedulerType.COMPRESSION)
@@ -444,16 +540,18 @@ def main(argv):
         # Start Job Processing Loop
         while True:
             try:
-                search_and_schedule_new_tasks(
-                    clp_config,
-                    db_conn,
-                    db_cursor,
-                    clp_metadata_db_connection_config,
-                )
-                poll_running_jobs(db_conn, db_cursor)
+                if not received_sigterm:
+                    search_and_schedule_new_tasks(
+                        clp_config,
+                        db_conn,
+                        db_cursor,
+                        clp_metadata_db_connection_config,
+                        task_manager,
+                    )
+                poll_running_jobs(clp_config.logs_directory, db_conn, db_cursor)
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
-                logger.info("Gracefully shutting down")
+                logger.info("Forcefully shutting down")
                 return -1
             except Exception:
                 logger.exception(f"Error in scheduling.")

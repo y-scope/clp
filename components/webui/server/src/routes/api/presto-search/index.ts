@@ -2,19 +2,19 @@ import {
     FastifyPluginAsyncTypebox,
     Type,
 } from "@fastify/type-provider-typebox";
-import {StatusCodes} from "http-status-codes";
-
+import {CLP_QUERY_ENGINES} from "@webui/common/config";
 import {
-    CLP_QUERY_ENGINES,
     PRESTO_SEARCH_SIGNAL,
     type SearchResultsMetadataDocument,
-} from "../../../../../common/index.js";
-import settings from "../../../../settings.json" with {type: "json"};
-import {ErrorSchema} from "../../../schemas/error.js";
+} from "@webui/common/metadata";
+import {ErrorSchema} from "@webui/common/schemas/error";
 import {
     PrestoQueryJobCreationSchema,
     PrestoQueryJobSchema,
-} from "../../../schemas/presto-search.js";
+} from "@webui/common/schemas/presto-search";
+import {constants} from "http2";
+
+import settings from "../../../../settings.json" with {type: "json"};
 import {MAX_PRESTO_SEARCH_RESULTS} from "./typings.js";
 import {insertPrestoRowsToMongo} from "./utils.js";
 
@@ -51,8 +51,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             schema: {
                 body: PrestoQueryJobCreationSchema,
                 response: {
-                    [StatusCodes.CREATED]: PrestoQueryJobSchema,
-                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
+                    [constants.HTTP_STATUS_CREATED]: PrestoQueryJobSchema,
+                    [constants.HTTP_STATUS_INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Presto Search"],
             },
@@ -150,8 +150,6 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                         },
                         query: queryString,
                         state: (_, queryId, stats) => {
-                            // Type cast `presto-client` string literal type to our enum type.
-                            const newState = stats.state as PRESTO_SEARCH_SIGNAL;
                             request.log.info({
                                 searchJobId: queryId,
                                 state: stats.state,
@@ -163,24 +161,30 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                                     _id: queryId,
                                     errorMsg: null,
                                     errorName: null,
-                                    lastSignal: newState,
+                                    lastSignal: PRESTO_SEARCH_SIGNAL.QUERYING,
                                     queryEngine: CLP_QUERY_ENGINES.PRESTO,
                                 }).catch((err: unknown) => {
                                     request.log.error(err, "Failed to insert Presto metadata");
                                 });
                                 isResolved = true;
                                 resolve(queryId);
-                            } else {
-                                // Update metadata on subsequent calls
-                                searchResultsMetadataCollection.updateOne(
-                                    {_id: queryId},
-                                    {$set: {lastSignal: newState}}
-                                ).catch((err: unknown) => {
-                                    request.log.error(err, "Failed to update Presto metadata");
-                                });
                             }
                         },
                         success: () => {
+                            if (false === isResolved) {
+                                request.log.error(
+                                    "Presto query finished before searchJobId was resolved; "
+                                );
+
+                                return;
+                            }
+                            searchResultsMetadataCollection.updateOne(
+                                {_id: searchJobId},
+                                {$set: {lastSignal: PRESTO_SEARCH_SIGNAL.DONE}}
+                            ).catch((err: unknown) => {
+                                request.log.error(err, "Failed to update Presto metadata");
+                            });
+
                             request.log.info("Presto search succeeded");
                         },
                         timeout: null,
@@ -193,7 +197,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
             await mongoDb.createCollection(searchJobId);
 
-            reply.code(StatusCodes.CREATED);
+            reply.code(constants.HTTP_STATUS_CREATED);
 
             return {searchJobId};
         }
@@ -205,8 +209,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             schema: {
                 body: PrestoQueryJobSchema,
                 response: {
-                    [StatusCodes.NO_CONTENT]: Type.Null(),
-                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
+                    [constants.HTTP_STATUS_NO_CONTENT]: Type.Null(),
+                    [constants.HTTP_STATUS_INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Presto Search"],
             },
@@ -222,7 +226,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
                 });
             });
             request.log.info({searchJobId}, "Presto search cancelled");
-            reply.code(StatusCodes.NO_CONTENT);
+            reply.code(constants.HTTP_STATUS_NO_CONTENT);
 
             return null;
         }
@@ -234,8 +238,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             schema: {
                 body: PrestoQueryJobSchema,
                 response: {
-                    [StatusCodes.NO_CONTENT]: Type.Null(),
-                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
+                    [constants.HTTP_STATUS_NO_CONTENT]: Type.Null(),
+                    [constants.HTTP_STATUS_INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Presto Search"],
             },
@@ -249,7 +253,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
             await mongoDb.collection(searchJobId).drop();
 
-            reply.code(StatusCodes.NO_CONTENT);
+            reply.code(constants.HTTP_STATUS_NO_CONTENT);
 
             return null;
         }

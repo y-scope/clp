@@ -20,6 +20,7 @@ from clp_py_utils.s3_utils import (
     s3_put,
 )
 from clp_py_utils.sql_adapter import SQL_Adapter
+
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
     report_task_failure,
@@ -54,7 +55,7 @@ def _make_clp_command_and_env_vars(
         return None, None
 
     logger.info("Starting IR extraction")
-    extract_ir_config = ExtractIrJobConfig.parse_obj(job_config)
+    extract_ir_config = ExtractIrJobConfig.model_validate(job_config)
     if not extract_ir_config.file_split_id:
         logger.error("file_split_id not supplied")
         return None, None
@@ -88,7 +89,7 @@ def _make_clp_s_command_and_env_vars(
     stream_collection_name = worker_config.stream_collection_name
 
     logger.info("Starting JSON extraction")
-    extract_json_config = ExtractJsonJobConfig.parse_obj(job_config)
+    extract_json_config = ExtractJsonJobConfig.model_validate(job_config)
     command = [
         str(clp_home / "bin" / "clp-s"),
         "x",
@@ -199,7 +200,7 @@ def extract_stream(
 
     start_time = datetime.datetime.now()
     task_status: QueryTaskStatus
-    sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
+    sql_adapter = SQL_Adapter(Database.model_validate(clp_metadata_db_conn_params))
 
     # Load configuration
     clp_config_path = Path(os.getenv("CLP_CONFIG_PATH"))
@@ -292,4 +293,4 @@ def extract_stream(
         else:
             logger.info(f"Finished uploading streams.")
 
-    return task_results.dict()
+    return task_results.model_dump()

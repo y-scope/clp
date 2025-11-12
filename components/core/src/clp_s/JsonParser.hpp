@@ -28,15 +28,10 @@
 #include "SchemaTree.hpp"
 #include "SchemaWriter.hpp"
 #include "TimestampDictionaryWriter.hpp"
-#include "Utils.hpp"
-#include "ZstdCompressor.hpp"
-
-using namespace simdjson;
 
 namespace clp_s {
 struct JsonParserOption {
     std::vector<Path> input_paths;
-    FileType input_file_type{FileType::Json};
     std::string timestamp_key;
     std::string archives_dir;
     size_t target_encoded_size{};
@@ -46,6 +41,7 @@ struct JsonParserOption {
     bool print_archive_stats{};
     bool structurize_arrays{};
     bool record_log_order{true};
+    bool retain_float_format{false};
     bool single_file_archive{false};
     NetworkAuthOption network_auth{};
 };
@@ -66,16 +62,10 @@ public:
     ~JsonParser() = default;
 
     /**
-     * Parses the JSON log messages and store the parsed data in the archive.
-     * @return whether the JSON was parsed succesfully
+     * Ingests the input described by `JsonParserOption`.
+     * @return Whether the input was ingested successfully.
      */
-    [[nodiscard]] bool parse();
-
-    /**
-     * Parses the Key Value IR Stream and stores the data in the archive.
-     * @return whether the IR Stream was parsed successfully
-     */
-    [[nodiscard]] auto parse_from_ir() -> bool;
+    [[nodiscard]] auto ingest() -> bool;
 
     /**
      * Writes the metadata and archive data to disk.
@@ -85,13 +75,41 @@ public:
 
 private:
     /**
+     * Parses JSON input and ingests it into the current archive, splitting the archive if it grows
+     * beyond the target encoded size.
+     * @param reader
+     * @param path
+     * @param archive_creator_id
+     * @return Whether ingestion was successful or not.
+     */
+    [[nodiscard]] auto ingest_json(
+            std::shared_ptr<clp::ReaderInterface> reader,
+            Path const& path,
+            std::string const& archive_creator_id
+    ) -> bool;
+
+    /**
+     * Parses KV-IR input and ingests it into the current archive, splitting the archive if it grows
+     * beyond the target encoded size.
+     * @param reader
+     * @param path
+     * @param archive_creator_id
+     * @return Whether ingestion was successful or not.
+     */
+    [[nodiscard]] auto ingest_kvir(
+            std::shared_ptr<clp::ReaderInterface> reader,
+            Path const& path,
+            std::string const& archive_creator_id
+    ) -> bool;
+
+    /**
      * Parses a JSON line
      * @param line the JSON line
      * @param parent_node_id the parent node id
      * @param key the key of the node
      * @throw simdjson::simdjson_error when encountering invalid fields while parsing line
      */
-    void parse_line(ondemand::value line, int32_t parent_node_id, std::string const& key);
+    void parse_line(simdjson::ondemand::value line, int32_t parent_node_id, std::string const& key);
 
     /**
      * Determines the archive node type based on the IR node type and value.
@@ -174,14 +192,14 @@ private:
      * @param line the JSON array
      * @param parent_node_id the parent node id
      */
-    void parse_array(ondemand::array line, int32_t parent_node_id);
+    void parse_array(simdjson::ondemand::array line, int32_t parent_node_id);
 
     /**
      * Parses an object within an array in a JSON line
      * @param line the JSON object
      * @param parent_node_id the parent node id
      */
-    void parse_obj_in_array(ondemand::object line, int32_t parent_node_id);
+    void parse_obj_in_array(simdjson::ondemand::object line, int32_t parent_node_id);
 
     /**
      * Splits the archive if the size of the archive exceeds the maximum size
@@ -206,7 +224,6 @@ private:
     static bool
     check_and_log_curl_error(Path const& path, std::shared_ptr<clp::ReaderInterface> reader);
 
-    int m_num_messages;
     std::vector<Path> m_input_paths;
     NetworkAuthOption m_network_auth{};
 
@@ -224,6 +241,7 @@ private:
     size_t m_max_document_size;
     bool m_structurize_arrays{false};
     bool m_record_log_order{true};
+    bool m_retain_float_format{false};
 
     absl::flat_hash_map<std::pair<uint32_t, NodeType>, std::pair<int32_t, bool>>
             m_ir_node_to_archive_node_id_mapping;

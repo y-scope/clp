@@ -1,0 +1,29 @@
+version: "3"
+
+vars:
+  G_INTEGRATION_TESTS_DIR: "{{.ROOT_DIR}}/integration-tests"
+
+tasks:
+  default:
+    deps:
+      - task: "clp-py-project-imports"
+      - task: "core"
+
+  cache-clear:
+    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
+    cmds:
+      - "rm -rf .pytest_cache"
+
+  core:
+    deps:
+      - task: "::core"
+    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
+    env:
+      CLP_BUILD_DIR: "{{.G_BUILD_DIR}}"
+      CLP_CORE_BINS_DIR: "{{.G_CORE_COMPONENT_BUILD_DIR}}"
+      CLP_PACKAGE_DIR: "{{.G_PACKAGE_BUILD_DIR}}"
+    cmd: "uv run pytest -m core"
+
+  clp-py-project-imports:
+    dir: "{{.G_INTEGRATION_TESTS_DIR}}"
+    cmd: "uv run pytest tests/test_clp_native_py_project_imports.py"

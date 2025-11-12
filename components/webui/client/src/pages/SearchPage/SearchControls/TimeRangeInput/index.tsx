@@ -10,7 +10,6 @@ import styles from "./index.module.css";
 import {
     isValidDateRange,
     TIME_RANGE_OPTION,
-    TIME_RANGE_OPTION_DAYJS_MAP,
     TIME_RANGE_OPTION_NAMES,
 } from "./utils";
 
@@ -33,10 +32,6 @@ const TimeRangeInput = () => {
 
     const handleSelectChange = (newTimeRangeOption: TIME_RANGE_OPTION) => {
         updateTimeRangeOption(newTimeRangeOption);
-        if (newTimeRangeOption !== TIME_RANGE_OPTION.CUSTOM) {
-            const dayJsRange = TIME_RANGE_OPTION_DAYJS_MAP[newTimeRangeOption]();
-            updateTimeRange(dayJsRange);
-        }
     };
 
     const handleRangePickerChange = (
@@ -61,7 +56,7 @@ const TimeRangeInput = () => {
                 listHeight={400}
                 options={TIME_RANGE_OPTION_NAMES.map((option) => ({label: option, value: option}))}
                 popupMatchSelectWidth={false}
-                size={"large"}
+                size={"middle"}
                 value={timeRangeOption}
                 variant={"filled"}
                 className={timeRangeOption === TIME_RANGE_OPTION.CUSTOM ?
@@ -75,7 +70,7 @@ const TimeRangeInput = () => {
                     allowClear={true}
                     className={styles["rangePicker"] || ""}
                     showTime={true}
-                    size={"large"}
+                    size={"middle"}
                     value={timeRange}
                     disabled={searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING ||
                                 searchUiState === SEARCH_UI_STATE.QUERYING}

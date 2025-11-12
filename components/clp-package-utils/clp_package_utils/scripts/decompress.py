@@ -1,6 +1,8 @@
 import argparse
 import logging
+import os
 import pathlib
+import shlex
 import subprocess
 import sys
 from typing import Optional
@@ -8,14 +10,15 @@ from typing import Optional
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
     CLPConfig,
     StorageEngine,
     StorageType,
 )
+from clp_py_utils.core import resolve_host_path, resolve_host_path_in_container
 
 from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     DockerMount,
     DockerMountType,
     dump_container_config,
@@ -50,8 +53,12 @@ def validate_and_load_config(
     :return: The config object on success, None otherwise.
     """
     try:
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
-        clp_config.validate_logs_dir()
+        clp_config = load_config_file(
+            resolve_host_path_in_container(config_file_path),
+            resolve_host_path_in_container(default_config_file_path),
+            clp_home,
+        )
+        clp_config.validate_logs_dir(True)
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
@@ -69,16 +76,18 @@ def handle_extract_file_cmd(
     :param parsed_args:
     :param clp_home:
     :param default_config_file_path:
-    :return: 0 on success, -1 otherwise.
+    :return: exit code of extraction command, or -1 if an error is encountered.
     """
     paths_to_extract_file_path = None
     if parsed_args.files_from:
         paths_to_extract_file_path = pathlib.Path(parsed_args.files_from)
 
     # Validate extraction directory
-    extraction_dir = pathlib.Path(parsed_args.extraction_dir).resolve()
+    extraction_dir = pathlib.Path(parsed_args.extraction_dir)
+    extraction_dir = resolve_host_path(extraction_dir)
+    resolved_extraction_dir = resolve_host_path_in_container(extraction_dir)
     try:
-        validate_path_could_be_dir(extraction_dir)
+        validate_path_could_be_dir(resolved_extraction_dir)
     except ValueError as ex:
         logger.error(f"extraction-dir is invalid: {ex}")
         return -1
@@ -106,10 +115,9 @@ def handle_extract_file_cmd(
     )
 
     # Set up mounts
-    extraction_dir.mkdir(exist_ok=True)
+    resolved_extraction_dir.mkdir(exist_ok=True)
     container_extraction_dir = pathlib.Path("/") / "mnt" / "extraction-dir"
     necessary_mounts = [
-        mounts.clp_home,
         mounts.data_dir,
         mounts.logs_dir,
         mounts.archives_output_dir,
@@ -131,7 +139,7 @@ def handle_extract_file_cmd(
         CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
     }
     container_start_cmd = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
+        container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
     )
 
     # fmt: off
@@ -143,23 +151,29 @@ def handle_extract_file_cmd(
         "-d", str(container_extraction_dir),
     ]
     # fmt: on
+    if parsed_args.verbose:
+        extract_cmd.append("--verbose")
     for path in parsed_args.paths:
         extract_cmd.append(path)
     if container_paths_to_extract_file_path:
         extract_cmd.append("--input-list")
-        extract_cmd.append(container_paths_to_extract_file_path)
+        extract_cmd.append(str(container_paths_to_extract_file_path))
 
     cmd = container_start_cmd + extract_cmd
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError:
-        logger.exception("Docker or file extraction command failed.")
-        return -1
+
+    proc = subprocess.run(cmd)
+    ret_code = proc.returncode
+    if 0 != ret_code:
+        logger.error("file extraction failed.")
+        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    generated_config_path_on_host.unlink()
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
+    resolved_generated_config_path_on_host.unlink()
 
-    return 0
+    return ret_code
 
 
 def handle_extract_stream_cmd(
@@ -170,7 +184,7 @@ def handle_extract_stream_cmd(
     :param parsed_args:
     :param clp_home:
     :param default_config_file_path:
-    :return: 0 on success, -1 otherwise.
+    :return: exit code of extraction command, or -1 if an error is encountered.
     """
     # Validate and load config file
     clp_config = validate_and_load_config(
@@ -201,13 +215,13 @@ def handle_extract_stream_cmd(
     generated_config_path_on_container, generated_config_path_on_host = dump_container_config(
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
-    necessary_mounts = [mounts.clp_home, mounts.logs_dir]
+    necessary_mounts = [mounts.logs_dir]
     extra_env_vars = {
         CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
         CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
     }
     container_start_cmd = generate_container_start_cmd(
-        container_name, necessary_mounts, clp_config.execution_container, extra_env_vars
+        container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
     )
 
     # fmt: off
@@ -218,6 +232,8 @@ def handle_extract_stream_cmd(
         job_command
     ]
     # fmt: on
+    if parsed_args.verbose:
+        extract_cmd.append("--verbose")
 
     if EXTRACT_IR_CMD == job_command:
         extract_cmd.append(str(parsed_args.msg_ix))
@@ -253,16 +269,19 @@ def handle_extract_stream_cmd(
 
     cmd = container_start_cmd + extract_cmd
 
-    try:
-        subprocess.run(cmd, check=True)
-    except subprocess.CalledProcessError:
-        logger.exception("Docker or stream extraction command failed.")
-        return -1
+    proc = subprocess.run(cmd)
+    ret_code = proc.returncode
+    if 0 != ret_code:
+        logger.error("stream extraction failed.")
+        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    generated_config_path_on_host.unlink()
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
+    resolved_generated_config_path_on_host.unlink()
 
-    return 0
+    return ret_code
 
 
 def main(argv):
@@ -276,6 +295,12 @@ def main(argv):
         default=str(default_config_file_path),
         help="CLP configuration file.",
     )
+    args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
     command_args_parser = args_parser.add_subparsers(dest="command", required=True)
 
     # File extraction command parser
@@ -287,7 +312,11 @@ def main(argv):
         "-f", "--files-from", help="A file listing all files to extract."
     )
     file_extraction_parser.add_argument(
-        "-d", "--extraction-dir", metavar="DIR", default=".", help="Extract files into DIR."
+        "-d",
+        "--extraction-dir",
+        metavar="DIR",
+        default=".",
+        help="Extract files into DIR.",
     )
 
     # IR extraction command parser
@@ -317,6 +346,10 @@ def main(argv):
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:

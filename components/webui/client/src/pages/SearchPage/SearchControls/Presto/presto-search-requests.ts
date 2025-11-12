@@ -1,11 +1,16 @@
 import {
+    type PrestoQueryJob,
+    type PrestoQueryJobCreation,
+} from "@webui/common/schemas/presto-search";
+
+import {
     cancelQuery,
     clearQueryResults,
-    type PrestoQueryJobCreationSchema,
-    type PrestoQueryJobSchema,
     submitQuery,
 } from "../../../../api/presto-search";
-import useSearchStore from "../../SearchState";
+import useSearchStore, {SEARCH_STATE_DEFAULT} from "../../SearchState";
+import usePrestoSearchState from "../../SearchState/Presto";
+import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 
 
@@ -33,14 +38,19 @@ const handlePrestoClearResults = () => {
     });
 };
 
-
 /**
  * Submits a new Presto query to server.
  *
  * @param payload
  */
-const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreationSchema) => {
-    const {updateSearchJobId, updateSearchUiState, searchUiState} = useSearchStore.getState();
+const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreation) => {
+    const {
+        updateNumSearchResultsTable,
+        updateNumSearchResultsMetadata,
+        updateSearchJobId,
+        updateSearchUiState,
+        searchUiState,
+    } = useSearchStore.getState();
 
     // User should NOT be able to submit a new query while an existing query is in progress.
     if (
@@ -55,6 +65,8 @@ const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreationSchema) => {
 
     handlePrestoClearResults();
 
+    updateNumSearchResultsTable(SEARCH_STATE_DEFAULT.numSearchResultsTable);
+    updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
     updateSearchUiState(SEARCH_UI_STATE.QUERY_ID_PENDING);
 
     submitQuery(payload)
@@ -73,12 +85,13 @@ const handlePrestoQuerySubmit = (payload: PrestoQueryJobCreationSchema) => {
         });
 };
 
+
 /**
  * Cancels an ongoing Presto search query on server.
  *
  * @param payload
  */
-const handlePrestoQueryCancel = (payload: PrestoQueryJobSchema) => {
+const handlePrestoQueryCancel = (payload: PrestoQueryJob) => {
     const {searchUiState, updateSearchUiState} = useSearchStore.getState();
     if (searchUiState !== SEARCH_UI_STATE.QUERYING) {
         console.error("Cannot cancel query if there is no ongoing query.");
@@ -96,7 +109,36 @@ const handlePrestoQueryCancel = (payload: PrestoQueryJobSchema) => {
         });
 };
 
+/**
+ * Handles switching to guided SQL interface by clearing results and resetting states.
+ */
+const handleSwitchToGuided = () => {
+    const {
+        searchUiState,
+        updateSearchUiState,
+        updateSearchJobId,
+        updateNumSearchResultsTable,
+        updateNumSearchResultsMetadata,
+    } = useSearchStore.getState();
+    const {setSqlInterface} = usePrestoSearchState.getState();
+
+    setSqlInterface(PRESTO_SQL_INTERFACE.GUIDED);
+
+    if (searchUiState === SEARCH_UI_STATE.DEFAULT) {
+        return;
+    }
+
+    handlePrestoClearResults();
+
+    updateSearchJobId(SEARCH_STATE_DEFAULT.searchJobId);
+    updateNumSearchResultsTable(SEARCH_STATE_DEFAULT.numSearchResultsTable);
+    updateNumSearchResultsMetadata(SEARCH_STATE_DEFAULT.numSearchResultsMetadata);
+
+    updateSearchUiState(SEARCH_UI_STATE.DEFAULT);
+};
+
 export {
     handlePrestoQueryCancel,
     handlePrestoQuerySubmit,
+    handleSwitchToGuided,
 };

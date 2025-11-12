@@ -1,10 +1,10 @@
+import {QueryId} from "@webui/common/socket";
 import {FastifyBaseLogger} from "fastify";
 import type {
     Collection,
     Db,
 } from "mongodb";
 
-import {QueryId} from "../../../../../../common/index.js";
 import {
     CLIENT_UPDATE_TIMEOUT_MILLIS,
     MongoCustomSocket,

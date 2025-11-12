@@ -1,0 +1,9 @@
+version: "3"
+
+tasks:
+  package:
+    dir: "{{.ROOT_DIR}}/tools/docker-images/clp-package"
+    deps:
+      - ":package-build-deps"
+    cmds:
+      - "./build.sh"

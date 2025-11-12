@@ -43,7 +43,8 @@ namespace clp::ffi::ir_stream {
  */
 template <
         IrUnitHandlerReq IrUnitHandlerType,
-        search::QueryHandlerReq QueryHandlerType = search::EmptyQueryHandler>
+        search::QueryHandlerReq QueryHandlerType = search::EmptyQueryHandler
+>
 class Deserializer {
 public:
     // Factory function
@@ -158,6 +159,14 @@ public:
      */
     [[nodiscard]] auto get_metadata() const -> nlohmann::json const& { return m_metadata; }
 
+    /**
+     * @return The number of log events (log event IR units) that have been deserialized from the
+     * current stream.
+     */
+    [[nodiscard]] auto get_num_log_events_deserialized() const -> size_t {
+        return m_next_log_event_idx;
+    }
+
 private:
     // Factory function
     /**
@@ -185,8 +194,8 @@ private:
             nlohmann::json metadata,
             QueryHandlerType query_handler
     )
-            : m_ir_unit_handler{std::move(ir_unit_handler)},
-              m_metadata(std::move(metadata)),
+            : m_metadata(std::move(metadata)),
+              m_ir_unit_handler{std::move(ir_unit_handler)},
               m_query_handler{std::move(query_handler)} {}
 
     // Variables

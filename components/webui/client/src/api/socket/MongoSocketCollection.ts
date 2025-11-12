@@ -1,7 +1,7 @@
 import {
     ClientToServerEvents,
     ServerToClientEvents,
-} from "@common/index.js";
+} from "@webui/common/socket";
 import {Socket} from "socket.io-client";
 
 import {MongoSocketCursor} from "./MongoSocketCursor.js";

@@ -7,6 +7,9 @@ import {
 } from "antd";
 
 import useSearchStore from "../../../../SearchState/index";
+import usePrestoSearchState from "../../../../SearchState/Presto";
+import {PRESTO_SQL_INTERFACE} from "../../../../SearchState/Presto/typings";
+import {handlePrestoGuidedQueryCancel} from "../../presto-guided-search-requests";
 import {handlePrestoQueryCancel} from "../../presto-search-requests";
 import styles from "./index.module.css";
 
@@ -18,6 +21,9 @@ import styles from "./index.module.css";
  */
 const CancelButton = () => {
     const searchJobId = useSearchStore((state) => state.searchJobId);
+    const aggregationJobId = useSearchStore((state) => state.aggregationJobId);
+    const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
+    const isPrestoGuided = sqlInterface === PRESTO_SQL_INTERFACE.GUIDED;
 
     const handleClick = useCallback(() => {
         if (null === searchJobId) {
@@ -25,16 +31,23 @@ const CancelButton = () => {
 
             return;
         }
-        handlePrestoQueryCancel({searchJobId});
-    }, [searchJobId]);
+        if (false === isPrestoGuided || null === aggregationJobId) {
+            handlePrestoQueryCancel({searchJobId});
+        } else {
+            handlePrestoGuidedQueryCancel(searchJobId, aggregationJobId);
+        }
+    }, [aggregationJobId,
+        searchJobId,
+        isPrestoGuided]);
 
     return (
         <Tooltip title={"Cancel query"}>
             <Button
                 className={styles["cancelButton"] || ""}
                 color={"red"}
+                htmlType={"button"}
                 icon={<CloseOutlined/>}
-                size={"large"}
+                size={"middle"}
                 variant={"solid"}
                 onClick={handleClick}
             >

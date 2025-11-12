@@ -1,13 +1,11 @@
+import {QUERY_JOB_TYPE} from "@webui/common/query";
+import {Nullable} from "@webui/common/utility-types";
 import axios, {
     AxiosProgressEvent,
     AxiosResponse,
 } from "axios";
-import {Nullable} from "src/typings/common";
 
-import {
-    ExtractStreamResp,
-    QUERY_JOB_TYPE,
-} from "../../typings/query";
+import {ExtractStreamResp} from "../../typings/query";
 
 
 interface SubmitExtractStreamJobProps {

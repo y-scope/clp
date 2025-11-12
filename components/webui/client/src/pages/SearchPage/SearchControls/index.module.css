@@ -1,4 +1,27 @@
 .searchControlsContainer {
     display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.inputsAndButtonRow {
+    display: flex;
     gap: 10px;
+}
+
+.status {
+    margin-left: 2px;
+}
+
+.runRow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.buttons {
+    display: flex;
+    flex-direction: row;
+    gap: 5px;
 }

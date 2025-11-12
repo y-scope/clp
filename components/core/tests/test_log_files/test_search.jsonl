@@ -2,7 +2,7 @@
 {"idx": 1, "msg": "Msg 1: \"Abc123\""}
 {"idx": 2, "msg": "Msg 2: 'Abc123'"}
 {"idx": 3, "msg": "Msg 3: \nAbc123"}
-{"idx": 4, "skip_msg": "Msg 4: \\Abc123"}
+{"idx": 4, "msg": "Msg 4: \\Abc123"}
 {"idx": 5, "msg": "Msg 5: \rAbc123"}
 {"idx": 6, "msg": "Msg 6: \tAbc123"}
 {"idx": 7, "arr": [{"a": 999}, {"b": 1001}]}
@@ -11,3 +11,4 @@
 {"idx": 10, "ambiguous_varstring": "abcde"}
 {"idx": 11, "ambiguous_varstring": "ae"}
 {"idx": 12, "ambiguous_varstring": "a*e"}
+{"idx": 13, "one": 1}

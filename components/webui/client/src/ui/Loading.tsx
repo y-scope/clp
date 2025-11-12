@@ -10,8 +10,8 @@ import {
     Typography,
 } from "@mui/joy";
 import {DefaultColorPalette} from "@mui/joy/styles/types";
+import {Nullable} from "@webui/common/utility-types";
 
-import {Nullable} from "../typings/common";
 import {
     QUERY_LOADING_STATE,
     QUERY_LOADING_STATE_DESCRIPTIONS,
@@ -97,7 +97,7 @@ interface LoadingProps {
 const Loading = ({
     currentState,
     errorMsg,
-}:LoadingProps) => {
+}: LoadingProps) => {
     const steps: React.ReactNode[] = [];
     QUERY_LOADING_STATE_VALUES.forEach((state) => {
         const isActive = (currentState === state);

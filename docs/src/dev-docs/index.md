@@ -1,0 +1,104 @@
+# Developer docs
+
+These docs are useful in developing CLP. Use the left sidebar (if it's hidden, click the
+<i class="fa fa-bars"></i> icon) to navigate to specific docs.
+
+The sections are as follows:
+
+::::{grid} 1 1 2 2
+:gutter: 2
+
+:::{grid-item-card}
+:link: building-package
+Building
+^^^
+Docs about building CLP.
+:::
+
+:::{grid-item-card}
+:link: testing/index
+Testing
+^^^
+Docs about testing CLP.
+:::
+
+:::{grid-item-card}
+:link: contributing-getting-started
+Contributing
+^^^
+Docs about contributing to this project.
+:::
+
+:::{grid-item-card}
+:link: components-core
+Components
+^^^
+Docs specific to each component.
+:::
+
+:::{grid-item-card}
+:link: tooling-containers
+Tooling
+^^^
+Docs about various tooling like available containers, etc.
+:::
+
+:::{grid-item-card}
+:link: design-project-structure
+Design
+^^^
+Any design docs describing parts of this project.
+:::
+::::
+
+:::{toctree}
+:hidden:
+
+building-package
+:::
+
+:::{toctree}
+:caption: Testing
+:hidden:
+
+testing/index
+testing/unit-tests
+testing/integration-tests
+:::
+
+:::{toctree}
+:caption: Contributing
+:hidden:
+
+contributing-getting-started
+contributing-linting
+:::
+
+:::{toctree}
+:caption: Components
+:hidden:
+
+components-core/index
+components-webui
+:::
+
+:::{toctree}
+:caption: Tooling
+:hidden:
+
+tooling-containers
+tooling-gh-workflows
+:::
+
+:::{toctree}
+:caption: Design
+:hidden:
+
+design-project-structure
+design-deployment-orchestration
+
+design-clp-structured/index
+design-kv-ir-streams/index
+design-metadata-db
+design-parsing-wildcard-queries
+:::

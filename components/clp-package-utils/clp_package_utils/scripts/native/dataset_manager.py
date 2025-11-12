@@ -6,7 +6,13 @@ from contextlib import closing
 from pathlib import Path
 from typing import Dict, List
 
-from clp_py_utils.clp_config import ArchiveOutput, Database, S3Config, StorageType
+from clp_py_utils.clp_config import (
+    ArchiveOutput,
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
+    Database,
+    S3Config,
+    StorageType,
+)
 from clp_py_utils.clp_metadata_db_utils import (
     delete_dataset_from_metadata_db,
     get_datasets_table_name,
@@ -15,7 +21,6 @@ from clp_py_utils.s3_utils import s3_delete_by_key_prefix
 from clp_py_utils.sql_adapter import SQL_Adapter
 
 from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLPConfig,
     get_clp_home,
     load_config_file,
@@ -108,7 +113,7 @@ def _try_deleting_archives(
     archive_storage_config = archive_output_config.storage
     storage_type = archive_storage_config.type
     if StorageType.FS == storage_type:
-        _try_deleting_archives_from_fs(archive_output_config, dataset_archive_storage_dir)
+        _try_deleting_archives_from_fs(dataset_archive_storage_dir)
     elif StorageType.S3 == storage_type:
         _try_deleting_archives_from_s3(
             archive_storage_config.s3_config, dataset_archive_storage_dir
@@ -117,16 +122,8 @@ def _try_deleting_archives(
         raise ValueError(f"Unsupported storage type: {storage_type}")
 
 
-def _try_deleting_archives_from_fs(
-    archive_output_config: ArchiveOutput, dataset_archive_storage_dir: str
-) -> None:
-    archives_dir = archive_output_config.get_directory()
+def _try_deleting_archives_from_fs(dataset_archive_storage_dir: str) -> None:
     dataset_archive_storage_path = Path(dataset_archive_storage_dir).resolve()
-    if not dataset_archive_storage_path.is_relative_to(archives_dir):
-        raise ValueError(
-            f"'{dataset_archive_storage_path}' is not within top-level archive storage directory"
-            f" '{archives_dir}'"
-        )
 
     if not dataset_archive_storage_path.exists():
         logger.debug(f"'{dataset_archive_storage_path}' doesn't exist.")

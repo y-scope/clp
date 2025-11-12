@@ -48,7 +48,9 @@ set(
         ../LogSurgeonReader.hpp
         ../LogTypeDictionaryEntry.cpp
         ../LogTypeDictionaryEntry.hpp
+        ../LogTypeDictionaryEntryReq.hpp
         ../LogTypeDictionaryReader.hpp
+        ../LogTypeDictionaryReaderReq.hpp
         ../MySQLDB.cpp
         ../MySQLDB.hpp
         ../MySQLParamBindings.cpp
@@ -117,9 +119,12 @@ set(
         ../Utils.hpp
         ../VariableDictionaryEntry.cpp
         ../VariableDictionaryEntry.hpp
+        ../VariableDictionaryEntryReq.hpp
         ../VariableDictionaryReader.hpp
+        ../VariableDictionaryReaderReq.hpp
         ../VariableDictionaryWriter.cpp
         ../VariableDictionaryWriter.hpp
+        ../VariableDictionaryWriterReq.hpp
         ../version.hpp
         ../WriterInterface.cpp
         ../WriterInterface.hpp
@@ -144,6 +149,7 @@ if(CLP_BUILD_EXECUTABLES)
                 fmt::fmt
                 log_surgeon::log_surgeon
                 MariaDBClient::MariaDBClient
+                msgpack-cxx
                 nlohmann_json::nlohmann_json
                 spdlog::spdlog
                 ${sqlite_LIBRARY_DEPENDENCIES}

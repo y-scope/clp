@@ -1,30 +1,36 @@
 version: "3"
 
 includes:
+  lock: "./lock.yaml"
   utils: "./utils.yaml"
   yscope-dev-utils: "../../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
 
 vars:
   # Directories
   G_DEPS_DIR: "{{.G_BUILD_DIR}}/deps"
-  G_DEPS_CORE_DIR: "{{.G_DEPS_DIR}}/core"
-  G_DEPS_CORE_CHECKSUMS_DIR: "{{.G_DEPS_CORE_DIR}}/checksums"
+  G_DEPS_CPP_DIR: "{{.G_DEPS_DIR}}/cpp"
+  G_DEPS_CPP_CHECKSUMS_DIR: "{{.G_DEPS_CPP_DIR}}/checksums"
 
   # Checksum file paths
-  G_DEPS_CORE_CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/all.md5"
+  G_DEPS_CPP_CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/all.md5"
   G_DEPS_LOG_VIEWER_CHECKSUM_FILE: "{{.G_DEPS_DIR}}/log-viewer.md5"
 
   # NOTE: This must be kept in-sync with its usage in components/core/CMakeLists.txt
-  G_DEPS_CORE_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_DIR}}/cmake-settings"
+  G_DEPS_CPP_CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_DIR}}/cmake-settings"
 
   # Library names
+  G_BOOST_LIB_NAME: "Boost"
   G_FMT_LIB_NAME: "fmt"
   G_GSL_LIB_NAME: "Microsoft.GSL"
 
   # Antlr
   G_ANTLR_VERSION: "4.13.2"
-  G_ANTLR_JAR_FILE: "{{.G_DEPS_CORE_DIR}}/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
+  G_ANTLR_JAR_FILE: "{{.G_DEPS_CPP_DIR}}/antlr-{{.G_ANTLR_VERSION}}-complete.jar"
 
+# NOTE: For dependencies built using CMake, we set CMP0074 to NEW whenever:
+# - a component's minimum required CMake version is less than 3.27 (where CMP0074 defaults to OLD);
+#   and
+# - the component depends on another via `<lib_name>_ROOT`.
 tasks:
   default:
     deps:
@@ -33,16 +39,15 @@ tasks:
 
   core:
     deps:
-      - "utils:clean-outdated-core-checksum-files"
+      - "utils:clean-outdated-cpp-checksum-files"
       - "utils:init"
     cmds:
-      - "rm -rf '{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}'"
-      - "mkdir -p '{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}'"
       - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
         vars:
-          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
+          CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-core.cmake"
           DEP_TASK: "core-all-parallel"
-      - task: "utils:combine-core-checksum-files"
+      - task: "utils:combine-cpp-checksum-files"
 
   log-viewer:
     deps:
@@ -51,10 +56,10 @@ tasks:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
           CHECKSUM_FILE: "{{.G_DEPS_LOG_VIEWER_CHECKSUM_FILE}}"
-          FILE_SHA256: "f9baaae0886439862204e8062c69dd49354cb14ad4e59f7c35779d544384955e"
+          FILE_SHA256: "a6915799d6a001f704ce1963131f02f9d6afef0974403c886da56d5ec2056fbc"
           OUTPUT_DIR: "{{.G_WEBUI_SRC_DIR}}/yscope-log-viewer"
           TAR_FILE: "{{.G_BUILD_DIR}}/yscope-log-viewer.tar.gz"
-          URL: "https://github.com/y-scope/yscope-log-viewer/archive/3abe4cc.tar.gz"
+          URL: "https://github.com/y-scope/yscope-log-viewer/archive/cb767f4.tar.gz"
 
   core-all-parallel:
     internal: true
@@ -63,6 +68,7 @@ tasks:
       - task: "absl"
       - task: "antlr-jar"
       - task: "antlr-runtime"
+      - task: "boost"
       - task: "catch2"
       - task: "date"
       - task: "fmt"
@@ -71,6 +77,7 @@ tasks:
       - task: "lz4"
       - task: "microsoft.gsl"
       - task: "mongocxx"
+      - task: "msgpack-cxx"
       - task: "nlohmann_json"
       - task: "simdjson"
       - task: "spdlog"
@@ -80,6 +87,55 @@ tasks:
       - task: "ystdlib"
       - task: "zlib"
       - task: "zstd"
+
+  spider:
+    deps:
+      - "spider-dep"
+    platforms: ["linux"]
+    preconditions:
+      # NOTE: Spider is only supported on Ubuntu at present.
+      - >-
+        source /etc/os-release && [[ "$ID" == "ubuntu" ]]
+    cmds:
+      - task: "yscope-dev-utils:cmake:install-remote-tar"
+        vars:
+          CMAKE_PACKAGE_NAME: "spider"
+          TAR_SHA256: "43478b6da99aa2df50c960573ec68c6fcf67cdfbab39b5e314676218aa93b959"
+          TAR_URL: "https://github.com/y-scope/spider/archive/6a7bad3.tar.gz"
+          WORK_DIR: "{{.G_SPIDER_BUILD_DIR}}"
+          CMAKE_JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-spider.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DSPIDER_BUILD_TESTING=OFF"
+
+  spider-dep:
+    internal: true
+    deps:
+      - "utils:clean-outdated-cpp-checksum-files"
+      - "utils:init"
+    cmds:
+      - task: "yscope-dev-utils:cmake:install-deps-and-generate-settings"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
+          CMAKE_SETTINGS_FILE: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/all-spider.cmake"
+          DEP_TASK: "spider-all-parallel"
+      - task: "utils:combine-cpp-checksum-files"
+
+  spider-all-parallel:
+    internal: true
+    run: "once"
+    deps:
+      - task: "absl"
+      - task: "antlr-jar"
+      - task: "antlr-runtime"
+      - task: "boost"
+      - task: "fmt"
+      - task: "mariadb-connector-cpp"
+      - task: "msgpack-cxx"
+      - task: "spdlog"
+      - task: "ystdlib"
 
   absl:
     internal: true
@@ -99,7 +155,7 @@ tasks:
   antlr-jar:
     internal: true
     vars:
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/antlr-jar.md5"
+      CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/antlr-jar.md5"
       OUTPUT_FILE: "{{.G_ANTLR_JAR_FILE}}"
     run: "once"
     deps:
@@ -130,10 +186,10 @@ tasks:
       LIB_NAME: "antlr4-runtime"
 
       # Paths
-      BUILD_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-build"
-      CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-      INSTALL_PREFIX: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install"
-      SOURCE_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+      BUILD_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-build"
+      CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+      INSTALL_PREFIX: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
+      SOURCE_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
     deps:
       - task: "utils:init"
       - task: "yscope-dev-utils:checksum:validate"
@@ -167,12 +223,12 @@ tasks:
       - task: "yscope-dev-utils:cmake:build"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
-          JOBS: "{{.G_CORE_MAX_PARALLELISM_PER_BUILD_TASK}}"
+          JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
       - task: "yscope-dev-utils:cmake:install"
         vars:
           BUILD_DIR: "{{.BUILD_DIR}}"
           CMAKE_PACKAGE_NAME: "{{.LIB_NAME}}"
-          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}"
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
           INSTALL_PREFIX: "{{.INSTALL_PREFIX}}"
 
       # This command must be last
@@ -180,6 +236,28 @@ tasks:
         vars:
           CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
           INCLUDE_PATTERNS: ["{{.INSTALL_PREFIX}}"]
+
+  boost:
+    internal: true
+    vars:
+      VERSION: "1.87.0"
+    run: "once"
+    cmds:
+      - task: "yscope-dev-utils:boost:download-and-install"
+        vars:
+          CMAKE_SETTINGS_DIR: "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}"
+          FILE_SHA256: "d6c69e4459eb5d6ec208250291221e7ff4a2affde9af6e49c9303b89c687461f"
+          TARGETS:
+            - "filesystem"
+            - "iostreams"
+            - "process"
+            - "program_options"
+            - "regex"
+            - "system"
+            - "url"
+          URL: "https://github.com/boostorg/boost/releases/download/boost-{{.VERSION}}/\
+          boost-{{.VERSION}}-b2-nodocs.tar.gz"
+          WORK_DIR: "{{.G_DEPS_CPP_DIR}}"
 
   catch2:
     internal: true
@@ -222,8 +300,8 @@ tasks:
             - "-DFMT_DOC=OFF"
             - "-DFMT_TEST=OFF"
           LIB_NAME: "{{.G_FMT_LIB_NAME}}"
-          TARBALL_SHA256: "1250e4cc58bf06ee631567523f48848dc4596133e163f02615c97f78bab6c811"
-          TARBALL_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/10.2.1.tar.gz"
+          TARBALL_SHA256: "bc23066d87ab3168f27cef3e97d545fa63314f5c79df5ea444d41d56f962c6af"
+          TARBALL_URL: "https://github.com/fmtlib/fmt/archive/refs/tags/11.2.0.tar.gz"
 
   liblzma:
     internal: true
@@ -283,14 +361,14 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_GSL_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_GSL_LIB_NAME}}.cmake"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
             - "-Dlog_surgeon_BUILD_TESTING=OFF"
           LIB_NAME: "log_surgeon"
-          TARBALL_SHA256: "6053f7e26ff21aef0c4cf409502d3abb0cfcf76d8f76786c3bb1bcc03e8f5df2"
-          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/a82ad13.tar.gz"
+          TARBALL_SHA256: "4551ea50cd22e8423770fd66a167e1c86053b1f4957f72c582a2da93e7820210"
+          TARBALL_URL: "https://github.com/y-scope/log-surgeon/archive/840f262.tar.gz"
 
   lz4:
     internal: true
@@ -309,6 +387,29 @@ tasks:
           TARBALL_SHA256: "537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b"
           TARBALL_URL: "https://github.com/lz4/lz4/releases/download/v1.10.0/lz4-1.10.0.tar.gz"
 
+  mariadb-connector-cpp:
+    platforms: ["linux"]
+    preconditions:
+      # NOTE: The MariaDB connector is only required for building Spider, which is only supported on
+      # Ubuntu. `INSTALL_LAYOUT` is currently hardcoded to "DEB". To support other Linux distros:
+      # - Update the precondition accordingly.
+      # - Make `INSTALL_LAYOUT` configurable.
+      - >-
+        source /etc/os-release && [[ "$ID" == "ubuntu" ]]
+    internal: true
+    run: "once"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DUSE_SYSTEM_INSTALLED_LIB=ON"
+            - "-DINSTALL_LAYOUT=DEB"
+          LIB_NAME: "mariadb-connector-cpp"
+          TARBALL_URL: "https://github.com/mariadb-corporation/mariadb-connector-cpp/archive/refs/\
+            tags/1.1.5.tar.gz"
+          TARBALL_SHA256: "0e3dfe9f2bc3f7bb6f7c159009556290064a7c23402ea08019fa8aebfc3ff2c9"
+
   microsoft.gsl:
     internal: true
     run: "once"
@@ -326,7 +427,7 @@ tasks:
   mongocxx:
     internal: true
     vars:
-      VERSION: "r3.10.2"
+      VERSION: "r4.1.1"
     run: "once"
     cmds:
       - task: "utils:install-remote-cmake-lib"
@@ -336,12 +437,33 @@ tasks:
             - "-DBUILD_SHARED_LIBS_WITH_STATIC_MONGOC=ON"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-            - "-DENABLE_TESTS=OFF"
             - "-DENABLE_UNINSTALL=OFF"
           LIB_NAME: "mongocxx"
-          TARBALL_SHA256: "52b99b2866019b5ea25d15c5a39e2a88c70fe1259c40f1091deff8bfae0194be"
+          TARBALL_SHA256: "19dff3cf834a3e09229260f22a0325820a7e30c78b294db91794dd934776b33a"
           TARBALL_URL: "https://github.com/mongodb/mongo-cxx-driver/releases/download/{{.VERSION}}\
           /mongo-cxx-driver-{{.VERSION}}.tar.gz"
+
+  msgpack-cxx:
+    internal: true
+    vars:
+      VERSION: "7.0.0"
+    run: "once"
+    deps:
+      - task: "boost"
+    cmds:
+      - task: "utils:install-remote-cmake-lib"
+        vars:
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-DCMAKE_BUILD_TYPE=Release"
+            - "-DCMAKE_INSTALL_MESSAGE=LAZY"
+            - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
+            - "-DMSGPACK_BUILD_DOCS=OFF"
+            - "-DMSGPACK_CXX20=ON"
+          LIB_NAME: "msgpack-cxx"
+          TARBALL_SHA256: "7504b7af7e7b9002ce529d4f941e1b7fb1fb435768780ce7da4abaac79bb156f"
+          TARBALL_URL: "https://github.com/msgpack/msgpack-c/releases/download/cpp-{{.VERSION}}\
+          /msgpack-cxx-{{.VERSION}}.tar.gz"
 
   nlohmann_json:
     internal: true
@@ -383,23 +505,19 @@ tasks:
       - task: "utils:install-remote-cmake-lib"
         vars:
           CMAKE_GEN_ARGS:
-            - "-C {{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_FMT_LIB_NAME}}.cmake"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-
-            # Set CMP0074 since our minimum required CMake version is less than 3.27, and we
-            # depend on fmt's settings file, which uses `fmt_ROOT`.
             - "-DCMAKE_POLICY_DEFAULT_CMP0074=NEW"
-
             - "-DSPDLOG_BUILD_EXAMPLE=OFF"
             - "-DSPDLOG_BUILD_EXAMPLE_HO=OFF"
             - "-DSPDLOG_FMT_EXTERNAL=ON"
           LIB_NAME: "spdlog"
-          TARBALL_SHA256: "1586508029a7d0670dfcb2d97575dcdc242d3868a259742b69f100801ab4e16b"
+          TARBALL_SHA256: "15a04e69c222eb6c01094b5c7ff8a249b36bb22788d72519646fb85feb267e67"
 
           # NOTE: Since spdlog depends on fmt, we need to choose a version of spdlog that's
           # compatible with the version of fmt we use.
-          TARBALL_URL: "https://github.com/gabime/spdlog/archive/refs/tags/v1.14.1.tar.gz"
+          TARBALL_URL: "https://github.com/gabime/spdlog/archive/refs/tags/v1.15.3.tar.gz"
 
   sqlite3:
     internal: true
@@ -407,8 +525,8 @@ tasks:
       LIB_NAME: "sqlite3"
 
       # Paths
-      EXTRACTION_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
-      INSTALL_INCLUDE_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install/include"
+      EXTRACTION_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
+      INSTALL_INCLUDE_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install/include"
       INSTALL_SYMLINK: "{{.INSTALL_INCLUDE_DIR}}/{{.LIB_NAME}}"
       ZIP_FILENAME_STEM: "sqlite-amalgamation-3360000"
       SRC_DIR: "{{.EXTRACTION_DIR}}/{{.ZIP_FILENAME_STEM}}"
@@ -418,7 +536,7 @@ tasks:
     cmds:
       - task: "yscope-dev-utils:remote:download-and-extract-zip"
         vars:
-          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
           FILE_SHA256: "999826fe4c871f18919fdb8ed7ec9dd8217180854dd1fe21eea96aed36186729"
           OUTPUT_DIR: "{{.EXTRACTION_DIR}}"
           URL: "https://www.sqlite.org/2021/{{.ZIP_FILENAME_STEM}}.zip"
@@ -427,29 +545,29 @@ tasks:
       - "ln -s '{{.SRC_DIR}}' '{{.INSTALL_SYMLINK}}'"
       - |-
         echo "set(CLP_SQLITE3_SOURCE_DIRECTORY \"{{.SRC_DIR}}\")" \
-        > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
         echo "set(CLP_SQLITE3_INCLUDE_DIRECTORY \"{{.INSTALL_INCLUDE_DIR}}\")" \
-        >> "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        >> "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   utfcpp:
     internal: true
     vars:
       LIB_NAME: "utfcpp"
-      UTFCPP_OUTPUT_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
+      UTFCPP_OUTPUT_DIR: "{{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-src"
     run: "once"
     deps:
       - task: "utils:init"
     cmds:
       - task: "yscope-dev-utils:remote:download-and-extract-tar"
         vars:
-          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
+          CHECKSUM_FILE: "{{.G_DEPS_CPP_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
           FILE_SHA256: "6920a6a5d6a04b9a89b2a89af7132f8acefd46e0c2a7b190350539e9213816c0"
           OUTPUT_DIR: "{{.UTFCPP_OUTPUT_DIR}}"
           URL: "https://github.com/nemtrif/utfcpp/archive/refs/tags/v4.0.6.tar.gz"
       - >-
         echo "set(
         CLP_UTFCPP_INCLUDE_DIRECTORY \"{{.UTFCPP_OUTPUT_DIR}}\"
-        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+        )" > "{{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
 
   yaml-cpp:
     internal: true
@@ -467,23 +585,19 @@ tasks:
 
   ystdlib:
     internal: true
-    vars:
-      LIB_NAME: "ystdlib"
-      YSTDLIB_OUTPUT_DIR: "{{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-src"
     run: "once"
     deps:
-      - task: "utils:init"
+      - task: "boost"
     cmds:
-      - task: "yscope-dev-utils:remote:download-and-extract-tar"
+      - task: "utils:install-remote-cmake-lib"
         vars:
-          CHECKSUM_FILE: "{{.G_DEPS_CORE_CHECKSUMS_DIR}}/{{.LIB_NAME}}.md5"
-          FILE_SHA256: "36fa0e9d96b7307ca92482343d6ba1091c5576370676e6d423cce32c20e34a3d"
-          OUTPUT_DIR: "{{.YSTDLIB_OUTPUT_DIR}}"
-          URL: "https://github.com/y-scope/ystdlib-cpp/archive/d80cf86.tar.gz"
-      - >-
-        echo "set(
-        CLP_YSTDLIB_SOURCE_DIRECTORY \"{{.YSTDLIB_OUTPUT_DIR}}\"
-        )" > "{{.G_DEPS_CORE_CMAKE_SETTINGS_DIR}}/{{.LIB_NAME}}.cmake"
+          CMAKE_GEN_ARGS:
+            - "-C {{.G_DEPS_CPP_CMAKE_SETTINGS_DIR}}/{{.G_BOOST_LIB_NAME}}.cmake"
+            - "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
+            - "-Dystdlib_BUILD_TESTING=OFF"
+          LIB_NAME: "ystdlib"
+          TARBALL_SHA256: "65990dc2bcc4a355c2181bfe31a7800f492309d1bcd340f52a34e85047e61bc8"
+          TARBALL_URL: "https://github.com/y-scope/ystdlib-cpp/archive/9ed78cd.tar.gz"
 
   zlib:
     internal: true
@@ -497,7 +611,7 @@ tasks:
             - "-DBUILD_SHARED_LIBS=ON"
             - "-DCMAKE_BUILD_TYPE=Release"
             - "-DCMAKE_INSTALL_MESSAGE=LAZY"
-            - "-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CORE_DIR}}/{{.LIB_NAME}}-install"
+            - "-DCMAKE_INSTALL_PREFIX={{.G_DEPS_CPP_DIR}}/{{.LIB_NAME}}-install"
             - "-DZLIB_BUILD_EXAMPLES=OFF"
           LIB_NAME: "{{.LIB_NAME}}"
           TARBALL_SHA256: "9a93b2b7dfdac77ceba5a558a580e74667dd6fede4585b91eefb60f03b72df23"

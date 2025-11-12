@@ -9,8 +9,10 @@ import socket
 import sys
 
 import msgpack
+import psutil
 import pymongo
 from clp_py_utils.clp_config import (
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     Database,
     ResultsCache,
 )
@@ -19,7 +21,6 @@ from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
 from job_orchestration.scheduler.job_config import AggregationConfig, SearchJobConfig
 
 from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     get_clp_home,
     load_config_file,
 )
@@ -76,7 +77,7 @@ def create_and_monitor_job_in_db(
 
     if do_count_aggregation is None and count_by_time_bucket_size is None:
         return
-    with pymongo.MongoClient(results_cache.get_uri()) as client:
+    with pymongo.MongoClient(results_cache.get_uri(), directConnection=True) as client:
         search_results_collection = client[results_cache.db_name][str(job_id)]
         if do_count_aggregation is not None:
             for document in search_results_collection.find():
@@ -128,16 +129,11 @@ async def do_search_without_aggregation(
     path_filter: str | None,
     raw_output: bool,
 ):
-    ip_list = socket.gethostbyname_ex(socket.gethostname())[2]
-    if len(ip_list) == 0:
-        logger.error("Couldn't determine the current host's IP.")
+    host = _get_ipv4_address()
+    if host is None:
+        logger.error("Couldn't find an IPv4 address for receiving search results.")
         return
-
-    host = ip_list[0]
-    for ip in ip_list:
-        if ipaddress.ip_address(ip) not in ipaddress.IPv4Network("127.0.0.0/8"):
-            host = ip
-            break
+    logger.debug(f"Listening on {host} for search results.")
 
     server = await asyncio.start_server(
         client_connected_cb=get_worker_connection_handler(raw_output),
@@ -240,6 +236,12 @@ def main(argv):
 
     args_parser = argparse.ArgumentParser(description="Searches the compressed logs.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
+    args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
     args_parser.add_argument("wildcard_query", help="Wildcard query.")
     args_parser.add_argument(
         "--dataset",
@@ -281,6 +283,10 @@ def main(argv):
         "--raw", action="store_true", help="Output the search results as raw logs."
     )
     parsed_args = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     if (
         parsed_args.begin_time is not None
@@ -330,6 +336,31 @@ def main(argv):
         return -1
 
     return 0
+
+
+def _get_ipv4_address() -> str | None:
+    """
+    Retrieves an IPv4 address of the host for network communication.
+
+    :returns: The first non-loopback IPv4 address it finds.
+    If no non-loopback address is available, returns the first loopback IPv4 address.
+    If no IPv4 address is found, returns None.
+    """
+    fallback_ip = None
+
+    for addresses in psutil.net_if_addrs().values():
+        for addr in addresses:
+            if addr.family != socket.AF_INET:
+                continue
+            ip = addr.address
+            if not ipaddress.ip_address(ip).is_loopback:
+                return ip
+            if fallback_ip is None:
+                fallback_ip = ip
+
+    if fallback_ip is not None:
+        logger.warning("Couldn't find a non-loopback IP address for receiving search results.")
+    return fallback_ip
 
 
 if "__main__" == __name__:

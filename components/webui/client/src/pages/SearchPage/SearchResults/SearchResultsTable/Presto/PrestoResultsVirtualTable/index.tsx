@@ -3,7 +3,8 @@ import {
     useMemo,
 } from "react";
 
-import type {PrestoSearchResult} from "../../../../../../../../common/index.js";
+import type {PrestoSearchResult} from "@webui/common/presto";
+
 import VirtualTable from "../../../../../../components/VirtualTable";
 import useSearchStore from "../../../../SearchState/index";
 import {usePrestoSearchResults} from "./usePrestoSearchResults";
@@ -47,7 +48,8 @@ const PrestoResultsVirtualTable = ({tableHeight}: PrestoResultsVirtualTableProps
             dataSource={prestoSearchResults || []}
             pagination={false}
             rowKey={(record) => record._id}
-            scroll={{y: tableHeight}}/>
+            scroll={{y: tableHeight, x: "max-content"}}/>
+
     );
 };
 

@@ -12,6 +12,7 @@ from typing import Optional
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
     CLP_DB_USER_ENV_VAR_NAME,
+    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLPConfig,
     Database,
 )
@@ -25,7 +26,6 @@ from job_orchestration.scheduler.job_config import (
 )
 
 from clp_package_utils.general import (
-    CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     EXTRACT_FILE_CMD,
     EXTRACT_IR_CMD,
     EXTRACT_JSON_CMD,
@@ -290,6 +290,12 @@ def main(argv):
         default=str(default_config_file_path),
         help="CLP configuration file.",
     )
+    args_parser.add_argument(
+        "--verbose",
+        "-v",
+        action="store_true",
+        help="Enable debug logging.",
+    )
     command_args_parser = args_parser.add_subparsers(dest="command", required=True)
 
     # File extraction command parser
@@ -329,6 +335,10 @@ def main(argv):
     )
 
     parsed_args = args_parser.parse_args(argv[1:])
+    if parsed_args.verbose:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:

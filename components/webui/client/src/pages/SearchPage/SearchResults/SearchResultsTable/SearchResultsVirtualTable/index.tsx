@@ -40,8 +40,8 @@ const SearchResultsVirtualTable = ({tableHeight}: SearchResultsVirtualTableProps
             columns={searchResultsTableColumns}
             dataSource={searchResults || []}
             pagination={false}
-            rowKey={(record) => record._id.toString()}
-            scroll={{y: tableHeight}}/>
+            rowKey={(record) => record._id}
+            scroll={{y: tableHeight, x: "max-content"}}/>
     );
 };
 
