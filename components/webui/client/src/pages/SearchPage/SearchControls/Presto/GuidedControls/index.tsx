@@ -18,22 +18,24 @@ import Where from "./Where";
  */
 const GuidedControls = () => (
     <div className={searchStyles["searchControlsContainer"]}>
+        <div className={searchStyles["runRow"]}>
+            <div>
+                <SqlInterfaceButton/>
+            </div>
+            <div className={searchStyles["buttons"]}>
+                <TimestampKey/>
+                <TimeRangeInput/>
+                <SqlSearchButton/>
+            </div>
+        </div>
         <div className={guidedGrid["gridContainer"]}>
             <Select/>
             <From/>
-            <TimestampKey/>
             <Where/>
             <OrderBy/>
         </div>
-        <div className={searchStyles["statusAndButtonsRow"]}>
-            <div className={searchStyles["status"]}>
-                <QueryStatus/>
-            </div>
-            <div className={searchStyles["buttons"]}>
-                <TimeRangeInput/>
-                <SqlInterfaceButton/>
-                <SqlSearchButton/>
-            </div>
+        <div className={searchStyles["status"]}>
+            <QueryStatus/>
         </div>
     </div>
 );
