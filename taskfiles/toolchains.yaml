@@ -1,13 +1,25 @@
 version: "3"
 
+includes:
+  utils: "../tools/yscope-dev-utils/exports/taskfiles/utils/utils.yaml"
+
 tasks:
   rust:
     run: "once"
+    env:
+      RUSTUP_HOME: "{{.G_RUSTUP_HOME}}"
+      CARGO_HOME: "{{.G_CARGO_HOME}}"
+    vars:
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      OUTPUT_DIR: "{{.G_RUST_TOOLCHAIN_ROOT}}"
+    generates: ["{{.CHECKSUM_FILE}}"]
     cmds:
-      # Installs Rust toolchains using rustup. If the toolchains are already installed, this task
-      # will ensure they are updated to the latest versions.
       - |-
         curl --proto "=https" --tlsv1.2 --silent --show-error --fail https://sh.rustup.rs \
           | sh -s -- --default-toolchain none -y
-        . "$HOME/.cargo/env"
-        rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt
+        . {{.G_CARGO_HOME}}/env
+      # This command must be last
+      - task: "utils:checksum:compute"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]

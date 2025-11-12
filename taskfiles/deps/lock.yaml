@@ -59,8 +59,11 @@ tasks:
       vars: ["CARGO_UPDATE_FLAGS"]
     dir: "{{.ROOT_DIR}}"
     deps: ["toolchains:rust"]
+    env:
+      RUSTUP_HOME: "{{.G_RUSTUP_HOME}}"
+      CARGO_HOME: "{{.G_CARGO_HOME}}"
     cmd: |-
-      . "$HOME/.cargo/env"
+      . "{{.G_CARGO_HOME}}/env"
       cargo update {{.CARGO_UPDATE_FLAGS}}
 
   # Runs `uv lock` in the UV project directory with the specified flags.

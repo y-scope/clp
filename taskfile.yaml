@@ -41,6 +41,11 @@ vars:
   G_CPP_MAX_PARALLELISM_PER_BUILD_TASK: >-
     {{default "" (env "CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK")}}
 
+  # Rust toolchain paths
+  G_RUST_TOOLCHAIN_ROOT: "{{.G_BUILD_DIR}}/toolchains/rust"
+  G_RUSTUP_HOME: "{{.G_RUST_TOOLCHAIN_ROOT}}/.rustup"
+  G_CARGO_HOME: "{{.G_RUST_TOOLCHAIN_ROOT}}/.cargo"
+
   # Checksum files
   G_PACKAGE_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/package.md5"
   G_PYTHON_LIBS_CHECKSUM_FILE: "{{.G_BUILD_DIR}}/python-libs.md5"
