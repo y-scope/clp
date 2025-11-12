@@ -1660,32 +1660,4 @@ auto JsonParser::parse_log_message(int32_t parent_node_id, std::string_view view
     m_current_schema.end_unordered_object(msg_start);
     return ystdlib::error_handling::success();
 }
-
-auto JsonParser::ingest_plain_text(
-        std::shared_ptr<clp::ReaderInterface> reader,
-        Path const& path,
-        std::string const& archive_creator_id
-) -> ystdlib::error_handling::Result<void> {
-    (void)reader;
-    (void)path;
-    (void)archive_creator_id;
-
-    return ystdlib::error_handling::success();
-
-    // m_log_surgeon_parser.parse_next_event()
-
-    // auto node_id {m_archive_writer->add_node(
-    //         constants::cRootNodeId,
-    //         NodeType::LogMessage,
-    //         ""
-    // )};
-    // if (auto const result{parse_log_message(node_id, value)}; result.has_error()) {
-    //     // TODO clpsls: if parsing fails we could try to treat the string as a
-    //     // VarString
-    //     throw(std::runtime_error(
-    //             "parse_log_message failed with: " + result.error().message()
-    //     ));
-    // }
-    // m_current_schema.insert_unordered(node_id);
-}
 }  // namespace clp_s
