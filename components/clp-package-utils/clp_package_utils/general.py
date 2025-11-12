@@ -20,6 +20,7 @@ from clp_py_utils.clp_config import (
     CONTAINER_CLP_HOME,
     CONTAINER_INPUT_LOGS_ROOT_DIR,
     DB_COMPONENT_NAME,
+    MCP_SERVER_COMPONENT_NAME,
     QueryEngine,
     QUEUE_COMPONENT_NAME,
     REDIS_COMPONENT_NAME,
@@ -37,6 +38,8 @@ from clp_py_utils.core import (
     get_config_value,
     make_config_path_absolute,
     read_yaml_config_file,
+    resolve_host_path,
+    resolve_host_path_in_container,
     validate_path_could_be_dir,
 )
 from strenum import KebabCaseStrEnum
@@ -47,6 +50,9 @@ EXTRACT_IR_CMD = "i"
 EXTRACT_JSON_CMD = "j"
 
 DOCKER_MOUNT_TYPE_STRINGS = ["bind"]
+
+S3_KEY_PREFIX_COMPRESSION = "s3-key-prefix"
+S3_OBJECT_COMPRESSION = "s3-object"
 
 
 class DockerDependencyError(OSError):
@@ -239,7 +245,7 @@ def generate_container_config(
     docker_mounts = CLPDockerMounts(clp_home, CONTAINER_CLP_HOME)
 
     if StorageType.FS == clp_config.logs_input.type:
-        input_logs_dir = clp_config.logs_input.directory.resolve()
+        input_logs_dir = resolve_host_path(clp_config.logs_input.directory)
         container_clp_config.logs_input.directory = (
             CONTAINER_INPUT_LOGS_ROOT_DIR / input_logs_dir.relative_to(input_logs_dir.anchor)
         )
@@ -325,7 +331,7 @@ def generate_worker_config(clp_config: CLPConfig) -> WorkerConfig:
     worker_config = WorkerConfig()
     worker_config.package = clp_config.package.model_copy(deep=True)
     worker_config.archive_output = clp_config.archive_output.model_copy(deep=True)
-    worker_config.data_directory = clp_config.data_directory
+    worker_config.tmp_directory = clp_config.tmp_directory
 
     worker_config.stream_output = clp_config.stream_output
     worker_config.stream_collection_name = clp_config.results_cache.stream_collection_name
@@ -351,7 +357,8 @@ def dump_container_config(
     """
     config_file_path_on_host = clp_config.logs_directory / config_filename
     config_file_path_on_container = container_clp_config.logs_directory / config_filename
-    with open(config_file_path_on_host, "w") as f:
+    resolved_config_file_path_on_host = resolve_host_path_in_container(config_file_path_on_host)
+    with open(resolved_config_file_path_on_host, "w") as f:
         yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
 
     return config_file_path_on_container, config_file_path_on_host
@@ -392,7 +399,6 @@ def generate_container_start_cmd(
         "--rm",
         "--network", "host",
         "-w", str(CONTAINER_CLP_HOME),
-        "-e", f"PYTHONPATH={clp_site_packages_dir}",
         "-u", f"{os.getuid()}:{os.getgid()}",
         "--name", container_name,
         "--log-driver", "local"
@@ -440,6 +446,7 @@ def load_config_file(
 
     validate_path_for_container_mount(clp_config.data_directory)
     validate_path_for_container_mount(clp_config.logs_directory)
+    validate_path_for_container_mount(clp_config.tmp_directory)
 
     return clp_config
 
@@ -459,16 +466,17 @@ def validate_credentials_file_path(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
 ):
     credentials_file_path = clp_config.credentials_file_path
-    if not credentials_file_path.exists():
+    resolved_credentials_file_path = resolve_host_path_in_container(credentials_file_path)
+    if not resolved_credentials_file_path.exists():
         if (
             make_config_path_absolute(clp_home, CLP_DEFAULT_CREDENTIALS_FILE_PATH)
             == credentials_file_path
             and generate_default_file
         ):
-            generate_credentials_file(credentials_file_path)
+            generate_credentials_file(resolved_credentials_file_path)
         else:
             raise ValueError(f"Credentials file path '{credentials_file_path}' does not exist.")
-    elif not credentials_file_path.is_file():
+    elif not resolved_credentials_file_path.is_file():
         raise ValueError(f"Credentials file path '{credentials_file_path}' is not a file.")
 
 
@@ -499,7 +507,8 @@ def validate_db_config(
     data_dir: pathlib.Path,
     logs_dir: pathlib.Path,
 ):
-    if not component_config.exists():
+    resolved_component_config = resolve_host_path_in_container(component_config)
+    if not resolved_component_config.exists():
         raise ValueError(f"{DB_COMPONENT_NAME} configuration file missing: '{component_config}'.")
     _validate_data_directory(data_dir, DB_COMPONENT_NAME)
     _validate_log_directory(logs_dir, DB_COMPONENT_NAME)
@@ -519,7 +528,8 @@ def validate_redis_config(
     data_dir: pathlib.Path,
     logs_dir: pathlib.Path,
 ):
-    if not component_config.exists():
+    resolved_component_config = resolve_host_path_in_container(component_config)
+    if not resolved_component_config.exists():
         raise ValueError(
             f"{REDIS_COMPONENT_NAME} configuration file missing: '{component_config}'."
         )
@@ -546,7 +556,8 @@ def validate_results_cache_config(
     data_dir: pathlib.Path,
     logs_dir: pathlib.Path,
 ):
-    if not component_config.exists():
+    resolved_component_config = resolve_host_path_in_container(component_config)
+    if not resolved_component_config.exists():
         raise ValueError(
             f"{RESULTS_CACHE_COMPONENT_NAME} configuration file missing: '{component_config}'."
         )
@@ -560,13 +571,9 @@ def validate_results_cache_config(
     )
 
 
-def validate_logs_input_config(clp_config: CLPConfig) -> None:
-    clp_config.validate_logs_input_config()
-
-
 def validate_output_storage_config(clp_config: CLPConfig) -> None:
-    clp_config.validate_archive_output_config()
-    clp_config.validate_stream_output_config()
+    clp_config.validate_archive_output_config(True)
+    clp_config.validate_stream_output_config(True)
 
     validate_path_for_container_mount(clp_config.archive_output.get_directory())
     validate_path_for_container_mount(clp_config.stream_output.get_directory())
@@ -578,10 +585,19 @@ def validate_webui_config(
     server_settings_json_path: pathlib.Path,
 ):
     for path in [client_settings_json_path, server_settings_json_path]:
-        if not path.exists():
+        resolved_path = resolve_host_path_in_container(path)
+        if not resolved_path.exists():
             raise ValueError(f"{WEBUI_COMPONENT_NAME} {path} is not a valid path to settings.json")
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
+
+
+def validate_mcp_server_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
+    _validate_log_directory(logs_dir, MCP_SERVER_COMPONENT_NAME)
+
+    validate_port(
+        f"{MCP_SERVER_COMPONENT_NAME}.port", clp_config.mcp_server.host, clp_config.mcp_server.port
+    )
 
 
 def validate_path_for_container_mount(path: pathlib.Path) -> None:
@@ -752,7 +768,7 @@ def _is_docker_compose_project_running(project_name: str) -> bool:
 
 def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
     try:
-        validate_path_could_be_dir(data_dir)
+        validate_path_could_be_dir(resolve_host_path_in_container(data_dir))
     except ValueError as ex:
         raise ValueError(f"{component_name} data directory is invalid: {ex}")
 
@@ -766,6 +782,6 @@ def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
     :raise ValueError: If the path is invalid or can't be a directory.
     """
     try:
-        validate_path_could_be_dir(logs_dir)
+        validate_path_could_be_dir(resolve_host_path_in_container(logs_dir))
     except ValueError as ex:
         raise ValueError(f"{component_name} logs directory is invalid: {ex}")

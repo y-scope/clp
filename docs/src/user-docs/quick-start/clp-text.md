@@ -19,9 +19,28 @@ To start CLP, run:
 sbin/start-clp.sh
 ```
 
+:::{tip}
+To validate configuration and prepare directories without launching services, add the
+`--setup-only` flag (e.g., `sbin/start-clp.sh --setup-only`).
+:::
+
 :::{note}
 If CLP fails to start (e.g., due to a port conflict), try adjusting the settings in
 `etc/clp-config.yml` and then run the start command again.
+:::
+
+:::{warning}
+**Do not comment out or remove the `package` block in `etc/clp-config.yml`**; otherwise, the storage
+and query engines will default to `clp-s`, which is optimized for JSON logs rather than unstructured
+text logs.
+
+To use `clp-text`, the `package` block should be configured as follows:
+
+```yaml
+package:
+  storage_engine: "clp"
+  query_engine: "clp"
+```
 :::
 
 ---

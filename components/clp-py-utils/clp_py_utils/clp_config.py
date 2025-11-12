@@ -19,6 +19,7 @@ from .core import (
     get_config_value,
     make_config_path_absolute,
     read_yaml_config_file,
+    resolve_host_path_in_container,
     validate_path_could_be_dir,
 )
 from .serialization_utils import serialize_path, serialize_str_enum
@@ -32,9 +33,12 @@ REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
 QUERY_SCHEDULER_COMPONENT_NAME = "query_scheduler"
+PRESTO_COORDINATOR_COMPONENT_NAME = "presto-coordinator"
 COMPRESSION_WORKER_COMPONENT_NAME = "compression_worker"
 QUERY_WORKER_COMPONENT_NAME = "query_worker"
+API_SERVER_COMPONENT_NAME = "api_server"
 WEBUI_COMPONENT_NAME = "webui"
+MCP_SERVER_COMPONENT_NAME = "mcp_server"
 GARBAGE_COLLECTOR_COMPONENT_NAME = "garbage_collector"
 
 # Action names
@@ -46,8 +50,8 @@ COMPRESSION_JOBS_TABLE_NAME = "compression_jobs"
 COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 
 # Paths
-CONTAINER_AWS_CONFIG_DIRECTORY = pathlib.Path("/") / ".aws"
 CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
+CONTAINER_AWS_CONFIG_DIRECTORY = CONTAINER_CLP_HOME / ".aws"
 CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
 CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yml"
 CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
@@ -57,6 +61,7 @@ CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / 
 CLP_DEFAULT_STREAMS_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "streams"
 CLP_DEFAULT_STREAMS_STAGING_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-streams"
 CLP_DEFAULT_LOG_DIRECTORY_PATH = pathlib.Path("var") / "log"
+CLP_DEFAULT_TMP_DIRECTORY_PATH = pathlib.Path("var") / "tmp"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
 CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH = pathlib.Path("clp-package-image.id")
@@ -130,8 +135,8 @@ AwsAuthTypeStr = Annotated[AwsAuthType, StrEnumSerializer]
 
 
 class Package(BaseModel):
-    storage_engine: StorageEngineStr = StorageEngine.CLP
-    query_engine: QueryEngineStr = QueryEngine.CLP
+    storage_engine: StorageEngineStr = StorageEngine.CLP_S
+    query_engine: QueryEngineStr = QueryEngine.CLP_S
 
     @model_validator(mode="after")
     def validate_query_engine_package_compatibility(self):
@@ -575,14 +580,40 @@ class SweepInterval(BaseModel):
     search_result: PositiveInt = 30
 
 
+class McpServer(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 8000
+
+    host: DomainStr = "localhost"
+    port: Port = DEFAULT_PORT
+    logging_level: LoggingLevel = "INFO"
+
+
 class GarbageCollector(BaseModel):
     logging_level: LoggingLevel = "INFO"
     sweep_interval: SweepInterval = SweepInterval()
 
 
+class QueryJobPollingConfig(BaseModel):
+    initial_backoff_ms: int = Field(default=100, alias="initial_backoff")
+    max_backoff_ms: int = Field(default=5000, alias="max_backoff")
+
+
+class ApiServer(BaseModel):
+    host: DomainStr = "localhost"
+    port: Port = 3001
+    query_job_polling: QueryJobPollingConfig = QueryJobPollingConfig()
+    default_max_num_query_results: int = 1000
+
+
 class Presto(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 8080
+
     host: DomainStr
     port: Port
+
+    def transform_for_container(self):
+        self.host = PRESTO_COORDINATOR_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 def _get_env_var(name: str) -> str:
@@ -609,14 +640,17 @@ class CLPConfig(BaseModel):
     query_worker: QueryWorker = QueryWorker()
     webui: WebUi = WebUi()
     garbage_collector: GarbageCollector = GarbageCollector()
+    api_server: ApiServer = ApiServer()
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
+    mcp_server: Optional[McpServer] = None
     presto: Optional[Presto] = None
 
     archive_output: ArchiveOutput = ArchiveOutput()
     stream_output: StreamOutput = StreamOutput()
     data_directory: SerializablePath = CLP_DEFAULT_DATA_DIRECTORY_PATH
     logs_directory: SerializablePath = CLP_DEFAULT_LOG_DIRECTORY_PATH
+    tmp_directory: SerializablePath = CLP_DEFAULT_TMP_DIRECTORY_PATH
     aws_config_directory: Optional[SerializablePath] = None
 
     _container_image_id_path: SerializablePath = PrivateAttr(
@@ -641,20 +675,24 @@ class CLPConfig(BaseModel):
         self.stream_output.storage.make_config_paths_absolute(clp_home)
         self.data_directory = make_config_path_absolute(clp_home, self.data_directory)
         self.logs_directory = make_config_path_absolute(clp_home, self.logs_directory)
+        self.tmp_directory = make_config_path_absolute(clp_home, self.tmp_directory)
         self._container_image_id_path = make_config_path_absolute(
             clp_home, self._container_image_id_path
         )
         self._version_file_path = make_config_path_absolute(clp_home, self._version_file_path)
 
-    def validate_logs_input_config(self):
+    def validate_logs_input_config(self, use_host_mount: bool = False):
         logs_input_type = self.logs_input.type
         if StorageType.FS == logs_input_type:
             # NOTE: This can't be a pydantic validator since input_logs_dir might be a
             # package-relative path that will only be resolved after pydantic validation
             input_logs_dir = self.logs_input.directory
-            if not input_logs_dir.exists():
+            resolved_input_logs_dir = (
+                resolve_host_path_in_container(input_logs_dir) if use_host_mount else input_logs_dir
+            )
+            if not resolved_input_logs_dir.exists():
                 raise ValueError(f"logs_input.directory '{input_logs_dir}' doesn't exist.")
-            if not input_logs_dir.is_dir():
+            if not resolved_input_logs_dir.is_dir():
                 raise ValueError(f"logs_input.directory '{input_logs_dir}' is not a directory.")
         if StorageType.S3 == logs_input_type and StorageEngine.CLP_S != self.package.storage_engine:
             raise ValueError(
@@ -662,7 +700,7 @@ class CLPConfig(BaseModel):
                 f" = '{StorageEngine.CLP_S}'"
             )
 
-    def validate_archive_output_config(self):
+    def validate_archive_output_config(self, use_host_mount: bool = False):
         if (
             StorageType.S3 == self.archive_output.storage.type
             and StorageEngine.CLP_S != self.package.storage_engine
@@ -671,12 +709,18 @@ class CLPConfig(BaseModel):
                 f"archive_output.storage.type = 's3' is only supported with package.storage_engine"
                 f" = '{StorageEngine.CLP_S}'"
             )
+        archive_output_dir = self.archive_output.get_directory()
+        resolved_archive_output_dir = (
+            resolve_host_path_in_container(archive_output_dir)
+            if use_host_mount
+            else archive_output_dir
+        )
         try:
-            validate_path_could_be_dir(self.archive_output.get_directory())
+            validate_path_could_be_dir(resolved_archive_output_dir)
         except ValueError as ex:
             raise ValueError(f"archive_output.storage's directory is invalid: {ex}")
 
-    def validate_stream_output_config(self):
+    def validate_stream_output_config(self, use_host_mount: bool = False):
         if (
             StorageType.S3 == self.stream_output.storage.type
             and StorageEngine.CLP_S != self.package.storage_engine
@@ -685,24 +729,42 @@ class CLPConfig(BaseModel):
                 f"stream_output.storage.type = 's3' is only supported with package.storage_engine"
                 f" = '{StorageEngine.CLP_S}'"
             )
+        stream_output_dir = self.stream_output.get_directory()
+        resolved_stream_output_dir = (
+            resolve_host_path_in_container(stream_output_dir)
+            if use_host_mount
+            else stream_output_dir
+        )
         try:
-            validate_path_could_be_dir(self.stream_output.get_directory())
+            validate_path_could_be_dir(resolved_stream_output_dir)
         except ValueError as ex:
             raise ValueError(f"stream_output.storage's directory is invalid: {ex}")
 
-    def validate_data_dir(self):
+    def validate_data_dir(self, use_host_mount: bool = False):
+        data_dir = self.data_directory
+        resolved_data_dir = resolve_host_path_in_container(data_dir) if use_host_mount else data_dir
         try:
-            validate_path_could_be_dir(self.data_directory)
+            validate_path_could_be_dir(resolved_data_dir)
         except ValueError as ex:
             raise ValueError(f"data_directory is invalid: {ex}")
 
-    def validate_logs_dir(self):
+    def validate_logs_dir(self, use_host_mount: bool = False):
+        logs_dir = self.logs_directory
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir) if use_host_mount else logs_dir
         try:
-            validate_path_could_be_dir(self.logs_directory)
+            validate_path_could_be_dir(resolved_logs_dir)
         except ValueError as ex:
             raise ValueError(f"logs_directory is invalid: {ex}")
 
-    def validate_aws_config_dir(self):
+    def validate_tmp_dir(self, use_host_mount: bool = False):
+        tmp_dir = self.tmp_directory
+        resolved_tmp_dir = resolve_host_path_in_container(tmp_dir) if use_host_mount else tmp_dir
+        try:
+            validate_path_could_be_dir(resolved_tmp_dir)
+        except ValueError as ex:
+            raise ValueError(f"tmp_directory is invalid: {ex}")
+
+    def validate_aws_config_dir(self, use_host_mount: bool = False):
         profile_auth_used = False
         auth_configs = []
 
@@ -723,7 +785,12 @@ class CLPConfig(BaseModel):
                 raise ValueError(
                     "aws_config_directory must be set when using profile authentication"
                 )
-            if not self.aws_config_directory.exists():
+            resolved_aws_config_dir = (
+                resolve_host_path_in_container(self.aws_config_directory)
+                if use_host_mount
+                else self.aws_config_directory
+            )
+            if not resolved_aws_config_dir.exists():
                 raise ValueError(
                     f"aws_config_directory does not exist: '{self.aws_config_directory}'"
                 )
@@ -783,6 +850,7 @@ class CLPConfig(BaseModel):
         """
         self.data_directory = pathlib.Path("/") / CLP_DEFAULT_DATA_DIRECTORY_PATH
         self.logs_directory = pathlib.Path("/") / CLP_DEFAULT_LOG_DIRECTORY_PATH
+        self.tmp_directory = pathlib.Path("/") / CLP_DEFAULT_TMP_DIRECTORY_PATH
         if self.aws_config_directory is not None:
             self.aws_config_directory = CONTAINER_AWS_CONFIG_DIRECTORY
         self.logs_input.transform_for_container()
@@ -795,12 +863,14 @@ class CLPConfig(BaseModel):
         self.results_cache.transform_for_container()
         self.query_scheduler.transform_for_container()
         self.reducer.transform_for_container()
+        if self.package.query_engine == QueryEngine.PRESTO and self.presto is not None:
+            self.presto.transform_for_container()
 
 
 class WorkerConfig(BaseModel):
     package: Package = Package()
     archive_output: ArchiveOutput = ArchiveOutput()
-    data_directory: SerializablePath = CLPConfig().data_directory
+    tmp_directory: SerializablePath = CLPConfig().tmp_directory
 
     # Only needed by query workers.
     stream_output: StreamOutput = StreamOutput()
