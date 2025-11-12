@@ -130,9 +130,9 @@ public:
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
 
-    [[nodiscard]] auto experimental_enabled() const -> bool { return m_experimental_enabled; }
+    [[nodiscard]] auto experimental() const -> bool { return m_experimental; }
 
-    [[nodiscard]] auto get_log_surgeon_schema_path() const -> Path {
+    [[nodiscard]] auto get_log_surgeon_schema_path() const -> std::optional<Path> {
         return m_log_surgeon_schema_path;
     }
 
@@ -249,8 +249,8 @@ private:
     OutputHandlerType m_output_handler_type{OutputHandlerType::Stdout};
 
     // clpsls Prototype
-    bool m_experimental_enabled{false};
-    Path m_log_surgeon_schema_path;
+    bool m_experimental{false};
+    std::optional<Path> m_log_surgeon_schema_path;
 };
 }  // namespace clp_s
 

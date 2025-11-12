@@ -196,16 +196,19 @@ JsonParser::JsonParser(JsonParserOption const& option)
           m_retain_float_format(option.retain_float_format),
           m_input_paths(option.input_paths),
           m_network_auth(option.network_auth) {
-    auto result{create_log_surgeon_parser(option.log_surgeon_schema_path, m_network_auth)};
-    if (result.has_error()) {
-        SPDLOG_ERROR(
-                "Failed to create log surgeon parser from: \"{}\" due to: \"{}\"",
-                option.log_surgeon_schema_path.path,
-                result.error().message()
-        );
-        throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+    if (option.log_surgeon_schema_path.has_value()) {
+        auto const schema_path{option.log_surgeon_schema_path.value()};
+        auto result{create_log_surgeon_parser(schema_path, m_network_auth)};
+        if (result.has_error()) {
+            SPDLOG_ERROR(
+                    "Failed to create log surgeon parser from: \"{}\" due to: \"{}\"",
+                    schema_path.path,
+                    result.error().message()
+            );
+            throw OperationFailed(ErrorCodeBadParam, __FILENAME__, __LINE__);
+        }
+        m_log_surgeon_parser = std::move(result.value());
     }
-    m_log_surgeon_parser = std::move(result.value());
     if (false == m_timestamp_key.empty()) {
         if (false
             == clp_s::search::ast::tokenize_column_descriptor(
@@ -242,6 +245,7 @@ JsonParser::JsonParser(JsonParserOption const& option)
     m_archive_options.id = m_generator();
     m_archive_options.authoritative_timestamp = m_timestamp_column;
     m_archive_options.authoritative_timestamp_namespace = m_timestamp_namespace;
+    m_archive_options.experimental = option.experimental;
 
     m_archive_writer = std::make_unique<ArchiveWriter>();
     m_archive_writer->open(m_archive_options);

@@ -47,7 +47,8 @@ struct JsonParserOption {
     bool retain_float_format{false};
     bool single_file_archive{false};
     NetworkAuthOption network_auth{};
-    Path log_surgeon_schema_path;
+    bool experimental{false};
+    std::optional<Path> log_surgeon_schema_path;
 };
 
 class JsonParser {

@@ -134,7 +134,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
     po::options_description general_options("General options");
     general_options.add_options()("help,h", "Print help")(
             "experimental",
-            po::bool_switch(&m_experimental_enabled),
+            po::bool_switch(&m_experimental),
             "Enable experimental features to be used."
     );
 
@@ -286,7 +286,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
             // clang-format on
 
             po::options_description experimental_options("Experimental Options");
-            std::string log_surgeon_schema_path;
+            std::string log_surgeon_schema_path{};
             experimental_options.add_options()(
                     "schema-path",
                     po::value<std::string>(&log_surgeon_schema_path)->value_name("PATH"),
@@ -930,10 +930,10 @@ void CommandLineArguments::print_search_usage() const {
 }
 
 auto CommandLineArguments::validate_experimental() const -> void {
-    if (m_experimental_enabled) {
+    if (m_experimental) {
         return;
     }
-    if (false == m_log_surgeon_schema_path.path.empty()) {
+    if (m_log_surgeon_schema_path.has_value()) {
         throw std::invalid_argument("Set --experimental to parse text with log-surgeon.");
     }
     if (ExperimentalQueries::cLogTypeStatsQuery == m_query) {
