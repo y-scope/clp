@@ -1,11 +1,9 @@
 import argparse
 import logging
-import os
 import pathlib
 import shlex
 import subprocess
 import sys
-from typing import Optional
 
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
@@ -37,14 +35,14 @@ from clp_package_utils.general import (
     validate_path_could_be_dir,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
 def validate_and_load_config(
     clp_home: pathlib.Path,
     config_file_path: pathlib.Path,
     default_config_file_path: pathlib.Path,
-) -> Optional[CLPConfig]:
+) -> CLPConfig | None:
     """
     Validates and loads the config file.
     :param clp_home:
@@ -62,14 +60,15 @@ def validate_and_load_config(
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
-        return clp_config
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
         return None
+    else:
+        return clp_config
 
 
 def handle_extract_file_cmd(
-    parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
+    parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
     """
     Handles the file extraction command.
@@ -88,8 +87,8 @@ def handle_extract_file_cmd(
     resolved_extraction_dir = resolve_host_path_in_container(extraction_dir)
     try:
         validate_path_could_be_dir(resolved_extraction_dir)
-    except ValueError as ex:
-        logger.error(f"extraction-dir is invalid: {ex}")
+    except ValueError:
+        logger.exception("extraction-dir is invalid.")
         return -1
 
     # Validate and load config file
@@ -103,8 +102,10 @@ def handle_extract_file_cmd(
     storage_engine = clp_config.package.storage_engine
     if StorageType.FS != storage_type or StorageEngine.CLP != storage_engine:
         logger.error(
-            f"File extraction is not supported for archive storage type `{storage_type}` with"
-            f" storage engine `{storage_engine}`."
+            "File extraction is not supported for archive storage type `%s` with storage engine"
+            " `%s`.",
+            storage_type,
+            storage_engine,
         )
         return -1
 
@@ -153,19 +154,18 @@ def handle_extract_file_cmd(
     # fmt: on
     if parsed_args.verbose:
         extract_cmd.append("--verbose")
-    for path in parsed_args.paths:
-        extract_cmd.append(path)
+    extract_cmd.extend(parsed_args.paths)
     if container_paths_to_extract_file_path:
         extract_cmd.append("--input-list")
         extract_cmd.append(str(container_paths_to_extract_file_path))
 
     cmd = container_start_cmd + extract_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("file extraction failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+        logger.debug("Docker command failed: %s", shlex.join(cmd))
 
     # Remove generated files
     resolved_generated_config_path_on_host = resolve_host_path_in_container(
@@ -177,7 +177,7 @@ def handle_extract_file_cmd(
 
 
 def handle_extract_stream_cmd(
-    parsed_args, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
+    parsed_args: argparse.Namespace, clp_home: pathlib.Path, default_config_file_path: pathlib.Path
 ) -> int:
     """
     Handles the stream extraction command.
@@ -197,17 +197,19 @@ def handle_extract_stream_cmd(
     storage_engine = clp_config.package.storage_engine
     if StorageType.S3 == storage_type and StorageEngine.CLP == storage_engine:
         logger.error(
-            f"Stream extraction is not supported for archive storage type `{storage_type}` with"
-            f" storage engine `{storage_engine}`."
+            "Stream extraction is not supported for archive storage type `%s` with storage engine"
+            " `%s`.",
+            storage_type,
+            storage_engine,
         )
         return -1
 
     job_command = parsed_args.command
     if EXTRACT_IR_CMD == job_command and StorageEngine.CLP != storage_engine:
-        logger.error(f"IR extraction is not supported for storage engine `{storage_engine}`.")
+        logger.error("IR extraction is not supported for storage engine `%s`.", storage_engine)
         return -1
     if EXTRACT_JSON_CMD == job_command and StorageEngine.CLP_S != storage_engine:
-        logger.error(f"JSON extraction is not supported for storage engine `{storage_engine}`.")
+        logger.error("JSON extraction is not supported for storage engine `%s`.", storage_engine)
         return -1
 
     container_name = generate_container_name(str(JobType.IR_EXTRACTION))
@@ -252,8 +254,8 @@ def handle_extract_stream_cmd(
         try:
             clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
             validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.exception("Failed to validate dataset name.")
             return -1
 
         extract_cmd.append(str(parsed_args.archive_id))
@@ -264,16 +266,16 @@ def handle_extract_stream_cmd(
             extract_cmd.append("--target-chunk-size")
             extract_cmd.append(str(parsed_args.target_chunk_size))
     else:
-        logger.error(f"Unexpected command: {job_command}")
+        logger.error("Unexpected command: %s", job_command)
         return -1
 
     cmd = container_start_cmd + extract_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("stream extraction failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+        logger.debug("Docker command failed: %s", shlex.join(cmd))
 
     # Remove generated files
     resolved_generated_config_path_on_host = resolve_host_path_in_container(
@@ -284,7 +286,7 @@ def handle_extract_stream_cmd(
     return ret_code
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -354,11 +356,10 @@ def main(argv):
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
-    elif command in (EXTRACT_IR_CMD, EXTRACT_JSON_CMD):
+    if command in (EXTRACT_IR_CMD, EXTRACT_JSON_CMD):
         return handle_extract_stream_cmd(parsed_args, clp_home, default_config_file_path)
-    else:
-        logger.exception(f"Unexpected command: {command}")
-        return -1
+    logger.exception("Unexpected command: %s", command)
+    return -1
 
 
 if "__main__" == __name__:

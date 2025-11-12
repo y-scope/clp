@@ -1,7 +1,9 @@
 import asyncio
 import multiprocessing
 import time
+from collections.abc import Callable, Sequence
 from contextlib import closing
+from typing import Any
 
 import msgpack
 from clp_py_utils.clp_config import (
@@ -14,7 +16,12 @@ from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
 from job_orchestration.scheduler.scheduler_data import QueryJobConfig
 
 
-async def run_function_in_process(function, *args, initializer=None, init_args=None):
+async def run_function_in_process(
+    function: Callable[..., Any],
+    *args: Any,
+    initializer: Callable[..., None] | None = None,
+    init_args: Sequence[Any] | None = None,
+) -> Any:
     """
     Runs the given function in a separate process wrapped in a *cancellable*
     asyncio task. This is necessary because asyncio's multiprocessing process
@@ -30,10 +37,10 @@ async def run_function_in_process(function, *args, initializer=None, init_args=N
     loop = asyncio.get_event_loop()
     fut = loop.create_future()
 
-    def process_done_callback(obj):
+    def process_done_callback(obj: Any) -> None:
         loop.call_soon_threadsafe(fut.set_result, obj)
 
-    def process_error_callback(err):
+    def process_error_callback(err: BaseException) -> None:
         loop.call_soon_threadsafe(fut.set_exception, err)
 
     pool.apply_async(
@@ -59,9 +66,10 @@ def submit_query_job(
     :param job_type:
     :return: The job's ID.
     """
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         # Create job
         db_cursor.execute(
             f"INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (%s, %s)",
@@ -82,11 +90,13 @@ def validate_dataset_exists(db_config: Database, dataset: str) -> None:
     sql_adapter = SQL_Adapter(db_config)
     clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         if dataset not in fetch_existing_datasets(db_cursor, table_prefix):
-            raise ValueError(f"Dataset `{dataset}` doesn't exist.")
+            msg = f"Dataset `{dataset}` doesn't exist."
+            raise ValueError(msg)
 
 
 def wait_for_query_job(sql_adapter: SQL_Adapter, job_id: int) -> QueryJobStatus:
@@ -96,13 +106,15 @@ def wait_for_query_job(sql_adapter: SQL_Adapter, job_id: int) -> QueryJobStatus:
     :param job_id:
     :return: The job's status on completion.
     """
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         # Wait for the job to be marked complete
         while True:
             db_cursor.execute(
-                f"SELECT `status` FROM `{QUERY_JOBS_TABLE_NAME}` WHERE `id` = {job_id}"
+                f"SELECT `status` FROM `{QUERY_JOBS_TABLE_NAME}` WHERE `id` = %s",
+                (job_id,),
             )
             # There will only ever be one row since it's impossible to have more than one job with
             # the same ID

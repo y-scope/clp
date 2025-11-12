@@ -5,7 +5,7 @@ import sys
 from abc import ABC, abstractmethod
 from contextlib import closing
 from pathlib import Path
-from typing import Any, List, Optional
+from typing import Any
 
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, Database
 from clp_py_utils.clp_metadata_db_utils import (
@@ -30,14 +30,14 @@ from clp_package_utils.scripts.archive_manager import (
 )
 from clp_package_utils.scripts.native.utils import validate_dataset_exists
 
-logger: logging.Logger = logging.getLogger(__file__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
 class DeleteHandler(ABC):
-    def __init__(self, query_params: List[str]):
-        self._params: List[str] = query_params
+    def __init__(self, query_params: list[str]) -> None:
+        self._params: list[str] = query_params
 
-    def get_params(self) -> List[str]:
+    def get_params(self) -> list[str]:
         return self._params
 
     @abstractmethod
@@ -47,7 +47,7 @@ class DeleteHandler(ABC):
     def get_not_found_message(self) -> str: ...
 
     @abstractmethod
-    def validate_results(self, archive_ids: List[str]) -> None: ...
+    def validate_results(self, archive_ids: list[str]) -> None: ...
 
 
 class FilterDeleteHandler(DeleteHandler):
@@ -57,7 +57,7 @@ class FilterDeleteHandler(DeleteHandler):
     def get_not_found_message(self) -> str:
         return "No archives found within the specified time range."
 
-    def validate_results(self, archive_ids: List[str]) -> None:
+    def validate_results(self, archive_ids: list[str]) -> None:
         pass
 
 
@@ -69,18 +69,15 @@ class IdDeleteHandler(DeleteHandler):
     def get_not_found_message(self) -> str:
         return "No archives found with matching IDs."
 
-    def validate_results(self, archive_ids: List[str]) -> None:
+    def validate_results(self, archive_ids: list[str]) -> None:
         not_found_ids: set[str] = set(self._params) - set(archive_ids)
         if not_found_ids:
             logger.warning(
-                f"""
-                Archives with the following IDs don't exist:
-                {', '.join(not_found_ids)}
-                """
+                "Archives with the following IDs don't exist: %s", ", ".join(not_found_ids)
             )
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     clp_home: Path = get_clp_home()
     default_config_file_path: Path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -194,7 +191,7 @@ def main(argv: List[str]) -> int:
         )
         clp_config.validate_logs_dir()
         clp_config.database.load_credentials_from_env()
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
         return -1
 
@@ -203,8 +200,8 @@ def main(argv: List[str]) -> int:
     if dataset is not None:
         try:
             validate_dataset_exists(database_config, dataset)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.exception("Failed to validate dataset.")
             return -1
 
     archives_dir: Path = clp_config.archive_output.get_directory()
@@ -220,7 +217,7 @@ def main(argv: List[str]) -> int:
             parsed_args.begin_ts,
             parsed_args.end_ts,
         )
-    elif DEL_COMMAND == parsed_args.subcommand:
+    if DEL_COMMAND == parsed_args.subcommand:
         delete_handler: DeleteHandler
         if DEL_BY_IDS_SUBCOMMAND == parsed_args.del_subcommand:
             delete_handler: IdDeleteHandler = IdDeleteHandler(parsed_args.ids)
@@ -231,7 +228,7 @@ def main(argv: List[str]) -> int:
                 delete_handler,
                 parsed_args.dry_run,
             )
-        elif DEL_BY_FILTER_SUBCOMMAND == parsed_args.del_subcommand:
+        if DEL_BY_FILTER_SUBCOMMAND == parsed_args.del_subcommand:
             delete_handler: FilterDeleteHandler = FilterDeleteHandler(
                 [parsed_args.begin_ts, parsed_args.end_ts]
             )
@@ -242,18 +239,16 @@ def main(argv: List[str]) -> int:
                 delete_handler,
                 parsed_args.dry_run,
             )
-        else:
-            logger.error(f"Unsupported subcommand: `{parsed_args.del_subcommand}`.")
-            return -1
-    else:
-        logger.error(f"Unsupported subcommand: `{parsed_args.subcommand}`.")
+        logger.error("Unsupported subcommand: `%s`.", parsed_args.del_subcommand)
         return -1
+    logger.error("Unsupported subcommand: `%s`.", parsed_args.subcommand)
+    return -1
 
 
 def _find_archives(
     archives_dir: Path,
     database_config: Database,
-    dataset: Optional[str],
+    dataset: str | None,
     begin_ts: int,
     end_ts: int,
 ) -> int:
@@ -267,9 +262,9 @@ def _find_archives(
     :param end_ts:
     :return: 0 on success, 1 on failure.
     """
-    archive_ids: List[str]
+    archive_ids: list[str]
     dataset_specific_message = f" of dataset `{dataset}`" if dataset is not None else ""
-    logger.info(f"Starting to find archives{dataset_specific_message} from the database.")
+    logger.info("Starting to find archives%s from the database.", dataset_specific_message)
     try:
         sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
         clp_db_connection_params: dict[str, Any] = (
@@ -277,16 +272,15 @@ def _find_archives(
         )
         table_prefix: str = clp_db_connection_params["table_prefix"]
 
-        with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-            db_conn.cursor(dictionary=True)
-        ) as db_cursor:
-            query_params: List[int] = [begin_ts]
-            query: str = (
-                f"""
+        with (
+            closing(sql_adapter.create_connection(True)) as db_conn,
+            closing(db_conn.cursor(dictionary=True)) as db_cursor,
+        ):
+            query_params: list[int] = [begin_ts]
+            query: str = f"""
                 SELECT id FROM `{get_archives_table_name(table_prefix, dataset)}`
                 WHERE begin_timestamp >= %s
                 """
-            )
             if end_ts is not None:
                 query += " AND end_timestamp <= %s"
                 query_params.append(end_ts)
@@ -294,31 +288,31 @@ def _find_archives(
             db_cursor.execute(query, query_params)
             results = db_cursor.fetchall()
 
-            archive_ids: List[str] = [result["id"] for result in results]
+            archive_ids: list[str] = [result["id"] for result in results]
             if 0 == len(archive_ids):
                 logger.info("No archives found within specified time range.")
                 return 0
 
-            logger.info(f"Found {len(archive_ids)} archives within the specified time range.")
+            logger.info("Found %s archives within the specified time range.", len(archive_ids))
             archive_output_dir = archives_dir / dataset if dataset is not None else archives_dir
             for archive_id in archive_ids:
                 logger.info(archive_id)
                 archive_path = archive_output_dir / archive_id
                 if not archive_path.is_dir():
-                    logger.warning(f"Archive {archive_id} in database not found on disk.")
+                    logger.warning("Archive %s in database not found on disk.", archive_id)
 
     except Exception:
         logger.exception("Failed to find archives from the database.")
         return -1
 
-    logger.info(f"Finished finding archives from the database.")
+    logger.info("Finished finding archives from the database.")
     return 0
 
 
 def _delete_archives(
     archives_dir: Path,
     database_config: Database,
-    dataset: Optional[str],
+    dataset: str | None,
     delete_handler: DeleteHandler,
     dry_run: bool = False,
 ) -> int:
@@ -332,10 +326,9 @@ def _delete_archives(
     :param dry_run: If True, no changes will be made to the database or disk.
     :return: 0 on success, -1 otherwise.
     """
-
-    archive_ids: List[str]
+    archive_ids: list[str]
     dataset_specific_message = f" of dataset `{dataset}`" if dataset is not None else ""
-    logger.info(f"Starting to delete archives{dataset_specific_message} from the database.")
+    logger.info("Starting to delete archives%s from the database.", dataset_specific_message)
     sql_adapter: SQL_Adapter = SQL_Adapter(database_config)
     clp_db_connection_params: dict[str, Any] = database_config.get_clp_connection_params_and_type(
         True
@@ -343,14 +336,15 @@ def _delete_archives(
     table_prefix = clp_db_connection_params["table_prefix"]
 
     try:
-        with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-            db_conn.cursor(dictionary=True)
-        ) as db_cursor:
+        with (
+            closing(sql_adapter.create_connection(True)) as db_conn,
+            closing(db_conn.cursor(dictionary=True)) as db_cursor,
+        ):
             if dry_run:
                 logger.info("Running in dry-run mode.")
 
             query_criteria: str = delete_handler.get_criteria()
-            query_params: List[str] = delete_handler.get_params()
+            query_params: list[str] = delete_handler.get_params()
 
             db_cursor.execute(
                 f"""
@@ -365,12 +359,12 @@ def _delete_archives(
                 logger.info(delete_handler.get_not_found_message())
                 return 0
 
-            archive_ids: List[str] = [result["id"] for result in results]
+            archive_ids: list[str] = [result["id"] for result in results]
             delete_handler.validate_results(archive_ids)
 
             delete_archives_from_metadata_db(db_cursor, archive_ids, table_prefix, dataset)
             for archive_id in archive_ids:
-                logger.info(f"Deleted archive {archive_id} from the database.")
+                logger.info("Deleted archive %s from the database.", archive_id)
 
             if dry_run:
                 logger.info("Dry-run finished.")
@@ -383,19 +377,19 @@ def _delete_archives(
         logger.exception("Failed to delete archives from the database. Aborting deletion.")
         return -1
 
-    logger.info(f"Finished deleting archives from the database.")
+    logger.info("Finished deleting archives from the database.")
 
     archive_output_dir: Path = archives_dir / dataset if dataset is not None else archives_dir
     for archive_id in archive_ids:
         archive_path = archive_output_dir / archive_id
         if not archive_path.is_dir():
-            logger.warning(f"Archive {archive_id} is not a directory. Skipping deletion.")
+            logger.warning("Archive %s is not a directory. Skipping deletion.", archive_id)
             continue
 
-        logger.info(f"Deleting archive {archive_id} from disk.")
+        logger.info("Deleting archive %s from disk.", archive_id)
         shutil.rmtree(archive_path)
 
-    logger.info(f"Finished deleting archives from disk.")
+    logger.info("Finished deleting archives from disk.")
 
     return 0
 

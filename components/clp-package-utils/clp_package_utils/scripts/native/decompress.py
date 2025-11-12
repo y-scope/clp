@@ -7,7 +7,6 @@ import subprocess
 import sys
 import uuid
 from contextlib import closing
-from typing import Optional
 
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
@@ -39,10 +38,10 @@ from clp_package_utils.scripts.native.utils import (
     wait_for_query_job,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
-def get_orig_file_id(db_config: Database, path: str) -> Optional[str]:
+def get_orig_file_id(db_config: Database, path: str) -> str | None:
     """
     :param db_config:
     :param path: Path of the original file.
@@ -53,9 +52,10 @@ def get_orig_file_id(db_config: Database, path: str) -> Optional[str]:
     sql_adapter = SQL_Adapter(db_config)
     clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         files_table_name = get_files_table_name(table_prefix, None)
         db_cursor.execute(
             f"SELECT orig_file_id FROM `{files_table_name}` WHERE path = (%s)",
@@ -94,10 +94,12 @@ def submit_and_monitor_extraction_job_in_db(
     job_status = wait_for_query_job(sql_adapter, job_id)
 
     if QueryJobStatus.SUCCEEDED == job_status:
-        logger.info(f"Finished extraction job {job_id}.")
+        logger.info("Finished extraction job %s.", job_id)
         return 0
 
-    logger.error(f"Extraction job {job_id} finished with unexpected status: {job_status.to_str()}.")
+    logger.error(
+        "Extraction job %s finished with unexpected status: %s.", job_id, job_status.to_str()
+    )
     return -1
 
 
@@ -133,7 +135,7 @@ def handle_extract_stream_cmd(
             orig_file_path = parsed_args.orig_file_path
             orig_file_id = get_orig_file_id(clp_config.database, orig_file_path)
             if orig_file_id is None:
-                logger.error(f"Cannot find orig_file_id corresponding to '{orig_file_path}'.")
+                logger.error("Cannot find orig_file_id corresponding to '%s'.", orig_file_path)
                 return -1
         job_config = ExtractIrJobConfig(
             orig_file_id=orig_file_id,
@@ -143,12 +145,12 @@ def handle_extract_stream_cmd(
     elif EXTRACT_JSON_CMD == command:
         dataset = parsed_args.dataset
         if dataset is None:
-            logger.error(f"Dataset unspecified, but must be specified for command `{command}'.")
+            logger.error("Dataset unspecified, but must be specified for command `%s'.", command)
             return -1
         try:
             validate_dataset_exists(clp_config.database, dataset)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.exception("Failed to validate dataset.")
             return -1
 
         job_type = QueryJobType.EXTRACT_JSON
@@ -158,7 +160,7 @@ def handle_extract_stream_cmd(
             target_chunk_size=parsed_args.target_chunk_size,
         )
     else:
-        logger.error(f"Unsupported stream extraction command: {command}")
+        logger.error("Unsupported stream extraction command: %s", command)
         return -1
 
     try:
@@ -171,7 +173,7 @@ def handle_extract_stream_cmd(
             )
         )
     except asyncio.CancelledError:
-        logger.error("Stream extraction cancelled.")
+        logger.exception("Stream extraction cancelled.")
         return -1
 
 
@@ -179,7 +181,7 @@ def validate_and_load_config_file(
     clp_home: pathlib.Path,
     config_file_path: pathlib.Path,
     default_config_file_path: pathlib.Path,
-) -> Optional[CLPConfig]:
+) -> CLPConfig | None:
     """
     Validates and loads the config file.
     :param clp_home:
@@ -192,10 +194,11 @@ def validate_and_load_config_file(
         clp_config.validate_archive_output_config()
         clp_config.validate_logs_dir()
         clp_config.database.load_credentials_from_env()
-        return clp_config
     except Exception:
         logger.exception("Failed to load config.")
         return None
+    else:
+        return clp_config
 
 
 def handle_extract_file_cmd(
@@ -216,7 +219,7 @@ def handle_extract_file_cmd(
     # Validate extraction directory
     extraction_dir = pathlib.Path(parsed_args.extraction_dir)
     if not extraction_dir.is_dir():
-        logger.error(f"extraction-dir ({extraction_dir}) is not a valid directory.")
+        logger.error("extraction-dir (%s) is not a valid directory.", extraction_dir)
         return -1
 
     # Validate and load config file
@@ -258,9 +261,8 @@ def handle_extract_file_cmd(
     elif len(paths) > 0:
         # Write paths to file
         files_to_extract_list_path = logs_dir / f"paths-to-extract-{uuid.uuid4()}.txt"
-        with open(files_to_extract_list_path, "w") as stream:
-            for path in paths:
-                stream.write(path + "\n")
+        with files_to_extract_list_path.open("w") as stream:
+            stream.writelines(path + "\n" for path in paths)
 
         extract_cmd.append("-f")
         extract_cmd.append(str(files_to_extract_list_path))
@@ -268,7 +270,7 @@ def handle_extract_file_cmd(
     proc = subprocess.Popen(extract_cmd, env=extract_env)
     return_code = proc.wait()
     if 0 != return_code:
-        logger.error(f"File extraction failed, return_code={return_code}")
+        logger.error("File extraction failed, return_code=%s", return_code)
         return return_code
 
     # Remove generated files
@@ -278,7 +280,7 @@ def handle_extract_file_cmd(
     return 0
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -343,11 +345,10 @@ def main(argv):
     command = parsed_args.command
     if EXTRACT_FILE_CMD == command:
         return handle_extract_file_cmd(parsed_args, clp_home, default_config_file_path)
-    elif command in (EXTRACT_IR_CMD, EXTRACT_JSON_CMD):
+    if command in (EXTRACT_IR_CMD, EXTRACT_JSON_CMD):
         return handle_extract_stream_cmd(parsed_args, clp_home, default_config_file_path)
-    else:
-        logger.exception(f"Unexpected command: {command}")
-        return -1
+    logger.exception("Unexpected command: %s", command)
+    return -1
 
 
 if "__main__" == __name__:

@@ -5,7 +5,6 @@ import shlex
 import subprocess
 import sys
 import uuid
-from typing import List, Optional
 
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
@@ -46,7 +45,7 @@ def _generate_logs_list(
     :return: Whether any paths were written to the logs list.
     """
     host_logs_list_path = parsed_args.path_list
-    with open(container_logs_list_path, "w") as container_logs_list_file:
+    with container_logs_list_path.open("w") as container_logs_list_file:
         if host_logs_list_path is None:
             for path in parsed_args.paths:
                 resolved_path = resolve_host_path(pathlib.Path(path))
@@ -60,7 +59,7 @@ def _generate_logs_list(
         resolved_host_logs_list_path = resolve_host_path_in_container(
             pathlib.Path(host_logs_list_path)
         )
-        with open(resolved_host_logs_list_path, "r") as host_logs_list_file:
+        with resolved_host_logs_list_path.open("r") as host_logs_list_file:
             for line in host_logs_list_file:
                 stripped_path_str = line.rstrip()
                 if "" == stripped_path_str:
@@ -77,11 +76,10 @@ def _generate_logs_list(
 
 def _generate_compress_cmd(
     parsed_args: argparse.Namespace,
-    dataset: Optional[str],
+    dataset: str | None,
     config_path: pathlib.Path,
     logs_list_path: pathlib.Path,
-) -> List[str]:
-
+) -> list[str]:
     # fmt: off
     compress_cmd = [
         "python3",
@@ -125,7 +123,7 @@ def _validate_fs_input_args(
         args_parser.error("Paths cannot be specified on the command line AND through a file.")
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -209,8 +207,8 @@ def main(argv):
         try:
             clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
             validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.exception("Failed to validate dataset name.")
             return -1
 
         if parsed_args.timestamp_key is None and not parsed_args.unstructured:
@@ -225,7 +223,7 @@ def main(argv):
                 "treated as unstructured, and the argument to `--timestamp-key` will be ignored."
             )
     elif dataset is not None:
-        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+        logger.error("Dataset selection is not supported for storage engine: %s.", storage_engine)
         return -1
 
     # Validate filesystem input arguments
@@ -267,11 +265,11 @@ def main(argv):
 
     cmd = container_start_cmd + compress_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if ret_code != 0:
         logger.error("Compression failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+        logger.debug("Docker command failed: %s", shlex.join(cmd))
     else:
         resolved_logs_list_path_on_host.unlink()
 

@@ -4,7 +4,7 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
-from typing import Final, List
+from typing import Final
 
 from clp_py_utils.clp_config import (
     ARCHIVE_MANAGER_ACTION_NAME,
@@ -35,10 +35,10 @@ from clp_package_utils.general import (
 LIST_COMMAND: Final[str] = "list"
 DEL_COMMAND: Final[str] = "del"
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -104,13 +104,13 @@ def main(argv: List[str]) -> int:
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
         return -1
 
     storage_engine = clp_config.package.storage_engine
     if StorageEngine.CLP_S != storage_engine:
-        logger.error(f"Datasets aren't supported for storage engine: {storage_engine}.")
+        logger.error("Datasets aren't supported for storage engine: %s.", storage_engine)
         return -1
 
     # Validate input depending on subcommands
@@ -127,7 +127,7 @@ def main(argv: List[str]) -> int:
             table_prefix = clp_db_connection_params["table_prefix"]
             for dataset in datasets:
                 validate_dataset_name(table_prefix, dataset)
-        except:
+        except Exception:
             logger.exception("Invalid dataset name.")
             return -1
 
@@ -186,16 +186,16 @@ def main(argv: List[str]) -> int:
         else:
             dataset_manager_cmd.extend(parsed_args.datasets)
     elif LIST_COMMAND != subcommand:
-        logger.error(f"Unsupported subcommand: `{subcommand}`.")
+        logger.error("Unsupported subcommand: `%s`.", subcommand)
         return -1
 
     cmd = container_start_cmd + dataset_manager_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Dataset manager failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+        logger.debug("Docker command failed: %s", shlex.join(cmd))
 
     # Remove generated files
     resolved_generated_config_path_on_host = resolve_host_path_in_container(

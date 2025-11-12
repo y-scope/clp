@@ -48,19 +48,18 @@ def _generate_url_list(
     :param parsed_args: Parsed command-line arguments.
     :return: Whether any URLs were written to the file.
     """
-    with open(container_url_list_path, "w") as url_list_file:
+    with container_url_list_path.open("w") as url_list_file:
         url_list_file.write(f"{subcommand}\n")
 
         if parsed_args.inputs_from is None:
-            for url in parsed_args.inputs:
-                url_list_file.write(f"{url}\n")
+            url_list_file.writelines(f"{url}\n" for url in parsed_args.inputs)
             return len(parsed_args.inputs) != 0
 
         no_url_found = True
         resolved_inputs_from_path = resolve_host_path_in_container(
             pathlib.Path(parsed_args.inputs_from)
         )
-        with open(resolved_inputs_from_path, "r") as input_file:
+        with resolved_inputs_from_path.open("r") as input_file:
             for line in input_file:
                 stripped_url = line.strip()
                 if "" == stripped_url:
@@ -143,20 +142,20 @@ def _validate_s3_key_prefix_args(
     :param parsed_args:
     :param args_parser:
     """
-
     if parsed_args.inputs_from is None:
         if len(parsed_args.inputs) == 0:
             args_parser.error("No URL specified.")
         if len(parsed_args.inputs) != 1:
             args_parser.error(
-                f"{S3_KEY_PREFIX_COMPRESSION} accepts exactly one URL, got {len(parsed_args.inputs)}."
+                f"{S3_KEY_PREFIX_COMPRESSION} accepts exactly one URL, "
+                f"got {len(parsed_args.inputs)}."
             )
 
     if len(parsed_args.inputs) > 0 and parsed_args.inputs_from is not None:
         args_parser.error("URL cannot be specified on the command line AND through a file.")
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -253,8 +252,9 @@ def main(argv):
 
     if StorageEngine.CLP_S != storage_engine:
         logger.error(
-            f"S3 compression requires storage engine {StorageEngine.CLP_S}, but configured engine"
-            f" is {storage_engine}."
+            "S3 compression requires storage engine %s, but configured engine is %s.",
+            StorageEngine.CLP_S,
+            storage_engine,
         )
         return -1
 
@@ -264,8 +264,8 @@ def main(argv):
     try:
         clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
         validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
-    except Exception as e:
-        logger.error(e)
+    except Exception:
+        logger.exception("Failed to validate dataset name.")
         return -1
 
     if parsed_args.timestamp_key is None and not parsed_args.unstructured:
@@ -321,11 +321,11 @@ def main(argv):
 
     cmd = container_start_cmd + compress_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if ret_code != 0:
         logger.error("Compression failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+        logger.debug("Docker command failed: %s", shlex.join(cmd))
     else:
         resolved_url_list_path_on_host.unlink()
 

@@ -17,10 +17,10 @@ from clp_package_utils.general import (
     validate_retention_config,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -70,7 +70,7 @@ def main(argv):
         clp_config.validate_data_dir(True)
         clp_config.validate_logs_dir(True)
         clp_config.validate_tmp_dir(True)
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
         return -1
 
@@ -85,7 +85,7 @@ def main(argv):
         resolve_host_path_in_container(clp_config.stream_output.get_directory()).mkdir(
             parents=True, exist_ok=True
         )
-    except:
+    except Exception:
         logger.exception("Failed to create necessary directories.")
         return -1
 
@@ -99,11 +99,8 @@ def main(argv):
             )
             return 0
         controller.start()
-    except Exception as ex:
-        if type(ex) == ValueError:
-            logger.error(f"Failed to start CLP: {ex}")
-        else:
-            logger.exception("Failed to start CLP.")
+    except Exception:
+        logger.exception("Failed to start CLP.")
         return -1
 
     return 0

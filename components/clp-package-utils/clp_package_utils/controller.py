@@ -8,7 +8,7 @@ import stat
 import subprocess
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
@@ -39,6 +39,7 @@ from clp_py_utils.clp_metadata_db_utils import (
     get_files_table_name,
 )
 from clp_py_utils.core import resolve_host_path_in_container
+from typing_extensions import Self
 
 from clp_package_utils.general import (
     check_docker_dependencies,
@@ -67,11 +68,9 @@ THIRD_PARTY_SERVICE_UID_GID = f"{THIRD_PARTY_SERVICE_UID}:{THIRD_PARTY_SERVICE_G
 logger = logging.getLogger(__name__)
 
 
-class EnvVarsDict(dict[str, Optional[str]]):
-    def __ior__(self, other: "EnvVarsDict") -> "EnvVarsDict":
-        """
-        Overloads the `|=` operator for static type checking on `other`.
-        """
+class EnvVarsDict(dict[str, str | None]):
+    def __ior__(self, other: "EnvVarsDict") -> Self:
+        """Overloads the `|=` operator for static type checking on `other`."""
         super().__ior__(other)
         return self
 
@@ -97,15 +96,11 @@ class BaseController(ABC):
 
     @abstractmethod
     def start(self) -> None:
-        """
-        Starts the components.
-        """
+        """Starts the components."""
 
     @abstractmethod
     def stop(self) -> None:
-        """
-        Stops the components.
-        """
+        """Stops the components."""
 
     def _set_up_env_for_database(self) -> EnvVarsDict:
         """
@@ -114,7 +109,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = DB_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         conf_logging_file = self._conf_dir / "mysql" / "conf.d" / "logging.cnf"
         data_dir = self._clp_config.data_directory / component_name
@@ -166,7 +161,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUEUE_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         validate_queue_config(self._clp_config, logs_dir)
@@ -203,7 +198,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = REDIS_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         conf_file = self._conf_dir / "redis" / "redis.conf"
         data_dir = self._clp_config.data_directory / component_name
@@ -254,7 +249,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = RESULTS_CACHE_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         conf_file = self._conf_dir / "mongo" / "mongod.conf"
         data_dir = self._clp_config.data_directory / component_name
@@ -300,7 +295,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = COMPRESSION_SCHEDULER_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -324,7 +319,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUERY_SCHEDULER_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -347,7 +342,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = COMPRESSION_WORKER_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -377,7 +372,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = QUERY_WORKER_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -405,7 +400,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = REDUCER_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -458,7 +453,7 @@ class BaseController(ABC):
         :return: Dictionary of environment variables necessary to launch the component.
         """
         component_name = WEBUI_COMPONENT_NAME
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         container_webui_dir = CONTAINER_CLP_HOME / "var" / "www" / "webui"
         client_settings_json_path = (
@@ -503,7 +498,7 @@ class BaseController(ABC):
         client_settings_json = self._read_and_update_settings_json(
             resolved_client_settings_json_path, client_settings_json_updates
         )
-        with open(resolved_client_settings_json_path, "w") as client_settings_json_file:
+        with resolved_client_settings_json_path.open("w") as client_settings_json_file:
             client_settings_json_file.write(json.dumps(client_settings_json))
 
         server_settings_json_updates = {
@@ -561,7 +556,7 @@ class BaseController(ABC):
         server_settings_json = self._read_and_update_settings_json(
             resolved_server_settings_json_path, server_settings_json_updates
         )
-        with open(resolved_server_settings_json_path, "w") as settings_json_file:
+        with resolved_server_settings_json_path.open("w") as settings_json_file:
             settings_json_file.write(json.dumps(server_settings_json))
 
         env_vars = EnvVarsDict()
@@ -587,9 +582,9 @@ class BaseController(ABC):
         """
         component_name = MCP_SERVER_COMPONENT_NAME
         if self._clp_config.mcp_server is None:
-            logger.info(f"The MCP Server is not configured, skipping {component_name} creation...")
+            logger.info("The MCP Server is not configured, skipping %s creation...", component_name)
             return EnvVarsDict()
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         validate_mcp_server_config(self._clp_config, logs_dir)
@@ -621,7 +616,7 @@ class BaseController(ABC):
         component_name = GARBAGE_COLLECTOR_COMPONENT_NAME
         if not is_retention_period_configured(self._clp_config):
             logger.info(
-                f"Retention period is not configured, skipping {component_name} creation..."
+                "Retention period is not configured, skipping %s creation...", component_name
             )
             return EnvVarsDict(
                 {
@@ -629,7 +624,7 @@ class BaseController(ABC):
                 }
             )
 
-        logger.info(f"Setting up environment for {component_name}...")
+        logger.info("Setting up environment for %s...", component_name)
 
         logs_dir = self._clp_config.logs_directory / component_name
         resolved_logs_dir = resolve_host_path_in_container(logs_dir)
@@ -653,7 +648,7 @@ class BaseController(ABC):
         :param settings_file_path:
         :param updates:
         """
-        with open(settings_file_path, "r") as settings_json_file:
+        with settings_file_path.open("r") as settings_json_file:
             settings_object = json.loads(settings_json_file.read())
         self._update_settings_object("", settings_object, updates)
 
@@ -686,9 +681,7 @@ class BaseController(ABC):
 
 
 class DockerComposeController(BaseController):
-    """
-    Controller for orchestrating CLP components using Docker Compose.
-    """
+    """Controller for orchestrating CLP components using Docker Compose."""
 
     def __init__(self, clp_config: CLPConfig, instance_id: str) -> None:
         self._project_name = f"clp-package-{instance_id}"
@@ -775,7 +768,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_garbage_collector()
 
         # Write the environment variables to the `.env` file.
-        with open(f"{self._clp_home}/.env", "w") as env_file:
+        with (self._clp_home / ".env").open("w") as env_file:
             for key, value in env_vars.items():
                 if value is None:
                     continue
@@ -793,7 +786,7 @@ class DockerComposeController(BaseController):
         )
 
         deployment_type = self._clp_config.get_deployment_type()
-        logger.info(f"Starting CLP using Docker Compose ({deployment_type} deployment)...")
+        logger.info("Starting CLP using Docker Compose (%s deployment)...", deployment_type)
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
         cmd += ["--file", self._get_docker_file_name()]
@@ -841,16 +834,12 @@ class DockerComposeController(BaseController):
 
     @staticmethod
     def _get_num_workers() -> int:
-        """
-        :return: Number of worker processes to run.
-        """
+        """:return: Number of worker processes to run."""
         # This will change when we move from single to multi-container workers. See y-scope/clp#1424
         return max(1, multiprocessing.cpu_count() // 2)
 
     def _get_docker_file_name(self) -> str:
-        """
-        :return: The Docker Compose file name to use based on the config.
-        """
+        """:return: The Docker Compose file name to use based on the config."""
         deployment_type = self._clp_config.get_deployment_type()
         if deployment_type == DeploymentType.BASE:
             return "docker-compose-base.yaml"
@@ -868,11 +857,11 @@ def get_or_create_instance_id(clp_config: CLPConfig) -> str:
     resolved_instance_id_file_path = resolve_host_path_in_container(instance_id_file_path)
 
     if resolved_instance_id_file_path.exists():
-        with open(resolved_instance_id_file_path, "r") as f:
+        with resolved_instance_id_file_path.open("r") as f:
             instance_id = f.readline()
     else:
         instance_id = str(uuid.uuid4())[-4:]
-        with open(resolved_instance_id_file_path, "w") as f:
+        with resolved_instance_id_file_path.open("w") as f:
             f.write(instance_id)
 
     return instance_id

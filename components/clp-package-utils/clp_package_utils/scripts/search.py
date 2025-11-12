@@ -28,10 +28,10 @@ from clp_package_utils.general import (
     validate_dataset_name,
 )
 
-logger = logging.getLogger(__file__)
+logger = logging.getLogger(__name__)
 
 
-def main(argv):
+def main(argv: list[str]) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -101,7 +101,7 @@ def main(argv):
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
         return -1
 
@@ -109,8 +109,9 @@ def main(argv):
     storage_engine = clp_config.package.storage_engine
     if StorageType.S3 == storage_type and StorageEngine.CLP == storage_engine:
         logger.error(
-            f"Search is not supported for archive storage type `{storage_type}` with storage engine"
-            f" `{storage_engine}`."
+            "Search is not supported for archive storage type `%s` with storage engine `%s`.",
+            storage_type,
+            storage_engine,
         )
         return -1
 
@@ -120,11 +121,11 @@ def main(argv):
         try:
             clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
             validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.exception("Failed to validate dataset name.")
             return -1
     elif dataset is not None:
-        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+        logger.error("Dataset selection is not supported for storage engine: %s.", storage_engine)
         return -1
 
     container_name = generate_container_name(str(JobType.SEARCH))
@@ -178,11 +179,11 @@ def main(argv):
         search_cmd.append("--raw")
     cmd = container_start_cmd + search_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Search failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+        logger.debug("Docker command failed: %s", shlex.join(cmd))
 
     # Remove generated files
     resolved_generated_config_path_on_host = resolve_host_path_in_container(

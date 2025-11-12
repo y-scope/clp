@@ -4,7 +4,7 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
-from typing import Final, List, Optional
+from typing import Final
 
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
@@ -39,10 +39,10 @@ BEGIN_TS_ARG: Final[str] = "--begin-ts"
 END_TS_ARG: Final[str] = "--end-ts"
 DRY_RUN_ARG: Final[str] = "--dry-run"
 
-logger: logging.Logger = logging.getLogger(__file__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 
-def _validate_timestamps(begin_ts: int, end_ts: Optional[int]) -> bool:
+def _validate_timestamps(begin_ts: int, end_ts: int | None) -> bool:
     if begin_ts < 0:
         logger.error("begin-ts must be non-negative.")
         return False
@@ -55,7 +55,7 @@ def _validate_timestamps(begin_ts: int, end_ts: Optional[int]) -> bool:
     return True
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     clp_home: Path = get_clp_home()
     default_config_file_path: Path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -164,8 +164,8 @@ def main(argv: List[str]) -> int:
     else:
         logger.setLevel(logging.INFO)
 
-    begin_timestamp: Optional[int] = None
-    end_timestamp: Optional[int] = None
+    begin_timestamp: int | None = None
+    end_timestamp: int | None = None
     subcommand: str = parsed_args.subcommand
 
     # Validate and load config file
@@ -180,13 +180,13 @@ def main(argv: List[str]) -> int:
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
-    except:
+    except Exception:
         logger.exception("Failed to load config.")
         return -1
 
     storage_type = StorageType(clp_config.archive_output.storage.type)
     if StorageType.FS != storage_type:
-        logger.error(f"Archive manager is not supported for storage type: {storage_type}.")
+        logger.error("Archive manager is not supported for storage type: %s.", storage_type)
         return -1
 
     storage_engine = StorageEngine(clp_config.package.storage_engine)
@@ -196,11 +196,11 @@ def main(argv: List[str]) -> int:
         try:
             clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
             validate_dataset_name(clp_db_connection_params["table_prefix"], dataset)
-        except Exception as e:
-            logger.error(e)
+        except Exception:
+            logger.exception("Failed to validate dataset name.")
             return -1
     elif dataset is not None:
-        logger.error(f"Dataset selection is not supported for storage engine: {storage_engine}.")
+        logger.error("Dataset selection is not supported for storage engine: %s.", storage_engine)
         return -1
 
     # Validate input depending on subcommands
@@ -222,7 +222,7 @@ def main(argv: List[str]) -> int:
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
-    necessary_mounts: List[Optional[DockerMount]] = [
+    necessary_mounts: list[DockerMount | None] = [
         mounts.logs_dir,
         mounts.archives_output_dir,
     ]
@@ -230,17 +230,17 @@ def main(argv: List[str]) -> int:
         CLP_DB_USER_ENV_VAR_NAME: clp_config.database.username,
         CLP_DB_PASS_ENV_VAR_NAME: clp_config.database.password,
     }
-    container_start_cmd: List[str] = generate_container_start_cmd(
+    container_start_cmd: list[str] = generate_container_start_cmd(
         container_name, necessary_mounts, clp_config.container_image_ref, extra_env_vars
     )
 
     # fmt: off
-    archive_manager_cmd: List[str] = [
+    archive_manager_cmd: list[str] = [
         "python3",
         "-m", "clp_package_utils.scripts.native.archive_manager",
         "--config", str(generated_config_path_on_container),
     ]
-    # fmt : on
+    # fmt: on
     if parsed_args.verbose:
         archive_manager_cmd.append("--verbose")
     if dataset is not None:
@@ -257,13 +257,11 @@ def main(argv: List[str]) -> int:
             archive_manager_cmd.append(DEL_BY_IDS_SUBCOMMAND)
             archive_manager_cmd.extend(parsed_args.ids)
         elif DEL_BY_FILTER_SUBCOMMAND == parsed_args.del_subcommand:
-            archive_manager_cmd.extend([
-                DEL_BY_FILTER_SUBCOMMAND,
-                str(begin_timestamp),
-                str(end_timestamp)
-            ])
+            archive_manager_cmd.extend(
+                [DEL_BY_FILTER_SUBCOMMAND, str(begin_timestamp), str(end_timestamp)]
+            )
         else:
-            logger.error(f"Unsupported subcommand: `{parsed_args.del_subcommand}`.")
+            logger.error("Unsupported subcommand: `%s`.", parsed_args.del_subcommand)
             return -1
     elif FIND_COMMAND == subcommand:
         assert begin_timestamp is not None, "begin_timestamp is None."
@@ -271,16 +269,16 @@ def main(argv: List[str]) -> int:
         if end_timestamp is not None:
             archive_manager_cmd.extend([END_TS_ARG, str(end_timestamp)])
     else:
-        logger.error(f"Unsupported subcommand: `{subcommand}`.")
+        logger.error("Unsupported subcommand: `%s`.", subcommand)
         return -1
 
-    cmd: List[str] = container_start_cmd + archive_manager_cmd
+    cmd: list[str] = container_start_cmd + archive_manager_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Archive manager failed.")
-        logger.debug(f"Docker command failed: {shlex.join(cmd)}")
+        logger.debug("Docker command failed: %s", shlex.join(cmd))
 
     # Remove generated files
     resolved_generated_config_path_on_host = resolve_host_path_in_container(

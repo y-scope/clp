@@ -9,7 +9,7 @@ import socket
 import subprocess
 import uuid
 from enum import auto
-from typing import Dict, List, Optional, Tuple
+from typing import Any
 
 import yaml
 from clp_py_utils.clp_config import (
@@ -68,10 +68,7 @@ class DockerNotAvailableError(DockerDependencyError):
         for stream in (process_error.stdout, process_error.stderr):
             if stream is None:
                 continue
-            if isinstance(stream, bytes):
-                text = stream.decode(errors="replace")
-            else:
-                text = str(stream)
+            text = stream.decode(errors="replace") if isinstance(stream, bytes) else str(stream)
             text = text.strip()
             if text:
                 output_chunks.append(text)
@@ -110,17 +107,17 @@ class JobType(KebabCaseStrEnum):
 class DockerMount:
     def __init__(
         self,
-        type: DockerMountType,
+        mount_type: DockerMountType,
         src: pathlib.Path,
         dst: pathlib.Path,
         is_read_only: bool = False,
-    ):
-        self.__type = type
+    ) -> None:
+        self.__type = mount_type
         self.__src = src
         self.__dst = dst
         self.__is_read_only = is_read_only
 
-    def __str__(self):
+    def __str__(self) -> str:
         mount_str = (
             f"type={DOCKER_MOUNT_TYPE_STRINGS[self.__type]},src={self.__src},dst={self.__dst}"
         )
@@ -130,20 +127,20 @@ class DockerMount:
 
 
 class CLPDockerMounts:
-    def __init__(self, clp_home: pathlib.Path, docker_clp_home: pathlib.Path):
-        self.input_logs_dir: Optional[DockerMount] = None
-        self.clp_home: Optional[DockerMount] = DockerMount(
+    def __init__(self, clp_home: pathlib.Path, docker_clp_home: pathlib.Path) -> None:
+        self.input_logs_dir: DockerMount | None = None
+        self.clp_home: DockerMount | None = DockerMount(
             DockerMountType.BIND, clp_home, docker_clp_home
         )
-        self.data_dir: Optional[DockerMount] = None
-        self.logs_dir: Optional[DockerMount] = None
-        self.archives_output_dir: Optional[DockerMount] = None
-        self.stream_output_dir: Optional[DockerMount] = None
-        self.aws_config_dir: Optional[DockerMount] = None
-        self.generated_config_file: Optional[DockerMount] = None
+        self.data_dir: DockerMount | None = None
+        self.logs_dir: DockerMount | None = None
+        self.archives_output_dir: DockerMount | None = None
+        self.stream_output_dir: DockerMount | None = None
+        self.aws_config_dir: DockerMount | None = None
+        self.generated_config_file: DockerMount | None = None
 
 
-def get_clp_home():
+def get_clp_home() -> pathlib.Path:
     # Determine CLP_HOME from an environment variable or this script's path
     clp_home = None
     if "CLP_HOME" in os.environ:
@@ -155,9 +152,11 @@ def get_clp_home():
                 break
 
     if clp_home is None:
-        raise ValueError("CLP_HOME is not set and could not be determined automatically.")
-    elif not clp_home.exists():
-        raise ValueError("CLP_HOME set to nonexistent path.")
+        msg = "CLP_HOME is not set and could not be determined automatically."
+        raise ValueError(msg)
+    if not clp_home.exists():
+        msg = "CLP_HOME set to nonexistent path."
+        raise ValueError(msg)
 
     return clp_home.resolve()
 
@@ -170,7 +169,7 @@ def generate_container_name(job_type: str) -> str:
     return f"clp-{job_type}-{str(uuid.uuid4())[-4:]}"
 
 
-def check_docker_dependencies(should_compose_project_be_running: bool, project_name: str):
+def check_docker_dependencies(should_compose_project_be_running: bool, project_name: str) -> None:
     """
     Checks if Docker and Docker Compose are installed, and whether a Docker Compose project is
     running.
@@ -187,7 +186,8 @@ def check_docker_dependencies(should_compose_project_be_running: bool, project_n
             stderr=subprocess.STDOUT,
         )
     except subprocess.CalledProcessError as e:
-        raise DockerNotAvailableError("docker is not installed or available on the path", e) from e
+        msg = "docker is not installed or available on the path"
+        raise DockerNotAvailableError(msg, e) from e
 
     is_running = _is_docker_compose_project_running(project_name)
     if should_compose_project_be_running and not is_running:
@@ -196,7 +196,7 @@ def check_docker_dependencies(should_compose_project_be_running: bool, project_n
         raise DockerComposeProjectAlreadyRunningError(project_name)
 
 
-def validate_port(port_name: str, hostname: str, port: int):
+def validate_port(port_name: str, hostname: str, port: int) -> None:
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -204,11 +204,12 @@ def validate_port(port_name: str, hostname: str, port: int):
         sock.close()
     except OSError as e:
         if e.errno == errno.EADDRINUSE:
-            raise ValueError(
+            msg = (
                 f"{port_name} {hostname}:{port} is already in use. Please choose a different port."
             )
-        else:
-            raise ValueError(f"{port_name} {hostname}:{port} is invalid: {e.strerror}.")
+            raise ValueError(msg) from e
+        msg = f"{port_name} {hostname}:{port} is invalid: {e.strerror}."
+        raise ValueError(msg) from e
 
 
 def is_path_already_mounted(
@@ -216,7 +217,7 @@ def is_path_already_mounted(
     mounted_container_root: pathlib.Path,
     host_path: pathlib.Path,
     container_path: pathlib.Path,
-):
+) -> bool:
     try:
         host_path_relative_to_mounted_root = host_path.relative_to(mounted_host_root)
     except ValueError:
@@ -232,7 +233,7 @@ def is_path_already_mounted(
 
 def generate_container_config(
     clp_config: CLPConfig, clp_home: pathlib.Path
-) -> Tuple[CLPConfig, CLPDockerMounts]:
+) -> tuple[CLPConfig, CLPDockerMounts]:
     """
     Copies the given config and sets up mounts mapping the relevant host paths into the container
 
@@ -345,7 +346,7 @@ def get_container_config_filename(container_name: str) -> str:
 
 def dump_container_config(
     container_clp_config: CLPConfig, clp_config: CLPConfig, config_filename: str
-):
+) -> tuple[pathlib.Path, pathlib.Path]:
     """
     Writes the given container config to the logs directory, so that it's accessible in the
     container.
@@ -358,13 +359,13 @@ def dump_container_config(
     config_file_path_on_host = clp_config.logs_directory / config_filename
     config_file_path_on_container = container_clp_config.logs_directory / config_filename
     resolved_config_file_path_on_host = resolve_host_path_in_container(config_file_path_on_host)
-    with open(resolved_config_file_path_on_host, "w") as f:
+    with resolved_config_file_path_on_host.open("w") as f:
         yaml.safe_dump(container_clp_config.dump_to_primitive_dict(), f)
 
     return config_file_path_on_container, config_file_path_on_host
 
 
-def dump_shared_container_config(container_clp_config: CLPConfig, clp_config: CLPConfig):
+def dump_shared_container_config(container_clp_config: CLPConfig, clp_config: CLPConfig) -> None:
     """
     Dumps the given container config to `CLP_SHARED_CONFIG_FILENAME` in the logs directory, so that
     it's accessible in the container.
@@ -377,10 +378,10 @@ def dump_shared_container_config(container_clp_config: CLPConfig, clp_config: CL
 
 def generate_container_start_cmd(
     container_name: str,
-    container_mounts: List[Optional[DockerMount]],
+    container_mounts: list[DockerMount | None],
     container_image: str,
-    extra_env_vars: Optional[Dict[str, str]] = None,
-) -> List[str]:
+    extra_env_vars: dict[str, str] | None = None,
+) -> list[str]:
     """
     Generates the command to start a container with the given mounts, environment variables, and
     name.
@@ -418,17 +419,18 @@ def generate_container_start_cmd(
     return container_start_cmd
 
 
-def validate_config_key_existence(config, key):
+def validate_config_key_existence(config: dict[str, Any], key: str) -> Any:
     try:
         value = get_config_value(config, key)
     except KeyError:
-        raise ValueError(f"{key} must be specified in CLP's configuration.")
+        msg = f"{key} must be specified in CLP's configuration."
+        raise ValueError(msg) from None
     return value
 
 
 def load_config_file(
     config_file_path: pathlib.Path, default_config_file_path: pathlib.Path, clp_home: pathlib.Path
-):
+) -> CLPConfig:
     if config_file_path.exists():
         raw_clp_config = read_yaml_config_file(config_file_path)
         if raw_clp_config is None:
@@ -437,7 +439,8 @@ def load_config_file(
             clp_config = CLPConfig.model_validate(raw_clp_config)
     else:
         if config_file_path != default_config_file_path:
-            raise ValueError(f"Config file '{config_file_path}' does not exist.")
+            msg = f"Config file '{config_file_path}' does not exist."
+            raise ValueError(msg)
 
         clp_config = CLPConfig()
 
@@ -451,20 +454,20 @@ def load_config_file(
     return clp_config
 
 
-def generate_credentials_file(credentials_file_path: pathlib.Path):
+def generate_credentials_file(credentials_file_path: pathlib.Path) -> None:
     credentials = {
         DB_COMPONENT_NAME: {"user": "clp-user", "password": secrets.token_urlsafe(8)},
         QUEUE_COMPONENT_NAME: {"user": "clp-user", "password": secrets.token_urlsafe(8)},
         REDIS_COMPONENT_NAME: {"password": secrets.token_urlsafe(16)},
     }
 
-    with open(credentials_file_path, "w") as f:
+    with credentials_file_path.open("w") as f:
         yaml.safe_dump(credentials, f)
 
 
 def validate_credentials_file_path(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
-):
+) -> None:
     credentials_file_path = clp_config.credentials_file_path
     resolved_credentials_file_path = resolve_host_path_in_container(credentials_file_path)
     if not resolved_credentials_file_path.exists():
@@ -475,28 +478,30 @@ def validate_credentials_file_path(
         ):
             generate_credentials_file(resolved_credentials_file_path)
         else:
-            raise ValueError(f"Credentials file path '{credentials_file_path}' does not exist.")
+            msg = f"Credentials file path '{credentials_file_path}' does not exist."
+            raise ValueError(msg)
     elif not resolved_credentials_file_path.is_file():
-        raise ValueError(f"Credentials file path '{credentials_file_path}' is not a file.")
+        msg = f"Credentials file path '{credentials_file_path}' is not a file."
+        raise ValueError(msg)
 
 
 def validate_and_load_db_credentials_file(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
-):
+) -> None:
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
     clp_config.database.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_and_load_queue_credentials_file(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
-):
+) -> None:
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
     clp_config.queue.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_and_load_redis_credentials_file(
     clp_config: CLPConfig, clp_home: pathlib.Path, generate_default_file: bool
-):
+) -> None:
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
     clp_config.redis.load_credentials_from_file(clp_config.credentials_file_path)
 
@@ -506,17 +511,18 @@ def validate_db_config(
     component_config: pathlib.Path,
     data_dir: pathlib.Path,
     logs_dir: pathlib.Path,
-):
+) -> None:
     resolved_component_config = resolve_host_path_in_container(component_config)
     if not resolved_component_config.exists():
-        raise ValueError(f"{DB_COMPONENT_NAME} configuration file missing: '{component_config}'.")
+        msg = f"{DB_COMPONENT_NAME} configuration file missing: '{component_config}'."
+        raise ValueError(msg)
     _validate_data_directory(data_dir, DB_COMPONENT_NAME)
     _validate_log_directory(logs_dir, DB_COMPONENT_NAME)
 
     validate_port(f"{DB_COMPONENT_NAME}.port", clp_config.database.host, clp_config.database.port)
 
 
-def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
+def validate_queue_config(clp_config: CLPConfig, logs_dir: pathlib.Path) -> None:
     _validate_log_directory(logs_dir, QUEUE_COMPONENT_NAME)
 
     validate_port(f"{QUEUE_COMPONENT_NAME}.port", clp_config.queue.host, clp_config.queue.port)
@@ -527,22 +533,23 @@ def validate_redis_config(
     component_config: pathlib.Path,
     data_dir: pathlib.Path,
     logs_dir: pathlib.Path,
-):
+) -> None:
     resolved_component_config = resolve_host_path_in_container(component_config)
     if not resolved_component_config.exists():
-        raise ValueError(
-            f"{REDIS_COMPONENT_NAME} configuration file missing: '{component_config}'."
-        )
+        msg = f"{REDIS_COMPONENT_NAME} configuration file missing: '{component_config}'."
+        raise ValueError(msg)
     _validate_data_directory(data_dir, REDIS_COMPONENT_NAME)
     _validate_log_directory(logs_dir, REDIS_COMPONENT_NAME)
 
     validate_port(f"{REDIS_COMPONENT_NAME}.port", clp_config.redis.host, clp_config.redis.port)
 
 
-def validate_reducer_config(clp_config: CLPConfig, logs_dir: pathlib.Path, num_workers: int):
+def validate_reducer_config(
+    clp_config: CLPConfig, logs_dir: pathlib.Path, num_workers: int
+) -> None:
     _validate_log_directory(logs_dir, REDUCER_COMPONENT_NAME)
 
-    for i in range(0, num_workers):
+    for i in range(num_workers):
         validate_port(
             f"{REDUCER_COMPONENT_NAME}.port",
             clp_config.reducer.host,
@@ -555,12 +562,11 @@ def validate_results_cache_config(
     component_config: pathlib.Path,
     data_dir: pathlib.Path,
     logs_dir: pathlib.Path,
-):
+) -> None:
     resolved_component_config = resolve_host_path_in_container(component_config)
     if not resolved_component_config.exists():
-        raise ValueError(
-            f"{RESULTS_CACHE_COMPONENT_NAME} configuration file missing: '{component_config}'."
-        )
+        msg = f"{RESULTS_CACHE_COMPONENT_NAME} configuration file missing: '{component_config}'."
+        raise ValueError(msg)
     _validate_data_directory(data_dir, RESULTS_CACHE_COMPONENT_NAME)
     _validate_log_directory(logs_dir, RESULTS_CACHE_COMPONENT_NAME)
 
@@ -583,16 +589,17 @@ def validate_webui_config(
     clp_config: CLPConfig,
     client_settings_json_path: pathlib.Path,
     server_settings_json_path: pathlib.Path,
-):
+) -> None:
     for path in [client_settings_json_path, server_settings_json_path]:
         resolved_path = resolve_host_path_in_container(path)
         if not resolved_path.exists():
-            raise ValueError(f"{WEBUI_COMPONENT_NAME} {path} is not a valid path to settings.json")
+            msg = f"{WEBUI_COMPONENT_NAME} {path} is not a valid path to settings.json"
+            raise ValueError(msg)
 
     validate_port(f"{WEBUI_COMPONENT_NAME}.port", clp_config.webui.host, clp_config.webui.port)
 
 
-def validate_mcp_server_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
+def validate_mcp_server_config(clp_config: CLPConfig, logs_dir: pathlib.Path) -> None:
     _validate_log_directory(logs_dir, MCP_SERVER_COMPONENT_NAME)
 
     validate_port(
@@ -601,7 +608,7 @@ def validate_mcp_server_config(clp_config: CLPConfig, logs_dir: pathlib.Path):
 
 
 def validate_path_for_container_mount(path: pathlib.Path) -> None:
-    RESTRICTED_PREFIXES: List[pathlib.Path] = [
+    restricted_prefixes: list[pathlib.Path] = [
         CONTAINER_AWS_CONFIG_DIRECTORY,
         CONTAINER_CLP_HOME,
         CONTAINER_INPUT_LOGS_ROOT_DIR,
@@ -624,14 +631,16 @@ def validate_path_for_container_mount(path: pathlib.Path) -> None:
     ]
 
     if not path.is_absolute():
-        raise ValueError(f"Path: `{path}` must be absolute:")
+        msg = f"Path: `{path}` must be absolute:"
+        raise ValueError(msg)
 
-    for prefix in RESTRICTED_PREFIXES:
+    for prefix in restricted_prefixes:
         if path.is_relative_to(prefix):
-            raise ValueError(
+            msg = (
                 f"Invalid path: `{path}` cannot be under '{prefix}' which may overlap with a path"
                 f" in the container."
             )
+            raise ValueError(msg)
 
 
 def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
@@ -645,10 +654,11 @@ def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
     :raise: ValueError if the dataset name is invalid.
     """
     if re.fullmatch(r"\w+", dataset_name) is None:
-        raise ValueError(
+        msg = (
             f"Invalid dataset name: `{dataset_name}`. Names can only contain alphanumeric"
             f" characters and underscores."
         )
+        raise ValueError(msg)
 
     dataset_name_max_len = (
         MYSQL_TABLE_NAME_MAX_LEN
@@ -657,33 +667,30 @@ def validate_dataset_name(clp_table_prefix: str, dataset_name: str) -> None:
         - TABLE_SUFFIX_MAX_LEN
     )
     if len(dataset_name) > dataset_name_max_len:
-        raise ValueError(
+        msg = (
             f"Invalid dataset name: `{dataset_name}`. Names can only be a maximum of"
             f" {dataset_name_max_len} characters long."
         )
+        raise ValueError(msg)
 
 
 def validate_retention_config(clp_config: CLPConfig) -> None:
     clp_query_engine = clp_config.package.query_engine
     if is_retention_period_configured(clp_config) and clp_query_engine == QueryEngine.PRESTO:
-        raise ValueError(
-            f"Retention control is not supported with query_engine `{clp_query_engine}`"
-        )
+        msg = f"Retention control is not supported with query_engine `{clp_query_engine}`"
+        raise ValueError(msg)
 
 
 def is_retention_period_configured(clp_config: CLPConfig) -> bool:
     if clp_config.archive_output.retention_period is not None:
         return True
 
-    if clp_config.results_cache.retention_period is not None:
-        return True
-
-    return False
+    return clp_config.results_cache.retention_period is not None
 
 
 def get_common_env_vars_list(
-    include_clp_home_env_var=True,
-) -> List[str]:
+    include_clp_home_env_var: bool = True,
+) -> list[str]:
     """
     :param include_clp_home_env_var:
     :return: A list of common environment variables for Docker containers, in the format
@@ -700,10 +707,10 @@ def get_common_env_vars_list(
 
 def get_credential_env_vars_list(
     container_clp_config: CLPConfig,
-    include_db_credentials=False,
-    include_queue_credentials=False,
-    include_redis_credentials=False,
-) -> List[str]:
+    include_db_credentials: bool = False,
+    include_queue_credentials: bool = False,
+    include_redis_credentials: bool = False,
+) -> list[str]:
     """
     :param container_clp_config:
     :param include_db_credentials:
@@ -728,13 +735,13 @@ def get_credential_env_vars_list(
     return env_vars
 
 
-def get_celery_connection_env_vars_list(container_clp_config: CLPConfig) -> List[str]:
+def get_celery_connection_env_vars_list(container_clp_config: CLPConfig) -> list[str]:
     """
     :param container_clp_config:
     :return: A list of Celery connection environment variables for Docker containers, in the format
     "KEY=VALUE".
     """
-    env_vars = [
+    return [
         f"BROKER_URL=amqp://"
         f"{container_clp_config.queue.username}:{container_clp_config.queue.password}@"
         f"{container_clp_config.queue.host}:{container_clp_config.queue.port}",
@@ -742,8 +749,6 @@ def get_celery_connection_env_vars_list(container_clp_config: CLPConfig) -> List
         f"{container_clp_config.redis.host}:{container_clp_config.redis.port}/"
         f"{container_clp_config.redis.query_backend_database}",
     ]
-
-    return env_vars
 
 
 def _is_docker_compose_project_running(project_name: str) -> bool:
@@ -761,19 +766,19 @@ def _is_docker_compose_project_running(project_name: str) -> bool:
         running_instances = json.loads(output)
         return len(running_instances) >= 1
     except subprocess.CalledProcessError as e:
-        raise DockerNotAvailableError(
-            "Docker Compose is not installed or not functioning properly.", e
-        ) from e
+        msg = "Docker Compose is not installed or not functioning properly."
+        raise DockerNotAvailableError(msg, e) from e
 
 
 def _validate_data_directory(data_dir: pathlib.Path, component_name: str) -> None:
     try:
         validate_path_could_be_dir(resolve_host_path_in_container(data_dir))
     except ValueError as ex:
-        raise ValueError(f"{component_name} data directory is invalid: {ex}")
+        msg = f"{component_name} data directory is invalid: {ex}"
+        raise ValueError(msg) from ex
 
 
-def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
+def _validate_log_directory(logs_dir: pathlib.Path, component_name: str) -> None:
     """
     Validates that the logs directory path for a component is valid.
 
@@ -784,4 +789,5 @@ def _validate_log_directory(logs_dir: pathlib.Path, component_name: str):
     try:
         validate_path_could_be_dir(resolve_host_path_in_container(logs_dir))
     except ValueError as ex:
-        raise ValueError(f"{component_name} logs directory is invalid: {ex}")
+        msg = f"{component_name} logs directory is invalid: {ex}"
+        raise ValueError(msg) from ex

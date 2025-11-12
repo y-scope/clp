@@ -16,12 +16,7 @@ concurrency:
 jobs:
   lint-check:
     name: "lint-check"
-    strategy:
-      matrix:
-        os:
-          - "macos-15"
-          - "ubuntu-24.04"
-    runs-on: "${{matrix.os}}"
+    runs-on: "ubuntu-noble"
     steps:
       - uses: "actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683"
         with:
@@ -39,32 +34,14 @@ jobs:
         shell: "bash"
         run: "curl --fail --location --silent --show-error https://astral.sh/uv/install.sh | sh"
 
-      - if: "matrix.os == 'macos-15'"
-        name: "Install coreutils (for md5sum)"
-        run: "brew install coreutils"
-
       # This is a necessary dependency for the Python mariadb package which is a transitive
       # dependency of `lint:py-check`.
       - name: "Install MariaDB Connector/C"
         shell: "bash"
         run: |-
-          case "${{ matrix.os }}" in
-            ubuntu-24.04)
-              sudo apt-get update
-              sudo apt-get install -y libmariadb-dev
-              MARIADB_CONFIG_PATH="$(command -v mariadb_config)"
-              ;;
-            macos-15)
-              brew update
-              brew install mariadb-connector-c
-              PREFIX="$(brew --prefix mariadb-connector-c)"
-              MARIADB_CONFIG_PATH="$PREFIX/bin/mariadb_config"
-              ;;
-            *)
-              # Control flow should not reach here
-              exit 1
-              ;;
-          esac
+          sudo apt-get update
+          sudo apt-get install -y libmariadb-dev
+          MARIADB_CONFIG_PATH="$(command -v mariadb_config)"
           echo "MARIADB_CONFIG=$MARIADB_CONFIG_PATH" >> "$GITHUB_ENV"
 
       - name: "Lint .js files"
