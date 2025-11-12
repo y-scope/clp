@@ -257,7 +257,7 @@ instance of "TimestampDictionary".
 ::::
 
 The key name in each TimestampRange follows the same
-[escaping rules](../../user-guide/reference-json-search-syntax.md) we use for key names in KQL
+[escaping rules](../../user-docs/reference-json-search-syntax.md) we use for key names in KQL
 search. Note that we allow each key to map to multiple MPT nodes, and that each key's range can be
 recorded as either integer epoch time or double epoch time to handle timestamp columns with
 polymorphic types.
