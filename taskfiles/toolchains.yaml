@@ -10,9 +10,17 @@ tasks:
       RUSTUP_HOME: "{{.G_RUSTUP_HOME}}"
       CARGO_HOME: "{{.G_CARGO_HOME}}"
     vars:
-      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/{{.TASK}}.md5"
+      CHECKSUM_FILE: "{{.G_BUILD_DIR}}/toolchains_rust.md5"
       OUTPUT_DIR: "{{.G_RUST_TOOLCHAIN_ROOT}}"
+    sources:
+      - "{{.ROOT_DIR}}/taskfile.yaml"
+      - "{{.TASKFILE}}"
     generates: ["{{.CHECKSUM_FILE}}"]
+    deps:
+      - task: "utils:checksum:validate"
+        vars:
+          CHECKSUM_FILE: "{{.CHECKSUM_FILE}}"
+          INCLUDE_PATTERNS: ["{{.OUTPUT_DIR}}"]
     cmds:
       - |-
         curl --proto "=https" --tlsv1.2 --silent --show-error --fail https://sh.rustup.rs \
