@@ -16,44 +16,81 @@ use clp_rust_utils::{clp_config::package, serde::yaml};
 use futures::{Stream, StreamExt};
 use thiserror::Error;
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
-use tracing_subscriber::{self};
+use tracing_subscriber::{self, fmt::writer::MakeWriterExt};
 
 #[derive(Parser)]
 #[command(version, about = "API Server for CLP.")]
-struct Args {}
+struct Args {
+    #[arg(long)]
+    config: String,
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
-    let _ = Args::parse();
-    let home = std::env::var("CLP_HOME").context("Expect `CLP_HOME` env variable")?;
-    let home = std::path::Path::new(&home);
+    #[arg(long)]
+    host: Option<String>,
 
-    let config_path = home.join(package::DEFAULT_CONFIG_FILE_PATH);
-    let config: package::config::Config = yaml::from_path(&config_path).context(format!(
+    #[arg(long)]
+    port: Option<u16>,
+}
+
+fn read_config_and_credentials(
+    args: &Args,
+) -> anyhow::Result<(package::config::Config, package::credentials::Credentials)> {
+    let config_path = std::path::Path::new(args.config.as_str());
+    let config: package::config::Config = yaml::from_path(config_path).context(format!(
         "Config file {} does not exist",
         config_path.display()
     ))?;
 
-    let file_appender = RollingFileAppender::new(
-        Rotation::HOURLY,
-        home.join(&config.logs_directory).join("api_server"),
-        "api_server.log",
-    );
+    let credentials = package::credentials::Credentials {
+        database: package::credentials::Database {
+            password: secrecy::SecretString::new(
+                std::env::var("CLP_DB_PASS")
+                    .context("Expect `CLP_DB_PASS` env variable")?
+                    .into_boxed_str(),
+            ),
+            user: std::env::var("CLP_DB_USER").context("Expect `CLP_DB_USER` env variable")?,
+        },
+    };
+    Ok((config, credentials))
+}
+
+fn set_up_logging() -> anyhow::Result<()> {
+    let logs_directory =
+        std::env::var("CLP_LOGS_DIR").context("Expect `CLP_LOGS_DIR` environment variable.")?;
+    let logs_directory = std::path::Path::new(logs_directory.as_str());
+    let file_appender =
+        RollingFileAppender::new(Rotation::HOURLY, logs_directory, "api_server.log");
     let (non_blocking_writer, _guard) = tracing_appender::non_blocking(file_appender);
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .with_ansi(false)
-        .with_writer(non_blocking_writer)
+        .with_writer(std::io::stdout.and(non_blocking_writer))
         .init();
+    Ok(())
+}
 
-    let credentials_path = home.join(package::DEFAULT_CREDENTIALS_FILE_PATH);
-    let credentials: package::credentials::Credentials = yaml::from_path(&credentials_path)
-        .context(format!(
-            "Credentials file {} does not exist",
-            credentials_path.display()
-        ))?;
+async fn shutdown_signal() {
+    let mut sigterm = tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+        .expect("failed to listen for SIGTERM");
+    tokio::select! {
+        _ = sigterm.recv() => {
+        }
+        _ = tokio::signal::ctrl_c()=> {
+        }
+    }
+}
 
-    let addr = format!("{}:{}", &config.api_server.host, &config.api_server.port);
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let args = Args::parse();
+
+    let (config, credentials) = read_config_and_credentials(&args)?;
+    set_up_logging()?;
+
+    let addr = format!(
+        "{}:{}",
+        args.host.unwrap_or_else(|| config.api_server.host.clone()),
+        args.port.unwrap_or(config.api_server.port)
+    );
     let listener = tokio::net::TcpListener::bind(&addr)
         .await
         .context(format!("Cannot listen to {addr}"))?;
@@ -71,11 +108,7 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("Server started at {addr}");
     axum::serve(listener, app)
-        .with_graceful_shutdown(async {
-            tokio::signal::ctrl_c()
-                .await
-                .expect("failed to listen for event");
-        })
+        .with_graceful_shutdown(shutdown_signal())
         .await?;
     Ok(())
 }
