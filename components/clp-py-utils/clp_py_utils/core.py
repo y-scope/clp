@@ -1,3 +1,4 @@
+import os
 import pathlib
 
 import yaml
@@ -64,32 +65,43 @@ def read_yaml_config_file(yaml_config_file_path: pathlib.Path):
     return config
 
 
-def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
+def resolve_host_path(host_path: pathlib.Path) -> pathlib.Path:
     """
-    Translates a host path to its container-mount equivalent. It also resolves a single level of
-    symbolic link if the host path itself is a symlink.
+    Resolves a host path:
+
+    - Tilde (~) paths are expanded before processing.
+    - Relative paths are resolved relative to the current working directory on the host.
+    - Symlinks are resolved recursively until a non-symlink path is reached or a cycle is detected.
 
     :param host_path: The host path.
-    :return: The translated path.
+    :return: The resolved host path.
     """
-    host_path = host_path.absolute()
-    translated_path = CONTAINER_DIR_FOR_HOST_ROOT / host_path.relative_to("/")
+    resolved_container_path = resolve_host_path_in_container(host_path)
+    return pathlib.Path("/") / resolved_container_path.relative_to(CONTAINER_DIR_FOR_HOST_ROOT)
 
-    try:
-        if not translated_path.is_symlink():
-            return translated_path
 
-        link_target = translated_path.readlink()
-        if link_target.is_absolute():
-            return CONTAINER_DIR_FOR_HOST_ROOT / link_target.relative_to("/")
-        else:
-            # If the symlink points to a relative path, resolve it relative to the symlink's parent.
-            return (translated_path.parent / link_target).resolve()
-    except OSError:
-        # Ignore if reading the symlink fails (e.g., broken link or permission error).
-        pass
+def resolve_host_path_in_container(host_path: pathlib.Path) -> pathlib.Path:
+    """
+    Resolves a host path and translates it into its container-mount equivalent absolute path. See
+    `resolve_host_path` for details about the resolution.
 
-    return translated_path
+    :param host_path: The host path.
+    :return: The translated path (with /mnt/host prefix).
+    """
+    host_path = host_path.expanduser()
+
+    if not host_path.is_absolute():
+        pwd_host = os.getenv("CLP_PWD_HOST")
+        if pwd_host is None:
+            raise ValueError("Relative host path provided but CLP_PWD_HOST is not set.")
+        host_path = pathlib.Path(pwd_host) / host_path
+        host_path = host_path.absolute()
+
+    resolved_path = _resolve_symlinks_in_path(host_path)
+    if resolved_path is not None:
+        return resolved_path
+
+    return CONTAINER_DIR_FOR_HOST_ROOT / host_path.relative_to("/")
 
 
 def validate_path_could_be_dir(path: pathlib.Path):
@@ -100,3 +112,36 @@ def validate_path_could_be_dir(path: pathlib.Path):
                 raise ValueError(f"{part} is not a directory.")
             return
         part = part.parent
+
+
+def _resolve_symlinks_in_path(host_path: pathlib.Path) -> pathlib.Path | None:
+    """
+    Resolves symlinks in a path by walking through each component and following symlinks.
+
+    :param host_path: The host path.
+    :return: The resolved path with all symlinks followed, or None on error.
+    """
+    try:
+        visited_symlink_inodes = set()
+        current_path = CONTAINER_DIR_FOR_HOST_ROOT
+        for part in host_path.relative_to("/").parts:
+            current_path = current_path / part
+
+            while current_path.is_symlink():
+                stat = current_path.lstat()
+                if stat.st_ino in visited_symlink_inodes:
+                    break
+                visited_symlink_inodes.add(stat.st_ino)
+
+                link_target = current_path.readlink()
+                if link_target.is_absolute():
+                    current_path = CONTAINER_DIR_FOR_HOST_ROOT / link_target.relative_to("/")
+                else:
+                    # If the symlink points to a relative path, resolve it relative to the symlink's
+                    # parent.
+                    current_path = (current_path.parent / link_target).resolve()
+
+        return current_path
+    except OSError:
+        # Ignore if reading the symlink fails (e.g., broken link or permission error).
+        return None

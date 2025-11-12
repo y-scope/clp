@@ -4,8 +4,7 @@ services:
     image: "${CLP_PACKAGE_CONTAINER_IMAGE_REF:-clp-package}"
     logging:
       driver: "local"
-    stdin_open: true
-    tty: true
+    network_mode: "host"
     user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:999}"
     environment:
       # NOTE: We forward "$HOME" into the container so that if the user specified "~" anywhere in
