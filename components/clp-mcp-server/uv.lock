@@ -319,19 +319,21 @@ wheels = [
 name = "clp-mcp-server"
 version = "0.6.1.dev0"
 source = { editable = "." }
+dependencies = [
+    { name = "aiomysql" },
+    { name = "click" },
+    { name = "fastmcp" },
+    { name = "msgpack" },
+    { name = "paginate" },
+    { name = "pymongo" },
+]
 
 [package.dev-dependencies]
 clp = [
     { name = "clp-py-utils" },
 ]
 dev = [
-    { name = "aiomysql" },
-    { name = "click" },
-    { name = "fastmcp" },
-    { name = "msgpack" },
     { name = "mypy" },
-    { name = "paginate" },
-    { name = "pymongo" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-env" },
@@ -340,17 +342,19 @@ dev = [
 ]
 
 [package.metadata]
-
-[package.metadata.requires-dev]
-clp = [{ name = "clp-py-utils", editable = "../clp-py-utils" }]
-dev = [
+requires-dist = [
     { name = "aiomysql", specifier = ">=0.2.0" },
     { name = "click", specifier = ">=8.3.0" },
     { name = "fastmcp", specifier = ">=2.12.4" },
     { name = "msgpack", specifier = ">=1.1.2" },
-    { name = "mypy", specifier = ">=1.16.0" },
     { name = "paginate", specifier = ">=0.5.7" },
     { name = "pymongo", specifier = ">=4.15.3" },
+]
+
+[package.metadata.requires-dev]
+clp = [{ name = "clp-py-utils", editable = "../clp-py-utils" }]
+dev = [
+    { name = "mypy", specifier = ">=1.16.0" },
     { name = "pytest", specifier = ">=8.4.1" },
     { name = "pytest-asyncio", specifier = ">=1.2.0" },
     { name = "pytest-env", specifier = ">=1.1.5" },
