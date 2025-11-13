@@ -78,7 +78,10 @@ void QueryRunner::initialize_reader(int32_t column_id, BaseColumnReader* column_
         auto* date_reader = dynamic_cast<DateStringColumnReader*>(column_reader);
         if (nullptr != clp_reader && clp_reader->get_type() == NodeType::ClpString) {
             m_clp_string_readers[column_id].push_back(clp_reader);
-        } else if (nullptr != var_reader && var_reader->get_type() == NodeType::VarString) {
+        } else if (nullptr != var_reader
+                   && (var_reader->get_type() == NodeType::VarString
+                       || var_reader->get_type() == NodeType::TypedVar))
+        {
             m_var_string_readers[column_id].push_back(var_reader);
         } else if (nullptr != date_reader) {
             // Datestring readers with a given column ID are guaranteed not to repeat
