@@ -124,6 +124,8 @@ public:
 
     auto increment_count() -> void { ++m_count; }
 
+    auto set_type(std::string_view type) -> void { m_type = type; }
+
 private:
     std::string m_type;
     size_t m_count{};

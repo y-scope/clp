@@ -16,6 +16,8 @@ class Array {
 public:
     [[nodiscard]] auto at(Index i) -> Element& { return m_array.at(i); }
 
+    auto at_or_create(Index id) -> Element&;
+
     auto clear() -> void { return m_array.clear(); }
 
     template <typename... Args>
@@ -55,6 +57,14 @@ auto Array<Element, Index>::decompress(ZstdDecompressor& decompressor)
         m_array.emplace_back(YSTDLIB_ERROR_HANDLING_TRYX(Element::decompress(decompressor)));
     }
     return ystdlib::error_handling::success();
+}
+
+template <typename Element, typename Index>
+auto Array<Element, Index>::at_or_create(Index id) -> Element& {
+    if (m_array.size() <= id) {
+        m_array.resize(id + 1);
+    }
+    return m_array.at(id);
 }
 }  // namespace clp_s
 #endif  // CLP_S_ARRAY_HPP

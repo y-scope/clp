@@ -145,7 +145,7 @@ auto LogTypeColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_t 
 
     if (nullptr != m_logtype_stats) {
         if (new_entry) {
-            m_logtype_stats->emplace_back();
+            m_logtype_stats->at_or_create(id);
         }
         m_logtype_stats->at(id).increment_count();
     }
@@ -161,6 +161,9 @@ auto LogTypeColumnWriter::store(ZstdCompressor& compressor) -> void {
     );
 }
 
+// TODO clpsls: Because the variable dictionary is shared between unstructured and structured
+// logs, but the variable stats are only for unstructured logs it is possible to have "holes" in the
+// variable stats array.
 auto TypedVariableColumnWriter::add_value(ParsedMessage::variable_t& value) -> size_t {
     auto const var{std::get<ParsedMessage::TypedVar>(value)};
     clp::variable_dictionary_id_t id{};
@@ -169,7 +172,7 @@ auto TypedVariableColumnWriter::add_value(ParsedMessage::variable_t& value) -> s
 
     if (nullptr != m_var_stats) {
         if (new_entry) {
-            m_var_stats->emplace_back(var.m_type);
+            m_var_stats->at_or_create(id).set_type(var.m_type);
         }
         m_var_stats->at(id).increment_count();
     }
