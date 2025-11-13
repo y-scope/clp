@@ -23,6 +23,21 @@ using std::string;
 using std::string_view;
 
 namespace clp_s {
+void FileOutputHandler::write(
+        string_view message,
+        epochtime_t timestamp,
+        string_view archive_id,
+        int64_t log_event_idx
+) {
+    static constexpr string_view cOrigFilePathPlaceholder{""};
+    msgpack::type::tuple<epochtime_t, string, string, string, int64_t> const
+            src(timestamp, message, cOrigFilePathPlaceholder, archive_id, log_event_idx);
+    msgpack::sbuffer m;
+    msgpack::pack(m, src);
+
+    m_file_writer.write(m.data(), m.size());
+}
+
 NetworkOutputHandler::NetworkOutputHandler(
         string const& host,
         int port,
@@ -156,15 +171,6 @@ void ResultsCacheOutputHandler::write(
                         log_event_idx
                 )
         );
-    }
-}
-
-FileOutputHandler::FileOutputHandler(std::string const& path, bool should_output_metadata)
-        : ::clp_s::search::OutputHandler(should_output_metadata, true),
-          m_file(path) {
-    if (false == m_file.is_open()) {
-        SPDLOG_ERROR("Failed to open file {}", path);
-        throw OperationFailed(ErrorCode::ErrorCodeFileNotFound, __FILE__, __LINE__);
     }
 }
 

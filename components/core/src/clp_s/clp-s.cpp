@@ -228,6 +228,12 @@ bool search_archive(
     std::unique_ptr<OutputHandler> output_handler;
     try {
         switch (command_line_arguments.get_output_handler_type()) {
+            case CommandLineArguments::OutputHandlerType::File:
+                output_handler = std::make_unique<clp_s::FileOutputHandler>(
+                        command_line_arguments.get_file_output_path(),
+                        true
+                );
+                break;
             case CommandLineArguments::OutputHandlerType::Network:
                 output_handler = std::make_unique<clp_s::NetworkOutputHandler>(
                         command_line_arguments.get_network_dest_host(),
@@ -257,11 +263,6 @@ bool search_archive(
                 break;
             case CommandLineArguments::OutputHandlerType::Stdout:
                 output_handler = std::make_unique<clp_s::StandardOutputHandler>();
-                break;
-            case CommandLineArguments::OutputHandlerType::File:
-                output_handler = std::make_unique<clp_s::FileOutputHandler>(
-                        command_line_arguments.get_file_output_path()
-                );
                 break;
             default:
                 SPDLOG_ERROR("Unhandled OutputHandlerType.");
