@@ -6,7 +6,7 @@ import {
 import MainLayout from "./components/Layout/MainLayout";
 import IngestPage from "./pages/IngestPage";
 import SearchPage from "./pages/SearchPage";
-import QueryStatus from "./ui/QueryStatus";
+import QueryStatus from "./pages/LogViewerLoadingPage/QueryStatus";
 
 
 const router = createBrowserRouter([
