@@ -1,6 +1,5 @@
 # /// script
-# dependencies = [
-# ]
+# dependencies = []
 # ///
 """Script to start a LocalStack Docker container."""
 

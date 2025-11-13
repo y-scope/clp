@@ -1,6 +1,5 @@
 # /// script
-# dependencies = [
-# ]
+# dependencies = []
 # ///
 """Script to stop a running LocalStack Docker container."""
 import argparse

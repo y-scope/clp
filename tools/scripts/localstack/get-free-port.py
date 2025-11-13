@@ -1,6 +1,5 @@
 # /// script
-# dependencies = [
-# ]
+# dependencies = []
 # ///
 """Script to get an unused port and print the port number to stdout."""
 import socket
