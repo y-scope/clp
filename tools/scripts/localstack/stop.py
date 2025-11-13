@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # /// script
 # dependencies = [
 # ]
@@ -14,7 +13,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger = logging.getLogger("localstack-stop")
+logger = logging.getLogger(__name__)
 
 
 def main() -> int:

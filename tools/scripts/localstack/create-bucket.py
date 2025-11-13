@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
 # /// script
 # dependencies = [
-#   "boto3>=1.40.70",
+#   "boto3==1.40.70",
 # ]
 # ///
 """Script to create an S3 bucket with an optional SQS queue listening to the bucket."""
@@ -23,7 +22,7 @@ import boto3
 _ACCESS_KEY_ID = "test"
 # To allow using hardcoded password
 # ruff: noqa: S105
-_SECRETE_ACCESS_KEY = "test"
+_SECRET_ACCESS_KEY = "test"
 _REGION: str = "us-east-1"
 
 logging.basicConfig(
@@ -154,7 +153,7 @@ def main() -> int:
 
     session = boto3.session.Session(
         aws_access_key_id=_ACCESS_KEY_ID,
-        aws_secret_access_key=_SECRETE_ACCESS_KEY,
+        aws_secret_access_key=_SECRET_ACCESS_KEY,
         region_name=_REGION,
     )
     s3_client = session.client("s3", endpoint_url=localstack_endpoint)
@@ -190,7 +189,7 @@ def main() -> int:
             QueueUrl=queue_url, AttributeNames=["QueueArn"]
         )["Attributes"]["QueueArn"]
     except Exception as _:
-        logger.exception("Failed to create S3 bucket.")
+        logger.exception("Failed to create SQS queue.")
         return 1
     logger.info("SQS queue '%s' created successfully with arn '%s'.", args.queue, queue_arn)
 
