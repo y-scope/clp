@@ -11,8 +11,9 @@ from abc import ABC, abstractmethod
 from typing import Any, Optional
 
 from clp_py_utils.clp_config import (
+    API_SERVER_COMPONENT_NAME,
     AwsAuthType,
-    CLPConfig,
+    ClpConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
@@ -82,7 +83,7 @@ class BaseController(ABC):
     variables, directories, and configuration files for each component.
     """
 
-    def __init__(self, clp_config: CLPConfig) -> None:
+    def __init__(self, clp_config: ClpConfig) -> None:
         self._clp_config = clp_config
         self._clp_home = get_clp_home()
         self._conf_dir = self._clp_home / "etc"
@@ -425,7 +426,31 @@ class BaseController(ABC):
 
         return env_vars
 
-    def _set_up_env_for_webui(self, container_clp_config: CLPConfig) -> EnvVarsDict:
+    def _set_up_env_for_api_server(self) -> EnvVarsDict:
+        """
+        Sets up environment variables and directories for the API server component.
+
+        :return: Dictionary of environment variables necessary to launch the component.
+        """
+        component_name = API_SERVER_COMPONENT_NAME
+
+        logger.info(f"Setting up environment for {component_name}...")
+
+        logs_dir = self._clp_config.logs_directory / component_name
+        resolved_logs_dir = resolve_host_path_in_container(logs_dir)
+        resolved_logs_dir.mkdir(parents=True, exist_ok=True)
+
+        env_vars = EnvVarsDict()
+
+        # Connection config
+        env_vars |= {
+            "CLP_API_SERVER_HOST": _get_ip_from_hostname(self._clp_config.api_server.host),
+            "CLP_API_SERVER_PORT": str(self._clp_config.api_server.port),
+        }
+
+        return env_vars
+
+    def _set_up_env_for_webui(self, container_clp_config: ClpConfig) -> EnvVarsDict:
         """
         Sets up environment variables and settings for the Web UI component.
 
@@ -665,7 +690,7 @@ class DockerComposeController(BaseController):
     Controller for orchestrating CLP components using Docker Compose.
     """
 
-    def __init__(self, clp_config: CLPConfig, instance_id: str) -> None:
+    def __init__(self, clp_config: ClpConfig, instance_id: str) -> None:
         self._project_name = f"clp-package-{instance_id}"
         super().__init__(clp_config)
 
@@ -744,6 +769,7 @@ class DockerComposeController(BaseController):
         env_vars |= self._set_up_env_for_compression_worker(num_workers)
         env_vars |= self._set_up_env_for_query_worker(num_workers)
         env_vars |= self._set_up_env_for_reducer(num_workers)
+        env_vars |= self._set_up_env_for_api_server()
         env_vars |= self._set_up_env_for_webui(container_clp_config)
         env_vars |= self._set_up_env_for_mcp_server()
         env_vars |= self._set_up_env_for_garbage_collector()
@@ -831,7 +857,7 @@ class DockerComposeController(BaseController):
         return "docker-compose.yaml"
 
 
-def get_or_create_instance_id(clp_config: CLPConfig) -> str:
+def get_or_create_instance_id(clp_config: ClpConfig) -> str:
     """
     Gets or creates a unique instance ID for this CLP instance.
 
