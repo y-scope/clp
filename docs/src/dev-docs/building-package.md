@@ -15,8 +15,8 @@ prebuilt version instead, check out the [releases](https://github.com/y-scope/cl
   * `docker-buildx-plugin` >= 0.15.1
   * `docker-ce` >= 27.0.3
   * `docker-ce-cli` >= 27.0.3
-* Python 3.10 or newer
-* python3-dev
+* Python 3.10
+* python3-dev (for the version of Python installed)
 * python3-venv (for the version of Python installed)
 * [Task] 3.44.0
   * We pin the version to 3.44.0 due to [y-scope/clp#1352].
