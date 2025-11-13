@@ -1,0 +1,37 @@
+services:
+  clp-runtime:
+    hostname: "clp_runtime"
+    image: "${CLP_PACKAGE_CONTAINER_IMAGE_REF:-clp-package}"
+    logging:
+      driver: "local"
+    network_mode: "host"
+    user: "${CLP_FIRST_PARTY_SERVICE_UID_GID:-1000:999}"
+    environment:
+      # NOTE: We forward "$HOME" into the container so that if the user specified "~" anywhere in
+      # their config, the container can resolve it to the relevant path on the host. As a result,
+      # the container should not rely on "$HOME" or "~" pointing to a path inside the container.
+      HOME: "${HOME:?Please set a value.}"
+
+      CLP_HOME: "${CLP_HOME:?Please set a value.}"
+      CLP_PWD_HOST: "${CLP_PWD_HOST:-${PWD}}"
+    volumes:
+      # Docker daemon bridge
+      - type: "bind"
+        source: "${CLP_DOCKER_PLUGIN_DIR:-/usr/local/lib/docker/cli-plugins}"
+        target: "/usr/local/lib/docker/cli-plugins"
+        read_only: true
+      - type: "bind"
+        source: "${CLP_DOCKER_SOCK_PATH:-/var/run/docker.sock}"
+        target: "/var/run/docker.sock"
+      - type: "bind"
+        source: "/usr/bin/docker"
+        target: "/usr/bin/docker"
+        read_only: true
+
+      # Host filesystem
+      - type: "bind"
+        source: "${CLP_HOME:?Please set a value.}"
+        target: "${CLP_HOME:?Please set a value.}"
+      - type: "bind"
+        source: "/"
+        target: "/mnt/host"
