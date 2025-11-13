@@ -42,9 +42,9 @@ public:
     // Methods
     [[nodiscard]] auto get_pattern() const -> std::string_view { return m_pattern; }
 
-    [[nodiscard]] auto get_optional_timezone_offset() const
-            -> std::optional<std::pair<std::string_view, int>> const& {
-        return m_optional_timezone_offset;
+    [[nodiscard]] auto get_optional_timezone_size_and_offset() const
+            -> std::optional<std::pair<size_t, int>> const& {
+        return m_optional_timezone_size_and_offset;
     }
 
     [[nodiscard]] auto uses_date_type_representation() const -> bool {
@@ -57,14 +57,18 @@ private:
     // Constructor
     TimestampPattern(
             std::string pattern,
-            std::optional<std::pair<std::pair<size_t, size_t>, int>> optional_timezone_offset,
+            std::optional<std::pair<size_t, int>> optional_timezone_size_and_offset,
             bool date_type_representation,
             bool uses_twelve_hour_clock
-    );
+    )
+            : m_pattern{std::move(pattern)},
+              m_optional_timezone_size_and_offset{optional_timezone_size_and_offset},
+              m_date_type_representation{date_type_representation},
+              m_uses_twelve_hour_clock{uses_twelve_hour_clock} {}
 
     // Variables
     std::string m_pattern;
-    std::optional<std::pair<std::string_view, int>> m_optional_timezone_offset{std::nullopt};
+    std::optional<std::pair<size_t, int>> m_optional_timezone_size_and_offset{std::nullopt};
     bool m_date_type_representation{false};
     bool m_uses_twelve_hour_clock{false};
 };
@@ -143,7 +147,7 @@ private:
  */
 [[nodiscard]] auto parse_timestamp(
         std::string_view timestamp,
-        std::string_view pattern,
+        TimestampPattern const& pattern,
         std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>>;
 }  // namespace clp_s::timestamp_parser

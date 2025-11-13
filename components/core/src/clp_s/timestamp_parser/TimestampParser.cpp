@@ -364,7 +364,7 @@ auto TimestampPattern::create(std::string pattern)
     bool number_type_representation{false};
     bool has_part_of_day{false};
     bool uses_twelve_hour_clock{false};
-    std::optional<std::pair<std::pair<size_t, size_t>, int>> optional_timezone_offset{std::nullopt};
+    std::optional<std::pair<size_t, int>> optional_timezone_size_and_offset{std::nullopt};
 
     bool escaped{false};
     for (size_t pattern_idx{0ULL}; pattern_idx < pattern.size(); ++pattern_idx) {
@@ -438,10 +438,8 @@ auto TimestampPattern::create(std::string pattern)
                     return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
                 }
 
-                optional_timezone_offset = std::make_pair(
-                        std::make_pair(pattern_idx + 2ULL, extracted_timezone_str.size()),
-                        extracted_timezone_offset
-                );
+                optional_timezone_size_and_offset
+                        = std::make_pair(extracted_timezone_str.size(), extracted_timezone_offset);
                 pattern_idx += timezone_bracket_pattern.size();
                 date_type_representation = true;
                 break;
@@ -476,37 +474,16 @@ auto TimestampPattern::create(std::string pattern)
 
     return TimestampPattern{
             pattern,
-            optional_timezone_offset,
+            optional_timezone_size_and_offset,
             date_type_representation,
             uses_twelve_hour_clock
     };
 }
 
-TimestampPattern::TimestampPattern(
-        std::string pattern,
-        std::optional<std::pair<std::pair<size_t, size_t>, int>> optional_timezone_offset,
-        bool date_type_representation,
-        bool uses_twelve_hour_clock
-)
-        : m_pattern{std::move(pattern)},
-          m_date_type_representation{date_type_representation},
-          m_uses_twelve_hour_clock{uses_twelve_hour_clock} {
-    if (optional_timezone_offset.has_value()) {
-        auto const [timezone_offset_str_offset, timezone_offset_str_size]
-                = optional_timezone_offset.value().first;
-        auto const timezone_offset = optional_timezone_offset.value().second;
-        m_optional_timezone_offset = std::make_pair(
-                std::string_view{m_pattern}
-                        .substr(timezone_offset_str_offset, timezone_offset_str_size),
-                timezone_offset
-        );
-    }
-}
-
 // NOLINTBEGIN(readability-function-cognitive-complexity)
 auto parse_timestamp(
         std::string_view timestamp,
-        std::string_view pattern,
+        TimestampPattern const& timestamp_pattern,
         [[maybe_unused]] std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>> {
     size_t pattern_idx{};
@@ -525,11 +502,8 @@ auto parse_timestamp(
 
     int64_t parsed_epoch_nanoseconds{};
 
-    bool date_type_representation{false};
-    bool number_type_representation{false};
-    bool uses_12_hour_clock{false};
-
     bool escaped{false};
+    auto const pattern{timestamp_pattern.get_pattern()};
     for (; pattern_idx < pattern.size() && timestamp_idx < timestamp.size(); ++pattern_idx) {
         if (false == escaped) {
             if ('\\' == pattern[pattern_idx]) {
@@ -564,7 +538,6 @@ auto parse_timestamp(
                     parsed_year = two_digit_year + cTwoDigitYearHighOffset;
                 }
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'Y': {  // Zero-padded 4-digit year.
@@ -583,7 +556,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'B': {  // Full month name.
@@ -592,7 +564,6 @@ auto parse_timestamp(
                 )};
                 parsed_month = static_cast<int>(month_idx) + 1;
                 timestamp_idx += cMonthNames.at(month_idx).length();
-                date_type_representation = true;
                 break;
             }
             case 'b': {  // Abbreviated month name.
@@ -602,7 +573,6 @@ auto parse_timestamp(
                 ))};
                 parsed_month = static_cast<int>(month_idx) + 1;
                 timestamp_idx += cAbbreviatedMonthNames.at(month_idx).length();
-                date_type_representation = true;
                 break;
             }
             case 'm': {  // Zero-padded month.
@@ -621,7 +591,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'd': {  // Zero-padded day in month.
@@ -640,7 +609,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'e': {  // Space-padded day in month.
@@ -659,7 +627,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'a': {  // Abbreviated day in week.
@@ -669,7 +636,6 @@ auto parse_timestamp(
                 ))};
                 timestamp_idx += cAbbreviatedDaysOfWeek.at(day_idx).length();
                 optional_day_of_week_idx = static_cast<int>(day_idx);
-                date_type_representation = true;
                 break;
             }
             case 'p': {  // Part of day (AM/PM).
@@ -678,7 +644,6 @@ auto parse_timestamp(
                 )};
                 timestamp_idx += cPartsOfDay.at(part_of_day_idx).length();
                 optional_part_of_day_idx = static_cast<int>(part_of_day_idx);
-                date_type_representation = true;
                 break;
             }
             case 'H': {  // 24-hour clock, zero-padded hour.
@@ -699,7 +664,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'k': {  // 24-hour clock, space-padded hour.
@@ -720,7 +684,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'I': {  // 12-hour clock, zero-padded hour.
@@ -741,8 +704,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                uses_12_hour_clock = true;
-                date_type_representation = true;
                 break;
             }
             case 'l': {  // 12-hour clock, space-padded hour.
@@ -763,8 +724,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                uses_12_hour_clock = true;
-                date_type_representation = true;
                 break;
             }
             case 'M': {  // Zero-padded minute.
@@ -783,7 +742,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case 'S': {  // Zero-padded second.
@@ -802,7 +760,6 @@ auto parse_timestamp(
                 }
 
                 timestamp_idx += cFieldLength;
-                date_type_representation = true;
                 break;
             }
             case '3': {  // Zero-padded 3-digit milliseconds.
@@ -898,7 +855,6 @@ auto parse_timestamp(
                                                [cNumNanosecondPrecisionSubsecondDigits
                                                 - cNumSecondPrecisionSubsecondDigits]};
                 parsed_epoch_nanoseconds = number * cFactor;
-                number_type_representation = true;
                 break;
             }
             case 'L': {  // Epoch milliseconds.
@@ -912,7 +868,6 @@ auto parse_timestamp(
                                                [cNumNanosecondPrecisionSubsecondDigits
                                                 - cNumMillisecondPrecisionSubsecondDigits]};
                 parsed_epoch_nanoseconds = number * cFactor;
-                number_type_representation = true;
                 break;
             }
             case 'C': {  // Epoch microseconds.
@@ -926,7 +881,6 @@ auto parse_timestamp(
                                                [cNumNanosecondPrecisionSubsecondDigits
                                                 - cNumMicrosecondPrecisionSubsecondDigits]};
                 parsed_epoch_nanoseconds = number * cFactor;
-                number_type_representation = true;
                 break;
             }
             case 'N': {  // Epoch nanoseconds.
@@ -937,32 +891,30 @@ auto parse_timestamp(
                 );
                 timestamp_idx += num_digits;
                 parsed_epoch_nanoseconds = number;
-                number_type_representation = true;
                 break;
             }
             case 'z': {  // Timezone offset.
-                auto const timezone_bracket_pattern{YSTDLIB_ERROR_HANDLING_TRYX(
-                        extract_bracket_pattern(pattern.substr(pattern_idx + 1ULL))
-                )};
-                auto const timezone_str{timezone_bracket_pattern.substr(
-                        1ULL,
-                        timezone_bracket_pattern.size() - 2ULL
-                )};
-
-                auto const [extracted_timezone_str, extracted_timezone_offset]
-                        = YSTDLIB_ERROR_HANDLING_TRYX(
-                                extract_timezone_offset_in_minutes(timezone_str)
-                        );
-                if (extracted_timezone_str.size() != timezone_str.size()) {
+                auto const& optional_timezone_size_and_offset{
+                        timestamp_pattern.get_optional_timezone_size_and_offset()
+                };
+                if (false == optional_timezone_size_and_offset.has_value()) {
                     return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
                 }
-                if (false == timestamp.substr(timestamp_idx).starts_with(timezone_str)) {
+
+                auto const [extracted_timezone_size, extracted_timezone_offset]
+                        = optional_timezone_size_and_offset.value();
+                if (false
+                    == timestamp.substr(timestamp_idx)
+                               .starts_with(
+                                       pattern.substr(pattern_idx + 2ULL, extracted_timezone_size)
+                               ))
+                {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 optional_timezone_offset_in_minutes = extracted_timezone_offset;
-                timestamp_idx += timezone_str.size();
-                pattern_idx += timezone_bracket_pattern.size();
+                timestamp_idx += extracted_timezone_size;
+                pattern_idx += extracted_timezone_size + 2ULL;
                 break;
             }
             case 'Z':
@@ -981,31 +933,12 @@ auto parse_timestamp(
         }
     }
 
-    if (escaped) {
-        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
-    }
-
-    // Do not allow mixing format specifiers for date-and-time type timestamps and epoch-number type
-    // timestamps.
-    if (date_type_representation && number_type_representation) {
-        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
-    }
-
     // Do not allow trailing unmatched content.
     if (pattern_idx != pattern.size() || timestamp_idx != timestamp.size()) {
         return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
     }
 
-    if ((uses_12_hour_clock && false == optional_part_of_day_idx.has_value())
-        || (false == uses_12_hour_clock && optional_part_of_day_idx.has_value()))
-    {
-        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
-    }
-
-    if (number_type_representation) {
-        if (optional_timezone_offset_in_minutes.has_value()) {
-            return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
-        }
+    if (false == timestamp_pattern.uses_date_type_representation()) {
         epochtime_t epoch_nanoseconds{parsed_epoch_nanoseconds};
         if (epoch_nanoseconds < 0) {
             epoch_nanoseconds -= static_cast<epochtime_t>(parsed_subsecond_nanoseconds);
@@ -1015,9 +948,9 @@ auto parse_timestamp(
         return {epoch_nanoseconds, pattern};
     }
 
-    if (uses_12_hour_clock) {
+    if (timestamp_pattern.uses_twelve_hour_clock()) {
         parsed_hour = (parsed_hour % cMaxParsedHour12HourClock)
-                      + optional_part_of_day_idx.value() * cMaxParsedHour12HourClock;
+                      + optional_part_of_day_idx.value_or(0) * cMaxParsedHour12HourClock;
     }
 
     auto const year_month_day{date::year(parsed_year) / parsed_month / parsed_day};

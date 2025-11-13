@@ -75,10 +75,14 @@ assert_specifier_accepts_valid_content(char specifier, std::vector<std::string> 
     auto const pattern{fmt::format(R"(\{}a)", specifier)};
     std::string generated_pattern;
     CAPTURE(pattern);
+    auto const timestamp_pattern_result{TimestampPattern::create(pattern)};
+    REQUIRE_FALSE(timestamp_pattern_result.has_error());
     for (auto const& test_case : content) {
         auto const timestamp{fmt::format("{}a", test_case)};
         CAPTURE(timestamp);
-        auto const result{parse_timestamp(timestamp, pattern, generated_pattern)};
+        auto const result{
+                parse_timestamp(timestamp, timestamp_pattern_result.value(), generated_pattern)
+        };
         REQUIRE_FALSE(result.has_error());
         REQUIRE(result.value().second == pattern);
     }
@@ -174,13 +178,21 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 "02 Fri",
                 "03 Sat"
         };
+        constexpr std::string_view cDayInWeekPattern{R"(\d \aa)"};
+        auto const day_in_week_pattern_result{
+                TimestampPattern::create(std::string{cDayInWeekPattern})
+        };
+        REQUIRE_FALSE(day_in_week_pattern_result.has_error());
         for (auto const& day_in_week_timestamp : abbreviated_day_in_week_timestamps) {
-            constexpr std::string_view cPattern{R"(\d \aa)"};
             std::string generated_pattern;
             auto const timestamp{fmt::format("{}a", day_in_week_timestamp)};
-            auto const result{parse_timestamp(timestamp, cPattern, generated_pattern)};
+            auto const result{parse_timestamp(
+                    timestamp,
+                    day_in_week_pattern_result.value(),
+                    generated_pattern
+            )};
             REQUIRE_FALSE(result.has_error());
-            REQUIRE(result.value().second == cPattern);
+            REQUIRE(result.value().second == cDayInWeekPattern);
         }
 
         auto const two_digit_hours{generate_padded_numbers_in_range(0, 23, 2, '0')};
@@ -201,9 +213,15 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             auto assert_twelve_hour_clock_accepts_valid_content
                     = [&](char hour_type, std::vector<std::string> const& hours) -> void {
                 auto const pattern{fmt::format(R"(\{} \pa)", hour_type)};
+                auto const timestamp_pattern_result{TimestampPattern::create(pattern)};
+                REQUIRE_FALSE(timestamp_pattern_result.has_error());
                 for (auto const& hour : hours) {
                     auto const timestamp{fmt::format("{} {}a", hour, part_of_day)};
-                    auto const result{parse_timestamp(timestamp, pattern, generated_pattern)};
+                    auto const result{parse_timestamp(
+                            timestamp,
+                            timestamp_pattern_result.value(),
+                            generated_pattern
+                    )};
                     REQUIRE_FALSE(result.has_error());
                     REQUIRE(result.value().second == pattern);
                 }
@@ -264,9 +282,15 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                         fmt::vformat(hour_offset_pattern, fmt::make_format_args(hour))
                 };
                 auto const hour_offset_specifier{fmt::format("\\z{{{}}}", hour_offset)};
-                auto const result{
-                        parse_timestamp(hour_offset, hour_offset_specifier, generated_pattern)
-                };
+                auto const timestamp_pattern_result(
+                        TimestampPattern::create(hour_offset_specifier)
+                );
+                REQUIRE_FALSE(timestamp_pattern_result.has_error());
+                auto const result{parse_timestamp(
+                        hour_offset,
+                        timestamp_pattern_result.value(),
+                        generated_pattern
+                )};
                 REQUIRE_FALSE(result.has_error());
                 REQUIRE(result.value().second == hour_offset_specifier);
             }
@@ -277,9 +301,14 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                             fmt::make_format_args(hour, minute)
                     )};
                     auto const hour_minute_specifier{fmt::format("\\z{{{}}}", hour_minute_offset)};
+                    auto const timestamp_pattern_result(
+                            TimestampPattern::create(hour_minute_specifier)
+                    );
+                    REQUIRE_FALSE(timestamp_pattern_result.has_error());
+
                     auto const result{parse_timestamp(
                             hour_minute_offset,
-                            hour_minute_specifier,
+                            timestamp_pattern_result.value(),
                             generated_pattern
                     )};
                     REQUIRE_FALSE(result.has_error());
@@ -355,9 +384,11 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
 
         std::string generated_pattern;
         for (auto const& expected_result : expected_parsing_results) {
+            auto const timestamp_pattern_result{TimestampPattern::create(expected_result.pattern)};
+            REQUIRE_FALSE(timestamp_pattern_result.has_error());
             auto const result{parse_timestamp(
                     expected_result.timestamp,
-                    expected_result.pattern,
+                    timestamp_pattern_result.value(),
                     generated_pattern
             )};
             REQUIRE_FALSE(result.has_error());
