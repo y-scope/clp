@@ -1,3 +1,5 @@
+"""Script for managing CLP archives."""
+
 import argparse
 import logging
 import shlex
@@ -56,6 +58,12 @@ def _validate_timestamps(begin_ts: int, end_ts: int | None) -> bool:
 
 
 def main(argv: list[str]) -> int:
+    """
+    Manages CLP archives (find or delete).
+
+    :param argv: Command-line arguments.
+    :return: Exit code.
+    """
     clp_home: Path = get_clp_home()
     default_config_file_path: Path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 

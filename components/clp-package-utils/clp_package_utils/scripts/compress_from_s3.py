@@ -1,3 +1,5 @@
+"""Script for compressing logs from S3 using CLP."""
+
 import argparse
 import logging
 import pathlib
@@ -156,6 +158,12 @@ def _validate_s3_key_prefix_args(
 
 
 def main(argv: list[str]) -> int:
+    """
+    Compresses logs from S3 using CLP.
+
+    :param argv: Command-line arguments.
+    :return: Exit code.
+    """
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 

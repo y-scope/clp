@@ -41,7 +41,6 @@ ignore = [
     "ANN401", # Allow using Any type for function signatures
     "C", # TODO: Enable C rules after fixing existing issues
     "COM812",  # Redundant and conflicts with ruff format
-    "D", # TODO: Enable C rules after fixing existing issues
     "D203",  # No blank line before docstrings (D211)
     "D205",  # Breaks if summary is larger than one line due to wrapping or if no summary exists
     "D212",  # Enforce docstring summary line on the next line after quotes (D213)

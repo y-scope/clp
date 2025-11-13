@@ -1,3 +1,5 @@
+"""Native compression script for CLP."""
+
 import argparse
 import logging
 import os
@@ -43,6 +45,11 @@ logger = logging.getLogger(__name__)
 
 
 def print_compression_job_status(job_row: dict[str, Any]) -> None:
+    """
+    Prints the compression job status including size and speed information.
+
+    :param job_row: Database row containing job information.
+    """
     job_uncompressed_size = job_row["uncompressed_size"]
     job_compressed_size = job_row["compressed_size"]
     compression_ratio = float(job_uncompressed_size) / job_compressed_size
@@ -63,6 +70,14 @@ def print_compression_job_status(job_row: dict[str, Any]) -> None:
 
 
 def handle_job_update(db: Any, db_cursor: Any, job_id: int, no_progress_reporting: bool) -> None:
+    """
+    Monitors and reports compression job progress.
+
+    :param db: Database connection.
+    :param db_cursor: Database cursor.
+    :param job_id: Job ID to monitor.
+    :param no_progress_reporting: Whether to suppress progress reporting.
+    """
     if no_progress_reporting:
         polling_query = f"SELECT status, status_msg FROM {COMPRESSION_JOBS_TABLE_NAME} WHERE id=%s"
     else:
@@ -119,6 +134,14 @@ def handle_job_update(db: Any, db_cursor: Any, job_id: int, no_progress_reportin
 def handle_job(
     sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress_reporting: bool
 ) -> CompressionJobCompletionStatus:
+    """
+    Handles a compression job by submitting it and monitoring its progress.
+
+    :param sql_adapter: SQL adapter for database operations.
+    :param clp_io_config: CLP I/O configuration.
+    :param no_progress_reporting: Whether to suppress progress reporting.
+    :return: Compression job completion status.
+    """
     with (
         closing(sql_adapter.create_connection(True)) as db,
         closing(db.cursor(dictionary=True)) as db_cursor,
@@ -307,6 +330,12 @@ def _get_aws_authentication_from_config(clp_config: CLPConfig) -> AwsAuthenticat
 
 
 def main(argv: list[str]) -> int:
+    """
+    Compresses logs using CLP's native compression.
+
+    :param argv: Command-line arguments.
+    :return: Exit code.
+    """
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
     args_parser = argparse.ArgumentParser(description="Compresses logs")

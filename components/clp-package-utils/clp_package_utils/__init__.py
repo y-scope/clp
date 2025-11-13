@@ -1,3 +1,5 @@
+"""Utilities for managing CLP package components and configurations."""
+
 import logging
 
 # Set up console logging

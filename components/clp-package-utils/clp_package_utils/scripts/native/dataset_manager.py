@@ -1,3 +1,5 @@
+"""Native dataset manager script for CLP."""
+
 import argparse
 import logging
 import shutil
@@ -163,6 +165,12 @@ def _delete_dataset_from_database(database_config: Database, dataset: str) -> No
 
 
 def main(argv: list[str]) -> int:
+    """
+    Manages CLP datasets (list or delete).
+
+    :param argv: Command-line arguments.
+    :return: Exit code.
+    """
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 

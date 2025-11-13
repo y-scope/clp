@@ -1,3 +1,5 @@
+"""Native decompression and extraction script for CLP."""
+
 import argparse
 import asyncio
 import logging
@@ -281,6 +283,12 @@ def handle_extract_file_cmd(
 
 
 def main(argv: list[str]) -> int:
+    """
+    Decompresses and extracts logs from CLP archives.
+
+    :param argv: Command-line arguments.
+    :return: Exit code.
+    """
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 

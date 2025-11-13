@@ -1,3 +1,5 @@
+"""Controllers for orchestrating CLP components in different deployment environments."""
+
 import json
 import logging
 import multiprocessing
@@ -68,6 +70,8 @@ logger = logging.getLogger(__name__)
 
 
 class EnvVarsDict(dict[str, str | None]):
+    """Dictionary for storing environment variables with type-safe merge operations."""
+
     def __ior__(self, other: "EnvVarsDict") -> Self:
         """Overloads the `|=` operator for static type checking on `other`."""
         super().__ior__(other)
@@ -82,6 +86,11 @@ class BaseController(ABC):
     """
 
     def __init__(self, clp_config: CLPConfig) -> None:
+        """
+        Initializes the base controller.
+
+        :param clp_config: CLP configuration.
+        """
         self._clp_config = clp_config
         self._clp_home = get_clp_home()
         self._conf_dir = self._clp_home / "etc"
@@ -659,10 +668,20 @@ class DockerComposeController(BaseController):
     """Controller for orchestrating CLP components using Docker Compose."""
 
     def __init__(self, clp_config: CLPConfig, instance_id: str) -> None:
+        """
+        Initializes the Docker Compose controller.
+
+        :param clp_config: CLP configuration.
+        :param instance_id: Unique instance ID for this CLP deployment.
+        """
         self._project_name = f"clp-package-{instance_id}"
         super().__init__(clp_config)
 
     def set_up_env(self) -> None:
+        """
+        Sets up all components to run by preparing environment variables, directories, and
+        configuration files for Docker Compose deployment.
+        """
         # Generate container-specific config.
         container_clp_config = generate_docker_compose_container_config(self._clp_config)
         num_workers = self._get_num_workers()

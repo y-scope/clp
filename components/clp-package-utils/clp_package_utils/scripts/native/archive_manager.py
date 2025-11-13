@@ -1,3 +1,5 @@
+"""Native archive manager script for CLP."""
+
 import argparse
 import logging
 import shutil
@@ -34,42 +36,62 @@ logger: logging.Logger = logging.getLogger(__name__)
 
 
 class DeleteHandler(ABC):
+    """Abstract base class for handling archive deletion operations."""
+
     def __init__(self, query_params: list[str]) -> None:
+        """
+        Initializes the delete handler.
+
+        :param query_params: Query parameters for deletion criteria.
+        """
         self._params: list[str] = query_params
 
     def get_params(self) -> list[str]:
+        """Returns the query parameters."""
         return self._params
 
     @abstractmethod
-    def get_criteria(self) -> str: ...
+    def get_criteria(self) -> str:
+        """Returns the SQL WHERE clause criteria for deletion."""
 
     @abstractmethod
-    def get_not_found_message(self) -> str: ...
+    def get_not_found_message(self) -> str:
+        """Returns the message to display when no archives are found."""
 
     @abstractmethod
-    def validate_results(self, archive_ids: list[str]) -> None: ...
+    def validate_results(self, archive_ids: list[str]) -> None:
+        """Validates the deletion results."""
 
 
 class FilterDeleteHandler(DeleteHandler):
+    """Handler for deleting archives by time range filter."""
+
     def get_criteria(self) -> str:
+        """Returns the SQL WHERE clause for time range filtering."""
         return "begin_timestamp >= %s AND end_timestamp <= %s"
 
     def get_not_found_message(self) -> str:
+        """Returns message for when no archives are found in the time range."""
         return "No archives found within the specified time range."
 
     def validate_results(self, archive_ids: list[str]) -> None:
-        pass
+        """No validation needed for filter-based deletion."""
 
 
 class IdDeleteHandler(DeleteHandler):
+    """Handler for deleting archives by specific IDs."""
+
     def get_criteria(self) -> str:
+        """Returns the SQL WHERE clause for ID-based filtering."""
         placeholders: str = ",".join(["%s"] * len(self._params))
         return f"id in ({placeholders})"
 
     def get_not_found_message(self) -> str:
+        """Returns message for when no archives are found with the given IDs."""
         return "No archives found with matching IDs."
 
     def validate_results(self, archive_ids: list[str]) -> None:
+        """Validates that all requested IDs were found and warns about missing ones."""
         not_found_ids: set[str] = set(self._params) - set(archive_ids)
         if not_found_ids:
             logger.warning(
@@ -78,6 +100,12 @@ class IdDeleteHandler(DeleteHandler):
 
 
 def main(argv: list[str]) -> int:
+    """
+    Manages CLP archives (find or delete).
+
+    :param argv: Command-line arguments.
+    :return: Exit code.
+    """
     clp_home: Path = get_clp_home()
     default_config_file_path: Path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 

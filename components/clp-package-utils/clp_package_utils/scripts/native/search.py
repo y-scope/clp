@@ -1,3 +1,5 @@
+"""Native search script for CLP."""
+
 from __future__ import annotations
 
 import argparse
@@ -52,6 +54,22 @@ def create_and_monitor_job_in_db(
     do_count_aggregation: bool | None,
     count_by_time_bucket_size: int | None,
 ) -> None:
+    """
+    Creates and monitors a search job in the database.
+
+    :param db_config: Database configuration.
+    :param results_cache: Results cache configuration.
+    :param dataset: Dataset to search.
+    :param wildcard_query: Search query string.
+    :param tags: Tags to filter by.
+    :param begin_timestamp: Start timestamp for search range.
+    :param end_timestamp: End timestamp for search range.
+    :param ignore_case: Whether to ignore case in search.
+    :param path_filter: Path filter for search.
+    :param network_address: Network address for results.
+    :param do_count_aggregation: Whether to perform count aggregation.
+    :param count_by_time_bucket_size: Time bucket size for count-by-time aggregation.
+    """
     search_config = SearchJobConfig(
         dataset=dataset,
         query_string=wildcard_query,
@@ -97,6 +115,12 @@ def create_and_monitor_job_in_db(
 def get_worker_connection_handler(
     raw_output: bool,
 ) -> Callable[[asyncio.StreamReader, asyncio.StreamWriter], None]:
+    """
+    Gets a connection handler for worker connections.
+
+    :param raw_output: Whether to output raw results.
+    :return: Async connection handler function.
+    """
     async def worker_connection_handler(
         reader: asyncio.StreamReader, writer: asyncio.StreamWriter
     ) -> None:
@@ -137,6 +161,20 @@ async def do_search_without_aggregation(
     path_filter: str | None,
     raw_output: bool,
 ) -> None:
+    """
+    Performs a search without aggregation.
+
+    :param db_config: Database configuration.
+    :param results_cache: Results cache configuration.
+    :param dataset: Dataset to search.
+    :param wildcard_query: Search query string.
+    :param tags: Tags to filter by.
+    :param begin_timestamp: Start timestamp for search range.
+    :param end_timestamp: End timestamp for search range.
+    :param ignore_case: Whether to ignore case in search.
+    :param path_filter: Path filter for search.
+    :param raw_output: Whether to output raw results.
+    """
     host = _get_ipv4_address()
     if host is None:
         logger.error("Couldn't find an IPv4 address for receiving search results.")
@@ -207,6 +245,22 @@ async def do_search(
     count_by_time_bucket_size: int | None,
     raw_output: bool,
 ) -> None:
+    """
+    Performs a search with optional aggregation.
+
+    :param db_config: Database configuration.
+    :param results_cache: Results cache configuration.
+    :param dataset: Dataset to search.
+    :param wildcard_query: Search query string.
+    :param tags: Tags to filter by.
+    :param begin_timestamp: Start timestamp for search range.
+    :param end_timestamp: End timestamp for search range.
+    :param ignore_case: Whether to ignore case in search.
+    :param path_filter: Path filter for search.
+    :param do_count_aggregation: Whether to perform count aggregation.
+    :param count_by_time_bucket_size: Time bucket size for count-by-time aggregation.
+    :param raw_output: Whether to output raw results.
+    """
     if do_count_aggregation is None and count_by_time_bucket_size is None:
         await do_search_without_aggregation(
             db_config,
@@ -239,6 +293,12 @@ async def do_search(
 
 
 def main(argv: list[str]) -> int:
+    """
+    Searches compressed logs using CLP's native search.
+
+    :param argv: Command-line arguments.
+    :return: Exit code.
+    """
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 

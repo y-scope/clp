@@ -1,3 +1,5 @@
+"""Script for searching compressed logs using CLP."""
+
 import argparse
 import logging
 import pathlib
@@ -32,6 +34,12 @@ logger = logging.getLogger(__name__)
 
 
 def main(argv: list[str]) -> int:
+    """
+    Searches compressed logs using CLP.
+
+    :param argv: Command-line arguments.
+    :return: Exit code.
+    """
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
