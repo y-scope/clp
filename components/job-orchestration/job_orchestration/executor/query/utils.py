@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from clp_py_utils.clp_config import QUERY_TASKS_TABLE_NAME
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 
 from job_orchestration.scheduler.scheduler_data import QueryTaskResult, QueryTaskStatus
 
@@ -21,7 +21,7 @@ def get_task_log_file_path(clp_logs_dir: Path, job_id: str, task_id: int) -> Pat
 
 
 def report_task_failure(
-    sql_adapter: SQL_Adapter,
+    sql_adapter: SqlAdapter,
     task_id: int,
     start_time: datetime.datetime,
 ):
@@ -40,7 +40,7 @@ def report_task_failure(
 
 
 def run_query_task(
-    sql_adapter: SQL_Adapter,
+    sql_adapter: SqlAdapter,
     logger: Logger,
     clp_logs_dir: Path,
     task_command: List[str],
@@ -117,7 +117,7 @@ def run_query_task(
 
 
 def update_query_task_metadata(
-    sql_adapter: SQL_Adapter,
+    sql_adapter: SqlAdapter,
     task_id: int,
     kv_pairs: Dict[str, Any],
 ):
