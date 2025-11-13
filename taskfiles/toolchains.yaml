@@ -17,19 +17,22 @@ vars:
 
 tasks:
   rust:
+    # We use a label to uniquely identify this task and its checksum under `.task/checksums/`.
+    label: "toolchains-rust"
     run: "once"
     env:
       CARGO_HOME: "{{.G_CARGO_HOME}}"
       RUSTUP_HOME: "{{.G_RUSTUP_HOME}}"
     vars:
       CHECKSUM_FILE: "{{.G_RUST_TOOLCHAIN_CHECKSUM_FILE}}"
-      # The checksum only tracks the environment files and settings to avoid unnecessary
-      # re-execution when CARGO_HOME/RUSTUP_HOME cache contents change (e.g., downloaded crates,
-      # toolchain auto-updates). The task will only re-run when the toolchain configuration itself
-      # changes.
+      # `RUSTUP_HOME` and `CARGO_HOME` contains cache files and temporary files. Instead of
+      # including the entire directory, we only include the necessary files to verify whether the
+      # toolchain installation is up to date.
       OUTPUT_PATTERNS:
+        - "{{.G_CARGO_HOME}}/bin"
         - "{{.G_CARGO_HOME}}/env"
         - "{{.G_RUSTUP_HOME}}/settings.toml"
+        - "{{.G_RUSTUP_HOME}}/toolchains"
         - "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
     sources:
       - "{{.ROOT_DIR}}/taskfile.yaml"
