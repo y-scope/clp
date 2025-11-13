@@ -29,7 +29,7 @@ from clp_py_utils.s3_utils import (
     get_credential_env_vars,
     s3_put,
 )
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import (
@@ -349,7 +349,7 @@ def run_clp(
     task_id: int,
     tag_ids: list[int],
     paths_to_compress: PathsToCompress,
-    sql_adapter: SQL_Adapter,
+    sql_adapter: SqlAdapter,
     clp_metadata_db_connection_config,
     logger,
 ):
@@ -364,7 +364,7 @@ def run_clp(
     :param task_id:
     :param tag_ids:
     :param paths_to_compress: PathToCompress
-    :param sql_adapter: SQL_Adapter
+    :param sql_adapter: SqlAdapter
     :param clp_metadata_db_connection_config
     :param logger
     :return: tuple -- (whether compression was successful, output messages)
@@ -626,7 +626,7 @@ def compression_entry_point(
     clp_io_config = ClpIoConfig.model_validate_json(clp_io_config_json)
     paths_to_compress = PathsToCompress.model_validate_json(paths_to_compress_json)
 
-    sql_adapter = SQL_Adapter(Database.model_validate(clp_metadata_db_connection_config))
+    sql_adapter = SqlAdapter(Database.model_validate(clp_metadata_db_connection_config))
 
     start_time = datetime.datetime.now()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
