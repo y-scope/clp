@@ -10,7 +10,7 @@ tasks:
       LOG_INGESTOR_BUCKET: "clp-log-ingestor-test-bucket"
       LOG_INGESTOR_QUEUE: "clp-log-ingestor-test-queue"
       LOCALSTACK_CONTAINER_NAME:
-        sh: "echo clp-localstack-rust-$(uuidgen)"
+        sh: "uuidgen | tr '[:upper:]' '[:lower:]' | sed 's/^/clp-localstack-rust-/'"
       LOCALSTACK_PORT:
         sh: "uv run tools/scripts/localstack/get-free-port.py"
     dir: "{{.ROOT_DIR}}"
