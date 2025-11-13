@@ -266,9 +266,9 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
         assert_specifier_accepts_valid_content('N', epoch_timestamps);
         assert_specifier_accepts_valid_content('N', negative_epoch_timestamps);
 
-        constexpr std::array hours_offset_patterns
+        constexpr std::array cHoursOffsetPattenrs
                 = {std::string_view{"+{}"}, std::string_view{"-{}"}, std::string_view{"\u2212{}"}};
-        constexpr std::array hours_minutes_offset_patterns
+        constexpr std::array cHoursMinutesOffsetPatterns
                 = {std::string_view{"+{}{}"},
                    std::string_view{"-{}{}"},
                    std::string_view{"\u2212{}{}"},
@@ -277,7 +277,7 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                    std::string_view{"\u2212{}:{}"}};
         for (auto const& hour : two_digit_hours) {
             std::string generated_pattern;
-            for (auto const& hour_offset_pattern : hours_offset_patterns) {
+            for (auto const& hour_offset_pattern : cHoursOffsetPattenrs) {
                 auto const hour_offset{
                         fmt::vformat(hour_offset_pattern, fmt::make_format_args(hour))
                 };
@@ -295,7 +295,7 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 REQUIRE(result.value().second == hour_offset_specifier);
             }
             for (auto const& minute : two_digit_minutes) {
-                for (auto const& hour_minute_offset_pattern : hours_minutes_offset_patterns) {
+                for (auto const& hour_minute_offset_pattern : cHoursMinutesOffsetPatterns) {
                     auto const hour_minute_offset{fmt::vformat(
                             hour_minute_offset_pattern,
                             fmt::make_format_args(hour, minute)
