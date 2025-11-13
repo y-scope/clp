@@ -52,7 +52,7 @@ def main() -> int:
         logger.error("Failed to stop LocalStack container:\n%s", result.stderr)
         return result.returncode
     logger.info("LocalStack container stopped successfully.")
-    return result.returncode
+    return 0
 
 
 if __name__ == "__main__":

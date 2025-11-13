@@ -4,7 +4,7 @@
 #   "boto3>=1.40.70",
 # ]
 # ///
-"""Script to create an S3 bucket with an optional SQS queue listen to the bucket."""
+"""Script to create an S3 bucket with an optional SQS queue listening to the bucket."""
 
 # To allow using try-except-pass pattern to detect whether resources are already created.
 # ruff: noqa: TRY300, BLE001
@@ -31,7 +31,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger = logging.getLogger("create-log-ingestor-test-resources")
+logger = logging.getLogger(__name__)
 
 
 def _bucket_already_exist(s3_client: Any, bucket_name: str) -> bool:

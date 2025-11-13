@@ -22,7 +22,7 @@ logger = logging.getLogger("localstack-start")
 
 def main() -> int:
     """Main."""
-    # To silence Ruff S607
+    # Silence Ruff S607: the absolute path of the Docker binary may vary depending on the installation method.
     docker_executable = "docker"
 
     parser = argparse.ArgumentParser(description="Start LocalStack Docker container.")
