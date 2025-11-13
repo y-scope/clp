@@ -8,6 +8,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 #include <utility>
 
 #include <date/date.h>
@@ -355,6 +356,152 @@ auto extract_timezone_offset_in_minutes(std::string_view str)
     return std::make_pair(str.substr(0ULL, num_timezone_bytes), sign_factor * offset);
 }
 }  // namespace
+
+auto TimestampPattern::create(std::string pattern)
+        -> ystdlib::error_handling::Result<TimestampPattern> {
+    std::unordered_set<char> format_specifiers;
+    bool date_type_representation{false};
+    bool number_type_representation{false};
+    bool has_part_of_day{false};
+    bool uses_twelve_hour_clock{false};
+    std::optional<std::pair<std::pair<size_t, size_t>, int>> optional_timezone_offset{std::nullopt};
+
+    bool escaped{false};
+    for (size_t pattern_idx{0ULL}; pattern_idx < pattern.size(); ++pattern_idx) {
+        auto const cur_format_specifier{pattern.at(pattern_idx)};
+        if (false == escaped) {
+            if ('\\' == cur_format_specifier) {
+                escaped = true;
+            }
+            continue;
+        }
+
+        if (format_specifiers.contains(cur_format_specifier)) {
+            return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+        }
+        format_specifiers.emplace(cur_format_specifier);
+
+        escaped = false;
+        switch (cur_format_specifier) {
+            case 'y':  // Zero-padded 2-digit year in century.
+            case 'Y':  // Zero-padded 4-digit year.
+            case 'B':  // Full month name.
+            case 'b':  // Abbreviated month name.
+            case 'm':  // Zero-padded month.
+            case 'd':  // Zero-padded day in month.
+            case 'e':  // Space-padded day in month.
+            case 'a':  // Abbreviated day in week.
+                date_type_representation = true;
+                break;
+            case 'p':  // Part of day (AM/PM).
+                date_type_representation = true;
+                has_part_of_day = true;
+                break;
+            case 'H':  // 24-hour clock, zero-padded hour.
+            case 'k':  // 24-hour clock, space-padded hour.
+                date_type_representation = true;
+                break;
+            case 'I':  // 12-hour clock, zero-padded hour.
+            case 'l':  // 12-hour clock, space-padded hour.
+                uses_twelve_hour_clock = true;
+                date_type_representation = true;
+                break;
+            case 'M':  // Zero-padded minute.
+            case 'S':  // Zero-padded second.
+                date_type_representation = true;
+                break;
+            case '3':  // Zero-padded 3-digit milliseconds.
+            case '6':  // Zero-padded 6-digit microseconds.
+            case '9':  // Zero-padded 9-digit nanoseconds.
+            case 'T':  // Zero-padded fractional seconds without trailing zeroes, max 9-digits.
+                break;
+            case 'E':  // Epoch seconds.
+            case 'L':  // Epoch milliseconds.
+            case 'C':  // Epoch microseconds.
+            case 'N':  // Epoch nanoseconds.
+                number_type_representation = true;
+                break;
+            case 'z': {  // Timezone offset.
+                auto const timezone_bracket_pattern{YSTDLIB_ERROR_HANDLING_TRYX(
+                        extract_bracket_pattern(pattern.substr(pattern_idx + 1ULL))
+                )};
+                auto const timezone_str{timezone_bracket_pattern.substr(
+                        1ULL,
+                        timezone_bracket_pattern.size() - 2ULL
+                )};
+
+                auto const [extracted_timezone_str, extracted_timezone_offset]
+                        = YSTDLIB_ERROR_HANDLING_TRYX(
+                                extract_timezone_offset_in_minutes(timezone_str)
+                        );
+                if (extracted_timezone_str.size() != timezone_str.size()) {
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+                }
+
+                optional_timezone_offset = std::make_pair(
+                        std::make_pair(pattern_idx + 2ULL, extracted_timezone_str.size()),
+                        extracted_timezone_offset
+                );
+                pattern_idx += timezone_bracket_pattern.size();
+                date_type_representation = true;
+                break;
+            }
+            case 'Z':  // Generic timezone.
+                date_type_representation = true;
+                break;
+            case '?':  // Generic fractional second.
+                break;
+            case 'P':  // Unknown-precision epoch time.
+                number_type_representation = true;
+                break;
+            case '\\': {
+                break;
+            }
+            default:
+                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+        }
+    }
+
+    if (escaped) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+    }
+
+    if (date_type_representation && number_type_representation) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+    }
+
+    if (uses_twelve_hour_clock != has_part_of_day) {
+        return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+    }
+
+    return TimestampPattern{
+            pattern,
+            optional_timezone_offset,
+            date_type_representation,
+            uses_twelve_hour_clock
+    };
+}
+
+TimestampPattern::TimestampPattern(
+        std::string pattern,
+        std::optional<std::pair<std::pair<size_t, size_t>, int>> optional_timezone_offset,
+        bool date_type_representation,
+        bool uses_twelve_hour_clock
+)
+        : m_pattern{std::move(pattern)},
+          m_date_type_representation{date_type_representation},
+          m_uses_twelve_hour_clock{uses_twelve_hour_clock} {
+    if (optional_timezone_offset.has_value()) {
+        auto const [timezone_offset_str_offset, timezone_offset_str_size]
+                = optional_timezone_offset.value().first;
+        auto const timezone_offset = optional_timezone_offset.value().second;
+        m_optional_timezone_offset = std::make_pair(
+                std::string_view{m_pattern}
+                        .substr(timezone_offset_str_offset, timezone_offset_str_size),
+                timezone_offset
+        );
+    }
+}
 
 // NOLINTBEGIN(readability-function-cognitive-complexity)
 auto parse_timestamp(
