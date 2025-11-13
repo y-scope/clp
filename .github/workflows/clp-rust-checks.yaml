@@ -7,10 +7,12 @@ on:
       - "Cargo.lock"
       - "Cargo.toml"
       - ".github/workflows/clp-rust-checks.yaml"
+      - "components/api-server/**"
       - "components/clp-rust-utils/**"
       - "components/log-ingestor/**"
       - "taskfile.yaml"
       - "taskfiles/**"
+      - "tools/scripts/localstack/**"
   push:
     paths: *monitored_paths
   schedule:
