@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from clp_py_utils.clp_config import CLPConfig
+from clp_py_utils.clp_config import ClpConfig
 from fastmcp import Context, FastMCP
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
@@ -14,7 +14,7 @@ from .session_manager import SessionManager
 from .utils import format_query_results, parse_timestamp_range, sort_by_timestamp
 
 
-def create_mcp_server(clp_config: CLPConfig) -> FastMCP:
+def create_mcp_server(clp_config: ClpConfig) -> FastMCP:
     """
     Creates and defines API tool calls for the CLP MCP server.
 

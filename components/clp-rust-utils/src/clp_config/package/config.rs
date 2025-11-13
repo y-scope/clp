@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-/// Mirror of `clp_py_utils.clp_config.CLPConfig`.
+/// Mirror of `clp_py_utils.clp_config.ClpConfig`.
 ///
 /// # NOTE
 ///
