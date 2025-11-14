@@ -3,4 +3,6 @@
 pytest_plugins = [
     "tests.fixtures.integration_test_config",
     "tests.fixtures.integration_test_logs",
+    "tests.fixtures.package_instance_fixtures",
+    "tests.fixtures.package_config_fixtures",
 ]
