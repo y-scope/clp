@@ -29,5 +29,6 @@ tasks:
         --bucket "{{.LOG_INGESTOR_BUCKET}}" \
         --queue "{{.LOG_INGESTOR_QUEUE}}" \
         --port "{{.LOCALSTACK_PORT}}"
-      - ". $HOME/.cargo/env"
-      - "cargo test --all --all-features --release"
+      - |-
+        . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+        cargo nextest run --all --all-features --release

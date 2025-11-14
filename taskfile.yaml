@@ -203,7 +203,7 @@ tasks:
     deps: ["toolchains:rust"]
     dir: "{{.ROOT_DIR}}"
     cmd: |-
-      . "$HOME/.cargo/env"
+      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
       cargo build --release --bins --target-dir {{.G_RUST_BUILD_DIR}}
 
   clp-mcp-server:

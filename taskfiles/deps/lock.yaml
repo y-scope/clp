@@ -47,7 +47,7 @@ tasks:
     dir: "{{.ROOT_DIR}}"
     deps: ["toolchains:rust"]
     cmd: |-
-      . "$HOME/.cargo/env"
+      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
       cargo fetch {{.CARGO_FETCH_FLAGS}}
 
   # Runs `cargo update` in the root Rust workspace directory with the specified flags.
@@ -60,7 +60,7 @@ tasks:
     dir: "{{.ROOT_DIR}}"
     deps: ["toolchains:rust"]
     cmd: |-
-      . "$HOME/.cargo/env"
+      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
       cargo update {{.CARGO_UPDATE_FLAGS}}
 
   # Runs `uv lock` in the UV project directory with the specified flags.
