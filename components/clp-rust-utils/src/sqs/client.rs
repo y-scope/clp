@@ -13,6 +13,7 @@ use secrecy::{ExposeSecret, SecretString};
 /// A newly created SQS client.
 #[must_use]
 pub async fn create_new_client(
+    endpoint: &str,
     region_id: &str,
     access_key_id: &str,
     secret_access_key: &SecretString,
@@ -27,6 +28,7 @@ pub async fn create_new_client(
     let region = Region::new(region_id.to_owned());
     let base_config = aws_config::defaults(BehaviorVersion::latest()).load().await;
     let config = Builder::from(&base_config)
+        .endpoint_url(endpoint)
         .credentials_provider(credential)
         .region(region)
         .build();
