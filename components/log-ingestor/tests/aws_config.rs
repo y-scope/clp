@@ -35,7 +35,7 @@ impl AwsConfig {
     ///
     /// * `Some(AwsConfig)` if all required environment variables are set.
     /// * `None` if any required environment variable is missing.
-    #[must_use] 
+    #[must_use]
     pub fn from_env() -> Option<Self> {
         let endpoint =
             std::env::var("AWS_ENDPOINT").unwrap_or_else(|_| DEFAULT_AWS_ENDPOINT.to_string());
