@@ -31,6 +31,7 @@ tasks:
         --port "{{.LOCALSTACK_PORT}}"
       - |-
         . $HOME/.cargo/env
+        AWS_ENDPOINT_URL="http://localhost:{{.LOCALSTACK_PORT}}" \
         CLP_LOG_INGESTOR_S3_BUCKET={{.LOG_INGESTOR_BUCKET}} \
         CLP_LOG_INGESTOR_SQS_QUEUE={{.LOG_INGESTOR_QUEUE}} \
         cargo test --all --all-features --release -- --include-ignored

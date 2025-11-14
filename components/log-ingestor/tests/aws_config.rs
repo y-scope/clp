@@ -1,5 +1,5 @@
 /// Default AWS configuration for local testing with `LocalStack`.
-const DEFAULT_AWS_ENDPOINT: &str = "http://127.0.0.1:4566";
+const DEFAULT_AWS_ENDPOINT_URL: &str = "http://127.0.0.1:4566";
 const DEFAULT_AWS_ACCESS_KEY_ID: &str = "test";
 const DEFAULT_AWS_SECRET_ACCESS_KEY: &str = "test";
 const DEFAULT_AWS_ACCOUNT_ID: &str = "000000000000";
@@ -23,7 +23,8 @@ impl AwsConfig {
     ///
     /// * `CLP_LOG_INGESTOR_S3_BUCKET` (REQUIRED): The S3 bucket name for testing log ingestion.
     /// * `CLP_LOG_INGESTOR_SQS_QUEUE` (REQUIRED): The SQS queue name for testing log ingestion.
-    /// * `AWS_ENDPOINT`: The AWS service endpoint. Defaults to [`DEFAULT_AWS_ENDPOINT`] if not set.
+    /// * `AWS_ENDPOINT_URL`: The AWS service endpoint. Defaults to [`DEFAULT_AWS_ENDPOINT`] if not
+    ///   set.
     /// * `AWS_ACCESS_KEY_ID`: The AWS access key ID. Defaults to [`DEFAULT_AWS_ACCESS_KEY_ID`] if
     ///   not set.
     /// * `AWS_SECRET_ACCESS_KEY`: The AWS secret access key. Defaults to
@@ -37,8 +38,8 @@ impl AwsConfig {
     /// * `None` if any required environment variable is missing.
     #[must_use]
     pub fn from_env() -> Option<Self> {
-        let endpoint =
-            std::env::var("AWS_ENDPOINT").unwrap_or_else(|_| DEFAULT_AWS_ENDPOINT.to_string());
+        let endpoint = std::env::var("AWS_ENDPOINT_URL")
+            .unwrap_or_else(|_| DEFAULT_AWS_ENDPOINT_URL.to_string());
         let access_key_id = std::env::var("AWS_ACCESS_KEY_ID")
             .unwrap_or_else(|_| DEFAULT_AWS_ACCESS_KEY_ID.to_string());
         let secret_access_key = std::env::var("AWS_SECRET_ACCESS_KEY")
