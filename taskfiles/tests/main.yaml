@@ -30,5 +30,5 @@ tasks:
         --queue "{{.LOG_INGESTOR_QUEUE}}" \
         --port "{{.LOCALSTACK_PORT}}"
       - |-
-      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+        . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
         cargo nextest run --all --all-features --release
