@@ -17,7 +17,7 @@ dependencies = [
     "pydantic>=2.12.3",
     "pymongo>=4.15.3",
     "PyYAML>=6.0.3",
-    "yscope-spider-py==0.1.0",
+    "yscope-spider-py==0.2.0",
 ]
 
 [build-system]
