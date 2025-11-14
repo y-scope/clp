@@ -13,7 +13,7 @@ from typing import Any, Optional
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
     AwsAuthType,
-    CLPConfig,
+    ClpConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
@@ -83,7 +83,7 @@ class BaseController(ABC):
     variables, directories, and configuration files for each component.
     """
 
-    def __init__(self, clp_config: CLPConfig) -> None:
+    def __init__(self, clp_config: ClpConfig) -> None:
         self._clp_config = clp_config
         self._clp_home = get_clp_home()
         self._conf_dir = self._clp_home / "etc"
@@ -450,7 +450,7 @@ class BaseController(ABC):
 
         return env_vars
 
-    def _set_up_env_for_webui(self, container_clp_config: CLPConfig) -> EnvVarsDict:
+    def _set_up_env_for_webui(self, container_clp_config: ClpConfig) -> EnvVarsDict:
         """
         Sets up environment variables and settings for the Web UI component.
 
@@ -690,7 +690,7 @@ class DockerComposeController(BaseController):
     Controller for orchestrating CLP components using Docker Compose.
     """
 
-    def __init__(self, clp_config: CLPConfig, instance_id: str) -> None:
+    def __init__(self, clp_config: ClpConfig, instance_id: str) -> None:
         self._project_name = f"clp-package-{instance_id}"
         super().__init__(clp_config)
 
@@ -857,7 +857,7 @@ class DockerComposeController(BaseController):
         return "docker-compose.yaml"
 
 
-def get_or_create_instance_id(clp_config: CLPConfig) -> str:
+def get_or_create_instance_id(clp_config: ClpConfig) -> str:
     """
     Gets or creates a unique instance ID for this CLP instance.
 
