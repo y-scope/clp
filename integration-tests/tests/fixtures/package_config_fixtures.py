@@ -20,8 +20,7 @@ def _build_package_config_for_mode(mode_name: str) -> PackageConfig:
 
     :param mode_name:
     :return: A PackageConfig object configured for the given mode.
-    :raise: KeyError if the mode name is unknown.
-    :raise: Propagates get_env_var exceptions.
+    :raise KeyError: if the mode name is unknown.
     """
     if mode_name not in CLP_MODE_CONFIGS:
         err_msg = f"Unknown CLP mode '{mode_name}'."
@@ -42,20 +41,17 @@ def clp_config(
     request: pytest.FixtureRequest,
 ) -> Iterator[PackageConfig]:
     """
-    Creates and maintains a PackageConfig object for a specific CLP mode and writes a temporary
-    config file for that mode that is used for the duration of the test.
+    Creates and maintains a PackageConfig object for a specific CLP mode.
 
     :param request:
     :return: An iterator that yields the PackageConfig object for the specified mode.
-    :raise: Propagates _build_package_config_for_mode exceptions.
-    :raise: Propagates get_clp_config_from_mode exceptions.
     """
     mode_name: str = request.param
     logger.info("Creating a temporary config file for the %s package...", mode_name)
 
     package_config = _build_package_config_for_mode(mode_name)
 
-    # Create the temp config file deterministically.
+    # Create the temp config file.
     clp_config_obj = get_clp_config_from_mode(mode_name)
     temp_config_file_path = PackageConfig.write_temp_config_file(
         clp_config=clp_config_obj,

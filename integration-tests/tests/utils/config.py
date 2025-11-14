@@ -81,7 +81,7 @@ class PackageConfig:
     temp_config_dir: Path = field(init=False, repr=True)
 
     def __post_init__(self) -> None:
-        """Validate values at init and initialize attributes."""
+        """Validates init values and initializes attributes."""
         # Validate that the CLP package directory exists and contains required directories.
         clp_package_dir = self.clp_package_dir
         validate_dir_exists(clp_package_dir)
@@ -160,7 +160,7 @@ class PackageInstance:
     shared_config_file_path: Path = field(init=False, repr=True)
 
     def __post_init__(self) -> None:
-        """Validate values at init and initialize attributes."""
+        """Validates init values and initializes attributes."""
         # Determine expected temp config file path and validate existence.
         temp_config_file_path = (
             self.package_config.temp_config_dir / f"clp-config-{self.package_config.mode_name}.yml"

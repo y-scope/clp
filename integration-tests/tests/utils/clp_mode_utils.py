@@ -84,7 +84,7 @@ def compute_mode_signature(config: CLPConfig) -> tuple[Any, ...]:
     Constructs a signature that captures the mode-defining aspects of a CLPConfig object.
 
     :param config:
-    :return: Tuple that encodes fields used to determine an operating mode
+    :return: Tuple that encodes fields used to determine an operating mode.
     """
     return (
         config.logs_input.type,
@@ -104,8 +104,8 @@ def get_clp_config_from_mode(mode_name: str) -> CLPConfig:
     Return a CLPConfig object for the given mode name.
 
     :param mode_name:
-    :return: CLPConfig object corresponding to the mode
-    :raise ValueError: If the mode is not supported
+    :return: CLPConfig object corresponding to the mode.
+    :raise ValueError: If the mode is not supported.
     """
     try:
         config = CLP_MODE_CONFIGS[mode_name][0]

@@ -24,7 +24,7 @@ def start_clp_package(package_config: PackageConfig) -> None:
     Starts an instance of the CLP package.
 
     :param package_config:
-    :raise RuntimeError: if the package fails to start.
+    :raise RuntimeError: If the package fails to start.
     """
     start_script_path = package_config.start_script_path
 
@@ -50,7 +50,7 @@ def stop_clp_package(instance: PackageInstance) -> None:
     Stops an instance of the CLP package.
 
     :param instance:
-    :raise RuntimeError: if the package fails to stop.
+    :raise RuntimeError: If the package fails to stop.
     """
     package_config = instance.package_config
     stop_script_path = package_config.stop_script_path
@@ -68,9 +68,9 @@ def stop_clp_package(instance: PackageInstance) -> None:
 
 def validate_package_running(package_instance: PackageInstance) -> tuple[bool, str | None]:
     """
-    Determines whether the given package instance is running. The check confirms that
+    Determines whether the given package instance is running. Confirms that
     each required component has at least one running container whose name matches the
-    expected prefix. The check stops at the first missing component.
+    expected prefix. Check stops at the first missing component.
 
     :param package_instance:
     :return: (True, None) if all required components are running, otherwise (False, message).

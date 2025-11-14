@@ -28,15 +28,11 @@ def clp_package(
 
     :param clp_config:
     :return: Iterator that yields the running package instance.
-    :raise: Propagates exceptions from start_clp_package.
-    :raise: Propagates exceptions from stop_clp_package.
-    :raise: Propagates KeyError if the mode name is not present in CLP_MODE_CONFIGS.
-    :raise: Propagates subprocess.CalledProcessError if the stop script fails.
     """
     mode_name = clp_config.mode_name
     logger.info("Starting up the %s package...", mode_name)
 
-    # Start the package using the pre-written temp config file.
+    # Start the package.
     start_clp_package(clp_config)
 
     instance: PackageInstance | None = None

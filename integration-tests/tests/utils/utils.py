@@ -59,9 +59,9 @@ def load_yaml_to_dict(path: Path) -> dict[str, Any]:
 
     :param path:
     :return: Dictionary parsed from the file.
-    :raise: ValueError if the file contains invalid YAML.
-    :raise: ValueError if the file cannot be read.
-    :raise: TypeError if the file does not have a top-level mapping.
+    :raise ValueError: if the file contains invalid YAML.
+    :raise ValueError: if the file cannot be read.
+    :raise TypeError: if the file does not have a top-level mapping.
     """
     try:
         with path.open("r", encoding="utf-8") as file:
@@ -117,7 +117,7 @@ def validate_dir_exists(dir_path: Path) -> None:
 def validate_file_exists(file_path: Path) -> None:
     """
     :param file_path:
-    :raise: ValueError if the path does not exist or is not a file.
+    :raise ValueError: if the path does not exist or is not a file.
     """
     if not file_path.is_file():
         err_msg = f"Path does not exist or is not a file: {file_path}"
