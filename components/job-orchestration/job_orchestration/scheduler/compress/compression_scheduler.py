@@ -13,7 +13,7 @@ import brotli
 import msgpack
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
-    CLPConfig,
+    ClpConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
@@ -28,7 +28,7 @@ from clp_py_utils.clp_metadata_db_utils import (
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import s3_get_object_metadata
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 from pydantic import ValidationError
 
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
@@ -222,7 +222,7 @@ def _write_user_failure_log(
 
 
 def search_and_schedule_new_tasks(
-    clp_config: CLPConfig,
+    clp_config: ClpConfig,
     db_conn,
     db_cursor,
     clp_metadata_db_connection_config: Dict[str, Any],
@@ -507,7 +507,7 @@ def main(argv):
     # Load configuration
     config_path = Path(args.config)
     try:
-        clp_config = CLPConfig.model_validate(read_yaml_config_file(config_path))
+        clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
         logger.error(err)
@@ -518,7 +518,7 @@ def main(argv):
         return -1
 
     logger.info(f"Starting {COMPRESSION_SCHEDULER_COMPONENT_NAME}")
-    sql_adapter = SQL_Adapter(clp_config.database)
+    sql_adapter = SqlAdapter(clp_config.database)
 
     task_manager = CeleryTaskManager()
 
