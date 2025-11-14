@@ -4,7 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from clp_py_utils.clp_config import (
-    CLPConfig,
+    ClpConfig,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_WORKER_COMPONENT_NAME,
     DB_COMPONENT_NAME,
@@ -33,9 +33,9 @@ def _to_docker_compose_service_name(name: str) -> str:
     return name.replace("_", "-")
 
 
-CLP_MODE_CONFIGS: dict[str, tuple[Callable[[], CLPConfig], list[str]]] = {
+CLP_MODE_CONFIGS: dict[str, tuple[Callable[[], ClpConfig], list[str]]] = {
     "clp-text": (
-        lambda: CLPConfig(
+        lambda: ClpConfig(
             package=Package(
                 storage_engine=StorageEngine.CLP,
                 query_engine=QueryEngine.CLP,
@@ -56,7 +56,7 @@ CLP_MODE_CONFIGS: dict[str, tuple[Callable[[], CLPConfig], list[str]]] = {
         ],
     ),
     "clp-json": (
-        lambda: CLPConfig(
+        lambda: ClpConfig(
             package=Package(
                 storage_engine=StorageEngine.CLP_S,
                 query_engine=QueryEngine.CLP_S,
@@ -79,9 +79,9 @@ CLP_MODE_CONFIGS: dict[str, tuple[Callable[[], CLPConfig], list[str]]] = {
 }
 
 
-def compute_mode_signature(config: CLPConfig) -> tuple[Any, ...]:
+def compute_mode_signature(config: ClpConfig) -> tuple[Any, ...]:
     """
-    Constructs a signature that captures the mode-defining aspects of a CLPConfig object.
+    Constructs a signature that captures the mode-defining aspects of a ClpConfig object.
 
     :param config:
     :return: Tuple that encodes fields used to determine an operating mode.
@@ -99,12 +99,12 @@ def compute_mode_signature(config: CLPConfig) -> tuple[Any, ...]:
     )
 
 
-def get_clp_config_from_mode(mode_name: str) -> CLPConfig:
+def get_clp_config_from_mode(mode_name: str) -> ClpConfig:
     """
-    Return a CLPConfig object for the given mode name.
+    Return a ClpConfig object for the given mode name.
 
     :param mode_name:
-    :return: CLPConfig object corresponding to the mode.
+    :return: ClpConfig object corresponding to the mode.
     :raise ValueError: If the mode is not supported.
     """
     try:

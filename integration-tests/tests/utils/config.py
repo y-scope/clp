@@ -10,7 +10,7 @@ import yaml
 from clp_py_utils.clp_config import (
     CLP_DEFAULT_LOG_DIRECTORY_PATH,
     CLP_SHARED_CONFIG_FILENAME,
-    CLPConfig,
+    ClpConfig,
 )
 
 from tests.utils.utils import (
@@ -111,12 +111,12 @@ class PackageConfig:
 
     @staticmethod
     def write_temp_config_file(
-        clp_config: CLPConfig,
+        clp_config: ClpConfig,
         temp_config_dir: Path,
         mode_name: str,
     ) -> Path:
         """
-        Writes a temporary config file for a CLPConfig object.
+        Writes a temporary config file for a ClpConfig object.
 
         :param clp_config:
         :param temp_config_dir:

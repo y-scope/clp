@@ -2,7 +2,7 @@
 
 import subprocess
 
-from clp_py_utils.clp_config import CLPConfig
+from clp_py_utils.clp_config import ClpConfig
 from pydantic import ValidationError
 
 from tests.utils.clp_mode_utils import (
@@ -102,7 +102,7 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> tuple[bo
     """
     shared_config_dict = load_yaml_to_dict(package_instance.shared_config_file_path)
     try:
-        running_config = CLPConfig.model_validate(shared_config_dict)
+        running_config = ClpConfig.model_validate(shared_config_dict)
     except ValidationError as err:
         err_msg = "Shared config failed validation"
         raise ValueError(err_msg) from err
