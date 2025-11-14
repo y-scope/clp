@@ -31,9 +31,9 @@ tasks:
       OUTPUT_PATTERNS:
         - "{{.G_CARGO_HOME}}/bin"
         - "{{.G_CARGO_HOME}}/env"
+        - "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
         - "{{.G_RUSTUP_HOME}}/settings.toml"
         - "{{.G_RUSTUP_HOME}}/toolchains"
-        - "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
     sources:
       - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.TASKFILE}}"
@@ -57,11 +57,11 @@ tasks:
       - |-
         cat > {{.G_RUST_TOOLCHAIN_ENV_FILE}} << 'EOF'
         #!/bin/sh
-        export CARGO_HOME={{.G_CARGO_HOME}}
-        export RUSTUP_HOME={{.G_RUSTUP_HOME}}
-        . {{.G_CARGO_HOME}}/env
+        export CARGO_HOME="{{.G_CARGO_HOME}}"
+        export RUSTUP_HOME="{{.G_RUSTUP_HOME}}"
+        . "{{.G_CARGO_HOME}}/env"
         EOF
-        chmod +x {{.G_RUST_TOOLCHAIN_ENV_FILE}}
+        chmod +x "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
 
       - |-
         . {{.G_RUST_TOOLCHAIN_ENV_FILE}}
