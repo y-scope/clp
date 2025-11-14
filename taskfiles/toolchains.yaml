@@ -64,7 +64,7 @@ tasks:
         chmod +x "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
 
       - |-
-        . {{.G_RUST_TOOLCHAIN_ENV_FILE}}
+      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
         rustup toolchain install nightly --allow-downgrade --component clippy,rustfmt
         rustup toolchain install stable
         rustup default stable
