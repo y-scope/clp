@@ -49,7 +49,5 @@ jobs:
         run: "task lint:check-rust"
 
       - name: "Test"
-        # Skip tests on macOS since the test requires LocalStack
-        if: "matrix.os != 'macos-15'"
         shell: "bash"
         run: "task tests:rust-all"
