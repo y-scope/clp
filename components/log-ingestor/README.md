@@ -19,7 +19,7 @@ task tests:rust-all
 To run tests that don't require AWS services:
 
 ```bash
-cargo nextest --all-features
+cargo nextest run --all-features
 ```
 
 By default, all tests that require AWS service will be ignored. To run those tests, use the following command to start
@@ -44,7 +44,7 @@ export CLP_LOG_INGESTOR_SQS_QUEUE="clp-log-ingestor-test-queue"
 cargo nextest run --all-features --run-ignored all
 
 # Stop and remove the LocalStack container after tests are done
-$REPO_ROOT/tools/scripts/localstack/stop.py --name clp-log-ingestor-tests
+$REPO_ROOT/tools/scripts/localstack/stop.py --name clp-log-ingestor-test
 ```
 
 For advanced configuration options and AWS service testing details, see the [AWS Config](tests/aws_config.rs) module.

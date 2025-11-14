@@ -71,12 +71,12 @@ async fn receive_object_metadata(
             timeout_duration.checked_sub(elapsed).unwrap(),
             receiver.recv(),
         )
-        .await
+        .await?
         {
-            Ok(Some(object_metadata)) => {
+            Some(object_metadata) => {
                 received_objects.push(object_metadata);
             }
-            Ok(None) | Err(_) => {
+            None => {
                 break;
             }
         }
