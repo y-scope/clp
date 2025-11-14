@@ -54,6 +54,11 @@ class CoreConfig:
         """:return: The absolute path to the core binary `clp-s`."""
         return self.clp_core_bins_dir / "clp-s"
 
+    @property
+    def log_converter_binary_path(self) -> Path:
+        """:return: The absolute path to the core binary `log-converter`."""
+        return self.clp_core_bins_dir / "log-converter"
+
 
 @dataclass(frozen=True)
 class PackageConfig:
