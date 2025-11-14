@@ -17,7 +17,7 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.general import (
-    CLPConfig,
+    ClpConfig,
     DockerMount,
     dump_container_config,
     generate_container_config,
@@ -171,7 +171,7 @@ def main(argv: List[str]) -> int:
     # Validate and load config file
     try:
         config_file_path: Path = Path(parsed_args.config)
-        clp_config: CLPConfig = load_config_file(
+        clp_config: ClpConfig = load_config_file(
             resolve_host_path_in_container(config_file_path),
             resolve_host_path_in_container(default_config_file_path),
             clp_home,
