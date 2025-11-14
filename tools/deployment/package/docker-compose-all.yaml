@@ -82,6 +82,8 @@ services:
     hostname: "db_table_creator"
     environment:
       CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
+      CLP_DB_PRIVILEGED_PASS: "${CLP_DB_PRIVILEGED_PASS:-}"
+      CLP_DB_PRIVILEGED_USER: "${CLP_DB_PRIVILEGED_USER:-}"
       CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
       PYTHONPATH: "/opt/clp/lib/python3/site-packages"
     volumes:

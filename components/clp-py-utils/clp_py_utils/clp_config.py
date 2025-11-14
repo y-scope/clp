@@ -1,5 +1,6 @@
 import os
 import pathlib
+from datetime import datetime, timedelta, timezone
 from enum import auto
 from typing import Annotated, Any, ClassVar, Literal, Optional, Union
 
@@ -11,6 +12,7 @@ from pydantic import (
     model_validator,
     PlainSerializer,
     PrivateAttr,
+    SecretStr,
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
@@ -71,6 +73,8 @@ CLP_VERSION_FILE_PATH = pathlib.Path("VERSION")
 # Environment variable names
 CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
 CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
+CLP_DB_PRIVILEGED_USER_ENV_VAR_NAME = "CLP_DB_PRIVILEGED_USER"
+CLP_DB_PRIVILEGED_PASS_ENV_VAR_NAME = "CLP_DB_PRIVILEGED_PASS"
 CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
@@ -175,6 +179,9 @@ class Database(BaseModel):
     username: Optional[NonEmptyStr] = None
     password: Optional[NonEmptyStr] = None
 
+    privileged_username: Optional[NonEmptyStr] = None
+    privileged_password: Optional[NonEmptyStr] = None
+
     def ensure_credentials_loaded(self):
         if self.username is None or self.password is None:
             raise ValueError("Credentials not loaded.")
@@ -224,8 +231,37 @@ class Database(BaseModel):
         return connection_params_and_type
 
     def dump_to_primitive_dict(self):
-        d = self.model_dump(exclude={"username", "password"})
+        d = self.model_dump(
+            exclude={"username", "password", "privileged_username", "privileged_password"}
+        )
         return d
+
+    def has_privileged_credentials(self) -> bool:
+        """
+        Checks if privileged credentials are configured.
+
+        :return: True if both privileged username and password are set.
+        """
+        return self.privileged_username is not None and self.privileged_password is not None
+
+    def get_privileged_connection_params(self, disable_localhost_socket_connection: bool = False):
+        """
+        Gets MySQL connection parameters using privileged credentials.
+
+        :param disable_localhost_socket_connection:
+        :return:
+        :raises ValueError: If privileged credentials are not configured.
+        """
+        if not self.has_privileged_credentials():
+            raise ValueError(
+                "Privileged database credentials not configured."
+                " Set privileged_username and privileged_password in database configuration."
+            )
+
+        connection_params = self.get_mysql_connection_params(disable_localhost_socket_connection)
+        connection_params["user"] = self.privileged_username
+        connection_params["password"] = self.privileged_password
+        return connection_params
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
@@ -239,12 +275,30 @@ class Database(BaseModel):
                 f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
             )
 
+        try:
+            self.privileged_username = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.privileged_user"
+            )
+            self.privileged_password = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.privileged_password"
+            )
+        except KeyError:
+            pass
+
     def load_credentials_from_env(self):
         """
-        :raise ValueError: if any expected environment variable is not set.
+        Loads database credentials from environment variables.
+
+        :raise ValueError: If any expected environment variable is not set.
         """
         self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
+
+        try:
+            self.privileged_username = _get_env_var(CLP_DB_PRIVILEGED_USER_ENV_VAR_NAME)
+            self.privileged_password = _get_env_var(CLP_DB_PRIVILEGED_PASS_ENV_VAR_NAME)
+        except ValueError:
+            pass
 
     def transform_for_container(self):
         self.host = DB_COMPONENT_NAME
@@ -416,6 +470,100 @@ class AwsAuthentication(BaseModel):
         if auth_enum in [AwsAuthType.ec2, AwsAuthType.env_vars] and (profile or credentials):
             raise ValueError(f"profile and credentials must not be set when type is '{auth_enum}.'")
         return data
+
+
+class AwsCredential(BaseModel):
+    """
+    Represents a stored AWS credential retrieved from the database.
+
+    This model is used for credentials that are persisted in the `aws_credentials` table.
+    Credentials can be either static (access key + secret key) or configured for role
+    assumption.
+    """
+
+    id: int
+    name: Annotated[
+        str,
+        Field(
+            min_length=1,
+            max_length=255,
+            pattern=r"^[a-zA-Z0-9_-]+$",
+            description="Credential name (alphanumeric, hyphens, underscores only; 1-255 characters)",
+        ),
+    ]
+
+    access_key_id: SecretStr
+    secret_access_key: SecretStr
+    role_arn: str | None = None
+
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    def to_s3_credentials(self) -> S3Credentials:
+        """
+        Converts to `S3Credentials` for use with boto3.
+
+        Note: This only works for static credentials. For temporary credentials
+        with session tokens, use the `TemporaryCredential` model instead.
+
+        :return: `S3Credentials` object with secrets revealed.
+        """
+        return S3Credentials(
+            access_key_id=self.access_key_id.get_secret_value(),
+            secret_access_key=self.secret_access_key.get_secret_value(),
+            session_token=None,
+        )
+
+
+class TemporaryCredential(BaseModel):
+    """
+    Represents cached temporary credentials (session tokens).
+
+    This model is used for credentials cached in the `aws_temporary_credentials` table.
+    These credentials can come from various sources:
+    - STS AssumeRole operations
+    - Resource-specific session tokens
+
+    The `source` field tracks the origin of the session token, which can be:
+    - A role ARN: "arn:aws:iam::123456789012:role/MyRole"
+    - An S3 resource ARN: "arn:aws:s3:::bucket/path/*"
+    """
+
+    id: int
+    long_term_key_id: int  # Foreign key to aws_credentials table
+    access_key_id: SecretStr
+    secret_access_key: SecretStr
+    session_token: SecretStr
+    source: str  # Role ARN or S3 resource ARN
+    expires_at: datetime
+    created_at: datetime
+
+    def to_s3_credentials(self) -> S3Credentials:
+        """
+        Converts to `S3Credentials` for use with boto3.
+
+        :return: `S3Credentials` object with secrets revealed.
+        """
+        return S3Credentials(
+            access_key_id=self.access_key_id.get_secret_value(),
+            secret_access_key=self.secret_access_key.get_secret_value(),
+            session_token=self.session_token.get_secret_value(),
+        )
+
+    def is_expired(self, buffer_minutes: int = 5) -> bool:
+        """
+        Checks if credential is expired or expiring soon.
+
+        :param buffer_minutes: Minutes of buffer before expiration to consider credential expired.
+        :return: True if expired or expiring within `buffer_minutes`.
+        """
+
+        now = datetime.now(timezone.utc)
+        exp = self.expires_at
+        if exp.tzinfo is None:
+            # Assume DB stores UTC; attach UTC tzinfo to compare safely.
+            exp = exp.replace(tzinfo=timezone.utc)
+        return now >= exp - timedelta(minutes=buffer_minutes)
 
 
 class S3Config(BaseModel):

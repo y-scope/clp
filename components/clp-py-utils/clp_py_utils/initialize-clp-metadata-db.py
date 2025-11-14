@@ -13,6 +13,7 @@ from clp_py_utils.clp_config import (
     StorageEngine,
 )
 from clp_py_utils.clp_metadata_db_utils import (
+    create_aws_credentials_table,
     create_datasets_table,
     create_metadata_db_tables,
 )
@@ -61,6 +62,8 @@ def main(argv):
         with closing(sql_adapter.create_connection(True)) as metadata_db, closing(
             metadata_db.cursor(dictionary=True)
         ) as metadata_db_cursor:
+            create_aws_credentials_table(metadata_db_cursor, table_prefix)
+
             if StorageEngine.CLP_S == storage_engine:
                 create_datasets_table(metadata_db_cursor, table_prefix)
             else:
