@@ -6,7 +6,7 @@ from typing import List, Optional
 
 from clp_py_utils.clp_config import (
     ArchiveOutput,
-    CLPConfig,
+    ClpConfig,
     Database,
     QUERY_JOBS_TABLE_NAME,
     StorageEngine,
@@ -17,7 +17,7 @@ from clp_py_utils.clp_metadata_db_utils import (
     fetch_existing_datasets,
     get_archives_table_name,
 )
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 from job_orchestration.garbage_collector.constants import (
     ARCHIVE_GARBAGE_COLLECTOR_NAME,
     MIN_TO_SECONDS,
@@ -156,7 +156,7 @@ def _collect_and_sweep_expired_archives(
 
     clp_connection_param = database_config.get_clp_connection_params_and_type()
     table_prefix = clp_connection_param["table_prefix"]
-    sql_adapter = SQL_Adapter(database_config)
+    sql_adapter = SqlAdapter(database_config)
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
@@ -192,7 +192,7 @@ def _collect_and_sweep_expired_archives(
 
 
 async def archive_garbage_collector(
-    clp_config: CLPConfig, log_directory: pathlib.Path, logging_level: str
+    clp_config: ClpConfig, log_directory: pathlib.Path, logging_level: str
 ) -> None:
     configure_logger(logger, logging_level, log_directory, ARCHIVE_GARBAGE_COLLECTOR_NAME)
 

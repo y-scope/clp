@@ -57,7 +57,7 @@ class ConnectionPoolWrapper:
         return True
 
 
-class SQL_Adapter:
+class SqlAdapter:
     def __init__(self, database_config: Database):
         self.database_config = database_config
 
