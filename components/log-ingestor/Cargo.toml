@@ -16,4 +16,5 @@ tokio-util = "0.7.17"
 uuid = { version = "1.18.1", features = ["v4"] }
 
 [dev-dependencies]
+serial_test = "3.2.0"
 stdext = "0.3.3"

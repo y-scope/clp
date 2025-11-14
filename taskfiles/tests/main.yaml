@@ -9,21 +9,28 @@ tasks:
     vars:
       LOG_INGESTOR_BUCKET: "clp-log-ingestor-test-bucket"
       LOG_INGESTOR_QUEUE: "clp-log-ingestor-test-queue"
-      LOCALSTACK_CONTAINER_NAME_PREFIX: "clp-localstack-rust"
-      LOCALSTACK_CONTAINER_UUID:
-        sh: "uuidgen"
+      LOCALSTACK_CONTAINER_NAME:
+        # Normalize UUID casing: macOS generates uppercase while Linux generates lowercase.
+        sh: "uuidgen | tr '[:upper:]' '[:lower:]' | sed 's/^/clp-localstack-rust-/'"
+      LOCALSTACK_PORT:
+        sh: "tools/scripts/localstack/get-free-port.py"
     dir: "{{.ROOT_DIR}}"
     deps: ["toolchains:rust"]
     cmds:
       - |-
-        uv run tools/scripts/localstack/start.py \
-        --name "{{.LOCALSTACK_CONTAINER_NAME_PREFIX}}-{{.LOCALSTACK_CONTAINER_UUID}}"
+        tools/scripts/localstack/start.py \
+        --name "{{.LOCALSTACK_CONTAINER_NAME}}" \
+        --port "{{.LOCALSTACK_PORT}}"
       - defer: |-
-          uv run tools/scripts/localstack/stop.py \
-          --name "{{.LOCALSTACK_CONTAINER_NAME_PREFIX}}-{{.LOCALSTACK_CONTAINER_UUID}}"
+          tools/scripts/localstack/stop.py \
+          --name "{{.LOCALSTACK_CONTAINER_NAME}}"
       - |-
-        uv run tools/scripts/localstack/create-bucket.py \
+        tools/scripts/localstack/create-bucket.py \
         --bucket "{{.LOG_INGESTOR_BUCKET}}" \
-        --queue "{{.LOG_INGESTOR_QUEUE}}"
-      - ". $HOME/.cargo/env"
-      - "cargo test --all --all-features --release"
+        --queue "{{.LOG_INGESTOR_QUEUE}}" \
+        --port "{{.LOCALSTACK_PORT}}"
+      - |-
+        . $HOME/.cargo/env
+        CLP_LOG_INGESTOR_S3_BUCKET={{.LOG_INGESTOR_BUCKET}} \
+        CLP_LOG_INGESTOR_SQS_QUEUE={{.LOG_INGESTOR_QUEUE}} \
+        cargo test --all --all-features --release -- --include-ignored

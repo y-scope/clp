@@ -8,6 +8,9 @@ use tokio::{select, sync::mpsc};
 use tokio_util::sync::CancellationToken;
 use uuid::Uuid;
 
+use crate::aws_client_manager::AwsClientManagerType;
+
+/// Configuration for a SQS listener job.
 #[derive(Debug, Clone)]
 pub struct SqsListenerConfig {
     pub queue_url: String,
@@ -18,13 +21,34 @@ pub struct SqsListenerConfig {
     pub max_polling_backoff_sec: i32,
 }
 
-struct SqsListenerTask {
-    sqs_client: Client,
+/// Represents a SQS listener task that listens to SQS messages and extracts S3 object metadata.
+///
+/// # Type Parameters
+///
+/// * [`SqsClientManager`]: The type of the AWS SQS client manager.
+struct SqsListenerTask<SqsClientManager: AwsClientManagerType<Client>> {
+    sqs_client_manager: SqsClientManager,
     config: SqsListenerConfig,
     sender: mpsc::Sender<ObjectMetadata>,
 }
 
-impl SqsListenerTask {
+impl<SqsClientManager: AwsClientManagerType<Client> + 'static> SqsListenerTask<SqsClientManager> {
+    /// Runs the SQS listener task to listen to SQS messages and extract S3 object metadata. The
+    /// extracted metadata is sent to the provided channel sender.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`AwsClientManagerType::get`]'s return values on failure.
+    /// * Forwards [`Self::process_sqs_response`]'s return values on failure.
+    /// * Forwards
+    ///   [`aws_sdk_sqs::operation::receive_message::builders::ReceiveMessageFluentBuilder::send`]'s
+    ///   return values on failure.
     pub async fn run(self, cancel_token: CancellationToken) -> Result<()> {
         let mut polling_backoff_sec = self.config.init_polling_backoff_sec;
         loop {
@@ -35,7 +59,7 @@ impl SqsListenerTask {
                 }
 
                 // Listen to SQS messages.
-                result = self.sqs_client
+                result = self.sqs_client_manager.get().await?
                     .receive_message()
                     .queue_url(self.config.queue_url.as_str())
                     .max_number_of_messages(self.config.max_num_messages_to_fetch)
@@ -51,6 +75,24 @@ impl SqsListenerTask {
         }
     }
 
+    /// Processes the SQS response to extract S3 object metadata and send it to the channel sender.
+    ///
+    /// # NOTE
+    ///
+    /// The message will be deleted from the SQS queue if it is successfully processed.
+    ///
+    /// # Returns
+    ///
+    /// Whether any relevant object metadata was ingested.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`mpsc::Sender::send`]'s return values on failure.
+    /// * Forwards
+    ///   [`aws_sdk_sqs::operation::delete_message::builders::DeleteMessageFluentBuilder::send`]'s
+    ///   return values on failure.
     async fn process_sqs_response(&self, response: ReceiveMessageOutput) -> Result<bool> {
         if response.messages.is_none() {
             return Ok(false);
@@ -75,7 +117,9 @@ impl SqsListenerTask {
                 }
             }
             if let Some(receipt_handle) = msg.receipt_handle() {
-                self.sqs_client
+                self.sqs_client_manager
+                    .get()
+                    .await?
                     .delete_message()
                     .queue_url(self.config.queue_url.as_str())
                     .receipt_handle(receipt_handle)
@@ -86,10 +130,20 @@ impl SqsListenerTask {
         Ok(ingested)
     }
 
+    /// Extracts S3 object metadata from the given SQS record if it corresponds to a relevant
+    /// object.
+    ///
+    /// # Returns
+    ///
+    /// * `Some(ObjectMetadata)` if the record corresponds to a relevant object.
+    /// * `None` if:
+    ///   * The event is not an object creation event.
+    ///   * The bucket name does not match the listener's configuration.
+    ///   * [`Self::is_relevant_object`] evaluates to `false`.
     fn extract_object_metadata(&self, record: Record) -> Option<ObjectMetadata> {
-        if false == record.event_name.starts_with("ObjectCreated:")
+        if !record.event_name.starts_with("ObjectCreated:")
             || self.config.bucket_name != record.s3.bucket.name.as_str()
-            || false == self.is_relevant_object(record.s3.object.key.as_str())
+            || !self.is_relevant_object(record.s3.object.key.as_str())
         {
             return None;
         }
@@ -100,11 +154,15 @@ impl SqsListenerTask {
         })
     }
 
+    /// # Returns:
+    ///
+    /// Whether the object key corresponds to a relevant object based on the listener's prefix.
     fn is_relevant_object(&self, object_key: &str) -> bool {
-        false == object_key.ends_with('/') && object_key.starts_with(self.config.prefix.as_str())
+        !object_key.ends_with('/') && object_key.starts_with(self.config.prefix.as_str())
     }
 }
 
+/// Represents a SQS listener job that manages the lifecycle of a SQS listener task.
 pub struct SqsListener {
     id: Uuid,
     cancel_token: CancellationToken,
@@ -112,15 +170,27 @@ pub struct SqsListener {
 }
 
 impl SqsListener {
+    /// Creates and spawns a new [`SqsListener`] backed by a [`SqsListenerTask`].
+    ///
+    /// This function spawns a [`SqsListenerTask`]. The spawned task will listen to SQS messages,
+    /// extract relevant S3 object metadata, and send the metadata to the provided channel sender.
+    ///
+    /// # Type parameters
+    ///
+    /// * [`SqsClientManager`]: The type of the AWS SQS client manager.
+    ///
+    /// # Returns
+    ///
+    /// A newly created instance of [`SqsListener`].
     #[must_use]
-    pub fn spawn(
+    pub fn spawn<SqsClientManager: AwsClientManagerType<Client> + 'static>(
         id: Uuid,
-        sqs_client: Client,
+        sqs_client_manager: SqsClientManager,
         config: SqsListenerConfig,
         sender: mpsc::Sender<ObjectMetadata>,
     ) -> Self {
         let task = SqsListenerTask {
-            sqs_client,
+            sqs_client_manager,
             config,
             sender,
         };

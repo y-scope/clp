@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
 # /// script
-# dependencies = [
-# ]
+# dependencies = []
 # ///
 """Script to start a LocalStack Docker container."""
 
@@ -17,14 +16,11 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger = logging.getLogger("localstack-start")
+logger = logging.getLogger(__name__)
 
 
 def main() -> int:
     """Main."""
-    # To silence Ruff S607
-    docker_executable = "docker"
-
     parser = argparse.ArgumentParser(description="Start LocalStack Docker container.")
     parser.add_argument(
         "--name",
@@ -39,6 +35,10 @@ def main() -> int:
         help="The port to expose LocalStack on (default: %(default)d)",
     )
     args = parser.parse_args()
+
+    # Silence Ruff S607: the absolute path of the Docker binary may vary depending on the
+    # installation method.
+    docker_executable = "docker"
 
     result = subprocess.run(
         [docker_executable, "inspect", "-f", "{{.State.Running}}", args.name],

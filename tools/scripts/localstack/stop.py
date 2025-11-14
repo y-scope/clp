@@ -1,7 +1,6 @@
-#!/usr/bin/env python3
+#!/usr/bin/env -S uv run --script
 # /// script
-# dependencies = [
-# ]
+# dependencies = []
 # ///
 """Script to stop a running LocalStack Docker container."""
 import argparse
@@ -14,7 +13,7 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger = logging.getLogger("localstack-stop")
+logger = logging.getLogger(__name__)
 
 
 def main() -> int:
@@ -52,7 +51,7 @@ def main() -> int:
         logger.error("Failed to stop LocalStack container:\n%s", result.stderr)
         return result.returncode
     logger.info("LocalStack container stopped successfully.")
-    return result.returncode
+    return 0
 
 
 if __name__ == "__main__":
