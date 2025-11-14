@@ -7,7 +7,6 @@ import pytest
 from tests.utils.config import (
     CoreConfig,
     IntegrationTestConfig,
-    PackageConfig,
 )
 from tests.utils.utils import get_env_var
 
@@ -17,14 +16,6 @@ def core_config() -> CoreConfig:
     """Fixture that provides a CoreConfig shared across tests."""
     return CoreConfig(
         clp_core_bins_dir=Path(get_env_var("CLP_CORE_BINS_DIR")).expanduser().resolve()
-    )
-
-
-@pytest.fixture(scope="session")
-def package_config() -> PackageConfig:
-    """Fixture that provides a PackageConfig shared across tests."""
-    return PackageConfig(
-        clp_package_dir=Path(get_env_var("CLP_PACKAGE_DIR")).expanduser().resolve()
     )
 
 
