@@ -1,0 +1,121 @@
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: {{ include "clp-package.fullname" . }}-query-scheduler
+  labels:
+    {{- include "clp-package.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "query-scheduler"
+spec:
+  clusterIP: "None"
+  selector:
+    {{- include "clp-package.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: "query-scheduler"
+  ports:
+    - port: 7000
+      targetPort: 7000
+---
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp-package.fullname" . }}-query-scheduler
+  labels:
+    {{- include "clp-package.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "query-scheduler"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "query-scheduler"
+  template:
+    metadata:
+      labels:
+        {{- include "clp-package.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "query-scheduler"
+    spec:
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsUser: {{ .Values.securityContext.firstParty.uid }}
+        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
+        fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      initContainers:
+        - name: "wait-for-database"
+          image: "busybox:latest"
+          command: [
+            "sh", "-c",
+            "until nc -z {{ include "clp-package.fullname" . }}-database 3306; do echo waiting for database; sleep 2; done"
+          ]
+        - name: "wait-for-queue"
+          image: "busybox:latest"
+          command: [
+            "sh", "-c",
+            "until nc -z {{ include "clp-package.fullname" . }}-queue 5672; do echo waiting for queue; sleep 2; done"
+          ]
+        - name: "wait-for-redis"
+          image: "busybox:latest"
+          command: [
+            "sh", "-c",
+            "until nc -z {{ include "clp-package.fullname" . }}-redis 6379; do echo waiting for redis; sleep 2; done"
+          ]
+      containers:
+        - name: "query-scheduler"
+          image: "{{ include "clp-package.image.ref" . }}"
+          imagePullPolicy: "Always"
+          env:
+            - name: "BROKER_URL"
+              value: "amqp://{{ .Values.credentials.queue.user }}:{{ .Values.credentials.queue.password }}@{{ include "clp-package.fullname" . }}-queue:5672"
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp-package.fullname" . }}-secret
+                  key: "db-username"
+            - name: "CLP_DB_PASS"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp-package.fullname" . }}-secret
+                  key: "db-password"
+            - name: "CLP_LOGGING_LEVEL"
+              value: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
+            - name: "CLP_LOGS_DIR"
+              value: "/var/log/query_scheduler"
+            - name: "PYTHONPATH"
+              value: "/opt/clp/lib/python3/site-packages"
+            - name: "RESULT_BACKEND"
+              value: "redis://default:{{ .Values.credentials.redis.password }}@{{ include "clp-package.fullname" . }}-redis:6379/{{ .Values.clpConfig.redis.query_backend_database }}"
+          volumeMounts:
+            - name: "config"
+              mountPath: "/etc/clp-config.yml"
+              subPath: "clp-config.yml"
+              readOnly: true
+            - name: "query-scheduler-logs"
+              mountPath: "/var/log/query_scheduler"
+          command: [
+            "python3", "-u",
+            "-m", "job_orchestration.scheduler.query.query_scheduler",
+            "--config", "/etc/clp-config.yml"
+          ]
+      volumes:
+        - name: "config"
+          configMap:
+            name: {{ include "clp-package.fullname" . }}-config
+        - name: "query-scheduler-logs"
+          persistentVolumeClaim:
+            claimName: {{ include "clp-package.fullname" . }}-query-scheduler-logs
+---
+apiVersion: "v1"
+kind: "PersistentVolumeClaim"
+metadata:
+  name: {{ include "clp-package.fullname" . }}-query-scheduler-logs
+  labels:
+    {{- include "clp-package.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "query-scheduler"
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: "local-storage"
+  selector:
+    matchLabels:
+      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "query-scheduler"
+  resources:
+    requests:
+      storage: "5Gi"
