@@ -102,8 +102,8 @@ tasks:
       - task: "yscope-dev-utils:cmake:install-remote-tar"
         vars:
           CMAKE_PACKAGE_NAME: "spider"
-          TAR_SHA256: "43478b6da99aa2df50c960573ec68c6fcf67cdfbab39b5e314676218aa93b959"
-          TAR_URL: "https://github.com/y-scope/spider/archive/6a7bad3.tar.gz"
+          TAR_SHA256: "c4ce1315a6788c34e7986e40b501adc3163dcd178865373e7cbc0684321a513c"
+          TAR_URL: "https://github.com/y-scope/spider/archive/b34204b.tar.gz"
           WORK_DIR: "{{.G_SPIDER_BUILD_DIR}}"
           CMAKE_JOBS: "{{.G_CPP_MAX_PARALLELISM_PER_BUILD_TASK}}"
           CMAKE_GEN_ARGS:
