@@ -1,0 +1,150 @@
+apiVersion: "v1"
+kind: "ConfigMap"
+metadata:
+  name: {{ include "clp-package.fullname" . }}-config
+  labels:
+    {{- include "clp-package.labels" . | nindent 4 }}
+data:
+  clp-config.yml: |
+    api_server:
+      default_max_num_query_results: {{ .Values.clpConfig.api_server.default_max_num_query_results }}
+      host: {{ .Values.clpConfig.api_server.host | quote }}
+      port: {{ .Values.clpConfig.api_server.port }}
+      query_job_polling:
+        initial_backoff_ms: {{ .Values.clpConfig.api_server.query_job_polling.initial_backoff_ms }}
+        max_backoff_ms: {{ .Values.clpConfig.api_server.query_job_polling.max_backoff_ms }}
+    archive_output:
+      compression_level: {{ .Values.clpConfig.archive_output.compression_level }}
+      retention_period: {{ .Values.clpConfig.archive_output.retention_period }}
+      storage:
+        directory: "/var/data/archives"
+        type: "fs"
+      target_archive_size: {{ .Values.clpConfig.archive_output.target_archive_size }}
+      target_dictionaries_size: {{ .Values.clpConfig.archive_output.target_dictionaries_size }}
+      target_encoded_file_size: {{ .Values.clpConfig.archive_output.target_encoded_file_size }}
+      target_segment_size: {{ .Values.clpConfig.archive_output.target_segment_size }}
+    aws_config_directory: {{ .Values.clpConfig.aws_config_directory }}
+    compression_scheduler:
+      jobs_poll_delay: {{ .Values.clpConfig.compression_scheduler.jobs_poll_delay }}
+      logging_level: {{ .Values.clpConfig.compression_scheduler.logging_level | quote }}
+    compression_worker:
+      logging_level: {{ .Values.clpConfig.compression_worker.logging_level | quote }}
+    data_directory: "/var/data"
+    database:
+      auto_commit: false
+      compress: true
+      host: {{ include "clp-package.fullname" . }}-database
+      name: {{ .Values.clpConfig.database.name | quote }}
+      port: {{ .Values.clpConfig.database.port }}
+      ssl_cert: null
+      type: {{ .Values.clpConfig.database.type | quote }}
+    garbage_collector:
+      logging_level: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
+      sweep_interval:
+        archive: {{ .Values.clpConfig.garbage_collector.sweep_interval.archive }}
+        search_result: {{ .Values.clpConfig.garbage_collector.sweep_interval.search_result }}
+    logs_directory: "/var/log"
+    logs_input:
+      directory: "/mnt/logs"
+      type: "fs"
+    mcp_server: {{ .Values.clpConfig.mcp_server }}
+    package:
+      query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
+      storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
+    presto: {{ .Values.clpConfig.presto }}
+    query_scheduler:
+      host: {{ include "clp-package.fullname" . }}-query-scheduler
+      jobs_poll_delay: {{ .Values.clpConfig.query_scheduler.jobs_poll_delay }}
+      logging_level: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
+      num_archives_to_search_per_sub_job: {{ .Values.clpConfig.query_scheduler.num_archives_to_search_per_sub_job }}
+      port: {{ .Values.clpConfig.query_scheduler.port }}
+    query_worker:
+      logging_level: {{ .Values.clpConfig.query_worker.logging_level | quote }}
+    queue:
+      host: {{ include "clp-package.fullname" . }}-queue
+      port: {{ .Values.clpConfig.queue.port }}
+    redis:
+      compression_backend_database: {{ .Values.clpConfig.redis.compression_backend_database }}
+      host: {{ include "clp-package.fullname" . }}-redis
+      port: {{ .Values.clpConfig.redis.port }}
+      query_backend_database: {{ .Values.clpConfig.redis.query_backend_database }}
+    reducer:
+      base_port: {{ .Values.clpConfig.reducer.base_port }}
+      host: {{ include "clp-package.fullname" . }}-reducer
+      logging_level: {{ .Values.clpConfig.reducer.logging_level | quote }}
+      upsert_interval: {{ .Values.clpConfig.reducer.upsert_interval }}
+    results_cache:
+      db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
+      host: {{ include "clp-package.fullname" . }}-results-cache
+      port: {{ .Values.clpConfig.results_cache.port }}
+      retention_period: {{ .Values.clpConfig.results_cache.retention_period }}
+      stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
+    stream_output:
+      storage:
+        directory: "/var/data/streams"
+        type: "fs"
+      target_uncompressed_size: {{ .Values.clpConfig.stream_output.target_uncompressed_size }}
+    tmp_directory: "/var/tmp"
+    webui:
+      host: {{ .Values.clpConfig.webui.host | quote }}
+      port: {{ .Values.clpConfig.webui.port }}
+      rate_limit: {{ .Values.clpConfig.webui.rate_limit }}
+      results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }}
+  mysql-logging.cnf: |
+    [mysqld]
+    # https://dev.mysql.com/doc/refman/8.0/en/log-destinations.html
+    # Enable the general log
+    general_log=1
+    # Set the destination file
+    general_log_file=/var/log/mysql/mysql.log
+
+    # https://dev.mysql.com/doc/refman/8.0/en/error-log-destination-configuration.html
+    # Send error logs to file
+    log_error=/var/log/mysql/mysql-error.log
+  redis.conf: |
+    # For full reference of configuration options see
+    # https://raw.githubusercontent.com/redis/redis/7.2/redis.conf
+
+    databases 2
+    logfile "/var/log/redis/redis.log"
+  mongod.conf: |
+    replication:
+      replSetName: "rs0"
+    systemLog:
+      destination: file
+      path: /var/log/mongodb/mongod.log
+      logAppend: true
+      timeStampFormat: iso8601-local
+  webui-client-settings.json: |
+    {
+      "ClpStorageEngine": {{ .Values.clpConfig.package.storage_engine | quote }},
+      "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
+      "MongoDbSearchResultsMetadataCollectionName": {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
+      "SqlDbClpArchivesTableName": "",
+      "SqlDbClpDatasetsTableName": "clp_datasets",
+      "SqlDbClpFilesTableName": "",
+      "SqlDbClpTablePrefix": "clp_",
+      "SqlDbCompressionJobsTableName": "compression_jobs"
+    }
+  webui-server-settings.json: |
+    {
+      "SqlDbHost": "{{ include "clp-package.fullname" . }}-database",
+      "SqlDbPort": {{ .Values.clpConfig.database.port }},
+      "SqlDbName": {{ .Values.clpConfig.database.name | quote }},
+      "SqlDbQueryJobsTableName": "query_jobs",
+      "MongoDbHost": "{{ include "clp-package.fullname" . }}-results-cache",
+      "MongoDbPort": 27017,
+      "MongoDbName": {{ .Values.clpConfig.results_cache.db_name | quote }},
+      "MongoDbSearchResultsMetadataCollectionName": {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},
+      "MongoDbStreamFilesCollectionName": "stream-files",
+      "ClientDir": "/opt/clp/var/www/webui/client",
+      "LogViewerDir": "/opt/clp/var/www/webui/yscope-log-viewer",
+      "StreamFilesDir": "/var/data/streams",
+      "StreamTargetUncompressedSize": 134217728,
+      "StreamFilesS3Region": null,
+      "StreamFilesS3PathPrefix": null,
+      "StreamFilesS3Profile": null,
+      "ClpQueryEngine": {{ .Values.clpConfig.package.query_engine | quote }},
+      "PrestoHost": null,
+      "PrestoPort": null
+    }

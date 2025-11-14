@@ -1,0 +1,25 @@
+{{- include "clp-package.createLocalDataPv" (list . "database") }}
+---
+{{- include "clp-package.createLocalLogsPv" (list . "database") }}
+---
+{{- include "clp-package.createLocalLogsPv" (list . "queue") }}
+---
+{{- include "clp-package.createLocalDataPv" (list . "redis") }}
+---
+{{- include "clp-package.createLocalLogsPv" (list . "redis") }}
+---
+{{- include "clp-package.createLocalDataPv" (list . "results-cache") }}
+---
+{{- include "clp-package.createLocalLogsPv" (list . "results-cache") }}
+---
+{{- include "clp-package.createLocalLogsPv" (list . "compression-scheduler") }}
+---
+{{- include "clp-package.createLocalLogsPv" (list . "compression-worker") }}
+---
+{{- include "clp-package.createLocalLogsPv" (list . "query-scheduler") }}
+---
+{{- include "clp-package.createLocalLogsPv" (list . "query-worker") }}
+---
+{{- include "clp-package.createStreamsPv" . }}
+---
+{{- include "clp-package.createTmpPv" . }}

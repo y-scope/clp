@@ -1,0 +1,58 @@
+apiVersion: "batch/v1"
+kind: "Job"
+metadata:
+  name: {{ include "clp-package.fullname" . }}-db-table-creator
+  labels:
+    {{- include "clp-package.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "db-table-creator"
+spec:
+  template:
+    metadata:
+      labels:
+        {{- include "clp-package.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "db-table-creator"
+    spec:
+      restartPolicy: "OnFailure"
+      securityContext:
+        runAsUser: {{ .Values.securityContext.firstParty.uid }}
+        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
+        fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      initContainers:
+        - name: "wait-for-database"
+          image: "busybox:latest"
+          command: [
+            "sh", "-c",
+            "until nc -z {{ include "clp-package.fullname" . }}-database 3306; do echo waiting for database; sleep 2; done"
+          ]
+      containers:
+        - name: "db-table-creator"
+          image: "{{ include "clp-package.image.ref" . }}"
+          imagePullPolicy: "Always"
+          env:
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp-package.fullname" . }}-secret
+                  key: "db-username"
+            - name: "CLP_DB_PASS"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp-package.fullname" . }}-secret
+                  key: "db-password"
+            - name: "PYTHONPATH"
+              value: "/opt/clp/lib/python3/site-packages"
+          volumeMounts:
+            - name: "config"
+              mountPath: "/etc/clp-config.yml"
+              subPath: "clp-config.yml"
+              readOnly: true
+          command: [
+            "python3", "-u",
+            "-m", "clp_py_utils.create-db-tables",
+            "--config", "/etc/clp-config.yml",
+            "--storage-engine", {{ .Values.clpConfig.package.storage_engine | quote }}
+          ]
+      volumes:
+        - name: "config"
+          configMap:
+            name: {{ include "clp-package.fullname" . }}-config
