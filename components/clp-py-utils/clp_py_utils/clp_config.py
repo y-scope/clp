@@ -853,12 +853,7 @@ class ClpConfig(BaseModel):
             return DeploymentType.FULL
 
     def dump_to_primitive_dict(self):
-        custom_serialized_fields = {
-            "database",
-            "queue",
-            "redis",
-            "spider_db"
-        }
+        custom_serialized_fields = {"database", "queue", "redis", "spider_db"}
         d = self.model_dump(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
             value = getattr(self, key)
