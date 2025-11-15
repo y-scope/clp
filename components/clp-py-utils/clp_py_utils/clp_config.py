@@ -857,10 +857,12 @@ class ClpConfig(BaseModel):
             "database",
             "queue",
             "redis",
+            "spider_db"
         }
         d = self.model_dump(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
-            d[key] = getattr(self, key).dump_to_primitive_dict()
+            value = getattr(self, key)
+            d[key] = None if value is None else value.dump_to_primitive_dict()
 
         return d
 
@@ -913,8 +915,10 @@ class ClpConfig(BaseModel):
         self.stream_output.storage.transform_for_container()
 
         self.database.transform_for_container()
-        self.queue.transform_for_container()
-        self.redis.transform_for_container()
+        if self.queue is not None:
+            self.queue.transform_for_container()
+        if self.redis is not None:
+            self.redis.transform_for_container()
         self.results_cache.transform_for_container()
         self.query_scheduler.transform_for_container()
         self.reducer.transform_for_container()
