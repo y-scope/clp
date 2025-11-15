@@ -120,15 +120,22 @@ def _sort_json_keys_and_rows(
         jq_cmd.append("--sort-keys")
     jq_cmd.extend(["--compact-output", ".", str(json_fp)])
 
+    jq_proc = None
     try:
         if respect_row_order:
             subprocess.run(jq_cmd, stdout=sorted_fp, check=True)
         else:
-            jq_proc = subprocess.run(jq_cmd, stdout=subprocess.PIPE, check=True)
-            subprocess.run([sort_bin], input=jq_proc.stdout, stdout=sorted_fp, check=True)
+            jq_proc = subprocess.Popen(jq_cmd, stdout=subprocess.PIPE)
+            subprocess.run([sort_bin], stdin=jq_proc.stdout, stdout=sorted_fp, check=True)
+            jq_rc = jq_proc.wait()
+            if jq_rc != 0:
+                raise subprocess.CalledProcessError(jq_rc, jq_cmd)  # noqa: TRY301
     except subprocess.CalledProcessError as e:
         err_msg = f"Failed to deterministically sort `{json_fp}`."
         raise RuntimeError(err_msg) from e
+    finally:
+        if jq_proc is not None and jq_proc.stdout is not None:
+            jq_proc.stdout.close()
 
     sorted_fp.flush()
     sorted_fp.seek(0)
