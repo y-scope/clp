@@ -59,7 +59,7 @@ class ConnectionPoolWrapper:
 
 
 class SqlAdapter:
-    def __init__(self, database_config: Database):
+    def __init__(self, database_config: Database, spider_database_config: Optional[SpiderDb] = None):
         self.database_config = database_config
         self._spider_database_config = spider_database_config
 
@@ -85,7 +85,7 @@ class SqlAdapter:
 
     def create_mariadb_connection(
         self, disable_localhost_socket_connection: bool = False
-    ) -> mariadb.connection:
+    ) -> mariadb.Connection:
         try:
             connection = mariadb.connect(
                 **self.database_config.get_mysql_connection_params(

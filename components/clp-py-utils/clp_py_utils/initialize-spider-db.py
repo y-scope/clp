@@ -7,9 +7,9 @@ import sys
 from contextlib import closing
 
 from pydantic import ValidationError
-from sql_adapter import SQL_Adapter
+from sql_adapter import SqlAdapter
 
-from clp_py_utils.clp_config import CLPConfig
+from clp_py_utils.clp_config import ClpConfig
 from clp_py_utils.core import read_yaml_config_file
 
 # Setup logging
@@ -227,7 +227,7 @@ def main(argv):
 
     config_path = pathlib.Path(parsed_args.config)
     try:
-        clp_config = CLPConfig.model_validate(read_yaml_config_file(config_path))
+        clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
         if clp_config.spider_db is None:
             return 0
@@ -245,7 +245,7 @@ def main(argv):
         return -1
 
     try:
-        sql_adapter = SQL_Adapter(clp_config.database)
+        sql_adapter = SqlAdapter(clp_config.database)
         with closing(sql_adapter.create_root_mariadb_connection()) as db_conn, closing(
             db_conn.cursor()
         ) as db_cursor:
