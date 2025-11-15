@@ -260,9 +260,6 @@ def main(argv):
             if not _validate_name(clp_user):
                 logger.error(f"Invalid CLP database user name: {clp_user}")
                 return -1
-            if not _validate_name(db_password):
-                logger.error(f"Invalid database user password")
-                return -1
 
             db_cursor.execute(f"""CREATE DATABASE IF NOT EXISTS `{db_name}`""")
             if db_password is not None:
@@ -277,7 +274,7 @@ def main(argv):
             db_cursor.execute(f"""USE `{db_name}`""")
             for table_creator in table_creators:
                 db_cursor.execute(table_creator)
-    except:
+    except Exception:
         logger.exception("Failed to setup Spider database.")
         return -1
 
