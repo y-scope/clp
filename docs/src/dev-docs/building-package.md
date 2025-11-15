@@ -88,20 +88,6 @@ To clean up all build artifacts, run:
 task clean
 ```
 
-## Building a Docker image
-
-To build a Docker image containing the CLP package, run:
-
-```shell
-task docker-images:package
-```
-
-This will create a Docker image named `clp-package:dev`.
-
-The package includes a `docker-compose.yaml` file that can be used to deploy CLP using Docker Compose.
-If you want to manually deploy with Docker Compose instead of using the package scripts, see the 
-[Docker Compose design][docker-compose-design] for more information.
-
 [Docker]: https://docs.docker.com/engine/install/
 [docker-compose]: https://docs.docker.com/compose/
 [design-deployment-orchestration]: design-deployment-orchestration.md
