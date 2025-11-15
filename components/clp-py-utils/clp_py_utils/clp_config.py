@@ -29,6 +29,7 @@ from .serialization_utils import serialize_path, serialize_str_enum
 DB_COMPONENT_NAME = "database"
 QUEUE_COMPONENT_NAME = "queue"
 REDIS_COMPONENT_NAME = "redis"
+SPIDER_SCHEDULER_COMPONENT_NAME = "spider_scheduler"
 REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
 COMPRESSION_SCHEDULER_COMPONENT_NAME = "compression_scheduler"
@@ -108,6 +109,14 @@ class DatabaseEngine(KebabCaseStrEnum):
 
 
 DatabaseEngineStr = Annotated[DatabaseEngine, StrEnumSerializer]
+
+
+class OrchestrationType(KebabCaseStrEnum):
+    celery = auto()
+    spider = auto()
+
+
+OrchestrationTypeStr = Annotated[OrchestrationType, StrEnumSerializer]
 
 
 class QueryEngine(KebabCaseStrEnum):
@@ -251,9 +260,31 @@ class Database(BaseModel):
         self.port = self.DEFAULT_PORT
 
 
+class SpiderDb(Database):
+
+    name: str = "spider-db"
+
+    @field_validator("type")
+    @classmethod
+    def validate_type(cls, value):
+        if value != "mariadb":
+            raise ValueError(f"Spider only support MariaDB storage.")
+        return value
+
+    def get_url(self):
+        self.ensure_credentials_loaded()
+        return f"jdbc:mariadb://{self.host}:{self.port}/{self.name}?user={self.username}&password={self.password}"
+
+
+class SpiderScheduler(BaseModel):
+    host: str = "localhost"
+    port: Port = 6000
+
+
 class CompressionScheduler(BaseModel):
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
     logging_level: LoggingLevel = "INFO"
+    type: OrchestrationTypeStr = OrchestrationType.celery
 
 
 class QueryScheduler(BaseModel):
@@ -428,9 +459,6 @@ class S3Config(BaseModel):
 class S3IngestionConfig(BaseModel):
     type: Literal[StorageType.S3.value] = StorageType.S3.value
     aws_authentication: AwsAuthentication
-
-    def dump_to_primitive_dict(self):
-        return self.model_dump()
 
     def transform_for_container(self):
         pass
@@ -630,11 +658,14 @@ class ClpConfig(BaseModel):
 
     package: Package = Package()
     database: Database = Database()
-    queue: Queue = Queue()
-    redis: Redis = Redis()
+    # Default to use celery backend
+    queue: Optional[Queue] = Queue()
+    redis: Optional[Redis] = Redis()
     reducer: Reducer = Reducer()
     results_cache: ResultsCache = ResultsCache()
     compression_scheduler: CompressionScheduler = CompressionScheduler()
+    spider_db: Optional[SpiderDb] = None
+    spider_scheduler: Optional[SpiderScheduler] = None
     query_scheduler: QueryScheduler = QueryScheduler()
     compression_worker: CompressionWorker = CompressionWorker()
     query_worker: QueryWorker = QueryWorker()
@@ -822,14 +853,11 @@ class ClpConfig(BaseModel):
             return DeploymentType.FULL
 
     def dump_to_primitive_dict(self):
-        custom_serialized_fields = {
-            "database",
-            "queue",
-            "redis",
-        }
+        custom_serialized_fields = {"database", "queue", "redis", "spider_db"}
         d = self.model_dump(exclude=custom_serialized_fields)
         for key in custom_serialized_fields:
-            d[key] = getattr(self, key).dump_to_primitive_dict()
+            value = getattr(self, key)
+            d[key] = None if value is None else value.dump_to_primitive_dict()
 
         return d
 
@@ -841,6 +869,30 @@ class ClpConfig(BaseModel):
             raise ValueError(
                 f"`presto` config must be non-null when query_engine is `{query_engine}`"
             )
+        return self
+
+    @model_validator(mode="after")
+    def validate_spider_config(self):
+        orchestration_type = self.compression_scheduler.type
+        if orchestration_type != OrchestrationType.spider:
+            return self
+        if self.spider_db is None:
+            raise ValueError("SpiderDb config must be set when using spider orchestration.")
+        if self.spider_scheduler is None:
+            raise ValueError("SpiderScheduler config must be set when using spider orchestration.")
+        if self.database.type != "mariadb":
+            raise ValueError("Database type must be 'mariadb' when using spider orchestration.")
+        return self
+
+    @model_validator(mode="after")
+    def validate_celery_config(self):
+        orchestration_type = self.compression_scheduler.type
+        if orchestration_type != OrchestrationType.celery:
+            return self
+        if self.queue is None:
+            raise ValueError("Queue config must be set when using celery orchestration.")
+        if self.redis is None:
+            raise ValueError("Redis config must be set when using celery orchestration.")
         return self
 
     def transform_for_container(self):
@@ -858,8 +910,10 @@ class ClpConfig(BaseModel):
         self.stream_output.storage.transform_for_container()
 
         self.database.transform_for_container()
-        self.queue.transform_for_container()
-        self.redis.transform_for_container()
+        if self.queue is not None:
+            self.queue.transform_for_container()
+        if self.redis is not None:
+            self.redis.transform_for_container()
         self.results_cache.transform_for_container()
         self.query_scheduler.transform_for_container()
         self.reducer.transform_for_container()

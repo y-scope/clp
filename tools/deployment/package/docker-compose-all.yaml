@@ -204,6 +204,25 @@ services:
       "--stream-collection", "${CLP_RESULTS_CACHE_STREAM_COLLECTION_NAME:-stream-files}",
     ]
 
+  spider-scheduler:
+    <<: *service_defaults
+    hostname: "spider_scheduler"
+    environment:
+      SPIDER_LOG_FILE: "/var/log/spider_scheduler.log"
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
+    ports:
+      - host_ip: "${SPIDER_SCHEDULER_HOST}"
+        published: "${SPIDER_SCHEDULER_PORT}"
+        target: "${SPIDER_SCHEDULER_PORT}"
+    command: [
+      "/opt/clp/bin/spider_scheduler",
+      "--host", "${SPIDER_SCHEDULER_HOST}",
+      "--port", "${SPIDER_SCHEDULER_PORT}",
+      "--storage_url", "${SPIDER_DB_URL}"
+    ]
+
   compression-scheduler:
     <<: *service_defaults
     hostname: "compression_scheduler"
@@ -274,6 +293,40 @@ services:
       "-n", "compression-worker"
     ]
 
+  spider-compression-worker:
+    <<: *service_defaults
+    hostname: "compression_worker"
+    environment:
+      CLP_CONFIG_PATH: "/etc/clp-config.yml"
+      CLP_HOME: "/opt/clp"
+      CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
+      CLP_LOGS_DIR: "/var/log/compression_worker"
+      CLP_WORKER_LOG_PATH: "/var/log/compression_worker/worker.log"
+      PYTHONPATH: "/opt/clp/lib/python3/site-packages"
+      SPIDER_LOG_DIR: "/var/log/compression_worker"
+    volumes:
+      - *volume_clp_config_readonly
+      - *volume_clp_logs
+      - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
+      - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
+      - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
+      - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
+      - type: "bind"
+        source: "${CLP_TMP_DIR_HOST:-./var/tmp}"
+        target: "/var/tmp"
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
+    command: [
+      "python3",
+      "-u",
+      "/opt/clp/lib/python3/site-packages/clp_py_utils/start-spider-worker.py",
+      "--concurrency", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
+      "--storage-url", "${SPIDER_DB_URL}",
+      # NOTE: Leave host to spider scheduler's host. This only affects task placement.
+      "--host", "${SPIDER_SCHEDULER_HOST}",
+    ]
+
   webui:
     <<: *service_defaults
     hostname: "webui"
@@ -323,7 +376,6 @@ services:
   garbage-collector:
     <<: *service_defaults
     hostname: "garbage_collector"
-    stop_grace_period: "10s"
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the garbage collector.
       replicas: "${CLP_GARBAGE_COLLECTOR_ENABLED:-1}"

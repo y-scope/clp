@@ -501,6 +501,13 @@ def validate_and_load_redis_credentials_file(
     clp_config.redis.load_credentials_from_file(clp_config.credentials_file_path)
 
 
+def validate_and_load_spider_db_credentials_file(
+    clp_config: ClpConfig, clp_home: pathlib.Path, generate_default_file: bool
+):
+    validate_credentials_file_path(clp_config, clp_home, generate_default_file)
+    clp_config.spider_db.load_credentials_from_file(clp_config.credentials_file_path)
+
+
 def validate_db_config(
     clp_config: ClpConfig,
     component_config: pathlib.Path,
