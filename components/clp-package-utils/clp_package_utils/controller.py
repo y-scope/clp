@@ -275,7 +275,7 @@ class BaseController(ABC):
 
     def _set_up_env_for_spider_scheduler(self) -> EnvVarsDict:
         """
-        Sets up environment variables for the Spider database component.
+        Sets up environment variables for the Spider scheduler component.
 
         :return: Dictionary of environment variables necessary to launch the component.
         """
