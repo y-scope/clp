@@ -528,7 +528,7 @@ def main(argv):
         task_manager = SpiderTaskManager(clp_config.spider_db.get_url())
     else:
         logger.error(
-            f"Unsupported compression scheduler type:" f" {clp_config.compression_scheduler.type}"
+            f"Unsupported compression scheduler type: {clp_config.compression_scheduler.type}"
         )
         return -1
 
