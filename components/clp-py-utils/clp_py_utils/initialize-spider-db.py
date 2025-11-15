@@ -236,7 +236,7 @@ def main(argv):
     except (ValidationError, ValueError) as err:
         logger.error(err)
         return -1
-    except:
+    except Exception:
         logger.exception("Failed to load CLP configuration.")
         return -1
 
