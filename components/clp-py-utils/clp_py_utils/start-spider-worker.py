@@ -28,18 +28,32 @@ def main() -> None:
 
     clp_home = os.getenv("CLP_HOME", "/opt/clp")
     spider_worker_path = pathlib.Path(clp_home) / "bin" / "spider_worker"
+    if not spider_worker_path.exists():
+        print(f"Error: spider_worker not found at {spider_worker_path}")
+        exit(1)
 
     # Start multiple spider workers
     processes = []
-    for _ in range(concurrency):
-        process = subprocess.Popen(
-            [spider_worker_path, "--storage_url", storage_url, "--host", host]
-        )
-        processes.append(process)
+    try:
+        for _ in range(concurrency):
+            process = subprocess.Popen(
+                [spider_worker_path, "--storage_url", storage_url, "--host", host]
+            )
+            processes.append(process)
+    except OSError as e:
+        print(f"Failed to start spider worker: {e}")
+        for process in processes:
+            process.terminate()
+        exit(1)
 
+    failed = False
     for process in processes:
         exit_code = process.wait()
-        print(f"Spider worker exited with code {exit_code}")
+        if exit_code != 0:
+            print(f"Spider worker exited with code {exit_code}")
+            failed = True
+    if failed:
+        exit(1)
 
 
 if __name__ == "__main__":
