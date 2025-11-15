@@ -4,6 +4,7 @@ import pathlib
 import sys
 
 from clp_py_utils.clp_config import CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH, OrchestrationType
+from clp_py_utils.core import resolve_host_path_in_container
 
 from clp_package_utils.controller import DockerComposeController, get_or_create_instance_id
 from clp_package_utils.general import (
@@ -13,7 +14,6 @@ from clp_package_utils.general import (
     validate_and_load_queue_credentials_file,
     validate_and_load_redis_credentials_file,
     validate_and_load_spider_db_credentials_file,
-    validate_logs_input_config,
     validate_output_storage_config,
     validate_retention_config,
 )
@@ -54,32 +54,40 @@ def main(argv):
     try:
         # Validate and load config file.
         config_file_path = pathlib.Path(parsed_args.config)
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
+        clp_config = load_config_file(
+            resolve_host_path_in_container(config_file_path),
+            resolve_host_path_in_container(default_config_file_path),
+            clp_home,
+        )
 
         validate_and_load_db_credentials_file(clp_config, clp_home, True)
         validate_and_load_queue_credentials_file(clp_config, clp_home, True)
         validate_and_load_redis_credentials_file(clp_config, clp_home, True)
         if clp_config.compression_scheduler.type == OrchestrationType.spider:
             validate_and_load_spider_db_credentials_file(clp_config, clp_home, True)
-        validate_logs_input_config(clp_config)
+        clp_config.validate_logs_input_config(True)
         validate_output_storage_config(clp_config)
         validate_retention_config(clp_config)
 
-        clp_config.validate_aws_config_dir()
-        clp_config.validate_data_dir()
-        clp_config.validate_logs_dir()
-        clp_config.validate_tmp_dir()
+        clp_config.validate_aws_config_dir(True)
+        clp_config.validate_data_dir(True)
+        clp_config.validate_logs_dir(True)
+        clp_config.validate_tmp_dir(True)
     except:
         logger.exception("Failed to load config.")
         return -1
 
     try:
         # Create necessary directories.
-        clp_config.data_directory.mkdir(parents=True, exist_ok=True)
-        clp_config.logs_directory.mkdir(parents=True, exist_ok=True)
-        clp_config.tmp_directory.mkdir(parents=True, exist_ok=True)
-        clp_config.archive_output.get_directory().mkdir(parents=True, exist_ok=True)
-        clp_config.stream_output.get_directory().mkdir(parents=True, exist_ok=True)
+        resolve_host_path_in_container(clp_config.data_directory).mkdir(parents=True, exist_ok=True)
+        resolve_host_path_in_container(clp_config.logs_directory).mkdir(parents=True, exist_ok=True)
+        resolve_host_path_in_container(clp_config.tmp_directory).mkdir(parents=True, exist_ok=True)
+        resolve_host_path_in_container(clp_config.archive_output.get_directory()).mkdir(
+            parents=True, exist_ok=True
+        )
+        resolve_host_path_in_container(clp_config.stream_output.get_directory()).mkdir(
+            parents=True, exist_ok=True
+        )
     except:
         logger.exception("Failed to create necessary directories.")
         return -1

@@ -58,10 +58,8 @@ class ConnectionPoolWrapper:
         return True
 
 
-class SQL_Adapter:
-    def __init__(
-        self, database_config: Database, spider_database_config: Optional[SpiderDb] = None
-    ):
+class SqlAdapter:
+    def __init__(self, database_config: Database):
         self.database_config = database_config
         self._spider_database_config = spider_database_config
 

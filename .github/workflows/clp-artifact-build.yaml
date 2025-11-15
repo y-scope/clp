@@ -538,7 +538,7 @@ jobs:
         shell: "bash"
         run: "chown $(id -u):$(id -g) -R ."
 
-      - name: "Build the package"
+      - name: "Build the package without the package image"
         uses: "./.github/actions/run-on-image"
         env:
           OS_NAME: "ubuntu-jammy"
@@ -548,7 +548,9 @@ jobs:
             ${{needs.filter-relevant-changes.outputs.ubuntu_jammy_image_changed == 'false'
             || (github.event_name != 'pull_request' && github.ref == 'refs/heads/main')}}
           run_command: >-
-            CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN) task package
+            CLP_CPP_MAX_PARALLELISM_PER_BUILD_TASK=$(getconf _NPROCESSORS_ONLN)
+            HOME=/tmp
+            task package-build-deps
 
       - uses: "./.github/actions/clp-build-runtime-image"
         with:

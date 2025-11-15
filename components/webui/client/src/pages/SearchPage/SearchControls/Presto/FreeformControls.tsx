@@ -12,15 +12,13 @@ import SqlSearchButton from "./SqlSearchButton";
  */
 const FreeformControls = () => (
     <div className={styles["searchControlsContainer"]}>
+        <div className={styles["runRow"]}>
+            <SqlInterfaceButton/>
+            <SqlSearchButton/>
+        </div>
         <SqlQueryInput/>
-        <div className={styles["statusAndButtonsRow"]}>
-            <div className={styles["status"]}>
-                <QueryStatus/>
-            </div>
-            <div className={styles["buttons"]}>
-                <SqlInterfaceButton/>
-                <SqlSearchButton/>
-            </div>
+        <div className={styles["status"]}>
+            <QueryStatus/>
         </div>
     </div>
 );

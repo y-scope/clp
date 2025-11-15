@@ -538,3 +538,30 @@ services:
         "-f",
         "http://mcp_server:8000/health"
       ]
+
+  api-server:
+    <<: *service_defaults
+    hostname: "api_server"
+    environment:
+      CLP_LOGS_DIR: "/var/log/api_server"
+      CLP_DB_PASS: "${CLP_DB_PASS:?Please set a value.}"
+      CLP_DB_USER: "${CLP_DB_USER:?Please set a value.}"
+      RUST_LOG: "DEBUG"
+    ports:
+      - host_ip: "${CLP_API_SERVER_HOST:-127.0.0.1}"
+        published: "${CLP_API_SERVER_PORT:-3001}"
+        target: 3001
+    volumes:
+      - *volume_clp_config_readonly
+      - *volume_clp_logs
+    depends_on:
+      db-table-creator:
+        condition: "service_completed_successfully"
+      results-cache-indices-creator:
+        condition: "service_completed_successfully"
+    command: [
+      "/opt/clp/bin/api_server",
+      "--host", "0.0.0.0",
+      "--port", "3001",
+      "--config", "/etc/clp-config.yml"
+    ]
