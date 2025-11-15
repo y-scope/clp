@@ -269,6 +269,7 @@ class SpiderDb(Database):
     def validate_type(cls, value):
         if value != "mariadb":
             raise ValueError(f"Spider only support MariaDB storage.")
+        return value
 
     def get_url(self):
         self.ensure_credentials_loaded()
