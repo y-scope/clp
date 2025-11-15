@@ -23,9 +23,7 @@ class SpiderTaskManager(TaskManager):
             if job_results is None:
                 return None
             if not isinstance(job_results, tuple):
-                return [
-                    CompressionTaskResult.model_validate_json(job_results.decode("utf-8"))
-                ]
+                return [CompressionTaskResult.model_validate_json(job_results.decode("utf-8"))]
             return [
                 CompressionTaskResult.model_validate_json(task_result.decode("utf-8"))
                 for task_result in job_results
