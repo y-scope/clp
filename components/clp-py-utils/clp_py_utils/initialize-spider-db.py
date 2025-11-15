@@ -230,7 +230,8 @@ def main(argv):
         clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
         if clp_config.spider_db is None:
-            return 0
+            logger.error("Spider database configuration not found in CLP configuration.")
+            return -1
         clp_config.spider_db.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
         logger.error(err)
@@ -240,9 +241,6 @@ def main(argv):
         return -1
 
     spider_db_config = clp_config.spider_db
-    if not spider_db_config:
-        logger.error("Spider database configuration not found in CLP configuration.")
-        return -1
 
     try:
         sql_adapter = SqlAdapter(clp_config.database)
