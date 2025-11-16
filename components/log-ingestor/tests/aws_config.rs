@@ -23,8 +23,8 @@ impl AwsConfig {
     ///
     /// * `CLP_LOG_INGESTOR_S3_BUCKET` (REQUIRED): The S3 bucket name for testing log ingestion.
     /// * `CLP_LOG_INGESTOR_SQS_QUEUE` (REQUIRED): The SQS queue name for testing log ingestion.
-    /// * `AWS_ENDPOINT_URL`: The AWS service endpoint. Defaults to [`DEFAULT_AWS_ENDPOINT`] if not
-    ///   set.
+    /// * `AWS_ENDPOINT_URL`: The AWS service endpoint. Defaults to [`DEFAULT_AWS_ENDPOINT_URL`] if
+    ///   not set.
     /// * `AWS_ACCESS_KEY_ID`: The AWS access key ID. Defaults to [`DEFAULT_AWS_ACCESS_KEY_ID`] if
     ///   not set.
     /// * `AWS_SECRET_ACCESS_KEY`: The AWS secret access key. Defaults to
