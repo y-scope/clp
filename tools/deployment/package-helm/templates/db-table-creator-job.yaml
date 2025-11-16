@@ -1,15 +1,15 @@
 apiVersion: "batch/v1"
 kind: "Job"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-db-table-creator
+  name: {{ include "clp.fullname" . }}-db-table-creator
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "db-table-creator"
 spec:
   template:
     metadata:
       labels:
-        {{- include "clp-package.labels" . | nindent 8 }}
+        {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "db-table-creator"
     spec:
       restartPolicy: "OnFailure"
@@ -22,22 +22,22 @@ spec:
           image: "busybox:latest"
           command: [
             "sh", "-c",
-            "until nc -z {{ include "clp-package.fullname" . }}-database 3306; do echo waiting for database; sleep 2; done"
+            "until nc -z {{ include "clp.fullname" . }}-database 3306; do echo waiting for database; sleep 2; done"
           ]
       containers:
         - name: "db-table-creator"
-          image: "{{ include "clp-package.image.ref" . }}"
+          image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "Always"
           env:
             - name: "CLP_DB_USER"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-database-secret
+                  name: {{ include "clp.fullname" . }}-database-secret
                   key: "username"
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-database-secret
+                  name: {{ include "clp.fullname" . }}-database-secret
                   key: "password"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
@@ -55,4 +55,4 @@ spec:
       volumes:
         - name: "config"
           configMap:
-            name: {{ include "clp-package.fullname" . }}-config
+            name: {{ include "clp.fullname" . }}-config

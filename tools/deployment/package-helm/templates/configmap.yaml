@@ -1,9 +1,9 @@
 apiVersion: "v1"
 kind: "ConfigMap"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-config
+  name: {{ include "clp.fullname" . }}-config
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
 data:
   clp-config.yml: |
     api_server:
@@ -33,7 +33,7 @@ data:
     database:
       auto_commit: false
       compress: true
-      host: {{ include "clp-package.fullname" . }}-database
+      host: {{ include "clp.fullname" . }}-database
       name: {{ .Values.clpConfig.database.name | quote }}
       port: 3306
       ssl_cert: null
@@ -53,7 +53,7 @@ data:
       storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
     presto: {{ .Values.clpConfig.presto }}
     query_scheduler:
-      host: {{ include "clp-package.fullname" . }}-query-scheduler
+      host: {{ include "clp.fullname" . }}-query-scheduler
       jobs_poll_delay: {{ .Values.clpConfig.query_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
       num_archives_to_search_per_sub_job: {{ .Values.clpConfig.query_scheduler.num_archives_to_search_per_sub_job }}
@@ -61,21 +61,21 @@ data:
     query_worker:
       logging_level: {{ .Values.clpConfig.query_worker.logging_level | quote }}
     queue:
-      host: {{ include "clp-package.fullname" . }}-queue
+      host: {{ include "clp.fullname" . }}-queue
       port: 5672
     redis:
       compression_backend_database: {{ .Values.clpConfig.redis.compression_backend_database }}
-      host: {{ include "clp-package.fullname" . }}-redis
+      host: {{ include "clp.fullname" . }}-redis
       port: 6379
       query_backend_database: {{ .Values.clpConfig.redis.query_backend_database }}
     reducer:
       base_port: {{ .Values.clpConfig.reducer.base_port }}
-      host: {{ include "clp-package.fullname" . }}-reducer
+      host: {{ include "clp.fullname" . }}-reducer
       logging_level: {{ .Values.clpConfig.reducer.logging_level | quote }}
       upsert_interval: {{ .Values.clpConfig.reducer.upsert_interval }}
     results_cache:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
-      host: {{ include "clp-package.fullname" . }}-results-cache
+      host: {{ include "clp.fullname" . }}-results-cache
       port: 27017
       retention_period: {{ .Values.clpConfig.results_cache.retention_period }}
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
@@ -128,11 +128,11 @@ data:
     }
   webui-server-settings.json: |
     {
-      "SqlDbHost": "{{ include "clp-package.fullname" . }}-database",
+      "SqlDbHost": "{{ include "clp.fullname" . }}-database",
       "SqlDbPort": 3306,
       "SqlDbName": {{ .Values.clpConfig.database.name | quote }},
       "SqlDbQueryJobsTableName": "query_jobs",
-      "MongoDbHost": "{{ include "clp-package.fullname" . }}-results-cache",
+      "MongoDbHost": "{{ include "clp.fullname" . }}-results-cache",
       "MongoDbPort": 27017,
       "MongoDbName": {{ .Values.clpConfig.results_cache.db_name | quote }},
       "MongoDbSearchResultsMetadataCollectionName": {{ .Values.clpConfig.results_cache.stream_collection_name | quote }},

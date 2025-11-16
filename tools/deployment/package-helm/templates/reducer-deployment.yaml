@@ -1,14 +1,14 @@
 apiVersion: "v1"
 kind: "Service"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-reducer
+  name: {{ include "clp.fullname" . }}-reducer
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "reducer"
 spec:
   clusterIP: "None"
   selector:
-    {{- include "clp-package.selectorLabels" . | nindent 4 }}
+    {{- include "clp.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "reducer"
   ports:
     {{- range $i := until (int .Values.workerConcurrency) }}
@@ -20,24 +20,24 @@ spec:
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-reducer
+  name: {{ include "clp.fullname" . }}-reducer
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "reducer"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      {{- include "clp.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: "reducer"
   template:
     metadata:
       labels:
-        {{- include "clp-package.labels" . | nindent 8 }}
+        {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "reducer"
     spec:
-      hostname: {{ include "clp-package.fullname" . }}-reducer
-      subdomain: {{ include "clp-package.fullname" . }}-reducer
+      hostname: {{ include "clp.fullname" . }}-reducer
+      subdomain: {{ include "clp.fullname" . }}-reducer
       terminationGracePeriodSeconds: 10
       securityContext:
         runAsUser: {{ .Values.securityContext.firstParty.uid }}
@@ -48,17 +48,17 @@ spec:
           image: "busybox:latest"
           command: [
             "sh", "-c",
-            "until nc -z {{ include "clp-package.fullname" . }}-query-scheduler 7000; do echo waiting for query-scheduler; sleep 2; done"
+            "until nc -z {{ include "clp.fullname" . }}-query-scheduler 7000; do echo waiting for query-scheduler; sleep 2; done"
           ]
         - name: "wait-for-results-cache"
           image: "busybox:latest"
           command: [
             "sh", "-c",
-            "until nc -z {{ include "clp-package.fullname" . }}-results-cache 27017; do echo waiting for results-cache; sleep 2; done"
+            "until nc -z {{ include "clp.fullname" . }}-results-cache 27017; do echo waiting for results-cache; sleep 2; done"
           ]
       containers:
         - name: "reducer"
-          image: "{{ include "clp-package.image.ref" . }}"
+          image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "Always"
           env:
             - name: "CLP_HOME"
@@ -86,24 +86,24 @@ spec:
       volumes:
         - name: "config"
           configMap:
-            name: {{ include "clp-package.fullname" . }}-config
+            name: {{ include "clp.fullname" . }}-config
         - name: "reducer-logs"
           persistentVolumeClaim:
-            claimName: {{ include "clp-package.fullname" . }}-reducer-logs
+            claimName: {{ include "clp.fullname" . }}-reducer-logs
 ---
 apiVersion: "v1"
 kind: "PersistentVolumeClaim"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-reducer-logs
+  name: {{ include "clp.fullname" . }}-reducer-logs
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "reducer"
 spec:
   accessModes: ["ReadWriteOnce"]
   storageClassName: "local-storage"
   selector:
     matchLabels:
-      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      {{- include "clp.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: "reducer"
   resources:
     requests:

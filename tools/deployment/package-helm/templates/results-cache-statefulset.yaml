@@ -1,9 +1,9 @@
 apiVersion: "v1"
 kind: "Service"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-results-cache
+  name: {{ include "clp.fullname" . }}-results-cache
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "results-cache"
 spec:
   {{- if .Values.allowSbinScripts }}
@@ -12,7 +12,7 @@ spec:
   clusterIP: "None"
   {{- end }}
   selector:
-    {{- include "clp-package.selectorLabels" . | nindent 4 }}
+    {{- include "clp.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "results-cache"
   ports:
     - port: 27017
@@ -24,21 +24,21 @@ spec:
 apiVersion: "apps/v1"
 kind: "StatefulSet"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-results-cache
+  name: {{ include "clp.fullname" . }}-results-cache
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "results-cache"
 spec:
-  serviceName: {{ include "clp-package.fullname" . }}-results-cache
+  serviceName: {{ include "clp.fullname" . }}-results-cache
   replicas: 1
   selector:
     matchLabels:
-      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      {{- include "clp.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: "results-cache"
   template:
     metadata:
       labels:
-        {{- include "clp-package.labels" . | nindent 8 }}
+        {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "results-cache"
     spec:
       securityContext:
@@ -67,7 +67,7 @@ spec:
               subPath: "mongod.conf"
               readOnly: true
           livenessProbe:
-            {{- include "clp-package.livenessProbeTimings" . | nindent 12 }}
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             exec: &results-cache-health-check
               command:
                 - "mongosh"
@@ -76,13 +76,13 @@ spec:
                 - "--eval"
                 - "db.runCommand('ping').ok"
           readinessProbe:
-            {{- include "clp-package.readinessProbeTimings" . | nindent 12 }}
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             exec:
               <<: *results-cache-health-check
       volumes:
         - name: "config"
           configMap:
-            name: {{ include "clp-package.fullname" . }}-config
+            name: {{ include "clp.fullname" . }}-config
   volumeClaimTemplates:
     - metadata:
         name: "results-cache-data"
@@ -91,7 +91,7 @@ spec:
         storageClassName: "local-storage"
         selector:
           matchLabels:
-            {{- include "clp-package.selectorLabels" . | nindent 12 }}
+            {{- include "clp.selectorLabels" . | nindent 12 }}
             app.kubernetes.io/component: "results-cache"
         resources:
           requests:
@@ -103,7 +103,7 @@ spec:
         storageClassName: "local-storage"
         selector:
           matchLabels:
-            {{- include "clp-package.selectorLabels" . | nindent 12 }}
+            {{- include "clp.selectorLabels" . | nindent 12 }}
             app.kubernetes.io/component: "results-cache"
         resources:
           requests:

@@ -1,5 +1,5 @@
 apiVersion: "v2"
-name: "clp-package"
+name: "clp"
 description: "A Helm chart for CLP (Compressed Log Processor) package deployment"
 type: "application"
 version: "0.1.0"

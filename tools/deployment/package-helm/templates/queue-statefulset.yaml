@@ -1,14 +1,14 @@
 apiVersion: "v1"
 kind: "Service"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-queue
+  name: {{ include "clp.fullname" . }}-queue
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "queue"
 spec:
   clusterIP: "None"
   selector:
-    {{- include "clp-package.selectorLabels" . | nindent 4 }}
+    {{- include "clp.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "queue"
   ports:
     - port: 5672
@@ -17,21 +17,21 @@ spec:
 apiVersion: "apps/v1"
 kind: "StatefulSet"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-queue
+  name: {{ include "clp.fullname" . }}-queue
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "queue"
 spec:
-  serviceName: {{ include "clp-package.fullname" . }}-queue
+  serviceName: {{ include "clp.fullname" . }}-queue
   replicas: 1
   selector:
     matchLabels:
-      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      {{- include "clp.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: "queue"
   template:
     metadata:
       labels:
-        {{- include "clp-package.labels" . | nindent 8 }}
+        {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "queue"
     spec:
       securityContext:
@@ -46,12 +46,12 @@ spec:
             - name: "RABBITMQ_DEFAULT_USER"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-queue-secret
+                  name: {{ include "clp.fullname" . }}-queue-secret
                   key: "username"
             - name: "RABBITMQ_DEFAULT_PASS"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-queue-secret
+                  name: {{ include "clp.fullname" . }}-queue-secret
                   key: "password"
             - name: "RABBITMQ_LOGS"
               value: "/var/log/rabbitmq/rabbitmq.log"
@@ -62,11 +62,11 @@ spec:
             - name: "queue-logs"
               mountPath: "/var/log/rabbitmq"
           livenessProbe:
-            {{- include "clp-package.livenessProbeTimings" . | nindent 12 }}
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             exec: &queue-health-check
               command: ["rabbitmq-diagnostics", "check_running"]
           readinessProbe:
-            {{- include "clp-package.readinessProbeTimings" . | nindent 12 }}
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             exec:
               <<: *queue-health-check
   volumeClaimTemplates:
@@ -77,7 +77,7 @@ spec:
         storageClassName: "local-storage"
         selector:
           matchLabels:
-            {{- include "clp-package.selectorLabels" . | nindent 12 }}
+            {{- include "clp.selectorLabels" . | nindent 12 }}
             app.kubernetes.io/component: "queue"
         resources:
           requests:

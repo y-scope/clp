@@ -1,20 +1,20 @@
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-query-worker
+  name: {{ include "clp.fullname" . }}-query-worker
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "query-worker"
 spec:
   replicas: {{ .Values.workerConcurrency }}
   selector:
     matchLabels:
-      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      {{- include "clp.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: "query-worker"
   template:
     metadata:
       labels:
-        {{- include "clp-package.labels" . | nindent 8 }}
+        {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "query-worker"
     spec:
       terminationGracePeriodSeconds: 60
@@ -27,21 +27,21 @@ spec:
           image: "busybox:latest"
           command: [
             "sh", "-c",
-            "until nc -z {{ include "clp-package.fullname" . }}-queue 5672; do echo waiting for queue; sleep 2; done"
+            "until nc -z {{ include "clp.fullname" . }}-queue 5672; do echo waiting for queue; sleep 2; done"
           ]
         - name: "wait-for-redis"
           image: "busybox:latest"
           command: [
             "sh", "-c",
-            "until nc -z {{ include "clp-package.fullname" . }}-redis 6379; do echo waiting for redis; sleep 2; done"
+            "until nc -z {{ include "clp.fullname" . }}-redis 6379; do echo waiting for redis; sleep 2; done"
           ]
       containers:
         - name: "query-worker"
-          image: "{{ include "clp-package.image.ref" . }}"
+          image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "Always"
           env:
             - name: "BROKER_URL"
-              value: "amqp://{{ .Values.credentials.queue.user }}:{{ .Values.credentials.queue.password }}@{{ include "clp-package.fullname" . }}-queue:5672"
+              value: "amqp://{{ .Values.credentials.queue.user }}:{{ .Values.credentials.queue.password }}@{{ include "clp.fullname" . }}-queue:5672"
             - name: "CLP_CONFIG_PATH"
               value: "/etc/clp-config.yml"
             - name: "CLP_HOME"
@@ -55,7 +55,7 @@ spec:
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
             - name: "RESULT_BACKEND"
-              value: "redis://default:{{ .Values.credentials.redis.password }}@{{ include "clp-package.fullname" . }}-redis:6379/{{ .Values.clpConfig.redis.query_backend_database }}"
+              value: "redis://default:{{ .Values.credentials.redis.password }}@{{ include "clp.fullname" . }}-redis:6379/{{ .Values.clpConfig.redis.query_backend_database }}"
           volumeMounts:
             - name: "config"
               mountPath: "/etc/clp-config.yml"
@@ -83,33 +83,33 @@ spec:
       volumes:
         - name: "config"
           configMap:
-            name: {{ include "clp-package.fullname" . }}-config
+            name: {{ include "clp.fullname" . }}-config
         - name: "query-worker-logs"
           persistentVolumeClaim:
-            claimName: {{ include "clp-package.fullname" . }}-query-worker-logs
+            claimName: {{ include "clp.fullname" . }}-query-worker-logs
         - name: "archives"
           persistentVolumeClaim:
-            claimName: {{ include "clp-package.fullname" . }}-archives
+            claimName: {{ include "clp.fullname" . }}-archives
         - name: "staged-streams"
           persistentVolumeClaim:
-            claimName: {{ include "clp-package.fullname" . }}-staged-streams
+            claimName: {{ include "clp.fullname" . }}-staged-streams
         - name: "streams"
           persistentVolumeClaim:
-            claimName: {{ include "clp-package.fullname" . }}-streams
+            claimName: {{ include "clp.fullname" . }}-streams
 ---
 apiVersion: "v1"
 kind: "PersistentVolumeClaim"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-query-worker-logs
+  name: {{ include "clp.fullname" . }}-query-worker-logs
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "query-worker"
 spec:
   accessModes: ["ReadWriteOnce"]
   storageClassName: "local-storage"
   selector:
     matchLabels:
-      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      {{- include "clp.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: "query-worker"
   resources:
     requests:
@@ -118,16 +118,16 @@ spec:
 apiVersion: "v1"
 kind: "PersistentVolumeClaim"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-staged-streams
+  name: {{ include "clp.fullname" . }}-staged-streams
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "staged-streams"
 spec:
   accessModes: ["ReadWriteMany"]
   storageClassName: "local-storage"
   selector:
     matchLabels:
-      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      {{- include "clp.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: "staged-streams"
   resources:
     requests:

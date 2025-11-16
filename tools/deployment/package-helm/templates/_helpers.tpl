@@ -1,7 +1,7 @@
 {{/*
 Expand the name of the chart.
 */}}
-{{- define "clp-package.name" -}}
+{{- define "clp.name" -}}
 {{- default .Chart.Name .Values.nameOverride | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
@@ -10,7 +10,7 @@ Create a default fully qualified app name.
 We truncate at 63 chars because some Kubernetes name fields are limited to this (by the DNS naming spec).
 If release name contains chart name it will be used as a full name.
 */}}
-{{- define "clp-package.fullname" -}}
+{{- define "clp.fullname" -}}
 {{- if .Values.fullnameOverride }}
 {{- .Values.fullnameOverride | trunc 63 | trimSuffix "-" }}
 {{- else }}
@@ -26,16 +26,16 @@ If release name contains chart name it will be used as a full name.
 {{/*
 Create chart name and version as used by the chart label.
 */}}
-{{- define "clp-package.chart" -}}
+{{- define "clp.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
 
 {{/*
 Common labels
 */}}
-{{- define "clp-package.labels" -}}
-helm.sh/chart: {{ include "clp-package.chart" . }}
-{{ include "clp-package.selectorLabels" . }}
+{{- define "clp.labels" -}}
+helm.sh/chart: {{ include "clp.chart" . }}
+{{ include "clp.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
 app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
 {{- end }}
@@ -45,15 +45,15 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{/*
 Selector labels
 */}}
-{{- define "clp-package.selectorLabels" -}}
-app.kubernetes.io/name: {{ include "clp-package.name" . }}
+{{- define "clp.selectorLabels" -}}
+app.kubernetes.io/name: {{ include "clp.name" . }}
 app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
 Image reference for CLP Package
 */}}
-{{- define "clp-package.image.ref" -}}
+{{- define "clp.image.ref" -}}
 {{- $tag := .Values.image.clpPackage.tag | default .Chart.AppVersion }}
 {{- printf "%s:%s" .Values.image.clpPackage.repository $tag }}
 {{- end }}
@@ -61,7 +61,7 @@ Image reference for CLP Package
 {{/*
 Creates timings for readiness probes (faster checks for quicker startup).
 */}}
-{{- define "clp-package.readinessProbeTimings" -}}
+{{- define "clp.readinessProbeTimings" -}}
 initialDelaySeconds: 1
 periodSeconds: 1
 timeoutSeconds: 1
@@ -71,7 +71,7 @@ failureThreshold: 3
 {{/*
 Creates timings for liveness probes.
 */}}
-{{- define "clp-package.livenessProbeTimings" -}}
+{{- define "clp.livenessProbeTimings" -}}
 initialDelaySeconds: 30
 periodSeconds: 10
 timeoutSeconds: 5
@@ -81,29 +81,29 @@ failureThreshold: 3
 {{/*
 CLP logs directory path on host
 */}}
-{{- define "clp-package.logsDirHost" -}}
+{{- define "clp.logsDirHost" -}}
 {{ .Values.storage.localPathBase }}/{{ .Values.clpConfig.logs_directory }}
 {{- end }}
 
 {{/*
 CLP data directory path on host
 */}}
-{{- define "clp-package.dataDirHost" -}}
+{{- define "clp.dataDirHost" -}}
 {{ .Values.storage.localPathBase }}/{{ .Values.clpConfig.data_directory }}
 {{- end }}
 
 {{/*
 Creates a local PersistentVolume for data storage.
 */}}
-{{- define "clp-package.createLocalDataPv" -}}
+{{- define "clp.createLocalDataPv" -}}
 {{- $root := index . 0 -}}
 {{- $component := index . 1 -}}
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
-  name: {{ include "clp-package.fullname" $root }}-data-pv-{{ $component }}
+  name: {{ include "clp.fullname" $root }}-data-pv-{{ $component }}
   labels:
-    {{- include "clp-package.labels" $root | nindent 4 }}
+    {{- include "clp.labels" $root | nindent 4 }}
     app.kubernetes.io/component: {{ $component | quote }}
 spec:
   capacity:
@@ -112,7 +112,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ include "clp-package.dataDirHost" $root }}/{{ $component }}
+    path: {{ include "clp.dataDirHost" $root }}/{{ $component }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -124,15 +124,15 @@ spec:
 {{/*
 Creates a local PersistentVolume for logs storage.
 */}}
-{{- define "clp-package.createLocalLogsPv" -}}
+{{- define "clp.createLocalLogsPv" -}}
 {{- $root := index . 0 -}}
 {{- $component := index . 1 -}}
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
-  name: {{ include "clp-package.fullname" $root }}-logs-pv-{{ $component }}
+  name: {{ include "clp.fullname" $root }}-logs-pv-{{ $component }}
   labels:
-    {{- include "clp-package.labels" $root | nindent 4 }}
+    {{- include "clp.labels" $root | nindent 4 }}
     app.kubernetes.io/component: {{ $component | quote }}
 spec:
   capacity:
@@ -141,7 +141,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ include "clp-package.logsDirHost" $root }}/{{ $component }}
+    path: {{ include "clp.logsDirHost" $root }}/{{ $component }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -153,14 +153,14 @@ spec:
 {{/*
 Creates a local PersistentVolume for streams storage (ReadWriteMany).
 */}}
-{{- define "clp-package.createStreamsPv" -}}
+{{- define "clp.createStreamsPv" -}}
 {{- $root := . -}}
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
-  name: {{ include "clp-package.fullname" $root }}-streams-pv
+  name: {{ include "clp.fullname" $root }}-streams-pv
   labels:
-    {{- include "clp-package.labels" $root | nindent 4 }}
+    {{- include "clp.labels" $root | nindent 4 }}
     app.kubernetes.io/component: "streams"
 spec:
   capacity:
@@ -169,7 +169,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ include "clp-package.dataDirHost" $root }}/streams
+    path: {{ include "clp.dataDirHost" $root }}/streams
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -181,14 +181,14 @@ spec:
 {{/*
 Creates a local PersistentVolume for tmp storage (ReadWriteMany).
 */}}
-{{- define "clp-package.createTmpPv" -}}
+{{- define "clp.createTmpPv" -}}
 {{- $root := . -}}
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
-  name: {{ include "clp-package.fullname" $root }}-tmp-pv
+  name: {{ include "clp.fullname" $root }}-tmp-pv
   labels:
-    {{- include "clp-package.labels" $root | nindent 4 }}
+    {{- include "clp.labels" $root | nindent 4 }}
     app.kubernetes.io/component: "tmp"
 spec:
   capacity:
@@ -209,14 +209,14 @@ spec:
 {{/*
 Creates a local PersistentVolume for archives storage (ReadWriteMany).
 */}}
-{{- define "clp-package.createArchivesPv" -}}
+{{- define "clp.createArchivesPv" -}}
 {{- $root := . -}}
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
-  name: {{ include "clp-package.fullname" $root }}-archives-pv
+  name: {{ include "clp.fullname" $root }}-archives-pv
   labels:
-    {{- include "clp-package.labels" $root | nindent 4 }}
+    {{- include "clp.labels" $root | nindent 4 }}
     app.kubernetes.io/component: "archives"
 spec:
   capacity:
@@ -225,7 +225,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ include "clp-package.dataDirHost" $root }}/archives
+    path: {{ include "clp.dataDirHost" $root }}/archives
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -237,14 +237,14 @@ spec:
 {{/*
 Creates a local PersistentVolume for staged-archives storage (ReadWriteMany).
 */}}
-{{- define "clp-package.createStagedArchivesPv" -}}
+{{- define "clp.createStagedArchivesPv" -}}
 {{- $root := . -}}
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
-  name: {{ include "clp-package.fullname" $root }}-staged-archives-pv
+  name: {{ include "clp.fullname" $root }}-staged-archives-pv
   labels:
-    {{- include "clp-package.labels" $root | nindent 4 }}
+    {{- include "clp.labels" $root | nindent 4 }}
     app.kubernetes.io/component: "staged-archives"
 spec:
   capacity:
@@ -253,7 +253,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ include "clp-package.dataDirHost" $root }}/staged-archives
+    path: {{ include "clp.dataDirHost" $root }}/staged-archives
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -265,14 +265,14 @@ spec:
 {{/*
 Creates a local PersistentVolume for staged-streams storage (ReadWriteMany).
 */}}
-{{- define "clp-package.createStagedStreamsPv" -}}
+{{- define "clp.createStagedStreamsPv" -}}
 {{- $root := . -}}
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
-  name: {{ include "clp-package.fullname" $root }}-staged-streams-pv
+  name: {{ include "clp.fullname" $root }}-staged-streams-pv
   labels:
-    {{- include "clp-package.labels" $root | nindent 4 }}
+    {{- include "clp.labels" $root | nindent 4 }}
     app.kubernetes.io/component: "staged-streams"
 spec:
   capacity:
@@ -281,7 +281,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ include "clp-package.dataDirHost" $root }}/staged-streams
+    path: {{ include "clp.dataDirHost" $root }}/staged-streams
   nodeAffinity:
     required:
       nodeSelectorTerms:

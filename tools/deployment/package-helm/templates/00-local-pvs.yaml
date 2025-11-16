@@ -1,41 +1,41 @@
-{{- include "clp-package.createLocalDataPv" (list . "database") }}
+{{- include "clp.createLocalDataPv" (list . "database") }}
 ---
-{{- include "clp-package.createLocalLogsPv" (list . "database") }}
+{{- include "clp.createLocalLogsPv" (list . "database") }}
 ---
-{{- include "clp-package.createLocalLogsPv" (list . "queue") }}
+{{- include "clp.createLocalLogsPv" (list . "queue") }}
 ---
-{{- include "clp-package.createLocalDataPv" (list . "redis") }}
+{{- include "clp.createLocalDataPv" (list . "redis") }}
 ---
-{{- include "clp-package.createLocalLogsPv" (list . "redis") }}
+{{- include "clp.createLocalLogsPv" (list . "redis") }}
 ---
-{{- include "clp-package.createLocalDataPv" (list . "results-cache") }}
+{{- include "clp.createLocalDataPv" (list . "results-cache") }}
 ---
-{{- include "clp-package.createLocalLogsPv" (list . "results-cache") }}
+{{- include "clp.createLocalLogsPv" (list . "results-cache") }}
 ---
-{{- include "clp-package.createLocalLogsPv" (list . "compression-scheduler") }}
+{{- include "clp.createLocalLogsPv" (list . "compression-scheduler") }}
 ---
-{{- include "clp-package.createLocalLogsPv" (list . "compression-worker") }}
+{{- include "clp.createLocalLogsPv" (list . "compression-worker") }}
 ---
-{{- include "clp-package.createLocalLogsPv" (list . "query-scheduler") }}
+{{- include "clp.createLocalLogsPv" (list . "query-scheduler") }}
 ---
-{{- include "clp-package.createLocalLogsPv" (list . "query-worker") }}
+{{- include "clp.createLocalLogsPv" (list . "query-worker") }}
 ---
-{{- include "clp-package.createLocalLogsPv" (list . "reducer") }}
+{{- include "clp.createLocalLogsPv" (list . "reducer") }}
 ---
-{{- include "clp-package.createLocalLogsPv" (list . "garbage-collector") }}
+{{- include "clp.createLocalLogsPv" (list . "garbage-collector") }}
 ---
-{{- include "clp-package.createLocalLogsPv" (list . "api-server") }}
+{{- include "clp.createLocalLogsPv" (list . "api-server") }}
 ---
 {{- if .Values.clpConfig.mcp_server }}
-{{- include "clp-package.createLocalLogsPv" (list . "mcp-server") }}
+{{- include "clp.createLocalLogsPv" (list . "mcp-server") }}
 ---
 {{- end }}
-{{- include "clp-package.createStreamsPv" . }}
+{{- include "clp.createStreamsPv" . }}
 ---
-{{- include "clp-package.createTmpPv" . }}
+{{- include "clp.createTmpPv" . }}
 ---
-{{- include "clp-package.createArchivesPv" . }}
+{{- include "clp.createArchivesPv" . }}
 ---
-{{- include "clp-package.createStagedArchivesPv" . }}
+{{- include "clp.createStagedArchivesPv" . }}
 ---
-{{- include "clp-package.createStagedStreamsPv" . }}
+{{- include "clp.createStagedStreamsPv" . }}

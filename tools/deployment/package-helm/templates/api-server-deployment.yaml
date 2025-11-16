@@ -1,14 +1,14 @@
 apiVersion: "v1"
 kind: "Service"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-api-server
+  name: {{ include "clp.fullname" . }}-api-server
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "api-server"
 spec:
   type: "NodePort"
   selector:
-    {{- include "clp-package.selectorLabels" . | nindent 4 }}
+    {{- include "clp.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "api-server"
   ports:
     - port: 3001
@@ -18,20 +18,20 @@ spec:
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-api-server
+  name: {{ include "clp.fullname" . }}-api-server
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "api-server"
 spec:
   replicas: 1
   selector:
     matchLabels:
-      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      {{- include "clp.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: "api-server"
   template:
     metadata:
       labels:
-        {{- include "clp-package.labels" . | nindent 8 }}
+        {{- include "clp.labels" . | nindent 8 }}
         app.kubernetes.io/component: "api-server"
     spec:
       terminationGracePeriodSeconds: 10
@@ -44,28 +44,28 @@ spec:
           image: "busybox:latest"
           command: [
             "sh", "-c",
-            "until nc -z {{ include "clp-package.fullname" . }}-database 3306; do echo waiting for database; sleep 2; done"
+            "until nc -z {{ include "clp.fullname" . }}-database 3306; do echo waiting for database; sleep 2; done"
           ]
         - name: "wait-for-results-cache"
           image: "busybox:latest"
           command: [
             "sh", "-c",
-            "until nc -z {{ include "clp-package.fullname" . }}-results-cache 27017; do echo waiting for results-cache; sleep 2; done"
+            "until nc -z {{ include "clp.fullname" . }}-results-cache 27017; do echo waiting for results-cache; sleep 2; done"
           ]
       containers:
         - name: "api-server"
-          image: "{{ include "clp-package.image.ref" . }}"
+          image: "{{ include "clp.image.ref" . }}"
           imagePullPolicy: "Always"
           env:
             - name: "CLP_DB_USER"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-database-secret
+                  name: {{ include "clp.fullname" . }}-database-secret
                   key: "username"
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-database-secret
+                  name: {{ include "clp.fullname" . }}-database-secret
                   key: "password"
             - name: "CLP_LOGS_DIR"
               value: "/var/log/api_server"
@@ -88,36 +88,36 @@ spec:
             "--config", "/etc/clp-config.yml"
           ]
           livenessProbe:
-            {{- include "clp-package.livenessProbeTimings" . | nindent 12 }}
+            {{- include "clp.livenessProbeTimings" . | nindent 12 }}
             httpGet:
               path: "/health"
               port: 3001
           readinessProbe:
-            {{- include "clp-package.readinessProbeTimings" . | nindent 12 }}
+            {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             httpGet:
               path: "/health"
               port: 3001
       volumes:
         - name: "config"
           configMap:
-            name: {{ include "clp-package.fullname" . }}-config
+            name: {{ include "clp.fullname" . }}-config
         - name: "api-server-logs"
           persistentVolumeClaim:
-            claimName: {{ include "clp-package.fullname" . }}-api-server-logs
+            claimName: {{ include "clp.fullname" . }}-api-server-logs
 ---
 apiVersion: "v1"
 kind: "PersistentVolumeClaim"
 metadata:
-  name: {{ include "clp-package.fullname" . }}-api-server-logs
+  name: {{ include "clp.fullname" . }}-api-server-logs
   labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
+    {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "api-server"
 spec:
   accessModes: ["ReadWriteOnce"]
   storageClassName: "local-storage"
   selector:
     matchLabels:
-      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      {{- include "clp.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: "api-server"
   resources:
     requests:
