@@ -22,6 +22,14 @@
 ---
 {{- include "clp-package.createLocalLogsPv" (list . "reducer") }}
 ---
+{{- include "clp-package.createLocalLogsPv" (list . "garbage-collector") }}
+---
+{{- include "clp-package.createLocalLogsPv" (list . "api-server") }}
+---
+{{- if .Values.clpConfig.mcp_server }}
+{{- include "clp-package.createLocalLogsPv" (list . "mcp-server") }}
+---
+{{- end }}
 {{- include "clp-package.createStreamsPv" . }}
 ---
 {{- include "clp-package.createTmpPv" . }}

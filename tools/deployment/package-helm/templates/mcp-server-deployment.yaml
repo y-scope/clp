@@ -1,0 +1,126 @@
+{{- if .Values.clpConfig.mcp_server }}
+apiVersion: "v1"
+kind: "Service"
+metadata:
+  name: {{ include "clp-package.fullname" . }}-mcp-server
+  labels:
+    {{- include "clp-package.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "mcp-server"
+spec:
+  type: "NodePort"
+  selector:
+    {{- include "clp-package.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: "mcp-server"
+  ports:
+    - port: 8000
+      targetPort: 8000
+      nodePort: 30800
+---
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp-package.fullname" . }}-mcp-server
+  labels:
+    {{- include "clp-package.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "mcp-server"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "mcp-server"
+  template:
+    metadata:
+      labels:
+        {{- include "clp-package.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "mcp-server"
+    spec:
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsUser: {{ .Values.securityContext.firstParty.uid }}
+        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
+        fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      initContainers:
+        - name: "wait-for-database"
+          image: "busybox:latest"
+          command: [
+            "sh", "-c",
+            "until nc -z {{ include "clp-package.fullname" . }}-database 3306; do echo waiting for database; sleep 2; done"
+          ]
+        - name: "wait-for-results-cache"
+          image: "busybox:latest"
+          command: [
+            "sh", "-c",
+            "until nc -z {{ include "clp-package.fullname" . }}-results-cache 27017; do echo waiting for results-cache; sleep 2; done"
+          ]
+      containers:
+        - name: "mcp-server"
+          image: "{{ include "clp-package.image.ref" . }}"
+          imagePullPolicy: "Always"
+          env:
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp-package.fullname" . }}-secret
+                  key: "db-username"
+            - name: "CLP_DB_PASS"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp-package.fullname" . }}-secret
+                  key: "db-password"
+            - name: "CLP_LOGGING_LEVEL"
+              value: {{ .Values.clpConfig.mcp_server.logging_level | quote }}
+            - name: "CLP_LOGS_DIR"
+              value: "/var/log/mcp_server"
+            - name: "PYTHONPATH"
+              value: "/opt/clp/lib/python3/site-packages"
+          volumeMounts:
+            - name: "config"
+              mountPath: "/etc/clp-config.yml"
+              subPath: "clp-config.yml"
+              readOnly: true
+            - name: "mcp-server-logs"
+              mountPath: "/var/log/mcp_server"
+          command: [
+            "python3", "-u",
+            "-m", "clp_mcp_server.clp_mcp_server",
+            "--host", "0.0.0.0",
+            "--port", "8000",
+            "--config-path", "/etc/clp-config.yml"
+          ]
+          livenessProbe:
+            {{- include "clp-package.livenessProbeTimings" . | nindent 12 }}
+            httpGet:
+              path: "/health"
+              port: 8000
+          readinessProbe:
+            {{- include "clp-package.readinessProbeTimings" . | nindent 12 }}
+            httpGet:
+              path: "/health"
+              port: 8000
+      volumes:
+        - name: "config"
+          configMap:
+            name: {{ include "clp-package.fullname" . }}-config
+        - name: "mcp-server-logs"
+          persistentVolumeClaim:
+            claimName: {{ include "clp-package.fullname" . }}-mcp-server-logs
+---
+apiVersion: "v1"
+kind: "PersistentVolumeClaim"
+metadata:
+  name: {{ include "clp-package.fullname" . }}-mcp-server-logs
+  labels:
+    {{- include "clp-package.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "mcp-server"
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: "local-storage"
+  selector:
+    matchLabels:
+      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "mcp-server"
+  resources:
+    requests:
+      storage: "5Gi"
+{{- end }}

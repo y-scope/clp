@@ -1,0 +1,107 @@
+apiVersion: "apps/v1"
+kind: "Deployment"
+metadata:
+  name: {{ include "clp-package.fullname" . }}-garbage-collector
+  labels:
+    {{- include "clp-package.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "garbage-collector"
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "garbage-collector"
+  template:
+    metadata:
+      labels:
+        {{- include "clp-package.labels" . | nindent 8 }}
+        app.kubernetes.io/component: "garbage-collector"
+    spec:
+      terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsUser: {{ .Values.securityContext.firstParty.uid }}
+        runAsGroup: {{ .Values.securityContext.firstParty.gid }}
+        fsGroup: {{ .Values.securityContext.firstParty.gid }}
+      initContainers:
+        - name: "wait-for-database"
+          image: "busybox:latest"
+          command: [
+            "sh", "-c",
+            "until nc -z {{ include "clp-package.fullname" . }}-database 3306; do echo waiting for database; sleep 2; done"
+          ]
+        - name: "wait-for-results-cache"
+          image: "busybox:latest"
+          command: [
+            "sh", "-c",
+            "until nc -z {{ include "clp-package.fullname" . }}-results-cache 27017; do echo waiting for results-cache; sleep 2; done"
+          ]
+      containers:
+        - name: "garbage-collector"
+          image: "{{ include "clp-package.image.ref" . }}"
+          imagePullPolicy: "Always"
+          env:
+            - name: "CLP_DB_USER"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp-package.fullname" . }}-secret
+                  key: "db-username"
+            - name: "CLP_DB_PASS"
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clp-package.fullname" . }}-secret
+                  key: "db-password"
+            - name: "CLP_HOME"
+              value: "/opt/clp"
+            - name: "CLP_LOGGING_LEVEL"
+              value: {{ .Values.clpConfig.garbage_collector.logging_level | quote }}
+            - name: "CLP_LOGS_DIR"
+              value: "/var/log/garbage_collector"
+            - name: "PYTHONPATH"
+              value: "/opt/clp/lib/python3/site-packages"
+          volumeMounts:
+            - name: "config"
+              mountPath: "/etc/clp-config.yml"
+              subPath: "clp-config.yml"
+              readOnly: true
+            - name: "garbage-collector-logs"
+              mountPath: "/var/log/garbage_collector"
+            - name: "archives"
+              mountPath: "/var/data/archives"
+            - name: "streams"
+              mountPath: "/var/data/streams"
+          command: [
+            "python3", "-u",
+            "-m", "job_orchestration.garbage_collector.garbage_collector",
+            "--config", "/etc/clp-config.yml"
+          ]
+      volumes:
+        - name: "config"
+          configMap:
+            name: {{ include "clp-package.fullname" . }}-config
+        - name: "garbage-collector-logs"
+          persistentVolumeClaim:
+            claimName: {{ include "clp-package.fullname" . }}-garbage-collector-logs
+        - name: "archives"
+          persistentVolumeClaim:
+            claimName: {{ include "clp-package.fullname" . }}-archives
+        - name: "streams"
+          persistentVolumeClaim:
+            claimName: {{ include "clp-package.fullname" . }}-streams
+---
+apiVersion: "v1"
+kind: "PersistentVolumeClaim"
+metadata:
+  name: {{ include "clp-package.fullname" . }}-garbage-collector-logs
+  labels:
+    {{- include "clp-package.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "garbage-collector"
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: "local-storage"
+  selector:
+    matchLabels:
+      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "garbage-collector"
+  resources:
+    requests:
+      storage: "5Gi"

@@ -4,7 +4,7 @@
 
 kind delete cluster --name clp-test
 sudo rm -rf /tmp/clp
-mkdir -p /tmp/clp/var/{data,log}/{database,queue,redis,results-cache,compression-scheduler,compression-worker,query-scheduler,query-worker,reducer}
+mkdir -p /tmp/clp/var/{data,log}/{database,queue,redis,results-cache,compression-scheduler,compression-worker,query-scheduler,query-worker,reducer,garbage-collector,api-server,mcp-server}
 mkdir -p /tmp/clp/var/data/{archives,staged-archives,staged-streams,streams}
 mkdir -p /tmp/clp/var/tmp
 mkdir -p /tmp/clp/samples
@@ -26,6 +26,12 @@ cat <<EOF | kind create cluster --name clp-test --config=-
       protocol: TCP
     - containerPort: 30400
       hostPort: 30400
+      protocol: TCP
+    - containerPort: 30301
+      hostPort: 30301
+      protocol: TCP
+    - containerPort: 30800
+      hostPort: 30800
       protocol: TCP
 EOF
 
