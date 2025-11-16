@@ -71,7 +71,7 @@ Creates timings for readiness probes (faster checks for quicker startup).
 {{- define "clp-package.readinessProbeTimings" -}}
 initialDelaySeconds: 1
 periodSeconds: 1
-timeoutSeconds: 2
+timeoutSeconds: 1
 failureThreshold: 3
 {{- end }}
 
