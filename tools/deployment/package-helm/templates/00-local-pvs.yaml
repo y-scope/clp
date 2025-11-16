@@ -25,3 +25,9 @@
 {{- include "clp-package.createStreamsPv" . }}
 ---
 {{- include "clp-package.createTmpPv" . }}
+---
+{{- include "clp-package.createArchivesPv" . }}
+---
+{{- include "clp-package.createStagedArchivesPv" . }}
+---
+{{- include "clp-package.createStagedStreamsPv" . }}

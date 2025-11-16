@@ -91,17 +91,15 @@ spec:
           persistentVolumeClaim:
             claimName: {{ include "clp-package.fullname" . }}-compression-worker-logs
         - name: "archives"
-          hostPath:
-            path: {{ include "clp-package.dataDirHost" . }}/archives
-            type: "DirectoryOrCreate"
+          persistentVolumeClaim:
+            claimName: {{ include "clp-package.fullname" . }}-archives
         - name: "logs-input"
           hostPath:
             path: "{{ .Values.clpConfig.logs_input.directory }}"
             type: "Directory"
         - name: "staged-archives"
-          hostPath:
-            path: {{ include "clp-package.dataDirHost" . }}/staged-archives
-            type: "DirectoryOrCreate"
+          persistentVolumeClaim:
+            claimName: {{ include "clp-package.fullname" . }}-staged-archives
         - name: "tmp"
           persistentVolumeClaim:
             claimName: {{ include "clp-package.fullname" . }}-tmp
@@ -123,6 +121,42 @@ spec:
   resources:
     requests:
       storage: "5Gi"
+---
+apiVersion: "v1"
+kind: "PersistentVolumeClaim"
+metadata:
+  name: {{ include "clp-package.fullname" . }}-archives
+  labels:
+    {{- include "clp-package.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "archives"
+spec:
+  accessModes: ["ReadWriteMany"]
+  storageClassName: "local-storage"
+  selector:
+    matchLabels:
+      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "archives"
+  resources:
+    requests:
+      storage: "50Gi"
+---
+apiVersion: "v1"
+kind: "PersistentVolumeClaim"
+metadata:
+  name: {{ include "clp-package.fullname" . }}-staged-archives
+  labels:
+    {{- include "clp-package.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "staged-archives"
+spec:
+  accessModes: ["ReadWriteMany"]
+  storageClassName: "local-storage"
+  selector:
+    matchLabels:
+      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "staged-archives"
+  resources:
+    requests:
+      storage: "20Gi"
 ---
 apiVersion: "v1"
 kind: "PersistentVolumeClaim"

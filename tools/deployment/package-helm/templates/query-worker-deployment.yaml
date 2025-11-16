@@ -88,13 +88,11 @@ spec:
           persistentVolumeClaim:
             claimName: {{ include "clp-package.fullname" . }}-query-worker-logs
         - name: "archives"
-          hostPath:
-            path: {{ include "clp-package.dataDirHost" . }}/archives
-            type: "DirectoryOrCreate"
+          persistentVolumeClaim:
+            claimName: {{ include "clp-package.fullname" . }}-archives
         - name: "staged-streams"
-          hostPath:
-            path: {{ include "clp-package.dataDirHost" . }}/staged-streams
-            type: "DirectoryOrCreate"
+          persistentVolumeClaim:
+            claimName: {{ include "clp-package.fullname" . }}-staged-streams
         - name: "streams"
           persistentVolumeClaim:
             claimName: {{ include "clp-package.fullname" . }}-streams
@@ -116,3 +114,21 @@ spec:
   resources:
     requests:
       storage: "5Gi"
+---
+apiVersion: "v1"
+kind: "PersistentVolumeClaim"
+metadata:
+  name: {{ include "clp-package.fullname" . }}-staged-streams
+  labels:
+    {{- include "clp-package.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "staged-streams"
+spec:
+  accessModes: ["ReadWriteMany"]
+  storageClassName: "local-storage"
+  selector:
+    matchLabels:
+      {{- include "clp-package.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "staged-streams"
+  resources:
+    requests:
+      storage: "20Gi"

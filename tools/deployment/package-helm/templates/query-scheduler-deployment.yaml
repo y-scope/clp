@@ -33,6 +33,8 @@ spec:
         {{- include "clp-package.labels" . | nindent 8 }}
         app.kubernetes.io/component: "query-scheduler"
     spec:
+      hostname: {{ include "clp-package.fullname" . }}-query-scheduler
+      subdomain: {{ include "clp-package.fullname" . }}-query-scheduler
       terminationGracePeriodSeconds: 10
       securityContext:
         runAsUser: {{ .Values.securityContext.firstParty.uid }}

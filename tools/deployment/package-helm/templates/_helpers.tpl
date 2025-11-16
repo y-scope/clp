@@ -213,3 +213,87 @@ spec:
               operator: "Exists"
 {{- end }}
 
+{{/*
+Creates a local PersistentVolume for archives storage (ReadWriteMany).
+*/}}
+{{- define "clp-package.createArchivesPv" -}}
+{{- $root := . -}}
+apiVersion: "v1"
+kind: "PersistentVolume"
+metadata:
+  name: {{ include "clp-package.fullname" $root }}-archives-pv
+  labels:
+    {{- include "clp-package.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: "archives"
+spec:
+  capacity:
+    storage: "50Gi"
+  accessModes: ["ReadWriteMany"]
+  persistentVolumeReclaimPolicy: "Retain"
+  storageClassName: "local-storage"
+  local:
+    path: {{ include "clp-package.dataDirHost" $root }}/archives
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: "kubernetes.io/hostname"
+              operator: "Exists"
+{{- end }}
+
+{{/*
+Creates a local PersistentVolume for staged-archives storage (ReadWriteMany).
+*/}}
+{{- define "clp-package.createStagedArchivesPv" -}}
+{{- $root := . -}}
+apiVersion: "v1"
+kind: "PersistentVolume"
+metadata:
+  name: {{ include "clp-package.fullname" $root }}-staged-archives-pv
+  labels:
+    {{- include "clp-package.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: "staged-archives"
+spec:
+  capacity:
+    storage: "20Gi"
+  accessModes: ["ReadWriteMany"]
+  persistentVolumeReclaimPolicy: "Retain"
+  storageClassName: "local-storage"
+  local:
+    path: {{ include "clp-package.dataDirHost" $root }}/staged-archives
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: "kubernetes.io/hostname"
+              operator: "Exists"
+{{- end }}
+
+{{/*
+Creates a local PersistentVolume for staged-streams storage (ReadWriteMany).
+*/}}
+{{- define "clp-package.createStagedStreamsPv" -}}
+{{- $root := . -}}
+apiVersion: "v1"
+kind: "PersistentVolume"
+metadata:
+  name: {{ include "clp-package.fullname" $root }}-staged-streams-pv
+  labels:
+    {{- include "clp-package.labels" $root | nindent 4 }}
+    app.kubernetes.io/component: "staged-streams"
+spec:
+  capacity:
+    storage: "20Gi"
+  accessModes: ["ReadWriteMany"]
+  persistentVolumeReclaimPolicy: "Retain"
+  storageClassName: "local-storage"
+  local:
+    path: {{ include "clp-package.dataDirHost" $root }}/staged-streams
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: "kubernetes.io/hostname"
+              operator: "Exists"
+{{- end }}
+
