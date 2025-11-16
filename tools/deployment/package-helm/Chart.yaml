@@ -7,7 +7,7 @@ appVersion: "0.6.1-dev"
 home: "https://github.com/y-scope/clp"
 icon: "https://github.com/y-scope/clp/raw/main/docs/src/clp-logo.png"
 sources: ["https://github.com/y-scope/clp"]
-maintainers: [{name: "YScope Inc.", email: "dev@yscope.com"}]
+maintainers: [{name: "y-scope", email: "dev@yscope.com"}]
 keywords:
   - "analytics"
   - "compression"
