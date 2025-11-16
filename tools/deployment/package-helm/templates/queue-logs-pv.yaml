@@ -1,1 +1,8 @@
-{{- include "clp.createLocalLogsPv" (list . "queue") }}
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "name" (printf "%s-queue-logs-pv" (include "clp.fullname" .))
+  "component" "queue"
+  "capacity" "5Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/queue" .Values.clpConfig.logs_directory)
+) }}

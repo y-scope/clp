@@ -79,26 +79,31 @@ failureThreshold: 3
 {{- end }}
 
 {{/*
-Creates a local PersistentVolume for data storage.
+Creates a local PersistentVolume.
+Parameters (dict):
+  root: Root template context
+  name: PV name (full)
+  component: Component label
+  capacity: Storage capacity
+  accessModes: Access modes (list)
+  hostPath: Absolute path on host
 */}}
-{{- define "clp.createLocalDataPv" -}}
-{{- $root := index . 0 -}}
-{{- $component := index . 1 -}}
+{{- define "clp.createLocalPv" -}}
 apiVersion: "v1"
 kind: "PersistentVolume"
 metadata:
-  name: {{ include "clp.fullname" $root }}-data-pv-{{ $component }}
+  name: {{ .name }}
   labels:
-    {{- include "clp.labels" $root | nindent 4 }}
-    app.kubernetes.io/component: {{ $component | quote }}
+    {{- include "clp.labels" .root | nindent 4 }}
+    app.kubernetes.io/component: {{ .component | quote }}
 spec:
   capacity:
-    storage: "20Gi"
-  accessModes: ["ReadWriteOnce"]
+    storage: {{ .capacity }}
+  accessModes: {{ .accessModes }}
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ $root.Values.clpConfig.data_directory }}/{{ $component }}
+    path: {{ .hostPath }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -107,172 +112,4 @@ spec:
               operator: "Exists"
 {{- end }}
 
-{{/*
-Creates a local PersistentVolume for logs storage.
-*/}}
-{{- define "clp.createLocalLogsPv" -}}
-{{- $root := index . 0 -}}
-{{- $component := index . 1 -}}
-apiVersion: "v1"
-kind: "PersistentVolume"
-metadata:
-  name: {{ include "clp.fullname" $root }}-logs-pv-{{ $component }}
-  labels:
-    {{- include "clp.labels" $root | nindent 4 }}
-    app.kubernetes.io/component: {{ $component | quote }}
-spec:
-  capacity:
-    storage: "5Gi"
-  accessModes: ["ReadWriteOnce"]
-  persistentVolumeReclaimPolicy: "Retain"
-  storageClassName: "local-storage"
-  local:
-    path: {{ $root.Values.clpConfig.logs_directory }}/{{ $component }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: "kubernetes.io/hostname"
-              operator: "Exists"
-{{- end }}
-
-{{/*
-Creates a local PersistentVolume for streams storage (ReadWriteMany).
-*/}}
-{{- define "clp.createStreamsPv" -}}
-{{- $root := . -}}
-apiVersion: "v1"
-kind: "PersistentVolume"
-metadata:
-  name: {{ include "clp.fullname" $root }}-streams-pv
-  labels:
-    {{- include "clp.labels" $root | nindent 4 }}
-    app.kubernetes.io/component: "streams"
-spec:
-  capacity:
-    storage: "20Gi"
-  accessModes: ["ReadWriteMany"]
-  persistentVolumeReclaimPolicy: "Retain"
-  storageClassName: "local-storage"
-  local:
-    path: {{ $root.Values.clpConfig.stream_output.storage.directory }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: "kubernetes.io/hostname"
-              operator: "Exists"
-{{- end }}
-
-{{/*
-Creates a local PersistentVolume for tmp storage (ReadWriteMany).
-*/}}
-{{- define "clp.createTmpPv" -}}
-{{- $root := . -}}
-apiVersion: "v1"
-kind: "PersistentVolume"
-metadata:
-  name: {{ include "clp.fullname" $root }}-tmp-pv
-  labels:
-    {{- include "clp.labels" $root | nindent 4 }}
-    app.kubernetes.io/component: "tmp"
-spec:
-  capacity:
-    storage: "10Gi"
-  accessModes: ["ReadWriteMany"]
-  persistentVolumeReclaimPolicy: "Retain"
-  storageClassName: "local-storage"
-  local:
-    path: {{ .Values.clpConfig.tmp_directory }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: "kubernetes.io/hostname"
-              operator: "Exists"
-{{- end }}
-
-{{/*
-Creates a local PersistentVolume for archives storage (ReadWriteMany).
-*/}}
-{{- define "clp.createArchivesPv" -}}
-{{- $root := . -}}
-apiVersion: "v1"
-kind: "PersistentVolume"
-metadata:
-  name: {{ include "clp.fullname" $root }}-archives-pv
-  labels:
-    {{- include "clp.labels" $root | nindent 4 }}
-    app.kubernetes.io/component: "archives"
-spec:
-  capacity:
-    storage: "50Gi"
-  accessModes: ["ReadWriteMany"]
-  persistentVolumeReclaimPolicy: "Retain"
-  storageClassName: "local-storage"
-  local:
-    path: {{ $root.Values.clpConfig.archive_output.storage.directory }}
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: "kubernetes.io/hostname"
-              operator: "Exists"
-{{- end }}
-
-{{/*
-Creates a local PersistentVolume for staged-archives storage (ReadWriteMany).
-*/}}
-{{- define "clp.createStagedArchivesPv" -}}
-{{- $root := . -}}
-apiVersion: "v1"
-kind: "PersistentVolume"
-metadata:
-  name: {{ include "clp.fullname" $root }}-staged-archives-pv
-  labels:
-    {{- include "clp.labels" $root | nindent 4 }}
-    app.kubernetes.io/component: "staged-archives"
-spec:
-  capacity:
-    storage: "20Gi"
-  accessModes: ["ReadWriteMany"]
-  persistentVolumeReclaimPolicy: "Retain"
-  storageClassName: "local-storage"
-  local:
-    path: "/tmp/clp/staged-archives"
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: "kubernetes.io/hostname"
-              operator: "Exists"
-{{- end }}
-
-{{/*
-Creates a local PersistentVolume for staged-streams storage (ReadWriteMany).
-*/}}
-{{- define "clp.createStagedStreamsPv" -}}
-{{- $root := . -}}
-apiVersion: "v1"
-kind: "PersistentVolume"
-metadata:
-  name: {{ include "clp.fullname" $root }}-staged-streams-pv
-  labels:
-    {{- include "clp.labels" $root | nindent 4 }}
-    app.kubernetes.io/component: "staged-streams"
-spec:
-  capacity:
-    storage: "20Gi"
-  accessModes: ["ReadWriteMany"]
-  persistentVolumeReclaimPolicy: "Retain"
-  storageClassName: "local-storage"
-  local:
-    path: "/tmp/clp/staged-streams"
-  nodeAffinity:
-    required:
-      nodeSelectorTerms:
-        - matchExpressions:
-            - key: "kubernetes.io/hostname"
-              operator: "Exists"
-{{- end }}
 

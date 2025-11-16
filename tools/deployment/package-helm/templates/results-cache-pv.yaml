@@ -1,1 +1,8 @@
-{{- include "clp.createLocalDataPv" (list . "results-cache") }}
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "name" (printf "%s-results-cache-data-pv" (include "clp.fullname" .))
+  "component" "results-cache"
+  "capacity" "20Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/results-cache" .Values.clpConfig.data_directory)
+) }}

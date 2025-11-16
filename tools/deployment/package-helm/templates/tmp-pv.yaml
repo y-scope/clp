@@ -1,1 +1,8 @@
-{{- include "clp.createTmpPv" . }}
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "name" (printf "%s-tmp-pv" (include "clp.fullname" .))
+  "component" "tmp"
+  "capacity" "10Gi"
+  "accessModes" (list "ReadWriteMany")
+  "hostPath" .Values.clpConfig.tmp_directory
+) }}

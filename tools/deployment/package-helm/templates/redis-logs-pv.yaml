@@ -1,1 +1,8 @@
-{{- include "clp.createLocalLogsPv" (list . "redis") }}
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "name" (printf "%s-redis-logs-pv" (include "clp.fullname" .))
+  "component" "redis"
+  "capacity" "5Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/redis" .Values.clpConfig.logs_directory)
+) }}

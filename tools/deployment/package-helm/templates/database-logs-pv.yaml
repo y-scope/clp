@@ -1,1 +1,8 @@
-{{- include "clp.createLocalLogsPv" (list . "database") }}
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "name" (printf "%s-database-logs-pv" (include "clp.fullname" .))
+  "component" "database"
+  "capacity" "5Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/database" .Values.clpConfig.logs_directory)
+) }}

@@ -1,1 +1,8 @@
-{{- include "clp.createStagedArchivesPv" . }}
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "name" (printf "%s-staged-archives-pv" (include "clp.fullname" .))
+  "component" "staged-archives"
+  "capacity" "20Gi"
+  "accessModes" (list "ReadWriteMany")
+  "hostPath" "/tmp/clp/var/data/staged-archives"
+) }}

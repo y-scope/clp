@@ -1,1 +1,8 @@
-{{- include "clp.createArchivesPv" . }}
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "name" (printf "%s-archives-pv" (include "clp.fullname" .))
+  "component" "archives"
+  "capacity" "50Gi"
+  "accessModes" (list "ReadWriteMany")
+  "hostPath" .Values.clpConfig.archive_output.storage.directory
+) }}

@@ -1,1 +1,8 @@
-{{- include "clp.createLocalLogsPv" (list . "api-server") }}
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "name" (printf "%s-api-server-logs-pv" (include "clp.fullname" .))
+  "component" "api-server"
+  "capacity" "5Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/api-server" .Values.clpConfig.logs_directory)
+) }}

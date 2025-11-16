@@ -1,1 +1,8 @@
-{{- include "clp.createStagedStreamsPv" . }}
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "name" (printf "%s-staged-streams-pv" (include "clp.fullname" .))
+  "component" "staged-streams"
+  "capacity" "20Gi"
+  "accessModes" (list "ReadWriteMany")
+  "hostPath" "/tmp/clp/var/data/staged-streams"
+) }}

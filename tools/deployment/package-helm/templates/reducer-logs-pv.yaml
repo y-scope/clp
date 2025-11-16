@@ -1,1 +1,8 @@
-{{- include "clp.createLocalLogsPv" (list . "reducer") }}
+{{- include "clp.createLocalPv" (dict
+  "root" .
+  "name" (printf "%s-reducer-logs-pv" (include "clp.fullname" .))
+  "component" "reducer"
+  "capacity" "5Gi"
+  "accessModes" (list "ReadWriteOnce")
+  "hostPath" (printf "%s/reducer" .Values.clpConfig.logs_directory)
+) }}
