@@ -1,3 +1,4 @@
+{{- if .Values.clpConfig.mcp_server }}
 apiVersion: "v1"
 kind: "PersistentVolumeClaim"
 metadata:

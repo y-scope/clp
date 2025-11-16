@@ -15,3 +15,4 @@ spec:
     - port: 8000
       targetPort: "http"
       nodePort: {{ .Values.clpConfig.mcp_server.port }}
+{{- end }}
