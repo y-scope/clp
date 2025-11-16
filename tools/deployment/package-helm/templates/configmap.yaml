@@ -57,16 +57,16 @@ data:
       jobs_poll_delay: {{ .Values.clpConfig.query_scheduler.jobs_poll_delay }}
       logging_level: {{ .Values.clpConfig.query_scheduler.logging_level | quote }}
       num_archives_to_search_per_sub_job: {{ .Values.clpConfig.query_scheduler.num_archives_to_search_per_sub_job }}
-      port: {{ .Values.clpConfig.query_scheduler.port }}
+      port: 7000
     query_worker:
       logging_level: {{ .Values.clpConfig.query_worker.logging_level | quote }}
     queue:
       host: {{ include "clp-package.fullname" . }}-queue
-      port: {{ .Values.clpConfig.queue.port }}
+      port: 5672
     redis:
       compression_backend_database: {{ .Values.clpConfig.redis.compression_backend_database }}
       host: {{ include "clp-package.fullname" . }}-redis
-      port: {{ .Values.clpConfig.redis.port }}
+      port: 6379
       query_backend_database: {{ .Values.clpConfig.redis.query_backend_database }}
     reducer:
       base_port: {{ .Values.clpConfig.reducer.base_port }}
