@@ -55,18 +55,18 @@ spec:
             - name: "MYSQL_USER"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-secret
-                  key: "db-username"
+                  name: {{ include "clp-package.fullname" . }}-database-secret
+                  key: "username"
             - name: "MYSQL_PASSWORD"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-secret
-                  key: "db-password"
+                  name: {{ include "clp-package.fullname" . }}-database-secret
+                  key: "password"
             - name: "MYSQL_ROOT_PASSWORD"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-secret
-                  key: "db-password"
+                  name: {{ include "clp-package.fullname" . }}-database-secret
+                  key: "password"
           ports:
             - name: "database"
               containerPort: 3306

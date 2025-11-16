@@ -59,13 +59,6 @@ Image reference for CLP Package
 {{- end }}
 
 {{/*
-Require a value with a standard error message
-*/}}
-{{- define "clp-package.requireInput" -}}
-{{- . | required "Please set a value." }}
-{{- end }}
-
-{{/*
 Creates timings for readiness probes (faster checks for quicker startup).
 */}}
 {{- define "clp-package.readinessProbeTimings" -}}

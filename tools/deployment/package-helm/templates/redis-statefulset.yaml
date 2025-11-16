@@ -50,8 +50,8 @@ spec:
             - name: "REDIS_PASSWORD"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-secret
-                  key: "redis-password"
+                  name: {{ include "clp-package.fullname" . }}-redis-secret
+                  key: "password"
           ports:
             - name: "redis"
               containerPort: 6379

@@ -60,13 +60,13 @@ spec:
             - name: "CLP_DB_USER"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-secret
-                  key: "db-username"
+                  name: {{ include "clp-package.fullname" . }}-database-secret
+                  key: "username"
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-secret
-                  key: "db-password"
+                  name: {{ include "clp-package.fullname" . }}-database-secret
+                  key: "password"
             - name: "HOST"
               value: "0.0.0.0"
             - name: "NODE_ENV"

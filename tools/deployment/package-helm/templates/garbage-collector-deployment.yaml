@@ -43,13 +43,13 @@ spec:
             - name: "CLP_DB_USER"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-secret
-                  key: "db-username"
+                  name: {{ include "clp-package.fullname" . }}-database-secret
+                  key: "username"
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-secret
-                  key: "db-password"
+                  name: {{ include "clp-package.fullname" . }}-database-secret
+                  key: "password"
             - name: "CLP_HOME"
               value: "/opt/clp"
             - name: "CLP_LOGGING_LEVEL"

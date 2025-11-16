@@ -46,13 +46,13 @@ spec:
             - name: "RABBITMQ_DEFAULT_USER"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-secret
-                  key: "queue-username"
+                  name: {{ include "clp-package.fullname" . }}-queue-secret
+                  key: "username"
             - name: "RABBITMQ_DEFAULT_PASS"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp-package.fullname" . }}-secret
-                  key: "queue-password"
+                  name: {{ include "clp-package.fullname" . }}-queue-secret
+                  key: "password"
             - name: "RABBITMQ_LOGS"
               value: "/var/log/rabbitmq/rabbitmq.log"
           ports:
