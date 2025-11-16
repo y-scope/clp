@@ -41,7 +41,7 @@ spec:
           imagePullPolicy: "Always"
           env:
             - name: "BROKER_URL"
-              value: "amqp://{{ .Values.credentials.queue.user }}:{{ .Values.credentials.queue.password }}@{{ include "clp.fullname" . }}-queue:5672"
+              value: "amqp://{{ .Values.credentials.queue.username }}:{{ .Values.credentials.queue.password }}@{{ include "clp.fullname" . }}-queue:5672"
             - name: "CLP_CONFIG_PATH"
               value: "/etc/clp-config.yml"
             - name: "CLP_HOME"
