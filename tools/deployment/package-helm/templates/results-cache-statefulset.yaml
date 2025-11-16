@@ -6,33 +6,21 @@ metadata:
     {{- include "clp-package.labels" . | nindent 4 }}
     app.kubernetes.io/component: "results-cache"
 spec:
-  clusterIP: "None"
-  selector:
-    {{- include "clp-package.selectorLabels" . | nindent 4 }}
-    app.kubernetes.io/component: "results-cache"
-  ports:
-    - port: 27017
-      targetPort: 27017
----
-{{- if .Values.allowSbinScripts }}
-apiVersion: "v1"
-kind: "Service"
-metadata:
-  name: {{ include "clp-package.fullname" . }}-results-cache-public
-  labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
-    app.kubernetes.io/component: "results-cache"
-spec:
+  {{- if .Values.allowSbinScripts }}
   type: "NodePort"
+  {{- else }}
+  clusterIP: "None"
+  {{- end }}
   selector:
     {{- include "clp-package.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "results-cache"
   ports:
     - port: 27017
       targetPort: 27017
+      {{- if .Values.allowSbinScripts }}
       nodePort: 30017
+      {{- end }}
 ---
-{{- end }}
 apiVersion: "apps/v1"
 kind: "StatefulSet"
 metadata:

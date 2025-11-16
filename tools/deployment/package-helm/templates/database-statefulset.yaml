@@ -6,32 +6,21 @@ metadata:
     {{- include "clp-package.labels" . | nindent 4 }}
     app.kubernetes.io/component: "database"
 spec:
+  {{- if .Values.allowSbinScripts }}
+  type: "NodePort"
+  {{- else }}
   clusterIP: "None"
+  {{- end }}
   selector:
     {{- include "clp-package.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "database"
   ports:
     - port: 3306
       targetPort: 3306
----
-{{- if .Values.allowSbinScripts }}
-apiVersion: "v1"
-kind: "Service"
-metadata:
-  name: {{ include "clp-package.fullname" . }}-database-public
-  labels:
-    {{- include "clp-package.labels" . | nindent 4 }}
-    app.kubernetes.io/component: "database"
-spec:
-  type: "NodePort"
-  selector:
-    {{- include "clp-package.selectorLabels" . | nindent 4 }}
-    app.kubernetes.io/component: "database"
-  ports:
-    - port: 3306
+      {{- if .Values.allowSbinScripts }}
       nodePort: 30306
+      {{- end }}
 ---
-{{- end }}
 apiVersion: "apps/v1"
 kind: "StatefulSet"
 metadata:
