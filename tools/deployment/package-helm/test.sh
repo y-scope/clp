@@ -5,7 +5,7 @@
 kind delete cluster --name clp-test
 sudo rm -rf /tmp/clp
 mkdir -p /tmp/clp/var/{data,log}/{database,queue,redis,results-cache,compression-scheduler,compression-worker,query-scheduler,query-worker,reducer}
-mkdir -p /tmp/clp/var/data/{archives,staged-streams,streams}
+mkdir -p /tmp/clp/var/data/{archives,staged-archives,staged-streams,streams}
 mkdir -p /tmp/clp/var/tmp
 mkdir -p /tmp/clp/samples
 
