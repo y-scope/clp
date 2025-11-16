@@ -184,12 +184,12 @@ clpConfig:
 credentials:
   # Database credentials
   database:
-    user: "clp-user"
+    username: "clp-user"
     password: "pass"
 
   # Queue credentials
   queue:
-    user: "clp-user"
+    username: "clp-user"
     password: "pass"
 
   # Redis credentials
