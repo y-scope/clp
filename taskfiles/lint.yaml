@@ -98,16 +98,17 @@ tasks:
       - |-
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
         yamllint --strict \
-          .github \
-          .yamllint.yml \
-          components/core/.clang-format \
-          components/core/config \
-          components/core/tools/ \
-          components/package-template/src/etc \
-          docs \
-          taskfile.yaml \
-          taskfiles \
-          tools/deployment
+          ".github" \
+          ".yamllint.yml" \
+          "components/core/.clang-format" \
+          "components/core/config" \
+          "components/core/tools/" \
+          "components/package-template/src/etc" \
+          "docs" \
+          "taskfile.yaml" \
+          "taskfiles" \
+          "tools/deployment/package" \
+          "tools/deployment/presto-clp"
 
   check-cpp-format:
     sources: &cpp_source_files
