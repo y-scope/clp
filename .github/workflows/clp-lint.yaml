@@ -78,3 +78,7 @@ jobs:
       - name: "Lint .yaml files"
         shell: "bash"
         run: "task lint:check-yaml"
+
+      - name: "Lint Helm charts"
+        shell: "bash"
+        run: "task lint:check-helm"

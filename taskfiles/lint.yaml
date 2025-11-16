@@ -14,6 +14,7 @@ tasks:
   check:
     cmds:
       - task: "check-cpp-full"
+      - task: "check-helm"
       - task: "check-js"
       - task: "check-py"
       - task: "check-rust"
@@ -32,6 +33,7 @@ tasks:
   fix:
     cmds:
       - task: "fix-cpp-full"
+      - task: "fix-helm"
       - task: "fix-js"
       - task: "fix-py"
       - task: "fix-rust"
@@ -89,6 +91,18 @@ tasks:
           RUFF_CHECK_FLAGS: "--fix"
           RUFF_FORMAT_FLAGS: ""
 
+  helm:
+    aliases:
+      - "check-helm"
+      - "fix-helm"
+    deps:
+      - "toolchains:helm"
+      - "venv"
+    cmds:
+      - |-
+        . "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
+        ct lint
+
   yaml:
     aliases:
       - "check-yaml"
@@ -104,6 +118,8 @@ tasks:
           "components/core/config" \
           "components/core/tools/" \
           "components/package-template/src/etc" \
+          "chart_schema.yaml" \
+          "ct.yaml" \
           "docs" \
           "taskfile.yaml" \
           "taskfiles" \
