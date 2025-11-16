@@ -24,7 +24,7 @@ image:
   clpPackage:
     repository: "ghcr.io/y-scope/clp/clp-package"
     pullPolicy: "IfNotPresent"
-    tag: ""
+    tag: "nightly"
 
 clpConfig:
   package:
