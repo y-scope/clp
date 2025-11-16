@@ -84,6 +84,16 @@ spec:
             "--port", "{{ .Values.clpConfig.api_server.port }}",
             "--config", "/etc/clp-config.yml"
           ]
+          livenessProbe:
+            {{- include "clp-package.livenessProbeTimings" . | nindent 12 }}
+            httpGet:
+              path: "/health"
+              port: {{ .Values.clpConfig.api_server.port }}
+          readinessProbe:
+            {{- include "clp-package.readinessProbeTimings" . | nindent 12 }}
+            httpGet:
+              path: "/health"
+              port: {{ .Values.clpConfig.api_server.port }}
       volumes:
         - name: "config"
           configMap:
