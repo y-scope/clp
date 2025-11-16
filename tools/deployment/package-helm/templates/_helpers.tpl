@@ -79,20 +79,6 @@ failureThreshold: 3
 {{- end }}
 
 {{/*
-CLP logs directory path on host
-*/}}
-{{- define "clp.logsDirHost" -}}
-{{ .Values.storage.localPathBase }}/{{ .Values.clpConfig.logs_directory }}
-{{- end }}
-
-{{/*
-CLP data directory path on host
-*/}}
-{{- define "clp.dataDirHost" -}}
-{{ .Values.storage.localPathBase }}/{{ .Values.clpConfig.data_directory }}
-{{- end }}
-
-{{/*
 Creates a local PersistentVolume for data storage.
 */}}
 {{- define "clp.createLocalDataPv" -}}
@@ -112,7 +98,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ include "clp.dataDirHost" $root }}/{{ $component }}
+    path: {{ $root.Values.clpConfig.data_directory }}/{{ $component }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -141,7 +127,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ include "clp.logsDirHost" $root }}/{{ $component }}
+    path: {{ $root.Values.clpConfig.logs_directory }}/{{ $component }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -169,7 +155,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ include "clp.dataDirHost" $root }}/streams
+    path: {{ $root.Values.clpConfig.stream_output.storage.directory }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -197,7 +183,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ .Values.storage.localPathBase }}/var/tmp
+    path: {{ .Values.clpConfig.tmp_directory }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -225,7 +211,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ include "clp.dataDirHost" $root }}/archives
+    path: {{ $root.Values.clpConfig.archive_output.storage.directory }}
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -253,7 +239,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ include "clp.dataDirHost" $root }}/staged-archives
+    path: "/tmp/clp/staged-archives"
   nodeAffinity:
     required:
       nodeSelectorTerms:
@@ -281,7 +267,7 @@ spec:
   persistentVolumeReclaimPolicy: "Retain"
   storageClassName: "local-storage"
   local:
-    path: {{ include "clp.dataDirHost" $root }}/staged-streams
+    path: "/tmp/clp/staged-streams"
   nodeAffinity:
     required:
       nodeSelectorTerms:

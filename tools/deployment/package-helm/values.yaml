@@ -4,10 +4,6 @@ fullnameOverride: ""
 # Whether to allow sbin script accesses to services on the node host.
 allowSbinScripts: true
 
-storage:
-  # Base directory on host when using local PVs.
-  localPathBase: "/tmp/clp"
-
 securityContext:
   # UID/GID for first-party CLP services
   firstParty:
@@ -105,7 +101,7 @@ clpConfig:
       type: "fs"
       # NOTE: This directory must not overlap with any path used in CLP's execution container. An
       # error will be raised if so.
-      directory: "var/data/archives"
+      directory: "/tmp/clp/var/data/archives"
 
     # Retention period for archives, in minutes. Set to null to disable automatic deletion.
     retention_period: null
@@ -133,7 +129,7 @@ clpConfig:
       type: "fs"
       # NOTE: This directory must not overlap with any path used in CLP's execution container. An
       # error will be raised if so.
-      directory: "var/data/streams"
+      directory: "/tmp/clp/var/data/streams"
 
     # How large each stream file should be before being split into a new stream file
     target_uncompressed_size: 134217728  # 128 MB
@@ -165,18 +161,18 @@ clpConfig:
   # it doesn't exist.
   # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
   # will be raised if so.
-  data_directory: "var/data"
+  data_directory: "/tmp/clp/var/data"
 
   # Location where logs are stored. It will be created if it doesn't exist.
   # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
   # will be raised if so.
-  logs_directory: "var/log"
+  logs_directory: "/tmp/clp/var/log"
 
   # Location where temporary runtime data are stored. It will be created if
   # it doesn't exist.
   # NOTE: This directory must not overlap with any path used in CLP's execution container. An error
   # will be raised if so.
-  tmp_directory: "var/tmp"
+  tmp_directory: "/tmp/clp/var/tmp"
 
   # Location of the AWS tools' config files (e.g., `~/.aws`)
   aws_config_directory: null
