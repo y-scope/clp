@@ -8,7 +8,6 @@ storage:
   # Base directory on host when using local PVs.
   localPathBase: "/tmp/clp"
 
-# UID and GID for services
 securityContext:
   # UID/GID for first-party CLP services
   firstParty:
