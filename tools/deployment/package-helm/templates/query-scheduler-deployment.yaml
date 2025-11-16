@@ -12,7 +12,7 @@ spec:
     app.kubernetes.io/component: "query-scheduler"
   ports:
     - port: 7000
-      targetPort: 7000
+      targetPort: "query-scheduler"
 ---
 apiVersion: "apps/v1"
 kind: "Deployment"
@@ -84,6 +84,9 @@ spec:
               value: "/opt/clp/lib/python3/site-packages"
             - name: "RESULT_BACKEND"
               value: "redis://default:{{ .Values.credentials.redis.password }}@{{ include "clp-package.fullname" . }}-redis:6379/{{ .Values.clpConfig.redis.query_backend_database }}"
+          ports:
+            - name: "query-scheduler"
+              containerPort: 7000
           volumeMounts:
             - name: "config"
               mountPath: "/etc/clp-config.yml"

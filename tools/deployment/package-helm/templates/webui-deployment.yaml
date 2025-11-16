@@ -12,7 +12,7 @@ spec:
     app.kubernetes.io/component: "webui"
   ports:
     - port: 4000
-      targetPort: 4000
+      targetPort: "http"
       nodePort: 30400
 ---
 apiVersion: "apps/v1"
@@ -78,7 +78,8 @@ spec:
             - name: "RATE_LIMIT"
               value: "1000"
           ports:
-            - containerPort: 4000
+            - name: "http"
+              containerPort: 4000
           volumeMounts:
             - name: "client-settings"
               mountPath: "/opt/clp/var/www/webui/client/settings.json"

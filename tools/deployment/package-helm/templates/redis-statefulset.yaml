@@ -12,7 +12,7 @@ spec:
     app.kubernetes.io/component: "redis"
   ports:
     - port: 6379
-      targetPort: 6379
+      targetPort: "redis"
 ---
 apiVersion: "apps/v1"
 kind: "StatefulSet"
@@ -53,7 +53,8 @@ spec:
                   name: {{ include "clp-package.fullname" . }}-secret
                   key: "redis-password"
           ports:
-            - containerPort: 6379
+            - name: "redis"
+              containerPort: 6379
           volumeMounts:
             - name: "redis-data"
               mountPath: "/data"

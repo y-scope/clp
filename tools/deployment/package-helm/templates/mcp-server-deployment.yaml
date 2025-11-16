@@ -13,7 +13,7 @@ spec:
     app.kubernetes.io/component: "mcp-server"
   ports:
     - port: 8000
-      targetPort: 8000
+      targetPort: "http"
       nodePort: 30800
 ---
 apiVersion: "apps/v1"
@@ -74,6 +74,9 @@ spec:
               value: "/var/log/mcp_server"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"
+          ports:
+            - name: "http"
+              containerPort: 8000
           volumeMounts:
             - name: "config"
               mountPath: "/etc/clp-config.yml"

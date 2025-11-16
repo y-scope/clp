@@ -12,7 +12,7 @@ spec:
     app.kubernetes.io/component: "api-server"
   ports:
     - port: {{ .Values.clpConfig.api_server.port }}
-      targetPort: {{ .Values.clpConfig.api_server.port }}
+      targetPort: "http"
       nodePort: 30301
 ---
 apiVersion: "apps/v1"
@@ -71,6 +71,9 @@ spec:
               value: "/var/log/api_server"
             - name: "RUST_LOG"
               value: "DEBUG"
+          ports:
+            - name: "http"
+              containerPort: {{ .Values.clpConfig.api_server.port }}
           volumeMounts:
             - name: "config"
               mountPath: "/etc/clp-config.yml"

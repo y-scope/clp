@@ -16,7 +16,7 @@ spec:
     app.kubernetes.io/component: "results-cache"
   ports:
     - port: 27017
-      targetPort: 27017
+      targetPort: "mongodb"
       {{- if .Values.allowSbinScripts }}
       nodePort: 30017
       {{- end }}
@@ -55,7 +55,8 @@ spec:
             "--bind_ip", "0.0.0.0"
           ]
           ports:
-            - containerPort: 27017
+            - name: "mongodb"
+              containerPort: 27017
           volumeMounts:
             - name: "results-cache-data"
               mountPath: "/data/db"
