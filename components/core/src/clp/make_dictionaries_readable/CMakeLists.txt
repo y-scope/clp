@@ -49,6 +49,7 @@ if(CLP_BUILD_EXECUTABLES)
                 spdlog::spdlog
                 clp::string_utils
                 ystdlib::containers
+                ystdlib::error_handling
                 ${zstd_TARGET}
         )
         # Put the built executable at the root of the build directory
