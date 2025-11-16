@@ -20,6 +20,8 @@
 ---
 {{- include "clp-package.createLocalLogsPv" (list . "query-worker") }}
 ---
+{{- include "clp-package.createLocalLogsPv" (list . "reducer") }}
+---
 {{- include "clp-package.createStreamsPv" . }}
 ---
 {{- include "clp-package.createTmpPv" . }}
