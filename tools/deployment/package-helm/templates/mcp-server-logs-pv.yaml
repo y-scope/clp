@@ -1,0 +1,3 @@
+{{- if .Values.clpConfig.mcp_server }}
+{{- include "clp.createLocalLogsPv" (list . "mcp-server") }}
+{{- end }}

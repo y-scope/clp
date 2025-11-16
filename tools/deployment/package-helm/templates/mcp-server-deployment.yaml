@@ -1,21 +1,3 @@
-{{- if .Values.clpConfig.mcp_server }}
-apiVersion: "v1"
-kind: "Service"
-metadata:
-  name: {{ include "clp.fullname" . }}-mcp-server
-  labels:
-    {{- include "clp.labels" . | nindent 4 }}
-    app.kubernetes.io/component: "mcp-server"
-spec:
-  type: "NodePort"
-  selector:
-    {{- include "clp.selectorLabels" . | nindent 4 }}
-    app.kubernetes.io/component: "mcp-server"
-  ports:
-    - port: 8000
-      targetPort: "http"
-      nodePort: {{ .Values.clpConfig.mcp_server.port }}
----
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
@@ -108,22 +90,3 @@ spec:
         - name: "mcp-server-logs"
           persistentVolumeClaim:
             claimName: {{ include "clp.fullname" . }}-mcp-server-logs
----
-apiVersion: "v1"
-kind: "PersistentVolumeClaim"
-metadata:
-  name: {{ include "clp.fullname" . }}-mcp-server-logs
-  labels:
-    {{- include "clp.labels" . | nindent 4 }}
-    app.kubernetes.io/component: "mcp-server"
-spec:
-  accessModes: ["ReadWriteOnce"]
-  storageClassName: "local-storage"
-  selector:
-    matchLabels:
-      {{- include "clp.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: "mcp-server"
-  resources:
-    requests:
-      storage: "5Gi"
-{{- end }}

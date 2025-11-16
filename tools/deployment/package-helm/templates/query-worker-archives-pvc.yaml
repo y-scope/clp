@@ -1,0 +1,17 @@
+apiVersion: "v1"
+kind: "PersistentVolumeClaim"
+metadata:
+  name: {{ include "clp.fullname" . }}-staged-streams
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+    app.kubernetes.io/component: "staged-streams"
+spec:
+  accessModes: ["ReadWriteMany"]
+  storageClassName: "local-storage"
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: "staged-streams"
+  resources:
+    requests:
+      storage: "20Gi"

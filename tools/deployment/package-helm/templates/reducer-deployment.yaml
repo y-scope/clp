@@ -1,22 +1,3 @@
-apiVersion: "v1"
-kind: "Service"
-metadata:
-  name: {{ include "clp.fullname" . }}-reducer
-  labels:
-    {{- include "clp.labels" . | nindent 4 }}
-    app.kubernetes.io/component: "reducer"
-spec:
-  clusterIP: "None"
-  selector:
-    {{- include "clp.selectorLabels" . | nindent 4 }}
-    app.kubernetes.io/component: "reducer"
-  ports:
-    {{- range $i := until (int .Values.workerConcurrency) }}
-    - name: "reducer-{{ $i }}"
-      port: {{ add $.Values.clpConfig.reducer.base_port $i }}
-      targetPort: {{ add $.Values.clpConfig.reducer.base_port $i }}
-    {{- end }}
----
 apiVersion: "apps/v1"
 kind: "Deployment"
 metadata:
@@ -90,21 +71,3 @@ spec:
         - name: "reducer-logs"
           persistentVolumeClaim:
             claimName: {{ include "clp.fullname" . }}-reducer-logs
----
-apiVersion: "v1"
-kind: "PersistentVolumeClaim"
-metadata:
-  name: {{ include "clp.fullname" . }}-reducer-logs
-  labels:
-    {{- include "clp.labels" . | nindent 4 }}
-    app.kubernetes.io/component: "reducer"
-spec:
-  accessModes: ["ReadWriteOnce"]
-  storageClassName: "local-storage"
-  selector:
-    matchLabels:
-      {{- include "clp.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: "reducer"
-  resources:
-    requests:
-      storage: "5Gi"
