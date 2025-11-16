@@ -9,7 +9,7 @@ data:
     api_server:
       default_max_num_query_results: {{ .Values.clpConfig.api_server.default_max_num_query_results }}
       host: {{ .Values.clpConfig.api_server.host | quote }}
-      port: {{ .Values.clpConfig.api_server.port }}
+      port: 3001
       query_job_polling:
         initial_backoff_ms: {{ .Values.clpConfig.api_server.query_job_polling.initial_backoff_ms }}
         max_backoff_ms: {{ .Values.clpConfig.api_server.query_job_polling.max_backoff_ms }}
@@ -35,7 +35,7 @@ data:
       compress: true
       host: {{ include "clp-package.fullname" . }}-database
       name: {{ .Values.clpConfig.database.name | quote }}
-      port: {{ .Values.clpConfig.database.port }}
+      port: 3306
       ssl_cert: null
       type: {{ .Values.clpConfig.database.type | quote }}
     garbage_collector:
@@ -76,7 +76,7 @@ data:
     results_cache:
       db_name: {{ .Values.clpConfig.results_cache.db_name | quote }}
       host: {{ include "clp-package.fullname" . }}-results-cache
-      port: {{ .Values.clpConfig.results_cache.port }}
+      port: 27017
       retention_period: {{ .Values.clpConfig.results_cache.retention_period }}
       stream_collection_name: {{ .Values.clpConfig.results_cache.stream_collection_name | quote }}
     stream_output:
@@ -87,7 +87,7 @@ data:
     tmp_directory: "/var/tmp"
     webui:
       host: {{ .Values.clpConfig.webui.host | quote }}
-      port: {{ .Values.clpConfig.webui.port }}
+      port: 4000
       rate_limit: {{ .Values.clpConfig.webui.rate_limit }}
       results_metadata_collection_name: {{ .Values.clpConfig.webui.results_metadata_collection_name | quote }}
   mysql-logging.cnf: |
@@ -129,7 +129,7 @@ data:
   webui-server-settings.json: |
     {
       "SqlDbHost": "{{ include "clp-package.fullname" . }}-database",
-      "SqlDbPort": {{ .Values.clpConfig.database.port }},
+      "SqlDbPort": 3306,
       "SqlDbName": {{ .Values.clpConfig.database.name | quote }},
       "SqlDbQueryJobsTableName": "query_jobs",
       "MongoDbHost": "{{ include "clp-package.fullname" . }}-results-cache",

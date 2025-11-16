@@ -44,7 +44,7 @@ clpConfig:
   database:
     type: "mariadb"  # "mariadb" or "mysql"
     host: "localhost"
-    port: 3306
+    port: 30306
     name: "clp-db"
 
   compression_scheduler:
@@ -76,7 +76,7 @@ clpConfig:
 
   results_cache:
     host: "localhost"
-    port: 27017
+    port: 30017
     db_name: "clp-query-results"
     stream_collection_name: "stream-files"
 
@@ -91,11 +91,14 @@ clpConfig:
 
   webui:
     host: "localhost"
-    port: 4000
+    port: 30400
     results_metadata_collection_name: "results-metadata"
     rate_limit: 1000
 
   mcp_server: null
+  #   host: "localhost"
+  #   port: 30800
+  #   logging_level: "INFO"
 
   # Where archives should be output to
   archive_output:
@@ -148,7 +151,7 @@ clpConfig:
   # API server config
   api_server:
     host: "localhost"
-    port: 3001
+    port: 30301
     default_max_num_query_results: 1000
     query_job_polling:
       initial_backoff_ms: 100
@@ -156,6 +159,8 @@ clpConfig:
 
   # Presto client config
   presto: null
+  #   host: "localhost"
+  #   port: 30889
 
   # Location where other data (besides archives) are stored. It will be created if
   # it doesn't exist.

@@ -14,7 +14,7 @@ spec:
   ports:
     - port: 8000
       targetPort: "http"
-      nodePort: 30800
+      nodePort: {{ .Values.clpConfig.mcp_server.port }}
 ---
 apiVersion: "apps/v1"
 kind: "Deployment"

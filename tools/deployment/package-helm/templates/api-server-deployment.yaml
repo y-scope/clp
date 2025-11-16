@@ -11,9 +11,9 @@ spec:
     {{- include "clp-package.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: "api-server"
   ports:
-    - port: {{ .Values.clpConfig.api_server.port }}
+    - port: 3001
       targetPort: "http"
-      nodePort: 30301
+      nodePort: {{ .Values.clpConfig.api_server.port }}
 ---
 apiVersion: "apps/v1"
 kind: "Deployment"
@@ -73,7 +73,7 @@ spec:
               value: "DEBUG"
           ports:
             - name: "http"
-              containerPort: {{ .Values.clpConfig.api_server.port }}
+              containerPort: 3001
           volumeMounts:
             - name: "config"
               mountPath: "/etc/clp-config.yml"
@@ -84,19 +84,19 @@ spec:
           command: [
             "/opt/clp/bin/api_server",
             "--host", "0.0.0.0",
-            "--port", "{{ .Values.clpConfig.api_server.port }}",
+            "--port", "3001",
             "--config", "/etc/clp-config.yml"
           ]
           livenessProbe:
             {{- include "clp-package.livenessProbeTimings" . | nindent 12 }}
             httpGet:
               path: "/health"
-              port: {{ .Values.clpConfig.api_server.port }}
+              port: 3001
           readinessProbe:
             {{- include "clp-package.readinessProbeTimings" . | nindent 12 }}
             httpGet:
               path: "/health"
-              port: {{ .Values.clpConfig.api_server.port }}
+              port: 3001
       volumes:
         - name: "config"
           configMap:

@@ -18,7 +18,7 @@ spec:
     - port: 27017
       targetPort: "mongodb"
       {{- if .Values.allowSbinScripts }}
-      nodePort: 30017
+      nodePort: {{ .Values.clpConfig.results_cache.port }}
       {{- end }}
 ---
 apiVersion: "apps/v1"
