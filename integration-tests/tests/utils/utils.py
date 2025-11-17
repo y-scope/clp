@@ -115,10 +115,11 @@ def _sort_json_keys_and_rows(
 
     sorted_fp = NamedTemporaryFile(mode="w+", delete=True)  # noqa: SIM115
 
-    jq_cmd = [jq_bin]
+    jq_cmd = [jq_bin, "--compact-output"]
     if not respect_key_order:
         jq_cmd.append("--sort-keys")
-    jq_cmd.extend(["--compact-output", ".", str(json_fp)])
+    jq_cmd.append(".")  # Identity filter
+    jq_cmd.append(str(json_fp))
 
     jq_proc = None
     try:
