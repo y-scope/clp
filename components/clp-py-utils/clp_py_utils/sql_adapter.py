@@ -4,8 +4,8 @@ import time
 
 import mariadb
 import mysql.connector
-import sqlalchemy.pool as pool
 from mysql.connector import errorcode
+from sqlalchemy import pool
 from sqlalchemy.dialects.mysql import mariadbconnector, mysqlconnector
 
 from clp_py_utils.clp_config import Database
@@ -72,11 +72,13 @@ class SqlAdapter:
             )
         except mysql.connector.Error as err:
             if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
-                logging.error("Database access denied.")
+                logging.exception("Database access denied.")
             elif err.errno == errorcode.ER_BAD_DB_ERROR:
-                logging.error(f'Specified database "{self.database_config.name}" does not exist.')
+                logging.exception(
+                    f'Specified database "{self.database_config.name}" does not exist.'
+                )
             else:
-                logging.error(err)
+                logging.exception(err)
             raise err
         else:
             return connection
@@ -91,7 +93,7 @@ class SqlAdapter:
                 )
             )
         except mariadb.Error as err:
-            logging.error(f"Error connecting to MariaDB: {err}")
+            logging.exception(f"Error connecting to MariaDB: {err}")
             raise err
         else:
             return connection
@@ -99,10 +101,9 @@ class SqlAdapter:
     def create_connection(self, disable_localhost_socket_connection: bool = False):
         if "mysql" == self.database_config.type:
             return self.create_mysql_connection(disable_localhost_socket_connection)
-        elif "mariadb" == self.database_config.type:
+        if "mariadb" == self.database_config.type:
             return self.create_mariadb_connection(disable_localhost_socket_connection)
-        else:
-            raise NotImplementedError
+        raise NotImplementedError
 
     def create_connection_pool(
         self,
