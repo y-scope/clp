@@ -393,7 +393,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 clp = [
-    { name = "clp-py-utils" },
+    { name = "clp-package-utils", directory = "../clp-package-utils" },
     { name = "job-orchestration", directory = "../job-orchestration" },
 ]
 dev = [

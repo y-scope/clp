@@ -565,7 +565,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 clp = [
-    { name = "clp-py-utils" },
+    { name = "clp-package-utils", directory = "../components/clp-package-utils" },
     { name = "job-orchestration", directory = "../components/job-orchestration" },
 ]
 dev = [
@@ -1009,8 +1009,8 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 clp = [
+    { name = "clp-package-utils", directory = "../components/clp-package-utils" },
     { name = "clp-py-utils", directory = "../components/clp-py-utils" },
-    { name = "job-orchestration" },
 ]
 dev = [
     { name = "mypy", specifier = ">=1.18.2" },

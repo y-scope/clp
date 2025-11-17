@@ -25,7 +25,7 @@ build-backend = "hatchling.build"
 
 [dependency-groups]
 clp = [
-    "clp-py-utils",
+    "clp-package-utils",
     "job-orchestration",
 ]
 dev = [
