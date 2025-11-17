@@ -20,6 +20,7 @@ if(CLP_BUILD_CLP_S_TIMESTAMP_PARSER)
                 PRIVATE
                 clp::string_utils
                 date::date
+                fmt::fmt
                 ystdlib::error_handling
         )
 endif()
