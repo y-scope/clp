@@ -6,6 +6,7 @@ metadata:
     {{- include "clp.labels" . | nindent 4 }}
     app.kubernetes.io/component: "results-cache-indices-creator"
 spec:
+  ttlSecondsAfterFinished: 300
   template:
     metadata:
       labels:
