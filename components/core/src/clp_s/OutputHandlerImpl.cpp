@@ -32,10 +32,7 @@ void FileOutputHandler::write(
     static constexpr string_view cOrigFilePathPlaceholder{""};
     msgpack::type::tuple<epochtime_t, string, string, string, int64_t> const
             src(timestamp, message, cOrigFilePathPlaceholder, archive_id, log_event_idx);
-    msgpack::sbuffer m;
-    msgpack::pack(m, src);
-
-    m_file_writer.write(m.data(), m.size());
+    msgpack::pack(m_file_writer, src);
 }
 
 NetworkOutputHandler::NetworkOutputHandler(

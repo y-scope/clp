@@ -659,7 +659,7 @@ CommandLineArguments::parse_arguments(int argc, char const** argv) {
                              R"( "level: INFO" and output to a file)"
                           << std::endl;
                 std::cerr << "  " << m_program_name << R"( s archives-dir "level: INFO")"
-                          << " " << cFileOutputHandlerName << " --path test.jsonl" << std::endl;
+                          << " " << cFileOutputHandlerName << " --path test.out" << std::endl;
                 std::cerr << std::endl;
 
                 std::cerr << "  # Search archives in archives-dir for logs matching a KQL query"
