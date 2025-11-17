@@ -19,7 +19,7 @@ from clp_py_utils.s3_utils import (
     get_credential_env_vars,
     s3_put,
 )
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
@@ -200,7 +200,7 @@ def extract_stream(
 
     start_time = datetime.datetime.now()
     task_status: QueryTaskStatus
-    sql_adapter = SQL_Adapter(Database.model_validate(clp_metadata_db_conn_params))
+    sql_adapter = SqlAdapter(Database.model_validate(clp_metadata_db_conn_params))
 
     # Load configuration
     clp_config_path = Path(os.getenv("CLP_CONFIG_PATH"))

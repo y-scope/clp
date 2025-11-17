@@ -13,13 +13,13 @@ import msgpack
 from clp_py_utils.clp_config import (
     AwsAuthentication,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
-    CLPConfig,
+    ClpConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     StorageType,
 )
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.s3_utils import parse_s3_url
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 from job_orchestration.scheduler.constants import (
     CompressionJobCompletionStatus,
     CompressionJobStatus,
@@ -115,7 +115,7 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
         time.sleep(0.5)
 
 
-def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress_reporting: bool):
+def handle_job(sql_adapter: SqlAdapter, clp_io_config: ClpIoConfig, no_progress_reporting: bool):
     with closing(sql_adapter.create_connection(True)) as db, closing(
         db.cursor(dictionary=True)
     ) as db_cursor:
@@ -143,7 +143,7 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
 
 
 def _generate_clp_io_config(
-    clp_config: CLPConfig,
+    clp_config: ClpConfig,
     logs_to_compress: list[str],
     parsed_args: argparse.Namespace,
 ) -> Union[S3InputConfig, FsInputConfig]:
@@ -280,7 +280,7 @@ def _parse_and_validate_s3_object_urls(
     return region_code, bucket_name, key_prefix, key_list
 
 
-def _get_aws_authentication_from_config(clp_config: CLPConfig) -> AwsAuthentication:
+def _get_aws_authentication_from_config(clp_config: ClpConfig) -> AwsAuthentication:
     """
     Gets AWS authentication configuration.
 
@@ -382,7 +382,7 @@ def main(argv):
             clp_output_config.tags = tag_list
     clp_io_config = ClpIoConfig(input=clp_input_config, output=clp_output_config)
 
-    mysql_adapter = SQL_Adapter(clp_config.database)
+    mysql_adapter = SqlAdapter(clp_config.database)
     return handle_job(
         sql_adapter=mysql_adapter,
         clp_io_config=clp_io_config,

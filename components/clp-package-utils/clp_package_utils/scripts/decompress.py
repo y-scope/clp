@@ -12,7 +12,7 @@ from clp_py_utils.clp_config import (
     CLP_DB_USER_ENV_VAR_NAME,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
     CLP_DEFAULT_DATASET_NAME,
-    CLPConfig,
+    ClpConfig,
     StorageEngine,
     StorageType,
 )
@@ -44,7 +44,7 @@ def validate_and_load_config(
     clp_home: pathlib.Path,
     config_file_path: pathlib.Path,
     default_config_file_path: pathlib.Path,
-) -> Optional[CLPConfig]:
+) -> Optional[ClpConfig]:
     """
     Validates and loads the config file.
     :param clp_home:
