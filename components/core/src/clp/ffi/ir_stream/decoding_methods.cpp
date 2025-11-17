@@ -78,7 +78,7 @@ auto deserialize_and_append_logtype(
             break;
         }
         case cProtocol::Payload::LogtypeStrLenInt: {
-            // NOTE: Using `int32_t` to be match `serialize_logtype`.
+            // NOTE: Using `int32_t` to match `serialize_logtype`.
             int32_t length{};
             if (false == deserialize_int(reader, length)) {
                 return IRErrorCode_Incomplete_IR;
