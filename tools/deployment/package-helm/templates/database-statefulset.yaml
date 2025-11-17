@@ -24,7 +24,12 @@ spec:
         fsGroup: {{ .Values.securityContext.thirdParty.gid }}
       containers:
         - name: "database"
-          image: "mariadb:10-jammy"
+          image: >-
+            {{- if eq .Values.clpConfig.database.type "mysql" }}
+              mysql:8.0.23
+            {{- else }}
+              mariadb:10-jammy
+            {{- end }}
           imagePullPolicy: "Always"
           env:
             - name: "MYSQL_DATABASE"
