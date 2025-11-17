@@ -122,6 +122,7 @@ private:
  * - \Z Generic timezone -- resolves to literal content, and potentially \z{...}.
  * - \? Generic fractional second -- resolves to \3, \6, \9, or \T.
  * - \P Unknown-precision epoch time -- resolves to \E, \L, \C, or \N based on a heuristic.
+ * - \O{...} One of several literal characters, described by content between {}.
  *
  * @param timestamp
  * @param pattern A timestamp pattern made up of literals, format specifiers, and potentially CAT
