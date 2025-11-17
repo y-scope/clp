@@ -30,12 +30,12 @@ spec:
             - name: "RABBITMQ_DEFAULT_USER"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-queue-secret
+                  name: {{ include "clp.fullname" . }}-queue
                   key: "username"
             - name: "RABBITMQ_DEFAULT_PASS"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-queue-secret
+                  name: {{ include "clp.fullname" . }}-queue
                   key: "password"
             - name: "RABBITMQ_LOGS"
               value: "/var/log/rabbitmq/rabbitmq.log"

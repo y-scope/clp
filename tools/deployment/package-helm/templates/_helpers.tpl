@@ -112,4 +112,32 @@ spec:
               operator: "Exists"
 {{- end }}
 
+{{/*
+Creates a PersistentVolumeClaim.
+Parameters (dict):
+  root: Root template context
+  component: Component label (used in name, labels, and selectors)
+  capacity: Storage capacity
+  accessModes: Access modes (list)
+*/}}
+{{- define "clp.createPvc" -}}
+apiVersion: "v1"
+kind: "PersistentVolumeClaim"
+metadata:
+  name: {{ include "clp.fullname" .root }}-{{ .component }}
+  labels:
+    {{- include "clp.labels" .root | nindent 4 }}
+    app.kubernetes.io/component: {{ .component | quote }}
+spec:
+  accessModes: {{ .accessModes }}
+  storageClassName: "local-storage"
+  selector:
+    matchLabels:
+      {{- include "clp.selectorLabels" .root | nindent 6 }}
+      app.kubernetes.io/component: {{ .component | quote }}
+  resources:
+    requests:
+      storage: {{ .capacity }}
+{{- end }}
+
 

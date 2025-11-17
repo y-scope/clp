@@ -32,12 +32,12 @@ spec:
             - name: "CLP_DB_USER"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-database-secret
+                  name: {{ include "clp.fullname" . }}-database
                   key: "username"
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-database-secret
+                  name: {{ include "clp.fullname" . }}-database
                   key: "password"
             - name: "PYTHONPATH"
               value: "/opt/clp/lib/python3/site-packages"

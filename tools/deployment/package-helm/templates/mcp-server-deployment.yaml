@@ -44,12 +44,12 @@ spec:
             - name: "CLP_DB_USER"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-database-secret
+                  name: {{ include "clp.fullname" . }}-database
                   key: "username"
             - name: "CLP_DB_PASS"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-database-secret
+                  name: {{ include "clp.fullname" . }}-database
                   key: "password"
             - name: "CLP_LOGGING_LEVEL"
               value: {{ .Values.clpConfig.mcp_server.logging_level | quote }}

@@ -1,7 +1,7 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
   "name" (printf "%s-garbage-collector-logs" (include "clp.fullname" .))
-  "component" "garbage-collector"
+  "component" "garbage-collector-logs"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/garbage-collector" .Values.clpConfig.logs_directory)

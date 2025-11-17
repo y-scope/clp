@@ -1,7 +1,7 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
   "name" (printf "%s-compression-scheduler-logs" (include "clp.fullname" .))
-  "component" "compression-scheduler"
+  "component" "compression-scheduler-logs"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
   "hostPath" (printf "%s/compression-scheduler" .Values.clpConfig.logs_directory)

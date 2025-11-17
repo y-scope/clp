@@ -1,17 +1,6 @@
-apiVersion: "v1"
-kind: "PersistentVolumeClaim"
-metadata:
-  name: {{ include "clp.fullname" . }}-api-server-logs
-  labels:
-    {{- include "clp.labels" . | nindent 4 }}
-    app.kubernetes.io/component: "api-server"
-spec:
-  accessModes: ["ReadWriteOnce"]
-  storageClassName: "local-storage"
-  selector:
-    matchLabels:
-      {{- include "clp.selectorLabels" . | nindent 6 }}
-      app.kubernetes.io/component: "api-server"
-  resources:
-    requests:
-      storage: "5Gi"
+{{- include "clp.createPvc" (dict
+  "root" .
+  "component" "api-server-logs"
+  "capacity" "5Gi"
+  "accessModes" (list "ReadWriteOnce")
+) }}

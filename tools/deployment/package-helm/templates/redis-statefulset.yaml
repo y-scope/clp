@@ -34,7 +34,7 @@ spec:
             - name: "REDIS_PASSWORD"
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "clp.fullname" . }}-redis-secret
+                  name: {{ include "clp.fullname" . }}-redis
                   key: "password"
           ports:
             - name: "redis"
