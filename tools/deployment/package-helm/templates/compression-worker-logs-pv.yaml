@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "name" (printf "%s-compression-worker-logs-pv" (include "clp.fullname" .))
+  "name" (printf "%s-compression-worker-logs" (include "clp.fullname" .))
   "component" "compression-worker"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")

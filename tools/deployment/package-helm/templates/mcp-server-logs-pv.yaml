@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "name" (printf "%s-mcp-server-logs-pv" (include "clp.fullname" .))
+  "name" (printf "%s-mcp-server-logs" (include "clp.fullname" .))
   "component" "mcp-server"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")

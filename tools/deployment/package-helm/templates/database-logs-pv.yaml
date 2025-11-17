@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "name" (printf "%s-database-logs-pv" (include "clp.fullname" .))
+  "name" (printf "%s-database-logs" (include "clp.fullname" .))
   "component" "database"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")

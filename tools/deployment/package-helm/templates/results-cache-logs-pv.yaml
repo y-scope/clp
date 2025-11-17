@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "name" (printf "%s-results-cache-logs-pv" (include "clp.fullname" .))
+  "name" (printf "%s-results-cache-logs" (include "clp.fullname" .))
   "component" "results-cache"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")

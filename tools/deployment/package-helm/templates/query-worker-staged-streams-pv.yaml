@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "name" (printf "%s-staged-streams-pv" (include "clp.fullname" .))
+  "name" (printf "%s-staged-streams" (include "clp.fullname" .))
   "component" "staged-streams"
   "capacity" "20Gi"
   "accessModes" (list "ReadWriteMany")

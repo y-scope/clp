@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "name" (printf "%s-archives-pv" (include "clp.fullname" .))
+  "name" (printf "%s-archives" (include "clp.fullname" .))
   "component" "archives"
   "capacity" "50Gi"
   "accessModes" (list "ReadWriteMany")

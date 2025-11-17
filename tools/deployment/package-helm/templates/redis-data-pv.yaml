@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "name" (printf "%s-redis-data-pv" (include "clp.fullname" .))
+  "name" (printf "%s-redis-data" (include "clp.fullname" .))
   "component" "redis"
   "capacity" "20Gi"
   "accessModes" (list "ReadWriteOnce")

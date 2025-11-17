@@ -1,6 +1,6 @@
 {{- include "clp.createLocalPv" (dict
   "root" .
-  "name" (printf "%s-garbage-collector-logs-pv" (include "clp.fullname" .))
+  "name" (printf "%s-garbage-collector-logs" (include "clp.fullname" .))
   "component" "garbage-collector"
   "capacity" "5Gi"
   "accessModes" (list "ReadWriteOnce")
