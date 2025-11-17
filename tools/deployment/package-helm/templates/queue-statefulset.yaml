@@ -53,6 +53,8 @@ spec:
             {{- include "clp.readinessProbeTimings" . | nindent 12 }}
             exec:
               <<: *queue-health-check
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: "Delete"
   volumeClaimTemplates:
     - metadata:
         name: "queue-logs"

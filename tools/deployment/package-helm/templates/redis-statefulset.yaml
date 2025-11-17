@@ -68,6 +68,8 @@ spec:
         - name: "config"
           configMap:
             name: {{ include "clp.fullname" . }}-config
+  persistentVolumeClaimRetentionPolicy:
+    whenDeleted: "Delete"
   volumeClaimTemplates:
     - metadata:
         name: "redis-data"
