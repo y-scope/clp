@@ -131,17 +131,16 @@ impl CredentialManagerService {
         .execute(self.db_pool())
         .await
         .map_err(|err| {
-            if let Some(db_err) = err.as_database_error() {
-                if let Some(mysql_err) =
-                    db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>()
-                {
-                    if mysql_err.number() == 1062 {
-                        return ServiceError::Conflict(format!(
-                            "credential with name `{}` already exists",
-                            name
-                        ));
-                    }
-                }
+            let is_duplicate = err
+                .as_database_error()
+                .and_then(|db_err| db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>())
+                .is_some_and(|mysql_err| mysql_err.number() == 1062);
+
+            if is_duplicate {
+                return ServiceError::Conflict(format!(
+                    "credential with name `{}` already exists",
+                    name
+                ));
             }
 
             ServiceError::from(err)
