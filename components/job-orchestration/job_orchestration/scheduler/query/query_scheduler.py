@@ -31,7 +31,7 @@ import celery
 import msgpack
 import pymongo
 from clp_py_utils.clp_config import (
-    CLPConfig,
+    ClpConfig,
     QUERY_JOBS_TABLE_NAME,
     QUERY_SCHEDULER_COMPONENT_NAME,
     QUERY_TASKS_TABLE_NAME,
@@ -46,7 +46,7 @@ from clp_py_utils.clp_metadata_db_utils import (
 )
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.decorators import exception_default_value
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 from pydantic import ValidationError
 
 from job_orchestration.executor.query.extract_stream_task import extract_stream
@@ -1160,7 +1160,7 @@ async def main(argv: List[str]) -> int:
     # Load configuration
     config_path = pathlib.Path(parsed_args.config)
     try:
-        clp_config = CLPConfig.model_validate(read_yaml_config_file(config_path))
+        clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
         logger.error(err)
@@ -1171,7 +1171,7 @@ async def main(argv: List[str]) -> int:
 
     reducer_connection_queue = asyncio.Queue(32)
 
-    sql_adapter = SQL_Adapter(clp_config.database)
+    sql_adapter = SqlAdapter(clp_config.database)
 
     try:
         killed_jobs = kill_hanging_jobs(sql_adapter, SchedulerType.QUERY)

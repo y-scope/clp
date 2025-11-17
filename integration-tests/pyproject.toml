@@ -16,6 +16,12 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [dependency-groups]
+clp = [
+    "clp-mcp-server",
+    "clp-package-utils",
+    "clp-py-utils",
+    "job-orchestration",
+]
 dev = [
     "mypy>=1.16.0",
     "ruff>=0.11.12",
@@ -69,3 +75,12 @@ isort.order-by-type = false
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 100
+
+[tool.uv]
+default-groups = ["clp", "dev"]
+
+[tool.uv.sources]
+clp-mcp-server = { path = "../components/clp-mcp-server", editable = true }
+clp-package-utils = { path = "../components/clp-package-utils", editable = true }
+clp-py-utils = { path = "../components/clp-py-utils", editable = true }
+job-orchestration = { path = "../components/job-orchestration", editable = true }

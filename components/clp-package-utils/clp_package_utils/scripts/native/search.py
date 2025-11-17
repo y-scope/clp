@@ -16,7 +16,7 @@ from clp_py_utils.clp_config import (
     Database,
     ResultsCache,
 )
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 from job_orchestration.scheduler.constants import QueryJobStatus, QueryJobType
 from job_orchestration.scheduler.job_config import AggregationConfig, SearchJobConfig
 
@@ -71,13 +71,13 @@ def create_and_monitor_job_in_db(
         if len(tag_list) > 0:
             search_config.tags = tag_list
 
-    sql_adapter = SQL_Adapter(db_config)
+    sql_adapter = SqlAdapter(db_config)
     job_id = submit_query_job(sql_adapter, search_config, QueryJobType.SEARCH_OR_AGGREGATION)
     job_status = wait_for_query_job(sql_adapter, job_id)
 
     if do_count_aggregation is None and count_by_time_bucket_size is None:
         return
-    with pymongo.MongoClient(results_cache.get_uri()) as client:
+    with pymongo.MongoClient(results_cache.get_uri(), directConnection=True) as client:
         search_results_collection = client[results_cache.db_name][str(job_id)]
         if do_count_aggregation is not None:
             for document in search_results_collection.find():

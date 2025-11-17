@@ -1,5 +1,8 @@
 version: "3"
 
+includes:
+  toolchains: "toolchains.yaml"
+
 vars:
   # Ignore https://github.com/msgpack/msgpack-c/issues/1098
   G_CLANG_TIDY_LINE_FILTER_IGNORE_MSGPACK_1098: >-
@@ -796,55 +799,61 @@ tasks:
 
   check-rust-format:
     cmds:
-      - task: "rust-workspace-fmt"
+      - task: "cargo-workspace-fmt"
         vars:
-          RUSTFMT_FLAGS: "--check"
+          CARGO_FMT_FLAGS: "--check"
 
   fix-rust-format:
     cmds:
-      - task: "rust-workspace-fmt"
+      - task: "cargo-workspace-fmt"
         vars:
-          RUSTFMT_FLAGS: ""
+          CARGO_FMT_FLAGS: ""
 
   check-rust-static:
     cmds:
-      - task: "rust-workspace-clippy"
+      - task: "cargo-workspace-clippy"
         vars:
-          RUST_CLIPPY_FLAGS: "-- -D warnings"
+          CARGO_CLIPPY_FLAGS: "-- -D warnings"
 
   fix-rust-static:
     cmds:
-      - task: "rust-workspace-clippy"
+      - task: "cargo-workspace-clippy"
         vars:
-          RUST_CLIPPY_FLAGS: "--fix --allow-dirty --allow-staged"
+          CARGO_CLIPPY_FLAGS: "--fix --allow-dirty --allow-staged"
 
   rust-lint-configs:
     internal: true
     run: "once"
-    cmd: |
+    cmd: |-
       cp \
         {{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/.rustfmt.toml \
         {{.ROOT_DIR}}/.rustfmt.toml
 
-  rust-workspace-fmt:
+  # Runs `cargo +nightly fmt` in the root Rust workspace directory with the specified flags.
+  #
+  # @param {string} CARGO_FMT_FLAGS The flags to pass to the `cargo +nightly fmt` command.
+  cargo-workspace-fmt:
     internal: true
-    deps: ["rust-lint-configs", ":toolchains:rust"]
-    dir: "{{.ROOT_DIR}}"
     requires:
-      vars: ["RUSTFMT_FLAGS"]
+      vars: ["CARGO_FMT_FLAGS"]
+    dir: "{{.ROOT_DIR}}"
+    deps: ["rust-lint-configs", "toolchains:rust"]
     cmd: |-
-      . "$HOME/.cargo/env"
-      cargo +nightly fmt --all -- {{.RUSTFMT_FLAGS}}
+      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+      cargo +nightly fmt --all -- {{.CARGO_FMT_FLAGS}}
 
-  rust-workspace-clippy:
+  # Runs `cargo +nightly clippy` in the root Rust workspace directory with the specified flags.
+  #
+  # @param {string} CARGO_CLIPPY_FLAGS The flags to pass to the `cargo +nightly clippy` command.
+  cargo-workspace-clippy:
     internal: true
-    deps: [":toolchains:rust"]
-    dir: "{{.ROOT_DIR}}"
     requires:
-      vars: ["RUST_CLIPPY_FLAGS"]
+      vars: ["CARGO_CLIPPY_FLAGS"]
+    dir: "{{.ROOT_DIR}}"
+    deps: ["toolchains:rust"]
     cmd: |-
-      . "$HOME/.cargo/env"
-      cargo +nightly clippy --all-targets --all-features {{.RUST_CLIPPY_FLAGS}}
+      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+      cargo +nightly clippy --all-targets --all-features {{.CARGO_CLIPPY_FLAGS}}
 
   venv:
     internal: true
