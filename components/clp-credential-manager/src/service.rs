@@ -52,7 +52,7 @@ impl CredentialManagerService {
     pub async fn list_credentials(&self) -> ServiceResult<Vec<CredentialMetadata>> {
         let rows = sqlx::query_as::<_, CredentialMetadataRow>(
             "SELECT id, name, credential_type, description, default_session_duration_seconds, \
-             transient, created_at, updated_at, last_used_at FROM aws_credentials ORDER BY name",
+             transient, created_at, updated_at, last_used_at FROM clp_aws_credentials ORDER BY name",
         )
         .fetch_all(self.db_pool())
         .await?;
@@ -63,7 +63,7 @@ impl CredentialManagerService {
     pub async fn get_credential(&self, id: i64) -> ServiceResult<CredentialMetadata> {
         let row = sqlx::query_as::<_, CredentialMetadataRow>(
             "SELECT id, name, credential_type, description, default_session_duration_seconds, \
-             transient, created_at, updated_at, last_used_at FROM aws_credentials WHERE id = ?",
+             transient, created_at, updated_at, last_used_at FROM clp_aws_credentials WHERE id = ?",
         )
         .bind(id)
         .fetch_optional(self.db_pool())
@@ -78,7 +78,7 @@ impl CredentialManagerService {
     }
 
     pub async fn delete_credential(&self, id: i64) -> ServiceResult<()> {
-        let result = sqlx::query("DELETE FROM aws_credentials WHERE id = ?")
+        let result = sqlx::query("DELETE FROM clp_aws_credentials WHERE id = ?")
             .bind(id)
             .execute(self.db_pool())
             .await?;
@@ -113,7 +113,7 @@ impl CredentialManagerService {
         let created_by = request.created_by.clone();
 
         let result = sqlx::query(
-            "INSERT INTO aws_credentials (name, credential_type, access_key_id, \
+            "INSERT INTO clp_aws_credentials (name, credential_type, access_key_id, \
              secret_access_key, role_arn, external_id, description, \
              default_session_duration_seconds, transient, created_by) VALUES (?, ?, ?, ?, ?, ?, \
              ?, ?, ?, ?)",
