@@ -40,5 +40,5 @@ cp /home/junhao/samples/postgresql.jsonl /tmp/clp/postgresql.jsonl
 
 helm uninstall test || true
 sleep 2
-helm install test . --set image.clpPackage.tag=nightly
+helm install test .
 ls -l /tmp/clp/var/data/
