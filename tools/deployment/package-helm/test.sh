@@ -23,4 +23,3 @@ EOF
 helm uninstall test || true
 sleep 2
 helm install test .
-kubectl get pods -w
