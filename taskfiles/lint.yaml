@@ -65,6 +65,7 @@ tasks:
       - "venv"
     cmds:
       - |-
+        . "{{.G_LINT_VENV_DIR}}/bin/activate"
         . "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
         ct lint
 
