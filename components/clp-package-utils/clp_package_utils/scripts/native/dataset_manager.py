@@ -18,10 +18,10 @@ from clp_py_utils.clp_metadata_db_utils import (
     get_datasets_table_name,
 )
 from clp_py_utils.s3_utils import s3_delete_by_key_prefix
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 
 from clp_package_utils.general import (
-    CLPConfig,
+    ClpConfig,
     get_clp_home,
     load_config_file,
 )
@@ -41,7 +41,7 @@ def _get_dataset_info(
     :return: A map of name -> archive_storage_directory for each dataset that exists.
     """
 
-    sql_adapter = SQL_Adapter(db_config)
+    sql_adapter = SqlAdapter(db_config)
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)
     ) as db_cursor:
@@ -62,7 +62,7 @@ def _handle_list_datasets(datasets: Dict[str, str]) -> int:
 
 
 def _handle_del_datasets(
-    clp_config: CLPConfig,
+    clp_config: ClpConfig,
     parsed_args: argparse.Namespace,
     existing_datasets_info: Dict[str, str],
 ):
@@ -89,7 +89,7 @@ def _handle_del_datasets(
     return 0
 
 
-def _delete_dataset(clp_config: CLPConfig, dataset: str, dataset_archive_storage_dir: str) -> bool:
+def _delete_dataset(clp_config: ClpConfig, dataset: str, dataset_archive_storage_dir: str) -> bool:
     try:
         _try_deleting_archives(clp_config.archive_output, dataset_archive_storage_dir)
         logger.info(f"Deleted archives of dataset `{dataset}`.")
@@ -150,7 +150,7 @@ def _try_deleting_archives_from_s3(s3_config: S3Config, archive_storage_key_pref
 
 
 def _delete_dataset_from_database(database_config: Database, dataset: str) -> None:
-    sql_adapter = SQL_Adapter(database_config)
+    sql_adapter = SqlAdapter(database_config)
 
     with closing(sql_adapter.create_connection(True)) as db_conn, closing(
         db_conn.cursor(dictionary=True)

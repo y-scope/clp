@@ -22,6 +22,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [dependency-groups]
+clp = [
+    "clp-py-utils",
+]
 dev = [
     "mypy>=1.16.0",
     "pytest>=8.4.1",
@@ -80,3 +83,9 @@ isort.order-by-type = false
 [tool.ruff.format]
 docstring-code-format = true
 docstring-code-line-length = 100
+
+[tool.uv]
+default-groups = ["clp", "dev"]
+
+[tool.uv.sources]
+clp-py-utils = { path = "../clp-py-utils", editable = true }
