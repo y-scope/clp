@@ -513,3 +513,11 @@ services:
       "--port", "3001",
       "--config", "/etc/clp-config.yml"
     ]
+    healthcheck:
+      <<: *healthcheck_defaults
+      test: [
+        "CMD",
+        "curl",
+        "-f",
+        "http://api_server:3001/health"
+      ]
