@@ -47,7 +47,7 @@ tasks:
 
       # Create an environment file to configure the custom Helm toolchain location.
       - |-
-        cat <<EOF > "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
+        cat <<"EOF" > "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
         #!/bin/sh
         export PATH="{{.G_HELM_TOOLCHAIN_DIR}}:$PATH"
         EOF

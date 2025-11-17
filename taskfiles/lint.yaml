@@ -56,6 +56,19 @@ tasks:
       - task: "fix-rust"
       - task: "fix-yaml"
 
+  helm:
+    aliases:
+      - "check-helm"
+      - "fix-helm"
+    deps:
+      - "toolchains:helm"
+      - "venv"
+    cmds:
+      - |-
+        . "{{.G_LINT_VENV_DIR}}/bin/activate"
+        . "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
+        ct lint
+
   check-js:
     sources: &js_source_files
       - "{{.G_BUILD_DIR}}/webui-node-modules.md5"
@@ -90,18 +103,6 @@ tasks:
           BLACK_FLAGS: ""
           RUFF_CHECK_FLAGS: "--fix"
           RUFF_FORMAT_FLAGS: ""
-
-  helm:
-    aliases:
-      - "check-helm"
-      - "fix-helm"
-    deps:
-      - "toolchains:helm"
-      - "venv"
-    cmds:
-      - |-
-        . "{{.G_HELM_TOOLCHAIN_ENV_FILE}}"
-        ct lint
 
   yaml:
     aliases:
