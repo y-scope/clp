@@ -31,7 +31,7 @@ namespace {
  * @param string_blob The string blob to append the deserialized logtype to.
  * @return IRErrorCode_Success on success.
  * @return IRErrorCode_Corrupted_IR if the encoded tag is invalid.
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize.
+ * @return IRErrorCode_Incomplete_IR if the reader doesn't contain enough data to deserialize.
  */
 [[nodiscard]] auto deserialize_and_append_logtype(
         ReaderInterface& reader,
@@ -46,7 +46,7 @@ namespace {
  * @param string_blob The string blob to append the deserialized logtype to.
  * @return IRErrorCode_Success on success.
  * @return IRErrorCode_Corrupted_IR if the encoded tag is invalid.
- * @return IRErrorCode_Incomplete_IR if reader doesn't contain enough data to deserialize.
+ * @return IRErrorCode_Incomplete_IR if the reader doesn't contain enough data to deserialize.
  */
 [[nodiscard]] auto deserialize_and_append_dict_var(
         ReaderInterface& reader,
@@ -121,7 +121,7 @@ auto deserialize_and_append_dict_var(
             break;
         }
         case cProtocol::Payload::VarStrLenInt: {
-            // NOTE: Using `int32_t` to be match `DictionaryVariableHandler`.
+            // NOTE: Using `int32_t` to match `DictionaryVariableHandler`.
             int32_t length{};
             if (false == deserialize_int(reader, length)) {
                 return IRErrorCode_Incomplete_IR;
