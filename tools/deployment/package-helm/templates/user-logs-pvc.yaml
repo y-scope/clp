@@ -1,0 +1,6 @@
+{{- include "clp.createPvc" (dict
+  "root" .
+  "component" "user-logs"
+  "capacity" "10Gi"
+  "accessModes" (list "ReadWriteMany")
+) }}

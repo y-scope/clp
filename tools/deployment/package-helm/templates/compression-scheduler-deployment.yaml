@@ -73,6 +73,8 @@ spec:
               readOnly: true
             - name: "compression-scheduler-logs"
               mountPath: "/var/log/compression_scheduler"
+            - name: "user-logs"
+              mountPath: "/var/log/user"
             - name: "logs-input"
               mountPath: "/mnt/logs"
               readOnly: true
@@ -88,6 +90,9 @@ spec:
         - name: "compression-scheduler-logs"
           persistentVolumeClaim:
             claimName: {{ include "clp.fullname" . }}-compression-scheduler-logs
+        - name: "user-logs"
+          persistentVolumeClaim:
+            claimName: {{ include "clp.fullname" . }}-user-logs
         - name: "logs-input"
           hostPath:
             path: "{{ .Values.clpConfig.logs_input.directory }}"
