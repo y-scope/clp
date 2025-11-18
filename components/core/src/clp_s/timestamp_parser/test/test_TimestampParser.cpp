@@ -318,7 +318,22 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
         }
     }
 
-    SECTION("Timestamps are parsed accurately") {
+    SECTION("Default timestamp patterns are valid.") {
+        auto const default_date_time_patterns_result{get_default_date_time_timestamp_patterns()};
+        REQUIRE_FALSE(default_date_time_patterns_result.has_error());
+        auto const default_numeric_timestamp_patterns_result{
+                get_default_numeric_timestamp_patterns()
+        };
+        REQUIRE_FALSE(default_numeric_timestamp_patterns_result.has_error());
+        auto const all_default_timestamp_patterns_result{get_all_default_timestamp_patterns()};
+        REQUIRE_FALSE(all_default_timestamp_patterns_result.has_error());
+        auto const all_default_quoted_timestamp_patterns_result{
+                get_all_default_quoted_timestamp_patterns()
+        };
+        REQUIRE_FALSE(all_default_quoted_timestamp_patterns_result.has_error());
+    }
+
+    SECTION("Timestamps are parsed accurately.") {
         std::vector<ExpectedParsingResult> const expected_parsing_results{
                 {"2015-02-01T01:02:03.004", R"(\Y-\m-\dT\H:\M:\S.\3)", 1'422'752'523'004'000'000},
                 {"2015-02-01T01:02:03.004005",
@@ -382,8 +397,9 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                  1'765'602'000'000'000}
         };
 
-        auto const default_patterns{get_all_default_timestamp_patterns()};
-
+        auto default_patterns_result{get_all_default_timestamp_patterns()};
+        REQUIRE_FALSE(default_patterns_result.has_error());
+        auto const default_patterns{std::move(default_patterns_result.value())};
         std::string generated_pattern;
         for (auto const& expected_result : expected_parsing_results) {
             auto const timestamp_pattern_result{TimestampPattern::create(expected_result.pattern)};

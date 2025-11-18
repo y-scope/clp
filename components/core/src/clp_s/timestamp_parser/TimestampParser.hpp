@@ -157,9 +157,14 @@ private:
         std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>>;
 
-[[nodiscard]] auto get_default_date_time_timestamp_patterns() -> std::vector<TimestampPattern>;
-[[nodiscard]] auto get_default_numeric_timestamp_patterns() -> std::vector<TimestampPattern>;
-[[nodiscard]] auto get_all_default_timestamp_patterns() -> std::vector<TimestampPattern>;
+[[nodiscard]] auto get_default_date_time_timestamp_patterns()
+        -> ystdlib::error_handling::Result<std::vector<TimestampPattern>>;
+[[nodiscard]] auto get_default_numeric_timestamp_patterns()
+        -> ystdlib::error_handling::Result<std::vector<TimestampPattern>>;
+[[nodiscard]] auto get_all_default_timestamp_patterns()
+        -> ystdlib::error_handling::Result<std::vector<TimestampPattern>>;
+[[nodiscard]] auto get_all_default_quoted_timestamp_patterns()
+        -> ystdlib::error_handling::Result<std::vector<TimestampPattern>>;
 }  // namespace clp_s::timestamp_parser
 
 #endif  // CLP_S_TIMESTAMP_PARSER_TIMESTAMPPARSER_HPP
