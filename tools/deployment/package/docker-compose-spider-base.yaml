@@ -23,7 +23,7 @@ services:
     extends:
       file: "docker-compose-all.yaml"
       service: "compression-scheduler"
-    # No need to depend on Redis and RabbitMQ
+    # Override: Spider does NOT require `queue` or `redis`.
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
