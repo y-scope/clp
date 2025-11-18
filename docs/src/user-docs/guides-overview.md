@@ -13,6 +13,13 @@ Using CLP to ingest logs from object storage and store archives on object storag
 :::
 
 :::{grid-item-card}
+:link: guides-external-database
+External database setup
+^^^
+Guide for setting up external databases for CLP package components.
+:::
+
+:::{grid-item-card}
 :link: guides-retention
 Configuring retention periods
 ^^^
@@ -20,10 +27,10 @@ How to configure retention periods for CLP archives and search results.
 :::
 
 :::{grid-item-card}
-:link: guides-multi-node
-Multi-node deployment
+:link: guides-multi-host
+Multi-host deployment
 ^^^
-How to deploy CLP across multiple nodes.
+How to deploy CLP across multiple hosts.
 :::
 
 :::{grid-item-card}
