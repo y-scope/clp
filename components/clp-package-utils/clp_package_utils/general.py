@@ -340,7 +340,7 @@ def generate_worker_config(clp_config: ClpConfig) -> WorkerConfig:
 
 
 def get_container_config_filename(container_name: str) -> str:
-    return f".{container_name}-config.yml"
+    return f".{container_name}-config.yaml"
 
 
 def dump_container_config(

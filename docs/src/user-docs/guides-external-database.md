@@ -173,14 +173,14 @@ When using AWS DocumentDB or MongoDB Atlas:
 
 ## Configuring CLP to use external databases
 
-After setting up your external databases, configure CLP to use them by editing `etc/clp-config.yml`:
+After setting up your external databases, configure CLP to use them by editing `etc/clp-config.yaml`:
 
 ```yaml
 database:
   host: "<mariadb-hostname-or-ip>"
   port: 3306
   name: "clp-db"
-  # Credentials will be set in etc/credentials.yml
+  # Credentials will be set in etc/credentials.yaml
 
 results_cache:
   host: "<mongodb-hostname-or-ip>"
@@ -188,7 +188,7 @@ results_cache:
   name: "clp-query-results"
 ```
 
-Set the credentials in `etc/credentials.yml`:
+Set the credentials in `etc/credentials.yaml`:
 
 ```yaml
 database:
