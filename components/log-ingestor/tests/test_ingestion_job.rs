@@ -118,8 +118,11 @@ async fn test_sqs_listener() -> Result<()> {
     }
 
     // Spawn a task to PUT new S3 objects
-    let _ = tokio::spawn(create_s3_objects(s3_client.clone(), objects_to_create.clone()));
-    let _ = tokio::spawn(create_s3_objects(s3_client.clone(), irrelevant_objects));
+    let _creation_handle_0 = tokio::spawn(create_s3_objects(
+        s3_client.clone(),
+        objects_to_create.clone(),
+    ));
+    let _creation_handle_1 = tokio::spawn(create_s3_objects(s3_client.clone(), irrelevant_objects));
 
     // Spawn the SQS listener
     let sqs_listener_config = SqsListenerConfig {
