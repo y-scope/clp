@@ -11,12 +11,7 @@
 }
 
 .from {
-    grid-column: span 1;
-    display: flex;
-}
-
-.timestampKey {
-    grid-column: span 1;
+    grid-column: span 2;
     display: flex;
 }
 

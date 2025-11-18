@@ -7,7 +7,6 @@ import From from "./From";
 import guidedGrid from "./index.module.css";
 import OrderBy from "./OrderBy";
 import Select from "./Select";
-import TimestampKey from "./TimestampKey";
 import Where from "./Where";
 
 
@@ -21,7 +20,6 @@ const GuidedControls = () => (
         <div className={guidedGrid["gridContainer"]}>
             <Select/>
             <From/>
-            <TimestampKey/>
             <Where/>
             <OrderBy/>
         </div>

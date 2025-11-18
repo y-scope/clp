@@ -1,12 +1,21 @@
+import {useCallback} from "react";
+
 import {
     DatePicker,
     Select,
 } from "antd";
 import dayjs from "dayjs";
 
+import {
+    CLP_QUERY_ENGINES,
+    SETTINGS_QUERY_ENGINE,
+} from "../../../../config";
 import useSearchStore from "../../SearchState/index";
+import usePrestoSearchState from "../../SearchState/Presto";
+import {PRESTO_SQL_INTERFACE} from "../../SearchState/Presto/typings";
 import {SEARCH_UI_STATE} from "../../SearchState/typings";
 import styles from "./index.module.css";
+import TimeRangeFooter from "./Presto/TimeRangeFooter";
 import {
     isValidDateRange,
     TIME_RANGE_OPTION,
@@ -30,6 +39,10 @@ const TimeRangeInput = () => {
         searchUiState,
     } = useSearchStore();
 
+    const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
+    const isPrestoGuided = SETTINGS_QUERY_ENGINE === CLP_QUERY_ENGINES.PRESTO &&
+                           sqlInterface === PRESTO_SQL_INTERFACE.GUIDED;
+
     const handleSelectChange = (newTimeRangeOption: TIME_RANGE_OPTION) => {
         updateTimeRangeOption(newTimeRangeOption);
     };
@@ -47,6 +60,14 @@ const TimeRangeInput = () => {
             dates[1].utc(true),
         ]);
     };
+
+    const renderFooter = useCallback(() => {
+        if (!isPrestoGuided) {
+            return null;
+        }
+
+        return <TimeRangeFooter/>;
+    }, [isPrestoGuided]);
 
     return (
         <div
@@ -69,6 +90,7 @@ const TimeRangeInput = () => {
                 <DatePicker.RangePicker
                     allowClear={true}
                     className={styles["rangePicker"] || ""}
+                    renderExtraFooter={renderFooter}
                     showTime={true}
                     size={"middle"}
                     value={timeRange}
