@@ -32,8 +32,8 @@ x-healthcheck-defaults: &healthcheck_defaults
 x-volume-definitions:
   clp-config-readonly: &volume_clp_config_readonly
     type: "bind"
-    source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yml"
-    target: "/etc/clp-config.yml"
+    source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yaml"
+    target: "/etc/clp-config.yaml"
     read_only: true
   clp-logs: &volume_clp_logs
     type: "bind"
@@ -93,7 +93,7 @@ services:
       "python3",
       "-u",
       "-m", "clp_py_utils.create-db-tables",
-      "--config", "/etc/clp-config.yml",
+      "--config", "/etc/clp-config.yaml",
       "--storage-engine", "${CLP_PACKAGE_STORAGE_ENGINE:-clp}",
     ]
 
@@ -234,7 +234,7 @@ services:
       "python3",
       "-u",
       "-m", "job_orchestration.scheduler.compress.compression_scheduler",
-      "--config", "/etc/clp-config.yml"
+      "--config", "/etc/clp-config.yaml"
     ]
 
   compression-worker:
@@ -243,7 +243,7 @@ services:
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
         :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
-      CLP_CONFIG_PATH: "/etc/clp-config.yml"
+      CLP_CONFIG_PATH: "/etc/clp-config.yaml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/compression_worker"
@@ -348,7 +348,7 @@ services:
     command: [
       "python3", "-u",
       "-m", "job_orchestration.garbage_collector.garbage_collector",
-      "--config", "/etc/clp-config.yml",
+      "--config", "/etc/clp-config.yaml",
     ]
 
   query-scheduler:
@@ -379,7 +379,7 @@ services:
       "python3",
       "-u",
       "-m", "job_orchestration.scheduler.query.query_scheduler",
-      "--config", "/etc/clp-config.yml"
+      "--config", "/etc/clp-config.yaml"
     ]
     healthcheck:
       <<: *healthcheck_defaults
@@ -396,7 +396,7 @@ services:
     environment:
       BROKER_URL: "amqp://${CLP_QUEUE_USER:?Please set a value.}\
         :${CLP_QUEUE_PASS:?Please set a value.}@queue:5672"
-      CLP_CONFIG_PATH: "/etc/clp-config.yml"
+      CLP_CONFIG_PATH: "/etc/clp-config.yaml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_QUERY_WORKER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/query_worker"
@@ -444,7 +444,7 @@ services:
     command: [
       "python3", "-u",
       "-m", "job_orchestration.reducer.reducer",
-      "--config", "/etc/clp-config.yml",
+      "--config", "/etc/clp-config.yaml",
       "--concurrency", "${CLP_REDUCER_CONCURRENCY:-1}",
       "--upsert-interval", "${CLP_REDUCER_UPSERT_INTERVAL:-100}"
     ]
@@ -476,7 +476,7 @@ services:
       "-m", "clp_mcp_server.clp_mcp_server",
       "--host", "mcp_server",
       "--port", "8000",
-      "--config-path", "/etc/clp-config.yml",
+      "--config-path", "/etc/clp-config.yaml",
     ]
     healthcheck:
       <<: *healthcheck_defaults
@@ -511,7 +511,7 @@ services:
       "/opt/clp/bin/api_server",
       "--host", "0.0.0.0",
       "--port", "3001",
-      "--config", "/etc/clp-config.yml"
+      "--config", "/etc/clp-config.yaml"
     ]
     healthcheck:
       <<: *healthcheck_defaults

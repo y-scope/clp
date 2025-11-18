@@ -54,7 +54,7 @@ def main(argv=None) -> int:
     clp_package_dir: Path = parsed_args.clp_package_dir.resolve()
     output_file: Path = parsed_args.output_file
 
-    clp_config_file_path = clp_package_dir / "etc" / "clp-config.yml"
+    clp_config_file_path = clp_package_dir / "etc" / "clp-config.yaml"
     if not clp_config_file_path.exists():
         logger.error(
             "'%s' doesn't exist. Is '%s' the location of the CLP package?",
@@ -155,7 +155,7 @@ def _add_clp_env_vars(
         )
         return False
 
-    credentials_file_path = clp_package_dir / "etc" / "credentials.yml"
+    credentials_file_path = clp_package_dir / "etc" / "credentials.yaml"
     if not credentials_file_path.exists():
         logger.error("'%s' doesn't exist. Did you start CLP?", credentials_file_path)
         return False

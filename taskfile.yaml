@@ -466,14 +466,14 @@ tasks:
       # Uncomment the package block header
       - task: "utils:misc:replace-text"
         vars:
-          FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yml"
+          FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yaml"
           SED_EXP: >-
             s/#(package:)/\1/
 
       # Uncomment and set the storage engine for the package
       - task: "utils:misc:replace-text"
         vars:
-          FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yml"
+          FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yaml"
           SED_EXP: >-
             s/#([[:space:]]*storage_engine: ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
 
@@ -482,7 +482,7 @@ tasks:
       # and query engines have the same name.
       - task: "utils:misc:replace-text"
         vars:
-          FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yml"
+          FILE_PATH: "{{.OUTPUT_DIR}}/etc/clp-config.yaml"
           SED_EXP: >-
             s/#([[:space:]]*query_engine: ")[^"]+"/\1{{.STORAGE_ENGINE}}"/
 
