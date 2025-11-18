@@ -360,7 +360,7 @@ auto extract_timezone_offset_in_minutes(std::string_view str)
 }
 }  // namespace
 
-auto TimestampPattern::create(std::string pattern)
+auto TimestampPattern::create(std::string_view pattern)
         -> ystdlib::error_handling::Result<TimestampPattern> {
     std::vector<bool> format_specifiers(std::numeric_limits<unsigned char>::max() + 1ULL, false);
     bool uses_date_type_representation{false};
@@ -479,7 +479,7 @@ auto TimestampPattern::create(std::string pattern)
     }
 
     return TimestampPattern{
-            std::move(pattern),
+            pattern,
             optional_timezone_size_and_offset,
             uses_date_type_representation,
             uses_twelve_hour_clock

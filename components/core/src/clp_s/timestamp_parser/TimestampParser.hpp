@@ -25,7 +25,7 @@ public:
      * - ErrorCodeEnum::InvalidTimezone if `pattern` contains a \z{} format specifier with an
      *   invalid timezone.
      */
-    [[nodiscard]] static auto create(std::string pattern)
+    [[nodiscard]] static auto create(std::string_view pattern)
             -> ystdlib::error_handling::Result<TimestampPattern>;
 
     // Default copy & move constructors and assignment operators
@@ -54,12 +54,12 @@ public:
 private:
     // Constructor
     TimestampPattern(
-            std::string pattern,
+            std::string_view pattern,
             std::optional<std::pair<size_t, int>> optional_timezone_size_and_offset,
             bool uses_date_type_representation,
             bool uses_twelve_hour_clock
     )
-            : m_pattern{std::move(pattern)},
+            : m_pattern{pattern},
               m_optional_timezone_size_and_offset{std::move(optional_timezone_size_and_offset)},
               m_uses_date_type_representation{uses_date_type_representation},
               m_uses_twelve_hour_clock{uses_twelve_hour_clock} {}
