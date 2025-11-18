@@ -1,0 +1,17 @@
+apiVersion: "v2"
+name: "clp"
+description: "A Helm chart for CLP (Compressed Log Processor) package deployment"
+type: "application"
+version: "0.1.0"
+appVersion: "0.6.1-dev"
+home: "https://github.com/y-scope/clp"
+icon: "https://github.com/y-scope/clp/raw/main/docs/src/clp-logo.png"
+sources: ["https://github.com/y-scope/clp"]
+maintainers: [{name: "y-scope", email: "dev@yscope.com"}]
+keywords:
+  - "analytics"
+  - "compression"
+  - "log-management"
+  - "log-parser"
+  - "logging"
+  - "search"
