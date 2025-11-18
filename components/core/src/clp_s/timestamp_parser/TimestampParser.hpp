@@ -157,12 +157,35 @@ private:
         std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>>;
 
+/**
+ * @return A result containing a vector of date-time timestamp patterns, or an error code indicating
+ * the failure:
+ * - Forwards `TimestampPattern::create`'s return values on failure.
+ */
 [[nodiscard]] auto get_default_date_time_timestamp_patterns()
         -> ystdlib::error_handling::Result<std::vector<TimestampPattern>>;
+
+/**
+ * @return A result containing a vector of numeric timestamp patterns, or an error code indicating
+ * the failure:
+ * - Forwards `TimestampPattern::create`'s return values on failure.
+ */
 [[nodiscard]] auto get_default_numeric_timestamp_patterns()
         -> ystdlib::error_handling::Result<std::vector<TimestampPattern>>;
+
+/**
+ * @return A result containing a vector of numeric and date-time timestamp patterns, or an error
+ * code indicating the failure:
+ * - Forwards `TimestampPattern::create`'s return values on failure.
+ */
 [[nodiscard]] auto get_all_default_timestamp_patterns()
         -> ystdlib::error_handling::Result<std::vector<TimestampPattern>>;
+
+/**
+ * @return A result containing a vector of quoted numeric and date-time timestamp patterns, or an
+ * error code indicating the failure:
+ * - Forwards `TimestampPattern::create`'s return values on failure.
+ */
 [[nodiscard]] auto get_all_default_quoted_timestamp_patterns()
         -> ystdlib::error_handling::Result<std::vector<TimestampPattern>>;
 }  // namespace clp_s::timestamp_parser
