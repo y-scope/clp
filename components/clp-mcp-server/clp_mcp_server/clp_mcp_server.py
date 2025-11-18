@@ -26,8 +26,8 @@ logger = get_logger(MCP_SERVER_COMPONENT_NAME)
 @click.option(
     "--config-path",
     type=click.Path(exists=True),
-    default="/etc/clp-config.yml",
-    help="The path to server's configuration file (default: /etc/clp-config.yml).",
+    default="/etc/clp-config.yaml",
+    help="The path to server's configuration file (default: /etc/clp-config.yaml).",
 )
 def main(host: str, port: int, config_path: Path) -> int:
     """
