@@ -1,5 +1,7 @@
 mod aws_config;
 
+use std::time::Duration;
+
 use anyhow::Result;
 use aws_config::AwsConfig;
 use clp_rust_utils::s3::ObjectMetadata;
@@ -40,39 +42,19 @@ async fn create_s3_objects(
     Ok(())
 }
 
-/// Receives object metadata from the given receiver channel until either:
-///
-/// * the maximum number of objects is reached or,
-/// * the timeout is triggered.
+/// Receives up to `max_num_objects` object metadata from the given receiver channel.
 ///
 /// # Returns
 ///
 /// A vector of received S3 object metadata on success.
-///
-/// # Errors
-///
-/// * Forwards [`mpsc::Receiver::recv`]'s return values on failure.
 async fn receive_object_metadata(
     mut receiver: mpsc::Receiver<ObjectMetadata>,
     max_num_objects: usize,
-    timeout_sec: u64,
-) -> Result<Vec<ObjectMetadata>> {
+) -> Vec<ObjectMetadata> {
     let mut received_objects = Vec::new();
-    let timeout_duration = tokio::time::Duration::from_secs(timeout_sec);
-    let start_time = tokio::time::Instant::now();
 
     while received_objects.len() < max_num_objects {
-        let elapsed = tokio::time::Instant::now().duration_since(start_time);
-        if elapsed >= timeout_duration {
-            break;
-        }
-
-        match tokio::time::timeout(
-            timeout_duration.checked_sub(elapsed).unwrap(),
-            receiver.recv(),
-        )
-        .await?
-        {
+        match receiver.recv().await {
             Some(object_metadata) => {
                 received_objects.push(object_metadata);
             }
@@ -82,7 +64,7 @@ async fn receive_object_metadata(
         }
     }
 
-    Ok(received_objects)
+    received_objects
 }
 
 #[tokio::test]
@@ -93,12 +75,7 @@ async fn test_sqs_listener() -> Result<()> {
     const RECEIVER_TIMEOUT_SEC: u64 = 30;
     const TEST_CHANNEL_CAPACITY: usize = 10;
 
-    let aws_config = AwsConfig::from_env().unwrap_or_else(|| {
-        panic!(
-            "{}: Required AWS configuration environment variables are not set.",
-            stdext::function_name!()
-        )
-    });
+    let aws_config = AwsConfig::from_env()?;
 
     let secret_access_key =
         secrecy::SecretString::new(aws_config.secret_access_key.clone().into_boxed_str());
@@ -133,7 +110,7 @@ async fn test_sqs_listener() -> Result<()> {
     }
 
     // Spawn a task to PUT new S3 objects
-    let creation_handle = tokio::spawn(create_s3_objects(s3_client, objects_to_create.clone()));
+    let _creation_handle = tokio::spawn(create_s3_objects(s3_client, objects_to_create.clone()));
 
     // Spawn the SQS listener
     let sqs_listener_config = SqsListenerConfig {
@@ -158,16 +135,13 @@ async fn test_sqs_listener() -> Result<()> {
         sender,
     );
 
-    // Spawn a task to listen for ingested object metadata
-    let receiver_handle = tokio::spawn(receive_object_metadata(
-        receiver,
-        objects_to_create.len(),
-        RECEIVER_TIMEOUT_SEC,
-    ));
-
     // Join all tasks
-    creation_handle.await??;
-    let mut received_objects = receiver_handle.await??;
+    let mut received_objects = tokio::time::timeout(
+        Duration::from_secs(RECEIVER_TIMEOUT_SEC),
+        receive_object_metadata(receiver, objects_to_create.len()),
+    )
+    .await
+    .expect("Timed out while receiving object metadata");
     sqs_listener.shutdown_and_join().await?;
 
     objects_to_create.sort();

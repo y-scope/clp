@@ -26,13 +26,13 @@ pub struct SqsListenerConfig {
 /// # Type Parameters
 ///
 /// * [`SqsClientManager`]: The type of the AWS SQS client manager.
-struct SqsListenerTask<SqsClientManager: AwsClientManagerType<Client>> {
+struct Task<SqsClientManager: AwsClientManagerType<Client>> {
     sqs_client_manager: SqsClientManager,
     config: SqsListenerConfig,
     sender: mpsc::Sender<ObjectMetadata>,
 }
 
-impl<SqsClientManager: AwsClientManagerType<Client> + 'static> SqsListenerTask<SqsClientManager> {
+impl<SqsClientManager: AwsClientManagerType<Client> + 'static> Task<SqsClientManager> {
     /// Runs the SQS listener task to listen to SQS messages and extract S3 object metadata. The
     /// extracted metadata is sent to the provided channel sender.
     ///
@@ -67,7 +67,7 @@ impl<SqsClientManager: AwsClientManagerType<Client> + 'static> SqsListenerTask<S
                     polling_backoff_sec = if self.process_sqs_response(result?).await? {
                         self.config.init_polling_backoff_sec
                     } else { std::cmp::min(
-                        polling_backoff_sec * 2,
+                        polling_backoff_sec.saturating_mul(2),
                         self.config.max_polling_backoff_sec
                     ) };
                 }
@@ -94,16 +94,17 @@ impl<SqsClientManager: AwsClientManagerType<Client> + 'static> SqsListenerTask<S
     ///   [`aws_sdk_sqs::operation::delete_message::builders::DeleteMessageFluentBuilder::send`]'s
     ///   return values on failure.
     async fn process_sqs_response(&self, response: ReceiveMessageOutput) -> Result<bool> {
-        if response.messages.is_none() {
+        let Some(messages) = response.messages else {
             return Ok(false);
-        }
-        let mut ingested = false;
-        for msg in response.messages.unwrap() {
-            if msg.body.is_none() {
-                continue;
-            }
+        };
 
-            let event = match serde_json::from_str::<S3>(msg.body.as_ref().unwrap()) {
+        let mut ingested = false;
+        for msg in messages {
+            let Some(body) = msg.body.as_ref() else {
+                continue;
+            };
+
+            let event = match serde_json::from_str::<S3>(body) {
                 Ok(event) => event,
                 Err(_e) => {
                     continue;
@@ -170,10 +171,10 @@ pub struct SqsListener {
 }
 
 impl SqsListener {
-    /// Creates and spawns a new [`SqsListener`] backed by a [`SqsListenerTask`].
+    /// Creates and spawns a new [`SqsListener`] backed by a [`Task`].
     ///
-    /// This function spawns a [`SqsListenerTask`]. The spawned task will listen to SQS messages,
-    /// extract relevant S3 object metadata, and send the metadata to the provided channel sender.
+    /// This function spawns a [`Task`]. The spawned task will listen to SQS messages, extract
+    /// relevant S3 object metadata, and send the metadata to the provided channel sender.
     ///
     /// # Type parameters
     ///
@@ -189,7 +190,7 @@ impl SqsListener {
         config: SqsListenerConfig,
         sender: mpsc::Sender<ObjectMetadata>,
     ) -> Self {
-        let task = SqsListenerTask {
+        let task = Task {
             sqs_client_manager,
             config,
             sender,
@@ -214,7 +215,7 @@ impl SqsListener {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards the underlying task's return values on failure ([`SqsListenerTask::run`]).
+    /// * Forwards the underlying task's return values on failure ([`Task::run`]).
     pub async fn shutdown_and_join(self) -> Result<()> {
         self.cancel_token.cancel();
         self.handle.await?

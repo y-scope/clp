@@ -1,3 +1,5 @@
+use anyhow::{Result, anyhow};
+
 /// Default AWS configuration for local testing with `LocalStack`.
 const DEFAULT_AWS_ENDPOINT_URL: &str = "http://127.0.0.1:4566";
 const DEFAULT_AWS_ACCESS_KEY_ID: &str = "test";
@@ -34,10 +36,15 @@ impl AwsConfig {
     ///
     /// # Returns
     ///
-    /// * `Some(AwsConfig)` if all required environment variables are set.
-    /// * `None` if any required environment variable is missing.
-    #[must_use]
-    pub fn from_env() -> Option<Self> {
+    /// An [`AwsConfig`] containing the required environment variables on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * `CLP_LOG_INGESTOR_S3_BUCKET` environment variable is not set.
+    /// * `CLP_LOG_INGESTOR_SQS_QUEUE` environment variable is not set.
+    pub fn from_env() -> Result<Self> {
         let endpoint = std::env::var("AWS_ENDPOINT_URL")
             .unwrap_or_else(|_| DEFAULT_AWS_ENDPOINT_URL.to_string());
         let access_key_id = std::env::var("AWS_ACCESS_KEY_ID")
@@ -48,15 +55,14 @@ impl AwsConfig {
         let account_id =
             std::env::var("AWS_ACCOUNT_ID").unwrap_or_else(|_| DEFAULT_AWS_ACCOUNT_ID.to_string());
 
-        let Ok(bucket_name) = std::env::var("CLP_LOG_INGESTOR_S3_BUCKET") else {
-            return None;
-        };
+        let bucket_name = std::env::var("CLP_LOG_INGESTOR_S3_BUCKET").map_err(|_| {
+            anyhow!("`CLP_LOG_INGESTOR_S3_BUCKET` environment variable is not set.")
+        })?;
+        let queue_name = std::env::var("CLP_LOG_INGESTOR_SQS_QUEUE").map_err(|_| {
+            anyhow!("`CLP_LOG_INGESTOR_SQS_QUEUE` environment variable is not set.")
+        })?;
 
-        let Ok(queue_name) = std::env::var("CLP_LOG_INGESTOR_SQS_QUEUE") else {
-            return None;
-        };
-
-        Some(Self {
+        Ok(Self {
             endpoint,
             access_key_id,
             secret_access_key,
