@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -149,6 +150,16 @@ private:
         TimestampPattern const& pattern,
         std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>>;
+
+[[nodiscard]] auto search_known_timestamp_patterns(
+        std::string_view timestamp,
+        std::vector<TimestampPattern> const& patterns,
+        std::string& generated_pattern
+) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>>;
+
+[[nodiscard]] auto get_default_date_time_timestamp_patterns() -> std::vector<TimestampPattern>;
+[[nodiscard]] auto get_default_numeric_timestamp_patterns() -> std::vector<TimestampPattern>;
+[[nodiscard]] auto get_all_default_timestamp_patterns() -> std::vector<TimestampPattern>;
 }  // namespace clp_s::timestamp_parser
 
 #endif  // CLP_S_TIMESTAMP_PARSER_TIMESTAMPPARSER_HPP

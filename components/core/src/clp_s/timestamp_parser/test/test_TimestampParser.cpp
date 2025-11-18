@@ -382,6 +382,8 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                  1'765'602'000'000'000}
         };
 
+        auto const default_patterns{get_all_default_timestamp_patterns()};
+
         std::string generated_pattern;
         for (auto const& expected_result : expected_parsing_results) {
             auto const timestamp_pattern_result{TimestampPattern::create(expected_result.pattern)};
@@ -394,6 +396,15 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             REQUIRE_FALSE(result.has_error());
             REQUIRE(expected_result.epoch_timestamp == result.value().first);
             REQUIRE(expected_result.pattern == result.value().second);
+
+            auto const searched_result{search_known_timestamp_patterns(
+                    expected_result.timestamp,
+                    default_patterns,
+                    generated_pattern
+            )};
+            REQUIRE_FALSE(searched_result.has_error());
+            REQUIRE(expected_result.epoch_timestamp == searched_result.value().first);
+            REQUIRE(expected_result.pattern == searched_result.value().second);
         }
     }
 }

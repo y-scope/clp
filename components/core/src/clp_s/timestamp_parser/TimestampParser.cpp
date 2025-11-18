@@ -111,6 +111,33 @@ constexpr std::string_view cUtc{"UTC"};
 constexpr std::string_view cSpace{" "};
 constexpr std::string_view cZulu{"Z"};
 
+constexpr std::array cDefaultDateTimePatterns{
+        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S\O{,.}\?\Z)"},
+        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S\Z)"},
+        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S\O{,.}\?)"},
+        std::string_view{R"(\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S)"},
+        std::string_view{R"([\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S\O{,.}\?])"},
+        std::string_view{R"([\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S])"},
+        std::string_view{R"([\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S)"},
+        std::string_view{R"(<<<\Y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S:\?)"},
+        std::string_view{R"(\d \b \Y \H:\M:\S\O{,.}\?)"},
+        std::string_view{R"([\Y\m\d-\H:\M:\S])"},
+        std::string_view{R"(\y\O{-/}\m\O{-/}\d\O{T }\H:\M:\S)"},
+        std::string_view{R"(\y\m\d\O{T }\k:\M:\S)"},
+        std::string_view{R"(\b \d, \Y \l:\M:\S \p)"},
+        std::string_view{R"(\B \d, \Y \H:\M)"},
+        std::string_view{R"([\d\O{-/}\b\O{-/}\Y:\H:\M:\S)"},
+        std::string_view{R"(\a \b \e \H:\M:\S \Y)"},
+        std::string_view{R"(\b \d \H:\M:\S)"},
+        std::string_view{R"(\b \d \H:\M:\S\Z)"},
+        std::string_view{R"(\m\O{- }\d \H:\M:\S\O{,.}\?)"}
+};
+
+constexpr std::array cDefaultNumericPatterns{
+        std::string_view{R"(\P)"},
+        std::string_view{R"(\E.\?)"}
+};
+
 struct CatSequenceReplacement {
 public:
     CatSequenceReplacement(size_t start_idx, size_t length, std::string replacement)
@@ -439,7 +466,7 @@ auto TimestampPattern::create(std::string_view pattern)
         }
 
         auto unsigned_cur_format_specifier = static_cast<unsigned char>(cur_format_specifier);
-        if (format_specifiers.at(unsigned_cur_format_specifier)) {
+        if ('O' != cur_format_specifier && format_specifiers.at(unsigned_cur_format_specifier)) {
             return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
         }
         format_specifiers[unsigned_cur_format_specifier] = true;
@@ -545,7 +572,7 @@ auto TimestampPattern::create(std::string_view pattern)
     }
 
     return TimestampPattern{
-            pattern,
+            std::string{pattern},
             optional_timezone_size_and_offset,
             uses_date_type_representation,
             uses_twelve_hour_clock
@@ -1015,6 +1042,7 @@ auto parse_timestamp(
                 if (false == extracted_timezone_result.has_error()) {
                     auto const [extracted_timezone_str, extracted_timezone_offset]
                             = extracted_timezone_result.value();
+                    timestamp_idx += extracted_timezone_str.size();
                     timezone_pattern.append(fmt::format(R"(\z{{{}}})", extracted_timezone_str));
                     remaining_unparsed_content
                             = remaining_unparsed_content.substr(extracted_timezone_str.size());
@@ -1070,7 +1098,7 @@ auto parse_timestamp(
                 );
                 auto const [factor, precision_specifier] = estimate_timestamp_precision(number);
                 cat_sequence_replacements
-                        .emplace_back(pattern_idx, 1ULL, std::string{1, precision_specifier});
+                        .emplace_back(pattern_idx, 1ULL, std::string{precision_specifier});
                 parsed_epoch_nanoseconds = factor * number;
                 timestamp_idx += num_digits;
                 break;
@@ -1099,7 +1127,7 @@ auto parse_timestamp(
                 cat_sequence_replacements.emplace_back(
                         pattern_idx - 1,
                         2ULL + bracket_pattern.size(),
-                        std::string{1, optional_matched_char.value()}
+                        std::string{optional_matched_char.value()}
                 );
                 pattern_idx += bracket_pattern.size();
                 timestamp_idx += cFieldLength;
@@ -1183,4 +1211,61 @@ auto parse_timestamp(
 }
 
 // NOLINTEND(readability-function-cognitive-complexity)
+
+[[nodiscard]] auto search_known_timestamp_patterns(
+        std::string_view timestamp,
+        std::vector<TimestampPattern> const& patterns,
+        std::string& generated_pattern
+) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>> {
+    for (auto const& pattern : patterns) {
+        auto const result{parse_timestamp(timestamp, pattern, generated_pattern)};
+        if (false == result.has_error()) {
+            return result.value();
+        }
+    }
+    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+}
+
+auto get_default_date_time_timestamp_patterns() -> std::vector<TimestampPattern> {
+    std::vector<TimestampPattern> timestamp_patterns;
+    for (auto const& pattern : cDefaultDateTimePatterns) {
+        auto const result{TimestampPattern::create(pattern)};
+        if (result.has_error()) {
+            return {};
+        }
+        timestamp_patterns.emplace_back(std::move(result.value()));
+    }
+    return timestamp_patterns;
+}
+
+auto get_default_numeric_timestamp_patterns() -> std::vector<TimestampPattern> {
+    std::vector<TimestampPattern> timestamp_patterns;
+    for (auto const& pattern : cDefaultNumericPatterns) {
+        auto const result{TimestampPattern::create(pattern)};
+        if (result.has_error()) {
+            return {};
+        }
+        timestamp_patterns.emplace_back(std::move(result.value()));
+    }
+    return timestamp_patterns;
+}
+
+auto get_all_default_timestamp_patterns() -> std::vector<TimestampPattern> {
+    std::vector<TimestampPattern> timestamp_patterns;
+    for (auto const& pattern : cDefaultNumericPatterns) {
+        auto const result{TimestampPattern::create(pattern)};
+        if (result.has_error()) {
+            return {};
+        }
+        timestamp_patterns.emplace_back(std::move(result.value()));
+    }
+    for (auto const& pattern : cDefaultDateTimePatterns) {
+        auto const result{TimestampPattern::create(pattern)};
+        if (result.has_error()) {
+            return {};
+        }
+        timestamp_patterns.emplace_back(std::move(result.value()));
+    }
+    return timestamp_patterns;
+}
 }  // namespace clp_s::timestamp_parser
