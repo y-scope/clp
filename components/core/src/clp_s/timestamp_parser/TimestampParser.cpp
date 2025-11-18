@@ -160,8 +160,10 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  * @param str Substring with a prefix potentially corresponding to a bracket pattern.
  * @return A result containing a string_view starting with the opening bracket and ending with the
  * closing bracket, or an error code indicating the failure:
- * - ErrorCodeEnum::InvalidTimestampPattern if there is no opening and closing bracket, if there is
- * a `\` character between the brackets, or if there are no characters between `{` and `}`.
+ * - ErrorCodeEnum::InvalidTimestampPattern if:
+ *     - There is no opening or closing bracket.
+ *     - There is a `\` character between the brackets.
+ *     - There are no characters between `{` and `}`.
  */
 [[nodiscard]] auto extract_bracket_pattern(std::string_view str)
         -> ystdlib::error_handling::Result<std::string_view>;
@@ -172,7 +174,7 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  * @return A result containing a pair holding the prefix corresponding to the extracted timezone
  * offset and the offset in minutes, or an error code indicating the failure:
  * - ErrorCodeEnum::InvalidTimezoneOffset if the prefix of the string doesn't correspond to a
- * timezone offset.
+ *   timezone offset.
  */
 [[nodiscard]] auto extract_timezone_offset_in_minutes(std::string_view str)
         -> ystdlib::error_handling::Result<std::pair<std::string_view, int>>;
@@ -282,7 +284,7 @@ auto convert_variable_length_string_prefix_to_number(std::string_view str)
 
 auto extract_bracket_pattern(std::string_view str)
         -> ystdlib::error_handling::Result<std::string_view> {
-    if (str.empty() || '{' != str.at(0ULL)) {
+    if (str.empty() || '{' != str.front()) {
         return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
     }
 
@@ -438,8 +440,10 @@ auto TimestampPattern::create(std::string pattern)
                     return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
                 }
 
-                optional_timezone_size_and_offset
-                        = std::make_pair(extracted_timezone_str.size(), extracted_timezone_offset);
+                optional_timezone_size_and_offset.emplace(
+                        extracted_timezone_str.size(),
+                        extracted_timezone_offset
+                );
                 pattern_idx += timezone_bracket_pattern.size();
                 date_type_representation = true;
                 break;
@@ -473,7 +477,7 @@ auto TimestampPattern::create(std::string pattern)
     }
 
     return TimestampPattern{
-            pattern,
+            std::move(pattern),
             optional_timezone_size_and_offset,
             date_type_representation,
             uses_twelve_hour_clock

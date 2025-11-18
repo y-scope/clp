@@ -19,13 +19,11 @@ class TimestampPattern {
 public:
     // Factory functions
     /**
-     * Creates an instance of TimestampPattern.
      * @param pattern
-     * @return A result containing a TimestampPattern, or an error code indicating the
-     * failure:
+     * @return A result containing a `TimestampPattern`, or an error code indicating the failure:
      * - ErrorCodeEnum::InvalidTimestampPattern if `pattern` is not a valid timestamp pattern.
      * - ErrorCodeEnum::InvalidTimezone if `pattern` contains a \z{} format specifier with an
-     * invalid timezone.
+     *   invalid timezone.
      */
     [[nodiscard]] static auto create(std::string pattern)
             -> ystdlib::error_handling::Result<TimestampPattern>;
@@ -68,7 +66,7 @@ private:
 
     // Variables
     std::string m_pattern;
-    std::optional<std::pair<size_t, int>> m_optional_timezone_size_and_offset{std::nullopt};
+    std::optional<std::pair<size_t, int>> m_optional_timezone_size_and_offset;
     bool m_date_type_representation{false};
     bool m_uses_twelve_hour_clock{false};
 };
