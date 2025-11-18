@@ -100,6 +100,7 @@ async fn test_sqs_listener() -> Result<()> {
     let prefix = format!("test-{job_id}/");
 
     let mut objects_to_create = Vec::new();
+    let mut irrelevant_objects = Vec::new();
     for i in 0..NUM_TEST_OBJECTS {
         let object_metadata = ObjectMetadata {
             bucket: aws_config.bucket_name.clone(),
@@ -107,10 +108,18 @@ async fn test_sqs_listener() -> Result<()> {
             size: 16,
         };
         objects_to_create.push(object_metadata);
+
+        let irrelevant_object_metadata = ObjectMetadata {
+            bucket: aws_config.bucket_name.clone(),
+            key: format!("irrelevant-{prefix}-{i}.log"),
+            size: 16,
+        };
+        irrelevant_objects.push(irrelevant_object_metadata);
     }
 
     // Spawn a task to PUT new S3 objects
-    let _creation_handle = tokio::spawn(create_s3_objects(s3_client, objects_to_create.clone()));
+    let _ = tokio::spawn(create_s3_objects(s3_client.clone(), objects_to_create.clone()));
+    let _ = tokio::spawn(create_s3_objects(s3_client.clone(), irrelevant_objects));
 
     // Spawn the SQS listener
     let sqs_listener_config = SqsListenerConfig {
