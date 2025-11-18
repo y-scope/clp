@@ -46,7 +46,7 @@ public:
     }
 
     [[nodiscard]] auto uses_date_type_representation() const -> bool {
-        return m_date_type_representation;
+        return m_uses_date_type_representation;
     }
 
     [[nodiscard]] auto uses_twelve_hour_clock() const -> bool { return m_uses_twelve_hour_clock; }
@@ -56,18 +56,18 @@ private:
     TimestampPattern(
             std::string pattern,
             std::optional<std::pair<size_t, int>> optional_timezone_size_and_offset,
-            bool date_type_representation,
+            bool uses_date_type_representation,
             bool uses_twelve_hour_clock
     )
             : m_pattern{std::move(pattern)},
-              m_optional_timezone_size_and_offset{optional_timezone_size_and_offset},
-              m_date_type_representation{date_type_representation},
+              m_optional_timezone_size_and_offset{std::move(optional_timezone_size_and_offset)},
+              m_uses_date_type_representation{uses_date_type_representation},
               m_uses_twelve_hour_clock{uses_twelve_hour_clock} {}
 
     // Variables
     std::string m_pattern;
     std::optional<std::pair<size_t, int>> m_optional_timezone_size_and_offset;
-    bool m_date_type_representation{false};
+    bool m_uses_date_type_representation{false};
     bool m_uses_twelve_hour_clock{false};
 };
 

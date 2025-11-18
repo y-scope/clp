@@ -4,12 +4,13 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <optional>
 #include <span>
 #include <string>
 #include <string_view>
-#include <unordered_set>
 #include <utility>
+#include <vector>
 
 #include <date/date.h>
 #include <string_utils/string_utils.hpp>
@@ -361,9 +362,9 @@ auto extract_timezone_offset_in_minutes(std::string_view str)
 
 auto TimestampPattern::create(std::string pattern)
         -> ystdlib::error_handling::Result<TimestampPattern> {
-    std::unordered_set<char> format_specifiers;
-    bool date_type_representation{false};
-    bool number_type_representation{false};
+    std::vector<bool> format_specifiers(std::numeric_limits<unsigned char>::max() + 1ULL, false);
+    bool uses_date_type_representation{false};
+    bool uses_number_type_representation{false};
     bool has_part_of_day{false};
     bool uses_twelve_hour_clock{false};
     std::optional<std::pair<size_t, int>> optional_timezone_size_and_offset{std::nullopt};
@@ -378,10 +379,11 @@ auto TimestampPattern::create(std::string pattern)
             continue;
         }
 
-        if (format_specifiers.contains(cur_format_specifier)) {
+        auto unsigned_cur_format_specifier = static_cast<unsigned char>(cur_format_specifier);
+        if (format_specifiers.at(unsigned_cur_format_specifier)) {
             return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
         }
-        format_specifiers.emplace(cur_format_specifier);
+        format_specifiers[unsigned_cur_format_specifier] = true;
 
         escaped = false;
         switch (cur_format_specifier) {
@@ -393,24 +395,24 @@ auto TimestampPattern::create(std::string pattern)
             case 'd':  // Zero-padded day in month.
             case 'e':  // Space-padded day in month.
             case 'a':  // Abbreviated day in week.
-                date_type_representation = true;
+                uses_date_type_representation = true;
                 break;
             case 'p':  // Part of day (AM/PM).
-                date_type_representation = true;
+                uses_date_type_representation = true;
                 has_part_of_day = true;
                 break;
             case 'H':  // 24-hour clock, zero-padded hour.
             case 'k':  // 24-hour clock, space-padded hour.
-                date_type_representation = true;
+                uses_date_type_representation = true;
                 break;
             case 'I':  // 12-hour clock, zero-padded hour.
             case 'l':  // 12-hour clock, space-padded hour.
                 uses_twelve_hour_clock = true;
-                date_type_representation = true;
+                uses_date_type_representation = true;
                 break;
             case 'M':  // Zero-padded minute.
             case 'S':  // Zero-padded second.
-                date_type_representation = true;
+                uses_date_type_representation = true;
                 break;
             case '3':  // Zero-padded 3-digit milliseconds.
             case '6':  // Zero-padded 6-digit microseconds.
@@ -421,7 +423,7 @@ auto TimestampPattern::create(std::string pattern)
             case 'L':  // Epoch milliseconds.
             case 'C':  // Epoch microseconds.
             case 'N':  // Epoch nanoseconds.
-                number_type_representation = true;
+                uses_number_type_representation = true;
                 break;
             case 'z': {  // Timezone offset.
                 auto const timezone_bracket_pattern{YSTDLIB_ERROR_HANDLING_TRYX(
@@ -445,16 +447,16 @@ auto TimestampPattern::create(std::string pattern)
                         extracted_timezone_offset
                 );
                 pattern_idx += timezone_bracket_pattern.size();
-                date_type_representation = true;
+                uses_date_type_representation = true;
                 break;
             }
             case 'Z':  // Generic timezone.
-                date_type_representation = true;
+                uses_date_type_representation = true;
                 break;
             case '?':  // Generic fractional second.
                 break;
             case 'P':  // Unknown-precision epoch time.
-                number_type_representation = true;
+                uses_number_type_representation = true;
                 break;
             case '\\': {
                 break;
@@ -468,7 +470,7 @@ auto TimestampPattern::create(std::string pattern)
         return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
     }
 
-    if (date_type_representation && number_type_representation) {
+    if (uses_date_type_representation && uses_number_type_representation) {
         return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
     }
 
@@ -479,7 +481,7 @@ auto TimestampPattern::create(std::string pattern)
     return TimestampPattern{
             std::move(pattern),
             optional_timezone_size_and_offset,
-            date_type_representation,
+            uses_date_type_representation,
             uses_twelve_hour_clock
     };
 }
