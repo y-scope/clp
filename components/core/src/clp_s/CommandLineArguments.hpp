@@ -30,7 +30,8 @@ public:
     };
 
     enum class OutputHandlerType : uint8_t {
-        Network = 0,
+        File = 0,
+        Network,
         Reducer,
         ResultsCache,
         Stdout,
@@ -79,6 +80,8 @@ public:
     std::string const& get_network_dest_host() const { return m_network_dest_host; }
 
     int const& get_network_dest_port() const { return m_network_dest_port; }
+
+    std::string const& get_file_output_path() const { return m_file_output_path; }
 
     std::string const& get_query() const { return m_query; }
 
@@ -161,6 +164,19 @@ private:
             boost::program_options::variables_map& parsed_options
     );
 
+    /**
+     * Validates output options related to the File output handler.
+     * @param options_description
+     * @param options Vector of options previously parsed by boost::program_options and which may
+     * contain options that have the unrecognized flag set
+     * @param parsed_options Returns any parsed options that were newly recognized
+     */
+    void parse_file_output_handler_options(
+            boost::program_options::options_description const& options_description,
+            std::vector<boost::program_options::option> const& options,
+            boost::program_options::variables_map& parsed_options
+    );
+
     void print_basic_usage() const;
 
     void print_compression_usage() const;
@@ -201,6 +217,9 @@ private:
     // Network configuration variables
     std::string m_network_dest_host;
     int m_network_dest_port;
+
+    // File output configuration variables
+    std::string m_file_output_path;
 
     // Search variables
     std::string m_query;
