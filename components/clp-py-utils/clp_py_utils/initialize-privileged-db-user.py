@@ -6,11 +6,11 @@ import sys
 from contextlib import closing
 
 from pydantic import ValidationError
-from sql_adapter import SQL_Adapter
+from sql_adapter import SqlAdapter
 
 from clp_py_utils.clp_config import (
     CLP_METADATA_TABLE_PREFIX,
-    CLPConfig,
+    ClpConfig,
 )
 from clp_py_utils.clp_metadata_db_utils import get_aws_credentials_table_name
 from clp_py_utils.core import read_yaml_config_file
@@ -32,7 +32,7 @@ def main(argv):
 
     config_path = pathlib.Path(parsed_args.config)
     try:
-        clp_config = CLPConfig.model_validate(read_yaml_config_file(config_path))
+        clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
         logger.error(err)
@@ -52,7 +52,7 @@ def main(argv):
     admin_db_config.username = "root"
 
     try:
-        sql_adapter = SQL_Adapter(admin_db_config)
+        sql_adapter = SqlAdapter(admin_db_config)
         clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
         database_name = clp_db_connection_params["name"]
         table_prefix = clp_db_connection_params.get("table_prefix", CLP_METADATA_TABLE_PREFIX)
