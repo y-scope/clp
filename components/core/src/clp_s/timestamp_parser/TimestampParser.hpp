@@ -142,8 +142,6 @@ private:
  *   - ErrorCodeEnum::InvalidDate if parsing was successful, but some components of the timestamp
  *     offer conflicting information about the actual date (e.g., if the parsed day of the week
  *     doesn't match up with the rest of the timestamp information).
- *   - ErrorCodeEnum::FormatSpecifierNotImplemented if the pattern contains format specifiers that
- *     have not been implemented yet.
  */
 [[nodiscard]] auto parse_timestamp(
         std::string_view timestamp,
@@ -151,6 +149,20 @@ private:
         std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>>;
 
+/**
+ * Parses a timestamp according to the first matching pattern in a list of patterns.
+ * @param timestamp
+ * @param patterns A list of timestamp patterns.
+ * @param generated_pattern A buffer where a newly-generated timestamp pattern can be written, if
+ * necessary.
+ * @return A result containing a pair, or an error code indicating the failure:
+ * - The pair:
+ *   - The timestamp in epoch nanoseconds.
+ *   - An `std::string_view` of the timestamp pattern that corresponds to the timestamp.
+ *     - The lifetime of the `std::string_view` is the least of `patterns` and `generated_pattern`.
+ * - The possible error codes:
+ *   - ErrorCodeEnum::IncompatibleTimestampPattern if no pattern can be used to parse the timestamp.
+ */
 [[nodiscard]] auto search_known_timestamp_patterns(
         std::string_view timestamp,
         std::vector<TimestampPattern> const& patterns,
