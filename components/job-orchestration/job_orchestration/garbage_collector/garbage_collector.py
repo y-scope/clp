@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 from clp_py_utils.clp_config import (
-    CLPConfig,
+    ClpConfig,
     GARBAGE_COLLECTOR_COMPONENT_NAME,
 )
 from clp_py_utils.clp_logging import get_logger
@@ -42,7 +42,7 @@ async def main(argv: List[str]) -> int:
     # Load configuration
     config_path = Path(parsed_args.config)
     try:
-        clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
+        clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
         logger.error(err)
@@ -84,7 +84,7 @@ async def main(argv: List[str]) -> int:
             try:
                 _ = task.result()
                 logger.error(f"{gc_name} unexpectedly terminated without an error.")
-            except Exception as e:
+            except Exception:
                 logger.exception(f"{gc_name} failed.")
 
     logger.error("All garbage collectors terminated unexpectedly.")

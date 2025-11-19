@@ -43,7 +43,8 @@ namespace clp::ffi::ir_stream {
  */
 template <
         IrUnitHandlerReq IrUnitHandlerType,
-        search::QueryHandlerReq QueryHandlerType = search::EmptyQueryHandler>
+        search::QueryHandlerReq QueryHandlerType = search::EmptyQueryHandler
+>
 class Deserializer {
 public:
     // Factory function

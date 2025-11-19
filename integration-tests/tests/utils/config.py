@@ -27,7 +27,15 @@ class CoreConfig:
         validate_dir_exists(clp_core_bins_dir)
 
         # Check for required CLP core binaries
-        required_binaries = ["clg", "clo", "clp", "clp-s", "indexer", "reducer-server"]
+        required_binaries = [
+            "clg",
+            "clo",
+            "clp",
+            "clp-s",
+            "indexer",
+            "log-converter",
+            "reducer-server",
+        ]
         missing_binaries = [b for b in required_binaries if not (clp_core_bins_dir / b).is_file()]
         if len(missing_binaries) > 0:
             err_msg = (
@@ -74,10 +82,6 @@ class PackageConfig:
 class IntegrationTestConfig:
     """The general configuration for integration tests."""
 
-    #:
-    core_config: CoreConfig
-    #:
-    package_config: PackageConfig
     #: Root directory for integration tests output.
     test_root_dir: Path
     logs_download_dir_init: InitVar[Path | None] = None

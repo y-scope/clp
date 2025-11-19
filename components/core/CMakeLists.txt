@@ -122,13 +122,13 @@ if(PROJECT_IS_TOP_LEVEL)
     # Include dependency settings if the project isn't being included as a subproject.
     # NOTE: We mark the file optional since it's not required if the user happens to have the
     # dependencies installed already.
-    set(CLP_CORE_DEPS_DIR "${CMAKE_SOURCE_DIR}/../../build/deps/core")
-    include("${CLP_CORE_DEPS_DIR}/cmake-settings/all.cmake"
+    set(CLP_DEPS_CPP_DIR "${CMAKE_SOURCE_DIR}/../../build/deps/cpp")
+    include("${CLP_DEPS_CPP_DIR}/cmake-settings/all-core.cmake"
             OPTIONAL
-            RESULT_VARIABLE CLP_DEPS_SETTINGS_FILE_PATH
+            RESULT_VARIABLE CLP_DEPS_CPP_CORE_SETTINGS_FILE_PATH
     )
 
-    if(NOT CLP_DEPS_SETTINGS_FILE_PATH STREQUAL "NOTFOUND")
+    if(NOT CLP_DEPS_CPP_CORE_SETTINGS_FILE_PATH STREQUAL "NOTFOUND")
         # Set CMP0144 since our minimum required CMake version is less than 3.27.
         if(POLICY "CMP0144")
             cmake_policy(SET "CMP0144" "NEW")
@@ -357,6 +357,8 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/FileReader.hpp
     src/clp_s/FileWriter.cpp
     src/clp_s/FileWriter.hpp
+    src/clp_s/FloatFormatEncoding.cpp
+    src/clp_s/FloatFormatEncoding.hpp
     src/clp_s/InputConfig.cpp
     src/clp_s/InputConfig.hpp
     src/clp_s/JsonConstructor.cpp
@@ -404,6 +406,7 @@ set(SOURCE_FILES_clp_s_unitTest
     src/clp_s/TimestampDictionaryWriter.hpp
     src/clp_s/TimestampEntry.cpp
     src/clp_s/TimestampEntry.hpp
+    src/clp_s/timestamp_parser/test/test_TimestampParser.cpp
     src/clp_s/Utils.cpp
     src/clp_s/Utils.hpp
     src/clp_s/ZstdCompressor.cpp
@@ -478,9 +481,14 @@ set(SOURCE_FILES_unitTest
         src/clp/EncodedVariableInterpreter.cpp
         src/clp/EncodedVariableInterpreter.hpp
         src/clp/ErrorCode.hpp
+        src/clp/ffi/EncodedTextAst.hpp
+        src/clp/ffi/EncodedTextAstError.cpp
+        src/clp/ffi/EncodedTextAstError.hpp
         src/clp/ffi/encoding_methods.cpp
         src/clp/ffi/encoding_methods.hpp
         src/clp/ffi/encoding_methods.inc
+        src/clp/ffi/test/test_EncodedTextAst.cpp
+        src/clp/ffi/test/test_StringBlob.cpp
         src/clp/ffi/ir_stream/byteswap.hpp
         src/clp/ffi/ir_stream/Deserializer.hpp
         src/clp/ffi/ir_stream/decoding_methods.cpp
@@ -532,6 +540,7 @@ set(SOURCE_FILES_unitTest
         src/clp/ffi/search/Subquery.hpp
         src/clp/ffi/search/WildcardToken.cpp
         src/clp/ffi/search/WildcardToken.hpp
+        src/clp/ffi/StringBlob.hpp
         src/clp/ffi/utils.cpp
         src/clp/ffi/utils.hpp
         src/clp/ffi/Value.hpp
@@ -700,6 +709,7 @@ set(SOURCE_FILES_unitTest
         tests/test-ffi_KeyValuePairLogEvent.cpp
         tests/test-ffi_SchemaTree.cpp
         tests/test-FileDescriptorReader.cpp
+        tests/test-FloatFormatEncoding.cpp
         tests/test-GlobalMetadataDBConfig.cpp
         tests/test-GrepCore.cpp
         tests/test-hash_utils.cpp
@@ -747,6 +757,7 @@ if(CLP_BUILD_TESTING)
             clp_s::search::ast
             clp_s::search::kql
             clp_s::search::sql
+            clp_s::timestamp_parser
             clp_s::timestamp_pattern
             date::date
             fmt::fmt

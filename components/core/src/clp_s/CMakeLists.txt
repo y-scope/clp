@@ -1,5 +1,7 @@
 add_subdirectory(indexer)
+add_subdirectory(log_converter)
 add_subdirectory(search)
+add_subdirectory(timestamp_parser)
 
 set(
         CLP_S_CLP_SOURCES
@@ -7,6 +9,10 @@ set(
         ../clp/aws/AwsAuthenticationSigner.hpp
         ../clp/BoundedReader.cpp
         ../clp/BoundedReader.hpp
+        ../clp/BufferedReader.cpp
+        ../clp/BufferedReader.hpp
+        ../clp/BufferReader.cpp
+        ../clp/BufferReader.hpp
         ../clp/CurlDownloadHandler.cpp
         ../clp/CurlDownloadHandler.hpp
         ../clp/CurlEasyHandle.hpp
@@ -88,6 +94,8 @@ set(
         ../clp/streaming_archive/ArchiveMetadata.cpp
         ../clp/streaming_archive/ArchiveMetadata.hpp
         ../clp/streaming_archive/Constants.hpp
+        ../clp/streaming_compression/Constants.hpp
+        ../clp/streaming_compression/Decompressor.hpp
         ../clp/streaming_compression/zstd/Decompressor.cpp
         ../clp/streaming_compression/zstd/Decompressor.hpp
         ../clp/StringReader.cpp
@@ -208,6 +216,7 @@ if(CLP_BUILD_CLP_S_IO)
                 Boost::iostreams Boost::url
                 clp_s::clp_dependencies
                 fmt::fmt
+                simdjson::simdjson
                 spdlog::spdlog
                 ${zstd_TARGET}
         )
@@ -226,6 +235,8 @@ set(
         DictionaryWriter.cpp
         DictionaryWriter.hpp
         ErrorCode.hpp
+        FloatFormatEncoding.cpp
+        FloatFormatEncoding.hpp
         JsonFileIterator.cpp
         JsonFileIterator.hpp
         JsonParser.cpp
@@ -264,13 +275,14 @@ if(CLP_BUILD_CLP_S_ARCHIVEWRITER)
                 clp_s_archive_writer
                 PUBLIC
                 absl::flat_hash_map
+                clp_s::clp_dependencies
                 clp_s::io
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
                 simdjson::simdjson
+                ystdlib::error_handling
                 PRIVATE
                 Boost::url
-                clp_s::clp_dependencies
                 clp_s::timestamp_pattern
                 ${CURL_LIBRARIES}
                 fmt::fmt
@@ -293,6 +305,8 @@ set(
         DictionaryEntry.hpp
         DictionaryReader.hpp
         ErrorCode.hpp
+        FloatFormatEncoding.cpp
+        FloatFormatEncoding.hpp
         JsonSerializer.hpp
         PackedStreamReader.cpp
         PackedStreamReader.hpp
@@ -329,6 +343,7 @@ if(CLP_BUILD_CLP_S_ARCHIVEREADER)
                 clp_s::io
                 msgpack-cxx
                 nlohmann_json::nlohmann_json
+                ystdlib::error_handling
                 PRIVATE
                 Boost::url
                 clp_s::clp_dependencies

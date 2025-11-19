@@ -61,7 +61,8 @@ static void tokenize_query(
         string_view wildcard_query,
         vector<
                 variant<ExactVariableToken<encoded_variable_t>,
-                        CompositeWildcardToken<encoded_variable_t>>>& tokens,
+                        CompositeWildcardToken<encoded_variable_t>>
+        >& tokens,
         vector<size_t>& composite_wildcard_token_indexes
 );
 
@@ -79,7 +80,8 @@ generate_subqueries(string_view wildcard_query, vector<Subquery<encoded_variable
 
     vector<
             variant<ExactVariableToken<encoded_variable_t>,
-                    CompositeWildcardToken<encoded_variable_t>>>
+                    CompositeWildcardToken<encoded_variable_t>>
+    >
             tokens;
     vector<size_t> composite_wildcard_token_indexes;
     tokenize_query(wildcard_query, tokens, composite_wildcard_token_indexes);
@@ -165,7 +167,8 @@ void tokenize_query(
         string_view wildcard_query,
         vector<
                 variant<ExactVariableToken<encoded_variable_t>,
-                        CompositeWildcardToken<encoded_variable_t>>>& tokens,
+                        CompositeWildcardToken<encoded_variable_t>>
+        >& tokens,
         vector<size_t>& composite_wildcard_token_indexes
 ) {
     // Tokenize query using delimiters to get definite variables and tokens containing wildcards
@@ -304,14 +307,16 @@ template void tokenize_query<eight_byte_encoded_variable_t>(
         string_view wildcard_query,
         vector<
                 variant<ExactVariableToken<eight_byte_encoded_variable_t>,
-                        CompositeWildcardToken<eight_byte_encoded_variable_t>>>& tokens,
+                        CompositeWildcardToken<eight_byte_encoded_variable_t>>
+        >& tokens,
         vector<size_t>& composite_wildcard_token_indexes
 );
 template void tokenize_query<four_byte_encoded_variable_t>(
         string_view wildcard_query,
         vector<
                 variant<ExactVariableToken<four_byte_encoded_variable_t>,
-                        CompositeWildcardToken<four_byte_encoded_variable_t>>>& tokens,
+                        CompositeWildcardToken<four_byte_encoded_variable_t>>
+        >& tokens,
         vector<size_t>& composite_wildcard_token_indexes
 );
 }  // namespace glt::ffi::search

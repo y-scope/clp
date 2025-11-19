@@ -4,8 +4,19 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, Optional
 
+import psutil
 import yaml
 from dotenv import dotenv_values
+
+# Database endpoint inside the CLP Package Docker network. Must match the constants defined in
+# `components/clp-py-utils/clp_py_utils/clp_config.py`.
+DATABASE_COMPONENT_NAME = "database"
+DATABASE_DEFAULT_PORT = 3306
+
+# Presto worker memory configuration ratios
+# Based on: https://prestodb.io/docs/current/presto_cpp/properties.html
+PRESTO_QUERY_MEMORY_RATIO = 0.5
+PRESTO_SYSTEM_MEMORY_RATIO = 0.9
 
 # Set up console logging
 logging_console_handler = logging.StreamHandler()
@@ -53,10 +64,13 @@ def main(argv=None) -> int:
         return 1
 
     with open(clp_config_file_path, "r") as clp_config_file:
-        clp_config = yaml.safe_load(clp_config_file)
+        clp_config = yaml.load(clp_config_file, Loader=yaml.CSafeLoader)
 
     env_vars: Dict[str, str] = {}
     if not _add_clp_env_vars(clp_config, clp_config_file_path, clp_package_dir, env_vars):
+        return 1
+
+    if not _add_memory_env_vars(env_vars):
         return 1
 
     script_dir = Path(__file__).parent.resolve()
@@ -101,11 +115,9 @@ def _add_clp_env_vars(
         )
         return False
 
-    database_host = _get_config_value(clp_config, "database.host", "localhost")
-    database_port = _get_config_value(clp_config, "database.port", 3306)
     database_name = _get_config_value(clp_config, "database.name", "clp-db")
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_URL"] = (
-        f"jdbc:mysql://{database_host}:{database_port}"
+        f"jdbc:mysql://{DATABASE_COMPONENT_NAME}:{DATABASE_DEFAULT_PORT}"
     )
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_NAME"] = database_name
 
@@ -124,7 +136,7 @@ def _add_clp_env_vars(
             )
         )
     elif "s3" == clp_archive_output_storage_type:
-        env_vars["CLP_ARCHIVES_DIR"] = str(
+        env_vars["CLP_STAGED_ARCHIVES_DIR"] = str(
             _get_path_clp_config_value(
                 clp_config,
                 f"{archive_output_storage_key}.staging_directory",
@@ -149,19 +161,24 @@ def _add_clp_env_vars(
         return False
 
     with open(credentials_file_path, "r") as credentials_file:
-        credentials = yaml.safe_load(credentials_file)
+        credentials = yaml.load(credentials_file, Loader=yaml.CSafeLoader)
 
     try:
-        database_user = _get_required_config_value(
-            credentials, "database.user", credentials_file_path
+        database_username = _get_required_config_value(
+            credentials, "database.username", credentials_file_path
         )
         database_password = _get_required_config_value(
             credentials, "database.password", credentials_file_path
         )
     except KeyError:
         return False
-    env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_USER"] = database_user
+    env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_USER"] = database_username
     env_vars["PRESTO_COORDINATOR_CLPPROPERTIES_METADATA_DATABASE_PASSWORD"] = database_password
+
+    instance_id = _get_clp_package_instance_id(clp_config, clp_package_dir)
+    if instance_id is None:
+        return False
+    env_vars["CLP_PACKAGE_NETWORK_NAME"] = f"clp-package-{instance_id}_default"
 
     return True
 
@@ -211,6 +228,32 @@ def _add_clp_s3_env_vars(
     s3_end_point = f"https://{s3_bucket}.s3.{s3_region_code}.amazonaws.com/"
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_END_POINT"] = s3_end_point
     env_vars["PRESTO_WORKER_CLPPROPERTIES_S3_SECRET_ACCESS_KEY"] = s3_secret_access_key
+
+    return True
+
+
+def _add_memory_env_vars(env_vars: Dict[str, str]) -> bool:
+    """
+    Adds memory-related environment variables based on Presto guidelines.
+
+    :param env_vars: Dictionary to populate with environment variables.
+    :return: Whether the environment variables were successfully added.
+    """
+    total_memory_gb = psutil.virtual_memory().total / (1024**3)
+
+    query_memory_gb = max(1, int(total_memory_gb * PRESTO_QUERY_MEMORY_RATIO))
+    system_memory_gb = max(query_memory_gb, int(total_memory_gb * PRESTO_SYSTEM_MEMORY_RATIO))
+
+    logger.info(
+        "Computed Presto worker memory settings from %.2f GB total RAM: "
+        "query-memory-gb=%d, system-memory-gb=%d",
+        total_memory_gb,
+        query_memory_gb,
+        system_memory_gb,
+    )
+
+    env_vars["PRESTO_WORKER_CONFIGPROPERTIES_QUERY_MEMORY_GB"] = str(query_memory_gb)
+    env_vars["PRESTO_WORKER_CONFIGPROPERTIES_SYSTEM_MEMORY_GB"] = str(system_memory_gb)
 
     return True
 
@@ -272,6 +315,46 @@ def _generate_worker_clp_properties(
         f.write("\n".join(properties) + "\n")
 
     return True
+
+
+def _get_clp_package_instance_id(
+    clp_config: Dict[str, Any], clp_package_dir: Path
+) -> Optional[str]:
+    """
+    Retrieves the CLP package instance ID from the logs directory.
+
+    :param clp_config:
+    :param clp_package_dir:
+    :return: The instance ID if it could be read, otherwise `None`.
+    """
+
+    logs_directory = _get_path_clp_config_value(
+        clp_config, "logs_directory", Path("var") / "log", clp_package_dir
+    )
+    instance_id_path = logs_directory / "instance-id"
+    if not instance_id_path.exists():
+        logger.error(
+            "Cannot determine the CLP package Docker network because '%s' does not exist."
+            " Start the CLP package at least once before configuring Presto.",
+            instance_id_path,
+        )
+        return None
+
+    try:
+        instance_id = instance_id_path.read_text(encoding="utf-8").strip()
+    except OSError:
+        logger.exception("Failed to read the CLP package instance ID from '%s'.", instance_id_path)
+        return None
+
+    if not instance_id:
+        logger.error(
+            "Instance ID file '%s' is empty. Restart the CLP package to regenerate the instance"
+            " ID.",
+            instance_id_path,
+        )
+        return None
+
+    return instance_id
 
 
 def _get_path_clp_config_value(

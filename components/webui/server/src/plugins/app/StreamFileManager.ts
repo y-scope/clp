@@ -110,8 +110,10 @@ class StreamFileManager {
      * @param logEventIdx
      * @return A promise that resolves to the extracted stream's metadata.
      */
-    async getExtractedStreamFileMetadata (streamId: string, logEventIdx: number)
-        : Promise<Nullable<StreamFileMetadata>> {
+    async getExtractedStreamFileMetadata (
+        streamId: string,
+        logEventIdx: number
+    ): Promise<Nullable<StreamFileMetadata>> {
         return await this.#streamFilesCollection.findOne({
             stream_id: streamId,
             begin_msg_ix: {$lte: logEventIdx},

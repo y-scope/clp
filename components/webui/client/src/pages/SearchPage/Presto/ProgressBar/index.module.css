@@ -1,4 +1,4 @@
 .prestoProgress {
-    position: absolute;
+    position: fixed;
     line-height: 0;
 }

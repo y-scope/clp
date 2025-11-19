@@ -1,51 +1,20 @@
-import {useCallback} from "react";
-
-import {CaretRightOutlined} from "@ant-design/icons";
-import {
-    Button,
-    Tooltip,
-} from "antd";
-
-import useSearchStore from "../../../../SearchState/index";
-import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
-import {handlePrestoQuerySubmit} from "../../presto-search-requests";
-import styles from "./index.module.css";
+import usePrestoSearchState from "../../../../SearchState/Presto";
+import {PRESTO_SQL_INTERFACE} from "../../../../SearchState/Presto/typings";
+import FreeformRunButton from "./FreeformRunButton";
+import GuidedRunButton from "./GuidedRunButton";
 
 
 /**
- * Renders a button to run the SQL query.
+ * Renders a button to run the SQL query based on the current interface mode.
  *
  * @return
  */
 const RunButton = () => {
-    const searchUiState = useSearchStore((state) => state.searchUiState);
-    const queryString = useSearchStore((state) => state.queryString);
+    const sqlInterface = usePrestoSearchState((state) => state.sqlInterface);
 
-    const isQueryStringEmpty = "" === queryString;
-    const tooltipTitle = isQueryStringEmpty ?
-        "Enter SQL query to run" :
-        "";
-
-    const handleClick = useCallback(() => {
-        handlePrestoQuerySubmit({queryString});
-    }, [queryString]);
-
-    return (
-        <Tooltip title={tooltipTitle}>
-            <Button
-                className={styles["runButton"] || ""}
-                color={"green"}
-                icon={<CaretRightOutlined/>}
-                size={"middle"}
-                variant={"solid"}
-                disabled={isQueryStringEmpty ||
-                    searchUiState === SEARCH_UI_STATE.QUERY_ID_PENDING}
-                onClick={handleClick}
-            >
-                Run
-            </Button>
-        </Tooltip>
-    );
+    return sqlInterface === PRESTO_SQL_INTERFACE.GUIDED ?
+        <GuidedRunButton/> :
+        <FreeformRunButton/>;
 };
 
 export default RunButton;

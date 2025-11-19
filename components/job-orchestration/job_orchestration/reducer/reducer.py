@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-from clp_py_utils.clp_config import CLPConfig
+from clp_py_utils.clp_config import ClpConfig
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
 from clp_py_utils.core import read_yaml_config_file
 from pydantic import ValidationError
@@ -43,7 +43,7 @@ def main(argv: List[str]) -> int:
     # Load configuration
     config_path = Path(parsed_args.config)
     try:
-        clp_config = CLPConfig.parse_obj(read_yaml_config_file(config_path))
+        clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
     except ValidationError as err:
         logger.error(err)
         return 1

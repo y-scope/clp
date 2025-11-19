@@ -30,7 +30,8 @@ public:
     };
 
     enum class OutputHandlerType : uint8_t {
-        Network = 0,
+        File = 0,
+        Network,
         Reducer,
         ResultsCache,
         Stdout,
@@ -80,6 +81,8 @@ public:
 
     int const& get_network_dest_port() const { return m_network_dest_port; }
 
+    std::string const& get_file_output_path() const { return m_file_output_path; }
+
     std::string const& get_query() const { return m_query; }
 
     std::optional<epochtime_t> get_search_begin_ts() const { return m_search_begin_ts; }
@@ -102,6 +105,10 @@ public:
 
     OutputHandlerType get_output_handler_type() const { return m_output_handler_type; }
 
+    [[nodiscard]] auto get_retain_float_format() const -> bool {
+        return false == m_no_retain_float_format;
+    }
+
     bool get_single_file_archive() const { return m_single_file_archive; }
 
     bool get_structurize_arrays() const { return m_structurize_arrays; }
@@ -115,8 +122,6 @@ public:
     std::vector<std::string> const& get_projection_columns() const { return m_projection_columns; }
 
     bool get_record_log_order() const { return false == m_disable_log_order; }
-
-    [[nodiscard]] auto get_file_type() const -> FileType { return m_file_type; }
 
 private:
     // Methods
@@ -159,6 +164,19 @@ private:
             boost::program_options::variables_map& parsed_options
     );
 
+    /**
+     * Validates output options related to the File output handler.
+     * @param options_description
+     * @param options Vector of options previously parsed by boost::program_options and which may
+     * contain options that have the unrecognized flag set
+     * @param parsed_options Returns any parsed options that were newly recognized
+     */
+    void parse_file_output_handler_options(
+            boost::program_options::options_description const& options_description,
+            std::vector<boost::program_options::option> const& options,
+            boost::program_options::variables_map& parsed_options
+    );
+
     void print_basic_usage() const;
 
     void print_compression_usage() const;
@@ -181,6 +199,7 @@ private:
     size_t m_target_encoded_size{8ULL * 1024 * 1024 * 1024};  // 8 GiB
     bool m_print_archive_stats{false};
     size_t m_max_document_size{512ULL * 1024 * 1024};  // 512 MB
+    bool m_no_retain_float_format{false};
     bool m_single_file_archive{false};
     bool m_structurize_arrays{false};
     bool m_ordered_decompression{false};
@@ -188,7 +207,6 @@ private:
     bool m_print_ordered_chunk_stats{false};
     size_t m_minimum_table_size{1ULL * 1024 * 1024};  // 1 MB
     bool m_disable_log_order{false};
-    FileType m_file_type{FileType::Json};
 
     // MongoDB configuration variables
     std::string m_mongodb_uri;
@@ -199,6 +217,9 @@ private:
     // Network configuration variables
     std::string m_network_dest_host;
     int m_network_dest_port;
+
+    // File output configuration variables
+    std::string m_file_output_path;
 
     // Search variables
     std::string m_query;

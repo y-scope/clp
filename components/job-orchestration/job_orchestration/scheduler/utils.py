@@ -9,7 +9,8 @@ from clp_py_utils.clp_config import (
     QUERY_JOBS_TABLE_NAME,
     QUERY_TASKS_TABLE_NAME,
 )
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
+
 from job_orchestration.scheduler.constants import (
     CompressionJobStatus,
     CompressionTaskStatus,
@@ -19,7 +20,7 @@ from job_orchestration.scheduler.constants import (
 )
 
 
-def kill_hanging_jobs(sql_adapter: SQL_Adapter, scheduler_type: str) -> Optional[List[int]]:
+def kill_hanging_jobs(sql_adapter: SqlAdapter, scheduler_type: str) -> Optional[List[int]]:
     if SchedulerType.COMPRESSION == scheduler_type:
         jobs_table_name = COMPRESSION_JOBS_TABLE_NAME
         job_status_running = CompressionJobStatus.RUNNING

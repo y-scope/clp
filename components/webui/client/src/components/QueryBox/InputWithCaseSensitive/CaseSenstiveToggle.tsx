@@ -6,6 +6,8 @@ import {
     Tooltip,
 } from "antd";
 
+import styles from "./index.module.css";
+
 
 interface CaseSensitiveToggleProps {
     disabled: boolean;
@@ -51,6 +53,7 @@ const CaseSensitiveToggle = ({
             title={"Match case"}
         >
             <Button
+                className={styles["customButton"] || ""}
                 disabled={disabled}
                 size={"small"}
                 variant={buttonVariant}
