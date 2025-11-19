@@ -41,6 +41,13 @@ def _make_core_clp_command_and_env_vars(
         )
         return None, None
 
+    if True == search_config.write_to_file:
+        logger.error(
+            f"Outputting search results to the file system is not supported while using the"
+            "'{worker_config.package.storage_engine}' storage engine."
+        )
+        return None, None
+
     archives_dir = worker_config.archive_output.get_directory()
     command = [str(clp_home / "bin" / "clo"), "s", str(archives_dir / archive_id)]
     if search_config.path_filter is not None:
@@ -151,6 +158,17 @@ def _make_command_and_env_vars(
             "--host", search_config.network_address[0],
             "--port", str(search_config.network_address[1])
         ))
+        # fmt: on
+    elif search_config.write_to_file:
+        output_directory = worker_config.stream_output.get_directory() / results_collection
+        output_directory.mkdir(exist_ok=True)
+        output_path = output_directory / archive_id
+        # fmt: off
+        command.extend((
+            "file",
+            "--path", str(output_path),
+        ))
+        logger.error(f"{command = }");
         # fmt: on
     else:
         # fmt: off
