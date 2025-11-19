@@ -151,7 +151,7 @@ impl<SqsClientManager: AwsClientManagerType<Client> + 'static> Task<SqsClientMan
         Some(ObjectMetadata {
             bucket: record.s3.bucket.name,
             key: record.s3.object.key,
-            size: record.s3.object.size,
+            size: record.s3.object.size as u64,
         })
     }
 

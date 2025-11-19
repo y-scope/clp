@@ -1,9 +1,12 @@
 use std::time::Duration;
+
 use anyhow::Result;
 use aws_sdk_s3::Client;
 use clp_rust_utils::s3::ObjectMetadata;
 use tokio::{select, sync::mpsc};
 use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
+
 use crate::aws_client_manager::AwsClientManagerType;
 
 /// Configuration for a S3 scanner job.
@@ -15,8 +18,8 @@ pub struct S3ScannerConfig {
     pub start_after: Option<String>,
 }
 
-/// Represents a S3 scanning task that periodically scans a given prefix under the bucket and fetch
-/// object metadata.
+/// Represents a S3 scanner task that periodically scans a given prefix under the bucket to fetch
+/// object metadata for newly created objects.
 ///
 /// # Type Parameters
 ///
@@ -28,11 +31,25 @@ struct Task<S3Client: AwsClientManagerType<Client>> {
 }
 
 impl<S3Client: AwsClientManagerType<Client> + 'static> Task<S3Client> {
+    /// Runs the S3 scanner task to scan the given bucket.
+    ///
+    /// This is a wrapper of [`Self::scan`] that supports cancellation via the provided cancellation
+    /// token.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`Self::scan`]'s return values on failure.
     pub async fn run(mut self, cancel_token: CancellationToken) -> Result<()> {
         select! {
             // Cancellation requested.
             () = cancel_token.cancelled() => {
-                return Ok(());
+                Ok(())
             }
 
             // Scanner execution
@@ -42,31 +59,58 @@ impl<S3Client: AwsClientManagerType<Client> + 'static> Task<S3Client> {
         }
     }
 
+    /// Scans the configured S3 bucket and prefix for new objects and sends their metadata to the
+    /// underlying channel sender.
+    ///
+    /// # NOTE
+    ///
+    /// * The scanner runs in a loop, sleeping for the configured scanning interval between each
+    ///   scan.
+    /// * The scanner uses the `start_after` parameter to keep track of the last scanned object key,
+    ///   meaning that it requires the keys of newly inserted objects to be lexicographically larger
+    ///   than the last successfully ingested key.
+    ///
+    /// # Returns
+    ///
+    /// This function never returns unless an error occurs.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards [`AwsClientManagerType::get`]'s return values on failure.
+    /// * Forwards
+    ///   [`aws_sdk_s3::operation::list_objects_v2::builders::ListObjectsV2FluentBuilder::send`]'s
+    ///   return values on failure.
     pub async fn scan(&mut self) -> Result<()> {
         loop {
             let client = self.s3_client_manager.get().await?;
-            let response = client.list_objects_v2()
+            let response = client
+                .list_objects_v2()
                 .bucket(self.config.bucket_name.as_str())
                 .prefix(self.config.prefix.as_str())
                 .set_start_after(self.config.start_after.clone())
-                .send().await?;
+                .send()
+                .await?;
             let Some(contents) = response.contents else {
                 self.sleep().await;
-                continue
+                continue;
             };
 
             for content in contents {
                 let (Some(key), Some(size)) = (content.key, content.size) else {
                     continue;
                 };
-                if (key.ends_with("/")) {
+                if key.ends_with('/') {
                     continue;
                 }
-                self.sender.send(ObjectMetadata {
-                    bucket: self.config.bucket_name.clone(),
-                    key: key.clone(),
-                    size: size as usize,
-                }).await?;
+                self.sender
+                    .send(ObjectMetadata {
+                        bucket: self.config.bucket_name.clone(),
+                        key: key.clone(),
+                        size: size.try_into()?,
+                    })
+                    .await?;
                 self.config.start_after = Some(key);
             }
 
@@ -81,7 +125,75 @@ impl<S3Client: AwsClientManagerType<Client> + 'static> Task<S3Client> {
         }
     }
 
+    /// Sleeps for the configured scanning interval.
     pub async fn sleep(&self) {
         tokio::time::sleep(self.config.scanning_interval).await;
+    }
+}
+
+/// Represents a S3 scanner job that manages the lifecycle of a S3 scanner task.
+pub struct S3Scanner {
+    id: Uuid,
+    cancel_token: CancellationToken,
+    handle: tokio::task::JoinHandle<Result<()>>,
+}
+
+impl S3Scanner {
+    /// Creates and spawns a new [`S3Scanner`] backed by a [`Task`].
+    ///
+    /// This function spawns a [`Task`]. The spawned task will periodically scan the configured S3
+    /// bucket and prefix for new objects and send their metadata to the provided channel sender.
+    ///
+    /// # Type parameters
+    ///
+    /// * [`S3ClientManager`]: The type of the AWS S3 client manager.
+    ///
+    /// # Returns
+    ///
+    /// A newly created instance of [`S3Scanner`].
+    #[must_use]
+    pub fn spawn<S3ClientManager: AwsClientManagerType<Client> + 'static>(
+        id: Uuid,
+        s3_client_manager: S3ClientManager,
+        config: S3ScannerConfig,
+        sender: mpsc::Sender<ObjectMetadata>,
+    ) -> Self {
+        let task = Task {
+            s3_client_manager,
+            config,
+            sender,
+        };
+        let cancel_token = CancellationToken::new();
+        let child_cancel_token = cancel_token.clone();
+        let handle = tokio::spawn(async move { task.run(child_cancel_token).await });
+        Self {
+            id,
+            cancel_token,
+            handle,
+        }
+    }
+
+    /// Shuts down and waits for the underlying task to complete.
+    ///
+    /// # Returns
+    ///
+    /// `Ok(())` on success.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if:
+    ///
+    /// * Forwards the underlying task's return values on failure ([`Task::run`]).
+    pub async fn shutdown_and_join(self) -> Result<()> {
+        self.cancel_token.cancel();
+        self.handle.await?
+    }
+
+    /// # Returns
+    ///
+    /// The UUID of this listener.
+    #[must_use]
+    pub fn get_id(&self) -> String {
+        self.id.to_string()
     }
 }
