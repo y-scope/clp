@@ -52,8 +52,7 @@ def _generate_url_list(
         url_list_file.write(f"{subcommand}\n")
 
         if parsed_args.inputs_from is None:
-            for url in parsed_args.inputs:
-                url_list_file.write(f"{url}\n")
+            url_list_file.writelines(f"{url}\n" for url in parsed_args.inputs)
             return len(parsed_args.inputs) != 0
 
         no_url_found = True
@@ -143,7 +142,6 @@ def _validate_s3_key_prefix_args(
     :param parsed_args:
     :param args_parser:
     """
-
     if parsed_args.inputs_from is None:
         if len(parsed_args.inputs) == 0:
             args_parser.error("No URL specified.")
@@ -321,7 +319,7 @@ def main(argv):
 
     cmd = container_start_cmd + compress_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if ret_code != 0:
         logger.error("Compression failed.")

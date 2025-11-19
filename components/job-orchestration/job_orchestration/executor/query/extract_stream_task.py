@@ -2,7 +2,7 @@ import datetime
 import json
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
@@ -41,7 +41,7 @@ def _make_clp_command_and_env_vars(
     job_config: dict,
     results_cache_uri: str,
     print_stream_stats: bool,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_type = worker_config.archive_output.storage.type
     archives_dir = worker_config.archive_output.get_directory()
     stream_output_dir = worker_config.stream_output.get_directory()
@@ -83,7 +83,7 @@ def _make_clp_s_command_and_env_vars(
     job_config: dict,
     results_cache_uri: str,
     print_stream_stats: bool,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_type = worker_config.archive_output.storage.type
     stream_output_dir = worker_config.stream_output.get_directory()
     stream_collection_name = worker_config.stream_collection_name
@@ -153,7 +153,7 @@ def _make_command_and_env_vars(
     job_config: dict,
     results_cache_uri: str,
     print_stream_stats: bool,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_engine = worker_config.package.storage_engine
     if StorageEngine.CLP == storage_engine:
         command, env_vars = _make_clp_command_and_env_vars(
@@ -188,7 +188,7 @@ def extract_stream(
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     task_name = "Stream Extraction"
 
     # Setup logging to file
@@ -252,7 +252,7 @@ def extract_stream(
     )
 
     if enable_s3_upload and QueryTaskStatus.SUCCEEDED == task_results.status:
-        logger.info(f"Uploading streams to S3...")
+        logger.info("Uploading streams to S3...")
 
         upload_error = False
         for line in task_stdout_str.splitlines():
@@ -291,6 +291,6 @@ def extract_stream(
             task_results.status = QueryTaskStatus.FAILED
             task_results.error_log_path = str(os.getenv("CLP_WORKER_LOG_PATH"))
         else:
-            logger.info(f"Finished uploading streams.")
+            logger.info("Finished uploading streams.")
 
     return task_results.model_dump()
