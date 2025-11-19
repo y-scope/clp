@@ -285,7 +285,7 @@ class SpiderDb(Database):
         if config is None:
             raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
         try:
-            self.username = get_config_value(config, f"{SPIDER_DB_COMPONENT_NAME}.user")
+            self.username = get_config_value(config, f"{SPIDER_DB_COMPONENT_NAME}.username")
             self.password = get_config_value(config, f"{SPIDER_DB_COMPONENT_NAME}.password")
         except KeyError as ex:
             raise ValueError(
