@@ -1229,6 +1229,7 @@ auto parse_timestamp(
 auto get_default_date_time_timestamp_patterns()
         -> ystdlib::error_handling::Result<std::vector<TimestampPattern>> {
     std::vector<TimestampPattern> timestamp_patterns;
+    timestamp_patterns.reserve(cDefaultDateTimePatterns.size());
     for (auto const& pattern : cDefaultDateTimePatterns) {
         auto timestamp_pattern{YSTDLIB_ERROR_HANDLING_TRYX(TimestampPattern::create(pattern))};
         timestamp_patterns.emplace_back(std::move(timestamp_pattern));
@@ -1239,6 +1240,7 @@ auto get_default_date_time_timestamp_patterns()
 auto get_default_numeric_timestamp_patterns()
         -> ystdlib::error_handling::Result<std::vector<TimestampPattern>> {
     std::vector<TimestampPattern> timestamp_patterns;
+    timestamp_patterns.reserve(cDefaultNumericPatterns.size());
     for (auto const& pattern : cDefaultNumericPatterns) {
         auto timestamp_pattern{YSTDLIB_ERROR_HANDLING_TRYX(TimestampPattern::create(pattern))};
         timestamp_patterns.emplace_back(std::move(timestamp_pattern));
@@ -1249,6 +1251,7 @@ auto get_default_numeric_timestamp_patterns()
 auto get_all_default_timestamp_patterns()
         -> ystdlib::error_handling::Result<std::vector<TimestampPattern>> {
     std::vector<TimestampPattern> timestamp_patterns;
+    timestamp_patterns.reserve(cDefaultNumericPatterns.size() + cDefaultDateTimePatterns.size());
     for (auto const& pattern : cDefaultNumericPatterns) {
         auto timestamp_pattern{YSTDLIB_ERROR_HANDLING_TRYX(TimestampPattern::create(pattern))};
         timestamp_patterns.emplace_back(std::move(timestamp_pattern));
@@ -1263,6 +1266,7 @@ auto get_all_default_timestamp_patterns()
 auto get_all_default_quoted_timestamp_patterns()
         -> ystdlib::error_handling::Result<std::vector<TimestampPattern>> {
     std::vector<TimestampPattern> timestamp_patterns;
+    timestamp_patterns.reserve(cDefaultNumericPatterns.size() + cDefaultDateTimePatterns.size());
     for (auto const& pattern : cDefaultNumericPatterns) {
         auto const quoted_pattern{fmt::format(R"("{}")", pattern)};
         auto timestamp_pattern{
