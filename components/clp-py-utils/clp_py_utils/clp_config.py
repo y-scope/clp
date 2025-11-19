@@ -291,8 +291,14 @@ class SpiderDb(Database):
 
 
 class SpiderScheduler(BaseModel):
+    DEFAULT_PORT: ClassVar[int] = 6000
+
     host: str = "localhost"
-    port: Port = 6000
+    port: Port = DEFAULT_PORT
+
+    def transform_for_container(self):
+        self.host = SPIDER_SCHEDULER_COMPONENT_NAME
+        self.port = self.DEFAULT_PORT
 
 
 class CompressionScheduler(BaseModel):
@@ -928,6 +934,8 @@ class ClpConfig(BaseModel):
             self.queue.transform_for_container()
         if self.redis is not None:
             self.redis.transform_for_container()
+        if self.spider_scheduler is not None:
+            self.spider_scheduler.transform_for_container()
         self.results_cache.transform_for_container()
         self.query_scheduler.transform_for_container()
         self.reducer.transform_for_container()
