@@ -62,7 +62,7 @@ const TimeRangeInput = () => {
     };
 
     const renderFooter = useCallback(() => {
-        if (!isPrestoGuided) {
+        if (false === isPrestoGuided) {
             return null;
         }
 

@@ -3,15 +3,14 @@ import {useEffect} from "react";
 import {message} from "antd";
 import {useQuery} from "@tanstack/react-query";
 
-import {fetchTimestampColumns} from "../../SearchControls/TimeRangeInput/Presto/TimeRangeFooter/TimestampKeySelect/sql";
-import useSearchStore from "..";
-import usePrestoSearchState from ".";
+import {fetchTimestampColumns} from "./sql";
+import useSearchStore from "../..";
+import usePrestoSearchState from "..";
 
 
 /**
- * Hook to initialize and manage timestamp key selection.
- * Uses React Query to fetch timestamp columns and sets a default if none is selected.
- * This should be called once at the GuidedControls level.
+ * Hook to initialize timestamp key. Fetches timestamp columns and sets a default if none is
+ * selected. Shows messages for errors or warnings with data fetching.
  */
 const useTimestampKeyInit = () => {
     const dataset = useSearchStore((state) => state.selectDataset);
@@ -34,8 +33,8 @@ const useTimestampKeyInit = () => {
     // Set default timestamp key when data is loaded
     useEffect(() => {
         if (isSuccess) {
-            if ("undefined" !== typeof timestampKeys?.[0] && null === timestampKey) {
-                updateTimestampKey(timestampKeys[0] ?? null);
+            if ("undefined" !== typeof timestampKeys[0] && null === timestampKey) {
+                updateTimestampKey(timestampKeys[0]);
             }
         }
     }, [
@@ -60,7 +59,7 @@ const useTimestampKeyInit = () => {
 
     // Show warning if no timestamp columns found
     useEffect(() => {
-        if (isSuccess && 0 === (timestampKeys?.length ?? 0)) {
+        if (isSuccess && 0 === timestampKeys.length) {
             messageApi.warning({
                 key: "noTimestamps",
                 content: "No timestamp columns found for selected dataset. " +
@@ -75,7 +74,7 @@ const useTimestampKeyInit = () => {
         updateTimestampKey,
     ]);
 
-    // Reset timestamp key when dataset changes
+    // Reset timestamp key when dataset changes.
     useEffect(() => {
         updateTimestampKey(null);
     }, [
