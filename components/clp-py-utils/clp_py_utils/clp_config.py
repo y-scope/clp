@@ -881,7 +881,7 @@ class ClpConfig(BaseModel):
         if self.spider_scheduler is None:
             raise ValueError("SpiderScheduler config must be set when using spider orchestration.")
         if self.database.type != "mariadb":
-            raise ValueError("Database type must be 'mariadb' when using spider orchestration.")
+            raise ValueError(f"Spider only supports MariaDB for the metadata database.")
         return self
 
     @model_validator(mode="after")
@@ -890,9 +890,9 @@ class ClpConfig(BaseModel):
         if orchestration_type != OrchestrationType.celery:
             return self
         if self.queue is None:
-            raise ValueError("Queue config must be set when using celery orchestration.")
+            raise ValueError("`queue` must be configured when using Celery orchestration.")
         if self.redis is None:
-            raise ValueError("Redis config must be set when using celery orchestration.")
+            raise ValueError("`redis` must be configured when using Celery orchestration.")
         return self
 
     def transform_for_container(self):

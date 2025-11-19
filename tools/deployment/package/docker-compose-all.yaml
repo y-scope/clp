@@ -324,7 +324,7 @@ services:
       "--concurrency", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
       "--storage-url", "${SPIDER_DB_URL}",
       # NOTE: Leave host to spider scheduler's host. This only affects task placement.
-      "--host", "${SPIDER_SCHEDULER_HOST}",
+      "--host", "spider-scheduler",
     ]
 
   webui:
