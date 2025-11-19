@@ -13,6 +13,7 @@ MYSQL_TABLE_NAME_MAX_LEN = 64
 
 ARCHIVE_TAGS_TABLE_SUFFIX = "archive_tags"
 ARCHIVES_TABLE_SUFFIX = "archives"
+CREDENTIAL_MANAGER_TABLE_SUFFIX = "aws_credentials"
 COLUMN_METADATA_TABLE_SUFFIX = "column_metadata"
 DATASETS_TABLE_SUFFIX = "datasets"
 FILES_TABLE_SUFFIX = "files"
@@ -21,6 +22,7 @@ TAGS_TABLE_SUFFIX = "tags"
 TABLE_SUFFIX_MAX_LEN = max(
     len(ARCHIVE_TAGS_TABLE_SUFFIX),
     len(ARCHIVES_TABLE_SUFFIX),
+    len(CREDENTIAL_MANAGER_TABLE_SUFFIX),
     len(COLUMN_METADATA_TABLE_SUFFIX),
     len(DATASETS_TABLE_SUFFIX),
     len(FILES_TABLE_SUFFIX),
@@ -110,6 +112,41 @@ def _create_column_metadata_table(db_cursor, table_prefix: str, dataset: str) ->
     )
 
 
+def _create_aws_credentials_table(db_cursor, aws_credentials_table_name: str) -> None:
+    db_cursor.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS `{aws_credentials_table_name}` (
+            `id` INT NOT NULL AUTO_INCREMENT,
+            `name` VARCHAR(255) NOT NULL UNIQUE,
+            `credential_type` ENUM('iam_user', 'iam_role', 'temporary') NOT NULL,
+            `access_key_id` VARCHAR(255),
+            `secret_access_key` VARCHAR(255),
+            `role_arn` VARCHAR(2048),
+            `external_id` VARCHAR(1224),
+            `session_token` VARCHAR(512),
+            `expiration` DATETIME,
+            `source_credential_id` INT,
+            `description` TEXT,
+            `default_session_duration_seconds` INT NOT NULL DEFAULT 3600,
+            `transient` BOOLEAN NOT NULL DEFAULT FALSE,
+            `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            `created_by` VARCHAR(255),
+            `last_used_at` DATETIME,
+            PRIMARY KEY (`id`) USING BTREE,
+            INDEX `idx_name` (`name`),
+            INDEX `idx_credential_type` (`credential_type`),
+            INDEX `idx_transient_created` (`transient`, `created_at`),
+            INDEX `idx_expiration` (`expiration`),
+            INDEX `idx_source_credential_id` (`source_credential_id`),
+            FOREIGN KEY (`source_credential_id`)
+                REFERENCES `{aws_credentials_table_name}`(`id`)
+                ON DELETE CASCADE
+        ) ROW_FORMAT=DYNAMIC
+        """
+    )
+
+
 def _get_table_name(prefix: str, suffix: str, dataset: str | None) -> str:
     """
     :param prefix:
@@ -143,6 +180,17 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
         )
         """
     )
+
+
+def create_aws_credentials_table(db_cursor, table_prefix: str) -> None:
+    """
+    Creates the AWS credentials table for storing user-managed static credentials.
+
+    :param db_cursor: The database cursor to execute the table creation.
+    :param table_prefix: A string to prepend to the table name.
+    """
+    aws_credentials_table_name = get_aws_credentials_table_name(table_prefix)
+    _create_aws_credentials_table(db_cursor, aws_credentials_table_name)
 
 
 def add_dataset(
@@ -298,6 +346,10 @@ def get_archive_tags_table_name(table_prefix: str, dataset: str | None) -> str:
 
 def get_archives_table_name(table_prefix: str, dataset: str | None) -> str:
     return _get_table_name(table_prefix, ARCHIVES_TABLE_SUFFIX, dataset)
+
+
+def get_aws_credentials_table_name(table_prefix: str) -> str:
+    return _get_table_name(table_prefix, CREDENTIAL_MANAGER_TABLE_SUFFIX, None)
 
 
 def get_column_metadata_table_name(table_prefix: str, dataset: str | None) -> str:

@@ -51,6 +51,14 @@ def main(argv):
     # fmt: on
     subprocess.run(cmd, check=True)
 
+    # fmt: off
+    cmd = [
+        "python3", str(script_dir / "initialize-privileged-db-user.py"),
+        "--config", str(config_file_path),
+    ]
+    # fmt: on
+    subprocess.run(cmd, check=True)
+
     return 0
 
 

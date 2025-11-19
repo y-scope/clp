@@ -1,5 +1,6 @@
 import os
 import pathlib
+from datetime import datetime, timedelta, timezone
 from enum import auto
 from typing import Annotated, Any, ClassVar, Literal, Optional, Union
 
@@ -11,6 +12,7 @@ from pydantic import (
     model_validator,
     PlainSerializer,
     PrivateAttr,
+    SecretStr,
 )
 from strenum import KebabCaseStrEnum, LowercaseStrEnum
 
@@ -71,6 +73,8 @@ CLP_VERSION_FILE_PATH = pathlib.Path("VERSION")
 # Environment variable names
 CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
 CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
+CLP_DB_PRIVILEGED_USER_ENV_VAR_NAME = "CLP_DB_PRIVILEGED_USER"
+CLP_DB_PRIVILEGED_PASS_ENV_VAR_NAME = "CLP_DB_PRIVILEGED_PASS"
 CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
@@ -175,6 +179,9 @@ class Database(BaseModel):
     username: Optional[NonEmptyStr] = None
     password: Optional[NonEmptyStr] = None
 
+    privileged_username: Optional[NonEmptyStr] = None
+    privileged_password: Optional[NonEmptyStr] = None
+
     def ensure_credentials_loaded(self):
         if self.username is None or self.password is None:
             raise ValueError("Credentials not loaded.")
@@ -224,8 +231,37 @@ class Database(BaseModel):
         return connection_params_and_type
 
     def dump_to_primitive_dict(self):
-        d = self.model_dump(exclude={"username", "password"})
+        d = self.model_dump(
+            exclude={"username", "password", "privileged_username", "privileged_password"}
+        )
         return d
+
+    def has_privileged_credentials(self) -> bool:
+        """
+        Checks if privileged credentials are configured.
+
+        :return: True if both privileged username and password are set.
+        """
+        return self.privileged_username is not None and self.privileged_password is not None
+
+    def get_privileged_connection_params(self, disable_localhost_socket_connection: bool = False):
+        """
+        Gets MySQL connection parameters using privileged credentials.
+
+        :param disable_localhost_socket_connection:
+        :return:
+        :raises ValueError: If privileged credentials are not configured.
+        """
+        if not self.has_privileged_credentials():
+            raise ValueError(
+                "Privileged database credentials not configured."
+                " Set privileged_username and privileged_password in database configuration."
+            )
+
+        connection_params = self.get_mysql_connection_params(disable_localhost_socket_connection)
+        connection_params["user"] = self.privileged_username
+        connection_params["password"] = self.privileged_password
+        return connection_params
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
@@ -239,12 +275,30 @@ class Database(BaseModel):
                 f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
             )
 
+        try:
+            self.privileged_username = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.privileged_user"
+            )
+            self.privileged_password = get_config_value(
+                config, f"{DB_COMPONENT_NAME}.privileged_password"
+            )
+        except KeyError:
+            pass
+
     def load_credentials_from_env(self):
         """
-        :raise ValueError: if any expected environment variable is not set.
+        Loads database credentials from environment variables.
+
+        :raise ValueError: If any expected environment variable is not set.
         """
         self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
+
+        try:
+            self.privileged_username = _get_env_var(CLP_DB_PRIVILEGED_USER_ENV_VAR_NAME)
+            self.privileged_password = _get_env_var(CLP_DB_PRIVILEGED_PASS_ENV_VAR_NAME)
+        except ValueError:
+            pass
 
     def transform_for_container(self):
         self.host = DB_COMPONENT_NAME
