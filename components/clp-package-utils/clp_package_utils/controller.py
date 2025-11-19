@@ -8,7 +8,7 @@ import stat
 import subprocess
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
@@ -67,7 +67,7 @@ THIRD_PARTY_SERVICE_UID_GID = f"{THIRD_PARTY_SERVICE_UID}:{THIRD_PARTY_SERVICE_G
 logger = logging.getLogger(__name__)
 
 
-class EnvVarsDict(dict[str, Optional[str]]):
+class EnvVarsDict(dict[str, str | None]):
     def __ior__(self, other: "EnvVarsDict") -> "EnvVarsDict":
         """
         Overloads the `|=` operator for static type checking on `other`.
