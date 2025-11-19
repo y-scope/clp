@@ -293,7 +293,7 @@ class SpiderDb(Database):
 class SpiderScheduler(BaseModel):
     DEFAULT_PORT: ClassVar[int] = 6000
 
-    host: str = "localhost"
+    host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
 
     def transform_for_container(self):
