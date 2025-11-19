@@ -7,7 +7,7 @@ import {useQuery} from "@tanstack/react-query";
 import useSearchStore from "../../../../../SearchState";
 import usePrestoSearchState from "../../../../../SearchState/Presto";
 import {SEARCH_UI_STATE} from "../../../../../SearchState/typings";
-import {fetchTimestampColumns} from "./sql";
+import {fetchTimestampColumns} from "../../../../../SearchState/Presto/useTimestampKeyInit/sql";
 
 
 /**

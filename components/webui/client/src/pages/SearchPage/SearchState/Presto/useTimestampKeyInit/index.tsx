@@ -4,7 +4,7 @@ import {message} from "antd";
 import {useQuery} from "@tanstack/react-query";
 
 import {fetchTimestampColumns} from "./sql";
-import useSearchStore from "../..";
+import useSearchStore from "../../";
 import usePrestoSearchState from "..";
 
 
@@ -30,19 +30,11 @@ const useTimestampKeyInit = () => {
         enabled: null !== dataset,
     });
 
-    // Set default timestamp key when data is loaded
-    useEffect(() => {
-        if (isSuccess) {
-            if ("undefined" !== typeof timestampKeys[0] && null === timestampKey) {
-                updateTimestampKey(timestampKeys[0]);
-            }
+    if (isSuccess) {
+        if ("undefined" !== typeof timestampKeys[0] && null === timestampKey) {
+            updateTimestampKey(timestampKeys[0]);
         }
-    }, [
-        isSuccess,
-        timestampKeys,
-        timestampKey,
-        updateTimestampKey,
-    ]);
+    }
 
     // Show error message if fetch fails
     useEffect(() => {
