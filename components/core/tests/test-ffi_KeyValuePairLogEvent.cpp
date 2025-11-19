@@ -1,5 +1,3 @@
-#include <cstddef>
-#include <cstdint>
 #include <memory>
 #include <optional>
 #include <string>
@@ -14,14 +12,15 @@
 #include <nlohmann/json.hpp>
 #include <nlohmann/json_fwd.hpp>
 
-#include "../src/clp/ffi/encoding_methods.hpp"
+#include "../src/clp/ffi/EncodedTextAst.hpp"
 #include "../src/clp/ffi/KeyValuePairLogEvent.hpp"
 #include "../src/clp/ffi/SchemaTree.hpp"
 #include "../src/clp/ffi/Value.hpp"
-#include "../src/clp/ir/EncodedTextAst.hpp"
 #include "../src/clp/ir/types.hpp"
 #include "../src/clp/time_types.hpp"
 
+using clp::ffi::EightByteEncodedTextAst;
+using clp::ffi::FourByteEncodedTextAst;
 using clp::ffi::KeyValuePairLogEvent;
 using clp::ffi::SchemaTree;
 using clp::ffi::Value;
@@ -29,29 +28,14 @@ using clp::ffi::value_bool_t;
 using clp::ffi::value_float_t;
 using clp::ffi::value_int_t;
 using clp::ir::eight_byte_encoded_variable_t;
-using clp::ir::EightByteEncodedTextAst;
+using clp::ir::EncodedVariableTypeReq;
 using clp::ir::four_byte_encoded_variable_t;
-using clp::ir::FourByteEncodedTextAst;
 using clp::UtcOffset;
 using std::string;
 using std::vector;
 
 namespace {
 constexpr std::string_view cStringToEncode{"uid=0, CPU usage: 99.99%, \"user_name\"=YScope"};
-
-/**
- * Parses and encodes the given string as an instance of `EncodedTextAst`.
- * @tparam encoded_variable_t
- * @param text
- * @return The encoded result.
- */
-template <typename encoded_variable_t>
-requires(
-        std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
-        || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
-)
-[[nodiscard]] auto get_encoded_text_ast(std::string_view text)
-        -> clp::ir::EncodedTextAst<encoded_variable_t>;
 
 /**
  * Tests that `Value::is` returns true for the given type and false for all others.
@@ -103,28 +87,6 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
         UtcOffset utc_offset,
         std::errc expected_error_code
 ) -> bool;
-
-template <typename encoded_variable_t>
-requires(
-        std::is_same_v<encoded_variable_t, eight_byte_encoded_variable_t>
-        || std::is_same_v<encoded_variable_t, four_byte_encoded_variable_t>
-)
-auto get_encoded_text_ast(std::string_view text) -> clp::ir::EncodedTextAst<encoded_variable_t> {
-    string logtype;
-    vector<encoded_variable_t> encoded_vars;
-    vector<int32_t> dict_var_bounds;
-    REQUIRE(clp::ffi::encode_message(text, logtype, encoded_vars, dict_var_bounds));
-    REQUIRE(((dict_var_bounds.size() % 2) == 0));
-
-    vector<string> dict_vars;
-    for (size_t i{0}; i < dict_var_bounds.size(); i += 2) {
-        auto const begin_pos{static_cast<size_t>(dict_var_bounds[i])};
-        auto const end_pos{static_cast<size_t>(dict_var_bounds[i + 1])};
-        dict_vars.emplace_back(text.cbegin() + begin_pos, text.cbegin() + end_pos);
-    }
-
-    return clp::ir::EncodedTextAst<encoded_variable_t>{logtype, dict_vars, encoded_vars};
-}
 
 template <typename Type>
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
@@ -211,11 +173,11 @@ auto insert_invalid_node_id_value_pairs_with_node_type_errors(
         if (SchemaTree::Node::Type::UnstructuredArray != node_type) {
             invalid_node_id_value_pairs.emplace(
                     node_id,
-                    Value{get_encoded_text_ast<four_byte_encoded_variable_t>(cStringToEncode)}
+                    Value{FourByteEncodedTextAst::parse_and_encode_from(cStringToEncode)}
             );
             invalid_node_id_value_pairs.emplace(
                     node_id,
-                    Value{get_encoded_text_ast<eight_byte_encoded_variable_t>(cStringToEncode)}
+                    Value{EightByteEncodedTextAst::parse_and_encode_from(cStringToEncode)}
             );
         }
     }
@@ -270,21 +232,21 @@ TEST_CASE("ffi_Value_basic", "[ffi][Value]") {
     test_value_get_immutable_view<string>(string_value, string{cStringVal});
 
     Value const eight_byte_encoded_text_ast_value{
-            get_encoded_text_ast<eight_byte_encoded_variable_t>(cStringToEncode)
+            EightByteEncodedTextAst::parse_and_encode_from(cStringToEncode)
     };
     test_value_is<EightByteEncodedTextAst>(eight_byte_encoded_text_ast_value);
     test_value_get_immutable_view<EightByteEncodedTextAst>(
             eight_byte_encoded_text_ast_value,
-            get_encoded_text_ast<eight_byte_encoded_variable_t>(cStringToEncode)
+            EightByteEncodedTextAst::parse_and_encode_from(cStringToEncode)
     );
 
     Value const four_byte_encoded_text_ast_value{
-            get_encoded_text_ast<four_byte_encoded_variable_t>(cStringToEncode)
+            FourByteEncodedTextAst::parse_and_encode_from(cStringToEncode)
     };
     test_value_is<FourByteEncodedTextAst>(four_byte_encoded_text_ast_value);
     test_value_get_immutable_view<FourByteEncodedTextAst>(
             four_byte_encoded_text_ast_value,
-            get_encoded_text_ast<four_byte_encoded_variable_t>(cStringToEncode)
+            FourByteEncodedTextAst::parse_and_encode_from(cStringToEncode)
     );
 }
 
@@ -461,11 +423,11 @@ TEST_CASE("ffi_KeyValuePairLogEvent_create", "[ffi]") {
         valid_node_id_value_pairs.emplace(5, Value{string{cStaticText}});
         valid_node_id_value_pairs.emplace(
                 8,
-                Value{get_encoded_text_ast<four_byte_encoded_variable_t>(cStringToEncode)}
+                Value{FourByteEncodedTextAst::parse_and_encode_from(cStringToEncode)}
         );
         valid_node_id_value_pairs.emplace(
                 7,
-                Value{get_encoded_text_ast<eight_byte_encoded_variable_t>(cJsonArrayToEncode)}
+                Value{EightByteEncodedTextAst::parse_and_encode_from(cJsonArrayToEncode)}
         );
         valid_node_id_value_pairs.emplace(10, Value{});
         valid_node_id_value_pairs.emplace(11, std::nullopt);

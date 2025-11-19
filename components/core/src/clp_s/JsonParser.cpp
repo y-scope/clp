@@ -14,9 +14,12 @@
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/uuid_io.hpp>
 #include <curl/curl.h>
+#include <fmt/format.h>
 #include <simdjson.h>
 #include <spdlog/spdlog.h>
 
+#include <clp/ErrorCode.hpp>
+#include <clp/ffi/EncodedTextAst.hpp>
 #include <clp/ffi/ir_stream/decoding_methods.hpp>
 #include <clp/ffi/ir_stream/Deserializer.hpp>
 #include <clp/ffi/ir_stream/IrUnitType.hpp>
@@ -24,7 +27,6 @@
 #include <clp/ffi/KeyValuePairLogEvent.hpp>
 #include <clp/ffi/SchemaTree.hpp>
 #include <clp/ffi/Value.hpp>
-#include <clp/ir/EncodedTextAst.hpp>
 #include <clp/NetworkReader.hpp>
 #include <clp/ReaderInterface.hpp>
 #include <clp/time_types.hpp>
@@ -1215,59 +1217,64 @@ void JsonParser::parse_kv_log_event_subtree(
             } break;
             case NodeType::ClpString: {
                 bool const is_eight_byte_encoding{
-                        pair.second.value().is<clp::ir::EightByteEncodedTextAst>()
+                        pair.second.value().is<clp::ffi::EightByteEncodedTextAst>()
                 };
                 if (false == matches_timestamp) {
                     if (is_eight_byte_encoding) {
                         m_current_parsed_message.add_value(
                                 node_id,
                                 pair.second.value()
-                                        .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
+                                        .get_immutable_view<clp::ffi::EightByteEncodedTextAst>()
                         );
                     } else {
                         m_current_parsed_message.add_value(
                                 node_id,
                                 pair.second.value()
-                                        .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
+                                        .get_immutable_view<clp::ffi::FourByteEncodedTextAst>()
                         );
                     }
                     break;
                 }
 
-                std::string decoded_value;
-                if (is_eight_byte_encoding) {
-                    decoded_value = pair.second.value()
-                                            .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
-                                            .decode_and_unparse()
-                                            .value();
-
-                } else {
-                    decoded_value = pair.second.value()
-                                            .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
-                                            .decode_and_unparse()
-                                            .value();
+                auto const decoding_result
+                        = is_eight_byte_encoding
+                                  ? pair.second.value()
+                                            .get_immutable_view<clp::ffi::EightByteEncodedTextAst>()
+                                            .to_string()
+                                  : pair.second.value()
+                                            .get_immutable_view<clp::ffi::FourByteEncodedTextAst>()
+                                            .to_string();
+                if (decoding_result.has_error()) {
+                    auto const error{decoding_result.error()};
+                    throw clp::ffi::ir_stream::DecodingException(
+                            clp::ErrorCode_Failure,
+                            __FILENAME__,
+                            __LINE__,
+                            fmt::format("{}: {}", error.category().name(), error.message())
+                    );
                 }
+
                 uint64_t encoding_id{};
                 auto const timestamp = m_archive_writer->ingest_timestamp_entry(
                         m_timestamp_key,
                         node_id,
-                        decoded_value,
+                        decoding_result.value(),
                         encoding_id
                 );
                 m_current_parsed_message.add_value(node_id, encoding_id, timestamp);
             } break;
             case NodeType::UnstructuredArray: {
-                if (pair.second.value().is<clp::ir::EightByteEncodedTextAst>()) {
+                if (pair.second.value().is<clp::ffi::EightByteEncodedTextAst>()) {
                     m_current_parsed_message.add_value(
                             node_id,
                             pair.second.value()
-                                    .get_immutable_view<clp::ir::EightByteEncodedTextAst>()
+                                    .get_immutable_view<clp::ffi::EightByteEncodedTextAst>()
                     );
                 } else {
                     m_current_parsed_message.add_value(
                             node_id,
                             pair.second.value()
-                                    .get_immutable_view<clp::ir::FourByteEncodedTextAst>()
+                                    .get_immutable_view<clp::ffi::FourByteEncodedTextAst>()
                     );
                 }
                 break;
