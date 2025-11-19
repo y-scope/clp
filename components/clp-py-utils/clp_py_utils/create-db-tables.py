@@ -4,7 +4,8 @@ import pathlib
 import subprocess
 import sys
 
-from clp_py_utils.clp_config import StorageEngine
+from clp_py_utils.clp_config import StorageEngine, ClpConfig
+from clp_py_utils.core import read_yaml_config_file
 
 # Setup logging
 # Create logger
@@ -51,6 +52,15 @@ def main(argv):
     # fmt: on
     subprocess.run(cmd, check=True)
 
+    try:
+        clp_config = ClpConfig.model_validate(read_yaml_config_file(pathlib.Path(config_file_path)))
+        clp_config.database.load_credentials_from_env()
+        if clp_config.spider_db is None:
+            logger.info("No spider database configured, skipping spider DB initialization.")
+            return 0
+    except Exception as e:
+        logger.error(f"Failed to load CLP configuration: {e}")
+        return 1
     # fmt: off
     cmd = [
         "python3", str(script_dir / "initialize-spider-db.py"),
