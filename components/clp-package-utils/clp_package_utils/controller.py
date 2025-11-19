@@ -588,7 +588,11 @@ class BaseController(ABC):
         component_name = MCP_SERVER_COMPONENT_NAME
         if self._clp_config.mcp_server is None:
             logger.info(f"The MCP Server is not configured, skipping {component_name} creation...")
-            return EnvVarsDict()
+            return EnvVarsDict(
+                {
+                    "CLP_MCP_ENABLED": "0",
+                }
+            )
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
@@ -797,8 +801,6 @@ class DockerComposeController(BaseController):
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
         cmd += ["--file", self._get_docker_file_name()]
-        if self._clp_config.mcp_server is not None:
-            cmd += ["--profile", "mcp"]
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(
             cmd,
@@ -853,7 +855,7 @@ class DockerComposeController(BaseController):
         """
         deployment_type = self._clp_config.get_deployment_type()
         if deployment_type == DeploymentType.BASE:
-            return "docker-compose-base.yaml"
+            return "etc/docker-compose/docker-compose-base.yaml"
         return "docker-compose.yaml"
 
 
