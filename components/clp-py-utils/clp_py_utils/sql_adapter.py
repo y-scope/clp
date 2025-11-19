@@ -108,7 +108,7 @@ class SqlAdapter:
         else:
             raise NotImplementedError
 
-    def create_root_mariadb_connection(self, disable_localhost_socket_connection: bool = False):
+    def create_root_mariadb_connection(self, disable_localhost_socket_connection: bool = False) -> mariadb.Connection:
         if "mariadb" != self.database_config.type:
             raise NotImplementedError
         params = self.database_config.get_mysql_connection_params(
