@@ -23,6 +23,9 @@ def main() -> None:
     # Parse arguments
     args = parse_args()
     concurrency = args.concurrency
+    if concurrency < 1:
+        print("Error: Concurrency must be at least 1.")
+        exit(1)
     storage_url = args.storage_url
     host = args.host
 
