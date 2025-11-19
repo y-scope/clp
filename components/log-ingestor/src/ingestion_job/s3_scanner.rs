@@ -191,7 +191,7 @@ impl S3Scanner {
 
     /// # Returns
     ///
-    /// The UUID of this listener.
+    /// The UUID of this scanner.
     #[must_use]
     pub fn get_id(&self) -> String {
         self.id.to_string()
