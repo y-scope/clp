@@ -1,6 +1,9 @@
+use std::{pin::Pin, sync::Mutex};
+
+use async_stream::stream;
 use clp_rust_utils::{
     clp_config::package::{
-        config::{Config, StorageEngine},
+        config::{Config, StorageEngine, StreamOutputStorage},
         credentials::Credentials,
     },
     database::mysql::create_mysql_pool,
@@ -167,25 +170,48 @@ impl Client {
             }
         }
 
-        let database = self
-            .mongodb_client
-            .database(&self.config.results_cache.db_name);
-        let collection: mongodb::Collection<mongodb::bson::Document> =
-            database.collection(&search_job_id.to_string());
-        let cursor = collection.find(mongodb::bson::doc! {}).await?;
-
-        let mapped = cursor.map(|res| {
-            let doc = res?;
-            let Some(msg) = doc.get("message") else {
-                return Err(ClientError::MalformedData);
+        let job_config = self.get_job_config(search_job_id).await?;
+        if job_config.write_to_file {
+            let StreamOutputStorage::Fs { directory } = &self.config.stream_output.storage else {
+                todo!("Outputting query results to S3 is not supported for now.");
             };
-            let mongodb::bson::Bson::String(message) = msg else {
-                return Err(ClientError::MalformedData);
+            let dir_path = std::path::Path::new("/")
+                .join(directory)
+                .join(search_job_id.to_string());
+            let stream = stream! {
+                let dir_path = dir_path;
+                let mut entries = tokio::fs::read_dir(dir_path).await?;
+                while let Some(entry) = entries.next_entry().await? {
+                    let file_path = entry.path();
+                    let reader = std::fs::File::open(file_path)?;
+                    let mut deserializer = rmp_serde::Deserializer::new(reader);
+                    while let Ok(e) = Deserialize::deserialize(&mut deserializer) {
+                        let e: (i64, String, String, String, i64) = e;
+                        yield Ok(e.1);
+                    }
+                }
             };
-            Ok(message.clone())
-        });
+            Ok(ResultsStream::new(stream))
+        } else {
+            let database = self
+                .mongodb_client
+                .database(&self.config.results_cache.db_name);
+            let collection: mongodb::Collection<mongodb::bson::Document> =
+                database.collection(&search_job_id.to_string());
+            let cursor = collection.find(mongodb::bson::doc! {}).await?;
 
-        Ok(mapped)
+            let mapped = cursor.map(|res| {
+                let doc = res?;
+                let Some(msg) = doc.get("message") else {
+                    return Err(ClientError::MalformedData);
+                };
+                let mongodb::bson::Bson::String(message) = msg else {
+                    return Err(ClientError::MalformedData);
+                };
+                Ok(message.clone())
+            });
+            Ok(ResultsStream::new(mapped))
+        }
     }
 
     /// Retrieves the status of a previously submitted search job.
@@ -210,5 +236,45 @@ impl Client {
         .await?;
         let status: i32 = row.try_get("status")?;
         Ok(QueryJobStatus::try_from(status)?)
+    }
+
+    async fn get_job_config(&self, search_job_id: u64) -> Result<SearchJobConfig, ClientError> {
+        let row = sqlx::query(&format!(
+            "SELECT job_config FROM `{QUERY_JOBS_TABLE_NAME}` WHERE id = ?"
+        ))
+        .bind(search_job_id)
+        .fetch_one(&self.sql_pool)
+        .await?;
+        let msgpack: &[u8] = row.try_get("job_config")?;
+        Ok(rmp_serde::from_slice(msgpack)?)
+    }
+}
+
+type PinnedStream = Pin<Box<dyn Stream<Item = Result<String, ClientError>> + Send>>;
+struct ResultsStream(Mutex<PinnedStream>);
+
+impl ResultsStream {
+    pub fn new(stream: impl Stream<Item = Result<String, ClientError>> + Send + 'static) -> Self {
+        Self(Mutex::new(Box::pin(stream)))
+    }
+}
+
+impl Stream for ResultsStream {
+    type Item = Result<String, ClientError>;
+
+    fn poll_next(
+        self: Pin<&mut Self>,
+        cx: &mut std::task::Context<'_>,
+    ) -> std::task::Poll<Option<Self::Item>> {
+        let poll = self
+            .0
+            .lock()
+            .expect("the other thread panics")
+            .as_mut()
+            .poll_next(cx);
+        if let std::task::Poll::Ready(Some(Err(err))) = &poll {
+            tracing::error!("An error occurred when streaming results: {:?}", err);
+        }
+        poll
     }
 }
