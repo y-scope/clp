@@ -14,7 +14,7 @@ from clp_py_utils.core import read_yaml_config_file
 
 # Setup logging
 # Create logger
-logger = logging.getLogger(__file__)
+logger = logging.getLogger("initialize-spider-db")
 logger.setLevel(logging.INFO)
 # Setup console logging
 logging_console_handler = logging.StreamHandler()
