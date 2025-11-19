@@ -44,7 +44,7 @@ def _make_core_clp_command_and_env_vars(
     if True == search_config.write_to_file:
         logger.error(
             f"Outputting search results to the file system is not supported while using the"
-            "'{worker_config.package.storage_engine}' storage engine."
+            f" '{worker_config.package.storage_engine}' storage engine."
         )
         return None, None
 
