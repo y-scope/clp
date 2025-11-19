@@ -21,6 +21,9 @@ set(
         ../../clp/EncodedVariableInterpreter.cpp
         ../../clp/EncodedVariableInterpreter.hpp
         ../../clp/ErrorCode.hpp
+        ../../clp/ffi/EncodedTextAst.hpp
+        ../../clp/ffi/EncodedTextAstError.cpp
+        ../../clp/ffi/EncodedTextAstError.hpp
         ../../clp/ffi/encoding_methods.cpp
         ../../clp/ffi/encoding_methods.hpp
         ../../clp/ffi/encoding_methods.inc
@@ -33,6 +36,7 @@ set(
         ../../clp/ffi/ir_stream/utils.hpp
         ../../clp/ffi/SchemaTree.cpp
         ../../clp/ffi/SchemaTree.hpp
+        ../../clp/ffi/StringBlob.hpp
         ../../clp/FileReader.cpp
         ../../clp/FileReader.hpp
         ../../clp/GlobalMetadataDBConfig.cpp
@@ -136,6 +140,7 @@ if(CLP_BUILD_EXECUTABLES)
                 simdjson::simdjson
                 spdlog::spdlog
                 ystdlib::containers
+                ystdlib::error_handling
                 ${zstd_TARGET}
         )
         # Put the built executable at the root of the build directory
