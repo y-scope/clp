@@ -1,16 +1,18 @@
 import {useEffect} from "react";
 
-import {message} from "antd";
 import {useQuery} from "@tanstack/react-query";
+import {message} from "antd";
 
-import {fetchTimestampColumns} from "./sql";
 import useSearchStore from "../../";
 import usePrestoSearchState from "..";
+import {fetchTimestampColumns} from "./sql";
 
 
 /**
  * Hook to initialize timestamp key. Fetches timestamp columns and sets a default if none is
  * selected. Shows messages for errors or warnings with data fetching.
+ *
+ * @return
  */
 const useTimestampKeyInit = () => {
     const dataset = useSearchStore((state) => state.selectDataset);
