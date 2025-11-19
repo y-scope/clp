@@ -50,5 +50,5 @@ extend = "../../tools/yscope-dev-utils/exports/lint-configs/python/ruff.toml"
 default-groups = ["clp", "dev"]
 
 [tool.uv.sources]
-clp-py-utils = { path = "../clp-py-utils" }
 clp-package-utils = { path = "../clp-package-utils" }
+clp-py-utils = { path = "../clp-py-utils" }
