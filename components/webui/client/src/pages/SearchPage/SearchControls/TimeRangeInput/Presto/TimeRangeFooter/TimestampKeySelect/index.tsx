@@ -4,9 +4,9 @@ import {
 } from "antd";
 import {useQuery} from "@tanstack/react-query";
 
-import useSearchStore from "../../../../SearchState";
-import usePrestoSearchState from "../../../../SearchState/Presto";
-import {SEARCH_UI_STATE} from "../../../../SearchState/typings";
+import useSearchStore from "../../../../../SearchState";
+import usePrestoSearchState from "../../../../../SearchState/Presto";
+import {SEARCH_UI_STATE} from "../../../../../SearchState/typings";
 import {fetchTimestampColumns} from "./sql";
 
 

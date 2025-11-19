@@ -3,7 +3,7 @@ import {useEffect} from "react";
 import {message} from "antd";
 import {useQuery} from "@tanstack/react-query";
 
-import {fetchTimestampColumns} from "../../SearchControls/TimeRangeInput/Presto/TimestampKey/sql";
+import {fetchTimestampColumns} from "../../SearchControls/TimeRangeInput/Presto/TimeRangeFooter/TimestampKeySelect/sql";
 import useSearchStore from "..";
 import usePrestoSearchState from ".";
 

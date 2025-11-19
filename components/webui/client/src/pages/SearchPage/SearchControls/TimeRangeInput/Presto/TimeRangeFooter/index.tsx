@@ -1,14 +1,14 @@
 import {Typography} from "antd";
 
-import styles from "./TimeRangeFooter.module.css";
-import TimestampKeySelect from "./TimestampKey/TimestampKeySelect";
+import styles from "./index.module.css";
+import TimestampKeySelect from "./TimestampKeySelect";
 
 
 const {Text} = Typography;
 
 /**
- * Renders the footer for the time range picker when in guided mode.
- * Includes the timestamp key selector.
+ * Renders the footer for the time range picker when in guided mode. Includes the timestamp key
+ * selector.
  *
  * @return
  */
