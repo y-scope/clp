@@ -61,8 +61,10 @@ def main(argv):
         )
 
         validate_and_load_db_credentials_file(clp_config, clp_home, True)
-        validate_and_load_queue_credentials_file(clp_config, clp_home, True)
-        validate_and_load_redis_credentials_file(clp_config, clp_home, True)
+        if clp_config.queue is not None:
+            validate_and_load_queue_credentials_file(clp_config, clp_home, True)
+        if clp_config.redis is not None:
+            validate_and_load_redis_credentials_file(clp_config, clp_home, True)
         if clp_config.compression_scheduler.type == OrchestrationType.spider:
             validate_and_load_spider_db_credentials_file(clp_config, clp_home, True)
         clp_config.validate_logs_input_config(True)
