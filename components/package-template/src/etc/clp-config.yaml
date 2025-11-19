@@ -12,7 +12,7 @@
 #  directory: "/"
 #
 ## File containing credentials for services
-#credentials_file_path: "etc/credentials.yml"
+#credentials_file_path: "etc/credentials.yaml"
 #
 #database:
 #  type: "mariadb"  # "mariadb" or "mysql"
