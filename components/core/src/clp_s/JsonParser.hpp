@@ -1,33 +1,30 @@
 #ifndef CLP_S_JSONPARSER_HPP
 #define CLP_S_JSONPARSER_HPP
 
+#include <cstddef>
 #include <cstdint>
-#include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
-#include <variant>
 #include <vector>
 
 #include <absl/container/flat_hash_map.h>
 #include <boost/uuid/random_generator.hpp>
 #include <simdjson.h>
 
-#include "../clp/ffi/KeyValuePairLogEvent.hpp"
-#include "../clp/ffi/SchemaTree.hpp"
-#include "../clp/ffi/Value.hpp"
-#include "../clp/ReaderInterface.hpp"
-#include "ArchiveWriter.hpp"
-#include "DictionaryWriter.hpp"
-#include "FileReader.hpp"
-#include "FileWriter.hpp"
-#include "InputConfig.hpp"
-#include "ParsedMessage.hpp"
-#include "Schema.hpp"
-#include "SchemaTree.hpp"
-#include "SchemaWriter.hpp"
-#include "TimestampDictionaryWriter.hpp"
+#include <clp/ffi/KeyValuePairLogEvent.hpp>
+#include <clp/ffi/SchemaTree.hpp>
+#include <clp/ffi/Value.hpp>
+#include <clp/ReaderInterface.hpp>
+#include <clp_s/ArchiveWriter.hpp>
+#include <clp_s/ErrorCode.hpp>
+#include <clp_s/InputConfig.hpp>
+#include <clp_s/ParsedMessage.hpp>
+#include <clp_s/Schema.hpp>
+#include <clp_s/SchemaTree.hpp>
+#include <clp_s/TraceableException.hpp>
 
 namespace clp_s {
 struct JsonParserOption {

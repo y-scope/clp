@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import List, Set
 
 from clp_py_utils.clp_config import (
     ArchiveOutput,
@@ -131,7 +130,6 @@ def create_datasets_table(db_cursor, table_prefix: str) -> None:
     :param db_cursor: The database cursor to execute the table creation.
     :param table_prefix: A string to prepend to the table name.
     """
-
     # For a description of the table, see
     # `../../../docs/src/dev-docs/design-metadata-db.md`
     db_cursor.execute(
@@ -184,7 +182,7 @@ def add_dataset(
 def fetch_existing_datasets(
     db_cursor,
     table_prefix: str,
-) -> Set[str]:
+) -> set[str]:
     """
     Gets the names of all existing datasets.
 
@@ -220,7 +218,7 @@ def create_metadata_db_tables(db_cursor, table_prefix: str, dataset: str | None 
 
 
 def delete_archives_from_metadata_db(
-    db_cursor, archive_ids: List[str], table_prefix: str, dataset: str | None
+    db_cursor, archive_ids: list[str], table_prefix: str, dataset: str | None
 ) -> None:
     """
     Deletes archives from the metadata database specified by a list of IDs. It also deletes
@@ -269,7 +267,6 @@ def delete_dataset_from_metadata_db(db_cursor, table_prefix: str, dataset: str) 
     :param table_prefix:
     :param dataset:
     """
-
     # Drop tables in an order such that no foreign key constraint is violated.
     tables_in_removal_order = [
         get_column_metadata_table_name(table_prefix, dataset),
