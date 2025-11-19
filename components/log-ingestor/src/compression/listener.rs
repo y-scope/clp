@@ -85,7 +85,7 @@ pub struct Listener {
 }
 
 impl Listener {
-    /// Create and spawn a new [`Listener`] backed by a [`ListenerTask`].
+    /// Creates and spawns a new [`Listener`] backed by a [`ListenerTask`].
     ///
     /// This function spawns a [`ListenerTask`]. The spawned task will buffer incoming
     /// [`ObjectMetadata`] values and call the supplied `Submitter` when either the buffer's
@@ -93,7 +93,7 @@ impl Listener {
     ///
     /// # Type parameters
     ///
-    /// - `Submitter`: A type that implements the [`BufferSubmitter`] trait to submit buffered
+    /// * [`Submitter`]: A type that implements the [`BufferSubmitter`] trait to submit buffered
     ///   object metadata.
     ///
     /// # Returns
