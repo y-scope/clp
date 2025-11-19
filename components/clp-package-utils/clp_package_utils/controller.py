@@ -588,11 +588,7 @@ class BaseController(ABC):
         component_name = MCP_SERVER_COMPONENT_NAME
         if self._clp_config.mcp_server is None:
             logger.info(f"The MCP Server is not configured, skipping {component_name} creation...")
-            return EnvVarsDict(
-                {
-                    "CLP_MCP_ENABLED": "0",
-                }
-            )
+            return EnvVarsDict()
         logger.info(f"Setting up environment for {component_name}...")
 
         logs_dir = self._clp_config.logs_directory / component_name
@@ -602,6 +598,11 @@ class BaseController(ABC):
         resolved_logs_dir.mkdir(parents=True, exist_ok=True)
 
         env_vars = EnvVarsDict()
+
+        # Service enablement
+        env_vars |= {
+            "CLP_MCP_SERVER_ENABLED": "1",
+        }
 
         # Connection config
         env_vars |= {
