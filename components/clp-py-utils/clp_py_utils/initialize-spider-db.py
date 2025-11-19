@@ -247,30 +247,30 @@ def main(argv):
         with closing(sql_adapter.create_root_mariadb_connection()) as db_conn, closing(
             db_conn.cursor()
         ) as db_cursor:
-            db_name = spider_db_config.name
-            db_user = spider_db_config.username
-            db_password = spider_db_config.password
-            clp_user = clp_config.database.username
-            if not _validate_name(db_name):
-                logger.error(f"Invalid database name: {db_name}")
+            clp_db_user = clp_config.database.username
+            spider_db_name = spider_db_config.name
+            spider_db_user = spider_db_config.username
+            spider_db_password = spider_db_config.password
+            if not _validate_name(spider_db_name):
+                logger.error(f"Invalid database name: {spider_db_name}")
                 return -1
-            if not _validate_name(db_user):
-                logger.error(f"Invalid database user name: {db_user}")
+            if not _validate_name(spider_db_user):
+                logger.error(f"Invalid database user name: {spider_db_user}")
                 return -1
-            if not _validate_name(clp_user):
-                logger.error(f"Invalid CLP database user name: {clp_user}")
+            if not _validate_name(clp_db_user):
+                logger.error(f"Invalid CLP database user name: {clp_db_user}")
                 return -1
 
-            db_cursor.execute(f"""CREATE DATABASE IF NOT EXISTS `{db_name}`""")
-            if db_password is not None:
+            db_cursor.execute(f"""CREATE DATABASE IF NOT EXISTS `{spider_db_name}`""")
+            if spider_db_password is not None:
                 logger.error(f"Password must be set for Spider database user.")
                 return -1
             else:
-                db_cursor.execute(f"""CREATE USER IF NOT EXISTS '{db_user}'@'%' IDENTIFIED BY ''""")
-            db_cursor.execute(f"""GRANT ALL PRIVILEGES ON `{db_name}`.* TO '{db_user}'@'%'""")
-            db_cursor.execute(f"""GRANT ALL PRIVILEGES ON `{db_name}`.* TO '{clp_user}'@'%'""")
+                db_cursor.execute(f"""CREATE USER IF NOT EXISTS '{spider_db_user}'@'%' IDENTIFIED BY ''""")
+            db_cursor.execute(f"""GRANT ALL PRIVILEGES ON `{spider_db_name}`.* TO '{spider_db_user}'@'%'""")
+            db_cursor.execute(f"""GRANT ALL PRIVILEGES ON `{spider_db_name}`.* TO '{clp_db_user}'@'%'""")
 
-            db_cursor.execute(f"""USE `{db_name}`""")
+            db_cursor.execute(f"""USE `{spider_db_name}`""")
             for table_creator in table_creators:
                 db_cursor.execute(table_creator)
     except Exception:
