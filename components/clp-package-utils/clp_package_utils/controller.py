@@ -262,7 +262,7 @@ class BaseController(ABC):
 
         # Database
         env_vars |= {
-            "SPIDER_DB_URL": self._clp_config.spider_db.get_url(),
+            "SPIDER_DB_URL": self._clp_config.spider_db.get_container_url(),
         }
 
         # Credentials

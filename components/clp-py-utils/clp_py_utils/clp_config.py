@@ -276,6 +276,10 @@ class SpiderDb(Database):
         self.ensure_credentials_loaded()
         return f"jdbc:mariadb://{self.host}:{self.port}/{self.name}?user={self.username}&password={self.password}"
 
+    def get_container_url(self):
+        self.ensure_credentials_loaded()
+        return f"jdbc:mariadb://{DB_COMPONENT_NAME}:{self.DEFAULT_PORT}/{self.name}?user={self.username}&password={self.password}"
+
     @override
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
