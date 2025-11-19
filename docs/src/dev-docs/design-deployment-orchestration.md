@@ -193,7 +193,7 @@ Specifically:
 
 To achieve this, before starting the deployment, `DockerComposeController.start` generates:
 
-* a CLP configuration file (`<clp-package>/var/log/.clp-config.yml` on the host) specific to the
+* a CLP configuration file (`<clp-package>/var/log/.clp-config.yaml` on the host) specific to the
   Docker Compose project environment.
 * an environment variable file (`<clp-package>/.env`) for any other configuration values.
 * any necessary directories (e.g., data output directories).

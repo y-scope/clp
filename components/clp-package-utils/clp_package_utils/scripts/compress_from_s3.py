@@ -240,7 +240,7 @@ def main(argv):
     if clp_config.logs_input.type != StorageType.S3:
         logger.error(
             "S3 compression expects `logs_input.type` to be `%s`, but `%s` is found. Please update"
-            " `clp-config.yml`.",
+            " `clp-config.yaml`.",
             StorageType.S3,
             clp_config.logs_input.type,
         )

@@ -53,8 +53,8 @@ COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
 CONTAINER_AWS_CONFIG_DIRECTORY = CONTAINER_CLP_HOME / ".aws"
 CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
-CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yml"
-CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
+CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yaml"
+CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yaml"
 CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
 CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
 CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
@@ -65,7 +65,7 @@ CLP_DEFAULT_TMP_DIRECTORY_PATH = pathlib.Path("var") / "tmp"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
 CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH = pathlib.Path("clp-package-image.id")
-CLP_SHARED_CONFIG_FILENAME = ".clp-config.yml"
+CLP_SHARED_CONFIG_FILENAME = ".clp-config.yaml"
 CLP_VERSION_FILE_PATH = pathlib.Path("VERSION")
 
 # Environment variable names
