@@ -168,7 +168,6 @@ def _make_command_and_env_vars(
             "file",
             "--path", str(output_path),
         ))
-        logger.error(f"{command = }");
         # fmt: on
     else:
         # fmt: off
