@@ -269,7 +269,7 @@ class SpiderDb(Database):
     @classmethod
     def validate_type(cls, value):
         if value != DatabaseEngine.MARIADB:
-            raise ValueError(f"Spider only support MariaDB storage.")
+            raise ValueError(f"Spider only supports MariaDB for the metadata database.")
         return value
 
     def get_url(self):
