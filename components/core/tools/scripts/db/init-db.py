@@ -2,9 +2,9 @@
 import argparse
 import logging
 import os
+import sys
 
 import mariadb
-import sys
 
 # Setup logging
 # Create logger
@@ -18,7 +18,9 @@ logger.addHandler(logging_console_handler)
 
 
 def main(argv):
-    args_parser = argparse.ArgumentParser(description="Setup a global MySQL metadata database for CLP.")
+    args_parser = argparse.ArgumentParser(
+        description="Setup a global MySQL metadata database for CLP."
+    )
     args_parser.add_argument("--db-host", default="127.0.0.1", help="Database host")
     args_parser.add_argument("--db-port", type=int, default=3306, help="Database port")
     args_parser.add_argument("--db-name", default="clp-db", help="Database name")
@@ -63,7 +65,8 @@ def main(argv):
 
         # Create tables
         try:
-            mysql_cursor.execute(f"""CREATE TABLE IF NOT EXISTS `{table_prefix}archives` (
+            mysql_cursor.execute(
+                f"""CREATE TABLE IF NOT EXISTS `{table_prefix}archives` (
                 `pagination_id` BIGINT unsigned NOT NULL AUTO_INCREMENT,
                 `id` VARCHAR(64) NOT NULL,
                 `begin_timestamp` BIGINT NOT NULL,
@@ -75,9 +78,11 @@ def main(argv):
                 KEY `archives_creation_order` (`creator_id`,`creation_ix`) USING BTREE,
                 UNIQUE KEY `archive_id` (`id`) USING BTREE,
                 PRIMARY KEY (`pagination_id`)
-            )""")
+            )"""
+            )
 
-            mysql_cursor.execute(f"""CREATE TABLE IF NOT EXISTS `{table_prefix}files` (
+            mysql_cursor.execute(
+                f"""CREATE TABLE IF NOT EXISTS `{table_prefix}files` (
                 `id` VARCHAR(64) NOT NULL,
                 `orig_file_id` VARCHAR(64) NOT NULL,
                 `path` VARCHAR(12288) NOT NULL,
@@ -90,7 +95,8 @@ def main(argv):
                 KEY `files_path` (`path`(768)) USING BTREE,
                 KEY `files_archive_id` (`archive_id`) USING BTREE,
                 PRIMARY KEY (`id`)
-            ) ROW_FORMAT=DYNAMIC""")
+            ) ROW_FORMAT=DYNAMIC"""
+            )
         except mariadb.Error as err:
             logger.error("Failed to create table - {}".format(err.msg))
             return -1
