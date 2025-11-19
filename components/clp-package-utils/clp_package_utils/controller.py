@@ -806,8 +806,10 @@ class DockerComposeController(BaseController):
 
         # Component-specific config
         env_vars |= self._set_up_env_for_database()
-        env_vars |= self._set_up_env_for_queue()
-        env_vars |= self._set_up_env_for_redis()
+        if self._clp_config.redis is not None:
+            env_vars |= self._set_up_env_for_queue()
+        if self._clp_config.queue is not None:
+            env_vars |= self._set_up_env_for_redis()
         if self._clp_config.compression_scheduler.type == OrchestrationType.spider:
             env_vars |= self._set_up_env_for_spider_db()
             env_vars |= self._set_up_env_for_spider_scheduler()
