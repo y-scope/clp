@@ -59,9 +59,10 @@ def submit_query_job(
     :param job_type:
     :return: The job's ID.
     """
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         # Create job
         db_cursor.execute(
             f"INSERT INTO `{QUERY_JOBS_TABLE_NAME}` (`job_config`, `type`) VALUES (%s, %s)",
@@ -82,9 +83,10 @@ def validate_dataset_exists(db_config: Database, dataset: str) -> None:
     sql_adapter = SqlAdapter(db_config)
     clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
     table_prefix = clp_db_connection_params["table_prefix"]
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         if dataset not in fetch_existing_datasets(db_cursor, table_prefix):
             raise ValueError(f"Dataset `{dataset}` doesn't exist.")
 
@@ -96,9 +98,10 @@ def wait_for_query_job(sql_adapter: SqlAdapter, job_id: int) -> QueryJobStatus:
     :param job_id:
     :return: The job's status on completion.
     """
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         # Wait for the job to be marked complete
         while True:
             db_cursor.execute(
