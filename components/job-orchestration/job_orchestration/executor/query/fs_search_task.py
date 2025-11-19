@@ -1,7 +1,7 @@
 import datetime
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
@@ -32,7 +32,7 @@ def _make_core_clp_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     search_config: SearchJobConfig,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_type = worker_config.archive_output.storage.type
     if StorageType.S3 == storage_type:
         logger.error(
@@ -54,7 +54,7 @@ def _make_core_clp_s_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     search_config: SearchJobConfig,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+) -> tuple[list[str] | None, dict[str, str] | None]:
     command = [
         str(clp_home / "bin" / "clp-s"),
         "s",
@@ -100,7 +100,7 @@ def _make_command_and_env_vars(
     search_config: SearchJobConfig,
     results_cache_uri: str,
     results_collection: str,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_engine = worker_config.package.storage_engine
 
     if StorageEngine.CLP == storage_engine:
@@ -174,7 +174,7 @@ def search(
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     task_name = "search"
 
     # Setup logging to file

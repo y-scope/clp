@@ -8,7 +8,7 @@ CONTAINER_DIR_FOR_HOST_ROOT = pathlib.Path("/") / "mnt" / "host"
 
 
 class FileMetadata:
-    __slots__ = ("path", "size", "estimated_uncompressed_size")
+    __slots__ = ("estimated_uncompressed_size", "path", "size")
 
     def __init__(self, path: pathlib.Path, size: int):
         self.path = path
@@ -52,8 +52,7 @@ def make_config_path_absolute(default_root: pathlib.Path, config_path: pathlib.P
     """
     if config_path.is_absolute():
         return config_path
-    else:
-        return default_root / config_path
+    return default_root / config_path
 
 
 def read_yaml_config_file(yaml_config_file_path: pathlib.Path):

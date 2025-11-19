@@ -21,3 +21,32 @@ dependencies = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+[dependency-groups]
+clp = [
+    "clp-package-utils",
+    "clp-py-utils",
+]
+dev = [
+    "mypy>=1.18.2",
+    "ruff>=0.14.4",
+]
+
+[tool.mypy]
+strict = true
+
+# Additional output
+pretty = true
+show_error_code_links = true
+show_error_context = true
+show_error_end = true
+
+[tool.ruff]
+extend = "../../tools/yscope-dev-utils/exports/lint-configs/python/ruff.toml"
+
+[tool.uv]
+default-groups = ["clp", "dev"]
+
+[tool.uv.sources]
+clp-package-utils = { path = "../clp-package-utils" }
+clp-py-utils = { path = "../clp-py-utils" }

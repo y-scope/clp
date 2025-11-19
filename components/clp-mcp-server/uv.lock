@@ -391,6 +391,16 @@ requires-dist = [
     { name = "strenum", specifier = ">=0.4.15" },
 ]
 
+[package.metadata.requires-dev]
+clp = [
+    { name = "clp-package-utils", directory = "../clp-package-utils" },
+    { name = "job-orchestration", directory = "../job-orchestration" },
+]
+dev = [
+    { name = "mypy", specifier = ">=1.18.2" },
+    { name = "ruff", specifier = ">=0.14.4" },
+]
+
 [[package]]
 name = "colorama"
 version = "0.4.6"
