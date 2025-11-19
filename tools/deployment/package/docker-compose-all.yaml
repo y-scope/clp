@@ -376,6 +376,7 @@ services:
   garbage-collector:
     <<: *service_defaults
     hostname: "garbage_collector"
+    stop_grace_period: "10s"
     deploy:
       # Value must be either 0 or 1. Set to 0 to disable the garbage collector.
       replicas: "${CLP_GARBAGE_COLLECTOR_ENABLED:-1}"
