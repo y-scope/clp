@@ -262,11 +262,10 @@ def main(argv):
                 return -1
 
             db_cursor.execute(f"""CREATE DATABASE IF NOT EXISTS `{spider_db_name}`""")
-            if spider_db_password is not None:
+            if spider_db_password is None:
                 logger.error(f"Password must be set for Spider database user.")
                 return -1
-            else:
-                db_cursor.execute(f"""CREATE USER IF NOT EXISTS '{spider_db_user}'@'%' IDENTIFIED BY ''""")
+            db_cursor.execute(f"""CREATE USER IF NOT EXISTS '{spider_db_user}'@'%' IDENTIFIED BY '{spider_db_password}'""")
             db_cursor.execute(f"""GRANT ALL PRIVILEGES ON `{spider_db_name}`.* TO '{spider_db_user}'@'%'""")
             db_cursor.execute(f"""GRANT ALL PRIVILEGES ON `{spider_db_name}`.* TO '{clp_db_user}'@'%'""")
 
