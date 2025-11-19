@@ -1,7 +1,7 @@
 import os
 import pathlib
 from enum import auto
-from typing import Annotated, Any, ClassVar, Literal, Optional, Union
+from typing import Annotated, Any, ClassVar, Literal, Optional, Union, override
 
 from pydantic import (
     BaseModel,
@@ -29,6 +29,7 @@ from .serialization_utils import serialize_path, serialize_str_enum
 DB_COMPONENT_NAME = "database"
 QUEUE_COMPONENT_NAME = "queue"
 REDIS_COMPONENT_NAME = "redis"
+SPIDER_DB_COMPONENT_NAME = "spider_db"
 SPIDER_SCHEDULER_COMPONENT_NAME = "spider_scheduler"
 REDUCER_COMPONENT_NAME = "reducer"
 RESULTS_CACHE_COMPONENT_NAME = "results_cache"
@@ -274,6 +275,19 @@ class SpiderDb(Database):
     def get_url(self):
         self.ensure_credentials_loaded()
         return f"jdbc:mariadb://{self.host}:{self.port}/{self.name}?user={self.username}&password={self.password}"
+
+    @override
+    def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
+        config = read_yaml_config_file(credentials_file_path)
+        if config is None:
+            raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
+        try:
+            self.username = get_config_value(config, f"{SPIDER_DB_COMPONENT_NAME}.user")
+            self.password = get_config_value(config, f"{SPIDER_DB_COMPONENT_NAME}.password")
+        except KeyError as ex:
+            raise ValueError(
+                f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
+            )
 
 
 class SpiderScheduler(BaseModel):
