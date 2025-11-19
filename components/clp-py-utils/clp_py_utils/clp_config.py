@@ -268,7 +268,7 @@ class SpiderDb(Database):
     @field_validator("type")
     @classmethod
     def validate_type(cls, value):
-        if value != "mariadb":
+        if value != DatabaseEngine.MARIADB:
             raise ValueError(f"Spider only support MariaDB storage.")
         return value
 
