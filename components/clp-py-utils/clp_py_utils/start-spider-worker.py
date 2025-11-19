@@ -1,8 +1,18 @@
 import argparse
+import logging
 import os
 import pathlib
 import subprocess
 
+# Setup logging
+# Create logger
+logger = logging.getLogger("start-spider-worker")
+logger.setLevel(logging.INFO)
+# Setup console logging
+logging_console_handler = logging.StreamHandler()
+logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
+logging_console_handler.setFormatter(logging_formatter)
+logger.addHandler(logging_console_handler)
 
 def parse_args() -> argparse.Namespace:
     """
@@ -24,7 +34,7 @@ def main() -> None:
     args = parse_args()
     concurrency = args.concurrency
     if concurrency < 1:
-        print("Error: Concurrency must be at least 1.")
+        logger.error("Concurrency must be at least 1.")
         exit(1)
     storage_url = args.storage_url
     host = args.host
@@ -32,7 +42,7 @@ def main() -> None:
     clp_home = os.getenv("CLP_HOME", "/opt/clp")
     spider_worker_path = pathlib.Path(clp_home) / "bin" / "spider_worker"
     if not spider_worker_path.exists():
-        print(f"Error: spider_worker not found at {spider_worker_path}")
+        logger.error(f"spider_worker not found at {spider_worker_path}")
         exit(1)
 
     # Start multiple spider workers
@@ -44,7 +54,7 @@ def main() -> None:
             )
             processes.append(process)
     except OSError as e:
-        print(f"Failed to start spider worker: {e}")
+        logger.error(f"Failed to start spider worker: {e}")
         for process in processes:
             process.terminate()
         exit(1)
@@ -53,7 +63,7 @@ def main() -> None:
     for process in processes:
         exit_code = process.wait()
         if exit_code != 0:
-            print(f"Spider worker exited with code {exit_code}")
+            logger.error(f"Spider worker exited with code {exit_code}")
             failed = True
     if failed:
         exit(1)
