@@ -86,6 +86,7 @@ def fetch_new_jobs(db_cursor):
 def update_compression_job_metadata(db_context: DbContext, job_id, kv) -> None:
     """
     Updates compression job metadata in the database.
+
     :param db_context:
     :param job_id:
     :param kv:
@@ -111,6 +112,7 @@ def _process_fs_input_paths(
     """
     Iterates through all paths in `fs_input_conf`, validates them, and adds metadata for each valid
     path to `paths_to_compress_buffer` as long as an invalid path hasn't yet been encountered.
+
     :param fs_input_conf:
     :param paths_to_compress_buffer:
     :return: List of error messages about invalid paths.
@@ -165,6 +167,7 @@ def _process_s3_input(
     """
     Iterates through all objects under the <bucket>/<key_prefix> specified by s3_input_config,
     and adds their metadata to paths_to_compress_buffer.
+
     :param s3_input_config:
     :param paths_to_compress_buffer:
     :raises: RuntimeError if input URL doesn't resolve to any objects.
@@ -227,6 +230,7 @@ def search_and_schedule_new_tasks(
 ) -> None:
     """
     Splits the all jobs with PENDING into tasks and schedules them in batches.
+
     :param clp_config:
     :param clp_metadata_db_connection_config:
     :param task_manager:
@@ -527,6 +531,7 @@ def _batch_and_submit_tasks(
 ) -> None:
     """
     Batches tasks from paths_to_compress_buffer and submits them to the task manager.
+
     :param clp_config:
     :param db_context:
     :param task_manager:
