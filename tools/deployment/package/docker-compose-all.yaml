@@ -507,7 +507,9 @@ services:
   mcp-server:
     <<: *service_defaults
     hostname: "mcp_server"
-    profiles: ["mcp"]
+    deploy:
+      # Value must be either 0 or 1. Set to 0 to disable the MCP server.
+      replicas: "${CLP_MCP_SERVER_ENABLED:-0}"
     environment:
       CLP_LOGGING_LEVEL: "${CLP_MCP_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/mcp_server"
