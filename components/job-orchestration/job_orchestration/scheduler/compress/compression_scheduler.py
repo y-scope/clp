@@ -466,7 +466,7 @@ def poll_running_jobs(
                         f" error: {task_result.error_message}."
                     )
 
-        except Exception as e:
+        except Exception:
             logger.exception("Error while getting results for job %s", job_id)
             job_success = False
 
