@@ -32,6 +32,7 @@
 #
 #spider_scheduler:
 #  host: "localhost"
+#  port: 6000
 #
 #query_scheduler:
 #  host: "localhost"
