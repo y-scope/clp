@@ -252,7 +252,7 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  * Marshals a date-time timestamp according to a timestamp pattern.
  * @param timestamp
  * @param pattern
- * @param buffer
+ * @param buffer The buffer that the marshalled timestamp is appended to.
  * @return A void result on success, or an error code indicating the failure:
  * - ErrorCodeEnum::InvalidTimestampPattern if `pattern` contains format malformed format
  *   specifiers, or format specifiers that aren't supported in date-time timestamps.
@@ -268,7 +268,7 @@ auto marshal_date_time_timestamp(
  * Marshals a numeric timestamp according to a timestamp pattern.
  * @param timestamp
  * @param pattern
- * @param buffer
+ * @param buffer The buffer that the marshalled timestamp is appended to.
  * @return A void result on success, or an error code indicating the failure:
  * - ErrorCodeEnum::InvalidTimestampPattern if `pattern` contains format specifiers that aren't
  *   supported in numeric timestamps.

@@ -153,7 +153,7 @@ private:
  * Marshals a timestamp according to a timestamp pattern.
  * @param timestamp
  * @param pattern
- * @param buffer
+ * @param buffer The buffer that the marshalled timestamp is appended to.
  * @return A void result on success, or an error code indicating the failure:
  * - Forwards `marshal_date_time_timestamp`'s return values.
  * - Forwards `marshal_numeric_timestamp`'s return values.
