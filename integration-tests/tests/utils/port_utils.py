@@ -1,4 +1,4 @@
-"""Functions for facilitating the clp package's port connections."""
+"""Functions for facilitating the port connections for the CLP package."""
 
 from clp_py_utils.clp_config import ClpConfig
 

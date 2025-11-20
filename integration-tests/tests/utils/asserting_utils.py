@@ -41,7 +41,7 @@ def validate_package_running(package_instance: PackageInstance) -> None:
     :param package_instance:
     """
     instance_id = package_instance.clp_instance_id
-    required_components = package_instance.component_list
+    required_components = package_instance.package_config.component_list
 
     for component in required_components:
         prefix = f"clp-package-{instance_id}-{component}-"

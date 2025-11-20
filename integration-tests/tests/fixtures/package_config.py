@@ -3,42 +3,22 @@
 import contextlib
 import logging
 from collections.abc import Iterator
-from pathlib import Path
 
 import pytest
 
-from tests.utils.clp_mode_utils import CLP_MODE_CONFIGS, get_clp_config_from_mode
-from tests.utils.config import PackageConfig
+from tests.utils.clp_mode_utils import (
+    get_clp_config_from_mode,
+    get_required_component_list,
+)
+from tests.utils.config import PackageConfig, PackagePathConfig
 from tests.utils.port_utils import assign_ports_from_base
-from tests.utils.utils import get_env_var
 
 logger = logging.getLogger(__name__)
 
 
-def _build_package_config_for_mode(mode_name: str) -> PackageConfig:
-    """
-    Constructs a PackageConfig for the specified CLP mode.
-
-    :param mode_name:
-    :return: A PackageConfig object configured for the given mode.
-    :raise KeyError: if the mode name is unknown.
-    """
-    if mode_name not in CLP_MODE_CONFIGS:
-        err_msg = f"Unknown CLP mode '{mode_name}'."
-        raise KeyError(err_msg)
-
-    clp_package_dir = Path(get_env_var("CLP_PACKAGE_DIR")).expanduser().resolve()
-    test_root_dir = Path(get_env_var("CLP_BUILD_DIR")).expanduser().resolve() / "integration-tests"
-
-    return PackageConfig(
-        clp_package_dir=clp_package_dir,
-        test_root_dir=test_root_dir,
-        mode_name=mode_name,
-    )
-
-
 @pytest.fixture
 def clp_config(
+    package_path_config: PackagePathConfig,
     request: pytest.FixtureRequest,
 ) -> Iterator[PackageConfig]:
     """
@@ -50,9 +30,7 @@ def clp_config(
     mode_name: str = request.param
     logger.debug("Creating a temporary config file for the %s package.", mode_name)
 
-    package_config = _build_package_config_for_mode(mode_name)
-
-    # Create the temp config file.
+    # Create the underlying ClpConfig for this mode.
     clp_config_obj = get_clp_config_from_mode(mode_name)
 
     # Assign ports based on BASE_PORT from ini.
@@ -67,10 +45,19 @@ def clp_config(
 
     assign_ports_from_base(clp_config_obj, base_port)
 
-    temp_config_file_path = PackageConfig.write_temp_config_file(
-        clp_config=clp_config_obj,
-        temp_config_dir=package_config.temp_config_dir,
+    # Compute the list of required components for this mode.
+    required_components = get_required_component_list(clp_config_obj)
+
+    package_config = PackageConfig(
+        path_config=package_path_config,
         mode_name=mode_name,
+        component_list=required_components,
+    )
+
+    # Create the temp config file using the PackageConfig member path.
+    PackageConfig.write_temp_config_file(
+        clp_config=clp_config_obj,
+        package_config=package_config,
     )
 
     try:
@@ -78,4 +65,4 @@ def clp_config(
     finally:
         logger.debug("Removing the temporary config file.")
         with contextlib.suppress(FileNotFoundError):
-            temp_config_file_path.unlink()
+            package_config.temp_config_file_path.unlink()

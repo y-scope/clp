@@ -111,7 +111,7 @@ def get_clp_config_from_mode(mode_name: str) -> ClpConfig:
 
 def get_required_component_list(config: ClpConfig) -> list[str]:
     """
-    Constructs a list of the components that the clp package described in `config` needs to run
+    Constructs a list of the components that the CLP package described in `config` needs to run
     properly.
 
     :param config:

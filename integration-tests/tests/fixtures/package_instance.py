@@ -6,10 +6,6 @@ from collections.abc import Iterator
 
 import pytest
 
-from tests.utils.clp_mode_utils import (
-    get_clp_config_from_mode,
-    get_required_component_list,
-)
 from tests.utils.config import (
     PackageConfig,
     PackageInstance,
@@ -50,10 +46,8 @@ def clp_package(
                 " BASE_PORT in .pytest.ini."
             )
 
-        required_components = get_required_component_list(get_clp_config_from_mode(mode_name))
         instance = PackageInstance(
             package_config=clp_config,
-            component_list=required_components,
         )
 
         yield instance
@@ -64,4 +58,4 @@ def clp_package(
             stop_clp_package(instance)
         else:
             # This means setup failed after start; fall back to calling stop script directly
-            subprocess.run([str(clp_config.stop_script_path)], check=False)
+            subprocess.run([str(clp_config.path_config.stop_script_path)], check=False)

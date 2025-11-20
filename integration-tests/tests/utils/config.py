@@ -65,20 +65,20 @@ class CoreConfig:
 
 
 @dataclass(frozen=True)
-class PackageConfig:
-    """Metadata for the clp package test on this system."""
+class PackagePathConfig:
+    """Path configuration for the CLP package."""
 
-    #: The directory the package is located in.
+    #: Root directory containing all CLP package contents.
     clp_package_dir: Path
 
     #: Root directory for package tests output.
     test_root_dir: Path
 
-    #: Name of the mode of operation represented in this config.
-    mode_name: str
-
     #: Directory to store any cached package config files.
     temp_config_dir: Path = field(init=False, repr=True)
+
+    #: Directory where the CLP package writes logs.
+    clp_log_dir: Path = field(init=False, repr=True)
 
     def __post_init__(self) -> None:
         """Validates init values and initializes attributes."""
@@ -94,10 +94,21 @@ class PackageConfig:
             )
             raise ValueError(err_msg)
 
-        # Initialize and create cache directory for package tests.
-        object.__setattr__(self, "temp_config_dir", self.test_root_dir / "temp_config_files")
-        self.test_root_dir.mkdir(parents=True, exist_ok=True)
+        # Initialize cache directory for package tests.
+        test_root_dir = self.test_root_dir
+        object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
+
+        # Initialize log directory for the package.
+        object.__setattr__(
+            self,
+            "clp_log_dir",
+            clp_package_dir / CLP_DEFAULT_LOG_DIRECTORY_PATH,
+        )
+
+        # Create directories if they do not already exist.
+        test_root_dir.mkdir(parents=True, exist_ok=True)
         self.temp_config_dir.mkdir(parents=True, exist_ok=True)
+        self.clp_log_dir.mkdir(parents=True, exist_ok=True)
 
     @property
     def start_script_path(self) -> Path:
@@ -109,23 +120,38 @@ class PackageConfig:
         """:return: The absolute path to the package stop script."""
         return self.clp_package_dir / "sbin" / "stop-clp.sh"
 
+
+@dataclass(frozen=True)
+class PackageConfig:
+    """Metadata for a specific configuration of the CLP package."""
+
+    #: Path configuration for this package.
+    path_config: PackagePathConfig
+
+    #: Name of the mode of operation represented in this config.
+    mode_name: str
+
+    #: The list of CLP components that this package needs.
+    component_list: list[str]
+
+    @property
+    def temp_config_file_path(self) -> Path:
+        """The absolute path to the temporary configuration file for this package configuration."""
+        return self.path_config.temp_config_dir / f"clp-config-{self.mode_name}.yml"
+
     @staticmethod
     def write_temp_config_file(
         clp_config: ClpConfig,
-        temp_config_dir: Path,
-        mode_name: str,
+        package_config: PackageConfig,
     ) -> Path:
         """
         Writes a temporary config file for a ClpConfig object.
 
         :param clp_config:
-        :param temp_config_dir:
-        :param mode_name:
+        :param package_config:
         :return: The path to the written config file.
         """
-        temp_config_dir.mkdir(parents=True, exist_ok=True)
-        temp_config_filename = f"clp-config-{mode_name}.yml"
-        temp_config_file_path = temp_config_dir / temp_config_filename
+        temp_config_file_path = package_config.temp_config_file_path
 
         payload = clp_config.dump_to_primitive_dict()  # type: ignore[no-untyped-call]
 
@@ -139,52 +165,32 @@ class PackageConfig:
 
 @dataclass(frozen=True)
 class PackageInstance:
-    """Metadata for a running instance of the clp package."""
+    """Metadata for a running instance of the CLP package."""
 
-    #:
+    #: Config describing this package instance.
     package_config: PackageConfig
-
-    #: The list of containerized CLP components that this package needs.
-    component_list: list[str]
-
-    #: The location of the logging directory within the running package.
-    clp_log_dir: Path = field(init=False, repr=True)
 
     #: The instance ID of the running package.
     clp_instance_id: str = field(init=False, repr=True)
-
-    #: The location of the temporary config file for this package.
-    temp_config_file_path: Path = field(init=False, repr=True)
 
     #: The path to the .clp-config.yml file constructed by the package during spin up.
     shared_config_file_path: Path = field(init=False, repr=True)
 
     def __post_init__(self) -> None:
         """Validates init values and initializes attributes."""
-        # Determine expected temp config file path and validate existence.
-        temp_config_file_path = (
-            self.package_config.temp_config_dir / f"clp-config-{self.package_config.mode_name}.yml"
-        )
-        validate_file_exists(temp_config_file_path)
-        object.__setattr__(self, "temp_config_file_path", temp_config_file_path)
+        path_config = self.package_config.path_config
 
-        # Set clp_log_dir and validate it exists.
-        clp_log_dir = self.package_config.clp_package_dir / "var" / "log"
-        validate_dir_exists(clp_log_dir)
-        object.__setattr__(self, "clp_log_dir", clp_log_dir)
+        # Validate that the temp config file exists.
+        validate_file_exists(self.package_config.temp_config_file_path)
 
         # Set clp_instance_id from instance-id file.
-        clp_instance_id_file_path = self.clp_log_dir / "instance-id"
+        clp_instance_id_file_path = path_config.clp_log_dir / "instance-id"
         validate_file_exists(clp_instance_id_file_path)
         clp_instance_id = self._get_clp_instance_id(clp_instance_id_file_path)
         object.__setattr__(self, "clp_instance_id", clp_instance_id)
 
         # Set shared_config_file_path and validate it exists.
-        shared_config_file_path = (
-            self.package_config.clp_package_dir
-            / CLP_DEFAULT_LOG_DIRECTORY_PATH
-            / CLP_SHARED_CONFIG_FILENAME
-        )
+        shared_config_file_path = path_config.clp_log_dir / CLP_SHARED_CONFIG_FILENAME
         validate_file_exists(shared_config_file_path)
         object.__setattr__(self, "shared_config_file_path", shared_config_file_path)
 
