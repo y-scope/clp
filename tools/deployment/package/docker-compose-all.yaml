@@ -331,8 +331,6 @@ services:
         ${SPIDER_DB_NAME:-spider-db}?\
         user=${SPIDER_DB_USER:?Please set a value.}\
         &password=${SPIDER_DB_PASS:?Please set a value.}",
-      # NOTE: Leave host to spider scheduler's host. This only affects task placement.
-      "--host", "spider-scheduler",
     ]
 
   webui:

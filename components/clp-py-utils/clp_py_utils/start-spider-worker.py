@@ -2,6 +2,7 @@ import argparse
 import logging
 import os
 import pathlib
+import socket
 import subprocess
 
 # Setup logging
@@ -25,7 +26,6 @@ def parse_args() -> argparse.Namespace:
         "--concurrency", type=int, default=1, help="Number of concurrent spider workers."
     )
     parser.add_argument("--storage-url", type=str, required=True, help="Spider storage URL.")
-    parser.add_argument("--host", type=str, required=True, help="Worker host address.")
     return parser.parse_args()
 
 
@@ -38,7 +38,7 @@ def main() -> None:
         logger.error("Concurrency must be at least 1.")
         exit(1)
     storage_url = args.storage_url
-    host = args.host
+    host = socket.gethostbyname(socket.gethostname())
 
     clp_home = os.getenv("CLP_HOME", "/opt/clp")
     spider_worker_path = pathlib.Path(clp_home) / "bin" / "spider_worker"
