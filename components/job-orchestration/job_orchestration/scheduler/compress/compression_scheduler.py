@@ -230,7 +230,7 @@ def search_and_schedule_new_tasks(
     db_context: DbContext,
 ) -> None:
     """
-    Splits the all jobs with PENDING into tasks and schedules them in batches.
+    Splits all the jobs with PENDING into tasks and schedules them in batches.
 
     :param clp_config:
     :param clp_metadata_db_connection_config:
