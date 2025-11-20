@@ -596,8 +596,8 @@ def main(argv) -> int | None:
     try:
         clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
-    except (ValidationError, ValueError) as err:
-        logger.exception(err)
+    except (ValidationError, ValueError):
+        logger.exception("Failed to load configuration")
         return -1
     except Exception:
         logger.exception(f"Failed to initialize {COMPRESSION_SCHEDULER_COMPONENT_NAME}.")
