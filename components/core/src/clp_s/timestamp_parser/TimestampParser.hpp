@@ -150,6 +150,15 @@ private:
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>>;
 
 /**
+ * Marshals a timestamp according to a timestamp pattern.
+ * @param timestamp
+ * @param pattern
+ * @param buffer
+ */
+auto marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, std::string& buffer)
+        -> ystdlib::error_handling::Result<void>;
+
+/**
  * Parses a timestamp according to the first matching pattern in a list of patterns.
  * @param timestamp
  * @param patterns A list of timestamp patterns.

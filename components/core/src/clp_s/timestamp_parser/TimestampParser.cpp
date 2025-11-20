@@ -230,6 +230,11 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
         -> ystdlib::error_handling::Result<std::pair<std::string_view, int>>;
 
 /**
+ * Extracts the absolute value of the subsecond fractional component of a timestamp.
+ */
+[[nodiscard]] auto extract_absolute_subsecond_nanoseconds(epochtime_t timestamp) -> epochtime_t;
+
+/**
  * Estimates the precision of an epoch timestamp based on its proximity to 1971 in different
  * precisions.
  *
@@ -242,6 +247,18 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  * precision, and a format specifier indicating the precision of the timestamp.
  */
 [[nodiscard]] auto estimate_timestamp_precision(int64_t timestamp) -> std::pair<int64_t, char>;
+
+auto marshal_date_time_timestamp(
+        epochtime_t timestamp,
+        TimestampPattern const& pattern,
+        std::string& buffer
+) -> ystdlib::error_handling::Result<void>;
+
+auto marshal_numeric_timestamp(
+        epochtime_t timestamp,
+        TimestampPattern const& pattern,
+        std::string& buffer
+) -> ystdlib::error_handling::Result<void>;
 
 auto convert_padded_string_to_number(std::string_view str, char padding_character)
         -> ystdlib::error_handling::Result<int> {
@@ -444,6 +461,119 @@ auto estimate_timestamp_precision(int64_t timestamp) -> std::pair<int64_t, char>
                     [cNumNanosecondPrecisionSubsecondDigits - cNumSecondPrecisionSubsecondDigits]
     };
     return std::make_pair(cFactor, 'E');
+}
+
+auto extract_absolute_subsecond_nanoseconds(epochtime_t timestamp) -> epochtime_t {
+    constexpr auto cFactor{
+            cPowersOfTen
+                    [cNumNanosecondPrecisionSubsecondDigits - cNumSecondPrecisionSubsecondDigits]
+    };
+    auto subsecond_nanoseconds = timestamp % cFactor;
+    return subsecond_nanoseconds < 0 ? -subsecond_nanoseconds : subsecond_nanoseconds;
+}
+
+auto marshal_date_time_timestamp(
+        epochtime_t timestamp,
+        TimestampPattern const& pattern,
+        std::string& buffer
+) -> ystdlib::error_handling::Result<void> {
+    return ystdlib::error_handling::success();
+}
+
+auto marshal_numeric_timestamp(
+        epochtime_t timestamp,
+        TimestampPattern const& pattern,
+        std::string& buffer
+) -> ystdlib::error_handling::Result<void> {
+    bool escaped{false};
+    for (auto const c : pattern.get_pattern()) {
+        if (false == escaped && '\\' == c) {
+            escaped = true;
+            continue;
+        }
+        if (false == escaped) {
+            buffer.push_back(c);
+        }
+        switch (c) {
+            case 'E': {
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumSecondPrecisionSubsecondDigits]};
+                int64_t epoch_second_timestamp{timestamp / cFactor};
+                buffer.append(fmt::format("{}", epoch_second_timestamp));
+                break;
+            }
+            case 'L': {
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumMillisecondPrecisionSubsecondDigits]};
+                int64_t epoch_millisecond_timestamp{timestamp / cFactor};
+                buffer.append(fmt::format("{}", epoch_millisecond_timestamp));
+                break;
+            }
+            case 'C': {
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumMicrosecondPrecisionSubsecondDigits]};
+                int64_t epoch_microsecond_timestamp{timestamp / cFactor};
+                buffer.append(fmt::format("{}", epoch_microsecond_timestamp));
+                break;
+            }
+            case 'N': {
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumNanosecondPrecisionSubsecondDigits]};
+                int64_t epoch_nanosecond_timestamp{timestamp / cFactor};
+                buffer.append(fmt::format("{}", epoch_nanosecond_timestamp));
+                break;
+            }
+            case '3': {
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumMillisecondPrecisionSubsecondDigits]};
+                auto const subsecond_nanoseconds{extract_absolute_subsecond_nanoseconds(timestamp)};
+                auto const subsecond_epoch_milliseconds{subsecond_nanoseconds / cFactor};
+                buffer.append(fmt::format("{:0>3d}", subsecond_epoch_milliseconds));
+                break;
+            }
+            case '6': {
+                constexpr auto cFactor{cPowersOfTen
+                                               [cNumNanosecondPrecisionSubsecondDigits
+                                                - cNumMicrosecondPrecisionSubsecondDigits]};
+                auto const subsecond_nanoseconds{extract_absolute_subsecond_nanoseconds(timestamp)};
+                auto const subsecond_epoch_microseconds{subsecond_nanoseconds / cFactor};
+                buffer.append(fmt::format("{:0>6d}", subsecond_epoch_microseconds));
+                break;
+            }
+            case '9': {
+                auto const subsecond_nanoseconds{extract_absolute_subsecond_nanoseconds(timestamp)};
+                buffer.append(fmt::format("{:0>9d}", subsecond_nanoseconds));
+                break;
+            }
+            case 'T': {
+                auto const subsecond_nanoseconds{extract_absolute_subsecond_nanoseconds(timestamp)};
+                auto const subsecond_nanoseconds_str{fmt::format("{:0>9d}", subsecond_nanoseconds)};
+                size_t num_digits_before_zero{subsecond_nanoseconds_str.size()};
+                while (num_digits_before_zero > 0
+                       && '0' == subsecond_nanoseconds_str.at(num_digits_before_zero - 1))
+                {
+                    --num_digits_before_zero;
+                }
+                if (0 == num_digits_before_zero) {
+                    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+                }
+                buffer.append(
+                        std::string_view{subsecond_nanoseconds_str}
+                                .substr(0ULL, num_digits_before_zero)
+                );
+            }
+            case '\\':
+                buffer.push_back('\\');
+            default:
+                return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
+        }
+    }
+    return ystdlib::error_handling::success();
 }
 }  // namespace
 
@@ -1206,6 +1336,16 @@ auto parse_timestamp(
 }
 
 // NOLINTEND(readability-function-cognitive-complexity)
+
+auto marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, std::string& buffer)
+        -> ystdlib::error_handling::Result<void> {
+    if (pattern.uses_date_type_representation()) {
+        YSTDLIB_ERROR_HANDLING_TRYV(marshal_date_time_timestamp(timestamp, pattern, buffer));
+    } else {
+        YSTDLIB_ERROR_HANDLING_TRYV(marshal_numeric_timestamp(timestamp, pattern, buffer));
+    }
+    return ystdlib::error_handling::success();
+}
 
 [[nodiscard]] auto search_known_timestamp_patterns(
         std::string_view timestamp,
