@@ -9,7 +9,7 @@ MAX_PORT = 65535
 
 def _validate_base_port(base_port: int) -> None:
     """
-    Validate that `base_port` plus `REQUIRED_PORTS` stays within [1024, 65535].
+    Validate that `base_port` plus `MAX_REQUIRED_PORTS` stays within [1024, 65535].
 
     :param base_port:
     :raise ValueError: if the range exceeds the valid TCP port range.
