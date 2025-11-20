@@ -11,8 +11,7 @@ import axios from "axios";
  * @param payload
  * @return
  */
-const submitCompressionJob = async (payload: CompressionJobCreation)
-: Promise<CompressionJob> => {
+const submitCompressionJob = async (payload: CompressionJobCreation): Promise<CompressionJob> => {
     console.log("Submitting compression job:", JSON.stringify(payload));
     const {data} = await axios.post<CompressionJob>("/api/compress", payload);
 
