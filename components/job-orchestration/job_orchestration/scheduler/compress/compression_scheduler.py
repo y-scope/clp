@@ -54,6 +54,7 @@ from job_orchestration.scheduler.utils import kill_hanging_jobs
 
 @dataclass
 class DbContext:
+    """Database context holding a connection, and a cursor created from the connection."""
     connection: Any
     cursor: Any
 
