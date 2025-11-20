@@ -68,7 +68,7 @@ class PackageConfig:
         validate_dir_exists(clp_package_dir)
 
         # Check for required package script directories
-        required_dirs = ["bin", "etc", "lib", "sbin"]
+        required_dirs = ["etc", "sbin"]
         missing_dirs = [d for d in required_dirs if not (clp_package_dir / d).is_dir()]
         if len(missing_dirs) > 0:
             err_msg = (
