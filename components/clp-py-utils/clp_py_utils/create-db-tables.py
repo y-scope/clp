@@ -63,7 +63,7 @@ def main(argv):
         return 1
     # fmt: off
     cmd = [
-        "python3", str(script_dir / "initialize-spider-db.py"),
+        "python3", "-m", "clp_py_utils.initialize-spider-db",
         "--config", str(config_file_path),
     ]
     # fmt: on
