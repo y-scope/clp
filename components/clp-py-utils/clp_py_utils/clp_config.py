@@ -253,6 +253,7 @@ class Database(BaseModel):
 
 class CompressionScheduler(BaseModel):
     jobs_poll_delay: PositiveFloat = 0.1  # seconds
+    num_tasks_per_sub_job: PositiveInt = 4
     logging_level: LoggingLevel = "INFO"
 
 

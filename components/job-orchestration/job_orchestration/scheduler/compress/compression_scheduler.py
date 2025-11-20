@@ -225,14 +225,16 @@ def search_and_schedule_new_tasks(
     db_cursor,
     clp_metadata_db_connection_config: dict[str, Any],
     task_manager: TaskManager,
+    num_tasks_per_sub_job: int,
 ):
     """
-    For all jobs with PENDING status, splits the job into tasks and schedules them.
+    For all jobs with PENDING status, splits the job into tasks and schedules them in batches.
     :param clp_config:
     :param db_conn:
     :param db_cursor:
     :param clp_metadata_db_connection_config:
     :param task_manager:
+    :param num_tasks_per_sub_job:
     """
     global scheduled_jobs
 
@@ -369,21 +371,43 @@ def search_and_schedule_new_tasks(
             tag_ids = [tags["tag_id"] for tags in db_cursor.fetchall()]
             db_conn.commit()
 
-        for task_idx, task in enumerate(tasks):
+        for task in tasks:
+            task["tag_ids"] = tag_ids
+
+        # Batch tasks
+        if len(tasks) > num_tasks_per_sub_job:
+            tasks_to_submit = tasks[:num_tasks_per_sub_job]
+            remaining_tasks = tasks[num_tasks_per_sub_job:]
+            partition_info_to_submit = partition_info[:num_tasks_per_sub_job]
+            remaining_partition_info = partition_info[num_tasks_per_sub_job:]
+        else:
+            tasks_to_submit = tasks
+            remaining_tasks = []
+            partition_info_to_submit = partition_info
+            remaining_partition_info = []
+
+        for task_idx, task in enumerate(tasks_to_submit):
             db_cursor.execute(
                 f"""
                 INSERT INTO {COMPRESSION_TASKS_TABLE_NAME}
                 (job_id, partition_original_size, clp_paths_to_compress)
-                VALUES({job_id!s}, {partition_info[task_idx]["partition_original_size"]}, %s)
+                VALUES({job_id!s}, {partition_info_to_submit[task_idx]["partition_original_size"]}, %s)
                 """,
-                (partition_info[task_idx]["clp_paths_to_compress"],),
+                (partition_info_to_submit[task_idx]["clp_paths_to_compress"],),
             )
             db_conn.commit()
             task["task_id"] = db_cursor.lastrowid
-            task["tag_ids"] = tag_ids
-        result_handle = task_manager.submit(tasks)
+        result_handle = task_manager.submit(tasks_to_submit)
 
-        job = CompressionJob(id=job_id, start_time=start_time, result_handle=result_handle)
+        job = CompressionJob(
+            id=job_id,
+            start_time=start_time,
+            result_handle=result_handle,
+            num_tasks_total=paths_to_compress_buffer.num_tasks,
+            num_tasks_completed=0,
+            remaining_tasks=remaining_tasks,
+            remaining_partition_info=remaining_partition_info,
+        )
         db_cursor.execute(
             f"""
             UPDATE {COMPRESSION_TASKS_TABLE_NAME}
@@ -393,11 +417,22 @@ def search_and_schedule_new_tasks(
         db_conn.commit()
 
         scheduled_jobs[job_id] = job
+        logger.info(
+            f"Dispatched job {job_id} with {len(tasks_to_submit)} tasks"
+            f" ({len(remaining_tasks)} remaining)."
+        )
 
 
-def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
+def poll_running_jobs(
+    logs_directory: Path, db_conn, db_cursor, task_manager: TaskManager, num_tasks_per_sub_job: int
+):
     """
-    Poll for running jobs and update their status.
+    Poll for running jobs, update their status, and dispatch next batch if needed.
+    :param logs_directory:
+    :param db_conn:
+    :param db_cursor:
+    :param task_manager:
+    :param num_tasks_per_sub_job:
     """
     global scheduled_jobs
 
@@ -415,6 +450,7 @@ def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
 
             duration = (datetime.datetime.now() - job.start_time).total_seconds()
             # Check for finished jobs
+            num_tasks_in_batch = len(returned_results)
             for task_result in returned_results:
                 if task_result.status == CompressionTaskStatus.SUCCEEDED:
                     logger.info(
@@ -435,17 +471,7 @@ def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
             logger.error(f"Error while getting results for job {job_id}: {e}")
             job_success = False
 
-        if job_success:
-            logger.info(f"Job {job_id} succeeded.")
-            update_compression_job_metadata(
-                db_cursor,
-                job_id,
-                dict(
-                    status=CompressionJobStatus.SUCCEEDED,
-                    duration=duration,
-                ),
-            )
-        else:
+        if not job_success:
             logger.error(f"Job {job_id} failed. See worker logs or status_msg for details.")
 
             error_log_relative_path = _write_user_failure_log(
@@ -473,15 +499,75 @@ def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
                     status_msg=error_msg,
                 ),
             )
-        db_conn.commit()
+            db_conn.commit()
+            jobs_to_delete.append(job_id)
+            continue
 
-        jobs_to_delete.append(job_id)
+        job.num_tasks_completed += num_tasks_in_batch
+
+        # Check if there are remaining tasks to dispatch
+        if len(job.remaining_tasks) > 0:
+            logger.info(
+                f"Job {job_id} batch completed. Dispatching next batch"
+                f" ({job.num_tasks_completed}/{job.num_tasks_total} tasks completed)."
+            )
+
+            # Prepare next batch of tasks
+            if len(job.remaining_tasks) > num_tasks_per_sub_job:
+                tasks_to_submit = job.remaining_tasks[:num_tasks_per_sub_job]
+                job.remaining_tasks = job.remaining_tasks[num_tasks_per_sub_job:]
+                partition_info_to_submit = job.remaining_partition_info[:num_tasks_per_sub_job]
+                job.remaining_partition_info = job.remaining_partition_info[num_tasks_per_sub_job:]
+            else:
+                tasks_to_submit = job.remaining_tasks
+                job.remaining_tasks = []
+                partition_info_to_submit = job.remaining_partition_info
+                job.remaining_partition_info = []
+
+            # Insert tasks into database and submit them
+            for task_idx, task in enumerate(tasks_to_submit):
+                db_cursor.execute(
+                    f"""
+                    INSERT INTO {COMPRESSION_TASKS_TABLE_NAME}
+                    (job_id, partition_original_size, clp_paths_to_compress)
+                    VALUES({job_id!s}, {partition_info_to_submit[task_idx]["partition_original_size"]}, %s)
+                    """,
+                    (partition_info_to_submit[task_idx]["clp_paths_to_compress"],),
+                )
+                db_conn.commit()
+                task["task_id"] = db_cursor.lastrowid
+
+            job.result_handle = task_manager.submit(tasks_to_submit)
+            db_cursor.execute(
+                f"""
+                UPDATE {COMPRESSION_TASKS_TABLE_NAME}
+                SET status='{CompressionTaskStatus.RUNNING}' WHERE job_id={job_id}
+                """
+            )
+            db_conn.commit()
+            logger.info(
+                f"Dispatched next batch for job {job_id} with {len(tasks_to_submit)} tasks"
+                f" ({len(job.remaining_tasks)} remaining)."
+            )
+        else:
+            # All tasks completed successfully
+            logger.info(f"Job {job_id} succeeded ({job.num_tasks_total} tasks completed).")
+            update_compression_job_metadata(
+                db_cursor,
+                job_id,
+                dict(
+                    status=CompressionJobStatus.SUCCEEDED,
+                    duration=duration,
+                ),
+            )
+            db_conn.commit()
+            jobs_to_delete.append(job_id)
 
     for job_id in jobs_to_delete:
         del scheduled_jobs[job_id]
 
     if received_sigterm and 0 == len(scheduled_jobs):
-        logger.info("Recieved SIGTERM and there're no more running jobs. Exiting.")
+        logger.info("Received SIGTERM and there're no more running jobs. Exiting.")
         sys.exit(0)
 
 
@@ -537,6 +623,7 @@ def main(argv):
         )
 
         # Start Job Processing Loop
+        num_tasks_per_sub_job = clp_config.compression_scheduler.num_tasks_per_sub_job
         while True:
             try:
                 if not received_sigterm:
@@ -546,8 +633,11 @@ def main(argv):
                         db_cursor,
                         clp_metadata_db_connection_config,
                         task_manager,
+                        num_tasks_per_sub_job,
                     )
-                poll_running_jobs(clp_config.logs_directory, db_conn, db_cursor)
+                poll_running_jobs(
+                    clp_config.logs_directory, db_conn, db_cursor, task_manager, num_tasks_per_sub_job
+                )
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
                 logger.info("Forcefully shutting down")
