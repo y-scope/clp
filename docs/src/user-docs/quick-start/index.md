@@ -45,7 +45,7 @@ There are two flavors of CLP:
 
 :::{note}
 Both flavors contain the same binaries but are configured with different values for the
-`package.storage_engine` key in the package's config file (`etc/clp-config.yml`).
+`package.storage_engine` key in the package's config file (`etc/clp-config.yaml`).
 :::
 
 ### clp-json

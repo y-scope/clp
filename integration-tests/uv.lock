@@ -524,6 +524,16 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0.3" },
 ]
 
+[package.metadata.requires-dev]
+clp = [
+    { name = "clp-py-utils", directory = "../components/clp-py-utils" },
+    { name = "job-orchestration", directory = "../components/job-orchestration" },
+]
+dev = [
+    { name = "mypy", specifier = ">=1.18.2" },
+    { name = "ruff", specifier = ">=0.14.4" },
+]
+
 [[package]]
 name = "clp-py-utils"
 version = "0.6.1.dev0"
@@ -551,6 +561,16 @@ requires-dist = [
     { name = "result", specifier = ">=0.17.0" },
     { name = "sqlalchemy", specifier = ">=2.0.44" },
     { name = "strenum", specifier = ">=0.4.15" },
+]
+
+[package.metadata.requires-dev]
+clp = [
+    { name = "clp-package-utils", directory = "../components/clp-package-utils" },
+    { name = "job-orchestration", directory = "../components/job-orchestration" },
+]
+dev = [
+    { name = "mypy", specifier = ">=1.18.2" },
+    { name = "ruff", specifier = ">=0.14.4" },
 ]
 
 [[package]]
@@ -989,6 +1009,16 @@ requires-dist = [
     { name = "pymongo", specifier = ">=4.15.3" },
     { name = "pyyaml", specifier = ">=6.0.3" },
     { name = "yscope-spider-py", specifier = "==0.1.0" },
+]
+
+[package.metadata.requires-dev]
+clp = [
+    { name = "clp-package-utils", directory = "../components/clp-package-utils" },
+    { name = "clp-py-utils", directory = "../components/clp-py-utils" },
+]
+dev = [
+    { name = "mypy", specifier = ">=1.18.2" },
+    { name = "ruff", specifier = ">=0.14.4" },
 ]
 
 [[package]]
