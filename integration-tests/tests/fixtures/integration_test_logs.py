@@ -1,4 +1,4 @@
-"""Session scoped test log fixtures shared across integration tests."""
+"""Session-scoped test log fixtures shared across integration tests."""
 
 import logging
 import shutil

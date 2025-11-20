@@ -56,7 +56,8 @@ def resolve_env_path(path_var_name: str) -> Path:
     :param path_var_name: Name of the environment variable holding a path.
     :return: Absolute Path resolved from the input value.
     :raise: Propagates `get_env_var`'s exceptions.
-    :raise: OSError if the path cannot be resolved.
+    :raise: Propagates `Path.expanduser`'s exceptions.
+    :raise: Propagates `Path.resolve`'s exceptions.
     """
     return Path(get_env_var(path_var_name)).expanduser().resolve()
 

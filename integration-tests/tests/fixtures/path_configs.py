@@ -1,4 +1,4 @@
-"""Session scoped path configuration fixtures shared across integration tests."""
+"""Session-scoped path configuration fixtures shared across integration tests."""
 
 import pytest
 
