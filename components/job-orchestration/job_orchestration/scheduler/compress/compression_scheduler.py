@@ -90,18 +90,18 @@ def update_compression_task_metadata(db_cursor, task_id, kv):
     db_cursor.execute(query, values)
 
 
-def update_compression_job_metadata(db_cursor, job_id, kv):
+def update_compression_job_metadata(db_cursor, job_id, kv) -> None:
     if not len(kv):
         logger.error("Must specify at least one field to update")
         raise ValueError
 
-    field_set_expressions = [f"{k} = %s" for k in kv.keys()] + ["update_time = CURRENT_TIMESTAMP()"]
+    field_set_expressions = [f"{k} = %s" for k in kv] + ["update_time = CURRENT_TIMESTAMP()"]
     query = f"""
         UPDATE {COMPRESSION_JOBS_TABLE_NAME}
         SET {", ".join(field_set_expressions)}
         WHERE id = %s
     """
-    values = list(kv.values()) + [job_id]
+    values = [*list(kv.values()), job_id]
     db_cursor.execute(query, values)
 
 
@@ -226,7 +226,7 @@ def search_and_schedule_new_tasks(
     clp_metadata_db_connection_config: dict[str, Any],
     task_manager: TaskManager,
     num_tasks_per_sub_job: int,
-):
+) -> None:
     """
     For all jobs with PENDING status, splits the job into tasks and schedules them in batches.
     :param clp_config:
@@ -236,8 +236,6 @@ def search_and_schedule_new_tasks(
     :param task_manager:
     :param num_tasks_per_sub_job:
     """
-    global scheduled_jobs
-
     existing_datasets: set[str] = set()
     if StorageEngine.CLP_S == clp_config.package.storage_engine:
         existing_datasets = fetch_existing_datasets(
@@ -425,7 +423,7 @@ def search_and_schedule_new_tasks(
 
 def poll_running_jobs(
     logs_directory: Path, db_conn, db_cursor, task_manager: TaskManager, num_tasks_per_sub_job: int
-):
+) -> None:
     """
     Poll for running jobs, update their status, and dispatch next batch if needed.
     :param logs_directory:
@@ -434,14 +432,13 @@ def poll_running_jobs(
     :param task_manager:
     :param num_tasks_per_sub_job:
     """
-    global scheduled_jobs
-
     logger.debug("Poll running jobs")
     jobs_to_delete = []
     for job_id, job in scheduled_jobs.items():
         job_success = True
         duration = 0.0
         error_messages: list[str] = []
+        num_tasks_in_batch = 0
 
         try:
             returned_results = job.result_handle.get_result()
@@ -468,7 +465,7 @@ def poll_running_jobs(
                     )
 
         except Exception as e:
-            logger.error(f"Error while getting results for job {job_id}: {e}")
+            logger.exception(f"Error while getting results for job {job_id}: {e}")
             job_success = False
 
         if not job_success:
@@ -494,10 +491,10 @@ def poll_running_jobs(
             update_compression_job_metadata(
                 db_cursor,
                 job_id,
-                dict(
-                    status=CompressionJobStatus.FAILED,
-                    status_msg=error_msg,
-                ),
+                {
+                    "status": CompressionJobStatus.FAILED,
+                    "status_msg": error_msg,
+                },
             )
             db_conn.commit()
             jobs_to_delete.append(job_id)
@@ -555,10 +552,10 @@ def poll_running_jobs(
             update_compression_job_metadata(
                 db_cursor,
                 job_id,
-                dict(
-                    status=CompressionJobStatus.SUCCEEDED,
-                    duration=duration,
-                ),
+                {
+                    "status": CompressionJobStatus.SUCCEEDED,
+                    "duration": duration,
+                },
             )
             db_conn.commit()
             jobs_to_delete.append(job_id)
@@ -571,7 +568,7 @@ def poll_running_jobs(
         sys.exit(0)
 
 
-def main(argv):
+def main(argv) -> int | None:
     args_parser = argparse.ArgumentParser()
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     args = args_parser.parse_args(argv[1:])
@@ -594,7 +591,7 @@ def main(argv):
         clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
-        logger.error(err)
+        logger.exception(err)
         return -1
     except Exception:
         logger.exception(f"Failed to initialize {COMPRESSION_SCHEDULER_COMPONENT_NAME}.")
@@ -636,7 +633,11 @@ def main(argv):
                         num_tasks_per_sub_job,
                     )
                 poll_running_jobs(
-                    clp_config.logs_directory, db_conn, db_cursor, task_manager, num_tasks_per_sub_job
+                    clp_config.logs_directory,
+                    db_conn,
+                    db_cursor,
+                    task_manager,
+                    num_tasks_per_sub_job,
                 )
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
