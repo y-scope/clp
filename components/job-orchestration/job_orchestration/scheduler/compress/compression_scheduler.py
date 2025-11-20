@@ -494,10 +494,6 @@ def main(argv) -> int | None:
                 return -1
 
 
-if "__main__" == __name__:
-    sys.exit(main(sys.argv))
-
-
 def _batch_tasks(
     tasks: list[dict[str, Any]],
     partition_info: list[dict[str, Any]],
@@ -779,3 +775,7 @@ def _insert_tasks_to_db(
         )
         db_context.connection.commit()
         task["task_id"] = db_context.cursor.lastrowid
+
+
+if "__main__" == __name__:
+    sys.exit(main(sys.argv))
