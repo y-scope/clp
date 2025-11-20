@@ -38,7 +38,6 @@ def list_running_containers_with_prefix(prefix: str) -> list[str]:
 
     :param prefix:
     :return: List of running container names that match the pattern.
-    :raise: Propagates `subprocess.run`'s errors.
     """
     docker_bin = get_docker_binary_path()
 

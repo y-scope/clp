@@ -17,7 +17,7 @@ def _validate_base_port(base_port: int) -> None:
     if base_port <= SYSTEM_PORTS_BOUNDARY:
         err_msg = f"BASE_PORT should be at least 1024, got {base_port}."
         raise ValueError(err_msg)
-    if base_port + REQUIRED_PORTS > MAX_PORT:
+    if base_port + REQUIRED_PORTS - 1 > MAX_PORT:
         err_msg = f"BASE_PORT={base_port} leaves insufficient headroom for {REQUIRED_PORTS} ports."
         raise ValueError(err_msg)
 
