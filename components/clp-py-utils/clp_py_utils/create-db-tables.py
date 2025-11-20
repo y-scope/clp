@@ -56,7 +56,7 @@ def main(argv):
         clp_config = ClpConfig.model_validate(read_yaml_config_file(pathlib.Path(config_file_path)))
         clp_config.database.load_credentials_from_env()
         if clp_config.spider_db is None:
-            logger.info("No spider database configured, skipping spider DB initialization.")
+            logger.info("No spider database configured. Skipping Spider database initialization.")
             return 0
     except Exception as e:
         logger.error(f"Failed to load CLP configuration: {e}")

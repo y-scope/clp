@@ -33,7 +33,8 @@ from clp_py_utils.clp_config import (
     SPIDER_SCHEDULER_COMPONENT_NAME,
     StorageEngine,
     StorageType,
-    WEBUI_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME, SPIDER_DB_USER_ENV_VAR_NAME, CLP_DB_PASS_ENV_VAR_NAME, CLP_DB_USER_ENV_VAR_NAME,
+    CLP_REDIS_PASS_ENV_VAR_NAME, SPIDER_DB_PASS_ENV_VAR_NAME, CLP_QUEUE_USER_ENV_VAR_NAME, CLP_QUEUE_PASS_ENV_VAR_NAME,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     get_archives_table_name,
@@ -141,8 +142,8 @@ class BaseController(ABC):
 
         # Credentials
         env_vars |= {
-            "CLP_DB_PASS": self._clp_config.database.password,
-            "CLP_DB_USER": self._clp_config.database.username,
+            CLP_DB_PASS_ENV_VAR_NAME: self._clp_config.database.password,
+            CLP_DB_USER_ENV_VAR_NAME: self._clp_config.database.username,
         }
 
         # Paths
@@ -187,8 +188,8 @@ class BaseController(ABC):
 
         # Credentials
         env_vars |= {
-            "CLP_QUEUE_PASS": self._clp_config.queue.password,
-            "CLP_QUEUE_USER": self._clp_config.queue.username,
+            CLP_QUEUE_PASS_ENV_VAR_NAME: self._clp_config.queue.password,
+            CLP_QUEUE_USER_ENV_VAR_NAME: self._clp_config.queue.username,
         }
 
         # Paths
@@ -237,7 +238,7 @@ class BaseController(ABC):
 
         # Credentials
         env_vars |= {
-            "CLP_REDIS_PASS": self._clp_config.redis.password,
+            CLP_REDIS_PASS_ENV_VAR_NAME: self._clp_config.redis.password,
         }
 
         # Paths
@@ -267,8 +268,8 @@ class BaseController(ABC):
 
         # Credentials
         env_vars |= {
-            "SPIDER_DB_USER": self._clp_config.spider_db.username,
-            "SPIDER_DB_PASS": self._clp_config.spider_db.password,
+            SPIDER_DB_PASS_ENV_VAR_NAME: self._clp_config.spider_db.password,
+            SPIDER_DB_USER_ENV_VAR_NAME: self._clp_config.spider_db.username,
         }
 
         return env_vars

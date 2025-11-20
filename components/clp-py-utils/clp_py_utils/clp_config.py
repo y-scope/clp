@@ -76,6 +76,8 @@ CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
 CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
+SPIDER_DB_USER_ENV_VAR_NAME = "SPIDER_DB_USER"
+SPIDER_DB_PASS_ENV_VAR_NAME = "SPIDER_DB_PASS"
 
 # Serializer
 StrEnumSerializer = PlainSerializer(serialize_str_enum)
@@ -279,6 +281,13 @@ class SpiderDb(Database):
     def get_container_url(self):
         self.ensure_credentials_loaded()
         return f"jdbc:mariadb://{DB_COMPONENT_NAME}:{self.DEFAULT_PORT}/{self.name}?user={self.username}&password={self.password}"
+
+    def load_credentials_from_env(self):
+        """
+        :raise ValueError: if any expected environment variable is not set.
+        """
+        self.username = _get_env_var(SPIDER_DB_USER_ENV_VAR_NAME)
+        self.password = _get_env_var(SPIDER_DB_PASS_ENV_VAR_NAME)
 
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
