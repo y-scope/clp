@@ -1,7 +1,6 @@
 import contextlib
 import logging
 import time
-from typing import Optional
 
 import mariadb
 import mysql.connector
@@ -59,9 +58,7 @@ class ConnectionPoolWrapper:
 
 
 class SqlAdapter:
-    def __init__(
-        self, database_config: Database, spider_database_config: Optional[SpiderDb] = None
-    ):
+    def __init__(self, database_config: Database, spider_database_config: SpiderDb | None = None):
         self.database_config = database_config
         self._spider_database_config = spider_database_config
 
@@ -109,7 +106,9 @@ class SqlAdapter:
             return self.create_mariadb_connection(disable_localhost_socket_connection)
         raise NotImplementedError
 
-    def create_root_mariadb_connection(self, disable_localhost_socket_connection: bool = False) -> mariadb.Connection:
+    def create_root_mariadb_connection(
+        self, disable_localhost_socket_connection: bool = False
+    ) -> mariadb.Connection:
         if "mariadb" != self.database_config.type:
             raise NotImplementedError
         params = self.database_config.get_mysql_connection_params(

@@ -264,14 +264,13 @@ class Database(BaseModel):
 
 
 class SpiderDb(Database):
-
     name: str = "spider-db"
 
     @field_validator("type")
     @classmethod
     def validate_type(cls, value):
         if value != DatabaseEngine.MARIADB:
-            raise ValueError(f"Spider only supports MariaDB for the metadata database.")
+            raise ValueError("Spider only supports MariaDB for the metadata database.")
         return value
 
     def get_url(self):

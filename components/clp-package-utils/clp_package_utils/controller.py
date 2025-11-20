@@ -13,6 +13,11 @@ from typing import Any
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
     AwsAuthType,
+    CLP_DB_PASS_ENV_VAR_NAME,
+    CLP_DB_USER_ENV_VAR_NAME,
+    CLP_QUEUE_PASS_ENV_VAR_NAME,
+    CLP_QUEUE_USER_ENV_VAR_NAME,
+    CLP_REDIS_PASS_ENV_VAR_NAME,
     ClpConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -30,11 +35,12 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SPIDER_DB_PASS_ENV_VAR_NAME,
+    SPIDER_DB_USER_ENV_VAR_NAME,
     SPIDER_SCHEDULER_COMPONENT_NAME,
     StorageEngine,
     StorageType,
-    WEBUI_COMPONENT_NAME, SPIDER_DB_USER_ENV_VAR_NAME, CLP_DB_PASS_ENV_VAR_NAME, CLP_DB_USER_ENV_VAR_NAME,
-    CLP_REDIS_PASS_ENV_VAR_NAME, SPIDER_DB_PASS_ENV_VAR_NAME, CLP_QUEUE_USER_ENV_VAR_NAME, CLP_QUEUE_PASS_ENV_VAR_NAME,
+    WEBUI_COMPONENT_NAME,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     get_archives_table_name,
@@ -907,8 +913,7 @@ class DockerComposeController(BaseController):
         if deployment_type == DeploymentType.BASE:
             if compression_scheduler_type == OrchestrationType.spider:
                 return "docker-compose-spider-base.yaml"
-            else:
-                return "docker-compose.base.yaml"
+            return "docker-compose.base.yaml"
         if compression_scheduler_type == OrchestrationType.spider:
             return "docker-compose-spider.yaml"
         return "docker-compose.yaml"

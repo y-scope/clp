@@ -1,7 +1,7 @@
 import json
 
 from clp_py_utils.clp_logging import get_logger
-from spider_py import Int8, Int64, TaskContext
+from spider_py import Int64, TaskContext
 
 from job_orchestration.executor.compress.compression_task import compression_entry_point
 

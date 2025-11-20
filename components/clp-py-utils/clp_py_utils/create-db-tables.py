@@ -4,7 +4,7 @@ import pathlib
 import subprocess
 import sys
 
-from clp_py_utils.clp_config import StorageEngine, ClpConfig
+from clp_py_utils.clp_config import ClpConfig, StorageEngine
 from clp_py_utils.core import read_yaml_config_file
 
 # Setup logging

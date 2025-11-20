@@ -14,6 +14,7 @@ logging_formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(message)s")
 logging_console_handler.setFormatter(logging_formatter)
 logger.addHandler(logging_console_handler)
 
+
 def parse_args() -> argparse.Namespace:
     """
     Parses command line arguments.

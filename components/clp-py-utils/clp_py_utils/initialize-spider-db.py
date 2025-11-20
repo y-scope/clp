@@ -244,9 +244,10 @@ def main(argv):
 
     try:
         sql_adapter = SqlAdapter(clp_config.database)
-        with closing(sql_adapter.create_root_mariadb_connection()) as db_conn, closing(
-            db_conn.cursor()
-        ) as db_cursor:
+        with (
+            closing(sql_adapter.create_root_mariadb_connection()) as db_conn,
+            closing(db_conn.cursor()) as db_cursor,
+        ):
             clp_db_user = clp_config.database.username
             spider_db_name = spider_db_config.name
             spider_db_user = spider_db_config.username
@@ -263,11 +264,17 @@ def main(argv):
 
             db_cursor.execute(f"""CREATE DATABASE IF NOT EXISTS `{spider_db_name}`""")
             if spider_db_password is None:
-                logger.error(f"Password must be set for Spider database user.")
+                logger.error("Password must be set for Spider database user.")
                 return -1
-            db_cursor.execute(f"""CREATE USER IF NOT EXISTS '{spider_db_user}'@'%' IDENTIFIED BY '{spider_db_password}'""")
-            db_cursor.execute(f"""GRANT ALL PRIVILEGES ON `{spider_db_name}`.* TO '{spider_db_user}'@'%'""")
-            db_cursor.execute(f"""GRANT ALL PRIVILEGES ON `{spider_db_name}`.* TO '{clp_db_user}'@'%'""")
+            db_cursor.execute(
+                f"""CREATE USER IF NOT EXISTS '{spider_db_user}'@'%' IDENTIFIED BY '{spider_db_password}'"""
+            )
+            db_cursor.execute(
+                f"""GRANT ALL PRIVILEGES ON `{spider_db_name}`.* TO '{spider_db_user}'@'%'"""
+            )
+            db_cursor.execute(
+                f"""GRANT ALL PRIVILEGES ON `{spider_db_name}`.* TO '{clp_db_user}'@'%'"""
+            )
 
             db_cursor.execute(f"""USE `{spider_db_name}`""")
             for table_creator in table_creators:
