@@ -2,12 +2,15 @@ use std::{sync::Arc, time::Duration};
 
 use jsonwebtoken::{DecodingKey, EncodingKey};
 use secrecy::ExposeSecret;
+use serde_json::json;
 use sqlx::{MySqlPool, mysql::MySqlPoolOptions};
 
 use crate::{
+    audit::{self, AuditEvent},
     config::{AppConfig, JwtConfig},
+    db,
     error::{ServiceError, ServiceResult},
-    models::{CreateCredentialRequest, CredentialMetadata, CredentialMetadataRow},
+    models::{CreateCredentialRequest, CredentialMetadata},
 };
 
 pub type SharedService = Arc<CredentialManagerService>;
@@ -50,104 +53,97 @@ impl CredentialManagerService {
     }
 
     pub async fn list_credentials(&self) -> ServiceResult<Vec<CredentialMetadata>> {
-        let rows = sqlx::query_as::<_, CredentialMetadataRow>(
-            "SELECT id, name, credential_type, description, default_session_duration_seconds, \
-             transient, created_at, updated_at, last_used_at FROM clp_aws_credentials ORDER BY name",
-        )
-        .fetch_all(self.db_pool())
-        .await?;
-
-        rows.into_iter().map(CredentialMetadata::try_from).collect()
+        match db::list_credentials(self.db_pool()).await {
+            Ok(credentials) => {
+                let mut event = AuditEvent::success("credential_list");
+                event.metadata = Some(json!({ "count": credentials.len() }));
+                audit::log_event(event);
+                Ok(credentials)
+            }
+            Err(err) => {
+                let error_message = err.to_string();
+                let event = AuditEvent::failure("credential_list", &error_message);
+                audit::log_event(event);
+                Err(err)
+            }
+        }
     }
 
     pub async fn get_credential(&self, id: i64) -> ServiceResult<CredentialMetadata> {
-        let row = sqlx::query_as::<_, CredentialMetadataRow>(
-            "SELECT id, name, credential_type, description, default_session_duration_seconds, \
-             transient, created_at, updated_at, last_used_at FROM clp_aws_credentials WHERE id = ?",
-        )
-        .bind(id)
-        .fetch_optional(self.db_pool())
-        .await?;
-
-        match row {
-            Some(row) => CredentialMetadata::try_from(row),
-            None => Err(ServiceError::NotFound(format!(
-                "credential with id `{id}` was not found"
-            ))),
+        match db::get_credential(self.db_pool(), id).await {
+            Ok(credential) => {
+                let mut event = AuditEvent::success("credential_get");
+                event.credential_id = Some(credential.id);
+                event.credential_name = Some(&credential.name);
+                audit::log_event(event);
+                Ok(credential)
+            }
+            Err(err) => {
+                let error_message = err.to_string();
+                let mut event = AuditEvent::failure("credential_get", &error_message);
+                event.credential_id = Some(id);
+                audit::log_event(event);
+                Err(err)
+            }
         }
     }
 
     pub async fn delete_credential(&self, id: i64) -> ServiceResult<()> {
-        let result = sqlx::query("DELETE FROM clp_aws_credentials WHERE id = ?")
-            .bind(id)
-            .execute(self.db_pool())
-            .await?;
-
-        if result.rows_affected() == 0 {
-            return Err(ServiceError::NotFound(format!(
-                "credential with id `{id}` was not found"
-            )));
+        let rows = db::delete_credential(self.db_pool(), id).await;
+        match rows {
+            Ok(rows_affected) if rows_affected > 0 => {
+                let mut event = AuditEvent::success("credential_delete");
+                event.credential_id = Some(id);
+                audit::log_event(event);
+                Ok(())
+            }
+            Ok(_) => {
+                let error_message = format!("credential with id `{id}` was not found");
+                let mut event = AuditEvent::failure("credential_delete", &error_message);
+                event.credential_id = Some(id);
+                audit::log_event(event);
+                Err(ServiceError::NotFound(error_message))
+            }
+            Err(err) => {
+                let error_message = err.to_string();
+                let mut event = AuditEvent::failure("credential_delete", &error_message);
+                event.credential_id = Some(id);
+                audit::log_event(event);
+                Err(err)
+            }
         }
-
-        Ok(())
     }
 
     pub async fn create_credential(
         &self,
         request: CreateCredentialRequest,
     ) -> ServiceResult<CredentialMetadata> {
-        request.validate()?;
+        if let Err(err) = request.validate() {
+            let error_message = err.to_string();
+            let event = AuditEvent::failure("credential_create", &error_message);
+            audit::log_event(event);
+            return Err(err);
+        }
 
-        let name = request.name.clone();
-        let credential_type = request.credential_type;
-        let access_key_id = request.access_key_id.clone();
-        let secret_access_key = request
-            .secret_access_key
-            .as_ref()
-            .map(|secret| secret.expose_secret().to_owned());
-        let role_arn = request.role_arn.clone();
-        let external_id = request.external_id.clone();
-        let description = request.description.clone();
-        let default_duration = request.default_session_duration_seconds.unwrap_or(3600);
-        let transient = request.transient.unwrap_or(false);
-        let created_by = request.created_by.clone();
-
-        let result = sqlx::query(
-            "INSERT INTO clp_aws_credentials (name, credential_type, access_key_id, \
-             secret_access_key, role_arn, external_id, description, \
-             default_session_duration_seconds, transient, created_by) VALUES (?, ?, ?, ?, ?, ?, \
-             ?, ?, ?, ?)",
-        )
-        .bind(&name)
-        .bind(credential_type.as_str())
-        .bind(access_key_id.as_deref())
-        .bind(secret_access_key.as_deref())
-        .bind(role_arn.as_deref())
-        .bind(external_id.as_deref())
-        .bind(description.as_deref())
-        .bind(default_duration)
-        .bind(transient)
-        .bind(created_by.as_deref())
-        .execute(self.db_pool())
-        .await
-        .map_err(|err| {
-            let is_duplicate = err
-                .as_database_error()
-                .and_then(|db_err| db_err.try_downcast_ref::<sqlx::mysql::MySqlDatabaseError>())
-                .is_some_and(|mysql_err| mysql_err.number() == 1062);
-
-            if is_duplicate {
-                return ServiceError::Conflict(format!(
-                    "credential with name `{}` already exists",
-                    name
-                ));
+        match db::create_credential(self.db_pool(), &request).await {
+            Ok(created) => {
+                let mut event = AuditEvent::success("credential_create");
+                event.credential_id = Some(created.id);
+                event.credential_name = Some(&created.name);
+                event.metadata = Some(json!({
+                    "credential_type": created.credential_type.as_str(),
+                    "transient": created.transient,
+                }));
+                audit::log_event(event);
+                Ok(created)
             }
-
-            ServiceError::from(err)
-        })?;
-
-        let inserted_id = result.last_insert_id() as i64;
-        self.get_credential(inserted_id).await
+            Err(err) => {
+                let error_message = err.to_string();
+                let event = AuditEvent::failure("credential_create", &error_message);
+                audit::log_event(event);
+                Err(err)
+            }
+        }
     }
 }
 

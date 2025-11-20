@@ -1,4 +1,6 @@
+mod audit;
 mod config;
+mod db;
 mod error;
 mod models;
 mod routes;
