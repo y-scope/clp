@@ -1,5 +1,6 @@
 #include "TimestampParser.hpp"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstddef>
@@ -1172,7 +1173,7 @@ auto parse_timestamp(
 
     if (timestamp_pattern.uses_twelve_hour_clock()) {
         parsed_hour = (parsed_hour % cMaxParsedHour12HourClock)
-                      + optional_part_of_day_idx.value_or(0) * cMaxParsedHour12HourClock;
+                      + (optional_part_of_day_idx.value_or(0) * cMaxParsedHour12HourClock);
     }
 
     auto const year_month_day{date::year(parsed_year) / parsed_month / parsed_day};
