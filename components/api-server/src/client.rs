@@ -272,7 +272,7 @@ impl Stream for ResultsStream {
 
         let poll = inner.poll_next(cx);
         if let std::task::Poll::Ready(Some(Err(err))) = &poll {
-            tracing::error!("An error occurred when streaming results: {:?}", err);
+            tracing::error!("An error occurred when streaming results: {}", err);
         }
         poll
     }
