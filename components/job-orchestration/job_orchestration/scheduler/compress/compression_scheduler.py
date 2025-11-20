@@ -403,7 +403,6 @@ def poll_running_jobs(
 
         job.num_tasks_completed += num_tasks_in_batch
 
-        # Check if there are remaining tasks to dispatch
         if len(job.remaining_tasks) > 0:
             _dispatch_next_task_batch(task_manager, db_context, job, num_tasks_per_sub_job)
         else:
