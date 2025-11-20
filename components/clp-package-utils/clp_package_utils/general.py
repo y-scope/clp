@@ -25,9 +25,10 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SPIDER_DB_COMPONENT_NAME,
     StorageType,
     WEBUI_COMPONENT_NAME,
-    WorkerConfig, SPIDER_DB_COMPONENT_NAME,
+    WorkerConfig,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     MYSQL_TABLE_NAME_MAX_LEN,

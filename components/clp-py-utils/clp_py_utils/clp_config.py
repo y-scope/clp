@@ -904,7 +904,9 @@ class ClpConfig(BaseModel):
         if self.spider_db is None:
             raise ValueError("`spider_db` must be configured when using Spider orchestration.")
         if self.spider_scheduler is None:
-            raise ValueError("`spider_scheduler` must be configured when using Spider orchestration.")
+            raise ValueError(
+                "`spider_scheduler` must be configured when using Spider orchestration."
+            )
         if self.database.type != DatabaseEngine.MARIADB:
             raise ValueError("Spider only supports MariaDB for the metadata database.")
         return self

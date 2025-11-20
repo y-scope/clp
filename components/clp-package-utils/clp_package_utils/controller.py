@@ -35,12 +35,13 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SPIDER_DB_COMPONENT_NAME,
     SPIDER_DB_PASS_ENV_VAR_NAME,
     SPIDER_DB_USER_ENV_VAR_NAME,
     SPIDER_SCHEDULER_COMPONENT_NAME,
     StorageEngine,
     StorageType,
-    WEBUI_COMPONENT_NAME, SPIDER_DB_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     get_archives_table_name,
