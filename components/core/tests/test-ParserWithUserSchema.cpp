@@ -192,10 +192,11 @@ TEST_CASE("Test lexer", "[Search]") {
     auto [error_code, opt_token] = lexer.scan(parser_input_buffer);
     REQUIRE(error_code == log_surgeon::ErrorCode::Success);
     Token token{opt_token.value()};
-    while (token.m_type_ids_ptr->at(0) != static_cast<int>(log_surgeon::SymbolId::TokenEnd)) {
+    while (token.get_type_ids()->at(0) != static_cast<int>(log_surgeon::SymbolId::TokenEnd)) {
         SPDLOG_INFO("token:" + token.to_string() + "\n");
         SPDLOG_INFO(
-                "token.m_type_ids->back():" + lexer.m_id_symbol[token.m_type_ids_ptr->back()] + "\n"
+                "token.get_type_ids()->back():" + lexer.m_id_symbol[token.get_type_ids()->back()]
+                + "\n"
         );
         auto [error_code, opt_token] = lexer.scan(parser_input_buffer);
         REQUIRE(error_code == log_surgeon::ErrorCode::Success);
@@ -204,9 +205,9 @@ TEST_CASE("Test lexer", "[Search]") {
 }
 
 TEST_CASE("Test schema with single capture group", "[load_lexer]") {
-    std::string const schema_path{"../tests/test_schema_files/single_capture_group.txt"};
+    auto const schema_file_path{get_test_schema_files_dir() / "single_capture_group.txt"};
     ByteLexer lexer;
-    load_lexer_from_file(schema_path, lexer);
+    load_lexer_from_file(schema_file_path, lexer);
 
     auto const rule_id{lexer.m_symbol_id.at("capture")};
     auto const capture_ids{lexer.get_capture_ids_from_rule_id(rule_id)};
@@ -216,11 +217,11 @@ TEST_CASE("Test schema with single capture group", "[load_lexer]") {
 }
 
 TEST_CASE("Test error for schema rule with multiple capture groups", "[load_lexer]") {
-    std::string const schema_path{"../tests/test_schema_files/multiple_capture_groups.txt"};
+    auto const schema_file_path{get_test_schema_files_dir() / "multiple_capture_groups.txt"};
     ByteLexer lexer;
     REQUIRE_THROWS_WITH(
-            load_lexer_from_file(schema_path, lexer),
-            schema_path
+            load_lexer_from_file(schema_file_path, lexer),
+            schema_file_path.string()
                     + ":3: error: the schema rule 'multicapture' has a regex pattern containing > "
                       "1 capture groups (found 2).\n"
     );
