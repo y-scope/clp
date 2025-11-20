@@ -416,8 +416,10 @@ def search_and_schedule_new_tasks(
 
         scheduled_jobs[job_id] = job
         logger.info(
-            f"Dispatched job {job_id} with {len(tasks_to_submit)} tasks"
-            f" ({len(remaining_tasks)} remaining)."
+            "Dispatched job %s with %s tasks (%s remaining).",
+            job_id,
+            len(tasks_to_submit),
+            len(remaining_tasks),
         )
 
 
@@ -465,11 +467,11 @@ def poll_running_jobs(
                     )
 
         except Exception as e:
-            logger.exception(f"Error while getting results for job {job_id}: {e}")
+            logger.exception("Error while getting results for job %s", job_id)
             job_success = False
 
         if not job_success:
-            logger.error(f"Job {job_id} failed. See worker logs or status_msg for details.")
+            logger.error("Job %s failed. See worker logs or status_msg for details.", job_id)
 
             error_log_relative_path = _write_user_failure_log(
                 title="Compression task errors.",
@@ -505,8 +507,10 @@ def poll_running_jobs(
         # Check if there are remaining tasks to dispatch
         if len(job.remaining_tasks) > 0:
             logger.info(
-                f"Job {job_id} batch completed. Dispatching next batch"
-                f" ({job.num_tasks_completed}/{job.num_tasks_total} tasks completed)."
+                "Job %s batch completed. Dispatching next batch (%s/%s tasks completed).",
+                job_id,
+                job.num_tasks_completed,
+                job.num_tasks_total,
             )
 
             # Prepare next batch of tasks
@@ -543,12 +547,14 @@ def poll_running_jobs(
             )
             db_conn.commit()
             logger.info(
-                f"Dispatched next batch for job {job_id} with {len(tasks_to_submit)} tasks"
-                f" ({len(job.remaining_tasks)} remaining)."
+                "Dispatched next batch for job %s with %s tasks (%s remaining).",
+                job_id,
+                len(tasks_to_submit),
+                len(job.remaining_tasks),
             )
         else:
             # All tasks completed successfully
-            logger.info(f"Job {job_id} succeeded ({job.num_tasks_total} tasks completed).")
+            logger.info("Job %s succeeded (%s tasks completed).", job_id, job.num_tasks_total)
             update_compression_job_metadata(
                 db_cursor,
                 job_id,
