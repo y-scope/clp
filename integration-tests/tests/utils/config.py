@@ -72,7 +72,7 @@ class PackagePathConfig:
     clp_package_dir: Path
 
     #: Root directory for package tests output.
-    test_root_dir: Path
+    test_root_dir: InitVar[Path]
 
     #: Directory to store any cached package config files.
     temp_config_dir: Path = field(init=False, repr=True)
@@ -80,7 +80,7 @@ class PackagePathConfig:
     #: Directory where the CLP package writes logs.
     clp_log_dir: Path = field(init=False, repr=True)
 
-    def __post_init__(self) -> None:
+    def __post_init__(self, test_root_dir: Path) -> None:
         """Validates init values and initializes attributes."""
         # Validate that the CLP package directory exists and contains required directories.
         clp_package_dir = self.clp_package_dir
@@ -95,7 +95,7 @@ class PackagePathConfig:
             raise ValueError(err_msg)
 
         # Initialize cache directory for package tests.
-        test_root_dir = self.test_root_dir
+        validate_dir_exists(test_root_dir)
         object.__setattr__(self, "temp_config_dir", test_root_dir / "temp_config_files")
 
         # Initialize log directory for the package.
@@ -106,7 +106,6 @@ class PackagePathConfig:
         )
 
         # Create directories if they do not already exist.
-        test_root_dir.mkdir(parents=True, exist_ok=True)
         self.temp_config_dir.mkdir(parents=True, exist_ok=True)
         self.clp_log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -136,7 +135,7 @@ class PackageConfig:
 
     @property
     def temp_config_file_path(self) -> Path:
-        """The absolute path to the temporary configuration file for this package configuration."""
+        """:return: The absolute path to the temporary configuration file for the package."""
         return self.path_config.temp_config_dir / f"clp-config-{self.mode_name}.yml"
 
     @staticmethod

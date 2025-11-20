@@ -2,7 +2,7 @@
 
 from clp_py_utils.clp_config import ClpConfig
 
-REQUIRED_PORTS = 10
+MAX_REQUIRED_PORTS = 10
 SYSTEM_PORTS_BOUNDARY = 1023
 MAX_PORT = 65535
 
@@ -17,8 +17,8 @@ def _validate_base_port(base_port: int) -> None:
     if base_port <= SYSTEM_PORTS_BOUNDARY:
         err_msg = f"BASE_PORT should be at least 1024, got {base_port}."
         raise ValueError(err_msg)
-    if base_port + REQUIRED_PORTS - 1 > MAX_PORT:
-        err_msg = f"BASE_PORT={base_port} leaves insufficient headroom for {REQUIRED_PORTS} ports."
+    if base_port + MAX_REQUIRED_PORTS - 1 > MAX_PORT:
+        err_msg = f"BASE_PORT={base_port} leaves insufficient headroom for {MAX_REQUIRED_PORTS} ports."
         raise ValueError(err_msg)
 
 

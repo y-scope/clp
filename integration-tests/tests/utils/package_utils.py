@@ -44,7 +44,7 @@ def stop_clp_package(instance: PackageInstance) -> None:
     try:
         # fmt: off
         stop_cmd = [
-            stop_script_path
+            str(stop_script_path)
         ]
         # fmt: on
         subprocess.run(stop_cmd, check=True)

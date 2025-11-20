@@ -41,21 +41,16 @@ def list_running_containers_with_prefix(prefix: str) -> list[str]:
     """
     docker_bin = get_docker_binary_path()
 
-    ps_proc = subprocess.run(
-        [
-            docker_bin,
-            "ps",
-            "--format",
-            "{{.Names}}",
-            "--filter",
-            f"name={prefix}",
-            "--filter",
-            "status=running",
-        ],
-        capture_output=True,
-        text=True,
-        check=True,
-    )
+    # fmt: off
+    docker_ps_cmd = [
+        docker_bin,
+        "ps",
+        "--format", "{{.Names}}",
+        "--filter", f"name={prefix}",
+        "--filter", f"status={DockerStatus.running}",
+    ]
+    # fmt: on
+    ps_proc = subprocess.run(docker_ps_cmd, stdout=subprocess.PIPE, text=True, check=True)
 
     matches: list[str] = []
     for line in (ps_proc.stdout or "").splitlines():
