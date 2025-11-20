@@ -225,17 +225,16 @@ def search_and_schedule_new_tasks(
     db_cursor,
     clp_metadata_db_connection_config: dict[str, Any],
     task_manager: TaskManager,
-    num_tasks_per_sub_job: int,
 ) -> None:
     """
-    For all jobs with PENDING status, splits the job into tasks and schedules them in batches.
+    Splits the all jobs with PENDING into tasks and schedules them in batches.
     :param clp_config:
     :param db_conn:
     :param db_cursor:
     :param clp_metadata_db_connection_config:
     :param task_manager:
-    :param num_tasks_per_sub_job:
     """
+    num_tasks_per_sub_job = clp_config.compression_scheduler.num_tasks_per_sub_job
     existing_datasets: set[str] = set()
     if StorageEngine.CLP_S == clp_config.package.storage_engine:
         existing_datasets = fetch_existing_datasets(
@@ -353,48 +352,17 @@ def search_and_schedule_new_tasks(
         )
         db_conn.commit()
 
-        tag_ids = []
-        if clp_io_config.output.tags:
-            tags_table_name = get_tags_table_name(table_prefix, dataset)
-            db_cursor.executemany(
-                f"INSERT IGNORE INTO {tags_table_name} (tag_name) VALUES (%s)",
-                [(tag,) for tag in clp_io_config.output.tags],
-            )
-            db_conn.commit()
-            db_cursor.execute(
-                f"SELECT tag_id FROM {tags_table_name} WHERE tag_name IN (%s)"
-                % ", ".join(["%s"] * len(clp_io_config.output.tags)),
-                clp_io_config.output.tags,
-            )
-            tag_ids = [tags["tag_id"] for tags in db_cursor.fetchall()]
-            db_conn.commit()
+        tag_ids = _get_tag_ids_for_job(db_conn, db_cursor, clp_io_config, table_prefix, dataset)
 
         for task in tasks:
             task["tag_ids"] = tag_ids
 
         # Batch tasks
-        if len(tasks) > num_tasks_per_sub_job:
-            tasks_to_submit = tasks[:num_tasks_per_sub_job]
-            remaining_tasks = tasks[num_tasks_per_sub_job:]
-            partition_info_to_submit = partition_info[:num_tasks_per_sub_job]
-            remaining_partition_info = partition_info[num_tasks_per_sub_job:]
-        else:
-            tasks_to_submit = tasks
-            remaining_tasks = []
-            partition_info_to_submit = partition_info
-            remaining_partition_info = []
+        tasks_to_submit, remaining_tasks, partition_info_to_submit, remaining_partition_info = (
+            _batch_tasks(tasks, partition_info, num_tasks_per_sub_job)
+        )
 
-        for task_idx, task in enumerate(tasks_to_submit):
-            db_cursor.execute(
-                f"""
-                INSERT INTO {COMPRESSION_TASKS_TABLE_NAME}
-                (job_id, partition_original_size, clp_paths_to_compress)
-                VALUES({job_id!s}, {partition_info_to_submit[task_idx]["partition_original_size"]}, %s)
-                """,
-                (partition_info_to_submit[task_idx]["clp_paths_to_compress"],),
-            )
-            db_conn.commit()
-            task["task_id"] = db_cursor.lastrowid
+        _insert_tasks_to_db(db_conn, db_cursor, job_id, tasks_to_submit, partition_info_to_submit)
         result_handle = task_manager.submit(tasks_to_submit)
 
         job = CompressionJob(
@@ -423,17 +391,18 @@ def search_and_schedule_new_tasks(
         )
 
 
-def poll_running_jobs(
-    logs_directory: Path, db_conn, db_cursor, task_manager: TaskManager, num_tasks_per_sub_job: int
-) -> None:
+def poll_running_jobs(clp_config: ClpConfig, db_conn, db_cursor, task_manager: TaskManager) -> None:
     """
-    Poll for running jobs, update their status, and dispatch next batch if needed.
-    :param logs_directory:
+    Polls for running jobs, update their status, and dispatch next batch if needed.
+
+    :param clp_config:
     :param db_conn:
     :param db_cursor:
     :param task_manager:
-    :param num_tasks_per_sub_job:
     """
+    logs_directory = clp_config.logs_directory
+    num_tasks_per_sub_job = clp_config.compression_scheduler.num_tasks_per_sub_job
+
     logger.debug("Poll running jobs")
     jobs_to_delete = []
     for job_id, job in scheduled_jobs.items():
@@ -471,34 +440,9 @@ def poll_running_jobs(
             job_success = False
 
         if not job_success:
-            logger.error("Job %s failed. See worker logs or status_msg for details.", job_id)
-
-            error_log_relative_path = _write_user_failure_log(
-                title="Compression task errors.",
-                content=error_messages,
-                logs_directory=logs_directory,
-                job_id=job_id,
-                filename_suffix="task_errors",
+            _handle_failed_compression_job(
+                logs_directory, db_conn, db_cursor, job_id, error_messages
             )
-            if error_log_relative_path is None:
-                err_msg = "Failed to write user log for failed compression job."
-                raise RuntimeError(err_msg)
-
-            error_msg = (
-                "One or more compression tasks failed."
-                f" See the error log at '{error_log_relative_path}' inside your configured logs"
-                " directory (`logs_directory`) for more details."
-            )
-
-            update_compression_job_metadata(
-                db_cursor,
-                job_id,
-                {
-                    "status": CompressionJobStatus.FAILED,
-                    "status_msg": error_msg,
-                },
-            )
-            db_conn.commit()
             jobs_to_delete.append(job_id)
             continue
 
@@ -506,64 +450,10 @@ def poll_running_jobs(
 
         # Check if there are remaining tasks to dispatch
         if len(job.remaining_tasks) > 0:
-            logger.info(
-                "Job %s batch completed. Dispatching next batch (%s/%s tasks completed).",
-                job_id,
-                job.num_tasks_completed,
-                job.num_tasks_total,
-            )
-
-            # Prepare next batch of tasks
-            if len(job.remaining_tasks) > num_tasks_per_sub_job:
-                tasks_to_submit = job.remaining_tasks[:num_tasks_per_sub_job]
-                job.remaining_tasks = job.remaining_tasks[num_tasks_per_sub_job:]
-                partition_info_to_submit = job.remaining_partition_info[:num_tasks_per_sub_job]
-                job.remaining_partition_info = job.remaining_partition_info[num_tasks_per_sub_job:]
-            else:
-                tasks_to_submit = job.remaining_tasks
-                job.remaining_tasks = []
-                partition_info_to_submit = job.remaining_partition_info
-                job.remaining_partition_info = []
-
-            # Insert tasks into database and submit them
-            for task_idx, task in enumerate(tasks_to_submit):
-                db_cursor.execute(
-                    f"""
-                    INSERT INTO {COMPRESSION_TASKS_TABLE_NAME}
-                    (job_id, partition_original_size, clp_paths_to_compress)
-                    VALUES({job_id!s}, {partition_info_to_submit[task_idx]["partition_original_size"]}, %s)
-                    """,
-                    (partition_info_to_submit[task_idx]["clp_paths_to_compress"],),
-                )
-                db_conn.commit()
-                task["task_id"] = db_cursor.lastrowid
-
-            job.result_handle = task_manager.submit(tasks_to_submit)
-            db_cursor.execute(
-                f"""
-                UPDATE {COMPRESSION_TASKS_TABLE_NAME}
-                SET status='{CompressionTaskStatus.RUNNING}' WHERE job_id={job_id}
-                """
-            )
-            db_conn.commit()
-            logger.info(
-                "Dispatched next batch for job %s with %s tasks (%s remaining).",
-                job_id,
-                len(tasks_to_submit),
-                len(job.remaining_tasks),
-            )
+            _dispatch_next_task_batch(db_conn, db_cursor, job, task_manager, num_tasks_per_sub_job)
         else:
             # All tasks completed successfully
-            logger.info("Job %s succeeded (%s tasks completed).", job_id, job.num_tasks_total)
-            update_compression_job_metadata(
-                db_cursor,
-                job_id,
-                {
-                    "status": CompressionJobStatus.SUCCEEDED,
-                    "duration": duration,
-                },
-            )
-            db_conn.commit()
+            _complete_compression_job(db_conn, db_cursor, job_id, job.num_tasks_total, duration)
             jobs_to_delete.append(job_id)
 
     for job_id in jobs_to_delete:
@@ -626,7 +516,6 @@ def main(argv) -> int | None:
         )
 
         # Start Job Processing Loop
-        num_tasks_per_sub_job = clp_config.compression_scheduler.num_tasks_per_sub_job
         while True:
             try:
                 if not received_sigterm:
@@ -636,14 +525,12 @@ def main(argv) -> int | None:
                         db_cursor,
                         clp_metadata_db_connection_config,
                         task_manager,
-                        num_tasks_per_sub_job,
                     )
                 poll_running_jobs(
-                    clp_config.logs_directory,
+                    clp_config,
                     db_conn,
                     db_cursor,
                     task_manager,
-                    num_tasks_per_sub_job,
                 )
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
@@ -656,3 +543,204 @@ def main(argv) -> int | None:
 
 if "__main__" == __name__:
     sys.exit(main(sys.argv))
+
+
+def _batch_tasks(
+    tasks: list[dict[str, Any]],
+    partition_info: list[dict[str, Any]],
+    num_tasks_per_sub_job: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
+    """
+    Batches tasks into submission and remaining groups.
+
+    :param tasks:
+    :param partition_info:
+    :param num_tasks_per_sub_job:
+    :return: Tuple of (tasks_to_submit, remaining_tasks, partition_info_to_submit,
+    remaining_partition_info).
+    """
+    if len(tasks) > num_tasks_per_sub_job:
+        tasks_to_submit = tasks[:num_tasks_per_sub_job]
+        remaining_tasks = tasks[num_tasks_per_sub_job:]
+        partition_info_to_submit = partition_info[:num_tasks_per_sub_job]
+        remaining_partition_info = partition_info[num_tasks_per_sub_job:]
+    else:
+        tasks_to_submit = tasks
+        remaining_tasks = []
+        partition_info_to_submit = partition_info
+        remaining_partition_info = []
+    return tasks_to_submit, remaining_tasks, partition_info_to_submit, remaining_partition_info
+
+
+def _complete_compression_job(
+    db_conn, db_cursor, job_id: int, num_tasks_total: int, duration: float
+) -> None:
+    """
+    Marks a compression job as successfully completed.
+
+    :param db_conn:
+    :param db_cursor:
+    :param job_id:
+    :param num_tasks_total:
+    :param duration:
+    """
+    logger.info("Job %s succeeded (%s tasks completed).", job_id, num_tasks_total)
+    update_compression_job_metadata(
+        db_cursor,
+        job_id,
+        {
+            "status": CompressionJobStatus.SUCCEEDED,
+            "duration": duration,
+        },
+    )
+    db_conn.commit()
+
+
+def _dispatch_next_task_batch(
+    db_conn,
+    db_cursor,
+    job: CompressionJob,
+    task_manager: TaskManager,
+    num_tasks_per_sub_job: int,
+) -> None:
+    """
+    Dispatches the next batch of tasks for a compression job.
+
+    :param db_conn:
+    :param db_cursor:
+    :param job:
+    :param task_manager:
+    :param num_tasks_per_sub_job:
+    """
+    job_id = job.id
+    logger.info(
+        "Job %s batch completed. Dispatching next batch (%s/%s tasks completed).",
+        job_id,
+        job.num_tasks_completed,
+        job.num_tasks_total,
+    )
+
+    # Prepare the next batch of tasks
+    tasks_to_submit, job.remaining_tasks, partition_info_to_submit, job.remaining_partition_info = (
+        _batch_tasks(job.remaining_tasks, job.remaining_partition_info, num_tasks_per_sub_job)
+    )
+
+    # Insert tasks into the database and submit them
+    _insert_tasks_to_db(db_conn, db_cursor, job_id, tasks_to_submit, partition_info_to_submit)
+
+    job.result_handle = task_manager.submit(tasks_to_submit)
+    db_cursor.execute(
+        f"""
+        UPDATE {COMPRESSION_TASKS_TABLE_NAME}
+        SET status='{CompressionTaskStatus.RUNNING}' WHERE job_id={job_id}
+        """
+    )
+    db_conn.commit()
+    logger.info(
+        "Dispatched next batch for job %s with %s tasks (%s remaining).",
+        job_id,
+        len(tasks_to_submit),
+        len(job.remaining_tasks),
+    )
+
+
+def _get_tag_ids_for_job(
+    db_conn, db_cursor, clp_io_config: ClpIoConfig, table_prefix: str, dataset: str
+) -> list[int]:
+    """
+    Gets tag IDs for a compression job.
+
+    :param db_conn:
+    :param db_cursor:
+    :param clp_io_config:
+    :param table_prefix:
+    :param dataset:
+    :return: List of tag IDs.
+    """
+    tag_ids = []
+    if clp_io_config.output.tags:
+        tags_table_name = get_tags_table_name(table_prefix, dataset)
+        db_cursor.executemany(
+            f"INSERT IGNORE INTO {tags_table_name} (tag_name) VALUES (%s)",
+            [(tag,) for tag in clp_io_config.output.tags],
+        )
+        db_conn.commit()
+        db_cursor.execute(
+            f"SELECT tag_id FROM {tags_table_name} WHERE tag_name IN (%s)"
+            % ", ".join(["%s"] * len(clp_io_config.output.tags)),
+            clp_io_config.output.tags,
+        )
+        tag_ids = [tags["tag_id"] for tags in db_cursor.fetchall()]
+        db_conn.commit()
+    return tag_ids
+
+
+def _handle_failed_compression_job(
+    logs_directory: Path, db_conn, db_cursor, job_id: int, error_messages: list[str]
+) -> None:
+    """
+    Handles a failed compression job by writing error logs and updating metadata.
+
+    :param logs_directory:
+    :param db_conn:
+    :param db_cursor:
+    :param job_id:
+    :param error_messages:
+    """
+    logger.error("Job %s failed. See worker logs or status_msg for details.", job_id)
+
+    error_log_relative_path = _write_user_failure_log(
+        title="Compression task errors.",
+        content=error_messages,
+        logs_directory=logs_directory,
+        job_id=job_id,
+        filename_suffix="task_errors",
+    )
+    if error_log_relative_path is None:
+        err_msg = "Failed to write user log for failed compression job."
+        raise RuntimeError(err_msg)
+
+    error_msg = (
+        "One or more compression tasks failed."
+        f" See the error log at '{error_log_relative_path}' inside your configured logs"
+        " directory (`logs_directory`) for more details."
+    )
+
+    update_compression_job_metadata(
+        db_cursor,
+        job_id,
+        {
+            "status": CompressionJobStatus.FAILED,
+            "status_msg": error_msg,
+        },
+    )
+    db_conn.commit()
+
+
+def _insert_tasks_to_db(
+    db_conn,
+    db_cursor,
+    job_id: int,
+    tasks_to_submit: list[dict[str, Any]],
+    partition_info_to_submit: list[dict[str, Any]],
+) -> None:
+    """
+    Inserts tasks into the database and assign task IDs.
+
+    :param db_conn:
+    :param db_cursor:
+    :param job_id:
+    :param tasks_to_submit:
+    :param partition_info_to_submit:
+    """
+    for task_idx, task in enumerate(tasks_to_submit):
+        db_cursor.execute(
+            f"""
+            INSERT INTO {COMPRESSION_TASKS_TABLE_NAME}
+            (job_id, partition_original_size, clp_paths_to_compress)
+            VALUES({job_id!s}, {partition_info_to_submit[task_idx]["partition_original_size"]}, %s)
+            """,
+            (partition_info_to_submit[task_idx]["clp_paths_to_compress"],),
+        )
+        db_conn.commit()
+        task["task_id"] = db_cursor.lastrowid
