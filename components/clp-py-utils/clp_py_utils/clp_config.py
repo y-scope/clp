@@ -273,10 +273,6 @@ class SpiderDb(Database):
             raise ValueError("Spider only supports MariaDB for the metadata database.")
         return value
 
-    def get_url(self):
-        self.ensure_credentials_loaded()
-        return f"jdbc:mariadb://{self.host}:{self.port}/{self.name}?user={self.username}&password={self.password}"
-
     def get_container_url(self):
         self.ensure_credentials_loaded()
         return f"jdbc:mariadb://{DB_COMPONENT_NAME}:{self.DEFAULT_PORT}/{self.name}?user={self.username}&password={self.password}"

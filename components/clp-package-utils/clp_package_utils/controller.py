@@ -269,9 +269,7 @@ class BaseController(ABC):
         env_vars = EnvVarsDict()
 
         # Database
-        env_vars |= {
-            "SPIDER_DB_URL": self._clp_config.spider_db.get_container_url(),
-        }
+        env_vars |= {"SPIDER_DB_NAME": self._clp_config.spider_db.name}
 
         # Credentials
         env_vars |= {
