@@ -15,10 +15,14 @@ def _validate_base_port(base_port: int) -> None:
     :raise ValueError: if the range exceeds the valid TCP port range.
     """
     if base_port <= SYSTEM_PORTS_BOUNDARY:
-        err_msg = f"BASE_PORT should be at least 1024, got {base_port}."
+        err_msg = (
+            f"BASE_PORT number should be larger than {SYSTEM_PORTS_BOUNDARY}, got {base_port}."
+        )
         raise ValueError(err_msg)
     if base_port + MAX_REQUIRED_PORTS - 1 > MAX_PORT:
-        err_msg = f"BASE_PORT={base_port} leaves insufficient headroom for {MAX_REQUIRED_PORTS} ports."
+        err_msg = (
+            f"BASE_PORT={base_port} leaves insufficient headroom for {MAX_REQUIRED_PORTS} ports."
+        )
         raise ValueError(err_msg)
 
 
