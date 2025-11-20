@@ -657,6 +657,33 @@ def _dispatch_next_task_batch(
     )
 
 
+def _ensure_dataset_exists(
+    clp_config: ClpConfig,
+    db_context: DbContext,
+    table_prefix: str,
+    dataset: str,
+    existing_datasets: set[str],
+) -> None:
+    """
+    Ensures that the specified dataset exists in the metadata database.
+
+    :param db_context:
+    :param table_prefix:
+    :param dataset:
+    :param clp_config:
+    :param existing_datasets:
+    """
+    if dataset is not None and dataset not in existing_datasets:
+        add_dataset(
+            db_context.connection,
+            db_context.cursor,
+            table_prefix,
+            dataset,
+            clp_config.archive_output,
+        )
+        existing_datasets.add(dataset)
+
+
 def _get_tag_ids_for_job(
     db_context: DbContext, clp_io_config: ClpIoConfig, table_prefix: str, dataset: str
 ) -> list[int]:
@@ -752,30 +779,3 @@ def _insert_tasks_to_db(
         )
         db_context.connection.commit()
         task["task_id"] = db_context.cursor.lastrowid
-
-
-def _ensure_dataset_exists(
-    clp_config: ClpConfig,
-    db_context: DbContext,
-    table_prefix: str,
-    dataset: str,
-    existing_datasets: set[str],
-) -> None:
-    """
-    Ensures that the specified dataset exists in the metadata database.
-
-    :param db_context:
-    :param table_prefix:
-    :param dataset:
-    :param clp_config:
-    :param existing_datasets:
-    """
-    if dataset is not None and dataset not in existing_datasets:
-        add_dataset(
-            db_context.connection,
-            db_context.cursor,
-            table_prefix,
-            dataset,
-            clp_config.archive_output,
-        )
-        existing_datasets.add(dataset)
