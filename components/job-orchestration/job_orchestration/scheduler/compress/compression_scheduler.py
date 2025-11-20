@@ -208,7 +208,7 @@ def _write_user_failure_log(
     log_path = logs_directory / relative_log_path
     try:
         with log_path.open("w", encoding="utf-8") as f:
-            timestamp = datetime.datetime.now().isoformat(timespec="seconds")
+            timestamp = datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds")
             f.write(f"{title}\nGenerated at {timestamp}.\n\n")
             for item in content:
                 f.write(f"{item.rstrip()}\n")
@@ -363,7 +363,7 @@ def poll_running_jobs(
             if returned_results is None:
                 continue
 
-            duration = (datetime.datetime.now() - job.start_time).total_seconds()
+            duration = (datetime.datetime.now(datetime.timezone.utc) - job.start_time).total_seconds()
             # Check for finished jobs
             num_tasks_in_batch = len(returned_results)
             for task_result in returned_results:
@@ -531,7 +531,7 @@ def _batch_and_submit_tasks(
     :param job_id:
     :param paths_to_compress_buffer:
     """
-    start_time = datetime.datetime.now()
+    start_time = datetime.datetime.now(datetime.timezone.utc)
     update_compression_job_metadata(
         db_context,
         job_id,
