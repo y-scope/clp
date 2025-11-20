@@ -1,3 +1,6 @@
+import {STORAGE_TYPE} from "@webui/common/config";
+
+import {SETTINGS_LOGS_INPUT_TYPE} from "../../config";
 import Compress from "./Compress";
 import Details from "./Details";
 import styles from "./index.module.css";
@@ -15,9 +18,11 @@ const IngestPage = () => {
         <div className={styles["ingestPageGrid"]}>
             <SpaceSavings/>
             <Details/>
-            <div className={styles["fullRow"] || ""}>
-                <Compress/>
-            </div>
+            {STORAGE_TYPE.FS === SETTINGS_LOGS_INPUT_TYPE && (
+                <div className={styles["fullRow"] || ""}>
+                    <Compress/>
+                </div>
+            )}
             <div className={styles["fullRow"] || ""}>
                 <Jobs/>
             </div>
