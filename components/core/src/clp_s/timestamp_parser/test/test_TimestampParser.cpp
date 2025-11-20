@@ -419,7 +419,7 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                     default_patterns,
                     generated_pattern
             )};
-            REQUIRE_FALSE(searched_result.has_error());
+            REQUIRE(searched_result.has_value());
             REQUIRE(expected_result.epoch_timestamp == searched_result.value().first);
             REQUIRE(expected_result.pattern == searched_result.value().second);
         }

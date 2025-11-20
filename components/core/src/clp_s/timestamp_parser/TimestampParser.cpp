@@ -1210,14 +1210,14 @@ auto parse_timestamp(
         std::string_view timestamp,
         std::vector<TimestampPattern> const& patterns,
         std::string& generated_pattern
-) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>> {
+) -> std::optional<std::pair<epochtime_t, std::string_view>> {
     for (auto const& pattern : patterns) {
         auto const result{parse_timestamp(timestamp, pattern, generated_pattern)};
         if (false == result.has_error()) {
             return result.value();
         }
     }
-    return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
+    return std::nullopt;
 }
 
 auto get_default_date_time_timestamp_patterns()
@@ -1267,7 +1267,7 @@ auto get_all_default_timestamp_patterns()
 auto get_all_default_quoted_timestamp_patterns()
         -> ystdlib::error_handling::Result<std::vector<TimestampPattern>> {
     std::vector<TimestampPattern> timestamp_patterns;
-        for (auto const& pattern : YSTDLIB_ERROR_HANDLING_TRYX(get_all_default_timestamp_patterns())) {
+    for (auto const& pattern : YSTDLIB_ERROR_HANDLING_TRYX(get_all_default_timestamp_patterns())) {
         timestamp_patterns.emplace_back(YSTDLIB_ERROR_HANDLING_TRYX(
                 TimestampPattern::create(fmt::format(R"("{}")", pattern.get_pattern()))
         ));

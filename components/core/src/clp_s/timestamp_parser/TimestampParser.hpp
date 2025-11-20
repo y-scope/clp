@@ -155,19 +155,17 @@ private:
  * @param patterns A list of timestamp patterns.
  * @param generated_pattern A buffer where a newly-generated timestamp pattern can be written, if
  * necessary.
- * @return A result containing a pair, or an error code indicating the failure:
- * - The pair:
+ * @return A pair containing:
  *   - The timestamp in epoch nanoseconds.
  *   - An `std::string_view` of the timestamp pattern that corresponds to the timestamp.
  *     - The lifetime of the `std::string_view` is the least of `patterns` and `generated_pattern`.
- * - The possible error codes:
- *   - ErrorCodeEnum::IncompatibleTimestampPattern if no pattern can be used to parse the timestamp.
+ * @return std::nullopt if no pattern can be used to parse the timestamp.
  */
 [[nodiscard]] auto search_known_timestamp_patterns(
         std::string_view timestamp,
         std::vector<TimestampPattern> const& patterns,
         std::string& generated_pattern
-) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>>;
+) -> std::optional<std::pair<epochtime_t, std::string_view>>;
 
 /**
  * @return A result containing a vector of date-time timestamp patterns, or an error code indicating
