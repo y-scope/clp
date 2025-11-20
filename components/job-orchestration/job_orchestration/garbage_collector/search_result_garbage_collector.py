@@ -8,11 +8,11 @@ from bson import ObjectId
 from clp_py_utils.clp_config import ClpConfig, ResultsCache
 from clp_py_utils.clp_logging import get_logger
 
-from job_orchestration.garbage_collector.constants import (
+from .constants import (
     MIN_TO_SECONDS,
     SEARCH_RESULT_GARBAGE_COLLECTOR_NAME,
 )
-from job_orchestration.garbage_collector.utils import (
+from .utils import (
     configure_logger,
     get_expiry_epoch_secs,
 )

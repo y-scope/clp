@@ -18,12 +18,12 @@ from clp_py_utils.clp_metadata_db_utils import (
 )
 from clp_py_utils.sql_adapter import SqlAdapter
 
-from job_orchestration.garbage_collector.constants import (
+from .constants import (
     ARCHIVE_GARBAGE_COLLECTOR_NAME,
     MIN_TO_SECONDS,
     SECOND_TO_MILLISECOND,
 )
-from job_orchestration.garbage_collector.utils import (
+from .utils import (
     configure_logger,
     DeletionCandidatesBuffer,
     execute_deletion,
