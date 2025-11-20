@@ -4,7 +4,7 @@ use aws_sdk_s3::Client as S3Client;
 use aws_sdk_sqs::Client as SqsClient;
 
 /// A marker trait for AWS client types.
-pub trait AwsClientType {}
+pub trait AwsClientType: Clone {}
 
 impl AwsClientType for SqsClient {}
 
@@ -17,7 +17,7 @@ impl AwsClientType for S3Client {}
 ///
 /// * [`Client`]: The AWS SKD client type. Must implement the [`AwsClientType`].
 #[async_trait]
-pub trait AwsClientManagerType<Client: AwsClientType + Clone>: Send + Sync {
+pub trait AwsClientManagerType<Client: AwsClientType>: Send + Sync + 'static {
     /// Retrieves an AWS client instance. The specific behavior depends on the implementation.
     ///
     /// # Returns:

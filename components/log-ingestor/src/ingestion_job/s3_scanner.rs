@@ -30,7 +30,7 @@ struct Task<S3Client: AwsClientManagerType<Client>> {
     sender: mpsc::Sender<ObjectMetadata>,
 }
 
-impl<S3Client: AwsClientManagerType<Client> + 'static> Task<S3Client> {
+impl<S3Client: AwsClientManagerType<Client>> Task<S3Client> {
     /// Runs the S3 scanner task to scan the given bucket.
     ///
     /// This is a wrapper of [`Self::scan`] that supports cancellation via the provided cancellation
@@ -152,7 +152,7 @@ impl S3Scanner {
     ///
     /// A newly created instance of [`S3Scanner`].
     #[must_use]
-    pub fn spawn<S3ClientManager: AwsClientManagerType<Client> + 'static>(
+    pub fn spawn<S3ClientManager: AwsClientManagerType<Client>>(
         id: Uuid,
         s3_client_manager: S3ClientManager,
         config: S3ScannerConfig,
