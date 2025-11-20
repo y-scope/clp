@@ -39,6 +39,10 @@ x-volume-definitions:
     type: "bind"
     source: "${CLP_LOGS_DIR_HOST:-./var/log}"
     target: "/var/log"
+  clp-tmp: &volume_clp_tmp
+    type: "bind"
+    source: "${CLP_TMP_DIR_HOST:-./var/tmp}"
+    target: "/var/tmp"
 
 services:
   database:
@@ -275,13 +279,11 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
+      - *volume_clp_tmp
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
       - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
       - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
-      - type: "bind"
-        source: "${CLP_TMP_DIR_HOST:-./var/tmp}"
-        target: "/var/tmp"
     command: [
       "python3",
       "-u",
@@ -309,13 +311,11 @@ services:
     volumes:
       - *volume_clp_config_readonly
       - *volume_clp_logs
+      - *volume_clp_tmp
       - "${CLP_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/archives"
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
       - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
       - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
-      - type: "bind"
-        source: "${CLP_TMP_DIR_HOST:-./var/tmp}"
-        target: "/var/tmp"
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
