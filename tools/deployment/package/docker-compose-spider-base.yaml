@@ -27,6 +27,9 @@ services:
     depends_on:
       db-table-creator:
         condition: "service_completed_successfully"
+    environment:
+      SPIDER_DB_PASS: "${SPIDER_DB_PASS:?Please set a value.}"
+      SPIDER_DB_USER: "${SPIDER_DB_USER:?Please set a value.}"
 
   compression-worker:
     extends:

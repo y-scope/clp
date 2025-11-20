@@ -523,6 +523,7 @@ def main(argv):
     if clp_config.compression_scheduler.type == OrchestrationType.celery:
         task_manager = CeleryTaskManager()
     elif clp_config.compression_scheduler.type == OrchestrationType.spider:
+        clp_config.spider_db.load_credentials_from_env()
         task_manager = SpiderTaskManager(clp_config.spider_db.get_container_url())
     else:
         logger.error(
