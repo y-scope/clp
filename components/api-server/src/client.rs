@@ -1,4 +1,4 @@
-use std::{pin::Pin, sync::Mutex};
+use std::pin::Pin;
 
 use async_stream::stream;
 use clp_rust_utils::{
@@ -251,11 +251,11 @@ impl Client {
 }
 
 type PinnedStream = Pin<Box<dyn Stream<Item = Result<String, ClientError>> + Send>>;
-struct ResultsStream(Mutex<PinnedStream>);
+struct ResultsStream(PinnedStream);
 
 impl ResultsStream {
     pub fn new(stream: impl Stream<Item = Result<String, ClientError>> + Send + 'static) -> Self {
-        Self(Mutex::new(Box::pin(stream)))
+        Self(Box::pin(stream))
     }
 }
 
@@ -266,12 +266,11 @@ impl Stream for ResultsStream {
         self: Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
-        let poll = self
-            .0
-            .lock()
-            .expect("the other thread panics")
-            .as_mut()
-            .poll_next(cx);
+        // SAFETY: The async runtime guarantees that `poll_next` is called exclusively. We only poll
+        // `self.0` and never move it out.
+        let inner = unsafe { self.map_unchecked_mut(|s| &mut s.0) };
+
+        let poll = inner.poll_next(cx);
         if let std::task::Poll::Ready(Some(Err(err))) = &poll {
             tracing::error!("An error occurred when streaming results: {:?}", err);
         }
