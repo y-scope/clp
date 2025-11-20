@@ -5,6 +5,7 @@ import useSearchStore from "../../../SearchState/index";
 import usePrestoSearchState from "../../../SearchState/Presto";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
 import guidedGrid from "./index.module.css";
+import {LABEL_WIDTH} from "./typings";
 
 
 /**
@@ -21,7 +22,7 @@ const Select = () => {
 
     return (
         <div className={guidedGrid["select"]}>
-            <InputLabel>SELECT</InputLabel>
+            <InputLabel width={LABEL_WIDTH}>SELECT</InputLabel>
             <SqlInput
                 className={guidedGrid["noLeftBorderRadius"] || ""}
                 disabled={disabled}
