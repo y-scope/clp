@@ -9,6 +9,7 @@ import pytest
 
 from tests.utils.clp_mode_utils import CLP_MODE_CONFIGS, get_clp_config_from_mode
 from tests.utils.config import PackageConfig
+from tests.utils.port_utils import assign_ports_from_base
 from tests.utils.utils import get_env_var
 
 logger = logging.getLogger(__name__)
@@ -47,24 +48,34 @@ def clp_config(
     :return: An iterator that yields the PackageConfig object for the specified mode.
     """
     mode_name: str = request.param
-    logger.info("Creating a temporary config file for the %s package...", mode_name)
+    logger.debug("Creating a temporary config file for the %s package.", mode_name)
 
     package_config = _build_package_config_for_mode(mode_name)
 
     # Create the temp config file.
     clp_config_obj = get_clp_config_from_mode(mode_name)
+
+    # Assign ports based on BASE_PORT from ini.
+    base_port_string = request.config.getini("BASE_PORT")
+    try:
+        base_port = int(base_port_string)
+    except ValueError as err:
+        err_msg = (
+            f"Invalid BASE_PORT value '{base_port_string}' in pytest.ini; expected an integer."
+        )
+        raise ValueError(err_msg) from err
+
+    assign_ports_from_base(clp_config_obj, base_port)
+
     temp_config_file_path = PackageConfig.write_temp_config_file(
         clp_config=clp_config_obj,
         temp_config_dir=package_config.temp_config_dir,
         mode_name=mode_name,
     )
 
-    logger.info("The temporary config file has been written for the %s package.", mode_name)
-
     try:
         yield package_config
     finally:
-        logger.info("Removing the temporary config file...")
+        logger.debug("Removing the temporary config file.")
         with contextlib.suppress(FileNotFoundError):
             temp_config_file_path.unlink()
-        logger.info("The temporary config file has been removed.")

@@ -38,30 +38,25 @@ def list_running_containers_with_prefix(prefix: str) -> list[str]:
 
     :param prefix:
     :return: List of running container names that match the pattern.
-    :raise RuntimeError: Error while invoking docker ps or parsing its output.
+    :raise: Propagates `subprocess.run`'s errors.
     """
     docker_bin = get_docker_binary_path()
 
-    try:
-        ps_proc = subprocess.run(
-            [
-                docker_bin,
-                "ps",
-                "--format",
-                "{{.Names}}",
-                "--filter",
-                f"name={prefix}",
-                "--filter",
-                "status=running",
-            ],
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-    except subprocess.CalledProcessError as ex:
-        err_out = (ex.stderr or ex.stdout or "").strip()
-        err_msg = f"Error listing running containers for prefix {prefix}: {err_out}"
-        raise RuntimeError(err_msg) from ex
+    ps_proc = subprocess.run(
+        [
+            docker_bin,
+            "ps",
+            "--format",
+            "{{.Names}}",
+            "--filter",
+            f"name={prefix}",
+            "--filter",
+            "status=running",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
 
     matches: list[str] = []
     for line in (ps_proc.stdout or "").splitlines():
