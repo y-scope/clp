@@ -363,7 +363,9 @@ def poll_running_jobs(
             if returned_results is None:
                 continue
 
-            duration = (datetime.datetime.now(datetime.timezone.utc) - job.start_time).total_seconds()
+            duration = (
+                datetime.datetime.now(datetime.timezone.utc) - job.start_time
+            ).total_seconds()
             # Check for finished jobs
             num_tasks_in_batch = len(returned_results)
             for task_result in returned_results:
