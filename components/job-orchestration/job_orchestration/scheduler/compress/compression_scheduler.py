@@ -6,6 +6,7 @@ import signal
 import sys
 import time
 from contextlib import closing
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +51,11 @@ from job_orchestration.scheduler.scheduler_data import (
 )
 from job_orchestration.scheduler.utils import kill_hanging_jobs
 
+@dataclass
+class DbContext:
+    connection: Any
+    cursor: Any
+
 # Setup logging
 logger = get_logger("compression_scheduler")
 
@@ -90,7 +96,17 @@ def update_compression_task_metadata(db_cursor, task_id, kv):
     db_cursor.execute(query, values)
 
 
-def update_compression_job_metadata(db_cursor, job_id, kv) -> None:
+def update_compression_job_metadata(
+    db_context: DbContext,
+    job_id,
+    kv
+) -> None:
+    """
+    Updates compression job metadata in the database.
+    :param db_context:
+    :param job_id:
+    :param kv:
+    """
     if not len(kv):
         logger.error("Must specify at least one field to update")
         raise ValueError
@@ -102,7 +118,8 @@ def update_compression_job_metadata(db_cursor, job_id, kv) -> None:
         WHERE id = %s
     """
     values = [*list(kv.values()), job_id]
-    db_cursor.execute(query, values)
+    db_context.cursor.execute(query, values)
+    db_context.connection.commit()
 
 
 def _process_fs_input_paths(
@@ -223,48 +240,46 @@ def search_and_schedule_new_tasks(
     clp_config: ClpConfig,
     clp_metadata_db_connection_config: dict[str, Any],
     task_manager: TaskManager,
-    db_conn,
-    db_cursor,
+    db_context: DbContext,
 ) -> None:
     """
     Splits the all jobs with PENDING into tasks and schedules them in batches.
     :param clp_config:
     :param clp_metadata_db_connection_config:
     :param task_manager:
-    :param db_conn:
-    :param db_cursor:
+    :param db_context:
     """
     existing_datasets: set[str] = set()
     if StorageEngine.CLP_S == clp_config.package.storage_engine:
         existing_datasets = fetch_existing_datasets(
-            db_cursor, clp_metadata_db_connection_config["table_prefix"]
+            db_context.cursor, clp_metadata_db_connection_config["table_prefix"]
         )
 
     logger.debug("Search and schedule new tasks")
 
     # Poll for new compression jobs
-    jobs = fetch_new_jobs(db_cursor)
-    db_conn.commit()
+    jobs = fetch_new_jobs(db_context.cursor)
+    # TODO: revisit why we need to commit here. To end long transactions?
+    db_context.connection.commit()
     for job_row in jobs:
         _schedule_compression_job(
             clp_config,
             clp_metadata_db_connection_config,
             task_manager,
-            db_conn,
-            db_cursor,
+            db_context,
             job_row,
             existing_datasets,
         )
 
 
-def poll_running_jobs(clp_config: ClpConfig, task_manager: TaskManager, db_conn, db_cursor) -> None:
+def poll_running_jobs(clp_config: ClpConfig, task_manager: TaskManager, db_context: DbContext
+                      ) -> None:
     """
     Polls for running jobs, update their status, and dispatch the next batch if needed.
 
     :param clp_config:
     :param task_manager:
-    :param db_conn:
-    :param db_cursor:
+    :param db_context:
     """
     logs_directory = clp_config.logs_directory
     num_tasks_per_sub_job = clp_config.compression_scheduler.num_tasks_per_sub_job
@@ -307,7 +322,7 @@ def poll_running_jobs(clp_config: ClpConfig, task_manager: TaskManager, db_conn,
 
         if not job_success:
             _handle_failed_compression_job(
-                logs_directory, db_conn, db_cursor, job_id, error_messages
+                logs_directory, db_context, job_id, error_messages
             )
             jobs_to_delete.append(job_id)
             continue
@@ -316,10 +331,10 @@ def poll_running_jobs(clp_config: ClpConfig, task_manager: TaskManager, db_conn,
 
         # Check if there are remaining tasks to dispatch
         if len(job.remaining_tasks) > 0:
-            _dispatch_next_task_batch(db_conn, db_cursor, job, task_manager, num_tasks_per_sub_job)
+            _dispatch_next_task_batch(db_context, job, task_manager, num_tasks_per_sub_job)
         else:
             # All tasks completed successfully
-            _complete_compression_job(db_conn, db_cursor, job_id, job.num_tasks_total, duration)
+            _complete_compression_job(db_context, job_id, job.num_tasks_total, duration)
             jobs_to_delete.append(job_id)
 
     for job_id in jobs_to_delete:
@@ -377,6 +392,7 @@ def main(argv) -> int | None:
         closing(sql_adapter.create_connection(True)) as db_conn,
         closing(db_conn.cursor(dictionary=True)) as db_cursor,
     ):
+        db_context = DbContext(connection=db_conn, cursor=db_cursor)
         clp_metadata_db_connection_config = (
             sql_adapter.database_config.get_clp_connection_params_and_type(True)
         )
@@ -389,14 +405,12 @@ def main(argv) -> int | None:
                         clp_config,
                         clp_metadata_db_connection_config,
                         task_manager,
-                        db_conn,
-                        db_cursor,
+                        db_context,
                     )
                 poll_running_jobs(
                     clp_config,
                     task_manager,
-                    db_conn,
-                    db_cursor,
+                    db_context,
                 )
                 time.sleep(clp_config.compression_scheduler.jobs_poll_delay)
             except KeyboardInterrupt:
@@ -439,32 +453,29 @@ def _batch_tasks(
 
 
 def _complete_compression_job(
-    db_conn, db_cursor, job_id: int, num_tasks_total: int, duration: float
+    db_context: DbContext, job_id: int, num_tasks_total: int, duration: float
 ) -> None:
     """
     Marks a compression job as successfully completed.
 
-    :param db_conn:
-    :param db_cursor:
+    :param db_context:
     :param job_id:
     :param num_tasks_total:
     :param duration:
     """
     logger.info("Job %s succeeded (%s tasks completed).", job_id, num_tasks_total)
     update_compression_job_metadata(
-        db_cursor,
+        db_context,
         job_id,
         {
             "status": CompressionJobStatus.SUCCEEDED,
             "duration": duration,
         },
     )
-    db_conn.commit()
 
 
 def _dispatch_next_task_batch(
-    db_conn,
-    db_cursor,
+    db_context: DbContext,
     job: CompressionJob,
     task_manager: TaskManager,
     num_tasks_per_sub_job: int,
@@ -472,8 +483,7 @@ def _dispatch_next_task_batch(
     """
     Dispatches the next batch of tasks for a compression job.
 
-    :param db_conn:
-    :param db_cursor:
+    :param db_context:
     :param job:
     :param task_manager:
     :param num_tasks_per_sub_job:
@@ -492,16 +502,16 @@ def _dispatch_next_task_batch(
     )
 
     # Insert tasks into the database and submit them
-    _insert_tasks_to_db(db_conn, db_cursor, job_id, tasks_to_submit, partition_info_to_submit)
+    _insert_tasks_to_db(db_context, job_id, tasks_to_submit, partition_info_to_submit)
 
     job.result_handle = task_manager.submit(tasks_to_submit)
-    db_cursor.execute(
+    db_context.cursor.execute(
         f"""
         UPDATE {COMPRESSION_TASKS_TABLE_NAME}
         SET status='{CompressionTaskStatus.RUNNING}' WHERE job_id={job_id}
         """
     )
-    db_conn.commit()
+    db_context.connection.commit()
     logger.info(
         "Dispatched next batch for job %s with %s tasks (%s remaining).",
         job_id,
@@ -511,13 +521,12 @@ def _dispatch_next_task_batch(
 
 
 def _get_tag_ids_for_job(
-    db_conn, db_cursor, clp_io_config: ClpIoConfig, table_prefix: str, dataset: str
+    db_context: DbContext, clp_io_config: ClpIoConfig, table_prefix: str, dataset: str
 ) -> list[int]:
     """
     Gets tag IDs for a compression job.
 
-    :param db_conn:
-    :param db_cursor:
+    :param db_context:
     :param clp_io_config:
     :param table_prefix:
     :param dataset:
@@ -526,30 +535,31 @@ def _get_tag_ids_for_job(
     tag_ids = []
     if clp_io_config.output.tags:
         tags_table_name = get_tags_table_name(table_prefix, dataset)
-        db_cursor.executemany(
+        db_context.cursor.executemany(
             f"INSERT IGNORE INTO {tags_table_name} (tag_name) VALUES (%s)",
             [(tag,) for tag in clp_io_config.output.tags],
         )
-        db_conn.commit()
-        db_cursor.execute(
+        db_context.connection.commit()
+        db_context.cursor.execute(
             f"SELECT tag_id FROM {tags_table_name} WHERE tag_name IN (%s)"
             % ", ".join(["%s"] * len(clp_io_config.output.tags)),
             clp_io_config.output.tags,
         )
-        tag_ids = [tags["tag_id"] for tags in db_cursor.fetchall()]
-        db_conn.commit()
+        tag_ids = [tags["tag_id"] for tags in db_context.cursor.fetchall()]
+        db_context.connection.commit()
     return tag_ids
 
 
 def _handle_failed_compression_job(
-    logs_directory: Path, db_conn, db_cursor, job_id: int, error_messages: list[str]
+    logs_directory: Path,
+    db_context: DbContext,
+    job_id: int, error_messages: list[str]
 ) -> None:
     """
     Handles a failed compression job by writing error logs and updating metadata.
 
     :param logs_directory:
-    :param db_conn:
-    :param db_cursor:
+    :param db_context:
     :param job_id:
     :param error_messages:
     """
@@ -573,19 +583,18 @@ def _handle_failed_compression_job(
     )
 
     update_compression_job_metadata(
-        db_cursor,
+        db_context,
         job_id,
         {
             "status": CompressionJobStatus.FAILED,
             "status_msg": error_msg,
         },
     )
-    db_conn.commit()
+
 
 
 def _insert_tasks_to_db(
-    db_conn,
-    db_cursor,
+    db_context: DbContext,
     job_id: int,
     tasks_to_submit: list[dict[str, Any]],
     partition_info_to_submit: list[dict[str, Any]],
@@ -593,14 +602,13 @@ def _insert_tasks_to_db(
     """
     Inserts tasks into the database and assign task IDs.
 
-    :param db_conn:
-    :param db_cursor:
+    :param db_context:
     :param job_id:
     :param tasks_to_submit:
     :param partition_info_to_submit:
     """
     for task_idx, task in enumerate(tasks_to_submit):
-        db_cursor.execute(
+        db_context.cursor.execute(
             f"""
             INSERT INTO {COMPRESSION_TASKS_TABLE_NAME}
             (job_id, partition_original_size, clp_paths_to_compress)
@@ -608,16 +616,15 @@ def _insert_tasks_to_db(
             """,
             (partition_info_to_submit[task_idx]["clp_paths_to_compress"],),
         )
-        db_conn.commit()
-        task["task_id"] = db_cursor.lastrowid
+        db_context.connection.commit()
+        task["task_id"] = db_context.cursor.lastrowid
 
 
 def _schedule_compression_job(
     clp_config: ClpConfig,
     clp_metadata_db_connection_config: dict[str, Any],
     task_manager: TaskManager,
-    db_conn,
-    db_cursor,
+    db_context: DbContext,
     job_row: dict[str, Any],
     existing_datasets: set[str],
 ) -> None:
@@ -627,8 +634,7 @@ def _schedule_compression_job(
     :param clp_config:
     :param clp_metadata_db_connection_config:
     :param task_manager:
-    :param db_conn:
-    :param db_cursor:
+    :param db_context:
     :param job_row:
     :param existing_datasets:
     """
@@ -643,8 +649,8 @@ def _schedule_compression_job(
 
     if dataset is not None and dataset not in existing_datasets:
         add_dataset(
-            db_conn,
-            db_cursor,
+            db_context.connection,
+            db_context.cursor,
             table_prefix,
             dataset,
             clp_config.archive_output,
@@ -681,14 +687,13 @@ def _schedule_compression_job(
             )
 
             update_compression_job_metadata(
-                db_cursor,
+                db_context,
                 job_id,
                 {
                     "status": CompressionJobStatus.FAILED,
                     "status_msg": error_msg,
                 },
             )
-            db_conn.commit()
             return
     elif input_type == InputType.S3.value:
         try:
@@ -696,26 +701,24 @@ def _schedule_compression_job(
         except Exception as err:
             logger.exception("Failed to process S3 input")
             update_compression_job_metadata(
-                db_cursor,
+                db_context,
                 job_id,
                 {
                     "status": CompressionJobStatus.FAILED,
                     "status_msg": f"S3 Failure: {err}",
                 },
             )
-            db_conn.commit()
             return
     else:
         logger.error(f"Unsupported input type {input_type}")
         update_compression_job_metadata(
-            db_cursor,
+            db_context,
             job_id,
             {
                 "status": CompressionJobStatus.FAILED,
                 "status_msg": f"Unsupported input type: {input_type}",
             },
         )
-        db_conn.commit()
         return
 
     paths_to_compress_buffer.flush()
@@ -725,7 +728,7 @@ def _schedule_compression_job(
     # Update job metadata
     start_time = datetime.datetime.now()
     update_compression_job_metadata(
-        db_cursor,
+        db_context,
         job_id,
         {
             "num_tasks": paths_to_compress_buffer.num_tasks,
@@ -733,9 +736,8 @@ def _schedule_compression_job(
             "start_time": start_time,
         },
     )
-    db_conn.commit()
 
-    tag_ids = _get_tag_ids_for_job(db_conn, db_cursor, clp_io_config, table_prefix, dataset)
+    tag_ids = _get_tag_ids_for_job(db_context, clp_io_config, table_prefix, dataset)
 
     for task in tasks:
         task["tag_ids"] = tag_ids
@@ -746,7 +748,7 @@ def _schedule_compression_job(
         _batch_tasks(tasks, partition_info, num_tasks_per_sub_job)
     )
 
-    _insert_tasks_to_db(db_conn, db_cursor, job_id, tasks_to_submit, partition_info_to_submit)
+    _insert_tasks_to_db(db_context, job_id, tasks_to_submit, partition_info_to_submit)
     result_handle = task_manager.submit(tasks_to_submit)
 
     job = CompressionJob(
@@ -758,13 +760,13 @@ def _schedule_compression_job(
         remaining_tasks=remaining_tasks,
         remaining_partition_info=remaining_partition_info,
     )
-    db_cursor.execute(
+    db_context.cursor.execute(
         f"""
         UPDATE {COMPRESSION_TASKS_TABLE_NAME}
         SET status='{CompressionTaskStatus.RUNNING}' WHERE job_id={job_id}
         """
     )
-    db_conn.commit()
+    db_context.connection.commit()
 
     scheduled_jobs[job_id] = job
     logger.info(
