@@ -1112,22 +1112,16 @@ auto parse_timestamp(
                         extract_bracket_pattern(pattern.substr(pattern_idx + 1ULL))
                 )};
 
-                std::optional<char> optional_matched_char;
-                for (auto c : bracket_pattern.substr(1, bracket_pattern.size() - 2)) {
-                    if (c == timestamp.at(timestamp_idx)) {
-                        optional_matched_char = c;
-                        break;
-                    }
-                }
-
-                if (false == optional_matched_char.has_value()) {
+                auto const possible_chars{bracket_pattern.substr(1, bracket_pattern.size() - 2)};
+                auto const char_to_match{timestamp.at(timestamp_idx)};
+                if (possible_chars.cend() == std::ranges::find(possible_chars, char_to_match)) {
                     return ErrorCode{ErrorCodeEnum::IncompatibleTimestampPattern};
                 }
 
                 cat_sequence_replacements.emplace_back(
                         pattern_idx - 1,
                         2ULL + bracket_pattern.size(),
-                        std::string{optional_matched_char.value()}
+                        std::string{char_to_match}
                 );
                 pattern_idx += bracket_pattern.size();
                 timestamp_idx += cFieldLength;
@@ -1230,9 +1224,10 @@ auto get_default_date_time_timestamp_patterns()
         -> ystdlib::error_handling::Result<std::vector<TimestampPattern>> {
     std::vector<TimestampPattern> timestamp_patterns;
     timestamp_patterns.reserve(cDefaultDateTimePatterns.size());
-    for (auto const& pattern : cDefaultDateTimePatterns) {
-        auto timestamp_pattern{YSTDLIB_ERROR_HANDLING_TRYX(TimestampPattern::create(pattern))};
-        timestamp_patterns.emplace_back(std::move(timestamp_pattern));
+    for (auto const pattern : cDefaultDateTimePatterns) {
+        timestamp_patterns.emplace_back(
+                YSTDLIB_ERROR_HANDLING_TRYX(TimestampPattern::create(pattern))
+        );
     }
     return timestamp_patterns;
 }
@@ -1241,9 +1236,10 @@ auto get_default_numeric_timestamp_patterns()
         -> ystdlib::error_handling::Result<std::vector<TimestampPattern>> {
     std::vector<TimestampPattern> timestamp_patterns;
     timestamp_patterns.reserve(cDefaultNumericPatterns.size());
-    for (auto const& pattern : cDefaultNumericPatterns) {
-        auto timestamp_pattern{YSTDLIB_ERROR_HANDLING_TRYX(TimestampPattern::create(pattern))};
-        timestamp_patterns.emplace_back(std::move(timestamp_pattern));
+    for (auto const pattern : cDefaultNumericPatterns) {
+        timestamp_patterns.emplace_back(
+                YSTDLIB_ERROR_HANDLING_TRYX(TimestampPattern::create(pattern))
+        );
     }
     return timestamp_patterns;
 }
@@ -1251,35 +1247,30 @@ auto get_default_numeric_timestamp_patterns()
 auto get_all_default_timestamp_patterns()
         -> ystdlib::error_handling::Result<std::vector<TimestampPattern>> {
     std::vector<TimestampPattern> timestamp_patterns;
-    timestamp_patterns.reserve(cDefaultNumericPatterns.size() + cDefaultDateTimePatterns.size());
-    for (auto const& pattern : cDefaultNumericPatterns) {
-        auto timestamp_pattern{YSTDLIB_ERROR_HANDLING_TRYX(TimestampPattern::create(pattern))};
-        timestamp_patterns.emplace_back(std::move(timestamp_pattern));
-    }
-    for (auto const& pattern : cDefaultDateTimePatterns) {
-        auto timestamp_pattern{YSTDLIB_ERROR_HANDLING_TRYX(TimestampPattern::create(pattern))};
-        timestamp_patterns.emplace_back(std::move(timestamp_pattern));
-    }
+    auto const date_time_patterns{
+            YSTDLIB_ERROR_HANDLING_TRYX(get_default_date_time_timestamp_patterns())
+    };
+    auto const numeric_patterns{
+            YSTDLIB_ERROR_HANDLING_TRYX(get_default_numeric_timestamp_patterns())
+    };
+    timestamp_patterns.reserve(date_time_patterns.size() + numeric_patterns.size());
+    timestamp_patterns.insert(
+            timestamp_patterns.cend(),
+            date_time_patterns.cbegin(),
+            date_time_patterns.cend()
+    );
+    timestamp_patterns
+            .insert(timestamp_patterns.cend(), numeric_patterns.cbegin(), numeric_patterns.cend());
     return timestamp_patterns;
 }
 
 auto get_all_default_quoted_timestamp_patterns()
         -> ystdlib::error_handling::Result<std::vector<TimestampPattern>> {
     std::vector<TimestampPattern> timestamp_patterns;
-    timestamp_patterns.reserve(cDefaultNumericPatterns.size() + cDefaultDateTimePatterns.size());
-    for (auto const& pattern : cDefaultNumericPatterns) {
-        auto const quoted_pattern{fmt::format(R"("{}")", pattern)};
-        auto timestamp_pattern{
-                YSTDLIB_ERROR_HANDLING_TRYX(TimestampPattern::create(quoted_pattern))
-        };
-        timestamp_patterns.emplace_back(std::move(timestamp_pattern));
-    }
-    for (auto const& pattern : cDefaultDateTimePatterns) {
-        auto const quoted_pattern{fmt::format(R"("{}")", pattern)};
-        auto timestamp_pattern{
-                YSTDLIB_ERROR_HANDLING_TRYX(TimestampPattern::create(quoted_pattern))
-        };
-        timestamp_patterns.emplace_back(std::move(timestamp_pattern));
+        for (auto const& pattern : YSTDLIB_ERROR_HANDLING_TRYX(get_all_default_timestamp_patterns())) {
+        timestamp_patterns.emplace_back(YSTDLIB_ERROR_HANDLING_TRYX(
+                TimestampPattern::create(fmt::format(R"("{}")", pattern.get_pattern()))
+        ));
     }
     return timestamp_patterns;
 }
