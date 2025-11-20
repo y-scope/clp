@@ -55,6 +55,7 @@ from job_orchestration.scheduler.utils import kill_hanging_jobs
 @dataclass
 class DbContext:
     """Database context holding a connection, and a cursor created from the connection."""
+
     connection: Any
     cursor: Any
 
@@ -266,6 +267,7 @@ def search_and_schedule_new_tasks(
             existing_datasets,
         )
 
+        # Prepare paths buffer
         tag_ids = _get_tag_ids_for_job(db_context, clp_io_config, table_prefix, dataset)
         paths_to_compress_buffer = PathsToCompressBuffer(
             maintain_file_ordering=False,
@@ -276,6 +278,7 @@ def search_and_schedule_new_tasks(
             tag_ids=tag_ids,
         )
 
+        # Process input paths
         input_type = input_config.type
         if input_type == InputType.FS.value:
             invalid_path_messages = _process_fs_input_paths(input_config, paths_to_compress_buffer)
@@ -331,8 +334,8 @@ def search_and_schedule_new_tasks(
                 },
             )
             return
-
         paths_to_compress_buffer.flush()
+
         _batch_and_submit_tasks(
             clp_config,
             task_manager,
@@ -750,26 +753,6 @@ def _insert_tasks_to_db(
         )
         db_context.connection.commit()
         task["task_id"] = db_context.cursor.lastrowid
-
-
-def _schedule_compression_job(
-    clp_config: ClpConfig,
-    clp_metadata_db_connection_config: dict[str, Any],
-    task_manager: TaskManager,
-    db_context: DbContext,
-    job_row: dict[str, Any],
-    existing_datasets: set[str],
-) -> None:
-    """
-    Schedules a single compression job by processing input paths and creating tasks.
-
-    :param clp_config:
-    :param clp_metadata_db_connection_config:
-    :param task_manager:
-    :param db_context:
-    :param job_row:
-    :param existing_datasets:
-    """
 
 
 def _ensure_dataset_exists(
