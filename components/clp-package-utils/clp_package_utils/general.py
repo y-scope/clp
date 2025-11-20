@@ -27,7 +27,7 @@ from clp_py_utils.clp_config import (
     RESULTS_CACHE_COMPONENT_NAME,
     StorageType,
     WEBUI_COMPONENT_NAME,
-    WorkerConfig,
+    WorkerConfig, SPIDER_DB_COMPONENT_NAME,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     MYSQL_TABLE_NAME_MAX_LEN,
@@ -454,6 +454,7 @@ def generate_credentials_file(credentials_file_path: pathlib.Path):
         DB_COMPONENT_NAME: {"username": "clp-user", "password": secrets.token_urlsafe(8)},
         QUEUE_COMPONENT_NAME: {"username": "clp-user", "password": secrets.token_urlsafe(8)},
         REDIS_COMPONENT_NAME: {"password": secrets.token_urlsafe(16)},
+        SPIDER_DB_COMPONENT_NAME: {"username": "spider-user", "password": secrets.token_urlsafe(8)},
     }
 
     with open(credentials_file_path, "w") as f:

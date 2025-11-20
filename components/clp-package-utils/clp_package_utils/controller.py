@@ -40,7 +40,7 @@ from clp_py_utils.clp_config import (
     SPIDER_SCHEDULER_COMPONENT_NAME,
     StorageEngine,
     StorageType,
-    WEBUI_COMPONENT_NAME,
+    WEBUI_COMPONENT_NAME, SPIDER_DB_COMPONENT_NAME,
 )
 from clp_py_utils.clp_metadata_db_utils import (
     get_archives_table_name,
@@ -262,7 +262,7 @@ class BaseController(ABC):
 
         :return: Dictionary of environment variables necessary to launch the component.
         """
-        component_name = "spider_db"
+        component_name = SPIDER_DB_COMPONENT_NAME
         logger.info(f"Setting up environment for {component_name}...")
 
         env_vars = EnvVarsDict()
@@ -813,9 +813,9 @@ class DockerComposeController(BaseController):
 
         # Component-specific config
         env_vars |= self._set_up_env_for_database()
-        if self._clp_config.redis is not None:
-            env_vars |= self._set_up_env_for_queue()
         if self._clp_config.queue is not None:
+            env_vars |= self._set_up_env_for_queue()
+        if self._clp_config.redis is not None:
             env_vars |= self._set_up_env_for_redis()
         if self._clp_config.compression_scheduler.type == OrchestrationType.spider:
             env_vars |= self._set_up_env_for_spider_db()

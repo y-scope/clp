@@ -904,7 +904,7 @@ class ClpConfig(BaseModel):
         if self.spider_db is None:
             raise ValueError("`spider_db` must be configured when using Spider orchestration.")
         if self.spider_scheduler is None:
-            raise ValueError("`spider_db` must be configured when using Spider orchestration.")
+            raise ValueError("`spider_scheduler` must be configured when using Spider orchestration.")
         if self.database.type != DatabaseEngine.MARIADB:
             raise ValueError("Spider only supports MariaDB for the metadata database.")
         return self
@@ -939,6 +939,8 @@ class ClpConfig(BaseModel):
             self.queue.transform_for_container()
         if self.redis is not None:
             self.redis.transform_for_container()
+        if self.spider_db is not None:
+            self.spider_db.transform_for_container()
         if self.spider_scheduler is not None:
             self.spider_scheduler.transform_for_container()
         self.results_cache.transform_for_container()
