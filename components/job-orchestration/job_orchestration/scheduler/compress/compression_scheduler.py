@@ -51,10 +51,12 @@ from job_orchestration.scheduler.scheduler_data import (
 )
 from job_orchestration.scheduler.utils import kill_hanging_jobs
 
+
 @dataclass
 class DbContext:
     connection: Any
     cursor: Any
+
 
 # Setup logging
 logger = get_logger("compression_scheduler")
@@ -81,26 +83,7 @@ def fetch_new_jobs(db_cursor):
     return db_cursor.fetchall()
 
 
-def update_compression_task_metadata(db_cursor, task_id, kv):
-    if not len(kv):
-        logger.error("Must specify at least one field to update")
-        raise ValueError
-
-    field_set_expressions = [f"{k} = %s" for k in kv.keys()]
-    query = f"""
-        UPDATE {COMPRESSION_TASKS_TABLE_NAME}
-        SET {", ".join(field_set_expressions)}
-        WHERE id = %s
-    """
-    values = list(kv.values()) + [task_id]
-    db_cursor.execute(query, values)
-
-
-def update_compression_job_metadata(
-    db_context: DbContext,
-    job_id,
-    kv
-) -> None:
+def update_compression_job_metadata(db_context: DbContext, job_id, kv) -> None:
     """
     Updates compression job metadata in the database.
     :param db_context:
@@ -262,18 +245,101 @@ def search_and_schedule_new_tasks(
     # TODO: revisit why we need to commit here. To end long transactions?
     db_context.connection.commit()
     for job_row in jobs:
-        _schedule_compression_job(
+        job_id = job_row["id"]
+        clp_io_config = ClpIoConfig.model_validate(
+            msgpack.unpackb(brotli.decompress(job_row["clp_config"]))
+        )
+        input_config = clp_io_config.input
+        table_prefix = clp_metadata_db_connection_config["table_prefix"]
+        dataset = input_config.dataset
+
+        _ensure_dataset_exists(
             clp_config,
-            clp_metadata_db_connection_config,
-            task_manager,
             db_context,
-            job_row,
+            table_prefix,
+            dataset,
             existing_datasets,
         )
 
+        tag_ids = _get_tag_ids_for_job(db_context, clp_io_config, table_prefix, dataset)
+        paths_to_compress_buffer = PathsToCompressBuffer(
+            maintain_file_ordering=False,
+            empty_directories_allowed=True,
+            scheduling_job_id=job_id,
+            clp_io_config=clp_io_config,
+            clp_metadata_db_connection_config=clp_metadata_db_connection_config,
+            tag_ids=tag_ids,
+        )
 
-def poll_running_jobs(clp_config: ClpConfig, task_manager: TaskManager, db_context: DbContext
-                      ) -> None:
+        input_type = input_config.type
+        if input_type == InputType.FS.value:
+            invalid_path_messages = _process_fs_input_paths(input_config, paths_to_compress_buffer)
+            if len(invalid_path_messages) > 0:
+                user_log_relative_path = _write_user_failure_log(
+                    title="Failed input paths log.",
+                    content=invalid_path_messages,
+                    logs_directory=clp_config.logs_directory,
+                    job_id=job_id,
+                    filename_suffix="failed_paths",
+                )
+                if user_log_relative_path is None:
+                    err_msg = "Failed to write user log for invalid input paths."
+                    raise RuntimeError(err_msg)
+
+                error_msg = (
+                    "At least one of your input paths could not be processed."
+                    f" See the error log at '{user_log_relative_path}' inside your configured logs"
+                    " directory (`logs_directory`) for more details."
+                )
+
+                update_compression_job_metadata(
+                    db_context,
+                    job_id,
+                    {
+                        "status": CompressionJobStatus.FAILED,
+                        "status_msg": error_msg,
+                    },
+                )
+                return
+        elif input_type == InputType.S3.value:
+            try:
+                _process_s3_input(input_config, paths_to_compress_buffer)
+            except Exception as err:
+                logger.exception("Failed to process S3 input")
+                update_compression_job_metadata(
+                    db_context,
+                    job_id,
+                    {
+                        "status": CompressionJobStatus.FAILED,
+                        "status_msg": f"S3 Failure: {err}",
+                    },
+                )
+                return
+        else:
+            logger.error(f"Unsupported input type {input_type}")
+            update_compression_job_metadata(
+                db_context,
+                job_id,
+                {
+                    "status": CompressionJobStatus.FAILED,
+                    "status_msg": f"Unsupported input type: {input_type}",
+                },
+            )
+            return
+
+        paths_to_compress_buffer.flush()
+        _batch_and_submit_tasks(
+            clp_config,
+            db_context,
+            task_manager,
+            job_id,
+            paths_to_compress_buffer,
+        )
+
+
+def poll_running_jobs(
+    clp_config: ClpConfig, task_manager: TaskManager, db_context: DbContext
+) -> None:
     """
     Polls for running jobs, update their status, and dispatch the next batch if needed.
 
@@ -321,9 +387,7 @@ def poll_running_jobs(clp_config: ClpConfig, task_manager: TaskManager, db_conte
             job_success = False
 
         if not job_success:
-            _handle_failed_compression_job(
-                logs_directory, db_context, job_id, error_messages
-            )
+            _handle_failed_compression_job(logs_directory, db_context, job_id, error_messages)
             jobs_to_delete.append(job_id)
             continue
 
@@ -452,6 +516,69 @@ def _batch_tasks(
     return tasks_to_submit, remaining_tasks, partition_info_to_submit, remaining_partition_info
 
 
+def _batch_and_submit_tasks(
+    clp_config: ClpConfig,
+    db_context: DbContext,
+    task_manager: TaskManager,
+    job_id: int,
+    paths_to_compress_buffer: PathsToCompressBuffer,
+) -> None:
+    """
+    Batches tasks from paths_to_compress_buffer and submits them to the task manager.
+    :param clp_config:
+    :param db_context:
+    :param task_manager:
+    :param job_id:
+    :param paths_to_compress_buffer:
+    """
+    start_time = datetime.datetime.now()
+    update_compression_job_metadata(
+        db_context,
+        job_id,
+        {
+            "num_tasks": paths_to_compress_buffer.num_tasks,
+            "status": CompressionJobStatus.RUNNING,
+            "start_time": start_time,
+        },
+    )
+
+    num_tasks_per_sub_job = clp_config.compression_scheduler.num_tasks_per_sub_job
+    tasks = paths_to_compress_buffer.get_tasks()
+    partition_info = paths_to_compress_buffer.get_partition_info()
+
+    tasks_to_submit, remaining_tasks, partition_info_to_submit, remaining_partition_info = (
+        _batch_tasks(tasks, partition_info, num_tasks_per_sub_job)
+    )
+    _insert_tasks_to_db(db_context, job_id, tasks_to_submit, partition_info_to_submit)
+    result_handle = task_manager.submit(tasks_to_submit)
+
+    job = CompressionJob(
+        id=job_id,
+        start_time=start_time,
+        result_handle=result_handle,
+        num_tasks_total=paths_to_compress_buffer.num_tasks,
+        num_tasks_completed=0,
+        remaining_tasks=remaining_tasks,
+        remaining_partition_info=remaining_partition_info,
+    )
+    scheduled_jobs[job_id] = job
+
+    db_context.cursor.execute(
+        f"""
+        UPDATE {COMPRESSION_TASKS_TABLE_NAME}
+        SET status='{CompressionTaskStatus.RUNNING}' WHERE job_id={job_id}
+        """
+    )
+    db_context.connection.commit()
+
+    logger.info(
+        "Dispatched job %s with %s tasks (%s remaining).",
+        job_id,
+        len(tasks_to_submit),
+        len(remaining_tasks),
+    )
+
+
 def _complete_compression_job(
     db_context: DbContext, job_id: int, num_tasks_total: int, duration: float
 ) -> None:
@@ -551,9 +678,7 @@ def _get_tag_ids_for_job(
 
 
 def _handle_failed_compression_job(
-    logs_directory: Path,
-    db_context: DbContext,
-    job_id: int, error_messages: list[str]
+    logs_directory: Path, db_context: DbContext, job_id: int, error_messages: list[str]
 ) -> None:
     """
     Handles a failed compression job by writing error logs and updating metadata.
@@ -590,7 +715,6 @@ def _handle_failed_compression_job(
             "status_msg": error_msg,
         },
     )
-
 
 
 def _insert_tasks_to_db(
@@ -638,15 +762,24 @@ def _schedule_compression_job(
     :param job_row:
     :param existing_datasets:
     """
-    job_id = job_row["id"]
-    clp_io_config = ClpIoConfig.model_validate(
-        msgpack.unpackb(brotli.decompress(job_row["clp_config"]))
-    )
-    input_config = clp_io_config.input
 
-    table_prefix = clp_metadata_db_connection_config["table_prefix"]
-    dataset = input_config.dataset
 
+def _ensure_dataset_exists(
+    clp_config: ClpConfig,
+    db_context: DbContext,
+    table_prefix: str,
+    dataset: str,
+    existing_datasets: set[str],
+) -> None:
+    """
+    Ensures that the specified dataset exists in the metadata database.
+
+    :param db_context:
+    :param table_prefix:
+    :param dataset:
+    :param clp_config:
+    :param existing_datasets:
+    """
     if dataset is not None and dataset not in existing_datasets:
         add_dataset(
             db_context.connection,
@@ -656,122 +789,3 @@ def _schedule_compression_job(
             clp_config.archive_output,
         )
         existing_datasets.add(dataset)
-
-    paths_to_compress_buffer = PathsToCompressBuffer(
-        maintain_file_ordering=False,
-        empty_directories_allowed=True,
-        scheduling_job_id=job_id,
-        clp_io_config=clp_io_config,
-        clp_metadata_db_connection_config=clp_metadata_db_connection_config,
-    )
-
-    input_type = input_config.type
-    if input_type == InputType.FS.value:
-        invalid_path_messages = _process_fs_input_paths(input_config, paths_to_compress_buffer)
-        if len(invalid_path_messages) > 0:
-            user_log_relative_path = _write_user_failure_log(
-                title="Failed input paths log.",
-                content=invalid_path_messages,
-                logs_directory=clp_config.logs_directory,
-                job_id=job_id,
-                filename_suffix="failed_paths",
-            )
-            if user_log_relative_path is None:
-                err_msg = "Failed to write user log for invalid input paths."
-                raise RuntimeError(err_msg)
-
-            error_msg = (
-                "At least one of your input paths could not be processed."
-                f" See the error log at '{user_log_relative_path}' inside your configured logs"
-                " directory (`logs_directory`) for more details."
-            )
-
-            update_compression_job_metadata(
-                db_context,
-                job_id,
-                {
-                    "status": CompressionJobStatus.FAILED,
-                    "status_msg": error_msg,
-                },
-            )
-            return
-    elif input_type == InputType.S3.value:
-        try:
-            _process_s3_input(input_config, paths_to_compress_buffer)
-        except Exception as err:
-            logger.exception("Failed to process S3 input")
-            update_compression_job_metadata(
-                db_context,
-                job_id,
-                {
-                    "status": CompressionJobStatus.FAILED,
-                    "status_msg": f"S3 Failure: {err}",
-                },
-            )
-            return
-    else:
-        logger.error(f"Unsupported input type {input_type}")
-        update_compression_job_metadata(
-            db_context,
-            job_id,
-            {
-                "status": CompressionJobStatus.FAILED,
-                "status_msg": f"Unsupported input type: {input_type}",
-            },
-        )
-        return
-
-    paths_to_compress_buffer.flush()
-    tasks = paths_to_compress_buffer.get_tasks()
-    partition_info = paths_to_compress_buffer.get_partition_info()
-
-    # Update job metadata
-    start_time = datetime.datetime.now()
-    update_compression_job_metadata(
-        db_context,
-        job_id,
-        {
-            "num_tasks": paths_to_compress_buffer.num_tasks,
-            "status": CompressionJobStatus.RUNNING,
-            "start_time": start_time,
-        },
-    )
-
-    tag_ids = _get_tag_ids_for_job(db_context, clp_io_config, table_prefix, dataset)
-
-    for task in tasks:
-        task["tag_ids"] = tag_ids
-
-    # Batch tasks
-    num_tasks_per_sub_job = clp_config.compression_scheduler.num_tasks_per_sub_job
-    tasks_to_submit, remaining_tasks, partition_info_to_submit, remaining_partition_info = (
-        _batch_tasks(tasks, partition_info, num_tasks_per_sub_job)
-    )
-
-    _insert_tasks_to_db(db_context, job_id, tasks_to_submit, partition_info_to_submit)
-    result_handle = task_manager.submit(tasks_to_submit)
-
-    job = CompressionJob(
-        id=job_id,
-        start_time=start_time,
-        result_handle=result_handle,
-        num_tasks_total=paths_to_compress_buffer.num_tasks,
-        num_tasks_completed=0,
-        remaining_tasks=remaining_tasks,
-        remaining_partition_info=remaining_partition_info,
-    )
-    db_context.cursor.execute(
-        f"""
-        UPDATE {COMPRESSION_TASKS_TABLE_NAME}
-        SET status='{CompressionTaskStatus.RUNNING}' WHERE job_id={job_id}
-        """
-    )
-    db_context.connection.commit()
-
-    scheduled_jobs[job_id] = job
-    logger.info(
-        "Dispatched job %s with %s tasks (%s remaining).",
-        job_id,
-        len(tasks_to_submit),
-        len(remaining_tasks),
-    )
