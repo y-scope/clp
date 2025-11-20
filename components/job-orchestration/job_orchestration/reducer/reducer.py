@@ -6,7 +6,6 @@ import os
 import subprocess
 import sys
 from pathlib import Path
-from typing import List
 
 from clp_py_utils.clp_config import ClpConfig
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
@@ -16,7 +15,7 @@ from pydantic import ValidationError
 logger = get_logger("reducer")
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     args_parser = argparse.ArgumentParser(description="Spin up reducers.")
     args_parser.add_argument("--config", "-c", required=True, help="CLP configuration file.")
     args_parser.add_argument(

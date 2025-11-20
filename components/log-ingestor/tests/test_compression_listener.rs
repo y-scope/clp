@@ -6,7 +6,7 @@ use clp_rust_utils::s3::ObjectMetadata;
 use log_ingestor::compression::{Buffer, BufferSubmitter, DEFAULT_LISTENER_CAPACITY, Listener};
 use tokio::sync::{Mutex, mpsc};
 
-const TEST_OBJECT_SIZE: usize = 1024;
+const TEST_OBJECT_SIZE: u64 = 1024;
 
 /// A test submitter that stores submitted buffers in memory for inspection.
 struct TestBufferSubmitter {

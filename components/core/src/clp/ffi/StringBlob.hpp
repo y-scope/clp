@@ -17,6 +17,8 @@ public:
     // Constructors
     StringBlob() = default;
 
+    auto operator==(StringBlob const& other) const -> bool = default;
+
     // Methods
     [[nodiscard]] auto get_num_strings() const -> size_t { return m_offsets.size() - 1; }
 
