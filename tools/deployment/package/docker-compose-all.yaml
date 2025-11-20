@@ -299,7 +299,7 @@ services:
     <<: *service_defaults
     hostname: "compression_worker"
     environment:
-      CLP_CONFIG_PATH: "/etc/clp-config.yml"
+      CLP_CONFIG_PATH: "/etc/clp-config.yaml"
       CLP_HOME: "/opt/clp"
       CLP_LOGGING_LEVEL: "${CLP_COMPRESSION_WORKER_LOGGING_LEVEL:-INFO}"
       CLP_LOGS_DIR: "/var/log/compression_worker"
