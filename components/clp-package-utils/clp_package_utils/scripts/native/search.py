@@ -24,6 +24,7 @@ from clp_package_utils.general import (
     get_clp_home,
     load_config_file,
 )
+
 from .utils import (
     run_function_in_process,
     submit_query_job,
