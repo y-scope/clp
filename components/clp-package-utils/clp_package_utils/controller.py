@@ -599,6 +599,11 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
+        # Service enablement
+        env_vars |= {
+            "CLP_MCP_SERVER_ENABLED": "1",
+        }
+
         # Connection config
         env_vars |= {
             "CLP_MCP_HOST": _get_ip_from_hostname(self._clp_config.mcp_server.host),
@@ -797,8 +802,6 @@ class DockerComposeController(BaseController):
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
         cmd += ["--file", self._get_docker_file_name()]
-        if self._clp_config.mcp_server is not None:
-            cmd += ["--profile", "mcp"]
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(
             cmd,
