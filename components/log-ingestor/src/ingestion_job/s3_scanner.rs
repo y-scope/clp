@@ -23,14 +23,14 @@ pub struct S3ScannerConfig {
 ///
 /// # Type Parameters
 ///
-/// * [`S3Client`]: The type of the AWS S3 client manager.
-struct Task<S3Client: AwsClientManagerType<Client>> {
-    s3_client_manager: S3Client,
+/// * [`S3ClientManager`]: The type of the AWS S3 client manager.
+struct Task<S3ClientManager: AwsClientManagerType<Client>> {
+    s3_client_manager: S3ClientManager,
     config: S3ScannerConfig,
     sender: mpsc::Sender<ObjectMetadata>,
 }
 
-impl<S3Client: AwsClientManagerType<Client>> Task<S3Client> {
+impl<S3ClientManager: AwsClientManagerType<Client>> Task<S3ClientManager> {
     /// Runs the S3 scanner task to scan the given bucket.
     ///
     /// This is a wrapper of [`Self::scan_once`] that supports cancellation via the provided
