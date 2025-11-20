@@ -2,9 +2,6 @@ name: "clp-build-runtime-image"
 description: "Builds a container image to be used for running CLP."
 
 inputs:
-  image_type:
-    description: "Type of image to build"
-    required: true
   image_registry:
     default: "ghcr.io"
     description: "Container image registry"
@@ -52,15 +49,8 @@ runs:
       shell: "bash"
       run: |
         base_path="./tools/docker-images"
-
-        if [[ "${{inputs.image_type}}" == "execution" ]]; then
-          platform="${{inputs.platform_id}}-${{inputs.platform_version_id}}"
-          dockerfile_path="$base_path/clp-execution-base-$platform/Dockerfile"
-          image_name="clp-${{inputs.image_type}}-$platform"
-        else
-          dockerfile_path="$base_path/clp-package/Dockerfile"
-          image_name="clp-${{inputs.image_type}}"
-        fi
+        image_name="clp-package"
+        dockerfile_path="$base_path/$image_name/Dockerfile"
 
         echo "DOCKERFILE=$dockerfile_path" >> "$GITHUB_OUTPUT"
         echo "IMAGE_NAME=$image_name" >> "$GITHUB_OUTPUT"

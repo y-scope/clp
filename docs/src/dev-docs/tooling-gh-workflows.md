@@ -88,11 +88,10 @@ need it for one OS since users can use the container on any OS.
 
 This workflow builds CLP-core on macOS and runs its unit tests.
 
-## clp-execution-image-build
-
-This workflow builds a container image that contains the dependencies necessary to run the CLP
-package.
-
 ## clp-lint
 
 This workflow runs linting checks on the codebase.
+
+## clp-uv-checks
+
+This workflow checks whether each UV Python project's lockfile matches the project metadata.

@@ -1,7 +1,7 @@
 import datetime
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from celery.app.task import Task
 from celery.utils.log import get_task_logger
@@ -13,7 +13,8 @@ from clp_py_utils.clp_config import (
 )
 from clp_py_utils.clp_logging import set_logging_level
 from clp_py_utils.s3_utils import generate_s3_virtual_hosted_style_url, get_credential_env_vars
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
+
 from job_orchestration.executor.query.celery import app
 from job_orchestration.executor.query.utils import (
     report_task_failure,
@@ -31,11 +32,18 @@ def _make_core_clp_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     search_config: SearchJobConfig,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_type = worker_config.archive_output.storage.type
     if StorageType.S3 == storage_type:
         logger.error(
             f"Search is not supported for storage type '{storage_type}' while using the"
+            f" '{worker_config.package.storage_engine}' storage engine."
+        )
+        return None, None
+
+    if True == search_config.write_to_file:
+        logger.error(
+            f"Outputting search results to the file system is not supported while using the"
             f" '{worker_config.package.storage_engine}' storage engine."
         )
         return None, None
@@ -53,7 +61,7 @@ def _make_core_clp_s_command_and_env_vars(
     worker_config: WorkerConfig,
     archive_id: str,
     search_config: SearchJobConfig,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+) -> tuple[list[str] | None, dict[str, str] | None]:
     command = [
         str(clp_home / "bin" / "clp-s"),
         "s",
@@ -99,7 +107,7 @@ def _make_command_and_env_vars(
     search_config: SearchJobConfig,
     results_cache_uri: str,
     results_collection: str,
-) -> Tuple[Optional[List[str]], Optional[Dict[str, str]]]:
+) -> tuple[list[str] | None, dict[str, str] | None]:
     storage_engine = worker_config.package.storage_engine
 
     if StorageEngine.CLP == storage_engine:
@@ -151,6 +159,16 @@ def _make_command_and_env_vars(
             "--port", str(search_config.network_address[1])
         ))
         # fmt: on
+    elif search_config.write_to_file:
+        output_directory = worker_config.stream_output.get_directory() / results_collection
+        output_directory.mkdir(exist_ok=True)
+        output_path = output_directory / archive_id
+        # fmt: off
+        command.extend((
+            "file",
+            "--path", str(output_path),
+        ))
+        # fmt: on
     else:
         # fmt: off
         command.extend((
@@ -173,7 +191,7 @@ def search(
     archive_id: str,
     clp_metadata_db_conn_params: dict,
     results_cache_uri: str,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     task_name = "search"
 
     # Setup logging to file
@@ -184,7 +202,7 @@ def search(
     logger.info(f"Started {task_name} task for job {job_id}")
 
     start_time = datetime.datetime.now()
-    sql_adapter = SQL_Adapter(Database.parse_obj(clp_metadata_db_conn_params))
+    sql_adapter = SqlAdapter(Database.model_validate(clp_metadata_db_conn_params))
 
     # Load configuration
     clp_config_path = Path(os.getenv("CLP_CONFIG_PATH"))
@@ -198,7 +216,7 @@ def search(
 
     # Make task_command
     clp_home = Path(os.getenv("CLP_HOME"))
-    search_config = SearchJobConfig.parse_obj(job_config)
+    search_config = SearchJobConfig.model_validate(job_config)
 
     task_command, core_clp_env_vars = _make_command_and_env_vars(
         clp_home=clp_home,
@@ -228,4 +246,4 @@ def search(
         start_time=start_time,
     )
 
-    return task_results.dict()
+    return task_results.model_dump()

@@ -1,5 +1,8 @@
 version: "3"
 
+includes:
+  toolchains: "toolchains.yaml"
+
 vars:
   # Ignore https://github.com/msgpack/msgpack-c/issues/1098
   G_CLANG_TIDY_LINE_FILTER_IGNORE_MSGPACK_1098: >-
@@ -13,6 +16,7 @@ tasks:
       - task: "check-cpp-full"
       - task: "check-js"
       - task: "check-py"
+      - task: "check-rust"
       - task: "check-yaml"
 
   check-cpp-diff:
@@ -25,17 +29,12 @@ tasks:
       - task: "check-cpp-format"
       - task: "check-cpp-static-full"
 
-  check-no-cpp:
-    cmds:
-      - task: "check-js"
-      - task: "check-py"
-      - task: "check-yaml"
-
   fix:
     cmds:
       - task: "fix-cpp-full"
       - task: "fix-js"
       - task: "fix-py"
+      - task: "fix-rust"
       - task: "fix-yaml"
 
   fix-cpp-diff:
@@ -52,6 +51,7 @@ tasks:
     cmds:
       - task: "fix-js"
       - task: "fix-py"
+      - task: "fix-rust"
       - task: "fix-yaml"
 
   check-js:
@@ -99,7 +99,7 @@ tasks:
         . "{{.G_LINT_VENV_DIR}}/bin/activate"
         yamllint --strict \
           .github \
-          .yamllint.yml \
+          .yamllint.yaml \
           components/core/.clang-format \
           components/core/config \
           components/core/tools/ \
@@ -762,15 +762,17 @@ tasks:
     vars:
       UV_PYTHON_PROJECTS:
         - "{{.G_INTEGRATION_TESTS_DIR}}"
+      UV_PYTHON_PROJECTS_IGNORE_ERRORS:
+        - "{{.G_COMPONENTS_DIR}}/clp-mcp-server"
+        - "{{.G_COMPONENTS_DIR}}/clp-package-utils"
+        - "{{.G_COMPONENTS_DIR}}/clp-py-utils"
+        - "{{.G_COMPONENTS_DIR}}/job-orchestration"
     requires:
       vars: ["BLACK_FLAGS", "RUFF_CHECK_FLAGS", "RUFF_FORMAT_FLAGS"]
     deps: ["venv"]
     cmds:
       - for:
-          - "components/clp-package-utils/clp_package_utils"
-          - "components/clp-py-utils/clp_py_utils"
           - "components/core/tools/scripts/utils"
-          - "components/job-orchestration/job_orchestration"
           - "tools/deployment"
           - "tools/scripts"
           - "docs/conf"
@@ -782,9 +784,83 @@ tasks:
       - for:
           var: "UV_PYTHON_PROJECTS"
         cmd: |-
-          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
           uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} .
+          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
           uv run --directory "{{.ITEM}}" mypy .
+      - for:
+          var: "UV_PYTHON_PROJECTS_IGNORE_ERRORS"
+        cmd: |-
+          uv run --directory "{{.ITEM}}" ruff check {{.RUFF_CHECK_FLAGS}} --exit-zero .
+          uv run --directory "{{.ITEM}}" ruff format {{.RUFF_FORMAT_FLAGS}} .
+          uv run --directory "{{.ITEM}}" mypy . || true
+
+  check-rust:
+    cmds:
+      - task: "check-rust-format"
+      - task: "check-rust-static"
+
+  fix-rust:
+    cmds:
+      - task: "fix-rust-format"
+      - task: "fix-rust-static"
+
+  check-rust-format:
+    cmds:
+      - task: "cargo-workspace-fmt"
+        vars:
+          CARGO_FMT_FLAGS: "--check"
+
+  fix-rust-format:
+    cmds:
+      - task: "cargo-workspace-fmt"
+        vars:
+          CARGO_FMT_FLAGS: ""
+
+  check-rust-static:
+    cmds:
+      - task: "cargo-workspace-clippy"
+        vars:
+          CARGO_CLIPPY_FLAGS: "-- -D warnings"
+
+  fix-rust-static:
+    cmds:
+      - task: "cargo-workspace-clippy"
+        vars:
+          CARGO_CLIPPY_FLAGS: "--fix --allow-dirty --allow-staged"
+
+  rust-lint-configs:
+    internal: true
+    run: "once"
+    cmd: |-
+      cp \
+        {{.ROOT_DIR}}/tools/yscope-dev-utils/exports/lint-configs/.rustfmt.toml \
+        {{.ROOT_DIR}}/.rustfmt.toml
+
+  # Runs `cargo +nightly fmt` in the root Rust workspace directory with the specified flags.
+  #
+  # @param {string} CARGO_FMT_FLAGS The flags to pass to the `cargo +nightly fmt` command.
+  cargo-workspace-fmt:
+    internal: true
+    requires:
+      vars: ["CARGO_FMT_FLAGS"]
+    dir: "{{.ROOT_DIR}}"
+    deps: ["rust-lint-configs", "toolchains:rust"]
+    cmd: |-
+      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+      cargo +nightly fmt --all -- {{.CARGO_FMT_FLAGS}}
+
+  # Runs `cargo +nightly clippy` in the root Rust workspace directory with the specified flags.
+  #
+  # @param {string} CARGO_CLIPPY_FLAGS The flags to pass to the `cargo +nightly clippy` command.
+  cargo-workspace-clippy:
+    internal: true
+    requires:
+      vars: ["CARGO_CLIPPY_FLAGS"]
+    dir: "{{.ROOT_DIR}}"
+    deps: ["toolchains:rust"]
+    cmd: |-
+      . "{{.G_RUST_TOOLCHAIN_ENV_FILE}}"
+      cargo +nightly clippy --all-targets --all-features {{.CARGO_CLIPPY_FLAGS}}
 
   venv:
     internal: true

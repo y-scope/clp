@@ -1,5 +1,4 @@
 import pathlib
-import typing
 
 import Levenshtein
 
@@ -60,7 +59,7 @@ def file_paths_in_same_group(a: pathlib.Path, b: pathlib.Path):
     return Levenshtein.ratio(str(a.name), str(b.name)) >= FILE_GROUPING_MIN_LEVENSHTEIN_RATIO
 
 
-def group_files_by_similar_filenames(files: typing.List[FileMetadata]):
+def group_files_by_similar_filenames(files: list[FileMetadata]):
     groups = []
 
     if len(files) == 0:

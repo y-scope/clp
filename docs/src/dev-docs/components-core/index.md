@@ -12,7 +12,7 @@ CLP core is the low-level component that performs compression, decompression, an
   * Minimum version 3.23.0 is required for [yscope-dev-utils].
   * We constrain the version to < 4.0.0 due to [y-scope/clp#795].
 * [Task] 3.44.0
-  * We pin the version to 3.44.0 due to [y-scope/clp-ffi-js#110].
+  * We pin the version to 3.44.0 due to [y-scope/clp#1352].
 * [uv] >= 0.8
 
 To build, we require some source dependencies, packages from package managers, and libraries built
@@ -43,16 +43,16 @@ The task will download, build, and install (within the build directory) the foll
 | [Boost](https://github.com/boostorg/boost)                            | v1.87.0        |
 | [Catch2](https://github.com/catchorg/Catch2)                          | v3.8.0         |
 | [date](https://github.com/HowardHinnant/date)                         | v3.0.1         |
-| [fmt](https://github.com/fmtlib/fmt)                                  | v10.2.1        |
+| [fmt](https://github.com/fmtlib/fmt)                                  | v11.2.0        |
 | [liblzma](https://github.com/tukaani-project/xz)                      | v5.8.1         |
-| [log-surgeon](https://github.com/y-scope/log-surgeon)                 | a82ad13        |
+| [log-surgeon](https://github.com/y-scope/log-surgeon)                 | 840f262        |
 | [lz4](https://github.com/lz4/lz4)                                     | v1.10.0        |
 | [microsoft.gsl](https://github.com/microsoft/GSL)                     | v4.0.0         |
 | [mongo-cxx-driver](https://github.com/mongodb/mongo-cxx-driver)       | r4.1.1         |
 | [msgpack-cxx](https://github.com/msgpack/msgpack-c/tree/cpp_master)   | v7.0.0         |
 | [nlohmann_json](https://github.com/nlohmann/json)                     | v3.11.3        |
 | [simdjson](https://github.com/simdjson/simdjson)                      | v3.13.0        |
-| [spdlog](https://github.com/gabime/spdlog)                            | v1.14.1        |
+| [spdlog](https://github.com/gabime/spdlog)                            | v1.15.3        |
 | [SQLite3](https://www.sqlite.org/download.html)                       | v3.36.0        |
 | [utfcpp](https://github.com/nemtrif/utfcpp)                           | v4.0.6         |
 | [yaml-cpp](https://github.com/jbeder/yaml-cpp)                        | v0.7.0         |
@@ -129,9 +129,9 @@ regex-utils
 :::
 
 [CMake]: https://cmake.org/
-[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yaml
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
-[y-scope/clp-ffi-js#110]: https://github.com/y-scope/clp-ffi-js/issues/110
 [y-scope/clp#795]: https://github.com/y-scope/clp/issues/795
+[y-scope/clp#1352]: https://github.com/y-scope/clp/issues/1352
 [yscope-dev-utils]: https://github.com/y-scope/yscope-dev-utils

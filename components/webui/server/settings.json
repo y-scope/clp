@@ -25,8 +25,8 @@
     "ArchiveOutputTargetEncodedFileSize": 268435456,
     "ArchiveOutputTargetSegmentSize": 268435456,
 
-    "ClpQueryEngine": "clp",
-    "ClpStorageEngine": "clp",
+    "ClpQueryEngine": "clp-s",
+    "ClpStorageEngine": "clp-s",
     "PrestoHost": "localhost",
     "PrestoPort": 8889
 }

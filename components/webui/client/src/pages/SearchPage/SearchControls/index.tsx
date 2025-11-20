@@ -4,7 +4,6 @@ import {SETTINGS_QUERY_ENGINE} from "../../../config";
 import usePrestoSearchState from "../SearchState/Presto";
 import {PRESTO_SQL_INTERFACE} from "../SearchState/Presto/typings";
 import NativeControls from "./NativeControls";
-import {BuildSqlTestingInputs} from "./Presto/BuildSqlTestingInputs";
 import FreeformControls from "./Presto/FreeformControls";
 import GuidedControls from "./Presto/GuidedControls";
 
@@ -37,12 +36,9 @@ const SearchControls = () => {
     }
 
     return (
-        <>
-            <form onSubmit={handleSubmit}>
-                {controls}
-            </form>
-            {isPrestoGuided && <BuildSqlTestingInputs/>}
-        </>
+        <form onSubmit={handleSubmit}>
+            {controls}
+        </form>
     );
 };
 

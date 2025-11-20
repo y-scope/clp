@@ -33,7 +33,7 @@ jobs:
 
       - name: "Install task"
         shell: "bash"
-        run: "npm install -g @go-task/cli"
+        run: "npm install -g @go-task/cli@3.44.0"
 
       - name: "Install uv"
         shell: "bash"
@@ -43,6 +43,38 @@ jobs:
         name: "Install coreutils (for md5sum)"
         run: "brew install coreutils"
 
-      - name: "Run lint task"
+      # This is a necessary dependency for the Python mariadb package which is a transitive
+      # dependency of `lint:py-check`.
+      - name: "Install MariaDB Connector/C"
         shell: "bash"
-        run: "task lint:check-no-cpp"
+        run: |-
+          case "${{ matrix.os }}" in
+            ubuntu-24.04)
+              sudo apt-get update
+              sudo apt-get install -y libmariadb-dev
+              MARIADB_CONFIG_PATH="$(command -v mariadb_config)"
+              ;;
+            macos-15)
+              brew update
+              brew install mariadb-connector-c
+              PREFIX="$(brew --prefix mariadb-connector-c)"
+              MARIADB_CONFIG_PATH="$PREFIX/bin/mariadb_config"
+              ;;
+            *)
+              # Control flow should not reach here
+              exit 1
+              ;;
+          esac
+          echo "MARIADB_CONFIG=$MARIADB_CONFIG_PATH" >> "$GITHUB_ENV"
+
+      - name: "Lint .js files"
+        shell: "bash"
+        run: "task lint:check-js"
+
+      - name: "Lint .py files"
+        shell: "bash"
+        run: "task lint:check-py"
+
+      - name: "Lint .yaml files"
+        shell: "bash"
+        run: "task lint:check-yaml"

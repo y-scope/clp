@@ -1,17 +1,22 @@
 .gridContainer {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    grid-template-rows: 32px;
+    grid-auto-rows: 32px;
     gap: 5px;
 }
 
 .select {
-    grid-column: span 3;
+    grid-column: span 2;
     display: flex;
 }
 
 .from {
-    grid-column: span 1;
+    grid-column: span 2;
+    display: flex;
+}
+
+.timestampKey {
+    width: 300px;
     display: flex;
 }
 
@@ -21,17 +26,13 @@
 }
 
 .order {
-    grid-column: span 1;
-    display: flex;
-}
-
-.limit {
-    grid-column: span 1;
+    grid-column: span 2;
     display: flex;
 }
 
 .widthSelect {
-    width: 100%;
+    width: 0;
+    flex-grow: 1;
 }
 
 .noLeftBorderRadiusSelect :global(.ant-select-selector) {

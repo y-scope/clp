@@ -58,6 +58,7 @@ tasks:
     sources:
       - "{{.ROOT_DIR}}/taskfile.yaml"
       - "{{.SRC_DIR}}/SqlBase.g4"
+      - "{{.SRC_DIR}}/Sql.g4"
       - "{{.TASKFILE}}"
     dir: "{{.SRC_DIR}}"
     cmds:
@@ -67,14 +68,14 @@ tasks:
         -Dlanguage=TypeScript
         -no-listener
         -o generated
-        -Xexact-output-dir SqlBase.g4
+        -Xexact-output-dir Sql.g4
       - >-
         find generated
         -type f -and -not -name "*.ts"
         -exec rm {} \;
       - for:
-          - "generated/SqlBaseLexer.ts"
-          - "generated/SqlBaseParser.ts"
+          - "generated/SqlLexer.ts"
+          - "generated/SqlParser.ts"
         task: ":utils:misc:replace-text"
         vars:
           FILE_PATH: "{{.SRC_DIR}}/{{.ITEM}}"
