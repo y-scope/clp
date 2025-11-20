@@ -523,6 +523,15 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             REQUIRE(expected_result.epoch_timestamp == searched_result.value().first);
             REQUIRE(expected_result.pattern == searched_result.value().second);
             // NOLINTEND(bugprone-unchecked-optional-access)
+
+            std::string marshalled_timestamp;
+            auto const marshal_result{marshal_timestamp(
+                    expected_result.epoch_timestamp,
+                    timestamp_pattern_result.value(),
+                    marshalled_timestamp
+            )};
+            REQUIRE_FALSE(marshal_result.has_error());
+            REQUIRE(expected_result.timestamp == marshalled_timestamp);
         }
     }
 }

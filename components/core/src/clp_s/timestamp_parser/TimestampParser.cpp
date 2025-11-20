@@ -248,15 +248,35 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  */
 [[nodiscard]] auto estimate_timestamp_precision(int64_t timestamp) -> std::pair<int64_t, char>;
 
+/**
+ * Marshals a date-time timestamp according to a timestamp pattern.
+ * @param timestamp
+ * @param pattern
+ * @param buffer
+ * @return A void result on success, or an error code indicating the failure:
+ * - ErrorCodeEnum::InvalidTimestampPattern if `pattern` contains format malformed format
+ *   specifiers, or format specifiers that aren't supported in date-time timestamps.
+ * - ErrorCodeEnum::IncompatibleTimestampPattern if `timestamp` can not be represented by `pattern`.
+ */
 auto marshal_date_time_timestamp(
         epochtime_t timestamp,
-        TimestampPattern const& pattern,
+        TimestampPattern const& timestamp_pattern,
         std::string& buffer
 ) -> ystdlib::error_handling::Result<void>;
 
+/**
+ * Marshals a numeric timestamp according to a timestamp pattern.
+ * @param timestamp
+ * @param pattern
+ * @param buffer
+ * @return A void result on success, or an error code indicating the failure:
+ * - ErrorCodeEnum::InvalidTimestampPattern if `pattern` contains format specifiers that aren't
+ *   supported in numeric timestamps.
+ * - ErrorCodeEnum::IncompatibleTimestampPattern if `timestamp` can not be represented by `pattern`.
+ */
 auto marshal_numeric_timestamp(
         epochtime_t timestamp,
-        TimestampPattern const& pattern,
+        TimestampPattern const& timestamp_pattern,
         std::string& buffer
 ) -> ystdlib::error_handling::Result<void>;
 
@@ -472,6 +492,7 @@ auto extract_absolute_subsecond_nanoseconds(epochtime_t timestamp) -> epochtime_
     return subsecond_nanoseconds < 0 ? -subsecond_nanoseconds : subsecond_nanoseconds;
 }
 
+// NOLINTBEGIN(readability-function-cognitive-complexity)
 auto marshal_date_time_timestamp(
         epochtime_t timestamp,
         TimestampPattern const& timestamp_pattern,
@@ -489,7 +510,7 @@ auto marshal_date_time_timestamp(
     };
     auto const timestamp_date{date::floor<date::days>(timezone_adjusted_timestamp_point)};
     auto const year_month_day{date::year_month_day(timestamp_date)};
-    auto const time_of_day_duration{timestamp_point - timestamp_date};
+    auto const time_of_day_duration{timezone_adjusted_timestamp_point - timestamp_date};
     auto const time_of_day{date::make_time(time_of_day_duration)};
 
     bool escaped{false};
@@ -573,13 +594,19 @@ auto marshal_date_time_timestamp(
             }
             case 'I': {  // 12-hour clock, zero-padded hour.
                 auto const hours{time_of_day.hours().count()};
-                auto const twelve_hour_clock_hours{(hours % cMaxParsedHour12HourClock) + 1};
+                auto const hours_mod_twelve{hours % cMaxParsedHour12HourClock};
+                auto const twelve_hour_clock_hours{
+                        0 == hours_mod_twelve ? cMaxParsedHour12HourClock : hours_mod_twelve
+                };
                 buffer.append(fmt::format("{: >2d}", twelve_hour_clock_hours));
                 break;
             }
             case 'l': {  // 12-hour clock, space-padded hour.
                 auto const hours{time_of_day.hours().count()};
-                auto const twelve_hour_clock_hours{(hours % cMaxParsedHour12HourClock) + 1};
+                auto const hours_mod_twelve{hours % cMaxParsedHour12HourClock};
+                auto const twelve_hour_clock_hours{
+                        0 == hours_mod_twelve ? cMaxParsedHour12HourClock : hours_mod_twelve
+                };
                 buffer.append(fmt::format("{: >2d}", twelve_hour_clock_hours));
                 break;
             }
@@ -642,10 +669,10 @@ auto marshal_date_time_timestamp(
                         timestamp_pattern.get_optional_timezone_size_and_offset()
                 };
                 if (false == timezone_offset.has_value()) {
-                    return ErrorCode{{ErrorCodeEnum::InvalidTimestampPattern}};
+                    return ErrorCode{ErrorCodeEnum::InvalidTimestampPattern};
                 }
                 auto const timezone_pattern_size{timezone_offset.value().first};
-                buffer.append(pattern.substr(pattern_idx + 1ULL, timezone_pattern_size));
+                buffer.append(pattern.substr(pattern_idx + 2ULL, timezone_pattern_size));
                 pattern_idx += timezone_pattern_size + 2ULL;
                 break;
             }
@@ -659,13 +686,15 @@ auto marshal_date_time_timestamp(
     return ystdlib::error_handling::success();
 }
 
+// NOLINTEND(readability-function-cognitive-complexity)
+
 auto marshal_numeric_timestamp(
         epochtime_t timestamp,
-        TimestampPattern const& pattern,
+        TimestampPattern const& timestamp_pattern,
         std::string& buffer
 ) -> ystdlib::error_handling::Result<void> {
     bool escaped{false};
-    for (auto const c : pattern.get_pattern()) {
+    for (auto const c : timestamp_pattern.get_pattern()) {
         if (false == escaped && '\\' == c) {
             escaped = true;
             continue;
@@ -701,11 +730,7 @@ auto marshal_numeric_timestamp(
                 break;
             }
             case 'N': {  // Epoch nanoseconds.
-                constexpr auto cFactor{cPowersOfTen
-                                               [cNumNanosecondPrecisionSubsecondDigits
-                                                - cNumNanosecondPrecisionSubsecondDigits]};
-                int64_t epoch_nanosecond_timestamp{timestamp / cFactor};
-                buffer.append(fmt::format("{}", epoch_nanosecond_timestamp));
+                buffer.append(fmt::format("{}", timestamp));
                 break;
             }
             case '3': {  // Zero-padded 3-digit milliseconds.
