@@ -8,7 +8,7 @@ import stat
 import subprocess
 import uuid
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any
 
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
@@ -67,7 +67,7 @@ THIRD_PARTY_SERVICE_UID_GID = f"{THIRD_PARTY_SERVICE_UID}:{THIRD_PARTY_SERVICE_G
 logger = logging.getLogger(__name__)
 
 
-class EnvVarsDict(dict[str, Optional[str]]):
+class EnvVarsDict(dict[str, str | None]):
     def __ior__(self, other: "EnvVarsDict") -> "EnvVarsDict":
         """
         Overloads the `|=` operator for static type checking on `other`.
@@ -599,6 +599,11 @@ class BaseController(ABC):
 
         env_vars = EnvVarsDict()
 
+        # Service enablement
+        env_vars |= {
+            "CLP_MCP_SERVER_ENABLED": "1",
+        }
+
         # Connection config
         env_vars |= {
             "CLP_MCP_HOST": _get_ip_from_hostname(self._clp_config.mcp_server.host),
@@ -797,8 +802,6 @@ class DockerComposeController(BaseController):
 
         cmd = ["docker", "compose", "--project-name", self._project_name]
         cmd += ["--file", self._get_docker_file_name()]
-        if self._clp_config.mcp_server is not None:
-            cmd += ["--profile", "mcp"]
         cmd += ["up", "--detach", "--wait"]
         subprocess.run(
             cmd,
