@@ -33,8 +33,8 @@ struct Task<S3Client: AwsClientManagerType<Client>> {
 impl<S3Client: AwsClientManagerType<Client>> Task<S3Client> {
     /// Runs the S3 scanner task to scan the given bucket.
     ///
-    /// This is a wrapper of [`Self::scan`] that supports cancellation via the provided cancellation
-    /// token.
+    /// This is a wrapper of [`Self::scan_once`] that supports cancellation via the provided
+    /// cancellation token.
     ///
     /// # Returns
     ///
@@ -44,17 +44,27 @@ impl<S3Client: AwsClientManagerType<Client>> Task<S3Client> {
     ///
     /// Returns an error if:
     ///
-    /// * Forwards [`Self::scan`]'s return values on failure.
+    /// * Forwards [`Self::scan_once`]'s return values on failure.
     pub async fn run(mut self, cancel_token: CancellationToken) -> Result<()> {
-        select! {
-            // Cancellation requested.
-            () = cancel_token.cancelled() => {
-                Ok(())
-            }
+        loop {
+            select! {
+                // Cancellation requested.
+                () = cancel_token.cancelled() => {
+                    return Ok(());
+                }
 
-            // Scanner execution
-            result = self.scan() => {
-                result
+                // Scanner execution
+                is_truncated_result = self.scan_once() => {
+                    if is_truncated_result? {
+                        // The results are truncated. Keep going until all objects are listed.
+                        // Ideally, we can use the continuation token to continue listing objects,
+                        // but since we may refresh the client in the next scan cycle, we will use
+                        // `start_after` to send a new request to resume the scanning progress for
+                        // simplicity.
+                        continue;
+                    }
+                    self.sleep().await;
+                }
             }
         }
     }
@@ -62,17 +72,15 @@ impl<S3Client: AwsClientManagerType<Client>> Task<S3Client> {
     /// Scans the configured S3 bucket and prefix for new objects and sends their metadata to the
     /// underlying channel sender.
     ///
-    /// # NOTE
+    /// # Note
     ///
-    /// * The scanner runs in a loop, sleeping for the configured scanning interval between each
-    ///   scan.
-    /// * The scanner uses the `start_after` parameter to keep track of the last scanned object key,
-    ///   meaning that it requires the keys of newly inserted objects to be lexicographically larger
-    ///   than the last successfully ingested key.
+    /// The scanner uses the `start_after` parameter to keep track of the last scanned object key,
+    /// meaning that it requires the keys of newly inserted objects to be lexicographically larger
+    /// than the last successfully ingested key.
     ///
     /// # Returns
     ///
-    /// This function never returns unless an error occurs.
+    /// Whether the underlying `list_buckets` call was truncated.
     ///
     /// # Errors
     ///
@@ -82,47 +90,37 @@ impl<S3Client: AwsClientManagerType<Client>> Task<S3Client> {
     /// * Forwards
     ///   [`aws_sdk_s3::operation::list_objects_v2::builders::ListObjectsV2FluentBuilder::send`]'s
     ///   return values on failure.
-    pub async fn scan(&mut self) -> Result<()> {
-        loop {
-            let client = self.s3_client_manager.get().await?;
-            let response = client
-                .list_objects_v2()
-                .bucket(self.config.bucket_name.as_str())
-                .prefix(self.config.prefix.as_str())
-                .set_start_after(self.config.start_after.clone())
-                .send()
-                .await?;
-            let Some(contents) = response.contents else {
-                self.sleep().await;
+    pub async fn scan_once(&mut self) -> Result<bool> {
+        let client = self.s3_client_manager.get().await?;
+        let response = client
+            .list_objects_v2()
+            .bucket(self.config.bucket_name.as_str())
+            .prefix(self.config.prefix.as_str())
+            .set_start_after(self.config.start_after.clone())
+            .send()
+            .await?;
+        let Some(contents) = response.contents else {
+            return Ok(false);
+        };
+
+        for content in contents {
+            let (Some(key), Some(size)) = (content.key, content.size) else {
                 continue;
             };
-
-            for content in contents {
-                let (Some(key), Some(size)) = (content.key, content.size) else {
-                    continue;
-                };
-                if key.ends_with('/') {
-                    continue;
-                }
-                self.sender
-                    .send(ObjectMetadata {
-                        bucket: self.config.bucket_name.clone(),
-                        key: key.clone(),
-                        size: size.try_into()?,
-                    })
-                    .await?;
-                self.config.start_after = Some(key);
-            }
-
-            if response.is_truncated.unwrap_or(false) {
-                // The results are truncated. Keep going until all objects are listed.
-                // Ideally, we can use the continuation token to continue listing objects, but since
-                // we may refresh the client in the next scan cycle, we will use `start_after` to
-                // send a new request for simplicity.
+            if key.ends_with('/') {
                 continue;
             }
-            self.sleep().await;
+            self.sender
+                .send(ObjectMetadata {
+                    bucket: self.config.bucket_name.clone(),
+                    key: key.clone(),
+                    size: size.try_into()?,
+                })
+                .await?;
+            self.config.start_after = Some(key);
         }
+
+        Ok(response.is_truncated.unwrap_or(false))
     }
 
     /// Sleeps for the configured scanning interval.
