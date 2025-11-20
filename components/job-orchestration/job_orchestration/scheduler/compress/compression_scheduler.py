@@ -335,8 +335,8 @@ def search_and_schedule_new_tasks(
         paths_to_compress_buffer.flush()
         _batch_and_submit_tasks(
             clp_config,
-            db_context,
             task_manager,
+            db_context,
             job_id,
             paths_to_compress_buffer,
         )
@@ -402,7 +402,7 @@ def poll_running_jobs(
 
         # Check if there are remaining tasks to dispatch
         if len(job.remaining_tasks) > 0:
-            _dispatch_next_task_batch(db_context, job, task_manager, num_tasks_per_sub_job)
+            _dispatch_next_task_batch(task_manager, db_context, job, num_tasks_per_sub_job)
         else:
             # All tasks completed successfully
             _complete_compression_job(db_context, job_id, job.num_tasks_total, duration)
@@ -525,8 +525,8 @@ def _batch_tasks(
 
 def _batch_and_submit_tasks(
     clp_config: ClpConfig,
-    db_context: DbContext,
     task_manager: TaskManager,
+    db_context: DbContext,
     job_id: int,
     paths_to_compress_buffer: PathsToCompressBuffer,
 ) -> None:
@@ -534,8 +534,8 @@ def _batch_and_submit_tasks(
     Batches tasks from paths_to_compress_buffer and submits them to the task manager.
 
     :param clp_config:
-    :param db_context:
     :param task_manager:
+    :param db_context:
     :param job_id:
     :param paths_to_compress_buffer:
     """
@@ -610,17 +610,17 @@ def _complete_compression_job(
 
 
 def _dispatch_next_task_batch(
+    task_manager: TaskManager,
     db_context: DbContext,
     job: CompressionJob,
-    task_manager: TaskManager,
     num_tasks_per_sub_job: int,
 ) -> None:
     """
     Dispatches the next batch of tasks for a compression job.
 
+    :param task_manager:
     :param db_context:
     :param job:
-    :param task_manager:
     :param num_tasks_per_sub_job:
     """
     job_id = job.id
