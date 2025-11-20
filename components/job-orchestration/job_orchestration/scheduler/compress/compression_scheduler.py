@@ -552,10 +552,10 @@ def _batch_and_submit_tasks(
         },
     )
 
+    # Compute the first batch of tasks and submit them to the task manager
     num_tasks_per_sub_job = clp_config.compression_scheduler.num_tasks_per_sub_job
     tasks = paths_to_compress_buffer.get_tasks()
     partition_info = paths_to_compress_buffer.get_partition_info()
-
     tasks_to_submit, remaining_tasks, partition_info_to_submit, remaining_partition_info = (
         _batch_tasks(tasks, partition_info, num_tasks_per_sub_job)
     )
