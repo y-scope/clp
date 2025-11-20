@@ -186,7 +186,8 @@ private:
 /**
  * @return A result containing a vector of numeric and date-time timestamp patterns, or an error
  * code indicating the failure:
- * - Forwards `TimestampPattern::create`'s return values on failure.
+ * - Forwards `get_default_date_time_timestamp_patterns`'s return values on failure.
+ * - Forwards `get_default_numeric_timestamp_patterns`'s return values on failure.
  */
 [[nodiscard]] auto get_all_default_timestamp_patterns()
         -> ystdlib::error_handling::Result<std::vector<TimestampPattern>>;
@@ -194,6 +195,7 @@ private:
 /**
  * @return A result containing a vector of quoted numeric and date-time timestamp patterns, or an
  * error code indicating the failure:
+ * - Forwards `get_all_default_timestamp_patterns`'s return values on failure.
  * - Forwards `TimestampPattern::create`'s return values on failure.
  */
 [[nodiscard]] auto get_all_default_quoted_timestamp_patterns()
