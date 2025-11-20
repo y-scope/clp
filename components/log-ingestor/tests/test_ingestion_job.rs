@@ -2,7 +2,7 @@ mod aws_config;
 
 use std::time::Duration;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use aws_config::AwsConfig;
 use clp_rust_utils::s3::ObjectMetadata;
 use log_ingestor::{
@@ -109,7 +109,7 @@ async fn upload_and_receive(
     .await
     .expect("Timed out while receiving object metadata");
 
-    let () = creation_handler
+    creation_handler
         .await
         .expect("Error while awaiting creation")
         .expect("Error during S3 object creation");
@@ -132,7 +132,7 @@ async fn upload_noise_objects(
         })
         .collect();
 
-    let () = create_s3_objects(s3_client.clone(), objects_to_create)
+    create_s3_objects(s3_client.clone(), objects_to_create)
         .await
         .expect("Error during S3 object creation");
 }
@@ -209,10 +209,10 @@ async fn test_sqs_listener() -> Result<()> {
 
     noise_upload_handle
         .await
-        .expect("Error while awaiting noise upload");
+        .context("Error while awaiting noise upload")?;
     let (mut created_objects, mut received_objects) = upload_and_receive_handle
         .await
-        .expect("Error while awaiting upload and receive");
+        .context("Error while awaiting upload and receive")?;
 
     sqs_listener.shutdown_and_join().await?;
 
@@ -273,10 +273,10 @@ async fn test_s3_scanner() -> Result<()> {
 
     noise_upload_handle
         .await
-        .expect("Error while awaiting noise upload");
+        .context("Error while awaiting noise upload")?;
     let (mut created_objects, mut received_objects) = upload_and_receive_handle
         .await
-        .expect("Error while awaiting upload and receive");
+        .context("Error while awaiting upload and receive")?;
     s3_scanner.shutdown_and_join().await?;
 
     created_objects.sort();
