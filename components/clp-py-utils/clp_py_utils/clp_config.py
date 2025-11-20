@@ -102,6 +102,15 @@ class StorageEngine(KebabCaseStrEnum):
 StorageEngineStr = Annotated[StorageEngine, StrEnumSerializer]
 
 
+class BundledService(LowercaseStrEnum):
+    DATABASE = auto()
+    QUEUE = auto()
+    REDIS = auto()
+    RESULTS_CACHE = auto()
+
+BundledServiceStr = Annotated[BundledService, StrEnumSerializer]
+
+
 class DatabaseEngine(KebabCaseStrEnum):
     MARIADB = auto()
     MYSQL = auto()
@@ -619,11 +628,16 @@ def _get_env_var(name: str) -> str:
         raise ValueError(f"Missing environment variable: {name}")
     return value
 
-
 class ClpConfig(BaseModel):
     container_image_ref: NonEmptyStr | None = None
 
     logs_input: FsIngestionConfig | S3IngestionConfig = FsIngestionConfig()
+    bundled: list[BundledServiceStr] = [
+        BundledService.DATABASE,
+        BundledService.QUEUE,
+        BundledService.REDIS,
+        BundledService.RESULTS_CACHE
+    ]
 
     package: Package = Package()
     database: Database = Database()

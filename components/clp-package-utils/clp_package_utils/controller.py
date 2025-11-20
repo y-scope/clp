@@ -13,6 +13,7 @@ from typing import Any
 from clp_py_utils.clp_config import (
     API_SERVER_COMPONENT_NAME,
     AwsAuthType,
+    BundledService,
     ClpConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
@@ -63,6 +64,23 @@ DEFAULT_UID_GID = f"{os.getuid()}:{os.getgid()}"
 THIRD_PARTY_SERVICE_UID = 999
 THIRD_PARTY_SERVICE_GID = 999
 THIRD_PARTY_SERVICE_UID_GID = f"{THIRD_PARTY_SERVICE_UID}:{THIRD_PARTY_SERVICE_GID}"
+
+DOCKER_COMPOSE_BASE_SERVICES = [
+    "database",
+    "db-table-creator",
+    "queue",
+    "redis",
+    "results-cache",
+    "results-cache-indices-creator",
+    "compression-scheduler",
+    "compression-worker",
+    "webui",
+    "garbage-collector",
+    "api-server"
+]
+
+DOCKER_COMPOSE_EXTENDED_SERVICES = ["query-scheduler", "query-worker", "reducer", "mcp-server"]
+
 
 logger = logging.getLogger(__name__)
 
@@ -765,6 +783,7 @@ class DockerComposeController(BaseController):
             env_vars["CLP_STAGED_STREAM_OUTPUT_DIR_HOST"] = stream_output_dir_str
 
         # Component-specific config
+        bundled = self._clp_config.bundled
         env_vars |= self._set_up_env_for_database()
         env_vars |= self._set_up_env_for_queue()
         env_vars |= self._set_up_env_for_redis()
@@ -803,6 +822,7 @@ class DockerComposeController(BaseController):
         cmd = ["docker", "compose", "--project-name", self._project_name]
         cmd += ["--file", self._get_docker_file_name()]
         cmd += ["up", "--detach", "--wait"]
+        cmd += self._get_docker_compose_services()
         subprocess.run(
             cmd,
             cwd=self._clp_home,
@@ -859,6 +879,28 @@ class DockerComposeController(BaseController):
             return "docker-compose-base.yaml"
         return "docker-compose.yaml"
 
+    def _get_docker_compose_services(self) -> str:
+        """
+        :return: The Docker Compose services to start based on the config.
+        """
+
+        deployment_type = self._clp_config.get_deployment_type()
+
+        services = DOCKER_COMPOSE_BASE_SERVICES
+        if deployment_type == DeploymentType.FULL:
+            services += DOCKER_COMPOSE_EXTENDED_SERVICES
+
+        bundled = self._clp_config.bundled
+        if BundledService.DATABASE not in bundled:
+            services.remove("database")
+        if BundledService.QUEUE not in bundled:
+            services.remove("queue")
+        if BundledService.REDIS not in bundled:
+            services.remove("redis")
+        if BundledService.RESULTS_CACHE not in bundled:
+            services.remove("results-cache")
+            services.remove("results-cache-indices-creator")
+        return services
 
 def get_or_create_instance_id(clp_config: ClpConfig) -> str:
     """
