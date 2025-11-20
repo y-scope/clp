@@ -66,7 +66,7 @@ class PackagePathConfig:
         clp_package_dir = self.clp_package_dir
         validate_dir_exists(clp_package_dir)
 
-        required_dirs = ["etc", "sbin"]
+        required_dirs = ["bin", "etc", "lib", "sbin"]
         missing_dirs = [d for d in required_dirs if not (clp_package_dir / d).is_dir()]
         if len(missing_dirs) > 0:
             err_msg = (
