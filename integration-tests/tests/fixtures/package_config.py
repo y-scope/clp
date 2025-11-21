@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
-def clp_config(
-    package_path_config: PackagePathConfig,
+def fixt_package_config(
+    fixt_package_path_config: PackagePathConfig,
     request: pytest.FixtureRequest,
 ) -> Iterator[PackageConfig]:
     """
@@ -30,7 +30,7 @@ def clp_config(
     mode_name: str = request.param
     logger.debug("Creating a temporary config file for the %s package.", mode_name)
 
-    # Create the underlying ClpConfig for this mode.
+    # Get the ClpConfig for this mode.
     clp_config_obj = get_clp_config_from_mode(mode_name)
 
     # Assign ports based on BASE_PORT from ini.
@@ -43,21 +43,17 @@ def clp_config(
         )
         raise ValueError(err_msg) from err
 
-    assign_ports_from_base(clp_config_obj, base_port)
+    assign_ports_from_base(base_port, clp_config_obj)
 
     # Compute the list of required components for this mode.
     required_components = get_required_component_list(clp_config_obj)
 
+    # Construct PackageConfig.
     package_config = PackageConfig(
-        path_config=package_path_config,
+        path_config=fixt_package_path_config,
         mode_name=mode_name,
         component_list=required_components,
-    )
-
-    # Create the temp config file using the PackageConfig member path.
-    PackageConfig.write_temp_config_file(
         clp_config=clp_config_obj,
-        package_config=package_config,
     )
 
     try:

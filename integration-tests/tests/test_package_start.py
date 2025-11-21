@@ -17,16 +17,16 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.package
-@pytest.mark.parametrize("clp_config", TEST_MODES, indirect=True)
-def test_clp_package(clp_package: PackageInstance) -> None:
+@pytest.mark.parametrize("fixt_package_config", TEST_MODES, indirect=True)
+def test_clp_package(fixt_package_instance: PackageInstance) -> None:
     """
     Validate that all of the components of the CLP package start up successfully for the selected
     mode of operation.
 
-    :param clp_package:
+    :param fixt_package_instance:
     """
-    mode_name = clp_package.package_config.mode_name
-    instance_id = clp_package.clp_instance_id
+    mode_name = fixt_package_instance.package_config.mode_name
+    instance_id = fixt_package_instance.clp_instance_id
 
     # Ensure that all package components are running.
     logger.debug(
@@ -35,7 +35,7 @@ def test_clp_package(clp_package: PackageInstance) -> None:
         instance_id,
     )
 
-    validate_package_running(clp_package)
+    validate_package_running(fixt_package_instance)
 
     # Ensure that the package is running in the correct mode.
     logger.debug(
@@ -44,4 +44,4 @@ def test_clp_package(clp_package: PackageInstance) -> None:
         instance_id,
     )
 
-    validate_running_mode_correct(clp_package)
+    validate_running_mode_correct(fixt_package_instance)

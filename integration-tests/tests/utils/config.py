@@ -135,26 +135,23 @@ class PackageConfig:
     #: The list of CLP components that this package needs.
     component_list: list[str]
 
+    #: The ClpConfig instance that describes this package configuration.
+    clp_config: ClpConfig
+
+    def __post_init__(self) -> None:
+        """Write the temporary config file for this package."""
+        self._write_temp_config_file()
+
     @property
     def temp_config_file_path(self) -> Path:
         """:return: The absolute path to the temporary configuration file for the package."""
         return self.path_config.temp_config_dir / f"clp-config-{self.mode_name}.yaml"
 
-    @staticmethod
-    def write_temp_config_file(
-        clp_config: ClpConfig,
-        package_config: PackageConfig,
-    ) -> Path:
-        """
-        Writes a temporary config file for a ClpConfig object.
+    def _write_temp_config_file(self) -> Path:
+        """:return: The path to the temporary config file."""
+        temp_config_file_path = self.temp_config_file_path
 
-        :param clp_config:
-        :param package_config:
-        :return: The path to the written config file.
-        """
-        temp_config_file_path = package_config.temp_config_file_path
-
-        payload = clp_config.dump_to_primitive_dict()  # type: ignore[no-untyped-call]
+        payload = self.clp_config.dump_to_primitive_dict()  # type: ignore[no-untyped-call]
 
         tmp_path = temp_config_file_path.with_suffix(temp_config_file_path.suffix + ".tmp")
         with tmp_path.open("w", encoding="utf-8") as f:

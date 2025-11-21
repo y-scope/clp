@@ -9,7 +9,6 @@ from pydantic import ValidationError
 
 from tests.utils.clp_mode_utils import (
     compute_mode_signature,
-    get_clp_config_from_mode,
 )
 from tests.utils.config import PackageInstance
 from tests.utils.docker_utils import list_running_containers_with_prefix
@@ -67,7 +66,7 @@ def validate_running_mode_correct(package_instance: PackageInstance) -> None:
     except ValidationError as err:
         pytest.fail(f"Shared config failed validation: {err}")
 
-    intended_config = get_clp_config_from_mode(package_instance.package_config.mode_name)
+    intended_config = package_instance.package_config.clp_config
 
     running_signature = compute_mode_signature(running_config)
     intended_signature = compute_mode_signature(intended_config)

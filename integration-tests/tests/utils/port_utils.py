@@ -26,7 +26,7 @@ def _validate_base_port(base_port: int) -> None:
         raise ValueError(err_msg)
 
 
-def assign_ports_from_base(clp_config: ClpConfig, base_port: int) -> None:
+def assign_ports_from_base(base_port: int, clp_config: ClpConfig) -> None:
     """
     Assign ports for all components that require a port in `clp_config`. Ports are assigned
     relative to `base_port`.

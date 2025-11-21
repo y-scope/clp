@@ -21,7 +21,7 @@ def core_config() -> CoreConfig:
 
 
 @pytest.fixture(scope="session")
-def package_path_config(integration_test_config: IntegrationTestConfig) -> PackagePathConfig:
+def fixt_package_path_config(integration_test_config: IntegrationTestConfig) -> PackagePathConfig:
     """Fixture that provides a PackagePathConfig shared across tests."""
     return PackagePathConfig(
         clp_package_dir=Path(get_env_var("CLP_PACKAGE_DIR")).expanduser().resolve(),
