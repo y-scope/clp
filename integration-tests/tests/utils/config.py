@@ -85,6 +85,8 @@ class IntegrationTestPathConfig:
 
     #: Directory to store the downloaded logs.
     logs_download_dir: Path = field(init=False, repr=True)
+
+    #: Optional initialization value used to set `logs_download_dir`.
     logs_download_dir_init: InitVar[Path | None] = None
 
     def __post_init__(self, logs_download_dir_init: Path | None) -> None:
