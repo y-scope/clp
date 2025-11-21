@@ -6,5 +6,5 @@ pub use client::create_new_client;
 pub struct ObjectMetadata {
     pub bucket: String,
     pub key: String,
-    pub size: usize,
+    pub size: u64,
 }
