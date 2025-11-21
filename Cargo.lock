@@ -935,6 +935,8 @@ name = "clp-credential-manager"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "aws-config",
+ "aws-sdk-sts",
  "axum",
  "chrono",
  "clap",
