@@ -195,6 +195,12 @@ docker compose \
   --project-name "clp-package-$(cat var/log/instance-id)" \
   up compression-scheduler \
     --no-deps --wait
+    
+# Start Spider scheduler (optional, only if using Spider)
+docker compose \
+    --project-name "clp-package-$(cat var/log/instance-id)" \
+    up spider-scheduler \
+      --no-deps --wait
 
 # Start query scheduler
 docker compose \
