@@ -73,7 +73,7 @@ Creates timings for liveness probes.
 */}}
 {{- define "clp.livenessProbeTimings" -}}
 initialDelaySeconds: 60
-periodSeconds: 10
+periodSeconds: 30
 timeoutSeconds: 4
 failureThreshold: 3
 {{- end }}
