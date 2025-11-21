@@ -488,6 +488,7 @@ class BaseController(ABC):
         client_settings_json_updates = {
             "ClpStorageEngine": self._clp_config.package.storage_engine,
             "ClpQueryEngine": self._clp_config.package.query_engine,
+            "LogsInputType": self._clp_config.logs_input.type,
             "MongoDbSearchResultsMetadataCollectionName": (
                 self._clp_config.webui.results_metadata_collection_name
             ),
@@ -521,6 +522,7 @@ class BaseController(ABC):
                 self._clp_config.results_cache.stream_collection_name
             ),
             "ClientDir": str(container_webui_dir / "client"),
+            "LogsInputType": self._clp_config.logs_input.type,
             "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
             "StreamTargetUncompressedSize": self._clp_config.stream_output.target_uncompressed_size,
             "ClpQueryEngine": self._clp_config.package.query_engine,

@@ -17,7 +17,8 @@
   "license": "Apache-2.0",
   "type": "module",
   "dependencies": {
-    "@sinclair/typebox": "^0.34.41"
+    "@sinclair/typebox": "^0.34.41",
+    "@fastify/type-provider-typebox": "^5.2.0"
   },
   "devDependencies": {
     "eslint-config-yscope": "1.1.2",

@@ -1,6 +1,7 @@
 import {useCallback} from "react";
 
 import {SearchOutlined} from "@ant-design/icons";
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {
     Button,
     message,
@@ -8,10 +9,7 @@ import {
 } from "antd";
 import {Dayjs} from "dayjs";
 
-import {
-    CLP_STORAGE_ENGINES,
-    SETTINGS_STORAGE_ENGINE,
-} from "../../../../../config";
+import {SETTINGS_STORAGE_ENGINE} from "../../../../../config";
 import {computeTimelineConfig} from "../../../SearchResults/SearchResultsTimeline/utils";
 import useSearchStore from "../../../SearchState/index";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
