@@ -136,7 +136,7 @@ class PackageConfig:
     @property
     def temp_config_file_path(self) -> Path:
         """:return: The absolute path to the temporary configuration file for the package."""
-        return self.path_config.temp_config_dir / f"clp-config-{self.mode_name}.yml"
+        return self.path_config.temp_config_dir / f"clp-config-{self.mode_name}.yaml"
 
     @staticmethod
     def write_temp_config_file(
@@ -172,7 +172,7 @@ class PackageInstance:
     #: The instance ID of the running package.
     clp_instance_id: str = field(init=False, repr=True)
 
-    #: The path to the .clp-config.yml file constructed by the package during spin up.
+    #: The path to the .clp-config.yaml file constructed by the package during spin up.
     shared_config_file_path: Path = field(init=False, repr=True)
 
     def __post_init__(self) -> None:

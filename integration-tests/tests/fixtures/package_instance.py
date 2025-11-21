@@ -35,23 +35,16 @@ def clp_package(
 
     try:
         logger.debug("Starting up the %s package.", mode_name)
-
-        try:
-            start_clp_package(clp_config)
-        except RuntimeError:
-            base_port_string = request.config.getini("BASE_PORT")
-            pytest.fail(
-                f"Failed to start the {mode_name} package. This could mean that one of the ports"
-                f" derived from BASE_PORT={base_port_string} was unavailable. Try changing"
-                " BASE_PORT in .pytest.ini."
-            )
-
-        instance = PackageInstance(
-            package_config=clp_config,
-        )
-
+        start_clp_package(clp_config)
+        instance = PackageInstance(package_config=clp_config)
         yield instance
-
+    except RuntimeError:
+        base_port_string = request.config.getini("BASE_PORT")
+        pytest.fail(
+            f"Failed to start the {mode_name} package. This could mean that one of the ports"
+            f" derived from BASE_PORT={base_port_string} was unavailable. Try changing BASE_PORT in"
+            " .pytest.ini."
+        )
     finally:
         logger.info("Now stopping the %s package...", mode_name)
         if instance is not None:
