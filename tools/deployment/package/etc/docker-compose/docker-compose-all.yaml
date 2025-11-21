@@ -32,12 +32,12 @@ x-healthcheck-defaults: &healthcheck_defaults
 x-volume-definitions:
   clp-config-readonly: &volume_clp_config_readonly
     type: "bind"
-    source: "${CLP_LOGS_DIR_HOST:-./var/log}/.clp-config.yaml"
+    source: "${CLP_LOGS_DIR_HOST:-../../var/log}/.clp-config.yaml"
     target: "/etc/clp-config.yaml"
     read_only: true
   clp-logs: &volume_clp_logs
     type: "bind"
-    source: "${CLP_LOGS_DIR_HOST:-./var/log}"
+    source: "${CLP_LOGS_DIR_HOST:-../../var/log}"
     target: "/var/log"
 
 services:
@@ -57,14 +57,14 @@ services:
         target: 3306
     volumes:
       - type: "bind"
-        source: "${CLP_DB_CONF_LOGGING_FILE_HOST:-./etc/mysql/conf.d/logging.cnf}"
+        source: "${CLP_DB_CONF_LOGGING_FILE_HOST:-../../etc/mysql/conf.d/logging.cnf}"
         target: "/etc/mysql/conf.d/logging.cnf"
         read_only: true
       - type: "bind"
-        source: "${CLP_DB_DATA_DIR_HOST:-./var/data/database}"
+        source: "${CLP_DB_DATA_DIR_HOST:-../../var/data/database}"
         target: "/var/lib/mysql"
       - type: "bind"
-        source: "${CLP_DB_LOGS_DIR_HOST:-./var/log/database}"
+        source: "${CLP_DB_LOGS_DIR_HOST:-../../var/log/database}"
         target: "/var/log/mysql"
     healthcheck:
       <<: *healthcheck_defaults
@@ -112,7 +112,7 @@ services:
         target: 5672
     volumes:
       - type: "bind"
-        source: "${CLP_QUEUE_LOGS_DIR_HOST:-./var/log/queue}"
+        source: "${CLP_QUEUE_LOGS_DIR_HOST:-../../var/log/queue}"
         target: "/var/log/rabbitmq"
     healthcheck:
       <<: *healthcheck_defaults
@@ -132,14 +132,14 @@ services:
         target: 6379
     volumes:
       - type: "bind"
-        source: "${CLP_REDIS_CONF_FILE_HOST:-./etc/redis/redis.conf}"
+        source: "${CLP_REDIS_CONF_FILE_HOST:-../../etc/redis/redis.conf}"
         target: "/usr/local/etc/redis/redis.conf"
         read_only: true
       - type: "bind"
-        source: "${CLP_REDIS_DATA_DIR_HOST:-./var/data/redis}"
+        source: "${CLP_REDIS_DATA_DIR_HOST:-../../var/data/redis}"
         target: "/data"
       - type: "bind"
-        source: "${CLP_REDIS_LOGS_DIR_HOST:-./var/log/redis}"
+        source: "${CLP_REDIS_LOGS_DIR_HOST:-../../var/log/redis}"
         target: "/var/log/redis"
     command: [
       "redis-server",
@@ -168,14 +168,14 @@ services:
         target: 27017
     volumes:
       - type: "bind"
-        source: "${CLP_RESULTS_CACHE_CONF_FILE_HOST:-./etc/mongo/mongod.conf}"
+        source: "${CLP_RESULTS_CACHE_CONF_FILE_HOST:-../../etc/mongo/mongod.conf}"
         target: "/etc/mongo/mongod.conf"
         read_only: true
       - type: "bind"
-        source: "${CLP_RESULTS_CACHE_DATA_DIR_HOST:-./var/data/results_cache}"
+        source: "${CLP_RESULTS_CACHE_DATA_DIR_HOST:-../../var/data/results_cache}"
         target: "/data/db"
       - type: "bind"
-        source: "${CLP_RESULTS_CACHE_LOGS_DIR_HOST:-./var/log/results_cache}"
+        source: "${CLP_RESULTS_CACHE_LOGS_DIR_HOST:-../../var/log/results_cache}"
         target: "/var/log/mongodb"
     command: [
       "--config", "/etc/mongo/mongod.conf",
@@ -259,7 +259,7 @@ services:
       - "${CLP_LOGS_INPUT_DIR_HOST:-empty}:${CLP_LOGS_INPUT_DIR_CONTAINER:-/mnt/logs}"
       - "${CLP_STAGED_ARCHIVE_OUTPUT_DIR_HOST:-empty}:/var/data/staged-archives"
       - type: "bind"
-        source: "${CLP_TMP_DIR_HOST:-./var/tmp}"
+        source: "${CLP_TMP_DIR_HOST:-../../var/tmp}"
         target: "/var/tmp"
     command: [
       "python3",
@@ -295,11 +295,11 @@ services:
       - "${CLP_AWS_CONFIG_DIR_HOST:-empty}:/opt/clp/.aws:ro"
       - "${CLP_STREAM_OUTPUT_DIR_HOST:-empty}:/var/data/streams"
       - type: "bind"
-        source: "./var/www/webui/client/settings.json"
+        source: "../../var/www/webui/client/settings.json"
         target: "/opt/clp/var/www/webui/client/settings.json"
         read_only: true
       - type: "bind"
-        source: "./var/www/webui/server/dist/settings.json"
+        source: "../../var/www/webui/server/dist/settings.json"
         target: "/opt/clp/var/www/webui/server/dist/settings.json"
         read_only: true
     depends_on:
