@@ -1,0 +1,12 @@
+.footerContainer {
+    display: flex;
+    align-items: center;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    gap: 8px;
+}
+
+.footerSelect {
+    flex: 1;
+    min-width: 0;
+}

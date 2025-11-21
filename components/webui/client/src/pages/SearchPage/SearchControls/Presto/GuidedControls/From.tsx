@@ -1,6 +1,7 @@
 import InputLabel from "../../../../../components/InputLabel";
 import DatasetSelect from "../../Dataset/DatasetSelect";
 import guidedGrid from "./index.module.css";
+import {LABEL_WIDTH} from "./typings";
 
 
 /**
@@ -11,7 +12,7 @@ import guidedGrid from "./index.module.css";
 const From = () => {
     return (
         <div className={guidedGrid["from"]}>
-            <InputLabel>FROM</InputLabel>
+            <InputLabel width={LABEL_WIDTH}>FROM</InputLabel>
             <DatasetSelect
                 className={
                     `${guidedGrid["noLeftBorderRadiusSelect"]} ${
