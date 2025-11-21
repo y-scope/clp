@@ -15,7 +15,7 @@ from clp_py_utils.clp_config import (
 from clp_py_utils.clp_logging import get_logging_formatter, set_logging_level
 from clp_py_utils.s3_utils import s3_delete_objects
 
-from job_orchestration.garbage_collector.constants import MIN_TO_SECONDS
+from .constants import MIN_TO_SECONDS
 
 
 def configure_logger(

@@ -40,7 +40,7 @@ from clp_py_utils.clp_metadata_db_utils import (
 )
 from clp_py_utils.core import resolve_host_path_in_container
 
-from clp_package_utils.general import (
+from .general import (
     check_docker_dependencies,
     CONTAINER_CLP_HOME,
     DockerComposeProjectNotRunningError,

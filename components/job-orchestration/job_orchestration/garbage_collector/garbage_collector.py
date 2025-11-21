@@ -15,15 +15,15 @@ from clp_py_utils.clp_logging import get_logger
 from clp_py_utils.core import read_yaml_config_file
 from pydantic import ValidationError
 
-from job_orchestration.garbage_collector.archive_garbage_collector import archive_garbage_collector
-from job_orchestration.garbage_collector.constants import (
+from .archive_garbage_collector import archive_garbage_collector
+from .constants import (
     ARCHIVE_GARBAGE_COLLECTOR_NAME,
     SEARCH_RESULT_GARBAGE_COLLECTOR_NAME,
 )
-from job_orchestration.garbage_collector.search_result_garbage_collector import (
+from .search_result_garbage_collector import (
     search_result_garbage_collector,
 )
-from job_orchestration.garbage_collector.utils import configure_logger
+from .utils import configure_logger
 
 logger = get_logger(GARBAGE_COLLECTOR_COMPONENT_NAME)
 

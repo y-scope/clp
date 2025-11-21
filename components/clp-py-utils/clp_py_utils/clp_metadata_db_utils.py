@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from clp_py_utils.clp_config import (
+from .clp_config import (
     ArchiveOutput,
     StorageType,
 )
