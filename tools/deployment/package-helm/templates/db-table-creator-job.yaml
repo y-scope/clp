@@ -21,10 +21,14 @@ spec:
       initContainers:
         - name: "wait-for-database"
           image: "busybox:latest"
-          command: [
-            "sh", "-c",
-            "until nc -z {{ include "clp.fullname" . }}-database 3306; do echo waiting for database; sleep 2; done"
-          ]
+          command:
+            - "sh"
+            - "-c"
+            - >-
+              until nc -z {{ include "clp.fullname" . }}-database 3306;
+                do echo waiting for database;
+                sleep 2;
+              done
       containers:
         - name: "db-table-creator"
           image: "{{ include "clp.image.ref" . }}"
