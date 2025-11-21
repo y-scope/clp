@@ -13,7 +13,6 @@ from job_orchestration.utils.spider_utils import int8_list_to_utf8_str, utf8_str
 
 
 class SpiderTaskManager(TaskManager):
-
     class ResultHandle(TaskManager.ResultHandle):
         def __init__(self, spider_job: Job) -> None:
             self._spider_job: Job = spider_job

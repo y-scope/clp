@@ -26,6 +26,8 @@ pub struct QueryConfig {
     pub end_timestamp: Option<i64>,
     #[serde(default)]
     pub ignore_case: bool,
+    #[serde(default)]
+    pub write_to_file: bool,
 }
 
 impl From<QueryConfig> for SearchJobConfig {
@@ -37,6 +39,7 @@ impl From<QueryConfig> for SearchJobConfig {
             begin_timestamp: value.begin_timestamp,
             end_timestamp: value.end_timestamp,
             ignore_case: value.ignore_case,
+            write_to_file: value.write_to_file,
             ..Default::default()
         }
     }
