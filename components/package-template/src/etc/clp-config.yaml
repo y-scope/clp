@@ -22,7 +22,7 @@
 #
 #compression_scheduler:
 #  jobs_poll_delay: 0.1  # seconds
-#  num_tasks_per_sub_job: 4
+#  max_concurrent_tasks_per_job: 4
 #  logging_level: "INFO"
 #
 #query_scheduler:

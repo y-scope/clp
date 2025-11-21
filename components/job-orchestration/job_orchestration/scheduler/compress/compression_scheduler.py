@@ -356,7 +356,7 @@ def poll_running_jobs(
     :param db_context:
     """
     logs_directory = clp_config.logs_directory
-    num_tasks_per_sub_job = clp_config.compression_scheduler.num_tasks_per_sub_job
+    max_concurrent_tasks_per_job = clp_config.compression_scheduler.max_concurrent_tasks_per_job
 
     logger.debug("Poll running jobs")
     jobs_to_delete = []
@@ -404,7 +404,7 @@ def poll_running_jobs(
         job.num_tasks_completed += num_tasks_in_batch
 
         if len(job.remaining_tasks) > 0:
-            _dispatch_next_task_batch(task_manager, db_context, job, num_tasks_per_sub_job)
+            _dispatch_next_task_batch(task_manager, db_context, job, max_concurrent_tasks_per_job)
         else:
             # All tasks completed successfully
             _complete_compression_job(db_context, job_id, job.num_tasks_total, duration)
@@ -497,22 +497,22 @@ def main(argv) -> int | None:
 def _batch_tasks(
     tasks: list[dict[str, Any]],
     partition_info: list[dict[str, Any]],
-    num_tasks_per_sub_job: int,
+    max_concurrent_tasks_per_job: int,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]], list[dict[str, Any]]]:
     """
     Batches tasks into submission and remaining groups.
 
     :param tasks:
     :param partition_info:
-    :param num_tasks_per_sub_job:
+    :param max_concurrent_tasks_per_job:
     :return: Tuple of (tasks_to_submit, remaining_tasks, partition_info_to_submit,
     remaining_partition_info).
     """
-    if len(tasks) > num_tasks_per_sub_job:
-        tasks_to_submit = tasks[:num_tasks_per_sub_job]
-        remaining_tasks = tasks[num_tasks_per_sub_job:]
-        partition_info_to_submit = partition_info[:num_tasks_per_sub_job]
-        remaining_partition_info = partition_info[num_tasks_per_sub_job:]
+    if len(tasks) > max_concurrent_tasks_per_job:
+        tasks_to_submit = tasks[:max_concurrent_tasks_per_job]
+        remaining_tasks = tasks[max_concurrent_tasks_per_job:]
+        partition_info_to_submit = partition_info[:max_concurrent_tasks_per_job]
+        remaining_partition_info = partition_info[max_concurrent_tasks_per_job:]
     else:
         tasks_to_submit = tasks
         remaining_tasks = []
@@ -549,11 +549,11 @@ def _batch_and_submit_tasks(
     )
 
     # Compute the first batch of tasks and submit them to the task manager
-    num_tasks_per_sub_job = clp_config.compression_scheduler.num_tasks_per_sub_job
+    max_concurrent_tasks_per_job = clp_config.compression_scheduler.max_concurrent_tasks_per_job
     tasks = paths_to_compress_buffer.get_tasks()
     partition_info = paths_to_compress_buffer.get_partition_info()
     tasks_to_submit, remaining_tasks, partition_info_to_submit, remaining_partition_info = (
-        _batch_tasks(tasks, partition_info, num_tasks_per_sub_job)
+        _batch_tasks(tasks, partition_info, max_concurrent_tasks_per_job)
     )
     _insert_tasks_to_db(db_context, job_id, tasks_to_submit, partition_info_to_submit)
     result_handle = task_manager.submit(tasks_to_submit)
@@ -611,7 +611,7 @@ def _dispatch_next_task_batch(
     task_manager: TaskManager,
     db_context: DbContext,
     job: CompressionJob,
-    num_tasks_per_sub_job: int,
+    max_concurrent_tasks_per_job: int,
 ) -> None:
     """
     Dispatches the next batch of tasks for a compression job.
@@ -619,7 +619,7 @@ def _dispatch_next_task_batch(
     :param task_manager:
     :param db_context:
     :param job:
-    :param num_tasks_per_sub_job:
+    :param max_concurrent_tasks_per_job:
     """
     job_id = job.id
     logger.info(
@@ -631,7 +631,9 @@ def _dispatch_next_task_batch(
 
     # Prepare the next batch of tasks
     tasks_to_submit, job.remaining_tasks, partition_info_to_submit, job.remaining_partition_info = (
-        _batch_tasks(job.remaining_tasks, job.remaining_partition_info, num_tasks_per_sub_job)
+        _batch_tasks(
+            job.remaining_tasks, job.remaining_partition_info, max_concurrent_tasks_per_job
+        )
     )
 
     # Insert tasks into the database and submit them
