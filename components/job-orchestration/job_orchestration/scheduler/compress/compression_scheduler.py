@@ -17,6 +17,7 @@ from clp_py_utils.clp_config import (
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
+    OrchestrationType,
     StorageEngine,
 )
 from clp_py_utils.clp_logging import get_logger, get_logging_formatter, set_logging_level
@@ -33,6 +34,7 @@ from pydantic import ValidationError
 
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
 from job_orchestration.scheduler.compress.task_manager.celery_task_manager import CeleryTaskManager
+from job_orchestration.scheduler.compress.task_manager.spider_task_manager import SpiderTaskManager
 from job_orchestration.scheduler.compress.task_manager.task_manager import TaskManager
 from job_orchestration.scheduler.constants import (
     CompressionJobStatus,
@@ -518,7 +520,16 @@ def main(argv):
     logger.info(f"Starting {COMPRESSION_SCHEDULER_COMPONENT_NAME}")
     sql_adapter = SqlAdapter(clp_config.database)
 
-    task_manager = CeleryTaskManager()
+    if clp_config.compression_scheduler.type == OrchestrationType.celery:
+        task_manager = CeleryTaskManager()
+    elif clp_config.compression_scheduler.type == OrchestrationType.spider:
+        clp_config.spider_db.load_credentials_from_env()
+        task_manager = SpiderTaskManager(clp_config.spider_db.get_container_url())
+    else:
+        logger.error(
+            f"Unsupported compression scheduler type: {clp_config.compression_scheduler.type}"
+        )
+        return -1
 
     try:
         killed_jobs = kill_hanging_jobs(sql_adapter, SchedulerType.COMPRESSION)

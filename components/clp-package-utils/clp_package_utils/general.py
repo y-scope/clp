@@ -25,6 +25,7 @@ from clp_py_utils.clp_config import (
     REDIS_COMPONENT_NAME,
     REDUCER_COMPONENT_NAME,
     RESULTS_CACHE_COMPONENT_NAME,
+    SPIDER_DB_COMPONENT_NAME,
     StorageType,
     WEBUI_COMPONENT_NAME,
     WorkerConfig,
@@ -454,6 +455,7 @@ def generate_credentials_file(credentials_file_path: pathlib.Path):
         DB_COMPONENT_NAME: {"username": "clp-user", "password": secrets.token_urlsafe(8)},
         QUEUE_COMPONENT_NAME: {"username": "clp-user", "password": secrets.token_urlsafe(8)},
         REDIS_COMPONENT_NAME: {"password": secrets.token_urlsafe(16)},
+        SPIDER_DB_COMPONENT_NAME: {"username": "spider-user", "password": secrets.token_urlsafe(8)},
     }
 
     with open(credentials_file_path, "w") as f:
@@ -497,6 +499,13 @@ def validate_and_load_redis_credentials_file(
 ):
     validate_credentials_file_path(clp_config, clp_home, generate_default_file)
     clp_config.redis.load_credentials_from_file(clp_config.credentials_file_path)
+
+
+def validate_and_load_spider_db_credentials_file(
+    clp_config: ClpConfig, clp_home: pathlib.Path, generate_default_file: bool
+):
+    validate_credentials_file_path(clp_config, clp_home, generate_default_file)
+    clp_config.spider_db.load_credentials_from_file(clp_config.credentials_file_path)
 
 
 def validate_db_config(

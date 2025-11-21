@@ -8,7 +8,7 @@ from mysql.connector import errorcode
 from sqlalchemy import pool
 from sqlalchemy.dialects.mysql import mariadbconnector, mysqlconnector
 
-from clp_py_utils.clp_config import Database
+from clp_py_utils.clp_config import Database, SpiderDb
 
 
 class DummyCloseableObject:
@@ -58,8 +58,9 @@ class ConnectionPoolWrapper:
 
 
 class SqlAdapter:
-    def __init__(self, database_config: Database):
+    def __init__(self, database_config: Database, spider_database_config: SpiderDb | None = None):
         self.database_config = database_config
+        self._spider_database_config = spider_database_config
 
     def create_mysql_connection(
         self, disable_localhost_socket_connection: bool = False
@@ -85,7 +86,7 @@ class SqlAdapter:
 
     def create_mariadb_connection(
         self, disable_localhost_socket_connection: bool = False
-    ) -> mariadb.connection:
+    ) -> mariadb.Connection:
         try:
             connection = mariadb.connect(
                 **self.database_config.get_mysql_connection_params(
@@ -104,6 +105,18 @@ class SqlAdapter:
         if "mariadb" == self.database_config.type:
             return self.create_mariadb_connection(disable_localhost_socket_connection)
         raise NotImplementedError
+
+    def create_root_mariadb_connection(
+        self, disable_localhost_socket_connection: bool = False
+    ) -> mariadb.Connection:
+        if "mariadb" != self.database_config.type:
+            raise NotImplementedError
+        params = self.database_config.get_mysql_connection_params(
+            disable_localhost_socket_connection
+        )
+        params["user"] = "root"
+        params.pop("database", None)
+        return mariadb.connect(**params)
 
     def create_connection_pool(
         self,

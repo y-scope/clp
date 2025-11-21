@@ -618,7 +618,7 @@ def compression_entry_point(
             status=CompressionTaskStatus.FAILED,
             duration=0,
             error_message=error_msg,
-        )
+        ).model_dump()
 
     clp_io_config = ClpIoConfig.model_validate_json(clp_io_config_json)
     paths_to_compress = PathsToCompress.model_validate_json(paths_to_compress_json)
