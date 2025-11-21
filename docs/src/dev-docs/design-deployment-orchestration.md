@@ -127,7 +127,7 @@ graph LR
 | spider_scheduler          | Scheduler for Spider distributed task execution framework.      |
 | results_cache             | Storage for the workers to return search results to the UI      |
 | compression_worker        | Worker processes for compression jobs                           |
-| spider_compression_worker | Worker processes for Spider distributed compression jobs        |
+| spider_compression_worker | Worker processes for compression jobs using Spider              |
 | query_worker              | Worker processes for search/aggregation jobs                    |
 | reducer                   | Reducers for performing the final stages of aggregation jobs    |
 | api_server                | API server for submitting queries                               |
@@ -212,12 +212,16 @@ instance ID.
 
 ### Deployment Types
 
-CLP supports two deployment types determined by the `package.query_engine` configuration setting.
+CLP supports four deployment types determined by the `package.compression_scheduler.type` and
+`package.query_engine` configuration setting.
 
-1. **BASE**: For deployments using [Presto][presto-integration] as the query engine. This deployment
-   only uses `docker-compose.base.yaml`.
-2. **FULL**: For deployments using one of CLP's native query engines. This uses both
-   `docker-compose.base.yaml` and `docker-compose.yaml`.
+| Deployment Type | Compression Scheduler | Query Engine                 | Docker Compose File                |
+|-----------------|-----------------------|------------------------------|------------------------------------|
+| Base            | Celery                | [Presto][presto-integration] | `docker-compose-base.yaml`         |
+| Full            | Celery                | Native                       | `docker-compose.yaml`              |
+| Spider Base     | Spider                | [Presto][presto-integration] | `docker-compose-spider-base.yaml`  |
+| Spider Full     | Spider                | Native                       | `docker-compose-spider.yaml`       |
+
 
 ### Implementation details
 
