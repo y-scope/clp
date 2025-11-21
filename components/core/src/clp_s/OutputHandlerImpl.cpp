@@ -23,6 +23,18 @@ using std::string;
 using std::string_view;
 
 namespace clp_s {
+void FileOutputHandler::write(
+        string_view message,
+        epochtime_t timestamp,
+        string_view archive_id,
+        int64_t log_event_idx
+) {
+    static constexpr string_view cOrigFilePathPlaceholder{""};
+    msgpack::type::tuple<epochtime_t, string, string, string, int64_t> const
+            src(timestamp, message, cOrigFilePathPlaceholder, archive_id, log_event_idx);
+    msgpack::pack(m_file_writer, src);
+}
+
 NetworkOutputHandler::NetworkOutputHandler(
         string const& host,
         int port,
