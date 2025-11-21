@@ -117,21 +117,23 @@ graph LR
 :::{table}
 :align: left
 
-| Service               | Description                                                     |
-|-----------------------|-----------------------------------------------------------------|
-| database              | Database for archive metadata, compression jobs, and query jobs |
-| queue                 | Task queue for schedulers                                       |
-| redis                 | Task result storage for workers                                 |
-| compression_scheduler | Scheduler for compression jobs                                  |
-| query_scheduler       | Scheduler for search/aggregation jobs                           |
-| results_cache         | Storage for the workers to return search results to the UI      |
-| compression_worker    | Worker processes for compression jobs                           |
-| query_worker          | Worker processes for search/aggregation jobs                    |
-| reducer               | Reducers for performing the final stages of aggregation jobs    |
-| api_server            | API server for submitting queries                               |
-| webui                 | Web server for the UI                                           |
-| mcp_server            | MCP server for AI agent to access CLP functionalities           |
-| garbage_collector     | Process to manage data retention                                |
+| Service                   | Description                                                     |
+|---------------------------|-----------------------------------------------------------------|
+| database                  | Database for archive metadata, compression jobs, and query jobs |
+| queue                     | Task queue for schedulers                                       |
+| redis                     | Task result storage for workers                                 |
+| compression_scheduler     | Scheduler for compression jobs                                  |
+| query_scheduler           | Scheduler for search/aggregation jobs                           |
+| spider_scheduler          | Scheduler for Spider distributed task execution framework.      |
+| results_cache             | Storage for the workers to return search results to the UI      |
+| compression_worker        | Worker processes for compression jobs                           |
+| spider_compression_worker | Worker processes for Spider distributed compression jobs        |
+| query_worker              | Worker processes for search/aggregation jobs                    |
+| reducer                   | Reducers for performing the final stages of aggregation jobs    |
+| api_server                | API server for submitting queries                               |
+| webui                     | Web server for the UI                                           |
+| mcp_server                | MCP server for AI agent to access CLP functionalities           |
+| garbage_collector         | Process to manage data retention                                |
 
 :::
 
