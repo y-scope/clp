@@ -327,7 +327,7 @@ services:
       "-u",
       "/opt/clp/lib/python3/site-packages/clp_py_utils/start-spider-worker.py",
       "--concurrency", "${CLP_COMPRESSION_WORKER_CONCURRENCY:-1}",
-      "--storage-url", "jdbc:mariadb://database:${CLP_DB_PORT:-3305}/\
+      "--storage-url", "jdbc:mariadb://database:${CLP_DB_PORT:-3306}/\
         ${SPIDER_DB_NAME:-spider-db}?\
         user=${SPIDER_DB_USER:?Please set a value.}\
         &password=${SPIDER_DB_PASS:?Please set a value.}",
