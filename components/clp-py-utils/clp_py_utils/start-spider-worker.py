@@ -26,6 +26,7 @@ def parse_args() -> argparse.Namespace:
         "--concurrency", type=int, default=1, help="Number of concurrent spider workers."
     )
     parser.add_argument("--storage-url", type=str, required=True, help="Spider storage URL.")
+    parser.add_argument("--host", type=str, required=False, default=None, help="The worker host.")
     return parser.parse_args()
 
 
@@ -38,7 +39,13 @@ def main() -> None:
         logger.error("Concurrency must be at least 1.")
         exit(1)
     storage_url = args.storage_url
-    host = socket.gethostbyname(socket.gethostname())
+    host = args.host
+    if host is None:
+        try:
+            host = socket.gethostbyname(socket.gethostname())
+        except (socket.gaierror, socket.herror) as e:
+            logger.error(f"Failed to resolve hostname: {e}")
+            exit(1)
 
     clp_home = os.getenv("CLP_HOME", "/opt/clp")
     spider_worker_path = pathlib.Path(clp_home) / "bin" / "spider_worker"
