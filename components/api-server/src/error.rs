@@ -26,6 +26,8 @@ impl IsMalformedData for serde_json::Error {}
 
 impl IsMalformedData for rmp_serde::encode::Error {}
 
+impl IsMalformedData for rmp_serde::decode::Error {}
+
 impl<Enum: TryFromPrimitive> IsMalformedData for num_enum::TryFromPrimitiveError<Enum> {}
 
 impl<T: IsMalformedData> From<T> for ClientError {
