@@ -13,14 +13,26 @@ use crate::{
     models::{CreateCredentialRequest, CredentialMetadata},
 };
 
+/// Reference-counted handle that Axum stores as application state.
 pub type SharedService = Arc<CredentialManagerService>;
 
+/// High-level façade that wires together persistence, auditing, and JWT handling.
 pub struct CredentialManagerService {
     db_pool: MySqlPool,
     jwt: JwtManager,
 }
 
 impl CredentialManagerService {
+    /// Establishes the database connection pool and prepares JWT helpers.
+    ///
+    /// # Returns
+    ///
+    /// A fully initialized [`CredentialManagerService`] ready to be shared with Axum routes.
+    ///
+    /// # Errors
+    ///
+    /// * Propagates errors from [`sqlx::mysql::MySqlPoolOptions::connect_with`].
+    /// * Propagates errors from [`JwtManager::new`].
     pub async fn new(config: &AppConfig) -> ServiceResult<Self> {
         let db_config = &config.database;
         let options = sqlx::mysql::MySqlConnectOptions::new()
@@ -40,18 +52,22 @@ impl CredentialManagerService {
         Ok(Self { db_pool: pool, jwt })
     }
 
+    /// Wraps `self` in an [`Arc`] so it can be cloned into Axum handlers.
     pub fn clone_shared(self) -> SharedService {
         Arc::new(self)
     }
 
+    /// Exposes the underlying pool for callers that need direct SQLx access.
     pub fn db_pool(&self) -> &MySqlPool {
         &self.db_pool
     }
 
+    /// Returns the JWT helper for issuing or validating service tokens.
     pub fn jwt(&self) -> &JwtManager {
         &self.jwt
     }
 
+    /// Fetches every credential metadata row and records the attempt in audit logs.
     pub async fn list_credentials(&self) -> ServiceResult<Vec<CredentialMetadata>> {
         match db::list_credentials(self.db_pool()).await {
             Ok(credentials) => {
@@ -69,6 +85,7 @@ impl CredentialManagerService {
         }
     }
 
+    /// Retrieves a single credential and enriches audit records with identifiers.
     pub async fn get_credential(&self, id: i64) -> ServiceResult<CredentialMetadata> {
         match db::get_credential(self.db_pool(), id).await {
             Ok(credential) => {
@@ -88,6 +105,7 @@ impl CredentialManagerService {
         }
     }
 
+    /// Attempts to delete a credential and distinguishes between success and missing rows.
     pub async fn delete_credential(&self, id: i64) -> ServiceResult<()> {
         let rows = db::delete_credential(self.db_pool(), id).await;
         match rows {
@@ -114,6 +132,13 @@ impl CredentialManagerService {
         }
     }
 
+    /// Validates, persists, and audits a new credential request.
+    ///
+    /// # Errors
+    ///
+    /// * Returns [`ServiceError::Validation`] when the input fails
+    ///   [`CreateCredentialRequest::validate`].
+    /// * Propagates persistence failures from [`db::create_credential`].
     pub async fn create_credential(
         &self,
         request: CreateCredentialRequest,
@@ -147,6 +172,7 @@ impl CredentialManagerService {
     }
 }
 
+/// Lightweight wrapper around jsonwebtoken keys plus default TTL metadata.
 pub struct JwtManager {
     encoding_key: EncodingKey,
     decoding_key: DecodingKey,
@@ -154,6 +180,7 @@ pub struct JwtManager {
 }
 
 impl JwtManager {
+    /// Builds signing and verification keys from configuration while enforcing required fields.
     fn new(config: &JwtConfig) -> ServiceResult<Self> {
         let secret = config.secret.expose_secret();
         if secret.is_empty() {
@@ -171,14 +198,17 @@ impl JwtManager {
         })
     }
 
+    /// Returns the reusable encoding key when constructing JWT headers.
     pub fn encoding_key(&self) -> &EncodingKey {
         &self.encoding_key
     }
 
+    /// Returns the reusable decoding key for JWT validation.
     pub fn decoding_key(&self) -> &DecodingKey {
         &self.decoding_key
     }
 
+    /// Provides the configured token lifetime so callers can align expirations.
     pub fn default_ttl(&self) -> Duration {
         self.default_ttl
     }

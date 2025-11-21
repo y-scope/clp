@@ -7,6 +7,7 @@ use crate::models::TokenSubject;
 
 const COMPONENT_NAME: &str = "credential-manager";
 
+/// Outcome associated with an audit record.
 #[derive(Debug, Clone, Copy)]
 pub enum AuditStatus {
     Success,
@@ -14,6 +15,7 @@ pub enum AuditStatus {
 }
 
 impl AuditStatus {
+    /// Returns the lowercase form consumed by downstream log processors.
     fn as_str(self) -> &'static str {
         match self {
             AuditStatus::Success => "success",
@@ -22,6 +24,7 @@ impl AuditStatus {
     }
 }
 
+/// Structured payload describing a single credential-related action.
 #[derive(Debug)]
 pub struct AuditEvent<'a> {
     pub event_type: &'a str,
@@ -35,6 +38,7 @@ pub struct AuditEvent<'a> {
 }
 
 impl<'a> AuditEvent<'a> {
+    /// Helper for constructing a success event with default metadata.
     pub fn success(event_type: &'a str) -> Self {
         Self {
             event_type,
@@ -48,6 +52,7 @@ impl<'a> AuditEvent<'a> {
         }
     }
 
+    /// Helper for constructing a failure event that records an error string.
     pub fn failure(event_type: &'a str, error: &'a str) -> Self {
         Self {
             event_type,
@@ -62,6 +67,7 @@ impl<'a> AuditEvent<'a> {
     }
 }
 
+/// Emits the provided audit event to the tracing ecosystem using the `audit` target.
 pub fn log_event(event: AuditEvent<'_>) {
     let subject = event
         .subject

@@ -13,6 +13,7 @@ use crate::{
     models::{CreateCredentialRequest, CredentialMetadata},
 };
 
+/// Registers CRUD endpoints for long-term credentials.
 pub fn router() -> Router<AppState> {
     Router::new()
         .route(
@@ -25,6 +26,7 @@ pub fn router() -> Router<AppState> {
         )
 }
 
+/// Lists every stored credential, returning metadata only.
 #[instrument(skip_all)]
 async fn list_credentials(
     State(service): State<AppState>,
@@ -33,6 +35,7 @@ async fn list_credentials(
     Ok(Json(credentials))
 }
 
+/// Creates a new credential from the request payload.
 #[instrument(skip_all)]
 async fn create_credential(
     State(service): State<AppState>,
@@ -45,6 +48,7 @@ async fn create_credential(
     Ok(Json(created))
 }
 
+/// Fetches a credential by identifier.
 #[instrument(skip_all)]
 async fn get_credential(
     State(service): State<AppState>,
@@ -54,6 +58,7 @@ async fn get_credential(
     Ok(Json(credential))
 }
 
+/// Deletes a credential and returns `204 No Content` on success.
 #[instrument(skip_all)]
 async fn delete_credential(
     State(service): State<AppState>,

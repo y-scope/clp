@@ -14,6 +14,7 @@ const DEFAULT_SERVER_BIND_ADDRESS: &str = "0.0.0.0";
 const DEFAULT_SERVER_PORT: u16 = 8080;
 const DEFAULT_JWT_TTL_SECONDS: u64 = 3600;
 
+/// Root configuration deserialized from `credential-manager-config.yml`.
 #[derive(Debug, Clone, Deserialize)]
 pub struct AppConfig {
     #[serde(default)]
@@ -27,6 +28,12 @@ pub struct AppConfig {
 }
 
 impl AppConfig {
+    /// Loads configuration from disk and validates YAML syntax.
+    ///
+    /// # Errors
+    ///
+    /// * Returns [`ServiceError::Io`] if the file cannot be read.
+    /// * Returns [`ServiceError::Yaml`] if parsing fails.
     pub fn from_file(path: &Path) -> ServiceResult<Self> {
         let contents = fs::read_to_string(path)?;
         let config: Self = serde_yaml::from_str(&contents)?;
@@ -34,6 +41,7 @@ impl AppConfig {
     }
 }
 
+/// Network settings for the Axum server.
 #[derive(Debug, Clone, Deserialize)]
 pub struct ServerConfig {
     #[serde(default = "default_bind_address")]
@@ -43,6 +51,7 @@ pub struct ServerConfig {
 }
 
 impl ServerConfig {
+    /// Renders the configured address pair into a [`SocketAddr`].
     pub fn socket_addr(&self) -> ServiceResult<SocketAddr> {
         let addr = format!("{}:{}", self.bind_address, self.port);
         addr.parse().map_err(|err| {
@@ -71,6 +80,7 @@ fn default_bind_port() -> u16 {
     DEFAULT_SERVER_PORT
 }
 
+/// Connection options for the MySQL backend that stores credentials.
 #[derive(Debug, Clone, Deserialize)]
 pub struct DatabaseConfig {
     pub host: String,
@@ -91,6 +101,7 @@ fn default_max_connections() -> u32 {
     DEFAULT_MAX_CONNECTIONS
 }
 
+/// JWT-related settings shared across token issuance endpoints.
 #[derive(Debug, Clone, Deserialize)]
 pub struct JwtConfig {
     pub secret: SecretString,

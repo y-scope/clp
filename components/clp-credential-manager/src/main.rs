@@ -15,6 +15,7 @@ use tracing_subscriber::EnvFilter;
 
 use crate::{config::AppConfig, routes::build_router, service::CredentialManagerService};
 
+/// CLI arguments accepted by the credential manager binary.
 #[derive(Debug, Parser)]
 #[command(author, version, about = "CLP Credential Manager service", long_about = None)]
 struct Args {
@@ -27,6 +28,7 @@ struct Args {
     config: PathBuf,
 }
 
+/// Binary entry point that configures logging, loads config, and starts Axum.
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     let args = Args::parse();
@@ -49,6 +51,7 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
+/// Sets up JSON-formatted tracing using environment filters.
 fn init_tracing() {
     let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
 

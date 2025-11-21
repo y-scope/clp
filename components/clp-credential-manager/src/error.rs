@@ -9,8 +9,10 @@ use jsonwebtoken::errors::Error as JwtError;
 use serde::Serialize;
 use thiserror::Error;
 
+/// Convenience alias for functions that return a [`ServiceError`].
 pub type ServiceResult<T> = Result<T, ServiceError>;
 
+/// Canonical error enumeration for the credential manager.
 #[derive(Debug, Error)]
 pub enum ServiceError {
     #[error("configuration error: {0}")]
@@ -56,6 +58,7 @@ impl From<sqlx::Error> for ServiceError {
     }
 }
 
+/// HTTP-friendly representation of service failures.
 #[derive(Debug)]
 pub struct ApiError {
     status: StatusCode,
@@ -63,6 +66,7 @@ pub struct ApiError {
 }
 
 impl ApiError {
+    /// Creates a new API error with the supplied HTTP status code.
     pub fn new(status: StatusCode, message: impl Into<String>) -> Self {
         Self {
             status,
@@ -70,6 +74,7 @@ impl ApiError {
         }
     }
 
+    /// Convenience constructor for 500-class responses.
     pub fn internal(message: impl Into<String>) -> Self {
         Self::new(StatusCode::INTERNAL_SERVER_ERROR, message)
     }
@@ -103,6 +108,7 @@ struct ErrorBody {
     error: String,
 }
 
+/// Converts API errors into JSON bodies that align with other CLP services.
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let status = self.status;

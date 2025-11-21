@@ -7,6 +7,7 @@ use crate::{
     models::{CreateCredentialRequest, CredentialMetadata, CredentialMetadataRow},
 };
 
+/// Returns all credential metadata sorted alphabetically by name.
 pub async fn list_credentials(pool: &MySqlPool) -> ServiceResult<Vec<CredentialMetadata>> {
     let query = format!(
         "SELECT {columns} FROM {table} ORDER BY name",
@@ -21,6 +22,7 @@ pub async fn list_credentials(pool: &MySqlPool) -> ServiceResult<Vec<CredentialM
     rows.into_iter().map(CredentialMetadata::try_from).collect()
 }
 
+/// Fetches a single credential row by ID.
 pub async fn get_credential(pool: &MySqlPool, id: i64) -> ServiceResult<CredentialMetadata> {
     let query = format!(
         "SELECT {columns} FROM {table} WHERE id = ?",
@@ -41,6 +43,7 @@ pub async fn get_credential(pool: &MySqlPool, id: i64) -> ServiceResult<Credenti
     }
 }
 
+/// Deletes the credential row and returns the affected row count.
 pub async fn delete_credential(pool: &MySqlPool, id: i64) -> ServiceResult<u64> {
     let query = format!(
         "DELETE FROM {table} WHERE id = ?",
@@ -51,6 +54,12 @@ pub async fn delete_credential(pool: &MySqlPool, id: i64) -> ServiceResult<u64> 
     Ok(result.rows_affected())
 }
 
+/// Persists a new credential then fetches the stored metadata.
+///
+/// # Errors
+///
+/// * Propagates validation/persistence failures from [`insert_credential`].
+/// * Propagates errors from [`get_credential`] when reloading the inserted row.
 pub async fn create_credential(
     pool: &MySqlPool,
     request: &CreateCredentialRequest,
@@ -60,6 +69,7 @@ pub async fn create_credential(
     get_credential(pool, inserted_id).await
 }
 
+/// Raw insert helper that maps low-level driver errors into [`ServiceError`] variants.
 async fn insert_credential(
     pool: &MySqlPool,
     request: &CreateCredentialRequest,
@@ -101,6 +111,7 @@ async fn insert_credential(
         .map_err(|err| map_insert_error(err, name))
 }
 
+/// Converts insert failures into domain-specific conflicts when possible.
 fn map_insert_error(err: sqlx::Error, name: &str) -> ServiceError {
     let is_duplicate = err
         .as_database_error()

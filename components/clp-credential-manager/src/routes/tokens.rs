@@ -3,6 +3,7 @@ use serde::Serialize;
 
 use super::AppState;
 
+/// Temporary placeholder router until token issuance/exchange is implemented.
 pub fn router() -> Router<AppState> {
     Router::new()
         .route("/credentials/issue-token", post(not_implemented))
@@ -14,6 +15,7 @@ struct PlaceholderResponse {
     message: &'static str,
 }
 
+/// Returns a 501 response indicating the endpoint is still under construction.
 async fn not_implemented() -> (StatusCode, Json<PlaceholderResponse>) {
     (
         StatusCode::NOT_IMPLEMENTED,

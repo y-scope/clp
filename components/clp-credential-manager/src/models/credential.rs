@@ -7,6 +7,7 @@ use sqlx::FromRow;
 
 use crate::error::{ServiceError, ServiceResult};
 
+/// Enumerates the types of credentials persisted by the service.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum CredentialType {
@@ -16,6 +17,7 @@ pub enum CredentialType {
 }
 
 impl CredentialType {
+    /// Returns the canonical lowercase representation used in the database.
     pub fn as_str(self) -> &'static str {
         match self {
             CredentialType::IamUser => "iam_user",
@@ -46,6 +48,7 @@ impl fmt::Display for CredentialType {
     }
 }
 
+/// Incoming payload for creating a long-term credential.
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateCredentialRequest {
     pub name: String,
@@ -69,6 +72,11 @@ pub struct CreateCredentialRequest {
 }
 
 impl CreateCredentialRequest {
+    /// Ensures the request matches the rules for its credential type.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`ServiceError::Validation`] when one or more fields are missing or invalid.
     pub fn validate(&self) -> ServiceResult<()> {
         if self.name.trim().is_empty() {
             return Err(ServiceError::Validation(
@@ -105,6 +113,7 @@ impl CreateCredentialRequest {
     }
 }
 
+/// Validates that the provided optional string exists and is not blank.
 fn ensure_present(value: Option<&str>, field: &str) -> ServiceResult<()> {
     match value {
         Some(val) if !val.trim().is_empty() => Ok(()),
@@ -114,6 +123,7 @@ fn ensure_present(value: Option<&str>, field: &str) -> ServiceResult<()> {
     }
 }
 
+/// Validates that the provided optional secret exists and is not blank.
 fn ensure_secret_present(value: Option<&SecretString>, field: &str) -> ServiceResult<()> {
     match value {
         Some(secret) if !secret.expose_secret().trim().is_empty() => Ok(()),
@@ -123,6 +133,7 @@ fn ensure_secret_present(value: Option<&SecretString>, field: &str) -> ServiceRe
     }
 }
 
+/// Raw row structure used when selecting metadata from SQLx.
 #[derive(Debug, Clone, FromRow)]
 pub struct CredentialMetadataRow {
     pub id: i64,
@@ -136,6 +147,7 @@ pub struct CredentialMetadataRow {
     pub last_used_at: Option<NaiveDateTime>,
 }
 
+/// Public-facing credential metadata returned to API clients.
 #[derive(Debug, Clone, Serialize)]
 pub struct CredentialMetadata {
     pub id: i64,
@@ -168,6 +180,7 @@ impl TryFrom<CredentialMetadataRow> for CredentialMetadata {
     }
 }
 
+/// Helper that converts `NaiveDateTime` values from SQLx into UTC timestamps.
 fn to_utc(ts: NaiveDateTime) -> DateTime<Utc> {
     DateTime::<Utc>::from_naive_utc_and_offset(ts, Utc)
 }
