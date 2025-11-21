@@ -508,7 +508,8 @@ def _batch_tasks(
     :return: Tuple of (tasks_to_submit, remaining_tasks, partition_info_to_submit,
     remaining_partition_info).
     """
-    if len(tasks) > max_concurrent_tasks_per_job:
+    # Skip partitioning if max_concurrent_tasks_per_job is 0.
+    if max_concurrent_tasks_per_job > 0 and len(tasks) > max_concurrent_tasks_per_job:
         tasks_to_submit = tasks[:max_concurrent_tasks_per_job]
         remaining_tasks = tasks[max_concurrent_tasks_per_job:]
         partition_info_to_submit = partition_info[:max_concurrent_tasks_per_job]
