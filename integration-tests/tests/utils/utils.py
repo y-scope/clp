@@ -80,6 +80,17 @@ def load_yaml_to_dict(path: Path) -> dict[str, Any]:
     return target_dict
 
 
+def resolve_path_env_var(var_name: str) -> Path:
+    """
+    :param var_name: Name of the environment variable holding a path.
+    :return: Absolute Path resolved from the input variable.
+    :raise: Propagates `get_env_var`'s exceptions.
+    :raise: Propagates `Path.expanduser`'s exceptions.
+    :raise: Propagates `Path.resolve`'s exceptions.
+    """
+    return Path(get_env_var(var_name)).expanduser().resolve()
+
+
 def unlink(rm_path: Path, force: bool = True) -> None:
     """
     Remove a file or directory at `path`.
