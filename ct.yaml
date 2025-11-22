@@ -2,7 +2,7 @@ chart-dirs:
   - "tools/deployment"
 chart-yaml-schema: "chart_schema.yaml"
 check-version-increment: true
-lint-conf: ".yamllint.yml"
+lint-conf: ".yamllint.yaml"
 validate-chart-schema: true
 validate-maintainers: true
 validate-yaml: true

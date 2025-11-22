@@ -5,7 +5,7 @@ metadata:
   labels:
     {{- include "clp.labels" . | nindent 4 }}
 data:
-  clp-config.yml: |
+  clp-config.yaml: |
     data_directory: "/var/data"
     database:
       auto_commit: false
