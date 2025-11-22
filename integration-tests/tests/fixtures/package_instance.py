@@ -31,7 +31,13 @@ def fixt_package_instance(
     :return: Iterator that yields the running package instance.
     """
     mode_name = fixt_package_config.mode_name
+    no_jobs: bool = bool(request.config.option.NO_JOBS)
     instance: PackageInstance | None = None
+    package_job_list = fixt_package_config.package_job_list
+
+    # Do not start this mode if there are no jobs and the '--no-jobs' flag wasn't specified by user.
+    if package_job_list is None and not no_jobs:
+        pytest.skip(f"No jobs to run for mode {mode_name} with current job filter.")
 
     try:
         logger.debug("Starting up the %s package.", mode_name)

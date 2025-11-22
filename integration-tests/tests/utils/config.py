@@ -121,6 +121,36 @@ class PackagePathConfig:
 
 
 @dataclass(frozen=True)
+class PackageCompressJob:
+    """A compression job for a package test."""
+
+    job_name: str
+    mode: str
+    file_path: str
+    # TODO: add fields as needed.
+
+
+@dataclass(frozen=True)
+class PackageSearchJob:
+    """A search job for a package test."""
+
+    job_name: str
+    mode: str
+    package_compress_job: PackageCompressJob
+    query: str
+    # TODO: add fields as needed.
+
+
+@dataclass(frozen=True)
+class PackageJobList:
+    """List of jobs to run during a package test."""
+
+    package_compress_jobs: list[PackageCompressJob]
+    package_search_jobs: list[PackageSearchJob]
+    # TODO: add job types as needed.
+
+
+@dataclass(frozen=True)
 class PackageConfig:
     """Metadata for a specific configuration of the CLP package."""
 
@@ -135,6 +165,9 @@ class PackageConfig:
 
     #: The ClpConfig instance that describes this package configuration.
     clp_config: ClpConfig
+
+    #: The list of jobs that this package will run during the test.
+    package_job_list: PackageJobList | None
 
     def __post_init__(self) -> None:
         """Write the temporary config file for this package."""
