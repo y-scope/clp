@@ -29,7 +29,8 @@ one-time initialization jobs and their functions.
             "primaryBorderColor": "transparent",
             "lineColor": "#007fff",
             "secondaryColor": "#007fff",
-            "tertiaryColor": "#fff"
+            "tertiaryColor": "#fff",
+            "clusterBkg": "#d1f6ff"
         }
     }
 }%%
@@ -41,7 +42,9 @@ graph LR
   results_cache["results-cache (MongoDB)"]
   compression_scheduler["compression-scheduler"]
   query_scheduler["query-scheduler"]
+  spider_scheduler["spider-scheduler"]
   compression_worker["compression-worker"]
+  spider_compression_worker["spider-compression-worker"]
   query_worker["query-worker"]
   reducer["reducer"]
   api_server["api-server"]
@@ -63,6 +66,8 @@ graph LR
   queue -->|healthy| query_scheduler
   redis -->|healthy| query_scheduler
   query_scheduler -->|healthy| reducer
+  db_table_creator -->|healthy| spider_scheduler
+  db_table_creator -->|healthy| spider_compression_worker
   results_cache_indices_creator -->|completed_successfully| reducer
   db_table_creator -->|completed_successfully| api_server
   results_cache_indices_creator -->|completed_successfully| api_server
@@ -75,9 +80,11 @@ graph LR
 
   subgraph Databases
     database
-    queue
-    redis
     results_cache
+    subgraph Celery[Celery<br/>Native Query Engine]
+        queue
+        redis
+    end
   end
 
   subgraph Initialization jobs
@@ -88,10 +95,17 @@ graph LR
   subgraph Schedulers
     compression_scheduler
     query_scheduler
+    subgraph SpiderSchedulers[Spider]
+        spider_scheduler
+    end
+    spider_scheduler
   end
 
   subgraph Workers
     compression_worker
+    subgraph SpiderWorkers[Spider Workers]
+        spider_compression_worker["spider-compression-worker"]
+    end
     query_worker
     reducer
   end
@@ -106,6 +120,13 @@ graph LR
     mcp_server
   end
 
+  %% Edges Styles
+  linkStyle 3,4,6,7 stroke:#ffd700,color:#ffd700
+  linkStyle 9,10 stroke:#00ced1,color:#00ced1
+  %% Subgraphs Styles
+  style Celery fill:#ffffe0,stroke:#ffd700
+  style SpiderSchedulers fill:#e0ffff,stroke:#00ced1
+  style SpiderWorkers fill:#e0ffff,stroke:#00ced1
 
 +++
 **Figure 1**: Orchestration architecture of the services in the CLP package.
