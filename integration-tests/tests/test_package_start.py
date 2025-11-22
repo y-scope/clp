@@ -8,47 +8,17 @@ from tests.utils.asserting_utils import (
     validate_package_running,
     validate_running_mode_correct,
 )
+from tests.utils.clp_job_utils import (
+    dispatch_test_jobs,
+)
 from tests.utils.clp_mode_utils import CLP_MODE_CONFIGS
 from tests.utils.config import (
-    PackageCompressJob,
     PackageInstance,
-    PackageJobList,
-    PackageSearchJob,
 )
 
 TEST_MODES = CLP_MODE_CONFIGS.keys()
 
 logger = logging.getLogger(__name__)
-
-
-def _run_package_compress_jobs(jobs: list[PackageCompressJob]) -> None:
-    job_descriptions = [f"{job.job_name}" for job in jobs]
-    logger.info(
-        "_run_package_compress_jobs: %d job(s): %s",
-        len(jobs),
-        job_descriptions,
-    )
-    # TODO: write this.
-    assert True
-
-
-def _run_package_search_jobs(jobs: list[PackageSearchJob]) -> None:
-    job_descriptions = [f"{job.job_name}" for job in jobs]
-    logger.info(
-        "_run_package_search_jobs: %d job(s): %s",
-        len(jobs),
-        job_descriptions,
-    )
-    # TODO: write this.
-    assert True
-
-
-def _dispatch_test_jobs(jobs_list: PackageJobList) -> None:
-    logger.info("_dispatch_test_jobs")
-    if jobs_list.package_compress_jobs:
-        _run_package_compress_jobs(jobs_list.package_compress_jobs)
-    if jobs_list.package_search_jobs:
-        _run_package_search_jobs(jobs_list.package_search_jobs)
 
 
 @pytest.mark.package
@@ -84,4 +54,4 @@ def test_clp_package(fixt_package_instance: PackageInstance) -> None:
     # Run all jobs.
     package_job_list = fixt_package_instance.package_config.package_job_list
     if package_job_list is not None:
-        _dispatch_test_jobs(package_job_list)
+        dispatch_test_jobs(package_job_list)
