@@ -145,8 +145,8 @@ class PackageConfig:
         """:return: The absolute path to the temporary configuration file for the package."""
         return self.path_config.temp_config_dir / f"clp-config-{self.mode_name}.yaml"
 
-    def _write_temp_config_file(self) -> Path:
-        """:return: The path to the temporary config file."""
+    def _write_temp_config_file(self) -> None:
+        """Writes the temporary config file for this package."""
         temp_config_file_path = self.temp_config_file_path
 
         payload = self.clp_config.dump_to_primitive_dict()  # type: ignore[no-untyped-call]
@@ -155,8 +155,6 @@ class PackageConfig:
         with tmp_path.open("w", encoding="utf-8") as f:
             yaml.safe_dump(payload, f, sort_keys=False)
         tmp_path.replace(temp_config_file_path)
-
-        return temp_config_file_path
 
 
 @dataclass(frozen=True)
