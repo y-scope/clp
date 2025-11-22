@@ -1,0 +1,33 @@
+apiVersion: "v1"
+kind: "ConfigMap"
+metadata:
+  name: {{ include "clp.fullname" . }}-config
+  labels:
+    {{- include "clp.labels" . | nindent 4 }}
+data:
+  clp-config.yaml: |
+    data_directory: "/var/data"
+    database:
+      auto_commit: false
+      compress: true
+      host: {{ include "clp.fullname" . }}-database
+      name: {{ .Values.clpConfig.database.name | quote }}
+      port: 3306
+      ssl_cert: null
+      type: {{ .Values.clpConfig.database.type | quote }}
+    logs_directory: "/var/log"
+    package:
+      query_engine: {{ .Values.clpConfig.package.query_engine | quote }}
+      storage_engine: {{ .Values.clpConfig.package.storage_engine | quote }}
+
+  mysql-logging.cnf: |
+    [mysqld]
+    # https://dev.mysql.com/doc/refman/8.0/en/log-destinations.html
+    # Enable the general log
+    general_log=1
+    # Set the destination file
+    general_log_file=/var/log/mysql/mysql.log
+
+    # https://dev.mysql.com/doc/refman/8.0/en/error-log-destination-configuration.html
+    # Send error logs to file
+    log_error=/var/log/mysql/mysql-error.log
