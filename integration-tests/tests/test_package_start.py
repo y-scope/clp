@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.package
 @pytest.mark.parametrize("fixt_package_config", TEST_MODES, indirect=True)
-def test_clp_package(fixt_package_instance: PackageInstance) -> None:
+def test_clp_package(
+    request: pytest.FixtureRequest, fixt_package_instance: PackageInstance
+) -> None:
     """
     Validate that all of the components of the CLP package start up successfully for the selected
     mode of operation.
@@ -54,4 +56,6 @@ def test_clp_package(fixt_package_instance: PackageInstance) -> None:
     # Run all jobs.
     package_job_list = fixt_package_instance.package_config.package_job_list
     if package_job_list is not None:
-        dispatch_test_jobs(package_job_list)
+        dispatch_test_jobs(request, fixt_package_instance)
+
+    # Remember to clear data, tmp, and log from the package directory when you're all done.

@@ -2,35 +2,40 @@
 
 import logging
 
+import pytest
+
 from tests.utils.config import (
     PackageCompressJob,
+    PackageInstance,
     PackageJobList,
     PackageSearchJob,
 )
+from tests.utils.package_utils import run_package_compress_jobs, run_package_search_jobs
 
 logger = logging.getLogger(__name__)
 
 
 PACKAGE_COMPRESS_JOBS: dict[str, PackageCompressJob] = {
     "compress-postgresql": PackageCompressJob(
-        job_name="compress-postgresql", mode="clp-json", file_path="/path/to/postgresql.log"
-    ),
-    "compress-cockroachdb": PackageCompressJob(
-        job_name="compress-cockroachdb", mode="clp-json", file_path="/path/to/cockroachdb.log"
+        job_name="compress-postgresql",
+        fixture_name="postgresql",
+        mode="clp-json",
+        log_format="json",
+        unstructured=False,
+        dataset_name="postgresql",
+        timestamp_key="timestamp",
     ),
     "compress-hive-24hr": PackageCompressJob(
-        job_name="compress-hive-24hr", mode="clp-text", file_path="/path/to/hive-24hr"
+        job_name="compress-hive-24hr",
+        fixture_name="hive_24hr",
+        mode="clp-text",
+        log_format="text",
+        unstructured=True,
     ),
     # TODO: insert more compression jobs as needed...
 }
 
 PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
-    "search-basic-hive": PackageSearchJob(
-        job_name="search-basic-hive",
-        mode="clp-text",
-        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
-        query="search query",
-    ),
     "search-basic-postgresql": PackageSearchJob(
         job_name="search-basic-postgresql",
         mode="clp-json",
@@ -40,8 +45,14 @@ PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
     "search-ignore-case": PackageSearchJob(
         job_name="search-ignore-case",
         mode="clp-json",
-        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-cockroachdb"],
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-postgresql"],
         query="sEaRcH qUeRy",
+    ),
+    "search-basic-hive": PackageSearchJob(
+        job_name="search-basic-hive",
+        mode="clp-text",
+        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
+        query="search query",
     ),
     # TODO: insert more search jobs as needed...
 }
@@ -87,36 +98,20 @@ def build_package_job_list(mode_name: str, job_filter: str) -> PackageJobList | 
     )
 
 
-def _run_package_compress_jobs(jobs: list[PackageCompressJob]) -> None:
-    job_descriptions = [f"{job.job_name}" for job in jobs]
-    logger.info(
-        "_run_package_compress_jobs: %d job(s): %s",
-        len(jobs),
-        job_descriptions,
-    )
-    # TODO: write this.
-    assert True
-
-
-def _run_package_search_jobs(jobs: list[PackageSearchJob]) -> None:
-    job_descriptions = [f"{job.job_name}" for job in jobs]
-    logger.info(
-        "_run_package_search_jobs: %d job(s): %s",
-        len(jobs),
-        job_descriptions,
-    )
-    # TODO: write this.
-    assert True
-
-
-def dispatch_test_jobs(jobs_list: PackageJobList) -> None:
+def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: PackageInstance) -> None:
     """
     Dispatches all the package jobs in `job_list` for this package test run.
 
     :param jobs_list:
     """
     logger.info("dispatch_test_jobs")
+
+    jobs_list = package_instance.package_config.package_job_list
+    if jobs_list is None:
+        logger.info("dispatch_test_jobs: no jobs configured for this package instance")
+        return
+
     if jobs_list.package_compress_jobs:
-        _run_package_compress_jobs(jobs_list.package_compress_jobs)
+        run_package_compress_jobs(request, package_instance)
     if jobs_list.package_search_jobs:
-        _run_package_search_jobs(jobs_list.package_search_jobs)
+        run_package_search_jobs(package_instance)

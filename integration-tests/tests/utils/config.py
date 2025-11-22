@@ -119,14 +119,24 @@ class PackagePathConfig:
         """:return: The absolute path to the package stop script."""
         return self.clp_package_dir / "sbin" / "stop-clp.sh"
 
+    @property
+    def compress_script_path(self) -> Path:
+        """:return: The absolute path to the package compress script."""
+        return self.clp_package_dir / "sbin" / "compress.sh"
+
 
 @dataclass(frozen=True)
 class PackageCompressJob:
     """A compression job for a package test."""
 
     job_name: str
+    fixture_name: str
     mode: str
-    file_path: str
+    log_format: str
+    unstructured: bool
+    dataset_name: str | None = None
+    timestamp_key: str | None = None
+    tags: list[str] | None = None
     # TODO: add fields as needed.
 
 
