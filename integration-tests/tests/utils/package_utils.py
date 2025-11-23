@@ -77,7 +77,9 @@ def compress_with_clp_package(
     compress_script_path = package_config.path_config.compress_script_path
     temp_config_file_path = package_config.temp_config_file_path
     # Get the correct logs fixture for this job and set up path config objects.
-    integration_test_logs: IntegrationTestLogs = request.getfixturevalue(compress_job.fixture_name)
+    integration_test_logs: IntegrationTestLogs = request.getfixturevalue(
+        compress_job.log_fixture_name
+    )
 
     # Construct the compression command for this job.
     compress_cmd = [
@@ -113,7 +115,10 @@ def compress_with_clp_package(
             ]
         )
 
-    compress_cmd.append(str(integration_test_logs.extraction_dir))
+    if compress_job.subpath is not None:
+        compress_cmd.append(str(integration_test_logs.extraction_dir / compress_job.subpath))
+    else:
+        compress_cmd.append(str(integration_test_logs.extraction_dir))
 
     # Run compression command for this job and assert that it succeeds.
     run_and_assert(compress_cmd)

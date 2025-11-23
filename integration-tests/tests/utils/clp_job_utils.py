@@ -1,6 +1,7 @@
 """Provides utilities related to the test jobs for the CLP package."""
 
 import logging
+from pathlib import Path
 
 import pytest
 
@@ -18,21 +19,68 @@ logger = logging.getLogger(__name__)
 PACKAGE_COMPRESS_JOBS: dict[str, PackageCompressJob] = {
     "compress-postgresql": PackageCompressJob(
         job_name="compress-postgresql",
-        fixture_name="postgresql",
+        log_fixture_name="postgresql",
         mode="clp-json",
         log_format="json",
         unstructured=False,
         dataset_name="postgresql",
         timestamp_key="timestamp",
     ),
+    "compress-spark-event-logs": PackageCompressJob(
+        job_name="compress-spark-event-logs",
+        log_fixture_name="spark_event_logs",
+        mode="clp-json",
+        log_format="json",
+        unstructured=False,
+        dataset_name="spark-event-logs",
+        timestamp_key="Timestamp",
+    ),
+    "compress-default-dataset": PackageCompressJob(
+        job_name="compress-default-dataset",
+        log_fixture_name="postgresql",
+        mode="clp-json",
+        log_format="json",
+        unstructured=False,
+        timestamp_key="timestamp",
+    ),
+    "compress-tagged-data-spark": PackageCompressJob(
+        job_name="compress-tagged-data-spark",
+        log_fixture_name="spark_event_logs",
+        mode="clp-json",
+        log_format="json",
+        unstructured=False,
+        dataset_name="tagged_data",
+        timestamp_key="Timestamp",
+        subpath=Path("spark-event-logs") / "app-20211007095008-0000",
+        tags=[
+            "tag1",
+        ],
+    ),
     "compress-hive-24hr": PackageCompressJob(
         job_name="compress-hive-24hr",
-        fixture_name="hive_24hr",
+        log_fixture_name="hive_24hr",
         mode="clp-text",
         log_format="text",
         unstructured=True,
     ),
-    # TODO: insert more compression jobs as needed...
+    "compress-tagged-data-hive": PackageCompressJob(
+        job_name="compress-tagged-data-hive",
+        log_fixture_name="hive_24hr",
+        mode="clp-text",
+        log_format="text",
+        unstructured=True,
+        subpath=(
+            Path("hive-24hr")
+            / "i-0ac90a05"
+            / "application_1427088391284_0001"
+            / "container_1427088391284_0001_01_000124"
+            / "syslog"
+        ),
+        tags=[
+            "tag1",
+        ],
+    ),
+    # Insert more compression jobs here as needed.
 }
 
 PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
@@ -54,10 +102,8 @@ PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
         package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
         query="search query",
     ),
-    # TODO: insert more search jobs as needed...
+    # Insert more search jobs here as needed.
 }
-
-# TODO: insert more job types as needed...
 
 
 def _matches_keyword(job_name: str, keyword_filter: str) -> bool:

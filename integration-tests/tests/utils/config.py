@@ -130,13 +130,14 @@ class PackageCompressJob:
     """A compression job for a package test."""
 
     job_name: str
-    fixture_name: str
+    log_fixture_name: str
     mode: str
     log_format: str
     unstructured: bool
     dataset_name: str | None = None
     timestamp_key: str | None = None
     tags: list[str] | None = None
+    subpath: Path | None = None
     # TODO: add fields as needed.
 
 
