@@ -121,7 +121,7 @@ def build_package_job_list(mode_name: str, job_filter: str) -> PackageJobList | 
     :param job_filter:
     :return: PackageJobList if there are jobs for this mode, None if not.
     """
-    logger.info("Creating job list for mode %s (job filter: %s)", mode_name, job_filter)
+    logger.debug("Creating job list for mode %s (job filter: %s)", mode_name, job_filter)
 
     package_compress_jobs: list[PackageCompressJob] = []
     package_search_jobs: list[PackageSearchJob] = []
@@ -160,13 +160,6 @@ def _run_package_compress_jobs(
         raise RuntimeError(err_msg)
 
     compress_jobs = package_job_list.package_compress_jobs
-    job_descriptions = [f"{compress_job.job_name}" for compress_job in compress_jobs]
-    logger.info(
-        "_run_package_compress_jobs: %d job(s): %s",
-        len(compress_jobs),
-        job_descriptions,
-    )
-
     for compress_job in compress_jobs:
         compress_with_clp_package(request, compress_job, package_instance)
 
@@ -184,14 +177,6 @@ def _run_package_search_jobs(
         err_msg = "Package job list is not configured for this package instance."
         raise RuntimeError(err_msg)
 
-    search_jobs = package_job_list.package_search_jobs
-    job_descriptions = [f"{search_job.job_name}" for search_job in search_jobs]
-    logger.info(
-        "_run_package_search_jobs: %d job(s): %s",
-        len(search_jobs),
-        job_descriptions,
-    )
-    # TODO: write this.
     assert True
 
 
@@ -201,11 +186,10 @@ def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: Package
 
     :param jobs_list:
     """
-    logger.info("dispatch_test_jobs")
+    logger.debug("Dispatching test jobs.")
 
     jobs_list = package_instance.package_config.package_job_list
     if jobs_list is None:
-        logger.info("dispatch_test_jobs: no jobs configured for this package instance")
         return
 
     if jobs_list.package_compress_jobs:

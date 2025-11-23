@@ -52,7 +52,7 @@ def fixt_package_instance(
             " .pytest.ini."
         )
     finally:
-        logger.info("Now stopping the %s package...", mode_name)
+        logger.debug("Now stopping the %s package...", mode_name)
         if instance is not None:
             stop_clp_package(instance)
         else:
