@@ -58,4 +58,5 @@ def test_clp_package(
     if package_job_list is not None:
         dispatch_test_jobs(request, fixt_package_instance)
 
-    # Remember to clear data, tmp, and log from the package directory when you're all done.
+    # TODO: Remember to clear data, tmp, and log from the package directory when you're all done.
+    

@@ -5,6 +5,7 @@ import subprocess
 
 import pytest
 
+from tests.utils.asserting_utils import run_and_assert
 from tests.utils.config import (
     IntegrationTestLogs,
     PackageConfig,
@@ -64,7 +65,7 @@ def run_package_compress_jobs(
     package_instance: PackageInstance,
 ) -> None:
     """
-    Run all the package compress jobs in `jobs` on the CLP package.
+    Run all the package compress jobs for this test run.
 
     :param package_instance:
     :param request:
@@ -82,25 +83,21 @@ def run_package_compress_jobs(
         job_descriptions,
     )
 
-    # TODO: write this.
+    package_config = package_instance.package_config
+    compress_script_path = package_config.path_config.compress_script_path
+    temp_config_file_path = package_config.temp_config_file_path
 
     for compress_job in compress_jobs:
-        # 1. Get the correct logs fixture for this job.
-        # The fixture will download and extract the dataset.
+        # Get the correct logs fixture for this job and set up path config objects.
         integration_test_logs: IntegrationTestLogs = request.getfixturevalue(
             compress_job.fixture_name
         )
 
-        # 2. Construct compression command for this job.
-        package_config = package_instance.package_config
-        compress_script_path = package_config.path_config.compress_script_path
-        temp_config_file_path = package_config.temp_config_file_path
-
+        # Construct the compression command for this job.
         compress_cmd = [
             str(compress_script_path),
             "--config",
             str(temp_config_file_path),
-            # "--no-progress-reporting",
         ]
 
         if compress_job.dataset_name is not None:
@@ -132,18 +129,15 @@ def run_package_compress_jobs(
 
         compress_cmd.append(str(integration_test_logs.extraction_dir))
 
-        # 3. Run compression command for this job.
-        subprocess.run(compress_cmd, check=True)
-
-        # 4. Ensure that compression was successful.
-        # (how? decompression? clp-json doesn't have decompression though.)
+        # Run compression command for this job and assert that it succeeds.
+        run_and_assert(compress_cmd)
 
 
 def run_package_search_jobs(
     package_instance: PackageInstance,
 ) -> None:
     """
-    Run all the package search jobs in `jobs` on the CLP package.
+    Run all the package search jobs for this test run.
 
     :param package_instance:
     """
