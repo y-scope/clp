@@ -2,9 +2,15 @@
 
 import contextlib
 import logging
+import shutil
 from collections.abc import Iterator
 
 import pytest
+from clp_py_utils.clp_config import (
+    CLP_DEFAULT_DATA_DIRECTORY_PATH,
+    CLP_DEFAULT_LOG_DIRECTORY_PATH,
+    CLP_DEFAULT_TMP_DIRECTORY_PATH,
+)
 
 from tests.utils.clp_job_utils import (
     build_package_job_list,
@@ -71,6 +77,14 @@ def fixt_package_config(
     try:
         yield package_config
     finally:
-        logger.debug("Removing the temporary config file.")
+        logger.debug("Removing the temporary config file and var contents.")
+
         with contextlib.suppress(FileNotFoundError):
             package_config.temp_config_file_path.unlink()
+
+        # Clear data, tmp, and log from the package directory.
+        data_dir = package_config.path_config.clp_package_dir / CLP_DEFAULT_DATA_DIRECTORY_PATH
+        tmp_dir = package_config.path_config.clp_package_dir / CLP_DEFAULT_TMP_DIRECTORY_PATH
+        log_dir = package_config.path_config.clp_package_dir / CLP_DEFAULT_LOG_DIRECTORY_PATH
+        for directory_path in (data_dir, tmp_dir, log_dir):
+            shutil.rmtree(directory_path, ignore_errors=True)

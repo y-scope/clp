@@ -57,6 +57,3 @@ def test_clp_package(
     package_job_list = fixt_package_instance.package_config.package_job_list
     if package_job_list is not None:
         dispatch_test_jobs(request, fixt_package_instance)
-
-    # TODO: Remember to clear data, tmp, and log from the package directory when you're all done.
-    
