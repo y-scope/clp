@@ -10,7 +10,7 @@ from tests.utils.config import (
     PackageJobList,
     PackageSearchJob,
 )
-from tests.utils.package_utils import run_package_compress_jobs, run_package_search_jobs
+from tests.utils.package_utils import compress_with_clp_package
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +98,57 @@ def build_package_job_list(mode_name: str, job_filter: str) -> PackageJobList | 
     )
 
 
+def _run_package_compress_jobs(
+    request: pytest.FixtureRequest,
+    package_instance: PackageInstance,
+) -> None:
+    """
+    Run all the package compress jobs for this test run.
+
+    :param package_instance:
+    :param request:
+    """
+    package_job_list = package_instance.package_config.package_job_list
+    if package_job_list is None:
+        err_msg = "Package job list is not configured for this package instance."
+        raise RuntimeError(err_msg)
+
+    compress_jobs = package_job_list.package_compress_jobs
+    job_descriptions = [f"{compress_job.job_name}" for compress_job in compress_jobs]
+    logger.info(
+        "_run_package_compress_jobs: %d job(s): %s",
+        len(compress_jobs),
+        job_descriptions,
+    )
+
+    for compress_job in compress_jobs:
+        compress_with_clp_package(request, compress_job, package_instance)
+
+
+def _run_package_search_jobs(
+    package_instance: PackageInstance,
+) -> None:
+    """
+    Run all the package search jobs for this test run.
+
+    :param package_instance:
+    """
+    package_job_list = package_instance.package_config.package_job_list
+    if package_job_list is None:
+        err_msg = "Package job list is not configured for this package instance."
+        raise RuntimeError(err_msg)
+
+    search_jobs = package_job_list.package_search_jobs
+    job_descriptions = [f"{search_job.job_name}" for search_job in search_jobs]
+    logger.info(
+        "_run_package_search_jobs: %d job(s): %s",
+        len(search_jobs),
+        job_descriptions,
+    )
+    # TODO: write this.
+    assert True
+
+
 def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: PackageInstance) -> None:
     """
     Dispatches all the package jobs in `job_list` for this package test run.
@@ -112,6 +163,6 @@ def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: Package
         return
 
     if jobs_list.package_compress_jobs:
-        run_package_compress_jobs(request, package_instance)
+        _run_package_compress_jobs(request, package_instance)
     if jobs_list.package_search_jobs:
-        run_package_search_jobs(package_instance)
+        _run_package_search_jobs(package_instance)
