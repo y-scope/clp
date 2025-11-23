@@ -4,7 +4,7 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
-from typing import Final, List
+from typing import Final
 
 from clp_py_utils.clp_config import (
     ARCHIVE_MANAGER_ACTION_NAME,
@@ -38,7 +38,7 @@ DEL_COMMAND: Final[str] = "del"
 logger = logging.getLogger(__file__)
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -191,7 +191,7 @@ def main(argv: List[str]) -> int:
 
     cmd = container_start_cmd + dataset_manager_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Dataset manager failed.")

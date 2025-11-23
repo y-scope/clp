@@ -10,7 +10,6 @@ from job_orchestration.scheduler.task_result import CompressionTaskResult
 
 
 class CeleryTaskManager(TaskManager):
-
     class ResultHandle(TaskManager.ResultHandle):
         def __init__(self, celery_result: celery.result.GroupResult) -> None:
             self._celery_result: celery.result.GroupResult = celery_result

@@ -6,20 +6,19 @@ import pathlib
 import sys
 import time
 from contextlib import closing
-from typing import Union
 
 import brotli
 import msgpack
 from clp_py_utils.clp_config import (
     AwsAuthentication,
     CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH,
-    CLPConfig,
+    ClpConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     StorageType,
 )
 from clp_py_utils.pretty_size import pretty_size
 from clp_py_utils.s3_utils import parse_s3_url
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 from job_orchestration.scheduler.constants import (
     CompressionJobCompletionStatus,
     CompressionJobStatus,
@@ -115,10 +114,11 @@ def handle_job_update(db, db_cursor, job_id, no_progress_reporting):
         time.sleep(0.5)
 
 
-def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress_reporting: bool):
-    with closing(sql_adapter.create_connection(True)) as db, closing(
-        db.cursor(dictionary=True)
-    ) as db_cursor:
+def handle_job(sql_adapter: SqlAdapter, clp_io_config: ClpIoConfig, no_progress_reporting: bool):
+    with (
+        closing(sql_adapter.create_connection(True)) as db,
+        closing(db.cursor(dictionary=True)) as db_cursor,
+    ):
         try:
             compressed_clp_io_config = brotli.compress(
                 msgpack.packb(clp_io_config.model_dump(exclude_none=True, exclude_unset=True)),
@@ -143,10 +143,10 @@ def handle_job(sql_adapter: SQL_Adapter, clp_io_config: ClpIoConfig, no_progress
 
 
 def _generate_clp_io_config(
-    clp_config: CLPConfig,
+    clp_config: ClpConfig,
     logs_to_compress: list[str],
     parsed_args: argparse.Namespace,
-) -> Union[S3InputConfig, FsInputConfig]:
+) -> S3InputConfig | FsInputConfig:
     input_type = parsed_args.input_type
 
     if input_type == "fs":
@@ -159,7 +159,7 @@ def _generate_clp_io_config(
             path_prefix_to_remove=str(CONTAINER_INPUT_LOGS_ROOT_DIR),
             unstructured=parsed_args.unstructured,
         )
-    elif input_type != "s3":
+    if input_type != "s3":
         raise ValueError(f"Unsupported input type: `{input_type}`.")
 
     # Handle S3 inputs
@@ -183,7 +183,7 @@ def _generate_clp_io_config(
             timestamp_key=parsed_args.timestamp_key,
             unstructured=parsed_args.unstructured,
         )
-    elif s3_compress_subcommand == S3_KEY_PREFIX_COMPRESSION:
+    if s3_compress_subcommand == S3_KEY_PREFIX_COMPRESSION:
         if len(urls) != 1:
             raise ValueError(
                 f"`{S3_KEY_PREFIX_COMPRESSION}` requires exactly one URL, got {len(urls)}"
@@ -199,8 +199,7 @@ def _generate_clp_io_config(
             timestamp_key=parsed_args.timestamp_key,
             unstructured=parsed_args.unstructured,
         )
-    else:
-        raise ValueError(f"Unsupported S3 compress subcommand: `{s3_compress_subcommand}`.")
+    raise ValueError(f"Unsupported S3 compress subcommand: `{s3_compress_subcommand}`.")
 
 
 def _get_logs_to_compress(logs_list_path: pathlib.Path) -> list[str]:
@@ -280,7 +279,7 @@ def _parse_and_validate_s3_object_urls(
     return region_code, bucket_name, key_prefix, key_list
 
 
-def _get_aws_authentication_from_config(clp_config: CLPConfig) -> AwsAuthentication:
+def _get_aws_authentication_from_config(clp_config: ClpConfig) -> AwsAuthentication:
     """
     Gets AWS authentication configuration.
 
@@ -372,7 +371,7 @@ def main(argv):
         logs_to_compress = _get_logs_to_compress(pathlib.Path(parsed_args.logs_list).resolve())
         clp_input_config = _generate_clp_io_config(clp_config, logs_to_compress, parsed_args)
     except Exception:
-        logger.exception(f"Failed to process input.")
+        logger.exception("Failed to process input.")
         return -1
 
     clp_output_config = OutputConfig.model_validate(clp_config.archive_output.model_dump())
@@ -382,7 +381,7 @@ def main(argv):
             clp_output_config.tags = tag_list
     clp_io_config = ClpIoConfig(input=clp_input_config, output=clp_output_config)
 
-    mysql_adapter = SQL_Adapter(clp_config.database)
+    mysql_adapter = SqlAdapter(clp_config.database)
     return handle_job(
         sql_adapter=mysql_adapter,
         clp_io_config=clp_io_config,

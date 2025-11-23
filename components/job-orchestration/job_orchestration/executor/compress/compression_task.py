@@ -5,7 +5,7 @@ import pathlib
 import shutil
 import subprocess
 from contextlib import closing
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from clp_py_utils.clp_config import (
     CLP_DB_PASS_ENV_VAR_NAME,
@@ -29,7 +29,7 @@ from clp_py_utils.s3_utils import (
     get_credential_env_vars,
     s3_put,
 )
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 
 from job_orchestration.scheduler.constants import CompressionTaskStatus
 from job_orchestration.scheduler.job_config import (
@@ -70,7 +70,7 @@ def increment_compression_job_metadata(db_cursor, job_id, kv):
 def update_tags(
     db_cursor,
     table_prefix: str,
-    dataset: Optional[str],
+    dataset: str | None,
     archive_id: str,
     tag_ids: list[int],
 ) -> None:
@@ -87,9 +87,9 @@ def update_job_metadata_and_tags(
     db_cursor,
     job_id: int,
     table_prefix: str,
-    dataset: Optional[str],
+    dataset: str | None,
     tag_ids: list[int],
-    archive_stats: Dict[str, Any],
+    archive_stats: dict[str, Any],
 ) -> None:
     if len(tag_ids) > 0:
         update_tags(db_cursor, table_prefix, dataset, archive_stats["id"], tag_ids)
@@ -106,8 +106,8 @@ def update_job_metadata_and_tags(
 def update_archive_metadata(
     db_cursor,
     table_prefix: str,
-    dataset: Optional[str],
-    archive_stats: Dict[str, Any],
+    dataset: str | None,
+    archive_stats: dict[str, Any],
 ) -> None:
     stats_to_update = {
         # Use defaults for values clp-s doesn't output
@@ -174,15 +174,15 @@ def _upload_archive_to_s3(
     s3_config: S3Config,
     archive_src_path: pathlib.Path,
     archive_id: str,
-    dataset: Optional[str],
+    dataset: str | None,
 ):
     dest_path = f"{dataset}/{archive_id}" if dataset is not None else archive_id
     s3_put(s3_config, archive_src_path, dest_path)
 
 
 def _get_db_connection_args_for_clp_cmd(
-    clp_metadata_db_connection_config: Dict[str, Any],
-) -> List[str]:
+    clp_metadata_db_connection_config: dict[str, Any],
+) -> list[str]:
     """
     :param clp_metadata_db_connection_config:
     :return: List of database connection arguments for the clp command.
@@ -202,8 +202,8 @@ def _get_db_connection_args_for_clp_cmd(
 
 
 def _get_db_connection_env_vars_for_clp_cmd(
-    clp_metadata_db_connection_config: Dict[str, Any],
-) -> Dict[str, str]:
+    clp_metadata_db_connection_config: dict[str, Any],
+) -> dict[str, str]:
     """
     :param clp_metadata_db_connection_config:
     :return: Dictionary of database connection environment variables for the clp command.
@@ -218,8 +218,8 @@ def _make_clp_command_and_env(
     clp_home: pathlib.Path,
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
-    clp_metadata_db_connection_config: Dict[str, Any],
-) -> Tuple[List[str], Optional[Dict[str, str]]]:
+    clp_metadata_db_connection_config: dict[str, Any],
+) -> tuple[list[str], dict[str, str] | None]:
     """
     Generates the command and environment variables for a clp compression job.
     :param clp_home:
@@ -228,7 +228,6 @@ def _make_clp_command_and_env(
     :param clp_metadata_db_connection_config:
     :return: Tuple of (compression_command, compression_env_vars)
     """
-
     path_prefix_to_remove = clp_config.input.path_prefix_to_remove
 
     # fmt: off
@@ -267,7 +266,7 @@ def _make_clp_s_command_and_env(
     archive_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
     use_single_file_archive: bool,
-) -> Tuple[List[str], Dict[str, str]]:
+) -> tuple[list[str], dict[str, str]]:
     """
     Generates the command and environment variables for a clp_s compression job.
     :param clp_home:
@@ -276,7 +275,6 @@ def _make_clp_s_command_and_env(
     :param use_single_file_archive:
     :return: Tuple of (compression_command, compression_env_vars)
     """
-
     # fmt: off
     compression_cmd = [
         str(clp_home / "bin" / "clp-s"),
@@ -311,7 +309,7 @@ def _make_log_converter_command_and_env(
     clp_home: pathlib.Path,
     conversion_output_dir: pathlib.Path,
     clp_config: ClpIoConfig,
-) -> Tuple[List[str], Dict[str, str]]:
+) -> tuple[list[str], dict[str, str]]:
     """
     Generates the command and environment variables for unstructured text log conversion.
 
@@ -322,7 +320,6 @@ def _make_log_converter_command_and_env(
         - The conversion command.
         - The conversion environment variables.
     """
-
     # fmt: off
     conversion_cmd = [
         str(clp_home / "bin" / "log-converter"),
@@ -349,7 +346,7 @@ def run_clp(
     task_id: int,
     tag_ids: list[int],
     paths_to_compress: PathsToCompress,
-    sql_adapter: SQL_Adapter,
+    sql_adapter: SqlAdapter,
     clp_metadata_db_connection_config,
     logger,
 ):
@@ -364,7 +361,7 @@ def run_clp(
     :param task_id:
     :param tag_ids:
     :param paths_to_compress: PathToCompress
-    :param sql_adapter: SQL_Adapter
+    :param sql_adapter: SqlAdapter
     :param clp_metadata_db_connection_config
     :param logger
     :return: tuple -- (whether compression was successful, output messages)
@@ -482,7 +479,7 @@ def run_clp(
     # Handle job metadata update and S3 write if enabled
     s3_error = None
     while not last_line_decoded:
-        stats: Optional[Dict[str, Any]] = None
+        stats: dict[str, Any] | None = None
 
         line = proc.stdout.readline()
         if not line:
@@ -513,9 +510,10 @@ def run_clp(
                 # the total
                 total_uncompressed_size += last_archive_stats["uncompressed_size"]
                 total_compressed_size += last_archive_stats["size"]
-                with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-                    db_conn.cursor(dictionary=True)
-                ) as db_cursor:
+                with (
+                    closing(sql_adapter.create_connection(True)) as db_conn,
+                    closing(db_conn.cursor(dictionary=True)) as db_cursor,
+                ):
                     table_prefix = clp_metadata_db_connection_config["table_prefix"]
                     if StorageEngine.CLP_S == clp_storage_engine:
                         update_archive_metadata(
@@ -565,7 +563,7 @@ def run_clp(
     return_code = proc.wait()
 
     if 0 != return_code:
-        logger.error(f"Failed to compress, return_code={str(return_code)}")
+        logger.error(f"Failed to compress, return_code={return_code!s}")
     else:
         compression_successful = True
         cleanup_temporary_files()
@@ -582,14 +580,13 @@ def run_clp(
 
     if compression_successful and s3_error is None:
         return CompressionTaskStatus.SUCCEEDED, worker_output
-    else:
-        error_msgs = []
-        if compression_successful is False:
-            error_msgs.append(f"See logs {stderr_log_path}")
-        if s3_error is not None:
-            error_msgs.append(s3_error)
-        worker_output["error_message"] = "\n".join(error_msgs)
-        return CompressionTaskStatus.FAILED, worker_output
+    error_msgs = []
+    if compression_successful is False:
+        error_msgs.append(f"See logs {stderr_log_path}")
+    if s3_error is not None:
+        error_msgs.append(s3_error)
+    worker_output["error_message"] = "\n".join(error_msgs)
+    return CompressionTaskStatus.FAILED, worker_output
 
 
 def compression_entry_point(
@@ -598,7 +595,7 @@ def compression_entry_point(
     tag_ids: list[int],
     clp_io_config_json: str,
     paths_to_compress_json: str,
-    clp_metadata_db_connection_config: Dict[str, Any],
+    clp_metadata_db_connection_config: dict[str, Any],
     logger,
 ):
     clp_home = pathlib.Path(os.getenv("CLP_HOME"))
@@ -613,7 +610,7 @@ def compression_entry_point(
         worker_config = WorkerConfig.model_validate(
             read_yaml_config_file(pathlib.Path(os.getenv("CLP_CONFIG_PATH")))
         )
-    except Exception as ex:
+    except Exception:
         error_msg = "Failed to load worker config"
         logger.exception(error_msg)
         return CompressionTaskResult(
@@ -626,7 +623,7 @@ def compression_entry_point(
     clp_io_config = ClpIoConfig.model_validate_json(clp_io_config_json)
     paths_to_compress = PathsToCompress.model_validate_json(paths_to_compress_json)
 
-    sql_adapter = SQL_Adapter(Database.model_validate(clp_metadata_db_connection_config))
+    sql_adapter = SqlAdapter(Database.model_validate(clp_metadata_db_connection_config))
 
     start_time = datetime.datetime.now()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION STARTED.")
@@ -646,9 +643,10 @@ def compression_entry_point(
     duration = (datetime.datetime.now() - start_time).total_seconds()
     logger.info(f"[job_id={job_id} task_id={task_id}] COMPRESSION COMPLETED.")
 
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         update_compression_task_metadata(
             db_cursor,
             task_id,

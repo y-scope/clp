@@ -4,7 +4,6 @@ import shutil
 import sys
 from contextlib import closing
 from pathlib import Path
-from typing import Dict, List
 
 from clp_py_utils.clp_config import (
     ArchiveOutput,
@@ -18,10 +17,10 @@ from clp_py_utils.clp_metadata_db_utils import (
     get_datasets_table_name,
 )
 from clp_py_utils.s3_utils import s3_delete_by_key_prefix
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 
 from clp_package_utils.general import (
-    CLPConfig,
+    ClpConfig,
     get_clp_home,
     load_config_file,
 )
@@ -35,16 +34,16 @@ logger: logging.Logger = logging.getLogger(__file__)
 
 def _get_dataset_info(
     db_config: Database,
-) -> Dict[str, str]:
+) -> dict[str, str]:
     """
     :param db_config:
     :return: A map of name -> archive_storage_directory for each dataset that exists.
     """
-
-    sql_adapter = SQL_Adapter(db_config)
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    sql_adapter = SqlAdapter(db_config)
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         clp_db_connection_params = db_config.get_clp_connection_params_and_type(True)
         table_prefix = clp_db_connection_params["table_prefix"]
         db_cursor.execute(
@@ -54,23 +53,23 @@ def _get_dataset_info(
         return {row["name"]: row["archive_storage_directory"] for row in rows}
 
 
-def _handle_list_datasets(datasets: Dict[str, str]) -> int:
+def _handle_list_datasets(datasets: dict[str, str]) -> int:
     logger.info(f"Found {len(datasets)} datasets.")
-    for dataset in datasets.keys():
+    for dataset in datasets:
         logger.info(dataset)
     return 0
 
 
 def _handle_del_datasets(
-    clp_config: CLPConfig,
+    clp_config: ClpConfig,
     parsed_args: argparse.Namespace,
-    existing_datasets_info: Dict[str, str],
+    existing_datasets_info: dict[str, str],
 ):
     if len(existing_datasets_info) == 0:
         logger.warning("No datasets exist.")
         return 0
 
-    datasets_to_delete: Dict[str, str] = {}
+    datasets_to_delete: dict[str, str] = {}
     if parsed_args.del_all:
         datasets_to_delete = existing_datasets_info
     else:
@@ -89,7 +88,7 @@ def _handle_del_datasets(
     return 0
 
 
-def _delete_dataset(clp_config: CLPConfig, dataset: str, dataset_archive_storage_dir: str) -> bool:
+def _delete_dataset(clp_config: ClpConfig, dataset: str, dataset_archive_storage_dir: str) -> bool:
     try:
         _try_deleting_archives(clp_config.archive_output, dataset_archive_storage_dir)
         logger.info(f"Deleted archives of dataset `{dataset}`.")
@@ -150,18 +149,19 @@ def _try_deleting_archives_from_s3(s3_config: S3Config, archive_storage_key_pref
 
 
 def _delete_dataset_from_database(database_config: Database, dataset: str) -> None:
-    sql_adapter = SQL_Adapter(database_config)
+    sql_adapter = SqlAdapter(database_config)
 
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         clp_db_connection_params = database_config.get_clp_connection_params_and_type(True)
         table_prefix = clp_db_connection_params["table_prefix"]
         delete_dataset_from_metadata_db(db_cursor, table_prefix, dataset)
         db_conn.commit()
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -232,11 +232,10 @@ def main(argv: List[str]) -> int:
 
     if LIST_COMMAND == parsed_args.subcommand:
         return _handle_list_datasets(existing_datasets_info)
-    elif DEL_COMMAND == parsed_args.subcommand:
+    if DEL_COMMAND == parsed_args.subcommand:
         return _handle_del_datasets(clp_config, parsed_args, existing_datasets_info)
-    else:
-        logger.error(f"Unsupported subcommand: `{parsed_args.subcommand}`.")
-        return -1
+    logger.error(f"Unsupported subcommand: `{parsed_args.subcommand}`.")
+    return -1
 
 
 if "__main__" == __name__:

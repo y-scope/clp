@@ -7,13 +7,13 @@ import sys
 import time
 from contextlib import closing
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Set
+from typing import Any
 
 import brotli
 import msgpack
 from clp_package_utils.general import CONTAINER_INPUT_LOGS_ROOT_DIR
 from clp_py_utils.clp_config import (
-    CLPConfig,
+    ClpConfig,
     COMPRESSION_JOBS_TABLE_NAME,
     COMPRESSION_SCHEDULER_COMPONENT_NAME,
     COMPRESSION_TASKS_TABLE_NAME,
@@ -28,7 +28,7 @@ from clp_py_utils.clp_metadata_db_utils import (
 from clp_py_utils.compression import validate_path_and_get_info
 from clp_py_utils.core import read_yaml_config_file
 from clp_py_utils.s3_utils import s3_get_object_metadata
-from clp_py_utils.sql_adapter import SQL_Adapter
+from clp_py_utils.sql_adapter import SqlAdapter
 from pydantic import ValidationError
 
 from job_orchestration.scheduler.compress.partition import PathsToCompressBuffer
@@ -107,7 +107,7 @@ def update_compression_job_metadata(db_cursor, job_id, kv):
 
 def _process_fs_input_paths(
     fs_input_conf: FsInputConfig, paths_to_compress_buffer: PathsToCompressBuffer
-) -> List[str]:
+) -> list[str]:
     """
     Iterates through all paths in `fs_input_conf`, validates them, and adds metadata for each valid
     path to `paths_to_compress_buffer` as long as an invalid path hasn't yet been encountered.
@@ -115,9 +115,8 @@ def _process_fs_input_paths(
     :param paths_to_compress_buffer:
     :return: List of error messages about invalid paths.
     """
-
     paths_ok = True
-    invalid_path_messages: List[str] = []
+    invalid_path_messages: list[str] = []
 
     for path_idx, path in enumerate(fs_input_conf.paths_to_compress, start=1):
         path = Path(path)
@@ -171,7 +170,6 @@ def _process_s3_input(
     :raises: RuntimeError if input URL doesn't resolve to any objects.
     :raises: Propagates `s3_get_object_metadata`'s exceptions.
     """
-
     object_metadata_list = s3_get_object_metadata(s3_input_config)
     if len(object_metadata_list) == 0:
         raise RuntimeError("Input URL doesn't resolve to any object")
@@ -182,11 +180,11 @@ def _process_s3_input(
 
 def _write_user_failure_log(
     title: str,
-    content: List[str],
+    content: list[str],
     logs_directory: Path,
     job_id: Any,
     filename_suffix: str,
-) -> Optional[Path]:
+) -> Path | None:
     """
     Writes a user-oriented failure log to
     `{logs_directory}/user/job_{job_id}_{filename_suffix}.txt`. The `{logs_directory}/user`
@@ -222,10 +220,10 @@ def _write_user_failure_log(
 
 
 def search_and_schedule_new_tasks(
-    clp_config: CLPConfig,
+    clp_config: ClpConfig,
     db_conn,
     db_cursor,
-    clp_metadata_db_connection_config: Dict[str, Any],
+    clp_metadata_db_connection_config: dict[str, Any],
     task_manager: TaskManager,
 ):
     """
@@ -238,7 +236,7 @@ def search_and_schedule_new_tasks(
     """
     global scheduled_jobs
 
-    existing_datasets: Set[str] = set()
+    existing_datasets: set[str] = set()
     if StorageEngine.CLP_S == clp_config.package.storage_engine:
         existing_datasets = fetch_existing_datasets(
             db_cursor, clp_metadata_db_connection_config["table_prefix"]
@@ -376,7 +374,7 @@ def search_and_schedule_new_tasks(
                 f"""
                 INSERT INTO {COMPRESSION_TASKS_TABLE_NAME}
                 (job_id, partition_original_size, clp_paths_to_compress)
-                VALUES({str(job_id)}, {partition_info[task_idx]["partition_original_size"]}, %s)
+                VALUES({job_id!s}, {partition_info[task_idx]["partition_original_size"]}, %s)
                 """,
                 (partition_info[task_idx]["clp_paths_to_compress"],),
             )
@@ -408,7 +406,7 @@ def poll_running_jobs(logs_directory: Path, db_conn, db_cursor):
     for job_id, job in scheduled_jobs.items():
         job_success = True
         duration = 0.0
-        error_messages: List[str] = []
+        error_messages: list[str] = []
 
         try:
             returned_results = job.result_handle.get_result()
@@ -507,7 +505,7 @@ def main(argv):
     # Load configuration
     config_path = Path(args.config)
     try:
-        clp_config = CLPConfig.model_validate(read_yaml_config_file(config_path))
+        clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
         logger.error(err)
@@ -518,7 +516,7 @@ def main(argv):
         return -1
 
     logger.info(f"Starting {COMPRESSION_SCHEDULER_COMPONENT_NAME}")
-    sql_adapter = SQL_Adapter(clp_config.database)
+    sql_adapter = SqlAdapter(clp_config.database)
 
     task_manager = CeleryTaskManager()
 
@@ -530,9 +528,10 @@ def main(argv):
         logger.exception("Failed to kill hanging compression jobs.")
         return -1
 
-    with closing(sql_adapter.create_connection(True)) as db_conn, closing(
-        db_conn.cursor(dictionary=True)
-    ) as db_cursor:
+    with (
+        closing(sql_adapter.create_connection(True)) as db_conn,
+        closing(db_conn.cursor(dictionary=True)) as db_cursor,
+    ):
         clp_metadata_db_connection_config = (
             sql_adapter.database_config.get_clp_connection_params_and_type(True)
         )
@@ -554,7 +553,7 @@ def main(argv):
                 logger.info("Forcefully shutting down")
                 return -1
             except Exception:
-                logger.exception(f"Error in scheduling.")
+                logger.exception("Error in scheduling.")
                 return -1
 
 

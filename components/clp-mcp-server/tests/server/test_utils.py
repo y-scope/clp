@@ -6,7 +6,7 @@ from clp_mcp_server.server.utils import (
     convert_date_string_to_epoch,
     format_query_results,
     parse_timestamp_range,
-    sort_by_timestamp
+    sort_by_timestamp,
 )
 
 
@@ -19,30 +19,25 @@ class TestUtils:
     INVALID_DATE_STRING_ERROR = "Invalid date string"
     INVALID_DATE_STRING_FORMAT_ERROR = "Timestamp must end with 'Z' to indicate UTC."
     INVALID_DATE_STRING_VALUE_ERROR = "is earlier than `formatted_begin_timestamp`"
-    
 
     # Test case: invalid timestamp types.
     INVALID_TYPE_ENTRIES = [
-        {
-            "timestamp": None,
-            "message": '{"message":"Log with None timestamp"}\n',
-            "link": LINK
-        },
+        {"timestamp": None, "message": '{"message":"Log with None timestamp"}\n', "link": LINK},
         {
             "timestamp": "1729267200000",  # str instead of int
             "message": '{"message":"Log with str timestamp"}\n',
-            "link": LINK
+            "link": LINK,
         },
         {
             "timestamp": 1729267200000.0,  # float instead of int
             "message": '{"message":"Log with float timestamp"}\n',
-            "link": LINK
+            "link": LINK,
         },
     ]
     EXPECTED_INVALID_TYPE = [
         f'timestamp: N/A, message: {{"message":"Log with None timestamp"}}\n, link: {LINK}',
         f'timestamp: N/A, message: {{"message":"Log with str timestamp"}}\n, link: {LINK}',
-        f'timestamp: N/A, message: {{"message":"Log with float timestamp"}}\n, link: {LINK}'
+        f'timestamp: N/A, message: {{"message":"Log with float timestamp"}}\n, link: {LINK}',
     ]
 
     # Test case: invalid timestamp values.
@@ -50,41 +45,27 @@ class TestUtils:
         {
             "timestamp": 9999999999999999,
             "message": '{"message":"Log with overflow timestamp"}\n',
-            "link": LINK
+            "link": LINK,
         },
         {
             "timestamp": -9999999999999999,
             "message": '{"message":"Log with negative overflow timestamp"}\n',
-            "link": LINK
+            "link": LINK,
         },
     ]
     EXPECTED_INVALID_VALUE = [
-        (
-            f'timestamp: N/A, message: {{"message":"Log with overflow timestamp"}}\n,'
-            f' link: {LINK}'
-        ),
+        (f'timestamp: N/A, message: {{"message":"Log with overflow timestamp"}}\n, link: {LINK}'),
         (
             f'timestamp: N/A, message: {{"message":"Log with negative overflow timestamp"}}\n,'
-            f' link: {LINK}'
-        )
+            f" link: {LINK}"
+        ),
     ]
 
     # Test case: missing timestamp and message fields.
     MISSING_TIMESTAMP_AND_MESSAGE_ENTRY = [
-        {
-            "_id": "test001",
-            "link": LINK
-        },
-        {
-            "_id": "test002",
-            "message": '{"message":"Log with no timestamp"}\n',
-            "link": LINK
-        },
-        {
-            "_id": "test003",
-            "timestamp": 0,
-            "link": LINK
-        }
+        {"_id": "test001", "link": LINK},
+        {"_id": "test002", "message": '{"message":"Log with no timestamp"}\n', "link": LINK},
+        {"_id": "test003", "timestamp": 0, "link": LINK},
     ]
     EXPECTED_MISSING_TIMESTAMP_AND_MESSAGE = [
         f'timestamp: N/A, message: {{"message":"Log with no timestamp"}}\n, link: {LINK}',
@@ -99,7 +80,7 @@ class TestUtils:
             "orig_file_path": "/var/log/app.log",
             "archive_id": "abc123",
             "log_event_ix": 99,
-            "link": LINK
+            "link": LINK,
         },
         {
             "_id": "test001",
@@ -108,7 +89,7 @@ class TestUtils:
             "orig_file_path": "/var/log/app.log",
             "archive_id": "abc123",
             "log_event_ix": 100,
-            "link": LINK
+            "link": LINK,
         },
         {
             "_id": "test002",
@@ -120,7 +101,7 @@ class TestUtils:
             "orig_file_path": "/var/log/app.log",
             "archive_id": "abc124",
             "log_event_ix": 101,
-            "link": LINK
+            "link": LINK,
         },
         {
             "_id": "test003",
@@ -135,7 +116,7 @@ class TestUtils:
             "link": (
                 "http://localhost:4000/streamFile"
                 "?dataset=default"
-                '&type=json'
+                "&type=json"
                 "&streamId=abc125"
                 "&logEventIdx=102"
             ),
@@ -144,28 +125,27 @@ class TestUtils:
 
     EXPECTED_RESULTS = [
         (
-            'timestamp: 2024-10-18T16:00:00.123Z, message: '
+            "timestamp: 2024-10-18T16:00:00.123Z, message: "
             '{"ts":1729267200123,"pid":1234,"tid":5678,'
             '"message":"Log with millisecond precision"}\n, '
             "link: http://localhost:4000/streamFile"
             "?dataset=default"
-            '&type=json'
+            "&type=json"
             "&streamId=abc125"
             "&logEventIdx=102"
-            
         ),
         (
-            f'timestamp: 2024-10-18T16:00:00.000Z, message: '
+            f"timestamp: 2024-10-18T16:00:00.000Z, message: "
             f'{{"ts":1729267200000,"pid":1234,"tid":5678,'
             f'"message":"Log with zero milliseconds"}}\n, link: {LINK}'
         ),
         (
-            f'timestamp: 1970-01-01T00:00:00.000Z, message: '
+            f"timestamp: 1970-01-01T00:00:00.000Z, message: "
             f'{{"ts":0,"pid":null,"tid":null,'
             f'"message":"Log at epoch zero"}}\n, link: {LINK}'
         ),
         (
-            f'timestamp: N/A, message: '
+            f"timestamp: N/A, message: "
             f'{{"pid":null,"tid":null,'
             f'"message":"Log at epoch none"}}\n, link: {LINK}'
         ),
@@ -181,7 +161,6 @@ class TestUtils:
 
         result = convert_date_string_to_epoch("2024-10-18T16:00Z")
         assert result == 1729267200000
-
 
     def test_convert_date_string_to_epoch_invalid_date_string(self):
         """Validates the handling of invalid date string."""
@@ -204,7 +183,6 @@ class TestUtils:
         with pytest.raises(ValueError) as exc_info:
             print(convert_date_string_to_epoch("2024-10-18T16-00-00-123"))
         assert self.INVALID_DATE_STRING_ERROR in str(exc_info.value)
-    
 
     def test_parse_timestamp_range_invalid_values(self):
         """Validates the handling of invalid date string types and values."""
@@ -213,7 +191,6 @@ class TestUtils:
 
         with pytest.raises(ValueError, match=self.INVALID_DATE_STRING_VALUE_ERROR):
             parse_timestamp_range("2024-10-18T16:00:00.123Z", "2000-10-18T16:00:00.123Z")
-
 
     def test_invalid_timestamp_type(self):
         """Validates the handling of noninteger timestamp types."""
@@ -226,7 +203,7 @@ class TestUtils:
         result = format_query_results(self.INVALID_VALUE_ENTRIES)
 
         assert result == self.EXPECTED_INVALID_VALUE
-    
+
     def test_missing_timestamp_and_message(self):
         """Validates the handling of log entries without timestamp and message field."""
         result = format_query_results(self.MISSING_TIMESTAMP_AND_MESSAGE_ENTRY)
