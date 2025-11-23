@@ -142,22 +142,10 @@ class PackageCompressJob:
 
 
 @dataclass(frozen=True)
-class PackageSearchJob:
-    """A search job for a package test."""
-
-    job_name: str
-    mode: str
-    package_compress_job: PackageCompressJob
-    query: str
-    # TODO: add fields as needed.
-
-
-@dataclass(frozen=True)
 class PackageJobList:
     """List of jobs to run during a package test."""
 
     package_compress_jobs: list[PackageCompressJob]
-    package_search_jobs: list[PackageSearchJob]
     # TODO: add job types as needed.
 
 

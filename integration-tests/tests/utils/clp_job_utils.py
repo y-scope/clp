@@ -9,7 +9,6 @@ from tests.utils.config import (
     PackageCompressJob,
     PackageInstance,
     PackageJobList,
-    PackageSearchJob,
 )
 from tests.utils.package_utils import compress_with_clp_package
 
@@ -83,28 +82,6 @@ PACKAGE_COMPRESS_JOBS: dict[str, PackageCompressJob] = {
     # Insert more compression jobs here as needed.
 }
 
-PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
-    "search-basic-postgresql": PackageSearchJob(
-        job_name="search-basic-postgresql",
-        mode="clp-json",
-        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-postgresql"],
-        query="search query",
-    ),
-    "search-ignore-case": PackageSearchJob(
-        job_name="search-ignore-case",
-        mode="clp-json",
-        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-postgresql"],
-        query="sEaRcH qUeRy",
-    ),
-    "search-basic-hive": PackageSearchJob(
-        job_name="search-basic-hive",
-        mode="clp-text",
-        package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
-        query="search query",
-    ),
-    # Insert more search jobs here as needed.
-}
-
 
 def _matches_keyword(job_name: str, keyword_filter: str) -> bool:
     """Return True if this job should be included given the current -k filter."""
@@ -124,23 +101,15 @@ def build_package_job_list(mode_name: str, job_filter: str) -> PackageJobList | 
     logger.debug("Creating job list for mode %s (job filter: %s)", mode_name, job_filter)
 
     package_compress_jobs: list[PackageCompressJob] = []
-    package_search_jobs: list[PackageSearchJob] = []
 
     for job_name, package_compress_job in PACKAGE_COMPRESS_JOBS.items():
         if package_compress_job.mode == mode_name and _matches_keyword(job_name, job_filter):
             package_compress_jobs.append(package_compress_job)
 
-    for job_name, package_search_job in PACKAGE_SEARCH_JOBS.items():
-        if package_search_job.mode == mode_name and _matches_keyword(job_name, job_filter):
-            package_search_jobs.append(package_search_job)
-            if package_search_job.package_compress_job not in package_compress_jobs:
-                package_compress_jobs.append(package_search_job.package_compress_job)
-
-    if not package_compress_jobs and not package_search_jobs:
+    if not package_compress_jobs:
         return None
     return PackageJobList(
         package_compress_jobs=package_compress_jobs,
-        package_search_jobs=package_search_jobs,
     )
 
 
@@ -164,22 +133,6 @@ def _run_package_compress_jobs(
         compress_with_clp_package(request, compress_job, package_instance)
 
 
-def _run_package_search_jobs(
-    package_instance: PackageInstance,
-) -> None:
-    """
-    Run all the package search jobs for this test run.
-
-    :param package_instance:
-    """
-    package_job_list = package_instance.package_config.package_job_list
-    if package_job_list is None:
-        err_msg = "Package job list is not configured for this package instance."
-        raise RuntimeError(err_msg)
-
-    assert True
-
-
 def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: PackageInstance) -> None:
     """
     Dispatches all the package jobs in `job_list` for this package test run.
@@ -194,5 +147,3 @@ def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: Package
 
     if jobs_list.package_compress_jobs:
         _run_package_compress_jobs(request, package_instance)
-    if jobs_list.package_search_jobs:
-        _run_package_search_jobs(package_instance)
