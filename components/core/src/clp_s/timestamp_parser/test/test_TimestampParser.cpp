@@ -252,8 +252,11 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
         auto const two_digit_minutes{generate_padded_numbers_in_range(0, 59, 2, '0')};
         assert_specifier_accepts_valid_content('M', two_digit_minutes);
 
-        auto const two_digit_seconds{generate_padded_numbers_in_range(0, 60, 2, '0')};
+        auto const two_digit_seconds{generate_padded_numbers_in_range(0, 59, 2, '0')};
         assert_specifier_accepts_valid_content('S', two_digit_seconds);
+
+        auto const two_digit_leap_seconds{generate_padded_numbers_in_range(60, 60, 2, '0')};
+        assert_specifier_accepts_valid_content('J', two_digit_leap_seconds);
 
         auto const milliseconds{generate_padded_number_subset(3)};
         assert_specifier_accepts_valid_content('3', milliseconds);
@@ -406,6 +409,15 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 {"F", R"(\O{ABCDEFGHIJKLMNOP})", "F"}
         };
         assert_transformations_are_expected(one_of_literal_transformations);
+
+        std::vector<ExpectedCatSequenceTransformation> const generic_second_transformations{
+                {"00", R"(\s)", R"(\S)"},
+                {"01", R"(\s)", R"(\S)"},
+                {"58", R"(\s)", R"(\S)"},
+                {"59", R"(\s)", R"(\S)"},
+                {"60", R"(\s)", R"(\J)"}
+        };
+        assert_transformations_are_expected(generic_second_transformations);
     }
 
     SECTION("Default timestamp patterns are valid.") {
@@ -498,7 +510,10 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 {"Jan 21 11:56:42 UTC+0130",
                  R"(\b \d \H:\M:\S UTC\z{+0130})",
                  1'765'602'000'000'000},
-                {"1895-11-20T21:55:46,010", R"(\Y-\m-\dT\H:\M:\S,\3)", -2'338'769'053'990'000'000}
+                {"1895-11-20T21:55:46,010", R"(\Y-\m-\dT\H:\M:\S,\3)", -2'338'769'053'990'000'000},
+                {"2016-12-31T23:59:59,999Z", R"(\Y-\m-\dT\H:\M:\S,\3Z)", 1'483'228'799'999'000'000},
+                {"2016-12-31T23:59:60,999Z", R"(\Y-\m-\dT\H:\M:\J,\3Z)", 1'483'228'799'999'000'000},
+                {"2017-01-01T00:00:00,999Z", R"(\Y-\m-\dT\H:\M:\S,\3Z)", 1'483'228'800'999'000'000}
         };
 
         auto default_patterns_result{get_all_default_timestamp_patterns()};
