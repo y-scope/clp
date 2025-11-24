@@ -36,14 +36,14 @@ Spider in configuration.
       ```
 
     * (Optional) Set the `spider_db`.
-   
+
         ```yaml
         spider_db:
             db_name: "spider-db"
         ```
 
     * (Optional) Set the `spider_scheduler`.
-   
+
         ```yaml
         spider_scheduler:
             host: "localhost"
