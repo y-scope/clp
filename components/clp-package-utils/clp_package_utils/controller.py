@@ -768,13 +768,13 @@ class DockerComposeController(BaseController):
         # Bundled config
         bundled = self._clp_config.bundled
         if BundledService.DATABASE not in bundled:
-            env_vars |= {"CLP_DATABASE_ENABLED": 0}
+            env_vars |= {"CLP_DATABASE_ENABLED": "0"}
         if BundledService.QUEUE not in bundled:
-            env_vars |= {"CLP_QUEUE_ENABLED": 0}
+            env_vars |= {"CLP_QUEUE_ENABLED": "0"}
         if BundledService.REDIS not in bundled:
-            env_vars |= {"CLP_REDIS_ENABLED": 0}
+            env_vars |= {"CLP_REDIS_ENABLED": "0"}
         if BundledService.RESULTS_CACHE not in bundled:
-            env_vars |= {"CLP_RESULTS_CACHE_ENABLED": 0}
+            env_vars |= {"CLP_RESULTS_CACHE_ENABLED": "0"}
 
         # Component-specific config
         env_vars |= self._set_up_env_for_database()
