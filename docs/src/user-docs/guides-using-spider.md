@@ -10,6 +10,7 @@ later.
 :::
 
 ## Requirements
+
 * [CLP][clp-releases] v0.7.0 or higher
 * [Docker] v28 or higher
 * [Docker Compose][docker-compose] v2.20.2 or higher
@@ -17,6 +18,7 @@ later.
 * python3-venv (for the version of Python installed)
 
 ## Set up
+
 To use Spider for CLP compression tasks, you need to [set up CLP](#setting-up-clp-with-spider) with
 Spider in configuration.
 
@@ -32,7 +34,7 @@ Spider in configuration.
       compression_scheduler:
         type: "spider"
       ```
-      
+
     * (Optional) Set the `spider_db`.
    
         ```yaml
@@ -47,6 +49,7 @@ Spider in configuration.
             host: "localhost"
             port: 6000
         ```
+
 3. (Optional) Before starting the package, update the package's credential file (`etc/credentials.yaml`)
    to add Spider database credentials as follows:
 
@@ -55,6 +58,7 @@ Spider in configuration.
       username: "spider_user"
       password: "spider_password"
     ```
+
 4. Continue following the [quick-start](./quick-start/index.md#using-clp) guide to start CLP.
 
 [clp-releases]: https://github.com/y-scope/clp/releases
