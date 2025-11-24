@@ -2,6 +2,7 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
+#include <utility>
 #include <vector>
 
 #include <catch2/catch_message.hpp>
@@ -28,6 +29,21 @@ struct ExpectedParsingResult {
     std::string timestamp;
     std::string pattern;
     epochtime_t epoch_timestamp;
+};
+
+struct ExpectedCatSequenceTransformation {
+    ExpectedCatSequenceTransformation(
+            std::string_view timestamp,
+            std::string_view cat_sequence,
+            std::string_view transformed_pattern
+    )
+            : timestamp{timestamp},
+              cat_sequence{cat_sequence},
+              transformed_pattern{transformed_pattern} {}
+
+    std::string timestamp;
+    std::string cat_sequence;
+    std::string transformed_pattern;
 };
 
 /**
@@ -318,7 +334,96 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
         }
     }
 
-    SECTION("Timestamps are parsed accurately") {
+    SECTION("CAT sequences are transformed correctly.") {
+        std::string generated_pattern;
+        auto assert_transformations_are_expected
+                = [&generated_pattern](
+                          std::vector<ExpectedCatSequenceTransformation> const& transformations
+                  ) -> void {
+            for (auto const& transformation : transformations) {
+                auto const timestamp_pattern_result{
+                        TimestampPattern::create(transformation.cat_sequence)
+                };
+                REQUIRE_FALSE(timestamp_pattern_result.has_error());
+                auto const result{parse_timestamp(
+                        transformation.timestamp,
+                        timestamp_pattern_result.value(),
+                        generated_pattern
+                )};
+                REQUIRE_FALSE(result.has_error());
+                REQUIRE(transformation.transformed_pattern == result.value().second);
+            }
+        };
+
+        std::vector<ExpectedCatSequenceTransformation> const timezone_transformations{
+                {"Z", R"(\Z)", R"(Z)"},
+                {"-04", R"(\Z)", R"(\z{-04})"},
+                {"-04:30", R"(\Z)", R"(\z{-04:30})"},
+                {"-0430", R"(\Z)", R"(\z{-0430})"},
+                {"−04", R"(\Z)", R"(\z{−04})"},
+                {"−04:30", R"(\Z)", R"(\z{−04:30})"},
+                {"−0430", R"(\Z)", R"(\z{−0430})"},
+                {"+04", R"(\Z)", R"(\z{+04})"},
+                {"+04:30", R"(\Z)", R"(\z{+04:30})"},
+                {"+0430", R"(\Z)", R"(\z{+0430})"},
+                {"UTC+04", R"(\Z)", R"(UTC\z{+04})"},
+                {" UTC+04", R"(\Z)", R"( UTC\z{+04})"},
+                {"UTC+04Z", R"(\Z)", R"(UTC\z{+04}Z)"},
+                {" UTC+04Z", R"(\Z)", R"( UTC\z{+04}Z)"},
+                {"+04Z", R"(\Z)", R"(\z{+04}Z)"},
+                {" +04Z", R"(\Z)", R"( \z{+04}Z)"},
+                {" Z", R"(\Z)", R"( Z)"}
+        };
+        assert_transformations_are_expected(timezone_transformations);
+
+        std::vector<ExpectedCatSequenceTransformation> const fractional_second_transformations{
+                {"123", R"(\?)", R"(\3)"},
+                {"123456", R"(\?)", R"(\6)"},
+                {"123456789", R"(\?)", R"(\9)"},
+                {"12", R"(\?)", R"(\T)"},
+                {"1234", R"(\?)", R"(\T)"},
+                {"1234567", R"(\?)", R"(\T)"},
+                {"12345678", R"(\?)", R"(\T)"}
+        };
+        assert_transformations_are_expected(fractional_second_transformations);
+
+        std::vector<ExpectedCatSequenceTransformation> const
+                unknown_epoch_precision_transformations{
+                        {"1763651316", R"(\P)", R"(\E)"},
+                        {"1763651316642", R"(\P)", R"(\L)"},
+                        {"1763651316642111", R"(\P)", R"(\C)"},
+                        {"1763651316642111123", R"(\P)", R"(\N)"},
+                        {"-1763651316", R"(\P)", R"(\E)"},
+                        {"-1763651316642", R"(\P)", R"(\L)"},
+                        {"-1763651316642111", R"(\P)", R"(\C)"},
+                        {"-1763651316642111123", R"(\P)", R"(\N)"}
+                };
+        assert_transformations_are_expected(unknown_epoch_precision_transformations);
+
+        std::vector<ExpectedCatSequenceTransformation> const one_of_literal_transformations{
+                {"A", R"(\O{A})", "A"},
+                {"AB", R"(\O{BA}\O{AB})", "AB"},
+                {"F", R"(\O{ABCDEFGHIJKLMNOP})", "F"}
+        };
+        assert_transformations_are_expected(one_of_literal_transformations);
+    }
+
+    SECTION("Default timestamp patterns are valid.") {
+        auto const default_date_time_patterns_result{get_default_date_time_timestamp_patterns()};
+        REQUIRE_FALSE(default_date_time_patterns_result.has_error());
+        auto const default_numeric_timestamp_patterns_result{
+                get_default_numeric_timestamp_patterns()
+        };
+        REQUIRE_FALSE(default_numeric_timestamp_patterns_result.has_error());
+        auto const all_default_timestamp_patterns_result{get_all_default_timestamp_patterns()};
+        REQUIRE_FALSE(all_default_timestamp_patterns_result.has_error());
+        auto const all_default_quoted_timestamp_patterns_result{
+                get_all_default_quoted_timestamp_patterns()
+        };
+        REQUIRE_FALSE(all_default_quoted_timestamp_patterns_result.has_error());
+    }
+
+    SECTION("Timestamps are parsed accurately.") {
         std::vector<ExpectedParsingResult> const expected_parsing_results{
                 {"2015-02-01T01:02:03.004", R"(\Y-\m-\dT\H:\M:\S.\3)", 1'422'752'523'004'000'000},
                 {"2015-02-01T01:02:03.004005",
@@ -365,6 +470,16 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                 {"1762445893.001002000", R"(\E.\9)", 1'762'445'893'001'002'000},
                 {"1762445893.00100201", R"(\E.\T)", 1'762'445'893'001'002'010},
                 {"1762445893.1", R"(\E.\T)", 1'762'445'893'100'000'000},
+                {"-1762445893", R"(\E)", -1'762'445'893'000'000'000},
+                {"-1762445893001", R"(\L)", -1'762'445'893'001'000'000},
+                {"-1762445893001002", R"(\C)", -1'762'445'893'001'002'000},
+                {"-1762445893001002003", R"(\N)", -1'762'445'893'001'002'003},
+                {"-1762445893.001", R"(\E.\3)", -1'762'445'893'001'000'000},
+                {"-1762445893.001002", R"(\E.\6)", -1'762'445'893'001'002'000},
+                {"-1762445893.001002003", R"(\E.\9)", -1'762'445'893'001'002'003},
+                {"-1762445893.001002000", R"(\E.\9)", -1'762'445'893'001'002'000},
+                {"-1762445893.00100201", R"(\E.\T)", -1'762'445'893'001'002'010},
+                {"-1762445893.1", R"(\E.\T)", -1'762'445'893'100'000'000},
                 {"Jan 21 11:56:42Z", R"(\b \d \H:\M:\SZ)", 1'771'002'000'000'000},
                 {"Jan 21 11:56:42 UTC-01", R"(\b \d \H:\M:\S UTC\z{-01})", 1'774'602'000'000'000},
                 {"Jan 21 11:56:42 UTC-01:30",
@@ -382,6 +497,9 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
                  1'765'602'000'000'000}
         };
 
+        auto default_patterns_result{get_all_default_timestamp_patterns()};
+        REQUIRE_FALSE(default_patterns_result.has_error());
+        auto const default_patterns{std::move(default_patterns_result.value())};
         std::string generated_pattern;
         for (auto const& expected_result : expected_parsing_results) {
             auto const timestamp_pattern_result{TimestampPattern::create(expected_result.pattern)};
@@ -394,6 +512,17 @@ TEST_CASE("timestamp_parser_parse_timestamp", "[clp-s][timestamp-parser]") {
             REQUIRE_FALSE(result.has_error());
             REQUIRE(expected_result.epoch_timestamp == result.value().first);
             REQUIRE(expected_result.pattern == result.value().second);
+
+            auto const searched_result{search_known_timestamp_patterns(
+                    expected_result.timestamp,
+                    default_patterns,
+                    generated_pattern
+            )};
+            REQUIRE(searched_result.has_value());
+            // NOLINTBEGIN(bugprone-unchecked-optional-access)
+            REQUIRE(expected_result.epoch_timestamp == searched_result.value().first);
+            REQUIRE(expected_result.pattern == searched_result.value().second);
+            // NOLINTEND(bugprone-unchecked-optional-access)
         }
     }
 }
