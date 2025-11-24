@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
+#include <vector>
 
 #include <ystdlib/error_handling/Result.hpp>
 
@@ -122,6 +123,7 @@ private:
  * - \Z Generic timezone -- resolves to literal content, and potentially \z{...}.
  * - \? Generic fractional second -- resolves to \3, \6, \9, or \T.
  * - \P Unknown-precision epoch time -- resolves to \E, \L, \C, or \N based on a heuristic.
+ * - \O{...} One of several literal characters, described by content between {}.
  *
  * @param timestamp
  * @param pattern A timestamp pattern made up of literals, format specifiers, and potentially CAT
@@ -140,14 +142,64 @@ private:
  *   - ErrorCodeEnum::InvalidDate if parsing was successful, but some components of the timestamp
  *     offer conflicting information about the actual date (e.g., if the parsed day of the week
  *     doesn't match up with the rest of the timestamp information).
- *   - ErrorCodeEnum::FormatSpecifierNotImplemented if the pattern contains format specifiers that
- *     have not been implemented yet.
  */
 [[nodiscard]] auto parse_timestamp(
         std::string_view timestamp,
         TimestampPattern const& pattern,
         std::string& generated_pattern
 ) -> ystdlib::error_handling::Result<std::pair<epochtime_t, std::string_view>>;
+
+/**
+ * Parses a timestamp according to the first matching pattern in a list of patterns.
+ * @param timestamp
+ * @param patterns A list of timestamp patterns.
+ * @param generated_pattern A buffer where a newly-generated timestamp pattern can be written, if
+ * necessary.
+ * @return A pair containing:
+ *   - The timestamp in epoch nanoseconds.
+ *   - An `std::string_view` of the timestamp pattern that corresponds to the timestamp.
+ *     - The lifetime of the `std::string_view` is the least of `patterns` and `generated_pattern`.
+ * @return std::nullopt if no pattern can be used to parse the timestamp.
+ */
+[[nodiscard]] auto search_known_timestamp_patterns(
+        std::string_view timestamp,
+        std::vector<TimestampPattern> const& patterns,
+        std::string& generated_pattern
+) -> std::optional<std::pair<epochtime_t, std::string_view>>;
+
+/**
+ * @return A result containing a vector of date-time timestamp patterns, or an error code indicating
+ * the failure:
+ * - Forwards `TimestampPattern::create`'s return values on failure.
+ */
+[[nodiscard]] auto get_default_date_time_timestamp_patterns()
+        -> ystdlib::error_handling::Result<std::vector<TimestampPattern>>;
+
+/**
+ * @return A result containing a vector of numeric timestamp patterns, or an error code indicating
+ * the failure:
+ * - Forwards `TimestampPattern::create`'s return values on failure.
+ */
+[[nodiscard]] auto get_default_numeric_timestamp_patterns()
+        -> ystdlib::error_handling::Result<std::vector<TimestampPattern>>;
+
+/**
+ * @return A result containing a vector of numeric and date-time timestamp patterns, or an error
+ * code indicating the failure:
+ * - Forwards `get_default_date_time_timestamp_patterns`'s return values on failure.
+ * - Forwards `get_default_numeric_timestamp_patterns`'s return values on failure.
+ */
+[[nodiscard]] auto get_all_default_timestamp_patterns()
+        -> ystdlib::error_handling::Result<std::vector<TimestampPattern>>;
+
+/**
+ * @return A result containing a vector of quoted numeric and date-time timestamp patterns, or an
+ * error code indicating the failure:
+ * - Forwards `get_all_default_timestamp_patterns`'s return values on failure.
+ * - Forwards `TimestampPattern::create`'s return values on failure.
+ */
+[[nodiscard]] auto get_all_default_quoted_timestamp_patterns()
+        -> ystdlib::error_handling::Result<std::vector<TimestampPattern>>;
 }  // namespace clp_s::timestamp_parser
 
 #endif  // CLP_S_TIMESTAMP_PARSER_TIMESTAMPPARSER_HPP

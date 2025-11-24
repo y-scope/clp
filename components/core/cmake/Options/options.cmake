@@ -376,6 +376,7 @@ endfunction()
 function(set_clp_s_timestamp_parser_dependencies)
     set_clp_need_flags(
         CLP_NEED_DATE
+        CLP_NEED_FMT
         CLP_NEED_YSTDLIB
     )
 endfunction()
