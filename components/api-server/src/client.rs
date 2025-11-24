@@ -154,7 +154,7 @@ impl Client {
         &self,
         search_job_id: u64,
     ) -> Result<
-        ResultsStream<
+        SearchResultStream<
             impl Stream<Item = Result<String, ClientError>> + use<>,
             impl Stream<Item = Result<String, ClientError>> + use<>,
         >,
@@ -179,13 +179,13 @@ impl Client {
 
         let job_config = self.get_job_config(search_job_id).await?;
         if job_config.write_to_file {
-            Ok(ResultsStream::File {
+            Ok(SearchResultStream::File {
                 inner: self.fetch_results_from_file(search_job_id),
             })
         } else {
             self.fetch_results_from_mongo(search_job_id)
                 .await
-                .map(|s| ResultsStream::Mongo { inner: s })
+                .map(|s| SearchResultStream::Mongo { inner: s })
         }
     }
 
@@ -276,8 +276,8 @@ impl Client {
 }
 
 pin_project! {
-    #[project = ResultsStreamProj]
-    pub enum ResultsStream<S1, S2>
+    #[project = SearchResultStreamProj]
+    pub enum SearchResultStream<S1, S2>
     where S1: Stream<Item = Result<String, ClientError>>,
         S2: Stream<Item = Result<String, ClientError>>
     {
@@ -286,7 +286,7 @@ pin_project! {
     }
 }
 
-impl<S1, S2> Stream for ResultsStream<S1, S2>
+impl<S1, S2> Stream for SearchResultStream<S1, S2>
 where
     S1: Stream<Item = Result<String, ClientError>>,
     S2: Stream<Item = Result<String, ClientError>>,
@@ -298,8 +298,8 @@ where
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Option<Self::Item>> {
         let poll = match self.project() {
-            ResultsStreamProj::File { inner } => inner.poll_next(cx),
-            ResultsStreamProj::Mongo { inner } => inner.poll_next(cx),
+            SearchResultStreamProj::File { inner } => inner.poll_next(cx),
+            SearchResultStreamProj::Mongo { inner } => inner.poll_next(cx),
         };
         if let std::task::Poll::Ready(Some(Err(err))) = &poll {
             tracing::error!("An error occurred when streaming results: {}", err);
