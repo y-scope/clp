@@ -1,18 +1,15 @@
 import {FastifyPluginAsyncTypebox} from "@fastify/type-provider-typebox";
-import {
-    CLP_DEFAULT_DATASET_NAME,
-    CLP_STORAGE_ENGINES,
-} from "@webui/common/config";
+import {CLP_STORAGE_ENGINES} from "@webui/common/config";
 import {
     CompressionJobCreationSchema,
     CompressionJobSchema,
 } from "@webui/common/schemas/compression";
 import {ErrorSchema} from "@webui/common/schemas/error";
+import {constants} from "http2";
 
 import settings from "../../../../settings.json" with {type: "json"};
 import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
 import {CONTAINER_INPUT_LOGS_ROOT_DIR} from "./typings.js";
-import {constants} from "http2";
 
 
 /**
@@ -69,7 +66,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
             if (CLP_STORAGE_ENGINES.CLP_S === settings.ClpStorageEngine as CLP_STORAGE_ENGINES) {
                 if ("string" !== typeof dataset || 0 === dataset.length) {
-                    jobConfig.input.dataset = CLP_DEFAULT_DATASET_NAME;
+                    request.log.error("Unable to submit compression job to the SQL database");
                 } else {
                     jobConfig.input.dataset = dataset;
                 }

@@ -2,7 +2,10 @@ import {
     useMutation,
     useQueryClient,
 } from "@tanstack/react-query";
-import {CLP_STORAGE_ENGINES} from "@webui/common/config";
+import {
+    CLP_DEFAULT_DATASET_NAME,
+    CLP_STORAGE_ENGINES,
+} from "@webui/common/config";
 import {CompressionJobCreation} from "@webui/common/schemas/compression";
 import {
     Form,
@@ -63,9 +66,9 @@ const Compress = () => {
         const payload: CompressionJobCreation = {paths};
 
         if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
-            if ("undefined" !== typeof values.dataset) {
-                payload.dataset = values.dataset;
-            }
+            payload.dataset = ("undefined" === typeof values.dataset) ?
+                CLP_DEFAULT_DATASET_NAME :
+                values.dataset;
             if ("undefined" !== typeof values.timestampKey) {
                 payload.timestampKey = values.timestampKey;
             }
