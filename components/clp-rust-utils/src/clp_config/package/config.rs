@@ -154,7 +154,6 @@ impl Default for ResultsCache {
 ///
 /// # NOTE
 ///
-///   deserialization.
 /// * The default values must be kept in sync with the Python definition.
 #[derive(Clone, Default, Debug, Deserialize, Eq, PartialEq)]
 #[serde(default)]

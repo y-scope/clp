@@ -122,6 +122,7 @@ dependencies = [
  "futures",
  "mongodb",
  "num_enum",
+ "pin-project-lite",
  "rmp-serde",
  "secrecy",
  "serde",
