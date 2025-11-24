@@ -115,13 +115,13 @@ dev-docs/index
 [badge-discord]: https://img.shields.io/discord/1377353873068392580?style=flat&logo=discord&logoColor=white&label=Discord&labelColor=%235561f5
 [badge-slack]: https://img.shields.io/badge/Slack-yscope--community-1e724f?style=flat&logo=slack&logoColor=white&labelColor=4A154B
 [badge-zulip]: https://img.shields.io/badge/Zulip-yscope--clp-1888FA?logo=zulip
-[bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yml
+[bug-report]: https://github.com/y-scope/clp/issues/new?assignees=&labels=bug&template=bug-report.yaml
 [clp-ffi-go]: https://github.com/y-scope/clp-ffi-go
 [clp-ffi-py]: https://github.com/y-scope/clp-ffi-py
 [clp-loglib-py]: https://github.com/y-scope/clp-loglib-py
 [clp-paper]: https://www.usenix.org/system/files/osdi21-rodrigues.pdf
 [datasets]: user-docs/resources-datasets
-[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yaml
 [log-surgeon]: https://github.com/y-scope/log-surgeon
 [log-viewer]: https://github.com/y-scope/yscope-log-viewer
 [log4j1-appenders]: https://github.com/y-scope/log4j1-appenders

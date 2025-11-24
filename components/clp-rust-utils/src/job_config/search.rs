@@ -21,6 +21,7 @@ pub struct SearchJobConfig {
     pub path_filter: Option<String>,
     pub network_address: Option<(String, u16)>,
     pub aggregation_config: Option<()>,
+    pub write_to_file: bool,
 }
 
 /// Mirror of `job_orchestration.scheduler.constants.QueryJobStatus`. Must be kept in sync.
