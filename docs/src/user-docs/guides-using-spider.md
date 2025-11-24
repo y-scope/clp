@@ -5,7 +5,7 @@ This guide describes how to set up and use Spider with CLP.
 
 :::{note}
 Spider is under active development, and its integration with CLP may change in the future.
-Right now Spider only supports executing CLP compression tasks. Support for search tasks will be added
+Right now, Spider only supports executing CLP compression tasks. Support for search tasks will be added
 later.
 :::
 
@@ -33,21 +33,21 @@ Spider in configuration.
         type: "spider"
       ```
       
-    * Optionally, set the `spider_db`.
+    * (Optional) Set the `spider_db`.
    
         ```yaml
         spider_db:
             db_name: "spider-db"
         ```
 
-    * Optionally, set the `spider_scheduler`.
+    * (Optional) Set the `spider_scheduler`.
    
         ```yaml
         spider_scheduler:
             host: "localhost"
             port: 6000
         ```
-3. Optionally, before starting the package, update the package's credential file (`etc/credentials.yaml`)
+3. (Optional) Before starting the package, update the package's credential file (`etc/credentials.yaml`)
    to add Spider database credentials as follows:
 
     ```yaml
