@@ -11,6 +11,7 @@ from tests.utils.config import (
     PackageCompressJob,
     PackageConfig,
     PackageInstance,
+    PackageSearchJob,
 )
 
 logger = logging.getLogger(__name__)
@@ -122,3 +123,78 @@ def compress_with_clp_package(
 
     # Run compression command for this job and assert that it succeeds.
     run_and_assert(compress_cmd)
+
+
+def search_with_clp_package(
+    search_job: PackageSearchJob,
+    package_instance: PackageInstance,
+) -> None:
+    """
+    Construct and run a search command for the CLP package.
+
+    :param request:
+    :param search_job:
+    :param package_instance:
+    """
+    package_config = package_instance.package_config
+    search_script_path = package_config.path_config.search_script_path
+    temp_config_file_path = package_config.temp_config_file_path
+
+    # Construct the search command for this job.
+    search_cmd = [
+        str(search_script_path),
+        "--config",
+        str(temp_config_file_path),
+    ]
+    if search_job.package_compress_job.dataset_name is not None:
+        search_cmd.extend(
+            [
+                "--dataset",
+                search_job.package_compress_job.dataset_name,
+            ]
+        )
+    if search_job.package_compress_job.tags is not None:
+        search_cmd.extend(
+            [
+                "-t",
+                ",".join(search_job.package_compress_job.tags),
+            ]
+        )
+    if search_job.begin_time is not None:
+        search_cmd.extend(
+            [
+                "--begin-time",
+                str(search_job.begin_time),
+            ]
+        )
+    if search_job.end_time is not None:
+        search_cmd.extend(
+            [
+                "--end-time",
+                str(search_job.end_time),
+            ]
+        )
+    if search_job.ignore_case:
+        search_cmd.append("--ignore-case")
+    if search_job.file_path is not None:
+        search_cmd.extend(
+            [
+                "--file-path",
+                str(search_job.file_path),
+            ]
+        )
+    if search_job.count:
+        search_cmd.append("--count")
+    if search_job.count_by_time is not None:
+        search_cmd.extend(
+            [
+                "--count-by-time",
+                str(search_job.count_by_time),
+            ]
+        )
+    search_cmd.append("--raw")
+    search_cmd.append(search_job.wildcard_query)
+
+    # Run search command for this job.
+    # TODO: assert the correctness of the search, probably with grep or something.
+    run_and_assert(search_cmd)

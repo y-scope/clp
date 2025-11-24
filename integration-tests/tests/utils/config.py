@@ -124,6 +124,11 @@ class PackagePathConfig:
         """:return: The absolute path to the package compress script."""
         return self.clp_package_dir / "sbin" / "compress.sh"
 
+    @property
+    def search_script_path(self) -> Path:
+        """:return: The absolute path to the package compress script."""
+        return self.clp_package_dir / "sbin" / "search.sh"
+
 
 @dataclass(frozen=True)
 class PackageCompressJob:
@@ -138,7 +143,6 @@ class PackageCompressJob:
     timestamp_key: str | None = None
     tags: list[str] | None = None
     subpath: Path | None = None
-    # TODO: add fields as needed.
 
 
 @dataclass(frozen=True)
@@ -148,8 +152,13 @@ class PackageSearchJob:
     job_name: str
     mode: str
     package_compress_job: PackageCompressJob
-    query: str
-    # TODO: add fields as needed.
+    ignore_case: bool
+    count: bool
+    wildcard_query: str
+    begin_time: int | None = None
+    end_time: int | None = None
+    file_path: Path | None = None
+    count_by_time: int | None = None
 
 
 @dataclass(frozen=True)

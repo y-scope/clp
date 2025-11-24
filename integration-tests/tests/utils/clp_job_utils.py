@@ -11,7 +11,7 @@ from tests.utils.config import (
     PackageJobList,
     PackageSearchJob,
 )
-from tests.utils.package_utils import compress_with_clp_package
+from tests.utils.package_utils import compress_with_clp_package, search_with_clp_package
 
 logger = logging.getLogger(__name__)
 
@@ -88,19 +88,25 @@ PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
         job_name="search-basic-postgresql",
         mode="clp-json",
         package_compress_job=PACKAGE_COMPRESS_JOBS["compress-postgresql"],
-        query="search query",
+        ignore_case=False,
+        count=False,
+        wildcard_query='message: "next transaction ID: 735; next OID: 16388"',
     ),
     "search-ignore-case": PackageSearchJob(
         job_name="search-ignore-case",
         mode="clp-json",
         package_compress_job=PACKAGE_COMPRESS_JOBS["compress-postgresql"],
-        query="sEaRcH qUeRy",
+        ignore_case=True,
+        count=False,
+        wildcard_query='message: "nExT tRaNsAcTiOn Id: 735; nExT OiD: 16388"',
     ),
     "search-basic-hive": PackageSearchJob(
         job_name="search-basic-hive",
         mode="clp-text",
         package_compress_job=PACKAGE_COMPRESS_JOBS["compress-hive-24hr"],
-        query="search query",
+        ignore_case=False,
+        count=False,
+        wildcard_query="Shuffle@79ec394e",
     ),
     # Insert more search jobs here as needed.
 }
@@ -177,7 +183,9 @@ def _run_package_search_jobs(
         err_msg = "Package job list is not configured for this package instance."
         raise RuntimeError(err_msg)
 
-    assert True
+    search_jobs = package_job_list.package_search_jobs
+    for search_job in search_jobs:
+        search_with_clp_package(search_job, package_instance)
 
 
 def dispatch_test_jobs(request: pytest.FixtureRequest, package_instance: PackageInstance) -> None:
