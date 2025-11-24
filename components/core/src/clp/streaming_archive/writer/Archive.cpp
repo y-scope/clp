@@ -15,6 +15,7 @@
 #include <log_surgeon/Constants.hpp>
 #include <log_surgeon/LogEvent.hpp>
 #include <log_surgeon/LogParser.hpp>
+#include <log_surgeon/Token.hpp>
 #include <nlohmann/json.hpp>
 
 #include "../../EncodedVariableInterpreter.hpp"
@@ -315,6 +316,109 @@ Archive::write_msg(epochtime_t timestamp, string const& message, size_t num_unco
     update_segment_indices(logtype_id, var_ids);
 }
 
+auto Archive::add_token_to_dicts(
+        log_surgeon::LogEventView const& log_view,
+        log_surgeon::Token token_view
+) -> void {
+    switch (token_view.get_type_ids()->at(0)) {
+        case static_cast<int>(log_surgeon::SymbolId::TokenNewline):
+        case static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString): {
+            m_logtype_dict_entry.add_constant(token_view.to_string(), 0, token_view.get_length());
+            break;
+        }
+        case static_cast<int>(log_surgeon::SymbolId::TokenInt): {
+            encoded_variable_t encoded_var{};
+            if (!EncodedVariableInterpreter::convert_string_to_representable_integer_var(
+                        token_view.to_string(),
+                        encoded_var
+                ))
+            {
+                variable_dictionary_id_t id{};
+                m_var_dict.add_entry(token_view.to_string(), id);
+                encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
+                m_logtype_dict_entry.add_dictionary_var();
+            } else {
+                m_logtype_dict_entry.add_int_var();
+            }
+            m_encoded_vars.push_back(encoded_var);
+            break;
+        }
+        case static_cast<int>(log_surgeon::SymbolId::TokenFloat): {
+            encoded_variable_t encoded_var{};
+            if (!EncodedVariableInterpreter::convert_string_to_representable_float_var(
+                        token_view.to_string(),
+                        encoded_var
+                ))
+            {
+                variable_dictionary_id_t id{};
+                m_var_dict.add_entry(token_view.to_string(), id);
+                encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
+                m_logtype_dict_entry.add_dictionary_var();
+            } else {
+                m_logtype_dict_entry.add_float_var();
+            }
+            m_encoded_vars.push_back(encoded_var);
+            break;
+        }
+        default: {
+            // If there are no capture groups the entire variable token is stored as a variable.
+            // If the variable token contains capture groups, we break the token up by storing
+            // each capture as a variable and any substrings surrounding the capture as part of
+            // the logtype. Capture repetition currently does not work so we explicitly only
+            // store the first capture.
+
+            auto const token_type{token_view.get_type_ids()->at(0)};
+            auto const& lexer{log_view.get_log_parser().m_lexer};
+            auto capture_ids{lexer.get_capture_ids_from_rule_id(token_type)};
+            if (false == capture_ids.has_value()) {
+                variable_dictionary_id_t id{};
+                m_var_dict.add_entry(token_view.to_string(), id);
+                m_var_ids.push_back(id);
+                m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
+                m_logtype_dict_entry.add_dictionary_var();
+                break;
+            }
+
+            auto const register_ids{lexer.get_reg_ids_from_capture_id(capture_ids.value().at(0))};
+            if (false == register_ids.has_value()) {
+                throw(std::runtime_error(
+                        "No register IDs found for variable's capture group. Full token: "
+                        + token_view.to_string()
+                ));
+            }
+
+            auto const [start_reg_id, end_reg_id]{register_ids.value()};
+            auto const start_positions{token_view.get_reversed_reg_positions(start_reg_id)};
+            auto const end_positions{token_view.get_reversed_reg_positions(end_reg_id)};
+
+            if (false == start_positions.empty() && -1 < start_positions[0]
+                && false == end_positions.empty() && -1 < end_positions[0])
+            {
+                auto token_end{token_view.get_end_pos()};
+
+                token_view.set_end_pos(start_positions[0]);
+                auto const before_capture{token_view.to_string_view()};
+                m_logtype_dict_entry.add_constant(before_capture, 0, before_capture.size());
+
+                token_view.set_start_pos(start_positions[0]);
+                token_view.set_end_pos(end_positions[0]);
+
+                variable_dictionary_id_t id{};
+                m_var_dict.add_entry(token_view.to_string_view(), id);
+                m_var_ids.push_back(id);
+                m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
+                m_logtype_dict_entry.add_dictionary_var();
+
+                token_view.set_start_pos(end_positions[0]);
+                token_view.set_end_pos(token_end);
+                auto const after_capture{token_view.to_string_view()};
+                m_logtype_dict_entry.add_constant(after_capture, 0, after_capture.size());
+            }
+            break;
+        }
+    }
+}
+
 void Archive::write_msg_using_schema(log_surgeon::LogEventView const& log_view) {
     epochtime_t timestamp{0};
     TimestampPattern const* timestamp_pattern{nullptr};
@@ -379,105 +483,7 @@ void Archive::write_msg_using_schema(log_surgeon::LogEventView const& log_view) 
             m_logtype_dict_entry.add_constant(token_view.get_delimiter(), 0, 1);
             token_view.increment_start_pos();
         }
-        switch (token_type) {
-            case static_cast<int>(log_surgeon::SymbolId::TokenNewline):
-            case static_cast<int>(log_surgeon::SymbolId::TokenUncaughtString): {
-                m_logtype_dict_entry
-                        .add_constant(token_view.to_string(), 0, token_view.get_length());
-                break;
-            }
-            case static_cast<int>(log_surgeon::SymbolId::TokenInt): {
-                encoded_variable_t encoded_var{};
-                if (!EncodedVariableInterpreter::convert_string_to_representable_integer_var(
-                            token_view.to_string(),
-                            encoded_var
-                    ))
-                {
-                    variable_dictionary_id_t id{};
-                    m_var_dict.add_entry(token_view.to_string(), id);
-                    encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                    m_logtype_dict_entry.add_dictionary_var();
-                } else {
-                    m_logtype_dict_entry.add_int_var();
-                }
-                m_encoded_vars.push_back(encoded_var);
-                break;
-            }
-            case static_cast<int>(log_surgeon::SymbolId::TokenFloat): {
-                encoded_variable_t encoded_var{};
-                if (!EncodedVariableInterpreter::convert_string_to_representable_float_var(
-                            token_view.to_string(),
-                            encoded_var
-                    ))
-                {
-                    variable_dictionary_id_t id{};
-                    m_var_dict.add_entry(token_view.to_string(), id);
-                    encoded_var = EncodedVariableInterpreter::encode_var_dict_id(id);
-                    m_logtype_dict_entry.add_dictionary_var();
-                } else {
-                    m_logtype_dict_entry.add_float_var();
-                }
-                m_encoded_vars.push_back(encoded_var);
-                break;
-            }
-            default: {
-                // If there are no capture groups the entire variable token is stored as a variable.
-                // If the variable token contains capture groups, we break the token up by storing
-                // each capture as a variable and any substrings surrounding the capture as part of
-                // the logtype. Capture repetition currently does not work so we explicitly only
-                // store the first capture.
-
-                auto const& lexer{log_view.get_log_parser().m_lexer};
-                auto capture_ids{lexer.get_capture_ids_from_rule_id(token_type)};
-                if (false == capture_ids.has_value()) {
-                    variable_dictionary_id_t id{};
-                    m_var_dict.add_entry(token_view.to_string(), id);
-                    m_var_ids.push_back(id);
-                    m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
-                    m_logtype_dict_entry.add_dictionary_var();
-                    break;
-                }
-
-                auto const register_ids{
-                        lexer.get_reg_ids_from_capture_id(capture_ids.value().at(0))
-                };
-                if (false == register_ids.has_value()) {
-                    throw(std::runtime_error(
-                            "No register IDs found for variable's capture group. Full token: "
-                            + token_view.to_string()
-                    ));
-                }
-
-                auto const [start_reg_id, end_reg_id]{register_ids.value()};
-                auto const start_positions{token_view.get_reversed_reg_positions(start_reg_id)};
-                auto const end_positions{token_view.get_reversed_reg_positions(end_reg_id)};
-
-                if (false == start_positions.empty() && -1 < start_positions[0]
-                    && false == end_positions.empty() && -1 < end_positions[0])
-                {
-                    auto token_end{token_view.get_end_pos()};
-
-                    token_view.set_end_pos(start_positions[0]);
-                    auto const before_capture{token_view.to_string_view()};
-                    m_logtype_dict_entry.add_constant(before_capture, 0, before_capture.size());
-
-                    token_view.set_start_pos(start_positions[0]);
-                    token_view.set_end_pos(end_positions[0]);
-
-                    variable_dictionary_id_t id{};
-                    m_var_dict.add_entry(token_view.to_string_view(), id);
-                    m_var_ids.push_back(id);
-                    m_encoded_vars.push_back(EncodedVariableInterpreter::encode_var_dict_id(id));
-                    m_logtype_dict_entry.add_dictionary_var();
-
-                    token_view.set_start_pos(end_positions[0]);
-                    token_view.set_end_pos(token_end);
-                    auto const after_capture{token_view.to_string_view()};
-                    m_logtype_dict_entry.add_constant(after_capture, 0, after_capture.size());
-                }
-                break;
-            }
-        }
+        add_token_to_dicts(log_view, token_view);
     }
     if (false == m_logtype_dict_entry.get_value().empty()) {
         logtype_dictionary_id_t logtype_id{};
