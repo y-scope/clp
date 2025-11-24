@@ -223,7 +223,11 @@ if(CLP_NEED_LIBARCHIVE)
         set(LibArchive_USE_STATIC_LIBS ON)
     endif()
     find_package(LibArchive REQUIRED)
-    message(STATUS "Found LibArchive ${LibArchive_VERSION}")
+    if(LibArchive_FOUND)
+        message(STATUS "Found LibArchive ${LibArchive_VERSION}")
+    else()
+        message(FATAL_ERROR "Could not find ${CLP_LIBS_STRING} libraries for LibArchive")
+    endif()
 endif()
 
 # Find and setup libcurl
