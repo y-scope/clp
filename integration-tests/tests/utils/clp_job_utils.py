@@ -91,6 +91,14 @@ PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
         ignore_case=False,
         count=False,
         wildcard_query='message: "next transaction ID: 735; next OID: 16388"',
+        desired_result=(
+            '{"timestamp":"2023-03-27 00:26:35.873","pid":7813,'
+            '"session_id":"64211afb.1e85",'
+            '"line_num":4,"session_start":"2023-03-27 00:26:35 EDT","txid":0,'
+            '"error_severity":"DEBUG","message":"next transaction ID: 735; '
+            'next OID: 16388",'
+            '"backend_type":"startup","query_id":0}\n'
+        ),
     ),
     "search-ignore-case": PackageSearchJob(
         job_name="search-ignore-case",
@@ -99,6 +107,14 @@ PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
         ignore_case=True,
         count=False,
         wildcard_query='message: "nExT tRaNsAcTiOn Id: 735; nExT OiD: 16388"',
+        desired_result=(
+            '{"timestamp":"2023-03-27 00:26:35.873","pid":7813,'
+            '"session_id":"64211afb.1e85",'
+            '"line_num":4,"session_start":"2023-03-27 00:26:35 EDT","txid":0,'
+            '"error_severity":"DEBUG","message":"next transaction ID: 735; '
+            'next OID: 16388",'
+            '"backend_type":"startup","query_id":0}\n'
+        ),
     ),
     "search-basic-hive": PackageSearchJob(
         job_name="search-basic-hive",
@@ -107,6 +123,12 @@ PACKAGE_SEARCH_JOBS: dict[str, PackageSearchJob] = {
         ignore_case=False,
         count=False,
         wildcard_query="Shuffle@79ec394e",
+        desired_result=(
+            "2015-03-23 05:40:08,988 INFO [main] "
+            "org.apache.hadoop.mapred.ReduceTask: "
+            "Using ShuffleConsumerPlugin: "
+            "org.apache.hadoop.mapreduce.task.reduce.Shuffle@79ec394e\n"
+        ),
     ),
     # Insert more search jobs here as needed.
 }
@@ -176,6 +198,7 @@ def _run_package_search_jobs(
     """
     Run all the package search jobs for this test run.
 
+    :param request:
     :param package_instance:
     """
     package_job_list = package_instance.package_config.package_job_list

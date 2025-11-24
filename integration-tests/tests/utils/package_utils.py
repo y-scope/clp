@@ -195,6 +195,23 @@ def search_with_clp_package(
     search_cmd.append("--raw")
     search_cmd.append(search_job.wildcard_query)
 
-    # Run search command for this job.
-    # TODO: assert the correctness of the search, probably with grep or something.
-    run_and_assert(search_cmd)
+    # Run search command for this job and capture the output.
+    completed_process = run_and_assert(
+        search_cmd,
+        capture_output=True,
+        text=True,
+    )
+
+    # Compare captured output to `desired_result`.
+    search_output = completed_process.stdout
+    expected_output = search_job.desired_result
+
+    if search_output != expected_output:
+        error_message = (
+            f"Search output for job '{search_job.job_name}' did not match desired_result.\n"
+            "Expected:\n"
+            f"{expected_output}\n"
+            "Actual:\n"
+            f"{search_output}"
+        )
+        pytest.fail(error_message)

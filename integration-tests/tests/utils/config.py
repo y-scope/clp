@@ -155,6 +155,7 @@ class PackageSearchJob:
     ignore_case: bool
     count: bool
     wildcard_query: str
+    desired_result: str
     begin_time: int | None = None
     end_time: int | None = None
     file_path: Path | None = None
