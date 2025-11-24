@@ -108,6 +108,7 @@ class BundledService(LowercaseStrEnum):
     REDIS = auto()
     RESULTS_CACHE = auto()
 
+
 BundledServiceStr = Annotated[BundledService, StrEnumSerializer]
 
 
@@ -628,6 +629,7 @@ def _get_env_var(name: str) -> str:
         raise ValueError(f"Missing environment variable: {name}")
     return value
 
+
 class ClpConfig(BaseModel):
     container_image_ref: NonEmptyStr | None = None
 
@@ -636,7 +638,7 @@ class ClpConfig(BaseModel):
         BundledService.DATABASE,
         BundledService.QUEUE,
         BundledService.REDIS,
-        BundledService.RESULTS_CACHE
+        BundledService.RESULTS_CACHE,
     ]
 
     package: Package = Package()
