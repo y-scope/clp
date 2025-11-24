@@ -278,7 +278,8 @@ impl Client {
 pin_project! {
     #[project = SearchResultStreamProj]
     pub enum SearchResultStream<S1, S2>
-    where S1: Stream<Item = Result<String, ClientError>>,
+    where
+        S1: Stream<Item = Result<String, ClientError>>,
         S2: Stream<Item = Result<String, ClientError>>
     {
         File{#[pin] inner: S1},
