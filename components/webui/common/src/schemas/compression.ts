@@ -1,7 +1,7 @@
 import {
     Static,
     Type,
-} from "@fastify/type-provider-typebox";
+} from "@sinclair/typebox";
 
 
 /**
