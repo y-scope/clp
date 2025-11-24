@@ -2,6 +2,10 @@
     display: inline-flex;
 }
 
+.timeRangeInputContainer :global(.ant-select) {
+    width: 160px;
+}
+
 /* Makes border flush with range picker */
 .customSelected :global(.ant-select-selector) {
     border-top-right-radius: 0 !important;
@@ -11,6 +15,16 @@
 .rangePicker {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
-    min-width: 200px;
-    max-width: 220px;
+    width: 350px;
+}
+
+/* Improve visibility of disabled date picker */
+.rangePicker:global(.ant-picker-disabled) {
+    background-color: #f5f5f5;
+    cursor: not-allowed;
+}
+
+.rangePicker:global(.ant-picker-disabled) input {
+    color: rgba(0, 0, 0, 0.65) !important;
+    cursor: not-allowed;
 }
