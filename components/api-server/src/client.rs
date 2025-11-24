@@ -205,9 +205,10 @@ impl Client {
                 let search_result_path = entry.path();
                 let reader = std::fs::File::open(search_result_path)?;
                 let mut deserializer = rmp_serde::Deserializer::new(reader);
-                while let Ok(e) = Deserialize::deserialize(&mut deserializer) {
-                    let e: (i64, String, String, String, i64) = e;
-                    yield Ok(e.1);
+                while let Ok(event) = Deserialize::deserialize(&mut deserializer) {
+                    let event: (i64, String, String, String, i64) = event;
+                    let message = event.1;
+                    yield Ok(message);
                 }
             }
         };
