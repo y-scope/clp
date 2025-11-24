@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# Exit on error
-set -e
+set -o errexit
+set -o nounset
+set -o pipefail
 
 cUsage="Usage: ${BASH_SOURCE[0]} <version>"
 if [ "$#" -lt 1 ] ; then

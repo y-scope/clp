@@ -1,0 +1,69 @@
+use anyhow::Result;
+use async_trait::async_trait;
+use aws_sdk_s3::Client as S3Client;
+use aws_sdk_sqs::Client as SqsClient;
+
+/// A marker trait for AWS client types.
+pub trait AwsClientType: Clone {}
+
+impl AwsClientType for SqsClient {}
+
+impl AwsClientType for S3Client {}
+
+/// Trait to provide an abstraction for retrieving AWS SDK clients with capabilities to support
+/// different management strategies (e.g., singleton, auto-renew).
+///
+/// # Type Parameters:
+///
+/// * [`Client`]: The AWS SKD client type. Must implement the [`AwsClientType`].
+#[async_trait]
+pub trait AwsClientManagerType<Client: AwsClientType>: Send + Sync + 'static {
+    /// Retrieves an AWS client instance. The specific behavior depends on the implementation.
+    ///
+    /// # Returns:
+    ///
+    /// A [`Client`] instance ready for use on success.
+    ///
+    /// # Errors:
+    ///
+    /// Returns an [`anyhow::Error`] on failure.
+    async fn get(&self) -> Result<Client>;
+}
+
+/// A simple wrapper around an `SqsClient` that implements the `AwsClientManagerType` trait.
+pub struct SqsClientWrapper {
+    client: SqsClient,
+}
+
+#[async_trait]
+impl AwsClientManagerType<SqsClient> for SqsClientWrapper {
+    async fn get(&self) -> Result<SqsClient> {
+        Ok(self.client.clone())
+    }
+}
+
+impl SqsClientWrapper {
+    #[must_use]
+    pub const fn from(client: SqsClient) -> Self {
+        Self { client }
+    }
+}
+
+/// A simple wrapper around an `S3Client` that implements the `AwsClientManagerType` trait.
+pub struct S3ClientWrapper {
+    client: S3Client,
+}
+
+#[async_trait]
+impl AwsClientManagerType<S3Client> for S3ClientWrapper {
+    async fn get(&self) -> Result<S3Client> {
+        Ok(self.client.clone())
+    }
+}
+
+impl S3ClientWrapper {
+    #[must_use]
+    pub const fn from(client: S3Client) -> Self {
+        Self { client }
+    }
+}

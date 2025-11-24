@@ -6,10 +6,10 @@ import sys
 from contextlib import closing
 
 from pydantic import ValidationError
-from sql_adapter import SQL_Adapter
+from sql_adapter import SqlAdapter
 
 from clp_py_utils.clp_config import (
-    CLPConfig,
+    ClpConfig,
     StorageEngine,
 )
 from clp_py_utils.clp_metadata_db_utils import (
@@ -45,7 +45,7 @@ def main(argv):
     # Load configuration
     config_path = pathlib.Path(parsed_args.config)
     try:
-        clp_config = CLPConfig.model_validate(read_yaml_config_file(config_path))
+        clp_config = ClpConfig.model_validate(read_yaml_config_file(config_path))
         clp_config.database.load_credentials_from_env()
     except (ValidationError, ValueError) as err:
         logger.error(err)
@@ -55,12 +55,13 @@ def main(argv):
         return -1
 
     try:
-        sql_adapter = SQL_Adapter(clp_config.database)
+        sql_adapter = SqlAdapter(clp_config.database)
         clp_db_connection_params = clp_config.database.get_clp_connection_params_and_type(True)
         table_prefix = clp_db_connection_params["table_prefix"]
-        with closing(sql_adapter.create_connection(True)) as metadata_db, closing(
-            metadata_db.cursor(dictionary=True)
-        ) as metadata_db_cursor:
+        with (
+            closing(sql_adapter.create_connection(True)) as metadata_db,
+            closing(metadata_db.cursor(dictionary=True)) as metadata_db_cursor,
+        ):
             if StorageEngine.CLP_S == storage_engine:
                 create_datasets_table(metadata_db_cursor, table_prefix)
             else:

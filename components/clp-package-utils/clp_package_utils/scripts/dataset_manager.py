@@ -4,7 +4,7 @@ import shlex
 import subprocess
 import sys
 from pathlib import Path
-from typing import Final, List
+from typing import Final
 
 from clp_py_utils.clp_config import (
     ARCHIVE_MANAGER_ACTION_NAME,
@@ -14,9 +14,12 @@ from clp_py_utils.clp_config import (
     StorageEngine,
     StorageType,
 )
+from clp_py_utils.core import resolve_host_path_in_container
 from clp_py_utils.s3_utils import generate_container_auth_options
 
 from clp_package_utils.general import (
+    DockerMount,
+    DockerMountType,
     dump_container_config,
     generate_container_config,
     generate_container_name,
@@ -35,7 +38,7 @@ DEL_COMMAND: Final[str] = "del"
 logger = logging.getLogger(__file__)
 
 
-def main(argv: List[str]) -> int:
+def main(argv: list[str]) -> int:
     clp_home = get_clp_home()
     default_config_file_path = clp_home / CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH
 
@@ -92,8 +95,12 @@ def main(argv: List[str]) -> int:
     # Validate and load config file
     try:
         config_file_path = Path(parsed_args.config)
-        clp_config = load_config_file(config_file_path, default_config_file_path, clp_home)
-        clp_config.validate_logs_dir()
+        clp_config = load_config_file(
+            resolve_host_path_in_container(config_file_path),
+            resolve_host_path_in_container(default_config_file_path),
+            clp_home,
+        )
+        clp_config.validate_logs_dir(True)
 
         # Validate and load necessary credentials
         validate_and_load_db_credentials_file(clp_config, clp_home, False)
@@ -131,12 +138,16 @@ def main(argv: List[str]) -> int:
         container_clp_config, clp_config, get_container_config_filename(container_name)
     )
 
-    necessary_mounts = [
-        mounts.clp_home,
-        mounts.logs_dir,
-    ]
+    necessary_mounts = [mounts.logs_dir]
     if clp_config.archive_output.storage.type == StorageType.FS:
-        necessary_mounts.append(mounts.archives_output_dir)
+        container_archive_output_config = container_clp_config.archive_output.model_copy(deep=True)
+        container_archive_output_config.storage.transform_for_container()
+        archives_output_dir_mount = DockerMount(
+            DockerMountType.BIND,
+            clp_config.archive_output.get_directory(),
+            container_archive_output_config.get_directory(),
+        )
+        necessary_mounts.append(archives_output_dir_mount)
 
     aws_mount, aws_env_vars = generate_container_auth_options(
         clp_config, ARCHIVE_MANAGER_ACTION_NAME
@@ -180,14 +191,17 @@ def main(argv: List[str]) -> int:
 
     cmd = container_start_cmd + dataset_manager_cmd
 
-    proc = subprocess.run(cmd)
+    proc = subprocess.run(cmd, check=False)
     ret_code = proc.returncode
     if 0 != ret_code:
         logger.error("Dataset manager failed.")
         logger.debug(f"Docker command failed: {shlex.join(cmd)}")
 
     # Remove generated files
-    generated_config_path_on_host.unlink()
+    resolved_generated_config_path_on_host = resolve_host_path_in_container(
+        generated_config_path_on_host
+    )
+    resolved_generated_config_path_on_host.unlink()
 
     return ret_code
 

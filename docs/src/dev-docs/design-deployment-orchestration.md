@@ -44,8 +44,10 @@ graph LR
   compression_worker["compression-worker"]
   query_worker["query-worker"]
   reducer["reducer"]
-  webui["webui"]
+  api_server["api-server"]
   garbage_collector["garbage-collector"]
+  webui["webui"]
+  mcp_server["mcp-server"]
 
   %% One-time jobs
   db_table_creator["db-table-creator"]
@@ -62,8 +64,12 @@ graph LR
   redis -->|healthy| query_scheduler
   query_scheduler -->|healthy| reducer
   results_cache_indices_creator -->|completed_successfully| reducer
+  db_table_creator -->|completed_successfully| api_server
+  results_cache_indices_creator -->|completed_successfully| api_server
   db_table_creator -->|completed_successfully| webui
   results_cache_indices_creator -->|completed_successfully| webui
+  db_table_creator -->|completed_successfully| mcp_server
+  results_cache_indices_creator -->|completed_successfully| mcp_server
   db_table_creator -->|completed_successfully| garbage_collector
   results_cache_indices_creator -->|completed_successfully| garbage_collector
 
@@ -90,11 +96,16 @@ graph LR
     reducer
   end
 
-  subgraph UI & Management
-    webui
+  subgraph Management & UI
+    api_server
     garbage_collector
+    webui
   end
-:::
+
+  subgraph AI
+    mcp_server
+  end
+
 
 +++
 **Figure 1**: Orchestration architecture of the services in the CLP package.
@@ -117,7 +128,9 @@ graph LR
 | compression_worker    | Worker processes for compression jobs                           |
 | query_worker          | Worker processes for search/aggregation jobs                    |
 | reducer               | Reducers for performing the final stages of aggregation jobs    |
+| api_server            | API server for submitting queries                               |
 | webui                 | Web server for the UI                                           |
+| mcp_server            | MCP server for AI agent to access CLP functionalities           |
 | garbage_collector     | Process to manage data retention                                |
 
 :::
@@ -180,7 +193,7 @@ Specifically:
 
 To achieve this, before starting the deployment, `DockerComposeController.start` generates:
 
-* a CLP configuration file (`<clp-package>/var/log/.clp-config.yml` on the host) specific to the
+* a CLP configuration file (`<clp-package>/var/log/.clp-config.yaml` on the host) specific to the
   Docker Compose project environment.
 * an environment variable file (`<clp-package>/.env`) for any other configuration values.
 * any necessary directories (e.g., data output directories).

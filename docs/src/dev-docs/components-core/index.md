@@ -45,7 +45,7 @@ The task will download, build, and install (within the build directory) the foll
 | [date](https://github.com/HowardHinnant/date)                         | v3.0.1         |
 | [fmt](https://github.com/fmtlib/fmt)                                  | v11.2.0        |
 | [liblzma](https://github.com/tukaani-project/xz)                      | v5.8.1         |
-| [log-surgeon](https://github.com/y-scope/log-surgeon)                 | a722d07        |
+| [log-surgeon](https://github.com/y-scope/log-surgeon)                 | 840f262        |
 | [lz4](https://github.com/lz4/lz4)                                     | v1.10.0        |
 | [microsoft.gsl](https://github.com/microsoft/GSL)                     | v4.0.0         |
 | [mongo-cxx-driver](https://github.com/mongodb/mongo-cxx-driver)       | r4.1.1         |
@@ -129,7 +129,7 @@ regex-utils
 :::
 
 [CMake]: https://cmake.org/
-[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yml
+[feature-req]: https://github.com/y-scope/clp/issues/new?assignees=&labels=enhancement&template=feature-request.yaml
 [Task]: https://taskfile.dev/
 [uv]: https://docs.astral.sh/uv/
 [y-scope/clp#795]: https://github.com/y-scope/clp/issues/795
