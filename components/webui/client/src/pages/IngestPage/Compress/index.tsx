@@ -62,11 +62,13 @@ const Compress = () => {
 
         const payload: CompressionJobCreation = {paths};
 
-        if ("undefined" !== typeof values.dataset) {
-            payload.dataset = values.dataset;
-        }
-        if ("undefined" !== typeof values.timestampKey) {
-            payload.timestampKey = values.timestampKey;
+        if (CLP_STORAGE_ENGINES.CLP_S === SETTINGS_STORAGE_ENGINE) {
+            if ("undefined" !== typeof values.dataset) {
+                payload.dataset = values.dataset;
+            }
+            if ("undefined" !== typeof values.timestampKey) {
+                payload.timestampKey = values.timestampKey;
+            }
         }
 
         mutate(payload);
