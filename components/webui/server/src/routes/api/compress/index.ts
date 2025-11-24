@@ -8,11 +8,11 @@ import {
     CompressionJobSchema,
 } from "@webui/common/schemas/compression";
 import {ErrorSchema} from "@webui/common/schemas/error";
-import {StatusCodes} from "http-status-codes";
 
 import settings from "../../../../settings.json" with {type: "json"};
 import {CompressionJobConfig} from "../../../plugins/app/CompressionJobDbManager/typings.js";
 import {CONTAINER_INPUT_LOGS_ROOT_DIR} from "./typings.js";
+import {constants} from "http2";
 
 
 /**
@@ -49,8 +49,8 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
             schema: {
                 body: CompressionJobCreationSchema,
                 response: {
-                    [StatusCodes.CREATED]: CompressionJobSchema,
-                    [StatusCodes.INTERNAL_SERVER_ERROR]: ErrorSchema,
+                    [constants.HTTP_STATUS_CREATED]: CompressionJobSchema,
+                    [constants.HTTP_STATUS_INTERNAL_SERVER_ERROR]: ErrorSchema,
                 },
                 tags: ["Compression"],
             },
@@ -80,7 +80,7 @@ const plugin: FastifyPluginAsyncTypebox = async (fastify) => {
 
             try {
                 const jobId = await CompressionJobDbManager.submitJob(jobConfig);
-                reply.code(StatusCodes.CREATED);
+                reply.code(constants.HTTP_STATUS_CREATED);
 
                 return {jobId};
             } catch (err: unknown) {
