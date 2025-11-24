@@ -2,17 +2,17 @@ BasedOnStyle: "InheritParentConfig"
 
 IncludeCategories:
   # NOTE: A header is grouped by the first matching regex.
-  # NOTE: clang-format retains leading white-space on a line in violation of the YAML spec.
-
-  # Project library headers
-  - Regex: "^<clp|clp_s|glt"
-    Priority: 4
 
   # External library headers. Update when adding new libraries.
+  # NOTE: clang-format retains leading white-space on a line in violation of the YAML spec.
   - Regex: "<(absl|antlr4|archive|boost|bsoncxx|catch2|curl|date|fmt|log_surgeon|lzma\
 |mongocxx|msgpack|mysql|nlohmann|openssl|outcome|regex_utils|simdjson|spdlog|sqlite3|string_utils\
 |yaml-cpp|ystdlib|zstd)"
     Priority: 3
+
+  # Project library headers
+  - Regex: "^<(clp|clp_s|glt|reducer)"
+    Priority: 4
 
   # C system headers
   - Regex: "^<.+\\.h>"

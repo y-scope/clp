@@ -1,5 +1,6 @@
 import InputLabel from "../../../../../components/InputLabel";
 import SqlInput from "../../../../../components/SqlInput";
+import {validateBooleanExpression} from "../../../../../sql-parser";
 import useSearchStore from "../../../SearchState/index";
 import usePrestoSearchState from "../../../SearchState/Presto";
 import {SEARCH_UI_STATE} from "../../../SearchState/typings";
@@ -24,6 +25,7 @@ const Where = () => {
             <SqlInput
                 className={guidedGrid["noLeftBorderRadius"] || ""}
                 disabled={disabled}
+                validateFn={validateBooleanExpression}
                 value={where}
                 onChange={(value) => {
                     updateWhere(value || "");

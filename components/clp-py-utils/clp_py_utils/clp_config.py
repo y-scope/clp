@@ -1,7 +1,7 @@
 import os
 import pathlib
 from enum import auto
-from typing import Annotated, Any, ClassVar, Literal, Optional, Union
+from typing import Annotated, Any, ClassVar, Literal
 
 from pydantic import (
     BaseModel,
@@ -53,8 +53,8 @@ COMPRESSION_TASKS_TABLE_NAME = "compression_tasks"
 CONTAINER_CLP_HOME = pathlib.Path("/") / "opt" / "clp"
 CONTAINER_AWS_CONFIG_DIRECTORY = CONTAINER_CLP_HOME / ".aws"
 CONTAINER_INPUT_LOGS_ROOT_DIR = pathlib.Path("/") / "mnt" / "logs"
-CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yml"
-CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yml"
+CLP_DEFAULT_CONFIG_FILE_RELATIVE_PATH = pathlib.Path("etc") / "clp-config.yaml"
+CLP_DEFAULT_CREDENTIALS_FILE_PATH = pathlib.Path("etc") / "credentials.yaml"
 CLP_DEFAULT_DATA_DIRECTORY_PATH = pathlib.Path("var") / "data"
 CLP_DEFAULT_ARCHIVES_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "archives"
 CLP_DEFAULT_ARCHIVES_STAGING_DIRECTORY_PATH = CLP_DEFAULT_DATA_DIRECTORY_PATH / "staged-archives"
@@ -65,7 +65,7 @@ CLP_DEFAULT_TMP_DIRECTORY_PATH = pathlib.Path("var") / "tmp"
 CLP_DEFAULT_DATASET_NAME = "default"
 CLP_METADATA_TABLE_PREFIX = "clp_"
 CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH = pathlib.Path("clp-package-image.id")
-CLP_SHARED_CONFIG_FILENAME = ".clp-config.yml"
+CLP_SHARED_CONFIG_FILENAME = ".clp-config.yaml"
 CLP_VERSION_FILE_PATH = pathlib.Path("VERSION")
 
 # Environment variable names
@@ -168,12 +168,12 @@ class Database(BaseModel):
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
     name: NonEmptyStr = "clp-db"
-    ssl_cert: Optional[NonEmptyStr] = None
+    ssl_cert: NonEmptyStr | None = None
     auto_commit: bool = False
     compress: bool = True
 
-    username: Optional[NonEmptyStr] = None
-    password: Optional[NonEmptyStr] = None
+    username: NonEmptyStr | None = None
+    password: NonEmptyStr | None = None
 
     def ensure_credentials_loaded(self):
         if self.username is None or self.password is None:
@@ -232,7 +232,7 @@ class Database(BaseModel):
         if config is None:
             raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
         try:
-            self.username = get_config_value(config, f"{DB_COMPONENT_NAME}.user")
+            self.username = get_config_value(config, f"{DB_COMPONENT_NAME}.username")
             self.password = get_config_value(config, f"{DB_COMPONENT_NAME}.password")
         except KeyError as ex:
             raise ValueError(
@@ -286,7 +286,7 @@ class Redis(BaseModel):
     query_backend_database: int = 0
     compression_backend_database: int = 1
     # redis can perform authentication without a username
-    password: Optional[str] = None
+    password: str | None = None
 
     def dump_to_primitive_dict(self):
         return self.model_dump(exclude={"password"})
@@ -333,7 +333,7 @@ class ResultsCache(BaseModel):
     port: Port = DEFAULT_PORT
     db_name: NonEmptyStr = "clp-query-results"
     stream_collection_name: NonEmptyStr = "stream-files"
-    retention_period: Optional[PositiveInt] = 60
+    retention_period: PositiveInt | None = 60
 
     def get_uri(self):
         return f"mongodb://{self.host}:{self.port}/{self.db_name}"
@@ -349,8 +349,8 @@ class Queue(BaseModel):
     host: DomainStr = "localhost"
     port: Port = DEFAULT_PORT
 
-    username: Optional[NonEmptyStr] = None
-    password: Optional[str] = None
+    username: NonEmptyStr | None = None
+    password: str | None = None
 
     def dump_to_primitive_dict(self):
         return self.model_dump(exclude={"username", "password"})
@@ -360,7 +360,7 @@ class Queue(BaseModel):
         if config is None:
             raise ValueError(f"Credentials file '{credentials_file_path}' is empty.")
         try:
-            self.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.user")
+            self.username = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.username")
             self.password = get_config_value(config, f"{QUEUE_COMPONENT_NAME}.password")
         except KeyError as ex:
             raise ValueError(
@@ -382,13 +382,13 @@ class Queue(BaseModel):
 class S3Credentials(BaseModel):
     access_key_id: NonEmptyStr
     secret_access_key: NonEmptyStr
-    session_token: Optional[NonEmptyStr] = None
+    session_token: NonEmptyStr | None = None
 
 
 class AwsAuthentication(BaseModel):
     type: AwsAuthTypeStr
-    profile: Optional[NonEmptyStr] = None
-    credentials: Optional[S3Credentials] = None
+    profile: NonEmptyStr | None = None
+    credentials: S3Credentials | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -514,20 +514,17 @@ class StreamS3Storage(S3Storage):
 
 
 def _get_directory_from_storage_config(
-    storage_config: Union[FsStorage, S3Storage],
+    storage_config: FsStorage | S3Storage,
 ) -> pathlib.Path:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
         return storage_config.directory
-    elif StorageType.S3 == storage_type:
+    if StorageType.S3 == storage_type:
         return storage_config.staging_directory
-    else:
-        raise NotImplementedError(f"storage.type {storage_type} is not supported")
+    raise NotImplementedError(f"storage.type {storage_type} is not supported")
 
 
-def _set_directory_for_storage_config(
-    storage_config: Union[FsStorage, S3Storage], directory
-) -> None:
+def _set_directory_for_storage_config(storage_config: FsStorage | S3Storage, directory) -> None:
     storage_type = storage_config.type
     if StorageType.FS == storage_type:
         storage_config.directory = directory
@@ -538,13 +535,13 @@ def _set_directory_for_storage_config(
 
 
 class ArchiveOutput(BaseModel):
-    storage: Union[ArchiveFsStorage, ArchiveS3Storage] = ArchiveFsStorage()
+    storage: ArchiveFsStorage | ArchiveS3Storage = ArchiveFsStorage()
     target_archive_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
     target_dictionaries_size: PositiveInt = 32 * 1024 * 1024  # 32 MB
     target_encoded_file_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
     target_segment_size: PositiveInt = 256 * 1024 * 1024  # 256 MB
     compression_level: ZstdCompressionLevel = 3
-    retention_period: Optional[PositiveInt] = None
+    retention_period: PositiveInt | None = None
 
     def set_directory(self, directory: pathlib.Path):
         _set_directory_for_storage_config(self.storage, directory)
@@ -554,7 +551,7 @@ class ArchiveOutput(BaseModel):
 
 
 class StreamOutput(BaseModel):
-    storage: Union[StreamFsStorage, StreamS3Storage] = StreamFsStorage()
+    storage: StreamFsStorage | StreamS3Storage = StreamFsStorage()
     target_uncompressed_size: PositiveInt = 128 * 1024 * 1024
 
     def set_directory(self, directory: pathlib.Path):
@@ -624,9 +621,9 @@ def _get_env_var(name: str) -> str:
 
 
 class ClpConfig(BaseModel):
-    container_image_ref: Optional[NonEmptyStr] = None
+    container_image_ref: NonEmptyStr | None = None
 
-    logs_input: Union[FsIngestionConfig, S3IngestionConfig] = FsIngestionConfig()
+    logs_input: FsIngestionConfig | S3IngestionConfig = FsIngestionConfig()
 
     package: Package = Package()
     database: Database = Database()
@@ -643,15 +640,15 @@ class ClpConfig(BaseModel):
     api_server: ApiServer = ApiServer()
     credentials_file_path: SerializablePath = CLP_DEFAULT_CREDENTIALS_FILE_PATH
 
-    mcp_server: Optional[McpServer] = None
-    presto: Optional[Presto] = None
+    mcp_server: McpServer | None = None
+    presto: Presto | None = None
 
     archive_output: ArchiveOutput = ArchiveOutput()
     stream_output: StreamOutput = StreamOutput()
     data_directory: SerializablePath = CLP_DEFAULT_DATA_DIRECTORY_PATH
     logs_directory: SerializablePath = CLP_DEFAULT_LOG_DIRECTORY_PATH
     tmp_directory: SerializablePath = CLP_DEFAULT_TMP_DIRECTORY_PATH
-    aws_config_directory: Optional[SerializablePath] = None
+    aws_config_directory: SerializablePath | None = None
 
     _container_image_id_path: SerializablePath = PrivateAttr(
         default=CLP_PACKAGE_CONTAINER_IMAGE_ID_PATH
@@ -660,9 +657,7 @@ class ClpConfig(BaseModel):
 
     @field_validator("aws_config_directory")
     @classmethod
-    def expand_profile_user_home(
-        cls, value: Optional[SerializablePath]
-    ) -> Optional[SerializablePath]:
+    def expand_profile_user_home(cls, value: SerializablePath | None) -> SerializablePath | None:
         if value is not None:
             value = value.expanduser()
         return value
@@ -818,8 +813,7 @@ class ClpConfig(BaseModel):
     def get_deployment_type(self) -> DeploymentType:
         if QueryEngine.PRESTO == self.package.query_engine:
             return DeploymentType.BASE
-        else:
-            return DeploymentType.FULL
+        return DeploymentType.FULL
 
     def dump_to_primitive_dict(self):
         custom_serialized_fields = {
