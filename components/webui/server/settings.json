@@ -12,7 +12,6 @@
     "MongoDbStreamFilesCollectionName": "stream-files",
 
     "ClientDir": "../client/dist",
-    "LogsInputType": "fs",
     "LogViewerDir": "../yscope-log-viewer/dist",
     "StreamFilesDir": "../../../build/clp-package/var/data/streams",
     "StreamTargetUncompressedSize": 134217728,

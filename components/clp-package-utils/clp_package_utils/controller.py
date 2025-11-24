@@ -522,7 +522,6 @@ class BaseController(ABC):
                 self._clp_config.results_cache.stream_collection_name
             ),
             "ClientDir": str(container_webui_dir / "client"),
-            "LogsInputType": self._clp_config.logs_input.type,
             "LogViewerDir": str(container_webui_dir / "yscope-log-viewer"),
             "StreamTargetUncompressedSize": self._clp_config.stream_output.target_uncompressed_size,
             "ClpQueryEngine": self._clp_config.package.query_engine,
