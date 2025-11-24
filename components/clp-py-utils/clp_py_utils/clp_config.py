@@ -71,6 +71,7 @@ CLP_VERSION_FILE_PATH = pathlib.Path("VERSION")
 # Environment variable names
 CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
 CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
+CLP_DB_ROOT_PASS_ENV_VAR_NAME = "CLP_DB_ROOT_PASS"
 CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
@@ -175,6 +176,8 @@ class Database(BaseModel):
     username: NonEmptyStr | None = None
     password: NonEmptyStr | None = None
 
+    root_password: Optional[NonEmptyStr] = None
+
     def ensure_credentials_loaded(self):
         if self.username is None or self.password is None:
             raise ValueError("Credentials not loaded.")
@@ -227,6 +230,14 @@ class Database(BaseModel):
         d = self.model_dump(exclude={"username", "password"})
         return d
 
+    def has_root_password(self) -> bool:
+        """
+        Checks if root password is configured.
+
+        :return: True if root password is set.
+        """
+        return self.root_password is not None
+
     def load_credentials_from_file(self, credentials_file_path: pathlib.Path):
         config = read_yaml_config_file(credentials_file_path)
         if config is None:
@@ -239,12 +250,22 @@ class Database(BaseModel):
                 f"Credentials file '{credentials_file_path}' does not contain key '{ex}'."
             )
 
+        try:
+            self.root_password = get_config_value(config, f"{DB_COMPONENT_NAME}.root_password")
+        except KeyError:
+            pass
+
     def load_credentials_from_env(self):
         """
         :raise ValueError: if any expected environment variable is not set.
         """
         self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
+
+        try:
+            self.root_password = _get_env_var(CLP_DB_ROOT_PASS_ENV_VAR_NAME)
+        except ValueError:
+            pass
 
     def transform_for_container(self):
         self.host = DB_COMPONENT_NAME

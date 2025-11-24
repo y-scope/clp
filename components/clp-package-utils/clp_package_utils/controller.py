@@ -143,6 +143,11 @@ class BaseController(ABC):
             "CLP_DB_USER": self._clp_config.database.username,
         }
 
+        if self._clp_config.database.has_root_password():
+            env_vars |= {
+                "CLP_DB_ROOT_PASS": self._clp_config.database.root_password,
+            }
+
         # Paths
         env_vars |= {
             "CLP_DB_CONF_LOGGING_FILE_HOST": str(conf_logging_file),

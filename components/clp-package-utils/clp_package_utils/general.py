@@ -451,7 +451,11 @@ def load_config_file(
 
 def generate_credentials_file(credentials_file_path: pathlib.Path):
     credentials = {
-        DB_COMPONENT_NAME: {"username": "clp-user", "password": secrets.token_urlsafe(8)},
+        DB_COMPONENT_NAME: {
+            "username": "clp-user",
+            "password": secrets.token_urlsafe(8),
+            "root_password": secrets.token_urlsafe(8),
+        },
         QUEUE_COMPONENT_NAME: {"username": "clp-user", "password": secrets.token_urlsafe(8)},
         REDIS_COMPONENT_NAME: {"password": secrets.token_urlsafe(16)},
     }
