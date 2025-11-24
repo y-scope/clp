@@ -1,6 +1,5 @@
 """Fixtures that start and stop CLP package instances for integration tests."""
 
-import logging
 import subprocess
 from collections.abc import Iterator
 
@@ -14,8 +13,6 @@ from tests.utils.package_utils import (
     start_clp_package,
     stop_clp_package,
 )
-
-logger = logging.getLogger(__name__)
 
 
 @pytest.fixture
@@ -34,7 +31,6 @@ def fixt_package_instance(
     instance: PackageInstance | None = None
 
     try:
-        logger.debug("Starting up the %s package.", mode_name)
         start_clp_package(fixt_package_config)
         instance = PackageInstance(package_config=fixt_package_config)
         yield instance
@@ -46,7 +42,6 @@ def fixt_package_instance(
             " .pytest.ini."
         )
     finally:
-        logger.info("Now stopping the %s package...", mode_name)
         if instance is not None:
             stop_clp_package(instance)
         else:
