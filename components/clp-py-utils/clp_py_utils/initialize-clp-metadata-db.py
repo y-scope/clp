@@ -62,9 +62,8 @@ def main(argv):
         with closing(sql_adapter.create_connection(True)) as metadata_db, closing(
             metadata_db.cursor(dictionary=True)
         ) as metadata_db_cursor:
-            create_aws_credentials_table(metadata_db_cursor, table_prefix)
-
             if StorageEngine.CLP_S == storage_engine:
+                create_aws_credentials_table(metadata_db_cursor, table_prefix)
                 create_datasets_table(metadata_db_cursor, table_prefix)
             else:
                 create_metadata_db_tables(metadata_db_cursor, table_prefix)
