@@ -66,6 +66,7 @@ guides-external-database
 guides-multi-host
 guides-retention
 guides-using-presto
+guides-using-spider
 :::
 
 :::{toctree}
