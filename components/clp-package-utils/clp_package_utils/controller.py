@@ -871,6 +871,7 @@ class DockerComposeController(BaseController):
             return "docker-compose-base.yaml"
         return "docker-compose.yaml"
 
+
 def get_or_create_instance_id(clp_config: ClpConfig) -> str:
     """
     Gets or creates a unique instance ID for this CLP instance.
