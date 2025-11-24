@@ -158,7 +158,8 @@ private:
  * - Forwards `marshal_date_time_timestamp`'s return values.
  * - Forwards `marshal_numeric_timestamp`'s return values.
  */
-auto marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, std::string& buffer)
+[[nodiscard]] auto
+marshal_timestamp(epochtime_t timestamp, TimestampPattern const& pattern, std::string& buffer)
         -> ystdlib::error_handling::Result<void>;
 
 /**

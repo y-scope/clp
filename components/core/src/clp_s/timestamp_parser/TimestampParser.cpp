@@ -258,7 +258,7 @@ find_first_matching_prefix(std::string_view str, std::span<std::string_view cons
  *   specifiers, or format specifiers that aren't supported in date-time timestamps.
  * - ErrorCodeEnum::IncompatibleTimestampPattern if `timestamp` can not be represented by `pattern`.
  */
-auto marshal_date_time_timestamp(
+[[nodiscard]] auto marshal_date_time_timestamp(
         epochtime_t timestamp,
         TimestampPattern const& timestamp_pattern,
         std::string& buffer
@@ -274,7 +274,7 @@ auto marshal_date_time_timestamp(
  *   supported in numeric timestamps.
  * - ErrorCodeEnum::IncompatibleTimestampPattern if `timestamp` can not be represented by `pattern`.
  */
-auto marshal_numeric_timestamp(
+[[nodiscard]] auto marshal_numeric_timestamp(
         epochtime_t timestamp,
         TimestampPattern const& timestamp_pattern,
         std::string& buffer
@@ -598,7 +598,7 @@ auto marshal_date_time_timestamp(
                 auto const twelve_hour_clock_hours{
                         0 == hours_mod_twelve ? cMaxParsedHour12HourClock : hours_mod_twelve
                 };
-                buffer.append(fmt::format("{: >2d}", twelve_hour_clock_hours));
+                buffer.append(fmt::format("{:0>2d}", twelve_hour_clock_hours));
                 break;
             }
             case 'l': {  // 12-hour clock, space-padded hour.
@@ -644,9 +644,6 @@ auto marshal_date_time_timestamp(
                 break;
             }
             case 'T': {  // Zero-padded fractional seconds without trailing zeroes, max 9-digits.
-                constexpr auto cFactor{cPowersOfTen
-                                               [cNumNanosecondPrecisionSubsecondDigits
-                                                - cNumMillisecondPrecisionSubsecondDigits]};
                 auto const subsecond_nanoseconds{time_of_day.subseconds().count()};
                 auto const subsecond_nanoseconds_str{fmt::format("{:0>9d}", subsecond_nanoseconds)};
                 size_t num_digits_before_zero{subsecond_nanoseconds_str.size()};
@@ -677,6 +674,7 @@ auto marshal_date_time_timestamp(
                 break;
             }
             case '\\': {
+                buffer.push_back('\\');
                 break;
             }
             default:
