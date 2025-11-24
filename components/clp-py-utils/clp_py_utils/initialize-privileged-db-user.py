@@ -50,6 +50,7 @@ def main(argv):
 
     admin_db_config = clp_config.database.model_copy()
     admin_db_config.username = "root"
+    admin_db_config.password = admin_db_config.root_password
 
     try:
         sql_adapter = SqlAdapter(admin_db_config)

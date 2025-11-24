@@ -75,6 +75,7 @@ CLP_DB_USER_ENV_VAR_NAME = "CLP_DB_USER"
 CLP_DB_PASS_ENV_VAR_NAME = "CLP_DB_PASS"
 CLP_DB_PRIVILEGED_USER_ENV_VAR_NAME = "CLP_DB_PRIVILEGED_USER"
 CLP_DB_PRIVILEGED_PASS_ENV_VAR_NAME = "CLP_DB_PRIVILEGED_PASS"
+CLP_DB_ROOT_PASS_ENV_VAR_NAME = "CLP_DB_ROOT_PASS"
 CLP_QUEUE_USER_ENV_VAR_NAME = "CLP_QUEUE_USER"
 CLP_QUEUE_PASS_ENV_VAR_NAME = "CLP_QUEUE_PASS"
 CLP_REDIS_PASS_ENV_VAR_NAME = "CLP_REDIS_PASS"
@@ -182,6 +183,8 @@ class Database(BaseModel):
     privileged_username: Optional[NonEmptyStr] = None
     privileged_password: Optional[NonEmptyStr] = None
 
+    root_password: Optional[NonEmptyStr] = None
+
     def ensure_credentials_loaded(self):
         if self.username is None or self.password is None:
             raise ValueError("Credentials not loaded.")
@@ -236,6 +239,14 @@ class Database(BaseModel):
         )
         return d
 
+    def has_root_password(self) -> bool:
+        """
+        Checks if root password is configured.
+
+        :return: True if root password is set.
+        """
+        return self.root_password is not None
+
     def has_privileged_credentials(self) -> bool:
         """
         Checks if privileged credentials are configured.
@@ -276,6 +287,11 @@ class Database(BaseModel):
             )
 
         try:
+            self.root_password = get_config_value(config, f"{DB_COMPONENT_NAME}.root_password")
+        except KeyError:
+            pass
+
+        try:
             self.privileged_username = get_config_value(
                 config, f"{DB_COMPONENT_NAME}.privileged_user"
             )
@@ -293,6 +309,11 @@ class Database(BaseModel):
         """
         self.username = _get_env_var(CLP_DB_USER_ENV_VAR_NAME)
         self.password = _get_env_var(CLP_DB_PASS_ENV_VAR_NAME)
+
+        try:
+            self.root_password = _get_env_var(CLP_DB_ROOT_PASS_ENV_VAR_NAME)
+        except ValueError:
+            pass
 
         try:
             self.privileged_username = _get_env_var(CLP_DB_PRIVILEGED_USER_ENV_VAR_NAME)
