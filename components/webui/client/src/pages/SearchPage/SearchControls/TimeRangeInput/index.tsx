@@ -68,7 +68,7 @@ const CustomDateInput = (props: CustomDateInputProps) => {
     const timeRangeOption = useSearchStore((state) => state.timeRangeOption);
 
     const isStartInput = dateRange === 'start';
-    const displayText = timeRangeOption === TIME_RANGE_OPTION.CUSTOM 
+    const displayText = timeRangeOption === TIME_RANGE_OPTION.CUSTOM
         ? (value || (isStartInput ? 'Start date' : 'End date'))
         : getTimeRangeDisplayText(timeRangeOption, isStartInput);
 
