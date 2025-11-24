@@ -74,7 +74,7 @@ auto LogConverter::convert_file(
             auto const& event{parser.get_log_parser().get_log_event_view()};
             auto const message{event.to_string()};
             if (nullptr != event.get_timestamp()) {
-                auto const timestamp{event.get_timestamp()->to_string()};
+                auto const timestamp{event.get_timestamp()->to_string_view()};
                 auto const message_without_timestamp{
                         std::string_view{message}.substr(timestamp.length())
                 };
