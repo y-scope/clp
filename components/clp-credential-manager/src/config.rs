@@ -1,9 +1,7 @@
-#![allow(dead_code)]
-
 use std::{
     fs,
     net::SocketAddr,
-    path::{Path, PathBuf},
+    path::{Path},
 };
 
 use secrecy::SecretString;
@@ -14,7 +12,6 @@ use crate::error::{ServiceError, ServiceResult};
 const DEFAULT_MAX_CONNECTIONS: u32 = 5;
 const DEFAULT_SERVER_BIND_ADDRESS: &str = "0.0.0.0";
 const DEFAULT_SERVER_PORT: u16 = 8080;
-const DEFAULT_JWT_TTL_SECONDS: u64 = 3600;
 
 /// Root configuration deserialized from `credential-manager-config.yml`.
 #[derive(Debug, Clone, Deserialize)]
@@ -22,11 +19,6 @@ pub struct AppConfig {
     #[serde(default)]
     pub server: ServerConfig,
     pub database: DatabaseConfig,
-    pub jwt: JwtConfig,
-    #[serde(default)]
-    pub credentials_file: Option<PathBuf>,
-    #[serde(default)]
-    pub default_credential: Option<serde_yaml::Value>,
 }
 
 impl AppConfig {
@@ -101,16 +93,4 @@ const fn default_mysql_port() -> u16 {
 
 const fn default_max_connections() -> u32 {
     DEFAULT_MAX_CONNECTIONS
-}
-
-/// JWT-related settings shared across token issuance endpoints.
-#[derive(Debug, Clone, Deserialize)]
-pub struct JwtConfig {
-    pub secret: SecretString,
-    #[serde(default = "default_jwt_ttl")]
-    pub token_ttl_seconds: u64,
-}
-
-const fn default_jwt_ttl() -> u64 {
-    DEFAULT_JWT_TTL_SECONDS
 }
