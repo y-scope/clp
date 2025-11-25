@@ -570,14 +570,7 @@ def _batch_and_submit_tasks(
     )
     scheduled_jobs[job_id] = job
 
-    db_context.cursor.execute(
-        f"""
-        UPDATE {COMPRESSION_TASKS_TABLE_NAME}
-        SET status='{CompressionTaskStatus.RUNNING}' WHERE job_id={job_id}
-        """
-    )
-    db_context.connection.commit()
-
+    _update_tasks_status_to_running(db_context, tasks_to_submit)
     logger.info(
         "Dispatched job %s with %s tasks (%s remaining).",
         job_id,
@@ -639,15 +632,8 @@ def _dispatch_next_task_batch(
 
     # Insert tasks into the database and submit them
     _insert_tasks_to_db(db_context, job_id, tasks_to_submit, partition_info_to_submit)
-
     job.result_handle = task_manager.submit(tasks_to_submit)
-    db_context.cursor.execute(
-        f"""
-        UPDATE {COMPRESSION_TASKS_TABLE_NAME}
-        SET status='{CompressionTaskStatus.RUNNING}' WHERE job_id={job_id}
-        """
-    )
-    db_context.connection.commit()
+    _update_tasks_status_to_running(db_context, tasks_to_submit)
     logger.info(
         "Dispatched next batch for job %s with %s tasks (%s remaining).",
         job_id,
@@ -778,6 +764,26 @@ def _insert_tasks_to_db(
         )
         db_context.connection.commit()
         task["task_id"] = db_context.cursor.lastrowid
+
+
+def _update_tasks_status_to_running(
+    db_context: DbContext, tasks_to_submit: list[dict[str, Any]]
+) -> None:
+    """
+    Updates the status of submitted tasks to RUNNING.
+
+    :param db_context:
+    :param tasks_to_submit:
+    """
+    if len(tasks_to_submit) > 0:
+        task_ids = [str(task["task_id"]) for task in tasks_to_submit]
+        db_context.cursor.execute(
+            f"""
+            UPDATE {COMPRESSION_TASKS_TABLE_NAME}
+            SET status='{CompressionTaskStatus.RUNNING}' WHERE id IN ({', '.join(task_ids)})
+            """
+        )
+        db_context.connection.commit()
 
 
 if "__main__" == __name__:
